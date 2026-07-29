@@ -34,9 +34,7 @@ class NumberingSchemeWriteSerializer(serializers.Serializer):
 
     pattern = serializers.CharField(max_length=128, required=False)
     padding = serializers.IntegerField(min_value=1, max_value=20, required=False)
-    reset_period = serializers.ChoiceField(
-        choices=DocumentNumberingScheme.RESET_PERIOD_CHOICES, required=False
-    )
+    reset_period = serializers.ChoiceField(choices=DocumentNumberingScheme.RESET_PERIOD_CHOICES, required=False)
     start_value = serializers.IntegerField(min_value=0, required=False)
     type_labels = serializers.DictField(child=serializers.CharField(max_length=32), required=False)
 

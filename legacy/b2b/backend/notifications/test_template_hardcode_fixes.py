@@ -12,7 +12,6 @@ from django.test import override_settings
 
 from notifications.emails import _render_bodies
 
-
 # ── B1: quote_sent names the real seller, not the platform ────────────────────────
 
 
@@ -47,7 +46,13 @@ def test_quote_sent_names_the_real_seller_not_railtech():
 def test_quote_sent_without_seller_is_graceful():
     _subject, _text, html = _render_bodies(
         "quote_sent",
-        {"recipient_name": "Алиса", "quote_number": "КП-2026-00001", "quote_version": 1, "total_incl_vat": "1", "valid_until": "—"},
+        {
+            "recipient_name": "Алиса",
+            "quote_number": "КП-2026-00001",
+            "quote_version": 1,
+            "total_incl_vat": "1",
+            "valid_until": "—",
+        },
     )
     # No seller → neutral wording, never a fabricated company name.
     assert "подготовлено" in html
@@ -84,7 +89,13 @@ def test_client_email_header_is_white_labeled_with_seller_brand():
 def test_client_email_falls_back_to_platform_brand_without_seller():
     _subject, _text, html = _render_bodies(
         "quote_sent",
-        {"recipient_name": "Алиса", "quote_number": "КП-1", "quote_version": 1, "total_incl_vat": "1", "valid_until": "—"},
+        {
+            "recipient_name": "Алиса",
+            "quote_number": "КП-1",
+            "quote_version": 1,
+            "total_incl_vat": "1",
+            "valid_until": "—",
+        },
     )
     header = html.split("padding:24px 32px", 1)[1][:400]
     assert "RailTech B2B" in header  # platform default header when no brand passed
@@ -118,8 +129,9 @@ def test_send_quote_email_passes_seller_name_not_buyer():
 
     from crm.tasks import send_quote_email
 
-    with patch("notifications.emails.send_templated_email") as mocked, patch(
-        "crm.tasks._render_pdf_for"
+    with (
+        patch("notifications.emails.send_templated_email") as mocked,
+        patch("crm.tasks._render_pdf_for"),
     ):  # skip real WeasyPrint
         # deal has no client/contact email → the task returns early after resolving recipient;
         # give the buyer a contact email so it reaches the send call.
@@ -150,9 +162,12 @@ def test_support_email_injected_into_email_context():
         captured.update(context)
         return ("s", "t", "<p>h</p>")
 
-    with patch.object(emails_mod, "_render_bodies", side_effect=fake_render), patch.object(
-        emails_mod, "get_connection"
-    ), patch.object(emails_mod, "EmailMultiAlternatives"), patch.object(emails_mod, "EmailLog"):
+    with (
+        patch.object(emails_mod, "_render_bodies", side_effect=fake_render),
+        patch.object(emails_mod, "get_connection"),
+        patch.object(emails_mod, "EmailMultiAlternatives"),
+        patch.object(emails_mod, "EmailLog"),
+    ):
         emails_mod.send_templated_email("setup_password", {"first_name": "A"}, to=["x@y.z"], fail_silently=True)
 
     assert captured.get("support_email") == "help@acme.uz"

@@ -79,8 +79,14 @@ def test_registration_footer_prints_seller_requisites():
     assert "ИНН 123456789" in footer_markup
 
     ctx["seller_profile"] = SimpleNamespace(
-        legal_name="", legal_address="", inn="", bank_details="", footer_text="Мой собственный подвал",
-        show_bank_in_header=False, signatory_name="", signatory_position="",
+        legal_name="",
+        legal_address="",
+        inn="",
+        bank_details="",
+        footer_text="Мой собственный подвал",
+        show_bank_in_header=False,
+        signatory_name="",
+        signatory_position="",
     )
     footer_custom = render_to_string("crm/_document_base.html", ctx).split('class="footer"')[1]
     assert "Мой собственный подвал" in footer_custom

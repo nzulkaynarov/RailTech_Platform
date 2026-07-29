@@ -16,15 +16,7 @@ from decimal import Decimal
 import pytest
 from rest_framework.test import APIRequestFactory
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanySettings,
-    CompanyType,
-    CustomUser,
-    SystemRole,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanySettings, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import Deal, DealSellerRouting, DealStage, Quote, QuoteItem, QuoteStatus
 from crm.serializers.quote import QuoteEconomicsSerializer, QuoteSerializer
 from crm.services.quotes import QuoteCalculationService, compute_quote_economics

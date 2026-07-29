@@ -27,10 +27,7 @@ def scope_quotes_for_viewer(quotes_qs, user, request):
     and a buyer in own-deal context see all. Used by BOTH QuoteViewSet.get_queryset AND the
     deal-nested `quotes`/`active_quote` prefetch (DealViewSet), so the two surfaces cannot
     diverge and leak a competitor's КП (prices/totals/margin/PDF) on a multi-seller deal."""
-    from accounts.services.permissions import (
-        seller_acting_company_ids,
-        seller_visible_deal_ids,
-    )
+    from accounts.services.permissions import seller_acting_company_ids, seller_visible_deal_ids
 
     if getattr(user, "is_platform_admin", False):
         return quotes_qs
@@ -137,7 +134,10 @@ def reapply_company_defaults(quote: Quote, company: Optional[Company]) -> list:
     if settings_row.default_delivery_basis_id and quote.delivery_basis_id != settings_row.default_delivery_basis_id:
         quote.delivery_basis_id = settings_row.default_delivery_basis_id
         changed.append("delivery_basis")
-    if settings_row.default_cost_currency_id and quote.cost_currency_default_id != settings_row.default_cost_currency_id:
+    if (
+        settings_row.default_cost_currency_id
+        and quote.cost_currency_default_id != settings_row.default_cost_currency_id
+    ):
         quote.cost_currency_default_id = settings_row.default_cost_currency_id
         changed.append("cost_currency_default")
     if settings_row.default_vat_rate is not None and quote.vat_rate != settings_row.default_vat_rate:

@@ -10,10 +10,9 @@ World-pattern split (Odoo for mutable quotations / PandaDoc-DocuSign for sent do
 
 from decimal import Decimal
 
+import pytest
 from django.core.files.base import ContentFile
 from django.utils import timezone
-
-import pytest
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -48,9 +47,7 @@ def seller_world(db):
         prepared_by=user,
         seller_company=company,
     )
-    QuoteItem.objects.create(
-        quote=quote, imported_raw_name="Деталь", quantity=2, frozen_base_price=Decimal("1000.00")
-    )
+    QuoteItem.objects.create(quote=quote, imported_raw_name="Деталь", quantity=2, frozen_base_price=Decimal("1000.00"))
     quote.pdf_file.save("cached.pdf", ContentFile(b"%PDF-1.4 cached"), save=True)
     return {"quote": quote, "user": user}
 

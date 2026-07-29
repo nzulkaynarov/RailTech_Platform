@@ -23,14 +23,7 @@ from django.template.loader import render_to_string
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SystemRole,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import Deal, DealSellerRouting, DealStage, Quote, QuoteItem, QuoteStatus
 from crm.serializers import QuoteItemSerializer
 from crm.services.documents import client_optional_items, client_projection_items

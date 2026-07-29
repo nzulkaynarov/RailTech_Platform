@@ -15,16 +15,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, VerificationStatus, WorkspaceRole
-from crm.models import (
-    ChargeType,
-    Deal,
-    DealSellerRouting,
-    DealStage,
-    Quote,
-    QuoteCharge,
-    QuoteItem,
-    QuoteStatus,
-)
+from crm.models import ChargeType, Deal, DealSellerRouting, DealStage, Quote, QuoteCharge, QuoteItem, QuoteStatus
 from crm.services import duplicate_quote
 from master_data.models import Country
 

@@ -27,10 +27,7 @@ from crm.models import Quote, QuoteStatus
 from crm.services.deals import transition_deal_stage
 
 from . import lifecycle_audit
-from ._shared import (
-    _log_quote,
-    _set_quote_status,
-)
+from ._shared import _log_quote, _set_quote_status
 from .lifecycle_gates import (
     assert_renderable,
     assert_send_economics,
@@ -228,7 +225,13 @@ class QuoteLifecycleService:
         quote.pdf_file = ""
         quote.save(
             update_fields=[
-                "status", "number", "frozen_at", "public_access_token", "pdf_file", *validity_fields, "updated_at"
+                "status",
+                "number",
+                "frozen_at",
+                "public_access_token",
+                "pdf_file",
+                *validity_fields,
+                "updated_at",
             ]
         )
 
@@ -379,12 +382,7 @@ class QuoteLifecycleService:
         # Unified approval workflow: build the permission-driven step list (mandatory head +
         # optional reviewer(s) + risk-aware reason), then route. Source of truth = the steps,
         # not a granular status — the КП goes to a single «На согласовании» (PENDING_APPROVAL).
-        from crm.services.approvals import (
-            _active_order,
-            _notify_order,
-            auto_approve_solo_chain,
-            build_approval_chain,
-        )
+        from crm.services.approvals import _active_order, _notify_order, auto_approve_solo_chain, build_approval_chain
 
         build_approval_chain(quote, company_id, economics=economics)
         _set_quote_status(quote, QuoteStatusCode.PENDING_APPROVAL)

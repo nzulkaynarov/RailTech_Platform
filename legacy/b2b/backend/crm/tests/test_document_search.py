@@ -282,7 +282,9 @@ def test_no_match_returns_empty(world, docs):
 
 
 def test_deep_link_hash_per_type(world, docs):
-    by_key = {(row["type"], row["id"]): row for row in _results(_api(world["buyer_user"]).get(URL, {"q": "2026-00042"}))}
+    by_key = {
+        (row["type"], row["id"]): row for row in _results(_api(world["buyer_user"]).get(URL, {"q": "2026-00042"}))
+    }
     assert by_key[("quote", docs["quote"].id)]["hash"] == f"deal-quote/{docs['deal'].id}"
     assert by_key[("contract", docs["contract"].id)]["hash"] == "contracts"
     assert by_key[("invoice", docs["invoice"].id)]["hash"] == f"invoices?open={docs['invoice'].id}"
@@ -291,9 +293,7 @@ def test_deep_link_hash_per_type(world, docs):
 
 
 def test_payload_fields_shape(world, docs):
-    row = next(
-        r for r in _results(_api(world["buyer_user"]).get(URL, {"q": "2026-00042"})) if r["type"] == "generated"
-    )
+    row = next(r for r in _results(_api(world["buyer_user"]).get(URL, {"q": "2026-00042"})) if r["type"] == "generated")
     assert row["label"] == "Сопроводительное письмо"  # title wins over number
     assert row["status_code"] == "ISSUED"
     assert row["deal"] == docs["deal"].id

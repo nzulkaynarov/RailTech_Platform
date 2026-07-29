@@ -62,9 +62,7 @@ def _search_contracts(user, request, query: str, limit: int) -> List[dict]:
 
     qs = Contract.objects.select_related("status").order_by("-created_at")
     if not _is_admin(user):
-        qs = qs.filter(
-            _billing_visibility_q(user, request, deal_path="deal", seller_path="quote__seller_company_id")
-        )
+        qs = qs.filter(_billing_visibility_q(user, request, deal_path="deal", seller_path="quote__seller_company_id"))
     qs = qs.filter(Q(number__icontains=query) | Q(deal__title__icontains=query)).distinct()
     return [
         {
@@ -154,9 +152,7 @@ def _search_generated(user, request, query: str, limit: int) -> List[dict]:
     qs = GeneratedDocument.objects.select_related("status").order_by("-created_at")
     if not _is_admin(user):
         qs = qs.filter(Q(company_id__in=_user_company_ids(user)) | party_visible_document_q(user))
-    qs = qs.filter(
-        Q(title__icontains=query) | Q(number__icontains=query) | Q(deal__title__icontains=query)
-    ).distinct()
+    qs = qs.filter(Q(title__icontains=query) | Q(number__icontains=query) | Q(deal__title__icontains=query)).distinct()
     return [
         {
             "type": "generated",

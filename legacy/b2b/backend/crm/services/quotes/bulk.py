@@ -107,11 +107,7 @@ def bulk_update_quote_items(user, quote_id, items_payload, request):
       • guard/global   → (None, "<CODE>", None)
       • per-row invalid→ (None, "QUOTE_ITEMS_BULK_INVALID", [ {id,index,errors}, … ])
     """
-    from accounts.services.permissions import (
-        can_edit_quote_pricing,
-        is_platform_admin_viewer,
-        seller_can_access_deal,
-    )
+    from accounts.services.permissions import can_edit_quote_pricing, is_platform_admin_viewer, seller_can_access_deal
 
     # Guards — IN THE SAME ORDER as QuoteItemViewSet._assert_seller.
     if is_platform_admin_viewer(user):
@@ -255,11 +251,7 @@ def bulk_create_quote_items(user, quote_id, items_payload, request):
       • guard/global   → (None, "<CODE>", None)
       • per-row invalid→ (None, "QUOTE_ITEMS_BULK_INVALID", [ {index,errors}, … ])
     """
-    from accounts.services.permissions import (
-        can_edit_quote_pricing,
-        is_platform_admin_viewer,
-        seller_can_access_deal,
-    )
+    from accounts.services.permissions import can_edit_quote_pricing, is_platform_admin_viewer, seller_can_access_deal
 
     # Guards — IN THE SAME ORDER as QuoteItemViewSet._assert_seller / bulk_update_quote_items.
     if is_platform_admin_viewer(user):
@@ -394,9 +386,10 @@ def import_extracted_lines_into_quote(quote: Quote, actor: CustomUser, rows: lis
     свыше QUOTE_ITEMS_BULK_MAX_ROWS — обрезаются с флагом truncated (тупик №8: не молча).
     Позиции добавляются В КОНЕЦ (после max position), валюта = cost_currency_default КП (как
     ручное «Добавить строку»), затем ОДИН recalc. Возврат: (added, truncated, error_code)."""
-    from accounts.services.permissions import can_edit_quote_pricing, seller_company_routed_to_deal
     from django.conf import settings
     from django.db.models import Max
+
+    from accounts.services.permissions import can_edit_quote_pricing, seller_company_routed_to_deal
 
     is_superuser = getattr(actor, "is_superuser", False)
     if not (is_superuser or can_edit_quote_pricing(actor)):

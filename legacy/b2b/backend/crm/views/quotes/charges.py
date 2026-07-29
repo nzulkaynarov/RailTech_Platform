@@ -81,10 +81,7 @@ class QuoteChargeViewSet(viewsets.ModelViewSet):
     def _assert_seller(self):
         from rest_framework.exceptions import PermissionDenied
 
-        from accounts.services.permissions import (
-            can_edit_quote_pricing,
-            is_platform_admin_viewer,
-        )
+        from accounts.services.permissions import can_edit_quote_pricing, is_platform_admin_viewer
 
         user = self.request.user
         if is_platform_admin_viewer(user):

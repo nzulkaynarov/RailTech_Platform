@@ -166,9 +166,7 @@ def docs(world):
     """A buyer-owned deal ROUTED to the seller, carrying one of every document type,
     plus a competitor's DRAFT сгенерированный документ (must never leak). created_at is
     stamped in a deterministic ascending order so date-sort can be asserted."""
-    deal = Deal.objects.create(
-        title="Docs deal", company=world["buyer_co"], stage=DealStage.objects.get(code="DRAFT")
-    )
+    deal = Deal.objects.create(title="Docs deal", company=world["buyer_co"], stage=DealStage.objects.get(code="DRAFT"))
     DealSellerRouting.objects.create(deal=deal, seller_company=world["seller_co"])
     quote = _quote(deal, world["seller_co"], world["seller_user"])
 

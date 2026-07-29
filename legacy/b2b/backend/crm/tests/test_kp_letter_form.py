@@ -8,7 +8,6 @@ PDF-файла = номер КП из схемы нумерации продав
 
 from types import SimpleNamespace
 
-import pytest
 from django.template.loader import render_to_string
 
 from crm.services.documents import quote_pdf_filename

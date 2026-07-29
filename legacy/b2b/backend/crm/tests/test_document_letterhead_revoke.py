@@ -24,14 +24,7 @@ from accounts.models import (
 )
 from accounts.services.entitlements import grant_entitlement
 from crm import services as crm_services
-from crm.models import (
-    Deal,
-    DealSellerRouting,
-    DealStage,
-    DocumentTemplateKind,
-    GeneratedDocument,
-    GeneratedDocumentStatus,
-)
+from crm.models import Deal, DealSellerRouting, DealStage, DocumentTemplateKind, GeneratedDocumentStatus
 from crm.services.generated_documents import _brand_context_from_snapshot
 from notifications.models import NotificationType
 
@@ -246,9 +239,7 @@ def test_revoke_draft_has_no_active_link(world):
 
 def test_revoke_action_endpoint(world):
     document = _issue(world)
-    resp = _api(world["seller_user"]).post(
-        f"/api/v1/crm/generated-documents/{document.id}/revoke-public-link/"
-    )
+    resp = _api(world["seller_user"]).post(f"/api/v1/crm/generated-documents/{document.id}/revoke-public-link/")
     assert resp.status_code == 200
     body = resp.json()
     assert body["public_link_revoked"] is True

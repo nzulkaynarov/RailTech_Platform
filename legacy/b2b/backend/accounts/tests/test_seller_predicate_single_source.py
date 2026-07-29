@@ -15,13 +15,7 @@ import pathlib
 
 import pytest
 
-from accounts.models import (
-    Company,
-    CompanyType,
-    VerificationStatus,
-    seller_company_q,
-    verified_seller_company_q,
-)
+from accounts.models import Company, CompanyType, VerificationStatus, seller_company_q, verified_seller_company_q
 
 BACKEND_ROOT = pathlib.Path(__file__).resolve().parents[2]
 

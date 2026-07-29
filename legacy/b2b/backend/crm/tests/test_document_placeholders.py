@@ -86,7 +86,7 @@ def test_value_with_markup_is_escaped():
 
 
 def test_render_from_values_also_escapes():
-    out = render_from_values("{{deal.title}}", {"deal.title": '<img src=x onerror=alert(1)>'})
+    out = render_from_values("{{deal.title}}", {"deal.title": "<img src=x onerror=alert(1)>"})
     assert "<img" not in out
     assert "&lt;img" in out
 

@@ -147,8 +147,11 @@ def test_manual_quote_create_prefills_request_lines(scene):
     """Разрыв №4: ручной «Сформировать КП» больше не создаёт ПУСТОЙ КП."""
     draft = QuoteStatus.objects.get(code="DRAFT")
     manual = Quote.objects.create(
-        deal=scene["deal"], version=2, status=draft,
-        prepared_by=scene["seller_user"], seller_company=scene["seller"],
+        deal=scene["deal"],
+        version=2,
+        status=draft,
+        prepared_by=scene["seller_user"],
+        seller_company=scene["seller"],
     )
     copied = prefill_created_quote(manual)
     assert copied == 2

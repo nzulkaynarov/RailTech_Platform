@@ -46,12 +46,7 @@ from .generated_documents import (
     update_document_values,
     update_template,
 )
-from .invoice_lifecycle import (
-    cancel_invoice,
-    issue_invoice,
-    notify_seller_invoice_draft,
-    update_invoice_draft,
-)
+from .invoice_lifecycle import cancel_invoice, issue_invoice, notify_seller_invoice_draft, update_invoice_draft
 from .manual_invoice import create_manual_invoice
 from .messaging import archive_messages_sync, send_deal_message, user_can_access_deal_chat
 from .quotes import (

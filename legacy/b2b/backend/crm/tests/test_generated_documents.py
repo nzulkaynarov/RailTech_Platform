@@ -10,12 +10,7 @@ from accounts.constants import FeatureKey
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from accounts.services.entitlements import grant_entitlement
 from crm import services as crm_services
-from crm.models import (
-    DealStage,
-    DocumentTemplate,
-    DocumentTemplateKind,
-    GeneratedDocumentStatus,
-)
+from crm.models import DealStage, DocumentTemplateKind, GeneratedDocumentStatus
 
 
 @pytest.fixture
@@ -162,11 +157,9 @@ def test_generate_requires_entitlement(lookups):
 def test_generate_rejects_foreign_deal_idor(entitled_world):
     company, user = entitled_world
     other = _company("Other", "O1")
-    other_user = _member(other, "o@t.uz")
+    _member(other, "o@t.uz")  # у чужой компании есть свой участник; тест проверяет доступ ИЗ company
     foreign_deal = _deal(other, "Чужая сделка")
-    document, err = crm_services.generate_document(
-        company, user, template=_template(company, user), deal=foreign_deal
-    )
+    document, err = crm_services.generate_document(company, user, template=_template(company, user), deal=foreign_deal)
     assert document is None
     assert err == "DEAL_NOT_FOUND"
 

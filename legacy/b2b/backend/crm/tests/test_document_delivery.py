@@ -26,14 +26,7 @@ from accounts.models import (
 )
 from accounts.services.entitlements import grant_entitlement
 from crm import services as crm_services
-from crm.models import (
-    Deal,
-    DealSellerRouting,
-    DealStage,
-    DocumentTemplateKind,
-    GeneratedDocument,
-    GeneratedDocumentStatus,
-)
+from crm.models import Deal, DealSellerRouting, DealStage, DocumentTemplateKind, GeneratedDocumentStatus
 from notifications.models import Notification, NotificationType
 
 

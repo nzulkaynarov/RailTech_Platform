@@ -6,12 +6,7 @@ routed seller; buyer edits fall through to the request-item services.
 """
 
 from django.db import transaction
-from drf_spectacular.utils import (
-    OpenApiResponse,
-    extend_schema,
-    extend_schema_view,
-    inline_serializer,
-)
+from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view, inline_serializer
 from rest_framework import serializers as drf_serializers
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -124,10 +119,7 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
         """Building/editing КП line items is a seller action. Raise 403 otherwise."""
         from rest_framework.exceptions import PermissionDenied
 
-        from accounts.services.permissions import (
-            can_edit_quote_pricing,
-            is_platform_admin_viewer,
-        )
+        from accounts.services.permissions import can_edit_quote_pricing, is_platform_admin_viewer
 
         user = self.request.user
         if is_platform_admin_viewer(user):

@@ -93,7 +93,7 @@ class NumberingSchemeView(APIView):
         summary="Update numbering scheme",
         description=(
             "Upsert the seller company's numbering scheme. An invalid mask (missing {seq}, "
-            "empty) → 400 {\"detail\": \"INVALID_NUMBERING_PATTERN\"}. Applies to FUTURE numbers "
+            'empty) → 400 {"detail": "INVALID_NUMBERING_PATTERN"}. Applies to FUTURE numbers '
             "only; already-issued numbers are snapshots and never change. settings.edit + seller."
         ),
         request=NumberingSchemeWriteSerializer,

@@ -20,17 +20,7 @@ from django.core.files.base import ContentFile
 
 from accounts.models import Company, CompanyType
 from crm.constants import ContractStatusCode, InvoiceStatusCode, QuoteStatusCode
-from crm.models import (
-    Contract,
-    ContractStatus,
-    Deal,
-    DealStage,
-    Invoice,
-    InvoiceStatus,
-    Quote,
-    QuoteItem,
-    QuoteStatus,
-)
+from crm.models import Contract, ContractStatus, Deal, DealStage, Invoice, InvoiceStatus, Quote, QuoteItem, QuoteStatus
 from crm.services.billing import generate_invoice_from_contract
 from crm.services.contracts import generate_contract_from_quote
 from master_data.models import Currency

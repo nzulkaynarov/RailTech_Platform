@@ -22,14 +22,7 @@ import pytest
 from django.core.files.base import ContentFile
 from rest_framework.test import APIClient
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyRole,
-    CompanyType,
-    CustomUser,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, CustomUser, WorkspaceRole
 from crm.models import Deal, DealSellerRouting, DealStage, Quote, QuoteItem, QuoteStatus
 
 RENDER_DELAY = "crm.tasks.render_document_pdf.delay"

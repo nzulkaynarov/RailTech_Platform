@@ -200,9 +200,7 @@ class CompanyTeamMixin:
         _result, error = services.remove_company_member(member)
         if error:
             http_status = (
-                status.HTTP_409_CONFLICT
-                if error == "CANNOT_REMOVE_LAST_COMPANY_ADMIN"
-                else status.HTTP_400_BAD_REQUEST
+                status.HTTP_409_CONFLICT if error == "CANNOT_REMOVE_LAST_COMPANY_ADMIN" else status.HTTP_400_BAD_REQUEST
             )
             return Response({"detail": error}, status=http_status)
         # member.pk is None after delete(); echo the request id so the SPA can drop the row.

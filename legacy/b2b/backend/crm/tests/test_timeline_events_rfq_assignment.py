@@ -38,9 +38,7 @@ def _make_company(name, type_code, status_code="L2_VERIFIED"):
 def _make_member(company, email, *, can_buy=False, can_sell=False):
     from accounts.models import CompanyMember, CustomUser, WorkspaceRole
 
-    user = CustomUser.objects.create_user(
-        email=email, username=email, password="pw", is_active=True
-    )
+    user = CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
     CompanyMember.objects.create(
         user=user,
         company=company,

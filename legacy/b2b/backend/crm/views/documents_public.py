@@ -45,9 +45,7 @@ _UNAVAILABLE_COPY = {
 def _resolve_document(token):
     """Fetch the document for a public token, or None."""
     return (
-        GeneratedDocument.objects.select_related("status", "company", "deal")
-        .filter(public_access_token=token)
-        .first()
+        GeneratedDocument.objects.select_related("status", "company", "deal").filter(public_access_token=token).first()
     )
 
 

@@ -12,12 +12,7 @@ Every ViewSet/View is re-exported here so ``from crm.views.quotes import X``
 (the ``crm.views`` package re-export → ``core/urls.py`` router) keeps working unchanged.
 """
 
-from .charges import (
-    ChargeTemplateViewSet,
-    ChargeTypeViewSet,
-    QuoteChargeViewSet,
-    QuoteStatusViewSet,
-)
+from .charges import ChargeTemplateViewSet, ChargeTypeViewSet, QuoteChargeViewSet, QuoteStatusViewSet
 from .items import QuoteItemViewSet
 from .public import (
     PublicQuoteAcceptView,

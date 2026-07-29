@@ -190,7 +190,6 @@ def test_brand_context_for_pdf_absolute_url_degrades_or_reads_profile_file(setti
 
     profile = _P()
     name = default_storage.save("companies/logos/abs-test.png", io.BytesIO(b"\x89PNG abs"))
-    from django.db.models.fields.files import FieldFile
 
     class _F:
         def __init__(self, storage_name):
@@ -200,9 +199,7 @@ def test_brand_context_for_pdf_absolute_url_degrades_or_reads_profile_file(setti
             return default_storage.open(self.name, mode)
 
     profile.logo = _F(name)
-    brand = brand_context_for_pdf(
-        {"seller_logo_url": "http://minio:9000/whatever.png", "seller_profile": profile}
-    )
+    brand = brand_context_for_pdf({"seller_logo_url": "http://minio:9000/whatever.png", "seller_profile": profile})
     assert brand["seller_logo_url"].startswith("data:image/png;base64,")
 
 

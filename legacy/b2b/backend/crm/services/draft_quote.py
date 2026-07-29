@@ -225,8 +225,13 @@ def generate_draft_quote(deal_id: int, actor: CustomUser) -> Tuple[Optional[Quot
             if not consume_credit(seller_company_id, FeatureKey.AI_DRAFT):
                 return None, "AI_DRAFT_NOT_ENTITLED", 0
         quote, prefilled = _create_prefilled_quote(
-            deal, actor, seller_company_id, request_items, resolved_matches,
-            ai_telemetry=ai_telemetry, ai_matched=ai_matched,
+            deal,
+            actor,
+            seller_company_id,
+            request_items,
+            resolved_matches,
+            ai_telemetry=ai_telemetry,
+            ai_matched=ai_matched,
         )
     quote.refresh_from_db()
     return quote, None, prefilled
@@ -358,9 +363,7 @@ def prepare_quote_from_request(deal_id: int, actor: CustomUser) -> Tuple[Optiona
     """W2 no-AI path: the same prefilled draft КП (lines copied, EXACT GOST/MPN matches bound,
     prices from the seller's own offers) WITHOUT the paid AI fuzzy pass — for sellers without the
     ai.draft entitlement. Free deterministic logic only: no credit consumed, no LLM call."""
-    deal, request_items, seller_company_id, err = _run_draft_quote_gates(
-        deal_id, actor, require_ai_entitlement=False
-    )
+    deal, request_items, seller_company_id, err = _run_draft_quote_gates(deal_id, actor, require_ai_entitlement=False)
     if err:
         return None, err, 0
     resolved_matches = _resolve_exact_catalog_matches(request_items)

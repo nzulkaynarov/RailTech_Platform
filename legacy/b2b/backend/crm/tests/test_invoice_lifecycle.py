@@ -103,9 +103,7 @@ def world(lookups):
         status="ACTIVE",
         valid_until=timezone.now().date() + timedelta(days=30),
     )
-    deal = Deal.objects.create(
-        title="Inv deal", company=buyer_co, stage=DealStage.objects.get(code="CONTRACT_SIGNED")
-    )
+    deal = Deal.objects.create(title="Inv deal", company=buyer_co, stage=DealStage.objects.get(code="CONTRACT_SIGNED"))
     DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)
     quote = Quote.objects.create(
         deal=deal,

@@ -22,11 +22,7 @@ from crm.constants import DealStageCode, QuoteStatusCode
 from crm.models import Quote, QuoteStatus
 from crm.services.deals import transition_deal_stage
 
-from ._shared import (
-    _log_quote,
-    _notify_quote_outcome,
-    _quote_client_display_name,
-)
+from ._shared import _log_quote, _notify_quote_outcome, _quote_client_display_name
 
 logger = logging.getLogger(__name__)
 

@@ -14,22 +14,10 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.constants import FeatureKey
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SystemRole,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from accounts.services.entitlements import grant_entitlement
 from crm import services as crm_services
-from crm.models import (
-    DocumentTemplate,
-    DocumentTemplateKind,
-    GeneratedDocument,
-    GeneratedDocumentStatus,
-)
+from crm.models import DocumentTemplate, DocumentTemplateKind, GeneratedDocument, GeneratedDocumentStatus
 from crm.views.documents import DocumentPreviewThrottle, DocumentTemplateViewSet
 
 

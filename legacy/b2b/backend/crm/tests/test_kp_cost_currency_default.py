@@ -6,21 +6,11 @@ CompanySettings.default_cost_currency → Quote.cost_currency_default приме
 cost_currency_default — как ручное добавление строки. Оффер со своей валютой не перекрывается.
 """
 
-from datetime import timedelta
 from decimal import Decimal
 
 import pytest
-from django.utils import timezone
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyRole,
-    CompanySettings,
-    CompanyType,
-    CustomUser,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyRole, CompanySettings, CompanyType, CustomUser, WorkspaceRole
 from catalog.models import Product, SupplierOffer
 from crm.models import Deal, DealSellerRouting, DealStage, Quote, QuoteItem, QuoteStatus
 from crm.services.draft_quote import prefill_created_quote, take_and_prepare_quote
@@ -87,8 +77,11 @@ def test_prefill_line_without_offer_inherits_cost_currency_default(scene):
 def test_manual_created_quote_prefill_also_inherits_cost_currency(scene):
     draft = QuoteStatus.objects.get(code="DRAFT")
     manual = Quote.objects.create(
-        deal=scene["deal"], version=2, status=draft,
-        prepared_by=scene["user"], seller_company=scene["seller"],
+        deal=scene["deal"],
+        version=2,
+        status=draft,
+        prepared_by=scene["user"],
+        seller_company=scene["seller"],
     )
     apply_company_quote_defaults(manual, scene["seller"])  # как в perform_create
     prefill_created_quote(manual)

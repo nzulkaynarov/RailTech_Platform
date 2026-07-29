@@ -56,9 +56,7 @@ def _api(user, ctx="SELLER"):
 
 def _quote_with_items(buyer_co, seller_co, count):
     """A buyer deal routed to `seller_co`, with a quote carrying `count` line items."""
-    deal = Deal.objects.create(
-        title="Big КП", company=buyer_co, stage=DealStage.objects.get(code="DRAFT")
-    )
+    deal = Deal.objects.create(title="Big КП", company=buyer_co, stage=DealStage.objects.get(code="DRAFT"))
     DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)
     quote = Quote.objects.create(
         deal=deal,

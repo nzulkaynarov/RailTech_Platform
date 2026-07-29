@@ -65,7 +65,7 @@ def test_create_template_sanitises_and_extracts(lookups):
         user,
         name="Гарантийное письмо",
         kind_code="LETTER",
-        body_html='<p>Компания {{company.name}}</p><script>evil()</script>',
+        body_html="<p>Компания {{company.name}}</p><script>evil()</script>",
     )
     assert "<script>" not in template.body_html
     assert "evil" not in template.body_html

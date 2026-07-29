@@ -154,11 +154,7 @@ def _invoice_seller_company(invoice):
 
     quote = invoice.contract.quote if (invoice.contract_id and invoice.contract.quote_id) else None
     if quote is None:
-        item = (
-            invoice.items.filter(source_quote_item__isnull=False)
-            .select_related("source_quote_item__quote")
-            .first()
-        )
+        item = invoice.items.filter(source_quote_item__isnull=False).select_related("source_quote_item__quote").first()
         if item and item.source_quote_item and item.source_quote_item.quote_id:
             quote = item.source_quote_item.quote
     supplier = _quote_seller_company(quote) if quote else None

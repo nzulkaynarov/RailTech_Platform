@@ -24,16 +24,7 @@ from accounts.models import (
     VerificationStatus,
     WorkspaceRole,
 )
-from crm.models import (
-    Deal,
-    DealSellerRouting,
-    DealStage,
-    Invoice,
-    InvoiceStatus,
-    Quote,
-    QuoteItem,
-    QuoteStatus,
-)
+from crm.models import Deal, DealSellerRouting, DealStage, Invoice, InvoiceStatus, Quote, QuoteItem, QuoteStatus
 from crm.services import create_manual_invoice
 from crm.services.billing import record_payment
 from crm.services.invoice_lifecycle import cancel_invoice, issue_invoice

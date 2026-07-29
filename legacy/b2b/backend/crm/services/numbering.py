@@ -230,7 +230,9 @@ def get_company_scheme_view(company) -> SchemeView:
     return SchemeView(scheme=scheme, prefix=prefix, is_effective=bool(prefix))
 
 
-def preview_scheme_numbers(company, *, pattern, padding, reset_period, start_value, prefix=None, type_labels=None) -> list:
+def preview_scheme_numbers(
+    company, *, pattern, padding, reset_period, start_value, prefix=None, type_labels=None
+) -> list:
     """Dry-run: render example КП/CT/INV numbers for a DRAFT scheme, WITHOUT touching any
     counter (`DocumentSequence` is never read or incremented).
 

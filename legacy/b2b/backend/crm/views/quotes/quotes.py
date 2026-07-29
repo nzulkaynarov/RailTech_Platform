@@ -105,10 +105,7 @@ class QuoteViewSet(QuoteApprovalMixin, OptimisticLockingMixin, viewsets.ModelVie
         (anchoring the КП-owning company + approval chain). Auto-increments version."""
         from rest_framework.exceptions import PermissionDenied
 
-        from accounts.services.permissions import (
-            can_edit_quote_pricing,
-            is_platform_admin_viewer,
-        )
+        from accounts.services.permissions import can_edit_quote_pricing, is_platform_admin_viewer
 
         user = self.request.user
         if is_platform_admin_viewer(user):
@@ -164,10 +161,7 @@ class QuoteViewSet(QuoteApprovalMixin, OptimisticLockingMixin, viewsets.ModelVie
         tax_country (by pk); changing vat_rate moves the VAT total, so recalc afterwards."""
         from rest_framework.exceptions import PermissionDenied
 
-        from accounts.services.permissions import (
-            can_edit_quote_pricing,
-            is_platform_admin_viewer,
-        )
+        from accounts.services.permissions import can_edit_quote_pricing, is_platform_admin_viewer
 
         user = self.request.user
         if is_platform_admin_viewer(user):
@@ -206,10 +200,7 @@ class QuoteViewSet(QuoteApprovalMixin, OptimisticLockingMixin, viewsets.ModelVie
         """Re-pull current CompanySettings defaults into this DRAFT КП (thin wrapper — Rule 8)."""
         from rest_framework.exceptions import PermissionDenied
 
-        from accounts.services.permissions import (
-            can_edit_quote_pricing,
-            is_platform_admin_viewer,
-        )
+        from accounts.services.permissions import can_edit_quote_pricing, is_platform_admin_viewer
         from crm.services.quotes._shared import _quote_seller_company
 
         quote = self.get_object()

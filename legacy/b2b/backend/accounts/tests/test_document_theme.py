@@ -3,8 +3,6 @@
 preview renders every kind with draft (unsaved) overrides — Odoo wizard model.
 """
 
-from datetime import date
-
 import pytest
 from django.utils import timezone
 from rest_framework.test import APIClient

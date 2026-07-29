@@ -13,14 +13,7 @@ from core.optimistic_locking import OptimisticLockingMixin
 from core.permissions import IsCompanyMemberOrPlatformAdmin, OperatorScoped
 from crm import services as crm_services
 from crm.constants import InvoiceStatusCode
-from crm.models import (
-    Act,
-    Contract,
-    Fulfillment,
-    Invoice,
-    InvoiceItem,
-    Payment,
-)
+from crm.models import Act, Contract, Fulfillment, Invoice, InvoiceItem, Payment
 from crm.serializers import (
     ActSerializer,
     ContractSerializer,

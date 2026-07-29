@@ -108,9 +108,7 @@ def two_person(lookups):
     The head is a DIFFERENT user than the submitter → a genuine cross-person chain."""
     company = _seller_company("Duo LLC", "7700000011", kyc=True)
     admin_role = CompanyRole.objects.create(company=company, name="Администратор компании", is_system=True)
-    sales_role = CompanyRole.objects.create(
-        company=company, name="Продажи", permissions=[Permission.QUOTE_BUILD.value]
-    )
+    sales_role = CompanyRole.objects.create(company=company, name="Продажи", permissions=[Permission.QUOTE_BUILD.value])
     sales = _user("sales@duo.test")
     _member(company, sales, workspace_role="SALES_MANAGER", company_role=sales_role)
     head = _user("head@duo.test")
@@ -213,7 +211,9 @@ def test_below_floor_with_different_head_still_escalates(two_person):
     deal = _deal(client_co, two_person["sales"])
     quote = _quote(deal, two_person["sales"], two_person["company"])
 
-    with mock.patch("crm.services.quotes.lifecycle.compute_quote_economics", return_value=_clean_econ(below_floor=True)):
+    with mock.patch(
+        "crm.services.quotes.lifecycle.compute_quote_economics", return_value=_clean_econ(below_floor=True)
+    ):
         q, err = QLS.submit_for_review(quote.id, two_person["sales"])
     assert err is None
     assert _status(quote) == "PENDING_APPROVAL"

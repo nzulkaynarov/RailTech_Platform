@@ -299,8 +299,7 @@ class QuoteImportFileView(APIView):
         if not (getattr(request.user, "is_superuser", False) or can_edit_quote_pricing(request.user)):
             return Response({"detail": "ONLY_SELLER_CAN_BUILD_QUOTE"}, status=status.HTTP_403_FORBIDDEN)
         if not (
-            getattr(request.user, "is_superuser", False)
-            or seller_company_routed_to_deal(request.user, quote.deal_id)
+            getattr(request.user, "is_superuser", False) or seller_company_routed_to_deal(request.user, quote.deal_id)
         ):
             return Response({"detail": "QUOTE_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
         if quote.frozen_at:

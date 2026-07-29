@@ -28,17 +28,18 @@ def world(db):
         company.types.add(CompanyType.objects.get(code="SUPPLIER"))
         user = CustomUser.objects.create_user(email=email, username=email, password="pw")
         CompanyMember.objects.create(
-            user=user, company=company, role=WorkspaceRole.objects.get(code="OWNER"),
-            is_active=True, can_sell=True,
+            user=user,
+            company=company,
+            role=WorkspaceRole.objects.get(code="OWNER"),
+            is_active=True,
+            can_sell=True,
         )
         return company, user
 
     seller_a, user_a = _seller("Seller A", "3100000001", "a@sella.test")
     seller_b, user_b = _seller("Seller B", "3100000002", "b@sellb.test")
     buyer = Company.objects.create(name="ООО «Покупатель»", inn="7700000042")
-    deal = Deal.objects.create(
-        title="Рельсы Р65", company=buyer, stage=DealStage.objects.get(code="DRAFT")
-    )
+    deal = Deal.objects.create(title="Рельсы Р65", company=buyer, stage=DealStage.objects.get(code="DRAFT"))
     DealSellerRouting.objects.create(deal=deal, seller_company=seller_a)
     DealSellerRouting.objects.create(deal=deal, seller_company=seller_b)
     return {"deal": deal, "user_a": user_a, "user_b": user_b}

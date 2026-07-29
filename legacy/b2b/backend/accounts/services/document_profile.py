@@ -138,12 +138,12 @@ def _invalidate_branded_pdfs(company: Company) -> None:
             ContractStatusCode.PENDING_MANAGER,
         ],
     ).exclude(pdf_file="").update(pdf_file="")
-    Invoice.objects.filter(
-        contract__quote__seller_company=company, status__code=InvoiceStatusCode.DRAFT
-    ).exclude(pdf_file="").update(pdf_file="")
-    Act.objects.filter(
-        contract__quote__seller_company=company, status__code=ActStatusCode.DRAFT
-    ).exclude(pdf_file="").update(pdf_file="")
+    Invoice.objects.filter(contract__quote__seller_company=company, status__code=InvoiceStatusCode.DRAFT).exclude(
+        pdf_file=""
+    ).update(pdf_file="")
+    Act.objects.filter(contract__quote__seller_company=company, status__code=ActStatusCode.DRAFT).exclude(
+        pdf_file=""
+    ).update(pdf_file="")
 
 
 def _as_bool(value) -> bool:

@@ -5,18 +5,9 @@
 детерминированная часть (вставка + гейты); AI-извлечение мокается.
 """
 
-from decimal import Decimal
-
 import pytest
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyRole,
-    CompanyType,
-    CustomUser,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, CustomUser, WorkspaceRole
 from crm.models import Deal, DealSellerRouting, DealStage, Quote, QuoteItem, QuoteStatus
 from crm.services.quotes.bulk import import_extracted_lines_into_quote
 from master_data.models import Currency
@@ -41,7 +32,9 @@ def scene(db):
     ws = WorkspaceRole.objects.get_or_create(code="SALES_MANAGER", defaults={"name": "SM", "sort_order": 10})[0]
 
     def _member(company, email):
-        r = CompanyRole.objects.get_or_create(company=company, name="М", defaults={"permissions": ["quote.edit_pricing"]})[0]
+        r = CompanyRole.objects.get_or_create(
+            company=company, name="М", defaults={"permissions": ["quote.edit_pricing"]}
+        )[0]
         user = CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
         CompanyMember.objects.create(
             user=user, company=company, role=ws, company_role=r, is_active=True, is_primary=True, can_sell=True

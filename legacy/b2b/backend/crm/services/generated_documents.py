@@ -158,6 +158,7 @@ def document_render_brand(document) -> dict:
         return _brand_context_from_snapshot(document.brand_snapshot)
     return document_brand_context(document.company)
 
+
 # ── Owner-company + access resolution ───────────────────────────────────────
 
 
@@ -284,9 +285,7 @@ def _demo_context(company, user) -> PlaceholderContext:
     contact = SimpleNamespace(name="ООО Пример", company_id=1, company=counterparty)
     quote = SimpleNamespace(number="КП-2026-00042", total_incl_vat="12 500 000 UZS")
     contract = SimpleNamespace(number="ДГ-2026-00007")
-    return PlaceholderContext(
-        company=company, deal=deal, contact=contact, quote=quote, contract=contract, user=user
-    )
+    return PlaceholderContext(company=company, deal=deal, contact=contact, quote=quote, contract=contract, user=user)
 
 
 def render_document_html_from_body(company, rendered_body_html: str, *, brand: dict = None) -> str:
@@ -347,9 +346,7 @@ def _build_context(company, user, deal, contact) -> PlaceholderContext:
     quote = deal.active_quote if deal is not None else None
     contract = None
     if deal is not None:
-        contract = (
-            deal.contracts.select_related("status").order_by("-created_at").first()
-        )
+        contract = deal.contracts.select_related("status").order_by("-created_at").first()
     return PlaceholderContext(company=company, deal=deal, contact=contact, quote=quote, contract=contract, user=user)
 
 
@@ -596,9 +593,7 @@ def party_visible_document_q(user):
     as_buyer = Q(deal__company_id__in=company_ids)
     # As a routed seller: ONLY the buyer's own documents (company == deal.company) — never a
     # co-routed competitor's, whose company_id differs from the deal owner's.
-    as_seller = Q(deal__seller_routings__seller_company_id__in=seller_company_ids) & Q(
-        company_id=F("deal__company_id")
-    )
+    as_seller = Q(deal__seller_routings__seller_company_id__in=seller_company_ids) & Q(company_id=F("deal__company_id"))
     return Q(status__code=GeneratedDocumentStatusCode.ISSUED) & (as_buyer | as_seller)
 
 

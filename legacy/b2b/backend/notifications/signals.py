@@ -25,9 +25,7 @@ def notify_new_rfq_by_email(deal, user_ids, *, assigned: bool = False) -> None:
     from accounts.models import CustomUser
 
     emails = list(
-        CustomUser.objects.filter(pk__in=user_ids, is_active=True)
-        .exclude(email="")
-        .values_list("email", "pk")
+        CustomUser.objects.filter(pk__in=user_ids, is_active=True).exclude(email="").values_list("email", "pk")
     )
     if not emails:
         return

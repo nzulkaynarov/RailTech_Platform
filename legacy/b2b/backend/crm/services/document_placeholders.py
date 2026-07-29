@@ -126,9 +126,7 @@ PLACEHOLDER_GROUPS = [
 
 # Flat {code: label} projection of the grouped catalogue — kept for any consumer that just needs the
 # label of a code (derived from PLACEHOLDER_GROUPS so the two never drift).
-PLACEHOLDER_CATALOG = {
-    item["code"]: item["label"] for group in PLACEHOLDER_GROUPS for item in group["items"]
-}
+PLACEHOLDER_CATALOG = {item["code"]: item["label"] for group in PLACEHOLDER_GROUPS for item in group["items"]}
 
 
 def _render_from_values(body_html: str, values: dict) -> str:
@@ -168,8 +166,29 @@ def render_from_values(body_html: str, values: dict) -> str:
 
 # ── HTML sanitiser (stdlib allowlist) ───────────────────────────────────────
 _ALLOWED_TAGS = {
-    "p", "br", "h1", "h2", "h3", "h4", "strong", "em", "u", "ul", "ol", "li",
-    "table", "thead", "tbody", "tr", "td", "th", "div", "span", "hr", "img", "a",
+    "p",
+    "br",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "strong",
+    "em",
+    "u",
+    "ul",
+    "ol",
+    "li",
+    "table",
+    "thead",
+    "tbody",
+    "tr",
+    "td",
+    "th",
+    "div",
+    "span",
+    "hr",
+    "img",
+    "a",
 }
 # Void tags that must self-close in the sanitised output.
 _VOID_TAGS = {"br", "hr", "img"}

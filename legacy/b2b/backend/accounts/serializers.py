@@ -552,9 +552,7 @@ class MeSerializer(serializers.ModelSerializer):
             return False
         from accounts.models import CompanyMember
 
-        return (
-            CompanyMember.objects.filter(company_id=seller_company_id, is_active=True, can_sell=True).count() == 1
-        )
+        return CompanyMember.objects.filter(company_id=seller_company_id, is_active=True, can_sell=True).count() == 1
 
 
 class KYCVerificationSerializer(serializers.Serializer):

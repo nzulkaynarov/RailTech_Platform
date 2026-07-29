@@ -11,6 +11,7 @@ import pytest
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from accounts.constants import Permission
 from accounts.models import (
     Company,
     CompanyMember,
@@ -22,7 +23,6 @@ from accounts.models import (
     VerificationStatus,
     WorkspaceRole,
 )
-from accounts.constants import Permission
 from crm.models import Deal, DealSellerRouting, DealStage, Quote, QuoteStatus
 from crm.services import reapply_company_defaults
 from master_data.models import Country, Currency, DeliveryBasis
@@ -45,10 +45,13 @@ def lookups(db):
 @pytest.fixture
 def seller_company(lookups):
     company = Company.objects.create(
-        name="Seller LLC", inn="7700000101",
+        name="Seller LLC",
+        inn="7700000101",
         verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
     )
-    company.types.add(CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})[0])
+    company.types.add(
+        CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})[0]
+    )
     SupplierSubscription.objects.create(
         company=company, plan="PREMIUM", status="ACTIVE", valid_until=timezone.now().date() + timedelta(days=365)
     )
@@ -117,15 +120,23 @@ def test_reapply_noop_without_settings(draft_quote, seller_company):
 
 
 def _seller_user(company):
-    user = CustomUser.objects.create_user(email="s@seller.test", username="s@seller.test", password="pw", is_active=True)
+    user = CustomUser.objects.create_user(
+        email="s@seller.test", username="s@seller.test", password="pw", is_active=True
+    )
     role = CompanyRole.objects.create(
-        company=company, name="Продажи",
+        company=company,
+        name="Продажи",
         permissions=[Permission.QUOTE_BUILD.value, Permission.QUOTE_EDIT_PRICING.value],
     )
     workspace_role = WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "OWNER", "sort_order": 10})[0]
     CompanyMember.objects.create(
-        user=user, company=company, role=workspace_role, company_role=role,
-        is_primary=True, is_active=True, can_sell=True,
+        user=user,
+        company=company,
+        role=workspace_role,
+        company_role=role,
+        is_primary=True,
+        is_active=True,
+        can_sell=True,
     )
     return user
 
@@ -138,7 +149,11 @@ def test_endpoint_applies_defaults_for_seller(draft_quote, seller_company, confi
     resp = api.post(f"/api/v1/crm/quotes/{draft_quote.id}/apply-defaults/", HTTP_X_ACTIVE_CONTEXT="seller")
     assert resp.status_code == 200, resp.content
     assert set(resp.json()["changed_fields"]) == {
-        "delivery_basis", "cost_currency_default", "vat_rate", "margin_percent", "valid_until",
+        "delivery_basis",
+        "cost_currency_default",
+        "vat_rate",
+        "margin_percent",
+        "valid_until",
     }
     draft_quote.refresh_from_db()
     assert draft_quote.vat_rate == Decimal("15.00")
