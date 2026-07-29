@@ -78,3 +78,6 @@ docker-compose.override.yml
 # collectstatic; WhiteNoise serves it). Never track generated build artifacts.
 backend/staticfiles/
 .claude/worktrees/
+
+# graphify knowledge-graph artifacts — regenerated with `graphify update .`
+graphify-out/
