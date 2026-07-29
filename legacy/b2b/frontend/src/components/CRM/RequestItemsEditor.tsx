@@ -1,9 +1,9 @@
-import { useState, useEffect, Fragment } from 'react';
+import { useState, useEffect, useMemo, Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Trash2, PackagePlus, AlertTriangle, Send, Upload, Sparkles } from 'lucide-react';
+import { Plus, Trash2, PackagePlus, AlertTriangle, Send, Upload, Sparkles, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import type { QuoteItem } from '@/api/crmApi';
-import { useAddRequestItem, useUpdateQuoteItem, useDeleteQuoteItem, useSubmitRequest, useRouteDeal, useSuggestedSellers } from '@/hooks/useCRM';
+import type { QuoteItem, SuggestedSeller } from '@/api/crmApi';
+import { useAddRequestItem, useUpdateQuoteItem, useDeleteQuoteItem, useSubmitRequest, useRouteDeal, useSuggestedSellers, useSuggestSellersAi } from '@/hooks/useCRM';
 import { usePartnerSuppliers } from '@/hooks/useAccounts';
 import { translateApiError } from '@/lib/apiError';
 import { uomLabelKey } from '@/lib/codes';
@@ -65,16 +65,45 @@ export function RequestItemsEditor({
   // know about EXPLICIT routings (hasRecipients) or catalog-linked lines (product set).
   const hasCatalogLines = items.some((item) => item.product != null);
   const { data: suppliers, isLoading: suppliersLoading } = usePartnerSuppliers(pickerOpen);
-  // R1 — предложенные продавцы по позициям заявки; грузим только когда пикер открыт.
+  // R1 — предложенные продавцы по позициям заявки (мгновенный trigram); грузим при открытии пикера.
   const { data: suggested } = useSuggestedSellers(dealId, pickerOpen);
-  const suggestedById = new Map((suggested ?? []).map((s) => [s.company_id, s]));
-  // Предвыбор: когда подсказка пришла и покупатель ещё ничего не трогал — отмечаем совпавших.
+  // R3 — опциональное AI-усиление подбора (покупатель запускает явно); мержим на клиенте.
+  const suggestAi = useSuggestSellersAi();
+  const [aiSellers, setAiSellers] = useState<SuggestedSeller[] | null>(null);
+  // Сбрасываем AI-результат при (пере)открытии пикера, чтобы не показывать чужой прогон.
+  useEffect(() => { if (!pickerOpen) setAiSellers(null); }, [pickerOpen]);
+  // Итоговые подсказки = trigram ∪ AI (по компании берём бо́льший счёт совпадений).
+  const mergedSuggested = useMemo(() => {
+    const byId = new Map<number, SuggestedSeller>();
+    for (const seller of suggested ?? []) byId.set(seller.company_id, seller);
+    for (const seller of aiSellers ?? []) {
+      const existing = byId.get(seller.company_id);
+      if (!existing || seller.matched_lines > existing.matched_lines) byId.set(seller.company_id, seller);
+    }
+    return [...byId.values()];
+  }, [suggested, aiSellers]);
+  const suggestedById = new Map(mergedSuggested.map((s) => [s.company_id, s]));
+  // Предвыбор: когда подсказка пришла (или AI её дополнил) и покупатель ещё ничего не трогал — отмечаем совпавших.
   const [touchedPicker, setTouchedPicker] = useState(false);
   useEffect(() => {
-    if (pickerOpen && !touchedPicker && suggested && suggested.length > 0) {
-      setSelectedSellerIds(suggested.map((s) => s.company_id));
+    if (pickerOpen && !touchedPicker && mergedSuggested.length > 0) {
+      setSelectedSellerIds(mergedSuggested.map((s) => s.company_id));
     }
-  }, [pickerOpen, touchedPicker, suggested]);
+  }, [pickerOpen, touchedPicker, mergedSuggested]);
+
+  const runAiSuggest = async () => {
+    try {
+      const { sellers } = await suggestAi.mutateAsync(dealId);
+      setAiSellers(sellers);
+      const knownIds = new Set((suggested ?? []).map((s) => s.company_id));
+      const added = sellers.filter((s) => !knownIds.has(s.company_id)).length;
+      toast[added > 0 ? 'success' : 'info'](
+        added > 0 ? t('requestItems.aiSuggestAdded', { count: added }) : t('requestItems.aiSuggestNoneNew'),
+      );
+    } catch (error) {
+      toast.error(translateApiError(error));
+    }
+  };
   // Совпавшие продавцы — вверх списка, чтобы покупатель видел их первыми.
   const orderedSuppliers = [...(suppliers ?? [])].sort(
     (a, b) => (suggestedById.get(b.id)?.matched_lines ?? 0) - (suggestedById.get(a.id)?.matched_lines ?? 0),
@@ -489,12 +518,31 @@ export function RequestItemsEditor({
             <DialogDescription>{t('requestItems.pickSuppliersDesc')}</DialogDescription>
           </DialogHeader>
           {/* R1 — подсказка: платформа сама нашла подходящих продавцов по позициям заявки. */}
-          {(suggested?.length ?? 0) > 0 && (
+          {mergedSuggested.length > 0 && (
             <div className="flex items-start gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs">
               <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-              <span>{t('requestItems.suggestedHint', { count: suggested!.length })}</span>
+              <span>{t('requestItems.suggestedHint', { count: mergedSuggested.length })}</span>
             </div>
           )}
+          {/* R3 — опциональный AI-проход: покупатель дожимает подбор, когда триграм ничего
+              (или мало) не нашёл — опечатки, синонимы, латиница. Явное действие, не авто. */}
+          <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+            <span>{t('requestItems.aiSuggestHint')}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 shrink-0 gap-1.5 text-xs"
+              onClick={runAiSuggest}
+              disabled={suggestAi.isPending}
+            >
+              {suggestAi.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              ) : (
+                <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              {t('requestItems.aiSuggestButton')}
+            </Button>
+          </div>
           <div className="max-h-64 space-y-1 overflow-y-auto">
             {suppliersLoading ? (
               <p className="py-4 text-center text-sm text-muted-foreground">…</p>

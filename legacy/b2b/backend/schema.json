@@ -10354,6 +10354,46 @@
                 }
             }
         },
+        "/api/v1/crm/deals/{id}/suggest-sellers-ai/": {
+            "post": {
+                "operationId": "crm_deals_suggest_sellers_ai_create",
+                "description": "R3: enqueue an AI-enhanced version of `suggested-sellers` (202 + task_id; poll sourcing/ai-status). Free-text заявка lines the trigram matcher missed are resolved in ONE bilingual LLM call so misspellings / synonyms / Latin script still route. Buyer-gated and subject to the daily AI cap; the buyer still confirms the list (AI never binds). 503 AI_DISABLED when AI is off (the sync suggested-sellers stays).",
+                "summary": "AI-enhance seller routing suggestions",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Сделка.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Enqueued — poll ai-status; result carries `sellers`"
+                    },
+                    "403": {
+                        "description": "ADMIN_VIEWER_CANNOT_ACT / ONLY_BUYER_CAN_ROUTE"
+                    },
+                    "429": {
+                        "description": "AI_DAILY_CAP_REACHED"
+                    },
+                    "503": {
+                        "description": "AI_DISABLED"
+                    }
+                }
+            }
+        },
         "/api/v1/crm/deals/{id}/suggested-sellers/": {
             "get": {
                 "operationId": "crm_deals_suggested_sellers_list",

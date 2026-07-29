@@ -380,6 +380,99 @@ MATCH_SYSTEM_PROMPT = (
 )
 
 
+CANONICALIZE_SYSTEM_PROMPT = (
+    "Ты — нормализатор наименований железнодорожной номенклатуры. "
+    "Для каждой входной строки верни каноническое РУССКОЕ наименование той же позиции: "
+    "переведи латиницу в кириллицу, раскрой транслитерацию и сокращения, исправь опечатки, "
+    "приведи к общепринятому термину каталога. Обозначения типоразмеров сохраняй "
+    "(«R65» → «Р65»). Не придумывай позицию, которой нет во входе, и не добавляй пояснений: "
+    "если строка бессмысленна, верни её как есть."
+)
+
+CANONICALIZE_RESULT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "items": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "index": {"type": "integer"},
+                    "name_canonical": {"type": "string"},
+                },
+                "required": ["index", "name_canonical"],
+                "additionalProperties": False,
+            },
+        }
+    },
+    "required": ["items"],
+    "additionalProperties": False,
+}
+
+
+def canonicalize_names(names: list[str]) -> dict[str, str]:
+    """Latin/typo'd free-text names → canonical Russian names, in ONE batched call.
+
+    Exists because `_shortlist_products` is trigram-based: a hand-typed Latin line
+    («relsy R65») has near-zero trigram similarity to a Cyrillic catalog row, so without a
+    canonical form the shortlist comes back empty and the matcher is never even reached.
+    The file-import parser produces `name_canonical` as part of extraction; lines a human
+    typed into the grid have none — this fills that gap for them.
+
+    Returns {raw_name: canonical_name} for the names the model could normalise; a name that
+    comes back empty or unchanged is simply absent. Empty dict when AI is off or the call
+    fails — every caller must degrade to the deterministic path, never surface an error.
+    """
+    cleaned = [name.strip() for name in names if (name or "").strip()]
+    if not getattr(settings, "AI_IMPORT_ENABLED", False) or not cleaned:
+        return {}
+
+    import anthropic
+
+    unique = list(dict.fromkeys(cleaned))
+    listing = "\n".join(f"{idx}: {name}" for idx, name in enumerate(unique))
+    try:
+        response = _client().messages.create(
+            model=settings.AI_IMPORT_MODEL,
+            max_tokens=1500,
+            system=CANONICALIZE_SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": [{"type": "text", "text": listing}]}],
+            output_config={"format": {"type": "json_schema", "schema": CANONICALIZE_RESULT_SCHEMA}},
+        )
+    except (anthropic.APIError, ValueError, OSError):
+        logger.exception("AI canonicalize: call failed (names=%s)", len(unique))
+        return {}
+
+    if response.stop_reason == "refusal":
+        logger.warning("AI canonicalize: model declined (%s)", getattr(response, "stop_details", None))
+        return {}
+    usage = getattr(response, "usage", None)
+    if usage is not None:
+        logger.info(
+            "AI canonicalize usage: input=%s output=%s names=%s",
+            usage.input_tokens,
+            usage.output_tokens,
+            len(unique),
+        )
+
+    raw = next((block.text for block in response.content if block.type == "text"), "{}")
+    try:
+        data = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        logger.warning("AI canonicalize: unparseable JSON (len=%s)", len(raw or ""))
+        return {}
+
+    canonical_by_name: dict[str, str] = {}
+    for item in data.get("items", []):
+        index = item.get("index")
+        if not isinstance(index, int) or not 0 <= index < len(unique):
+            continue  # the model must address a line we actually sent
+        canonical = (item.get("name_canonical") or "").strip()[:500]
+        if canonical and canonical.casefold() != unique[index].casefold():
+            canonical_by_name[unique[index]] = canonical
+    return canonical_by_name
+
+
 def _shortlist_products(line: dict, domain_code: str | None, limit: int = 8):
     """Trigram + exact-code preselect of catalog Products for one заявка line.
 

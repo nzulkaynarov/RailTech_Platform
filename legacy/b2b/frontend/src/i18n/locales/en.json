@@ -4985,7 +4985,12 @@
     "sendToSelected": "Send to selected",
     "suggestedHint_one": "Found {{count}} matching supplier for your items — pre-selected. You can uncheck or add others.",
     "suggestedHint_other": "Found {{count}} matching suppliers for your items — pre-selected. You can uncheck or add others.",
-    "matchedLines": "matched {{matched}} of {{total}}"
+    "matchedLines": "matched {{matched}} of {{total}}",
+    "aiSuggestHint": "Can't find the supplier you need?",
+    "aiSuggestButton": "Enhance with AI",
+    "aiSuggestAdded_one": "AI found {{count}} more supplier",
+    "aiSuggestAdded_other": "AI found {{count}} more suppliers",
+    "aiSuggestNoneNew": "AI found no new suppliers — the list is already complete"
   },
   "requestDetailActions": {
     "titleLabel": "Request title",

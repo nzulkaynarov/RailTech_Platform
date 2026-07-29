@@ -4993,7 +4993,14 @@
     "suggestedHint_few": "Нашли {{count}} подходящих поставщика по вашим позициям — отметили галочками. Можно снять или добавить других.",
     "suggestedHint_many": "Нашли {{count}} подходящих поставщиков по вашим позициям — отметили галочками. Можно снять или добавить других.",
     "suggestedHint_other": "Нашли {{count}} подходящих поставщиков по вашим позициям — отметили галочками. Можно снять или добавить других.",
-    "matchedLines": "совпало {{matched}} из {{total}}"
+    "matchedLines": "совпало {{matched}} из {{total}}",
+    "aiSuggestHint": "Не нашли нужного поставщика?",
+    "aiSuggestButton": "Дополнить подбор ИИ",
+    "aiSuggestAdded_one": "ИИ нашёл ещё {{count}} поставщика",
+    "aiSuggestAdded_few": "ИИ нашёл ещё {{count}} поставщиков",
+    "aiSuggestAdded_many": "ИИ нашёл ещё {{count}} поставщиков",
+    "aiSuggestAdded_other": "ИИ нашёл ещё {{count}} поставщиков",
+    "aiSuggestNoneNew": "ИИ не нашёл новых поставщиков — список уже полный"
   },
   "requestDetailActions": {
     "titleLabel": "Название заявки",

@@ -745,6 +745,15 @@ AI_DAILY_JOB_CAP_PER_COMPANY = int((os.environ.get("AI_DAILY_JOB_CAP_PER_COMPANY
 # usable by unsubscribed tenants, so a free company still needs a runaway-bill fuse — just a lower
 # one than a paying tenant. 0 or negative disables the free-tier cap entirely (opt-out).
 AI_DAILY_JOB_CAP_FREE = int((os.environ.get("AI_DAILY_JOB_CAP_FREE") or "30").strip() or "30")
+# Tier-aware daily AI ceiling: map each subscription plan to its daily AI-job allowance
+# (Старт / Про / Безлимит). The DB plan CODES stay stable (BASIC/STANDARD/PREMIUM) — only
+# the allowance number is attached here, tunable via env. 0 or negative = UNLIMITED (the
+# Безлимит tier, PREMIUM). A per-company CompanyEntitlement(ai.daily_cap).limit override
+# (set by an operator in React Admin) wins over these plan defaults. A company with NO
+# operational subscription falls back to AI_DAILY_JOB_CAP_FREE above.
+AI_DAILY_CAP_BASIC = int((os.environ.get("AI_DAILY_CAP_BASIC") or "75").strip() or "75")  # Старт
+AI_DAILY_CAP_STANDARD = int((os.environ.get("AI_DAILY_CAP_STANDARD") or "300").strip() or "300")  # Про
+AI_DAILY_CAP_PREMIUM = int((os.environ.get("AI_DAILY_CAP_PREMIUM") or "0").strip() or "0")  # Безлимит (0 = off)
 # Hard byte cap before a file is sent to the model. Vision payloads (PDF/image) go
 # as one base64 request, so an oversized file means a 413 + wasted spend — reject it
 # early. Default 10 MB (the upload endpoint already caps the raw file at 20 MB).

@@ -3600,6 +3600,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/deals/{id}/suggest-sellers-ai/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * AI-enhance seller routing suggestions
+         * @description R3: enqueue an AI-enhanced version of `suggested-sellers` (202 + task_id; poll sourcing/ai-status). Free-text заявка lines the trigram matcher missed are resolved in ONE bilingual LLM call so misspellings / synonyms / Latin script still route. Buyer-gated and subject to the daily AI cap; the buyer still confirms the list (AI never binds). 503 AI_DISABLED when AI is off (the sync suggested-sellers stays).
+         */
+        post: operations["crm_deals_suggest_sellers_ai_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/deals/{id}/suggested-sellers/": {
         parameters: {
             query?: never;
@@ -18654,6 +18674,48 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["DealDetail"];
                 };
+            };
+        };
+    };
+    crm_deals_suggest_sellers_ai_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Сделка. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Enqueued — poll ai-status; result carries `sellers` */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description ADMIN_VIEWER_CANNOT_ACT / ONLY_BUYER_CAN_ROUTE */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description AI_DAILY_CAP_REACHED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description AI_DISABLED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
