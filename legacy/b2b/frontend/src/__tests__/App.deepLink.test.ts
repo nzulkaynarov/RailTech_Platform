@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseHashToPage } from '../routes/hashRoute';
+import { parseHashToPage, pageToHash, type Page } from '../routes/hashRoute';
 import { evaluatePageGuard, type PageGuardInput } from '../routes/pageGuard';
 
 // WP-4 — cold-load deep-link regression guard.
@@ -155,5 +155,55 @@ describe('evaluatePageGuard — cross-role / role bounces still hold after boots
 
   it('bounces an unknown/stale hash to the dashboard (invalid hash → dashboard)', () => {
     expect(evaluatePageGuard(input({ pageType: 'totally-bogus-page' }))).toEqual({ action: 'bounce', reason: 'context' });
+  });
+});
+
+// ── Круговой обход хэша: URL обязан описывать экран ───────────────────────────
+//
+// `pageToHash` подставлял идентификатор только для `product_detail`; `request-detail`
+// и `deal-quote` уходили в историю голыми. Назад/вперёд это не ломало (страница едет
+// в `history.state`), но обновление страницы, закладка или отправленная коллеге ссылка
+// уводили с карточки сделки на список заявок. Прямые присвоения `window.location.hash`
+// (корзина, очередь согласования, уведомления) номер всегда клали — расходился ровно
+// путь через `navigateTo`, то есть кнопка «Назад» из билдера КП.
+describe('pageToHash — точная обратная операция к parseHashToPage', () => {
+  const roundTrip = (page: Page) => parseHashToPage(`#${pageToHash(page)}`);
+
+  it('сохраняет dealId карточки сделки', () => {
+    expect(roundTrip({ type: 'request-detail', dealId: 7 })).toEqual({ type: 'request-detail', dealId: 7 });
+  });
+
+  it('сохраняет dealId билдера КП', () => {
+    expect(roundTrip({ type: 'deal-quote', dealId: 42 })).toEqual({ type: 'deal-quote', dealId: 42 });
+  });
+
+  it('сохраняет productId карточки товара', () => {
+    expect(roundTrip({ type: 'product_detail', productId: 'abc-1' })).toEqual({
+      type: 'product_detail',
+      productId: 'abc-1',
+    });
+  });
+
+  it('непараметризованные маршруты проходят без изменений', () => {
+    for (const type of ['dashboard', 'crm-deals', 'contracts', 'admin-kyc'] as const) {
+      expect(roundTrip({ type })).toEqual({ type });
+    }
+  });
+});
+
+describe('parseHashToPage — голые параметризованные маршруты не рендерят сломанный экран', () => {
+  it('#deal-quote без номера откатывается на список сделок', () => {
+    // Раньше проваливалось в общий `return { type: path }` → билдер КП монтировался
+    // с `dealId: undefined`. Ветка `request-detail` голую форму обрабатывала, эта — нет.
+    expect(parseHashToPage('#deal-quote')).toEqual({ type: 'crm-deals' });
+  });
+
+  it('#request-detail без номера откатывается на список заявок', () => {
+    expect(parseHashToPage('#request-detail')).toEqual({ type: 'my-requests' });
+  });
+
+  it('нечисловой номер откатывается так же, как отсутствующий', () => {
+    expect(parseHashToPage('#deal-quote/abc')).toEqual({ type: 'crm-deals' });
+    expect(parseHashToPage('#request-detail/abc')).toEqual({ type: 'my-requests' });
   });
 });

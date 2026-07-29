@@ -30,7 +30,10 @@ export function parseHashToPage(rawHash: string): Page {
   if (path.startsWith('product_detail/')) {
     return { type: 'product_detail', productId: path.slice('product_detail/'.length) } as Page;
   }
-  if (path.startsWith('deal-quote/')) {
+  // Голая форма (`#deal-quote` без номера) обрабатывается наравне с `deal-quote/abc`:
+  // раньше она проваливалась в общий `return { type: path }` и рендерила билдер КП с
+  // `dealId: undefined` — сломанный экран вместо отката на список сделок.
+  if (path === 'deal-quote' || path.startsWith('deal-quote/')) {
     const dealId = Number(path.slice('deal-quote/'.length));
     if (Number.isFinite(dealId) && dealId > 0) return { type: 'deal-quote', dealId };
     return { type: 'crm-deals' };
@@ -43,9 +46,25 @@ export function parseHashToPage(rawHash: string): Page {
   return { type: path } as Page;
 }
 
-/** Хэш, соответствующий странице — обратная операция к `parseHashToPage`. */
+/**
+ * Хэш, соответствующий странице — ТОЧНАЯ обратная операция к `parseHashToPage`.
+ *
+ * Раньше идентификатор подставлялся только для `product_detail`, а `request-detail` и
+ * `deal-quote` уходили в историю голыми. Назад/вперёд это не ломало (страница едет в
+ * `history.state`), но URL переставал описывать экран: обновление страницы, закладка или
+ * ссылка, отправленная коллеге, уводили с карточки сделки на список заявок. Прямые
+ * присвоения `window.location.hash` (корзина, очередь согласования, уведомления) номер
+ * всегда клали — расходился именно этот путь.
+ */
 export function pageToHash(page: Page): string {
-  return page.type === 'product_detail'
-    ? `product_detail/${(page as { productId: string }).productId}`
-    : page.type;
+  switch (page.type) {
+    case 'product_detail':
+      return `product_detail/${page.productId}`;
+    case 'request-detail':
+      return `request-detail/${page.dealId}`;
+    case 'deal-quote':
+      return `deal-quote/${page.dealId}`;
+    default:
+      return page.type;
+  }
 }
