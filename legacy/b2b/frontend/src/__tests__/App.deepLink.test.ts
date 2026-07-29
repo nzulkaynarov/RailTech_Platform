@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { parseHashToPage, evaluatePageGuard, type PageGuardInput } from '../App';
+import { parseHashToPage } from '../routes/hashRoute';
+import { evaluatePageGuard, type PageGuardInput } from '../routes/pageGuard';
 
 // WP-4 — cold-load deep-link regression guard.
 //

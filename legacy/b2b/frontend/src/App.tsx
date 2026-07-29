@@ -1,14 +1,13 @@
 import { Suspense, useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { lazyWithRetry } from './lib/lazyWithRetry';
 import { toast } from 'sonner';
 import { AppShell } from './layouts/AppShell';
 import { PlatformAdminShell } from './layouts/PlatformAdminShell';
 import { ErrorBoundary } from './components/Shared/ErrorBoundary';
 import { OnboardingTour } from './components/Shared/OnboardingTour';
 import { PageBreadcrumb, getPageLabel } from './components/Shared/PageBreadcrumb';
-import { useUserStore, type CompanyStatus, type CompanyStatusEntry } from './store/userStore';
+import { useUserStore } from './store/userStore';
 import { useAuthStore } from './store/authStore';
 import { LoginPage } from './components/Auth/LoginPage';
 import { KYCRegistrationForm } from './components/Auth/KYCRegistrationForm';
@@ -16,101 +15,11 @@ import { PasswordSetupPage } from './components/Auth/PasswordSetupPage';
 import { ForgotPasswordPage } from './components/Auth/ForgotPasswordPage';
 import { ResetPasswordPage } from './components/Auth/ResetPasswordPage';
 import { ProfileCompletionForm } from './components/Cabinet/ProfileCompletionForm';
-
-// Lazy load page components
-const ProductManagement = lazyWithRetry(() => import('./pages/ProductManagement').then(m => ({ default: m.ProductManagement })));
-const ProductDetail = lazyWithRetry(() => import('./pages/ProductDetail').then(m => ({ default: m.ProductDetail })));
-const Dashboard = lazyWithRetry(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
-// ProfilePage слился с SettingsPage в единый Settings Hub (settings-profile-redesign, PR 1);
-// `#profile` остаётся рабочим deep-link'ом — алиас на `#settings?section=profile` (см. MainApp).
-const SettingsPage = lazyWithRetry(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
-// OnboardingPage and PendingVerificationPage removed — real auth flow via LoginPage + KYCRegistrationForm
-// Admin approves users via Django admin panel at /admin/
-const RequestDetailPage = lazyWithRetry(() => import('./pages/RequestDetailPage').then(m => ({ default: m.RequestDetailPage })));
-
-// Lazy load individual page modules
-const PlatformAdminDashboard = lazyWithRetry(() => import('./pages/PlatformAdminDashboard'));
-const DealsPage = lazyWithRetry(() => import('./pages/DealsPage'));
-const QuotesPage = lazyWithRetry(() => import('./pages/QuotesPage'));
-const CategoriesPage = lazyWithRetry(() => import('./pages/CategoriesPage'));
-const EquipmentGroupsPage = lazyWithRetry(() => import('./pages/EquipmentGroupsPage'));
-const HelpPage = lazyWithRetry(() => import('./pages/HelpPage'));
-const MyRequestsPage = lazyWithRetry(() => import('./pages/MyRequestsPage'));
-const AdminUsersPage = lazyWithRetry(() => import('./pages/AdminUsersPage'));
-const AdminKYCPage = lazyWithRetry(() => import('./pages/AdminKYCPage'));
-const AdminSubscriptionsPage = lazyWithRetry(() => import('./pages/AdminSubscriptionsPage'));
-const AdminEntitlementsPage = lazyWithRetry(() => import('./pages/AdminEntitlementsPage'));
-const AdminRoleApplicationsPage = lazyWithRetry(() => import('./pages/AdminRoleApplicationsPage'));
-const AdminLeadsPage = lazyWithRetry(() => import('./pages/AdminLeadsPage'));
-const AdminCatalogPage = lazyWithRetry(() => import('./pages/AdminCatalogPage'));
-const AdminCategoriesPage = lazyWithRetry(() => import('./pages/AdminCategoriesPage'));
-const AdminEquipmentGroupsPage = lazyWithRetry(() => import('./pages/AdminEquipmentGroupsPage'));
-const AdminOffersPage = lazyWithRetry(() => import('./pages/AdminOffersPage'));
-const AdminCompaniesPage = lazyWithRetry(() => import('./pages/AdminCompaniesPage'));
-const AdminDealsPage = lazyWithRetry(() => import('./pages/AdminDealsPage'));
-const AdminMasterDataPage = lazyWithRetry(() => import('./pages/AdminMasterDataPage'));
-const AdminEmailTemplatesPage = lazyWithRetry(() => import('./pages/AdminEmailTemplatesPage'));
-const AdminOperatorRolesPage = lazyWithRetry(() => import('./pages/AdminOperatorRolesPage'));
-const AdminAccessLogPage = lazyWithRetry(() => import('./pages/AdminAccessLogPage'));
-const AdminSupportPage = lazyWithRetry(() => import('./pages/AdminSupportPage'));
-const ContractsPage = lazyWithRetry(() => import('./pages/ContractsPage'));
-const InvoicesPage = lazyWithRetry(() => import('./pages/InvoicesPage'));
-const PaymentsPage = lazyWithRetry(() => import('./pages/PaymentsPage'));
-const ActsPage = lazyWithRetry(() => import('./pages/ActsPage'));
-const OtherDocumentsPage = lazyWithRetry(() => import('./pages/OtherDocumentsPage'));
-const CompanyFilesPage = lazyWithRetry(() => import('./pages/CompanyFilesPage'));
-const FulfillmentsPage = lazyWithRetry(() => import('./pages/FulfillmentsPage'));
-const MySubscriptionPage = lazyWithRetry(() => import('./pages/MySubscriptionPage'));
-const CatalogImportPage = lazyWithRetry(() => import('./pages/CatalogImportPage'));
-const DealQuotePage = lazyWithRetry(() => import('./pages/DealQuotePage'));
-const CounterpartiesPage = lazyWithRetry(() => import('./pages/CounterpartiesPage'));
-
 import { LoadingSkeleton } from './components/LoadingSkeleton';
-
-type Page =
-  | { type: 'dashboard' }
-  | { type: 'products' }
-  | { type: 'request-detail'; dealId: number }
-  | { type: 'product_detail'; productId: string }
-  | { type: 'profile' }
-  | { type: 'settings' }
-  | { type: 'sourcing-requests' }
-  | { type: 'crm-deals' }
-  | { type: 'deal-quote'; dealId: number }
-  | { type: 'crm-quotes' }
-  | { type: 'categories' }
-  | { type: 'equipment-groups' }
-  | { type: 'help' }
-  | { type: 'my-requests' }
-  | { type: 'admin-users' }
-  | { type: 'admin-kyc' }
-  | { type: 'admin-subscriptions' }
-  | { type: 'admin-entitlements' }
-  | { type: 'admin-role-apps' }
-  | { type: 'admin-catalog' }
-  | { type: 'admin-categories' }
-  | { type: 'admin-equipment-groups' }
-  | { type: 'admin-offers' }
-  | { type: 'admin-companies' }
-  | { type: 'admin-deals' }
-  | { type: 'admin-master-data' }
-  | { type: 'admin-email-templates' }
-  | { type: 'admin-operator-roles' }
-  | { type: 'admin-access-log' }
-  | { type: 'admin-support' }
-  | { type: 'admin-leads' }
-  | { type: 'contracts' }
-  | { type: 'invoices' }
-  | { type: 'payments' }
-  | { type: 'acts' }
-  | { type: 'other-documents' }
-  | { type: 'company-files' }
-  | { type: 'fulfillments' }
-  | { type: 'my-subscription' }
-  | { type: 'catalog-import' }
-  | { type: 'clients' }
-  | { type: 'suppliers' }
-;
+import { ADMIN_PAGES, ADMIN_REACHABLE_PAGES, NAVIGABLE_PAGES } from './config/pageRegistry';
+import { parseHashToPage, pageToHash, type Page } from './routes/hashRoute';
+import { evaluatePageGuard } from './routes/pageGuard';
+import { renderPage } from './routes/pageContent';
 
 /** Parse URL path and query params for auth routes */
 type AuthRouteView = 'login' | 'register' | 'setup-password' | 'forgot-password' | 'reset-password';
@@ -166,30 +75,6 @@ function useAuthRoute() {
   }, []);
 
   return { route, navigate };
-}
-
-// Parse a URL hash back into a Page, restoring parameterised routes like
-// `product_detail/<id>` so deep links / refresh / back-forward work.
-export function parseHashToPage(rawHash: string): Page {
-  const hash = rawHash.replace(/^#/, '');
-  // Drop any query suffix (e.g. `crm-quotes?deal=123`) — the target page reads
-  // its own params from the hash; the page TYPE must be the bare route.
-  const path = hash.split('?')[0];
-  if (!path || path === 'dashboard') return { type: 'dashboard' };
-  if (path.startsWith('product_detail/')) {
-    return { type: 'product_detail', productId: path.slice('product_detail/'.length) } as Page;
-  }
-  if (path.startsWith('deal-quote/')) {
-    const dealId = Number(path.slice('deal-quote/'.length));
-    if (Number.isFinite(dealId) && dealId > 0) return { type: 'deal-quote', dealId };
-    return { type: 'crm-deals' };
-  }
-  if (path === 'request-detail' || path.startsWith('request-detail/')) {
-    const dealId = Number(path.slice('request-detail/'.length));
-    if (Number.isFinite(dealId) && dealId > 0) return { type: 'request-detail', dealId };
-    return { type: 'my-requests' };
-  }
-  return { type: path } as Page;
 }
 
 function App() {
@@ -313,131 +198,6 @@ function App() {
   );
 }
 
-const ADMIN_PAGES = new Set([
-  'admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-entitlements', 'admin-role-apps',
-  'admin-catalog', 'admin-categories', 'admin-equipment-groups', 'admin-offers',
-  'admin-companies', 'admin-deals', 'admin-master-data', 'admin-email-templates',
-  'admin-operator-roles', 'admin-access-log', 'admin-support', 'admin-leads',
-]);
-// ADR-0005 tier T0 (KYC pending): Главная/Профиль/каталог-read + utility pages.
-// `products` (catalog listing) and `product_detail` are catalog-READ, allowed pre-KYC;
-// every write/document/seller surface stays gated (nav hides them via requires.kyc — the
-// two stay in lock-step so a T0 user is never shown a link that then bounces).
-const KYC_ALLOWED_PAGES = new Set(['dashboard', 'profile', 'settings', 'help', 'products', 'product_detail']);
-
-// Platform Admin is a viewer/moderator (ADR-0002): they reach moderation +
-// platform-CRUD surfaces only, NEVER a buyer/seller business page (deals,
-// quotes-as-a-seller, sourcing, my-requests, my-subscription…). This allowlist
-// mirrors the admin sidebar (getAdminNavigation + bottom nav + footer profile);
-// a non-allowlisted hash for an admin is bounced to the admin dashboard rather
-// than rendering a business surface they must not act on.
-const ADMIN_REACHABLE_PAGES = new Set([
-  'dashboard', 'profile', 'settings', 'help',
-  ...ADMIN_PAGES,
-  // Moderation read surfaces the admin sidebar links to but which aren't
-  // `admin-*` ids (force-approve quote / read-only contract inspection).
-  'crm-quotes', 'contracts',
-]);
-
-// Role-scoped reachable pages. Closes "hidden" cross-role routes: a buyer
-// hash-navigating to a seller page (crm-deals, deal-quote, analysis, sourcing…)
-// is bounced to the dashboard instead of seeing seller/CRM UI. One standard for
-// what each context can open — nav + deep links + back/forward all go through it.
-const COMMON_PAGES = ['dashboard', 'profile', 'settings', 'help'];
-const BUYER_PAGES = new Set([
-  ...COMMON_PAGES,
-  'products', 'product_detail', 'my-requests', 'request-detail',
-  'contracts', 'invoices', 'payments', 'fulfillments', 'other-documents', 'company-files', 'my-subscription',
-  'suppliers',
-]);
-const SELLER_PAGES = new Set([
-  ...COMMON_PAGES,
-  'products', 'product_detail', 'categories', 'equipment-groups', 'catalog-import',
-  'sourcing-requests', 'crm-deals', 'crm-quotes',
-  'deal-quote', 'request-detail', 'my-subscription',
-  'contracts', 'invoices', 'payments', 'acts', 'fulfillments', 'other-documents', 'company-files',
-  'clients',
-]);
-
-// ADR-0005 Phase C — page-derived context. A page UNIQUE to one side implies that
-// working context; pages in BOTH sets (dashboard, products, request-detail, the shared
-// document pages…) are context-neutral → keep whatever context the user is already in.
-// Derived from the two sets above so they stay the single source of truth.
-function pageContextOf(pageType: string): CompanyStatus | null {
-  const inBuyer = BUYER_PAGES.has(pageType);
-  const inSeller = SELLER_PAGES.has(pageType);
-  if (inBuyer && !inSeller) return 'BUYER';
-  if (inSeller && !inBuyer) return 'SELLER';
-  return null;
-}
-
-// Unified page-access decision (role → KYC → context), extracted as a PURE
-// function so it can be unit-tested and so the three historically-separate guard
-// effects share a single source of truth.
-//
-// `bootstrapped` is the load-bearing input for the cold-load deep-link fix: until
-// userStore's `loadFromAuth` has resolved real capabilities (signalled by
-// `screen === 'main'`), the store still holds pre-auth DEFAULTS — role 'USER',
-// kycStatus 'not_started', activeStatus 'BUYER', empty statusEntries. Enforcing
-// the guards against those defaults on a cold deep-link (e.g. `#request-detail/3`,
-// `#deal-quote/7`) would wrongly fail the KYC/context checks and bounce the page
-// to #dashboard (clobbering the hash via replaceState) before auth even resolves.
-// So while `!bootstrapped` we ALLOW (defer); the effect re-runs once capabilities
-// land and then enforces exactly as before — cross-role/KYC/admin bounces intact.
-export type PageGuardDecision =
-  | { action: 'allow' }
-  | { action: 'adopt'; context: CompanyStatus }
-  | { action: 'bounce'; reason: 'admin' | 'kyc' | 'context' };
-
-export interface PageGuardInput {
-  pageType: string;
-  role: string;
-  kycStatus: string;
-  activeStatus: CompanyStatus;
-  statusEntries: CompanyStatusEntry[];
-  bootstrapped: boolean;
-}
-
-export function evaluatePageGuard(input: PageGuardInput): PageGuardDecision {
-  const { pageType, role, kycStatus, activeStatus, statusEntries, bootstrapped } = input;
-
-  // Cold-load guard-deferral (see block comment above): never enforce against
-  // pre-auth defaults, or a valid deep-link is clobbered before bootstrap.
-  if (!bootstrapped) return { action: 'allow' };
-
-  // Role guard: a non-admin can never open an admin-* page.
-  if (ADMIN_PAGES.has(pageType) && role !== 'ADMIN') {
-    return { action: 'bounce', reason: 'admin' };
-  }
-
-  // Platform admin is a viewer/moderator (ADR-0002): gated to the moderation +
-  // platform-CRUD allowlist; the KYC/context guards below never apply to them.
-  if (role === 'ADMIN') {
-    if (!ADMIN_REACHABLE_PAGES.has(pageType)) return { action: 'bounce', reason: 'context' };
-    return { action: 'allow' };
-  }
-
-  // KYC floor: below L2 only dashboard/profile/settings/help + catalog-read.
-  if (kycStatus !== 'verified' && !KYC_ALLOWED_PAGES.has(pageType)) {
-    return { action: 'bounce', reason: 'kyc' };
-  }
-
-  // Page-derived context (ADR-0005 Phase C): a page unique to the user's OTHER
-  // verified capability adopts that context rather than bouncing.
-  const pageCtx = pageContextOf(pageType);
-  const hasContext = (candidate: CompanyStatus) =>
-    statusEntries.some((entry) => entry.status === candidate && entry.verification === 'verified');
-  if (pageCtx && pageCtx !== activeStatus && hasContext(pageCtx)) {
-    return { action: 'adopt', context: pageCtx };
-  }
-
-  // Cross-role guard: a buyer can't reach seller-only pages and vice versa.
-  const allowed = activeStatus === 'BUYER' ? BUYER_PAGES : SELLER_PAGES;
-  if (!allowed.has(pageType)) return { action: 'bounce', reason: 'context' };
-
-  return { action: 'allow' };
-}
-
 function MainApp() {
   const { t } = useTranslation();
   const role = useUserStore((s) => s.role);
@@ -456,8 +216,7 @@ function MainApp() {
   const navigateTo = (p: Page) => {
     setPage(p);
     // Sync URL hash with current page for browser back/forward
-    const hash = p.type === 'product_detail' ? `product_detail/${(p as { productId: string }).productId}` : p.type;
-    window.history.pushState({ page: p }, '', `#${hash}`);
+    window.history.pushState({ page: p }, '', `#${pageToHash(p)}`);
   };
 
   // Unified page-access guard (role → KYC → context), driven by the pure
@@ -544,41 +303,28 @@ function MainApp() {
   };
 
   const handleNavigate = (target: string) => {
-    const validTypes = [
-      'dashboard', 'products', 'profile', 'settings',
-      'sourcing-requests',
-      'crm-deals', 'crm-quotes',
-      // Counterparty book (ADR-0005 Phase F): clients (seller ctx) / suppliers (buyer ctx).
-      // Their render cases + context sets existed, but this allowlist omitted them, so nav
-      // clicks bounced to the dashboard.
-      'clients', 'suppliers',
-      'categories', 'equipment-groups',
-      'help', 'my-requests',
-      'admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-entitlements', 'admin-role-apps',
-      'admin-catalog', 'admin-categories', 'admin-equipment-groups', 'admin-offers',
-      'admin-companies', 'admin-deals', 'admin-master-data', 'admin-email-templates',
-      'admin-operator-roles', 'admin-access-log', 'admin-support', 'admin-leads',
-      'contracts', 'invoices', 'payments', 'acts', 'fulfillments', 'other-documents', 'company-files',
-      'my-subscription', 'catalog-import',
-    ];
-    if (validTypes.includes(target)) {
-      // Platform admin (viewer): only moderation/CRUD surfaces are reachable —
-      // a business page target is bounced to the admin dashboard.
-      if (role === 'ADMIN' && !ADMIN_REACHABLE_PAGES.has(target)) {
-        toast.info(t('guards.notAvailableHere'));
-        navigateTo({ type: 'dashboard' });
-        return;
-      }
-      // Role guard: admin pages require ADMIN role
-      if (ADMIN_PAGES.has(target) && role !== 'ADMIN') {
-        toast.error(t('guards.adminRequired'));
-        navigateTo({ type: 'dashboard' });
-        return;
-      }
-      navigateTo({ type: target } as Page);
-    } else {
+    // Цели меню — из реестра страниц (`navigable`). Раньше здесь лежал четвёртый
+    // рукописный список идентификаторов, и он уже расходился с остальными: пункты
+    // «Клиенты»/«Поставщики» существовали и в рендере, и в наборах контекста, но
+    // отсутствовали ЗДЕСЬ — клик по ним молча уводил на дашборд (ADR-0005 Phase F).
+    if (!NAVIGABLE_PAGES.has(target)) {
       navigateTo({ type: 'dashboard' });
+      return;
     }
+    // Platform admin (viewer): only moderation/CRUD surfaces are reachable —
+    // a business page target is bounced to the admin dashboard.
+    if (role === 'ADMIN' && !ADMIN_REACHABLE_PAGES.has(target)) {
+      toast.info(t('guards.notAvailableHere'));
+      navigateTo({ type: 'dashboard' });
+      return;
+    }
+    // Role guard: admin pages require ADMIN role
+    if (ADMIN_PAGES.has(target) && role !== 'ADMIN') {
+      toast.error(t('guards.adminRequired'));
+      navigateTo({ type: 'dashboard' });
+      return;
+    }
+    navigateTo({ type: target } as Page);
   };
 
   // Build breadcrumbs based on current page
@@ -605,168 +351,14 @@ function MainApp() {
     }
   };
 
-  let content: React.ReactNode;
-  let activePageId: string = page.type;
-
-  switch (page.type) {
-    case 'dashboard':
-      content = role === 'ADMIN'
-        ? <PlatformAdminDashboard onNavigate={handleNavigate} />
-        : <Dashboard onProductClick={handleProductClick} onNavigate={handleNavigate} />;
-      break;
-    case 'product_detail':
-      content = (
-        <ProductDetail
-          productId={page.productId}
-          onBack={() => navigateTo({ type: 'products' })}
-          onNavigate={(id) => navigateTo({ type: 'product_detail', productId: id })}
-        />
-      );
-      activePageId = 'products';
-      break;
-    case 'products':
-      content = <ProductManagement onProductClick={handleProductClick} />;
-      break;
-    case 'profile':
-      // Транзитный кадр до срабатывания алиас-эффекта выше (#profile →
-      // #settings?section=profile) — рендерим сразу Settings Hub без мигания.
-      content = <SettingsPage />;
-      activePageId = 'settings';
-      break;
-    case 'settings':
-      content = <SettingsPage />;
-      break;
-    case 'request-detail':
-      content = (
-        <RequestDetailPage
-          dealId={page.dealId}
-          onBack={() => navigateTo({ type: activeStatus === 'SELLER' ? 'crm-deals' : 'my-requests' })}
-        />
-      );
-      activePageId = activeStatus === 'SELLER' ? 'crm-deals' : 'my-requests';
-      break;
-    case 'sourcing-requests':
-      // Consolidated into the single CRM → Deals pipeline. Keep the old hash route
-      // working by rendering the canonical Deals surface (no separate page).
-      content = <DealsPage />;
-      activePageId = 'crm-deals';
-      break;
-    case 'crm-deals':
-      content = <DealsPage />;
-      break;
-    case 'deal-quote':
-      // Same access surface as crm-deals (a seller working a КП). The backend
-      // enforces seller-only writes on the quote/quote-item endpoints.
-      content = <DealQuotePage dealId={page.dealId} onBack={() => navigateTo({ type: 'request-detail', dealId: page.dealId })} onNavigate={handleNavigate} />;
-      activePageId = 'crm-deals';
-      break;
-    case 'crm-quotes':
-      content = <QuotesPage />;
-      break;
-    case 'categories':
-      content = <CategoriesPage />;
-      break;
-    case 'equipment-groups':
-      content = <EquipmentGroupsPage />;
-      break;
-    case 'help':
-      content = <HelpPage />;
-      break;
-    case 'my-requests':
-      content = <MyRequestsPage />;
-      break;
-    case 'admin-users':
-      content = <AdminUsersPage />;
-      break;
-    case 'admin-kyc':
-      content = <AdminKYCPage />;
-      break;
-    case 'admin-subscriptions':
-      content = <AdminSubscriptionsPage />;
-      break;
-    case 'admin-entitlements':
-      content = <AdminEntitlementsPage />;
-      break;
-    case 'admin-role-apps':
-      content = <AdminRoleApplicationsPage />;
-      break;
-    case 'admin-catalog':
-      content = <AdminCatalogPage />;
-      break;
-    case 'admin-categories':
-      content = <AdminCategoriesPage />;
-      break;
-    case 'admin-equipment-groups':
-      content = <AdminEquipmentGroupsPage />;
-      break;
-    case 'admin-offers':
-      content = <AdminOffersPage />;
-      break;
-    case 'admin-companies':
-      content = <AdminCompaniesPage />;
-      break;
-    case 'admin-deals':
-      content = <AdminDealsPage />;
-      break;
-    case 'admin-master-data':
-      content = <AdminMasterDataPage />;
-      break;
-    case 'admin-email-templates':
-      content = <AdminEmailTemplatesPage />;
-      break;
-    case 'admin-operator-roles':
-      content = <AdminOperatorRolesPage />;
-      break;
-    case 'admin-access-log':
-      content = <AdminAccessLogPage />;
-      break;
-    case 'admin-support':
-      content = <AdminSupportPage />;
-      break;
-    case 'admin-leads':
-      content = <AdminLeadsPage />;
-      break;
-    case 'clients':
-      content = <CounterpartiesPage direction="CLIENT" />;
-      break;
-    case 'suppliers':
-      content = <CounterpartiesPage direction="SUPPLIER" />;
-      break;
-    case 'contracts':
-      content = <ContractsPage />;
-      break;
-    case 'invoices':
-      content = <InvoicesPage />;
-      break;
-    case 'payments':
-      content = <PaymentsPage />;
-      break;
-    case 'acts':
-      content = <ActsPage />;
-      break;
-    case 'other-documents':
-      content = <OtherDocumentsPage />;
-      break;
-    case 'company-files':
-      content = <CompanyFilesPage />;
-      break;
-    case 'fulfillments':
-      content = <FulfillmentsPage />;
-      break;
-    case 'my-subscription':
-      content = <MySubscriptionPage />;
-      break;
-    case 'catalog-import':
-      content = <CatalogImportPage />;
-      break;
-    default:
-      // Unknown/stale hash → fall back to the role-correct dashboard (never show a
-      // platform admin the buyer dashboard, as a raw default would).
-      content = role === 'ADMIN'
-        ? <PlatformAdminDashboard onNavigate={handleNavigate} />
-        : <Dashboard onProductClick={handleProductClick} onNavigate={handleNavigate} />;
-      activePageId = 'dashboard';
-  }
+  const { content, activePageId } = renderPage({
+    page,
+    role,
+    activeStatus,
+    navigateTo,
+    onNavigate: handleNavigate,
+    onProductClick: handleProductClick,
+  });
 
   const breadcrumbs = getBreadcrumbs();
   const isPlatformAdmin = useUserStore((s) => s.role === 'ADMIN');
