@@ -1,0 +1,248 @@
+"""Detail-экшены биллинга обязаны проверять объектные права.
+
+Часть экшенов брала `pk` из URL напрямую (`int(pk)`) вместо `self.get_object()`. В DRF
+объектные права (`check_object_permissions`) и сужение `get_queryset()` применяются ТОЛЬКО
+внутри `get_object()`, поэтому такой экшен обходил обе защиты: доступ зависел исключительно
+от того, проверяет ли что-то сам сервис.
+
+Для большинства экшенов сервис проверял (`record_payment` — членство покупателя,
+`generate_act` — роутинг продавца, подпись договора — `viewer_can_sign_*`). Но у подписания
+акта и отмены договора проверки не было, и посторонний пользователь мог менять чужие
+документы по прямому id.
+
+Эти тесты фиксируют границу: пользователь компании, не участвующей в сделке, не должен
+получать доступ ни к одному detail-экшену её документов.
+"""
+
+from datetime import timedelta
+from decimal import Decimal
+
+import pytest
+from django.utils import timezone
+from rest_framework.test import APIClient
+from rest_framework_simplejwt.tokens import RefreshToken
+
+from accounts.models import (
+    Company,
+    CompanyMember,
+    CompanyType,
+    CustomUser,
+    SupplierSubscription,
+    SystemRole,
+    VerificationStatus,
+    WorkspaceRole,
+)
+from crm.models import (
+    ActStatus,
+    Contract,
+    ContractStatus,
+    Deal,
+    DealSellerRouting,
+    DealStage,
+    InvoiceStatus,
+    Quote,
+    QuoteStatus,
+)
+from crm.services.billing import generate_act, generate_invoice_from_contract
+
+#: Посторонний не должен отличать «нет доступа» от «нет объекта» — оба ответа скрывают
+#: существование чужого документа.
+DENIED = (403, 404)
+
+
+@pytest.fixture
+def lookups(db):
+    WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
+    for code in ("CLIENT", "SUPPLIER"):
+        CompanyType.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
+    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
+    SystemRole.objects.get_or_create(code="USER", defaults={"name": "User", "sort_order": 10})
+    for code in ("DRAFT", "CONTRACT_SIGNED"):
+        DealStage.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
+    QuoteStatus.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})
+    for code in ("DRAFT", "PENDING_CLIENT", "SIGNED", "CANCELLED"):
+        ContractStatus.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
+    for code in ("DRAFT", "ISSUED", "PARTIAL", "PAID", "CANCELLED"):
+        InvoiceStatus.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
+    for code in ("DRAFT", "ISSUED", "SIGNED", "CANCELLED"):
+        ActStatus.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
+
+
+def _company(name, inn, type_code):
+    company = Company.objects.create(
+        name=name, inn=inn, verification_status=VerificationStatus.objects.get(code="L2_VERIFIED")
+    )
+    company.types.add(CompanyType.objects.get(code=type_code))
+    return company
+
+
+def _member(company, email, **capabilities):
+    user = CustomUser.objects.create_user(email=email, username=email, password="x")
+    CompanyMember.objects.create(
+        user=user,
+        company=company,
+        role=WorkspaceRole.objects.get(code="OWNER"),
+        is_active=True,
+        is_primary=True,
+        **capabilities,
+    )
+    return user
+
+
+def _api(user):
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user).access_token}")
+    return client
+
+
+@pytest.fixture
+def world(lookups):
+    """Сделка покупателя с зароутиненным продавцом — и ПОСТОРОННЯЯ компания вне сделки."""
+    buyer_co = _company("Покупатель", "SB903", "CLIENT")
+    buyer = _member(buyer_co, "buyer@scope.test", can_buy=True)
+
+    seller_co = _company("Продавец", "SS903", "SUPPLIER")
+    seller = _member(seller_co, "seller@scope.test", can_sell=True)
+    SupplierSubscription.objects.create(
+        company=seller_co,
+        plan="PREMIUM",
+        status="ACTIVE",
+        valid_until=timezone.now().date() + timedelta(days=30),
+    )
+
+    # Компания, не имеющая к сделке НИКАКОГО отношения: ни покупатель, ни зароутиненный продавец.
+    outsider_co = _company("Посторонние", "SX903", "CLIENT")
+    outsider = _member(outsider_co, "outsider@scope.test", can_buy=True)
+
+    deal = Deal.objects.create(title="Сделка", company=buyer_co, stage=DealStage.objects.get(code="CONTRACT_SIGNED"))
+    DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)
+    quote = Quote.objects.create(
+        deal=deal,
+        version=1,
+        status=QuoteStatus.objects.get(code="DRAFT"),
+        prepared_by=seller,
+        seller_company=seller_co,
+        subtotal_excl_vat=Decimal("100"),
+        vat_amount=Decimal("12"),
+        total_incl_vat=Decimal("112"),
+    )
+    contract = Contract.objects.create(
+        deal=deal,
+        quote=quote,
+        number="CT-SCOPE-903",
+        status=ContractStatus.objects.get(code="SIGNED"),
+        total_amount=Decimal("112"),
+    )
+    return {
+        "buyer": buyer,
+        "seller": seller,
+        "outsider": outsider,
+        "deal": deal,
+        "contract": contract,
+    }
+
+
+def _signed_act(world):
+    """Выпущенный акт по выставленному счёту — то, что посторонний не должен трогать."""
+    invoice, error = generate_invoice_from_contract(world["contract"].id, actor=None)
+    assert error is None, error
+    invoice.status = InvoiceStatus.objects.get(code="ISSUED")
+    invoice.save(update_fields=["status"])
+    act, error = generate_act(invoice.id, actor=world["seller"])
+    assert error is None, error
+    return invoice, act
+
+
+@pytest.mark.django_db
+class TestOutsiderCannotTouchForeignAct:
+    def test_outsider_cannot_sign_a_foreign_act(self, world):
+        """РЕГРЕСС. Экшен брал `int(pk)` вместо `self.get_object()`, а `sign_act` проверял
+        только оператора-наблюдателя — посторонний получал HTTP 200 и акт становился SIGNED."""
+        _invoice, act = _signed_act(world)
+
+        response = _api(world["outsider"]).post(f"/api/v1/crm/acts/{act.id}/sign/")
+
+        assert response.status_code in DENIED, f"посторонний подписал чужой акт: {response.status_code}"
+        act.refresh_from_db()
+        assert act.status_code == "ISSUED", "статус чужого акта изменён посторонним"
+
+    def test_outsider_cannot_read_a_foreign_act(self, world):
+        """Контроль: чтение уже было закрыто сужением queryset — граница та же."""
+        _invoice, act = _signed_act(world)
+        response = _api(world["outsider"]).get(f"/api/v1/crm/acts/{act.id}/")
+        assert response.status_code in DENIED
+
+    def test_buyer_of_the_deal_still_signs(self, world):
+        """Починка не должна закрыть доступ участнику сделки."""
+        _invoice, act = _signed_act(world)
+        response = _api(world["buyer"]).post(f"/api/v1/crm/acts/{act.id}/sign/")
+        assert response.status_code == 200, response.content
+        act.refresh_from_db()
+        assert act.status_code == "SIGNED"
+
+
+@pytest.mark.django_db
+class TestOutsiderCannotTouchForeignContract:
+    """Контроль: договор был защищён и до починки — фиксируем, что граница не потерялась.
+
+    Предположение, что `cancel_contract` уязвим (сервис не проверяет членство), тестом НЕ
+    подтвердилось: экшен `cancel` закрыт на уровне вьюсета через
+    `operator_permissions = {"cancel": "moderation.force_override"}`, то есть отменять договор
+    может только оператор платформы с этой возможностью, а не участник сделки.
+    """
+
+    def test_outsider_cannot_cancel_a_foreign_contract(self, world):
+        contract = world["contract"]
+        response = _api(world["outsider"]).post(f"/api/v1/crm/contracts/{contract.id}/cancel/")
+        assert response.status_code in DENIED
+        contract.refresh_from_db()
+        assert contract.status_code != "CANCELLED"
+
+    def test_participant_cannot_cancel_either(self, world):
+        """Отмена договора — операторское действие, не участника сделки."""
+        contract = world["contract"]
+        response = _api(world["buyer"]).post(f"/api/v1/crm/contracts/{contract.id}/cancel/")
+        assert response.status_code == 403
+        contract.refresh_from_db()
+        assert contract.status_code != "CANCELLED"
+
+    def test_outsider_cannot_sign_a_foreign_contract(self, world):
+        """Подпись договора проверялась сервисом (`viewer_can_sign_client`) и до починки.
+        Сервисный отказ приходит как 400 с кодом — важен ЭФФЕКТ: подписи не появилось."""
+        contract = world["contract"]
+        response = _api(world["outsider"]).post(f"/api/v1/crm/contracts/{contract.id}/sign-client/")
+        assert response.status_code != 200
+        contract.refresh_from_db()
+        assert contract.client_signed_at is None
+
+
+@pytest.mark.django_db
+class TestOutsiderCannotTouchForeignInvoice:
+    """Контроль: эти два экшена проверял САМ сервис и до починки.
+
+    Отказ приходит кодом 400 с бизнес-кодом в `detail`, а не 403/404 — поэтому проверяем
+    ЭФФЕКТ (состояние не изменилось), а не конкретный статус. Побочно это значит, что по
+    различию ответов посторонний может узнать о существовании чужого документа; менять коды
+    здесь не стал — это контракт API, его читает фронтенд.
+    """
+
+    def test_outsider_cannot_record_payment(self, world):
+        invoice, _act = _signed_act(world)
+        response = _api(world["outsider"]).post(
+            f"/api/v1/crm/invoices/{invoice.id}/record-payment/",
+            {"amount": "10", "paid_at": "2026-07-29"},
+            format="json",
+        )
+        assert response.status_code != 200
+        invoice.refresh_from_db()
+        assert invoice.amount_paid == Decimal("0"), "посторонний записал платёж по чужому счёту"
+
+    def test_outsider_cannot_generate_act(self, world):
+        """Аудит H4: продавец вне роутинга не выпускает акт по чужому счёту."""
+        from crm.models import Act
+
+        invoice, _act = _signed_act(world)
+        before = Act.objects.filter(invoice=invoice).count()
+        response = _api(world["outsider"]).post(f"/api/v1/crm/invoices/{invoice.id}/generate-act/")
+        assert response.status_code != 200
+        assert Act.objects.filter(invoice=invoice).count() == before, "посторонний выпустил акт"

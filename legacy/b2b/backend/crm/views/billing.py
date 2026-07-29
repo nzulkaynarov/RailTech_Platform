@@ -512,7 +512,12 @@ class ActViewSet(viewsets.ModelViewSet):
             except ValidationError as e:
                 return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        act, err = crm_services.sign_act(int(pk), request.user, signed_file=signed_file)
+        # `self.get_object()` — а не `int(pk)`: только внутри него DRF применяет
+        # `check_object_permissions` и сужение `get_queryset()`. С сырым pk экшен обходил обе
+        # защиты, а `sign_act` проверял лишь оператора-наблюдателя — посторонний пользователь
+        # подписывал ЧУЖОЙ акт по прямому id и получал HTTP 200. Соседние экшены акта
+        # (download-pdf, download-signed) уже шли через get_object.
+        act, err = crm_services.sign_act(self.get_object().id, request.user, signed_file=signed_file)
         if err:
             return Response({"detail": err}, status=400)
         return Response(ActSerializer(act).data)
