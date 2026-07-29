@@ -460,7 +460,12 @@ def sign_act(act_id: int, actor: CustomUser, signed_file=None) -> Tuple[Optional
 
     if is_platform_admin_viewer(actor):
         return None, "ADMIN_VIEWER_CANNOT_ACT"
-    act = Act.objects.select_for_update().select_related("status").get(pk=act_id)
+    # `of=("self",)` блокирует ТОЛЬКО строку акта. `Act.status` — nullable FK, поэтому
+    # `select_related("status")` даёт LEFT OUTER JOIN, а PostgreSQL запрещает `FOR UPDATE`
+    # по nullable-стороне внешнего соединения: без `of` запрос падал с NotSupportedError,
+    # то есть подписание акта отвечало 500. Не покрыто это было ровно потому, что код
+    # никогда не выполнялся в тестах.
+    act = Act.objects.select_for_update(of=("self",)).select_related("status").get(pk=act_id)
     if act.status_code != ActStatusCode.ISSUED:
         return None, "ACT_SIGN_NOT_ALLOWED"
     act.status = _astatus(ActStatusCode.SIGNED)

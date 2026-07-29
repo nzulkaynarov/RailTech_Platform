@@ -182,9 +182,9 @@ def test_dashboard_payload_keys_are_stable(lookups):
     """Форма ответа — контракт с SPA. Тест ловит выпавший ключ при правке сервиса."""
     from unittest.mock import MagicMock
 
-    from crm.services.dashboard_analytics import dashboard_analytics
-
     from django.core.cache import cache
+
+    from crm.services.dashboard_analytics import dashboard_analytics
 
     cache.clear()
     company = _company("Покупатель", "B100")
