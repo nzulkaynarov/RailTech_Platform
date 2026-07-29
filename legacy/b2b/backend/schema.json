@@ -7793,6 +7793,7 @@
         "/api/v1/crm/acts/": {
             "get": {
                 "operationId": "crm_acts_list",
+                "description": "Акты — только чтение плюс сервисные экшены ниже (Rule 8).\n\nВыпуск — через `invoices/{id}/generate-act/` (там же проверяется роутинг\nпродавца, аудит H4), подпись — через `acts/{id}/sign/`. Сырые create/update/\ndestroy обходили обе проверки и позволяли проставить номер, статус и даты руками.",
                 "parameters": [
                     {
                         "name": "page",
@@ -7833,54 +7834,12 @@
                         "description": ""
                     }
                 }
-            },
-            "post": {
-                "operationId": "crm_acts_create",
-                "tags": [
-                    "crm"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/ActRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/ActRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/ActRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Act"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
             }
         },
         "/api/v1/crm/acts/{id}/": {
             "get": {
                 "operationId": "crm_acts_retrieve",
+                "description": "Акты — только чтение плюс сервисные экшены ниже (Rule 8).\n\nВыпуск — через `invoices/{id}/generate-act/` (там же проверяется роутинг\nпродавца, аудит H4), подпись — через `acts/{id}/sign/`. Сырые create/update/\ndestroy обходили обе проверки и позволяли проставить номер, статус и даты руками.",
                 "parameters": [
                     {
                         "in": "path",
@@ -7910,140 +7869,6 @@
                             }
                         },
                         "description": ""
-                    }
-                }
-            },
-            "put": {
-                "operationId": "crm_acts_update",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Акт.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "crm"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/ActRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/ActRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/ActRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Act"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            },
-            "patch": {
-                "operationId": "crm_acts_partial_update",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Акт.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "crm"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedActRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedActRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedActRequest"
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Act"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            },
-            "delete": {
-                "operationId": "crm_acts_destroy",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Акт.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "crm"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "No response body"
                     }
                 }
             }
@@ -8051,6 +7876,7 @@
         "/api/v1/crm/acts/{id}/download-pdf/": {
             "get": {
                 "operationId": "crm_acts_download_pdf_retrieve",
+                "description": "Акты — только чтение плюс сервисные экшены ниже (Rule 8).\n\nВыпуск — через `invoices/{id}/generate-act/` (там же проверяется роутинг\nпродавца, аудит H4), подпись — через `acts/{id}/sign/`. Сырые create/update/\ndestroy обходили обе проверки и позволяли проставить номер, статус и даты руками.",
                 "parameters": [
                     {
                         "in": "path",
@@ -8087,6 +7913,7 @@
         "/api/v1/crm/acts/{id}/download-signed/": {
             "get": {
                 "operationId": "crm_acts_download_signed_retrieve",
+                "description": "Акты — только чтение плюс сервисные экшены ниже (Rule 8).\n\nВыпуск — через `invoices/{id}/generate-act/` (там же проверяется роутинг\nпродавца, аудит H4), подпись — через `acts/{id}/sign/`. Сырые create/update/\ndestroy обходили обе проверки и позволяли проставить номер, статус и даты руками.",
                 "parameters": [
                     {
                         "in": "path",
@@ -8123,6 +7950,7 @@
         "/api/v1/crm/acts/{id}/sign/": {
             "post": {
                 "operationId": "crm_acts_sign_create",
+                "description": "Акты — только чтение плюс сервисные экшены ниже (Rule 8).\n\nВыпуск — через `invoices/{id}/generate-act/` (там же проверяется роутинг\nпродавца, аудит H4), подпись — через `acts/{id}/sign/`. Сырые create/update/\ndestroy обходили обе проверки и позволяли проставить номер, статус и даты руками.",
                 "summary": "Sign act (mark as SIGNED)",
                 "parameters": [
                     {
@@ -11002,6 +10830,7 @@
         "/api/v1/crm/fulfillments/": {
             "get": {
                 "operationId": "crm_fulfillments_list",
+                "description": "Отгрузки — только чтение плюс экшен `update-status` (Rule 8).\n\nСырой CRUD позволял, среди прочего, проставить или сбросить `contract` —\nпривязку к владельцу, от которой зависит видимость записи для продавца.",
                 "parameters": [
                     {
                         "name": "page",
@@ -11042,54 +10871,12 @@
                         "description": ""
                     }
                 }
-            },
-            "post": {
-                "operationId": "crm_fulfillments_create",
-                "tags": [
-                    "crm"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/FulfillmentRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/FulfillmentRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/FulfillmentRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Fulfillment"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
             }
         },
         "/api/v1/crm/fulfillments/{id}/": {
             "get": {
                 "operationId": "crm_fulfillments_retrieve",
+                "description": "Отгрузки — только чтение плюс экшен `update-status` (Rule 8).\n\nСырой CRUD позволял, среди прочего, проставить или сбросить `contract` —\nпривязку к владельцу, от которой зависит видимость записи для продавца.",
                 "parameters": [
                     {
                         "in": "path",
@@ -11119,140 +10906,6 @@
                             }
                         },
                         "description": ""
-                    }
-                }
-            },
-            "put": {
-                "operationId": "crm_fulfillments_update",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Исполнение сделки.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "crm"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/FulfillmentRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/FulfillmentRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/FulfillmentRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Fulfillment"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            },
-            "patch": {
-                "operationId": "crm_fulfillments_partial_update",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Исполнение сделки.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "crm"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedFulfillmentRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedFulfillmentRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedFulfillmentRequest"
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Fulfillment"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            },
-            "delete": {
-                "operationId": "crm_fulfillments_destroy",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Исполнение сделки.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "crm"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "No response body"
                     }
                 }
             }
@@ -11260,6 +10913,7 @@
         "/api/v1/crm/fulfillments/update-status/": {
             "post": {
                 "operationId": "crm_fulfillments_update_status_create",
+                "description": "Отгрузки — только чтение плюс экшен `update-status` (Rule 8).\n\nСырой CRUD позволял, среди прочего, проставить или сбросить `contract` —\nпривязку к владельцу, от которой зависит видимость записи для продавца.",
                 "summary": "Update fulfillment status",
                 "tags": [
                     "CRM"
@@ -11704,7 +11358,7 @@
         "/api/v1/crm/invoices/": {
             "get": {
                 "operationId": "crm_invoices_list",
-                "description": "Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.",
+                "description": "Счета. Сырые `create`/`destroy` НЕ подключены намеренно (Rule 8).\n\nВыставление счёта — только через сервисные экшены `create-manual` и\n`generate-from-contract`; отмена — через `cancel` (сервис `cancel_invoice`).\nСырое удаление обходило бы отмену, а при наличии платежей падало бы в\n`ProtectedError` → 500 (`Payment.invoice` объявлен с `on_delete=PROTECT`).\n`update` оставлен: им правят черновик (due_date / notes), и он уже загейчен\nна DRAFT ниже — фронтенд использует именно его.",
                 "parameters": [
                     {
                         "name": "page",
@@ -11745,56 +11399,12 @@
                         "description": ""
                     }
                 }
-            },
-            "post": {
-                "operationId": "crm_invoices_create",
-                "description": "Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.",
-                "tags": [
-                    "crm"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/InvoiceRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/InvoiceRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/InvoiceRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Invoice"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
             }
         },
         "/api/v1/crm/invoices/{id}/": {
             "get": {
                 "operationId": "crm_invoices_retrieve",
-                "description": "Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.",
+                "description": "Счета. Сырые `create`/`destroy` НЕ подключены намеренно (Rule 8).\n\nВыставление счёта — только через сервисные экшены `create-manual` и\n`generate-from-contract`; отмена — через `cancel` (сервис `cancel_invoice`).\nСырое удаление обходило бы отмену, а при наличии платежей падало бы в\n`ProtectedError` → 500 (`Payment.invoice` объявлен с `on_delete=PROTECT`).\n`update` оставлен: им правят черновик (due_date / notes), и он уже загейчен\nна DRAFT ниже — фронтенд использует именно его.",
                 "parameters": [
                     {
                         "in": "path",
@@ -11884,7 +11494,7 @@
             },
             "patch": {
                 "operationId": "crm_invoices_partial_update",
-                "description": "Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.",
+                "description": "Счета. Сырые `create`/`destroy` НЕ подключены намеренно (Rule 8).\n\nВыставление счёта — только через сервисные экшены `create-manual` и\n`generate-from-contract`; отмена — через `cancel` (сервис `cancel_invoice`).\nСырое удаление обходило бы отмену, а при наличии платежей падало бы в\n`ProtectedError` → 500 (`Payment.invoice` объявлен с `on_delete=PROTECT`).\n`update` оставлен: им правят черновик (due_date / notes), и он уже загейчен\nна DRAFT ниже — фронтенд использует именно его.",
                 "parameters": [
                     {
                         "in": "path",
@@ -11935,40 +11545,12 @@
                         "description": ""
                     }
                 }
-            },
-            "delete": {
-                "operationId": "crm_invoices_destroy",
-                "description": "Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Инвойс.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "crm"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "No response body"
-                    }
-                }
             }
         },
         "/api/v1/crm/invoices/{id}/cancel/": {
             "post": {
                 "operationId": "crm_invoices_cancel_create",
-                "description": "Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.",
+                "description": "Счета. Сырые `create`/`destroy` НЕ подключены намеренно (Rule 8).\n\nВыставление счёта — только через сервисные экшены `create-manual` и\n`generate-from-contract`; отмена — через `cancel` (сервис `cancel_invoice`).\nСырое удаление обходило бы отмену, а при наличии платежей падало бы в\n`ProtectedError` → 500 (`Payment.invoice` объявлен с `on_delete=PROTECT`).\n`update` оставлен: им правят черновик (due_date / notes), и он уже загейчен\nна DRAFT ниже — фронтенд использует именно его.",
                 "summary": "Cancel an invoice (→ CANCELLED; not allowed if paid)",
                 "parameters": [
                     {
@@ -12026,7 +11608,7 @@
         "/api/v1/crm/invoices/{id}/download-pdf/": {
             "get": {
                 "operationId": "crm_invoices_download_pdf_retrieve",
-                "description": "Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.",
+                "description": "Счета. Сырые `create`/`destroy` НЕ подключены намеренно (Rule 8).\n\nВыставление счёта — только через сервисные экшены `create-manual` и\n`generate-from-contract`; отмена — через `cancel` (сервис `cancel_invoice`).\nСырое удаление обходило бы отмену, а при наличии платежей падало бы в\n`ProtectedError` → 500 (`Payment.invoice` объявлен с `on_delete=PROTECT`).\n`update` оставлен: им правят черновик (due_date / notes), и он уже загейчен\nна DRAFT ниже — фронтенд использует именно его.",
                 "parameters": [
                     {
                         "in": "path",
@@ -12063,7 +11645,7 @@
         "/api/v1/crm/invoices/{id}/generate-act/": {
             "post": {
                 "operationId": "crm_invoices_generate_act_create",
-                "description": "Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.",
+                "description": "Счета. Сырые `create`/`destroy` НЕ подключены намеренно (Rule 8).\n\nВыставление счёта — только через сервисные экшены `create-manual` и\n`generate-from-contract`; отмена — через `cancel` (сервис `cancel_invoice`).\nСырое удаление обходило бы отмену, а при наличии платежей падало бы в\n`ProtectedError` → 500 (`Payment.invoice` объявлен с `on_delete=PROTECT`).\n`update` оставлен: им правят черновик (due_date / notes), и он уже загейчен\nна DRAFT ниже — фронтенд использует именно его.",
                 "summary": "Generate Act for this invoice",
                 "parameters": [
                     {
@@ -12121,7 +11703,7 @@
         "/api/v1/crm/invoices/{id}/issue/": {
             "post": {
                 "operationId": "crm_invoices_issue_create",
-                "description": "Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.",
+                "description": "Счета. Сырые `create`/`destroy` НЕ подключены намеренно (Rule 8).\n\nВыставление счёта — только через сервисные экшены `create-manual` и\n`generate-from-contract`; отмена — через `cancel` (сервис `cancel_invoice`).\nСырое удаление обходило бы отмену, а при наличии платежей падало бы в\n`ProtectedError` → 500 (`Payment.invoice` объявлен с `on_delete=PROTECT`).\n`update` оставлен: им правят черновик (due_date / notes), и он уже загейчен\nна DRAFT ниже — фронтенд использует именно его.",
                 "summary": "Issue a DRAFT invoice (DRAFT → ISSUED)",
                 "parameters": [
                     {
@@ -12179,7 +11761,7 @@
         "/api/v1/crm/invoices/{id}/record-payment/": {
             "post": {
                 "operationId": "crm_invoices_record_payment_create",
-                "description": "Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.",
+                "description": "Счета. Сырые `create`/`destroy` НЕ подключены намеренно (Rule 8).\n\nВыставление счёта — только через сервисные экшены `create-manual` и\n`generate-from-contract`; отмена — через `cancel` (сервис `cancel_invoice`).\nСырое удаление обходило бы отмену, а при наличии платежей падало бы в\n`ProtectedError` → 500 (`Payment.invoice` объявлен с `on_delete=PROTECT`).\n`update` оставлен: им правят черновик (due_date / notes), и он уже загейчен\nна DRAFT ниже — фронтенд использует именно его.",
                 "summary": "Record a payment against this invoice",
                 "parameters": [
                     {
@@ -12287,7 +11869,7 @@
         "/api/v1/crm/invoices/generate-from-contract/": {
             "post": {
                 "operationId": "crm_invoices_generate_from_contract_create",
-                "description": "Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.",
+                "description": "Счета. Сырые `create`/`destroy` НЕ подключены намеренно (Rule 8).\n\nВыставление счёта — только через сервисные экшены `create-manual` и\n`generate-from-contract`; отмена — через `cancel` (сервис `cancel_invoice`).\nСырое удаление обходило бы отмену, а при наличии платежей падало бы в\n`ProtectedError` → 500 (`Payment.invoice` объявлен с `on_delete=PROTECT`).\n`update` оставлен: им правят черновик (due_date / notes), и он уже загейчен\nна DRAFT ниже — фронтенд использует именно его.",
                 "summary": "Generate invoice from a signed contract",
                 "tags": [
                     "CRM"
@@ -13099,6 +12681,7 @@
         "/api/v1/crm/payments/": {
             "get": {
                 "operationId": "crm_payments_list",
+                "description": "Платежи — ТОЛЬКО чтение (Rule 8).\n\nЗапись идёт исключительно через `invoices/{id}/record-payment/` → сервис\n`record_payment`, который проверяет права покупателя, статус счёта и\nположительность суммы, пересчитывает `amount_paid`/статус и пишет в аудит.\nСырой `POST /crm/payments/` всё это обходил: любой аутентифицированный\nпользователь мог вписать в реестр строку (в т.ч. отрицательную) по ЧУЖОМУ\nсчёту, а `amount_paid` счёта при этом не менялся — реестр расходился со счётом.",
                 "parameters": [
                     {
                         "name": "page",
@@ -13139,54 +12722,12 @@
                         "description": ""
                     }
                 }
-            },
-            "post": {
-                "operationId": "crm_payments_create",
-                "tags": [
-                    "crm"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PaymentRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PaymentRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PaymentRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Payment"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
             }
         },
         "/api/v1/crm/payments/{id}/": {
             "get": {
                 "operationId": "crm_payments_retrieve",
+                "description": "Платежи — ТОЛЬКО чтение (Rule 8).\n\nЗапись идёт исключительно через `invoices/{id}/record-payment/` → сервис\n`record_payment`, который проверяет права покупателя, статус счёта и\nположительность суммы, пересчитывает `amount_paid`/статус и пишет в аудит.\nСырой `POST /crm/payments/` всё это обходил: любой аутентифицированный\nпользователь мог вписать в реестр строку (в т.ч. отрицательную) по ЧУЖОМУ\nсчёту, а `amount_paid` счёта при этом не менялся — реестр расходился со счётом.",
                 "parameters": [
                     {
                         "in": "path",
@@ -13216,140 +12757,6 @@
                             }
                         },
                         "description": ""
-                    }
-                }
-            },
-            "put": {
-                "operationId": "crm_payments_update",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Платёж.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "crm"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PaymentRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PaymentRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PaymentRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Payment"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            },
-            "patch": {
-                "operationId": "crm_payments_partial_update",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Платёж.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "crm"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedPaymentRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedPaymentRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedPaymentRequest"
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Payment"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            },
-            "delete": {
-                "operationId": "crm_payments_destroy",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Платёж.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "crm"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "No response body"
                     }
                 }
             }
@@ -24640,41 +24047,6 @@
                     }
                 }
             },
-            "PatchedActRequest": {
-                "type": "object",
-                "properties": {
-                    "deal": {
-                        "type": "integer",
-                        "title": "Сделка"
-                    },
-                    "contract": {
-                        "type": "integer",
-                        "nullable": true
-                    },
-                    "invoice": {
-                        "type": "integer",
-                        "nullable": true
-                    },
-                    "issued_at": {
-                        "type": "string",
-                        "format": "date",
-                        "nullable": true
-                    },
-                    "total_amount": {
-                        "type": "string",
-                        "format": "decimal",
-                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
-                    },
-                    "signed_file": {
-                        "type": "string",
-                        "format": "binary",
-                        "nullable": true
-                    },
-                    "notes": {
-                        "type": "string"
-                    }
-                }
-            },
             "PatchedAttachmentRequest": {
                 "type": "object",
                 "properties": {
@@ -25503,50 +24875,6 @@
                     }
                 }
             },
-            "PatchedFulfillmentRequest": {
-                "type": "object",
-                "properties": {
-                    "deal": {
-                        "type": "integer",
-                        "title": "Сделка"
-                    },
-                    "contract": {
-                        "type": "integer",
-                        "nullable": true
-                    },
-                    "shipped_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "nullable": true
-                    },
-                    "delivered_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "nullable": true
-                    },
-                    "accepted_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "nullable": true
-                    },
-                    "expected_delivery_date": {
-                        "type": "string",
-                        "format": "date",
-                        "nullable": true
-                    },
-                    "tracking_number": {
-                        "type": "string",
-                        "maxLength": 128
-                    },
-                    "carrier": {
-                        "type": "string",
-                        "maxLength": 128
-                    },
-                    "notes": {
-                        "type": "string"
-                    }
-                }
-            },
             "PatchedInvoiceRequest": {
                 "type": "object",
                 "properties": {
@@ -25743,39 +25071,6 @@
                     "description": {
                         "type": "string",
                         "title": "Описание"
-                    }
-                }
-            },
-            "PatchedPaymentRequest": {
-                "type": "object",
-                "properties": {
-                    "invoice": {
-                        "type": "integer",
-                        "title": "Инвойс"
-                    },
-                    "amount": {
-                        "type": "string",
-                        "format": "decimal",
-                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
-                    },
-                    "method": {
-                        "$ref": "#/components/schemas/MethodEnum"
-                    },
-                    "paid_at": {
-                        "type": "string",
-                        "format": "date",
-                        "title": "Дата платежа"
-                    },
-                    "reference": {
-                        "type": "string",
-                        "title": "Референс / номер операции",
-                        "maxLength": 255
-                    },
-                    "proof_file": {
-                        "type": "string",
-                        "format": "binary",
-                        "nullable": true,
-                        "title": "Подтверждение"
                     }
                 }
             },

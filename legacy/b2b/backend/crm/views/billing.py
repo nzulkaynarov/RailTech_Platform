@@ -1,5 +1,6 @@
 from django.db.models import Q
 from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
+from rest_framework import mixins
 from rest_framework import serializers as drf_serializers
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -256,7 +257,23 @@ class ContractViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         return Response(ContractSerializer(contract).data)
 
 
-class InvoiceViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
+class InvoiceViewSet(
+    OptimisticLockingMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
+    """Счета. Сырые `create`/`destroy` НЕ подключены намеренно (Rule 8).
+
+    Выставление счёта — только через сервисные экшены `create-manual` и
+    `generate-from-contract`; отмена — через `cancel` (сервис `cancel_invoice`).
+    Сырое удаление обходило бы отмену, а при наличии платежей падало бы в
+    `ProtectedError` → 500 (`Payment.invoice` объявлен с `on_delete=PROTECT`).
+    `update` оставлен: им правят черновик (due_date / notes), и он уже загейчен
+    на DRAFT ниже — фронтенд использует именно его.
+    """
+
     serializer_class = InvoiceSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
 
@@ -446,7 +463,17 @@ class InvoiceViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         return Response(ActSerializer(act).data, status=201)
 
 
-class PaymentViewSet(viewsets.ModelViewSet):
+class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
+    """Платежи — ТОЛЬКО чтение (Rule 8).
+
+    Запись идёт исключительно через `invoices/{id}/record-payment/` → сервис
+    `record_payment`, который проверяет права покупателя, статус счёта и
+    положительность суммы, пересчитывает `amount_paid`/статус и пишет в аудит.
+    Сырой `POST /crm/payments/` всё это обходил: любой аутентифицированный
+    пользователь мог вписать в реестр строку (в т.ч. отрицательную) по ЧУЖОМУ
+    счёту, а `amount_paid` счёта при этом не менялся — реестр расходился со счётом.
+    """
+
     serializer_class = PaymentSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
 
@@ -470,7 +497,14 @@ class PaymentViewSet(viewsets.ModelViewSet):
         ).distinct()
 
 
-class ActViewSet(viewsets.ModelViewSet):
+class ActViewSet(viewsets.ReadOnlyModelViewSet):
+    """Акты — только чтение плюс сервисные экшены ниже (Rule 8).
+
+    Выпуск — через `invoices/{id}/generate-act/` (там же проверяется роутинг
+    продавца, аудит H4), подпись — через `acts/{id}/sign/`. Сырые create/update/
+    destroy обходили обе проверки и позволяли проставить номер, статус и даты руками.
+    """
+
     serializer_class = ActSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
 
@@ -523,7 +557,13 @@ class ActViewSet(viewsets.ModelViewSet):
         return Response(ActSerializer(act).data)
 
 
-class FulfillmentViewSet(viewsets.ModelViewSet):
+class FulfillmentViewSet(viewsets.ReadOnlyModelViewSet):
+    """Отгрузки — только чтение плюс экшен `update-status` (Rule 8).
+
+    Сырой CRUD позволял, среди прочего, проставить или сбросить `contract` —
+    привязку к владельцу, от которой зависит видимость записи для продавца.
+    """
+
     serializer_class = FulfillmentSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
 

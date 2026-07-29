@@ -136,9 +136,6 @@ export const invoicesApi = {
     const response = await apiClient.patch<Invoice>(`crm/invoices/${id}/`, payload);
     return response.data;
   },
-  remove: async (id: number) => {
-    await apiClient.delete(`crm/invoices/${id}/`);
-  },
 };
 
 // ─── Payments ─────────────────────────────────────────────────

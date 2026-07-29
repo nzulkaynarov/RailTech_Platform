@@ -246,3 +246,78 @@ class TestOutsiderCannotTouchForeignInvoice:
         response = _api(world["outsider"]).post(f"/api/v1/crm/invoices/{invoice.id}/generate-act/")
         assert response.status_code != 200
         assert Act.objects.filter(invoice=invoice).count() == before, "посторонний выпустил акт"
+
+
+# ── Сырой CRUD в обход сервисов ───────────────────────────────────────────────
+
+
+@pytest.mark.django_db
+class TestRawCrudIsClosed:
+    """Записывающие маршруты коллекций закрыты: запись идёт только через сервисные экшены.
+
+    До починки `POST /crm/payments/` создавал платёж мимо `record_payment`: посторонний
+    пользователь вписывал в реестр строку по ЧУЖОМУ счёту (проверено — HTTP 201, сумма −999),
+    при этом `amount_paid` счёта не пересчитывался, то есть реестр расходился со счётом.
+    """
+
+    def test_raw_payment_create_is_closed(self, world):
+        """РЕГРЕСС. Ни постороннему, ни участнику — платёж создаётся только сервисом."""
+        from crm.models import Payment
+
+        invoice, _act = _signed_act(world)
+        payload = {"invoice": invoice.id, "amount": "-999", "paid_at": "2026-07-29", "reference": "RAW-1"}
+
+        for actor in (world["outsider"], world["buyer"]):
+            response = _api(actor).post("/api/v1/crm/payments/", payload, format="json")
+            assert response.status_code == 405, f"сырое создание платежа доступно: {response.status_code}"
+
+        assert Payment.objects.filter(invoice=invoice).count() == 0
+        invoice.refresh_from_db()
+        assert invoice.amount_paid == Decimal("0")
+
+    def test_service_path_for_payments_still_works(self, world):
+        """Закрытие сырого маршрута не должно ломать штатную фиксацию платежа."""
+        invoice, _act = _signed_act(world)
+        response = _api(world["buyer"]).post(
+            f"/api/v1/crm/invoices/{invoice.id}/record-payment/",
+            {"amount": "50", "paid_at": "2026-07-29"},
+            format="json",
+        )
+        assert response.status_code in (200, 201), response.content
+        invoice.refresh_from_db()
+        assert invoice.amount_paid == Decimal("50"), "сервисный путь перестал пересчитывать счёт"
+
+    def test_raw_act_write_is_closed(self, world):
+        """Акт выпускается сервисом (с проверкой роутинга), а не сырым POST."""
+        invoice, act = _signed_act(world)
+        create = _api(world["seller"]).post(
+            "/api/v1/crm/acts/",
+            {"deal": world["deal"].id, "invoice": invoice.id, "total_amount": "1"},
+            format="json",
+        )
+        assert create.status_code == 405
+        patch = _api(world["seller"]).patch(f"/api/v1/crm/acts/{act.id}/", {"total_amount": "1"}, format="json")
+        assert patch.status_code == 405
+        delete = _api(world["seller"]).delete(f"/api/v1/crm/acts/{act.id}/")
+        assert delete.status_code == 405
+
+    def test_act_service_actions_still_work(self, world):
+        """Чтение и сервисные экшены акта не должны пострадать от закрытия CRUD."""
+        _invoice, act = _signed_act(world)
+        assert _api(world["buyer"]).get(f"/api/v1/crm/acts/{act.id}/").status_code == 200
+        assert _api(world["buyer"]).post(f"/api/v1/crm/acts/{act.id}/sign/").status_code == 200
+
+    def test_raw_invoice_create_and_delete_are_closed(self, world):
+        """Счёт выставляется через create-manual / generate-from-contract, отменяется через
+        cancel. Сырое удаление обходило отмену и падало бы в ProtectedError при платежах."""
+        invoice, _act = _signed_act(world)
+        create = _api(world["seller"]).post("/api/v1/crm/invoices/", {"deal": world["deal"].id}, format="json")
+        assert create.status_code == 405
+        delete = _api(world["seller"]).delete(f"/api/v1/crm/invoices/{invoice.id}/")
+        assert delete.status_code == 405
+
+    def test_raw_fulfillment_write_is_closed(self, world):
+        """Сырой CRUD позволял проставить/сбросить `contract` — привязку к владельцу,
+        от которой зависит видимость отгрузки для продавца."""
+        create = _api(world["seller"]).post("/api/v1/crm/fulfillments/", {"deal": world["deal"].id}, format="json")
+        assert create.status_code == 405

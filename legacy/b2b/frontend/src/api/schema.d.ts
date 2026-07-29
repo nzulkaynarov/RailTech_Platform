@@ -2800,9 +2800,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * @description Акты — только чтение плюс сервисные экшены ниже (Rule 8).
+         *
+         *     Выпуск — через `invoices/{id}/generate-act/` (там же проверяется роутинг
+         *     продавца, аудит H4), подпись — через `acts/{id}/sign/`. Сырые create/update/
+         *     destroy обходили обе проверки и позволяли проставить номер, статус и даты руками.
+         */
         get: operations["crm_acts_list"];
         put?: never;
-        post: operations["crm_acts_create"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2816,13 +2823,20 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * @description Акты — только чтение плюс сервисные экшены ниже (Rule 8).
+         *
+         *     Выпуск — через `invoices/{id}/generate-act/` (там же проверяется роутинг
+         *     продавца, аудит H4), подпись — через `acts/{id}/sign/`. Сырые create/update/
+         *     destroy обходили обе проверки и позволяли проставить номер, статус и даты руками.
+         */
         get: operations["crm_acts_retrieve"];
-        put: operations["crm_acts_update"];
+        put?: never;
         post?: never;
-        delete: operations["crm_acts_destroy"];
+        delete?: never;
         options?: never;
         head?: never;
-        patch: operations["crm_acts_partial_update"];
+        patch?: never;
         trace?: never;
     };
     "/api/v1/crm/acts/{id}/download-pdf/": {
@@ -2832,6 +2846,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * @description Акты — только чтение плюс сервисные экшены ниже (Rule 8).
+         *
+         *     Выпуск — через `invoices/{id}/generate-act/` (там же проверяется роутинг
+         *     продавца, аудит H4), подпись — через `acts/{id}/sign/`. Сырые create/update/
+         *     destroy обходили обе проверки и позволяли проставить номер, статус и даты руками.
+         */
         get: operations["crm_acts_download_pdf_retrieve"];
         put?: never;
         post?: never;
@@ -2848,6 +2869,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * @description Акты — только чтение плюс сервисные экшены ниже (Rule 8).
+         *
+         *     Выпуск — через `invoices/{id}/generate-act/` (там же проверяется роутинг
+         *     продавца, аудит H4), подпись — через `acts/{id}/sign/`. Сырые create/update/
+         *     destroy обходили обе проверки и позволяли проставить номер, статус и даты руками.
+         */
         get: operations["crm_acts_download_signed_retrieve"];
         put?: never;
         post?: never;
@@ -2866,7 +2894,14 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Sign act (mark as SIGNED) */
+        /**
+         * Sign act (mark as SIGNED)
+         * @description Акты — только чтение плюс сервисные экшены ниже (Rule 8).
+         *
+         *     Выпуск — через `invoices/{id}/generate-act/` (там же проверяется роутинг
+         *     продавца, аудит H4), подпись — через `acts/{id}/sign/`. Сырые create/update/
+         *     destroy обходили обе проверки и позволяли проставить номер, статус и даты руками.
+         */
         post: operations["crm_acts_sign_create"];
         delete?: never;
         options?: never;
@@ -3832,9 +3867,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * @description Отгрузки — только чтение плюс экшен `update-status` (Rule 8).
+         *
+         *     Сырой CRUD позволял, среди прочего, проставить или сбросить `contract` —
+         *     привязку к владельцу, от которой зависит видимость записи для продавца.
+         */
         get: operations["crm_fulfillments_list"];
         put?: never;
-        post: operations["crm_fulfillments_create"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3848,13 +3889,19 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * @description Отгрузки — только чтение плюс экшен `update-status` (Rule 8).
+         *
+         *     Сырой CRUD позволял, среди прочего, проставить или сбросить `contract` —
+         *     привязку к владельцу, от которой зависит видимость записи для продавца.
+         */
         get: operations["crm_fulfillments_retrieve"];
-        put: operations["crm_fulfillments_update"];
+        put?: never;
         post?: never;
-        delete: operations["crm_fulfillments_destroy"];
+        delete?: never;
         options?: never;
         head?: never;
-        patch: operations["crm_fulfillments_partial_update"];
+        patch?: never;
         trace?: never;
     };
     "/api/v1/crm/fulfillments/update-status/": {
@@ -3866,7 +3913,13 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Update fulfillment status */
+        /**
+         * Update fulfillment status
+         * @description Отгрузки — только чтение плюс экшен `update-status` (Rule 8).
+         *
+         *     Сырой CRUD позволял, среди прочего, проставить или сбросить `contract` —
+         *     привязку к владельцу, от которой зависит видимость записи для продавца.
+         */
         post: operations["crm_fulfillments_update_status_create"];
         delete?: never;
         options?: never;
@@ -4051,11 +4104,19 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`. */
+        /**
+         * @description Счета. Сырые `create`/`destroy` НЕ подключены намеренно (Rule 8).
+         *
+         *     Выставление счёта — только через сервисные экшены `create-manual` и
+         *     `generate-from-contract`; отмена — через `cancel` (сервис `cancel_invoice`).
+         *     Сырое удаление обходило бы отмену, а при наличии платежей падало бы в
+         *     `ProtectedError` → 500 (`Payment.invoice` объявлен с `on_delete=PROTECT`).
+         *     `update` оставлен: им правят черновик (due_date / notes), и он уже загейчен
+         *     на DRAFT ниже — фронтенд использует именно его.
+         */
         get: operations["crm_invoices_list"];
         put?: never;
-        /** @description Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`. */
-        post: operations["crm_invoices_create"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4069,7 +4130,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`. */
+        /**
+         * @description Счета. Сырые `create`/`destroy` НЕ подключены намеренно (Rule 8).
+         *
+         *     Выставление счёта — только через сервисные экшены `create-manual` и
+         *     `generate-from-contract`; отмена — через `cancel` (сервис `cancel_invoice`).
+         *     Сырое удаление обходило бы отмену, а при наличии платежей падало бы в
+         *     `ProtectedError` → 500 (`Payment.invoice` объявлен с `on_delete=PROTECT`).
+         *     `update` оставлен: им правят черновик (due_date / notes), и он уже загейчен
+         *     на DRAFT ниже — фронтенд использует именно его.
+         */
         get: operations["crm_invoices_retrieve"];
         /**
          * @description DRAFT-only edit, restricted to due_date / notes (amounts mirror the contract, never
@@ -4078,11 +4148,19 @@ export interface paths {
          */
         put: operations["crm_invoices_update"];
         post?: never;
-        /** @description Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`. */
-        delete: operations["crm_invoices_destroy"];
+        delete?: never;
         options?: never;
         head?: never;
-        /** @description Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`. */
+        /**
+         * @description Счета. Сырые `create`/`destroy` НЕ подключены намеренно (Rule 8).
+         *
+         *     Выставление счёта — только через сервисные экшены `create-manual` и
+         *     `generate-from-contract`; отмена — через `cancel` (сервис `cancel_invoice`).
+         *     Сырое удаление обходило бы отмену, а при наличии платежей падало бы в
+         *     `ProtectedError` → 500 (`Payment.invoice` объявлен с `on_delete=PROTECT`).
+         *     `update` оставлен: им правят черновик (due_date / notes), и он уже загейчен
+         *     на DRAFT ниже — фронтенд использует именно его.
+         */
         patch: operations["crm_invoices_partial_update"];
         trace?: never;
     };
@@ -4097,7 +4175,14 @@ export interface paths {
         put?: never;
         /**
          * Cancel an invoice (→ CANCELLED; not allowed if paid)
-         * @description Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.
+         * @description Счета. Сырые `create`/`destroy` НЕ подключены намеренно (Rule 8).
+         *
+         *     Выставление счёта — только через сервисные экшены `create-manual` и
+         *     `generate-from-contract`; отмена — через `cancel` (сервис `cancel_invoice`).
+         *     Сырое удаление обходило бы отмену, а при наличии платежей падало бы в
+         *     `ProtectedError` → 500 (`Payment.invoice` объявлен с `on_delete=PROTECT`).
+         *     `update` оставлен: им правят черновик (due_date / notes), и он уже загейчен
+         *     на DRAFT ниже — фронтенд использует именно его.
          */
         post: operations["crm_invoices_cancel_create"];
         delete?: never;
@@ -4113,7 +4198,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`. */
+        /**
+         * @description Счета. Сырые `create`/`destroy` НЕ подключены намеренно (Rule 8).
+         *
+         *     Выставление счёта — только через сервисные экшены `create-manual` и
+         *     `generate-from-contract`; отмена — через `cancel` (сервис `cancel_invoice`).
+         *     Сырое удаление обходило бы отмену, а при наличии платежей падало бы в
+         *     `ProtectedError` → 500 (`Payment.invoice` объявлен с `on_delete=PROTECT`).
+         *     `update` оставлен: им правят черновик (due_date / notes), и он уже загейчен
+         *     на DRAFT ниже — фронтенд использует именно его.
+         */
         get: operations["crm_invoices_download_pdf_retrieve"];
         put?: never;
         post?: never;
@@ -4134,7 +4228,14 @@ export interface paths {
         put?: never;
         /**
          * Generate Act for this invoice
-         * @description Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.
+         * @description Счета. Сырые `create`/`destroy` НЕ подключены намеренно (Rule 8).
+         *
+         *     Выставление счёта — только через сервисные экшены `create-manual` и
+         *     `generate-from-contract`; отмена — через `cancel` (сервис `cancel_invoice`).
+         *     Сырое удаление обходило бы отмену, а при наличии платежей падало бы в
+         *     `ProtectedError` → 500 (`Payment.invoice` объявлен с `on_delete=PROTECT`).
+         *     `update` оставлен: им правят черновик (due_date / notes), и он уже загейчен
+         *     на DRAFT ниже — фронтенд использует именно его.
          */
         post: operations["crm_invoices_generate_act_create"];
         delete?: never;
@@ -4154,7 +4255,14 @@ export interface paths {
         put?: never;
         /**
          * Issue a DRAFT invoice (DRAFT → ISSUED)
-         * @description Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.
+         * @description Счета. Сырые `create`/`destroy` НЕ подключены намеренно (Rule 8).
+         *
+         *     Выставление счёта — только через сервисные экшены `create-manual` и
+         *     `generate-from-contract`; отмена — через `cancel` (сервис `cancel_invoice`).
+         *     Сырое удаление обходило бы отмену, а при наличии платежей падало бы в
+         *     `ProtectedError` → 500 (`Payment.invoice` объявлен с `on_delete=PROTECT`).
+         *     `update` оставлен: им правят черновик (due_date / notes), и он уже загейчен
+         *     на DRAFT ниже — фронтенд использует именно его.
          */
         post: operations["crm_invoices_issue_create"];
         delete?: never;
@@ -4174,7 +4282,14 @@ export interface paths {
         put?: never;
         /**
          * Record a payment against this invoice
-         * @description Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.
+         * @description Счета. Сырые `create`/`destroy` НЕ подключены намеренно (Rule 8).
+         *
+         *     Выставление счёта — только через сервисные экшены `create-manual` и
+         *     `generate-from-contract`; отмена — через `cancel` (сервис `cancel_invoice`).
+         *     Сырое удаление обходило бы отмену, а при наличии платежей падало бы в
+         *     `ProtectedError` → 500 (`Payment.invoice` объявлен с `on_delete=PROTECT`).
+         *     `update` оставлен: им правят черновик (due_date / notes), и он уже загейчен
+         *     на DRAFT ниже — фронтенд использует именно его.
          */
         post: operations["crm_invoices_record_payment_create"];
         delete?: never;
@@ -4214,7 +4329,14 @@ export interface paths {
         put?: never;
         /**
          * Generate invoice from a signed contract
-         * @description Mix in BEFORE the ViewSet base. Requires the model to have `updated_at`.
+         * @description Счета. Сырые `create`/`destroy` НЕ подключены намеренно (Rule 8).
+         *
+         *     Выставление счёта — только через сервисные экшены `create-manual` и
+         *     `generate-from-contract`; отмена — через `cancel` (сервис `cancel_invoice`).
+         *     Сырое удаление обходило бы отмену, а при наличии платежей падало бы в
+         *     `ProtectedError` → 500 (`Payment.invoice` объявлен с `on_delete=PROTECT`).
+         *     `update` оставлен: им правят черновик (due_date / notes), и он уже загейчен
+         *     на DRAFT ниже — фронтенд использует именно его.
          */
         post: operations["crm_invoices_generate_from_contract_create"];
         delete?: never;
@@ -4418,9 +4540,19 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * @description Платежи — ТОЛЬКО чтение (Rule 8).
+         *
+         *     Запись идёт исключительно через `invoices/{id}/record-payment/` → сервис
+         *     `record_payment`, который проверяет права покупателя, статус счёта и
+         *     положительность суммы, пересчитывает `amount_paid`/статус и пишет в аудит.
+         *     Сырой `POST /crm/payments/` всё это обходил: любой аутентифицированный
+         *     пользователь мог вписать в реестр строку (в т.ч. отрицательную) по ЧУЖОМУ
+         *     счёту, а `amount_paid` счёта при этом не менялся — реестр расходился со счётом.
+         */
         get: operations["crm_payments_list"];
         put?: never;
-        post: operations["crm_payments_create"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4434,13 +4566,23 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * @description Платежи — ТОЛЬКО чтение (Rule 8).
+         *
+         *     Запись идёт исключительно через `invoices/{id}/record-payment/` → сервис
+         *     `record_payment`, который проверяет права покупателя, статус счёта и
+         *     положительность суммы, пересчитывает `amount_paid`/статус и пишет в аудит.
+         *     Сырой `POST /crm/payments/` всё это обходил: любой аутентифицированный
+         *     пользователь мог вписать в реестр строку (в т.ч. отрицательную) по ЧУЖОМУ
+         *     счёту, а `amount_paid` счёта при этом не менялся — реестр расходился со счётом.
+         */
         get: operations["crm_payments_retrieve"];
-        put: operations["crm_payments_update"];
+        put?: never;
         post?: never;
-        delete: operations["crm_payments_destroy"];
+        delete?: never;
         options?: never;
         head?: never;
-        patch: operations["crm_payments_partial_update"];
+        patch?: never;
         trace?: never;
     };
     "/api/v1/crm/quote-charges/": {
@@ -9152,19 +9294,6 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["User"][];
         };
-        PatchedActRequest: {
-            /** Сделка */
-            deal?: number;
-            contract?: number | null;
-            invoice?: number | null;
-            /** Format: date */
-            issued_at?: string | null;
-            /** Format: decimal */
-            total_amount?: string;
-            /** Format: binary */
-            signed_file?: string | null;
-            notes?: string;
-        };
         PatchedAttachmentRequest: {
             /**
              * Файл
@@ -9774,22 +9903,6 @@ export interface components {
              */
             name?: string;
         };
-        PatchedFulfillmentRequest: {
-            /** Сделка */
-            deal?: number;
-            contract?: number | null;
-            /** Format: date-time */
-            shipped_at?: string | null;
-            /** Format: date-time */
-            delivered_at?: string | null;
-            /** Format: date-time */
-            accepted_at?: string | null;
-            /** Format: date */
-            expected_delivery_date?: string | null;
-            tracking_number?: string;
-            carrier?: string;
-            notes?: string;
-        };
         PatchedInvoiceRequest: {
             /** Сделка */
             deal?: number;
@@ -9913,25 +10026,6 @@ export interface components {
             permissions?: unknown;
             /** Описание */
             description?: string;
-        };
-        PatchedPaymentRequest: {
-            /** Инвойс */
-            invoice?: number;
-            /** Format: decimal */
-            amount?: string;
-            method?: components["schemas"]["MethodEnum"];
-            /**
-             * Дата платежа
-             * Format: date
-             */
-            paid_at?: string;
-            /** Референс / номер операции */
-            reference?: string;
-            /**
-             * Подтверждение
-             * Format: binary
-             */
-            proof_file?: string | null;
         };
         /**
          * @description Strip supplier-cost fields (offers / base_price) from viewers who don't own
@@ -17248,31 +17342,6 @@ export interface operations {
             };
         };
     };
-    crm_acts_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ActRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["ActRequest"];
-                "multipart/form-data": components["schemas"]["ActRequest"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Act"];
-                };
-            };
-        };
-    };
     crm_acts_retrieve: {
         parameters: {
             query?: never;
@@ -17284,83 +17353,6 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Act"];
-                };
-            };
-        };
-    };
-    crm_acts_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Акт. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ActRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["ActRequest"];
-                "multipart/form-data": components["schemas"]["ActRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Act"];
-                };
-            };
-        };
-    };
-    crm_acts_destroy: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Акт. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No response body */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    crm_acts_partial_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Акт. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["PatchedActRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["PatchedActRequest"];
-                "multipart/form-data": components["schemas"]["PatchedActRequest"];
-            };
-        };
         responses: {
             200: {
                 headers: {
@@ -19105,31 +19097,6 @@ export interface operations {
             };
         };
     };
-    crm_fulfillments_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["FulfillmentRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["FulfillmentRequest"];
-                "multipart/form-data": components["schemas"]["FulfillmentRequest"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Fulfillment"];
-                };
-            };
-        };
-    };
     crm_fulfillments_retrieve: {
         parameters: {
             query?: never;
@@ -19141,83 +19108,6 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Fulfillment"];
-                };
-            };
-        };
-    };
-    crm_fulfillments_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Исполнение сделки. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["FulfillmentRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["FulfillmentRequest"];
-                "multipart/form-data": components["schemas"]["FulfillmentRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Fulfillment"];
-                };
-            };
-        };
-    };
-    crm_fulfillments_destroy: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Исполнение сделки. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No response body */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    crm_fulfillments_partial_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Исполнение сделки. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["PatchedFulfillmentRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["PatchedFulfillmentRequest"];
-                "multipart/form-data": components["schemas"]["PatchedFulfillmentRequest"];
-            };
-        };
         responses: {
             200: {
                 headers: {
@@ -19518,31 +19408,6 @@ export interface operations {
             };
         };
     };
-    crm_invoices_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["InvoiceRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["InvoiceRequest"];
-                "multipart/form-data": components["schemas"]["InvoiceRequest"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Invoice"];
-                };
-            };
-        };
-    };
     crm_invoices_retrieve: {
         parameters: {
             query?: never;
@@ -19590,27 +19455,6 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Invoice"];
                 };
-            };
-        };
-    };
-    crm_invoices_destroy: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Инвойс. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No response body */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
         };
     };
@@ -20294,31 +20138,6 @@ export interface operations {
             };
         };
     };
-    crm_payments_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PaymentRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["PaymentRequest"];
-                "multipart/form-data": components["schemas"]["PaymentRequest"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Payment"];
-                };
-            };
-        };
-    };
     crm_payments_retrieve: {
         parameters: {
             query?: never;
@@ -20330,83 +20149,6 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Payment"];
-                };
-            };
-        };
-    };
-    crm_payments_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Платёж. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PaymentRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["PaymentRequest"];
-                "multipart/form-data": components["schemas"]["PaymentRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Payment"];
-                };
-            };
-        };
-    };
-    crm_payments_destroy: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Платёж. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No response body */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    crm_payments_partial_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Платёж. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["PatchedPaymentRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["PatchedPaymentRequest"];
-                "multipart/form-data": components["schemas"]["PatchedPaymentRequest"];
-            };
-        };
         responses: {
             200: {
                 headers: {
