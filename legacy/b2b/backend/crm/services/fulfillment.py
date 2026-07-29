@@ -14,15 +14,34 @@ from .deals import transition_deal_stage
 
 
 @transaction.atomic
-def ensure_fulfillment(deal: Deal) -> object:
+def ensure_fulfillment(deal: Deal, contract=None) -> object:
+    """Отгрузка сделки, создаётся идемпотентно.
+
+    `contract` — ПРИВЯЗКА К ВЛАДЕЛЬЦУ, а не украшение. Видимость биллинга у продавца
+    (`crm/views/billing.py:_seller_side_q`) считает документ своим, если он привязан к его
+    компании через `contract → quote.seller_company`; при неопределённом владельце включается
+    фолбэк «виден любому ЗАРОУТИНЕННОМУ продавцу». Раньше `contract` не заполнялся никогда,
+    поэтому отгрузка выигранной сделки всегда уходила в фолбэк — и её видел проигравший
+    со-роутед продавец (нарушение «скрытой конкуренции», ADR-0003 §5; у инвойсов и актов
+    привязка есть, у отгрузки не было).
+
+    Договор может появиться ПОЗЖЕ отгрузки, поэтому недостающая привязка дозаполняется при
+    повторном вызове. Уже проставленная НЕ перезаписывается — победитель сделки один.
+    """
     from ..models import Fulfillment, FulfillmentStatus
 
     # status is now a FK (null=True); stamp the PENDING lookup on creation so a new
     # fulfillment keeps the old CharField default behaviour.
     obj, _ = Fulfillment.objects.get_or_create(
         deal=deal,
-        defaults={"status": FulfillmentStatus.objects.get(code=FulfillmentStatusCode.PENDING)},
+        defaults={
+            "status": FulfillmentStatus.objects.get(code=FulfillmentStatusCode.PENDING),
+            "contract": contract,
+        },
     )
+    if contract is not None and obj.contract_id is None:
+        obj.contract = contract
+        obj.save(update_fields=["contract", "updated_at"])
     return obj
 
 

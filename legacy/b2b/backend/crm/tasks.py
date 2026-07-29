@@ -230,7 +230,9 @@ def auto_invoice_on_closed_won(self, deal_id: int) -> dict:
         return {"error": "deal not found"}
     contract = deal.contracts.filter(status__code=ContractStatusCode.SIGNED).order_by("-created_at").first()
     result = {"deal_id": deal_id, "invoice": None, "act": None, "fulfillment": True, "idempotent_reuse": False}
-    ensure_fulfillment(deal)
+    # Договор передаётся как ПРИВЯЗКА К ВЛАДЕЛЬЦУ: без неё отгрузка уходит в фолбэк видимости
+    # и становится видна проигравшему со-роутед продавцу (см. ensure_fulfillment).
+    ensure_fulfillment(deal, contract=contract)
     if not contract:
         return result
 
