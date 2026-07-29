@@ -1916,73 +1916,6 @@
       "phone": "Enter a phone in +998 XX XXX XX XX format"
     }
   },
-  "nomenclaturePanel": {
-    "editTitle": "Edit Product",
-    "createTitle": "New Product",
-    "editDescription": "Editing SKU: {{sku}}",
-    "editDescriptionNoSku": "Unassigned",
-    "createDescription": "Fill in the product details below.",
-    "productName": "Product Name",
-    "productNamePlaceholder": "Enter product name",
-    "sku": "SKU",
-    "domainType": "Domain Type",
-    "domainPlaceholder": "Select domain",
-    "category": "Category",
-    "categoryPlaceholder": "Select category",
-    "noCategory": "No category",
-    "description": "Description",
-    "descriptionPlaceholder": "Enter product description...",
-    "basePrice": "Base Price (FCA)",
-    "currency": "Currency",
-    "currencyPlaceholder": "Currency",
-    "uom": "Unit of Measurement",
-    "uomPlaceholder": "Select unit",
-    "gostDrawing": "GOST / Drawing Reference",
-    "gostPlaceholder": "GOST XXXXX-YY / Drawing ID",
-    "equipmentSeries": "Equipment Series Binding",
-    "searchSeries": "Search series (e.g. TEM2, CHME3...)",
-    "noGroups": "No equipment groups found",
-    "railwayGroupRequired": "Railway domain requires at least one equipment group binding.",
-    "saveChanges": "Save Changes",
-    "createProduct": "Create Product",
-    "validation": {
-      "nameRequired": "Product name is required",
-      "priceRequired": "Base price is required",
-      "domainRequired": "Domain is required"
-    }
-  },
-  "userPanel": {
-    "editTitle": "Edit User",
-    "createTitle": "Create User",
-    "editDescription": "Editing user ID: {{id}}",
-    "createDescription": "Fill in the details to provision a new user.",
-    "firstName": "First Name",
-    "firstNamePlaceholder": "First name",
-    "lastName": "Last Name",
-    "lastNamePlaceholder": "Last name",
-    "email": "Email",
-    "emailPlaceholder": "user@railtech.uz",
-    "role": "Role",
-    "rolePlaceholder": "Select role",
-    "roleAdmin": "Administrator",
-    "roleSalesManager": "Sales Manager",
-    "roleAccountManager": "Account Manager",
-    "roleClient": "Client",
-    "company": "Company",
-    "companyPlaceholder": "Internal staff (no company)",
-    "internalStaff": "Internal staff",
-    "workspaceRole": "Workspace Role",
-    "workspaceRolePlaceholder": "Select workspace role",
-    "workspaceNone": "None",
-    "workspaceOwner": "Company Admin",
-    "workspaceAccountant": "Accountant",
-    "workspaceManager": "Manager",
-    "validation": {
-      "emailRequired": "Valid email is required",
-      "firstNameRequired": "First name is required",
-      "lastNameRequired": "Last name is required"
-    }
-  },
   "kycManager": {
     "title": "KYC",
     "titleHighlight": "Verification",
@@ -2160,66 +2093,6 @@
     "title": "RailTech · Platform",
     "subtitle": "Administrator"
   },
-  "platformDashboard": {
-    "title": "Platform dashboard",
-    "subtitle": "Overview of the whole system: users, companies, deals, subscriptions",
-    "kpi": {
-      "users": "Users",
-      "usersSub": "Active: {{active}} · New in 7 days: {{new}}",
-      "companies": "Companies",
-      "companiesSub": "Buyers: {{buyers}} · Sellers: {{sellers}} · Manufacturers: {{mfg}}",
-      "deals": "Deals",
-      "dealsSub": "Active: {{active}} · Won: {{won}}",
-      "pipeline": "Pipeline",
-      "wonValue": "Won: {{value}}"
-    },
-    "attention": {
-      "title": "Needs attention",
-      "total": "{{count}} pending",
-      "empty": "All clear — no pending items",
-      "kyc": "Companies awaiting KYC verification",
-      "roleApps": "Role applications — unreviewed",
-      "subsPastDue": "Subscriptions past due",
-      "subsExpiring": "Subscriptions expiring in 7 days",
-      "overdueInvoices": "Overdue invoices"
-    },
-    "dealsByStage": {
-      "title": "Deals by stage",
-      "openAll": "All deals",
-      "empty": "No deals yet"
-    },
-    "subscriptions": {
-      "title": "Subscriptions",
-      "active": "Active",
-      "trial": "Trial",
-      "pastDue": "Past due",
-      "suspended": "Suspended",
-      "manage": "Manage subscriptions"
-    },
-    "companies": {
-      "title": "Companies",
-      "verified": "Verified",
-      "pendingKyc": "Awaiting KYC",
-      "buyers": "Buyers",
-      "sellers": "Sellers",
-      "manufacturers": "Manufacturers",
-      "manage": "Manage companies"
-    },
-    "quickActions": {
-      "title": "Quick actions",
-      "users": "Users",
-      "companies": "Companies",
-      "kyc": "KYC",
-      "masterData": "Master data",
-      "catalog": "Catalog",
-      "settings": "Settings"
-    },
-    "recentActivity": {
-      "title": "Recent activity",
-      "empty": "No recent events",
-      "system": "System"
-    }
-  },
   "companyStatusDesc": {
     "BUYER": "Only requests quotes and purchases equipment",
     "MANUFACTURER": "Produces, sells directly or through sellers, can also purchase",
@@ -2236,24 +2109,6 @@
     "switchToRu": "Переключить на русский",
     "labelEn": "EN",
     "labelRu": "РУ"
-  },
-  "domainLabels": {
-    "RAILWAY_MACHINERY": "Railway Machinery",
-    "GENERAL_GOODS": "General Goods",
-    "SERVICES": "Services"
-  },
-  "requestStatuses": {
-    "draft": "Draft",
-    "submitted": "Submitted",
-    "processing": "Processing",
-    "rfq_sent": "RFQ Sent",
-    "rfq_received": "RFQ Received",
-    "calculating": "Calculating",
-    "kp_sent": "Quote Sent",
-    "kp_review": "Quote Under Review",
-    "kp_accepted": "Quote Accepted",
-    "kp_rejected": "Quote Rejected",
-    "deal_opened": "Deal Opened"
   },
   "shell": {
     "dashboard": "Dashboard",
@@ -2393,29 +2248,6 @@
     "quantity": "Quantity",
     "decrease": "Decrease",
     "increase": "Increase"
-  },
-  "managerDashboard": {
-    "title": "Sourcing",
-    "titleHighlight": "Commander",
-    "subtitle": "Operational Dashboard & Transaction Registry",
-    "liveFeed": "Live Feed Active",
-    "actionQueue": "Action Queue",
-    "critical": "Critical",
-    "sourcingBacklog": "Sourcing Backlog",
-    "itemsRequiringMapping": "Items requiring PIN mapping",
-    "kycVerifications": "KYC Verifications",
-    "entitiesL1": "Entities at L1 restriction",
-    "activePipeline": "Active Deal Pipeline",
-    "fullRegistry": "Full Registry",
-    "systemDraft": "System Draft",
-    "grossValue": "Gross Value",
-    "noProtocols": "No active protocols found in pipeline",
-    "kpi": {
-      "newProtocols": "New Protocols",
-      "operationalPL": "Operational P/L",
-      "grossExposure": "Gross Exposure",
-      "finalizedSales": "Finalized Sales"
-    }
   },
   "dashboardPage": {
     "title": "Dashboard",
@@ -2931,42 +2763,6 @@
       "inheritedFromCompany": "Inherited from the company profile"
     }
   },
-  "sourcingHub": {
-    "title": "Request Items — Catalog Matching",
-    "kpi": {
-      "matched": "Matched",
-      "partial": "Partial",
-      "notFound": "Not Found",
-      "outOf": "of {{total}}"
-    },
-    "table": {
-      "num": "#",
-      "name": "Name",
-      "article": "SKU",
-      "gost": "GOST",
-      "uom": "Unit",
-      "qty": "Qty",
-      "matchStatus": "Match Status",
-      "action": "Action"
-    },
-    "status": {
-      "matched": "Matched",
-      "partial": "Partial",
-      "not_found": "Not Found"
-    },
-    "actions": {
-      "findInCatalog": "Find in catalog",
-      "clarify": "Clarify",
-      "linked": "Linked"
-    },
-    "linkedTo": "Linked to: {{name}}",
-    "dialog": {
-      "title": "Catalog Search",
-      "item": "Item",
-      "searchPlaceholder": "Search by name, SKU, manufacturer...",
-      "noResults": "No results found"
-    }
-  },
   "dealChat": {
     "pickSeller": "Select a seller",
     "pickSellerHint": "Pick a seller to open the private chat",
@@ -2996,12 +2792,6 @@
     "suggestReply": "Suggest reply (AI)",
     "suggestDisabled": "The AI assistant is currently unavailable.",
     "suggestError": "Could not get a reply draft."
-  },
-  "fab": {
-    "telegram": "Telegram",
-    "call": "Call",
-    "writeManager": "Write to manager",
-    "support": "Support"
   },
   "tour": {
     "skip": "Skip",
@@ -3042,203 +2832,6 @@
     "description": "An unexpected error occurred. Try reloading the page.",
     "goHome": "Go home",
     "reload": "Reload"
-  },
-  "purchaseTemplates": {
-    "title": "Purchase Templates",
-    "subtitle": "Saved templates for quick reordering",
-    "createTemplate": "Create template",
-    "itemCount_one": "{{count}} item",
-    "itemCount_few": "{{count}} items",
-    "itemCount_many": "{{count}} items",
-    "itemCount_other": "{{count}} items",
-    "itemCount": "{{count}} items",
-    "lastOrder": "Last order",
-    "reorder": "Reorder",
-    "details": "Details",
-    "recentOrders": "Recent Orders",
-    "repeat": "Repeat",
-    "create": "Create",
-    "table": {
-      "number": "#",
-      "date": "Date",
-      "itemCount": "Items",
-      "amount": "Amount",
-      "status": "Status",
-      "action": "Action"
-    },
-    "dialog": {
-      "name": "Template name",
-      "namePlaceholder": "Enter template name",
-      "description": "Description",
-      "descriptionPlaceholder": "Enter template description"
-    },
-    "emptyTitle": "No saved templates",
-    "emptyDescription": "Create a purchase template to quickly repeat frequent orders. Templates save your product list and quantities."
-  },
-  "requestDetail": {
-    "title": "Request {{number}}",
-    "resetDemo": "Reset demo",
-    "resetDemoHint": "Resets the demo request flow to its initial state. Use to walk through the processing steps again.",
-    "reset": "Reset",
-    "importSummary": "Excel import · {{count}} items · {{date}}",
-    "steps": {
-      "submitted": "Request submitted",
-      "supplierProcessing": "Supplier processing",
-      "quoteReceived": "Quote received",
-      "deal": "Deal"
-    },
-    "stats": {
-      "matched": "Found in catalog",
-      "partial": "Partial match",
-      "notFound": "Not found"
-    },
-    "matchStatus": {
-      "matched": "Matched",
-      "partial": "Partial",
-      "notFound": "Not found"
-    },
-    "tabs": {
-      "items": "Request items ({{count}})",
-      "quote": "Commercial offer",
-      "deal": "Deal"
-    },
-    "table": {
-      "name": "Name",
-      "article": "SKU",
-      "gost": "GOST",
-      "unit": "Unit",
-      "quantity": "Qty",
-      "status": "Status",
-      "factory": "Factory",
-      "priceFCA": "FCA Price",
-      "rfq": "RFQ",
-      "factoryPrice": "Factory price",
-      "leadTime": "Lead time",
-      "priceExclVAT": "Price (excl. VAT)",
-      "priceInclVAT": "Price (incl. VAT)",
-      "totalInclVAT": "Total incl. VAT"
-    },
-    "quoteFrom": "Commercial offer from {{seller}}",
-    "quoteItemsSummary": "{{count}} items · {{date}}",
-    "status": {
-      "discountRequested": "Discount request sent",
-      "accepted": "Accepted",
-      "rejected": "Rejected"
-    },
-    "actions": {
-      "reject": "Reject",
-      "requestDiscount": "Request discount",
-      "acceptQuote": "Accept quote",
-      "acceptCurrentQuote": "Accept current quote",
-      "rejectQuote": "Reject quote",
-      "sendRequest": "Send request",
-      "takeInWork": "Take in work",
-      "sendRFQ": "Send RFQ to factories ({{count}} items)",
-      "simulateResponses": "Simulation: factories responded",
-      "calculateCost": "Calculate cost",
-      "sendQuoteToClient": "Send quote to client"
-    },
-    "totals": {
-      "exclVAT": "Total excl. VAT",
-      "vat": "VAT 12%",
-      "inclVAT": "Total incl. VAT"
-    },
-    "deal": {
-      "title": "Deal {{number}}",
-      "manager": "Manager: {{name}}",
-      "amount": "Deal amount",
-      "items": "Items",
-      "createdAt": "Created",
-      "nextStep": "Next step: contract signing and payment. Manager {{manager}} will contact you to finalize details."
-    },
-    "rejectDialog": {
-      "title": "Reject commercial offer",
-      "description": "Specify the reason for rejection",
-      "reason": "Reason",
-      "selectReason": "Select a reason",
-      "reasons": {
-        "expensive": "Too expensive — exceeds our budget",
-        "terms": "Delivery terms are unacceptable",
-        "partial": "Need a complete set (not all items included)",
-        "other": "Other reason"
-      },
-      "comment": "Comment",
-      "commentPlaceholder": "Additional notes..."
-    },
-    "negotiateDialog": {
-      "title": "Request discount",
-      "currentAmount": "Current quote amount: {{amount}} (incl. VAT)",
-      "desiredDiscount": "Desired discount (%)",
-      "estimatedAmount": "Estimated amount: {{amount}} (saving {{savings}})",
-      "justification": "Justification",
-      "justificationPlaceholder": "Order volume, long-term partnership, competitive offer..."
-    },
-    "seller": {
-      "client": "Client",
-      "itemsCount": "{{count}} items",
-      "inStock": "In stock",
-      "needRFQ": "Need RFQ",
-      "factoryResponses": "Factory responses",
-      "noAccess": "No access",
-      "marginLabel": "Margin %",
-      "warehouse": "Warehouse",
-      "leadDays": "{{days}} days"
-    },
-    "sellerSteps": {
-      "received": "Received",
-      "analysis": "Analysis",
-      "rfqFactories": "RFQ to factories",
-      "responses": "Responses",
-      "calculation": "Calculation",
-      "quoteToClient": "Quote to client"
-    },
-    "sellerTabs": {
-      "all": "All items ({{count}})",
-      "inStock": "In stock ({{count}})",
-      "rfq": "RFQ to factories ({{count}})",
-      "noAccess": "No access ({{count}})"
-    },
-    "rfqStatus": {
-      "waiting": "Waiting",
-      "sent": "Sent",
-      "responded": "Responded"
-    },
-    "cost": {
-      "title": "Cost calculation",
-      "fca": "FCA",
-      "logistics": "Logistics",
-      "customs": "Customs",
-      "margin": "Margin",
-      "vat": "VAT 12%",
-      "total": "TOTAL",
-      "purchaseFCA": "Purchase FCA",
-      "logisticsDAP": "+ Logistics DAP (8%)",
-      "customsDuty": "+ Customs duty (5%)",
-      "landedCostLabel": "= Landed Cost",
-      "marginWithPercent": "+ Margin ({{percent}}%)",
-      "subtotalExclVAT": "Subtotal excl. VAT",
-      "totalInclVAT": "TOTAL incl. VAT",
-      "structure": "Cost structure",
-      "amount": "Amount"
-    },
-    "manufacturer": {
-      "incomingRequests": "Incoming requests",
-      "noRequests": "No active requests from suppliers",
-      "noRequestsHint": "Requests will appear when a supplier sends an RFQ",
-      "rfqFrom": "RFQ from {{seller}}",
-      "itemsCount": "{{count}} items",
-      "priceAndTerms": "Price and terms request · Request {{number}}",
-      "filled": "Filled: {{responded}} of {{total}}",
-      "article": "SKU",
-      "gost": "GOST",
-      "qty": "Qty",
-      "priceFCA": "FCA Price ($)",
-      "leadTimeDays": "Lead time (days)",
-      "note": "Note",
-      "commentPlaceholder": "Comment",
-      "confirm": "Confirm",
-      "sent": "Sent"
-    }
   },
   "pages": {
     "common": {
@@ -3918,18 +3511,6 @@
       "stageBadgeHint": "Deal stage"
     }
   },
-  "dealSplit": {
-    "stageLabel": "Stage",
-    "docsComingSoon": "Upload of contracts, specifications, and invoices will be available in the next version.",
-    "stages": {
-      "NEW": "New Inquiry",
-      "SOURCING": "Sourcing Suppliers",
-      "CALCULATING": "Pricing Analysis",
-      "QUOTE_SENT": "Quote Sent",
-      "CONTRACT_SIGNED": "Contract Signed",
-      "CLOSED_LOST": "Closed Lost"
-    }
-  },
   "validation": {
     "validEmailRequired": "Valid email is required",
     "firstNameRequired": "First name is required",
@@ -4096,47 +3677,6 @@
       "currencies": "Currencies",
       "units": "Units",
       "deliveryBases": "Bases"
-    }
-  },
-  "adminBids": {
-    "title": "Supplier bids",
-    "description": "All bids across all deals and companies. Admin-wide visibility + audit log.",
-    "searchPlaceholder": "Search by deal, supplier, notes",
-    "empty": "No bids found",
-    "notSubmitted": "Only SUBMITTED bids can be accepted/rejected",
-    "accepted": "Bid accepted",
-    "rejected": "Bid rejected",
-    "accept": "Accept",
-    "reject": "Reject",
-    "items": "Items",
-    "notes": "Notes",
-    "detailTitle": "Bid #{{id}}",
-    "stats": {
-      "total": "Total",
-      "submitted": "Submitted",
-      "accepted": "Accepted",
-      "rejected": "Rejected"
-    },
-    "table": {
-      "id": "ID",
-      "deal": "Deal",
-      "supplier": "Supplier",
-      "status": "Status",
-      "total": "Total",
-      "leadDays": "Lead (days)",
-      "submittedAt": "Submitted"
-    },
-    "detailTab": {
-      "overview": "Overview"
-    },
-    "confirmAcceptTitle": "Accept supplier bid?",
-    "confirmAcceptDescription": "Bid #{{id}} from {{supplier}} will be accepted. Competing SUBMITTED bids are auto-rejected and the deal moves to CALCULATING.",
-    "confirmRejectTitle": "Reject bid?",
-    "confirmRejectDescription": "Bid #{{id}} from {{supplier}} will be rejected. Reason is required and will be written to the audit log.",
-    "rejectTemplates": {
-      "price": "Price exceeds budget",
-      "leadTime": "Lead time unacceptable",
-      "other": "Other (specify in comment)"
     }
   },
   "adminDeals": {
@@ -4793,49 +4333,6 @@
     },
     "disputedHint": "Dispute recorded — await the supplier’s response. Discuss it in the request chat."
   },
-  "supplierBidsPage": {
-    "title": "Supplier bids",
-    "description": "Supplier offers against open RFQs",
-    "emptyState": "No bids",
-    "emptyStateBuyerHint": "Open an RFQ from the Deals section — supplier responses will appear here.",
-    "emptyStateSupplierHint": "When an RFQ is open to you, submit a bid using the form above.",
-    "goToDeals": "Open deals",
-    "pickDealPlaceholder": "Select a deal",
-    "noOpenDeals": "No deals are available for bidding right now.",
-    "submit": "Submit bid",
-    "accept": "Accept",
-    "reject": "Reject",
-    "submitted": "Bid submitted",
-    "accepted": "Bid accepted",
-    "rejected": "Bid rejected",
-    "allStatuses": "All statuses",
-    "stats": {
-      "total": "Total",
-      "submitted": "Submitted",
-      "accepted": "Accepted"
-    },
-    "table": {
-      "deal": "Deal",
-      "supplier": "Supplier",
-      "total": "Total",
-      "leadTime": "Lead time (days)",
-      "status": "Status",
-      "submittedAt": "Submitted",
-      "actions": "Actions"
-    },
-    "status": {
-      "DRAFT": "Draft",
-      "SUBMITTED": "Submitted",
-      "ACCEPTED": "Accepted",
-      "REJECTED": "Rejected",
-      "WITHDRAWN": "Withdrawn"
-    },
-    "itemHeaders": {
-      "description": "Description",
-      "qty": "Qty",
-      "unit": "Unit"
-    }
-  },
   "confirmActions": {
     "sendQuote": {
       "title": "Send quote to the client?",
@@ -4852,23 +4349,6 @@
       "description": "A new deal will be created from “{{name}}” and the lead marked as processed."
     }
   },
-  "leadsPage": {
-    "title": "Leads",
-    "description": "Landing-page inquiries",
-    "emptyState": "No leads",
-    "convert": "Convert to deal",
-    "converted": "Lead converted to deal",
-    "table": {
-      "name": "Name",
-      "company": "Company",
-      "phone": "Phone",
-      "email": "Email",
-      "message": "Message",
-      "processed": "Processed",
-      "created": "Received",
-      "actions": "Actions"
-    }
-  },
   "rematchDialog": {
     "title": "Reassign product",
     "rawLabel": "Imported name",
@@ -4883,13 +4363,6 @@
       "gost": "GOST",
       "score": "Score"
     }
-  },
-  "rfqDialog": {
-    "title": "Open RFQ",
-    "description": "Move deal to RFQ_OPEN and invite suppliers",
-    "selectSuppliers": "Select suppliers (optional)",
-    "open": "Open RFQ",
-    "opened": "RFQ opened"
   },
   "contractGenerateDialog": {
     "title": "Generate contract",
@@ -5047,17 +4520,6 @@
       "resolving": "Loading contract…",
       "goToContract": "Go to contract"
     }
-  },
-  "createQuoteDialog": {
-    "title": "Create quote",
-    "description": "A new quote will be created in DRAFT status, attached to the selected deal.",
-    "deal": "Deal",
-    "selectDeal": "Select a deal",
-    "validUntil": "Valid until",
-    "notes": "Notes",
-    "create": "Create",
-    "dealRequired": "Please select a deal",
-    "created": "Quote v{{version}} created"
   },
   "deleteConfirmations": {
     "quoteItemDescription": "The item will be removed permanently.",
@@ -5223,21 +4685,6 @@
       "invalidType": "Invalid file type",
       "uploadFailed": "Failed to upload file",
       "removeFailed": "Failed to remove file"
-    }
-  },
-  "roleApplication": {
-    "title": "Apply for supplier / manufacturer role",
-    "description": "Submit documents to upgrade your company to SUPPLIER or MANUFACTURER. Platform admins will review and activate.",
-    "requestedType": "Requested role",
-    "contract": "Contract (required for supplier)",
-    "nda": "NDA (required for supplier)",
-    "partnership": "Partnership agreement (required for manufacturer)",
-    "submit": "Submit application",
-    "submitted": "Application submitted",
-    "errors": {
-      "typeRequired": "Select a role",
-      "contractAndNdaRequired": "Contract and NDA are required",
-      "partnershipRequired": "Partnership agreement is required"
     }
   },
   "dealAttachments": {

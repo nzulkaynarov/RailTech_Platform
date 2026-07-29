@@ -1920,73 +1920,6 @@
       "phone": "Введите номер в формате +998 XX XXX XX XX"
     }
   },
-  "nomenclaturePanel": {
-    "editTitle": "Редактировать товар",
-    "createTitle": "Новый товар",
-    "editDescription": "Редактирование SKU: {{sku}}",
-    "editDescriptionNoSku": "SKU не назначен",
-    "createDescription": "Заполните данные товара ниже.",
-    "productName": "Название товара",
-    "productNamePlaceholder": "Введите название товара",
-    "sku": "SKU",
-    "domainType": "Тип домена",
-    "domainPlaceholder": "Выберите домен",
-    "category": "Категория",
-    "categoryPlaceholder": "Выберите категорию",
-    "noCategory": "Без категории",
-    "description": "Описание",
-    "descriptionPlaceholder": "Описание товара...",
-    "basePrice": "Базовая цена (FCA)",
-    "currency": "Валюта",
-    "currencyPlaceholder": "Валюта",
-    "uom": "Единица измерения",
-    "uomPlaceholder": "Выберите единицу",
-    "gostDrawing": "ГОСТ / Чертёж",
-    "gostPlaceholder": "ГОСТ XXXXX-YY / Номер чертежа",
-    "equipmentSeries": "Привязка к сериям оборудования",
-    "searchSeries": "Поиск серии (напр. ТЭМ2, ЧМЭ3...)",
-    "noGroups": "Группы оборудования не найдены",
-    "railwayGroupRequired": "Для ж/д домена требуется минимум одна группа оборудования.",
-    "saveChanges": "Сохранить",
-    "createProduct": "Создать товар",
-    "validation": {
-      "nameRequired": "Название товара обязательно",
-      "priceRequired": "Базовая цена обязательна",
-      "domainRequired": "Домен обязателен"
-    }
-  },
-  "userPanel": {
-    "editTitle": "Редактировать пользователя",
-    "createTitle": "Создать пользователя",
-    "editDescription": "Редактирование ID: {{id}}",
-    "createDescription": "Заполните данные для нового пользователя.",
-    "firstName": "Имя",
-    "firstNamePlaceholder": "Имя",
-    "lastName": "Фамилия",
-    "lastNamePlaceholder": "Фамилия",
-    "email": "Email",
-    "emailPlaceholder": "user@railtech.uz",
-    "role": "Роль",
-    "rolePlaceholder": "Выберите роль",
-    "roleAdmin": "Администратор",
-    "roleSalesManager": "Менеджер продаж",
-    "roleAccountManager": "Аккаунт-менеджер",
-    "roleClient": "Клиент",
-    "company": "Компания",
-    "companyPlaceholder": "Штатный сотрудник (без компании)",
-    "internalStaff": "Штатный сотрудник",
-    "workspaceRole": "Роль в кабинете",
-    "workspaceRolePlaceholder": "Выберите роль в кабинете",
-    "workspaceNone": "Нет",
-    "workspaceOwner": "Администратор компании",
-    "workspaceAccountant": "Бухгалтер",
-    "workspaceManager": "Менеджер",
-    "validation": {
-      "emailRequired": "Введите корректный email",
-      "firstNameRequired": "Имя обязательно",
-      "lastNameRequired": "Фамилия обязательна"
-    }
-  },
   "kycManager": {
     "title": "KYC",
     "titleHighlight": "Верификация",
@@ -2166,66 +2099,6 @@
     "title": "RailTech · Платформа",
     "subtitle": "Администратор"
   },
-  "platformDashboard": {
-    "title": "Дашборд платформы",
-    "subtitle": "Обзор всей системы: пользователи, компании, сделки, подписки",
-    "kpi": {
-      "users": "Пользователи",
-      "usersSub": "Активных: {{active}} · За 7 дней: {{new}}",
-      "companies": "Компании",
-      "companiesSub": "Покупателей: {{buyers}} · Продавцов: {{sellers}} · Производителей: {{mfg}}",
-      "deals": "Сделки",
-      "dealsSub": "Активных: {{active}} · Выиграно: {{won}}",
-      "pipeline": "Пайплайн",
-      "wonValue": "Выиграно: {{value}}"
-    },
-    "attention": {
-      "title": "Требует внимания",
-      "total": "{{count}} задач",
-      "empty": "Всё в порядке — нерешённых задач нет",
-      "kyc": "Компании ждут KYC-верификацию",
-      "roleApps": "Заявки на роли — не рассмотрены",
-      "subsPastDue": "Подписки просрочены",
-      "subsExpiring": "Подписки истекают в ближайшую неделю",
-      "overdueInvoices": "Просроченные инвойсы"
-    },
-    "dealsByStage": {
-      "title": "Сделки по стадиям",
-      "openAll": "Все сделки",
-      "empty": "Сделок пока нет"
-    },
-    "subscriptions": {
-      "title": "Подписки",
-      "active": "Активные",
-      "trial": "Триал",
-      "pastDue": "Просрочены",
-      "suspended": "Приостановлены",
-      "manage": "Управление подписками"
-    },
-    "companies": {
-      "title": "Компании",
-      "verified": "Верифицированы",
-      "pendingKyc": "Ждут KYC",
-      "buyers": "Покупатели",
-      "sellers": "Продавцы",
-      "manufacturers": "Производители",
-      "manage": "Управление компаниями"
-    },
-    "quickActions": {
-      "title": "Быстрые действия",
-      "users": "Пользователи",
-      "companies": "Компании",
-      "kyc": "KYC",
-      "masterData": "Справочники",
-      "catalog": "Каталог",
-      "settings": "Настройки"
-    },
-    "recentActivity": {
-      "title": "Последняя активность",
-      "empty": "Нет недавних событий",
-      "system": "Система"
-    }
-  },
   "companyStatusDesc": {
     "BUYER": "Только запрашивает КП и закупает оборудование",
     "MANUFACTURER": "Производит, продаёт напрямую или через продавцов, может закупать",
@@ -2242,24 +2115,6 @@
     "switchToRu": "Переключить на русский",
     "labelEn": "EN",
     "labelRu": "РУ"
-  },
-  "domainLabels": {
-    "RAILWAY_MACHINERY": "ЖД и Техника",
-    "GENERAL_GOODS": "Общие товары",
-    "SERVICES": "Услуги"
-  },
-  "requestStatuses": {
-    "draft": "Черновик",
-    "submitted": "Отправлена",
-    "processing": "В обработке",
-    "rfq_sent": "Запросы отправлены",
-    "rfq_received": "Ответы получены",
-    "calculating": "Расчёт себестоимости",
-    "kp_sent": "КП отправлено",
-    "kp_review": "На рассмотрении",
-    "kp_accepted": "КП принято",
-    "kp_rejected": "КП отклонено",
-    "deal_opened": "Сделка открыта"
   },
   "shell": {
     "dashboard": "Дашборд",
@@ -2399,29 +2254,6 @@
     "quantity": "Количество",
     "decrease": "Уменьшить",
     "increase": "Увеличить"
-  },
-  "managerDashboard": {
-    "title": "Sourcing",
-    "titleHighlight": "Commander",
-    "subtitle": "Оперативная панель и реестр сделок",
-    "liveFeed": "Трансляция активна",
-    "actionQueue": "Очередь действий",
-    "critical": "Критично",
-    "sourcingBacklog": "Backlog поиска",
-    "itemsRequiringMapping": "Позиции, требующие маппинга",
-    "kycVerifications": "Верификация KYC",
-    "entitiesL1": "Контрагенты на уровне L1",
-    "activePipeline": "Активные сделки",
-    "fullRegistry": "Полный реестр",
-    "systemDraft": "Черновик",
-    "grossValue": "Сумма",
-    "noProtocols": "Нет активных протоколов в реестре",
-    "kpi": {
-      "newProtocols": "Новые протоколы",
-      "operationalPL": "Операционный P/L",
-      "grossExposure": "Общий объём",
-      "finalizedSales": "Закрытые сделки"
-    }
   },
   "dashboardPage": {
     "title": "Дашборд",
@@ -2643,171 +2475,6 @@
     "toggleLabel": "Демо-режим",
     "enabled": "Демо-режим включён",
     "disabled": "Демо-режим выключен"
-  },
-  "requestDetail": {
-    "title": "Заявка {{number}}",
-    "resetDemo": "Сбросить демо",
-    "resetDemoHint": "Сбрасывает демонстрационный флоу заявки к начальному состоянию. Используется для повторного прохождения этапов обработки.",
-    "reset": "Сбросить",
-    "importSummary": "Импорт из Excel · {{count}} позиций · {{date}}",
-    "steps": {
-      "submitted": "Заявка отправлена",
-      "supplierProcessing": "Поставщик обрабатывает",
-      "quoteReceived": "КП получено",
-      "deal": "Сделка"
-    },
-    "stats": {
-      "matched": "Найдено в каталоге",
-      "partial": "Частичное совпадение",
-      "notFound": "Не найдено"
-    },
-    "matchStatus": {
-      "matched": "Найден",
-      "partial": "Частично",
-      "notFound": "Не найден"
-    },
-    "tabs": {
-      "items": "Позиции заявки ({{count}})",
-      "quote": "Коммерческое предложение",
-      "deal": "Сделка"
-    },
-    "table": {
-      "name": "Наименование",
-      "article": "Артикул",
-      "gost": "ГОСТ",
-      "unit": "Ед.",
-      "quantity": "Кол-во",
-      "status": "Статус",
-      "factory": "Завод",
-      "priceFCA": "Цена FCA",
-      "rfq": "RFQ",
-      "factoryPrice": "Цена завода",
-      "leadTime": "Срок",
-      "priceExclVAT": "Цена (без НДС)",
-      "priceInclVAT": "Цена (с НДС)",
-      "totalInclVAT": "Итого с НДС"
-    },
-    "quoteFrom": "Коммерческое предложение от {{seller}}",
-    "quoteItemsSummary": "{{count}} позиций · {{date}}",
-    "status": {
-      "discountRequested": "Запрос скидки отправлен",
-      "accepted": "Принято",
-      "rejected": "Отклонено"
-    },
-    "actions": {
-      "reject": "Отклонить",
-      "requestDiscount": "Запросить скидку",
-      "acceptQuote": "Принять КП",
-      "acceptCurrentQuote": "Принять текущее КП",
-      "rejectQuote": "Отклонить КП",
-      "sendRequest": "Отправить запрос",
-      "takeInWork": "Взять в работу",
-      "sendRFQ": "Отправить RFQ заводам ({{count}} поз.)",
-      "simulateResponses": "Симуляция: заводы ответили",
-      "calculateCost": "Рассчитать себестоимость",
-      "sendQuoteToClient": "Отправить КП клиенту"
-    },
-    "totals": {
-      "exclVAT": "Итого без НДС",
-      "vat": "НДС 12%",
-      "inclVAT": "Итого с НДС"
-    },
-    "deal": {
-      "title": "Сделка {{number}}",
-      "manager": "Менеджер: {{name}}",
-      "amount": "Сумма сделки",
-      "items": "Позиций",
-      "createdAt": "Дата создания",
-      "nextStep": "Следующий шаг: подписание договора и оплата. Менеджер {{manager}} свяжется с вами для согласования деталей."
-    },
-    "rejectDialog": {
-      "title": "Отклонить коммерческое предложение",
-      "description": "Укажите причину отказа",
-      "reason": "Причина",
-      "selectReason": "Выберите причину",
-      "reasons": {
-        "expensive": "Дорого — не укладываемся в бюджет",
-        "terms": "Не устраивают сроки поставки",
-        "partial": "Нужен полный комплект (не все позиции)",
-        "other": "Другая причина"
-      },
-      "comment": "Комментарий",
-      "commentPlaceholder": "Дополнительные пояснения..."
-    },
-    "negotiateDialog": {
-      "title": "Запросить скидку",
-      "currentAmount": "Текущая сумма КП: {{amount}} (с НДС)",
-      "desiredDiscount": "Желаемая скидка (%)",
-      "estimatedAmount": "Предполагаемая сумма: {{amount}} (экономия {{savings}})",
-      "justification": "Обоснование",
-      "justificationPlaceholder": "Объём заказа, долгосрочное сотрудничество, конкурентное предложение..."
-    },
-    "seller": {
-      "client": "Клиент",
-      "itemsCount": "{{count}} позиций",
-      "inStock": "В наличии",
-      "needRFQ": "Нужен RFQ",
-      "factoryResponses": "Ответов от заводов",
-      "noAccess": "Нет доступа",
-      "marginLabel": "Маржа %",
-      "warehouse": "Склад",
-      "leadDays": "{{days}} дн."
-    },
-    "sellerSteps": {
-      "received": "Получена",
-      "analysis": "Анализ",
-      "rfqFactories": "RFQ заводам",
-      "responses": "Ответы",
-      "calculation": "Расчёт",
-      "quoteToClient": "КП клиенту"
-    },
-    "sellerTabs": {
-      "all": "Все позиции ({{count}})",
-      "inStock": "В наличии ({{count}})",
-      "rfq": "RFQ заводам ({{count}})",
-      "noAccess": "Нет доступа ({{count}})"
-    },
-    "rfqStatus": {
-      "waiting": "Ожидает",
-      "sent": "Отправлен",
-      "responded": "Ответ"
-    },
-    "cost": {
-      "title": "Расчёт себестоимости",
-      "fca": "FCA",
-      "logistics": "Логистика",
-      "customs": "Таможня",
-      "margin": "Маржа",
-      "vat": "НДС 12%",
-      "total": "ИТОГО",
-      "purchaseFCA": "Закупка FCA",
-      "logisticsDAP": "+ Логистика DAP (8%)",
-      "customsDuty": "+ Таможенная пошлина (5%)",
-      "landedCostLabel": "= Landed Cost",
-      "marginWithPercent": "+ Маржа ({{percent}}%)",
-      "subtotalExclVAT": "Итого без НДС",
-      "totalInclVAT": "ИТОГО с НДС",
-      "structure": "Структура стоимости",
-      "amount": "Сумма"
-    },
-    "manufacturer": {
-      "incomingRequests": "Входящие запросы",
-      "noRequests": "Нет активных запросов от поставщиков",
-      "noRequestsHint": "Запросы появятся когда поставщик отправит RFQ",
-      "rfqFrom": "RFQ от {{seller}}",
-      "itemsCount": "{{count}} позиций",
-      "priceAndTerms": "Запрос цен и сроков · Заявка {{number}}",
-      "filled": "Заполнено: {{responded}} из {{total}}",
-      "article": "Арт",
-      "gost": "ГОСТ",
-      "qty": "Кол-во",
-      "priceFCA": "Цена FCA ($)",
-      "leadTimeDays": "Срок (дн.)",
-      "note": "Примечание",
-      "commentPlaceholder": "Комментарий",
-      "confirm": "Подтвердить",
-      "sent": "Отправлено"
-    }
   },
   "profile": {
     "title": "Профиль",
@@ -3102,42 +2769,6 @@
       "inheritedFromCompany": "Данные наследуются из профиля компании"
     }
   },
-  "sourcingHub": {
-    "title": "Позиции заявки — сопоставление с каталогом",
-    "kpi": {
-      "matched": "Найдено",
-      "partial": "Частично",
-      "notFound": "Не найдено",
-      "outOf": "из {{total}}"
-    },
-    "table": {
-      "num": "№",
-      "name": "Наименование",
-      "article": "Артикул",
-      "gost": "ГОСТ",
-      "uom": "Ед.",
-      "qty": "Кол-во",
-      "matchStatus": "Статус совпадения",
-      "action": "Действие"
-    },
-    "status": {
-      "matched": "Найден",
-      "partial": "Частично",
-      "not_found": "Не найден"
-    },
-    "actions": {
-      "findInCatalog": "Найти в каталоге",
-      "clarify": "Уточнить",
-      "linked": "Привязан"
-    },
-    "linkedTo": "Привязан к: {{name}}",
-    "dialog": {
-      "title": "Поиск в каталоге",
-      "item": "Позиция",
-      "searchPlaceholder": "Поиск по названию, артикулу, производителю...",
-      "noResults": "Ничего не найдено"
-    }
-  },
   "dealChat": {
     "pickSeller": "Выберите продавца",
     "pickSellerHint": "Выберите продавца, чтобы открыть приватный чат",
@@ -3167,12 +2798,6 @@
     "suggestReply": "Черновик ответа (ИИ)",
     "suggestDisabled": "ИИ-помощник сейчас недоступен.",
     "suggestError": "Не удалось получить черновик ответа."
-  },
-  "fab": {
-    "telegram": "Telegram",
-    "call": "Позвонить",
-    "writeManager": "Написать менеджеру",
-    "support": "Поддержка"
   },
   "tour": {
     "skip": "Пропустить",
@@ -3213,38 +2838,6 @@
     "description": "Произошла непредвиденная ошибка. Попробуйте перезагрузить страницу.",
     "goHome": "На главную",
     "reload": "Перезагрузить"
-  },
-  "purchaseTemplates": {
-    "title": "Шаблоны закупок",
-    "subtitle": "Сохранённые шаблоны для быстрого повторного заказа",
-    "createTemplate": "Создать шаблон",
-    "itemCount_one": "{{count}} позиция",
-    "itemCount_few": "{{count}} позиции",
-    "itemCount_many": "{{count}} позиций",
-    "itemCount_other": "{{count}} позиций",
-    "itemCount": "{{count}} позиций",
-    "lastOrder": "Последний заказ",
-    "reorder": "Повторить заказ",
-    "details": "Детали",
-    "recentOrders": "Последние заказы",
-    "repeat": "Повторить",
-    "create": "Создать",
-    "table": {
-      "number": "№",
-      "date": "Дата",
-      "itemCount": "Кол-во позиций",
-      "amount": "Сумма",
-      "status": "Статус",
-      "action": "Действие"
-    },
-    "dialog": {
-      "name": "Название шаблона",
-      "namePlaceholder": "Введите название шаблона",
-      "description": "Описание",
-      "descriptionPlaceholder": "Введите описание шаблона"
-    },
-    "emptyTitle": "Нет сохранённых шаблонов",
-    "emptyDescription": "Создайте шаблон закупки, чтобы быстро повторять частые заказы. Шаблоны сохраняют список товаров и количества."
   },
   "pages": {
     "common": {
@@ -3924,18 +3517,6 @@
       "stageBadgeHint": "Этап сделки"
     }
   },
-  "dealSplit": {
-    "stageLabel": "Этап",
-    "docsComingSoon": "Загрузка договоров, спецификаций и накладных будет доступна в следующей версии.",
-    "stages": {
-      "NEW": "Новый запрос",
-      "SOURCING": "Поиск поставщиков",
-      "CALCULATING": "Расчёт цен",
-      "QUOTE_SENT": "КП отправлено",
-      "CONTRACT_SIGNED": "Договор подписан",
-      "CLOSED_LOST": "Закрыта (отказ)"
-    }
-  },
   "validation": {
     "validEmailRequired": "Введите корректный email",
     "firstNameRequired": "Имя обязательно",
@@ -4102,47 +3683,6 @@
       "currencies": "Валюты",
       "units": "Единицы",
       "deliveryBases": "Базисы"
-    }
-  },
-  "adminBids": {
-    "title": "Тендер-предложения поставщиков",
-    "description": "Все bids по сделкам всех компаний. Видимость и аудит для platform admin.",
-    "searchPlaceholder": "Поиск по сделке, поставщику, заметкам",
-    "empty": "Предложений не найдено",
-    "notSubmitted": "Можно принимать/отклонять только предложения в статусе SUBMITTED",
-    "accepted": "Предложение принято",
-    "rejected": "Предложение отклонено",
-    "accept": "Принять",
-    "reject": "Отклонить",
-    "items": "Позиции",
-    "notes": "Комментарий",
-    "detailTitle": "Bid #{{id}}",
-    "stats": {
-      "total": "Всего",
-      "submitted": "Подано",
-      "accepted": "Принято",
-      "rejected": "Отклонено"
-    },
-    "table": {
-      "id": "ID",
-      "deal": "Сделка",
-      "supplier": "Поставщик",
-      "status": "Статус",
-      "total": "Сумма",
-      "leadDays": "Срок (дней)",
-      "submittedAt": "Подано"
-    },
-    "detailTab": {
-      "overview": "Обзор"
-    },
-    "confirmAcceptTitle": "Принять предложение поставщика?",
-    "confirmAcceptDescription": "Bid #{{id}} от {{supplier}} будет принят. Остальные SUBMITTED-предложения по этой сделке автоматически отклонятся, а стадия сделки перейдёт в CALCULATING.",
-    "confirmRejectTitle": "Отклонить предложение?",
-    "confirmRejectDescription": "Bid #{{id}} от {{supplier}} будет отклонён. Причина обязательна и попадёт в аудит.",
-    "rejectTemplates": {
-      "price": "Цена выше бюджета",
-      "leadTime": "Неприемлемый срок поставки",
-      "other": "Другое (уточнить в комментарии)"
     }
   },
   "adminDeals": {
@@ -4799,49 +4339,6 @@
     },
     "disputedHint": "Спор зафиксирован — ожидайте ответа поставщика. Обсудить можно в переписке по заявке."
   },
-  "supplierBidsPage": {
-    "title": "Предложения поставщиков",
-    "description": "Заявки поставщиков по открытым RFQ",
-    "emptyState": "Предложений нет",
-    "emptyStateBuyerHint": "Откройте RFQ в разделе «Сделки» — когда поставщики откликнутся, их предложения появятся здесь.",
-    "emptyStateSupplierHint": "Когда у вас появится доступный RFQ, подайте предложение формой выше.",
-    "goToDeals": "Перейти к сделкам",
-    "pickDealPlaceholder": "Выберите сделку",
-    "noOpenDeals": "Нет доступных сделок для подачи предложения.",
-    "submit": "Подать предложение",
-    "accept": "Принять",
-    "reject": "Отклонить",
-    "submitted": "Предложение подано",
-    "accepted": "Предложение принято",
-    "rejected": "Предложение отклонено",
-    "allStatuses": "Все статусы",
-    "stats": {
-      "total": "Всего",
-      "submitted": "Подано",
-      "accepted": "Принято"
-    },
-    "table": {
-      "deal": "Сделка",
-      "supplier": "Поставщик",
-      "total": "Сумма",
-      "leadTime": "Срок (дней)",
-      "status": "Статус",
-      "submittedAt": "Подано",
-      "actions": "Действия"
-    },
-    "status": {
-      "DRAFT": "Черновик",
-      "SUBMITTED": "Подано",
-      "ACCEPTED": "Принято",
-      "REJECTED": "Отклонено",
-      "WITHDRAWN": "Отозвано"
-    },
-    "itemHeaders": {
-      "description": "Описание",
-      "qty": "Кол-во",
-      "unit": "Ед. изм."
-    }
-  },
   "confirmActions": {
     "sendQuote": {
       "title": "Отправить КП клиенту?",
@@ -4858,23 +4355,6 @@
       "description": "Из «{{name}}» будет создана новая сделка, а лид помечен как обработанный."
     }
   },
-  "leadsPage": {
-    "title": "Лиды",
-    "description": "Заявки с публичного лендинга",
-    "emptyState": "Лидов нет",
-    "convert": "Конвертировать в сделку",
-    "converted": "Лид конвертирован в сделку",
-    "table": {
-      "name": "Имя",
-      "company": "Компания",
-      "phone": "Телефон",
-      "email": "Email",
-      "message": "Сообщение",
-      "processed": "Обработан",
-      "created": "Получен",
-      "actions": "Действия"
-    }
-  },
   "rematchDialog": {
     "title": "Переназначение товара",
     "rawLabel": "Импортированное наименование",
@@ -4889,13 +4369,6 @@
       "gost": "ГОСТ",
       "score": "Совпадение"
     }
-  },
-  "rfqDialog": {
-    "title": "Открыть RFQ",
-    "description": "Переведите сделку в статус RFQ_OPEN и пригласите поставщиков",
-    "selectSuppliers": "Выбрать поставщиков (необязательно)",
-    "open": "Открыть RFQ",
-    "opened": "RFQ открыт"
   },
   "contractGenerateDialog": {
     "title": "Сформировать контракт",
@@ -5057,17 +4530,6 @@
       "resolving": "Загружаем договор…",
       "goToContract": "Перейти к договору"
     }
-  },
-  "createQuoteDialog": {
-    "title": "Создать КП",
-    "description": "КП создаётся в статусе DRAFT и привязывается к выбранной сделке.",
-    "deal": "Сделка",
-    "selectDeal": "Выберите сделку",
-    "validUntil": "Действует до",
-    "notes": "Комментарий",
-    "create": "Создать",
-    "dealRequired": "Выберите сделку",
-    "created": "КП v{{version}} создано"
   },
   "deleteConfirmations": {
     "quoteItemDescription": "Позиция будет удалена без возможности восстановления.",
@@ -5233,21 +4695,6 @@
       "invalidType": "Недопустимый тип файла",
       "uploadFailed": "Не удалось загрузить файл",
       "removeFailed": "Не удалось удалить файл"
-    }
-  },
-  "roleApplication": {
-    "title": "Заявка на статус поставщика / производителя",
-    "description": "Подайте документы для получения роли SUPPLIER или MANUFACTURER. Платформа проверит их и активирует статус.",
-    "requestedType": "Запрашиваемая роль",
-    "contract": "Договор (обязателен для поставщика)",
-    "nda": "NDA (обязателен для поставщика)",
-    "partnership": "Партнёрское соглашение (обязательно для производителя)",
-    "submit": "Отправить заявку",
-    "submitted": "Заявка отправлена",
-    "errors": {
-      "typeRequired": "Выберите роль",
-      "contractAndNdaRequired": "Необходимо загрузить договор и NDA",
-      "partnershipRequired": "Необходимо загрузить партнёрское соглашение"
     }
   },
   "dealAttachments": {
