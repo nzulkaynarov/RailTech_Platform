@@ -1,8 +1,6 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Loader2, Sparkles, FileText } from 'lucide-react';
-import { QuoteItem, QuoteEconomics } from '@/api/crmApi';
 import {
 	useQuoteItems, useUpdateQuoteItem, useCreateQuoteItem, useDeleteQuoteItem, useDeal,
 	useBulkUpdateQuoteItems, useBulkCreateQuoteItems, useBulkDeleteQuoteItems,
@@ -10,19 +8,15 @@ import {
 import { useCurrencies } from '@/hooks/useMasterData';
 import { useMediaQuery } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
-import { toDecimal } from '@/utils/decimal';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { QuoteChargesSection } from '@/components/CRM/QuoteChargesSection';
 import { StickyTotalsBar } from '@/components/QuoteBuilder/StickyTotalsBar';
-import { useQuoteDraft, type DraftFieldValue } from '@/components/QuoteBuilder/useQuoteDraft';
+import { useQuoteDraft } from '@/components/QuoteBuilder/useQuoteDraft';
 import { useGridKeyboard } from '@/components/QuoteBuilder/useGridKeyboard';
 import { useGridWorkspaceKeys } from '@/components/QuoteBuilder/useGridWorkspaceKeys';
 import { usePricingMirror } from '@/components/QuoteBuilder/usePricingMirror';
-import { cellErrorKey, hiddenErrorFields } from '@/components/QuoteBuilder/bulkErrors';
+import { hiddenErrorFields } from '@/components/QuoteBuilder/bulkErrors';
 import { useRowSelection } from '@/components/QuoteBuilder/useRowSelection';
 import { SelectionToolbar } from '@/components/QuoteBuilder/SelectionToolbar';
 import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
@@ -39,6 +33,11 @@ import { EconomicsRail } from '@/components/QuoteBuilder/EconomicsRail';
 import { GridDialogs } from '@/components/QuoteBuilder/GridDialogs';
 import { useRailState } from '@/components/QuoteBuilder/useRailState';
 import { useGridDensity } from '@/components/QuoteBuilder/useGridDensity';
+import { deriveQuoteView, makeFieldLabel } from '@/components/QuoteBuilder/quoteDerived';
+import { GridLoadingSkeleton, GridNoQuoteState } from '@/components/QuoteBuilder/GridEmptyStates';
+import { useGridEditingState } from '@/components/QuoteBuilder/useGridEditingState';
+import { useGridDialogState } from '@/components/QuoteBuilder/useGridDialogState';
+import { useGridLifecycle } from '@/components/QuoteBuilder/useGridLifecycle';
 
 interface QuoteBuilderGridProps {
 	dealId?: number;
@@ -146,40 +145,15 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 			: undefined,
 	);
 
-	// Per-cell rejection codes from the LAST bulk save (P0-4), keyed `${id}:${field}` → CODE.
-	const [cellErrors, setCellErrors] = useState<Record<string, string>>({});
-	const [newItemName, setNewItemName] = useState('');
-	const [newItemQty, setNewItemQty] = useState<string>('1');
-	const [newItemPrice, setNewItemPrice] = useState<string>('0');
-	const [showAddRow, setShowAddRow] = useState(false);
-	const [pasteOpen, setPasteOpen] = useState(false);
-	const [pasteText, setPasteText] = useState('');
-	const [pasteRowErrors, setPasteRowErrors] = useState<Record<number, Record<string, string>>>({});
-	const addNameRef = useRef<HTMLInputElement>(null);
-	const addRowRef = useRef<HTMLTableRowElement>(null);
-	const rowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map());
-
-	// Edit a line AND drop any stale bulk-save error on that exact cell.
-	const handleFieldChange = (id: number, field: keyof QuoteItem, value: DraftFieldValue) => {
-		setField(id, field, value);
-		const key = cellErrorKey(id, field as string);
-		if (cellErrors[key]) {
-			setCellErrors((previous) => {
-				const next = { ...previous };
-				delete next[key];
-				return next;
-			});
-		}
-	};
-
-	// Localized message for a rejected cell (or undefined when the cell is clean).
-	const cellError = (id: number, field: string): string | undefined => {
-		const code = cellErrors[cellErrorKey(id, field)];
-		if (!code) return undefined;
-		const key = `quote.validation.${code}`;
-		const label = t(key);
-		return label === key ? code : label; // unlocalized new code → show the raw code
-	};
+	// Редактирование строк: ошибки ячеек, поля добавления, состояние Excel-вставки.
+	const editing = useGridEditingState({ setField, t });
+	const {
+		cellErrors, setCellErrors, cellError, handleFieldChange,
+		newItemName, setNewItemName, newItemQty, setNewItemQty, newItemPrice, setNewItemPrice,
+		showAddRow, setShowAddRow,
+		pasteOpen, setPasteOpen, pasteText, setPasteText, pasteRowErrors, setPasteRowErrors,
+		addNameRef, addRowRef, rowRefs,
+	} = editing;
 
 	// Live local pricing mirror (P0-2) — null-safe off deal?.active_quote (called unconditionally).
 	const mirrorQuote = deal?.active_quote ?? null;
@@ -205,34 +179,21 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	});
 	const mirrorTotals = pricingMirror.totals;
 
-	const [showAiMatch, setShowAiMatch] = useState(false);
-	const [importOpen, setImportOpen] = useState(false);  // Q2: импорт позиций из файла
-	const [showGenerateQuote, setShowGenerateQuote] = useState(false);
-	const [showSettings, setShowSettings] = useState(false);
-	const [pricingBusy, setPricingBusy] = useState(false);
-	const [draftBusy, setDraftBusy] = useState(false);
+	// UI-состояние: диалоги, режимы, «занятость». Не влияет на draftItems.
+	const dialogs = useGridDialogState();
+	const {
+		showAiMatch, setShowAiMatch, importOpen, setImportOpen, showGenerateQuote, setShowGenerateQuote,
+		showSettings, setShowSettings, pricingBusy, setPricingBusy, draftBusy, setDraftBusy,
+		expandedRowId, setExpandedRowId, toggleRow, activeTab, setActiveTab, fullscreen, setFullscreen,
+		deleteTarget, setDeleteTarget, reassignItemId, setReassignItemId,
+		conflictOpen, setConflictOpen, conflictIds, setConflictIds,
+	} = dialogs;
 
-	// UI-only state — deliberately kept OUT of draftItems so it never trips hasUnsavedChanges.
-	const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
 	// Economics-rail view state (open/collapsed persisted, inline-aside-vs-slide-over Sheet).
 	const { railAsSheet, railOpen, railSheetOpen, setRailSheetOpen, toggleRail } = useRailState();
 	// Below 1200px the cost columns drop out of the main table (economics stay in the row detail).
 	const isCompact = useMediaQuery('(max-width: 1199px)');
 
-	const [activeTab, setActiveTab] = useState<'items' | 'charges'>('items');
-	const [fullscreen, setFullscreen] = useState(false);
-	const [deleteTarget, setDeleteTarget] = useState<number | null>(null);
-	// Manual product attach/re-match for a КП line (human counterpart to AI-подбор).
-	const [reassignItemId, setReassignItemId] = useState<number | null>(null);
-
-	// Optimistic-lock conflict dialog (волна 3): a save that lost a race to a colleague opens this
-	// instead of writing. `conflictIds` are the stale rows — only the versioned bulk save opens the
-	// dialog, and it always passes a non-empty set (pricing-assist carries no version, so it can't
-	// 409). No empty-ids "reset all" case exists. The «Обновить» refresh handler lives in GridDialogs.
-	const [conflictOpen, setConflictOpen] = useState(false);
-	const [conflictIds, setConflictIds] = useState<number[]>([]);
-
-	const toggleRow = (id: number) => setExpandedRowId((current) => (current === id ? null : id));
 
 	// All mutation-driven actions (save · add · paste · delete · bulk · pricing · AI draft).
 	const actions = useQuoteBuilderActions({
@@ -246,129 +207,39 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 		addNameRef, addRowRef, rowRefs, onSave,
 	});
 
-	// Esc exits focus mode (mirrors the ⛶ toggle) — a layered dialog owns its own Escape.
-	useEffect(() => {
-		if (!fullscreen) return;
-		const onKey = (event: KeyboardEvent) => {
-			if (event.key !== 'Escape') return;
-			if (event.defaultPrevented || document.querySelector('[role="dialog"], [role="alertdialog"]')) return;
-			setFullscreen(false);
-		};
-		window.addEventListener('keydown', onKey);
-		return () => window.removeEventListener('keydown', onKey);
-	}, [fullscreen]);
-
-	// Lift the unsaved-changes signal so the host page can guard in-app navigation (Back button).
-	useEffect(() => {
-		onDirtyChange?.(hasUnsavedChanges);
-	}, [hasUnsavedChanges, onDirtyChange]);
-
-	// Browser-level guard: warn before a tab close / reload while there are unsaved edits.
-	useEffect(() => {
-		if (!hasUnsavedChanges) return;
-		const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-			event.preventDefault();
-			event.returnValue = '';
-		};
-		window.addEventListener('beforeunload', handleBeforeUnload);
-		return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-	}, [hasUnsavedChanges]);
+	// Esc-выход из фокус-режима + две страховки от потери несохранённых правок.
+	useGridLifecycle({ fullscreen, setFullscreen, hasUnsavedChanges, onDirtyChange });
 
 	// U6 working-area keyboard shortcuts (copy-out TSV + local draft undo/redo) — extracted hook.
 	const { handleWorkspaceKeyDown } = useGridWorkspaceKeys({
 		draftItems, selection, undo, redo, canUndo, canRedo,
 	});
 
-	if (itemsLoading || dealLoading) {
-		return (
-			<Card className="min-h-[200px]">
-				<CardContent className="flex flex-col items-center justify-center gap-4 py-12">
-					<Skeleton className="h-8 w-full max-w-md" />
-					<Skeleton className="h-6 w-full max-w-lg" />
-					<Skeleton className="h-6 w-full max-w-lg" />
-					<Skeleton className="h-6 w-full max-w-lg" />
-					<Skeleton className="h-6 w-3/4 max-w-sm" />
-				</CardContent>
-			</Card>
-		);
-	}
+	if (itemsLoading || dealLoading) return <GridLoadingSkeleton />;
 
 	const activeQuote = deal?.active_quote;
 
-	// No active quote → guided empty-state with a primary action that opens the КП-creation flow.
+	// Нет активного КП → экран с первичным действием, открывающим создание КП (Q1: не тупик).
 	if (!activeQuote) {
 		return (
 			<>
-				<Card className="min-h-[200px]">
-					<CardContent className="flex flex-col items-center justify-center gap-3 py-12 text-center">
-						<div className="flex size-12 items-center justify-center rounded-full bg-muted">
-							<FileText className="size-6 text-muted-foreground" aria-hidden="true" />
-						</div>
-						<h3 className="text-base font-semibold">{t('quote.empty.title')}</h3>
-						<p className="max-w-sm text-sm text-muted-foreground">{t('quote.empty.description')}</p>
-						<div className="mt-2 flex flex-wrap items-center justify-center gap-2">
-							<Button onClick={actions.handleGenerateDraft} disabled={!dealId || draftBusy}>
-								{draftBusy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" aria-hidden="true" />}
-								{t('aiDraft.action')}
-							</Button>
-							<Button variant="outline" onClick={() => setShowGenerateQuote(true)} disabled={!dealId}>
-								<FileText className="size-4" aria-hidden="true" />
-								{t('quote.empty.action')}
-							</Button>
-						</div>
-					</CardContent>
-				</Card>
+				<GridNoQuoteState
+					dealId={dealId}
+					draftBusy={draftBusy}
+					onGenerateDraft={actions.handleGenerateDraft}
+					onOpenGenerateDialog={() => setShowGenerateQuote(true)}
+				/>
 				<GenerateQuoteDialog dealId={dealId || null} open={showGenerateQuote} onOpenChange={setShowGenerateQuote} />
 			</>
 		);
 	}
 
-	// Presentation currency (all STORED totals are in UZS); computed columns render in it.
-	const presentationCurrency = activeQuote?.quote_currency || 'UZS';
-	const vatRate = activeQuote?.vat_rate || '12';
-
-	// Cost-viewer gate: the server redacts cost fields + returns economics === null without
-	// quote.view_cost_margin. One derived flag drives every cost-bearing column/panel.
-	const econ: QuoteEconomics | null = activeQuote.economics ?? null;
-	const canViewCost = !!econ;
-	// Viewport gate layered on top: on narrow laptops (<1200px) the two cost columns collapse.
-	const showCostColumns = canViewCost && !isCompact;
-
-	// FX rate (сум per 1 unit) for a line cost currency: manual override wins over the frozen snapshot.
-	const fxSnapshot = activeQuote?.fx_snapshot ?? {};
-	const fxManual = activeQuote?.fx_manual ?? {};
-	const fxMarket = activeQuote?.fx_market ?? {};
-	const fxRateFor = (code?: string): string => {
-		const ccy = (code || 'UZS').toUpperCase();
-		if (ccy === 'UZS') return '1';
-		return fxManual[ccy] || fxSnapshot[ccy] || fxMarket[ccy] || '1';
-	};
-	// The line's COST shown in the presentation (UZS) currency, for the tooltip.
-	const lineCostInPresentation = (item: QuoteItem): string => {
-		const native = toDecimal(item.frozen_base_price).plus(toDecimal(item.customs_duty));
-		return native.mul(toDecimal(fxRateFor(item.frozen_currency))).toString();
-	};
-
-	// КП срок поставки (до N дн.) — backend-computed effective value.
-	const effectiveLeadTime = activeQuote?.effective_delivery_lead_time_days ?? 0;
-
-	// Visible main-row columns (for the detail row + spacer colSpan): select, chevron, name, qty,
-	// [base], [margin], sum, delete. Tracks the two cost columns the <1200px gate hides.
-	const mainColCount = showCostColumns ? 8 : 6;
-
-	// Human label for a КП-line field code — names the hidden field(s) in the row error marker tooltip.
-	const fieldLabel = (field: string): string => {
-		const labels: Record<string, string> = {
-			customs_duty: t('quote.customsDuty'),
-			discount_percent: t('quote.discountPercent'),
-			lead_time_days: t('quote.leadTime'),
-			hs_code: t('quote.hsCode'),
-			frozen_base_price: t('quote.basePrice'),
-			frozen_currency: t('quote.lineCurrency'),
-			margin_percent: t('quote.marginOverride.header'),
-		};
-		return labels[field] ?? field;
-	};
+	// Производные от активного КП: валюта/НДС, гейт себестоимости, курсы, число колонок.
+	const {
+		presentationCurrency, vatRate, econ, canViewCost, showCostColumns,
+		effectiveLeadTime, mainColCount, fxRateFor, lineCostInPresentation,
+	} = deriveQuoteView(activeQuote, isCompact);
+	const fieldLabel = makeFieldLabel(t);
 
 	const contextValue: QuoteBuilderGridContextValue = {
 		activeQuote, econ, canViewCost, showCostColumns, presentationCurrency, vatRate, effectiveLeadTime,
