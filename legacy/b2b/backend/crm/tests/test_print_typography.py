@@ -15,7 +15,7 @@ import pytest
 import tinycss2
 from django.template.loader import render_to_string
 
-from crm.services.documents import _FONT_STACKS
+from crm.services.documents.brand import _FONT_STACKS
 
 _BACKEND_ROOT = Path(__file__).resolve().parents[2]
 _TEMPLATE_ROOTS = [_BACKEND_ROOT / "crm" / "templates", _BACKEND_ROOT / "templates"]
