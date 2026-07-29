@@ -321,3 +321,98 @@ class TestRawCrudIsClosed:
         от которой зависит видимость отгрузки для продавца."""
         create = _api(world["seller"]).post("/api/v1/crm/fulfillments/", {"deal": world["deal"].id}, format="json")
         assert create.status_code == 405
+
+
+# ── Фильтры списков ───────────────────────────────────────────────────────────
+
+
+@pytest.mark.django_db
+class TestBillingListFilters:
+    """Параметры фильтрации молча отбрасывались: у вьюсетов не было ни `filterset_fields`,
+    ни `filterset_class`, а `DjangoFilterBackend` в таком случае возвращает queryset без
+    изменений — без ошибки. Симптомы были видны пользователю (см. тесты ниже)."""
+
+    def _second_deal_invoice(self, world):
+        """Второй счёт по ДРУГОЙ сделке того же покупателя — чтобы фильтр было что отсечь."""
+        from crm.models import Contract, ContractStatus, Deal, DealSellerRouting, Quote, QuoteStatus
+
+        other_deal = Deal.objects.create(
+            title="Вторая сделка",
+            company=world["deal"].company,
+            stage=DealStage.objects.get(code="CONTRACT_SIGNED"),
+        )
+        DealSellerRouting.objects.create(deal=other_deal, seller_company=world["seller"].memberships.first().company)
+        other_quote = Quote.objects.create(
+            deal=other_deal,
+            version=1,
+            status=QuoteStatus.objects.get(code="DRAFT"),
+            prepared_by=world["seller"],
+            seller_company=world["seller"].memberships.first().company,
+            total_incl_vat=Decimal("50"),
+        )
+        other_contract = Contract.objects.create(
+            deal=other_deal,
+            quote=other_quote,
+            number="CT-SCOPE-OTHER",
+            status=ContractStatus.objects.get(code="SIGNED"),
+            total_amount=Decimal("50"),
+        )
+        invoice, error = generate_invoice_from_contract(other_contract.id, actor=None)
+        assert error is None, error
+        return other_deal, invoice
+
+    def _rows(self, response):
+        body = response.json()
+        return body["results"] if isinstance(body, dict) and "results" in body else body
+
+    def test_deal_filter_actually_filters(self, world):
+        """РЕГРЕСС. `?deal=<id>` отбрасывался, и список возвращал ВСЕ видимые счета."""
+        first_invoice, _act = _signed_act(world)
+        _other_deal, other_invoice = self._second_deal_invoice(world)
+
+        response = _api(world["buyer"]).get(f"/api/v1/crm/invoices/?deal={world['deal'].id}")
+
+        assert response.status_code == 200, response.content
+        ids = {row["id"] for row in self._rows(response)}
+        assert first_invoice.id in ids
+        assert other_invoice.id not in ids, "фильтр по сделке не сработал"
+
+    def test_status_filter_accepts_a_comma_separated_list(self, world):
+        """РЕГРЕСС. `RecordPaymentDialog` шлёт `?status=ISSUED,PARTIAL,OVERDUE`, чтобы
+        предложить к оплате только живую дебиторку. Фильтр игнорировался — в списке
+        оказывались черновики и отменённые счета, и пользователь выбирал неоплачиваемый."""
+        issued_invoice, _act = _signed_act(world)  # ISSUED
+        _other_deal, draft_invoice = self._second_deal_invoice(world)  # DRAFT
+        assert draft_invoice.status_code == "DRAFT"
+
+        response = _api(world["seller"]).get("/api/v1/crm/invoices/?status=ISSUED,PARTIAL,OVERDUE")
+
+        assert response.status_code == 200, response.content
+        ids = {row["id"] for row in self._rows(response)}
+        assert issued_invoice.id in ids
+        assert draft_invoice.id not in ids, "черновик попал в список к оплате"
+
+    def test_unknown_status_returns_nothing_rather_than_everything(self, world):
+        """Осмысленный отказ: неизвестный код не должен вести себя как «фильтра нет»."""
+        _signed_act(world)
+        response = _api(world["buyer"]).get("/api/v1/crm/invoices/?status=НЕТ_ТАКОГО")
+        assert response.status_code == 200
+        assert self._rows(response) == []
+
+    def test_payments_can_be_filtered_by_deal(self, world):
+        """У платежа нет своей связи со сделкой — фильтр идёт через счёт."""
+        invoice, _act = _signed_act(world)
+        _api(world["buyer"]).post(
+            f"/api/v1/crm/invoices/{invoice.id}/record-payment/",
+            {"amount": "10", "paid_at": "2026-07-29"},
+            format="json",
+        )
+        response = _api(world["buyer"]).get(f"/api/v1/crm/payments/?deal={world['deal'].id}")
+        assert response.status_code == 200, response.content
+        assert len(self._rows(response)) == 1
+
+    def test_acts_can_be_filtered_by_deal(self, world):
+        _invoice, act = _signed_act(world)
+        response = _api(world["buyer"]).get(f"/api/v1/crm/acts/?deal={world['deal'].id}")
+        assert response.status_code == 200, response.content
+        assert {row["id"] for row in self._rows(response)} == {act.id}

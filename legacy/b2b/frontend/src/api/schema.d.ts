@@ -17321,10 +17321,15 @@ export interface operations {
     crm_acts_list: {
         parameters: {
             query?: {
+                contract?: number;
+                deal?: number;
+                invoice?: number;
                 /** @description A page number within the paginated result set. */
                 page?: number;
                 /** @description A search term. */
                 search?: string;
+                /** @description Несколько значений могут быть разделены запятыми. */
+                status?: string[];
             };
             header?: never;
             path?: never;
@@ -19076,10 +19081,14 @@ export interface operations {
     crm_fulfillments_list: {
         parameters: {
             query?: {
+                contract?: number;
+                deal?: number;
                 /** @description A page number within the paginated result set. */
                 page?: number;
                 /** @description A search term. */
                 search?: string;
+                /** @description Несколько значений могут быть разделены запятыми. */
+                status?: string[];
             };
             header?: never;
             path?: never;
@@ -19387,10 +19396,14 @@ export interface operations {
     crm_invoices_list: {
         parameters: {
             query?: {
+                contract?: number;
+                deal?: number;
                 /** @description A page number within the paginated result set. */
                 page?: number;
                 /** @description A search term. */
                 search?: string;
+                /** @description Несколько значений могут быть разделены запятыми. */
+                status?: string[];
             };
             header?: never;
             path?: never;
@@ -20117,6 +20130,8 @@ export interface operations {
     crm_payments_list: {
         parameters: {
             query?: {
+                deal?: number;
+                invoice?: number;
                 /** @description A page number within the paginated result set. */
                 page?: number;
                 /** @description A search term. */

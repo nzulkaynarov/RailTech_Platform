@@ -267,7 +267,22 @@ def auto_invoice_on_closed_won(self, deal_id: int) -> dict:
         .first()
     )
     if act is None:
-        act, err2 = generate_act(invoice.id)
+        act, act_error = generate_act(invoice.id)
+        if act_error:
+            # Раньше код возврата присваивался и НИКУДА не шёл: авто-акт падал молча, а в
+            # ответе таска оставалось act=None — по логам было не отличить «акт не нужен» от
+            # «акт не создался». Ожидаемый и самый частый случай — ACT_INVALID_INVOICE_STATUS:
+            # счёт только что создан в DRAFT, а generate_act требует ISSUED/PARTIAL/PAID.
+            # Здесь чиню ТОЛЬКО молчание; вопрос «когда вообще выпускать акт» —
+            # продуктовый (спека post-contract §6), поведение триггера не меняю.
+            result["act_error"] = act_error
+            logger.warning(
+                "Auto-act skipped for deal %s (invoice %s, status %s): %s",
+                deal_id,
+                invoice.id,
+                invoice.status_code,
+                act_error,
+            )
     if act is not None:
         result["act"] = act.id
     return result

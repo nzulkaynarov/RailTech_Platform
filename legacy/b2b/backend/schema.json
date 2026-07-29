@@ -7796,6 +7796,27 @@
                 "description": "Акты — только чтение плюс сервисные экшены ниже (Rule 8).\n\nВыпуск — через `invoices/{id}/generate-act/` (там же проверяется роутинг\nпродавца, аудит H4), подпись — через `acts/{id}/sign/`. Сырые create/update/\ndestroy обходили обе проверки и позволяли проставить номер, статус и даты руками.",
                 "parameters": [
                     {
+                        "in": "query",
+                        "name": "contract",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "deal",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "invoice",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
                         "name": "page",
                         "required": false,
                         "in": "query",
@@ -7812,6 +7833,19 @@
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    {
+                        "in": "query",
+                        "name": "status",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        "description": "Несколько значений могут быть разделены запятыми.",
+                        "explode": false,
+                        "style": "form"
                     }
                 ],
                 "tags": [
@@ -10833,6 +10867,20 @@
                 "description": "Отгрузки — только чтение плюс экшен `update-status` (Rule 8).\n\nСырой CRUD позволял, среди прочего, проставить или сбросить `contract` —\nпривязку к владельцу, от которой зависит видимость записи для продавца.",
                 "parameters": [
                     {
+                        "in": "query",
+                        "name": "contract",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "deal",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
                         "name": "page",
                         "required": false,
                         "in": "query",
@@ -10849,6 +10897,19 @@
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    {
+                        "in": "query",
+                        "name": "status",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        "description": "Несколько значений могут быть разделены запятыми.",
+                        "explode": false,
+                        "style": "form"
                     }
                 ],
                 "tags": [
@@ -11361,6 +11422,20 @@
                 "description": "Счета. Сырые `create`/`destroy` НЕ подключены намеренно (Rule 8).\n\nВыставление счёта — только через сервисные экшены `create-manual` и\n`generate-from-contract`; отмена — через `cancel` (сервис `cancel_invoice`).\nСырое удаление обходило бы отмену, а при наличии платежей падало бы в\n`ProtectedError` → 500 (`Payment.invoice` объявлен с `on_delete=PROTECT`).\n`update` оставлен: им правят черновик (due_date / notes), и он уже загейчен\nна DRAFT ниже — фронтенд использует именно его.",
                 "parameters": [
                     {
+                        "in": "query",
+                        "name": "contract",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "deal",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
                         "name": "page",
                         "required": false,
                         "in": "query",
@@ -11377,6 +11452,19 @@
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    {
+                        "in": "query",
+                        "name": "status",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        "description": "Несколько значений могут быть разделены запятыми.",
+                        "explode": false,
+                        "style": "form"
                     }
                 ],
                 "tags": [
@@ -12683,6 +12771,20 @@
                 "operationId": "crm_payments_list",
                 "description": "Платежи — ТОЛЬКО чтение (Rule 8).\n\nЗапись идёт исключительно через `invoices/{id}/record-payment/` → сервис\n`record_payment`, который проверяет права покупателя, статус счёта и\nположительность суммы, пересчитывает `amount_paid`/статус и пишет в аудит.\nСырой `POST /crm/payments/` всё это обходил: любой аутентифицированный\nпользователь мог вписать в реестр строку (в т.ч. отрицательную) по ЧУЖОМУ\nсчёту, а `amount_paid` счёта при этом не менялся — реестр расходился со счётом.",
                 "parameters": [
+                    {
+                        "in": "query",
+                        "name": "deal",
+                        "schema": {
+                            "type": "number"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "invoice",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
                     {
                         "name": "page",
                         "required": false,

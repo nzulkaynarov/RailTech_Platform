@@ -22,6 +22,7 @@ from crm.serializers import (
     InvoiceSerializer,
     PaymentSerializer,
 )
+from crm.views.billing_filters import ActFilter, FulfillmentFilter, InvoiceFilter, PaymentFilter
 
 _PDF_DOC_TYPE = {"Contract": "contract", "Invoice": "invoice", "Act": "act"}
 
@@ -276,6 +277,7 @@ class InvoiceViewSet(
 
     serializer_class = InvoiceSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
+    filterset_class = InvoiceFilter
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
@@ -476,6 +478,7 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
 
     serializer_class = PaymentSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
+    filterset_class = PaymentFilter
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
@@ -507,6 +510,7 @@ class ActViewSet(viewsets.ReadOnlyModelViewSet):
 
     serializer_class = ActSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
+    filterset_class = ActFilter
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
@@ -566,6 +570,7 @@ class FulfillmentViewSet(viewsets.ReadOnlyModelViewSet):
 
     serializer_class = FulfillmentSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
+    filterset_class = FulfillmentFilter
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
