@@ -34,6 +34,7 @@ from .access import (
     can_duplicate_quote,
     can_send_quote_to_client,
     public_quote_gate,
+    reapply_company_defaults,
     scope_quotes_for_viewer,
 )
 from .bulk import (
@@ -73,6 +74,7 @@ __all__ = [
     # access
     "scope_quotes_for_viewer",
     "apply_company_quote_defaults",
+    "reapply_company_defaults",
     "can_duplicate_quote",
     "duplicate_quote",
     "can_send_quote_to_client",

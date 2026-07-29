@@ -382,6 +382,21 @@ export const useUpdateQuoteSettings = () => {
     });
 };
 
+// «Применить настройки компании» (Odoo Update Prices): re-pull current company defaults
+// into the DRAFT КП. vat/margin move the totals server-side, so refresh the same surfaces
+// as a settings save (quotes + deals + line grid).
+export const useApplyQuoteDefaults = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => crmApi.applyQuoteDefaults(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['quotes'] });
+            queryClient.invalidateQueries({ queryKey: ['deals'] });
+            queryClient.invalidateQueries({ queryKey: ['quote-items'] });
+        },
+    });
+};
+
 // Seller picks Incoterm → basis set + charge template auto-applied. Refresh quotes,
 // deals (active_quote), the charges list (template rows appear), and the line grid
 // (F5: freight/basis recomputes each line's landed cost → final price).

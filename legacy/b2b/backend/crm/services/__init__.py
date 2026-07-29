@@ -61,6 +61,7 @@ from .quotes import (
     can_duplicate_quote,
     duplicate_quote,
     effective_quote_lead_time,
+    reapply_company_defaults,
     reassign_quote_item_product,
 )
 from .relationships import (
@@ -89,6 +90,7 @@ __all__ = [
     "Tranche",
     "apply_charge_template_to_quote",
     "apply_company_quote_defaults",
+    "reapply_company_defaults",
     "archive_messages_sync",
     "auto_split_quote_by_availability",
     "buyer_add_request_item",

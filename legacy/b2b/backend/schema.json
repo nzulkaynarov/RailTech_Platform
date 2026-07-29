@@ -14504,6 +14504,40 @@
                 }
             }
         },
+        "/api/v1/crm/quotes/{id}/apply-defaults/": {
+            "post": {
+                "operationId": "crm_quotes_apply_defaults_create",
+                "description": "Re-pull the seller company's CURRENT defaults (VAT rate, margin, delivery basis, validity term, cost currency) into this DRAFT КП, OVERWRITING those five fields (Odoo «Update Prices» / Salesforce «Recalculate» pattern). Seller-only, unfrozen КП only (else QUOTE_FROZEN). Returns `changed_fields` — the fields that actually differed and were updated (empty when the КП already matched the defaults).",
+                "summary": "Reapply company defaults to the quote",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Коммерческое предложение.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Applied — `changed_fields` lists what changed"
+                    },
+                    "403": {
+                        "description": "ONLY_SELLER_CAN_BUILD_QUOTE / QUOTE_FROZEN"
+                    }
+                }
+            }
+        },
         "/api/v1/crm/quotes/{id}/approval-act/": {
             "post": {
                 "operationId": "crm_quotes_approval_act_create",
