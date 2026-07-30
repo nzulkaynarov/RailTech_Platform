@@ -53,21 +53,43 @@ const CATALOG_READ = [
   { id: 'product_detail', buyer: true, seller: true, kycExempt: true },
 ] as const satisfies readonly PageDefinition[];
 
-/** Документооборот, общий для покупателя и продавца. */
+/**
+ * Документооборот, общий для покупателя и продавца.
+ *
+ * Правило раздела (U1): если документ ВИДЕН обеим сторонам сделки, то и страница документа
+ * доступна обеим. Иначе получается разрыв «объект показан, а места нет»: виджеты выводят то,
+ * что вернул сервер, а маршрут упирается в статический список ролей. Списки при этом сужены
+ * видимостью на бэкенде — контрагент видит только документы СВОИХ сделок, скрытая конкуренция
+ * (ADR-0003 §5) не страдает.
+ */
 const SHARED_DOCUMENTS = [
   { id: 'contracts', buyer: true, seller: true, adminReachable: true, navigable: true },
-  { id: 'invoices', buyer: true, seller: true, navigable: true },
+  // Оператору открыт, потому что его же страница договоров ведёт сюда кнопкой «Открыть счёт».
+  { id: 'invoices', buyer: true, seller: true, adminReachable: true, navigable: true },
   { id: 'payments', buyer: true, seller: true, navigable: true },
   { id: 'fulfillments', buyer: true, seller: true, navigable: true },
+  // Акт — ДВУСТОРОННИЙ документ: выпускает исполнитель, принимает заказчик (волна G2), и
+  // сервер отдаёт покупателю `viewer_can_sign`/`viewer_can_reject`. Пока страница была
+  // продавцовской, покупатель не мог воспользоваться собственным правом: четыре поверхности
+  // показывали ему акт, и все четыре вели в отказ. Это было единственное исключение из
+  // правила раздела — остальные документы цепочки уже были общими.
+  { id: 'acts', buyer: true, seller: true, navigable: true },
   { id: 'other-documents', buyer: true, seller: true, navigable: true },
   { id: 'company-files', buyer: true, seller: true, navigable: true },
-  { id: 'my-subscription', buyer: true, seller: true, navigable: true },
+  // Подписка — страница СЧЁТА, а не бизнес-операция: и баннер тарифа, и чек-лист онбординга
+  // зовут сюда новичка ДО прохождения KYC (эталон — Stripe/Odoo: биллинг доступен всегда).
+  // Пока страница была за KYC-порогом, обе подсказки вели в отказ.
+  { id: 'my-subscription', buyer: true, seller: true, kycExempt: true, navigable: true },
   // Карточка сделки — одна страница для обеих сторон, родительская крошка контекстная.
-  { id: 'request-detail', buyer: true, seller: true },
+  // Оператору открыта: на его страницах КП и договоров ссылка на сделку ведёт сюда.
+  { id: 'request-detail', buyer: true, seller: true, adminReachable: true },
 ] as const satisfies readonly PageDefinition[];
 
 const BUYER_ONLY = [
-  { id: 'my-requests', buyer: true, navigable: true },
+  // До KYC покупателю разрешены регистрация, просмотр каталога и ЧЕРНОВИК заявки
+  // (ADR-0006, KYC floor) — значит и страница своих заявок нужна ему до верификации.
+  // Иначе чек-лист онбординга зовёт создать заявку и упирается в KYC-гейт.
+  { id: 'my-requests', buyer: true, kycExempt: true, navigable: true },
   { id: 'suppliers', buyer: true, navigable: true },
 ] as const satisfies readonly PageDefinition[];
 
@@ -78,8 +100,10 @@ const SELLER_ONLY = [
   { id: 'sourcing-requests', seller: true, navigable: true },
   { id: 'crm-deals', seller: true, navigable: true },
   { id: 'crm-quotes', seller: true, adminReachable: true, navigable: true },
+  // Билдер КП — рабочее место ПРОДАВЦА (правка цен, маржи, себестоимости). Покупателю сюда
+  // не нужно и нельзя: его вид того же КП живёт на карточке заявки. Ссылки на КП поэтому
+  // разрешаются через `documentRoute` по стороне зрителя, а не открытием этой страницы.
   { id: 'deal-quote', seller: true },
-  { id: 'acts', seller: true, navigable: true },
   { id: 'clients', seller: true, navigable: true },
 ] as const satisfies readonly PageDefinition[];
 

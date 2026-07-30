@@ -9,6 +9,12 @@ the viewer couldn't already open — in particular the hidden-competition bounda
 preserved: a routed seller never sees a CO-ROUTED competitor's contract/invoice/act, nor another
 company's DRAFT сгенерированный документ. The scoping helpers are REUSED (not re-derived) to keep
 this feed from drifting away from the canonical querysets.
+
+ВАЖНО: маршрут SPA этот фид НЕ отдаёт. Раньше в каждой строке лежало готовое поле `hash`
+(`deal-quote/5`, `acts`, …), и бэкенд тем самым брал на себя знание о гейтах интерфейса,
+которого у него нет: ссылка на акт и на КП была продавцовской и уводила покупателя в отказ
+(аудит UI 2026-07-30). Маршрут считает фронтовый `lib/documentRoute` по стороне зрителя;
+здесь остаются `type`/`id`/`deal`, которых ему для этого достаточно.
 """
 
 from typing import List, Optional
@@ -56,7 +62,6 @@ def _recent_quotes(user, request, limit: int) -> List[dict]:
             "status_code": quote.status.code if quote.status_id else None,
             "_date": quote.created_at,
             "deal": quote.deal_id,
-            "hash": f"deal-quote/{quote.deal_id}",
         }
         for quote in qs[:limit]
     ]
@@ -80,7 +85,6 @@ def _recent_contracts(user, request, limit: int) -> List[dict]:
             "status_code": contract.status_code,
             "_date": contract.created_at,
             "deal": contract.deal_id,
-            "hash": "contracts",
         }
         for contract in qs[:limit]
     ]
@@ -112,7 +116,6 @@ def _recent_invoices(user, request, limit: int) -> List[dict]:
             "status_code": invoice.status_code,
             "_date": invoice.created_at,
             "deal": invoice.deal_id,
-            "hash": f"invoices?open={invoice.id}",
         }
         for invoice in qs[:limit]
     ]
@@ -138,7 +141,6 @@ def _recent_acts(user, request, limit: int) -> List[dict]:
             "status_code": act.status_code,
             "_date": act.created_at,
             "deal": act.deal_id,
-            "hash": "acts",
         }
         for act in qs[:limit]
     ]
@@ -164,7 +166,6 @@ def _recent_generated(user, request, limit: int) -> List[dict]:
             "status_code": document.status_code,
             "_date": document.created_at,
             "deal": document.deal_id,
-            "hash": "other-documents",
         }
         for document in qs[:limit]
     ]

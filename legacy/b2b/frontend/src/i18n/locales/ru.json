@@ -2346,7 +2346,8 @@
       "overdueInvoices_few": "{{count}} просрочено",
       "overdueInvoices_many": "{{count}} просрочено",
       "overdueInvoices_other": "{{count}} просрочено",
-      "actsToSign": "Акты на подписи",
+      "actsAwaitingAcceptance": "Акты ждут приёмки",
+      "actsToAccept": "Акты на приёмку",
       "inTransit": "Поставки в пути",
       "awaitingDelivery": "Ожидаемые поставки",
       "toAccept": "Ждут приёмки"

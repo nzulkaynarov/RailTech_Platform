@@ -7,7 +7,7 @@ fields, merges the heterogeneous rows, sorts by date-desc and caps at `limit`. B
 identical to each type's own ViewSet, search can never surface a document the viewer couldn't open:
 the hidden-competition boundary (ADR-0003 §5) and the another-company-DRAFT gate are preserved.
 
-Result element shape is IDENTICAL to recent_documents ({type,id,label,status_code,date,deal,hash}).
+Result element shape is IDENTICAL to recent_documents ({type,id,label,status_code,date,deal}).
 A query shorter than MIN_QUERY_LEN returns [] WITHOUT touching the DB.
 """
 
@@ -47,7 +47,6 @@ def _search_quotes(user, request, query: str, limit: int) -> List[dict]:
             "status_code": quote.status.code if quote.status_id else None,
             "_date": quote.created_at,
             "deal": quote.deal_id,
-            "hash": f"deal-quote/{quote.deal_id}",
         }
         for quote in qs[:limit]
     ]
@@ -72,7 +71,6 @@ def _search_contracts(user, request, query: str, limit: int) -> List[dict]:
             "status_code": contract.status_code,
             "_date": contract.created_at,
             "deal": contract.deal_id,
-            "hash": "contracts",
         }
         for contract in qs[:limit]
     ]
@@ -105,7 +103,6 @@ def _search_invoices(user, request, query: str, limit: int) -> List[dict]:
             "status_code": invoice.status_code,
             "_date": invoice.created_at,
             "deal": invoice.deal_id,
-            "hash": f"invoices?open={invoice.id}",
         }
         for invoice in qs[:limit]
     ]
@@ -134,7 +131,6 @@ def _search_acts(user, request, query: str, limit: int) -> List[dict]:
             "status_code": act.status_code,
             "_date": act.created_at,
             "deal": act.deal_id,
-            "hash": "acts",
         }
         for act in qs[:limit]
     ]
@@ -161,7 +157,6 @@ def _search_generated(user, request, query: str, limit: int) -> List[dict]:
             "status_code": document.status_code,
             "_date": document.created_at,
             "deal": document.deal_id,
-            "hash": "other-documents",
         }
         for document in qs[:limit]
     ]

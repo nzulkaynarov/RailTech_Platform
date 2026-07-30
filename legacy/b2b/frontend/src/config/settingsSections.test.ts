@@ -67,13 +67,14 @@ describe('buildSettingsSections — S1 гейтинг = правда сохра�
     expect(defaultSettingsSection(gate)).toBe('profile');
   });
 
-  it('OWNER CLIENT-only компании с can_sell=true у участника: seller-секции скрыты', () => {
-    // /me.capabilities.can_sell — флаг CompanyMember и не знает тип компании; без companySells
-    // такой OWNER видел documents/numbering/defaults/templates.
+  it('OWNER CLIENT-only компании: seller-секции скрыты (can_sell приходит с сервера уже ложным)', () => {
+    // `capabilities.can_sell` = серверный `is_seller` (членство И тип компании), поэтому у OWNER'а
+    // покупательской компании он ложен независимо от флага участника. Проверка держит инвариант:
+    // если сервер вернёт правду, секции появятся — значит гейт читает именно эту правду.
     const gate = makeGate({
       isOwner: true,
       companySells: false,
-      capabilities: makeCapabilities({ can_sell: true }),
+      capabilities: makeCapabilities({ can_sell: false }),
     });
     expect(sectionKeys(gate)).toEqual(['profile', 'security', 'company', 'doc-templates', 'team']);
   });

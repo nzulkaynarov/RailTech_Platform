@@ -11,6 +11,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useDeals, useQuotes, useMyApprovalQueue, useDealStages } from '@/hooks/useCRM';
 import { useContracts, useInvoices, useActs, useFulfillments } from '@/hooks/useBilling';
 import { useCurrencyStore } from '@/store/currencyStore';
+import { useUserStore } from '@/store/userStore';
+import { dealsListRoute } from '@/lib/documentRoute';
 import { dealStageLabelKey } from '@/lib/codes';
 import type { DashboardStats } from '@/api/dashboardApi';
 
@@ -146,6 +148,10 @@ export function PostContractStrip({ side, onNavigate }: { side: 'seller' | 'buye
     (shipment) => shipment.status === 'SHIPPED' || shipment.status === 'IN_TRANSIT',
   );
   const delivered = (fulfillments ?? []).filter((shipment) => shipment.status === 'DELIVERED');
+  // Акт двусторонний (G2): выпустивший его подтвердить не может, сервер отдаёт это в
+  // `viewer_can_sign`. Заказчику показываем то, что ждёт ЕГО приёмки, исполнителю — сколько
+  // выпущенных актов висит на другой стороне.
+  const actsAwaitingMe = (acts ?? []).filter((act) => act.viewer_can_sign);
 
   const items: AttentionItem[] = side === 'seller'
     ? [
@@ -158,7 +164,7 @@ export function PostContractStrip({ side, onNavigate }: { side: 'seller' | 'buye
         page: 'invoices',
         hint: overdueCount ? t('dashboardPage.attn.overdueInvoices', { count: overdueCount }) : null,
       },
-      { icon: ScrollText, label: t('dashboardPage.attn.actsToSign'), count: (acts ?? []).length, tone: 'warning', page: 'acts' },
+      { icon: ScrollText, label: t('dashboardPage.attn.actsAwaitingAcceptance'), count: (acts ?? []).length, tone: 'warning', page: 'acts' },
       { icon: Truck, label: t('dashboardPage.attn.inTransit'), count: inTransit.length, tone: 'warning', page: 'fulfillments' },
     ]
     : [
@@ -170,7 +176,7 @@ export function PostContractStrip({ side, onNavigate }: { side: 'seller' | 'buye
         page: 'invoices',
         hint: overdueCount ? t('dashboardPage.attn.overdueInvoices', { count: overdueCount }) : null,
       },
-      // Реестр актов покупателю закрыт (SELLER_PAGES) — плитки, ведущей в никуда, здесь нет.
+      { icon: ScrollText, label: t('dashboardPage.attn.actsToAccept'), count: actsAwaitingMe.length, tone: 'destructive', page: 'acts' },
       { icon: Truck, label: t('dashboardPage.attn.awaitingDelivery'), count: inTransit.length, tone: 'warning', page: 'fulfillments' },
       { icon: PackageCheck, label: t('dashboardPage.attn.toAccept'), count: delivered.length, tone: 'destructive', page: 'fulfillments' },
     ];
@@ -213,6 +219,10 @@ const FUNNEL_COLORS = [
  *  Data-driven (no hardcoded stage list); a click drills into that stage on the deals page. */
 export function PipelineFunnel({ onNavigate }: { onNavigate: (p: string) => void }) {
   const { t } = useTranslation();
+  // Воронка стоит и на дашборде ПОКУПАТЕЛЯ — клик по сегменту вёл его в очередь продавца,
+  // куда гейт не пускает. Маршрут теперь по стороне зрителя (U1).
+  const activeStatus = useUserStore((state) => state.activeStatus);
+  const viewer = { isSeller: activeStatus === 'SELLER' };
   const { data: deals } = useDeals();
   const { data: stages } = useDealStages();
 
@@ -257,7 +267,7 @@ export function PipelineFunnel({ onNavigate }: { onNavigate: (p: string) => void
             <button
               key={s.code}
               type="button"
-              onClick={() => onNavigate('crm-deals')}
+              onClick={() => onNavigate(dealsListRoute(viewer))}
               className="flex items-center gap-2 text-left"
             >
               <span className={cn('h-2.5 w-2.5 shrink-0 rounded-sm', FUNNEL_COLORS[i % FUNNEL_COLORS.length])} aria-hidden="true" />

@@ -28165,15 +28165,11 @@
                     "deal": {
                         "type": "integer",
                         "nullable": true
-                    },
-                    "hash": {
-                        "type": "string"
                     }
                 },
                 "required": [
                     "date",
                     "deal",
-                    "hash",
                     "id",
                     "label",
                     "status_code",
@@ -28536,15 +28532,11 @@
                     "deal": {
                         "type": "integer",
                         "nullable": true
-                    },
-                    "hash": {
-                        "type": "string"
                     }
                 },
                 "required": [
                     "date",
                     "deal",
-                    "hash",
                     "id",
                     "label",
                     "status_code",

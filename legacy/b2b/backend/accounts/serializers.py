@@ -512,7 +512,7 @@ class MeSerializer(serializers.ModelSerializer):
         effective CompanyRole permission codes — is_system role → ALL_PERMISSIONS (mirrors
         CompanyRole.has_perm's short-circuit, so a perm added later isn't wrongly missing for an
         existing company admin). Drives the unified nav's per-item `requires` gates."""
-        from accounts.services import is_demo, primary_seller_company_id, quote_send_entitled
+        from accounts.services import is_demo, is_seller, primary_seller_company_id, quote_send_entitled
 
         from .constants import ALL_PERMISSIONS, FeatureKey
 
@@ -528,10 +528,15 @@ class MeSerializer(serializers.ModelSerializer):
         # UI show the distinct "output watermarked" message. UI-gating only — send_to_client stays
         # authoritative. None seller company → both False (no seller context to gate).
         seller_company_id = primary_seller_company_id(obj)
+        # `can_sell` здесь — «пользователь на стороне ПРОДАВЦА», ровно как это понимает авторизация
+        # (`is_seller`: активное членство с can_sell И компания типа SUPPLIER/MANUFACTURER).
+        # Плоское поле `can_sell` выше по сериализатору — флаг УЧАСТНИКА и типа компании не знает;
+        # он по умолчанию True у любого члена, поэтому SPA показывала продавцовские поверхности
+        # члену чисто покупательской компании (аудит UI 2026-07-30). Две правды свелись в одну.
         return {
             "kyc_level": self.get_kyc_status(obj),
             "can_buy": self.get_can_buy(obj),
-            "can_sell": self.get_can_sell(obj),
+            "can_sell": is_seller(obj),
             "subscription_active": bool(self.get_seller_subscription_operational(obj)),
             "can_send_quotes": bool(seller_company_id and quote_send_entitled(seller_company_id)),
             "quote_send_is_demo": bool(seller_company_id and is_demo(seller_company_id, FeatureKey.QUOTE_SEND)),

@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MessageSquare } from 'lucide-react';
 import { crmApi, type Message } from '@/api/crmApi';
+import { useUserStore } from '@/store/userStore';
+import { dealsListRoute } from '@/lib/documentRoute';
 
 import {
   Sheet,
@@ -21,6 +23,9 @@ interface ChatDrawerProps {
 }
 
 export function ChatDrawer({ onNavigate }: ChatDrawerProps) {
+  // «К сделке» у продавца — очередь сделок, у покупателя — его заявки (U1).
+  const activeStatus = useUserStore((state) => state.activeStatus);
+  const viewer = { isSeller: activeStatus === 'SELLER' };
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -101,7 +106,7 @@ export function ChatDrawer({ onNavigate }: ChatDrawerProps) {
                 <div key={dealId} className="border-b last:border-b-0">
                   <button
                     className="flex w-full items-center gap-2 px-5 py-2.5 text-left hover:bg-accent transition-colors"
-                    onClick={() => { setIsOpen(false); onNavigate('crm-deals'); }}
+                    onClick={() => { setIsOpen(false); onNavigate(dealsListRoute(viewer)); }}
                   >
                     <MessageSquare className="size-3.5 text-primary shrink-0" />
                     <span className="text-xs font-semibold text-primary">

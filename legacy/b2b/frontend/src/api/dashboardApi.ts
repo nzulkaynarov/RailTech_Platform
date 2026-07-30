@@ -77,9 +77,11 @@ export interface PlatformDashboard {
   }[];
 }
 
-// Wave I-2 — «Недавние документы» dashboard widget. The backend returns a ready-to-use
-// SPA deep-link in `hash` (e.g. `deal-quote/5`, `invoices?open=3`, `other-documents`), so
-// the widget never has to reconstruct navigation targets per document type.
+// Wave I-2 — виджет «Недавние документы» (та же форма строки у поиска документов ⌘K).
+// Маршрута здесь НЕТ намеренно: раньше сервер отдавал готовый `hash`, но про гейты SPA он не
+// знает — ссылка на акт и КП была продавцовской и уводила покупателя в отказ (аудит UI, U1).
+// `type` + `id` + `deal` — всё, что нужно `lib/documentRoute`, чтобы посчитать маршрут по
+// стороне зрителя.
 export interface RecentDocument {
   type: 'quote' | 'contract' | 'invoice' | 'act' | 'generated';
   id: number;
@@ -87,7 +89,6 @@ export interface RecentDocument {
   status_code: string | null;
   date: string;
   deal: number | null;
-  hash: string;
 }
 
 export const dashboardApi = {
@@ -103,7 +104,7 @@ export const dashboardApi = {
     return response.data.results;
   },
   // Global document search for the company command palette (Cmd+K). Returns the same
-  // `RecentDocument` shape (each row carries a ready-to-use SPA deep-link in `hash`).
+  // Форма строки — та же `RecentDocument` (маршрут считает клиент, см. комментарий выше).
   // q shorter than 2 chars yields an empty result set on the backend.
   searchDocuments: async (query: string, limit = 8): Promise<RecentDocument[]> => {
     const response = await apiClient.get<{ results: RecentDocument[] }>(

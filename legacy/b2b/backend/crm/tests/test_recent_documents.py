@@ -252,16 +252,19 @@ def test_returns_all_types_sorted_desc(world, docs):
     assert results[0]["type"] == "generated"
 
 
-# ── 2. Deep-link hash is correct per type ─────────────────────────────────────
+# ── 2. Фид отдаёт данные для маршрута, но не сам маршрут ──────────────────────
 
 
-def test_deep_link_hash_per_type(world, docs):
-    by_key = {(row["type"], row["id"]): row for row in _results(_api(world["buyer_user"]).get(URL))}
-    assert by_key[("quote", docs["quote"].id)]["hash"] == f"deal-quote/{docs['deal'].id}"
-    assert by_key[("contract", docs["contract"].id)]["hash"] == "contracts"
-    assert by_key[("invoice", docs["invoice"].id)]["hash"] == f"invoices?open={docs['invoice'].id}"
-    assert by_key[("act", docs["act"].id)]["hash"] == "acts"
-    assert by_key[("generated", docs["generated"].id)]["hash"] == "other-documents"
+def test_feed_carries_routing_inputs_and_no_spa_route(world, docs):
+    """Каждая строка несёт `type`/`id`/`deal` — этого фронту хватает, чтобы вычислить маршрут
+    по стороне зрителя. Готового `hash` здесь больше нет: он был продавцовским для акта и КП и
+    уводил покупателя в отказ (аудит UI 2026-07-30). Возврат поля ломает этот тест."""
+    rows = _results(_api(world["buyer_user"]).get(URL))
+    assert rows, "фид не должен быть пустым"
+    for row in rows:
+        assert "hash" not in row, "маршрут SPA считает фронт, бэкенд про его гейты не знает"
+        assert row["type"] and row["id"]
+        assert "deal" in row
 
 
 def test_payload_fields_shape(world, docs):

@@ -116,7 +116,9 @@ export const TENANT_NAV: NavNodeDef[] = [
       { labelKey: 'shell.contracts', id: 'contracts', requires: { kyc: true } },
       { labelKey: 'shell.invoices', id: 'invoices', requires: { kyc: true } },
       { labelKey: 'shell.payments', id: 'payments', requires: { kyc: true } },
-      { labelKey: 'shell.acts', id: 'acts', side: 'sell', requires: { kyc: true } },
+      // Акт двусторонний: заказчик его принимает или возвращает. Пункт без `side` — как у
+      // договоров, счетов и отгрузок; список сужен видимостью на бэкенде (U1).
+      { labelKey: 'shell.acts', id: 'acts', requires: { kyc: true } },
       { labelKey: 'shell.fulfillments', id: 'fulfillments', requires: { kyc: true } },
       { labelKey: 'shell.otherDocuments', id: 'other-documents', requires: { kyc: true } },
       { labelKey: 'shell.files', id: 'company-files', requires: { kyc: true } },

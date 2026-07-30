@@ -11,6 +11,7 @@ import { crmApi, type Deal, type Quote } from '@/api/crmApi';
 import { contractsApi, type Contract, type ContractStatus } from '@/api/contractsApi';
 import type { DashboardStats } from '@/api/dashboardApi';
 import { renderWithProviders } from '@/test/renderWithProviders';
+import { useUserStore } from '@/store/userStore';
 
 // Mock at the API-client layer: the widgets' real react-query hooks
 // (useDeals/useQuotes/useMyApprovalQueue/useDealStages/useContracts) run
@@ -187,6 +188,12 @@ describe('BuyerAttentionStrip', () => {
 });
 
 describe('PipelineFunnel', () => {
+  // Воронка читает контекст пользователя, а стор глобальный — возвращаем покупателя,
+  // иначе роль, выставленная одним тестом, утечёт в следующий.
+  beforeEach(() => {
+    useUserStore.setState({ activeStatus: 'BUYER' });
+  });
+
   it('renders stages in backend order, omits empty stages, and drills into deals', async () => {
     // DT5: the DB `name` is translated-at-rest (RU-only), so the funnel must label by
     // CODE via DEAL_STAGE_LABEL_KEY. Sentinel names below deliberately differ from the
@@ -220,6 +227,22 @@ describe('PipelineFunnel', () => {
     const legendEntry = screen.getByText('Заявка открыта').closest('button');
     if (!legendEntry) throw new Error('no legend button');
     expect(within(legendEntry).getByText('2')).toBeInTheDocument();
+    fireEvent.click(legendEntry);
+    // Воронка входит и в покупательский дашборд, а очередь сделок — рабочее место продавца.
+    // Раньше здесь стояла константа `crm-deals`, и покупателя из воронки выбрасывало на дашборд.
+    expect(onNavigate).toHaveBeenCalledWith('my-requests');
+  });
+
+  it('продавца та же воронка ведёт в его очередь сделок', async () => {
+    useUserStore.setState({ activeStatus: 'SELLER' });
+    vi.mocked(crmApi.getDealStages).mockResolvedValue([{ code: 'RFQ_OPEN', name: 'Заявка открыта' }]);
+    vi.mocked(crmApi.getDeals).mockResolvedValue([makeDeal(1, 'RFQ_OPEN')]);
+    const onNavigate = vi.fn();
+
+    renderWithProviders(<PipelineFunnel onNavigate={onNavigate} />);
+
+    const legendEntry = (await screen.findByText('Заявка открыта')).closest('button');
+    if (!legendEntry) throw new Error('no legend button');
     fireEvent.click(legendEntry);
     expect(onNavigate).toHaveBeenCalledWith('crm-deals');
   });

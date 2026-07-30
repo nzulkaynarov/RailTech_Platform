@@ -11,15 +11,17 @@ import {
 } from '@/components/ui/command';
 import { Badge } from '@/components/ui/badge';
 import { useSearchDocuments } from '@/hooks/usePageStats';
+import { useUserStore } from '@/store/userStore';
+import { documentRoute } from '@/lib/documentRoute';
 import type { RecentDocument } from '@/api/dashboardApi';
 
 interface DocumentSearchDialogProps {
     open: boolean;
     onOpenChange: (v: boolean) => void;
     /**
-     * Called with the document's ready-to-use SPA deep-link (the backend `hash`, e.g.
-     * `deal-quote/5`, `invoices?open=3`, `other-documents`). Query-carrying hashes are
-     * assigned to `window.location.hash` directly here, so the caller need not parse them.
+     * Вызывается с ДОСТИЖИМЫМ для зрителя маршрутом (`invoices?open=3`, `request-detail/5`).
+     * Маршрут считает `documentRoute` по стороне пользователя, а не берётся готовый хэш от
+     * сервера: тот не знает про гейты SPA и уводил покупателя в отказ (аудит UI, U1).
      */
     onNavigate: (hash: string) => void;
 }
@@ -45,6 +47,9 @@ export function DocumentSearchDialog({ open, onOpenChange, onNavigate }: Documen
     const debouncedQuery = useDebouncedValue(query, DEBOUNCE_MS);
     const term = debouncedQuery.trim();
     const search = useSearchDocuments(term);
+    const activeStatus = useUserStore((state) => state.activeStatus);
+    const isPlatformAdmin = useUserStore((state) => state.role === 'ADMIN');
+    const viewer = { isSeller: activeStatus === 'SELLER', isPlatformAdmin };
 
     // Reset the input each time the dialog closes so a re-open starts clean.
     useEffect(() => {
@@ -115,7 +120,9 @@ export function DocumentSearchDialog({ open, onOpenChange, onNavigate }: Documen
                                     key={`${doc.type}-${doc.id}`}
                                     // Embed the query so cmdk's built-in filter never hides a server match.
                                     value={`${doc.type}-${doc.id} ${doc.label} ${term}`}
-                                    onSelect={() => handleSelect(doc.hash)}
+                                    onSelect={() => handleSelect(
+                                        documentRoute({ kind: doc.type, id: doc.id, dealId: doc.deal }, viewer),
+                                    )}
                                 >
                                     <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
                                     <div className="flex min-w-0 flex-1 flex-col">

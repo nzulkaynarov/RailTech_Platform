@@ -79,7 +79,8 @@ function makeFulfillment(id: number, status: Fulfillment['status']): Fulfillment
   };
 }
 
-function makeAct(id: number): Act {
+/** `canSign` — серверная подсказка «этот акт ждёт МОЕЙ приёмки» (выпустившему она false). */
+function makeAct(id: number, canSign = true): Act {
   return {
     id,
     deal: id,
@@ -94,8 +95,8 @@ function makeAct(id: number): Act {
     pdf_url: null,
     signed_file: null,
     signed_file_url: null,
-    viewer_can_sign: true,
-    viewer_can_reject: true,
+    viewer_can_sign: canSign,
+    viewer_can_reject: canSign,
     issuer_signer: null,
     issuer_signer_name: null,
     issuer_signed_at: null,
@@ -150,7 +151,8 @@ describe('PostContractStrip', () => {
     expect(within(await findTile('Счета к выставлению')).getByText('1')).toBeInTheDocument();
     // ISSUED + PARTIAL ждут денег; PAID уже нет.
     expect(within(await findTile('Ждут оплаты')).getByText('2')).toBeInTheDocument();
-    expect(within(await findTile('Акты на подписи')).getByText('1')).toBeInTheDocument();
+    // Акт выпустил сам продавец, принимает заказчик — плитка считает, сколько висит на нём.
+    expect(within(await findTile('Акты ждут приёмки')).getByText('1')).toBeInTheDocument();
     // ACCEPTED — уже не «в пути».
     expect(within(await findTile('Поставки в пути')).getByText('1')).toBeInTheDocument();
   });
@@ -170,16 +172,19 @@ describe('PostContractStrip', () => {
     expect(within(tile).getByText('1 просрочен')).toBeInTheDocument();
   });
 
-  it('покупателю не показывает плитку актов — реестр актов ему закрыт', async () => {
+  it('покупателю показывает акты, ждущие ЕГО приёмки, и молчит о чужих', async () => {
+    // Акт двусторонний (G2): страница актов открыта обеим сторонам, но плитка считает только
+    // то, что ждёт решения зрителя — сервер говорит это в `viewer_can_sign`.
     listInvoices.mockResolvedValue([makeInvoice(1, 'ISSUED', null)]);
-    listActs.mockResolvedValue([makeAct(9)]);
+    listActs.mockResolvedValue([makeAct(9), makeAct(10, false)]);
     listFulfillments.mockResolvedValue([makeFulfillment(5, 'DELIVERED')]);
 
     renderWithProviders(<PostContractStrip side="buyer" onNavigate={vi.fn()} />);
 
     expect(await screen.findByText('Счета к оплате')).toBeInTheDocument();
     expect(within(await findTile('Ждут приёмки')).getByText('1')).toBeInTheDocument();
-    expect(screen.queryByText('Акты на подписи')).not.toBeInTheDocument();
+    expect(within(await findTile('Акты на приёмку')).getByText('1')).toBeInTheDocument();
+    expect(screen.queryByText('Акты ждут приёмки')).not.toBeInTheDocument();
   });
 
   it('клик по плитке ведёт на её страницу', async () => {

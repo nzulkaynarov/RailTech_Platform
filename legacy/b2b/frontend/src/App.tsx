@@ -16,7 +16,7 @@ import { ForgotPasswordPage } from './components/Auth/ForgotPasswordPage';
 import { ResetPasswordPage } from './components/Auth/ResetPasswordPage';
 import { ProfileCompletionForm } from './components/Cabinet/ProfileCompletionForm';
 import { LoadingSkeleton } from './components/LoadingSkeleton';
-import { ADMIN_PAGES, ADMIN_REACHABLE_PAGES, NAVIGABLE_PAGES } from './config/pageRegistry';
+import { NAVIGABLE_PAGES } from './config/pageRegistry';
 import { parseHashToPage, pageToHash, type Page } from './routes/hashRoute';
 import { evaluatePageGuard } from './routes/pageGuard';
 import { renderPage } from './routes/pageContent';
@@ -311,16 +311,24 @@ function MainApp() {
       navigateTo({ type: 'dashboard' });
       return;
     }
-    // Platform admin (viewer): only moderation/CRUD surfaces are reachable —
-    // a business page target is bounced to the admin dashboard.
-    if (role === 'ADMIN' && !ADMIN_REACHABLE_PAGES.has(target)) {
-      toast.info(t('guards.notAvailableHere'));
-      navigateTo({ type: 'dashboard' });
-      return;
-    }
-    // Role guard: admin pages require ADMIN role
-    if (ADMIN_PAGES.has(target) && role !== 'ADMIN') {
-      toast.error(t('guards.adminRequired'));
+    // Решение о доступе — ТОТ ЖЕ `evaluatePageGuard`, что и у эффекта ниже. Раньше здесь
+    // проверялись только роль и админский список, а гейты KYC и контекста доставались уже
+    // ПОСЛЕ перехода: страница успевала смонтироваться и отскакивала — пользователь видел
+    // мигание вместо отказа (аудит UI 2026-07-30). Теперь отказ виден до навигации, причина
+    // формулируется один раз, а `adopt` (страница другого подтверждённого контекста) как и
+    // прежде пропускается вперёд — контекст переключит эффект.
+    const decision = evaluatePageGuard({
+      pageType: target,
+      role,
+      kycStatus,
+      activeStatus,
+      statusEntries,
+      bootstrapped,
+    });
+    if (decision.action === 'bounce') {
+      if (decision.reason === 'admin') toast.error(t('guards.adminRequired'));
+      else if (decision.reason === 'kyc') toast.info(t('guards.kycRequired'));
+      else toast.info(t('guards.notAvailableHere'));
       navigateTo({ type: 'dashboard' });
       return;
     }

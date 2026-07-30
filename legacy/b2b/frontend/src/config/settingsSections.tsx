@@ -13,11 +13,11 @@
  * только для templates=статей расхода; hasTeamManage внутри секции team). Это устранение трения,
  * НЕ новая блокировка (PRODUCT RULE 2) — перестаём ПОКАЗЫВАТЬ несохраняемое.
  *
- * seller-секции (documents/defaults/numbering/templates) дополнительно за can_sell И companySells:
- * /me.capabilities.can_sell — флаг УЧАСТНИКА (CompanyMember.can_sell) и не знает тип компании,
- * поэтому один он показывал seller-секции OWNER'у CLIENT-only компании (нарушение матрицы).
- * companySells — компания типизирована как продавец (SUPPLIER/MANUFACTURER в statusEntries);
- * мягче nav'а (без требования verified), чтобы свежий продавец мог настроить документы до KYC.
+ * seller-секции (documents/defaults/numbering/templates) — за `capabilities.can_sell`. Это поле
+ * теперь считает сервер тем же предикатом, что и авторизация (`is_seller`: членство с can_sell И
+ * компания типа SUPPLIER/MANUFACTURER), поэтому местная поправка на тип компании больше не нужна.
+ * Раньше плоский флаг участника показывал seller-секции OWNER'у CLIENT-only компании.
+ * Требования verified нет — свежий продавец настраивает документы до KYC.
  *
  * UX-гейтинг only — backend enforcement (member_has_permission / KYC / entitlements) независим.
  */
@@ -97,7 +97,7 @@ interface SectionRule {
   visible: (input: SettingsGateInput) => boolean;
 }
 
-const sells = (input: SettingsGateInput) => input.capabilities.can_sell && input.companySells;
+const sells = (input: SettingsGateInput) => input.capabilities.can_sell;
 
 /**
  * Полный каталог секций в порядке отображения; порядок групп account→company→sales→team→platform.

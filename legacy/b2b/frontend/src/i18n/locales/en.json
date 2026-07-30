@@ -2338,7 +2338,8 @@
       "invoicesToPay": "Invoices to pay",
       "overdueInvoices_one": "{{count}} overdue",
       "overdueInvoices_other": "{{count}} overdue",
-      "actsToSign": "Acts to sign",
+      "actsAwaitingAcceptance": "Acts awaiting acceptance",
+      "actsToAccept": "Acts to accept",
       "inTransit": "Shipments in transit",
       "awaitingDelivery": "Expected deliveries",
       "toAccept": "Awaiting acceptance"

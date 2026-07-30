@@ -108,7 +108,6 @@ class TimeToFirstQuoteView(APIView):
                             "status_code": drf_serializers.CharField(allow_null=True),
                             "date": drf_serializers.DateTimeField(),
                             "deal": drf_serializers.IntegerField(allow_null=True),
-                            "hash": drf_serializers.CharField(),
                         },
                     )
                 )
@@ -175,7 +174,6 @@ class RecentDocumentsView(APIView):
                             "status_code": drf_serializers.CharField(allow_null=True),
                             "date": drf_serializers.DateTimeField(),
                             "deal": drf_serializers.IntegerField(allow_null=True),
-                            "hash": drf_serializers.CharField(),
                         },
                     )
                 )

@@ -11941,7 +11941,6 @@ export interface components {
             /** Format: date-time */
             date: string;
             deal: number | null;
-            hash: string;
         };
         RecentDocumentsResponse: {
             results: components["schemas"]["RecentDocument"][];
@@ -12069,7 +12068,6 @@ export interface components {
             /** Format: date-time */
             date: string;
             deal: number | null;
-            hash: string;
         };
         SearchDocumentsResponse: {
             results: components["schemas"]["SearchDocument"][];

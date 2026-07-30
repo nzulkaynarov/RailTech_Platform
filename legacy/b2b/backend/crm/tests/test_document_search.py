@@ -278,18 +278,18 @@ def test_no_match_returns_empty(world, docs):
     assert _results(_api(world["buyer_user"]).get(URL, {"q": "нетничего-zzz"})) == []
 
 
-# ── 2. Deep-link hash is correct per type ─────────────────────────────────────
+# ── 2. Поиск отдаёт данные для маршрута, но не сам маршрут ────────────────────
 
 
-def test_deep_link_hash_per_type(world, docs):
-    by_key = {
-        (row["type"], row["id"]): row for row in _results(_api(world["buyer_user"]).get(URL, {"q": "2026-00042"}))
-    }
-    assert by_key[("quote", docs["quote"].id)]["hash"] == f"deal-quote/{docs['deal'].id}"
-    assert by_key[("contract", docs["contract"].id)]["hash"] == "contracts"
-    assert by_key[("invoice", docs["invoice"].id)]["hash"] == f"invoices?open={docs['invoice'].id}"
-    assert by_key[("act", docs["act"].id)]["hash"] == "acts"
-    assert by_key[("generated", docs["generated"].id)]["hash"] == "other-documents"
+def test_search_carries_routing_inputs_and_no_spa_route(world, docs):
+    """Форма строки совпадает с «Недавними документами»: `type`/`id`/`deal` без готового `hash`
+    (см. тот же тест в test_recent_documents — маршрут считает фронт по стороне зрителя)."""
+    rows = _results(_api(world["buyer_user"]).get(URL, {"q": "2026-00042"}))
+    assert rows, "поиск не должен быть пустым"
+    for row in rows:
+        assert "hash" not in row
+        assert row["type"] and row["id"]
+        assert "deal" in row
 
 
 def test_payload_fields_shape(world, docs):

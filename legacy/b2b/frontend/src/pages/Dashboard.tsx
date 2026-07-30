@@ -37,6 +37,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import { useTranslation } from 'react-i18next';
 import { useUserStore, selectIsSellerCapable } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
+import { documentRoute } from '@/lib/documentRoute';
 import { useDeals, useTimeToFirstQuote } from '@/hooks/useCRM';
 import { useRecentDocuments } from '@/hooks/usePageStats';
 import { buyerStatus } from '@/lib/requestStatus';
@@ -320,6 +321,11 @@ const DOC_TYPE_ICON: Record<RecentDocument['type'], LucideIcon> = {
 function RecentDocumentsCard() {
   const { t } = useTranslation();
   const { data: documents, isError, refetch } = useRecentDocuments(8);
+  // Маршрут считаем по стороне зрителя, а не берём готовый хэш от сервера: сервер не знает
+  // про гейты SPA, и его ссылка на акт/КП уводила покупателя в отказ (аудит UI, U1).
+  const activeStatus = useUserStore((state) => state.activeStatus);
+  const isPlatformAdmin = useUserStore((state) => state.role === 'ADMIN');
+  const viewer = { isSeller: activeStatus === 'SELLER', isPlatformAdmin };
 
   // A failed fetch reads as an explicit error with a retry — never a silent
   // absence that would look like "no documents yet".
@@ -366,8 +372,8 @@ function RecentDocumentsCard() {
                 className="cursor-pointer"
                 tabIndex={0}
                 role="link"
-                onClick={() => openDocument(doc.hash)}
-                onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openDocument(doc.hash); } }}
+                onClick={() => openDocument(documentRoute({ kind: doc.type, id: doc.id, dealId: doc.deal }, viewer))}
+                onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openDocument(documentRoute({ kind: doc.type, id: doc.id, dealId: doc.deal }, viewer)); } }}
               >
                 <TableCell>
                   <span className="flex items-center gap-2">

@@ -114,3 +114,86 @@ def test_buyer_only_user_has_no_seller_send_signals(lookups):
     caps = _caps(user)
     assert caps["can_send_quotes"] is False
     assert caps["quote_send_is_demo"] is False
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# `capabilities.can_sell` — «пользователь на стороне продавца» (аудит UI 2026-07-30)
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# Плоский флаг `can_sell` — это CompanyMember.can_sell, и он по умолчанию True у ЛЮБОГО
+# участника. Пока `capabilities.can_sell` копировал его, SPA показывала продавцовские
+# поверхности (мастер документов с КП/инвойсом, seller-секции настроек) члену чисто
+# покупательской компании — и клик уводил в отказ. Теперь поле считает тот же предикат,
+# что и авторизация: `is_seller` = активное членство с can_sell И компания-продавец.
+
+
+def test_capability_can_sell_is_false_for_member_of_client_only_company(lookups):
+    """Ключевой случай: у участника флаг стоит, но компания не продаёт."""
+    company = Company.objects.create(name="Client co", inn="3001000001")
+    company.types.add(CompanyType.objects.get(code="CLIENT"))
+    user = CustomUser.objects.create_user(email="member@caps.test", username="member@caps.test", password="x")
+    CompanyMember.objects.create(
+        user=user,
+        company=company,
+        role=WorkspaceRole.objects.get(code="OWNER"),
+        is_active=True,
+        is_primary=True,
+        can_sell=True,  # дефолт модели — именно он и вводил интерфейс в заблуждение
+        can_buy=True,
+    )
+
+    data = MeSerializer(user).data
+    assert data["can_sell"] is True, "плоское поле остаётся флагом участника"
+    assert data["capabilities"]["can_sell"] is False, "capabilities знает тип компании"
+
+
+def test_capability_can_sell_is_true_for_seller_company_member(lookups):
+    user, _ = _seller_user("seller@caps.test", with_subscription=False)
+    assert MeSerializer(user).data["capabilities"]["can_sell"] is True
+
+
+def test_capability_can_sell_follows_revoked_member_flag(lookups):
+    """Компания продаёт, но участнику продажи запрещены — стороной продавца он не считается."""
+    company = Company.objects.create(name="Seller co", inn="3001000002")
+    company.types.add(CompanyType.objects.get(code="SUPPLIER"))
+    user = CustomUser.objects.create_user(email="nosell@caps.test", username="nosell@caps.test", password="x")
+    CompanyMember.objects.create(
+        user=user,
+        company=company,
+        role=WorkspaceRole.objects.get(code="OWNER"),
+        is_active=True,
+        is_primary=True,
+        can_sell=False,
+        can_buy=True,
+    )
+
+    assert MeSerializer(user).data["capabilities"]["can_sell"] is False
+
+
+def test_capability_can_sell_sees_secondary_seller_membership(lookups):
+    """Основное членство в компании-покупателе не должно скрывать продавцовскую сторону."""
+    buyer_company = Company.objects.create(name="Buyer primary", inn="3001000003")
+    buyer_company.types.add(CompanyType.objects.get(code="CLIENT"))
+    seller_company = Company.objects.create(name="Seller secondary", inn="3001000004")
+    seller_company.types.add(CompanyType.objects.get(code="SUPPLIER"))
+    user = CustomUser.objects.create_user(email="dual@caps.test", username="dual@caps.test", password="x")
+    CompanyMember.objects.create(
+        user=user,
+        company=buyer_company,
+        role=WorkspaceRole.objects.get(code="OWNER"),
+        is_active=True,
+        is_primary=True,
+        can_sell=False,
+        can_buy=True,
+    )
+    CompanyMember.objects.create(
+        user=user,
+        company=seller_company,
+        role=WorkspaceRole.objects.get(code="OWNER"),
+        is_active=True,
+        is_primary=False,
+        can_sell=True,
+        can_buy=False,
+    )
+
+    assert MeSerializer(user).data["capabilities"]["can_sell"] is True
