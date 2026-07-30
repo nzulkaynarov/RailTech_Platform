@@ -85,7 +85,7 @@ vi.mock('@/components/CRM/DealTimeline', () => ({ DealTimeline: () => null }));
 vi.mock('@/components/CRM/DealDocumentsCard', () => ({ DealDocumentsCard: () => null }));
 vi.mock('@/components/CRM/GenerateQuoteDialog', () => ({ GenerateQuoteDialog: () => null }));
 vi.mock('@/components/CRM/RejectQuoteDialog', () => ({ RejectQuoteDialog: () => null }));
-vi.mock('@/components/Admin/ConfirmActionDialog', () => ({ ConfirmActionDialog: () => null }));
+vi.mock('@/components/Shared/ConfirmActionDialog', () => ({ ConfirmActionDialog: () => null }));
 vi.mock('@/components/CRM/RequestItemsEditor', () => ({ RequestItemsEditor: () => null }));
 vi.mock('@/components/CRM/PreflightWarnings', () => ({ PreflightWarnings: () => null }));
 vi.mock('@/components/CRM/CoverageCheck', () => ({ CoverageCheck: () => null }));

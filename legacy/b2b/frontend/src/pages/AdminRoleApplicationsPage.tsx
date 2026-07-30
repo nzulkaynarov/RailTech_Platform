@@ -13,7 +13,7 @@ import { useRoleApplications, useApproveRoleApplication, useRejectRoleApplicatio
 import { AdminDataTable, useAdminTableQueryState } from '@/components/Admin/AdminDataTable';
 import { AdminDetailLayout } from '@/components/Admin/AdminDetailLayout';
 import { AdminActivityTimeline } from '@/components/Admin/AdminActivityTimeline';
-import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
+import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';
 import { DetailKPIGrid } from '@/components/Admin/DetailKPIGrid';
 import { PageShell, ErrorState } from './shared/PageShell';
 import { translateApiError } from '@/lib/apiError';

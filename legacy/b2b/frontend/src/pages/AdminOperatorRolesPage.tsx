@@ -406,6 +406,7 @@ export function AdminOperatorRolesPage() {
                                   <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
                                   <AlertDialogAction
                                     onClick={() => handleDelete(role)}
+                                    disabled={deleteMut.isPending}
                                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                   >
                                     {t('common.delete')}

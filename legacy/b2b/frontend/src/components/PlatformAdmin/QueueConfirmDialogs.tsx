@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
+import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';
 import type { PendingConfirm } from './useQueueActions';
 
 export interface QueueConfirmDialogsProps {

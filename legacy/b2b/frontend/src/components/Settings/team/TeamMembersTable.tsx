@@ -158,7 +158,7 @@ function MemberRowActions({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleToggle}>
+            <AlertDialogAction onClick={handleToggle} disabled={busy}>
               {isActive ? t('team.deactivate') : t('team.activate')}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -189,6 +189,7 @@ function MemberRowActions({
             <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleRemove}
+              disabled={busy}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {t('team.remove')}

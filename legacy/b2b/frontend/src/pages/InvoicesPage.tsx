@@ -31,6 +31,7 @@ import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { useCurrencyStore } from '@/store/currencyStore';
 import type { InvoiceStatus } from '@/api/billingApi';
 import { openableRowProps } from '@/lib/rowClick';
+import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';
 
 const STATUS_VARIANT: Record<InvoiceStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   DRAFT: 'secondary',
@@ -48,6 +49,7 @@ export function InvoicesPage() {
   const listParams = useListParams(['status'] as const, { defaultOrdering: '-created_at' });
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [payOpen, setPayOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
 
   const { data: invoices, isLoading, isError, refetch } = useInvoices(undefined);
 
@@ -158,13 +160,9 @@ export function InvoicesPage() {
 
   const onCancelInvoice = async () => {
     if (!selected) return;
-    try {
-      // Cache-driven: cancel invalidates ['invoices'], `selected` re-derives.
-      await cancelInvoice.mutateAsync(selected.id);
-      toast.success(t('invoicesPage.cancelled'));
-    } catch (e) {
-      toast.error(translateApiError(e));
-    }
+    // Cache-driven: cancel invalidates ['invoices'], `selected` re-derives.
+    await cancelInvoice.mutateAsync(selected.id);
+    toast.success(t('invoicesPage.cancelled'));
   };
 
   return (
@@ -373,11 +371,13 @@ export function InvoicesPage() {
                       {t('invoicesPage.generateAct')}
                     </Button>
                   )}
-                  {/* Cancel an issued-but-unpaid invoice; backend refuses PAID/PARTIAL. */}
+                  {/* Аннулирование счёта необратимо (бэкенд отказывает по PAID/PARTIAL), а
+                      кнопка стояла рядом с обычными действиями и срабатывала с первого клика
+                      (аудит UI, U4). Теперь она открывает подтверждение. */}
                   {selected.status !== 'PAID' && selected.status !== 'CANCELLED' && (
                     <Button
                       variant="outline"
-                      onClick={onCancelInvoice}
+                      onClick={() => setCancelOpen(true)}
                       disabled={cancelInvoice.isPending || isViewer}
                       title={isViewer ? viewerTip : undefined}
                     >
@@ -428,6 +428,17 @@ export function InvoicesPage() {
         onOpenChange={setPayOpen}
         defaultInvoiceId={selected?.id}
         onRecorded={() => { setPayOpen(false); refetch(); }}
+      />
+
+      <ConfirmActionDialog
+        open={cancelOpen}
+        onOpenChange={setCancelOpen}
+        title={t('invoicesPage.cancelConfirmTitle')}
+        description={t('invoicesPage.cancelConfirmDescription', { number: selected?.number ?? '' })}
+        variant="destructive"
+        confirmLabel={t('invoicesPage.cancel')}
+        onConfirm={onCancelInvoice}
+        translateError={(code) => translateApiError(code)}
       />
     </PageShell>
   );

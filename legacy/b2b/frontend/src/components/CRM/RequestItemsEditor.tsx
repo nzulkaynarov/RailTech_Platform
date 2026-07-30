@@ -6,6 +6,7 @@ import type { QuoteItem, SuggestedSeller } from '@/api/crmApi';
 import { useAddRequestItem, useUpdateQuoteItem, useDeleteQuoteItem, useSubmitRequest, useRouteDeal, useSuggestedSellers, useSuggestSellersAi } from '@/hooks/useCRM';
 import { usePartnerSuppliers } from '@/hooks/useAccounts';
 import { translateApiError } from '@/lib/apiError';
+import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';
 import { uomLabelKey } from '@/lib/codes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,6 +60,7 @@ export function RequestItemsEditor({
   const [newQty, setNewQty] = useState('1');
   const [newUnit, setNewUnit] = useState('');
   const [importOpen, setImportOpen] = useState(false);
+  const [pendingRemoval, setPendingRemoval] = useState<QuoteItem | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [selectedSellerIds, setSelectedSellerIds] = useState<number[]>([]);
   // The catalog-implied routing happens server-side at submit, so client-side we only
@@ -241,6 +243,8 @@ export function RequestItemsEditor({
     }
   };
 
+  // Удаление позиции необратимо и меняет состав заявки — раньше уходило с первого клика
+  // по иконке в узкой строке таблицы (аудит UI, U4).
   const remove = async (item: QuoteItem) => {
     try {
       await deleteItem.mutateAsync(item.id);
@@ -252,6 +256,21 @@ export function RequestItemsEditor({
 
   return (
     <Card>
+      <ConfirmActionDialog
+        open={pendingRemoval !== null}
+        onOpenChange={(open) => !open && setPendingRemoval(null)}
+        title={t('requestItems.removeConfirmTitle')}
+        description={t('requestItems.removeConfirmDescription', {
+          name: pendingRemoval?.imported_raw_name || pendingRemoval?.product_name || '',
+        })}
+        variant="destructive"
+        confirmLabel={t('common.delete')}
+        onConfirm={async () => {
+          const target = pendingRemoval;
+          setPendingRemoval(null);
+          if (target) await remove(target);
+        }}
+      />
       <CardHeader>
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1.5">
@@ -383,7 +402,7 @@ export function RequestItemsEditor({
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      onClick={() => remove(item)}
+                      onClick={() => setPendingRemoval(item)}
                       disabled={deleteItem.isPending}
                       title={t('common.delete')}
                     >

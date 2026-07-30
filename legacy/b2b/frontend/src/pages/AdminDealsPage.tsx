@@ -14,7 +14,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
-import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
+import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';
 import { useDeals, useDealStages, useForceChangeDealStage, useDeleteDeal } from '@/hooks/useCRM';
 import { useCompanies } from '@/hooks/useAccounts';
 import { DealStage, DEAL_STAGE_LABEL_KEY } from '@/lib/codes';

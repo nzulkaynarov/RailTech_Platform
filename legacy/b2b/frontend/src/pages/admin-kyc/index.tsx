@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { useCompanies, useVerifyCompany } from '@/hooks/useAccounts';
 import { useBulkVerifyKYC } from '@/hooks/useAdmin';
 import { AdminDataTable, useAdminTableQueryState } from '@/components/Admin/AdminDataTable';
-import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
+import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';
 import { PageShell, ErrorState } from '../shared/PageShell';
 import type { Company } from '@/api/accountsApi';
 import { STORAGE_KEY, STATUS_BADGE_MAP, getStatusCode } from './constants';

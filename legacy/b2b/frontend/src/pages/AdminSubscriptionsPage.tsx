@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/select';
 import { AdminDataTable, useAdminTableQueryState } from '@/components/Admin/AdminDataTable';
 import { AdminActivityTimeline } from '@/components/Admin/AdminActivityTimeline';
-import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
+import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';
 import { DetailKPIGrid } from '@/components/Admin/DetailKPIGrid';
 import { useBulkSubscriptionStatus } from '@/hooks/useAdmin';
 import { Tabs as TabsRoot, TabsList as TabsListRoot, TabsTrigger as TabsTriggerRoot, TabsContent as TabsContentRoot } from '@/components/ui/tabs';

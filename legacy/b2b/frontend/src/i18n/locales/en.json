@@ -4118,7 +4118,9 @@
     "amountsFromContract": "Amounts come from the contract and are not editable here",
     "issued": "Invoice issued",
     "cancelled": "Invoice cancelled",
-    "draftSaved": "Draft saved"
+    "draftSaved": "Draft saved",
+    "cancelConfirmTitle": "Cancel this invoice?",
+    "cancelConfirmDescription": "Invoice {{number}} will be cancelled. This cannot be undone — a new invoice will be needed for payment."
   },
   "paymentsPage": {
     "title": "Payments",
@@ -4257,7 +4259,9 @@
       "sent": "Email sent"
     },
     "linkRevoked": "Public link revoked",
-    "linkRevokedNote": "The public link is revoked — the document no longer opens by it."
+    "linkRevokedNote": "The public link is revoked — the document no longer opens by it.",
+    "cancelConfirmTitle": "Cancel this document?",
+    "cancelConfirmDescription": "Document {{number}} will be cancelled: its PDF and public link stop working. This cannot be undone."
   },
   "documentsHub": {
     "create": "Create document",
@@ -4488,7 +4492,9 @@
     "aiSuggestButton": "Enhance with AI",
     "aiSuggestAdded_one": "AI found {{count}} more supplier",
     "aiSuggestAdded_other": "AI found {{count}} more suppliers",
-    "aiSuggestNoneNew": "AI found no new suppliers — the list is already complete"
+    "aiSuggestNoneNew": "AI found no new suppliers — the list is already complete",
+    "removeConfirmTitle": "Delete this line?",
+    "removeConfirmDescription": "Line {{name}} will be removed from the request. It cannot be restored — you would need to add it again."
   },
   "requestDetailActions": {
     "titleLabel": "Request title",
@@ -4710,7 +4716,9 @@
       "invalidType": "Invalid file type",
       "uploadFailed": "Failed to upload file",
       "removeFailed": "Failed to remove file"
-    }
+    },
+    "removeConfirmTitle": "Delete this file?",
+    "removeConfirmDescription": "File {{name}} will be deleted. It cannot be restored from the interface."
   },
   "dealAttachments": {
     "title": "Deal attachments",
@@ -5527,5 +5535,13 @@
         "done": "The whole chain is complete: contract, payment, act and acceptance are closed."
       }
     }
+  },
+  "imageGallery": {
+    "removeConfirmTitle": "Delete this image?",
+    "removeConfirmDescription": "The image will be removed from the product. It cannot be restored — you would need to upload the file again."
+  },
+  "quoteCharges": {
+    "deleteConfirmTitle": "Delete this charge?",
+    "deleteConfirmDescription": "Charge {{name}} will be removed and the quote total recalculated. It can only be restored by adding it again."
   }
 }

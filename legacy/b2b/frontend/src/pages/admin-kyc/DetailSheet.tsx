@@ -18,7 +18,7 @@ import {
 import { useVerifyCompany, useUploadDocument, useDeleteDocument } from '@/hooks/useAccounts';
 import { AdminDetailLayout } from '@/components/Admin/AdminDetailLayout';
 import { AdminActivityTimeline } from '@/components/Admin/AdminActivityTimeline';
-import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
+import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';
 import { DetailKPIGrid } from '@/components/Admin/DetailKPIGrid';
 import { kycDocTypeLabelKey } from '@/lib/codes';
 import type { Company } from '@/api/accountsApi';

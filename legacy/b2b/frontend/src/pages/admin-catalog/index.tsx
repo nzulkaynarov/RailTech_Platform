@@ -4,7 +4,7 @@ import { getDomainLabelKey } from '@/config/domainConfig';
 import { toast } from 'sonner';
 import { Package } from 'lucide-react';
 import { Toolbar, useListParams } from '@/components/DataTable';
-import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
+import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';
 import { PageShell } from '../shared/PageShell';
 import {
   useProducts, useDomainTypes, useProductStatuses,

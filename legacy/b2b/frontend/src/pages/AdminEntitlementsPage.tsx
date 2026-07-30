@@ -277,7 +277,7 @@ export function AdminEntitlementsPage() {
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => remove(e.id)}>{t('common.delete')}</AlertDialogAction>
+                          <AlertDialogAction onClick={() => remove(e.id)} disabled={del.isPending}>{t('common.delete')}</AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>

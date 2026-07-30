@@ -275,6 +275,7 @@ export function DocumentTemplatesSettings() {
                             <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
                             <AlertDialogAction
                               onClick={() => handleDelete(tpl)}
+                              disabled={deleteMut.isPending}
                               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                             >
                               {t('common.delete')}

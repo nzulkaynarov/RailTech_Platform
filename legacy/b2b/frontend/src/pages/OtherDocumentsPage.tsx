@@ -17,6 +17,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
+import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';
 import {
   Toolbar, Pager, useListParams, applyListParams,
 } from '@/components/DataTable';
@@ -235,6 +236,7 @@ function DocumentSheet({
   const { t } = useTranslation();
   const [values, setValues] = useState<Record<string, string>>(() => ({ ...(document.values ?? {}) }));
   const [sendOpen, setSendOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
   // The list row omits the heavy document_html; the detail endpoint renders it (1:1 iframe preview).
   const { data: detail } = useGeneratedDocument(document.id);
   const valueKeys = Object.keys(document.values ?? {});
@@ -409,12 +411,14 @@ function DocumentSheet({
                 {t('otherDocumentsPage.actions.issue')}
               </Button>
             )}
+            {/* Аннулирование необратимо: выпущенный документ больше не выдаётся и не
+                рендерится. Кнопка срабатывала с первого клика (аудит UI, U4). */}
             {!isReceived && (isDraft || isIssued) && (
               <Button
                 variant="outline"
                 disabled={!canAct || busy}
                 title={canAct ? undefined : viewerTip}
-                onClick={onCancel}
+                onClick={() => setCancelOpen(true)}
               >
                 <Ban className="mr-2 h-4 w-4" />
                 {t('otherDocumentsPage.actions.cancel')}
@@ -425,6 +429,15 @@ function DocumentSheet({
         <SheetFooter />
       </SheetContent>
       <SendDocumentDialog document={document} open={sendOpen} onOpenChange={setSendOpen} />
+      <ConfirmActionDialog
+        open={cancelOpen}
+        onOpenChange={setCancelOpen}
+        title={t('otherDocumentsPage.cancelConfirmTitle')}
+        description={t('otherDocumentsPage.cancelConfirmDescription', { number: document.number })}
+        variant="destructive"
+        confirmLabel={t('otherDocumentsPage.actions.cancel')}
+        onConfirm={async () => onCancel()}
+      />
     </Sheet>
   );
 }

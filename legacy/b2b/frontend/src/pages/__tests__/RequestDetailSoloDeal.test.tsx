@@ -65,7 +65,7 @@ vi.mock('@/components/Sourcing/DealChatPanel', () => ({ DealChatPanel: () => nul
 vi.mock('@/components/CRM/DealTimeline', () => ({ DealTimeline: () => null }));
 vi.mock('@/components/CRM/CoverageCheck', () => ({ CoverageCheck: () => null }));
 vi.mock('@/components/CRM/RejectQuoteDialog', () => ({ RejectQuoteDialog: () => null }));
-vi.mock('@/components/Admin/ConfirmActionDialog', () => ({ ConfirmActionDialog: () => null }));
+vi.mock('@/components/Shared/ConfirmActionDialog', () => ({ ConfirmActionDialog: () => null }));
 vi.mock('@/components/CRM/GenerateQuoteDialog', () => ({ GenerateQuoteDialog: () => null }));
 vi.mock('@/components/CRM/BuyerAcceptedPanel', () => ({ BuyerAcceptedPanel: () => null }));
 

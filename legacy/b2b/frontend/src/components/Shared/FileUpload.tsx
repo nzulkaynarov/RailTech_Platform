@@ -5,6 +5,7 @@ import { FileText, Loader2, Trash2, Upload, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';
 
 export interface UploadedFile {
     id: string | number;
@@ -50,6 +51,7 @@ export function FileUpload({
     const [isDragging, setIsDragging] = useState(false);
     const [isBusy, setIsBusy] = useState(false);
     const [removingId, setRemovingId] = useState<string | number | null>(null);
+    const [pendingRemoval, setPendingRemoval] = useState<UploadedFile | null>(null);
 
     const handleFile = async (file: File) => {
         if (file.size > maxSizeMB * 1024 * 1024) {
@@ -118,6 +120,19 @@ export function FileUpload({
 
     return (
         <div className={cn('flex flex-col gap-3', className)}>
+            <ConfirmActionDialog
+                open={pendingRemoval !== null}
+                onOpenChange={(open) => !open && setPendingRemoval(null)}
+                title={t('fileUpload.removeConfirmTitle')}
+                description={t('fileUpload.removeConfirmDescription', { name: pendingRemoval?.name ?? '' })}
+                variant="destructive"
+                confirmLabel={t('common.delete')}
+                onConfirm={async () => {
+                    const target = pendingRemoval;
+                    setPendingRemoval(null);
+                    if (target) await handleRemove(target.id);
+                }}
+            />
             {label && <div className="text-sm font-medium">{label}</div>}
             <div
                 onDragOver={e => {
@@ -201,12 +216,14 @@ export function FileUpload({
                                         </a>
                                     </Button>
                                 ) : null}
+                                {/* Удаление файла необратимо — восстановить его из интерфейса
+                                    нельзя. Корзина срабатывала с первого клика (аудит UI, U4). */}
                                 {onRemove && (
                                     <Button
                                         type="button"
                                         size="icon-sm"
                                         variant="ghost"
-                                        onClick={() => handleRemove(file.id)}
+                                        onClick={() => setPendingRemoval(file)}
                                         disabled={removingId === file.id}
                                         aria-label={t('fileUpload.remove')}
                                     >

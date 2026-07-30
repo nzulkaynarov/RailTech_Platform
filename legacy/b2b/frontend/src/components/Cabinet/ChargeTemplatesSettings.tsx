@@ -133,8 +133,11 @@ export function ChargeTemplatesSettings() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+              {/* Кнопка гаснет на время запроса: без этого второй клик отправлял
+                  удаление повторно (аудит UI, U4). */}
               <AlertDialogAction
                 onClick={() => deleteMut.mutate(tpl.id)}
+                disabled={deleteMut.isPending}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 {t('common.delete')}

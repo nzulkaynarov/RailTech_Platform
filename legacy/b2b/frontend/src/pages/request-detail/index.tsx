@@ -17,7 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 import { DealChatPanel } from '@/components/Sourcing/DealChatPanel';
 import { RejectQuoteDialog } from '@/components/CRM/RejectQuoteDialog';
-import { ConfirmActionDialog } from '@/components/Admin/ConfirmActionDialog';
+import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';
 import { RequestItemsEditor } from '@/components/CRM/RequestItemsEditor';
 import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
 import { BuyerAcceptedPanel } from '@/components/CRM/BuyerAcceptedPanel';

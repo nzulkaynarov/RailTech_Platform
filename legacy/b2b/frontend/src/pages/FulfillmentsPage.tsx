@@ -291,6 +291,7 @@ export function FulfillmentsPage() {
             <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               className={confirm?.status === FStatusCode.DISPUTED ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : undefined}
+              disabled={updateMut.isPending}
               onClick={() => { if (confirm) buyerAct(confirm.f, confirm.status); setConfirm(null); }}
             >
               {confirm?.status === FStatusCode.DISPUTED ? t('fulfillmentPage.dispute') : t('fulfillmentPage.accept')}

@@ -8,6 +8,7 @@ import {
 	useReorderQuoteCharges,
 } from '@/hooks/useCRM';
 import type { QuoteCharge } from '@/api/crmApi';
+import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';
 import { chargeTypeLabelKey } from '@/lib/codes';
 import { formatMoney } from '@/utils/decimal';
 import { ChargeCascadeTable } from './ChargeCascadeTable';
@@ -73,6 +74,7 @@ export const QuoteChargesSection: React.FC<QuoteChargesSectionProps> = ({ quoteI
 	const [editMode, setEditMode] = useState<Mode>('fixed');
 	const [editKind, setEditKind] = useState<Kind>('charge');
 	const [deletingId, setDeletingId] = useState<number | null>(null);
+	const [pendingDelete, setPendingDelete] = useState<QuoteCharge | null>(null);
 
 	const ccyLabel = currency || 'UZS';
 
@@ -140,6 +142,22 @@ export const QuoteChargesSection: React.FC<QuoteChargesSectionProps> = ({ quoteI
 	};
 
 	return (
+		<>
+		<ConfirmActionDialog
+			open={pendingDelete !== null}
+			onOpenChange={(open) => !open && setPendingDelete(null)}
+			title={t('quoteCharges.deleteConfirmTitle')}
+			description={t('quoteCharges.deleteConfirmDescription', {
+				name: pendingDelete?.description || pendingDelete?.charge_type_name || '',
+			})}
+			variant="destructive"
+			confirmLabel={t('common.delete')}
+			onConfirm={async () => {
+				const target = pendingDelete;
+				setPendingDelete(null);
+				if (target) await handleDelete(target.id);
+			}}
+		/>
 		<Card className="py-3">
 			<CardContent className="flex flex-col gap-2 py-0">
 				<div className="flex items-center justify-between">
@@ -250,10 +268,12 @@ export const QuoteChargesSection: React.FC<QuoteChargesSectionProps> = ({ quoteI
 										>
 											<Pencil className="size-3" />
 										</Button>
+										{/* Удаление строки расхода меняет итог КП и необратимо — раньше
+											уходило с первого клика (аудит UI, U4). */}
 										<Button
 											variant="ghost"
 											size="icon-xs"
-											onClick={() => handleDelete(charge.id)}
+											onClick={() => setPendingDelete(charge)}
 											disabled={deletingId === charge.id}
 											className="text-muted-foreground hover:text-destructive"
 											title={t('common.delete')}
@@ -337,5 +357,6 @@ export const QuoteChargesSection: React.FC<QuoteChargesSectionProps> = ({ quoteI
 				)}
 			</CardContent>
 		</Card>
+		</>
 	);
 };

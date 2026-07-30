@@ -5,6 +5,7 @@ import { Loader2, Star, Trash2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';
 
 export interface GalleryImage {
     id: number;
@@ -40,6 +41,7 @@ export function ImageGalleryUpload({
     const inputRef = useRef<HTMLInputElement | null>(null);
     const [isBusy, setIsBusy] = useState(false);
     const [removingId, setRemovingId] = useState<number | null>(null);
+    const [pendingRemoval, setPendingRemoval] = useState<number | null>(null);
 
     const handleFile = async (file: File) => {
         if (!ACCEPTED.includes(file.type)) {
@@ -84,6 +86,19 @@ export function ImageGalleryUpload({
 
     return (
         <div className={cn('flex flex-col gap-3', className)}>
+            <ConfirmActionDialog
+                open={pendingRemoval !== null}
+                onOpenChange={(open) => !open && setPendingRemoval(null)}
+                title={t('imageGallery.removeConfirmTitle')}
+                description={t('imageGallery.removeConfirmDescription')}
+                variant="destructive"
+                confirmLabel={t('common.delete')}
+                onConfirm={async () => {
+                    const target = pendingRemoval;
+                    setPendingRemoval(null);
+                    if (target != null) await handleRemove(target);
+                }}
+            />
             {label && <div className="text-sm font-medium">{label}</div>}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
                 {images.map(img => (
@@ -123,12 +138,14 @@ export function ImageGalleryUpload({
                                     <Star className="size-4" />
                                 </Button>
                             )}
+                            {/* Удаление изображения необратимо, а кнопка живёт поверх самой
+                                картинки — попасть по ней случайно особенно легко (аудит UI, U4). */}
                             {onRemove && (
                                 <Button
                                     type="button"
                                     size="icon-sm"
                                     variant="destructive"
-                                    onClick={() => handleRemove(img.id)}
+                                    onClick={() => setPendingRemoval(img.id)}
                                     disabled={removingId === img.id}
                                     aria-label={t('fileUpload.remove')}
                                 >
