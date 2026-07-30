@@ -16,11 +16,27 @@
 
 from django_filters import rest_framework as filters
 
-from crm.models import Act, Fulfillment, Invoice, Payment
+from crm.models import Act, Contract, Fulfillment, Invoice, Payment
 
 
 class StatusCodeInFilter(filters.BaseInFilter, filters.CharFilter):
     """`?status=ISSUED,PARTIAL,OVERDUE` — один код или список кодов через запятую."""
+
+
+class ContractFilter(filters.FilterSet):
+    """Договоры остались без фильтра, когда его получили остальные биллинговые списки.
+
+    Последствие видел пользователь: `BuyerAcceptedPanel` запрашивает `?deal=<id>` и берёт
+    новейший не-CANCELLED договор из ответа. При игнорируемом фильтре покупатель с двумя
+    сделками видел на карточке одной сделки номер договора ДРУГОЙ, а кнопка «Перейти к
+    договору» открывала чужой документ.
+    """
+
+    status = StatusCodeInFilter(field_name="status__code", lookup_expr="in")
+
+    class Meta:
+        model = Contract
+        fields = ["deal", "quote", "status"]
 
 
 class InvoiceFilter(filters.FilterSet):

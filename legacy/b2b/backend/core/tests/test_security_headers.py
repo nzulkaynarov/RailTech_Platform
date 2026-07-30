@@ -22,10 +22,20 @@ def client():
 
 @pytest.mark.django_db
 class TestSchemaGating:
-    """/api/schema/ must not be anonymously public (drf-spectacular leak)."""
+    """/api/schema/ must not be anonymously public (drf-spectacular leak).
+
+    Запрашиваем JSON явно. По умолчанию у этой вьюхи согласуется YAML-рендерер, и тогда
+    ПОД ЗАМЕРОМ ПОКРЫТИЯ сериализация тела отказа (`ErrorDetail` — подкласс str) падает в
+    C-дампере libyaml, тест видит 500 и выглядит «сломанным гейтом», хотя гейт исправен:
+    вне coverage тот же запрос отдаёт 401. Проверять надо ПРАВА, а не то, каким рендерером
+    оформлен отказ, — поэтому формат зафиксирован и результат больше не зависит от того,
+    запущен прогон с `--cov` или без.
+    """
+
+    JSON = {"HTTP_ACCEPT": "application/json"}
 
     def test_anonymous_schema_is_denied(self, client):
-        resp = client.get(reverse("schema"))
+        resp = client.get(reverse("schema"), **self.JSON)
         assert resp.status_code in (401, 403), f"schema must be gated, got {resp.status_code}"
 
     def test_staff_can_read_schema(self, client):
@@ -35,7 +45,7 @@ class TestSchemaGating:
             password="pw-Test1234!",
         )
         client.force_authenticate(user=admin)
-        resp = client.get(reverse("schema"))
+        resp = client.get(reverse("schema"), **self.JSON)
         assert resp.status_code == 200
 
     def test_non_staff_user_is_denied(self, client):
@@ -45,7 +55,7 @@ class TestSchemaGating:
             password="pw-Test1234!",
         )
         client.force_authenticate(user=user)
-        resp = client.get(reverse("schema"))
+        resp = client.get(reverse("schema"), **self.JSON)
         assert resp.status_code == 403
 
 

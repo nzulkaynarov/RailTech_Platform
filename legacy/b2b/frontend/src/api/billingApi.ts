@@ -47,6 +47,13 @@ export interface Invoice {
   notes: string;
   items: InvoiceItem[];
   payments: Payment[];
+  /**
+   * Сторона зрителя ПО ЭТОМУ счёту, посчитанная сервером (образец — viewer_can_sign_* у
+   * договора). Заменяет вывод роли из activeStatus: тот брал первый тип компании, из-за чего
+   * посредник, который и покупает, и продаёт, терял половину действий.
+   */
+  viewer_can_pay: boolean;
+  viewer_can_manage: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -165,6 +172,8 @@ export interface Act {
   pdf_url: string | null;
   signed_file: string | null;
   signed_file_url: string | null;
+  /** Акт выставлен и зритель — сторона сделки (подпись в модели одна, сторону сервис не делит). */
+  viewer_can_sign: boolean;
   notes: string;
   created_at: string;
   updated_at: string;

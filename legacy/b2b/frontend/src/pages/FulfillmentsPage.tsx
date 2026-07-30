@@ -26,7 +26,6 @@ import {
 import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import { useFulfillments, useUpdateFulfillmentStatus } from '@/hooks/useBilling';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
-import { useUserStore } from '@/store/userStore';
 import { FulfillmentStatus as FStatusCode } from '@/lib/codes';
 import type { Fulfillment, FulfillmentStatus } from '@/api/fulfillmentApi';
 import { DealLink } from '@/components/Shared/DealLink';
@@ -60,9 +59,10 @@ export function FulfillmentsPage() {
   const { data: list, isLoading, isError, refetch } = useFulfillments(queryParams);
   const updateMut = useUpdateFulfillmentStatus();
   const isViewer = useIsViewerMode();
-  // Driving the shipment (PENDING→…→DELIVERED) is a seller action. Buyer-side
-  // acceptance/dispute is handled separately (backend split); not surfaced here yet.
-  const isSeller = useUserStore((s) => s.activeStatus) !== 'BUYER';
+  // Продвигает отгрузку продавец, принимает/спорит покупатель — сторону по КАЖДОЙ строке
+  // считает сервер (`viewer_can_ship` / `viewer_can_accept`). Прежний вывод из activeStatus
+  // брал первый тип компании: посредник, который и покупает, и продаёт, терял половину
+  // действий, а на своей же отгрузке видел чужой набор кнопок.
   const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
 
   const stats = useMemo(() => {
@@ -156,7 +156,7 @@ export function FulfillmentsPage() {
                 {(list ?? []).map((f) => (
                   <TableRow
                     key={f.id}
-                    {...(isSeller && !isViewer
+                    {...(f.viewer_can_ship && !isViewer
                       ? openableRowProps(() => startEdit(f), `${t('common.open')} #${f.deal}`)
                       : {})}
                   >
@@ -172,7 +172,7 @@ export function FulfillmentsPage() {
                     <TableCell>{f.tracking_number || '—'}</TableCell>
                     <TableCell>{f.carrier || '—'}</TableCell>
                     <TableCell className="text-right" data-row-action>
-                      {isSeller && (
+                      {f.viewer_can_ship && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -185,7 +185,7 @@ export function FulfillmentsPage() {
                       )}
                       {/* Buyer accepts or disputes the delivery — ACCEPTED auto-closes
                           the deal (CLOSED_WON). Only once the seller marks DELIVERED. */}
-                      {!isSeller && f.status === FStatusCode.DELIVERED && (
+                      {f.viewer_can_accept && f.status === FStatusCode.DELIVERED && (
                         <div className="flex justify-end gap-1">
                           <Button
                             variant="ghost" size="sm"
@@ -208,7 +208,7 @@ export function FulfillmentsPage() {
                       {/* After a dispute the buyer has no action — the conflict is
                           handled with the seller. Give a status hint + a way into
                           the deal chat instead of a silent dead-end. */}
-                      {!isSeller && f.status === FStatusCode.DISPUTED && (
+                      {f.viewer_can_accept && f.status === FStatusCode.DISPUTED && (
                         <div className="flex flex-col items-end gap-1">
                           <span className="text-xs text-muted-foreground">{t('fulfillmentPage.disputedHint')}</span>
                           <DealLink dealId={f.deal} className="text-xs" />

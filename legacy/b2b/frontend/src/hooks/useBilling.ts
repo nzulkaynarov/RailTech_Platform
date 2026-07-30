@@ -17,6 +17,20 @@ const invalidateDashboardSurfaces = (qc: QueryClient) => {
   qc.invalidateQueries({ queryKey: ['recent-documents'] });
 };
 
+/**
+ * Любое действие в цепочке «после договора» меняет и саму сделку, и её хаб документов (F1).
+ *
+ * Раньше инвалидация писалась в каждой мутации поштучно и разъезжалась: подпись договора не
+ * трогала `['deals']`, поэтому открытая карточка сделки не узнавала, что сделка выиграна, —
+ * пользователь видел прежнюю стадию до перезагрузки страницы. Один помощник на всю цепочку
+ * убирает этот класс ошибки.
+ */
+const invalidateDealChain = (qc: QueryClient) => {
+  qc.invalidateQueries({ queryKey: ['deals'] });
+  qc.invalidateQueries({ queryKey: ['deal-documents'] });
+  invalidateDashboardSurfaces(qc);
+};
+
 // ─── Contracts ────────────────────────────────────────────────
 
 export const useContracts = (params?: ContractFilterParams) => useQuery({
@@ -38,7 +52,7 @@ export const useGenerateContract = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['contracts'] });
       qc.invalidateQueries({ queryKey: ['deals'] });
-      invalidateDashboardSurfaces(qc);
+      invalidateDealChain(qc);
     },
   });
 };
@@ -50,6 +64,9 @@ export const useSignContractClient = () => {
     onSuccess: (_, id) => {
       qc.invalidateQueries({ queryKey: ['contracts'] });
       qc.invalidateQueries({ queryKey: ['contract', id] });
+      // Вторая подпись закрывает сделку как CLOSED_WON и материализует счёт — карточка и её
+      // хаб документов обязаны это увидеть без перезагрузки страницы.
+      invalidateDealChain(qc);
     },
   });
 };
@@ -61,6 +78,7 @@ export const useSignContractManager = () => {
     onSuccess: (_, id) => {
       qc.invalidateQueries({ queryKey: ['contracts'] });
       qc.invalidateQueries({ queryKey: ['contract', id] });
+      invalidateDealChain(qc);
     },
   });
 };
@@ -124,7 +142,7 @@ export const useCreateInvoiceDraft = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['invoices'] });
       qc.invalidateQueries({ queryKey: ['deals'] });
-      invalidateDashboardSurfaces(qc);
+      invalidateDealChain(qc);
     },
   });
 };
@@ -140,7 +158,7 @@ export const useGenerateInvoice = () => {
       // "Create invoice" button flips to "Open invoice".
       qc.invalidateQueries({ queryKey: ['contracts'] });
       qc.invalidateQueries({ queryKey: ['contract', contractId] });
-      invalidateDashboardSurfaces(qc);
+      invalidateDealChain(qc);
     },
   });
 };
@@ -164,7 +182,7 @@ export const useRecordPayment = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['invoices'] });
       qc.invalidateQueries({ queryKey: ['payments'] });
-      invalidateDashboardSurfaces(qc);
+      invalidateDealChain(qc);
     },
   });
 };
@@ -176,7 +194,7 @@ export const useGenerateAct = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['invoices'] });
       qc.invalidateQueries({ queryKey: ['acts'] });
-      invalidateDashboardSurfaces(qc);
+      invalidateDealChain(qc);
     },
   });
 };
@@ -188,7 +206,7 @@ export const useIssueInvoice = () => {
     onSuccess: (_data, id) => {
       qc.invalidateQueries({ queryKey: ['invoices'] });
       qc.invalidateQueries({ queryKey: ['invoice', id] });
-      invalidateDashboardSurfaces(qc);
+      invalidateDealChain(qc);
     },
   });
 };
@@ -203,7 +221,7 @@ export const useCancelInvoice = () => {
       // Cancelling clears the contract's non-cancelled invoice → its `invoice_id` goes null, so the
       // contract Sheet must flip «Открыть инвойс» back to «Создать инвойс» (re-issue after cancel).
       qc.invalidateQueries({ queryKey: ['contracts'] });
-      invalidateDashboardSurfaces(qc);
+      invalidateDealChain(qc);
     },
   });
 };
@@ -216,7 +234,7 @@ export const useUpdateInvoiceDraft = () => {
     onSuccess: (_data, { id }) => {
       qc.invalidateQueries({ queryKey: ['invoices'] });
       qc.invalidateQueries({ queryKey: ['invoice', id] });
-      invalidateDashboardSurfaces(qc);
+      invalidateDealChain(qc);
     },
   });
 };
@@ -248,7 +266,7 @@ export const useSignAct = () => {
       actsApi.sign(id, signedFile),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['acts'] });
-      invalidateDashboardSurfaces(qc);
+      invalidateDealChain(qc);
     },
   });
 };
@@ -267,7 +285,8 @@ export const useUpdateFulfillmentStatus = () => {
     mutationFn: (payload: FulfillmentUpdatePayload) => fulfillmentApi.updateStatus(payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['fulfillments'] });
-      qc.invalidateQueries({ queryKey: ['deals'] });
+      // Приёмка (ACCEPTED) закрывает сделку как CLOSED_WON — обновляем и карточку, и хаб.
+      invalidateDealChain(qc);
     },
   });
 };

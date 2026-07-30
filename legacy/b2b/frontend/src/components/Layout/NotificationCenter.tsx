@@ -60,11 +60,17 @@ interface NotificationCenterProps {
 // request detail — both show the deal's documents in context.
 function notificationTarget(n: Notification, activeStatus: string): { hash?: string; page?: string } {
     const isSeller = activeStatus === 'SELLER';
+    // F2: ссылка, начинающаяся с «#», — точный маршрут SPA, который бэкенд поставил осознанно
+    // («вот ЭТОТ счёт»). Она обязана иметь приоритет над выводом по сделке: иначе уведомление
+    // «оплата получена» приводило на карточку сделки вообще, и человек шёл искать документ,
+    // о котором его только что известили. Ссылки без «#» — легаси-пути вида `/crm/deals`,
+    // они по-прежнему ничего не адресуют, поэтому обрабатываются старым способом.
+    const link = n.link || '';
+    if (link.startsWith('#')) return { hash: link.slice(1) };
     if (n.deal) {
         return { hash: `${isSeller ? 'deal-quote' : 'request-detail'}/${n.deal}` };
     }
-    const l = (n.link || '').toLowerCase();
-    if (l.includes('profile')) return { page: 'profile' };
+    if (link.toLowerCase().includes('profile')) return { page: 'profile' };
     return { page: isSeller ? 'crm-deals' : 'my-requests' };
 }
 
@@ -75,6 +81,9 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNaviga
     const [isOpen, setIsOpen] = useState(false);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(false);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
 
     const dateLocale = i18n.language === 'ru' ? ru : enUS;
 
@@ -85,13 +94,36 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNaviga
         if (!getAccessToken()) return;
         if (typeof document !== 'undefined' && document.hidden) return;
         try {
-            const data = await notificationsApi.getNotifications();
-            setNotifications(data);
-            setUnreadCount(data.filter(n => !n.is_read).length);
+            const { items, hasMore } = await notificationsApi.getNotificationsPage(1);
+            setNotifications(items);
+            setUnreadCount(items.filter(n => !n.is_read).length);
+            setHasMore(hasMore);
+            setPage(1);
         } catch {
             // silently fail — backend may not be running
         }
     }, []);
+
+    // «Показать ещё»: панель загружала только первую страницу, а кнопка под списком не делала
+    // ничего — до остальной истории было не добраться. Периодическое обновление возвращает
+    // список к первой странице намеренно: подгруженный хвост не должен расти бесконечно.
+    const loadMore = useCallback(async () => {
+        if (isLoadingMore || !hasMore) return;
+        setIsLoadingMore(true);
+        try {
+            const { items, hasMore: more } = await notificationsApi.getNotificationsPage(page + 1);
+            setNotifications(prev => {
+                const known = new Set(prev.map(n => n.id));
+                return [...prev, ...items.filter(n => !known.has(n.id))];
+            });
+            setHasMore(more);
+            setPage(prev => prev + 1);
+        } catch {
+            // silently fail — the already-loaded page stays usable
+        } finally {
+            setIsLoadingMore(false);
+        }
+    }, [page, hasMore, isLoadingMore]);
 
     useEffect(() => {
         fetchNotifications();
@@ -342,11 +374,19 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNaviga
                     )}
                 </ScrollArea>
 
-                <SheetFooter className="border-t p-4">
-                    <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground">
-                        {t('notifications.viewAll')}
-                    </Button>
-                </SheetFooter>
+                {hasMore && (
+                    <SheetFooter className="border-t p-4">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full text-xs text-muted-foreground"
+                            onClick={loadMore}
+                            disabled={isLoadingMore}
+                        >
+                            {isLoadingMore ? t('common.loading') : t('notifications.loadMore')}
+                        </Button>
+                    </SheetFooter>
+                )}
             </SheetContent>
         </Sheet>
     );

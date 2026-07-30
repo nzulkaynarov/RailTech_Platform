@@ -20,6 +20,17 @@ export const useDeal = (id: number) => useQuery({
   enabled: !!id,
 });
 
+/**
+ * Цепочка документов сделки для хаба на карточке (F1). Отдельный ключ, а не поле сделки:
+ * подпись договора / выставление счёта / оплата обновляют ТОЛЬКО его, не перегружая
+ * карточку с её вложенными КП.
+ */
+export const useDealDocuments = (dealId: number) => useQuery({
+  queryKey: ['deal-documents', dealId],
+  queryFn: () => crmApi.getDealDocuments(dealId),
+  enabled: !!dealId,
+});
+
 export interface QuoteItemsFilterParams {
   deal_id?: number;
   product_is_null?: boolean;

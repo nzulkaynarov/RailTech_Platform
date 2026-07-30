@@ -51,6 +51,52 @@ def notify_platform_admins(
     return notification
 
 
+def spa_link(page: str, object_id=None) -> str:
+    """Точная ссылка на ОБЪЕКТ внутри SPA — хэш-маршрут с ведущим «#».
+
+    Соглашение с фронтендом: ссылка, начинающаяся с «#», — готовый маршрут SPA, и центр
+    уведомлений открывает именно его. Ссылки без «#» остаются легаси-путями вида `/crm/deals`
+    и обрабатываются по-прежнему, поэтому старые уведомления не ломаются.
+
+    Нужно затем, что «уведомление ведёт на объект» иначе невыразимо: у модели уведомления
+    есть только FK на сделку, и любое событие по счёту, акту или отгрузке приводило человека
+    на карточку сделки вообще, а не к документу, о котором его известили.
+    """
+    return f"#{page}?open={object_id}" if object_id else f"#{page}"
+
+
+def notify_user(
+    *,
+    user,
+    title: str,
+    message: str,
+    link: str = "",
+    deal=None,
+    type_code: str = "INFO",
+    push: bool = True,
+) -> Notification | None:
+    """Создать уведомление пользователю и (по умолчанию) сразу доставить его по WebSocket.
+
+    Возвращает None, если получателя нет: у сделок сплошь и рядом пустой legacy-`manager`,
+    и вызывающему удобнее получить None, чем городить проверку на каждой площадке.
+    """
+    from .models import NotificationType
+
+    if user is None:
+        return None
+    notification = Notification.objects.create(
+        user=user,
+        type=NotificationType.objects.filter(code=type_code).first(),
+        title=title,
+        message=message,
+        link=link,
+        deal=deal,
+    )
+    if push:
+        push_notification_ws(notification)
+    return notification
+
+
 def push_notification_ws(notification: Notification):
     """Push a notification to the user via WebSocket channel layer."""
     if not notification.user_id:
@@ -66,6 +112,10 @@ def push_notification_ws(notification: Notification):
                     "title": notification.title,
                     "message": notification.message,
                     "link": notification.link or "",
+                    # Без `deal` живое WS-уведомление приходило на фронт «безадресным» и
+                    # уводило в общий список — правильная ссылка появлялась только после
+                    # перезагрузки страницы, когда список тянулся из API.
+                    "deal": notification.deal_id,
                     "type": notification.type.code if notification.type else "INFO",
                     "is_read": notification.is_read,
                     "created_at": notification.created_at.isoformat() if notification.created_at else "",

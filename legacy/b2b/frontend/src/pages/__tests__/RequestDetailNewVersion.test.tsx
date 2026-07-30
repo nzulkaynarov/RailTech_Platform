@@ -21,6 +21,9 @@ function mutation() {
 }
 
 vi.mock('@/hooks/useCRM', () => ({
+  // Хаб цепочки документов (F1) монтируется на карточке; здесь он не предмет проверки —
+  // отдаём пустой результат, чтобы блок молчал.
+  useDealDocuments: vi.fn(() => ({ data: undefined, isLoading: false })),
   useDeal: () => ({
     data: {
       id: 7,

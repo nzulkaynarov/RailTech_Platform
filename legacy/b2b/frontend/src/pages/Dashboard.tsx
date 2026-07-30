@@ -30,7 +30,7 @@ import {
 import { OnboardingChecklist } from '@/components/Shared/OnboardingChecklist';
 import { QuoteApprovalQueue } from '@/components/CRM/QuoteApprovalQueue';
 import {
-  SellerAttentionStrip, BuyerAttentionStrip, PipelineFunnel, MetricStrip,
+  SellerAttentionStrip, BuyerAttentionStrip, PostContractStrip, PipelineFunnel, MetricStrip,
 } from '@/components/Dashboard/DashboardWidgets';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 
@@ -413,6 +413,8 @@ function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stat
   return (
     <div className="flex flex-col gap-6">
       <BuyerAttentionStrip onNavigate={onNavigate} />
+      {/* F3 — деньги и поставка: блок появляется сам, когда сделки доходят до счетов. */}
+      <PostContractStrip side="buyer" onNavigate={onNavigate} />
       <RecentRequestsCard onNavigate={onNavigate} />
       <RecentDocumentsCard />
       <PipelineFunnel onNavigate={onNavigate} />
@@ -471,6 +473,8 @@ function SellerDashboard({ period: _period, stats, onNavigate }: { period: strin
   return (
     <div className="flex flex-col gap-6">
       <SellerAttentionStrip onNavigate={onNavigate} />
+      {/* F3 — деньги и поставка: блок появляется сам, когда сделки доходят до счетов. */}
+      <PostContractStrip side="seller" onNavigate={onNavigate} />
       <QuoteApprovalQueue />
       <RecentDocumentsCard />
       <TimeToFirstQuoteCard />

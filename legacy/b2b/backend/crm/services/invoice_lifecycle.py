@@ -10,6 +10,8 @@ from typing import Optional, Tuple
 
 from django.db import transaction
 
+from notifications.services import spa_link
+
 from ..constants import InvoiceStatusCode
 from ..models import ActivityLog
 from .billing import _istatus
@@ -18,66 +20,35 @@ from .billing import _istatus
 def _notify_invoice_issued_to_buyer(invoice) -> None:
     """Alert the BUYER team that the invoice is now issued (payable). FK→deal so the deep-link
     derives from it, matching the platform's notification convention."""
-    from notifications.models import Notification, NotificationType
-    from notifications.services import push_notification_ws
+    from .deal_notifications import buyer_team_user_ids, notify_deal_users
 
     deal = invoice.deal
-    if not deal.company_id:
-        return
-    info_type = NotificationType.objects.filter(code="INFO").first()
-    member_user_ids = deal.company.members.filter(is_active=True).values_list("user_id", flat=True)
-    notifications = [
-        Notification(
-            user_id=uid,
-            type=info_type,
-            title="Инвойс выставлен",
-            message=f"По сделке #{deal.pk} выставлен инвойс {invoice.number} к оплате",
-            link="/crm/invoices",
-            deal=deal,
-        )
-        for uid in member_user_ids
-    ]
-    for notif in Notification.objects.bulk_create(notifications):
-        push_notification_ws(notif)
+    notify_deal_users(
+        buyer_team_user_ids(deal),
+        deal=deal,
+        title="Инвойс выставлен",
+        message=f"По сделке #{deal.pk} выставлен инвойс {invoice.number} к оплате",
+        # Точная ссылка вместо реестра: раньше человек попадал в общий список счетов и искал
+        # там тот, о котором его известили.
+        link=spa_link("invoices", invoice.id),
+        type_code="INFO",
+    )
 
 
 def notify_seller_invoice_draft(invoice) -> None:
     """Alert the routed seller team that an invoice DRAFT was auto-created on deal win — they must
     review it and explicitly issue it (владелец не теряет контроль; ERP canon). FK→deal."""
-    from accounts.models import CustomUser
-    from notifications.models import Notification, NotificationType
-    from notifications.services import push_notification_ws
+    from .deal_notifications import notify_deal_users, seller_team_user_ids
 
     deal = invoice.deal
-    seller_company_ids = list(deal.seller_routings.values_list("seller_company_id", flat=True))
-    if not seller_company_ids:
-        return
-    seller_user_ids = set(
-        CustomUser.objects.filter(
-            is_active=True,
-            memberships__is_active=True,
-            memberships__can_sell=True,
-            memberships__company_id__in=seller_company_ids,
-        )
-        .values_list("id", flat=True)
-        .distinct()
+    notify_deal_users(
+        seller_team_user_ids(deal),
+        deal=deal,
+        title="Инвойс создан черновиком",
+        message=f"По сделке #{deal.pk} создан инвойс {invoice.number} — проверьте и выставьте",
+        link=spa_link("invoices", invoice.id),
+        type_code="INFO",
     )
-    if not seller_user_ids:
-        return
-    info_type = NotificationType.objects.filter(code="INFO").first()
-    notifications = [
-        Notification(
-            user_id=uid,
-            type=info_type,
-            title="Инвойс создан черновиком",
-            message=f"По сделке #{deal.pk} создан инвойс {invoice.number} — проверьте и выставьте",
-            link="/crm/invoices",
-            deal=deal,
-        )
-        for uid in seller_user_ids
-    ]
-    for notif in Notification.objects.bulk_create(notifications):
-        push_notification_ws(notif)
 
 
 def _assert_seller_may_act_on_invoice(invoice, user) -> Optional[str]:

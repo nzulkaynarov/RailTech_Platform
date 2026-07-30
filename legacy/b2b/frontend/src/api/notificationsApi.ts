@@ -20,6 +20,17 @@ export const notificationsApi = {
         const response = await apiClient.get<PaginatedResponse<Notification>>('notifications/');
         return response.data.results;
     },
+    /**
+     * Страница уведомлений вместе с признаком «есть ещё» — для кнопки «Показать ещё» в центре
+     * уведомлений. Панель показывала только первую страницу, а кнопка под списком не делала
+     * ничего: дальше первой страницы истории было не добраться.
+     */
+    getNotificationsPage: async (page: number) => {
+        const response = await apiClient.get<PaginatedResponse<Notification>>('notifications/', {
+            params: { page },
+        });
+        return { items: response.data.results, hasMore: Boolean(response.data.next) };
+    },
     markAsRead: async (id: number) => {
         await apiClient.patch(`notifications/${id}/mark_read/`);
     },

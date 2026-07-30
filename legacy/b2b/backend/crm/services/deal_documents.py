@@ -1,0 +1,359 @@
+"""Сводка цепочки документов сделки — «карточка сделки как хаб» (Rule 8).
+
+Зачем. Путь после подписания договора (оплата → акт → отгрузка → приёмка) на бэкенде
+работал, но пользователя туда никто не вёл: `DealDetailSerializer` не отдавал ни договора,
+ни счетов, ни актов, и на выигранной сделке блок документов был пуст. Найти счёт можно было
+только через боковое меню.
+
+Эталон — smart-buttons карточки заказа в Odoo (и связанные списки Salesforce): карточка
+показывает счётчики-ссылки на документы цепочки и ОДНУ подсказку следующего шага.
+
+Два инварианта, которые здесь важнее краткости:
+
+1. **Видимость не переизобретается.** Каждый набор сужается тем же `_billing_visibility_q`,
+   что и «родной» список этого типа. Иначе хаб стал бы вторым определением видимости и
+   разошёлся бы с ним — ровно так проигравший со-роутед продавец увидел отгрузку победителя
+   (#463). Доступ к самой сделке проверяет вызывающая вьюха через `get_object()`.
+
+2. **Права считает сервер, а не страница.** Клиент выводил роль из `activeStatus`
+   (= первый тип компании), из-за чего компания и покупатель, и продавец одновременно не
+   видела продавцовских действий. Стороны здесь определяются по образцу
+   `viewer_can_sign_client/manager` — по отношению зрителя К ЭТОЙ сделке.
+
+`next_step` — ПОДСКАЗКА, а не гейт: она ничего не запрещает и никаких новых блокировок не
+вводит (PRODUCT RULES §2). Реальные проверки остаются в сервисах, которые выполняют действие.
+"""
+
+from decimal import Decimal
+from typing import Optional
+
+from crm.constants import ActStatusCode, ContractStatusCode, FulfillmentStatusCode, InvoiceStatusCode
+
+# Коды подсказки «следующий шаг» — ДЕЙСТВИЕ цепочки. Чей сейчас ход, говорит отдельный флаг
+# `for_viewer`: так один код обслуживает обе стороны («оплатить счёт» / «ждём оплату»), и набор
+# не разрастается парами AWAIT_*.
+STEP_SIGN_CONTRACT = "SIGN_CONTRACT"
+STEP_CREATE_INVOICE = "CREATE_INVOICE"
+STEP_ISSUE_INVOICE = "ISSUE_INVOICE"
+STEP_PAY_INVOICE = "PAY_INVOICE"
+STEP_GENERATE_ACT = "GENERATE_ACT"
+STEP_SIGN_ACT = "SIGN_ACT"
+STEP_SHIP = "SHIP"
+STEP_ACCEPT_DELIVERY = "ACCEPT_DELIVERY"
+STEP_DONE = "DONE"
+
+# Счета, по которым ещё ждут денег.
+_OPEN_INVOICE_CODES = (InvoiceStatusCode.ISSUED, InvoiceStatusCode.PARTIAL, InvoiceStatusCode.OVERDUE)
+
+
+def _money(value: Optional[Decimal]) -> str:
+    """Деньги уходят строкой — как во всех биллинговых сериализаторах (DecimalField)."""
+    return str(value if value is not None else Decimal("0"))
+
+
+def _is_admin(user) -> bool:
+    return bool(getattr(user, "is_platform_admin", False))
+
+
+def viewer_deal_sides(user, deal, request=None) -> dict:
+    """Отношение зрителя К ЭТОЙ сделке — источник правды для гейтов UI.
+
+    Ровно то, на чём построены `viewer_can_sign_client/manager`: покупательская сторона — это
+    активное членство в компании-владельце сделки с правом покупать; продавцовская — компания
+    зрителя среди адресатов маршрутизации. У компании с обоими типами истинны обе.
+
+    Одиночный случай выражен через тот же `DealSideResolver`, что обслуживает реестры: два
+    определения стороны неизбежно разошлись бы, и карточка с реестром показывали бы одному
+    человеку разные кнопки.
+    """
+    return DealSideResolver(user, request).sides_for(deal.id, deal.company_id)
+
+
+class DealSideResolver:
+    """Стороны зрителя сразу для МНОГИХ сделок — за два запроса на весь список.
+
+    Нужен реестрам (счета / акты / отгрузки): там надо показать правильную кнопку в каждой
+    строке, а `viewer_deal_sides` на строку дал бы N+1. Множества «мои покупательские
+    компании» и «сделки, куда я пророутен как продавец» считаются один раз на запрос.
+
+    Определение стороны здесь то же, что у `viewer_deal_sides`, — иначе реестр и карточка
+    показывали бы разные кнопки одному человеку.
+    """
+
+    def __init__(self, user, request):
+        from accounts.services import is_platform_admin_viewer
+        from accounts.services.permissions import seller_visible_deal_ids
+
+        self.is_viewer = bool(user is not None and not getattr(user, "is_anonymous", False)) and (
+            is_platform_admin_viewer(user)
+        )
+        anonymous = user is None or getattr(user, "is_anonymous", False)
+        if anonymous or self.is_viewer:
+            self.buy_company_ids = set()
+            self.routed_deal_ids = set()
+            return
+        self.buy_company_ids = set(
+            user.memberships.filter(is_active=True, can_buy=True).values_list("company_id", flat=True)
+        )
+        # force=True — сторона не зависит от заголовка активного контекста SPA (правило WP-1).
+        self.routed_deal_ids = set(seller_visible_deal_ids(user, request, force=True) or ())
+
+    def sides_for(self, deal_id, deal_company_id) -> dict:
+        if self.is_viewer:
+            return {"is_buyer_side": False, "is_seller_side": False, "is_viewer": True}
+        return {
+            "is_buyer_side": bool(deal_company_id) and deal_company_id in self.buy_company_ids,
+            "is_seller_side": deal_id in self.routed_deal_ids,
+            "is_viewer": False,
+        }
+
+
+def _visible(model_qs, user, request, *, deal_path, seller_path):
+    """Сузить набор ровно так же, как это делает «родной» список данного типа."""
+    from crm.views.billing import _billing_visibility_q
+
+    if _is_admin(user):
+        return model_qs
+    return model_qs.filter(
+        _billing_visibility_q(user, request, deal_path=deal_path, seller_path=seller_path)
+    ).distinct()
+
+
+def _contracts_for(deal, user, request) -> list:
+    from crm.models import Contract
+
+    qs = Contract.objects.filter(deal_id=deal.id).select_related("status", "deal")
+    return list(_visible(qs, user, request, deal_path="deal", seller_path="quote__seller_company_id"))
+
+
+def _invoices_for(deal, user, request) -> list:
+    """Счета сделки — ровно тем же правилом, что и `InvoiceViewSet` (включая запрет показывать
+    покупателю чужой DRAFT). Правило переиспользуется, а не переписывается."""
+    from crm.models import Invoice
+    from crm.views.billing import invoice_visibility_q
+
+    qs = Invoice.objects.filter(deal_id=deal.id).select_related("status").prefetch_related("payments")
+    if _is_admin(user):
+        return list(qs)
+    return list(qs.filter(invoice_visibility_q(user, request)).distinct())
+
+
+def _acts_for(deal, user, request) -> list:
+    """Акты — тем же правилом, что и `ActViewSet` (владелец резолвится по всем цепочкам счёта)."""
+    from crm.models import Act
+    from crm.views.billing import act_visibility_q
+
+    qs = Act.objects.filter(deal_id=deal.id).select_related("status")
+    if _is_admin(user):
+        return list(qs)
+    return list(qs.filter(act_visibility_q(user, request)).distinct())
+
+
+def _fulfillment_for(deal, user, request):
+    from crm.models import Fulfillment
+
+    qs = Fulfillment.objects.filter(deal_id=deal.id).select_related("status")
+    return _visible(qs, user, request, deal_path="deal", seller_path="contract__quote__seller_company_id").first()
+
+
+def _payments_for(deal, user, request) -> list:
+    from crm.models import Payment
+
+    qs = Payment.objects.filter(invoice__deal_id=deal.id).select_related("invoice")
+    return list(
+        _visible(
+            qs,
+            user,
+            request,
+            deal_path="invoice__deal",
+            seller_path="invoice__contract__quote__seller_company_id",
+        )
+    )
+
+
+def _live(rows, cancelled_code: str) -> list:
+    """Строки без отменённых — «живая» часть цепочки."""
+    return [row for row in rows if row.status_code != cancelled_code]
+
+
+def _contract_payload(contract, user) -> Optional[dict]:
+    if contract is None:
+        return None
+    from crm.services.contracts import viewer_can_sign_client, viewer_can_sign_manager
+
+    return {
+        "id": contract.id,
+        "number": contract.number,
+        "status": contract.status_code,
+        "status_name": contract.status.name if contract.status_id else None,
+        "total_amount": _money(contract.total_amount),
+        "client_signed_at": contract.client_signed_at,
+        "manager_signed_at": contract.manager_signed_at,
+        "is_fully_signed": contract.is_fully_signed,
+        # Те же подсказки, что и в ContractSerializer — чтобы хаб и страница договоров
+        # показывали одну и ту же кнопку одному и тому же человеку.
+        "viewer_can_sign_client": bool(viewer_can_sign_client(user, contract)),
+        "viewer_can_sign_manager": bool(viewer_can_sign_manager(user, contract)),
+    }
+
+
+def _invoice_payload(invoice) -> dict:
+    return {
+        "id": invoice.id,
+        "number": invoice.number,
+        "status": invoice.status_code,
+        "status_name": invoice.status.name if invoice.status_id else None,
+        "total_incl_vat": _money(invoice.total_incl_vat),
+        "amount_paid": _money(invoice.amount_paid),
+        "balance_due": _money(invoice.balance_due),
+        "due_date": invoice.due_date,
+        "issued_at": invoice.issued_at,
+    }
+
+
+def _act_payload(act) -> dict:
+    return {
+        "id": act.id,
+        "number": act.number,
+        "status": act.status_code,
+        "status_name": act.status.name if act.status_id else None,
+        "total_amount": _money(act.total_amount),
+        "signed_at": act.signed_at,
+    }
+
+
+def _fulfillment_payload(fulfillment) -> Optional[dict]:
+    if fulfillment is None:
+        return None
+    status = fulfillment.status
+    return {
+        "id": fulfillment.id,
+        "status": status.code if status else None,
+        "status_name": status.name if status else None,
+        "expected_delivery_date": fulfillment.expected_delivery_date,
+        "shipped_at": fulfillment.shipped_at,
+        "delivered_at": fulfillment.delivered_at,
+        "accepted_at": fulfillment.accepted_at,
+        "tracking_number": fulfillment.tracking_number,
+        "carrier": fulfillment.carrier,
+    }
+
+
+def _step(code: str, *, for_viewer: bool, page: str, object_id=None) -> dict:
+    return {"code": code, "for_viewer": bool(for_viewer), "page": page, "object_id": object_id}
+
+
+def _contract_step(contract_data: dict, sides: dict) -> dict:
+    """Договор ещё не подписан обеими сторонами."""
+    viewer_signs = contract_data["viewer_can_sign_client"] and not contract_data["client_signed_at"]
+    viewer_signs = viewer_signs or (contract_data["viewer_can_sign_manager"] and not contract_data["manager_signed_at"])
+    return _step(STEP_SIGN_CONTRACT, for_viewer=viewer_signs, page="contracts", object_id=contract_data["id"])
+
+
+def _invoice_step(invoices: list, sides: dict) -> Optional[dict]:
+    """Шаг на участке «счёт» — или None, если счета закрыты и пора к акту."""
+    if not invoices:
+        return _step(STEP_CREATE_INVOICE, for_viewer=sides["is_seller_side"], page="invoices")
+    draft = next((inv for inv in invoices if inv["status"] == InvoiceStatusCode.DRAFT), None)
+    if draft is not None:
+        return _step(STEP_ISSUE_INVOICE, for_viewer=sides["is_seller_side"], page="invoices", object_id=draft["id"])
+    unpaid = next((inv for inv in invoices if inv["status"] in _OPEN_INVOICE_CODES), None)
+    if unpaid is not None:
+        return _step(STEP_PAY_INVOICE, for_viewer=sides["is_buyer_side"], page="invoices", object_id=unpaid["id"])
+    return None
+
+
+def _act_step(invoices: list, acts: list, sides: dict) -> Optional[dict]:
+    """Шаг на участке «акт» — или None, если акт подписан и пора к отгрузке."""
+    issued = next((act for act in acts if act["status"] == ActStatusCode.ISSUED), None)
+    if issued is not None:
+        # Акт в модели несёт ОДНУ подпись, и `sign_act` не различает сторону — поэтому
+        # подсказка адресована обеим. Момент выпуска акта — открытый вопрос владельцу.
+        return _step(STEP_SIGN_ACT, for_viewer=True, page="acts", object_id=issued["id"])
+    if not acts and any(inv["status"] == InvoiceStatusCode.PAID for inv in invoices):
+        return _step(STEP_GENERATE_ACT, for_viewer=sides["is_seller_side"], page="invoices")
+    return None
+
+
+def _fulfillment_step(fulfillment_data: Optional[dict], sides: dict) -> Optional[dict]:
+    if fulfillment_data is None:
+        return None
+    status = fulfillment_data["status"]
+    if status == FulfillmentStatusCode.ACCEPTED:
+        return None
+    if status == FulfillmentStatusCode.DELIVERED:
+        return _step(
+            STEP_ACCEPT_DELIVERY,
+            for_viewer=sides["is_buyer_side"],
+            page="fulfillments",
+            object_id=fulfillment_data["id"],
+        )
+    return _step(STEP_SHIP, for_viewer=sides["is_seller_side"], page="fulfillments", object_id=fulfillment_data["id"])
+
+
+def _next_step(*, contract_data, invoices, acts, fulfillment_data, sides) -> Optional[dict]:
+    """Одна подсказка «что дальше» по фактическому состоянию цепочки.
+
+    Порядок повторяет реальную последовательность в коде (договор → счёт → оплата → акт →
+    отгрузка → приёмка). Ничего не запрещает: это подпись к кнопке, а не гейт.
+    """
+    if contract_data is None:
+        return None
+    if not contract_data["is_fully_signed"]:
+        return _contract_step(contract_data, sides)
+    step = _invoice_step(invoices, sides)
+    if step is not None:
+        return step
+    step = _act_step(invoices, acts, sides)
+    if step is not None:
+        return step
+    step = _fulfillment_step(fulfillment_data, sides)
+    if step is not None:
+        return step
+    return _step(STEP_DONE, for_viewer=False, page="fulfillments")
+
+
+def deal_document_hub(deal, user, request) -> dict:
+    """Цепочка документов сделки + права зрителя + подсказка следующего шага.
+
+    Доступ к самой сделке проверяет вызывающая вьюха (`get_object()`); здесь дополнительно
+    сужается КАЖДЫЙ набор — у сделки с несколькими продавцами документы победителя не должны
+    попасть проигравшему.
+    """
+    sides = viewer_deal_sides(user, deal, request)
+
+    contracts = _contracts_for(deal, user, request)
+    live_contracts = _live(contracts, ContractStatusCode.CANCELLED)
+    contract = live_contracts[0] if live_contracts else (contracts[0] if contracts else None)
+
+    invoices = _live(_invoices_for(deal, user, request), InvoiceStatusCode.CANCELLED)
+    acts = _live(_acts_for(deal, user, request), ActStatusCode.CANCELLED)
+    fulfillment = _fulfillment_for(deal, user, request)
+    payments = _payments_for(deal, user, request)
+
+    contract_data = _contract_payload(contract, user)
+    invoice_data = [_invoice_payload(inv) for inv in invoices]
+    act_data = [_act_payload(act) for act in acts]
+    fulfillment_data = _fulfillment_payload(fulfillment)
+
+    return {
+        "deal": deal.id,
+        "stage_code": deal.stage.code if deal.stage_id else None,
+        "contract": contract_data,
+        "invoices": invoice_data,
+        "acts": act_data,
+        "fulfillment": fulfillment_data,
+        "payments_count": len(payments),
+        "payments_total": _money(sum((payment.amount for payment in payments), Decimal("0"))),
+        # Сторона зрителя ПО ЭТОЙ сделке. Это не полное право на действие: сервис,
+        # выполняющий действие, дополнительно проверит подписку, KYC и стадию — и честно
+        # откажет бизнес-кодом. Клиенту эти флаги нужны, чтобы не показывать чужих кнопок.
+        "viewer": sides,
+        "next_step": _next_step(
+            contract_data=contract_data,
+            invoices=invoice_data,
+            acts=act_data,
+            fulfillment_data=fulfillment_data,
+            sides=sides,
+        ),
+    }

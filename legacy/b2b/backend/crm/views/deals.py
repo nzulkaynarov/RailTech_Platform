@@ -23,6 +23,14 @@ from crm.services import (
     transition_deal_stage,
 )
 
+# Экшены, открывающие ОДНУ конкретную сделку (read-only). Видимость у них шире списочной:
+# продавец вправе открыть сделку, где он покупатель, и наоборот. Раньше это условие было
+# записано литералом `self.action == "retrieve"` в двух местах get_queryset, поэтому КАЖДЫЙ
+# новый detail-экшен молча получал списочный скоуп и отдавал 404 там, где retrieve отдаёт 200.
+# Набор намеренно ограничен читающими экшенами: расширять скоуп пишущим — менять границу
+# безопасности.
+SINGLE_DEAL_READ_ACTIONS = frozenset({"retrieve", "documents"})
+
 
 class AiDraftThrottle(UserRateThrottle):
     """Per-user throttle for the async AI draft-КП build (ARCH-01) — each call is a paid
@@ -128,7 +136,7 @@ class DealViewSet(viewsets.ModelViewSet):
         if visible_deal_ids is not None:
             scope = Q(id__in=visible_deal_ids)
             # Opening ONE specific deal: a seller may also open a deal they own as the buyer.
-            if self.action == "retrieve":
+            if self.action in SINGLE_DEAL_READ_ACTIONS:
                 scope |= buyer_scope
             return queryset.filter(scope)
 
@@ -139,7 +147,7 @@ class DealViewSet(viewsets.ModelViewSet):
         # force=True resolves routing regardless of the X-Active-Context header, staying
         # routing-only (no competitor widening) — the same WP-1 rule billing docs already use.
         scope = buyer_scope
-        if self.action == "retrieve":
+        if self.action in SINGLE_DEAL_READ_ACTIONS:
             forced = seller_visible_deal_ids(user, self.request, force=True)
             if forced:
                 scope |= Q(id__in=forced)
@@ -267,6 +275,26 @@ class DealViewSet(viewsets.ModelViewSet):
 
         serializer = DealDetailSerializer(deal)
         return Response(serializer.data)
+
+    @extend_schema(
+        summary="Deal document chain (deal card hub)",
+        description=(
+            "Договор / счета / акты / отгрузка этой сделки одним ответом, плюс сторона зрителя "
+            "и подсказка следующего шага — «карточка сделки как хаб» (паттерн smart-buttons "
+            "карточки заказа Odoo). Каждый набор сужается ровно тем же правилом видимости, что "
+            "и «родной» список этого типа, поэтому проигравший со-роутед продавец не увидит "
+            "документов победителя. `next_step` — подсказка для UI, а не гейт: разрешения "
+            "по-прежнему проверяют сервисы, выполняющие действие."
+        ),
+        responses={200: OpenApiResponse(description="Document chain summary")},
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["get"], url_path="documents")
+    def documents(self, request, pk=None):
+        """Thin wrapper (Rule 8) — сводку собирает crm.services.deal_documents."""
+        from crm.services.deal_documents import deal_document_hub
+
+        return Response(deal_document_hub(self.get_object(), request.user, request))
 
     @extend_schema(
         summary="Add a line item to the buyer's request",

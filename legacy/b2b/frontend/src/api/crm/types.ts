@@ -282,6 +282,91 @@ export interface SuggestedSeller {
 	total_lines: number;
 }
 
+/**
+ * Цепочка документов сделки — ответ `GET crm/deals/{id}/documents/` (F1, «карточка как хаб»).
+ *
+ * Сторону зрителя и подсказку следующего шага считает СЕРВЕР: клиентский `activeStatus` —
+ * это первый тип компании, из-за чего компания, которая и покупает, и продаёт, теряла
+ * продавцовские действия. Здесь обе стороны могут быть истинны одновременно.
+ */
+export type DealDocumentStepCode =
+	| 'SIGN_CONTRACT'
+	| 'CREATE_INVOICE'
+	| 'ISSUE_INVOICE'
+	| 'PAY_INVOICE'
+	| 'GENERATE_ACT'
+	| 'SIGN_ACT'
+	| 'SHIP'
+	| 'ACCEPT_DELIVERY'
+	| 'DONE';
+
+export interface DealDocumentStep {
+	code: DealDocumentStepCode;
+	/** Ход зрителя (иначе шаг за контрагентом — показываем как ожидание, без кнопки). */
+	for_viewer: boolean;
+	page: string;
+	object_id: number | null;
+}
+
+export interface DealHubContract {
+	id: number;
+	number: string;
+	status: string | null;
+	status_name: string | null;
+	total_amount: string;
+	client_signed_at: string | null;
+	manager_signed_at: string | null;
+	is_fully_signed: boolean;
+	viewer_can_sign_client: boolean;
+	viewer_can_sign_manager: boolean;
+}
+
+export interface DealHubInvoice {
+	id: number;
+	number: string;
+	status: string | null;
+	status_name: string | null;
+	total_incl_vat: string;
+	amount_paid: string;
+	balance_due: string;
+	due_date: string | null;
+	issued_at: string | null;
+}
+
+export interface DealHubAct {
+	id: number;
+	number: string;
+	status: string | null;
+	status_name: string | null;
+	total_amount: string;
+	signed_at: string | null;
+}
+
+export interface DealHubFulfillment {
+	id: number;
+	status: string | null;
+	status_name: string | null;
+	expected_delivery_date: string | null;
+	shipped_at: string | null;
+	delivered_at: string | null;
+	accepted_at: string | null;
+	tracking_number: string;
+	carrier: string;
+}
+
+export interface DealDocumentHub {
+	deal: number;
+	stage_code: string | null;
+	contract: DealHubContract | null;
+	invoices: DealHubInvoice[];
+	acts: DealHubAct[];
+	fulfillment: DealHubFulfillment | null;
+	payments_count: number;
+	payments_total: string;
+	viewer: { is_buyer_side: boolean; is_seller_side: boolean; is_viewer: boolean };
+	next_step: DealDocumentStep | null;
+}
+
 export interface Deal {
 	id: number;
 	company?: number | null;

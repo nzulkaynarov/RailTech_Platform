@@ -22,7 +22,7 @@ from crm.serializers import (
     InvoiceSerializer,
     PaymentSerializer,
 )
-from crm.views.billing_filters import ActFilter, FulfillmentFilter, InvoiceFilter, PaymentFilter
+from crm.views.billing_filters import ActFilter, ContractFilter, FulfillmentFilter, InvoiceFilter, PaymentFilter
 
 _PDF_DOC_TYPE = {"Contract": "contract", "Invoice": "invoice", "Act": "act"}
 
@@ -93,6 +93,77 @@ def _invoice_seller_side_q(user, request):
     return owned_q | unresolved_q
 
 
+def _act_seller_side_q(user, request):
+    """SELLER-ownership Q для АКТОВ, или None, если у пользователя нет компании-продавца.
+
+    Владелец акта — тот же, кто владеет его счётом, поэтому цепочек резолва столько же, сколько
+    у счёта: договор → КП, ЛИБО позиции счёта → исходное КП (ручной G2-счёт). Прежде путь был
+    один — `invoice__contract__quote__seller_company`, — а `create_manual_invoice` создаёт счёт
+    БЕЗ договора, и `generate_act` копирует этот NULL в акт. У акта по ручному счёту владелец
+    не резолвился, срабатывал legacy-фолбэк «видно любому ПРОРОУТЕННОМУ продавцу», и акт
+    победителя попадал в список проигравшего конкурента (тот же класс, что #463 у отгрузки:
+    комментарий к фолбэку обещает «winner's docs ARE owner-anchored», а для этой модели
+    обещание не выполнялось).
+
+    Фолбэк оставлен, но срабатывает теперь только когда пусты ВСЕ цепочки — то есть у акта
+    действительно нет прослеживаемого владельца.
+    """
+    owned_seller_ids = seller_company_ids(user)
+    if not owned_seller_ids:
+        return None
+    owned_via_invoice_source_ids = InvoiceItem.objects.filter(
+        source_quote_item__quote__seller_company_id__in=owned_seller_ids
+    ).values("invoice_id")
+    any_source_owner_ids = InvoiceItem.objects.filter(source_quote_item__quote__seller_company__isnull=False).values(
+        "invoice_id"
+    )
+    owned_q = (
+        Q(invoice__contract__quote__seller_company_id__in=owned_seller_ids)
+        | Q(contract__quote__seller_company_id__in=owned_seller_ids)
+        | Q(invoice_id__in=owned_via_invoice_source_ids)
+    )
+    routed_deal_ids = seller_visible_deal_ids(user, request, force=True) or set()
+    unresolved_q = (
+        Q(invoice__contract__quote__seller_company_id__isnull=True)
+        & Q(contract__quote__seller_company_id__isnull=True)
+        & ~Q(invoice_id__in=any_source_owner_ids)
+        & Q(deal_id__in=routed_deal_ids)
+    )
+    return owned_q | unresolved_q
+
+
+def act_visibility_q(user, request):
+    """Полная Q видимости АКТОВ для не-админа: покупательская сторона ∪ владеющий продавец."""
+    user_company_ids = list(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
+    buyer_q = Q(deal__company_id__in=user_company_ids)
+    seller_q = _act_seller_side_q(user, request)
+    return buyer_q if seller_q is None else (buyer_q | seller_q)
+
+
+def invoice_visibility_q(user, request):
+    """Полная Q видимости СЧЕТОВ для не-админа: чья это сторона + запрет чужого черновика.
+
+    Вынесено из `InvoiceViewSet.get_queryset`, потому что у счёта видимость сложнее прочих
+    (владелец резолвится через договор ИЛИ через исходное КП позиций ручного счёта) и её
+    понадобилось переиспользовать в сводке документов сделки. Копия этой логики стала бы
+    вторым определением видимости — тем самым классом расхождения, из-за которого отгрузка
+    победителя утекала проигравшему (#463).
+    """
+    user_company_ids = list(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
+    buyer_q = Q(deal__company_id__in=user_company_ids)
+    seller_side_q = _invoice_seller_side_q(user, request)
+    visibility_q = buyer_q if seller_side_q is None else (buyer_q | seller_side_q)
+    # I-3: a DRAFT invoice is the seller's private working copy — hidden from the buyer until
+    # it is ISSUED (Odoo canon: a draft is not shown to the customer). CANCELLED/ISSUED/… stay
+    # visible to both sides. seller_side_q ⊆ visibility_q, so ANDing the gate keeps non-DRAFT
+    # rows untouched and confines DRAFT rows to the seller side. A pure buyer (no seller
+    # company) has seller_side_q=None → never matches a DRAFT.
+    draft_gate = ~Q(status__code=InvoiceStatusCode.DRAFT)
+    if seller_side_q is not None:
+        draft_gate = draft_gate | seller_side_q
+    return visibility_q & draft_gate
+
+
 def _billing_visibility_q(user, request, *, deal_path, seller_path):
     """Tenant-scope Q for a non-admin billing queryset.
 
@@ -124,6 +195,8 @@ class ContractViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
 
     serializer_class = ContractSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
+    # Без FilterSet DjangoFilterBackend молча возвращает список ЦЕЛИКОМ — см. billing_filters.
+    filterset_class = ContractFilter
     # Operator sub-capability for the admin contract overrides (ADR-0004 G1).
     operator_permissions = {
         "cancel": "moderation.force_override",
@@ -297,21 +370,9 @@ class InvoiceViewSet(
         if getattr(user, "is_platform_admin", False):
             return qs
         # Invoice ownership resolves through the contract chain OR — for a G2 contract-less MANUAL
-        # invoice — through its items' source КП (see _invoice_seller_side_q). Buyer sees its deals'
-        # invoices; seller sees the ones its company OWNS (hidden competition).
-        user_company_ids = list(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
-        buyer_q = Q(deal__company_id__in=user_company_ids)
-        seller_side_q = _invoice_seller_side_q(user, self.request)
-        visibility_q = buyer_q if seller_side_q is None else (buyer_q | seller_side_q)
-        # I-3: a DRAFT invoice is the seller's private working copy — hidden from the buyer until
-        # it is ISSUED (Odoo canon: a draft is not shown to the customer). CANCELLED/ISSUED/… stay
-        # visible to both sides. seller_side_q ⊆ visibility_q, so ANDing the gate keeps non-DRAFT
-        # rows untouched and confines DRAFT rows to the seller side. A pure buyer (no seller
-        # company) has seller_side_q=None → never matches a DRAFT.
-        draft_gate = ~Q(status__code=InvoiceStatusCode.DRAFT)
-        if seller_side_q is not None:
-            draft_gate = draft_gate | seller_side_q
-        return qs.filter(visibility_q & draft_gate).distinct()
+        # invoice — through its items' source КП. Buyer sees its deals' invoices; seller sees the
+        # ones its company OWNS (hidden competition). Shared with the deal-documents hub.
+        return qs.filter(invoice_visibility_q(user, self.request)).distinct()
 
     def update(self, request, *args, **kwargs):
         """DRAFT-only edit, restricted to due_date / notes (amounts mirror the contract, never
@@ -519,14 +580,11 @@ class ActViewSet(viewsets.ReadOnlyModelViewSet):
         qs = Act.objects.select_related("deal__company", "contract", "invoice", "status").order_by("-created_at")
         # Platform admin sees every billing record; otherwise BOTH sides of a deal
         # (buyer company + routed seller) see its records, regardless of the SPA
-        # X-Active-Context header (WP-1). Seller side stays routing-scoped.
+        # X-Active-Context header (WP-1). Владелец акта резолвится по всем цепочкам его
+        # счёта — иначе акт по ручному счёту уходил в фолбэк и был виден конкуренту.
         if getattr(user, "is_platform_admin", False):
             return qs
-        return qs.filter(
-            _billing_visibility_q(
-                user, self.request, deal_path="deal", seller_path="invoice__contract__quote__seller_company_id"
-            )
-        ).distinct()
+        return qs.filter(act_visibility_q(user, self.request)).distinct()
 
     @action(detail=True, methods=["get"], url_path="download-pdf")
     def download_pdf(self, request, pk=None):

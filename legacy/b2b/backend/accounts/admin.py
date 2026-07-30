@@ -395,8 +395,10 @@ class CompanyRoleApplicationAdmin(ReadOnlyInspectionMixin, ModelAdmin):
 
     @superuser_only_action(_("[Emergency] Отклонить"))
     def reject_application(self, request, queryset):
-        updated = services.bulk_reject_role_applications(queryset, request.user)
-        self.message_user(request, _("%(count)d заявок отклонено.") % {"count": updated})
+        rejected, errors = services.bulk_reject_role_applications(queryset, request.user)
+        if errors:
+            self.message_user(request, "\n".join(errors), level="warning")
+        self.message_user(request, _("%(count)d заявок отклонено.") % {"count": rejected})
 
 
 # ────────────────────────────────────────────

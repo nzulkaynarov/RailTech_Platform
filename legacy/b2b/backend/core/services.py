@@ -70,14 +70,34 @@ def add_ticket_message(
 
 
 def change_ticket_status(*, ticket: SupportTicket, status: str, actor) -> SupportTicket:
-    """Смена статуса тикета Platform Admin'ом."""
+    """Смена статуса тикета Platform Admin'ом.
+
+    `actor` принимался и НИКУДА не записывался: кто закрыл обращение, нигде не фиксировалось,
+    хотя вьюха исправно передавала пользователя, а соседний сервис заявок на роль пишет
+    `log_admin_action` на каждое решение. Параметр, который ничего не делает, обещает аудит,
+    которого нет, — поэтому он теперь действительно ведёт запись.
+    """
+    from core.audit import log_admin_action
+
     valid = {code for code, _ in SupportTicket.STATUS_CHOICES}
     if status not in valid:
         return None
+    before_status = ticket.status
     ticket.status = status
     if status == SupportTicket.STATUS_RESOLVED and not ticket.resolved_at:
         ticket.resolved_at = timezone.now()
     ticket.save(update_fields=["status", "resolved_at", "updated_at"])
+    log_admin_action(
+        entity_type="support_ticket",
+        entity_id=ticket.id,
+        action="Изменён статус обращения",
+        detail=f"{before_status} → {status}",
+        event_code="support.ticket_status_changed",
+        event_params={"from": before_status, "to": status},
+        actor=actor,
+        before={"status": before_status},
+        after={"status": status},
+    )
     return ticket
 
 

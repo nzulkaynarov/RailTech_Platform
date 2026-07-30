@@ -1533,8 +1533,8 @@
     "markAllRead": "Mark all read",
     "unread": "Unread: {{count}}",
     "caughtUp": "You're all caught up",
-    "viewAll": "All notifications",
-    "unreadLabel": "Unread"
+    "unreadLabel": "Unread",
+    "loadMore": "Show more"
   },
   "cart": {
     "title": "Purchase Request",
@@ -2331,7 +2331,17 @@
       "rfqNoKp": "RFQs without a quote",
       "expiredKp": "Expired quotes",
       "reviewKp": "Quotes to review",
-      "oldestWaiting": "oldest {{waiting}}"
+      "oldestWaiting": "oldest {{waiting}}",
+      "postContractTitle": "Money and delivery",
+      "invoicesToIssue": "Invoices to issue",
+      "awaitingPayment": "Awaiting payment",
+      "invoicesToPay": "Invoices to pay",
+      "overdueInvoices_one": "{{count}} overdue",
+      "overdueInvoices_other": "{{count}} overdue",
+      "actsToSign": "Acts to sign",
+      "inTransit": "Shipments in transit",
+      "awaitingDelivery": "Expected deliveries",
+      "toAccept": "Awaiting acceptance"
     },
     "funnel": {
       "title": "Deal pipeline"
@@ -5439,5 +5449,66 @@
     "none": "No lines recognized in the file",
     "truncated_one": "Added {{count}} line; the file was longer — remaining rows were truncated",
     "truncated_other": "Added {{count}} lines; the file was longer — remaining rows were truncated"
+  },
+  "dealChain": {
+    "title": "Deal chain",
+    "tiles": {
+      "contract": "Contract",
+      "invoices": "Invoices",
+      "payments": "Payments",
+      "acts": "Acts",
+      "fulfillment": "Delivery",
+      "none": "None yet",
+      "noPayments": "No payments yet",
+      "paidTotal": "Paid {{amount}}"
+    },
+    "steps": {
+      "SIGN_CONTRACT": {
+        "title": "The contract is waiting for your signature",
+        "action": "Sign",
+        "waiting": "You have signed — waiting for the other side."
+      },
+      "CREATE_INVOICE": {
+        "title": "Contract signed — raise an invoice",
+        "action": "Go to invoices",
+        "waiting": "Contract signed. The seller is preparing the invoice."
+      },
+      "ISSUE_INVOICE": {
+        "title": "The invoice is drafted — issue it to the client",
+        "action": "Open invoice",
+        "waiting": "The seller is preparing the invoice."
+      },
+      "PAY_INVOICE": {
+        "title": "The invoice is issued — you can pay it",
+        "action": "Open invoice",
+        "waiting": "Invoice issued — waiting for the client's payment."
+      },
+      "GENERATE_ACT": {
+        "title": "The invoice is paid — issue the act",
+        "action": "Go to invoices",
+        "waiting": "Payment received. The seller is preparing the act."
+      },
+      "SIGN_ACT": {
+        "title": "The act is issued and awaits a signature",
+        "action": "Open act",
+        "waiting": "Act issued — waiting for the other side to sign."
+      },
+      "SHIP": {
+        "title": "Time to ship and update the delivery status",
+        "action": "Go to delivery",
+        "waiting": "The seller is preparing the shipment."
+      },
+      "ACCEPT_DELIVERY": {
+        "title": "Delivered — confirm acceptance",
+        "action": "Go to delivery",
+        "waiting": "Delivered — waiting for the buyer to accept."
+      },
+      "DONE": {
+        "title": "Deal closed",
+        "action": "Done",
+        "waiting": "Deal closed.",
+        "done": "The whole chain is complete: contract, payment, act and acceptance are closed."
+      }
+    }
   }
 }

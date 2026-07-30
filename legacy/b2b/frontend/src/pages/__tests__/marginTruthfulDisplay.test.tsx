@@ -41,6 +41,9 @@ import {
 // Data hooks are mocked so the components render deterministically off fixtures.
 vi.mock('@/hooks/useCRM', () => ({
   useDeal: vi.fn(),
+  // Хаб цепочки документов (F1) монтируется на карточке; в этих тестах он не предмет
+  // проверки — отдаём пустой результат, чтобы блок молчал.
+  useDealDocuments: vi.fn(() => ({ data: undefined, isLoading: false })),
   useChangeDealStage: vi.fn(),
   useApproveQuote: vi.fn(),
   useRejectQuote: vi.fn(),

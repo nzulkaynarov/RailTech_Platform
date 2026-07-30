@@ -224,9 +224,10 @@ class TestBulkActions:
         first = _application(world)
         second = _application(world, requested_type=world["manufacturer"])
 
-        rejected = bulk_reject_role_applications(CompanyRoleApplication.objects.all(), world["reviewer"])
+        rejected, errors = bulk_reject_role_applications(CompanyRoleApplication.objects.all(), world["reviewer"])
 
         assert rejected == 2
+        assert errors == []
         first.refresh_from_db()
         second.refresh_from_db()
         assert first.status == "REJECTED"
@@ -254,8 +255,9 @@ class TestBulkActions:
         # на другую роль, а не дубль первой.
         _application(world, status="APPROVED")
         _application(world, requested_type=world["manufacturer"], status="PENDING")
-        rejected = bulk_reject_role_applications(CompanyRoleApplication.objects.all(), world["reviewer"])
+        rejected, errors = bulk_reject_role_applications(CompanyRoleApplication.objects.all(), world["reviewer"])
         assert rejected == 1
+        assert errors == [], "пропуск уже закрытой заявки — не ошибка"
 
     def test_bulk_approve_counts_and_reports_errors(self, world):
         """Одну одобрить можно, вторую — нет: счётчик и список ошибок должны это отражать."""

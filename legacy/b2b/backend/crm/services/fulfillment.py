@@ -91,4 +91,11 @@ def update_fulfillment_status(
     # Auto-close deal when accepted by client
     if status_code == FulfillmentStatusCode.ACCEPTED:
         transition_deal_stage(obj.deal, DealStageCode.CLOSED_WON, actor=actor, reason="Приёмка клиентом")
+    # Движение груза не порождало ни одного уведомления: покупатель, ждущий поставку, не
+    # узнавал ни об отгрузке, ни о доставке. Адресат — противоположная сторона.
+    from django.db import transaction
+
+    from .deal_notifications import notify_fulfillment_status
+
+    transaction.on_commit(lambda: notify_fulfillment_status(obj, status_code, actor))
     return obj, None

@@ -135,6 +135,28 @@ class TestChangeTicketStatus:
         ticket.refresh_from_db()
         assert ticket.status == status
 
+    def test_status_change_is_audited_with_the_actor(self, world):
+        """`actor` принимался и никуда не записывался: кто закрыл обращение, нигде не
+        фиксировалось, хотя соседний сервис заявок на роль пишет запись на каждое решение."""
+        from crm.models import ActivityLog
+
+        ticket = _ticket(world)
+        change_ticket_status(ticket=ticket, status=SupportTicket.STATUS_RESOLVED, actor=world["operator"])
+
+        entry = ActivityLog.objects.filter(event_code="support.ticket_status_changed").first()
+        assert entry is not None, "смена статуса обращения не попала в аудит"
+        assert entry.user_id == world["operator"].id, "в аудите не тот, кто менял статус"
+        assert entry.event_params == {"from": SupportTicket.STATUS_OPEN, "to": SupportTicket.STATUS_RESOLVED}
+
+    def test_rejected_status_is_not_audited(self, world):
+        """Неизвестный статус ничего не меняет — значит и записывать нечего."""
+        from crm.models import ActivityLog
+
+        ticket = _ticket(world)
+        change_ticket_status(ticket=ticket, status="НЕТ_ТАКОГО", actor=world["operator"])
+
+        assert not ActivityLog.objects.filter(event_code="support.ticket_status_changed").exists()
+
     def test_resolving_stamps_the_resolution_time(self, world):
         ticket = _ticket(world)
         change_ticket_status(ticket=ticket, status=SupportTicket.STATUS_RESOLVED, actor=world["operator"])

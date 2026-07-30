@@ -18,8 +18,10 @@ export function PaymentsPage() {
   const { data: payments, isLoading, isError, refetch } = usePayments();
   const formatCurrency = useCurrencyStore((s) => s.format);
   const [recordOpen, setRecordOpen] = useState(false);
-  // Recording a payment is a BUYER action (the client pays the invoice).
-  const isBuyer = useUserStore((s) => s.activeStatus) === 'BUYER';
+  // Оплату записывает покупающая сторона. Гейтим по СПОСОБНОСТИ члена (`can_buy`), а не по
+  // контексту отображения: `activeStatus` — первый тип компании, и посредник, который и
+  // покупает, и продаёт, кнопки не видел. Тот же образец, что в DocumentCreateWizard.
+  const isBuyer = useUserStore((s) => s.capabilities.can_buy);
   const isViewer = useIsViewerMode();
   const listParams = useListParams([] as const, { defaultOrdering: '-paid_at' });
 

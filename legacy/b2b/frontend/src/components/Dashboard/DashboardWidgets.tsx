@@ -1,12 +1,15 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ClipboardCheck, PenLine, FileWarning, FileClock, FileCheck2, type LucideIcon } from 'lucide-react';
+import {
+  ClipboardCheck, PenLine, FileWarning, FileClock, FileCheck2, FilePlus2, Wallet, ScrollText,
+  Truck, PackageCheck, type LucideIcon,
+} from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { PRE_KP_STAGES, formatWaiting, isUnclaimedRfq } from '@/lib/waiting';
 import { Card, CardContent } from '@/components/ui/card';
 import { useDeals, useQuotes, useMyApprovalQueue, useDealStages } from '@/hooks/useCRM';
-import { useContracts } from '@/hooks/useBilling';
+import { useContracts, useInvoices, useActs, useFulfillments } from '@/hooks/useBilling';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { dealStageLabelKey } from '@/lib/codes';
 import type { DashboardStats } from '@/api/dashboardApi';
@@ -107,6 +110,79 @@ export function SellerAttentionStrip({ onNavigate }: { onNavigate: (p: string) =
     { icon: FileClock, label: t('dashboardPage.attn.expiredKp'), count: expiredQuotes, tone: 'destructive', page: 'crm-quotes' },
   ];
   return <AttentionGrid items={items} onNavigate={onNavigate} />;
+}
+
+/**
+ * Вторая половина воронки — деньги и поставка (F3).
+ *
+ * Полоса внимания заканчивалась на «Договорах на подписи»: всё, что происходит после
+ * подписания, на дашборде не отражалось вовсе, хотя данные уже считались на страницах.
+ *
+ * Блок показывается, ТОЛЬКО когда в нём есть хоть одна ненулевая величина: у компании, которая
+ * ещё не дошла до денег, он не занимает экран нулями, а как только пошли счета — появляется сам.
+ *
+ * Просрочка считается по факту (`due_date` в прошлом у неоплаченного счёта), а НЕ по статусу
+ * OVERDUE: тот объявлен в справочнике, но его никто не проставляет — плитка по нему всегда
+ * показывала бы ноль. Кому и когда проставлять OVERDUE — открытый вопрос владельцу.
+ */
+function isOverdue(dueDate: string | null): boolean {
+  if (!dueDate) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return new Date(dueDate).getTime() < today.getTime();
+}
+
+export function PostContractStrip({ side, onNavigate }: { side: 'seller' | 'buyer'; onNavigate: (p: string) => void }) {
+  const { t } = useTranslation();
+  const { data: invoices } = useInvoices(undefined);
+  const { data: acts } = useActs({ status: 'ISSUED' });
+  const { data: fulfillments } = useFulfillments(undefined);
+
+  const list = invoices ?? [];
+  const drafts = list.filter((invoice) => invoice.status === 'DRAFT');
+  const awaitingPayment = list.filter((invoice) => invoice.status === 'ISSUED' || invoice.status === 'PARTIAL');
+  const overdueCount = awaitingPayment.filter((invoice) => isOverdue(invoice.due_date)).length;
+  const inTransit = (fulfillments ?? []).filter(
+    (shipment) => shipment.status === 'SHIPPED' || shipment.status === 'IN_TRANSIT',
+  );
+  const delivered = (fulfillments ?? []).filter((shipment) => shipment.status === 'DELIVERED');
+
+  const items: AttentionItem[] = side === 'seller'
+    ? [
+      { icon: FilePlus2, label: t('dashboardPage.attn.invoicesToIssue'), count: drafts.length, tone: 'warning', page: 'invoices' },
+      {
+        icon: Wallet,
+        label: t('dashboardPage.attn.awaitingPayment'),
+        count: awaitingPayment.length,
+        tone: 'warning',
+        page: 'invoices',
+        hint: overdueCount ? t('dashboardPage.attn.overdueInvoices', { count: overdueCount }) : null,
+      },
+      { icon: ScrollText, label: t('dashboardPage.attn.actsToSign'), count: (acts ?? []).length, tone: 'warning', page: 'acts' },
+      { icon: Truck, label: t('dashboardPage.attn.inTransit'), count: inTransit.length, tone: 'warning', page: 'fulfillments' },
+    ]
+    : [
+      {
+        icon: Wallet,
+        label: t('dashboardPage.attn.invoicesToPay'),
+        count: awaitingPayment.length,
+        tone: 'warning',
+        page: 'invoices',
+        hint: overdueCount ? t('dashboardPage.attn.overdueInvoices', { count: overdueCount }) : null,
+      },
+      // Реестр актов покупателю закрыт (SELLER_PAGES) — плитки, ведущей в никуда, здесь нет.
+      { icon: Truck, label: t('dashboardPage.attn.awaitingDelivery'), count: inTransit.length, tone: 'warning', page: 'fulfillments' },
+      { icon: PackageCheck, label: t('dashboardPage.attn.toAccept'), count: delivered.length, tone: 'destructive', page: 'fulfillments' },
+    ];
+
+  if (!items.some((item) => item.count > 0)) return null;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <h3 className="text-sm font-medium text-muted-foreground">{t('dashboardPage.attn.postContractTitle')}</h3>
+      <AttentionGrid items={items} onNavigate={onNavigate} />
+    </div>
+  );
 }
 
 /** BUYER — "what needs my decision": КП to review, contracts to sign. */

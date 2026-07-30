@@ -23,6 +23,7 @@ import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
 import { BuyerAcceptedPanel } from '@/components/CRM/BuyerAcceptedPanel';
 import { DealTimeline } from '@/components/CRM/DealTimeline';
 import { DealDocumentsCard } from '@/components/CRM/DealDocumentsCard';
+import { DealChainCard } from '@/components/CRM/DealChainCard';
 import { RequestHeader } from './RequestHeader';
 import { RequestActionBar } from './RequestActionBar';
 import { QuoteView } from './QuoteView';
@@ -261,6 +262,12 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
             </CardContent>
           </Card>
         )}
+
+        {/* F1 — цепочка «после договора»: договор / счета / платежи / акты / отгрузка со
+            счётчиками-ссылками и подсказкой следующего шага (smart-buttons карточки заказа
+            Odoo). Сам решает, показываться ли: пока договора нет, блок молчит. Стороны и шаг
+            приходят с сервера, поэтому dual-компания видит верные кнопки в любом контексте. */}
+        <DealChainCard dealId={deal.id} />
 
         {/* F2 II-4 — documents attached to this deal + «Создать документ» (pre-bound to the deal).
             Received counterparty documents surface here read-only with a «Получен» badge. Renders

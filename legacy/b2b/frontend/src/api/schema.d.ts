@@ -3512,6 +3512,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/deals/{id}/documents/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Deal document chain (deal card hub)
+         * @description Договор / счета / акты / отгрузка этой сделки одним ответом, плюс сторона зрителя и подсказка следующего шага — «карточка сделки как хаб» (паттерн smart-buttons карточки заказа Odoo). Каждый набор сужается ровно тем же правилом видимости, что и «родной» список этого типа, поэтому проигравший со-роутед продавец не увидит документов победителя. `next_step` — подсказка для UI, а не гейт: разрешения по-прежнему проверяют сервисы, выполняющие действие.
+         */
+        get: operations["crm_deals_documents_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/deals/{id}/export-pdf/": {
         parameters: {
             query?: never;
@@ -6314,6 +6334,19 @@ export interface components {
          * @enum {string}
          */
         AccessEnum: "ENABLED" | "DISABLED" | "DEMO";
+        /**
+         * @description Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.
+         *
+         *     Зачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,
+         *     которая одновременно покупает и продаёт, не видела продавцовских кнопок: «Сформировать
+         *     акт» пряталась за `!isBuyer`, и у dual-компании с порядком типов [CLIENT, SUPPLIER]
+         *     кнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`
+         *     у договора.
+         *
+         *     Поля-подсказки НЕ являются полным правом: подписку, KYC и стадию проверит сервис,
+         *     выполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку
+         *     кнопок чужой стороны.
+         */
         Act: {
             readonly id: number;
             /** Сделка */
@@ -6336,12 +6369,33 @@ export interface components {
             /** Format: uri */
             signed_file?: string | null;
             readonly signed_file_url: string | null;
+            /**
+             * @description Акт подписывается один раз и только выставленный.
+             *
+             *     Сторону `sign_act` намеренно не различает (в модели одна подпись), поэтому подсказка
+             *     адресована обеим сторонам сделки — ровно то, что разрешает бэкенд. Кто именно должен
+             *     подписывать акт по бизнесу — открытый вопрос владельцу, поведение здесь не меняется.
+             */
+            readonly viewer_can_sign: boolean;
             notes?: string;
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
             readonly updated_at: string;
         };
+        /**
+         * @description Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.
+         *
+         *     Зачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,
+         *     которая одновременно покупает и продаёт, не видела продавцовских кнопок: «Сформировать
+         *     акт» пряталась за `!isBuyer`, и у dual-компании с порядком типов [CLIENT, SUPPLIER]
+         *     кнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`
+         *     у договора.
+         *
+         *     Поля-подсказки НЕ являются полным правом: подписку, KYC и стадию проверит сервис,
+         *     выполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку
+         *     кнопок чужой стороны.
+         */
         ActRequest: {
             /** Сделка */
             deal: number;
@@ -8228,6 +8282,19 @@ export interface components {
             /** Format: email */
             email: string;
         };
+        /**
+         * @description Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.
+         *
+         *     Зачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,
+         *     которая одновременно покупает и продаёт, не видела продавцовских кнопок: «Сформировать
+         *     акт» пряталась за `!isBuyer`, и у dual-компании с порядком типов [CLIENT, SUPPLIER]
+         *     кнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`
+         *     у договора.
+         *
+         *     Поля-подсказки НЕ являются полным правом: подписку, KYC и стадию проверит сервис,
+         *     выполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку
+         *     кнопок чужой стороны.
+         */
         Fulfillment: {
             readonly id: number;
             /** Сделка */
@@ -8245,12 +8312,27 @@ export interface components {
             expected_delivery_date?: string | null;
             tracking_number?: string;
             carrier?: string;
+            readonly viewer_can_ship: boolean;
+            readonly viewer_can_accept: boolean;
             notes?: string;
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
             readonly updated_at: string;
         };
+        /**
+         * @description Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.
+         *
+         *     Зачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,
+         *     которая одновременно покупает и продаёт, не видела продавцовских кнопок: «Сформировать
+         *     акт» пряталась за `!isBuyer`, и у dual-компании с порядком типов [CLIENT, SUPPLIER]
+         *     кнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`
+         *     у договора.
+         *
+         *     Поля-подсказки НЕ являются полным правом: подписку, KYC и стадию проверит сервис,
+         *     выполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку
+         *     кнопок чужой стороны.
+         */
         FulfillmentRequest: {
             /** Сделка */
             deal: number;
@@ -8356,6 +8438,19 @@ export interface components {
             /** @default PROCUREMENT_MANAGER */
             role: string;
         };
+        /**
+         * @description Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.
+         *
+         *     Зачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,
+         *     которая одновременно покупает и продаёт, не видела продавцовских кнопок: «Сформировать
+         *     акт» пряталась за `!isBuyer`, и у dual-компании с порядком типов [CLIENT, SUPPLIER]
+         *     кнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`
+         *     у договора.
+         *
+         *     Поля-подсказки НЕ являются полным правом: подписку, KYC и стадию проверит сервис,
+         *     выполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку
+         *     кнопок чужой стороны.
+         */
         Invoice: {
             readonly id: number;
             /** Сделка */
@@ -8393,6 +8488,10 @@ export interface components {
             notes?: string;
             readonly items: components["schemas"]["InvoiceItem"][];
             readonly payments: components["schemas"]["Payment"][];
+            /** @description Оплату записывает ПОКУПАТЕЛЬ, и только по живому выставленному счёту. */
+            readonly viewer_can_pay: boolean;
+            /** @description Выставить / отменить / сформировать акт — сторона ПРОДАВЦА. */
+            readonly viewer_can_manage: boolean;
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
@@ -8417,6 +8516,19 @@ export interface components {
             line_total_excl_vat?: string;
             source_quote_item?: number | null;
         };
+        /**
+         * @description Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.
+         *
+         *     Зачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,
+         *     которая одновременно покупает и продаёт, не видела продавцовских кнопок: «Сформировать
+         *     акт» пряталась за `!isBuyer`, и у dual-компании с порядком типов [CLIENT, SUPPLIER]
+         *     кнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`
+         *     у договора.
+         *
+         *     Поля-подсказки НЕ являются полным правом: подписку, KYC и стадию проверит сервис,
+         *     выполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку
+         *     кнопок чужой стороны.
+         */
         InvoiceRequest: {
             /** Сделка */
             deal: number;
@@ -9903,6 +10015,19 @@ export interface components {
              */
             name?: string;
         };
+        /**
+         * @description Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.
+         *
+         *     Зачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,
+         *     которая одновременно покупает и продаёт, не видела продавцовских кнопок: «Сформировать
+         *     акт» пряталась за `!isBuyer`, и у dual-компании с порядком типов [CLIENT, SUPPLIER]
+         *     кнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`
+         *     у договора.
+         *
+         *     Поля-подсказки НЕ являются полным правом: подписку, KYC и стадию проверит сервис,
+         *     выполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку
+         *     кнопок чужой стороны.
+         */
         PatchedInvoiceRequest: {
             /** Сделка */
             deal?: number;
@@ -17720,10 +17845,14 @@ export interface operations {
     crm_contracts_list: {
         parameters: {
             query?: {
+                deal?: number;
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                quote?: number;
                 /** @description A search term. */
                 search?: string;
+                /** @description Несколько значений могут быть разделены запятыми. */
+                status?: string[];
             };
             header?: never;
             path?: never;
@@ -18455,6 +18584,27 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["DealDetail"];
                 };
+            };
+        };
+    };
+    crm_deals_documents_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Сделка. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Document chain summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

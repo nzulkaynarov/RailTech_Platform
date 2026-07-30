@@ -9,7 +9,7 @@
 import { runAiJob } from '@/lib/aiJob';
 import { apiClient } from '../client';
 import { PaginatedResponse } from '../types';
-import type { ChargeTemplate, Deal, Lead, QuoteItem, QuoteItemDisplayType, SellerCompanyRef, SuggestedSeller, TimeToFirstQuoteStats } from './types';
+import type { ChargeTemplate, Deal, DealDocumentHub, Lead, QuoteItem, QuoteItemDisplayType, SellerCompanyRef, SuggestedSeller, TimeToFirstQuoteStats } from './types';
 
 export const dealsApi = {
 	getDeals: async () => {
@@ -87,6 +87,12 @@ export const dealsApi = {
 	// Returns the refreshed deal (incl. target_sellers_data).
 	routeDeal: async (dealId: number, sellerCompanyIds: number[]) => {
 		const response = await apiClient.post<Deal>(`crm/deals/${dealId}/route/`, { seller_company_ids: sellerCompanyIds });
+		return response.data;
+	},
+	// F1: цепочка документов сделки одним запросом — договор, счета, акты, отгрузка + сторона
+	// зрителя и подсказка следующего шага. Один ключ кэша вместо пяти списочных запросов.
+	getDealDocuments: async (dealId: number): Promise<DealDocumentHub> => {
+		const response = await apiClient.get<DealDocumentHub>(`crm/deals/${dealId}/documents/`);
 		return response.data;
 	},
 	// R1 (spec-freetext-rfq-routing): предложенные продавцы по позициям заявки (trigram-матч

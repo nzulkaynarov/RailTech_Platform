@@ -28,7 +28,6 @@ import {
   useInvoices, useGenerateAct, useIssueInvoice, useCancelInvoice, useUpdateInvoiceDraft,
 } from '@/hooks/useBilling';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
-import { useUserStore } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
 import type { InvoiceStatus } from '@/api/billingApi';
 import { openableRowProps } from '@/lib/rowClick';
@@ -88,8 +87,10 @@ export function InvoicesPage() {
   const cancelInvoice = useCancelInvoice();
   const updateDraft = useUpdateInvoiceDraft();
   const isViewer = useIsViewerMode();
-  // Recording payment is a BUYER action; issuing the Act is a SELLER action.
-  const isBuyer = useUserStore((s) => s.activeStatus) === 'BUYER';
+  // Оплата — действие ПОКУПАТЕЛЯ, выпуск акта — ПРОДАВЦА. Сторону по каждому счёту считает
+  // сервер (`viewer_can_pay` / `viewer_can_manage`), как у договоров с viewer_can_sign_*:
+  // прежний вывод из activeStatus брал первый тип компании, и посредник, который и покупает,
+  // и продаёт, не видел кнопки «Сформировать акт» вовсе.
   const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
 
   // DRAFT-only editable fields. Kept in local state, synced when the open
@@ -348,7 +349,7 @@ export function InvoicesPage() {
                       size="default"
                     />
                   )}
-                  {isBuyer && selected.status !== 'PAID' && selected.status !== 'CANCELLED' && (
+                  {selected.viewer_can_pay && (
                     <Button
                       onClick={() => setPayOpen(true)}
                       disabled={isViewer}
@@ -358,7 +359,7 @@ export function InvoicesPage() {
                       {t('invoicesPage.recordPayment')}
                     </Button>
                   )}
-                  {!isBuyer && selected.status !== 'CANCELLED' && (
+                  {selected.viewer_can_manage && selected.status !== 'CANCELLED' && (
                     <Button
                       variant="outline"
                       onClick={onGenerateAct}

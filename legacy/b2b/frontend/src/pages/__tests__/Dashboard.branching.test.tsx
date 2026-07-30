@@ -45,6 +45,8 @@ vi.mock('@/api/dashboardApi', () => ({ dashboardApi: { getStats: vi.fn() } }));
 vi.mock('@/components/Dashboard/DashboardWidgets', () => ({
   SellerAttentionStrip: () => <div>SELLER_ATTENTION_STRIP</div>,
   BuyerAttentionStrip: () => <div>BUYER_ATTENTION_STRIP</div>,
+  // F3: полоса «деньги и поставка» — здесь не предмет проверки (ветвление дашборда).
+  PostContractStrip: () => null,
   PipelineFunnel: () => null,
   MetricStrip: () => null,
 }));

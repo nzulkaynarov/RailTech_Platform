@@ -162,9 +162,8 @@ def check_overdue_deliveries(self) -> dict:
     """Flag fulfillments whose expected_delivery_date passed without status change.
     Sends in-app notification to the deal manager.
     """
-    from notifications.models import Notification, NotificationType
-
     from .models import Fulfillment
+    from .services.deal_notifications import notify_delivery_overdue
 
     today = timezone.now().date()
     overdue_qs = Fulfillment.objects.filter(
@@ -175,25 +174,18 @@ def check_overdue_deliveries(self) -> dict:
             FulfillmentStatusCode.SHIPPED,
             FulfillmentStatusCode.IN_TRANSIT,
         ],
-    ).select_related("deal__manager", "status")
-    warn_type = NotificationType.objects.filter(code="WARNING").first()
-    from notifications.services import push_notification_ws
+    ).select_related("deal__company", "status")
 
-    count = 0
-    for ff in overdue_qs:
-        mgr = ff.deal.manager
-        if mgr:
-            notif = Notification.objects.create(
-                user=mgr,
-                type=warn_type,
-                title="Просрочка по доставке",
-                message=f"Сделка #{ff.deal_id}: ожидали {ff.expected_delivery_date}, статус {ff.status}",
-                link="/crm/deals",
-                deal=ff.deal,
-            )
-            push_notification_ws(notif)
-        count += 1
-    return {"overdue_flagged": count}
+    # Раньше уведомление уходило одному `deal.manager` — legacy-полю, которое у реальных
+    # сделок покупатель/продавец почти всегда пустое, а счётчик всё равно инкрементировался.
+    # Задача рапортовала о работе, которой не делала; теперь извещаются обе стороны, а в
+    # отчёте разделены просмотренные строки и фактически отправленные уведомления.
+    overdue_count = 0
+    notified = 0
+    for fulfillment in overdue_qs:
+        overdue_count += 1
+        notified += notify_delivery_overdue(fulfillment)
+    return {"overdue_flagged": overdue_count, "notified": notified}
 
 
 @shared_task(

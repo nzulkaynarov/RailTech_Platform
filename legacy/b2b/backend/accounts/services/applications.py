@@ -187,16 +187,23 @@ def bulk_reject_role_applications(
     applications: QuerySet[CompanyRoleApplication],
     reviewer: CustomUser,
     reason: str = BULK_REJECT_REASON,
-) -> int:
-    """Bulk reject. Returns count of rejected applications.
+) -> Tuple[int, List[str]]:
+    """Bulk reject. Returns (rejected_count, list_of_error_messages).
 
     `reason` попадает в `review_notes` и в аудит-лог каждой заявки — по умолчанию явно
     помечает отказ как массовое экстренное действие, чтобы запись оставалась осмысленной.
+
+    Ошибки возвращаются наравне со счётчиком — как у `bulk_approve_role_applications`.
+    Раньше отказы по отдельным заявкам молча терялись: при частичном сбое оператор видел
+    только число и не знал, что именно не отклонилось и почему.
     """
     pending = applications.filter(status__in=["PENDING", "PAYMENT_REQUIRED", "DOCUMENTS_REQUIRED"])
     rejected = 0
+    errors: List[str] = []
     for app in pending:
         _, error = reject_role_application(app, reviewer, reason)
-        if not error:
+        if error:
+            errors.append(error)
+        else:
             rejected += 1
-    return rejected
+    return rejected, errors

@@ -340,6 +340,11 @@ def record_payment(
         deal=invoice.deal,
         company_id=invoice.deal.company_id,
     )
+    # Об оплате продавец не узнавал НИКАК — событие оседало только в журнале активности.
+    # После коммита, чтобы уведомление не пережило откат транзакции.
+    from .deal_notifications import notify_payment_recorded
+
+    transaction.on_commit(lambda: notify_payment_recorded(payment))
     return payment, None
 
 
@@ -402,6 +407,11 @@ def generate_act(
 
     act_id = act.id
     transaction.on_commit(lambda: render_document_pdf.delay("act", act_id))
+    # Покупателя о выставленном акте не извещал никто — он не мог узнать, что от него ждут
+    # подпись, кроме как открыв реестр (который ему к тому же закрыт).
+    from .deal_notifications import notify_act_issued
+
+    transaction.on_commit(lambda: notify_act_issued(act))
     return act, None
 
 
@@ -486,4 +496,7 @@ def sign_act(act_id: int, actor: CustomUser, signed_file=None) -> Tuple[Optional
         deal=act.deal,
         company_id=act.deal.company_id,
     )
+    from .deal_notifications import notify_act_signed
+
+    transaction.on_commit(lambda: notify_act_signed(act, actor))
     return act, None
