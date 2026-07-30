@@ -118,9 +118,7 @@ export function CommandPalette({ open, onOpenChange, onNavigate }: CommandPalett
                 <CommandEmpty>
                     {debouncedQuery.length >= 2 && !search.isLoading
                         ? t('admin.palette.empty')
-                        : t('admin.palette.placeholderHint', {
-                              defaultValue: t('admin.palette.placeholder'),
-                          })}
+                        : t('admin.palette.placeholderHint')}
                 </CommandEmpty>
 
                 {groups.length > 0 ? (

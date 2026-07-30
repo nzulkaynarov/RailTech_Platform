@@ -69,14 +69,21 @@ export function Toolbar({
 }
 
 interface SortableHeadProps {
-  sortKey: string;
-  current: string;
-  onChange: (k: string) => void;
+  /** Поле сортировки. Пусто/не задано — колонка НЕ сортируется, и это видно. */
+  sortKey?: string;
+  current?: string;
+  onChange?: (k: string) => void;
   children: ReactNode;
   className?: string;
 }
 
-export function SortableHead({ sortKey, current, onChange, children, className }: SortableHeadProps) {
+export function SortableHead({ sortKey, current = '', onChange, children, className }: SortableHeadProps) {
+  // Заголовок без поля сортировки рисовался ровно как сортируемый — курсор-указатель и
+  // стрелки, — но клик по нему не делал ничего. Пять колонок обещали сортировку, которой
+  // нет (аудит UI 2026-07-30). Теперь несортируемая колонка выглядит несортируемой.
+  if (!sortKey || !onChange) {
+    return <TableHead className={className}>{children}</TableHead>;
+  }
   const isAsc = current === sortKey;
   const isDesc = current === `-${sortKey}`;
   const icon = isAsc

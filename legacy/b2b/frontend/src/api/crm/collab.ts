@@ -37,17 +37,6 @@ export const collabApi = {
 		}>(`sourcing/import-status/${taskId}/`);
 		return response.data;
 	},
-	// On-demand multi-format КП export (PDF / Excel / CSV). Returns an attachment
-	// (blob), not JSON; the backend gates seller cost/margin columns server-side.
-	// The query key is `export_format`, NOT `format` — DRF reserves ?format for
-	// content-negotiation and 404s `?format=pdf` before the view runs. Routed through
-	// the 202-aware fetch so a PDF racing the off-thread render (ARCH-03) is polled,
-	// never saved as GENERATING-JSON masquerading as a .pdf.
-	exportQuote: async (quoteId: number, format: 'pdf' | 'xlsx' | 'csv') => {
-		const { fetchDocumentBlob, saveBlob } = await import('@/lib/documents');
-		const blob = await fetchDocumentBlob(`crm/quotes/${quoteId}/export/`, { export_format: format });
-		saveBlob(blob, `RailTech_Quote_${quoteId}.${format}`);
-	},
 	// Polls through the 202 GENERATING window (ARCH-03) before saving the blob.
 	exportDealPDF: async (dealId: number) => {
 		const { downloadFile } = await import('@/lib/download');

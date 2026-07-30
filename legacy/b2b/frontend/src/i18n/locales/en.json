@@ -1260,7 +1260,8 @@
         "deals": "Deals",
         "offers": "Offers",
         "tickets": "Tickets"
-      }
+      },
+      "placeholderHint": "Type at least two characters — we search deals, quotes, contracts, invoices and companies"
     },
     "support": {
       "title": "Support Tickets",

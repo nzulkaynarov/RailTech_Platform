@@ -210,9 +210,9 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                   <SortableHead sortKey="sku" current={listParams.ordering} onChange={listParams.toggleOrdering}>
                     {t('productManagement.table.article')}
                   </SortableHead>
-                  <SortableHead sortKey="" current="" onChange={() => {}}>{t('productManagement.table.domain')}</SortableHead>
-                  <SortableHead sortKey="" current="" onChange={() => {}}>{t('productManagement.table.category')}</SortableHead>
-                  <SortableHead sortKey="" current="" onChange={() => {}}>{t('productManagement.table.uom')}</SortableHead>
+                  <SortableHead>{t('productManagement.table.domain')}</SortableHead>
+                  <SortableHead>{t('productManagement.table.category')}</SortableHead>
+                  <SortableHead>{t('productManagement.table.uom')}</SortableHead>
                   {showPrices && (
                     <SortableHead sortKey="price" current={listParams.ordering} onChange={listParams.toggleOrdering} className="text-right">
                       {t('productManagement.table.priceFca')}

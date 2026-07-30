@@ -128,8 +128,8 @@ export function AdminDealsPage() {
                       <SortableHead sortKey="title" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('adminDeals.table.title')}</SortableHead>
                       <SortableHead sortKey="company" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('adminDeals.table.company')}</SortableHead>
                       <SortableHead sortKey="stage" current={listParams.ordering} onChange={listParams.toggleOrdering}>{t('adminDeals.table.stage')}</SortableHead>
-                      <SortableHead sortKey="" current="" onChange={() => {}}>{t('adminDeals.table.value')}</SortableHead>
-                      <SortableHead sortKey="" current="" onChange={() => {}} className="text-right">{t('adminDeals.table.actions')}</SortableHead>
+                      <SortableHead>{t('adminDeals.table.value')}</SortableHead>
+                      <SortableHead className="text-right">{t('adminDeals.table.actions')}</SortableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

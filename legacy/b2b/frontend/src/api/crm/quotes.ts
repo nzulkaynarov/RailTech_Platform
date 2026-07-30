@@ -99,8 +99,8 @@ export const quotesApi = {
 		const response = await apiClient.post<Quote>(`crm/quotes/${quoteId}/charges-reorder/`, { order });
 		return response.data;
 	},
-	// ARCH-03: the render is enqueued off-thread — the backend answers 202 GENERATING;
-	// poll downloadQuotePDF (it retries on 202) to obtain the fresh file.
+	// ARCH-03: рендер уходит в Celery, бэкенд отвечает 202 GENERATING. Файл забирает
+	// `DocumentActions` через 202-aware fetch — он же и опрашивает.
 	generateQuotePDF: async (id: number) => {
 		const response = await apiClient.post<{ detail: string; retry_after: number }>(
 			`crm/quotes/${id}/generate-pdf/`,
@@ -160,11 +160,5 @@ export const quotesApi = {
 		const response = await apiClient.get<PaginatedResponse<Quote>>('crm/quotes/my-approval-queue/');
 		return response.data.results;
 	},
-	// Polls through the 202 GENERATING window (lib/download.ts) before saving the blob.
-	downloadQuotePDF: async (id: number) => {
-		const { downloadFile } = await import('@/lib/download');
-		await downloadFile(`crm/quotes/${id}/download-pdf/`, `RailTech_Quote_${id}.pdf`);
-	},
-
 	// ─── Lead ops ─────────────────────────────────────────────
 };
