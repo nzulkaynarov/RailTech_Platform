@@ -1,0 +1,13 @@
+Здравствуйте!
+
+Счёт {{ invoice_number }}{% if deal_title %} по сделке «{{ deal_title }}»{% endif %}{% if seller_name %} от компании «{{ seller_name }}»{% endif %} остаётся неоплаченным{% if due_date %}: срок был до {{ due_date }}{% endif %}.
+
+К оплате: {{ balance_due }} из {{ total }}.
+
+Если оплата уже отправлена, просто отметьте её в системе — напоминание больше не придёт.
+
+Открыть счёт:
+
+{{ invoice_url }}
+
+— RailTech B2B

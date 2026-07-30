@@ -197,15 +197,15 @@ def check_overdue_deliveries(self) -> dict:
     autoretry_for=(Exception,),
     retry_backoff=True,
     # Financial task: ack only after completion and re-queue if the worker is
-    # lost mid-run, so a SIGKILL/OOM/redeploy never silently drops invoice+act
-    # creation. Safe because the task is idempotent (reuses existing Invoice/Act).
+    # lost mid-run, so a SIGKILL/OOM/redeploy never silently drops the invoice
+    # creation. Safe because the task is idempotent (reuses the existing Invoice).
     # NB: the per-task attribute is `reject_on_worker_lost` (the *setting* is
     # `task_reject_on_worker_lost`).
     acks_late=True,
     reject_on_worker_lost=True,
 )
 def auto_invoice_on_closed_won(self, deal_id: int) -> dict:
-    """Triggered after a deal transitions to CLOSED_WON: create invoice+act skeletons.
+    """Triggered after a deal transitions to CLOSED_WON: create the invoice draft + fulfillment.
 
     Idempotent: safe to run multiple times for the same deal — reuses existing Invoice
     for the contract (if any) and existing Act for the invoice. Needed because:
@@ -214,7 +214,7 @@ def auto_invoice_on_closed_won(self, deal_id: int) -> dict:
       * Celery task retries duplicate the call.
     """
     from .models import Act, Deal, Invoice
-    from .services import ensure_fulfillment, generate_act, generate_invoice_from_contract, notify_seller_invoice_draft
+    from .services import ensure_fulfillment, generate_invoice_from_contract, notify_seller_invoice_draft
 
     try:
         deal = Deal.objects.get(pk=deal_id)
@@ -249,34 +249,29 @@ def auto_invoice_on_closed_won(self, deal_id: int) -> dict:
         result["idempotent_reuse"] = True
     result["invoice"] = invoice.id
 
-    # Reuse existing Act for this invoice if present.
-    act = (
-        Act.objects.filter(
-            invoice=invoice,
-        )
+    # АКТ ЗДЕСЬ БОЛЬШЕ НЕ ВЫПУСКАЕТСЯ (G1, спека post-contract-open-questions §1).
+    #
+    # Раньше на этом месте вызывался `generate_act`, и вызов был мёртвым по построению: счёт
+    # только что создан в DRAFT, а `generate_act` требует ISSUED/PARTIAL/PAID — то есть акт не
+    # выпускался НИКОГДА, только писал предупреждение в лог.
+    #
+    # Бенчмарк подтвердил, что чинить триггер «в момент выигрыша» и не следовало: закрывающий
+    # документ ни в одном эталоне не рождается от подписания сделки. В Odoo он привязан к
+    # валидации отгрузки, в SAP приёмку подтверждает ПОЛУЧАТЕЛЬ (принцип двух рук), и оба
+    # независимых основания — признание выручки по передаче контроля (IFRS 15 / ASC 606) и
+    # правило составления первички по факту хозяйственной жизни — указывают на факт поставки,
+    # а не на выигрыш сделки и не на оплату.
+    #
+    # Теперь акт выпускает продавец кнопкой, а подсказка «сформировать акт» встаёт в цепочке
+    # по факту доставки (см. crm/services/deal_documents.py).
+    existing_act = (
+        Act.objects.filter(invoice=invoice)
         .exclude(status__code=ActStatusCode.CANCELLED)
         .order_by("-created_at")
         .first()
     )
-    if act is None:
-        act, act_error = generate_act(invoice.id)
-        if act_error:
-            # Раньше код возврата присваивался и НИКУДА не шёл: авто-акт падал молча, а в
-            # ответе таска оставалось act=None — по логам было не отличить «акт не нужен» от
-            # «акт не создался». Ожидаемый и самый частый случай — ACT_INVALID_INVOICE_STATUS:
-            # счёт только что создан в DRAFT, а generate_act требует ISSUED/PARTIAL/PAID.
-            # Здесь чиню ТОЛЬКО молчание; вопрос «когда вообще выпускать акт» —
-            # продуктовый (спека post-contract §6), поведение триггера не меняю.
-            result["act_error"] = act_error
-            logger.warning(
-                "Auto-act skipped for deal %s (invoice %s, status %s): %s",
-                deal_id,
-                invoice.id,
-                invoice.status_code,
-                act_error,
-            )
-    if act is not None:
-        result["act"] = act.id
+    if existing_act is not None:
+        result["act"] = existing_act.id
     return result
 
 
@@ -551,3 +546,57 @@ def send_document_email(self, document_id: int, to_email: str) -> dict:
     )
     logger.info("Generated document %s email sent to %s", document_id, to_email)
     return {"document_id": document_id, "status": "sent", "to": to_email}
+
+
+@shared_task(
+    bind=True,
+    name="crm.send_payment_reminders",
+    time_limit=600,
+    soft_time_limit=540,
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+)
+def send_payment_reminders(self, grace_days: int = 3) -> dict:
+    """Одно письмо-напоминание по каждому просроченному счёту (G3).
+
+    Просрочка НЕ хранится статусом — она вычисляется здесь из `due_date` и остатка. Эталоны
+    поступают так же: у Stripe `past_due` вообще не статус счёта, у Odoo и QuickBooks просрочка
+    выводится из срока и оплаты. Хранимый статус пришлось бы синхронизировать, и у Chargebee,
+    который его хранит, задокументированы ровно эти рассинхроны.
+
+    Хранится ровно одно — факт отправки (`payment_reminder_sent_at`), иначе ежедневная задача
+    слала бы письмо каждый день. Это состояние ПРОЦЕССА напоминаний, как «next reminder date»
+    у Odoo, а не статус документа.
+
+    Эскалации пока нет намеренно: эталоны шлют серию, но лишние письма дороже молчания —
+    вторую ступень добавим, если первая окажется недостаточной.
+    """
+    from django.utils import timezone
+
+    from .models import Invoice
+    from .services.deal_emails import email_payment_reminder
+
+    cutoff = timezone.now().date() - timedelta(days=grace_days)
+    overdue_qs = (
+        Invoice.objects.filter(
+            due_date__lt=cutoff,
+            payment_reminder_sent_at__isnull=True,
+            status__code__in=[InvoiceStatusCode.ISSUED, InvoiceStatusCode.PARTIAL],
+        )
+        .select_related("deal__company", "status")
+        .order_by("id")
+    )
+
+    reminded = 0
+    for invoice in overdue_qs:
+        if invoice.balance_due <= 0:
+            # Счёт закрыт деньгами, но статус не переключился — напоминать не о чем.
+            continue
+        if email_payment_reminder(invoice):
+            reminded += 1
+        # Отмечаем в любом случае: если у покупателя нет ни одного активного адреса, повторная
+        # попытка завтра ничего не изменит и превратится в ежедневный холостой проход.
+        invoice.payment_reminder_sent_at = timezone.now()
+        invoice.save(update_fields=["payment_reminder_sent_at", "updated_at"])
+    return {"reminded": reminded}

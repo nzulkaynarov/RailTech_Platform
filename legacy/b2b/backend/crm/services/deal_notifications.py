@@ -98,6 +98,25 @@ def notify_act_signed(act, signer) -> int:
     )
 
 
+def notify_act_rejected(act, actor, reason: str) -> int:
+    """Исполнителю — что заказчик вернул акт с причиной (G2).
+
+    Без этого отказ был бы тише согласия: акт молча уезжал обратно в черновик, и продавец
+    узнавал бы об этом, только зайдя в реестр.
+    """
+    deal = act.deal
+    recipients = set(seller_team_user_ids(deal))
+    recipients.discard(getattr(actor, "id", None))
+    return notify_deal_users(
+        recipients,
+        deal=deal,
+        title="Акт отклонён заказчиком",
+        message=f"Акт {act.number} по сделке #{deal.pk} возвращён на доработку: {reason}",
+        link=spa_link("acts", act.id),
+        type_code="WARNING",
+    )
+
+
 def notify_fulfillment_status(fulfillment, status_code: str, actor) -> int:
     """Смена статуса отгрузки — противоположной стороне.
 

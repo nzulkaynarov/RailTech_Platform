@@ -28,6 +28,7 @@ type DefaultsForm = {
   min_margin_percent: string;
   target_margin_percent: string;
   default_offer_validity_days: string;
+  payment_terms_days: string;
   default_payment_terms: string;
   default_warranty_months: string;
 };
@@ -40,6 +41,7 @@ const EMPTY_FORM: DefaultsForm = {
   min_margin_percent: '',
   target_margin_percent: '',
   default_offer_validity_days: '',
+  payment_terms_days: '',
   default_payment_terms: '',
   default_warranty_months: '',
 };
@@ -56,6 +58,7 @@ function toForm(settings: CompanySettings): DefaultsForm {
       settings.default_offer_validity_days != null
         ? String(settings.default_offer_validity_days)
         : '',
+    payment_terms_days: settings.payment_terms_days != null ? String(settings.payment_terms_days) : '',
     default_payment_terms: settings.default_payment_terms ?? '',
     default_warranty_months:
       settings.default_warranty_months != null ? String(settings.default_warranty_months) : '',
@@ -124,6 +127,7 @@ export function CompanyDefaultsSettings() {
     const minMargin = form.min_margin_percent.trim() !== '' ? Number(form.min_margin_percent) : null;
     const targetMargin = form.target_margin_percent.trim() !== '' ? Number(form.target_margin_percent) : null;
     const validityDays = form.default_offer_validity_days.trim() !== '' ? Number(form.default_offer_validity_days) : null;
+    const paymentDays = form.payment_terms_days.trim() !== '' ? Number(form.payment_terms_days) : null;
     const warrantyMonths = form.default_warranty_months.trim() !== '' ? Number(form.default_warranty_months) : null;
 
     if (vat !== null && (vat < 0 || vat > 100 || isNaN(vat))) {
@@ -175,6 +179,7 @@ export function CompanyDefaultsSettings() {
       target_margin_percent:
         form.target_margin_percent.trim() === '' ? null : form.target_margin_percent.trim(),
       default_offer_validity_days: validityDays,
+      payment_terms_days: paymentDays,
       default_payment_terms: form.default_payment_terms.trim(),
       default_warranty_months: warrantyMonths,
     });
@@ -302,6 +307,22 @@ export function CompanyDefaultsSettings() {
                 onChange={(e) => setForm({ ...form, default_offer_validity_days: e.target.value })}
                 placeholder="30"
               />
+            </div>
+
+            {/* G3: МАШИННЫЙ срок оплаты — от него считается дата в счёте и напоминание.
+                Не путать с текстовым «Условия оплаты» ниже: из текста дату не посчитать. */}
+            <div className="space-y-2">
+              <Label htmlFor="cd-payment-days">{t('companyDefaults.paymentTermsDays')}</Label>
+              <Input
+                id="cd-payment-days"
+                type="number"
+                step="1"
+                min="0"
+                value={form.payment_terms_days}
+                onChange={(e) => setForm({ ...form, payment_terms_days: e.target.value })}
+                placeholder="14"
+              />
+              <p className="text-xs text-muted-foreground">{t('companyDefaults.paymentTermsDaysHint')}</p>
             </div>
 
             {/* spec-kp-blank: dynamic «Условия поставки» defaults printed on the КП. */}

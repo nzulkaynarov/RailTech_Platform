@@ -13,7 +13,7 @@ from core.file_streaming import stream_file_field
 from core.optimistic_locking import OptimisticLockingMixin
 from core.permissions import IsCompanyMemberOrPlatformAdmin, OperatorScoped
 from crm import services as crm_services
-from crm.constants import InvoiceStatusCode
+from crm.constants import DEFAULT_INVOICE_DUE_DAYS, InvoiceStatusCode
 from crm.models import Act, Contract, Fulfillment, Invoice, InvoiceItem, Payment
 from crm.serializers import (
     ActSerializer,
@@ -432,7 +432,7 @@ class InvoiceViewSet(
             fields={
                 "deal": drf_serializers.IntegerField(),
                 "source_quote": drf_serializers.IntegerField(required=False),
-                "due_days": drf_serializers.IntegerField(required=False, default=14),
+                "due_days": drf_serializers.IntegerField(required=False, default=DEFAULT_INVOICE_DUE_DAYS),
                 "lines": drf_serializers.ListField(
                     required=False,
                     child=inline_serializer(
@@ -460,7 +460,7 @@ class InvoiceViewSet(
             actor=request.user,
             source_quote_id=int(source_quote) if source_quote else None,
             lines=request.data.get("lines"),
-            due_days=int(request.data.get("due_days", 14)),
+            due_days=int(request.data.get("due_days", DEFAULT_INVOICE_DUE_DAYS)),
         )
         if err:
             forbidden = {"ADMIN_VIEWER_CANNOT_ACT", "MEMBER_REQUIRED_FOR_ACTION"}
@@ -477,7 +477,7 @@ class InvoiceViewSet(
     )
     def generate_from_contract(self, request):
         contract_id = request.data.get("contract_id")
-        due_days = int(request.data.get("due_days", 14))
+        due_days = int(request.data.get("due_days", DEFAULT_INVOICE_DUE_DAYS))
         if not contract_id:
             return Response({"detail": "CONTRACT_ID_REQUIRED"}, status=400)
         invoice, err = crm_services.generate_invoice_from_contract(
@@ -616,7 +616,25 @@ class ActViewSet(viewsets.ReadOnlyModelViewSet):
         act, err = crm_services.sign_act(self.get_object().id, request.user, signed_file=signed_file)
         if err:
             return Response({"detail": err}, status=400)
-        return Response(ActSerializer(act).data)
+        return Response(ActSerializer(act, context=self.get_serializer_context()).data)
+
+    @extend_schema(
+        summary="Reject an issued act (buyer side)",
+        description=(
+            "Заказчик возвращает акт исполнителю с причиной — второй шаг двустороннего цикла "
+            "(паттерн ЭСФ «подтвердить или отклонить»). Причина обязательна: без основания "
+            "отказ бесполезен обеим сторонам. Акт уходит обратно в DRAFT."
+        ),
+        request=inline_serializer("RejectAct", fields={"reason": drf_serializers.CharField()}),
+        responses={200: ActSerializer, 400: OpenApiResponse(description="REASON_REQUIRED / ACT_SIGN_NOT_ALLOWED")},
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["post"], url_path="reject")
+    def reject(self, request, pk=None):
+        act, err = crm_services.reject_act(self.get_object().id, request.user, reason=request.data.get("reason", ""))
+        if err:
+            return Response({"detail": err}, status=400)
+        return Response(ActSerializer(act, context=self.get_serializer_context()).data)
 
 
 class FulfillmentViewSet(viewsets.ReadOnlyModelViewSet):

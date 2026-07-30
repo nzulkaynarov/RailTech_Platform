@@ -69,9 +69,13 @@ def _assert_seller_may_act_on_invoice(invoice, user) -> Optional[str]:
 def issue_invoice(invoice, user) -> Tuple[Optional[object], Optional[str]]:
     """Issue a DRAFT invoice → ISSUED: stamps the issue date, renders the PDF off-thread and
     notifies the buyer. Seller-side action; only DRAFT invoices can be issued."""
+    from datetime import timedelta
+
     from django.utils import timezone
 
     from accounts.services import assert_seller_can_operate
+
+    from .billing import invoice_due_days
 
     if gate_err := _assert_seller_may_act_on_invoice(invoice, user):
         return None, gate_err
@@ -82,7 +86,14 @@ def issue_invoice(invoice, user) -> Tuple[Optional[object], Optional[str]]:
 
     invoice.status = _istatus(InvoiceStatusCode.ISSUED)
     invoice.issued_at = timezone.now().date()
-    invoice.save(update_fields=["status", "issued_at", "updated_at"])
+    updated = ["status", "issued_at", "updated_at"]
+    # Срок оплаты отсчитывается от ВЫСТАВЛЕНИЯ, а не от создания черновика: черновик может
+    # пролежать неделю, и покупатель получал бы счёт с уже наполовину истёкшим сроком (G1).
+    # Дату, выставленную продавцом вручную, не трогаем — это условие конкретного договора.
+    if not invoice.due_date_is_manual:
+        invoice.due_date = invoice.issued_at + timedelta(days=invoice_due_days(invoice))
+        updated.append("due_date")
+    invoice.save(update_fields=updated)
 
     # Render off the request thread, after commit (F1.6 — avoids orphan PDFs on rollback).
     from ..tasks import render_document_pdf
@@ -100,6 +111,11 @@ def issue_invoice(invoice, user) -> Tuple[Optional[object], Optional[str]]:
         company_id=invoice.deal.company_id,
     )
     _notify_invoice_issued_to_buyer(invoice)
+    # Письмо, а не только колокольчик: покупатель здесь часто внешний контрагент, который в
+    # систему может и не зайти, а оплата — действие ВНЕ системы (G3).
+    from .deal_emails import email_invoice_issued
+
+    email_invoice_issued(invoice)
     return invoice, None
 
 
@@ -152,7 +168,10 @@ def update_invoice_draft(invoice, user, *, due_date=None, notes=None) -> Tuple[O
     update_fields = ["updated_at"]
     if due_date is not None:
         invoice.due_date = due_date
-        update_fields.append("due_date")
+        # Явно заданный продавцом срок — условие конкретного договора; помечаем, чтобы
+        # выставление счёта его не пересчитало (см. issue_invoice).
+        invoice.due_date_is_manual = True
+        update_fields += ["due_date", "due_date_is_manual"]
     if notes is not None:
         invoice.notes = notes
         update_fields.append("notes")

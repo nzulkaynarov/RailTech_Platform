@@ -8,7 +8,7 @@ from ._params import PaymentData
 from .ai_chat import suggest_chat_reply
 from .ai_diff import quote_vs_request_diff, user_can_view_quote_diff
 from .availability import Tranche, auto_split_quote_by_availability, resolve_seller_offer, split_line_by_availability
-from .billing import generate_act, generate_invoice_from_contract, record_payment, sign_act
+from .billing import act_viewer_side, generate_act, generate_invoice_from_contract, record_payment, reject_act, sign_act
 from .charges import apply_charge_template_to_quote, set_quote_delivery_basis
 from .contracts import (
     cancel_contract,
@@ -140,6 +140,8 @@ __all__ = [
     "send_deal_message",
     "set_quote_delivery_basis",
     "sign_act",
+    "reject_act",
+    "act_viewer_side",
     "sign_contract_by_client",
     "sign_contract_by_manager",
     "submit_request",

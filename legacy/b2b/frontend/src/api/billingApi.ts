@@ -172,8 +172,19 @@ export interface Act {
   pdf_url: string | null;
   signed_file: string | null;
   signed_file_url: string | null;
-  /** Акт выставлен и зритель — сторона сделки (подпись в модели одна, сторону сервис не делит). */
+  /**
+   * Двусторонний акт (G2): выпускает исполнитель, принимает ЗАКАЗЧИК. Подсказки адресные —
+   * выпустившей стороне «принять собственный акт» не предлагается.
+   */
   viewer_can_sign: boolean;
+  viewer_can_reject: boolean;
+  issuer_signer: number | null;
+  issuer_signer_name: string | null;
+  issuer_signed_at: string | null;
+  acceptor_signer: number | null;
+  acceptor_signer_name: string | null;
+  acceptor_signed_at: string | null;
+  rejection_reason: string;
   notes: string;
   created_at: string;
   updated_at: string;
@@ -199,6 +210,11 @@ export const actsApi = {
       return response.data;
     }
     const response = await apiClient.post<Act>(`crm/acts/${id}/sign/`);
+    return response.data;
+  },
+  // Второй шаг двустороннего цикла: заказчик возвращает акт с причиной (обязательной).
+  reject: async (id: number, reason: string) => {
+    const response = await apiClient.post<Act>(`crm/acts/${id}/reject/`, { reason });
     return response.data;
   },
 };

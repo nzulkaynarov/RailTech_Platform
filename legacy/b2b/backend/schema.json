@@ -7981,6 +7981,67 @@
                 }
             }
         },
+        "/api/v1/crm/acts/{id}/reject/": {
+            "post": {
+                "operationId": "crm_acts_reject_create",
+                "description": "Заказчик возвращает акт исполнителю с причиной — второй шаг двустороннего цикла (паттерн ЭСФ «подтвердить или отклонить»). Причина обязательна: без основания отказ бесполезен обеим сторонам. Акт уходит обратно в DRAFT.",
+                "summary": "Reject an issued act (buyer side)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Акт.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RejectActRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RejectActRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RejectActRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Act"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "REASON_REQUIRED / ACT_SIGN_NOT_ALLOWED"
+                    }
+                }
+            }
+        },
         "/api/v1/crm/acts/{id}/sign/": {
             "post": {
                 "operationId": "crm_acts_sign_create",
@@ -18356,9 +18417,52 @@
                         "nullable": true,
                         "readOnly": true
                     },
+                    "issuer_signer": {
+                        "type": "integer",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Выпустил (сторона исполнителя)"
+                    },
+                    "issuer_signer_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "issuer_signed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Выпущен"
+                    },
+                    "acceptor_signer": {
+                        "type": "integer",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Принял (сторона заказчика)"
+                    },
+                    "acceptor_signer_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "acceptor_signed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Принят"
+                    },
+                    "rejection_reason": {
+                        "type": "string",
+                        "readOnly": true,
+                        "title": "Причина отклонения",
+                        "description": "Заполняется, когда заказчик отклоняет акт: основание попадает в аудит"
+                    },
                     "viewer_can_sign": {
                         "type": "boolean",
-                        "description": "Акт подписывается один раз и только выставленный.\n\nСторону `sign_act` намеренно не различает (в модели одна подпись), поэтому подсказка\nадресована обеим сторонам сделки — ровно то, что разрешает бэкенд. Кто именно должен\nподписывать акт по бизнесу — открытый вопрос владельцу, поведение здесь не меняется.",
+                        "readOnly": true
+                    },
+                    "viewer_can_reject": {
+                        "type": "boolean",
                         "readOnly": true
                     },
                     "notes": {
@@ -18376,17 +18480,25 @@
                     }
                 },
                 "required": [
+                    "acceptor_signed_at",
+                    "acceptor_signer",
+                    "acceptor_signer_name",
                     "created_at",
                     "deal",
                     "id",
+                    "issuer_signed_at",
+                    "issuer_signer",
+                    "issuer_signer_name",
                     "number",
                     "pdf_file",
                     "pdf_url",
+                    "rejection_reason",
                     "signed_at",
                     "signed_file_url",
                     "status",
                     "status_name",
                     "updated_at",
+                    "viewer_can_reject",
                     "viewer_can_sign"
                 ]
             },
@@ -20342,6 +20454,14 @@
                         "nullable": true,
                         "title": "Срок действия КП по умолчанию (дней)",
                         "description": "Через сколько дней истекает новый КП (valid_until = сегодня + N)"
+                    },
+                    "payment_terms_days": {
+                        "type": "integer",
+                        "maximum": 32767,
+                        "minimum": 0,
+                        "nullable": true,
+                        "title": "Срок оплаты счёта (дней)",
+                        "description": "Через сколько дней после ВЫСТАВЛЕНИЯ счёт должен быть оплачен. Пусто — платформенное умолчание. От этого срока считается напоминание об оплате."
                     },
                     "default_payment_terms": {
                         "type": "string",
@@ -24703,6 +24823,14 @@
                         "title": "Срок действия КП по умолчанию (дней)",
                         "description": "Через сколько дней истекает новый КП (valid_until = сегодня + N)"
                     },
+                    "payment_terms_days": {
+                        "type": "integer",
+                        "maximum": 32767,
+                        "minimum": 0,
+                        "nullable": true,
+                        "title": "Срок оплаты счёта (дней)",
+                        "description": "Через сколько дней после ВЫСТАВЛЕНИЯ счёт должен быть оплачен. Пусто — платформенное умолчание. От этого срока считается напоминание об оплате."
+                    },
                     "default_payment_terms": {
                         "type": "string",
                         "title": "Условия оплаты по умолчанию",
@@ -28125,6 +28253,18 @@
                     "first_name",
                     "last_name",
                     "phone"
+                ]
+            },
+            "RejectActRequest": {
+                "type": "object",
+                "properties": {
+                    "reason": {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                },
+                "required": [
+                    "reason"
                 ]
             },
             "RejectQuoteRequestRequest": {

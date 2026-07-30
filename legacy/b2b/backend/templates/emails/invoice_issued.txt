@@ -1,0 +1,11 @@
+Здравствуйте!
+
+{% if seller_name %}Компания «{{ seller_name }}» выставила{% else %}Выставлен{% endif %} счёт {{ invoice_number }}{% if deal_title %} по сделке «{{ deal_title }}»{% endif %} на сумму {{ total }}.
+{% if due_date %}
+Срок оплаты — до {{ due_date }}.
+{% endif %}
+Открыть счёт:
+
+{{ invoice_url }}
+
+— RailTech B2B

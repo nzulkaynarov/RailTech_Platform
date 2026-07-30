@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { translateApiError } from '@/lib/apiError';
 import { extractBlobErrorCode, fetchDocumentBlob, saveBlob } from '@/lib/documents';
-import { ScrollText, PenLine, Download } from 'lucide-react';
+import { ScrollText, PenLine, Download, Ban } from 'lucide-react';
 import { DocumentActions } from '@/components/Shared/DocumentActions';
 import { ManualModeBanner } from '@/components/Shared/ManualModeBanner';
 import { Card, CardContent } from '@/components/ui/card';
@@ -20,7 +20,8 @@ import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShe
 import {
   Toolbar, SortableHead, Pager, useListParams, applyListParams,
 } from '@/components/DataTable';
-import { useActs, useSignAct } from '@/hooks/useBilling';
+import { useActs, useSignAct, useRejectAct } from '@/hooks/useBilling';
+import { RejectActDialog } from '@/components/Billing/RejectActDialog';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { openableRowProps } from '@/lib/rowClick';
@@ -40,6 +41,8 @@ export function ActsPage() {
   const listParams = useListParams(['status'] as const, { defaultOrdering: '-created_at' });
   const { data: acts, isLoading, isError, refetch } = useActs(undefined);
   const signAct = useSignAct();
+  const rejectAct = useRejectAct();
+  const [rejectOpen, setRejectOpen] = useState(false);
   const isViewer = useIsViewerMode();
   const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
   const formatCurrency = useCurrencyStore((s) => s.format);
@@ -62,6 +65,11 @@ export function ActsPage() {
     } catch (e) {
       toast.error(translateApiError(e));
     }
+  };
+
+  const onReject = async (id: number, reason: string) => {
+    await rejectAct.mutateAsync({ id, reason });
+    toast.success(t('actsPage.rejected'));
   };
 
   const onDownloadSigned = async (act: Act) => {
@@ -203,7 +211,30 @@ export function ActsPage() {
                     {t('actsPage.downloadSigned')}
                   </Button>
                 )}
-                {selected.status === 'ISSUED' && (
+                {/* Акт двусторонний (G2): принимает ЗАКАЗЧИК, и признак приходит с сервера —
+                    выпустившей стороне «принять собственный акт» не предлагается. */}
+                {selected.viewer_can_sign && (
+                  <Button
+                    onClick={() => onSign(selected.id)}
+                    disabled={isViewer || signAct.isPending}
+                    title={isViewer ? viewerTip : undefined}
+                  >
+                    <PenLine className="mr-2 h-4 w-4" />
+                    {t('actsPage.accept')}
+                  </Button>
+                )}
+                {selected.viewer_can_reject && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setRejectOpen(true)}
+                    disabled={isViewer || rejectAct.isPending}
+                    title={isViewer ? viewerTip : undefined}
+                  >
+                    <Ban className="mr-2 h-4 w-4" />
+                    {t('actsPage.reject')}
+                  </Button>
+                )}
+                {selected.viewer_can_sign && (
                   <label
                     className={`flex items-center justify-center gap-2 rounded-md border border-dashed border-border px-3 py-2 text-sm ${isViewer ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-accent'}`}
                     title={isViewer ? viewerTip : undefined}
@@ -222,12 +253,23 @@ export function ActsPage() {
                     />
                   </label>
                 )}
+                {selected.rejection_reason && selected.status === 'DRAFT' && (
+                  <p className="text-sm text-destructive">
+                    {t('actsPage.rejectedWithReason', { reason: selected.rejection_reason })}
+                  </p>
+                )}
               </div>
             </div>
             <SheetFooter />
           </SheetContent>
         </Sheet>
       )}
+      <RejectActDialog
+        actNumber={selected?.number ?? null}
+        open={rejectOpen}
+        onOpenChange={setRejectOpen}
+        onConfirm={async (reason) => { if (selected) await onReject(selected.id, reason); }}
+      />
     </PageShell>
   );
 }

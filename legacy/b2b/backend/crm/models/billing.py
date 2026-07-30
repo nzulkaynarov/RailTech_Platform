@@ -50,6 +50,23 @@ class Invoice(models.Model):
     )
     issued_at = models.DateField(null=True, blank=True, verbose_name=_("Дата выставления"))
     due_date = models.DateField(null=True, blank=True, verbose_name=_("Срок оплаты"))
+    # Срок оплаты по умолчанию пересчитывается от даты ВЫСТАВЛЕНИЯ счёта, иначе пролежавший
+    # неделю черновик отдавал бы покупателю уже наполовину истёкший срок. Но если продавец
+    # задал дату руками (особые условия договора), пересчёт её затёр бы — отсюда признак.
+    due_date_is_manual = models.BooleanField(
+        default=False,
+        verbose_name=_("Срок оплаты задан вручную"),
+        help_text=_("Установлен продавцом явно — не пересчитывается при выставлении счёта"),
+    )
+    # Состояние процесса напоминаний, а НЕ статус просрочки. Просрочка остаётся вычисляемой
+    # (эталоны её не хранят — у Stripe `past_due` вообще не статус счёта, у Odoo и QuickBooks
+    # она выводится из срока и остатка). Хранить нужно ровно одно: было ли уже отправлено
+    # напоминание, иначе ежедневная задача слала бы его каждый день.
+    payment_reminder_sent_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Напоминание об оплате отправлено"),
+    )
 
     subtotal_excl_vat = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     vat_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0)
@@ -231,8 +248,43 @@ class Act(models.Model):
         verbose_name=_("Статус"),
     )
     issued_at = models.DateField(null=True, blank=True)
+    # Момент, когда акт стал закрытым (согласован обеими сторонами). Оставлен как есть —
+    # на него смотрят реестры, PDF и аналитика; заполняется по приёму второй стороной.
     signed_at = models.DateTimeField(null=True, blank=True)
     total_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+
+    # ── Две стороны акта (G2) ────────────────────────────────────────────────
+    # Акт — двусторонний документ: в узбекской практике он «подтверждён двумя сторонами»
+    # (и ГК РУз ст. 646 привязывает возражения заказчика по недостаткам именно к акту
+    # приёмки), в российском ЭДО он физически состоит из двух титулов — исполнителя и
+    # заказчика. Односторонняя подпись — форма СЧЁТА, а не акта.
+    #
+    # Раньше здесь было одно поле `signed_at` и НИ ОДНОГО подписанта: кто закрыл документ,
+    # нигде не сохранялось, и закрыть его в одиночку могла любая сторона. Модель приведена
+    # к той, что уже есть у договора рядом (client_signer / manager_signer).
+    issuer_signer = models.ForeignKey(
+        "accounts.CustomUser",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="acts_issued",
+        verbose_name=_("Выпустил (сторона исполнителя)"),
+    )
+    issuer_signed_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Выпущен"))
+    acceptor_signer = models.ForeignKey(
+        "accounts.CustomUser",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="acts_accepted",
+        verbose_name=_("Принял (сторона заказчика)"),
+    )
+    acceptor_signed_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Принят"))
+    rejection_reason = models.TextField(
+        blank=True,
+        verbose_name=_("Причина отклонения"),
+        help_text=_("Заполняется, когда заказчик отклоняет акт: основание попадает в аудит"),
+    )
 
     pdf_file = models.FileField(
         upload_to=act_pdf_path,
@@ -267,6 +319,11 @@ class Act(models.Model):
     def status_code(self):
         """Null-safe status code — status is a FK lookup now (F5.4)."""
         return self.status.code if self.status_id else None
+
+    @property
+    def is_fully_signed(self) -> bool:
+        """Согласован обеими сторонами — зеркало `Contract.is_fully_signed`."""
+        return self.status_code == "SIGNED" and bool(self.issuer_signed_at and self.acceptor_signed_at)
 
     def __str__(self):
         return f"Act {self.number} ({self.status_code})"

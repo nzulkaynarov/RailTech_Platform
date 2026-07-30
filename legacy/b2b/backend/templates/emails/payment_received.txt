@@ -1,0 +1,11 @@
+Здравствуйте!
+
+По счёту {{ invoice_number }}{% if deal_title %} (сделка «{{ deal_title }}»){% endif %}{% if buyer_name %} от компании «{{ buyer_name }}»{% endif %} записана оплата на сумму {{ amount }}.
+
+{% if is_fully_paid %}Счёт оплачен полностью.{% else %}Оплачено {{ paid_total }} из {{ total }}.{% endif %}
+
+Открыть счёт:
+
+{{ invoice_url }}
+
+— RailTech B2B

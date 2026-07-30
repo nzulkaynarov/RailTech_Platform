@@ -47,6 +47,7 @@ class CompanySettingsSerializer(serializers.ModelSerializer):
             "default_vat_rate",
             "default_margin_percent",
             "default_offer_validity_days",
+            "payment_terms_days",
             "default_payment_terms",
             "default_warranty_months",
             "min_margin_percent",

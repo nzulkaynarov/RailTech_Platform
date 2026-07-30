@@ -19,7 +19,7 @@ from typing import Optional, Tuple
 
 from django.db import transaction
 
-from ..constants import InvoiceStatusCode
+from ..constants import DEFAULT_INVOICE_DUE_DAYS, InvoiceStatusCode
 from ..models import ActivityLog
 
 _PENNY = Decimal("0.01")
@@ -73,7 +73,7 @@ def create_manual_invoice(
     *,
     source_quote_id: Optional[int] = None,
     lines: Optional[list] = None,
-    due_days: int = 14,
+    due_days: int = DEFAULT_INVOICE_DUE_DAYS,
 ) -> Tuple[Optional[object], Optional[str]]:
     """Create a DRAFT invoice on ``deal_id`` with ``contract=None``.
 

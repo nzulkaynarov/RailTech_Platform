@@ -263,16 +263,34 @@ def _invoice_step(invoices: list, sides: dict) -> Optional[dict]:
     return None
 
 
-def _act_step(invoices: list, acts: list, sides: dict) -> Optional[dict]:
-    """Шаг на участке «акт» — или None, если акт подписан и пора к отгрузке."""
+def _pending_act_step(acts: list) -> Optional[dict]:
+    """Выставленный акт ждёт ответа второй стороны — это приоритетный шаг цепочки.
+
+    Документ уже на руках у контрагента, поэтому подсказка про него важнее любого следующего
+    действия: пока он висит, сделка не закрывается.
+    """
     issued = next((act for act in acts if act["status"] == ActStatusCode.ISSUED), None)
-    if issued is not None:
-        # Акт в модели несёт ОДНУ подпись, и `sign_act` не различает сторону — поэтому
-        # подсказка адресована обеим. Момент выпуска акта — открытый вопрос владельцу.
-        return _step(STEP_SIGN_ACT, for_viewer=True, page="acts", object_id=issued["id"])
-    if not acts and any(inv["status"] == InvoiceStatusCode.PAID for inv in invoices):
-        return _step(STEP_GENERATE_ACT, for_viewer=sides["is_seller_side"], page="invoices")
-    return None
+    if issued is None:
+        return None
+    # Акт в модели несёт ОДНУ подпись, и `sign_act` не различает сторону — поэтому подсказка
+    # адресована обеим. Двусторонняя модель — волна G2.
+    return _step(STEP_SIGN_ACT, for_viewer=True, page="acts", object_id=issued["id"])
+
+
+def _generate_act_step(acts: list, fulfillment_data: Optional[dict], sides: dict) -> Optional[dict]:
+    """Пора выпустить акт — по ФАКТУ ПОСТАВКИ (G1, спека post-contract-open-questions §1).
+
+    Раньше подсказка появлялась по оплаченному счёту. Бенчмарк показал, что оплата не является
+    триггером закрывающего документа ни в одном эталоне: в Odoo он привязан к валидации отгрузки,
+    в SAP — к приёмке получателем, а IFRS 15 / ASC 606 признают выручку по передаче контроля, а
+    не по факту платежа. Поэтому условие — состоявшаяся поставка.
+    """
+    if acts or fulfillment_data is None:
+        return None
+    delivered = fulfillment_data["status"] in (FulfillmentStatusCode.DELIVERED, FulfillmentStatusCode.ACCEPTED)
+    if not delivered:
+        return None
+    return _step(STEP_GENERATE_ACT, for_viewer=sides["is_seller_side"], page="invoices")
 
 
 def _fulfillment_step(fulfillment_data: Optional[dict], sides: dict) -> Optional[dict]:
@@ -294,22 +312,25 @@ def _fulfillment_step(fulfillment_data: Optional[dict], sides: dict) -> Optional
 def _next_step(*, contract_data, invoices, acts, fulfillment_data, sides) -> Optional[dict]:
     """Одна подсказка «что дальше» по фактическому состоянию цепочки.
 
-    Порядок повторяет реальную последовательность в коде (договор → счёт → оплата → акт →
-    отгрузка → приёмка). Ничего не запрещает: это подпись к кнопке, а не гейт.
+    Порядок: договор → (выставленный акт, если висит) → счёт и оплата → отгрузка и приёмка →
+    выпуск акта по факту поставки. Закрывающий документ стоит ПОСЛЕ поставки, а не после
+    оплаты — см. `_generate_act_step`. Счёт при этом идёт раньше отгрузки: у нас он рождается
+    из договора, и предоплата — обычное условие поставки в этом рынке.
+
+    Ничего не запрещает: это подпись к кнопке, а не гейт.
     """
     if contract_data is None:
         return None
     if not contract_data["is_fully_signed"]:
         return _contract_step(contract_data, sides)
-    step = _invoice_step(invoices, sides)
-    if step is not None:
-        return step
-    step = _act_step(invoices, acts, sides)
-    if step is not None:
-        return step
-    step = _fulfillment_step(fulfillment_data, sides)
-    if step is not None:
-        return step
+    for step in (
+        _pending_act_step(acts),
+        _invoice_step(invoices, sides),
+        _fulfillment_step(fulfillment_data, sides),
+        _generate_act_step(acts, fulfillment_data, sides),
+    ):
+        if step is not None:
+            return step
     return _step(STEP_DONE, for_viewer=False, page="fulfillments")
 
 

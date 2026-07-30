@@ -4,7 +4,7 @@ from django.db import IntegrityError, transaction
 
 from accounts.models import CustomUser
 
-from ..constants import ActStatusCode, ContractStatusCode, InvoiceStatusCode
+from ..constants import DEFAULT_INVOICE_DUE_DAYS, ActStatusCode, ContractStatusCode, InvoiceStatusCode
 from ..models import ActivityLog
 from ._params import PaymentData
 
@@ -45,7 +45,7 @@ def _astatus(code: str):
 def generate_invoice_from_contract(
     contract_id: int,
     actor: Optional[CustomUser] = None,
-    due_days: int = 14,
+    due_days: int = DEFAULT_INVOICE_DUE_DAYS,
 ) -> Tuple[Optional["Invoice"], Optional[str]]:  # noqa: F821
     from datetime import timedelta
 
@@ -137,6 +137,20 @@ def generate_invoice_from_contract(
         company_id=invoice.deal.company_id,
     )
     return invoice, None
+
+
+def invoice_due_days(invoice) -> int:
+    """Срок оплаты в днях для ЭТОГО счёта: настройка компании-продавца, иначе умолчание.
+
+    Раньше 14 дней были зашиты числом. Настройка машинная и отдельная от текстовых «Условий
+    оплаты» бланка КП («100% предоплата»): из текста дату посчитать нельзя.
+    """
+    from ..constants import DEFAULT_INVOICE_DUE_DAYS
+
+    supplier = _invoice_seller_company(invoice)
+    if supplier is None:
+        return DEFAULT_INVOICE_DUE_DAYS
+    return supplier.settings.payment_terms_days or DEFAULT_INVOICE_DUE_DAYS
 
 
 def _invoice_seller_company(invoice):
@@ -342,9 +356,11 @@ def record_payment(
     )
     # Об оплате продавец не узнавал НИКАК — событие оседало только в журнале активности.
     # После коммита, чтобы уведомление не пережило откат транзакции.
+    from .deal_emails import email_payment_received
     from .deal_notifications import notify_payment_recorded
 
     transaction.on_commit(lambda: notify_payment_recorded(payment))
+    email_payment_received(payment)
     return payment, None
 
 
@@ -400,6 +416,10 @@ def generate_act(
         issued_at=timezone.now().date(),
         total_amount=invoice.total_incl_vat,
         created_by=actor,
+        # Титул исполнителя: выпуск — это первая из двух сторон акта (G2). Раньше подписант
+        # не сохранялся вообще, и по документу нельзя было сказать, кто его выставил.
+        issuer_signer=actor,
+        issuer_signed_at=timezone.now(),
     )
     # Render off the request thread, after commit (F1.6 — avoids orphan PDFs on
     # rollback). The download endpoint renders lazily if a download races ahead.
@@ -409,9 +429,11 @@ def generate_act(
     transaction.on_commit(lambda: render_document_pdf.delay("act", act_id))
     # Покупателя о выставленном акте не извещал никто — он не мог узнать, что от него ждут
     # подпись, кроме как открыв реестр (который ему к тому же закрыт).
+    from .deal_emails import email_act_awaiting_acceptance
     from .deal_notifications import notify_act_issued
 
     transaction.on_commit(lambda: notify_act_issued(act))
+    email_act_awaiting_acceptance(act)
     return act, None
 
 
@@ -461,33 +483,78 @@ def _render_act_pdf(act) -> None:
 
 
 @transaction.atomic
+def act_viewer_side(actor, act) -> str:
+    """Сторона зрителя по ЭТОМУ акту: «issuer» (выпустил), «acceptor» (принимает) или «».
+
+    Акт двусторонний: выпускает исполнитель, принимает заказчик. Раньше сторона не
+    различалась вовсе — кто первый нажал, тот и закрывал документ в одиночку.
+    """
+    from accounts.services import is_member_of, is_platform_admin_viewer, seller_company_routed_to_deal
+
+    if actor is None or getattr(actor, "is_anonymous", False) or is_platform_admin_viewer(actor):
+        return ""
+    if seller_company_routed_to_deal(actor, act.deal_id):
+        return "issuer"
+    if act.deal.company_id and is_member_of(actor, act.deal.company_id, capability="buy"):
+        return "acceptor"
+    return ""
+
+
+def _locked_act(act_id: int):
+    """`of=("self",)` блокирует ТОЛЬКО строку акта. `Act.status` — nullable FK, поэтому
+    `select_related("status")` даёт LEFT OUTER JOIN, а PostgreSQL запрещает `FOR UPDATE` по
+    nullable-стороне внешнего соединения: без `of` запрос падал с NotSupportedError, то есть
+    подписание акта отвечало 500."""
+    from ..models import Act
+
+    return Act.objects.select_for_update(of=("self",)).select_related("status", "deal").get(pk=act_id)
+
+
 def sign_act(act_id: int, actor: CustomUser, signed_file=None) -> Tuple[Optional[object], Optional[str]]:
+    """ЗАКАЗЧИК принимает выставленный акт → SIGNED (G2).
+
+    Акт — двусторонний документ: в узбекской практике он «подтверждён двумя сторонами», в
+    российском ЭДО состоит из двух титулов. Раньше здесь стояла ОДНА подпись без подписанта, и
+    закрыть акт в одиночку могла любая сторона, включая выпустившую его.
+
+    Подпись остаётся ручной ([MANUAL_MODE]): клик без E-IMZO не является юридически значимой
+    подписью, поэтому фиксируем «согласовано в системе» с полным аудит-следом.
+    """
     from django.utils import timezone
 
     from accounts.services import is_platform_admin_viewer
 
-    from ..models import Act
-
     if is_platform_admin_viewer(actor):
         return None, "ADMIN_VIEWER_CANNOT_ACT"
-    # `of=("self",)` блокирует ТОЛЬКО строку акта. `Act.status` — nullable FK, поэтому
-    # `select_related("status")` даёт LEFT OUTER JOIN, а PostgreSQL запрещает `FOR UPDATE`
-    # по nullable-стороне внешнего соединения: без `of` запрос падал с NotSupportedError,
-    # то есть подписание акта отвечало 500. Не покрыто это было ровно потому, что код
-    # никогда не выполнялся в тестах.
-    act = Act.objects.select_for_update(of=("self",)).select_related("status").get(pk=act_id)
+    act = _locked_act(act_id)
     if act.status_code != ActStatusCode.ISSUED:
         return None, "ACT_SIGN_NOT_ALLOWED"
+    if act_viewer_side(actor, act) != "acceptor":
+        # Выпустивший акт не может «принять» его сам — приёмка это подтверждение ВТОРОЙ стороны.
+        return None, "ACT_ACCEPTOR_SIDE_REQUIRED"
+
+    now = timezone.now()
     act.status = _astatus(ActStatusCode.SIGNED)
-    act.signed_at = timezone.now()
+    act.signed_at = now
+    act.acceptor_signer = actor
+    act.acceptor_signed_at = now
     if signed_file is not None:
         act.signed_file = signed_file
-    act.save(update_fields=["status", "signed_at", "signed_file", "updated_at"])
+    act.save(
+        update_fields=[
+            "status",
+            "signed_at",
+            "acceptor_signer",
+            "acceptor_signed_at",
+            "signed_file",
+            "updated_at",
+        ]
+    )
     # [MANUAL_MODE]: a button-click / uploaded scan is NOT a qualified e-signature — tag it so
     # these records can be told apart from real E-IMZO signatures once that lands (tech debt,
     # see memory tech_debt_payment_esign). Mirrors the contract-sign logs in contracts.py.
     ActivityLog.objects.create(
-        action="[MANUAL_MODE] Подписан акт",
+        action="[MANUAL_MODE] Акт принят заказчиком",
         detail=f"Акт {act.number} по сделке #{act.deal_id}",
         event_code="act.signed",
         event_params={"number": act.number, "deal_id": act.deal_id, "manual": True},
@@ -499,4 +566,48 @@ def sign_act(act_id: int, actor: CustomUser, signed_file=None) -> Tuple[Optional
     from .deal_notifications import notify_act_signed
 
     transaction.on_commit(lambda: notify_act_signed(act, actor))
+    return act, None
+
+
+@transaction.atomic
+def reject_act(act_id: int, actor: CustomUser, reason: str = "") -> Tuple[Optional[object], Optional[str]]:
+    """ЗАКАЗЧИК отклоняет акт с указанием причины (G2).
+
+    Второй шаг двустороннего цикла, которого не было вовсе: заказчик мог либо подписать, либо
+    ничего — несогласие выразить было нечем, и документ повисал. Паттерн взят у ЭСФ, где
+    покупатель «подтверждает или отклоняет», и у нашего же отклонения КП, где причина
+    обязательна: без основания отказ бесполезен обеим сторонам.
+
+    Акт возвращается в DRAFT — исполнитель правит и выпускает заново.
+    """
+    from accounts.services import is_platform_admin_viewer
+
+    if is_platform_admin_viewer(actor):
+        return None, "ADMIN_VIEWER_CANNOT_ACT"
+    clean_reason = (reason or "").strip()
+    if not clean_reason:
+        return None, "REASON_REQUIRED"
+    act = _locked_act(act_id)
+    if act.status_code != ActStatusCode.ISSUED:
+        return None, "ACT_SIGN_NOT_ALLOWED"
+    if act_viewer_side(actor, act) != "acceptor":
+        return None, "ACT_ACCEPTOR_SIDE_REQUIRED"
+
+    act.status = _astatus(ActStatusCode.DRAFT)
+    act.rejection_reason = clean_reason
+    act.issuer_signed_at = None
+    act.save(update_fields=["status", "rejection_reason", "issuer_signed_at", "updated_at"])
+    ActivityLog.objects.create(
+        action="Акт отклонён заказчиком",
+        detail=f"Акт {act.number} по сделке #{act.deal_id}: {clean_reason}",
+        event_code="act.rejected",
+        event_params={"number": act.number, "deal_id": act.deal_id, "reason": clean_reason},
+        user=actor,
+        level="WARNING",
+        deal=act.deal,
+        company_id=act.deal.company_id,
+    )
+    from .deal_notifications import notify_act_rejected
+
+    transaction.on_commit(lambda: notify_act_rejected(act, actor, clean_reason))
     return act, None

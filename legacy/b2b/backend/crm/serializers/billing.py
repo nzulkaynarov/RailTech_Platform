@@ -221,7 +221,12 @@ class ActSerializer(ViewerSidesMixin, serializers.ModelSerializer):
     status_name = serializers.CharField(source="status.name", read_only=True)
     pdf_url = serializers.SerializerMethodField()
     signed_file_url = serializers.SerializerMethodField()
+    # Двусторонний акт (G2): принимает ЗАКАЗЧИК, выпускает исполнитель. Раньше поле означало
+    # «любая сторона может закрыть документ» — теперь оно адресное.
     viewer_can_sign = serializers.SerializerMethodField()
+    viewer_can_reject = serializers.SerializerMethodField()
+    issuer_signer_name = serializers.CharField(source="issuer_signer.get_full_name", read_only=True, default=None)
+    acceptor_signer_name = serializers.CharField(source="acceptor_signer.get_full_name", read_only=True, default=None)
 
     class Meta:
         model = Act
@@ -240,12 +245,29 @@ class ActSerializer(ViewerSidesMixin, serializers.ModelSerializer):
             "pdf_url",
             "signed_file",
             "signed_file_url",
+            "issuer_signer",
+            "issuer_signer_name",
+            "issuer_signed_at",
+            "acceptor_signer",
+            "acceptor_signer_name",
+            "acceptor_signed_at",
+            "rejection_reason",
             "viewer_can_sign",
+            "viewer_can_reject",
             "notes",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["number", "pdf_file", "signed_at"]
+        read_only_fields = [
+            "number",
+            "pdf_file",
+            "signed_at",
+            "issuer_signer",
+            "issuer_signed_at",
+            "acceptor_signer",
+            "acceptor_signed_at",
+            "rejection_reason",
+        ]
 
     def get_pdf_url(self, obj) -> str | None:
         return obj.pdf_file.url if obj.pdf_file else None
@@ -253,17 +275,22 @@ class ActSerializer(ViewerSidesMixin, serializers.ModelSerializer):
     def get_signed_file_url(self, obj) -> str | None:
         return obj.signed_file.url if obj.signed_file else None
 
-    def get_viewer_can_sign(self, obj) -> bool:
-        """Акт подписывается один раз и только выставленный.
+    def _acceptor_may_answer(self, obj) -> bool:
+        """Выставленный акт ждёт ответа ЗАКАЗЧИКА — принять или вернуть с причиной.
 
-        Сторону `sign_act` намеренно не различает (в модели одна подпись), поэтому подсказка
-        адресована обеим сторонам сделки — ровно то, что разрешает бэкенд. Кто именно должен
-        подписывать акт по бизнесу — открытый вопрос владельцу, поведение здесь не меняется.
+        Прежде подсказка адресовалась обеим сторонам, потому что `sign_act` сторону не
+        различал: выпустивший акт мог закрыть его сам. Акт — двусторонний документ, поэтому
+        отвечает вторая сторона.
         """
         if obj.status_code != ActStatusCode.ISSUED:
             return False
-        sides = self._sides(obj.deal_id, obj.deal.company_id)
-        return sides["is_buyer_side"] or sides["is_seller_side"]
+        return self._sides(obj.deal_id, obj.deal.company_id)["is_buyer_side"]
+
+    def get_viewer_can_sign(self, obj) -> bool:
+        return self._acceptor_may_answer(obj)
+
+    def get_viewer_can_reject(self, obj) -> bool:
+        return self._acceptor_may_answer(obj)
 
 
 class FulfillmentSerializer(ViewerSidesMixin, serializers.ModelSerializer):

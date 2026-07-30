@@ -4169,7 +4169,19 @@
     },
     "downloadSigned": "Скачать подписанный",
     "uploadSigned": "Загрузить подписанный",
-    "signedAt": "Подписан"
+    "signedAt": "Подписан",
+    "accept": "Принять акт",
+    "reject": "Отклонить",
+    "rejected": "Акт возвращён исполнителю",
+    "rejectedWithReason": "Возвращён заказчиком: {{reason}}",
+    "rejectDialog": {
+      "title": "Отклонить акт",
+      "description": "Укажите, что не так — исполнитель увидит причину и выставит акт заново.",
+      "reasonLabel": "Причина",
+      "reasonPlaceholder": "Например: объём работ не совпадает с накладной",
+      "confirm": "Отклонить",
+      "reasonRequired": "Укажите причину"
+    }
   },
   "companyFilesPage": {
     "title": "Файлы",
@@ -4948,7 +4960,9 @@
       "minMarginGreaterThanDefault": "Минимальная маржа не может превышать базовую",
       "defaultMarginGreaterThanTarget": "Базовая маржа не может превышать целевую",
       "minMarginGreaterThanTarget": "Минимальная маржа не может превышать целевую"
-    }
+    },
+    "paymentTermsDays": "Срок оплаты счёта (дней)",
+    "paymentTermsDaysHint": "Через сколько дней после выставления счёт должен быть оплачен. От этого срока считается напоминание. Пусто — 14 дней."
   },
   "companyNumbering": {
     "title": "Нумерация документов",

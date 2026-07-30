@@ -4161,7 +4161,19 @@
     },
     "downloadSigned": "Download signed",
     "uploadSigned": "Upload signed",
-    "signedAt": "Signed"
+    "signedAt": "Signed",
+    "accept": "Accept act",
+    "reject": "Reject",
+    "rejected": "The act was returned to the issuer",
+    "rejectedWithReason": "Returned by the customer: {{reason}}",
+    "rejectDialog": {
+      "title": "Reject the act",
+      "description": "Say what is wrong — the issuer will see the reason and re-issue the act.",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "For example: the scope does not match the delivery note",
+      "confirm": "Reject",
+      "reasonRequired": "Please give a reason"
+    }
   },
   "companyFilesPage": {
     "title": "Files",
@@ -4936,7 +4948,9 @@
       "minMarginGreaterThanDefault": "Minimum margin cannot exceed the default margin",
       "defaultMarginGreaterThanTarget": "Default margin cannot exceed the target margin",
       "minMarginGreaterThanTarget": "Minimum margin cannot exceed the target margin"
-    }
+    },
+    "paymentTermsDays": "Invoice payment term (days)",
+    "paymentTermsDaysHint": "How many days after issuing the invoice is due. The reminder is counted from this date. Empty — 14 days."
   },
   "companyNumbering": {
     "title": "Document numbering",

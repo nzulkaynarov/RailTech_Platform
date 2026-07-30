@@ -101,7 +101,10 @@ export interface CompanySettings {
 	min_margin_percent?: string | null;     // loss-prevention floor (below → warn + approval)
 	target_margin_percent?: string | null;  // healthy target (≥ → green traffic-light)
 	default_offer_validity_days?: number | null;
+	/** Машинный срок оплаты счёта, дней — от него считается напоминание. Пусто = умолчание. */
+	payment_terms_days?: number | null;
 	// КП «фирменный бланк» defaults (spec-kp-blank): feed the dynamic «Условия поставки» block.
+	// ВНИМАНИЕ: `default_payment_terms` — ТЕКСТ для бланка («100% предоплата»), не число.
 	default_payment_terms?: string;
 	default_warranty_months?: number | null;
 	doc_number_prefix?: string;
@@ -119,6 +122,7 @@ export interface CompanySettingsUpdate {
 	min_margin_percent?: string | null;
 	target_margin_percent?: string | null;
 	default_offer_validity_days?: number | null;
+	payment_terms_days?: number | null;
 	default_payment_terms?: string;
 	default_warranty_months?: number | null;
 	doc_number_prefix?: string;

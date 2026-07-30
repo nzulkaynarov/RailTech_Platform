@@ -51,7 +51,6 @@ export const useGenerateContract = () => {
       contractsApi.generateFromQuote(quoteId, notes),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['contracts'] });
-      qc.invalidateQueries({ queryKey: ['deals'] });
       invalidateDealChain(qc);
     },
   });
@@ -141,7 +140,6 @@ export const useCreateInvoiceDraft = () => {
       invoicesApi.createDraft(payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['invoices'] });
-      qc.invalidateQueries({ queryKey: ['deals'] });
       invalidateDealChain(qc);
     },
   });
@@ -258,6 +256,17 @@ export const useAct = (id: number | null) => useQuery({
   queryFn: () => actsApi.get(id as number),
   enabled: !!id,
 });
+
+export const useRejectAct = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: number; reason: string }) => actsApi.reject(id, reason),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['acts'] });
+      invalidateDealChain(qc);
+    },
+  });
+};
 
 export const useSignAct = () => {
   const qc = useQueryClient();

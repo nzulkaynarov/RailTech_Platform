@@ -2885,6 +2885,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/acts/{id}/reject/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject an issued act (buyer side)
+         * @description Заказчик возвращает акт исполнителю с причиной — второй шаг двустороннего цикла (паттерн ЭСФ «подтвердить или отклонить»). Причина обязательна: без основания отказ бесполезен обеим сторонам. Акт уходит обратно в DRAFT.
+         */
+        post: operations["crm_acts_reject_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/acts/{id}/sign/": {
         parameters: {
             query?: never;
@@ -6369,14 +6389,29 @@ export interface components {
             /** Format: uri */
             signed_file?: string | null;
             readonly signed_file_url: string | null;
+            /** Выпустил (сторона исполнителя) */
+            readonly issuer_signer: number | null;
+            readonly issuer_signer_name: string;
             /**
-             * @description Акт подписывается один раз и только выставленный.
-             *
-             *     Сторону `sign_act` намеренно не различает (в модели одна подпись), поэтому подсказка
-             *     адресована обеим сторонам сделки — ровно то, что разрешает бэкенд. Кто именно должен
-             *     подписывать акт по бизнесу — открытый вопрос владельцу, поведение здесь не меняется.
+             * Выпущен
+             * Format: date-time
              */
+            readonly issuer_signed_at: string | null;
+            /** Принял (сторона заказчика) */
+            readonly acceptor_signer: number | null;
+            readonly acceptor_signer_name: string;
+            /**
+             * Принят
+             * Format: date-time
+             */
+            readonly acceptor_signed_at: string | null;
+            /**
+             * Причина отклонения
+             * @description Заполняется, когда заказчик отклоняет акт: основание попадает в аудит
+             */
+            readonly rejection_reason: string;
             readonly viewer_can_sign: boolean;
+            readonly viewer_can_reject: boolean;
             notes?: string;
             /** Format: date-time */
             readonly created_at: string;
@@ -7514,6 +7549,11 @@ export interface components {
              * @description Через сколько дней истекает новый КП (valid_until = сегодня + N)
              */
             default_offer_validity_days?: number | null;
+            /**
+             * Срок оплаты счёта (дней)
+             * @description Через сколько дней после ВЫСТАВЛЕНИЯ счёт должен быть оплачен. Пусто — платформенное умолчание. От этого срока считается напоминание об оплате.
+             */
+            payment_terms_days?: number | null;
             /**
              * Условия оплаты по умолчанию
              * @description Напр. «100% предоплата» — подставляется в блок «Условия поставки» КП
@@ -9763,6 +9803,11 @@ export interface components {
              */
             default_offer_validity_days?: number | null;
             /**
+             * Срок оплаты счёта (дней)
+             * @description Через сколько дней после ВЫСТАВЛЕНИЯ счёт должен быть оплачен. Пусто — платформенное умолчание. От этого срока считается напоминание об оплате.
+             */
+            payment_terms_days?: number | null;
+            /**
              * Условия оплаты по умолчанию
              * @description Напр. «100% предоплата» — подставляется в блок «Условия поставки» КП
              */
@@ -11918,6 +11963,9 @@ export interface components {
             last_name: string;
             /** @description Uzbekistan format: +998XXXXXXXXX */
             phone: string;
+        };
+        RejectActRequest: {
+            reason: string;
         };
         RejectQuoteRequestRequest: {
             /** @default  */
@@ -17535,6 +17583,41 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Act"];
                 };
+            };
+        };
+    };
+    crm_acts_reject_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Акт. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RejectActRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["RejectActRequest"];
+                "multipart/form-data": components["schemas"]["RejectActRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Act"];
+                };
+            };
+            /** @description REASON_REQUIRED / ACT_SIGN_NOT_ALLOWED */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

@@ -1,12 +1,14 @@
-"""Авто-цепочка при выигрыше сделки обязана СООБЩАТЬ о несозданном акте.
+"""Авто-цепочка при выигрыше сделки: что она создаёт, а что — нет.
 
-`auto_invoice_on_closed_won` создаёт счёт в DRAFT, а затем пробует выпустить акт. Но
-`generate_act` требует ISSUED/PARTIAL/PAID — то есть по свежесозданному счёту акт не выпустится
-никогда. Код возврата присваивался и никуда не шёл: в ответе оставалось `act=None`, в логах
-пусто, и «акт не нужен» было не отличить от «акт не создался».
+История файла. Раньше `auto_invoice_on_closed_won` пробовал выпустить и акт, но вызов был
+мёртвым по построению: счёт рождается DRAFT, а `generate_act` требует ISSUED/PARTIAL/PAID.
+Сначала (#465) чинилась только НАБЛЮДАЕМОСТЬ — чтобы причина попадала в результат и в лог.
 
-Здесь фиксируется только НАБЛЮДАЕМОСТЬ. Вопрос «когда вообще выпускать акт» продуктовый
-(спека post-contract §6) — поведение триггера тестами не закрепляется.
+Затем бенчмарк (спека post-contract-open-questions §1) показал, что чинить триггер и не
+следовало: ни один эталон не выпускает закрывающий документ в момент подписания сделки. Вызов
+удалён (G1), поэтому тесты про «сообщить о падении авто-акта» стали беспредметны — падать
+нечему. Здесь остаётся то, что осмысленно: счёт и отгрузка создаются, акт — нет, повторный
+прогон идемпотентен. Триггер выпуска акта проверяется в `test_act_trigger_and_due_date.py`.
 """
 
 from datetime import timedelta
@@ -98,40 +100,46 @@ def won_deal(db):
 
 
 @pytest.mark.django_db
-def test_failed_auto_act_is_reported_in_the_result(won_deal):
-    """РЕГРЕСС. Причина несозданного акта обязана попасть в результат таска."""
+def test_win_creates_the_invoice_and_leaves_the_act_alone(won_deal):
+    """Выигрыш сделки заводит счёт-черновик, но не закрывающий документ."""
     result = auto_invoice_on_closed_won(won_deal.id)
 
     assert result["invoice"] is not None, "счёт не создан — тест проверяет не тот сценарий"
     assert result["act"] is None
-    assert result.get("act_error") == "ACT_INVALID_INVOICE_STATUS"
+    assert "act_error" not in result, "ошибки быть не может: акт здесь больше не выпускается"
 
 
 @pytest.mark.django_db
-def test_failed_auto_act_is_logged_with_context(won_deal, caplog):
-    """В логе должны быть сделка, счёт и его статус — иначе по записи не понять причину."""
+def test_no_act_error_is_logged_anymore(won_deal, caplog):
+    """Раньше каждый выигрыш сделки писал в лог предупреждение о «пропущенном» акте.
+
+    Это был шум от вызова, который не мог сработать в принципе. Теперь его нет.
+    """
     import logging
 
     with caplog.at_level(logging.WARNING, logger="crm.tasks"):
         auto_invoice_on_closed_won(won_deal.id)
 
-    records = [r for r in caplog.records if "Auto-act skipped" in r.getMessage()]
-    assert records, "падение авто-акта по-прежнему проходит молча"
-    message = records[0].getMessage()
-    assert str(won_deal.id) in message
-    assert "ACT_INVALID_INVOICE_STATUS" in message
+    assert not [r for r in caplog.records if "Auto-act skipped" in r.getMessage()]
 
 
 @pytest.mark.django_db
-def test_successful_act_does_not_report_an_error(won_deal):
-    """Когда акт создаётся, ключа ошибки в результате быть не должно."""
-    from crm.models import Invoice
+def test_rerun_reports_an_act_issued_by_hand(won_deal):
+    """Акт, выпущенный продавцом вручную, отражается в отчёте повторного прогона —
+    задача остаётся наблюдаемой."""
+    from crm.models import Act, Invoice
 
     auto_invoice_on_closed_won(won_deal.id)
     invoice = Invoice.objects.get(deal=won_deal)
-    invoice.status = InvoiceStatus.objects.get(code="ISSUED")
-    invoice.save(update_fields=["status"])
+    act = Act.objects.create(
+        deal=won_deal,
+        invoice=invoice,
+        number="ACT-AUTOACT-905",
+        status=ActStatus.objects.get(code="ISSUED"),
+        total_amount=Decimal("112"),
+    )
 
     result = auto_invoice_on_closed_won(won_deal.id)
-    assert result["act"] is not None
-    assert "act_error" not in result
+
+    assert result["act"] == act.id
+    assert result["idempotent_reuse"] is True

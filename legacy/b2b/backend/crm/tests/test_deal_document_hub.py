@@ -291,8 +291,13 @@ def test_next_step_walks_the_chain_invoice_then_act(world):
     draft.status = InvoiceStatus.objects.get(code="PAID")
     draft.amount_paid = Decimal("112")
     draft.save(update_fields=["status", "amount_paid"])
+    Fulfillment.objects.create(
+        deal=world["deal"], contract=contract, status=FulfillmentStatus.objects.get(code="PENDING")
+    )
     step = seller.get(_hub_url(world["deal"].id)).json()["next_step"]
-    assert step["code"] == "GENERATE_ACT"
+    # G1: оплата больше НЕ триггер закрывающего документа — после денег цепочка ведёт к
+    # отгрузке, а акт предлагается по факту поставки (см. test_act_trigger_and_due_date.py).
+    assert step["code"] == "SHIP"
 
 
 def test_next_step_accept_delivery_is_addressed_to_the_buyer(world):
