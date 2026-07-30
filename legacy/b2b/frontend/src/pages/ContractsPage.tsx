@@ -378,13 +378,15 @@ export function ContractsPage() {
                 </div>
               )}
               <div className="flex flex-col gap-2">
-                {selected.pdf_url && (
-                  <DocumentActions
-                    request={() => ({ path: `crm/contracts/${selected.id}/download-pdf/` })}
-                    filenameBase={`RailTech_Contract_${selected.id}`}
-                    size="default"
-                  />
-                )}
+                {/* Кнопка не ждёт готового файла: сервер сам ставит рендер и отвечает 202 (ARCH-03),
+                    а `DocumentActions` опрашивает его по Retry-After. Пока условие требовало уже
+                    существующий PDF, документ было НЕ ПОЛУЧИТЬ именно тогда, когда он ещё не
+                    отрисован (аудит UI, U3). */}
+                <DocumentActions
+                  request={() => ({ path: `crm/contracts/${selected.id}/download-pdf/` })}
+                  filenameBase={`RailTech_Contract_${selected.id}`}
+                  size="default"
+                />
                 {selected.signed_file_url && (
                   <Button variant="outline" onClick={() => onDownloadSigned(selected)}>
                     <Download className="mr-2 h-4 w-4" />

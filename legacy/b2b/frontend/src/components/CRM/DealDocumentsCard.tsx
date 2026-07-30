@@ -72,7 +72,8 @@ export function DealDocumentsCard({ dealId, isViewer, viewerTip }: {
                     {doc.title} · {t(`otherDocumentsPage.status.${doc.status_code}`)}
                   </p>
                 </div>
-                {doc.pdf_available && (
+                {/* По статусу, а не по наличию файла: сервер дорисует PDF по запросу (ARCH-03). */}
+                {doc.status_code === 'ISSUED' && (
                   <DocumentActions
                     request={() => ({ path: `crm/generated-documents/${doc.id}/download-pdf/` })}
                     filenameBase={`RailTech_Document_${doc.id}`}

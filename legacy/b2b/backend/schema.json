@@ -22253,10 +22253,6 @@
                         "title": "Готовый HTML",
                         "description": "Снапшот тела с подставленными значениями."
                     },
-                    "pdf_available": {
-                        "type": "boolean",
-                        "readOnly": true
-                    },
                     "issued_at": {
                         "type": "string",
                         "format": "date-time",
@@ -22322,7 +22318,6 @@
                     "is_owned",
                     "issued_at",
                     "number",
-                    "pdf_available",
                     "public_link_revoked",
                     "public_url",
                     "rendered_html",

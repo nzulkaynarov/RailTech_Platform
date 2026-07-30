@@ -57,7 +57,6 @@ class GeneratedDocumentSerializer(serializers.ModelSerializer):
     deal_title = serializers.SerializerMethodField()
     contact_name = serializers.CharField(source="contact.name", read_only=True, default=None)
     created_by_name = serializers.SerializerMethodField()
-    pdf_available = serializers.SerializerMethodField()
     is_owned = serializers.SerializerMethodField()
     public_url = serializers.SerializerMethodField()
     # Flat letterhead slice (name/ИНН/лого/подвал/accent) so the registry sheet renders the FULL
@@ -88,7 +87,6 @@ class GeneratedDocumentSerializer(serializers.ModelSerializer):
             "contact_name",
             "values",
             "rendered_html",
-            "pdf_available",
             "issued_at",
             "is_owned",
             "public_url",
@@ -150,5 +148,3 @@ class GeneratedDocumentSerializer(serializers.ModelSerializer):
             return None
         return obj.created_by.get_full_name() or obj.created_by.email
 
-    def get_pdf_available(self, obj) -> bool:
-        return bool(obj.pdf_file)

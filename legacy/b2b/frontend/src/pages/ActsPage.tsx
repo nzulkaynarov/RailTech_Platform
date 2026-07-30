@@ -161,14 +161,12 @@ export function ActsPage() {
                           {a.issued_at ? new Date(a.issued_at).toLocaleDateString() : '—'}
                         </TableCell>
                         <TableCell className="text-right" data-row-action>
-                          {a.pdf_url && (
-                            <DocumentActions
-                              request={() => ({ path: `crm/acts/${a.id}/download-pdf/` })}
-                              filenameBase={`RailTech_Act_${a.id}`}
-                              variant="ghost"
-                              iconOnly
-                            />
-                          )}
+                          <DocumentActions
+                            request={() => ({ path: `crm/acts/${a.id}/download-pdf/` })}
+                            filenameBase={`RailTech_Act_${a.id}`}
+                            variant="ghost"
+                            iconOnly
+                          />
                         </TableCell>
                       </TableRow>
                     ))}
@@ -198,13 +196,15 @@ export function ActsPage() {
                 <div><Label>{t('actsPage.signedAt')}</Label><p className="text-muted-foreground">{selected.signed_at ? new Date(selected.signed_at).toLocaleString() : '—'}</p></div>
               </div>
               <div className="flex flex-col gap-2">
-                {selected.pdf_url && (
-                  <DocumentActions
-                    request={() => ({ path: `crm/acts/${selected.id}/download-pdf/` })}
-                    filenameBase={`RailTech_Act_${selected.id}`}
-                    size="default"
-                  />
-                )}
+                {/* Кнопка не ждёт готового файла: сервер сам ставит рендер и отвечает 202 (ARCH-03),
+                    а `DocumentActions` опрашивает его по Retry-After. Пока условие требовало уже
+                    существующий PDF, документ было НЕ ПОЛУЧИТЬ именно тогда, когда он ещё не
+                    отрисован, — и без единого объяснения (аудит UI, U3). */}
+                <DocumentActions
+                  request={() => ({ path: `crm/acts/${selected.id}/download-pdf/` })}
+                  filenameBase={`RailTech_Act_${selected.id}`}
+                  size="default"
+                />
                 {selected.signed_file_url && (
                   <Button variant="outline" onClick={() => onDownloadSigned(selected)}>
                     <Download className="mr-2 h-4 w-4" />

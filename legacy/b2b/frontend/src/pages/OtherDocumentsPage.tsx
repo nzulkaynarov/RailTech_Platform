@@ -116,7 +116,10 @@ export function OtherDocumentsPage() {
     },
     {
       id: 'actions', header: t('otherDocumentsPage.table.actions'), className: 'text-right', mobileActions: true,
-      cell: (doc) => (doc.pdf_available ? (
+      // Условие — по СТАТУСУ, а не по наличию файла: выпущенный документ можно получить
+      // всегда (сервер ставит рендер и отвечает 202, ARCH-03). Раньше кнопка ждала уже
+      // отрисованный PDF и пропадала ровно тогда, когда он ещё готовился (аудит UI, U3).
+      cell: (doc) => (doc.status_code === 'ISSUED' ? (
         <DocumentActions
           request={() => ({ path: `crm/generated-documents/${doc.id}/download-pdf/` })}
           filenameBase={`RailTech_Document_${doc.id}`}
@@ -365,7 +368,7 @@ function DocumentSheet({
           </div>
 
           <div className="flex flex-col gap-2">
-            {isIssued && document.pdf_available && (
+            {isIssued && (
               <DocumentActions
                 request={() => ({ path: `crm/generated-documents/${document.id}/download-pdf/` })}
                 filenameBase={`RailTech_Document_${document.id}`}

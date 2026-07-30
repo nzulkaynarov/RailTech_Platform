@@ -341,8 +341,11 @@ export function InvoicesPage() {
                 </div>
               ) : (
                 <div className="flex flex-col gap-2">
-                  {/* CANCELLED invoices are view-only — no PDF/actions. */}
-                  {selected.status !== 'CANCELLED' && selected.pdf_url && (
+                  {/* Аннулированный счёт — только просмотр, PDF по нему не выдаётся. В остальных
+                      случаях кнопка не ждёт готового файла: сервер ставит рендер и отвечает 202
+                      (ARCH-03). Раньше условие требовало уже существующий PDF, и счёт было не
+                      получить именно до отрисовки (аудит UI, U3). */}
+                  {selected.status !== 'CANCELLED' && (
                     <DocumentActions
                       request={() => ({ path: `crm/invoices/${selected.id}/download-pdf/` })}
                       filenameBase={`RailTech_Invoice_${selected.id}`}

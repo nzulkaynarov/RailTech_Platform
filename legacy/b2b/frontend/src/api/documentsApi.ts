@@ -95,7 +95,6 @@ export interface GeneratedDocument {
   contact_name: string | null;
   values: Record<string, string>;
   rendered_html: string;
-  pdf_available: boolean;
   issued_at: string | null;
   created_by_name: string | null;
   created_at: string;

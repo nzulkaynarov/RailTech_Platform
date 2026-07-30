@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 
 import { ContractsPage } from '../ContractsPage';
 import { contractsApi, type Contract } from '@/api/contractsApi';
@@ -79,6 +79,19 @@ describe('ContractsPage', () => {
       signedState = true;
       return SIGNED;
     });
+  });
+
+  it('предлагает получить PDF, даже если файл ещё не отрисован', async () => {
+    // Сервер сам ставит рендер и отвечает 202 (ARCH-03), а `DocumentActions` опрашивает его.
+    // Пока кнопку прятало условие «файл уже есть», документ было НЕ ПОЛУЧИТЬ ровно тогда,
+    // когда он готовился, — и без единого объяснения (аудит UI, U3). Фикстура намеренно
+    // без `pdf_url`.
+    renderWithProviders(<ContractsPage />);
+    fireEvent.click((await screen.findAllByText('CT-001'))[0]);
+
+    const dialog = await screen.findByRole('dialog');
+    expect(PENDING.pdf_url).toBeNull();
+    expect(within(dialog).getByRole('button', { name: 'Экспорт' })).toBeInTheDocument();
   });
 
   it('opens the detail panel on row click', async () => {

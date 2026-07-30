@@ -8433,7 +8433,6 @@ export interface components {
              * @description Снапшот тела с подставленными значениями.
              */
             readonly rendered_html: string;
-            readonly pdf_available: boolean;
             /**
              * Дата выпуска
              * Format: date-time
