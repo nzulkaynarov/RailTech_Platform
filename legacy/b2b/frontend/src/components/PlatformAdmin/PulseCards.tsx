@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CreditCard, Handshake, TrendingUp } from 'lucide-react';
+import { AlertTriangle, CreditCard, Handshake, TrendingUp } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -59,22 +59,39 @@ function PulseCard({
  * Верхний ряд дашборда оператора: новые компании, новые сделки, сумма подписанных КП и MRR.
  * Три плитки несут спарклайн за период, четвёртая (MRR) — счётчик активных подписок.
  */
-export function PulseCards({ pulse, isLoading }: { pulse: AdminPulseResponse | undefined; isLoading: boolean }) {
+export function PulseCards({ pulse, isLoading, isError }: {
+  pulse: AdminPulseResponse | undefined;
+  isLoading: boolean;
+  /** Сбой загрузки: считать суммы не из чего, и «0» здесь был бы неправдой (U2). */
+  isError?: boolean;
+}) {
   const { t } = useTranslation();
   const format = useCurrencyStore((s) => s.format);
 
+  // При сбое суммировать нечего: `null` печатается как «—», а не как ноль работы.
   const companiesTotal = useMemo(
-    () => (pulse?.companies ?? []).reduce((s, d) => s + d.count, 0),
+    () => (pulse ? (pulse.companies ?? []).reduce((s, d) => s + d.count, 0) : null),
     [pulse],
   );
   const dealsTotal = useMemo(
-    () => (pulse?.deals ?? []).reduce((s, d) => s + d.count, 0),
+    () => (pulse ? (pulse.deals ?? []).reduce((s, d) => s + d.count, 0) : null),
     [pulse],
   );
   const signedValue = useMemo(
-    () => (pulse?.quotes_signed_value ?? []).reduce((s, d) => s + Number(d.value || 0), 0),
+    () => (pulse ? (pulse.quotes_signed_value ?? []).reduce((s, d) => s + Number(d.value || 0), 0) : null),
     [pulse],
   );
+
+  if (isError) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center gap-2 py-8 text-center">
+          <AlertTriangle className="h-4 w-4 text-destructive" aria-hidden="true" />
+          <div className="text-xs font-medium text-foreground">{t('common.loadError')}</div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
@@ -110,7 +127,7 @@ export function PulseCards({ pulse, isLoading }: { pulse: AdminPulseResponse | u
         icon={TrendingUp}
         tone="info"
         label={t('platformAdmin.pulse.signedValue')}
-        value={format(signedValue)}
+        value={signedValue == null ? '—' : format(signedValue)}
         isLoading={isLoading}
       >
         <PulseChart
@@ -126,11 +143,11 @@ export function PulseCards({ pulse, isLoading }: { pulse: AdminPulseResponse | u
         icon={CreditCard}
         tone="warning"
         label={t('platformAdmin.pulse.mrr')}
-        value={format(Number(pulse?.mrr ?? 0))}
+        value={pulse ? format(Number(pulse.mrr ?? 0)) : '—'}
         isLoading={isLoading}
       >
         <div className="text-xs text-muted-foreground">
-          {t('platformAdmin.pulse.activeSubscriptions', { count: pulse?.active_subscriptions ?? 0 })}
+          {pulse ? t('platformAdmin.pulse.activeSubscriptions', { count: pulse.active_subscriptions ?? 0 }) : '—'}
         </div>
       </PulseCard>
     </div>

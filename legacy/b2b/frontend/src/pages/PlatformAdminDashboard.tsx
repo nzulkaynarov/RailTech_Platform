@@ -47,7 +47,7 @@ export default function PlatformAdminDashboard({ onNavigate }: PlatformAdminDash
         </Tabs>
       </div>
 
-      <PulseCards pulse={pulse.data} isLoading={pulse.isLoading} />
+      <PulseCards pulse={pulse.data} isLoading={pulse.isLoading} isError={pulse.isError} />
 
       <TriageQueuePanel
         items={queue.data?.items ?? []}
@@ -71,7 +71,12 @@ export default function PlatformAdminDashboard({ onNavigate }: PlatformAdminDash
           isError={dashboard.isError}
           onRetry={() => dashboard.refetch()}
         />
-        <SummaryPanel dashboard={dashboard.data} onNavigate={onNavigate} />
+        <SummaryPanel
+          dashboard={dashboard.data}
+          isError={dashboard.isError}
+          onRetry={() => dashboard.refetch()}
+          onNavigate={onNavigate}
+        />
       </div>
 
       <QueueConfirmDialogs

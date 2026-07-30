@@ -24,6 +24,8 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { toast } from 'sonner';
+import { translateApiError } from '@/lib/apiError';
 
 const getTypeIcon = (type: string) => {
     switch (type) {
@@ -84,6 +86,8 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNaviga
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(false);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
+    /** Последняя загрузка списка не удалась — панель объясняет пустоту сбоем, а не тишиной. */
+    const [loadFailed, setLoadFailed] = useState(false);
 
     const dateLocale = i18n.language === 'ru' ? ru : enUS;
 
@@ -99,8 +103,11 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNaviga
             setUnreadCount(items.filter(n => !n.is_read).length);
             setHasMore(hasMore);
             setPage(1);
+            setLoadFailed(false);
         } catch {
-            // silently fail — backend may not be running
+            // Периодическое обновление тостом не шумит: панель скажет о сбое у себя, и только
+            // если показывать всё равно нечего — иначе «Уведомлений нет» врёт про недоступный API.
+            setLoadFailed(true);
         }
     }, []);
 
@@ -118,8 +125,9 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNaviga
             });
             setHasMore(more);
             setPage(prev => prev + 1);
-        } catch {
-            // silently fail — the already-loaded page stays usable
+        } catch (err) {
+            // Кнопку нажал пользователь — он должен узнать, что истории не прибавилось.
+            toast.error(translateApiError(err));
         } finally {
             setIsLoadingMore(false);
         }
@@ -194,12 +202,16 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNaviga
         };
     }, [accessToken]);
 
+    // Действие пользователя не имеет права проваливаться молча: отметка «прочитано» не
+    // срабатывала, счётчик оставался прежним, и человек кликал снова и снова (аудит UI, U2).
     const handleMarkAsRead = async (id: number) => {
         try {
             await notificationsApi.markAsRead(id);
             setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
             setUnreadCount(prev => Math.max(0, prev - 1));
-        } catch { /* silently fail */ }
+        } catch (err) {
+            toast.error(translateApiError(err));
+        }
     };
 
     const handleMarkAllRead = async () => {
@@ -207,7 +219,9 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNaviga
             await notificationsApi.markAllAsRead();
             setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
             setUnreadCount(0);
-        } catch { /* silently fail */ }
+        } catch (err) {
+            toast.error(translateApiError(err));
+        }
     };
 
     return (
@@ -268,7 +282,17 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNaviga
                 </SheetHeader>
 
                 <ScrollArea className="flex-1">
-                    {notifications.length === 0 ? (
+                    {notifications.length === 0 && loadFailed ? (
+                        <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
+                            <div className="flex size-16 items-center justify-center rounded-2xl bg-destructive/10">
+                                <AlertTriangle className="size-7 text-destructive" aria-hidden="true" />
+                            </div>
+                            <p className="text-sm font-semibold text-foreground">{t('common.loadError')}</p>
+                            <Button variant="outline" size="sm" onClick={() => fetchNotifications()}>
+                                {t('common.retry')}
+                            </Button>
+                        </div>
+                    ) : notifications.length === 0 ? (
                         <div className="flex flex-col items-center justify-center gap-3 p-8 text-center h-full">
                             <div className="flex size-16 items-center justify-center rounded-2xl bg-muted">
                                 <BellOff className="size-7 text-muted-foreground" aria-hidden="true" />

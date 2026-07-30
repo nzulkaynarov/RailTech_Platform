@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { Building2, ClipboardList, CreditCard, Handshake, Receipt, ShieldCheck, Users } from 'lucide-react';
+import { AlertTriangle, Building2, ClipboardList, CreditCard, Handshake, Receipt, ShieldCheck, Users } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { PlatformDashboard } from '@/api/dashboardApi';
@@ -44,9 +45,13 @@ function SummaryRow({
  */
 export function SummaryPanel({
   dashboard,
+  isError,
+  onRetry,
   onNavigate,
 }: {
   dashboard: PlatformDashboard | undefined;
+  isError?: boolean;
+  onRetry?: () => void;
   onNavigate: (target: string) => void;
 }) {
   const { t } = useTranslation();
@@ -57,6 +62,19 @@ export function SummaryPanel({
       <CardHeader className="pb-2">
         <CardTitle className="text-sm">{t('platformAdmin.summary.title')}</CardTitle>
       </CardHeader>
+      {/* Сводка — это очередь работы оператора. При сбое загрузки она показывала нули, и
+          «очередь KYC пуста» читалось как факт, а не как недоступный API (аудит UI, U2). */}
+      {isError ? (
+        <CardContent className="flex flex-col items-center gap-2 py-8 text-center">
+          <AlertTriangle className="h-4 w-4 text-destructive" aria-hidden="true" />
+          <div className="text-xs font-medium text-foreground">{t('common.loadError')}</div>
+          {onRetry && (
+            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={onRetry}>
+              {t('common.retry')}
+            </Button>
+          )}
+        </CardContent>
+      ) : (
       <CardContent className="space-y-2 text-xs">
         <SummaryRow
           icon={Users}
@@ -79,32 +97,33 @@ export function SummaryPanel({
         <SummaryRow
           icon={ShieldCheck}
           label={t('shell.kyc')}
-          value={attention?.kyc ?? 0}
+          value={attention?.kyc}
           highlight={Boolean(attention?.kyc)}
           onClick={() => onNavigate('admin-kyc')}
         />
         <SummaryRow
           icon={ClipboardList}
           label={t('shell.roleApplications')}
-          value={attention?.role_applications ?? 0}
+          value={attention?.role_applications}
           highlight={Boolean(attention?.role_applications)}
           onClick={() => onNavigate('admin-role-apps')}
         />
         <SummaryRow
           icon={CreditCard}
           label={t('platformAdmin.summary.subsExpiring')}
-          value={(attention?.subscriptions_expiring_7d ?? 0) + (attention?.subscriptions_past_due ?? 0)}
+          value={attention ? attention.subscriptions_expiring_7d + attention.subscriptions_past_due : undefined}
           highlight={Boolean(attention?.subscriptions_past_due)}
           onClick={() => onNavigate('admin-subscriptions')}
         />
         <SummaryRow
           icon={Receipt}
           label={t('platformAdmin.summary.overdueInvoices')}
-          value={attention?.overdue_invoices ?? 0}
+          value={attention?.overdue_invoices}
           highlight={Boolean(attention?.overdue_invoices)}
           onClick={() => onNavigate('admin-deals')}
         />
       </CardContent>
+      )}
     </Card>
   );
 }

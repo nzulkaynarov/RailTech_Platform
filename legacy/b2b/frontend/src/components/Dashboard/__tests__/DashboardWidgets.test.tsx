@@ -214,7 +214,9 @@ describe('PipelineFunnel', () => {
 
     const { container } = renderWithProviders(<PipelineFunnel onNavigate={onNavigate} />);
 
-    expect(await screen.findByText('Воронка сделок')).toBeInTheDocument();
+    // Ждём именно данные, а не заголовок: карточка держит заголовок и на скелете, чтобы
+    // не прыгать при загрузке (U2).
+    expect(await screen.findByText('Заявка открыта')).toBeInTheDocument();
     // Zero-count stage is filtered out entirely (CALCULATING has no deals).
     expect(screen.queryByText('Расчёт')).not.toBeInTheDocument();
     const text = container.textContent ?? '';
@@ -251,11 +253,22 @@ describe('PipelineFunnel', () => {
     vi.mocked(crmApi.getDealStages).mockResolvedValue([
       { code: 'RFQ_OPEN', name: 'Заявка открыта' },
     ]);
+    vi.mocked(crmApi.getDeals).mockResolvedValue([]);
     const { container } = renderWithProviders(<PipelineFunnel onNavigate={vi.fn()} />);
 
-    await waitFor(() => expect(crmApi.getDeals).toHaveBeenCalled());
-    expect(screen.queryByText('Воронка сделок')).not.toBeInTheDocument();
-    expect(container).toBeEmptyDOMElement();
+    await waitFor(() => expect(container).toBeEmptyDOMElement());
+  });
+
+  it('при сбое загрузки говорит об ошибке и предлагает повтор, а не «сделок нет»', async () => {
+    // Пустая воронка означает «сделок нет». Пока сбой выглядел так же, руководитель читал
+    // недоступный API как факт отсутствия работы (аудит UI, U2).
+    vi.mocked(crmApi.getDealStages).mockRejectedValue(new Error('boom'));
+    vi.mocked(crmApi.getDeals).mockRejectedValue(new Error('boom'));
+
+    renderWithProviders(<PipelineFunnel onNavigate={vi.fn()} />);
+
+    expect(await screen.findByText('Не удалось загрузить данные')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Повторить' })).toBeInTheDocument();
   });
 });
 

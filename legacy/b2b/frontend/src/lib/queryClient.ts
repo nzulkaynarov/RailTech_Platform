@@ -1,7 +1,14 @@
-import { QueryClient, MutationCache } from '@tanstack/react-query';
+import { QueryClient, MutationCache, QueryCache } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { translateApiError } from './apiError';
+
+/**
+ * Одно место для всех одновременных отказов чтения. Sonner заменяет тост с тем же `id`
+ * вместо того, чтобы копить стопку, поэтому страница с десятком запросов при обрыве сети
+ * скажет об этом ОДИН раз, а не десять.
+ */
+const QUERY_ERROR_TOAST_ID = 'query-load-error';
 
 /**
  * The single app-wide React Query client.
@@ -21,6 +28,23 @@ export const queryClient = new QueryClient({
     onError: (error, _vars, _ctx, mutation) => {
       if (mutation.meta?.skipErrorToast) return;
       toast.error(translateApiError(error));
+    },
+  }),
+  // Симметрично мутациям — единый источник правды об ошибках ЧТЕНИЯ. Аудит UI 2026-07-30
+  // нашёл ~35 мест, где упавший запрос выглядел как «данных нет»: выпадающие списки валют,
+  // единиц, категорий и базисов поставки становились пустыми молча, и пользователь не мог
+  // заполнить форму, не понимая почему. Поверхность, которая ВЛАДЕЕТ решением (дашборд,
+  // список), обязана показать ошибку у себя — тост её не заменяет; но там, где показывать
+  // ошибку негде (справочник внутри селекта, фоновой опрос), молчание было единственным
+  // исходом. Запрос отказывается от тоста через meta: { skipErrorToast: true }.
+  queryCache: new QueryCache({
+    onError: (error, query) => {
+      if (query.meta?.skipErrorToast) return;
+      // 401 — это истёкшая сессия: её отрабатывает интерцептор axios (refresh либо выход).
+      // Тост здесь только пугал бы пользователя в момент штатного продления токена.
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      if (status === 401) return;
+      toast.error(translateApiError(error), { id: QUERY_ERROR_TOAST_ID });
     },
   }),
   defaultOptions: {

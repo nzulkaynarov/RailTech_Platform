@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/sheet';
 import { useLeads, useConvertLead } from '@/hooks/useCRM';
 import { AdminDataTable, useAdminTableQueryState } from '@/components/Admin/AdminDataTable';
-import { PageShell } from './shared/PageShell';
+import { ErrorState, PageShell } from './shared/PageShell';
 import { translateApiError } from '@/lib/apiError';
 import type { Lead } from '@/api/crmApi';
 
@@ -25,7 +25,9 @@ function formatDate(iso?: string): string {
 
 export default function AdminLeadsPage() {
   const { t } = useTranslation();
-  const { data: leads = [], isLoading } = useLeads();
+  // Сбой загрузки раньше выглядел как «Лидов нет» — оператор читал недоступный API как
+  // отсутствие работы (аудит UI, U2). Так же, как на остальных операторских списках.
+  const { data: leads = [], isLoading, isError, refetch } = useLeads();
   const convertLead = useConvertLead();
   const { tab } = useAdminTableQueryState(STORAGE_KEY);
   const [selected, setSelected] = useState<Lead | null>(null);
@@ -57,6 +59,9 @@ export default function AdminLeadsPage() {
       title={t('admin.leads.title')}
       description={t('admin.leads.subtitle')}
     >
+      {isError ? (
+        <ErrorState onRetry={() => refetch()} />
+      ) : (
       <AdminDataTable<Lead>
         storageKey={STORAGE_KEY}
         rows={filtered}
@@ -119,6 +124,7 @@ export default function AdminLeadsPage() {
           },
         ]}
       />
+      )}
 
       <Sheet open={selected !== null} onOpenChange={(open) => !open && setSelected(null)}>
         <SheetContent className="w-full sm:max-w-md">

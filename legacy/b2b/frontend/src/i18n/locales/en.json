@@ -286,7 +286,8 @@
     "req1": "Format: .xlsx only",
     "req2": "Required column: Name. For an offer add Price (and Currency/Stock).",
     "req3": "For a shared product card provide Brand + Manufacturer part number (or GOST).",
-    "req4": "Check the file first, then Import. Every import is logged."
+    "req4": "Check the file first, then Import. Every import is logged.",
+    "statusLost": "Lost contact with the import status. The task may still be running — refresh the status."
   },
   "mySubscription": {
     "title": "My subscription",
@@ -2204,7 +2205,8 @@
     "currencySelector": "Currency selector",
     "emailTemplates": "Email templates",
     "operatorRoles": "Operator roles",
-    "accessLog": "Access log"
+    "accessLog": "Access log",
+    "fxRateFallback": "Exchange rate unavailable — USD amounts are approximate"
   },
   "productDetail": {
     "specifications": "Specifications",

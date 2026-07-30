@@ -201,12 +201,21 @@ export function DealsPage() {
         }}
       />
 
+      {/* Табличный вид проверял загрузку и ошибку, а канбан — нет: при недоступном API он
+          рисовал пустые колонки без объяснения и без «Повторить» (аудит UI, U2). Оба вида
+          отвечают на одно и то же состояние. */}
       {view === 'kanban' ? (
-        <DealsKanban
-          deals={deals ?? []}
-          stages={stages}
-          onOpen={openDeal}
-        />
+        isLoading ? (
+          <LoadingRows rows={5} />
+        ) : isError ? (
+          <ErrorState onRetry={refetch} />
+        ) : (
+          <DealsKanban
+            deals={deals ?? []}
+            stages={stages}
+            onOpen={openDeal}
+          />
+        )
       ) : (
       <Card>
         <CardContent className="p-0">

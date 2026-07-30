@@ -2,12 +2,14 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ClipboardCheck, PenLine, FileWarning, FileClock, FileCheck2, FilePlus2, Wallet, ScrollText,
-  Truck, PackageCheck, type LucideIcon,
+  Truck, PackageCheck, AlertTriangle, type LucideIcon,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { PRE_KP_STAGES, formatWaiting, isUnclaimedRfq } from '@/lib/waiting';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useDeals, useQuotes, useMyApprovalQueue, useDealStages } from '@/hooks/useCRM';
 import { useContracts, useInvoices, useActs, useFulfillments } from '@/hooks/useBilling';
 import { useCurrencyStore } from '@/store/currencyStore';
@@ -71,7 +73,58 @@ function AttentionStat({ item, onNavigate }: { item: AttentionItem; onNavigate: 
   );
 }
 
-function AttentionGrid({ items, onNavigate }: { items: AttentionItem[]; onNavigate: (p: string) => void }) {
+/**
+ * Состояние запросов, на которых стоит полоса внимания.
+ *
+ * Аудит UI 2026-07-30: во всём файле не было НИ ОДНОГО обращения к `isError`/`isLoading` при
+ * одиннадцати запросах. При недоступном API плитки «КП на утверждении», «Заявки без КП»,
+ * «Счета к оплате», «Просрочено» показывали 0 — руководитель читал это как «работы нет».
+ * Ноль обязан означать ноль; про сбой и про загрузку интерфейс говорит отдельно.
+ */
+interface GridState {
+  isLoading: boolean;
+  isError: boolean;
+  onRetry: () => void;
+}
+
+/** Сводит несколько запросов одной полосы в одно состояние. */
+function gridState(queries: { isLoading: boolean; isError: boolean; refetch: () => unknown }[]): GridState {
+  return {
+    isLoading: queries.some((query) => query.isLoading),
+    isError: queries.some((query) => query.isError),
+    onRetry: () => queries.forEach((query) => query.refetch()),
+  };
+}
+
+function AttentionGridSkeleton() {
+  return (
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {Array.from({ length: 4 }).map((_, index) => (
+        <Skeleton key={index} className="h-[74px] w-full rounded-lg" />
+      ))}
+    </div>
+  );
+}
+
+/** Отдельно от пустоты: упавшая загрузка не должна читаться как «здесь ничего нет». */
+function WidgetError({ onRetry }: { onRetry: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+      <AlertTriangle className="h-5 w-5 shrink-0 text-destructive" aria-hidden="true" />
+      <span className="min-w-0 flex-1 text-sm text-foreground">{t('common.loadError')}</span>
+      <Button variant="outline" size="sm" onClick={onRetry}>{t('common.retry')}</Button>
+    </div>
+  );
+}
+
+function AttentionGrid({ items, onNavigate, state }: {
+  items: AttentionItem[];
+  onNavigate: (p: string) => void;
+  state: GridState;
+}) {
+  if (state.isError) return <WidgetError onRetry={state.onRetry} />;
+  if (state.isLoading) return <AttentionGridSkeleton />;
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {items.map((item, i) => (
@@ -84,10 +137,15 @@ function AttentionGrid({ items, onNavigate }: { items: AttentionItem[]; onNaviga
 /** SELLER — "what blocks me now": approvals, contracts to sign, RFQs without a КП, expired КП. */
 export function SellerAttentionStrip({ onNavigate }: { onNavigate: (p: string) => void }) {
   const { t } = useTranslation();
-  const { data: approvals } = useMyApprovalQueue();
-  const { data: pendingContracts } = useContracts({ status: 'PENDING_MANAGER' });
-  const { data: deals } = useDeals();
-  const { data: quotes } = useQuotes();
+  const approvalsQuery = useMyApprovalQueue();
+  const contractsQuery = useContracts({ status: 'PENDING_MANAGER' });
+  const dealsQuery = useDeals();
+  const quotesQuery = useQuotes();
+  const { data: approvals } = approvalsQuery;
+  const { data: pendingContracts } = contractsQuery;
+  const { data: deals } = dealsQuery;
+  const { data: quotes } = quotesQuery;
+  const state = gridState([approvalsQuery, contractsQuery, dealsQuery, quotesQuery]);
 
   // «Заявки без КП» — ЧЕСТНЫЙ счёт (ресерч 2026-07-28): pre-КП стадия И КП ещё НЕТ.
   // Раньше считали только по стадии — плитка кричала «6 без КП», когда у всех шести уже
@@ -111,7 +169,7 @@ export function SellerAttentionStrip({ onNavigate }: { onNavigate: (p: string) =
     { icon: FileWarning, label: t('dashboardPage.attn.rfqNoKp'), count: rfqsNeedingKp, tone: 'destructive', page: 'crm-deals', hint: oldestWaiting ? t('dashboardPage.attn.oldestWaiting', { waiting: oldestWaiting }) : null },
     { icon: FileClock, label: t('dashboardPage.attn.expiredKp'), count: expiredQuotes, tone: 'destructive', page: 'crm-quotes' },
   ];
-  return <AttentionGrid items={items} onNavigate={onNavigate} />;
+  return <AttentionGrid items={items} onNavigate={onNavigate} state={state} />;
 }
 
 /**
@@ -136,9 +194,13 @@ function isOverdue(dueDate: string | null): boolean {
 
 export function PostContractStrip({ side, onNavigate }: { side: 'seller' | 'buyer'; onNavigate: (p: string) => void }) {
   const { t } = useTranslation();
-  const { data: invoices } = useInvoices(undefined);
-  const { data: acts } = useActs({ status: 'ISSUED' });
-  const { data: fulfillments } = useFulfillments(undefined);
+  const invoicesQuery = useInvoices(undefined);
+  const actsQuery = useActs({ status: 'ISSUED' });
+  const fulfillmentsQuery = useFulfillments(undefined);
+  const { data: invoices } = invoicesQuery;
+  const { data: acts } = actsQuery;
+  const { data: fulfillments } = fulfillmentsQuery;
+  const state = gridState([invoicesQuery, actsQuery, fulfillmentsQuery]);
 
   const list = invoices ?? [];
   const drafts = list.filter((invoice) => invoice.status === 'DRAFT');
@@ -181,12 +243,14 @@ export function PostContractStrip({ side, onNavigate }: { side: 'seller' | 'buye
       { icon: PackageCheck, label: t('dashboardPage.attn.toAccept'), count: delivered.length, tone: 'destructive', page: 'fulfillments' },
     ];
 
-  if (!items.some((item) => item.count > 0)) return null;
+  // Блок скрывается, когда деньги ещё не пошли, — но только если данные ДЕЙСТВИТЕЛЬНО
+  // приехали. Сбой загрузки выглядел ровно как «нулей нет, блок не нужен».
+  if (!state.isError && !state.isLoading && !items.some((item) => item.count > 0)) return null;
 
   return (
     <div className="flex flex-col gap-2">
       <h3 className="text-sm font-medium text-muted-foreground">{t('dashboardPage.attn.postContractTitle')}</h3>
-      <AttentionGrid items={items} onNavigate={onNavigate} />
+      <AttentionGrid items={items} onNavigate={onNavigate} state={state} />
     </div>
   );
 }
@@ -194,8 +258,11 @@ export function PostContractStrip({ side, onNavigate }: { side: 'seller' | 'buye
 /** BUYER — "what needs my decision": КП to review, contracts to sign. */
 export function BuyerAttentionStrip({ onNavigate }: { onNavigate: (p: string) => void }) {
   const { t } = useTranslation();
-  const { data: quotes } = useQuotes();
-  const { data: pendingContracts } = useContracts({ status: 'PENDING_CLIENT' });
+  const quotesQuery = useQuotes();
+  const contractsQuery = useContracts({ status: 'PENDING_CLIENT' });
+  const { data: quotes } = quotesQuery;
+  const { data: pendingContracts } = contractsQuery;
+  const state = gridState([quotesQuery, contractsQuery]);
 
   const kpToReview = (quotes ?? []).filter((q) => q.status_code === 'SENT').length;
 
@@ -203,7 +270,7 @@ export function BuyerAttentionStrip({ onNavigate }: { onNavigate: (p: string) =>
     { icon: FileCheck2, label: t('dashboardPage.attn.reviewKp'), count: kpToReview, tone: 'warning', page: 'my-requests' },
     { icon: PenLine, label: t('dashboardPage.attn.signContract'), count: (pendingContracts ?? []).length, tone: 'warning', page: 'contracts' },
   ];
-  return <AttentionGrid items={items} onNavigate={onNavigate} />;
+  return <AttentionGrid items={items} onNavigate={onNavigate} state={state} />;
 }
 
 // Chart-token classes as literals so Tailwind's JIT keeps them. Cycled per stage.
@@ -223,8 +290,11 @@ export function PipelineFunnel({ onNavigate }: { onNavigate: (p: string) => void
   // куда гейт не пускает. Маршрут теперь по стороне зрителя (U1).
   const activeStatus = useUserStore((state) => state.activeStatus);
   const viewer = { isSeller: activeStatus === 'SELLER' };
-  const { data: deals } = useDeals();
-  const { data: stages } = useDealStages();
+  const dealsQuery = useDeals();
+  const stagesQuery = useDealStages();
+  const { data: deals } = dealsQuery;
+  const { data: stages } = stagesQuery;
+  const state = gridState([dealsQuery, stagesQuery]);
 
   const segments = useMemo(() => {
     const counts = new Map<string, number>();
@@ -246,6 +316,27 @@ export function PipelineFunnel({ onNavigate }: { onNavigate: (p: string) => void
   }, [deals, stages, t]);
 
   const total = segments.reduce((sum, s) => sum + s.count, 0);
+  // Пустая воронка = сделок нет. Пока сбой выглядел так же, «нет сделок» читалось как факт.
+  if (state.isError) {
+    return (
+      <Card>
+        <CardContent className="p-5">
+          <h3 className="mb-4 text-sm font-semibold">{t('dashboardPage.funnel.title')}</h3>
+          <WidgetError onRetry={state.onRetry} />
+        </CardContent>
+      </Card>
+    );
+  }
+  if (state.isLoading) {
+    return (
+      <Card>
+        <CardContent className="p-5">
+          <h3 className="mb-4 text-sm font-semibold">{t('dashboardPage.funnel.title')}</h3>
+          <Skeleton className="h-2.5 w-full rounded-full" />
+        </CardContent>
+      </Card>
+    );
+  }
   if (total === 0) return null;
 
   return (

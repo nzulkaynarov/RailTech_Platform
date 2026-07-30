@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Package, Upload, FileSpreadsheet, Download, CheckCircle2, Loader2, AlertCircle, SearchCheck } from 'lucide-react';
+import { Package, Upload, FileSpreadsheet, Download, CheckCircle2, Loader2, AlertCircle, AlertTriangle, SearchCheck } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -44,6 +44,14 @@ export function CatalogImportPage() {
   const [taskResult, setTaskResult] = useState<CatalogImportResult | null>(null);
   const [taskMeta, setTaskMeta] = useState<{ current?: number; total?: number } | null>(null);
   const [busy, setBusy] = useState<'check' | 'import' | null>(null);
+  /**
+   * Опрос статуса перестал получать ответы. Раньше сбой статус-эндпоинта означал, что прогресс
+   * замирал НАВСЕГДА: задача в Celery могла давно завершиться, а пользователь смотрел на
+   * застывшую полосу и не знал, ждать ему или начинать заново (аудит UI, U2).
+   */
+  const [pollLost, setPollLost] = useState(false);
+  /** Счётчик ручных попыток — его смена перезапускает эффект опроса. */
+  const [pollAttempt, setPollAttempt] = useState(0);
   const [checkedOk, setCheckedOk] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -54,10 +62,16 @@ export function CatalogImportPage() {
     if (isTerminal(taskStatus)) return;
 
     let cancelled = false;
+    // Одиночный сбой — обычное дело (перезапуск бэкенда, потеря сети); сдаёмся только после
+    // серии подряд, чтобы не пугать пользователя миганием.
+    const MAX_CONSECUTIVE_FAILURES = 5;
+    let consecutiveFailures = 0;
     const tick = async () => {
       try {
         const data = await sourcingApi.getImportStatus(taskId);
         if (cancelled) return;
+        consecutiveFailures = 0;
+        setPollLost(false);
         setTaskStatus(data.status);
         setTaskMeta(data.meta ?? null);
         if (data.status === 'SUCCESS') {
@@ -66,7 +80,9 @@ export function CatalogImportPage() {
           if (result?.dry_run && result?.status === 'success') setCheckedOk(true);
         }
       } catch {
-        /* transient, keep trying */
+        if (cancelled) return;
+        consecutiveFailures += 1;
+        if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) setPollLost(true);
       }
     };
     const interval = setInterval(tick, 2000);
@@ -75,7 +91,7 @@ export function CatalogImportPage() {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [taskId, taskStatus]);
+  }, [taskId, taskStatus, pollAttempt]);
 
   function pickFile(next: File | null) {
     setFile(next);
@@ -232,6 +248,16 @@ export function CatalogImportPage() {
                 <p className="text-xs tabular-nums text-muted-foreground">
                   {taskMeta.current} / {taskMeta.total}
                 </p>
+              ) : null}
+
+              {pollLost && !isTerminal ? (
+                <div className="flex items-center gap-3 rounded-md border border-warning/30 bg-warning/5 p-3">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
+                  <span className="min-w-0 flex-1 text-xs text-foreground">{t('catalogImport.statusLost')}</span>
+                  <Button variant="outline" size="sm" onClick={() => { setPollLost(false); setPollAttempt((n) => n + 1); }}>
+                    {t('common.retry')}
+                  </Button>
+                </div>
               ) : null}
 
               {isTerminal && taskStatus === 'SUCCESS' && !isError ? (

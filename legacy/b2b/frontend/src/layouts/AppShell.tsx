@@ -224,7 +224,7 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour, fullBlee
   const { t } = useTranslation();
   const { role, profile, company, capabilities } = useUserStore();
   const cartCount = useCartCount();
-  const { currency, setCurrency } = useCurrencyStore();
+  const { currency, setCurrency, rateIsFallback } = useCurrencyStore();
   const { state } = useSidebar();
   const sidebarCollapsed = state === 'collapsed';
   // E2: Header flex shrinking — left container (min-w-0) allows company name truncation,
@@ -388,8 +388,12 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour, fullBlee
                   onClick={() => setCurrency('USD')}
                   role="radio"
                   aria-checked={currency === 'USD'}
+                  // Курс с сервера не приехал: пересчёт идёт по резервному, и суммы в USD
+                  // приблизительны. Молча выдавать их за настоящие нельзя (аудит UI, U2).
+                  title={rateIsFallback ? t('shell.fxRateFallback') : undefined}
                 >
                   USD
+                  {rateIsFallback ? <span aria-hidden="true">*</span> : null}
                 </Button>
                 <Button
                   variant={currency === 'UZS' ? 'default' : 'ghost'}

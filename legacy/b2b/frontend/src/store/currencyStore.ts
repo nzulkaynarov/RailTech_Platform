@@ -8,6 +8,8 @@ interface CurrencyState {
   currency: Currency;
   rate: number;
   rateLoaded: boolean;
+  /** Курс не приехал с сервера и остаётся резервным — суммы в USD приблизительны. */
+  rateIsFallback: boolean;
   setCurrency: (currency: Currency) => void;
   loadRate: () => Promise<void>;
   convert: (amountUZS: number) => number;
@@ -42,6 +44,7 @@ export const useCurrencyStore = create<CurrencyState>((set, get) => ({
   currency: 'UZS',
   rate: DEFAULT_RATE,
   rateLoaded: false,
+  rateIsFallback: false,
 
   convert: buildConvert('UZS', DEFAULT_RATE),
   format: buildFormat('UZS', DEFAULT_RATE),
@@ -56,10 +59,19 @@ export const useCurrencyStore = create<CurrencyState>((set, get) => ({
       const rate = toDecimal(settings.exchange_rate_usd_uzs).toNumber();
       if (rate > 0) {
         const currency = get().currency;
-        set({ rate, rateLoaded: true, convert: buildConvert(currency, rate), format: buildFormat(currency, rate) });
+        set({
+          rate,
+          rateLoaded: true,
+          rateIsFallback: false,
+          convert: buildConvert(currency, rate),
+          format: buildFormat(currency, rate),
+        });
       }
     } catch {
-      // Keep fallback rate on error — will retry on next call
+      // Курс остаётся резервным, и попытка повторится — но молчать об этом нельзя: по нему
+      // пересчитываются ПОКАЗЫВАЕМЫЕ суммы, и пользователь читал бы их как настоящие
+      // (аудит UI, U2). Переключатель валюты помечает такой курс приблизительным.
+      set({ rateIsFallback: true });
     }
   },
 }));

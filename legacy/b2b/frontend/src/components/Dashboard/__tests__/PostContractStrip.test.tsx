@@ -132,8 +132,21 @@ describe('PostContractStrip', () => {
 
     const { container } = renderWithProviders(<PostContractStrip side="seller" onNavigate={vi.fn()} />);
 
-    await waitFor(() => expect(listInvoices).toHaveBeenCalled());
-    expect(container).toBeEmptyDOMElement();
+    // Блок исчезает только когда данные ПРИЕХАЛИ и все нули; до этого висит скелет.
+    await waitFor(() => expect(container).toBeEmptyDOMElement());
+  });
+
+  it('при сбое загрузки показывает ошибку с повтором, а не пустоту', async () => {
+    // Ноль обязан означать ноль: «Счета к оплате: 0» при недоступном API — ложь, по которой
+    // принимают решения (аудит UI, U2).
+    listInvoices.mockRejectedValue(new Error('boom'));
+    listActs.mockRejectedValue(new Error('boom'));
+    listFulfillments.mockRejectedValue(new Error('boom'));
+
+    renderWithProviders(<PostContractStrip side="seller" onNavigate={vi.fn()} />);
+
+    expect(await screen.findByText('Не удалось загрузить данные')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Повторить' })).toBeInTheDocument();
   });
 
   it('продавцу показывает счета к выставлению, ожидание оплаты, акты и поставки', async () => {

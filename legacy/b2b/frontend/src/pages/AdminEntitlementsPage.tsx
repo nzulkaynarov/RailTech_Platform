@@ -22,6 +22,7 @@ import {
 } from '@/hooks/useAdmin';
 import { translateApiError } from '@/lib/apiError';
 import { PageShell, ErrorState } from './shared/PageShell';
+import { Skeleton } from '@/components/ui/skeleton';
 import { entitlementAccessLabelKey } from '@/lib/codes';
 import type { CompanyEntitlement, CompanyEntitlementDraft } from '@/api/adminApi';
 
@@ -191,7 +192,9 @@ export function AdminEntitlementsPage() {
   const accessLabel = useAccessLabel();
   const [companyFilter, setCompanyFilter] = useState<string>(ALL);
   const params = companyFilter !== ALL ? { company: Number(companyFilter) } : undefined;
-  const { data: rows = [], isError, refetch } = useEntitlements(params);
+  // Пока состояние загрузки не читалось, во время запроса страница утверждала «прав нет»
+  // — оператор видел готовый ответ там, где ответа ещё не было (аудит UI, U2).
+  const { data: rows = [], isLoading, isError, refetch } = useEntitlements(params);
   const { data: companiesRaw } = useCompanies();
   const del = useDeleteEntitlement();
 
@@ -240,7 +243,13 @@ export function AdminEntitlementsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.length === 0 ? (
+            {isLoading ? (
+              Array.from({ length: 3 }).map((_, index) => (
+                <TableRow key={`skeleton-${index}`}>
+                  <TableCell colSpan={7} className="py-3"><Skeleton className="h-4 w-full" /></TableCell>
+                </TableRow>
+              ))
+            ) : rows.length === 0 ? (
               <TableRow><TableCell colSpan={7} className="py-8 text-center text-sm text-muted-foreground">{t('adminEntitlements.empty')}</TableCell></TableRow>
             ) : rows.map((e) => (
               <TableRow key={e.id}>
