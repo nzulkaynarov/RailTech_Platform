@@ -12,7 +12,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, screen, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 
 import { ActsPage } from '../ActsPage';
 import { actsApi, type Act } from '@/api/billingApi';
@@ -22,7 +22,7 @@ vi.mock('@/api/billingApi', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/billingApi')>();
   return {
     ...actual,
-    actsApi: { ...actual.actsApi, list: vi.fn(), sign: vi.fn(), reject: vi.fn() },
+    actsApi: { ...actual.actsApi, list: vi.fn(), sign: vi.fn(), reject: vi.fn(), remind: vi.fn(), cancel: vi.fn() },
   };
 });
 
@@ -45,6 +45,10 @@ function makeAct(overrides: Partial<Act>): Act {
     signed_file_url: null,
     viewer_can_sign: false,
     viewer_can_reject: false,
+    viewer_can_remind: false,
+    viewer_can_cancel: false,
+    cancellation_reason: '',
+    reminder_sent_at: null,
     issuer_signer: 5,
     issuer_signer_name: 'Пётр Продавец',
     issuer_signed_at: '2026-07-01T10:00:00Z',
@@ -130,5 +134,75 @@ describe('карточка акта', () => {
 
     const card = await openCard();
     expect(within(card).getByText(/объём не совпадает с накладной/)).toBeInTheDocument();
+  });
+});
+
+
+describe('действия выпустившей стороны на карточке', () => {
+  beforeEach(() => {
+    vi.mocked(actsApi.list).mockReset();
+    vi.mocked(actsApi.remind).mockReset().mockResolvedValue(makeAct({}) as never);
+  });
+
+  it('исполнителю предлагает напомнить и аннулировать — по подсказкам сервера', async () => {
+    vi.mocked(actsApi.list).mockResolvedValue([makeAct({ viewer_can_remind: true, viewer_can_cancel: true })]);
+    renderWithProviders(<ActsPage />);
+
+    const card = await openCard();
+    expect(within(card).getByRole('button', { name: 'Напомнить заказчику' })).toBeInTheDocument();
+    expect(within(card).getByRole('button', { name: 'Аннулировать акт' })).toBeInTheDocument();
+  });
+
+  it('заказчику этих кнопок не предлагает — напоминать и отзывать нечего', async () => {
+    vi.mocked(actsApi.list).mockResolvedValue([
+      makeAct({ viewer_can_sign: true, viewer_can_reject: true, viewer_can_remind: false, viewer_can_cancel: false }),
+    ]);
+    renderWithProviders(<ActsPage />);
+
+    const card = await openCard();
+    expect(within(card).queryByRole('button', { name: 'Напомнить заказчику' })).not.toBeInTheDocument();
+    expect(within(card).queryByRole('button', { name: 'Аннулировать акт' })).not.toBeInTheDocument();
+  });
+
+  it('в сутки после напоминания объясняет, почему кнопки нет', async () => {
+    // Кулдаун виден заранее (PandaDoc гасит кнопку так же), а не выясняется отказом.
+    vi.mocked(actsApi.list).mockResolvedValue([
+      makeAct({ viewer_can_remind: false, reminder_sent_at: '2026-07-30T09:00:00Z' }),
+    ]);
+    renderWithProviders(<ActsPage />);
+
+    const card = await openCard();
+    expect(within(card).getByText(/следующее можно через сутки/)).toBeInTheDocument();
+  });
+
+  it('клик по напоминанию шлёт запрос по этому акту', async () => {
+    vi.mocked(actsApi.list).mockResolvedValue([makeAct({ viewer_can_remind: true })]);
+    renderWithProviders(<ActsPage />);
+
+    const card = await openCard();
+    fireEvent.click(within(card).getByRole('button', { name: 'Напомнить заказчику' }));
+
+    await waitFor(() => expect(actsApi.remind).toHaveBeenCalledWith(1));
+  });
+
+  it('аннулирование сначала спрашивает причину, а не отзывает с первого клика', async () => {
+    vi.mocked(actsApi.list).mockResolvedValue([makeAct({ viewer_can_cancel: true })]);
+    renderWithProviders(<ActsPage />);
+
+    const card = await openCard();
+    fireEvent.click(within(card).getByRole('button', { name: 'Аннулировать акт' }));
+
+    expect(await screen.findByText('Аннулировать акт?')).toBeInTheDocument();
+    expect(actsApi.cancel).not.toHaveBeenCalled();
+  });
+
+  it('отозванный акт объясняет причину отзыва отдельно от возврата заказчиком', async () => {
+    vi.mocked(actsApi.list).mockResolvedValue([
+      makeAct({ status: 'CANCELLED', cancellation_reason: 'выставлен по ошибке' }),
+    ]);
+    renderWithProviders(<ActsPage />);
+
+    const card = await openCard();
+    expect(within(card).getByText(/Аннулирован исполнителем: выставлен по ошибке/)).toBeInTheDocument();
   });
 });

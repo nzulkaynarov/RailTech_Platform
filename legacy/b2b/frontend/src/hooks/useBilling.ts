@@ -268,6 +268,28 @@ export const useRejectAct = () => {
   });
 };
 
+export const useRemindAct = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => actsApi.remind(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['acts'] });
+      invalidateDealChain(qc);
+    },
+  });
+};
+
+export const useCancelAct = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: number; reason: string }) => actsApi.cancel(id, reason),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['acts'] });
+      invalidateDealChain(qc);
+    },
+  });
+};
+
 export const useSignAct = () => {
   const qc = useQueryClient();
   return useMutation({

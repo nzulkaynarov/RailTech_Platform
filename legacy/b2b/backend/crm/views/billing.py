@@ -636,6 +636,50 @@ class ActViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({"detail": err}, status=400)
         return Response(ActSerializer(act, context=self.get_serializer_context()).data)
 
+    @extend_schema(
+        summary="Remind the customer that the act awaits acceptance (issuer side)",
+        description=(
+            "Исполнитель повторно приглашает заказчика ответить по выставленному акту. Уходит "
+            "ТО ЖЕ письмо «акт ждёт подтверждения», а не новый его вид — число писем на отрезке "
+            "не растёт (аналог Resend у DocuSign). Не чаще раза в сутки на документ: ограничение "
+            "взято у PandaDoc, иначе кнопка становится инструментом спама."
+        ),
+        request=None,
+        responses={
+            200: ActSerializer,
+            400: OpenApiResponse(description="ACT_REMINDER_TOO_SOON / ACT_ISSUER_SIDE_REQUIRED"),
+        },
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["post"], url_path="remind")
+    def remind(self, request, pk=None):
+        act, err = crm_services.remind_act_acceptance(self.get_object().id, request.user)
+        if err:
+            return Response({"detail": err}, status=400)
+        return Response(ActSerializer(act, context=self.get_serializer_context()).data)
+
+    @extend_schema(
+        summary="Cancel (void) an act — issuer side only",
+        description=(
+            "Выпустившая сторона отзывает собственный акт. Причина обязательна и уходит "
+            "заказчику вместе с уведомлением (так же устроены void у DocuSign и cancel у Adobe "
+            "Acrobat Sign). Статус терминальный: согласованный обеими сторонами акт не "
+            "отзывается — его судьбу решает новый акт."
+        ),
+        request=inline_serializer("CancelAct", fields={"reason": drf_serializers.CharField()}),
+        responses={
+            200: ActSerializer,
+            400: OpenApiResponse(description="REASON_REQUIRED / ACT_CANCEL_NOT_ALLOWED / ACT_ISSUER_SIDE_REQUIRED"),
+        },
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["post"], url_path="cancel")
+    def cancel(self, request, pk=None):
+        act, err = crm_services.cancel_act(self.get_object().id, request.user, reason=request.data.get("reason", ""))
+        if err:
+            return Response({"detail": err}, status=400)
+        return Response(ActSerializer(act, context=self.get_serializer_context()).data)
+
 
 class FulfillmentViewSet(viewsets.ReadOnlyModelViewSet):
     """Отгрузки — только чтение плюс экшен `update-status` (Rule 8).

@@ -2839,6 +2839,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/acts/{id}/cancel/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel (void) an act — issuer side only
+         * @description Выпустившая сторона отзывает собственный акт. Причина обязательна и уходит заказчику вместе с уведомлением (так же устроены void у DocuSign и cancel у Adobe Acrobat Sign). Статус терминальный: согласованный обеими сторонами акт не отзывается — его судьбу решает новый акт.
+         */
+        post: operations["crm_acts_cancel_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/acts/{id}/download-pdf/": {
         parameters: {
             query?: never;
@@ -2899,6 +2919,26 @@ export interface paths {
          * @description Заказчик возвращает акт исполнителю с причиной — второй шаг двустороннего цикла (паттерн ЭСФ «подтвердить или отклонить»). Причина обязательна: без основания отказ бесполезен обеим сторонам. Акт уходит обратно в DRAFT.
          */
         post: operations["crm_acts_reject_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/acts/{id}/remind/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Remind the customer that the act awaits acceptance (issuer side)
+         * @description Исполнитель повторно приглашает заказчика ответить по выставленному акту. Уходит ТО ЖЕ письмо «акт ждёт подтверждения», а не новый его вид — число писем на отрезке не растёт (аналог Resend у DocuSign). Не чаще раза в сутки на документ: ограничение взято у PandaDoc, иначе кнопка становится инструментом спама.
+         */
+        post: operations["crm_acts_remind_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6410,8 +6450,30 @@ export interface components {
              * @description Заполняется, когда заказчик отклоняет акт: основание попадает в аудит
              */
             readonly rejection_reason: string;
+            /**
+             * Причина аннулирования
+             * @description Заполняется, когда акт аннулирует ВЫПУСТИВШАЯ сторона. Отдельно от причины отклонения: отклонение — ответ заказчика, аннулирование — отзыв исполнителя, и смешивать их в одном поле значит терять, кто именно закрыл документ.
+             */
+            readonly cancellation_reason: string;
+            /**
+             * Напоминание отправлено
+             * Format: date-time
+             */
+            readonly reminder_sent_at: string | null;
             readonly viewer_can_sign: boolean;
             readonly viewer_can_reject: boolean;
+            /**
+             * @description Напомнить может исполнитель по ВЫСТАВЛЕННОМУ акту и не чаще раза в сутки.
+             *
+             *     Кулдаун показывается заранее, а не выясняется отказом после нажатия: PandaDoc так же
+             *     гасит кнопку до истечения суток.
+             */
+            readonly viewer_can_remind: boolean;
+            /**
+             * @description Отозвать акт может ТОЛЬКО выпустившая сторона и только пока он не согласован обеими:
+             *     закрытый документ не «разподписывают» (у DocuSign и Adobe отзыв тоже терминален).
+             */
+            readonly viewer_can_cancel: boolean;
             notes?: string;
             /** Format: date-time */
             readonly created_at: string;
@@ -6628,6 +6690,9 @@ export interface components {
             items: {
                 [key: string]: unknown;
             }[];
+        };
+        CancelActRequest: {
+            reason: string;
         };
         CatalogCurrency: {
             readonly id: number;
@@ -17541,6 +17606,41 @@ export interface operations {
             };
         };
     };
+    crm_acts_cancel_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Акт. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelActRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CancelActRequest"];
+                "multipart/form-data": components["schemas"]["CancelActRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Act"];
+                };
+            };
+            /** @description REASON_REQUIRED / ACT_CANCEL_NOT_ALLOWED / ACT_ISSUER_SIDE_REQUIRED */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     crm_acts_download_pdf_retrieve: {
         parameters: {
             query?: never;
@@ -17612,6 +17712,35 @@ export interface operations {
                 };
             };
             /** @description REASON_REQUIRED / ACT_SIGN_NOT_ALLOWED */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    crm_acts_remind_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Акт. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Act"];
+                };
+            };
+            /** @description ACT_REMINDER_TOO_SOON / ACT_ISSUER_SIDE_REQUIRED */
             400: {
                 headers: {
                     [name: string]: unknown;

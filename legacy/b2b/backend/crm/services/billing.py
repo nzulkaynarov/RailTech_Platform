@@ -611,3 +611,99 @@ def reject_act(act_id: int, actor: CustomUser, reason: str = "") -> Tuple[Option
 
     transaction.on_commit(lambda: notify_act_rejected(act, actor, clean_reason))
     return act, None
+
+
+# ── Действия ВЫПУСТИВШЕЙ стороны по акту (A4 спеки карточки акта) ─────────────
+#
+# Двусторонний цикл (G2) дал заказчику два ответа — принять или вернуть с причиной, — но у
+# исполнителя после выпуска не осталось ничего: акт висел, и сделать с ним было нечего.
+# Эталоны закрывающих документов дают выпустившей стороне ровно два действия, и оба здесь.
+
+#: Ручное напоминание — не чаще раза в сутки на документ. Ограничение взято у PandaDoc
+#: (manual reminder «once every 24 hours»): без него кнопка превращается в инструмент спама,
+#: а доставляемость считается по домену целиком — мусорные письма бьют по критичным.
+ACT_REMINDER_COOLDOWN_HOURS = 24
+
+
+def remind_act_acceptance(act_id: int, actor: CustomUser) -> Tuple[Optional[object], Optional[str]]:
+    """Исполнитель напоминает заказчику, что акт ждёт ответа.
+
+    ВАЖНО: это ПОВТОР уже существующего письма «акт ждёт подтверждения», а не новый его вид —
+    число писем на отрезке остаётся прежним (канон: их ровно четыре). Так же устроен «Resend»
+    у DocuSign и manual reminder у PandaDoc: адресату уходит то же приглашение, а не другое
+    сообщение.
+    """
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from accounts.services import is_platform_admin_viewer
+
+    if is_platform_admin_viewer(actor):
+        return None, "ADMIN_VIEWER_CANNOT_ACT"
+    act = _locked_act(act_id)
+    if act.status_code != ActStatusCode.ISSUED:
+        return None, "ACT_REMINDER_NOT_ALLOWED"
+    if act_viewer_side(actor, act) != "issuer":
+        return None, "ACT_ISSUER_SIDE_REQUIRED"
+    if act.reminder_sent_at and timezone.now() - act.reminder_sent_at < timedelta(hours=ACT_REMINDER_COOLDOWN_HOURS):
+        return None, "ACT_REMINDER_TOO_SOON"
+
+    act.reminder_sent_at = timezone.now()
+    act.save(update_fields=["reminder_sent_at", "updated_at"])
+    ActivityLog.objects.create(
+        action="Напоминание по акту",
+        detail=f"Акт {act.number} по сделке #{act.deal_id}: заказчику отправлено напоминание",
+        event_code="act.reminded",
+        event_params={"number": act.number, "deal_id": act.deal_id},
+        user=actor,
+        level="INFO",
+        deal=act.deal,
+        company_id=act.deal.company_id,
+    )
+    from .deal_emails import email_act_awaiting_acceptance
+    from .deal_notifications import notify_act_issued
+
+    transaction.on_commit(lambda: notify_act_issued(act))
+    email_act_awaiting_acceptance(act)
+    return act, None
+
+
+def cancel_act(act_id: int, actor: CustomUser, reason: str = "") -> Tuple[Optional[object], Optional[str]]:
+    """Исполнитель отзывает собственный акт с обязательной причиной.
+
+    Эталон — void у DocuSign и cancel у Adobe Acrobat Sign: отозвать документ может ТОЛЬКО
+    выпустившая сторона, причина уходит адресату вместе с уведомлением, а статус терминальный
+    («unvoid» не существует ни там, ни там). Согласованный обеими сторонами акт не отзывается:
+    это уже закрытый документ, и его судьба решается новым актом, а не правкой старого.
+    """
+    from accounts.services import is_platform_admin_viewer
+
+    if is_platform_admin_viewer(actor):
+        return None, "ADMIN_VIEWER_CANNOT_ACT"
+    clean_reason = (reason or "").strip()
+    if not clean_reason:
+        return None, "REASON_REQUIRED"
+    act = _locked_act(act_id)
+    if act.status_code not in {ActStatusCode.DRAFT, ActStatusCode.ISSUED}:
+        return None, "ACT_CANCEL_NOT_ALLOWED"
+    if act_viewer_side(actor, act) != "issuer":
+        return None, "ACT_ISSUER_SIDE_REQUIRED"
+
+    act.status = _astatus(ActStatusCode.CANCELLED)
+    act.cancellation_reason = clean_reason
+    act.save(update_fields=["status", "cancellation_reason", "updated_at"])
+    ActivityLog.objects.create(
+        action="Акт аннулирован",
+        detail=f"Акт {act.number} по сделке #{act.deal_id}: {clean_reason}",
+        event_code="act.cancelled",
+        event_params={"number": act.number, "deal_id": act.deal_id, "reason": clean_reason},
+        user=actor,
+        level="WARNING",
+        deal=act.deal,
+        company_id=act.deal.company_id,
+    )
+    from .deal_notifications import notify_act_cancelled
+
+    transaction.on_commit(lambda: notify_act_cancelled(act, actor, clean_reason))
+    return act, None

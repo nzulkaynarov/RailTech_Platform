@@ -117,6 +117,26 @@ def notify_act_rejected(act, actor, reason: str) -> int:
     )
 
 
+def notify_act_cancelled(act, actor, reason: str) -> int:
+    """Заказчику — что исполнитель отозвал акт, и почему.
+
+    Причина уходит вместе с уведомлением так же, как её включают в письмо об отзыве DocuSign и
+    Adobe Acrobat Sign: документ исчезает из списка дел заказчика, и без основания это выглядит
+    как сбой, а не как решение контрагента.
+    """
+    deal = act.deal
+    recipients = set(buyer_team_user_ids(deal))
+    recipients.discard(getattr(actor, "id", None))
+    return notify_deal_users(
+        recipients,
+        deal=deal,
+        title="Акт аннулирован исполнителем",
+        message=f"Акт {act.number} по сделке #{deal.pk} отозван: {reason}",
+        link="",
+        type_code="WARNING",
+    )
+
+
 def notify_fulfillment_status(fulfillment, status_code: str, actor) -> int:
     """Смена статуса отгрузки — противоположной стороне.
 

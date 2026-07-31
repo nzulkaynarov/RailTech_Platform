@@ -7907,6 +7907,67 @@
                 }
             }
         },
+        "/api/v1/crm/acts/{id}/cancel/": {
+            "post": {
+                "operationId": "crm_acts_cancel_create",
+                "description": "Выпустившая сторона отзывает собственный акт. Причина обязательна и уходит заказчику вместе с уведомлением (так же устроены void у DocuSign и cancel у Adobe Acrobat Sign). Статус терминальный: согласованный обеими сторонами акт не отзывается — его судьбу решает новый акт.",
+                "summary": "Cancel (void) an act — issuer side only",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Акт.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CancelActRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CancelActRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CancelActRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Act"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "REASON_REQUIRED / ACT_CANCEL_NOT_ALLOWED / ACT_ISSUER_SIDE_REQUIRED"
+                    }
+                }
+            }
+        },
         "/api/v1/crm/acts/{id}/download-pdf/": {
             "get": {
                 "operationId": "crm_acts_download_pdf_retrieve",
@@ -8038,6 +8099,47 @@
                     },
                     "400": {
                         "description": "REASON_REQUIRED / ACT_SIGN_NOT_ALLOWED"
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/acts/{id}/remind/": {
+            "post": {
+                "operationId": "crm_acts_remind_create",
+                "description": "Исполнитель повторно приглашает заказчика ответить по выставленному акту. Уходит ТО ЖЕ письмо «акт ждёт подтверждения», а не новый его вид — число писем на отрезке не растёт (аналог Resend у DocuSign). Не чаще раза в сутки на документ: ограничение взято у PandaDoc, иначе кнопка становится инструментом спама.",
+                "summary": "Remind the customer that the act awaits acceptance (issuer side)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Акт.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Act"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "ACT_REMINDER_TOO_SOON / ACT_ISSUER_SIDE_REQUIRED"
                     }
                 }
             }
@@ -18457,12 +18559,35 @@
                         "title": "Причина отклонения",
                         "description": "Заполняется, когда заказчик отклоняет акт: основание попадает в аудит"
                     },
+                    "cancellation_reason": {
+                        "type": "string",
+                        "readOnly": true,
+                        "title": "Причина аннулирования",
+                        "description": "Заполняется, когда акт аннулирует ВЫПУСТИВШАЯ сторона. Отдельно от причины отклонения: отклонение — ответ заказчика, аннулирование — отзыв исполнителя, и смешивать их в одном поле значит терять, кто именно закрыл документ."
+                    },
+                    "reminder_sent_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Напоминание отправлено"
+                    },
                     "viewer_can_sign": {
                         "type": "boolean",
                         "readOnly": true
                     },
                     "viewer_can_reject": {
                         "type": "boolean",
+                        "readOnly": true
+                    },
+                    "viewer_can_remind": {
+                        "type": "boolean",
+                        "description": "Напомнить может исполнитель по ВЫСТАВЛЕННОМУ акту и не чаще раза в сутки.\n\nКулдаун показывается заранее, а не выясняется отказом после нажатия: PandaDoc так же\nгасит кнопку до истечения суток.",
+                        "readOnly": true
+                    },
+                    "viewer_can_cancel": {
+                        "type": "boolean",
+                        "description": "Отозвать акт может ТОЛЬКО выпустившая сторона и только пока он не согласован обеими:\nзакрытый документ не «разподписывают» (у DocuSign и Adobe отзыв тоже терминален).",
                         "readOnly": true
                     },
                     "notes": {
@@ -18483,6 +18608,7 @@
                     "acceptor_signed_at",
                     "acceptor_signer",
                     "acceptor_signer_name",
+                    "cancellation_reason",
                     "created_at",
                     "deal",
                     "id",
@@ -18493,12 +18619,15 @@
                     "pdf_file",
                     "pdf_url",
                     "rejection_reason",
+                    "reminder_sent_at",
                     "signed_at",
                     "signed_file_url",
                     "status",
                     "status_name",
                     "updated_at",
+                    "viewer_can_cancel",
                     "viewer_can_reject",
+                    "viewer_can_remind",
                     "viewer_can_sign"
                 ]
             },
@@ -18897,6 +19026,18 @@
                 "required": [
                     "items",
                     "quote"
+                ]
+            },
+            "CancelActRequest": {
+                "type": "object",
+                "properties": {
+                    "reason": {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                },
+                "required": [
+                    "reason"
                 ]
             },
             "CatalogCurrency": {

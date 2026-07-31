@@ -4190,6 +4190,17 @@
       "yours": "Waiting for your confirmation",
       "counterparty": "Waiting for the customer to confirm",
       "settled": "Confirmed by both parties"
+    },
+    "remind": "Remind the customer",
+    "reminded": "Reminder sent to the customer",
+    "remindedAt": "Reminder sent {{at}} — the next one is available in 24 hours",
+    "cancel": "Cancel act",
+    "cancelled": "Act cancelled",
+    "cancelledWithReason": "Cancelled by the issuer: {{reason}}",
+    "cancelDialog": {
+      "title": "Cancel this act?",
+      "description": "The customer will see that the act was withdrawn, and why. This cannot be undone — issue a new act if needed.",
+      "confirm": "Cancel act"
     }
   },
   "companyFilesPage": {

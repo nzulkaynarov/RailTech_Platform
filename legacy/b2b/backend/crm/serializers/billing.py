@@ -225,6 +225,10 @@ class ActSerializer(ViewerSidesMixin, serializers.ModelSerializer):
     # «любая сторона может закрыть документ» — теперь оно адресное.
     viewer_can_sign = serializers.SerializerMethodField()
     viewer_can_reject = serializers.SerializerMethodField()
+    # Действия ВЫПУСТИВШЕЙ стороны (A4): напомнить и аннулировать. Право считает сервер тем же
+    # предикатом, что и сами сервисы, — иначе кнопка появится там, где действие откажет.
+    viewer_can_remind = serializers.SerializerMethodField()
+    viewer_can_cancel = serializers.SerializerMethodField()
     issuer_signer_name = serializers.CharField(source="issuer_signer.get_full_name", read_only=True, default=None)
     acceptor_signer_name = serializers.CharField(source="acceptor_signer.get_full_name", read_only=True, default=None)
 
@@ -252,8 +256,12 @@ class ActSerializer(ViewerSidesMixin, serializers.ModelSerializer):
             "acceptor_signer_name",
             "acceptor_signed_at",
             "rejection_reason",
+            "cancellation_reason",
+            "reminder_sent_at",
             "viewer_can_sign",
             "viewer_can_reject",
+            "viewer_can_remind",
+            "viewer_can_cancel",
             "notes",
             "created_at",
             "updated_at",
@@ -267,6 +275,8 @@ class ActSerializer(ViewerSidesMixin, serializers.ModelSerializer):
             "acceptor_signer",
             "acceptor_signed_at",
             "rejection_reason",
+            "cancellation_reason",
+            "reminder_sent_at",
         ]
 
     def get_pdf_url(self, obj) -> str | None:
@@ -291,6 +301,36 @@ class ActSerializer(ViewerSidesMixin, serializers.ModelSerializer):
 
     def get_viewer_can_reject(self, obj) -> bool:
         return self._acceptor_may_answer(obj)
+
+    def _is_issuer_side(self, obj) -> bool:
+        return self._sides(obj.deal_id, obj.deal.company_id)["is_seller_side"]
+
+    def get_viewer_can_remind(self, obj) -> bool:
+        """Напомнить может исполнитель по ВЫСТАВЛЕННОМУ акту и не чаще раза в сутки.
+
+        Кулдаун показывается заранее, а не выясняется отказом после нажатия: PandaDoc так же
+        гасит кнопку до истечения суток.
+        """
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from crm.services.billing import ACT_REMINDER_COOLDOWN_HOURS
+
+        if obj.status_code != ActStatusCode.ISSUED or not self._is_issuer_side(obj):
+            return False
+        if obj.reminder_sent_at and timezone.now() - obj.reminder_sent_at < timedelta(
+            hours=ACT_REMINDER_COOLDOWN_HOURS
+        ):
+            return False
+        return True
+
+    def get_viewer_can_cancel(self, obj) -> bool:
+        """Отозвать акт может ТОЛЬКО выпустившая сторона и только пока он не согласован обеими:
+        закрытый документ не «разподписывают» (у DocuSign и Adobe отзыв тоже терминален)."""
+        if obj.status_code not in {ActStatusCode.DRAFT, ActStatusCode.ISSUED}:
+            return False
+        return self._is_issuer_side(obj)
 
 
 class FulfillmentSerializer(ViewerSidesMixin, serializers.ModelSerializer):

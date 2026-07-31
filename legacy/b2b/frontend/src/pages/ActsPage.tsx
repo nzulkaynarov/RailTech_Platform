@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { translateApiError } from '@/lib/apiError';
 import { extractBlobErrorCode, fetchDocumentBlob, saveBlob } from '@/lib/documents';
-import { ScrollText, PenLine, Download, Ban } from 'lucide-react';
+import { ScrollText, PenLine, Download, Ban, BellRing } from 'lucide-react';
 import { DocumentActions } from '@/components/Shared/DocumentActions';
 import { ManualModeBanner } from '@/components/Shared/ManualModeBanner';
 import { Card, CardContent } from '@/components/ui/card';
@@ -20,8 +20,9 @@ import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShe
 import {
   Toolbar, SortableHead, Pager, useListParams, applyListParams,
 } from '@/components/DataTable';
-import { useActs, useSignAct, useRejectAct } from '@/hooks/useBilling';
+import { useActs, useSignAct, useRejectAct, useRemindAct, useCancelAct } from '@/hooks/useBilling';
 import { RejectActDialog } from '@/components/Billing/RejectActDialog';
+import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { openableRowProps } from '@/lib/rowClick';
@@ -100,7 +101,10 @@ export function ActsPage() {
   const { data: acts, isLoading, isError, refetch } = useActs(undefined);
   const signAct = useSignAct();
   const rejectAct = useRejectAct();
+  const remindAct = useRemindAct();
+  const cancelAct = useCancelAct();
   const [rejectOpen, setRejectOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
   const isViewer = useIsViewerMode();
   const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
   const formatCurrency = useCurrencyStore((s) => s.format);
@@ -128,6 +132,20 @@ export function ActsPage() {
   const onReject = async (id: number, reason: string) => {
     await rejectAct.mutateAsync({ id, reason });
     toast.success(t('actsPage.rejected'));
+  };
+
+  const onRemind = async (id: number) => {
+    try {
+      await remindAct.mutateAsync(id);
+      toast.success(t('actsPage.reminded'));
+    } catch (e) {
+      toast.error(translateApiError(e));
+    }
+  };
+
+  const onCancel = async (id: number, reason: string) => {
+    await cancelAct.mutateAsync({ id, reason });
+    toast.success(t('actsPage.cancelled'));
   };
 
   const onDownloadSigned = async (act: Act) => {
@@ -277,6 +295,13 @@ export function ActsPage() {
                   {t('actsPage.rejectedWithReason', { reason: selected.rejection_reason })}
                 </p>
               ) : null}
+              {/* Отзыв исполнителя и возврат заказчика — разные события; поле у каждого своё,
+                  иначе по документу нельзя сказать, кто именно его закрыл. */}
+              {selected.cancellation_reason ? (
+                <p className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                  {t('actsPage.cancelledWithReason', { reason: selected.cancellation_reason })}
+                </p>
+              ) : null}
               <div className="flex flex-col gap-2">
                 {/* Кнопка не ждёт готового файла: сервер сам ставит рендер и отвечает 202 (ARCH-03),
                     а `DocumentActions` опрашивает его по Retry-After. Пока условие требовало уже
@@ -316,6 +341,37 @@ export function ActsPage() {
                     {t('actsPage.reject')}
                   </Button>
                 )}
+                {/* Действия ВЫПУСТИВШЕЙ стороны (A4): до этого после выпуска акта исполнителю
+                    было нечего делать — документ висел, и повлиять на это он не мог. */}
+                {selected.viewer_can_remind && (
+                  <Button
+                    variant="outline"
+                    onClick={() => onRemind(selected.id)}
+                    disabled={isViewer || remindAct.isPending}
+                    title={isViewer ? viewerTip : undefined}
+                  >
+                    <BellRing className="mr-2 h-4 w-4" />
+                    {t('actsPage.remind')}
+                  </Button>
+                )}
+                {/* Кнопка гаснет на сутки после напоминания — сервер сообщает это заранее
+                    подсказкой `viewer_can_remind`, а не отказом после нажатия. */}
+                {!selected.viewer_can_remind && selected.reminder_sent_at && selected.status === 'ISSUED' && (
+                  <p className="text-xs text-muted-foreground">
+                    {t('actsPage.remindedAt', { at: new Date(selected.reminder_sent_at).toLocaleString() })}
+                  </p>
+                )}
+                {selected.viewer_can_cancel && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setCancelOpen(true)}
+                    disabled={isViewer || cancelAct.isPending}
+                    title={isViewer ? viewerTip : undefined}
+                  >
+                    <Ban className="mr-2 h-4 w-4" />
+                    {t('actsPage.cancel')}
+                  </Button>
+                )}
                 {selected.viewer_can_sign && (
                   <label
                     className={`flex items-center justify-center gap-2 rounded-md border border-dashed border-border px-3 py-2 text-sm ${isViewer ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-accent'}`}
@@ -346,6 +402,19 @@ export function ActsPage() {
         open={rejectOpen}
         onOpenChange={setRejectOpen}
         onConfirm={async (reason) => { if (selected) await onReject(selected.id, reason); }}
+      />
+      {/* Отзыв акта — необратимое действие с обязательной причиной: тот же диалог, что и у
+          остальных необратимых операций (волна U4), с `requireReason`. */}
+      <ConfirmActionDialog
+        open={cancelOpen}
+        onOpenChange={setCancelOpen}
+        title={t('actsPage.cancelDialog.title')}
+        description={t('actsPage.cancelDialog.description')}
+        variant="destructive"
+        requireReason
+        confirmLabel={t('actsPage.cancelDialog.confirm')}
+        onConfirm={async ({ reason }) => { if (selected) await onCancel(selected.id, reason); }}
+        translateError={(code) => translateApiError(code)}
       />
     </PageShell>
   );

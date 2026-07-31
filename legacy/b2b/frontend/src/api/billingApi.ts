@@ -178,6 +178,12 @@ export interface Act {
    */
   viewer_can_sign: boolean;
   viewer_can_reject: boolean;
+  /**
+   * Действия ВЫПУСТИВШЕЙ стороны (A4). Считает сервер: `remind` дополнительно гаснет на сутки
+   * после напоминания, `cancel` — после того как акт согласован обеими сторонами.
+   */
+  viewer_can_remind: boolean;
+  viewer_can_cancel: boolean;
   issuer_signer: number | null;
   issuer_signer_name: string | null;
   issuer_signed_at: string | null;
@@ -185,6 +191,9 @@ export interface Act {
   acceptor_signer_name: string | null;
   acceptor_signed_at: string | null;
   rejection_reason: string;
+  /** Причина отзыва выпустившей стороной — отдельно от причины возврата заказчиком. */
+  cancellation_reason: string;
+  reminder_sent_at: string | null;
   notes: string;
   created_at: string;
   updated_at: string;
@@ -215,6 +224,17 @@ export const actsApi = {
   // Второй шаг двустороннего цикла: заказчик возвращает акт с причиной (обязательной).
   reject: async (id: number, reason: string) => {
     const response = await apiClient.post<Act>(`crm/acts/${id}/reject/`, { reason });
+    return response.data;
+  },
+  // Повтор приглашения заказчику (не новый вид письма). Сервер откажет
+  // ACT_REMINDER_TOO_SOON, если с прошлого напоминания не прошли сутки.
+  remind: async (id: number) => {
+    const response = await apiClient.post<Act>(`crm/acts/${id}/remind/`);
+    return response.data;
+  },
+  // Отзыв акта выпустившей стороной: причина обязательна и уходит заказчику.
+  cancel: async (id: number, reason: string) => {
+    const response = await apiClient.post<Act>(`crm/acts/${id}/cancel/`, { reason });
     return response.data;
   },
 };
