@@ -6,26 +6,20 @@ import { extractBlobErrorCode, fetchDocumentBlob, saveBlob } from '@/lib/documen
 import { ScrollText, PenLine, Download, Ban, BellRing } from 'lucide-react';
 import { DocumentActions } from '@/components/Shared/DocumentActions';
 import { ManualModeBanner } from '@/components/Shared/ManualModeBanner';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
-import {
   Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle,
 } from '@/components/ui/sheet';
-import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
-import {
-  Toolbar, SortableHead, Pager, useListParams, applyListParams,
-} from '@/components/DataTable';
+import { PageShell } from './shared/PageShell';
+import { DocumentRegistry, useDocumentCoreColumns } from '@/components/Documents/DocumentRegistry';
+import { Toolbar, useListParams, applyListParams } from '@/components/DataTable';
 import { useActs, useSignAct, useRejectAct, useRemindAct, useCancelAct } from '@/hooks/useBilling';
 import { RejectActDialog } from '@/components/Billing/RejectActDialog';
 import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { useCurrencyStore } from '@/store/currencyStore';
-import { openableRowProps } from '@/lib/rowClick';
 import { DealLink } from '@/components/Shared/DealLink';
 import type { Act, ActStatus } from '@/api/billingApi';
 
@@ -161,6 +155,37 @@ export function ActsPage() {
     }
   };
 
+  const { items: pageItems, total } = applyListParams(acts ?? [], listParams, {
+    searchFields: (a) => [a.number, String(a.deal)],
+    filterPredicates: { status: (a, v) => a.status === v },
+    sortAccessors: {
+      number: (a) => a.number,
+      total: (a) => Number(a.total_amount),
+      issued: (a) => a.issued_at ?? '',
+      created_at: (a) => a.created_at,
+    },
+  });
+
+  // Ядро колонок — общее для всех реестров документов и в одном порядке. Своё у акта только
+  // подпись колонки даты («Выставлен»): смысл даты у каждого документа свой.
+  const columns = useDocumentCoreColumns<Act>({
+    number: (a) => <span className="font-medium">{a.number}</span>,
+    deal: (a) => <DealLink dealId={a.deal} />,
+    status: (a) => <Badge variant={STATUS_VARIANT[a.status]}>{t(`actsPage.status.${a.status}`)}</Badge>,
+    total: (a) => <span className="tabular-nums">{formatCurrency(Number(a.total_amount))}</span>,
+    date: (a) => (a.issued_at ? new Date(a.issued_at).toLocaleDateString() : '—'),
+    actions: (a) => (
+      <DocumentActions
+        request={() => ({ path: `crm/acts/${a.id}/download-pdf/` })}
+        filenameBase={`RailTech_Act_${a.id}`}
+        variant="ghost"
+        iconOnly
+      />
+    ),
+    sortKeys: { number: 'number', total: 'total', date: 'issued' },
+    dateHeader: t('actsPage.table.issued'),
+  });
+
   return (
     <PageShell
       title={t('actsPage.title')}
@@ -183,77 +208,21 @@ export function ActsPage() {
           },
         ]}
       />
-      <Card>
-        <CardContent className="p-0">
-          {(() => {
-            const { items: pageItems, total } = applyListParams(acts ?? [], listParams, {
-              searchFields: (a) => [a.number, String(a.deal)],
-              filterPredicates: { status: (a, v) => a.status === v },
-              sortAccessors: {
-                number: (a) => a.number,
-                total: (a) => Number(a.total_amount),
-                issued: (a) => a.issued_at ?? '',
-                created_at: (a) => a.created_at,
-              },
-            });
-            if (isLoading) return <LoadingRows rows={6} />;
-            if (isError) return <ErrorState onRetry={refetch} />;
-            if (!pageItems.length) {
-              // Acts are generated from an invoice — never created directly — so the empty state
-              // explains where they come from instead of implying a missing «create» button.
-              return <EmptyState icon={<ScrollText className="h-5 w-5" />} message={t('actsPage.emptyState')} />;
-            }
-            return (
-              <>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <SortableHead sortKey="number" current={listParams.ordering} onChange={listParams.toggleOrdering}>
-                        {t('actsPage.table.number')}
-                      </SortableHead>
-                      <TableHead>{t('actsPage.table.deal')}</TableHead>
-                      <SortableHead sortKey="total" current={listParams.ordering} onChange={listParams.toggleOrdering}>
-                        {t('actsPage.table.total')}
-                      </SortableHead>
-                      <TableHead>{t('actsPage.table.status')}</TableHead>
-                      <SortableHead sortKey="issued" current={listParams.ordering} onChange={listParams.toggleOrdering}>
-                        {t('actsPage.table.issued')}
-                      </SortableHead>
-                      <TableHead className="text-right">{t('actsPage.table.actions')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {pageItems.map((a) => (
-                      <TableRow key={a.id} {...openableRowProps(() => setSelectedId(a.id), `${t('common.open')} ${a.number}`)}>
-                        <TableCell className="font-medium">{a.number}</TableCell>
-                        <TableCell><DealLink dealId={a.deal} /></TableCell>
-                        <TableCell className="tabular-nums">{formatCurrency(Number(a.total_amount))}</TableCell>
-                        <TableCell>
-                          <Badge variant={STATUS_VARIANT[a.status]}>
-                            {t(`actsPage.status.${a.status}`)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {a.issued_at ? new Date(a.issued_at).toLocaleDateString() : '—'}
-                        </TableCell>
-                        <TableCell className="text-right" data-row-action>
-                          <DocumentActions
-                            request={() => ({ path: `crm/acts/${a.id}/download-pdf/` })}
-                            filenameBase={`RailTech_Act_${a.id}`}
-                            variant="ghost"
-                            iconOnly
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                <Pager page={listParams.page} pageSize={listParams.pageSize} total={total} onPageChange={listParams.setPage} />
-              </>
-            );
-          })()}
-        </CardContent>
-      </Card>
+      {/* Акты рождаются из счёта, а не создаются напрямую — пустое состояние объясняет
+          происхождение, а не намекает на пропавшую кнопку «создать». */}
+      <DocumentRegistry
+        rows={pageItems}
+        getRowId={(a) => a.id}
+        columns={columns}
+        onRowClick={(a) => setSelectedId(a.id)}
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={refetch}
+        emptyIcon={<ScrollText className="h-5 w-5" />}
+        emptyMessage={t('actsPage.emptyState')}
+        sorting={{ ordering: listParams.ordering, onToggle: listParams.toggleOrdering }}
+        pagination={{ page: listParams.page, pageSize: listParams.pageSize, total, onPageChange: listParams.setPage }}
+      />
 
       {selected && (
         <Sheet open={!!selected} onOpenChange={(o) => !o && setSelectedId(null)}>

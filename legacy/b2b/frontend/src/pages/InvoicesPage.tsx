@@ -4,7 +4,6 @@ import { toast } from 'sonner';
 import { translateApiError } from '@/lib/apiError';
 import { Receipt, DollarSign, ScrollText, Send, Ban, Save } from 'lucide-react';
 import { DocumentActions } from '@/components/Shared/DocumentActions';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,20 +16,18 @@ import {
   Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle,
 } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
-import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
+import { PageShell } from './shared/PageShell';
+import { DocumentRegistry, useDocumentCoreColumns } from '@/components/Documents/DocumentRegistry';
 import { ManualModeBanner } from '@/components/Shared/ManualModeBanner';
 import { RecordPaymentDialog } from '@/components/Billing/RecordPaymentDialog';
 import { DealLink } from '@/components/Shared/DealLink';
-import {
-  Toolbar, SortableHead, Pager, useListParams, applyListParams,
-} from '@/components/DataTable';
+import { Toolbar, useListParams, applyListParams } from '@/components/DataTable';
 import {
   useInvoices, useGenerateAct, useIssueInvoice, useCancelInvoice, useUpdateInvoiceDraft,
 } from '@/hooks/useBilling';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { useCurrencyStore } from '@/store/currencyStore';
-import type { InvoiceStatus } from '@/api/billingApi';
-import { openableRowProps } from '@/lib/rowClick';
+import type { Invoice, InvoiceStatus } from '@/api/billingApi';
 import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';
 
 const STATUS_VARIANT: Record<InvoiceStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -165,6 +162,55 @@ export function InvoicesPage() {
     toast.success(t('invoicesPage.cancelled'));
   };
 
+  const { items: pageItems, total } = applyListParams(invoices ?? [], listParams, {
+    searchFields: (i) => [i.number, String(i.deal)],
+    filterPredicates: { status: (i, v) => i.status === v },
+    sortAccessors: {
+      number: (i) => i.number,
+      total: (i) => Number(i.total_incl_vat),
+      paid: (i) => Number(i.amount_paid),
+      issued: (i) => i.issued_at ?? '',
+      due: (i) => i.due_date ?? '',
+      created_at: (i) => i.created_at,
+    },
+  });
+
+  // Ядро колонок в общем порядке; «Оплачено» и «Срок оплаты» — специфика счёта, приставлена
+  // к понятным якорям (после суммы и после даты выставления), а не вместо ядра.
+  const columns = useDocumentCoreColumns<Invoice>({
+    number: (inv) => <span className="font-medium">{inv.number}</span>,
+    deal: (inv) => <DealLink dealId={inv.deal} />,
+    status: (inv) => <Badge variant={STATUS_VARIANT[inv.status]}>{t(`invoicesPage.status.${inv.status}`)}</Badge>,
+    total: (inv) => <span className="tabular-nums">{formatCurrency(Number(inv.total_incl_vat))}</span>,
+    date: (inv) => (inv.issued_at ? new Date(inv.issued_at).toLocaleDateString() : '—'),
+    actions: (inv) => (
+      <DocumentActions
+        request={() => ({ path: `crm/invoices/${inv.id}/download-pdf/` })}
+        filenameBase={`RailTech_Invoice_${inv.id}`}
+        variant="ghost"
+        iconOnly
+      />
+    ),
+    sortKeys: { number: 'number', total: 'total', date: 'issued' },
+    dateHeader: t('invoicesPage.table.issued'),
+    insertAfter: {
+      total: [{
+        id: 'paid',
+        header: t('invoicesPage.table.paid'),
+        sortKey: 'paid',
+        className: 'text-right',
+        cell: (inv: Invoice) => <span className="tabular-nums">{formatCurrency(Number(inv.amount_paid))}</span>,
+      }],
+      date: [{
+        id: 'due',
+        header: t('invoicesPage.table.due'),
+        sortKey: 'due',
+        className: 'text-xs text-muted-foreground',
+        cell: (inv: Invoice) => (inv.due_date ? new Date(inv.due_date).toLocaleDateString() : '—'),
+      }],
+    },
+  });
+
   return (
     <PageShell
       title={t('invoicesPage.title')}
@@ -187,86 +233,19 @@ export function InvoicesPage() {
           },
         ]}
       />
-      <Card>
-        <CardContent className="p-0">
-          {(() => {
-            const { items: pageItems, total } = applyListParams(invoices ?? [], listParams, {
-              searchFields: (i) => [i.number, String(i.deal)],
-              filterPredicates: {
-                status: (i, v) => i.status === v,
-              },
-              sortAccessors: {
-                number: (i) => i.number,
-                total: (i) => Number(i.total_incl_vat),
-                paid: (i) => Number(i.amount_paid),
-                issued: (i) => i.issued_at ?? '',
-                due: (i) => i.due_date ?? '',
-                created_at: (i) => i.created_at,
-              },
-            });
-            if (isLoading) return <LoadingRows rows={6} />;
-            if (isError) return <ErrorState onRetry={refetch} />;
-            if (!pageItems.length) {
-              return <EmptyState icon={<Receipt className="h-5 w-5" />} message={t('invoicesPage.emptyState')} />;
-            }
-            return (
-              <>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <SortableHead sortKey="number" current={listParams.ordering} onChange={listParams.toggleOrdering}>
-                        {t('invoicesPage.table.number')}
-                      </SortableHead>
-                      <TableHead>{t('invoicesPage.table.deal')}</TableHead>
-                      <SortableHead sortKey="total" current={listParams.ordering} onChange={listParams.toggleOrdering}>
-                        {t('invoicesPage.table.total')}
-                      </SortableHead>
-                      <SortableHead sortKey="paid" current={listParams.ordering} onChange={listParams.toggleOrdering}>
-                        {t('invoicesPage.table.paid')}
-                      </SortableHead>
-                      <TableHead>{t('invoicesPage.table.status')}</TableHead>
-                      <SortableHead sortKey="issued" current={listParams.ordering} onChange={listParams.toggleOrdering}>
-                        {t('invoicesPage.table.issued')}
-                      </SortableHead>
-                      <SortableHead sortKey="due" current={listParams.ordering} onChange={listParams.toggleOrdering}>
-                        {t('invoicesPage.table.due')}
-                      </SortableHead>
-                      <TableHead className="text-right">{t('invoicesPage.table.actions')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {pageItems.map((inv) => (
-                      <TableRow key={inv.id} {...openableRowProps(() => setSelectedId(inv.id), `${t('common.open')} ${inv.number}`)}>
-                        <TableCell className="font-medium">{inv.number}</TableCell>
-                        <TableCell><DealLink dealId={inv.deal} /></TableCell>
-                        <TableCell className="tabular-nums">{formatCurrency(Number(inv.total_incl_vat))}</TableCell>
-                        <TableCell className="tabular-nums">{formatCurrency(Number(inv.amount_paid))}</TableCell>
-                        <TableCell>
-                          <Badge variant={STATUS_VARIANT[inv.status]}>
-                            {t(`invoicesPage.status.${inv.status}`)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {inv.issued_at ? new Date(inv.issued_at).toLocaleDateString() : '—'}
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {inv.due_date ? new Date(inv.due_date).toLocaleDateString() : '—'}
-                        </TableCell>
-                        <TableCell className="text-right" data-row-action>
-                          <Button variant="ghost" size="sm" onClick={() => setSelectedId(inv.id)} aria-label={t('common.open')}>
-                            <Receipt className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                <Pager page={listParams.page} pageSize={listParams.pageSize} total={total} onPageChange={listParams.setPage} />
-              </>
-            );
-          })()}
-        </CardContent>
-      </Card>
+      <DocumentRegistry
+        rows={pageItems}
+        getRowId={(inv) => inv.id}
+        columns={columns}
+        onRowClick={(inv) => setSelectedId(inv.id)}
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={refetch}
+        emptyIcon={<Receipt className="h-5 w-5" />}
+        emptyMessage={t('invoicesPage.emptyState')}
+        sorting={{ ordering: listParams.ordering, onToggle: listParams.toggleOrdering }}
+        pagination={{ page: listParams.page, pageSize: listParams.pageSize, total, onPageChange: listParams.setPage }}
+      />
 
       {selected && (
         <Sheet open={!!selected} onOpenChange={(o) => !o && setSelectedId(null)}>

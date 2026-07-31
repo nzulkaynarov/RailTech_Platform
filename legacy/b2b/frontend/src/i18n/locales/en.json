@@ -5596,5 +5596,15 @@
     "title": "Record history",
     "empty": "No actions on this record yet",
     "reason": "Reason: {{reason}}"
+  },
+  "documentRegistry": {
+    "columns": {
+      "number": "Number",
+      "deal": "Deal",
+      "status": "Status",
+      "total": "Amount",
+      "date": "Date",
+      "actions": "Actions"
+    }
   }
 }

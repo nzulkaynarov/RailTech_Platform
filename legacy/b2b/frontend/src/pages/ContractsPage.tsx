@@ -3,16 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { translateApiError } from '@/lib/apiError';
 import { extractBlobErrorCode, fetchDocumentBlob, saveBlob } from '@/lib/documents';
-import { FileText, PenLine, Upload, Download, Receipt, Ban, FileSignature, ShieldAlert } from 'lucide-react';
+import { PenLine, Upload, Download, Receipt, Ban, FileSignature, ShieldAlert } from 'lucide-react';
 import { DocumentActions } from '@/components/Shared/DocumentActions';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
 import {
   Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle,
 } from '@/components/ui/sheet';
@@ -20,11 +16,10 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
+import { PageShell } from './shared/PageShell';
+import { DocumentRegistry, useDocumentCoreColumns } from '@/components/Documents/DocumentRegistry';
 import { ManualModeBanner } from '@/components/Shared/ManualModeBanner';
-import {
-  Toolbar, SortableHead, Pager, useListParams, applyListParams,
-} from '@/components/DataTable';
+import { Toolbar, useListParams, applyListParams } from '@/components/DataTable';
 import {
   useContracts, useSignContractClient, useSignContractManager,
   useUploadSignedContract, useCancelContract, useForceCancelContract, useGenerateInvoice,
@@ -213,6 +208,44 @@ export function ContractsPage() {
     }
   };
 
+  const { items: pageItems, total } = applyListParams(contracts ?? [], listParams, {
+    searchFields: (c) => [c.number, String(c.deal)],
+    filterPredicates: { status: (c, v) => c.status === v },
+    sortAccessors: {
+      number: (c) => c.number,
+      deal: (c) => c.deal,
+      total: (c) => Number(c.total_amount),
+      status: (c) => c.status,
+      created_at: (c) => c.created_at,
+    },
+  });
+
+  // Ядро колонок в общем порядке; «Сторона» — специфика договора, приставлена после сделки.
+  const columns = useDocumentCoreColumns<Contract>({
+    number: (c) => <span className="font-medium">{c.number}</span>,
+    deal: (c) => <DealLink dealId={c.deal} />,
+    status: (c) => <Badge variant={STATUS_VARIANT[c.status]}>{t(`contractsPage.status.${c.status}`)}</Badge>,
+    total: (c) => <span className="tabular-nums">{formatCurrency(Number(c.total_amount))}</span>,
+    date: (c) => new Date(c.created_at).toLocaleDateString(),
+    actions: (c) => (
+      <DocumentActions
+        request={() => ({ path: `crm/contracts/${c.id}/download-pdf/` })}
+        filenameBase={`RailTech_Contract_${c.id}`}
+        variant="ghost"
+        iconOnly
+      />
+    ),
+    sortKeys: { number: 'number', total: 'total', date: 'created_at' },
+    dateHeader: t('contractsPage.table.created'),
+    insertAfter: {
+      deal: [{
+        id: 'side',
+        header: t('contractsPage.table.side'),
+        cell: (c: Contract) => sideBadgeFor(c),
+      }],
+    },
+  });
+
   return (
     <PageShell
       title={t('contractsPage.title')}
@@ -236,107 +269,20 @@ export function ContractsPage() {
         ]}
       />
 
-      <Card>
-        <CardContent className="p-0">
-          {(() => {
-            const { items: pageItems, total } = applyListParams(contracts ?? [], listParams, {
-              searchFields: (c) => [c.number, String(c.deal)],
-              filterPredicates: {
-                status: (c, v) => c.status === v,
-              },
-              sortAccessors: {
-                number: (c) => c.number,
-                deal: (c) => c.deal,
-                total: (c) => Number(c.total_amount),
-                status: (c) => c.status,
-                created_at: (c) => c.created_at,
-              },
-            });
-            if (isLoading) return <LoadingRows rows={6} />;
-            if (isError) return <ErrorState onRetry={refetch} />;
-            if (!pageItems.length) {
-              return (
-                <EmptyState
-                  icon={<FileSignature className="h-5 w-5" />}
-                  message={t('contractsPage.emptyState')}
-                  hint={t('contractsPage.emptyStateHint')}
-                />
-              );
-            }
-            return (
-              <>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <SortableHead sortKey="number" current={listParams.ordering} onChange={listParams.toggleOrdering}>
-                        {t('contractsPage.table.number')}
-                      </SortableHead>
-                      <SortableHead sortKey="deal" current={listParams.ordering} onChange={listParams.toggleOrdering}>
-                        {t('contractsPage.table.deal')}
-                      </SortableHead>
-                      <TableHead>{t('contractsPage.table.side')}</TableHead>
-                      <SortableHead sortKey="total" current={listParams.ordering} onChange={listParams.toggleOrdering}>
-                        {t('contractsPage.table.total')}
-                      </SortableHead>
-                      <SortableHead sortKey="status" current={listParams.ordering} onChange={listParams.toggleOrdering}>
-                        {t('contractsPage.table.status')}
-                      </SortableHead>
-                      <SortableHead sortKey="created_at" current={listParams.ordering} onChange={listParams.toggleOrdering}>
-                        {t('contractsPage.table.created')}
-                      </SortableHead>
-                      <TableHead className="text-right">{t('contractsPage.table.actions')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {pageItems.map((c) => (
-                      <TableRow
-                        key={c.id}
-                        role="button"
-                        tabIndex={0}
-                        aria-label={`${t('common.open')} ${c.number}`}
-                        className="cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-                        onClick={(event) => {
-                          // Ignore clicks that originate inside a row control (the action button
-                          // and DealLink already open the panel / navigate themselves).
-                          if ((event.target as HTMLElement).closest('[data-row-action]')) return;
-                          setSelectedId(c.id);
-                        }}
-                        onKeyDown={(event) => {
-                          // Only activate when the row itself is focused, not a nested control.
-                          if (event.target !== event.currentTarget) return;
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault();
-                            setSelectedId(c.id);
-                          }
-                        }}
-                      >
-                        <TableCell className="font-medium">{c.number}</TableCell>
-                        <TableCell><DealLink dealId={c.deal} /></TableCell>
-                        <TableCell>{sideBadgeFor(c)}</TableCell>
-                        <TableCell className="tabular-nums">{formatCurrency(Number(c.total_amount))}</TableCell>
-                        <TableCell>
-                          <Badge variant={STATUS_VARIANT[c.status]}>
-                            {t(`contractsPage.status.${c.status}`)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {new Date(c.created_at).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell className="text-right" data-row-action>
-                          <Button variant="ghost" size="sm" onClick={() => setSelectedId(c.id)}>
-                            <FileText className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                <Pager page={listParams.page} pageSize={listParams.pageSize} total={total} onPageChange={listParams.setPage} />
-              </>
-            );
-          })()}
-        </CardContent>
-      </Card>
+      <DocumentRegistry
+        rows={pageItems}
+        getRowId={(c) => c.id}
+        columns={columns}
+        onRowClick={(c) => setSelectedId(c.id)}
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={refetch}
+        emptyIcon={<FileSignature className="h-5 w-5" />}
+        emptyMessage={t('contractsPage.emptyState')}
+        emptyHint={t('contractsPage.emptyStateHint')}
+        sorting={{ ordering: listParams.ordering, onToggle: listParams.toggleOrdering }}
+        pagination={{ page: listParams.page, pageSize: listParams.pageSize, total, onPageChange: listParams.setPage }}
+      />
 
       {selected && (
         <Sheet open={!!selected} onOpenChange={(o) => !o && setSelectedId(null)}>
