@@ -620,6 +620,11 @@ export const accountsApi = {
 	},
 
 	// ─── Role Applications (admin + owner self-service) ────────────────
+	// Справочник типов компании — из него выбирается запрашиваемая роль.
+	getCompanyTypes: async () => {
+		const response = await apiClient.get<{ id: number; code: string; name: string }[]>('accounts/company-types/');
+		return response.data;
+	},
 	getRoleApplications: async (params?: { search?: string; status?: string; requested_type?: string; ordering?: string }) => {
 		const response = await apiClient.get<PaginatedResponse<RoleApplication>>(
 			'accounts/role-applications/',

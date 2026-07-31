@@ -399,6 +399,12 @@ export const useDeleteSubscription = () => {
 
 // ─── Role Applications ─────────────────────────────────────────────────
 
+export const useCompanyTypes = () => useQuery({
+  queryKey: ['company-types'],
+  queryFn: () => accountsApi.getCompanyTypes(),
+  staleTime: 30 * 60_000,
+});
+
 export const useRoleApplications = (params?: { search?: string; status?: string; requested_type?: string; ordering?: string }) => useQuery({
   queryKey: ['roleApplications', params],
   queryFn: () => accountsApi.getRoleApplications(params),

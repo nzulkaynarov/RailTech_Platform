@@ -13,6 +13,7 @@ from accounts.serializers import (
     CompanyRoleApplicationSerializer,
     SupplierSubscriptionSerializer,
 )
+from accounts.services import member_has_permission
 from core.permissions import OperatorScoped
 
 
@@ -266,24 +267,26 @@ class CompanyRoleApplicationViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.is_platform_admin:
             return qs
-        own_company_ids = list(
-            user.memberships.filter(
-                is_active=True,
-                role__code="OWNER",
-            ).values_list("company_id", flat=True)
-        )
+        # Право — `team.manage` на компании, а не WorkspaceRole OWNER: после ADR-0005 Phase E
+        # WorkspaceRole остался слоем ПОДПИСИ и на авторизации не ветвится. Прежняя проверка
+        # прятала собственные заявки от делегированного администратора компании, который по
+        # правам полностью равен владельцу (у `member_has_permission` есть legacy-ветка на
+        # OWNER, поэтому сам владелец ничего не теряет).
+        own_company_ids = [
+            company_id
+            for company_id in user.memberships.filter(is_active=True).values_list("company_id", flat=True)
+            if member_has_permission(user, company_id, "team.manage")
+        ]
         return qs.filter(company_id__in=own_company_ids)
 
     def perform_create(self, serializer):
         user = self.request.user
         company = serializer.validated_data.get("company")
         if not user.is_platform_admin:
-            is_owner = user.memberships.filter(
-                is_active=True,
-                role__code="OWNER",
-                company=company,
-            ).exists()
-            if not is_owner:
+            # Тот же предикат, что и в `get_queryset`: кто видит заявки своей компании, тот их и
+            # подаёт. Разъезд этих двух проверок дал бы список без возможности что-то в него
+            # добавить — ровно тот класс «показано, но не сработает», который вычищала волна U1.
+            if not (company and member_has_permission(user, company.id, "team.manage")):
                 from rest_framework.exceptions import PermissionDenied
 
                 raise PermissionDenied("ONLY_COMPANY_OWNER_CAN_APPLY")

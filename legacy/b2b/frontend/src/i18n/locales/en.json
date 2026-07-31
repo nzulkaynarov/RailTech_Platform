@@ -5566,5 +5566,18 @@
   "quoteCharges": {
     "deleteConfirmTitle": "Delete this charge?",
     "deleteConfirmDescription": "Charge {{name}} will be removed and the quote total recalculated. It can only be restored by adding it again."
+  },
+  "companyRole": {
+    "title": "Company role on the platform",
+    "current": "Current roles",
+    "requestLabel": "Request a role",
+    "requestPlaceholder": "Choose a role",
+    "submit": "Submit application",
+    "submitted": "Application submitted for review",
+    "pending": "Application for the «{{role}}» role is under review",
+    "pendingHint": "A platform operator will review it and let you know. No need to apply again.",
+    "rejected": "The previous application was rejected",
+    "rejectedWithReason": "The previous application was rejected: {{reason}}",
+    "allRolesGranted": "All available roles are already granted"
   }
 }
