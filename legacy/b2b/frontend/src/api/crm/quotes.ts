@@ -98,16 +98,7 @@ export const quotesApi = {
 	reorderQuoteCharges: async (quoteId: number, order: number[]) => {
 		const response = await apiClient.post<Quote>(`crm/quotes/${quoteId}/charges-reorder/`, { order });
 		return response.data;
-	},
-	// ARCH-03: рендер уходит в Celery, бэкенд отвечает 202 GENERATING. Файл забирает
-	// `DocumentActions` через 202-aware fetch — он же и опрашивает.
-	generateQuotePDF: async (id: number) => {
-		const response = await apiClient.post<{ detail: string; retry_after: number }>(
-			`crm/quotes/${id}/generate-pdf/`,
-		);
-		return response.data;
-	},
-	sendQuoteToClient: async (id: number, justification?: string) => {
+	},	sendQuoteToClient: async (id: number, justification?: string) => {
 		// S7a: `justification` is required only when the КП is below the margin floor (the backend
 		// gate returns BELOW_FLOOR_JUSTIFICATION_REQUIRED otherwise); it is ignored above the floor.
 		const body = justification && justification.trim() ? { justification: justification.trim() } : {};

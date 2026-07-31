@@ -119,18 +119,6 @@ export const useWorkspaceRoles = (companyType?: string) => useQuery({
   staleTime: 30 * 60_000,
 });
 
-export const useSetMemberRole = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (params: { companyId: number; member_id: number; role: string }) =>
-      accountsApi.setMemberRole(params.companyId, { member_id: params.member_id, role: params.role }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['company-team'] });
-      qc.invalidateQueries({ queryKey: ['me'] });
-    },
-  });
-};
-
 export const useChangeUserRole = () => {
   const qc = useQueryClient();
   return useMutation({
@@ -433,6 +421,14 @@ export const useRejectRoleApplication = () => {
   });
 };
 
+/**
+ * ОТКРЫТЫЙ ВОПРОС ВЛАДЕЛЬЦУ, а не забытый код (аудит UI 2026-07-30, §3.2).
+ *
+ * Операторская страница модерации заявок на смену роли компании работает, а подать такую
+ * заявку неоткуда: экрана нет. Это не «недоведённая архитектура», которую можно доделать
+ * проводкой — это полноценная новая форма, то есть новая функция. Хук оставлен намеренно:
+ * когда решение будет принято, подключать его не придётся заново.
+ */
 export const useCreateRoleApplication = () => {
   const qc = useQueryClient();
   return useMutation({

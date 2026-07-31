@@ -410,18 +410,8 @@ export interface TimeToFirstQuoteStats {
 	slowest_hours: number;
 }
 
-export interface ActivityLog {
-	id: number;
-	action: string;
-	detail: string;
-	event_code?: string;
-	event_params?: Record<string, unknown>;
-	user_name: string;
-	level: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR';
-	timestamp: string;
-}
-
-// CRM Phase A — counterparty / deal activity timeline entry.
+// Лента активности сделки/контрагента. Форма ОДНА: прежний `ActivityLog` дублировал её
+// один-в-один и остался без потребителей, когда лента переехала на таймлайн-эндпоинт.
 export interface TimelineEntry {
 	id: number;
 	action: string;

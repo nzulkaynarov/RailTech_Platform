@@ -28,6 +28,14 @@ export const useAdminSearch = (q: string) =>
     placeholderData: keepPreviousData,
   });
 
+/**
+ * ОТКРЫТЫЙ ВОПРОС ВЛАДЕЛЬЦУ, а не забытый код (аудит UI 2026-07-30, §3.2).
+ *
+ * Пообъектная история для оператора: эндпоинт есть, но поверхности, где её показать, нет —
+ * лента на дашборде платформенная, а не по конкретной компании/пользователю. Естественный дом
+ * — карточки в операторских реестрах; делать это без решения владельца не стал, потому что это
+ * новый блок интерфейса, а не проводка существующего.
+ */
 export const useAdminActivity = (entityType: string, entityId: number | string | undefined) =>
   useQuery({
     queryKey: ['admin-activity', entityType, entityId],

@@ -193,13 +193,3 @@ export const useDeleteDeal = () => {
   });
 };
 
-export const useUpdateDeal = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<import('../../api/crmApi').Deal> }) => crmApi.updateDeal(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['deals'] });
-    },
-  });
-};
-

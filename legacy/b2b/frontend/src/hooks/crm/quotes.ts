@@ -120,14 +120,3 @@ export const useRejectQuote = () => {
     },
   });
 };
-
-export const useGenerateQuotePDF = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (quoteId: number) => crmApi.generateQuotePDF(quoteId),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['quotes'] });
-      qc.invalidateQueries({ queryKey: ['deals'] });
-    },
-  });
-};

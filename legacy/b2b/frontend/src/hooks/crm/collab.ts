@@ -10,11 +10,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { crmApi, RelationshipDirection, RelationshipStage, OfflineClientPayload } from '../../api/crmApi';
 import { accountsApi } from '../../api/accountsApi';
 
-export const useActivityLogs = () => useQuery({
-    queryKey: ['activity-logs'],
-    queryFn: () => crmApi.getActivityLogs(),
-});
-
 // CRM Phase A — deal-scoped activity timeline (read-only history feed).
 export const useDealTimeline = (dealId: number) => useQuery({
     queryKey: ['timeline', 'deal', dealId],

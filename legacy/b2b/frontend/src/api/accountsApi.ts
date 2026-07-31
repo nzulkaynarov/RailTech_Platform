@@ -548,16 +548,7 @@ export const accountsApi = {
 			id: number; user_id: number; can_sell: boolean; can_buy: boolean;
 		}>(`accounts/companies/${companyId}/update-member-capabilities/`, payload);
 		return response.data;
-	},
-	// Company Admin changes a member's workspace role (promote/demote/transfer).
-	setMemberRole: async (companyId: number, payload: { member_id: number; role: string }) => {
-		const response = await apiClient.post<{ id: number; user_id: number; role: string }>(
-			`accounts/companies/${companyId}/set-member-role/`,
-			payload,
-		);
-		return response.data;
-	},
-	// S3 (P2): Company Admin removes a member from the company. Never-orphan on the
+	},	// S3 (P2): Company Admin removes a member from the company. Never-orphan on the
 	// backend → CANNOT_REMOVE_LAST_COMPANY_ADMIN. `member_id` is the CompanyMember pk.
 	removeMember: async (companyId: number, memberId: number) => {
 		const response = await apiClient.post<{ removed: boolean; member_id: number }>(

@@ -8,7 +8,7 @@
 
 import { apiClient } from '../client';
 import { PaginatedResponse } from '../types';
-import type { ActivityLog, Contact, Message, OfflineClientPayload, Relationship, RelationshipDirection, RelationshipStage, TimelineEntry } from './types';
+import type { Contact, Message, OfflineClientPayload, Relationship, RelationshipDirection, RelationshipStage, TimelineEntry } from './types';
 
 export const collabApi = {
 	getMessages: async (dealId: number, sellerCompany?: number | null) => {
@@ -41,12 +41,7 @@ export const collabApi = {
 	exportDealPDF: async (dealId: number) => {
 		const { downloadFile } = await import('@/lib/download');
 		await downloadFile(`crm/deals/${dealId}/export-pdf/`, `RailTech_Quote_${dealId}.pdf`);
-	},
-	getActivityLogs: async () => {
-		const response = await apiClient.get<PaginatedResponse<ActivityLog>>('crm/activity-logs/');
-		return response.data.results;
-	},
-	// CRM Phase A — read-only timeline scoped to a deal or a counterparty company.
+	},	// CRM Phase A — read-only timeline scoped to a deal or a counterparty company.
 	getTimeline: async (params: { deal_id?: number; company_id?: number; limit?: number }) => {
 		const response = await apiClient.get<TimelineEntry[]>('crm/timeline/', { params });
 		return response.data;

@@ -26,12 +26,7 @@ export const dealsApi = {
 	createDeal: async (data: { title?: string; notes?: string; contact_id?: number; without_client?: boolean }) => {
 		const response = await apiClient.post<Deal>('crm/deals/', data);
 		return response.data;
-	},
-	updateDeal: async (id: number, data: Partial<Deal>) => {
-		const response = await apiClient.patch<Deal>(`crm/deals/${id}/`, data);
-		return response.data;
-	},
-	createQuoteItem: async (data: { quote: number; imported_raw_name: string; quantity?: number; frozen_base_price?: string; frozen_currency?: string; lead_time_days?: number; display_type?: QuoteItemDisplayType; is_optional?: boolean }) => {
+	},	createQuoteItem: async (data: { quote: number; imported_raw_name: string; quantity?: number; frozen_base_price?: string; frozen_currency?: string; lead_time_days?: number; display_type?: QuoteItemDisplayType; is_optional?: boolean }) => {
 		const response = await apiClient.post<QuoteItem>('crm/quote-items/', data);
 		return response.data;
 	},
