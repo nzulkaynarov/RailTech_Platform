@@ -29,17 +29,14 @@ export const useAdminSearch = (q: string) =>
   });
 
 /**
- * ОТКРЫТЫЙ ВОПРОС ВЛАДЕЛЬЦУ, а не забытый код (аудит UI 2026-07-30, §3.2).
- *
- * Пообъектная история для оператора: эндпоинт есть, но поверхности, где её показать, нет —
- * лента на дашборде платформенная, а не по конкретной компании/пользователю. Естественный дом
- * — карточки в операторских реестрах; делать это без решения владельца не стал, потому что это
- * новый блок интерфейса, а не проводка существующего.
+ * История записи для оператора — «кто, что и когда» по конкретной компании, пользователю,
+ * подписке или заявке. Единственная реализация этого чтения: `AdminActivityTimeline` раньше
+ * собирал тот же запрос инлайном, с тем же ключом кэша, из-за чего хук числился мёртвым.
  */
-export const useAdminActivity = (entityType: string, entityId: number | string | undefined) =>
+export const useAdminActivity = (entityType: string, entityId: number | string | undefined, limit = 100) =>
   useQuery({
-    queryKey: ['admin-activity', entityType, entityId],
-    queryFn: () => adminApi.getActivity(entityType, entityId as number),
+    queryKey: ['admin-activity', entityType, entityId, limit],
+    queryFn: () => adminApi.getActivity(entityType, entityId as number, limit),
     enabled: Boolean(entityType) && entityId !== undefined && entityId !== null && entityId !== '',
     staleTime: 15_000,
   });

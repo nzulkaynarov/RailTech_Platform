@@ -1,27 +1,21 @@
-import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { apiClient } from '@/api/client';
+import { AlertTriangle } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { activityTitle, activityDetail } from '@/lib/activityText';
+import { useAdminActivity } from '@/hooks/useAdmin';
+import type { AdminActivityEntry } from '@/api/adminApi';
 
-export interface ActivityEntry {
-  id: number;
-  action: string;
-  detail: string;
-  event_code?: string;
-  event_params?: Record<string, unknown>;
-  level: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR';
-  reason: string;
-  before_data: Record<string, unknown> | null;
-  after_data: Record<string, unknown> | null;
-  user_id: number | null;
-  user_email: string | null;
-  user_name: string;
-  timestamp: string;
-}
+/**
+ * Запрос идёт через `useAdminActivity` и типизированный api-клиент. Раньше компонент собирал
+ * тот же запрос ИНЛАЙНОМ, с тем же ключом кэша, что и хук: две реализации одного чтения, из
+ * которых вызывалась только одна, а вторая числилась мёртвой. Форма записи тоже дублировалась
+ * — теперь берётся из контракта (`AdminActivityEntry`).
+ */
+export type ActivityEntry = AdminActivityEntry;
 
 interface AdminActivityTimelineProps {
   entityType: string;
@@ -72,20 +66,21 @@ export function AdminActivityTimeline({
   limit = 100,
 }: AdminActivityTimelineProps): React.ReactNode {
   const { t, i18n } = useTranslation();
-  const { data, isLoading } = useQuery({
-    queryKey: ['admin-activity', entityType, entityId, limit],
-    queryFn: async () => {
-      const res = await apiClient.get<{
-        count: number;
-        items: ActivityEntry[];
-      }>('admin/activity/', {
-        params: { entity_type: entityType, entity_id: entityId, limit },
-      });
-      return res.data;
-    },
-    enabled: Boolean(entityType) && entityId !== undefined && entityId !== null,
-    staleTime: 15_000,
-  });
+  const { data, isLoading, isError, refetch } = useAdminActivity(entityType, entityId, limit);
+
+  // Упавший журнал аудита — не «действий не было». Для истории записи это опаснее обычного:
+  // оператор принимает решение, считая, что с объектом ничего не делали (класс волны U2).
+  if (isError) {
+    return (
+      <Card className="flex flex-col items-center gap-2 p-6 text-center">
+        <AlertTriangle className="h-4 w-4 text-destructive" aria-hidden="true" />
+        <p className="text-xs font-medium text-foreground">{t('common.loadError')}</p>
+        <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => refetch()}>
+          {t('common.retry')}
+        </Button>
+      </Card>
+    );
+  }
 
   if (isLoading) {
     return (

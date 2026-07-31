@@ -5579,5 +5579,10 @@
     "rejected": "The previous application was rejected",
     "rejectedWithReason": "The previous application was rejected: {{reason}}",
     "allRolesGranted": "All available roles are already granted"
+  },
+  "recordHistory": {
+    "title": "Record history",
+    "empty": "No actions on this record yet",
+    "reason": "Reason: {{reason}}"
   }
 }

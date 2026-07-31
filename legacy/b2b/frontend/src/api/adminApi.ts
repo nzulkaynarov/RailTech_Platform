@@ -65,6 +65,13 @@ export interface AdminActivityEntry {
   id: number;
   action: string;
   detail: string;
+  /**
+   * Структурированное событие: интерфейс локализует `activity.<event_code>`, а `action`/`detail`
+   * остаются русским запасным вариантом для старых записей. Эндпоинт отдавал эти поля с самого
+   * начала — тип о них просто не знал, и локализация была недоступна.
+   */
+  event_code?: string | null;
+  event_params?: Record<string, unknown> | null;
   level: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR';
   reason: string;
   before_data: Record<string, unknown> | null;
