@@ -211,10 +211,13 @@ def _render_invoice_pdf(invoice) -> None:
 
     # E1b: шаблон компании (или платформенный образец) — тем же механизмом, что акт. Компания
     # правит ТЕКСТ, структурные блоки собирает сервер. Шаблона нет → прежний путь из кода.
+    # E3: выставленный счёт печатает ЗАМОРОЖЕННУЮ при выставлении редакцию — живой шаблон
+    # читается только пока счёт черновик (или для документов, выпущенных до E3).
     from .document_blocks import company_template_for, render_invoice_body
 
-    invoice_template = company_template_for(supplier, "INVOICE")
-    if invoice_template is not None:
+    frozen_body = invoice.frozen_template_body
+    invoice_template = None if frozen_body else company_template_for(supplier, "INVOICE")
+    if frozen_body or invoice_template is not None:
         html_string = render_to_string(
             "crm/invoice_pdf_templated.html",
             {
@@ -229,6 +232,7 @@ def _render_invoice_pdf(invoice) -> None:
                     invoice_template,
                     seller=invoice_brand.get("seller"),
                     seller_profile=invoice_brand.get("seller_profile"),
+                    body_html=frozen_body or None,
                 ),
                 **brand_context_for_pdf(invoice_brand),
             },
@@ -436,6 +440,7 @@ def generate_act(
         return None, "ACT_INVALID_INVOICE_STATUS"
 
     # Seller company = the КП author's owning company → its prefix + per-company counter.
+    from .document_blocks import frozen_body_for
     from .quotes import _quote_seller_company
 
     seller_company = _quote_seller_company(invoice.contract.quote) if invoice.contract_id else None
@@ -447,6 +452,9 @@ def generate_act(
         status=_astatus(ActStatusCode.ISSUED),
         issued_at=timezone.now().date(),
         total_amount=invoice.total_incl_vat,
+        # E3: акт рождается выпущенным — редакция шаблона замораживается сразу. Продавец
+        # резолвится той же цепочкой, что при рендере (акт зеркалит счёт).
+        frozen_template_body=frozen_body_for(seller_company or _invoice_seller_company(invoice), "ACT"),
         created_by=actor,
         # Титул исполнителя: выпуск — это первая из двух сторон акта (G2). Раньше подписант
         # не сохранялся вообще, и по документу нельзя было сказать, кто его выставил.
@@ -508,10 +516,12 @@ def _render_act_pdf(act) -> None:
     # E1: если у компании (или у платформы) есть шаблон акта — печатаем по нему. Компания
     # правит ТЕКСТ своего документа, а структурные блоки вставляются плейсхолдерами и
     # собираются сервером. Шаблона нет → прежний путь из кода, документ не меняется.
+    # E3: выпущенный акт печатает замороженную редакцию; блоки (штампы подписей) — живые.
     from .document_blocks import company_template_for, render_act_body
 
-    act_template = company_template_for(supplier, "ACT")
-    if act_template is not None:
+    frozen_body = act.frozen_template_body
+    act_template = None if frozen_body else company_template_for(supplier, "ACT")
+    if frozen_body or act_template is not None:
         html_string = render_to_string(
             "crm/act_pdf_templated.html",
             {
@@ -528,6 +538,7 @@ def _render_act_pdf(act) -> None:
                     act_template,
                     seller=act_brand.get("seller"),
                     seller_profile=act_brand.get("seller_profile"),
+                    body_html=frozen_body or None,
                 ),
                 **brand_context_for_pdf(act_brand),
             },

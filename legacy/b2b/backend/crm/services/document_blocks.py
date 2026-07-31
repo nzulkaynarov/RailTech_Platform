@@ -224,6 +224,17 @@ def company_template_for(company, kind_code: str):
     return DocumentTemplate.objects.filter(company__isnull=True, is_sample=True, kind__code=kind_code).first()
 
 
+def frozen_body_for(supplier, kind_code: str) -> str:
+    """Тело действующего шаблона — для заморозки в документ при выпуске (E3).
+
+    Документ печатается по той редакции, что действовала на момент выпуска, и хранит её у
+    себя: правка шаблона задним числом не переписывает выпущенные документы. Блоки при этом
+    остаются живыми данными (штампы подписей, суммы) — замораживается только ТЕКСТ.
+    """
+    template = company_template_for(supplier, kind_code)
+    return template.body_html if template is not None else ""
+
+
 def render_document_body(body_html: str, *, blocks: dict, scalars: dict) -> str:
     """Подстановка блоков и скаляров в тело шаблона.
 
@@ -252,10 +263,15 @@ def render_document_body(body_html: str, *, blocks: dict, scalars: dict) -> str:
     return PLACEHOLDER_RE.sub(_sub, body_html or "")
 
 
-def render_act_body(act, invoice, totals, ccy: str, template, *, seller=None, seller_profile=None) -> str:
-    """Тело акта по шаблону компании либо по платформенному образцу."""
+def render_act_body(
+    act, invoice, totals, ccy: str, template, *, seller=None, seller_profile=None, body_html=None
+) -> str:
+    """Тело акта по шаблону компании либо по платформенному образцу.
+
+    `body_html` — замороженная при выпуске редакция (E3): когда она есть, живой шаблон не
+    читается вовсе, и его правка не меняет уже выпущенный документ."""
     return render_document_body(
-        template.body_html,
+        body_html if body_html else template.body_html,
         blocks=act_block_values(act, invoice, totals, ccy, seller=seller, seller_profile=seller_profile),
         scalars={
             "doc.number": act.number,
@@ -265,13 +281,15 @@ def render_act_body(act, invoice, totals, ccy: str, template, *, seller=None, se
     )
 
 
-def render_invoice_body(invoice, items, totals, ccy: str, template, *, seller=None, seller_profile=None) -> str:
-    """Тело счёта по шаблону компании либо по платформенному образцу."""
+def render_invoice_body(
+    invoice, items, totals, ccy: str, template, *, seller=None, seller_profile=None, body_html=None
+) -> str:
+    """Тело счёта по шаблону компании либо по платформенному образцу (`body_html` — E3-снапшот)."""
     from crm.templatetags.document_format import money
 
     issued = invoice.issued_at or invoice.created_at
     return render_document_body(
-        template.body_html,
+        body_html if body_html else template.body_html,
         blocks=invoice_block_values(invoice, items, totals, ccy, seller=seller, seller_profile=seller_profile),
         scalars={
             "doc.number": invoice.number,
@@ -297,8 +315,10 @@ def _contract_delivery_terms(quote) -> str:
     return phrase
 
 
-def render_contract_body(contract, items, totals, ccy: str, template, *, seller=None, seller_profile=None) -> str:
-    """Тело договора по шаблону компании либо по платформенному образцу."""
+def render_contract_body(
+    contract, items, totals, ccy: str, template, *, seller=None, seller_profile=None, body_html=None
+) -> str:
+    """Тело договора по шаблону компании либо по платформенному образцу (`body_html` — E3-снапшот)."""
     from crm.templatetags.document_format import money
 
     quote = contract.quote if contract.quote_id else None
@@ -314,7 +334,7 @@ def render_contract_body(contract, items, totals, ccy: str, template, *, seller=
         else "до полного исполнения Сторонами своих обязательств"
     )
     return render_document_body(
-        template.body_html,
+        body_html if body_html else template.body_html,
         blocks=contract_block_values(contract, items, totals, ccy, seller=seller, seller_profile=seller_profile),
         scalars={
             "doc.number": contract.number,

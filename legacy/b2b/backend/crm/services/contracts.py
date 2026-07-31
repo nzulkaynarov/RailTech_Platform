@@ -76,10 +76,14 @@ def generate_contract_from_quote(
 
     if not contract:
         # Seller company = the КП author's owning company → its prefix + per-company counter.
+        from .document_blocks import frozen_body_for
         from .quotes import _quote_seller_company
 
         seller_company = _quote_seller_company(quote)
         contract = Contract(
+            # E3: договор сразу уходит клиенту на подпись — редакция шаблона замораживается
+            # при создании; правка шаблона после не переписывает отправленный документ.
+            frozen_template_body=frozen_body_for(seller_company, "CONTRACT"),
             deal=quote.deal,
             quote=quote,
             number=_next_contract_number(seller_company),
@@ -181,10 +185,12 @@ def _render_contract_pdf(contract) -> None:
 
     # E1b: шаблон компании (или платформенный образец) — тем же механизмом, что акт. Компания
     # правит статьи договора, структурные блоки собирает сервер. Шаблона нет → путь из кода.
+    # E3: договор печатает замороженную при создании редакцию; ПЭП-штампы — живые блоки.
     from .document_blocks import company_template_for, render_contract_body
 
-    contract_template = company_template_for(supplier, "CONTRACT")
-    if contract_template is not None:
+    frozen_body = contract.frozen_template_body
+    contract_template = None if frozen_body else company_template_for(supplier, "CONTRACT")
+    if frozen_body or contract_template is not None:
         html_string = render_to_string(
             "crm/contract_pdf_templated.html",
             {
@@ -198,6 +204,7 @@ def _render_contract_pdf(contract) -> None:
                     contract_template,
                     seller=brand.get("seller"),
                     seller_profile=brand.get("seller_profile"),
+                    body_html=frozen_body or None,
                 ),
                 **brand_context_for_pdf(brand),
             },

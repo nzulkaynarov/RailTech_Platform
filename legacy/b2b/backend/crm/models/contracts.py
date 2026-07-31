@@ -70,6 +70,10 @@ class Contract(models.Model):
         blank=True,
         verbose_name=_("PDF контракта"),
     )
+    # E3: редакция шаблона на момент СОЗДАНИЯ договора (он сразу уходит клиенту на подпись).
+    # Перерендер при подписании обновляет блоки (ПЭП-штампы — живые данные), но печатает
+    # замороженный ТЕКСТ статей. Пусто = создан до E3, рендерится по живому шаблону.
+    frozen_template_body = models.TextField(blank=True, default="")
     signed_file = models.FileField(
         upload_to=contract_signed_path,
         storage=get_private_storage,

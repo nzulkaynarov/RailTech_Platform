@@ -87,6 +87,13 @@ def issue_invoice(invoice, user) -> Tuple[Optional[object], Optional[str]]:
     invoice.status = _istatus(InvoiceStatusCode.ISSUED)
     invoice.issued_at = timezone.now().date()
     updated = ["status", "issued_at", "updated_at"]
+    # E3: заморозить редакцию шаблона, действующую в момент выставления, — дальнейшие правки
+    # шаблона не должны переписывать уже выставленный счёт.
+    from .billing import _invoice_seller_company
+    from .document_blocks import frozen_body_for
+
+    invoice.frozen_template_body = frozen_body_for(_invoice_seller_company(invoice), "INVOICE")
+    updated.append("frozen_template_body")
     # Срок оплаты отсчитывается от ВЫСТАВЛЕНИЯ, а не от создания черновика: черновик может
     # пролежать неделю, и покупатель получал бы счёт с уже наполовину истёкшим сроком (G1).
     # Дату, выставленную продавцом вручную, не трогаем — это условие конкретного договора.

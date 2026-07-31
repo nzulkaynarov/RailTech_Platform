@@ -86,6 +86,11 @@ class Invoice(models.Model):
         null=True,
         blank=True,
     )
+    # E3 (spec-editable-outgoing-documents): редакция шаблона, действовавшая на момент
+    # ВЫСТАВЛЕНИЯ. Перерендер (смена бренда, invalidate_document_pdfs) печатает этот текст,
+    # а не сегодняшний шаблон — правка шаблона задним числом не меняет выпущенный счёт.
+    # Пусто = документ выпущен до E3 либо ещё черновик (черновик следует за живым шаблоном).
+    frozen_template_body = models.TextField(blank=True, default="")
     notes = models.TextField(blank=True)
 
     created_by = models.ForeignKey(
@@ -310,6 +315,10 @@ class Act(models.Model):
         null=True,
         blank=True,
     )
+    # E3: редакция шаблона на момент ВЫПУСКА акта. Перерендер после подписания обновляет
+    # блоки (штампы подписей — живые данные), но печатает замороженный ТЕКСТ — правка
+    # шаблона между выпуском и подписью не переписывает документ. Пусто = выпущен до E3.
+    frozen_template_body = models.TextField(blank=True, default="")
     signed_file = models.FileField(
         upload_to=act_pdf_path,
         storage=get_private_storage,
