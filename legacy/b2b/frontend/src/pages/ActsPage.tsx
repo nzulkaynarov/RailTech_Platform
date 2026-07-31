@@ -36,6 +36,64 @@ const STATUS_VARIANT: Record<ActStatus, 'default' | 'secondary' | 'destructive' 
 };
 const STATUS_CODES: ActStatus[] = ['DRAFT', 'ISSUED', 'SIGNED', 'CANCELLED'];
 
+/**
+ * Одна подпись: кто и когда. Пусто — честное «—», а не пропуск строки: заказчик должен
+ * видеть, что акт ещё никем не принят.
+ *
+ * Формулировка «согласовал в системе», а не «подписал»: клик без E-IMZO юридической подписью
+ * не является, и интерфейс не должен утверждать обратное (канон отрезка «после контракта»).
+ */
+function SignatureLine({ name, at }: { name?: string | null; at?: string | null }) {
+  if (!at) return <p className="text-muted-foreground">—</p>;
+  return (
+    <p className="text-muted-foreground">
+      <span className="text-foreground">{name || '—'}</span>
+      <br />
+      <span className="text-xs">{new Date(at).toLocaleString()}</span>
+    </p>
+  );
+}
+
+/**
+ * «Чей сейчас ход» — состояние документа в терминах действия.
+ *
+ * Статус-код («Выставлен») говорит, ЧТО с документом, но не говорит, КОГО он ждёт. Эталоны
+ * закрывающих документов показывают именно второе: Диадок «Ожидается подпись контрагента»,
+ * DocuSign «Needs to Sign». Данные для этого сервер уже отдаёт — обе подписи и адресные
+ * подсказки `viewer_can_sign` / `viewer_can_reject`.
+ */
+function ActTurnLine({ act }: { act: Act }) {
+  const { t } = useTranslation();
+  if (act.status === 'CANCELLED') return null;
+
+  // Обе стороны согласовали — документ закрыт, ход ничей.
+  if (act.issuer_signed_at && act.acceptor_signed_at) {
+    return (
+      <p className="rounded-md border border-success/30 bg-success/5 p-3 text-sm text-foreground">
+        {t('actsPage.turn.settled')}
+      </p>
+    );
+  }
+  // Ждёт ЗРИТЕЛЯ — сервер сказал это адресно.
+  if (act.viewer_can_sign) {
+    return (
+      <p className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm font-medium text-foreground">
+        {t('actsPage.turn.yours')}
+      </p>
+    );
+  }
+  // Выставлен, но ждёт другую сторону.
+  if (act.status === 'ISSUED') {
+    return (
+      <p className="rounded-md border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+        {t('actsPage.turn.counterparty')}
+      </p>
+    );
+  }
+  return null;
+}
+
+
 export function ActsPage() {
   const { t } = useTranslation();
   const listParams = useListParams(['status'] as const, { defaultOrdering: '-created_at' });
@@ -189,12 +247,36 @@ export function ActsPage() {
               </SheetDescription>
             </SheetHeader>
             <div className="space-y-4 p-4">
+              {/* Чей сейчас ход — строка в терминах ДЕЙСТВИЯ, а не только код документа.
+                  Эталон: Диадок «Ожидается подпись контрагента», DocuSign «Needs to Sign».
+                  Считается из полей, которые сервер и так отдаёт. */}
+              <ActTurnLine act={selected} />
+
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div><Label>{t('actsPage.table.deal')}</Label><DealLink dealId={selected.deal} /></div>
                 <div><Label>{t('actsPage.table.total')}</Label><p className="tabular-nums">{formatCurrency(Number(selected.total_amount))}</p></div>
                 <div><Label>{t('actsPage.table.issued')}</Label><p className="text-muted-foreground">{selected.issued_at ? new Date(selected.issued_at).toLocaleDateString() : '—'}</p></div>
-                <div><Label>{t('actsPage.signedAt')}</Label><p className="text-muted-foreground">{selected.signed_at ? new Date(selected.signed_at).toLocaleString() : '—'}</p></div>
+                {/* Акт ДВУСТОРОННИЙ (волна G2): выпускает исполнитель, принимает заказчик, и
+                    сервер отдаёт обе подписи с именами. Карточка показывала одно поле «Подписан»
+                    по legacy `signed_at` — кто выпустил и кто принял, было не узнать, хотя данные
+                    приходили в том же ответе. */}
+                <div>
+                  <Label>{t('actsPage.issuedBy')}</Label>
+                  <SignatureLine name={selected.issuer_signer_name} at={selected.issuer_signed_at} />
+                </div>
+                <div>
+                  <Label>{t('actsPage.acceptedBy')}</Label>
+                  <SignatureLine name={selected.acceptor_signer_name} at={selected.acceptor_signed_at} />
+                </div>
               </div>
+
+              {/* Причина возврата — рядом со статусом, а не под кнопками: это объяснение
+                  текущего состояния документа, а не действие. */}
+              {selected.rejection_reason ? (
+                <p className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                  {t('actsPage.rejectedWithReason', { reason: selected.rejection_reason })}
+                </p>
+              ) : null}
               <div className="flex flex-col gap-2">
                 {/* Кнопка не ждёт готового файла: сервер сам ставит рендер и отвечает 202 (ARCH-03),
                     а `DocumentActions` опрашивает его по Retry-After. Пока условие требовало уже
@@ -252,11 +334,6 @@ export function ActsPage() {
                       }}
                     />
                   </label>
-                )}
-                {selected.rejection_reason && selected.status === 'DRAFT' && (
-                  <p className="text-sm text-destructive">
-                    {t('actsPage.rejectedWithReason', { reason: selected.rejection_reason })}
-                  </p>
                 )}
               </div>
             </div>

@@ -4172,7 +4172,6 @@
     },
     "downloadSigned": "Download signed",
     "uploadSigned": "Upload signed",
-    "signedAt": "Signed",
     "accept": "Accept act",
     "reject": "Reject",
     "rejected": "The act was returned to the issuer",
@@ -4184,6 +4183,13 @@
       "reasonPlaceholder": "For example: the scope does not match the delivery note",
       "confirm": "Reject",
       "reasonRequired": "Please give a reason"
+    },
+    "issuedBy": "Issued by",
+    "acceptedBy": "Accepted by",
+    "turn": {
+      "yours": "Waiting for your confirmation",
+      "counterparty": "Waiting for the customer to confirm",
+      "settled": "Confirmed by both parties"
     }
   },
   "companyFilesPage": {
