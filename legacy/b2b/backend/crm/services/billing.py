@@ -127,8 +127,8 @@ def generate_invoice_from_contract(
 
     # No PDF at DRAFT — the render happens on `issue_invoice` (a draft has no legal PDF yet).
     ActivityLog.objects.create(
-        action="Инвойс создан (черновик)",
-        detail=f"Инвойс {invoice.number} по сделке #{invoice.deal_id}",
+        action="Счёт создан (черновик)",
+        detail=f"Счёт {invoice.number} по сделке #{invoice.deal_id}",
         event_code="invoice.created",
         event_params={"number": invoice.number, "deal_id": invoice.deal_id},
         user=actor,
@@ -370,7 +370,7 @@ def record_payment(
     marker = "[MANUAL_MODE] " if manual else ""
     ActivityLog.objects.create(
         action=f"{marker}Зафиксирован платёж",
-        detail=f"Инвойс {invoice.number}: получено {amount_d} (итого {invoice.amount_paid}/{invoice.total_incl_vat})",
+        detail=f"Счёт {invoice.number}: получено {amount_d} (итого {invoice.amount_paid}/{invoice.total_incl_vat})",
         event_code="payment.recorded",
         # Decimals serialized as str (JSONField default encoder can't emit Decimal) — keeps the
         # exact value; the client formats currency by locale.

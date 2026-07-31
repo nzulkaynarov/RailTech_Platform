@@ -197,8 +197,8 @@ def create_manual_invoice(
     )
 
     ActivityLog.objects.create(
-        action="Инвойс создан вручную (черновик)",
-        detail=f"Инвойс {invoice.number} по сделке #{invoice.deal_id} (без контракта)",
+        action="Счёт создан вручную (черновик)",
+        detail=f"Счёт {invoice.number} по сделке #{invoice.deal_id} (без договора)",
         event_code="invoice.created_manual",
         event_params={"number": invoice.number, "deal_id": invoice.deal_id, "source_quote_id": source_quote_id},
         user=actor,

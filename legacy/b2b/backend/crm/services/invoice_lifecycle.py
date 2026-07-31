@@ -26,8 +26,8 @@ def _notify_invoice_issued_to_buyer(invoice) -> None:
     notify_deal_users(
         buyer_team_user_ids(deal),
         deal=deal,
-        title="Инвойс выставлен",
-        message=f"По сделке #{deal.pk} выставлен инвойс {invoice.number} к оплате",
+        title="Счёт выставлен",
+        message=f"По сделке #{deal.pk} выставлен счёт {invoice.number} к оплате",
         # Точная ссылка вместо реестра: раньше человек попадал в общий список счетов и искал
         # там тот, о котором его известили.
         link=spa_link("invoices", invoice.id),
@@ -44,8 +44,8 @@ def notify_seller_invoice_draft(invoice) -> None:
     notify_deal_users(
         seller_team_user_ids(deal),
         deal=deal,
-        title="Инвойс создан черновиком",
-        message=f"По сделке #{deal.pk} создан инвойс {invoice.number} — проверьте и выставьте",
+        title="Счёт создан черновиком",
+        message=f"По сделке #{deal.pk} создан счёт {invoice.number} — проверьте и выставьте",
         link=spa_link("invoices", invoice.id),
         type_code="INFO",
     )
@@ -101,8 +101,8 @@ def issue_invoice(invoice, user) -> Tuple[Optional[object], Optional[str]]:
     invoice_id = invoice.id
     transaction.on_commit(lambda: render_document_pdf.delay("invoice", invoice_id))
     ActivityLog.objects.create(
-        action="Инвойс выставлен",
-        detail=f"Инвойс {invoice.number} по сделке #{invoice.deal_id}",
+        action="Счёт выставлен",
+        detail=f"Счёт {invoice.number} по сделке #{invoice.deal_id}",
         event_code="invoice.issued",
         event_params={"number": invoice.number, "deal_id": invoice.deal_id},
         user=user,
@@ -140,8 +140,8 @@ def cancel_invoice(invoice, user) -> Tuple[Optional[object], Optional[str]]:
         invoice.pdf_file.delete(save=False)
     invoice.save(update_fields=["status", "pdf_file", "updated_at"])
     ActivityLog.objects.create(
-        action="Инвойс отменён",
-        detail=f"Инвойс {invoice.number} по сделке #{invoice.deal_id}",
+        action="Счёт отменён",
+        detail=f"Счёт {invoice.number} по сделке #{invoice.deal_id}",
         event_code="invoice.cancelled",
         event_params={"number": invoice.number, "deal_id": invoice.deal_id},
         user=user,
