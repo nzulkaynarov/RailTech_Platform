@@ -100,6 +100,19 @@ class DocumentTemplateKindCode(models.TextChoices):
     LETTER = "LETTER", "Письмо"
     REPORT = "REPORT", "Рапорт / отчёт"
     CUSTOM = "CUSTOM", "Произвольный"
+    # Юридические виды (spec-editable-outgoing-documents): компания правит СВОЙ шаблон
+    # договора / счёта / акта, а не строки в коде. Пока своего шаблона нет — печатается
+    # платформенный образец, то есть документ не меняется.
+    CONTRACT = "CONTRACT", "Договор"
+    INVOICE = "INVOICE", "Счёт"
+    ACT = "ACT", "Акт"
+
+
+#: Виды, у которых документ юридический: для них шаблон обязан содержать реквизиты (E2), а
+#: правка вёрстки блоков запрещена — блок вставляется целиком одним плейсхолдером.
+LEGAL_TEMPLATE_KINDS = frozenset(
+    {DocumentTemplateKindCode.CONTRACT, DocumentTemplateKindCode.INVOICE, DocumentTemplateKindCode.ACT}
+)
 
 
 class GeneratedDocumentStatusCode(models.TextChoices):

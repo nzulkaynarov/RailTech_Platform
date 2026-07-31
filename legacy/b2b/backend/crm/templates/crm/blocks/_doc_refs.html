@@ -1,0 +1,9 @@
+{% comment %}
+  Блок «ссылки на сделку, договор и счёт». Вставляется в шаблон компании ОДНИМ плейсхолдером
+  {{doc.refs}} — компания решает, где он стоит, но не что внутри (аналог locked block).
+{% endcomment %}
+<div class="term-box">
+  <span class="k">Сделка:</span> #{{ act.deal_id }}
+  {% if act.contract %} &middot; <span class="k">Договор:</span> {{ act.contract.number }} от {{ act.contract.created_at|date:"d.m.Y" }}{% endif %}
+  {% if invoice %} &middot; <span class="k">Счёт:</span> {{ invoice.number }} от {{ invoice.issued_at|date:"d.m.Y" }}{% endif %}
+</div>

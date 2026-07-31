@@ -468,6 +468,30 @@ def _render_act_pdf(act) -> None:
     else:
         totals = document_totals(ccy=ccy, total=act.total_amount)
 
+    # E1: если у компании (или у платформы) есть шаблон акта — печатаем по нему. Компания
+    # правит ТЕКСТ своего документа, а структурные блоки вставляются плейсхолдерами и
+    # собираются сервером. Шаблона нет → прежний путь из кода, документ не меняется.
+    from .document_blocks import company_template_for, render_act_body
+
+    act_template = company_template_for(supplier, "ACT")
+    if act_template is not None:
+        html_string = render_to_string(
+            "crm/act_pdf_templated.html",
+            {
+                "act": act,
+                "invoice": act.invoice,
+                "company": act.deal.company,
+                "contact": act.deal.contact,
+                "totals": totals,
+                "body_html": render_act_body(act, act.invoice, totals, ccy, act_template),
+                **brand_context_for_pdf(act_brand),
+            },
+        )
+        buf = BytesIO()
+        HTML(string=html_string).write_pdf(buf)
+        act.pdf_file.save(f"Act_{act.number}.pdf", ContentFile(buf.getvalue()), save=True)
+        return
+
     html_string = render_to_string(
         "crm/act_pdf.html",
         {
