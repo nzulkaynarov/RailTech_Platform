@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { useSearchDocuments } from '@/hooks/usePageStats';
 import { useUserStore } from '@/store/userStore';
 import { documentRoute } from '@/lib/documentRoute';
+import { documentStatusLabelKey } from '@/lib/codes';
 import type { RecentDocument } from '@/api/dashboardApi';
 
 interface DocumentSearchDialogProps {
@@ -128,9 +129,11 @@ export function DocumentSearchDialog({ open, onOpenChange, onNavigate }: Documen
                                     <div className="flex min-w-0 flex-1 flex-col">
                                         <span className="truncate">{doc.label}</span>
                                     </div>
+                                    {/* Тот же резолвер, что и в «Недавних документах»: статус
+                                        пишется так же, как в реестре документа. */}
                                     {doc.status_code && (
                                         <Badge variant="secondary" className="shrink-0">
-                                            {t(`dashboardPage.recentDocuments.statusCode.${doc.status_code}`, {
+                                            {t(documentStatusLabelKey(doc.type, doc.status_code), {
                                                 defaultValue: doc.status_code,
                                             })}
                                         </Badge>

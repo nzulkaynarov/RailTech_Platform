@@ -38,6 +38,7 @@ import { useTranslation } from 'react-i18next';
 import { useUserStore, selectIsSellerCapable } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { documentRoute } from '@/lib/documentRoute';
+import { documentStatusLabelKey } from '@/lib/codes';
 import { useDeals, useTimeToFirstQuote } from '@/hooks/useCRM';
 import { useRecentDocuments } from '@/hooks/usePageStats';
 import { buyerStatus } from '@/lib/requestStatus';
@@ -385,8 +386,10 @@ function RecentDocumentsCard() {
                   {t(`dashboardPage.recentDocuments.types.${doc.type}`)}
                 </TableCell>
                 <TableCell>
+                  {/* Подпись статуса берётся из словаря ТОГО ЖЕ реестра, где документ живёт:
+                      раньше здесь печатался сырой код, а рядом в реестре — перевод. */}
                   {doc.status_code
-                    ? <Badge variant="secondary">{t(`dashboardPage.recentDocuments.statusCode.${doc.status_code}`, { defaultValue: doc.status_code })}</Badge>
+                    ? <Badge variant="secondary">{t(documentStatusLabelKey(doc.type, doc.status_code), { defaultValue: doc.status_code })}</Badge>
                     : <span className="text-muted-foreground">—</span>}
                 </TableCell>
                 <TableCell className="text-right text-xs text-muted-foreground">

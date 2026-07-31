@@ -421,3 +421,34 @@ export const UOM_LABEL_KEY: Record<string, string> = {
  *  may add lookup rows via Unfold) so callers can fall back to the raw DB name (`|| uom.name`). */
 export const uomLabelKey = (code: string | undefined | null): string =>
   code && UOM_LABEL_KEY[code] ? UOM_LABEL_KEY[code] : '';
+
+
+/**
+ * Ключ подписи статуса ДОКУМЕНТА по паре «тип + код».
+ *
+ * Виджет «Недавние документы» и глобальный поиск показывают документы всех типов вперемешку,
+ * и статус у них печатался СЫРЫМ КОДОМ (`ISSUED`, `PENDING_CLIENT`), тогда как в реестрах тот
+ * же статус переведён. Одно состояние — два разных написания на соседних экранах; поймано
+ * проходом глазами 2026-07-31.
+ *
+ * Словари статусов уже существуют у каждой страницы-реестра, поэтому здесь не новые переводы,
+ * а карта «тип документа → чей словарь спросить». Дублировать подписи значило бы завести
+ * второе место, где их можно рассинхронизировать.
+ */
+const DOCUMENT_STATUS_NAMESPACE: Record<string, string> = {
+  act: 'actsPage.status',
+  contract: 'contractsPage.status',
+  invoice: 'invoicesPage.status',
+  generated: 'otherDocumentsPage.status',
+};
+
+export const documentStatusLabelKey = (
+  type: string | undefined | null,
+  code: string | undefined | null,
+): string => {
+  if (!code) return '';
+  // КП живёт по собственному словарю статусов — он общий для всей воронки.
+  if (type === 'quote') return quoteStatusLabelKey(code);
+  const namespace = type ? DOCUMENT_STATUS_NAMESPACE[type] : undefined;
+  return namespace ? `${namespace}.${code}` : '';
+};
