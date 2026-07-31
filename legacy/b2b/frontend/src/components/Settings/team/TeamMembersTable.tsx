@@ -13,11 +13,12 @@ import { toast } from 'sonner';
 import { CheckCircle2, XCircle, UserCheck, UserX, Trash2 } from 'lucide-react';
 
 import type { CompanyRole, User, UserMembership } from '@/api/accountsApi';
-import { useRemoveMember, useToggleMemberActive } from '@/hooks/useAccounts';
+import { useRemoveMember, useToggleMemberActive, useUpdateMemberCapabilities } from '@/hooks/useAccounts';
 import { translateApiError } from '@/lib/apiError';
 import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,6 +58,14 @@ interface MemberRow {
   canEdit: boolean;
   /** Real membership/account status (P8) — false for invited-but-not-activated / disabled. */
   isActive: boolean;
+  /**
+   * Возможности участника (ADR-0002): продавать и покупать от имени компании. Раздаёт их
+   * администратор компании — так это устроено в модели и в эндпоинте, но переключить их в
+   * интерфейсе было НЕГДЕ (аудит UI, §3.2). Права живут на записи участника — паттерн Odoo,
+   * где access rights редактируются на карточке пользователя.
+   */
+  canSell: boolean;
+  canBuy: boolean;
   displayName: string;
 }
 
@@ -79,6 +88,10 @@ function toMemberRow(
   // Real status (P8): the account-level is_active the backend returns per member.
   // Absent (older payloads) → treat as active so we never show a false «disabled».
   const isActive = member.is_active !== false;
+  // Флаги берём из членства В ЭТОЙ компании: у участника нескольких компаний они разные.
+  // По умолчанию модели оба true — отражаем то же, если поле не пришло со старым payload.
+  const canSell = myMembership?.can_sell !== false;
+  const canBuy = myMembership?.can_buy !== false;
   return {
     member,
     memberId,
@@ -86,8 +99,82 @@ function toMemberRow(
     isSelf,
     canEdit: canManageTeam && !isSelf,
     isActive,
+    canSell,
+    canBuy,
     displayName: member.first_name || member.username || member.email,
   };
+}
+
+/**
+ * Раздача возможностей участника: продавать / покупать от имени компании.
+ *
+ * Эндпоинт `update-member-capabilities` и хук `useUpdateMemberCapabilities` существовали, но
+ * не вызывались ниоткуда — модель per-member capabilities (ADR-0002) была недоступна тому, кому
+ * вменена. Отдельный переключатель на каждое право (а не одно поле «роль») — так же, как в Odoo,
+ * где права по приложениям выставляются независимо на карточке пользователя.
+ *
+ * Свои собственные права участник не меняет (`canEdit` уже исключает себя): администратор,
+ * снявший с себя продажи, потерял бы доступ к собственной воронке и чинил бы это через другого.
+ */
+function MemberCapabilities({
+  companyId,
+  memberId,
+  canSell,
+  canBuy,
+  canEdit,
+}: {
+  companyId: number;
+  memberId: number;
+  canSell: boolean;
+  canBuy: boolean;
+  canEdit: boolean;
+}) {
+  const { t } = useTranslation();
+  const mut = useUpdateMemberCapabilities();
+
+  const apply = async (patch: { can_sell?: boolean; can_buy?: boolean }) => {
+    try {
+      await mut.mutateAsync({ companyId, member_id: memberId, ...patch });
+      toast.success(t('team.capabilities.updated'));
+    } catch (err) {
+      toast.error(translateApiError(err));
+    }
+  };
+
+  if (!canEdit) {
+    return (
+      <div className="flex flex-wrap gap-1">
+        {canSell ? <Badge variant="outline">{t('team.capabilities.sell')}</Badge> : null}
+        {canBuy ? <Badge variant="outline">{t('team.capabilities.buy')}</Badge> : null}
+        {!canSell && !canBuy ? (
+          <span className="text-xs text-muted-foreground">{t('team.capabilities.none')}</span>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="flex items-center gap-2 text-xs">
+        <Switch
+          checked={canSell}
+          disabled={mut.isPending}
+          onCheckedChange={(next) => apply({ can_sell: next })}
+          aria-label={t('team.capabilities.sell')}
+        />
+        {t('team.capabilities.sell')}
+      </label>
+      <label className="flex items-center gap-2 text-xs">
+        <Switch
+          checked={canBuy}
+          disabled={mut.isPending}
+          onCheckedChange={(next) => apply({ can_buy: next })}
+          aria-label={t('team.capabilities.buy')}
+        />
+        {t('team.capabilities.buy')}
+      </label>
+    </div>
+  );
 }
 
 /** Deactivate/activate + remove actions for one member (team.manage, non-self). */
@@ -266,6 +353,20 @@ export function TeamMembersTable({
                 t('team.companyRole'))
               : t('team.noRole')}
           </Badge>
+        ),
+    },
+    {
+      id: 'capabilities',
+      header: t('team.capabilities.label'),
+      cell: ({ memberId, canSell, canBuy, canEdit }) =>
+        companyId == null ? null : (
+          <MemberCapabilities
+            companyId={companyId}
+            memberId={memberId}
+            canSell={canSell}
+            canBuy={canBuy}
+            canEdit={canEdit}
+          />
         ),
     },
     {

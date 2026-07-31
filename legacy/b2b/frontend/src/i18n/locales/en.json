@@ -1731,8 +1731,11 @@
     "roleUpdated": "Role updated",
     "cannotDemoteLastAdmin": "Cannot demote the last Company Admin — assign another one first.",
     "capabilities": {
-      "canBuy": "Buy",
-      "canSell": "Sell"
+      "label": "Rights",
+      "sell": "Selling",
+      "buy": "Buying",
+      "none": "No rights",
+      "updated": "Member rights updated"
     },
     "roles": {
       "OWNER": "Company Admin",
@@ -2062,7 +2065,9 @@
     "untitled": "Deal #{{id}}",
     "claim": "Claim",
     "claimed": "Deal claimed",
-    "assigned": "Assigned"
+    "assigned": "Assigned",
+    "release": "Return to queue",
+    "released": "Request returned to the team queue"
   },
   "verification": {
     "applicationUnderReview": "Application Under Review",

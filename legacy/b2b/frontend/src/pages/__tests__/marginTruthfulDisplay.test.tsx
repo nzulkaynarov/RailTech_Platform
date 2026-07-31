@@ -23,6 +23,7 @@ import {
   useDeleteQuoteItem,
   useSetQuoteDeliveryBasis,
   useClaimDeal,
+  useReleaseDeal,
   useTakeAndPrepareQuote,
   useSubmitQuoteForReview,
 } from '@/hooks/useCRM';
@@ -61,6 +62,7 @@ vi.mock('@/hooks/useCRM', () => ({
   useSetQuoteDeliveryBasis: vi.fn(),
   useReassignProduct: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useClaimDeal: vi.fn(),
+  useReleaseDeal: vi.fn(),
   useTakeAndPrepareQuote: vi.fn(),
   useSubmitQuoteForReview: vi.fn(),
 }));
@@ -229,7 +231,7 @@ describe('WP-7 truthful margin display', () => {
       useCreateQuoteItem,
       useDeleteQuoteItem,
       useSetQuoteDeliveryBasis,
-      useClaimDeal, useTakeAndPrepareQuote, useSubmitQuoteForReview,
+      useClaimDeal, useReleaseDeal, useTakeAndPrepareQuote, useSubmitQuoteForReview,
     ].forEach((hook) => setHook(hook, mkMutation()));
   });
 

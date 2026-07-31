@@ -199,3 +199,63 @@ def test_new_message_notifies_claimed_owner(scenario):
     claim_deal(scenario.deal.id, scenario.a_member)
     Message.objects.create(deal=scenario.deal, sender=scenario.buyer_user, text="Когда КП?", message_type="CHAT")
     assert Notification.objects.filter(user=scenario.a_member, deal=scenario.deal).exists()
+
+
+# ─── подсказка «можно вернуть в очередь» ────────────────────────────────────
+#
+# Волна U1 закрыла класс ошибок «интерфейс показывает объект, а право на действие выводит сам»:
+# сторона зрителя считается СЕРВЕРОМ. `viewer_can_release` — та же дисциплина для владения
+# сделкой. Тесты ниже проверяют не текст подсказки, а её СОВПАДЕНИЕ с сервисом: если предикаты
+# разойдутся, кнопка появится там, где действие откажет, — ровно то, что мы вычищали.
+
+
+def _can_release(deal, viewer):
+    return DealListSerializer(deal, context={"request": SimpleNamespace(user=viewer)}).data["viewer_can_release"]
+
+
+def test_release_hint_matches_service_for_every_actor(scenario):
+    """Параметризация по всем действующим лицам: подсказка == успех сервиса."""
+    claim_deal(scenario.deal.id, scenario.a_member)
+
+    actors = {
+        "владелец записи": scenario.a_member,
+        "админ своей компании": scenario.a_admin,
+        "коллега без team.manage": _member_of_seller_a(scenario),
+        "продавец-конкурент": scenario.b_member,
+        "админ конкурента": scenario.b_admin,
+        "покупатель": scenario.buyer_user,
+    }
+    for name, actor in actors.items():
+        hint = _can_release(scenario.deal, actor)
+        # Сервис вызываем на СВЕЖЕЙ копии состояния: он меняет данные, поэтому сначала снимаем
+        # подсказку, потом пробуем действие и возвращаем владение на место.
+        _, err = release_deal(scenario.deal.id, actor)
+        allowed = err is None and _routing(scenario.deal, scenario.seller_a).assigned_to_id is None
+        assert hint == allowed, f"{name}: подсказка {hint}, а сервис {'разрешил' if allowed else 'отказал'}"
+        # восстанавливаем исходное владение для следующего актора
+        routing = _routing(scenario.deal, scenario.seller_a)
+        if routing.assigned_to_id is None:
+            claim_deal(scenario.deal.id, scenario.a_member)
+
+
+def _member_of_seller_a(scenario):
+    """Второй рядовой участник компании A — у него нет ни записи, ни team.manage."""
+    user = CustomUser.objects.filter(email="a.colleague@a.uz").first()
+    if user is None:
+        user = _user("a.colleague@a.uz")
+        _member(user, scenario.seller_a)
+    return user
+
+
+def test_no_release_hint_while_deal_is_unclaimed(scenario):
+    """Возвращать нечего, пока никто не взял: кнопка не должна появляться рядом с «Взять»."""
+    assert _can_release(scenario.deal, scenario.a_member) is False
+
+
+def test_platform_operator_never_gets_release_hint(scenario):
+    """Оператор платформы — наблюдатель (ADR-0002), от имени компании он не действует."""
+    claim_deal(scenario.deal.id, scenario.a_member)
+    operator = _user("operator@platform.uz")
+    operator.role = SystemRole.objects.get_or_create(code="ADMIN", defaults={"name": "Admin", "sort_order": 1})[0]
+    operator.save(update_fields=["role"])
+    assert _can_release(scenario.deal, operator) is False

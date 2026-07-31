@@ -8,7 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Handshake, UserCheck, Loader2, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatWaiting, isUnclaimedRfq, waitingHours } from '@/lib/waiting';
-import { useClaimDeal } from '@/hooks/useCRM';
+import { useClaimDeal, useReleaseDeal } from '@/hooks/useCRM';
 import { useIsSoloSeller } from '@/hooks/useCapabilities';
 import { DEAL_STAGE_LABEL_KEY } from '@/lib/codes';
 import { translateApiError } from '@/lib/apiError';
@@ -38,6 +38,7 @@ export function DealsKanban({ deals, stages, onOpen }: DealsKanbanProps) {
   const { t } = useTranslation();
   const format = useCurrencyStore((s) => s.format);
   const claimMut = useClaimDeal();
+  const releaseMut = useReleaseDeal();
   // Wave B2 (auto-claim): hide the per-card «Взять в работу» for a solo seller — no queue to route.
   const isSoloSeller = useIsSoloSeller();
 
@@ -45,6 +46,17 @@ export function DealsKanban({ deals, stages, onOpen }: DealsKanbanProps) {
     e.stopPropagation(); // don't open the deal — just take ownership from the queue
     claimMut.mutate(dealId, {
       onSuccess: () => toast.success(t('dealsKanban.claimed')),
+      onError: (err) => toast.error(translateApiError(err)),
+    });
+  };
+
+  // Обратное действие к «Взять в работу»: запись возвращается в очередь КОМАНДЫ, откуда её
+  // может взять любой коллега (паттерн очередей Salesforce). Без него менеджер, взявший заявку
+  // по ошибке, оставался с ней навсегда — эндпоинт был, входа не было.
+  const handleRelease = (e: React.MouseEvent, dealId: number) => {
+    e.stopPropagation();
+    releaseMut.mutate(dealId, {
+      onSuccess: () => toast.success(t('dealsKanban.released')),
       onError: (err) => toast.error(translateApiError(err)),
     });
   };
@@ -145,10 +157,28 @@ export function DealsKanban({ deals, stages, onOpen }: DealsKanbanProps) {
                           </div>
                         ) : null}
                         {d.assigned_to != null ? (
-                          <Badge variant="secondary" className="gap-1 text-xs font-normal">
-                            <UserCheck className="h-3 w-3" aria-hidden="true" />
-                            <span className="truncate">{d.assigned_to_name || t('dealsKanban.assigned')}</span>
-                          </Badge>
+                          <div className="flex flex-col gap-1">
+                            <Badge variant="secondary" className="gap-1 text-xs font-normal">
+                              <UserCheck className="h-3 w-3" aria-hidden="true" />
+                              <span className="truncate">{d.assigned_to_name || t('dealsKanban.assigned')}</span>
+                            </Badge>
+                            {/* Право на возврат приходит с сервера — тем же предикатом, что и само
+                                действие; фронт его не выводит (U1). */}
+                            {d.viewer_can_release ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-full text-xs"
+                                disabled={releaseMut.isPending}
+                                onClick={(e) => handleRelease(e, d.id)}
+                              >
+                                {releaseMut.isPending && releaseMut.variables === d.id ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                                ) : null}
+                                {t('dealsKanban.release')}
+                              </Button>
+                            ) : null}
+                          </div>
                         ) : isSoloSeller ? null : (
                           <Button
                             variant="outline"

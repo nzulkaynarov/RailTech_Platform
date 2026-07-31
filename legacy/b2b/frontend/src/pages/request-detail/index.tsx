@@ -8,7 +8,7 @@ import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { useIsSoloSeller } from '@/hooks/useCapabilities';
 import {
   useDeal, useChangeDealStage, useApproveQuote, useRejectQuote, useSendQuoteToClient,
-  useUpdateRequestMeta, useClaimDeal, useTakeAndPrepareQuote, useSubmitQuoteForReview,
+  useUpdateRequestMeta, useClaimDeal, useReleaseDeal, useTakeAndPrepareQuote, useSubmitQuoteForReview,
 } from '@/hooks/useCRM';
 import { translateApiError, extractApiErrorCode } from '@/lib/apiError';
 import { Textarea } from '@/components/ui/textarea';
@@ -57,6 +57,7 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
   const sendQuote = useSendQuoteToClient();
   const updateMeta = useUpdateRequestMeta();
   const claimMut = useClaimDeal();
+  const releaseMut = useReleaseDeal();
   const takeMut = useTakeAndPrepareQuote();
   const submitReviewMut = useSubmitQuoteForReview();
   const isSoloSeller = useIsSoloSeller();
@@ -107,6 +108,8 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
   const canBuildNewVersion = isSellerSide && deal.active_quote?.status_code === QuoteStatus.REJECTED;
   // Wave B2 (auto-claim): a solo seller has no queue to route, so hide «Взять в работу» entirely.
   const canClaim = isSellerSide && deal.assigned_to == null && !isSoloSeller;
+  // Право на возврат считает СЕРВЕР (владелец записи ИЛИ team.manage) — фронт его не выводит.
+  const canRelease = !!deal.viewer_can_release;
   const openQuoteBuilder = () => { window.location.hash = `deal-quote/${deal.id}`; };
   // Buyer may build/edit their own request (name + qty) until the seller engages. The backend is
   // the source of truth (can_edit_request); the UI only reflects it.
@@ -176,6 +179,7 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
           canBuildQuote={canBuildQuote}
           canBuildNewVersion={canBuildNewVersion}
           canClaim={canClaim}
+          canRelease={canRelease}
           canTakeAndPrepare={canTakeAndPrepare}
           canSubmitForReview={canSubmitForReview}
           canEditRequest={canEditRequest}
@@ -183,6 +187,7 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
           viewerTip={viewerTip}
           changeStagePending={changeStage.isPending}
           claimPending={claimMut.isPending}
+          releasePending={releaseMut.isPending}
           takePending={takeMut.isPending}
           submitReviewPending={submitReviewMut.isPending}
           onSubmitForReview={async () => {
@@ -207,6 +212,10 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
           approvePending={approveQuote.isPending}
           onClaim={() => claimMut.mutate(deal.id, {
             onSuccess: () => toast.success(t('dealsKanban.claimed')),
+            onError: (err) => toast.error(translateApiError(err)),
+          })}
+          onRelease={() => releaseMut.mutate(deal.id, {
+            onSuccess: () => toast.success(t('dealsKanban.released')),
             onError: (err) => toast.error(translateApiError(err)),
           })}
           onStartSourcing={() => run(() => changeStage.mutateAsync({ id: deal.id, stage: DealStage.SOURCING }))}

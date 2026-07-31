@@ -52,6 +52,32 @@ def _assigned_at(obj, request):
     return routing.assigned_at if routing else None
 
 
+def _viewer_can_release(obj, request):
+    """Может ли зритель вернуть эту сделку в очередь своей компании.
+
+    Считает СЕРВЕР тем же предикатом, что и `release_deal`: владелец записи ИЛИ участник с
+    правом `team.manage` в компании-продавце, которой сделка отроутена. Иначе фронт снова
+    начал бы угадывать сторону по локальным флагам — ровно та ошибка, которую закрыла волна U1
+    (виджет показывает объект, а право на действие выводит сам).
+
+    Платформенный оператор — наблюдатель (ADR-0002): он не действует от имени компании.
+    """
+    from accounts.services import is_platform_admin_viewer, member_has_permission
+
+    user = getattr(request, "user", None)
+    if user is None or not getattr(user, "is_authenticated", False):
+        return False
+    if is_platform_admin_viewer(user):
+        return False
+    routing = _viewer_routing(obj, request)
+    # Возвращать нечего, пока запись никем не взята.
+    if routing is None or not routing.assigned_to_id:
+        return False
+    if routing.assigned_to_id == user.id or getattr(user, "is_superuser", False):
+        return True
+    return member_has_permission(user, routing.seller_company_id, "team.manage")
+
+
 def _target_sellers_for_viewer(obj, request):
     """Seller companies this RFQ is routed to — VIEWER-SCOPED (audit #5). The buyer (RFQ owner)
     and platform admin see the full routed set; a routed SELLER viewer sees only its OWN company,
@@ -86,6 +112,7 @@ class DealListSerializer(serializers.ModelSerializer):
     assigned_to = serializers.SerializerMethodField()
     assigned_to_name = serializers.SerializerMethodField()
     assigned_at = serializers.SerializerMethodField()
+    viewer_can_release = serializers.SerializerMethodField()
 
     def get_assigned_to(self, obj) -> int | None:
         return _assigned_to_id(obj, self.context.get("request"))
@@ -95,6 +122,9 @@ class DealListSerializer(serializers.ModelSerializer):
 
     def get_assigned_at(self, obj) -> datetime | None:
         return _assigned_at(obj, self.context.get("request"))
+
+    def get_viewer_can_release(self, obj) -> bool:
+        return _viewer_can_release(obj, self.context.get("request"))
 
     def get_target_sellers_data(self, obj) -> list:
         """Seller companies this RFQ is routed to (multi-seller routing)."""
@@ -116,6 +146,7 @@ class DealListSerializer(serializers.ModelSerializer):
             "assigned_to",
             "assigned_to_name",
             "assigned_at",
+            "viewer_can_release",
             "active_quote",
             "target_sellers_data",
             "created_at",
@@ -139,6 +170,7 @@ class DealDetailSerializer(serializers.ModelSerializer):
     assigned_to = serializers.SerializerMethodField()
     assigned_to_name = serializers.SerializerMethodField()
     assigned_at = serializers.SerializerMethodField()
+    viewer_can_release = serializers.SerializerMethodField()
     can_edit_request = serializers.SerializerMethodField()
     target_sellers_data = serializers.SerializerMethodField()
 
@@ -150,6 +182,9 @@ class DealDetailSerializer(serializers.ModelSerializer):
 
     def get_assigned_at(self, obj) -> datetime | None:
         return _assigned_at(obj, self.context.get("request"))
+
+    def get_viewer_can_release(self, obj) -> bool:
+        return _viewer_can_release(obj, self.context.get("request"))
 
     def get_target_sellers_data(self, obj) -> list:
         """Seller companies this RFQ is routed to (multi-seller routing)."""
@@ -179,6 +214,7 @@ class DealDetailSerializer(serializers.ModelSerializer):
             "assigned_to",
             "assigned_to_name",
             "assigned_at",
+            "viewer_can_release",
             "stage",
             "stage_code",
             "stage_name",

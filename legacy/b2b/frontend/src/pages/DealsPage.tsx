@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { FileText, Clock, Eye, Handshake, Loader2 } from 'lucide-react';
+import { FileText, Clock, Eye, Handshake, Loader2, Undo2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StatusBadge, getDealStageVariant } from '@/components/ui/StatusBadge';
@@ -9,7 +9,7 @@ import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/Respons
 import { Toolbar, Pager, useListParams, applyListParams } from '@/components/DataTable';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useUserStore } from '@/store/userStore';
-import { useDeals, useDealStages, useClaimDeal } from '@/hooks/useCRM';
+import { useDeals, useDealStages, useClaimDeal, useReleaseDeal } from '@/hooks/useCRM';
 import { useIsSoloSeller } from '@/hooks/useCapabilities';
 import { DEAL_STAGE_LABEL_KEY } from '@/lib/codes';
 import { translateApiError } from '@/lib/apiError';
@@ -34,6 +34,7 @@ export function DealsPage() {
   const formatCurrency = useCurrencyStore((s) => s.format);
   const activeStatus = useUserStore((s) => s.activeStatus);
   const claimMut = useClaimDeal();
+  const releaseMut = useReleaseDeal();
   // Wave B2 (auto-claim): a solo seller has no one to route work between, so «Взять в работу» is
   // noise — hide it. Multi-member companies keep claim (it still routes the queue). UI-only.
   const isSoloSeller = useIsSoloSeller();
@@ -52,6 +53,12 @@ export function DealsPage() {
   const handleClaim = (dealId: number) => {
     claimMut.mutate(dealId, {
       onSuccess: () => toast.success(t('dealsKanban.claimed')),
+      onError: (err) => toast.error(translateApiError(err)),
+    });
+  };
+  const handleRelease = (dealId: number) => {
+    releaseMut.mutate(dealId, {
+      onSuccess: () => toast.success(t('dealsKanban.released')),
       onError: (err) => toast.error(translateApiError(err)),
     });
   };
@@ -142,6 +149,24 @@ export function DealsPage() {
                 <Handshake className="h-3 w-3" aria-hidden="true" />
               )}
               {t('dealsKanban.claim')}
+            </Button>
+          ) : null}
+          {/* Обратное действие: запись уходит обратно в очередь команды. Право считает сервер
+              (`viewer_can_release`) тем же предикатом, что и сам возврат. */}
+          {deal.viewer_can_release ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1 text-xs"
+              disabled={releaseMut.isPending}
+              onClick={() => handleRelease(deal.id)}
+            >
+              {releaseMut.isPending && releaseMut.variables === deal.id ? (
+                <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+              ) : (
+                <Undo2 className="h-3 w-3" aria-hidden="true" />
+              )}
+              {t('dealsKanban.release')}
             </Button>
           ) : null}
           <Button variant="ghost" size="sm" onClick={() => openDeal(deal)} aria-label={t('pages.deals.detail.openQuote')}>

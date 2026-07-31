@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Send, Calculator, ThumbsUp, ThumbsDown, Loader2, FileText, Handshake, Sparkles, ClipboardCheck } from 'lucide-react';
+import { Send, Calculator, ThumbsUp, ThumbsDown, Loader2, FileText, Handshake, Sparkles, ClipboardCheck, Undo2 } from 'lucide-react';
 import type { Quote } from '@/api/crmApi';
 import { QuoteStatus } from '@/lib/codes';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,8 @@ export interface RequestActionBarProps {
   canBuildQuote: boolean;
   canBuildNewVersion: boolean;
   canClaim: boolean;
+  /** Серверная подсказка: зритель вправе вернуть сделку в очередь команды. */
+  canRelease: boolean;
   canTakeAndPrepare: boolean;
   canSubmitForReview: boolean;
   canEditRequest: boolean;
@@ -26,11 +28,13 @@ export interface RequestActionBarProps {
   viewerTip: string;
   changeStagePending: boolean;
   claimPending: boolean;
+  releasePending: boolean;
   takePending: boolean;
   submitReviewPending: boolean;
   sendQuotePending: boolean;
   approvePending: boolean;
   onClaim: () => void;
+  onRelease: () => void;
   onTakeAndPrepare: () => void;
   onStartSourcing: () => void;
   onStartCalculation: () => void;
@@ -52,9 +56,9 @@ export function RequestActionBar(props: RequestActionBarProps) {
   const { t } = useTranslation();
   const {
     quote, isSellerSide, isBuyerSide, isDraft, isSourcing, isCalculating, isQuoteSent, isWon,
-    hasQuote, canBuildQuote, canBuildNewVersion, canClaim, canTakeAndPrepare, canSubmitForReview,
-    canEditRequest, isViewer, viewerTip, changeStagePending, claimPending, takePending,
-    submitReviewPending, sendQuotePending, approvePending, onClaim, onTakeAndPrepare,
+    hasQuote, canBuildQuote, canBuildNewVersion, canClaim, canRelease, canTakeAndPrepare, canSubmitForReview,
+    canEditRequest, isViewer, viewerTip, changeStagePending, claimPending, releasePending, takePending,
+    submitReviewPending, sendQuotePending, approvePending, onClaim, onRelease, onTakeAndPrepare,
     onStartSourcing, onStartCalculation, onOpenGenerate, onOpenQuoteBuilder, onSubmitForReview,
     onSendQuote, onApprove, onReject, onOpenContract,
   } = props;
@@ -63,7 +67,7 @@ export function RequestActionBar(props: RequestActionBarProps) {
   const buyerActions = isBuyerSide && isQuoteSent && !!quote;
   // Buyer-side "won" state is owned by BuyerAcceptedPanel above, so it does not open an action
   // bar; the seller still gets the "deal accepted / open contract" row from the isWon branch below.
-  const showActionBar = sellerActions || buyerActions || (isWon && isSellerSide) || canClaim || canTakeAndPrepare;
+  const showActionBar = sellerActions || buyerActions || (isWon && isSellerSide) || canClaim || canRelease || canTakeAndPrepare;
 
   if (!showActionBar) {
     // A buyer editing a draft already gets this guidance from the "Your request" card subtitle —
@@ -106,6 +110,21 @@ export function RequestActionBar(props: RequestActionBarProps) {
               ? <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
               : <Handshake className="h-4 w-4 mr-2" aria-hidden="true" />}
             {t('dealsKanban.claim')}
+          </Button>
+        )}
+        {/* Обратное действие к «Взять в работу»: запись уходит в очередь команды, и её может
+            взять любой коллега. Право приходит с сервера — тем же предикатом, что и возврат. */}
+        {canRelease && (
+          <Button
+            variant="ghost"
+            onClick={onRelease}
+            disabled={isViewer || releasePending}
+            title={isViewer ? viewerTip : undefined}
+          >
+            {releasePending
+              ? <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
+              : <Undo2 className="h-4 w-4 mr-2" aria-hidden="true" />}
+            {t('dealsKanban.release')}
           </Button>
         )}
         {isSellerSide && isDraft && (

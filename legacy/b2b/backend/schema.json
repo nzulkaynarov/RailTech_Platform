@@ -21082,6 +21082,10 @@
                         "nullable": true,
                         "readOnly": true
                     },
+                    "viewer_can_release": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
                     "stage": {
                         "type": "integer",
                         "nullable": true,
@@ -21162,7 +21166,8 @@
                     "stage_code",
                     "stage_name",
                     "target_sellers_data",
-                    "updated_at"
+                    "updated_at",
+                    "viewer_can_release"
                 ]
             },
             "DealDetailRequest": {
@@ -21277,6 +21282,10 @@
                         "nullable": true,
                         "readOnly": true
                     },
+                    "viewer_can_release": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
                     "active_quote": {
                         "allOf": [
                             {
@@ -21310,7 +21319,8 @@
                     "stage_code",
                     "stage_name",
                     "target_sellers_data",
-                    "total_value"
+                    "total_value",
+                    "viewer_can_release"
                 ]
             },
             "DealStageLookup": {

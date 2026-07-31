@@ -13,6 +13,7 @@ import {
   useUpdateRequestMeta,
   useQuoteRequestDiff,
   useClaimDeal,
+  useReleaseDeal,
   useTakeAndPrepareQuote,
   useSubmitQuoteForReview,
 } from '@/hooks/useCRM';
@@ -40,6 +41,7 @@ vi.mock('@/hooks/useCRM', () => ({
   usePreflightCheck: vi.fn(),
   useQuoteRequestDiff: vi.fn(),
   useClaimDeal: vi.fn(),
+  useReleaseDeal: vi.fn(),
   useTakeAndPrepareQuote: vi.fn(),
   useSubmitQuoteForReview: vi.fn(),
 }));
@@ -128,7 +130,7 @@ describe('RequestDetailPage — seller SOLO deal (company === null)', () => {
     vi.clearAllMocks();
     [
       useChangeDealStage, useApproveQuote, useRejectQuote, useSendQuoteToClient,
-      useUpdateRequestMeta, useQuoteRequestDiff, useClaimDeal, useTakeAndPrepareQuote,
+      useUpdateRequestMeta, useQuoteRequestDiff, useClaimDeal, useReleaseDeal, useTakeAndPrepareQuote,
       useSubmitQuoteForReview,
     ].forEach((hook) => setHook(hook, mkMutation()));
     setHook(useDeal, { data: soloDeal, isLoading: false, isError: false, refetch: vi.fn() });

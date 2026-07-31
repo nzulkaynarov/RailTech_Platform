@@ -379,6 +379,12 @@ export interface Deal {
 	assigned_to?: number | null;       // deal owner (claimed); null = unclaimed, in the queue
 	assigned_to_name?: string;
 	assigned_at?: string | null;       // time-to-first-touch anchor
+	/**
+	 * Может ли зритель вернуть сделку в очередь своей компании. Считает СЕРВЕР тем же
+	 * предикатом, что и сам возврат (владелец записи ИЛИ участник с `team.manage`), — фронт
+	 * не выводит право сам, иначе кнопка появлялась бы там, где действие откажет (U1).
+	 */
+	viewer_can_release?: boolean;
 	stage?: number | null;
 	stage_code?: string;
 	stage_name?: string;
