@@ -9165,6 +9165,64 @@
                 }
             }
         },
+        "/api/v1/crm/contracts/{id}/select-wording/": {
+            "post": {
+                "operationId": "crm_contracts_select_wording_create",
+                "description": "Contracts -- generated from approved quotes, double-signed.",
+                "summary": "Select an approved wording variant for THIS contract (E4 playbook)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Контракт.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SelectContractWordingRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SelectContractWordingRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SelectContractWordingRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Contract"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/v1/crm/contracts/{id}/sign-client/": {
             "post": {
                 "operationId": "crm_contracts_sign_client_create",
@@ -15596,6 +15654,216 @@
                 }
             }
         },
+        "/api/v1/crm/wording-variants/": {
+            "get": {
+                "operationId": "crm_wording_variants_list",
+                "description": "Библиотека согласованных формулировок компании (E4, playbook-канон).",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "field",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "A search term.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/CompanyWordingVariant"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "crm_wording_variants_create",
+                "description": "Библиотека согласованных формулировок компании (E4, playbook-канон).",
+                "tags": [
+                    "CRM"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CompanyWordingVariantRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CompanyWordingVariantRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CompanyWordingVariantRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CompanyWordingVariant"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/wording-variants/{id}/": {
+            "get": {
+                "operationId": "crm_wording_variants_retrieve",
+                "description": "Библиотека согласованных формулировок компании (E4, playbook-канон).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Вариант формулировки.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CompanyWordingVariant"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "crm_wording_variants_partial_update",
+                "description": "Библиотека согласованных формулировок компании (E4, playbook-канон).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Вариант формулировки.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedCompanyWordingVariantRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedCompanyWordingVariantRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedCompanyWordingVariantRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CompanyWordingVariant"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "crm_wording_variants_destroy",
+                "description": "Библиотека согласованных формулировок компании (E4, playbook-канон).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Вариант формулировки.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/v1/master-data/countries/": {
             "get": {
                 "operationId": "master_data_countries_list",
@@ -20700,6 +20968,92 @@
                     "name"
                 ]
             },
+            "CompanyWordingVariant": {
+                "type": "object",
+                "description": "Согласованный вариант формулировки (E4). `company`/`created_by` — серверные.",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "field": {
+                        "type": "string",
+                        "title": "Поле формулировки",
+                        "description": "Код поля из каталога формулировок (contract_liability_text, ...)",
+                        "maxLength": 64
+                    },
+                    "title": {
+                        "type": "string",
+                        "title": "Название варианта",
+                        "maxLength": 120
+                    },
+                    "text": {
+                        "type": "string",
+                        "title": "Текст"
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "maximum": 2147483647,
+                        "minimum": 0,
+                        "title": "Порядок"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "title": "Дата создания"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "title": "Дата обновления"
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "field",
+                    "id",
+                    "text",
+                    "title",
+                    "updated_at"
+                ]
+            },
+            "CompanyWordingVariantRequest": {
+                "type": "object",
+                "description": "Согласованный вариант формулировки (E4). `company`/`created_by` — серверные.",
+                "properties": {
+                    "field": {
+                        "type": "string",
+                        "minLength": 1,
+                        "title": "Поле формулировки",
+                        "description": "Код поля из каталога формулировок (contract_liability_text, ...)",
+                        "maxLength": 64
+                    },
+                    "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "title": "Название варианта",
+                        "maxLength": 120
+                    },
+                    "text": {
+                        "type": "string",
+                        "minLength": 1,
+                        "title": "Текст"
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "maximum": 2147483647,
+                        "minimum": 0,
+                        "title": "Порядок"
+                    }
+                },
+                "required": [
+                    "field",
+                    "text",
+                    "title"
+                ]
+            },
             "Contact": {
                 "type": "object",
                 "properties": {
@@ -20891,6 +21245,10 @@
                     "notes": {
                         "type": "string"
                     },
+                    "wording_selections": {
+                        "readOnly": true,
+                        "title": "Формулировки договора"
+                    },
                     "created_at": {
                         "type": "string",
                         "format": "date-time",
@@ -20923,7 +21281,8 @@
                     "total_amount",
                     "updated_at",
                     "viewer_can_sign_client",
-                    "viewer_can_sign_manager"
+                    "viewer_can_sign_manager",
+                    "wording_selections"
                 ]
             },
             "ContractRequest": {
@@ -25063,6 +25422,36 @@
                     }
                 }
             },
+            "PatchedCompanyWordingVariantRequest": {
+                "type": "object",
+                "description": "Согласованный вариант формулировки (E4). `company`/`created_by` — серверные.",
+                "properties": {
+                    "field": {
+                        "type": "string",
+                        "minLength": 1,
+                        "title": "Поле формулировки",
+                        "description": "Код поля из каталога формулировок (contract_liability_text, ...)",
+                        "maxLength": 64
+                    },
+                    "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "title": "Название варианта",
+                        "maxLength": 120
+                    },
+                    "text": {
+                        "type": "string",
+                        "minLength": 1,
+                        "title": "Текст"
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "maximum": 2147483647,
+                        "minimum": 0,
+                        "title": "Порядок"
+                    }
+                }
+            },
             "PatchedContactRequest": {
                 "type": "object",
                 "properties": {
@@ -28751,6 +29140,22 @@
                 },
                 "required": [
                     "results"
+                ]
+            },
+            "SelectContractWordingRequest": {
+                "type": "object",
+                "properties": {
+                    "field": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "variant_id": {
+                        "type": "integer",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "field"
                 ]
             },
             "SelfUpdate": {

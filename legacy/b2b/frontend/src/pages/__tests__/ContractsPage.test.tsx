@@ -48,6 +48,7 @@ function makeContract(overrides: Partial<Contract> & { id: number }): Contract {
     valid_from: null,
     valid_until: null,
     invoice_id: null,
+  wording_selections: {},
     notes: '',
     created_at: '2026-07-08T10:00:00Z',
     updated_at: '2026-07-08T10:00:00Z',

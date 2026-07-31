@@ -220,3 +220,51 @@ class GeneratedDocument(models.Model):
     @property
     def status_code(self):
         return self.status.code if self.status_id else None
+
+
+class CompanyWordingVariant(models.Model):
+    """Согласованная альтернативная редакция формулировки документа (E4, playbook-канон).
+
+    Юрист компании заранее готовит именованные варианты пункта («Неустойка 0,05%»,
+    «Предоплата 50%»); менеджер в переговорах по конкретному договору ВЫБИРАЕТ из них, а не
+    сочиняет текст (Ironclad fallback positions / DocuSign playbook). `field` — код поля из
+    каталога формулировок D1 (`crm.document_wording.DOCUMENT_WORDING_DEFAULTS`).
+    """
+
+    company = models.ForeignKey(
+        "accounts.Company",
+        on_delete=models.CASCADE,
+        related_name="wording_variants",
+        db_index=True,
+        verbose_name=_("Компания"),
+    )
+    field = models.CharField(
+        max_length=64,
+        db_index=True,
+        verbose_name=_("Поле формулировки"),
+        help_text=_("Код поля из каталога формулировок (contract_liability_text, ...)"),
+    )
+    title = models.CharField(max_length=120, verbose_name=_("Название варианта"))
+    text = models.TextField(verbose_name=_("Текст"))
+    sort_order = models.PositiveIntegerField(default=100, verbose_name=_("Порядок"))
+    created_by = models.ForeignKey(
+        "accounts.CustomUser",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_wording_variants",
+        verbose_name=_("Кем создан"),
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Дата создания"))
+    updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Дата обновления"))
+
+    class Meta:
+        verbose_name = _("Вариант формулировки")
+        verbose_name_plural = _("Варианты формулировок")
+        ordering = ["field", "sort_order", "id"]
+        constraints = [
+            models.UniqueConstraint(fields=["company", "field", "title"], name="wording_variant_unique_title")
+        ]
+
+    def __str__(self):
+        return f"[{self.company_id}] {self.field}: {self.title}"

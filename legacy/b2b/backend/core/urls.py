@@ -98,6 +98,7 @@ from crm.views import (
     SuggestChatReplyView,
     TimelineView,
     TimeToFirstQuoteView,
+    WordingVariantViewSet,
 )
 from master_data.views import CountryViewSet, CurrencyViewSet, DeliveryBasisViewSet, UnitOfMeasureViewSet
 from notifications.views import EmailTemplateViewSet, NotificationViewSet
@@ -132,6 +133,7 @@ router.register(r"crm/quote-charges", QuoteChargeViewSet, basename="quotecharge"
 router.register(r"crm/charge-types", ChargeTypeViewSet, basename="chargetype")
 router.register(r"crm/charge-templates", ChargeTemplateViewSet, basename="chargetemplate")
 router.register(r"crm/document-templates", DocumentTemplateViewSet, basename="documenttemplate")
+router.register(r"crm/wording-variants", WordingVariantViewSet, basename="wordingvariant")
 router.register(r"crm/generated-documents", GeneratedDocumentViewSet, basename="generateddocument")
 router.register(r"crm/messages", MessageViewSet, basename="message")
 router.register(r"crm/activity-logs", ActivityLogViewSet, basename="activitylog")

@@ -10,7 +10,7 @@ from .billing import Act, Invoice, InvoiceItem, Payment
 from .charges import ChargeTemplate, QuoteCharge
 from .contracts import Contract
 from .deals import ActivityLog, Deal, DealSellerRouting, Lead, Message
-from .documents import DocumentTemplate, GeneratedDocument
+from .documents import CompanyWordingVariant, DocumentTemplate, GeneratedDocument
 from .fulfillment import Fulfillment
 from .lookups import (
     ActStatus,
@@ -42,6 +42,7 @@ __all__ = [
     "DealStage",
     "DocumentNumberingScheme",
     "DocumentSequence",
+    "CompanyWordingVariant",
     "DocumentTemplate",
     "DocumentTemplateKind",
     "Fulfillment",

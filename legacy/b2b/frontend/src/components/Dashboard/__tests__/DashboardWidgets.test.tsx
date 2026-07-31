@@ -83,6 +83,7 @@ function makeContract(id: number, status: ContractStatus): Contract {
     valid_from: null,
     valid_until: null,
     invoice_id: null,
+  wording_selections: {},
     notes: '',
     created_at: '2026-07-01T10:00:00Z',
     updated_at: '2026-07-01T10:00:00Z',

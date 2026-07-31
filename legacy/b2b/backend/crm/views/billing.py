@@ -260,6 +260,32 @@ class ContractViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
             return Response({"detail": err}, status=400)
         return Response(ContractSerializer(contract).data, status=201)
 
+    @extend_schema(
+        summary="Select an approved wording variant for THIS contract (E4 playbook)",
+        tags=["CRM"],
+        request=inline_serializer(
+            "SelectContractWording",
+            fields={
+                "field": drf_serializers.CharField(),
+                "variant_id": drf_serializers.IntegerField(required=False, allow_null=True),
+            },
+        ),
+    )
+    @action(detail=True, methods=["post"], url_path="select-wording")
+    def select_wording(self, request, pk=None):
+        from crm.services.wording_variants import select_contract_wording
+
+        contract = self.get_object()
+        contract, err = select_contract_wording(
+            contract,
+            request.user,
+            field=str(request.data.get("field", "")),
+            variant_id=request.data.get("variant_id"),
+        )
+        if err:
+            return Response({"detail": err}, status=400)
+        return Response(ContractSerializer(contract).data)
+
     @extend_schema(summary="Sign contract by client", tags=["CRM"])
     @action(detail=True, methods=["post"], url_path="sign-client")
     def sign_client(self, request, pk=None):

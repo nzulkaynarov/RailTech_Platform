@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+
+import { WordingVariantsSettings } from '@/components/Cabinet/WordingVariantsSettings';
 import { FileText, Loader2, Lock, Shield } from 'lucide-react';
 
 import {
@@ -546,6 +548,8 @@ export function CompanyDocumentProfileSettings() {
                 />
                 <p className="text-xs text-muted-foreground">{t('documentProfile.wording.actClosingHint')}</p>
               </div>
+              {/* E4: библиотека согласованных редакций — рядом с формулировками, то же право. */}
+              <WordingVariantsSettings />
             </div>
 
             <Separator />

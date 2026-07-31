@@ -4064,7 +4064,16 @@
     "downloadSigned": "Download signed",
     "createInvoice": "Create invoice",
     "openInvoice": "Open invoice",
-    "invoiceCreated": "Invoice created"
+    "invoiceCreated": "Invoice created",
+    "wording": {
+      "title": "Contract wording",
+      "hint": "Pick an approved clause wording for this contract. Available until it is signed.",
+      "acceptance": "Acceptance & quality",
+      "liability": "Liability",
+      "extraTerms": "Special terms",
+      "standard": "Standard wording",
+      "changed": "Contract wording updated"
+    }
   },
   "invoicesPage": {
     "title": "Invoices",
@@ -4725,7 +4734,13 @@
     "INVALID_EMAIL": "Enter a valid email address",
     "NO_RECIPIENT": "Could not determine a recipient — enter an email.",
     "DOCUMENT_LINK_NOT_ACTIVE": "The document has no active public link",
-    "DOCUMENT_LINK_REVOKED": "The public link has been revoked"
+    "DOCUMENT_LINK_REVOKED": "The public link has been revoked",
+    "WORDING_FIELD_UNKNOWN": "Unknown wording clause",
+    "WORDING_TITLE_REQUIRED": "Please enter a variant name",
+    "WORDING_TEXT_REQUIRED": "Please enter the wording text",
+    "WORDING_TITLE_TAKEN": "A variant with this name already exists",
+    "WORDING_VARIANT_NOT_FOUND": "Wording variant not found",
+    "CONTRACT_ALREADY_SIGNED": "The contract is already signed — its wording is frozen"
   },
   "fileUpload": {
     "upload": "Upload",
@@ -5614,5 +5629,15 @@
       "date": "Date",
       "actions": "Actions"
     }
+  },
+  "wordingVariants": {
+    "title": "Approved wording variants",
+    "hint": "Pre-approved clause wordings. A manager picks a variant on a specific contract — without rewriting the company-wide wording.",
+    "field": "Clause",
+    "name": "Variant name",
+    "namePlaceholder": "E.g. Penalty 0.05%",
+    "text": "Wording text",
+    "add": "Add variant",
+    "created": "Variant added"
   }
 }

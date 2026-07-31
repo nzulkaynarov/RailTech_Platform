@@ -53,6 +53,19 @@ DOCUMENT_WORDING_DEFAULTS = {
 }
 
 
+def resolve_wording_selected(selections, profile, field: str, **tokens) -> str:
+    """Формулировка ДОКУМЕНТА: зафиксированный на нём выбор, иначе цепочка профиль → платформа.
+
+    `selections` — {field: text} с Contract/Act (E4). Наличие ключа — решение, даже с пустым
+    текстом («особые условия выключены»); отсутствие — документ создан до E4, резолвим живьём.
+    """
+    from .services.documents.blank import substitute_tokens
+
+    if selections and field in selections:
+        return substitute_tokens(selections[field] or "", **tokens)
+    return resolve_wording(profile, field, **tokens)
+
+
 def resolve_wording(profile, field: str, **tokens) -> str:
     """Формулировка компании либо платформенная, с плоской подстановкой токенов.
 

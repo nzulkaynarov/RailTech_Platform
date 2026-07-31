@@ -28,6 +28,7 @@ import { useUserStore } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
 import type { Contract, ContractStatus } from '@/api/contractsApi';
+import { ContractWordingSection } from '@/components/CRM/ContractWordingSection';
 import { DealLink } from '@/components/Shared/DealLink';
 import { DocumentCheck } from '@/components/CRM/DocumentCheck';
 
@@ -323,6 +324,8 @@ export function ContractsPage() {
                   <p className="whitespace-pre-wrap text-sm">{selected.notes}</p>
                 </div>
               )}
+              {/* E4: выбор согласованной редакции пункта для ЭТОГО договора (до подписания). */}
+              <ContractWordingSection contract={selected} />
               <div className="flex flex-col gap-2">
                 {/* Кнопка не ждёт готового файла: сервер сам ставит рендер и отвечает 202 (ARCH-03),
                     а `DocumentActions` опрашивает его по Retry-After. Пока условие требовало уже

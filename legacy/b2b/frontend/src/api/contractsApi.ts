@@ -35,6 +35,9 @@ export interface Contract {
   // id of this contract's non-cancelled invoice, or null if none exists yet
   // (server-derived). Drives the "Create invoice" ↔ "Open invoice" switch.
   invoice_id: number | null;
+  /** E4: формулировки ЭТОГО договора {field: text} — снапшот при создании + выбор менеджера.
+   *  Меняются только через selectWording, пока договор не подписан. */
+  wording_selections: Record<string, string>;
   notes: string;
   created_at: string;
   updated_at: string;
@@ -71,6 +74,15 @@ export const contractsApi = {
     });
     return response.data;
   },
+  /** E4: выбрать согласованный вариант формулировки для ЭТОГО договора
+   *  (variantId=null — вернуть стандартную редакцию компании). */
+  selectWording: async (id: number, field: string, variantId: number | null) => {
+    const response = await apiClient.post<Contract>(`crm/contracts/${id}/select-wording/`, {
+      field,
+      variant_id: variantId,
+    });
+    return response.data;
+  },
   signClient: async (id: number) => {
     const response = await apiClient.post<Contract>(`crm/contracts/${id}/sign-client/`);
     return response.data;
@@ -99,5 +111,36 @@ export const contractsApi = {
   },
   remove: async (id: number) => {
     await apiClient.delete(`crm/contracts/${id}/`);
+  },
+};
+
+// ─── E4: библиотека согласованных формулировок ────────────────────
+export interface WordingVariant {
+  id: number;
+  field: string;
+  title: string;
+  text: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export const wordingVariantsApi = {
+  list: async (field?: string) => {
+    const response = await apiClient.get<WordingVariant[]>('crm/wording-variants/', {
+      params: field ? { field } : undefined,
+    });
+    return response.data;
+  },
+  create: async (payload: { field: string; title: string; text: string }) => {
+    const response = await apiClient.post<WordingVariant>('crm/wording-variants/', payload);
+    return response.data;
+  },
+  update: async (id: number, payload: { title?: string; text?: string }) => {
+    const response = await apiClient.patch<WordingVariant>(`crm/wording-variants/${id}/`, payload);
+    return response.data;
+  },
+  remove: async (id: number) => {
+    await apiClient.delete(`crm/wording-variants/${id}/`);
   },
 };

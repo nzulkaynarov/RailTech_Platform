@@ -401,6 +401,18 @@ def record_payment(
 
 
 @transaction.atomic
+def _act_wordings(seller_company) -> dict:
+    """Снапшот формулировок акта на момент выпуска (E4)."""
+    from accounts.models import CompanyDocumentProfile
+
+    from ..document_wording import resolve_wording
+
+    # Сырой ряд профиля (не брендовый резолвер _seller_document_profile — тот возвращает None
+    # без legal_name/лого, а формулировки D1 живут в профиле независимо от брендинга).
+    profile = CompanyDocumentProfile.objects.filter(company=seller_company).first() if seller_company else None
+    return {"act_closing_text": resolve_wording(profile, "act_closing_text")}
+
+
 def generate_act(
     invoice_id: int,
     actor: Optional[CustomUser] = None,
@@ -455,6 +467,8 @@ def generate_act(
         # E3: акт рождается выпущенным — редакция шаблона замораживается сразу. Продавец
         # резолвится той же цепочкой, что при рендере (акт зеркалит счёт).
         frozen_template_body=frozen_body_for(seller_company or _invoice_seller_company(invoice), "ACT"),
+        # E4: оговорка акта фиксируется при выпуске — правка профиля после не перепечатывает акт.
+        wording_selections=_act_wordings(seller_company or _invoice_seller_company(invoice)),
         created_by=actor,
         # Титул исполнителя: выпуск — это первая из двух сторон акта (G2). Раньше подписант
         # не сохранялся вообще, и по документу нельзя было сказать, кто его выставил.

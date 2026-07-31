@@ -42,6 +42,7 @@ from crm.views.quotes import (  # noqa: F401
 )
 from crm.views.relationships import RelationshipViewSet  # noqa: F401
 from crm.views.timeline import TimelineView  # noqa: F401
+from crm.views.wording import WordingVariantViewSet  # noqa: F401
 
 __all__ = [
     # deals
@@ -89,6 +90,7 @@ __all__ = [
     "RelationshipViewSet",
     # documents ("Документы 2.0")
     "DocumentTemplateViewSet",
+    "WordingVariantViewSet",
     "GeneratedDocumentViewSet",
     "PublicDocumentView",
 ]

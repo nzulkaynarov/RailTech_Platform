@@ -81,6 +81,9 @@ class ContractSerializer(serializers.ModelSerializer):
             "valid_from",
             "valid_until",
             "notes",
+            # E4: формулировки ЭТОГО договора (снапшот + выбор менеджера). Меняются только
+            # через select-wording, пока договор не подписан.
+            "wording_selections",
             "created_at",
             "updated_at",
         ]
@@ -88,6 +91,7 @@ class ContractSerializer(serializers.ModelSerializer):
             "number",
             "total_amount",
             "pdf_file",
+            "wording_selections",
             "client_signer",
             "client_signed_at",
             "manager_signer",

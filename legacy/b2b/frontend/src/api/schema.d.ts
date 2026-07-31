@@ -3271,6 +3271,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/contracts/{id}/select-wording/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Select an approved wording variant for THIS contract (E4 playbook)
+         * @description Contracts -- generated from approved quotes, double-signed.
+         */
+        post: operations["crm_contracts_select_wording_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/contracts/{id}/sign-client/": {
         parameters: {
             query?: never;
@@ -5447,6 +5467,43 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/wording-variants/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Библиотека согласованных формулировок компании (E4, playbook-канон). */
+        get: operations["crm_wording_variants_list"];
+        put?: never;
+        /** @description Библиотека согласованных формулировок компании (E4, playbook-канон). */
+        post: operations["crm_wording_variants_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/wording-variants/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Библиотека согласованных формулировок компании (E4, playbook-канон). */
+        get: operations["crm_wording_variants_retrieve"];
+        put?: never;
+        post?: never;
+        /** @description Библиотека согласованных формулировок компании (E4, playbook-канон). */
+        delete: operations["crm_wording_variants_destroy"];
+        options?: never;
+        head?: never;
+        /** @description Библиотека согласованных формулировок компании (E4, playbook-канон). */
+        patch: operations["crm_wording_variants_partial_update"];
         trace?: never;
     };
     "/api/v1/master-data/countries/": {
@@ -7685,6 +7742,45 @@ export interface components {
             code: string;
             name: string;
         };
+        /** @description Согласованный вариант формулировки (E4). `company`/`created_by` — серверные. */
+        CompanyWordingVariant: {
+            readonly id: number;
+            /**
+             * Поле формулировки
+             * @description Код поля из каталога формулировок (contract_liability_text, ...)
+             */
+            field: string;
+            /** Название варианта */
+            title: string;
+            /** Текст */
+            text: string;
+            /** Порядок */
+            sort_order?: number;
+            /**
+             * Дата создания
+             * Format: date-time
+             */
+            readonly created_at: string;
+            /**
+             * Дата обновления
+             * Format: date-time
+             */
+            readonly updated_at: string;
+        };
+        /** @description Согласованный вариант формулировки (E4). `company`/`created_by` — серверные. */
+        CompanyWordingVariantRequest: {
+            /**
+             * Поле формулировки
+             * @description Код поля из каталога формулировок (contract_liability_text, ...)
+             */
+            field: string;
+            /** Название варианта */
+            title: string;
+            /** Текст */
+            text: string;
+            /** Порядок */
+            sort_order?: number;
+        };
         Contact: {
             readonly id: number;
             /**
@@ -7757,6 +7853,8 @@ export interface components {
             /** Format: date */
             valid_until?: string | null;
             notes?: string;
+            /** Формулировки договора */
+            readonly wording_selections: unknown;
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */
@@ -9945,6 +10043,20 @@ export interface components {
              * @description Префикс номеров документов компании (напр. «ACME» → ACME-CT-2026-00001)
              */
             doc_number_prefix?: string;
+        };
+        /** @description Согласованный вариант формулировки (E4). `company`/`created_by` — серверные. */
+        PatchedCompanyWordingVariantRequest: {
+            /**
+             * Поле формулировки
+             * @description Код поля из каталога формулировок (contract_liability_text, ...)
+             */
+            field?: string;
+            /** Название варианта */
+            title?: string;
+            /** Текст */
+            text?: string;
+            /** Порядок */
+            sort_order?: number;
         };
         PatchedContactRequest: {
             /** ФИО */
@@ -12182,6 +12294,10 @@ export interface components {
         };
         SearchDocumentsResponse: {
             results: components["schemas"]["SearchDocument"][];
+        };
+        SelectContractWordingRequest: {
+            field: string;
+            variant_id?: number | null;
         };
         /**
          * @description Fields a user may edit on their OWN profile via /users/update-me/.
@@ -18357,6 +18473,34 @@ export interface operations {
             };
         };
     };
+    crm_contracts_select_wording_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Контракт. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SelectContractWordingRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SelectContractWordingRequest"];
+                "multipart/form-data": components["schemas"]["SelectContractWordingRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Contract"];
+                };
+            };
+        };
+    };
     crm_contracts_sign_client_create: {
         parameters: {
             query?: never;
@@ -22070,6 +22214,125 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    crm_wording_variants_list: {
+        parameters: {
+            query?: {
+                field?: string;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyWordingVariant"][];
+                };
+            };
+        };
+    };
+    crm_wording_variants_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompanyWordingVariantRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CompanyWordingVariantRequest"];
+                "multipart/form-data": components["schemas"]["CompanyWordingVariantRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyWordingVariant"];
+                };
+            };
+        };
+    };
+    crm_wording_variants_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Вариант формулировки. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyWordingVariant"];
+                };
+            };
+        };
+    };
+    crm_wording_variants_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Вариант формулировки. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    crm_wording_variants_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Вариант формулировки. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedCompanyWordingVariantRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedCompanyWordingVariantRequest"];
+                "multipart/form-data": components["schemas"]["PatchedCompanyWordingVariantRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyWordingVariant"];
+                };
             };
         };
     };

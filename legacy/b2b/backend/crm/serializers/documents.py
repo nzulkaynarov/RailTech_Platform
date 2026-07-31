@@ -7,7 +7,7 @@ a couple of write fields the ViewSet hands to the services.
 
 from rest_framework import serializers
 
-from crm.models import DocumentTemplate, GeneratedDocument
+from crm.models import CompanyWordingVariant, DocumentTemplate, GeneratedDocument
 
 
 class DocumentTemplateSerializer(serializers.ModelSerializer):
@@ -148,3 +148,11 @@ class GeneratedDocumentSerializer(serializers.ModelSerializer):
             return None
         return obj.created_by.get_full_name() or obj.created_by.email
 
+
+class CompanyWordingVariantSerializer(serializers.ModelSerializer):
+    """Согласованный вариант формулировки (E4). `company`/`created_by` — серверные."""
+
+    class Meta:
+        model = CompanyWordingVariant
+        fields = ["id", "field", "title", "text", "sort_order", "created_at", "updated_at"]
+        read_only_fields = ["id", "created_at", "updated_at"]

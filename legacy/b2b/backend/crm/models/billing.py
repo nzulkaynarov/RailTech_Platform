@@ -319,6 +319,9 @@ class Act(models.Model):
     # блоки (штампы подписей — живые данные), но печатает замороженный ТЕКСТ — правка
     # шаблона между выпуском и подписью не переписывает документ. Пусто = выпущен до E3.
     frozen_template_body = models.TextField(blank=True, default="")
+    # E4: снапшот формулировок акта {field: text} на момент выпуска - оговорка не меняется
+    # перерендером после правки профиля (та же дыра E3, что у договора).
+    wording_selections = models.JSONField(default=dict, blank=True, verbose_name=_("Формулировки акта"))
     signed_file = models.FileField(
         upload_to=act_pdf_path,
         storage=get_private_storage,

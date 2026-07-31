@@ -30,6 +30,19 @@ def _cstatus(code: str):
 
 
 @transaction.atomic
+def _initial_contract_wordings(seller_company) -> dict:
+    """Снапшот формулировок договора на момент создания (E4)."""
+    from accounts.models import CompanyDocumentProfile
+
+    from ..document_wording import resolve_wording
+
+    # Сырой ряд профиля (не брендовый резолвер _seller_document_profile — тот возвращает None
+    # без legal_name/лого, а формулировки D1 живут в профиле независимо от брендинга).
+    profile = CompanyDocumentProfile.objects.filter(company=seller_company).first() if seller_company else None
+    fields = ("contract_acceptance_text", "contract_liability_text", "contract_extra_terms_text")
+    return {field: resolve_wording(profile, field) for field in fields}
+
+
 def generate_contract_from_quote(
     quote_id: int,
     actor: Optional[CustomUser] = None,
@@ -84,6 +97,10 @@ def generate_contract_from_quote(
             # E3: договор сразу уходит клиенту на подпись — редакция шаблона замораживается
             # при создании; правка шаблона после не переписывает отправленный документ.
             frozen_template_body=frozen_body_for(seller_company, "CONTRACT"),
+            # E4: формулировки фиксируются на договоре при создании (резолв D1: профиль ->
+            # платформа). Дальше менеджер меняет их ВЫБОРОМ согласованного варианта, а
+            # перерендер после подписи печатает зафиксированный текст, не живой профиль.
+            wording_selections=_initial_contract_wordings(seller_company),
             deal=quote.deal,
             quote=quote,
             number=_next_contract_number(seller_company),

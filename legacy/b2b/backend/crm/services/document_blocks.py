@@ -103,7 +103,7 @@ def preview_block_stubs() -> dict:
     }
 
 
-def _wording_html(seller_profile, field: str):
+def _wording_html(seller_profile, field: str, selections=None):
     """Формулировка компании (или платформенная) как готовый HTML-блок.
 
     Значение — прозаический ТЕКСТ из профиля, поэтому он экранируется, и только потом
@@ -112,9 +112,9 @@ def _wording_html(seller_profile, field: str):
     from django.template.defaultfilters import linebreaks
     from django.utils.html import escape
 
-    from ..document_wording import resolve_wording
+    from ..document_wording import resolve_wording_selected
 
-    return mark_safe(linebreaks(escape(resolve_wording(seller_profile, field))))
+    return mark_safe(linebreaks(escape(resolve_wording_selected(selections, seller_profile, field))))
 
 
 def act_block_values(act, invoice, totals, ccy: str, *, seller=None, seller_profile=None) -> dict:
@@ -128,7 +128,9 @@ def act_block_values(act, invoice, totals, ccy: str, *, seller=None, seller_prof
             )
         ),
         "doc.totals": mark_safe(render_to_string("crm/blocks/_totals.html", {"totals": totals})),
-        "doc.act_closing": _wording_html(seller_profile, "act_closing_text"),
+        "doc.act_closing": _wording_html(
+            seller_profile, "act_closing_text", selections=getattr(act, "wording_selections", None)
+        ),
         "doc.signatures": mark_safe(
             render_to_string(
                 "crm/blocks/_signatures_act.html",
@@ -171,9 +173,11 @@ def contract_block_values(contract, items, totals, ccy: str, *, seller=None, sel
     пункт в договоре хуже отсутствующего). Номер статьи реквизитов сдвигается ровно на этот
     случай — как это делал код-шаблон, без «дыры» в нумерации.
     """
-    from ..document_wording import resolve_wording
+    from ..document_wording import resolve_wording_selected
 
-    extra_terms = resolve_wording(seller_profile, "contract_extra_terms_text")
+    # E4: формулировки ЭТОГО договора (выбор менеджера + снапшот) важнее живого профиля.
+    selections = getattr(contract, "wording_selections", None)
+    extra_terms = resolve_wording_selected(selections, seller_profile, "contract_extra_terms_text")
     extra_article = ""
     if extra_terms.strip():
         extra_article = render_to_string(
@@ -183,8 +187,8 @@ def contract_block_values(contract, items, totals, ccy: str, *, seller=None, sel
     return {
         "doc.spec_table": mark_safe(render_to_string("crm/blocks/_spec_table.html", {"items": items, "ccy": ccy})),
         "doc.totals": mark_safe(render_to_string("crm/blocks/_totals.html", {"totals": totals})),
-        "doc.contract_acceptance": _wording_html(seller_profile, "contract_acceptance_text"),
-        "doc.contract_liability": _wording_html(seller_profile, "contract_liability_text"),
+        "doc.contract_acceptance": _wording_html(seller_profile, "contract_acceptance_text", selections=selections),
+        "doc.contract_liability": _wording_html(seller_profile, "contract_liability_text", selections=selections),
         "doc.extra_terms_article": mark_safe(extra_article),
         "doc.notes": mark_safe(
             render_to_string("crm/blocks/_notes.html", {"label": "Дополнительные условия", "text": contract.notes})
