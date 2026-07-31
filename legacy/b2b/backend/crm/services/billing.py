@@ -195,6 +195,7 @@ def _render_invoice_pdf(invoice) -> None:
     from .documents import brand_context_for_pdf, document_brand_context, document_totals
 
     supplier = _invoice_seller_company(invoice)
+    invoice_brand = document_brand_context(supplier)
 
     # D1: shared 3-line VAT bridge (+ paid/balance rows). Same block as КП/договор/акт.
     ccy = invoice.currency.code if invoice.currency_id else "UZS"
@@ -206,14 +207,45 @@ def _render_invoice_pdf(invoice) -> None:
         amount_paid=invoice.amount_paid,
         balance_due=invoice.balance_due,
     )
+    items = invoice.items.select_related("source_quote_item").all()
+
+    # E1b: шаблон компании (или платформенный образец) — тем же механизмом, что акт. Компания
+    # правит ТЕКСТ, структурные блоки собирает сервер. Шаблона нет → прежний путь из кода.
+    from .document_blocks import company_template_for, render_invoice_body
+
+    invoice_template = company_template_for(supplier, "INVOICE")
+    if invoice_template is not None:
+        html_string = render_to_string(
+            "crm/invoice_pdf_templated.html",
+            {
+                "invoice": invoice,
+                "company": invoice.deal.company,
+                "contact": invoice.deal.contact,
+                "body_html": render_invoice_body(
+                    invoice,
+                    items,
+                    totals,
+                    ccy,
+                    invoice_template,
+                    seller=invoice_brand.get("seller"),
+                    seller_profile=invoice_brand.get("seller_profile"),
+                ),
+                **brand_context_for_pdf(invoice_brand),
+            },
+        )
+        buf = BytesIO()
+        HTML(string=html_string).write_pdf(buf)
+        invoice.pdf_file.save(f"Invoice_{invoice.number}.pdf", ContentFile(buf.getvalue()), save=True)
+        return
+
     html_string = render_to_string(
         "crm/invoice_pdf.html",
         {
             "invoice": invoice,
-            "items": invoice.items.select_related("source_quote_item").all(),
+            "items": items,
             "company": invoice.deal.company,
             "totals": totals,
-            **brand_context_for_pdf(document_brand_context(supplier)),
+            **brand_context_for_pdf(invoice_brand),
         },
     )
     buf = BytesIO()
@@ -452,6 +484,11 @@ def _render_act_pdf(act) -> None:
 
     quote = act.contract.quote if (act.contract_id and act.contract.quote_id) else None
     supplier = _quote_seller_company(quote) if quote else None
+    if supplier is None and act.invoice_id:
+        # Акт по ручному счёту (волна K) не имеет договора → КП. Акт зеркалит счёт (D1),
+        # поэтому и продавца берёт той же цепочкой fallback-ов — иначе «Поставщик» печатался
+        # платформой, а «От Поставщика» пустой строкой.
+        supplier = _invoice_seller_company(act.invoice)
     act_brand = document_brand_context(supplier)
 
     # D1: the act MIRRORS its invoice (audit: «акт зеркалит инвойс») — same net/VAT/gross figures,
@@ -483,7 +520,15 @@ def _render_act_pdf(act) -> None:
                 "company": act.deal.company,
                 "contact": act.deal.contact,
                 "totals": totals,
-                "body_html": render_act_body(act, act.invoice, totals, ccy, act_template),
+                "body_html": render_act_body(
+                    act,
+                    act.invoice,
+                    totals,
+                    ccy,
+                    act_template,
+                    seller=act_brand.get("seller"),
+                    seller_profile=act_brand.get("seller_profile"),
+                ),
                 **brand_context_for_pdf(act_brand),
             },
         )

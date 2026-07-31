@@ -1,0 +1,15 @@
+{% load document_format %}
+{% comment %}
+  Блок «платёжные реквизиты» счёта (F-06: счёт обязан быть оплачиваемым). Получатель, банк и
+  назначение платежа — данные, а не текст: правится их положение в шаблоне, но не содержимое.
+{% endcomment %}
+<div class="pay-block">
+  <h3>Платёжные реквизиты</h3>
+  <p><span class="k">Получатель:</span> {% firstof seller_profile.legal_name seller.name "—" %}{% if seller_profile.inn or seller.inn %} · ИНН {% firstof seller_profile.inn seller.inn %}{% endif %}</p>
+  {% if seller_profile.bank_details %}
+  <p>{{ seller_profile.bank_details|linebreaksbr }}</p>
+  {% elif seller.bank_account %}
+  <p><span class="k">Р/с:</span> {{ seller.bank_account }}{% if seller.mfo %} · <span class="k">МФО:</span> {{ seller.mfo }}{% endif %}</p>
+  {% endif %}
+  <p><span class="k">Назначение платежа:</span> Оплата по счёту № {{ invoice.number }} от {% if invoice.issued_at %}{{ invoice.issued_at|date:"d.m.Y" }}{% else %}{{ invoice.created_at|date:"d.m.Y" }}{% endif %}{% if invoice.contract %}, договор № {{ invoice.contract.number }}{% endif %}, в т.ч. НДС {{ invoice.vat_amount|money:ccy }}.</p>
+</div>

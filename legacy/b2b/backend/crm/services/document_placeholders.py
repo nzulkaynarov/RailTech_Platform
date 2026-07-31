@@ -124,6 +124,28 @@ PLACEHOLDER_GROUPS = [
     },
 ]
 
+
+def _legal_group() -> dict:
+    """Третья группа каталога — структурные блоки и скаляры юридических видов (договор /
+    счёт / акт, E1b). Собирается из каталогов `document_blocks` — единственного источника,
+    с которым сверяется и проверка целостности (E2): разъехаться они не могут."""
+    from .document_blocks import DOCUMENT_BLOCKS, DOCUMENT_SCALARS, DOCUMENT_WORDING_TOKENS
+
+    wording_labels = {
+        "doc.act_closing": "Оговорка акта (настройка «Формулировки»)",
+        "doc.contract_acceptance": "Приёмка и качество (настройка «Формулировки»)",
+        "doc.contract_liability": "Ответственность сторон (настройка «Формулировки»)",
+    }
+    items = (
+        [{"code": code, "label": label} for code, label in DOCUMENT_BLOCKS.items()]
+        + [{"code": code, "label": wording_labels.get(code, code)} for code in DOCUMENT_WORDING_TOKENS]
+        + [{"code": code, "label": label} for code, label in DOCUMENT_SCALARS.items()]
+    )
+    return {"key": "legal_blocks", "label": "Юридические документы (договор / счёт / акт)", "items": items}
+
+
+PLACEHOLDER_GROUPS.append(_legal_group())
+
 # Flat {code: label} projection of the grouped catalogue — kept for any consumer that just needs the
 # label of a code (derived from PLACEHOLDER_GROUPS so the two never drift).
 PLACEHOLDER_CATALOG = {item["code"]: item["label"] for group in PLACEHOLDER_GROUPS for item in group["items"]}

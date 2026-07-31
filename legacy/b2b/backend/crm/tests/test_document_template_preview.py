@@ -194,15 +194,16 @@ def test_preview_requires_auth(lookups):
 
 
 def test_placeholder_catalog_returns_grouped_code_and_label(lookups):
-    """T1-c: the catalogue is two groups — dynamic data vs company requisites already in the шапка."""
+    """T1-c: dynamic data vs company requisites already in the шапка; E1b добавил третью
+    группу — структурные блоки юридических документов."""
     company = _company("Продавец", "S1")
     user = _member(company, "s@t.uz")
     resp = _api(user).get("/api/v1/crm/document-templates/placeholders/")
     assert resp.status_code == 200, resp.content
     groups = resp.json()["groups"]
-    assert len(groups) == 2
+    assert len(groups) == 3
     by_key = {group["key"]: group for group in groups}
-    assert set(by_key) == {"dynamic", "company"}
+    assert set(by_key) == {"dynamic", "company", "legal_blocks"}
     for group in groups:
         assert group["label"]
         assert group["items"]

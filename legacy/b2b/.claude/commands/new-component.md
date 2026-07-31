@@ -1,76 +1,55 @@
 # New Component
 
-Создай новый React компонент по конвенциям проекта.
+Создай новый React-компонент по конвенциям проекта.
 
 ## Аргумент
 
-$ARGUMENTS — имя компонента и опционально директория. Примеры:
-- `StatusTimeline` — создаст в `src/components/ui/`
-- `Catalog/ProductFilters` — создаст в `src/components/Catalog/`
-- `Dashboard/RevenueChart` — создаст в `src/components/Dashboard/`
+$ARGUMENTS — имя и опционально директория: `Catalog/ProductFilters`, `CRM/DealTimeline`.
 
-## Инструкции
+## Куда класть
 
-1. Определи путь файла:
-   - Если указана директория: `src/components/<Dir>/<Name>.tsx`
-   - Если без директории: `src/components/ui/<Name>.tsx`
-   - Если имя содержит `/subcomponents/`: создай в subcomponents
+- **Доменная папка**: `src/components/<Домен>/<Name>.tsx` (Admin, CRM, Billing, Settings, Sourcing, Dashboard, Shared…). Посмотри соседей: `ls src/components/`.
+- **`src/components/ui/` — ТОЛЬКО shadcn-примитивы.** Свои компоненты туда НЕ кладём.
+- Перед созданием проверь, нет ли уже похожего компонента в домене — расширить лучше, чем дублировать.
 
-2. Создай компонент используя **шаблон проекта**:
+## Главный принцип: повторяй за свежим соседом
+
+```bash
+git log --oneline --diff-filter=A -10 -- frontend/src/components/<Домен>/
+```
+
+Прочитай свежий компонент домена: структура props, работа с хуками/React Query, паттерн диалогов/форм — повтори.
+
+## Каркас
 
 ```tsx
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
-// ... другие импорты
 
 interface <Name>Props {
   className?: string;
-  // ... props
 }
 
-export function <Name>({ className, ...props }: <Name>Props) {
+export function <Name>({ className }: <Name>Props) {
   const { t } = useTranslation();
-  return (
-    <div className={cn('', className)}>
-      {/* content */}
-    </div>
-  );
+  return <div className={cn('', className)}>{/* ... */}</div>;
 }
 ```
 
-## Конвенции
+## Инварианты
 
-- **Именование:** PascalCase для файлов и компонентов
-- **Экспорт:** Named export (не default)
-- **Стили:** Tailwind CSS + `cn()` для условных классов
-- **UI примитивы:** Используй shadcn/ui компоненты из `@/components/ui/`
-- **Иконки:** `lucide-react`
-- **i18n:** `useTranslation()` + `t('key')` для ВСЕХ UI текстов (без хардкода)
-- **Типы:** TypeScript интерфейсы для props (не type aliases)
+- Named export, PascalCase, интерфейс для props.
+- **Только shadcn/ui** (`<Input>`, `<Textarea>`, `<Table>`, `<Dialog>`…) — не raw-элементы.
+- **Только семантические токены**: `text-foreground`, `bg-muted`, `text-destructive`, `bg-success/10`… — НЕ `text-slate-*`, `text-white`, hex. Графики: `var(--color-chart-N)`.
+- **Размеры текста** — только шкала Tailwind, минимум `text-xs`. Никаких `text-[10px]`.
+- Никаких inline-`style` для статики, emoji (иконки — lucide-react), `alert()` (только `toast()` из sonner).
+- Все тексты через `t()`, ключи в ОБОИХ `ru.json` и `en.json`; zod-сообщения — factory `createSchema(t)`.
+- Формы — по паттерну соседних диалогов (react-hook-form + zod, если сосед так делает).
 
-## Дизайн-система (ОБЯЗАТЕЛЬНО)
+## Проверка
 
-**Цвета — ТОЛЬКО семантические токены:**
-- `text-foreground`, `text-muted-foreground` — НЕ `text-slate-*`, `text-gray-*`
-- `bg-background`, `bg-card`, `bg-muted` — НЕ `bg-white`, `bg-slate-*`
-- `border-border` — НЕ `border-slate-200`
-- `bg-primary`, `text-primary` — НЕ `bg-blue-600`, `text-blue-600`
-- `text-destructive` — НЕ `text-red-600`
+```bash
+cd frontend && npm run build   # НЕ lint:tsc — build строже
+```
 
-**Графики (recharts):**
-- `fill="var(--color-chart-1)"` — НЕ `fill="#4f46e5"`
-- `stroke="var(--color-border)"` — НЕ `stroke="#e5e7eb"`
-
-**Размеры текста — ТОЛЬКО стандартная шкала:**
-- `text-xs`, `text-sm`, `text-base` — НЕ `text-[10px]`, `text-[11px]`
-
-**Запрещено:**
-- `text-industrial-*`, `bg-industrial-*` — не существует в теме
-- Inline `style={{ color: ... }}` — используй Tailwind классы
-- Emoji в коде — используй `lucide-react` иконки
-- Raw `<input>`, `<textarea>` — используй `<Input>`, `<Textarea>` из shadcn
-
-## После создания
-
-- Проверь: `npm run build` (НЕ lint:tsc — build строже)
-- Сообщи путь к созданному файлу
+Затем `/design-check` по файлу. Если компонент виден пользователю в ключевом флоу — прогнать `/ux-review`.

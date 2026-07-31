@@ -156,17 +156,27 @@ def test_sanitizer_handles_empty():
 
 def test_placeholder_groups_split_company_from_dynamic():
     by_key = {group["key"]: group for group in PLACEHOLDER_GROUPS}
-    assert set(by_key) == {"dynamic", "company"}
+    # E1b: третья группа — структурные блоки юридических документов (договор / счёт / акт).
+    assert set(by_key) == {"dynamic", "company", "legal_blocks"}
     company_codes = {item["code"] for item in by_key["company"]["items"]}
     dynamic_codes = {item["code"] for item in by_key["dynamic"]["items"]}
+    legal_codes = {item["code"] for item in by_key["legal_blocks"]["items"]}
     # Every company.* placeholder is in the «уже в шапке» group and NONE leak into dynamic.
     assert company_codes == {"company.name", "company.inn", "company.address"}
     assert not any(code.startswith("company.") for code in dynamic_codes)
+    # Legal tokens are exactly the doc.* namespace — and nothing else claims it.
+    assert legal_codes and all(code.startswith("doc.") for code in legal_codes)
+    assert not any(code.startswith("doc.") for code in dynamic_codes | company_codes)
 
 
 def test_flat_catalog_derived_from_groups_and_matches_resolvers():
+    from crm.services.document_blocks import preview_block_stubs
+
     # The flat projection covers exactly the grouped codes …
     grouped_codes = {item["code"] for group in PLACEHOLDER_GROUPS for item in group["items"]}
     assert set(PLACEHOLDER_CATALOG) == grouped_codes
-    # … and every advertised code has a real resolver (no phantom placeholder).
-    assert grouped_codes <= set(RESOLVERS)
+    # … and every advertised code resolves: обычные — резолвером, doc.* — блочной машиной
+    # (в превью — подписанной заглушкой). Фантомных плейсхолдеров в каталоге нет.
+    doc_codes = {code for code in grouped_codes if code.startswith("doc.")}
+    assert (grouped_codes - doc_codes) <= set(RESOLVERS)
+    assert doc_codes <= set(preview_block_stubs())

@@ -1,0 +1,9 @@
+{% comment %}
+  Условная статья «Особые условия» ({{doc.extra_terms_article}}): печатается только когда
+  компания её написала (D1, contract_extra_terms_text). Пустой пункт в договоре хуже
+  отсутствующего — документ выглядит недооформленным.
+{% endcomment %}
+<div class="legal-article">
+  <h2>{{ heading }}</h2>
+  {{ text|linebreaks }}
+</div>

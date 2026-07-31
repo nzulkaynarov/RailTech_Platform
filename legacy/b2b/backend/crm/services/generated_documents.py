@@ -326,6 +326,13 @@ def preview_template(company, user: CustomUser, *, body_html: str) -> dict:
         raise ValidationError("TEMPLATE_BODY_TOO_LARGE")
     clean_html = sanitize_template_html(body_html)
     rendered_html, values, warnings = render_template(clean_html, _demo_context(company, user))
+    # Структурные блоки юридических видов (E1b) собираются только при печати настоящего
+    # документа — в превью на месте токена встаёт подписанная заглушка, а не предупреждение.
+    from .document_blocks import preview_block_stubs, render_document_body
+
+    stubs = preview_block_stubs()
+    rendered_html = render_document_body(rendered_html, blocks=stubs, scalars={})
+    warnings = [code for code in warnings if code not in stubs]
     return {
         "rendered_html": rendered_html,
         "placeholders_used": list(values.keys()),

@@ -97,7 +97,18 @@ def test_template_body_is_never_executed_as_a_django_template():
     assert "14" not in out
 
 
-def test_block_catalogue_covers_every_structural_part_of_the_act():
+def test_block_catalogue_covers_every_structural_part_of_the_legal_documents():
     """Каталог блоков один: и редактор показывает его пользователю, и проверка целостности (E2)
-    сверяется с ним — разъехаться они не могут."""
-    assert set(DOCUMENT_BLOCKS) == {"doc.refs", "doc.items_table", "doc.totals"}
+    сверяется с ним — разъехаться они не могут. E1b: к блокам акта добавились блоки счёта
+    (платёжные реквизиты) и договора (спецификация, реквизиты и подписи), подписи и примечание."""
+    assert set(DOCUMENT_BLOCKS) == {
+        "doc.refs",
+        "doc.items_table",
+        "doc.totals",
+        "doc.signatures",
+        "doc.payment_requisites",
+        "doc.spec_table",
+        "doc.requisites_and_signatures",
+        "doc.notes",
+        "doc.extra_terms_article",
+    }

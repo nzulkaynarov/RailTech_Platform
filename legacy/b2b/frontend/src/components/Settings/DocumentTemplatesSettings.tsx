@@ -351,7 +351,7 @@ interface TemplateEditorProps {
 // Russian label as the last-resort fallback.
 const groupHeadingKey = (key: string) => `docTemplatesSettings.placeholderGroups.${key}`;
 const groupHintKey = (key: string) => `docTemplatesSettings.placeholderGroupHints.${key}`;
-const GROUPS_WITH_HINT = new Set(['company']);
+const GROUPS_WITH_HINT = new Set(['company', 'legal_blocks']);
 
 function TemplateEditor({
   editor, onChange, onClose, onSave, onInsert, richEditorRef, placeholderGroups, preview, isPreviewing, isSaving,

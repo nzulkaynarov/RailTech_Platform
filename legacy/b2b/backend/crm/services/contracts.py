@@ -175,6 +175,38 @@ def _render_contract_pdf(contract) -> None:
         vat_rate=contract.quote.vat_rate if contract.quote_id else None,
         total=contract.total_amount,
     )
+    # A signed contract's specification (Приложение № 1) is the LEGALLY agreed goods: only
+    # billable lines — see the comment on the code path below. Shared by both render paths.
+    items = contract.quote.items.billable().select_related("product", "frozen_currency")
+
+    # E1b: шаблон компании (или платформенный образец) — тем же механизмом, что акт. Компания
+    # правит статьи договора, структурные блоки собирает сервер. Шаблона нет → путь из кода.
+    from .document_blocks import company_template_for, render_contract_body
+
+    contract_template = company_template_for(supplier, "CONTRACT")
+    if contract_template is not None:
+        html_string = render_to_string(
+            "crm/contract_pdf_templated.html",
+            {
+                "contract": contract,
+                "company": contract.deal.company,
+                "body_html": render_contract_body(
+                    contract,
+                    items,
+                    totals,
+                    ccy,
+                    contract_template,
+                    seller=brand.get("seller"),
+                    seller_profile=brand.get("seller_profile"),
+                ),
+                **brand_context_for_pdf(brand),
+            },
+        )
+        buf = BytesIO()
+        HTML(string=html_string).write_pdf(buf)
+        contract.pdf_file.save(f"Contract_{contract.number}.pdf", ContentFile(buf.getvalue()), save=True)
+        return
+
     html_string = render_to_string(
         "crm/contract_pdf.html",
         {
@@ -187,7 +219,7 @@ def _render_contract_pdf(contract) -> None:
             # only billable lines (non-optional ITEM). SECTION/NOTE are not payable line items and
             # optional lines were quoted outside the offer — printing them here as numbered priced
             # rows would misstate what the buyer contracted to pay. billable() = the single filter.
-            "items": contract.quote.items.billable().select_related("product", "frozen_currency"),
+            "items": items,
             **brand_context_for_pdf(brand),
             # Формулировки договора: компании либо платформенные (spec-documents-editable).
             **document_wording_context(brand.get("seller_profile")),

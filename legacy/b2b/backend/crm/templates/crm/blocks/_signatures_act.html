@@ -1,0 +1,25 @@
+{% comment %}
+  Блок «подписи сторон» акта. Вставляется одним плейсхолдером {{doc.signatures}} — компания
+  решает, где он стоит, но не что внутри (аналог locked block). Разметка — та, что печатал
+  код-шаблон act_pdf.html.
+{% endcomment %}
+<table class="signatures">
+  <tr>
+    <td>
+      <div class="sign-box">
+        <div class="role">От Поставщика:</div>
+        {% firstof seller_profile.legal_name seller.name "—" %}
+        {% if seller_profile.signatory_name %}<div class="sign-line">{{ seller_profile.signatory_position|default:"Подписант" }}: {{ seller_profile.signatory_name }}</div>{% else %}<div class="sign-line">Подпись / дата</div>{% endif %}
+        <div class="seal">М.П.</div>
+      </div>
+    </td>
+    <td>
+      <div class="sign-box">
+        <div class="role">От Покупателя:</div>
+        {% if company %}{{ company.name }}{% else %}{% firstof contact.name "—" %}{% endif %}
+        <div class="sign-line">Подпись / дата</div>
+        <div class="seal">М.П.</div>
+      </div>
+    </td>
+  </tr>
+</table>

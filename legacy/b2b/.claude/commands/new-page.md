@@ -1,70 +1,40 @@
 # New Page
 
-Создай новую страницу и подключи её к навигации.
+Создай новую страницу SPA и подключи её к hash-навигации и капабилити-меню.
 
 ## Аргумент
 
-$ARGUMENTS — имя страницы (например: `SupplierRating`, `BudgetControl`, `ContractManagement`)
+$ARGUMENTS — имя страницы (например: `SupplierRating`).
 
-## Инструкции
+## Главный принцип: повторяй за свежим соседом
 
-### 1. Создай файл страницы
-
-Путь: `src/pages/<Name>Page.tsx`
-
-```tsx
-import { cn } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-// Иконка из lucide-react соответствующая содержанию
-
-interface <Name>PageProps {
-  onNavigate?: (target: string) => void;
-}
-
-export function <Name>Page({ onNavigate }: <Name>PageProps) {
-  return (
-    <div className="flex flex-col gap-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Заголовок</h1>
-          <p className="text-sm text-muted-foreground">Описание страницы</p>
-        </div>
-      </div>
-
-      {/* Content */}
-      <Card>
-        <CardContent className="p-6">
-          {/* Содержимое */}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-```
-
-### 2. Добавь в App.tsx
-
-- Добавь тип в `Page` union: `| { type: '<page-id>' }`
-- Добавь `'<page-id>'` в `validTypes` массив в `handleNavigate`
-- Добавь `case` в `switch` блок
-- Добавь breadcrumb в `getBreadcrumbs`
-
-### 3. Добавь в навигацию AppShell
-
-- Определи к какому статусу относится (BUYER / SELLER / MANUFACTURER)
-- Добавь `NavItem` в соответствующую функцию `get*Navigation()` в `src/layouts/AppShell.tsx`
-
-### 4. Проверь
+Найди последнюю добавленную страницу и повтори ВСЕ точки её подключения:
 
 ```bash
-npm run lint:tsc
+git log --oneline --diff-filter=A -10 -- frontend/src/pages/
 ```
 
-## Конвенции
+Прочитай её файл + грепни её page-id по `App.tsx` и `src/config/navigation.tsx` — это и есть актуальный список мест подключения.
 
-- Файл: PascalCase + `Page` суффикс
-- Named export (не default)
-- Page ID в kebab-case (`supplier-rating`, `budget-control`)
-- Для SELLER и MANUFACTURER страниц — не забудь `onNavigate` prop
+## Точки подключения (сверься с соседом — список мог измениться)
+
+1. **Файл**: `src/pages/<Name>Page.tsx` — named export, PascalCase, props `activePage`/`onNavigate` как у соседа.
+2. **App.tsx**: hash-роутинг (`#<page-id>` в kebab-case) — union-тип, valid types, switch-case, breadcrumbs — точно там же, где у соседа.
+3. **Навигация**: ТОЛЬКО `buildNavigation(capabilities)` в `src/config/navigation.tsx` (ADR-0005). Никаких правок меню в AppShell — там его больше нет. Реши, каким капабилити гейтится пункт (тир T0/T1/T2, can_buy/can_sell, operator) — пункты СКРЫВАЮТСЯ, не дизейблятся.
+4. **Гварды**: если страница требует авторизации/капабилити — как у соседа в `evaluatePageGuard` (cold-load дип-линки должны работать: гейты откладываются до bootstrap).
+
+## Инварианты
+
+- Данные — через хук на реальный API (`src/hooks/`, React Query). Никаких моков (Rule 1).
+- Списки — `ResponsiveDataTable` (мобильные карточки, клавиатурная доступность).
+- Все тексты через `t()`, ключи в ОБОИХ `ru.json` и `en.json`.
+- Только shadcn/ui + семантические токены (см. `/design-check`).
+- Пустое/loading/error состояния экрана осмысленны — не белый экран.
+
+## Проверка
+
+```bash
+cd frontend && npm run build   # НЕ lint:tsc — build строже (tsc -b)
+```
+
+Затем **обязательно** `/ux-review` по флоу страницы: прод-сборка (`docker compose up -d --build frontend`), пройти глазами вход → страница → следующий шаг, скриншоты. Страница без пройденного сценария — не done (PRODUCT RULE 4).

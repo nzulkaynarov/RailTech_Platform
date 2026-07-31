@@ -1,0 +1,63 @@
+{% extends "crm/_document_base.html" %}
+{% comment %}
+  Счёт, напечатанный по шаблону КОМПАНИИ (spec-editable-outgoing-documents, E1b).
+
+  Тело — уже отрендеренный HTML: санитайзинг прошёл при сохранении шаблона (allowlist), значения
+  плейсхолдеров экранированы при подстановке, а блоки собраны сервером из partials. Поэтому
+  выводим `|safe` — повторное экранирование напечатало бы теги буквально.
+
+  Шапка и реквизиты сторон приходят из общей базы; «Плательщик» вместо «Покупателя» — тот же
+  структурный выбор, что в код-шаблоне invoice_pdf.html.
+{% endcomment %}
+{% block doc_meta %}
+  <div class="doc-no">Счёт № {{ invoice.number }}</div>
+  <div>от {% if invoice.issued_at %}{{ invoice.issued_at|date:"d.m.Y" }}{% else %}{{ invoice.created_at|date:"d.m.Y" }}{% endif %}</div>
+  {% if invoice.due_date %}<div>оплата до {{ invoice.due_date|date:"d.m.Y" }}</div>{% endif %}
+  {% if invoice.contract %}<div>по договору № {{ invoice.contract.number }}</div>{% endif %}
+{% endblock %}
+
+{% block doc_title %}Счёт на оплату{% endblock %}
+
+{% block parties %}
+<table class="parties">
+  <tr>
+    <td>
+      <div class="party">
+        <h3>Поставщик</h3>
+        {% if seller_profile %}
+          <div class="pname">{{ seller_profile.legal_name|default:seller.name }}</div>
+          {% if seller_profile.inn %}<p>ИНН: {{ seller_profile.inn }}</p>{% elif seller.inn %}<p>ИНН: {{ seller.inn }}</p>{% endif %}
+          {% if seller_profile.legal_address %}<p>{{ seller_profile.legal_address }}</p>{% elif seller.legal_address %}<p>{{ seller.legal_address }}</p>{% endif %}
+        {% elif seller %}
+          <div class="pname">{{ seller.name }}</div>
+          {% if seller.inn %}<p>ИНН: {{ seller.inn }}</p>{% endif %}
+          {% if seller.legal_address %}<p>{{ seller.legal_address }}</p>{% endif %}
+        {% else %}
+          <div class="pname">&mdash;</div>
+        {% endif %}
+      </div>
+    </td>
+    <td>
+      {% if company or contact %}
+      <div class="party">
+        <h3>Плательщик</h3>
+        {% if company %}
+          <div class="pname">{{ company.name }}</div>
+          {% if company.inn %}<p>ИНН: {{ company.inn }}</p>{% endif %}
+          {% if company.legal_address %}<p>{{ company.legal_address }}</p>{% endif %}
+        {% else %}
+          {# Соло-сделка (Deal.company nullable, crm/0065): плательщик — офлайн-контакт. #}
+          <div class="pname">{% firstof contact.name "Плательщик" %}</div>
+          {% if contact.inn %}<p>ИНН: {{ contact.inn }}</p>{% endif %}
+          {% if contact.phone %}<p>Тел.: {{ contact.phone }}</p>{% endif %}
+        {% endif %}
+      </div>
+      {% endif %}
+    </td>
+  </tr>
+</table>
+{% endblock %}
+
+{% block content %}
+  <div class="doc-body">{{ body_html|safe }}</div>
+{% endblock %}

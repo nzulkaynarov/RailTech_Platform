@@ -1670,10 +1670,12 @@
     "letterheadHint": "The letterhead with company requisites and the signature are added to the document automatically — don't duplicate them in the body.",
     "placeholderGroups": {
       "dynamic": "Dynamic data",
-      "company": "Company requisites (already in the letterhead)"
+      "company": "Company requisites (already in the letterhead)",
+      "legal_blocks": "Legal documents (contract / invoice / act)"
     },
     "placeholderGroupHints": {
-      "company": "These already print in the document letterhead — usually not needed in the body."
+      "company": "These already print in the document letterhead — usually not needed in the body.",
+      "legal_blocks": "Structural blocks and values for contract, invoice and act templates. Blocks are assembled by the server at print time — the preview shows a labelled stub."
     },
     "preview": "Preview",
     "previewEmpty": "Start typing the template body — a preview will appear here.",
