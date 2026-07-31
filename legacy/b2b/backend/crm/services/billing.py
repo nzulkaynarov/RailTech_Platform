@@ -446,11 +446,13 @@ def _render_act_pdf(act) -> None:
 
     # Real seller (via the act's contract → КП) so «От Поставщика» names the counterparty,
     # not a blank line. Shared branding bundle, same shape as every other document.
+    from ..document_wording import document_wording_context
     from .documents import brand_context_for_pdf, document_brand_context, document_totals
     from .quotes import _quote_seller_company
 
     quote = act.contract.quote if (act.contract_id and act.contract.quote_id) else None
     supplier = _quote_seller_company(quote) if quote else None
+    act_brand = document_brand_context(supplier)
 
     # D1: the act MIRRORS its invoice (audit: «акт зеркалит инвойс») — same net/VAT/gross figures,
     # same shared 3-line block. Falls back to the act's own gross total if it has no invoice.
@@ -474,7 +476,9 @@ def _render_act_pdf(act) -> None:
             "company": act.deal.company,
             "contact": act.deal.contact,
             "totals": totals,
-            **brand_context_for_pdf(document_brand_context(supplier)),
+            **brand_context_for_pdf(act_brand),
+            # Оговорка о приёмке: компании либо платформенная (spec-documents-editable).
+            **document_wording_context(act_brand.get("seller_profile")),
         },
     )
     buf = BytesIO()

@@ -89,6 +89,12 @@ class CompanyDocumentProfileSerializer(serializers.ModelSerializer):
             "font_family",
             "cover_letter_text",
             "show_cover_letter",
+            # Формулировки документов (spec-documents-editable-and-uniform): проза договора и
+            # акта редактируется компанией, каркас остаётся кодом.
+            "contract_acceptance_text",
+            "contract_liability_text",
+            "contract_extra_terms_text",
+            "act_closing_text",
             "show_bank_in_header",
             "use_company_defaults",
             "show_logo",

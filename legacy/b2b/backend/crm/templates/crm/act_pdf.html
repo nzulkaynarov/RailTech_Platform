@@ -53,10 +53,10 @@
 
   {% include "crm/_totals_block.html" %}
 
-  <p style="font-size:8.8pt;color:var(--ink-soft);margin:12pt 0;">
-    Услуги / товары оказаны / поставлены в полном объёме и в согласованные сроки. Стороны претензий
-    по объёму, качеству, комплектности и срокам друг к другу не имеют.
-  </p>
+  {# Оговорка компании либо платформенная (crm.document_wording). #}
+  <div style="font-size:8.8pt;color:var(--ink-soft);margin:12pt 0;">
+    {{ wording_act_closing_text|linebreaks }}
+  </div>
 
   <table class="signatures">
     <tr>

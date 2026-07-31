@@ -70,6 +70,10 @@ export interface CompanyDocumentProfile {
 	font_family?: DocumentFontFamily;
 	// КП «фирменный бланк» (spec-kp-blank): cover letter + bank-in-header toggle.
 	cover_letter_text?: string;
+	contract_acceptance_text?: string;
+	contract_liability_text?: string;
+	contract_extra_terms_text?: string;
+	act_closing_text?: string;
 	show_cover_letter?: boolean;
 	show_bank_in_header?: boolean;
 	use_company_defaults?: boolean;

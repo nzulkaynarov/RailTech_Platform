@@ -56,6 +56,10 @@ type ProfileForm = {
   layout_preset: DocumentLayoutPreset;
   font_family: DocumentFontFamily;
   cover_letter_text: string;
+  contract_acceptance_text: string;
+  contract_liability_text: string;
+  contract_extra_terms_text: string;
+  act_closing_text: string;
   show_cover_letter: boolean;
   show_bank_in_header: boolean;
   show_logo: boolean;
@@ -77,6 +81,10 @@ const EMPTY_FORM: ProfileForm = {
   layout_preset: 'light',
   font_family: 'sans',
   cover_letter_text: '',
+  contract_acceptance_text: '',
+  contract_liability_text: '',
+  contract_extra_terms_text: '',
+  act_closing_text: '',
   show_cover_letter: false,
   show_bank_in_header: true,
   show_logo: true,
@@ -99,6 +107,10 @@ function toForm(profile: CompanyDocumentProfile): ProfileForm {
     layout_preset: profile.layout_preset ?? 'light',
     font_family: profile.font_family ?? 'sans',
     cover_letter_text: profile.cover_letter_text ?? '',
+    contract_acceptance_text: profile.contract_acceptance_text ?? '',
+    contract_liability_text: profile.contract_liability_text ?? '',
+    contract_extra_terms_text: profile.contract_extra_terms_text ?? '',
+    act_closing_text: profile.act_closing_text ?? '',
     show_cover_letter: profile.show_cover_letter ?? false,
     show_bank_in_header: profile.show_bank_in_header ?? true,
     show_logo: profile.show_logo ?? true,
@@ -482,6 +494,58 @@ export function CompanyDocumentProfileSettings() {
                   <p className="text-xs text-muted-foreground">{t('documentProfile.coverTextTokens')}</p>
                 </div>
               )}
+            </div>
+
+            <Separator />
+            {/* Формулировки документов: каркас (таблица, итоги, реквизиты, подписи) остаётся
+                кодом, а проза — данными. Так границу проводят эталоны отчётов: настраиваемый
+                текст живёт в полях, структура — в шаблоне. Пустое поле печатает платформенную
+                формулировку, поэтому ничего не заполнивший получает прежний документ. */}
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-sm font-semibold text-foreground">{t('documentProfile.wording.title')}</h4>
+                <p className="mt-0.5 text-xs text-muted-foreground">{t('documentProfile.wording.hint')}</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dp-contract-acceptance-text">{t('documentProfile.wording.contractAcceptance')}</Label>
+                <Textarea
+                  id="dp-contract-acceptance-text"
+                  rows={4}
+                  value={form.contract_acceptance_text}
+                  onChange={(e) => setForm({ ...form, contract_acceptance_text: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">{t('documentProfile.wording.contractAcceptanceHint')}</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dp-contract-liability-text">{t('documentProfile.wording.contractLiability')}</Label>
+                <Textarea
+                  id="dp-contract-liability-text"
+                  rows={4}
+                  value={form.contract_liability_text}
+                  onChange={(e) => setForm({ ...form, contract_liability_text: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">{t('documentProfile.wording.contractLiabilityHint')}</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dp-contract-extra-terms-text">{t('documentProfile.wording.contractExtra')}</Label>
+                <Textarea
+                  id="dp-contract-extra-terms-text"
+                  rows={4}
+                  value={form.contract_extra_terms_text}
+                  onChange={(e) => setForm({ ...form, contract_extra_terms_text: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">{t('documentProfile.wording.contractExtraHint')}</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dp-act-closing-text">{t('documentProfile.wording.actClosing')}</Label>
+                <Textarea
+                  id="dp-act-closing-text"
+                  rows={4}
+                  value={form.act_closing_text}
+                  onChange={(e) => setForm({ ...form, act_closing_text: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">{t('documentProfile.wording.actClosingHint')}</p>
+              </div>
             </div>
 
             <Separator />

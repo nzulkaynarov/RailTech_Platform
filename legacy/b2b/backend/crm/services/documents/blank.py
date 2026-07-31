@@ -25,6 +25,23 @@ def _tidy_empty_substitutions(text: str) -> str:
     return text.strip()
 
 
+def substitute_tokens(text: str, **tokens) -> str:
+    """Плоская подстановка `{{имя}}` → значение, с уборкой пунктуации после пустых токенов.
+
+    Выделено из `resolve_cover_letter`, потому что тем же способом подставляются формулировки
+    договора и акта (`crm.document_wording`): один механизм — одно место, где он может сломаться.
+    Текст НЕ рендерится как Django-шаблон: подстановка строковая (нет SSTI), а вывод экранирует
+    вызывающий шаблон через `|linebreaks` (нет XSS).
+    """
+    if not text:
+        return ""
+    values = {f"{{{{{name}}}}}": ("" if value is None else str(value)) for name, value in tokens.items()}
+    had_empty = any(token in text and not value for token, value in values.items())
+    for token, value in values.items():
+        text = text.replace(token, value)
+    return _tidy_empty_substitutions(text) if had_empty else text
+
+
 def resolve_cover_letter(profile, *, buyer_name: str = "", deal_ref: str = "", seller_name: str = "") -> str:
     """Resolved cover-letter paragraph, or "" when disabled/empty.
 
@@ -40,15 +57,7 @@ def resolve_cover_letter(profile, *, buyer_name: str = "", deal_ref: str = "", s
     text = (getattr(profile, "cover_letter_text", "") or "").strip()
     if not text:
         return ""
-    values = {
-        "{{buyer}}": buyer_name or "",
-        "{{deal}}": str(deal_ref or ""),
-        "{{seller}}": seller_name or "",
-    }
-    had_empty = any(token in text and not value for token, value in values.items())
-    for token, value in values.items():
-        text = text.replace(token, value)
-    return _tidy_empty_substitutions(text) if had_empty else text
+    return substitute_tokens(text, buyer=buyer_name or "", deal=deal_ref or "", seller=seller_name or "")
 
 
 def build_quote_terms(

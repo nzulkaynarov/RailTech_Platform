@@ -160,10 +160,12 @@ def _render_contract_pdf(contract) -> None:
     # a preparer's primary membership which can be missing/wrong), plus its branded
     # document profile (shared document_brand_context, mirroring the КП PDF). NEVER a hardcoded
     # platform identity: a contract is a legal document and must name the real counterparty.
+    from ..document_wording import document_wording_context
     from .documents import brand_context_for_pdf, document_brand_context, document_totals
     from .quotes import _quote_seller_company
 
     supplier = _quote_seller_company(contract.quote)
+    brand = document_brand_context(supplier)
 
     # D1: shared 3-line VAT bridge. A contract stores only the gross `total_amount`, so the net/VAT
     # split is derived from the КП vat_rate (document_totals) — same block as КП/инвойс/акт.
@@ -186,7 +188,9 @@ def _render_contract_pdf(contract) -> None:
             # optional lines were quoted outside the offer — printing them here as numbered priced
             # rows would misstate what the buyer contracted to pay. billable() = the single filter.
             "items": contract.quote.items.billable().select_related("product", "frozen_currency"),
-            **brand_context_for_pdf(document_brand_context(supplier)),
+            **brand_context_for_pdf(brand),
+            # Формулировки договора: компании либо платформенные (spec-documents-editable).
+            **document_wording_context(brand.get("seller_profile")),
         },
     )
     buf = BytesIO()

@@ -4954,7 +4954,19 @@
     "secondaryColor": "Secondary color",
     "secondaryColorHint": "Panel fills and table stripes. Empty — neutral light gray.",
     "useCompanyDefaults": "Use company profile data",
-    "useCompanyDefaultsHint": "Name, INN, address and bank details are inherited from the company profile automatically"
+    "useCompanyDefaultsHint": "Name, INN, address and bank details are inherited from the company profile automatically",
+    "wording": {
+      "title": "Document wording",
+      "hint": "Text printed in the contract and the act. Empty — the platform's standard wording is printed.",
+      "contractAcceptance": "Contract: quality and acceptance",
+      "contractAcceptanceHint": "Clause 4. How goods are accepted and how claims are raised.",
+      "contractLiability": "Contract: liability",
+      "contractLiabilityHint": "Clause 5. This is where companies most often change the penalty rate.",
+      "contractExtra": "Contract: special terms",
+      "contractExtraHint": "A separate clause. Printed only when filled in.",
+      "actClosing": "Act: acceptance statement",
+      "actClosingHint": "The paragraph under the act table — scope of work and absence of claims."
+    }
   },
   "companyDefaults": {
     "title": "Quote defaults",

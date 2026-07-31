@@ -409,6 +409,31 @@ class CompanyDocumentProfile(models.Model):
         verbose_name=_("Печатать сопроводительный текст"),
         help_text=_("Добавлять вступительный абзац в начало КП"),
     )
+    # ── Формулировки документов (spec-documents-editable-and-uniform) ────────
+    # Каркас документа остаётся кодом, а ПРОЗА становится данными — так границу проводят
+    # эталоны отчётов (Odoo: настраиваемый текст в полях модели, структура в шаблоне).
+    # Пустое поле = печатать платформенную формулировку из `crm.document_wording`, а не пусто:
+    # компания, которая ничего не настраивала, получает ровно прежний документ.
+    contract_acceptance_text = models.TextField(
+        blank=True,
+        verbose_name=_("Договор: качество и приёмка"),
+        help_text=_("Пункт «Качество, комплектность и приёмка». Пусто — печатается стандартная формулировка."),
+    )
+    contract_liability_text = models.TextField(
+        blank=True,
+        verbose_name=_("Договор: ответственность сторон"),
+        help_text=_("Пункт «Ответственность сторон» — здесь компании чаще всего меняют ставку неустойки."),
+    )
+    contract_extra_terms_text = models.TextField(
+        blank=True,
+        verbose_name=_("Договор: особые условия"),
+        help_text=_("Дополнительный пункт договора. Печатается, ТОЛЬКО если заполнен."),
+    )
+    act_closing_text = models.TextField(
+        blank=True,
+        verbose_name=_("Акт: оговорка о приёмке"),
+        help_text=_("Абзац под таблицей акта об объёме и отсутствии претензий."),
+    )
     show_bank_in_header = models.BooleanField(
         default=True,
         verbose_name=_("Банковские реквизиты в шапке"),
