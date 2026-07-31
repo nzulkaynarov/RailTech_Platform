@@ -76,6 +76,13 @@ export interface PlaceholderCatalogGroup {
   items: PlaceholderCatalogEntry[];
 }
 
+export interface PlaceholderCatalog {
+  groups: PlaceholderCatalogGroup[];
+  /** E2: обязательные блоки по видам юр-документов (CONTRACT/INVOICE/ACT → doc.* коды) —
+   *  редактор называет недостающее при TEMPLATE_MISSING_REQUIRED_BLOCKS. */
+  required_blocks: Record<string, string[]>;
+}
+
 // ─── Generated documents (rendered instances) ─────────────────────
 
 export type GeneratedDocumentStatus = 'DRAFT' | 'ISSUED' | 'CANCELLED';
@@ -162,12 +169,10 @@ export const documentTemplatesApi = {
     return response.data;
   },
   placeholders: async () => {
-    // Backend wraps the catalogue as { groups: [{ key, label, items }] } (T1-c) — dynamic data vs
-    // company requisites already in the letterhead шапка.
-    const response = await apiClient.get<{ groups: PlaceholderCatalogGroup[] }>(
-      'crm/document-templates/placeholders/',
-    );
-    return response.data.groups;
+    // Backend wraps the catalogue as { groups, required_blocks } (T1-c + E2) — dynamic data vs
+    // company requisites already in the letterhead шапка, плюс обязательные блоки юр-видов.
+    const response = await apiClient.get<PlaceholderCatalog>('crm/document-templates/placeholders/');
+    return response.data;
   },
 };
 

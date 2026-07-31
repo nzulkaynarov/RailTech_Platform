@@ -1704,6 +1704,7 @@
     "toast": {
       "created": "Шаблон создан",
       "updated": "Шаблон обновлён",
+      "missingBlocks": "В шаблоне не хватает обязательных блоков: {{list}}. Вставьте их из каталога плейсхолдеров.",
       "deleted": "Шаблон удалён",
       "copied": "Шаблон скопирован к вам"
     }
@@ -4612,6 +4613,7 @@
     "DOCUMENT_ALREADY_CANCELLED": "Документ уже отменён",
     "DOCUMENT_CANCELLED": "Документ отменён",
     "TEMPLATE_BODY_TOO_LARGE": "Тело шаблона слишком большое",
+    "TEMPLATE_MISSING_REQUIRED_BLOCKS": "В шаблоне не хватает обязательных блоков этого вида документа",
     "TEMPLATE_NAME_REQUIRED": "Введите название шаблона",
     "TEMPLATE_NOT_FOUND": "Шаблон не найден",
     "TEMPLATE_ID_REQUIRED": "Не указан шаблон",

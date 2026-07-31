@@ -227,6 +227,19 @@ def _kind(code: str):
     return DocumentTemplateKind.objects.get(code=code)
 
 
+def _assert_legal_template_integrity(kind_code: str, body_html: str, is_active: bool) -> None:
+    """E2 (spec-editable-outgoing-documents): АКТИВНЫЙ шаблон юридического вида обязан
+    содержать структурные блоки — без таблицы позиций, итогов и подписей/реквизитов документ
+    перестаёт быть документом. Черновик (is_active=False) правится свободно; проверка
+    срабатывает на активации. Наш аналог «lock block position» у PandaDoc."""
+    if not is_active:
+        return
+    from .document_blocks import missing_required_blocks
+
+    if missing_required_blocks(kind_code, body_html):
+        raise ValidationError("TEMPLATE_MISSING_REQUIRED_BLOCKS")
+
+
 @transaction.atomic
 def create_template(company, user: CustomUser, *, name: str, kind_code: str, body_html: str):
     """Create a company template: sanitise the body, derive its placeholders, save."""
@@ -237,6 +250,8 @@ def create_template(company, user: CustomUser, *, name: str, kind_code: str, bod
     if len(body_html or "") > MAX_TEMPLATE_BODY_CHARS:
         raise ValidationError("TEMPLATE_BODY_TOO_LARGE")
     clean_html = sanitize_template_html(body_html)
+    # Новый шаблон рождается активным (модельный default) — целостность проверяется сразу.
+    _assert_legal_template_integrity(kind_code, clean_html, True)
     return DocumentTemplate.objects.create(
         company=company,
         name=name.strip(),
@@ -269,6 +284,8 @@ def update_template(template, *, name=None, kind_code=None, body_html=None, is_a
     if is_active is not None:
         template.is_active = bool(is_active)
         fields.append("is_active")
+    # E2: проверяем ИТОГОВОЕ состояние — какая пара (вид, тело) станет активной после правки.
+    _assert_legal_template_integrity(template.kind.code, template.body_html, template.is_active)
     template.save(update_fields=fields)
     return template
 

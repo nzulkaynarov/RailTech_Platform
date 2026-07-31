@@ -3909,7 +3909,9 @@ export interface paths {
         /**
          * Placeholder catalogue for the template editor (grouped)
          * @description Advertised `{{code}}` placeholders in two groups (dynamic data vs company requisites
-         *     already printed in the letterhead шапка) — the editor helper (T1-c).
+         *     already printed in the letterhead шапка) — the editor helper (T1-c). Plus the E2
+         *     required-block sets per legal kind (one catalogue — the editor and the integrity
+         *     check can't drift).
          */
         get: operations["crm_document_templates_placeholders_retrieve"];
         put?: never;
@@ -8185,6 +8187,9 @@ export interface components {
         };
         DocumentPlaceholderCatalog: {
             groups: components["schemas"]["DocumentPlaceholderGroup"][];
+            required_blocks: {
+                [key: string]: string[];
+            };
         };
         DocumentPlaceholderGroup: {
             key: string;

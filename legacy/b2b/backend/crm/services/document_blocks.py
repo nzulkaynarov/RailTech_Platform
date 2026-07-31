@@ -41,6 +41,31 @@ DOCUMENT_WORDING_TOKENS = {
     "doc.contract_liability": "contract_liability_text",
 }
 
+#: E2 — проверка целостности вместо блочных замков: без этих блоков документ перестаёт быть
+#: документом (счёт без реквизитов нельзя оплатить, договор без подписей нельзя заключить).
+#: Активировать шаблон юридического вида без них нельзя; правится ТЕКСТ вокруг, не состав.
+REQUIRED_TEMPLATE_BLOCKS = {
+    "ACT": ("doc.items_table", "doc.totals", "doc.signatures"),
+    "INVOICE": ("doc.items_table", "doc.totals", "doc.payment_requisites"),
+    "CONTRACT": ("doc.spec_table", "doc.totals", "doc.requisites_and_signatures"),
+}
+
+
+def missing_required_blocks(kind_code: str, body_html: str) -> list:
+    """Каких обязательных блоков не хватает телу шаблона этого вида (пусто = целостно).
+
+    Один источник правды с каталогом DOCUMENT_BLOCKS: редактор показывает блоки, эта проверка
+    требует их — разъехаться они не могут.
+    """
+    from .document_placeholders import extract_placeholders
+
+    required = REQUIRED_TEMPLATE_BLOCKS.get(kind_code)
+    if not required:
+        return []
+    present = set(extract_placeholders(body_html or ""))
+    return [token for token in required if token not in present]
+
+
 #: Скалярные значения юридического документа.
 DOCUMENT_SCALARS = {
     "doc.number": "Номер документа",

@@ -1700,6 +1700,7 @@
     "toast": {
       "created": "Template created",
       "updated": "Template updated",
+      "missingBlocks": "The template is missing required blocks: {{list}}. Insert them from the placeholder catalog.",
       "deleted": "Template deleted",
       "copied": "Template copied to you"
     }
@@ -4600,6 +4601,7 @@
     "DOCUMENT_ALREADY_CANCELLED": "The document is already cancelled",
     "DOCUMENT_CANCELLED": "The document is cancelled",
     "TEMPLATE_BODY_TOO_LARGE": "The template body is too large",
+    "TEMPLATE_MISSING_REQUIRED_BLOCKS": "The template is missing required blocks for this document kind",
     "TEMPLATE_NAME_REQUIRED": "Please enter a template name",
     "TEMPLATE_NOT_FOUND": "Template not found",
     "TEMPLATE_ID_REQUIRED": "No template selected",

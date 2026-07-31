@@ -105,27 +105,39 @@ class DocumentTemplateViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("TEMPLATE_NOT_EDITABLE")
 
     def create(self, request, *args, **kwargs):
+        from django.core.exceptions import ValidationError as DjangoValidationError
+
         company = self._owner_company()
-        template = crm_services.create_template(
-            company,
-            request.user,
-            name=request.data.get("name", ""),
-            kind_code=request.data.get("kind", "CUSTOM"),
-            body_html=request.data.get("body_html", ""),
-        )
+        try:
+            template = crm_services.create_template(
+                company,
+                request.user,
+                name=request.data.get("name", ""),
+                kind_code=request.data.get("kind", "CUSTOM"),
+                body_html=request.data.get("body_html", ""),
+            )
+        except DjangoValidationError as exc:
+            # Сервисные коды обязаны доехать как {"detail": CODE} — без перехвата Django
+            # отдаёт HTML-страницу «Bad Request», которую SPA не может ни разобрать, ни перевести.
+            return Response({"detail": exc.messages[0]}, status=400)
         return Response(self.get_serializer(template).data, status=201)
 
     def update(self, request, *args, **kwargs):
+        from django.core.exceptions import ValidationError as DjangoValidationError
+
         instance = self.get_object()
         self._owner_company()  # gate on settings.edit
         self._assert_owned(instance)
-        template = crm_services.update_template(
-            instance,
-            name=request.data.get("name"),
-            kind_code=request.data.get("kind"),
-            body_html=request.data.get("body_html"),
-            is_active=request.data.get("is_active"),
-        )
+        try:
+            template = crm_services.update_template(
+                instance,
+                name=request.data.get("name"),
+                kind_code=request.data.get("kind"),
+                body_html=request.data.get("body_html"),
+                is_active=request.data.get("is_active"),
+            )
+        except DjangoValidationError as exc:
+            return Response({"detail": exc.messages[0]}, status=400)
         return Response(self.get_serializer(template).data)
 
     def partial_update(self, request, *args, **kwargs):
@@ -147,15 +159,20 @@ class DocumentTemplateViewSet(viewsets.ModelViewSet):
     @extend_schema(summary="Copy a platform sample into the caller's company", tags=["CRM"])
     @action(detail=True, methods=["post"], url_path="copy")
     def copy(self, request, pk=None):
+        from django.core.exceptions import ValidationError as DjangoValidationError
+
         source = self.get_object()
         company = self._owner_company()
-        template = crm_services.create_template(
-            company,
-            request.user,
-            name=source.name,
-            kind_code=source.kind.code,
-            body_html=source.body_html,
-        )
+        try:
+            template = crm_services.create_template(
+                company,
+                request.user,
+                name=source.name,
+                kind_code=source.kind.code,
+                body_html=source.body_html,
+            )
+        except DjangoValidationError as exc:
+            return Response({"detail": exc.messages[0]}, status=400)
         return Response(self.get_serializer(template).data, status=201)
 
     @extend_schema(
@@ -227,7 +244,12 @@ class DocumentTemplateViewSet(viewsets.ModelViewSet):
                                 ),
                             },
                         )
-                    )
+                    ),
+                    # E2: обязательные блоки по видам юр-документов — редактор подсказывает
+                    # и называет недостающее при TEMPLATE_MISSING_REQUIRED_BLOCKS.
+                    "required_blocks": drf_serializers.DictField(
+                        child=drf_serializers.ListField(child=drf_serializers.CharField())
+                    ),
                 },
             )
         },
@@ -235,10 +257,18 @@ class DocumentTemplateViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"], url_path="placeholders")
     def placeholders(self, request):
         """Advertised `{{code}}` placeholders in two groups (dynamic data vs company requisites
-        already printed in the letterhead шапка) — the editor helper (T1-c)."""
+        already printed in the letterhead шапка) — the editor helper (T1-c). Plus the E2
+        required-block sets per legal kind (one catalogue — the editor and the integrity
+        check can't drift)."""
+        from crm.services.document_blocks import REQUIRED_TEMPLATE_BLOCKS
         from crm.services.document_placeholders import PLACEHOLDER_GROUPS
 
-        return Response({"groups": PLACEHOLDER_GROUPS})
+        return Response(
+            {
+                "groups": PLACEHOLDER_GROUPS,
+                "required_blocks": {kind: list(codes) for kind, codes in REQUIRED_TEMPLATE_BLOCKS.items()},
+            }
+        )
 
 
 class GeneratedDocumentViewSet(viewsets.ModelViewSet):

@@ -13,7 +13,7 @@ import {
   usePlaceholderCatalog,
 } from '@/hooks/useDocuments';
 import type { DocumentTemplate, PlaceholderCatalogGroup, TemplatePreviewResult } from '@/api/documentsApi';
-import { translateApiError } from '@/lib/apiError';
+import { extractApiErrorCode, translateApiError } from '@/lib/apiError';
 import { DocumentHtmlPreview } from '@/components/Documents/DocumentHtmlPreview';
 import { SampleTemplatePreviewDialog } from '@/components/Settings/SampleTemplatePreviewDialog';
 import {
@@ -43,7 +43,9 @@ import {
 } from '@/components/ui/alert-dialog';
 
 // Document-template kinds (crm.DocumentTemplateKind lookup, spec §Данные). Compared by CODE (Rule 2).
-const KIND_CODES = ['LETTER', 'REPORT', 'CUSTOM'] as const;
+// E1b добавил юридические виды: без них правка скопированного образца договора молча
+// превращала его в CUSTOM — и шаблон переставал применяться к печати документа.
+const KIND_CODES = ['LETTER', 'REPORT', 'CUSTOM', 'CONTRACT', 'INVOICE', 'ACT'] as const;
 type KindCode = (typeof KIND_CODES)[number];
 const kindLabelKey = (code: string) => `docTemplatesSettings.kind.${code.toLowerCase()}`;
 
@@ -64,7 +66,9 @@ interface EditorState {
 export function DocumentTemplatesSettings() {
   const { t } = useTranslation();
   const { data: templates = [], isLoading } = useDocumentTemplates();
-  const { data: placeholderGroups = [] } = usePlaceholderCatalog();
+  const { data: placeholderCatalog } = usePlaceholderCatalog();
+  const placeholderGroups = placeholderCatalog?.groups ?? [];
+  const requiredBlocks = placeholderCatalog?.required_blocks ?? {};
   const createMut = useCreateTemplate();
   const updateMut = useUpdateTemplate();
   const deleteMut = useDeleteTemplate();
@@ -112,6 +116,32 @@ export function DocumentTemplatesSettings() {
     richEditorRef.current?.insertPlaceholder(code);
   }
 
+  /** E2: назвать недостающие обязательные блоки юр-вида по-человечески (спека требует, чтобы
+   *  ошибка называла, чего именно не хватает). Каталог и required-наборы приходят с сервера —
+   *  один источник с самой проверкой. */
+  function describeMissingBlocks(kindCode: string, body: string): string | null {
+    const required = requiredBlocks[kindCode] ?? [];
+    const missing = required.filter(
+      (code) => !new RegExp(`\\{\\{\\s*${code.replace(/\./g, '\\.')}\\s*\\}\\}`).test(body),
+    );
+    if (!missing.length) return null;
+    const labels = new Map(
+      placeholderGroups.flatMap((group) => group.items.map((entry) => [entry.code, entry.label] as const)),
+    );
+    return missing.map((code) => labels.get(code) ?? code).join(', ');
+  }
+
+  function toastTemplateError(err: unknown, kindCode: string, body: string) {
+    if (extractApiErrorCode(err) === 'TEMPLATE_MISSING_REQUIRED_BLOCKS') {
+      const list = describeMissingBlocks(kindCode, body);
+      if (list) {
+        toast.error(t('docTemplatesSettings.toast.missingBlocks', { list }));
+        return;
+      }
+    }
+    toast.error(translateApiError(err));
+  }
+
   async function handleSave() {
     if (!editor) return;
     if (!editor.name.trim()) {
@@ -131,7 +161,7 @@ export function DocumentTemplatesSettings() {
       }
       closeEditor();
     } catch (err) {
-      toast.error(translateApiError(err));
+      toastTemplateError(err, editor.kind, editor.body_html);
     }
   }
 
@@ -139,7 +169,7 @@ export function DocumentTemplatesSettings() {
     try {
       await updateMut.mutateAsync({ id: tpl.id, payload: { is_active: !tpl.is_active } });
     } catch (err) {
-      toast.error(translateApiError(err));
+      toastTemplateError(err, tpl.kind_code, tpl.body_html);
     }
   }
 

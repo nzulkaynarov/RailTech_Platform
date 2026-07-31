@@ -11009,7 +11009,7 @@
         "/api/v1/crm/document-templates/placeholders/": {
             "get": {
                 "operationId": "crm_document_templates_placeholders_retrieve",
-                "description": "Advertised `{{code}}` placeholders in two groups (dynamic data vs company requisites\nalready printed in the letterhead шапка) — the editor helper (T1-c).",
+                "description": "Advertised `{{code}}` placeholders in two groups (dynamic data vs company requisites\nalready printed in the letterhead шапка) — the editor helper (T1-c). Plus the E2\nrequired-block sets per legal kind (one catalogue — the editor and the integrity\ncheck can't drift).",
                 "summary": "Placeholder catalogue for the template editor (grouped)",
                 "tags": [
                     "CRM"
@@ -21723,10 +21723,20 @@
                         "items": {
                             "$ref": "#/components/schemas/DocumentPlaceholderGroup"
                         }
+                    },
+                    "required_blocks": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
                     }
                 },
                 "required": [
-                    "groups"
+                    "groups",
+                    "required_blocks"
                 ]
             },
             "DocumentPlaceholderGroup": {
