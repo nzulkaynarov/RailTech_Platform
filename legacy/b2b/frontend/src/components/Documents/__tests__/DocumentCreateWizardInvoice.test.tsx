@@ -45,18 +45,18 @@ beforeEach(() => {
   window.location.hash = '';
 });
 
-describe('DocumentCreateWizard — «Создать инвойс»', () => {
+describe('DocumentCreateWizard — «Создать счёт»', () => {
   it('creates a DRAFT invoice for the deal and lands on its editor via a deep link', async () => {
     // defaultDealId locks the deal so the create button is enabled without touching the Select.
     renderWithProviders(
       <DocumentCreateWizard open onOpenChange={vi.fn()} defaultDealId={42} />,
     );
 
-    // Step 1 → pick the «Инвойс» type.
-    fireEvent.click(screen.getByRole('button', { name: /Инвойс/ }));
+    // Step 1 → pick the «Счёт» type.
+    fireEvent.click(screen.getByRole('button', { name: /Счёт/ }));
 
     // Step 2 → create.
-    const createBtn = await screen.findByRole('button', { name: 'Создать инвойс' });
+    const createBtn = await screen.findByRole('button', { name: 'Создать счёт' });
     fireEvent.click(createBtn);
 
     await waitFor(() => expect(inv.mutateAsync).toHaveBeenCalledTimes(1));

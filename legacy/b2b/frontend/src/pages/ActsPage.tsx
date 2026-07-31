@@ -37,14 +37,31 @@ const STATUS_CODES: ActStatus[] = ['DRAFT', 'ISSUED', 'SIGNED', 'CANCELLED'];
  *
  * Формулировка «согласовал в системе», а не «подписал»: клик без E-IMZO юридической подписью
  * не является, и интерфейс не должен утверждать обратное (канон отрезка «после контракта»).
+ *
+ * ОТМЕТКА БЕЗ ИМЕНИ бывает ровно в одном случае — исторический акт, которому дата выпуска
+ * досталась бэкфиллом при переходе на двусторонний акт (сервис всегда пишет обе величины
+ * разом). Тогда: во-первых, говорим об этом прямо, иначе «—» над датой читается как порча
+ * данных; во-вторых, печатаем только ДАТУ. Время у такой записи взято из полуночи — его не
+ * было, и показывать несуществующее «00:00:00» значит выдавать артефакт за факт.
  */
 function SignatureLine({ name, at }: { name?: string | null; at?: string | null }) {
+  const { t } = useTranslation();
   if (!at) return <p className="text-muted-foreground">—</p>;
+  const moment = new Date(at);
+  if (!name) {
+    return (
+      <p className="text-muted-foreground">
+        <span className="text-xs">{moment.toLocaleDateString()}</span>
+        <br />
+        <span className="text-xs">{t('actsPage.signerUnknown')}</span>
+      </p>
+    );
+  }
   return (
     <p className="text-muted-foreground">
-      <span className="text-foreground">{name || '—'}</span>
+      <span className="text-foreground">{name}</span>
       <br />
-      <span className="text-xs">{new Date(at).toLocaleString()}</span>
+      <span className="text-xs">{moment.toLocaleString()}</span>
     </p>
   );
 }

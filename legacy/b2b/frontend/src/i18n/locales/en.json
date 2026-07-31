@@ -4201,7 +4201,8 @@
       "title": "Cancel this act?",
       "description": "The customer will see that the act was withdrawn, and why. This cannot be undone — issue a new act if needed.",
       "confirm": "Cancel act"
-    }
+    },
+    "signerUnknown": "issued before two-sided acts — the name was not recorded"
   },
   "companyFilesPage": {
     "title": "Files",
