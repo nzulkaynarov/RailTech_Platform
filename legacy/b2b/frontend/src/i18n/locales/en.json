@@ -1692,7 +1692,10 @@
     "kind": {
       "letter": "Letter",
       "report": "Report",
-      "custom": "Custom"
+      "custom": "Custom",
+      "contract": "Contract",
+      "invoice": "Invoice",
+      "act": "Act"
     },
     "toast": {
       "created": "Template created",
