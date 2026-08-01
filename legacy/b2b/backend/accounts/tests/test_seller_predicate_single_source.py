@@ -54,7 +54,9 @@ def test_no_inline_seller_predicate_outside_canonical_home():
         for fragment in FORBIDDEN_FRAGMENTS:
             if fragment in text:
                 offenders.append(f"{path.relative_to(BACKEND_ROOT)}: {fragment}")
-    assert not offenders, "предикат «продавец» продублирован вне accounts/models/company/core.py:\n" + "\n".join(offenders)
+    assert not offenders, "предикат «продавец» продублирован вне accounts/models/company/core.py:\n" + "\n".join(
+        offenders
+    )
 
 
 def test_canonical_home_is_importable_and_exported():
