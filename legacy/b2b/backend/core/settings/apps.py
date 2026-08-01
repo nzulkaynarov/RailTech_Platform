@@ -1,0 +1,204 @@
+"""INSTALLED_APPS и Unfold (инженерная админка)."""
+
+from django.utils.translation import gettext_lazy as _
+
+from .base import *  # noqa: F401,F403 — последовательная композиция настроек
+
+# Application definition
+
+INSTALLED_APPS = [
+    "unfold",
+    "unfold.contrib.filters",
+    "unfold.contrib.forms",
+    "unfold.contrib.inlines",
+    "unfold.contrib.import_export",
+    "import_export",
+    "daphne",
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "rest_framework",
+    "drf_spectacular",
+    "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
+    "corsheaders",
+    "django.contrib.postgres",
+    "channels",
+    "pgtrigger",
+    "pghistory",
+    "catalog",
+    "crm",
+    "sourcing",
+    "django_filters",
+    "master_data",
+    "accounts.apps.AccountsConfig",
+    "notifications",
+    "core",
+    "django_celery_beat",
+    "storages",
+]
+
+# Unfold Configuration
+UNFOLD = {
+    "SITE_TITLE": "RailTech B2B Control Center",
+    "SITE_HEADER": "RailTech B2B",
+    "SITE_SYMBOL": "train",
+    "DASHBOARD_CALLBACK": "core.dashboard.dashboard_callback",
+    "SHOW_HISTORY": True,
+    "SHOW_VIEW_ON_SITE": True,
+    "COLORS": {
+        "primary": {
+            "50": "239 246 255",
+            "100": "219 234 254",
+            "200": "191 219 254",
+            "300": "147 197 253",
+            "400": "96 165 250",
+            "500": "59 130 246",
+            "600": "37 99 235",
+            "700": "29 78 216",
+            "800": "30 64 175",
+            "900": "30 58 138",
+            "950": "23 37 84",
+        },
+    },
+    "SIDEBAR": {
+        "show_search": True,
+        # True = показывать fallback "All applications" в конце sidebar.
+        # Обеспечивает доступ ко всем orphan-моделям (SystemRole, VerificationStatus,
+        # KYCDocType и т.п.), которых нет в явной навигации выше. Инженер не
+        # должен помнить прямые URL, чтобы добраться до любого лукапа.
+        "show_all_applications": True,
+        "navigation": [
+            {
+                "title": _("Каталог"),
+                "separator": True,
+                "items": [
+                    {"title": _("Товары (PIM)"), "icon": "inventory_2", "link": "/admin/catalog/product/"},
+                    {"title": _("Офферы поставщиков"), "icon": "local_offer", "link": "/admin/catalog/supplieroffer/"},
+                    {"title": _("Категории"), "icon": "folder", "link": "/admin/catalog/category/"},
+                    {
+                        "title": _("Группы оборудования"),
+                        "icon": "precision_manufacturing",
+                        "link": "/admin/catalog/equipmentgroup/",
+                    },
+                ],
+            },
+            {
+                "title": _("Продажи"),
+                "separator": True,
+                "items": [
+                    {"title": _("Сделки"), "icon": "handshake", "link": "/admin/crm/deal/"},
+                    {"title": _("Коммерческие предложения"), "icon": "request_quote", "link": "/admin/crm/quote/"},
+                    {"title": _("Лиды с сайта"), "icon": "contact_page", "link": "/admin/crm/lead/"},
+                    {"title": _("Сообщения"), "icon": "chat", "link": "/admin/crm/message/"},
+                ],
+            },
+            {
+                "title": _("Компании и верификация"),
+                "separator": True,
+                "items": [
+                    {"title": _("Все компании"), "icon": "domain", "link": "/admin/accounts/company/"},
+                    {
+                        "title": _("+ Создать компанию"),
+                        "icon": "add_business",
+                        "link": "/admin/accounts/company/wizard/",
+                    },
+                    {
+                        "title": _("Заявки на роли"),
+                        "icon": "assignment",
+                        "link": "/admin/accounts/companyroleapplication/",
+                    },
+                    {
+                        "title": _("Подписки поставщиков"),
+                        "icon": "credit_card",
+                        "link": "/admin/accounts/suppliersubscription/",
+                    },
+                    {"title": _("KYC документы"), "icon": "verified_user", "link": "/admin/accounts/kycdocument/"},
+                ],
+            },
+            {
+                "title": _("Пользователи"),
+                "items": [
+                    {"title": _("Все пользователи"), "icon": "group", "link": "/admin/accounts/customuser/"},
+                ],
+            },
+            {
+                "title": _("Инженерный доступ"),
+                "separator": True,
+                "items": [
+                    {"title": _("Django Groups"), "icon": "groups", "link": "/admin/auth/group/"},
+                    {"title": _("Django Permissions"), "icon": "key", "link": "/admin/auth/permission/"},
+                ],
+            },
+            {
+                "title": _("Импорт данных"),
+                "separator": True,
+                "items": [
+                    {"title": _("Задачи импорта"), "icon": "upload_file", "link": "/admin/sourcing/importtask/"},
+                    {"title": _("Вложения"), "icon": "attach_file", "link": "/admin/sourcing/attachment/"},
+                ],
+            },
+            {
+                "title": _("Справочники: география и логистика"),
+                "separator": True,
+                "items": [
+                    {"title": _("Страны"), "icon": "public", "link": "/admin/master_data/country/"},
+                    {"title": _("Валюты"), "icon": "payments", "link": "/admin/master_data/currency/"},
+                    {"title": _("Ед. измерения"), "icon": "straighten", "link": "/admin/master_data/unitofmeasure/"},
+                    {
+                        "title": _("Базис поставки"),
+                        "icon": "local_shipping",
+                        "link": "/admin/master_data/deliverybasis/",
+                    },
+                    {
+                        "title": _("Ключевые слова Smart Match"),
+                        "icon": "label",
+                        "link": "/admin/sourcing/domainkeyword/",
+                    },
+                ],
+            },
+            {
+                "title": _("Справочники: роли и статусы"),
+                "separator": True,
+                "items": [
+                    {
+                        "title": _("Системные роли"),
+                        "icon": "admin_panel_settings",
+                        "link": "/admin/accounts/systemrole/",
+                    },
+                    {"title": _("Роли в команде"), "icon": "badge", "link": "/admin/accounts/workspacerole/"},
+                    {"title": _("Типы компаний"), "icon": "category", "link": "/admin/accounts/companytype/"},
+                    {
+                        "title": _("Статусы верификации"),
+                        "icon": "verified",
+                        "link": "/admin/accounts/verificationstatus/",
+                    },
+                    {"title": _("Типы KYC-документов"), "icon": "description", "link": "/admin/accounts/kycdoctype/"},
+                    {"title": _("Этапы сделки"), "icon": "timeline", "link": "/admin/crm/dealstage/"},
+                    {"title": _("Статусы КП"), "icon": "flag", "link": "/admin/crm/quotestatus/"},
+                    {"title": _("Домены каталога"), "icon": "widgets", "link": "/admin/catalog/domaintype/"},
+                    {"title": _("Статусы товара"), "icon": "toggle_on", "link": "/admin/catalog/productstatus/"},
+                    {"title": _("Статусы наличия"), "icon": "inventory", "link": "/admin/catalog/stockstatus/"},
+                    {
+                        "title": _("Типы уведомлений"),
+                        "icon": "notifications_active",
+                        "link": "/admin/notifications/notificationtype/",
+                    },
+                ],
+            },
+            {
+                "title": _("Аудит и мониторинг"),
+                "separator": True,
+                "items": [
+                    {"title": _("Уведомления"), "icon": "notifications", "link": "/admin/notifications/notification/"},
+                    {"title": _("Журнал email"), "icon": "mail", "link": "/admin/notifications/emaillog/"},
+                    {"title": _("Журнал действий"), "icon": "history", "link": "/admin/crm/activitylog/"},
+                    {"title": _("История цен КП"), "icon": "fact_check", "link": "/admin/crm/quoteitemhistory/"},
+                ],
+            },
+        ],
+    },
+}
