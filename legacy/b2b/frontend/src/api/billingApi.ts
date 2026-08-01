@@ -22,6 +22,7 @@ export interface Payment {
   method: 'BANK_TRANSFER' | 'CARD' | 'CASH' | 'OTHER';
   paid_at: string;
   reference: string;
+  receipt_number: string;
   proof_file: string | null;
   proof_url: string | null;
   recorded_by: number | null;

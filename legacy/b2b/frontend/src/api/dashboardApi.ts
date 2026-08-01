@@ -83,7 +83,7 @@ export interface PlatformDashboard {
 // `type` + `id` + `deal` — всё, что нужно `lib/documentRoute`, чтобы посчитать маршрут по
 // стороне зрителя.
 export interface RecentDocument {
-  type: 'quote' | 'contract' | 'invoice' | 'act' | 'generated';
+  type: 'quote' | 'contract' | 'invoice' | 'act' | 'generated' | 'receipt' | 'delivery_note';
   id: number;
   label: string;
   status_code: string | null;

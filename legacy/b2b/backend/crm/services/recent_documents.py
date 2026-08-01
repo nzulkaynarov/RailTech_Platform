@@ -171,6 +171,64 @@ def _recent_generated(user, request, limit: int) -> List[dict]:
     ]
 
 
+def _recent_receipts(user, request, limit: int) -> List[dict]:
+    """Квитанции об оплате (D2a) — печатный артефакт платежа. Видимость = видимость его
+    счёта (обе стороны сделки): регистр остаётся регистром, в реестр попадает артефакт."""
+    from django.db.models import Q
+
+    from crm.models import Payment
+    from crm.views.billing import _invoice_seller_side_q
+
+    qs = Payment.objects.exclude(receipt_number="").select_related("invoice").order_by("-created_at")
+    if not _is_admin(user):
+        buyer_q = Q(invoice__deal__company_id__in=_user_company_ids(user))
+        seller_q = _invoice_seller_side_q(user, request)
+        if seller_q is not None:
+            # Префиксуем пути Q счёта путём платежа (invoice__…).
+            from crm.models import Invoice
+
+            invoice_ids = Invoice.objects.filter(seller_q).values_list("id", flat=True)
+            qs = qs.filter(buyer_q | Q(invoice_id__in=invoice_ids)).distinct()
+        else:
+            qs = qs.filter(buyer_q).distinct()
+    return [
+        {
+            "type": "receipt",
+            "id": payment.id,
+            "label": payment.receipt_number,
+            "status_code": "ISSUED",
+            "_date": payment.created_at,
+            "deal": payment.invoice.deal_id,
+        }
+        for payment in qs[:limit]
+    ]
+
+
+def _recent_delivery_notes(user, request, limit: int) -> List[dict]:
+    """Накладные на отгрузку (D2b) — печатный артефакт отгрузки; появляются после отгрузки."""
+    from django.db.models import Q
+
+    from crm.models import Fulfillment
+    from crm.views.billing import _seller_side_q
+
+    qs = Fulfillment.objects.filter(shipped_at__isnull=False).select_related("deal", "status").order_by("-shipped_at")
+    if not _is_admin(user):
+        buyer_q = Q(deal__company_id__in=_user_company_ids(user))
+        seller_q = _seller_side_q(user, request, deal_path="deal", seller_path="contract__quote__seller_company_id")
+        qs = qs.filter(buyer_q if seller_q is None else (buyer_q | seller_q)).distinct()
+    return [
+        {
+            "type": "delivery_note",
+            "id": fulfillment.id,
+            "label": f"DN-{fulfillment.id}",
+            "status_code": fulfillment.status.code if fulfillment.status_id else "",
+            "_date": fulfillment.shipped_at,
+            "deal": fulfillment.deal_id,
+        }
+        for fulfillment in qs[:limit]
+    ]
+
+
 def recent_documents(user, request, limit: Optional[int] = DEFAULT_LIMIT) -> List[dict]:
     """Newest documents across all types the viewer may see, date-desc, capped at `limit`.
 
@@ -184,6 +242,8 @@ def recent_documents(user, request, limit: Optional[int] = DEFAULT_LIMIT) -> Lis
         + _recent_invoices(user, request, limit)
         + _recent_acts(user, request, limit)
         + _recent_generated(user, request, limit)
+        + _recent_receipts(user, request, limit)
+        + _recent_delivery_notes(user, request, limit)
     )
     entries.sort(key=lambda entry: entry["_date"], reverse=True)
     trimmed = entries[:limit]

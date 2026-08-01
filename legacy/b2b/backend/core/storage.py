@@ -138,6 +138,18 @@ def payment_proof_path(instance, filename):
     return f"deals/{instance.invoice.deal_id}/payments/{name}"
 
 
+def payment_receipt_path(instance, filename):
+    """deals/{deal_id}/payments/receipts/{uuid}.pdf (D2a: квитанция об оплате)"""
+    name = _uuid_filename(instance, filename)
+    return f"deals/{instance.invoice.deal_id}/payments/receipts/{name}"
+
+
+def fulfillment_pdf_path(instance, filename):
+    """deals/{deal_id}/fulfillment/{uuid}.pdf (D2b: накладная на отгрузку)"""
+    name = _uuid_filename(instance, filename)
+    return f"deals/{instance.deal_id}/fulfillment/{name}"
+
+
 def generated_document_pdf_path(instance, filename):
     """companies/{company_id}/generated/{uuid}.pdf
 

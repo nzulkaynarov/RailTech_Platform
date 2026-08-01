@@ -1,0 +1,26 @@
+{% load document_format %}
+{% comment %}
+  Блок «состав отправления» накладной ({{doc.items_table}}): позиции КП договора —
+  наименование и количество, БЕЗ цен (канон delivery slip: Odoo печатает products+qty;
+  цены — дело счёта, а не сопровождения груза).
+{% endcomment %}
+{% if items %}
+<table class="lines">
+  <thead>
+    <tr>
+      <th style="width:8%">№</th>
+      <th style="width:72%">Наименование</th>
+      <th style="width:20%" class="center">Кол-во</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in items %}
+    <tr>
+      <td class="num">{{ forloop.counter }}</td>
+      <td class="item-name">{% if item.product %}{{ item.product.name }}{% else %}{{ item.imported_raw_name }}{% endif %}</td>
+      <td class="center">{{ item.quantity|qty:item.unit }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}

@@ -1,0 +1,14 @@
+{% extends "crm/_document_base.html" %}
+{% comment %}
+  Квитанция об оплате по шаблону компании (D2a, механика E1). Тело — отрендеренный HTML
+  (санитайзинг при сохранении, экранирование при подстановке), поэтому |safe.
+{% endcomment %}
+{% block doc_meta %}
+  <div class="doc-no">Квитанция № {{ payment.receipt_number }}</div>
+  <div>от {{ payment.paid_at|date:"d.m.Y" }}</div>
+  <div>к счёту № {{ invoice.number }}</div>
+{% endblock %}
+{% block doc_title %}Квитанция об оплате{% endblock %}
+{% block content %}
+  <div class="doc-body">{{ body_html|safe }}</div>
+{% endblock %}

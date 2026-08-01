@@ -351,3 +351,70 @@ def render_contract_body(
             "doc.valid_until": valid_until,
         },
     )
+
+
+def receipt_block_values(payment, totals, ccy: str, *, seller=None, seller_profile=None) -> dict:
+    """HTML блоков квитанции об оплате (D2a): ссылки, итоги, подписи."""
+    return {
+        "doc.refs": mark_safe(render_to_string("crm/blocks/_payment_refs.html", {"invoice": payment.invoice})),
+        "doc.totals": mark_safe(render_to_string("crm/blocks/_totals.html", {"totals": totals})),
+        "doc.signatures": mark_safe(
+            render_to_string("crm/blocks/_signatures_invoice.html", {"seller_profile": seller_profile})
+        ),
+    }
+
+
+def render_receipt_body(payment, totals, ccy: str, template, *, seller=None, seller_profile=None) -> str:
+    """Тело квитанции по шаблону компании либо по платформенному образцу."""
+    from crm.templatetags.document_format import money, money_words
+
+    invoice = payment.invoice
+    return render_document_body(
+        template.body_html,
+        blocks=receipt_block_values(payment, totals, ccy, seller=seller, seller_profile=seller_profile),
+        scalars={
+            "doc.number": payment.receipt_number,
+            "doc.date": payment.paid_at.strftime("%d.%m.%Y") if payment.paid_at else "",
+            "doc.total": money(payment.amount, ccy),
+            "doc.total_words": money_words(payment.amount, ccy),
+            "doc.currency": ccy,
+            "doc.payment_method": payment.get_method_display(),
+            "doc.invoice_paid": money(invoice.amount_paid, ccy),
+            "doc.invoice_balance": money(invoice.balance_due, ccy),
+        },
+    )
+
+
+def delivery_note_block_values(fulfillment, items, ccy: str, *, seller=None, seller_profile=None) -> dict:
+    """HTML блоков накладной (D2b): ссылки, состав отправления, подписи двух рук."""
+    deal = fulfillment.deal
+    return {
+        "doc.refs": mark_safe(render_to_string("crm/blocks/_delivery_refs.html", {"fulfillment": fulfillment})),
+        "doc.items_table": mark_safe(render_to_string("crm/blocks/_delivery_items.html", {"items": items, "ccy": ccy})),
+        "doc.signatures": mark_safe(
+            render_to_string(
+                "crm/blocks/_signatures_delivery.html",
+                {
+                    "seller": seller,
+                    "seller_profile": seller_profile,
+                    "company": deal.company,
+                    "contact": getattr(deal, "contact", None),
+                },
+            )
+        ),
+    }
+
+
+def render_delivery_note_body(fulfillment, items, ccy: str, template, *, seller=None, seller_profile=None) -> str:
+    """Тело накладной по шаблону компании либо по платформенному образцу."""
+    carrier_phrase = f" ({fulfillment.carrier})" if fulfillment.carrier else ""
+    return render_document_body(
+        template.body_html,
+        blocks=delivery_note_block_values(fulfillment, items, ccy, seller=seller, seller_profile=seller_profile),
+        scalars={
+            "doc.number": f"DN-{fulfillment.id}",
+            "doc.date": fulfillment.shipped_at.strftime("%d.%m.%Y") if fulfillment.shipped_at else "",
+            "doc.carrier_phrase": carrier_phrase,
+            "doc.tracking": fulfillment.tracking_number or "",
+        },
+    )

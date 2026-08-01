@@ -21,6 +21,12 @@ def _next_invoice_number(seller_company=None) -> str:
     return next_document_number("INV", "INV", company=seller_company)
 
 
+def _next_receipt_number(seller_company=None) -> str:
+    from .numbering import next_document_number
+
+    return next_document_number("RCP", "RCP", company=seller_company)
+
+
 def _next_act_number(seller_company=None) -> str:
     from .numbering import next_document_number
 
@@ -357,6 +363,9 @@ def record_payment(
                 reference=reference,
                 proof_file=proof_file,
                 recorded_by=actor,
+                # D2a: платёж — запись регистра, его печатный артефакт — квитанция.
+                # Номер присваивается сразу (своя серия), PDF рендерится после коммита.
+                receipt_number=_next_receipt_number(_invoice_seller_company(invoice)),
             )
     except IntegrityError:
         existing = Payment.objects.filter(invoice=invoice, reference=reference).first()
@@ -397,6 +406,10 @@ def record_payment(
 
     transaction.on_commit(lambda: notify_payment_recorded(payment))
     email_payment_received(payment)
+    from ..tasks import render_document_pdf
+
+    payment_id = payment.id
+    transaction.on_commit(lambda: render_document_pdf.delay("receipt", payment_id))
     return payment, None
 
 
@@ -805,3 +818,47 @@ def cancel_act(act_id: int, actor: CustomUser, reason: str = "") -> Tuple[Option
 
     transaction.on_commit(lambda: notify_act_cancelled(act, actor, clean_reason))
     return act, None
+
+
+def _render_receipt_pdf(payment) -> None:
+    """Квитанция об оплате (D2a, паттерн Odoo Payment Receipt): печатный артефакт платежа.
+
+    Рендер по механике E1 — шаблон компании либо платформенный образец; структурные блоки
+    собирает сервер. Номер квитанции присваивается при записи платежа (record_payment).
+    """
+    from io import BytesIO
+
+    from django.core.files.base import ContentFile
+    from django.template.loader import render_to_string
+    from weasyprint import HTML
+
+    from .document_blocks import company_template_for, render_receipt_body
+    from .documents import brand_context_for_pdf, document_brand_context, document_totals
+
+    invoice = payment.invoice
+    supplier = _invoice_seller_company(invoice)
+    brand = document_brand_context(supplier)
+    ccy = invoice.currency.code if invoice.currency_id else "UZS"
+    totals = document_totals(ccy=ccy, total=payment.amount)
+    template = company_template_for(supplier, "RECEIPT")
+    html_string = render_to_string(
+        "crm/receipt_pdf_templated.html",
+        {
+            "payment": payment,
+            "invoice": invoice,
+            "company": invoice.deal.company,
+            "contact": invoice.deal.contact,
+            "body_html": render_receipt_body(
+                payment,
+                totals,
+                ccy,
+                template,
+                seller=brand.get("seller"),
+                seller_profile=brand.get("seller_profile"),
+            ),
+            **brand_context_for_pdf(brand),
+        },
+    )
+    buf = BytesIO()
+    HTML(string=html_string).write_pdf(buf)
+    payment.pdf_file.save(f"Receipt_{payment.receipt_number}.pdf", ContentFile(buf.getvalue()), save=True)

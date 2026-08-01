@@ -317,6 +317,8 @@ const DOC_TYPE_ICON: Record<RecentDocument['type'], LucideIcon> = {
   invoice: Receipt,
   act: ClipboardCheck,
   generated: FileType,
+  receipt: Receipt,
+  delivery_note: ClipboardCheck,
 };
 
 function RecentDocumentsCard() {

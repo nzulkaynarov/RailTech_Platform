@@ -28,6 +28,7 @@ import { useFulfillments, useUpdateFulfillmentStatus } from '@/hooks/useBilling'
 import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { FulfillmentStatus as FStatusCode } from '@/lib/codes';
 import type { Fulfillment, FulfillmentStatus } from '@/api/fulfillmentApi';
+import { DocumentActions } from '@/components/Shared/DocumentActions';
 import { DealLink } from '@/components/Shared/DealLink';
 
 const STATUS_VARIANT: Record<FulfillmentStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -172,6 +173,14 @@ export function FulfillmentsPage() {
                     <TableCell>{f.tracking_number || '—'}</TableCell>
                     <TableCell>{f.carrier || '—'}</TableCell>
                     <TableCell className="text-right" data-row-action>
+                      {/* D2b: накладная — печатный артефакт отгрузки (Odoo Delivery Slip). */}
+                      {f.shipped_at && (
+                        <DocumentActions
+                          request={() => ({ path: `crm/fulfillments/${f.id}/download-note/` })}
+                          filenameBase={`RailTech_DeliveryNote_DN-${f.id}`}
+                          size="sm"
+                        />
+                      )}
                       {f.viewer_can_ship && (
                         <Button
                           variant="ghost"

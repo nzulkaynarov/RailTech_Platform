@@ -4006,6 +4006,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/fulfillments/{id}/download-note/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the delivery note PDF (D2b)
+         * @description Отгрузки — только чтение плюс экшен `update-status` (Rule 8).
+         *
+         *     Сырой CRUD позволял, среди прочего, проставить или сбросить `contract` —
+         *     привязку к владельцу, от которой зависит видимость записи для продавца.
+         */
+        get: operations["crm_fulfillments_download_note_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/fulfillments/update-status/": {
         parameters: {
             query?: never;
@@ -4679,6 +4702,33 @@ export interface paths {
          *     счёту, а `amount_paid` счёта при этом не менялся — реестр расходился со счётом.
          */
         get: operations["crm_payments_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/payments/{id}/download-receipt/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the payment receipt PDF (D2a)
+         * @description Платежи — ТОЛЬКО чтение (Rule 8).
+         *
+         *     Запись идёт исключительно через `invoices/{id}/record-payment/` → сервис
+         *     `record_payment`, который проверяет права покупателя, статус счёта и
+         *     положительность суммы, пересчитывает `amount_paid`/статус и пишет в аудит.
+         *     Сырой `POST /crm/payments/` всё это обходил: любой аутентифицированный
+         *     пользователь мог вписать в реестр строку (в т.ч. отрицательную) по ЧУЖОМУ
+         *     счёту, а `amount_paid` счёта при этом не менялся — реестр расходился со счётом.
+         */
+        get: operations["crm_payments_download_receipt_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -11014,6 +11064,8 @@ export interface components {
             paid_at: string;
             /** Референс / номер операции */
             reference: string;
+            /** Номер квитанции */
+            receipt_number?: string;
             /**
              * Подтверждение
              * Format: uri
@@ -11037,6 +11089,8 @@ export interface components {
             paid_at: string;
             /** Референс / номер операции */
             reference: string;
+            /** Номер квитанции */
+            receipt_number?: string;
             /**
              * Подтверждение
              * Format: binary
@@ -19678,6 +19732,28 @@ export interface operations {
             };
         };
     };
+    crm_fulfillments_download_note_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Исполнение сделки. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fulfillment"];
+                };
+            };
+        };
+    };
     crm_fulfillments_update_status_create: {
         parameters: {
             query?: never;
@@ -20704,6 +20780,28 @@ export interface operations {
         };
     };
     crm_payments_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Платёж. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Payment"];
+                };
+            };
+        };
+    };
+    crm_payments_download_receipt_retrieve: {
         parameters: {
             query?: never;
             header?: never;

@@ -358,6 +358,16 @@ def _render_pdf_for(doc_type: str, doc_id: int) -> None:
         from .services.billing import _render_act_pdf
 
         _render_act_pdf(Act.objects.get(pk=doc_id))
+    elif doc_type == "receipt":
+        from .models import Payment
+        from .services.billing import _render_receipt_pdf
+
+        _render_receipt_pdf(Payment.objects.get(pk=doc_id))
+    elif doc_type == "delivery_note":
+        from .models import Fulfillment
+        from .services.fulfillment import _render_delivery_note_pdf
+
+        _render_delivery_note_pdf(Fulfillment.objects.get(pk=doc_id))
     elif doc_type == "quote":
         from .services.quotes import QuoteLifecycleService
 

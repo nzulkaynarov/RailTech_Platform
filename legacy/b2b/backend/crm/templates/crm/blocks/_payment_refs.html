@@ -1,0 +1,8 @@
+{% comment %}
+  Блок «ссылки» квитанции ({{doc.refs}}): сделка, договор, счёт. Аналог _doc_refs акта.
+{% endcomment %}
+<div class="term-box">
+  <span class="k">Сделка:</span> #{{ invoice.deal_id }}
+  {% if invoice.contract %} &middot; <span class="k">Договор:</span> {{ invoice.contract.number }}{% endif %}
+  &middot; <span class="k">Счёт:</span> {{ invoice.number }}{% if invoice.issued_at %} от {{ invoice.issued_at|date:"d.m.Y" }}{% endif %}
+</div>

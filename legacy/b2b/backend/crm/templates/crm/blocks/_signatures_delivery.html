@@ -1,0 +1,23 @@
+{% comment %}
+  Блок «подписи» накладной ({{doc.signatures}}): отправитель / получатель (принцип двух рук).
+{% endcomment %}
+<table class="signatures">
+  <tr>
+    <td>
+      <div class="sign-box">
+        <div class="role">Отправитель (Поставщик):</div>
+        {% firstof seller_profile.legal_name seller.name "—" %}
+        <div class="sign-line">Подпись / дата</div>
+        <div class="seal">М.П.</div>
+      </div>
+    </td>
+    <td>
+      <div class="sign-box">
+        <div class="role">Получатель (Покупатель):</div>
+        {% if company %}{{ company.name }}{% else %}{% firstof contact.name "—" %}{% endif %}
+        <div class="sign-line">Подпись / дата · кол-во мест проверено</div>
+        <div class="seal">М.П.</div>
+      </div>
+    </td>
+  </tr>
+</table>

@@ -24,7 +24,13 @@ from crm.serializers import (
 )
 from crm.views.billing_filters import ActFilter, ContractFilter, FulfillmentFilter, InvoiceFilter, PaymentFilter
 
-_PDF_DOC_TYPE = {"Contract": "contract", "Invoice": "invoice", "Act": "act"}
+_PDF_DOC_TYPE = {
+    "Contract": "contract",
+    "Invoice": "invoice",
+    "Act": "act",
+    "Payment": "receipt",
+    "Fulfillment": "delivery_note",
+}
 
 
 def _stream_or_render_pdf(obj):
@@ -586,6 +592,13 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
             )
         ).distinct()
 
+    @extend_schema(summary="Download the payment receipt PDF (D2a)", tags=["CRM"])
+    @action(detail=True, methods=["get"], url_path="download-receipt")
+    def download_receipt(self, request, pk=None):
+        # Квитанция — печатный артефакт платежа (Odoo Payment Receipt). Ленивая догенерация
+        # через 202 + Retry-After, как у остальных документов (ARCH-03).
+        return _stream_or_render_pdf(self.get_object())
+
 
 class ActViewSet(viewsets.ReadOnlyModelViewSet):
     """Акты — только чтение плюс сервисные экшены ниже (Rule 8).
@@ -751,3 +764,9 @@ class FulfillmentViewSet(viewsets.ReadOnlyModelViewSet):
         if err:
             return Response({"detail": err}, status=400)
         return Response(FulfillmentSerializer(obj).data)
+
+    @extend_schema(summary="Download the delivery note PDF (D2b)", tags=["CRM"])
+    @action(detail=True, methods=["get"], url_path="download-note")
+    def download_note(self, request, pk=None):
+        # Накладная — печатный артефакт отгрузки (Odoo Delivery Slip).
+        return _stream_or_render_pdf(self.get_object())

@@ -8,6 +8,7 @@ import {
 import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
 import { usePayments } from '@/hooks/useBilling';
+import { DocumentActions } from '@/components/Shared/DocumentActions';
 import { RecordPaymentDialog } from '@/components/Billing/RecordPaymentDialog';
 import { useUserStore } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
@@ -80,6 +81,7 @@ export function PaymentsPage() {
                         {t('paymentsPage.table.paidAt')}
                       </SortableHead>
                       <TableHead>{t('paymentsPage.table.reference')}</TableHead>
+                      <TableHead className="text-right">{t('paymentsPage.table.receipt')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -90,6 +92,14 @@ export function PaymentsPage() {
                         <TableCell>{t(`invoicesPage.method.${p.method}`, p.method)}</TableCell>
                         <TableCell>{new Date(p.paid_at).toLocaleDateString()}</TableCell>
                         <TableCell className="text-muted-foreground">{p.reference || '—'}</TableCell>
+                        <TableCell className="text-right">
+                          {/* D2a: квитанция — печатный артефакт платежа (Odoo Payment Receipt). */}
+                          <DocumentActions
+                            request={() => ({ path: `crm/payments/${p.id}/download-receipt/` })}
+                            filenameBase={`RailTech_Receipt_${p.receipt_number || p.id}`}
+                            size="sm"
+                          />
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

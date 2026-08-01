@@ -2330,7 +2330,9 @@
         "contract": "Contract",
         "invoice": "Invoice",
         "act": "Act",
-        "generated": "Document"
+        "generated": "Document",
+        "receipt": "Receipt",
+        "delivery_note": "Delivery note"
       }
     },
     "byMonths": "By months",
@@ -4155,7 +4157,8 @@
       "amount": "Amount",
       "method": "Method",
       "paidAt": "Paid at",
-      "reference": "Reference"
+      "reference": "Reference",
+      "receipt": "Receipt"
     }
   },
   "actsPage": {

@@ -29,6 +29,8 @@ interface DocumentSearchDialogProps {
 
 // Mirrors the dashboard RecentDocumentsCard icon map (single source of truth for doc-type glyphs).
 const DOC_TYPE_ICON: Record<RecentDocument['type'], LucideIcon> = {
+    receipt: Receipt,
+    delivery_note: ClipboardCheck,
     quote: FileText,
     contract: FileSignature,
     invoice: Receipt,

@@ -11250,6 +11250,44 @@
                 }
             }
         },
+        "/api/v1/crm/fulfillments/{id}/download-note/": {
+            "get": {
+                "operationId": "crm_fulfillments_download_note_retrieve",
+                "description": "Отгрузки — только чтение плюс экшен `update-status` (Rule 8).\n\nСырой CRUD позволял, среди прочего, проставить или сбросить `contract` —\nпривязку к владельцу, от которой зависит видимость записи для продавца.",
+                "summary": "Download the delivery note PDF (D2b)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Исполнение сделки.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Fulfillment"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/v1/crm/fulfillments/update-status/": {
             "post": {
                 "operationId": "crm_fulfillments_update_status_create",
@@ -13122,6 +13160,44 @@
                 ],
                 "tags": [
                     "crm"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Payment"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/payments/{id}/download-receipt/": {
+            "get": {
+                "operationId": "crm_payments_download_receipt_retrieve",
+                "description": "Платежи — ТОЛЬКО чтение (Rule 8).\n\nЗапись идёт исключительно через `invoices/{id}/record-payment/` → сервис\n`record_payment`, который проверяет права покупателя, статус счёта и\nположительность суммы, пересчитывает `amount_paid`/статус и пишет в аудит.\nСырой `POST /crm/payments/` всё это обходил: любой аутентифицированный\nпользователь мог вписать в реестр строку (в т.ч. отрицательную) по ЧУЖОМУ\nсчёту, а `amount_paid` счёта при этом не менялся — реестр расходился со счётом.",
+                "summary": "Download the payment receipt PDF (D2a)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Платёж.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
                 ],
                 "security": [
                     {
@@ -26774,6 +26850,11 @@
                         "title": "Референс / номер операции",
                         "maxLength": 255
                     },
+                    "receipt_number": {
+                        "type": "string",
+                        "title": "Номер квитанции",
+                        "maxLength": 64
+                    },
                     "proof_file": {
                         "type": "string",
                         "format": "uri",
@@ -26831,6 +26912,11 @@
                         "type": "string",
                         "title": "Референс / номер операции",
                         "maxLength": 255
+                    },
+                    "receipt_number": {
+                        "type": "string",
+                        "title": "Номер квитанции",
+                        "maxLength": 64
                     },
                     "proof_file": {
                         "type": "string",

@@ -5,7 +5,7 @@ import pgtrigger
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from core.storage import act_pdf_path, get_private_storage, invoice_pdf_path, payment_proof_path
+from core.storage import act_pdf_path, get_private_storage, invoice_pdf_path, payment_proof_path, payment_receipt_path
 from master_data.models import Currency
 
 # ────────────────────────────────────────────
@@ -180,6 +180,10 @@ class Payment(models.Model):
         blank=True,
         verbose_name=_("Референс / номер операции"),
     )
+    # D2a («регистр + печатный артефакт», Odoo Payment Receipt): платёж остаётся записью
+    # регистра, печатается его КВИТАНЦИЯ. Номер — своя серия RCP (per-company counter).
+    receipt_number = models.CharField(max_length=64, blank=True, default="", verbose_name=_("Номер квитанции"))
+    pdf_file = models.FileField(upload_to=payment_receipt_path, storage=get_private_storage, null=True, blank=True)
     proof_file = models.FileField(
         upload_to=payment_proof_path,
         storage=get_private_storage,

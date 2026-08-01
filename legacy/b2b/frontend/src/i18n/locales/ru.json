@@ -2336,7 +2336,9 @@
         "contract": "Договор",
         "invoice": "Счёт",
         "act": "Акт",
-        "generated": "Документ"
+        "generated": "Документ",
+        "receipt": "Квитанция",
+        "delivery_note": "Накладная"
       }
     },
     "byMonths": "По месяцам",
@@ -4163,7 +4165,8 @@
       "amount": "Сумма",
       "method": "Способ",
       "paidAt": "Дата",
-      "reference": "Референс"
+      "reference": "Референс",
+      "receipt": "Квитанция"
     }
   },
   "actsPage": {

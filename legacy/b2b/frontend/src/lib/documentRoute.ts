@@ -18,7 +18,7 @@
  */
 
 /** Тип документа в терминах предметной области, а не страницы. */
-export type DocumentKind = 'quote' | 'contract' | 'invoice' | 'act' | 'payment' | 'fulfillment' | 'generated';
+export type DocumentKind = 'quote' | 'contract' | 'invoice' | 'act' | 'payment' | 'fulfillment' | 'generated' | 'receipt' | 'delivery_note';
 
 export interface DocumentRouteInput {
   kind: DocumentKind;
@@ -63,6 +63,11 @@ export function documentRoute(doc: DocumentRouteInput, viewer: RouteViewer): str
     case 'payment':
       return 'payments';
     case 'fulfillment':
+      return 'fulfillments';
+    // D2: печатные артефакты регистров — ведём на их регистр (там кнопка скачивания).
+    case 'receipt':
+      return 'payments';
+    case 'delivery_note':
       return 'fulfillments';
 
     // КП: у продавца — билдер с ценами и маржой, у покупателя тот же документ виден на

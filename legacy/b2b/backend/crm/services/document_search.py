@@ -162,6 +162,64 @@ def _search_generated(user, request, query: str, limit: int) -> List[dict]:
     ]
 
 
+def _search_receipts(user, request, query: str, limit: int) -> List[dict]:
+    """Квитанции (D2a) по номеру квитанции / счёта — видимость как у recent_documents."""
+    from django.db.models import Q
+
+    from crm.models import Invoice, Payment
+    from crm.views.billing import _invoice_seller_side_q
+
+    qs = Payment.objects.exclude(receipt_number="").select_related("invoice").order_by("-created_at")
+    if not _is_admin(user):
+        buyer_q = Q(invoice__deal__company_id__in=_user_company_ids(user))
+        seller_q = _invoice_seller_side_q(user, request)
+        if seller_q is not None:
+            invoice_ids = Invoice.objects.filter(seller_q).values_list("id", flat=True)
+            qs = qs.filter(buyer_q | Q(invoice_id__in=invoice_ids))
+        else:
+            qs = qs.filter(buyer_q)
+    qs = qs.filter(Q(receipt_number__icontains=query) | Q(invoice__number__icontains=query)).distinct()
+    return [
+        {
+            "type": "receipt",
+            "id": payment.id,
+            "label": payment.receipt_number,
+            "status_code": "ISSUED",
+            "_date": payment.created_at,
+            "deal": payment.invoice.deal_id,
+        }
+        for payment in qs[:limit]
+    ]
+
+
+def _search_delivery_notes(user, request, query: str, limit: int) -> List[dict]:
+    """Накладные (D2b) по треку / перевозчику / номеру договора."""
+    from django.db.models import Q
+
+    from crm.models import Fulfillment
+    from crm.views.billing import _seller_side_q
+
+    qs = Fulfillment.objects.filter(shipped_at__isnull=False).select_related("deal", "status").order_by("-shipped_at")
+    if not _is_admin(user):
+        buyer_q = Q(deal__company_id__in=_user_company_ids(user))
+        seller_q = _seller_side_q(user, request, deal_path="deal", seller_path="contract__quote__seller_company_id")
+        qs = qs.filter(buyer_q if seller_q is None else (buyer_q | seller_q))
+    qs = qs.filter(
+        Q(tracking_number__icontains=query) | Q(carrier__icontains=query) | Q(contract__number__icontains=query)
+    ).distinct()
+    return [
+        {
+            "type": "delivery_note",
+            "id": fulfillment.id,
+            "label": f"DN-{fulfillment.id}",
+            "status_code": fulfillment.status.code if fulfillment.status_id else "",
+            "_date": fulfillment.shipped_at,
+            "deal": fulfillment.deal_id,
+        }
+        for fulfillment in qs[:limit]
+    ]
+
+
 def search_documents(user, request, q, limit=DEFAULT_LIMIT) -> List[dict]:
     """Documents across all types the viewer may see whose text matches `q`, date-desc, capped.
 
@@ -179,6 +237,8 @@ def search_documents(user, request, q, limit=DEFAULT_LIMIT) -> List[dict]:
         + _search_invoices(user, request, query, limit)
         + _search_acts(user, request, query, limit)
         + _search_generated(user, request, query, limit)
+        + _search_receipts(user, request, query, limit)
+        + _search_delivery_notes(user, request, query, limit)
     )
     entries.sort(key=lambda entry: entry["_date"], reverse=True)
     trimmed = entries[:limit]

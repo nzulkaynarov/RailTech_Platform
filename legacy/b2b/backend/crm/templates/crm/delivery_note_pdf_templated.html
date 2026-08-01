@@ -1,0 +1,12 @@
+{% extends "crm/_document_base.html" %}
+{% comment %}
+  Накладная на отгрузку по шаблону компании (D2b, механика E1). |safe — тело уже собрано.
+{% endcomment %}
+{% block doc_meta %}
+  <div class="doc-no">Накладная № {{ note_number }}</div>
+  {% if fulfillment.shipped_at %}<div>отгружено {{ fulfillment.shipped_at|date:"d.m.Y" }}</div>{% endif %}
+{% endblock %}
+{% block doc_title %}Накладная на отгрузку{% endblock %}
+{% block content %}
+  <div class="doc-body">{{ body_html|safe }}</div>
+{% endblock %}

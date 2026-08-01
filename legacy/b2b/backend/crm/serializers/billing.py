@@ -147,6 +147,7 @@ class PaymentSerializer(serializers.ModelSerializer):
             "method",
             "paid_at",
             "reference",
+            "receipt_number",
             "proof_file",
             "proof_url",
             "recorded_by",

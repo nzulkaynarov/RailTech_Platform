@@ -1,6 +1,8 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from core.storage import fulfillment_pdf_path, get_private_storage
+
 # ────────────────────────────────────────────
 # Справочники модуля CRM
 # ────────────────────────────────────────────
@@ -37,6 +39,8 @@ class Fulfillment(models.Model):
     tracking_number = models.CharField(max_length=128, blank=True)
     carrier = models.CharField(max_length=128, blank=True)
     notes = models.TextField(blank=True)
+    # D2b (Odoo Delivery Slip): отгрузка остаётся статусной лентой, печатается её НАКЛАДНАЯ.
+    pdf_file = models.FileField(upload_to=fulfillment_pdf_path, storage=get_private_storage, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

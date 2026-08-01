@@ -99,3 +99,46 @@ def update_fulfillment_status(
 
     transaction.on_commit(lambda: notify_fulfillment_status(obj, status_code, actor))
     return obj, None
+
+
+def _render_delivery_note_pdf(fulfillment) -> None:
+    """Накладная на отгрузку (D2b, паттерн Odoo Delivery Slip): печатный артефакт отгрузки.
+
+    Состав отправления — billable-позиции КП победившего договора (юридически согласованный
+    товар); подписи «двух рук» (отправитель/получатель) — печатное основание приёмки для
+    двустороннего акта (G1).
+    """
+    from io import BytesIO
+
+    from django.core.files.base import ContentFile
+    from django.template.loader import render_to_string
+    from weasyprint import HTML
+
+    from .document_blocks import company_template_for, render_delivery_note_body
+    from .documents import brand_context_for_pdf, document_brand_context
+    from .quotes import _quote_seller_company
+
+    contract = fulfillment.contract
+    quote = contract.quote if (contract and contract.quote_id) else None
+    supplier = _quote_seller_company(quote) if quote else None
+    brand = document_brand_context(supplier)
+    ccy = contract.currency.code if (contract and contract.currency_id) else "UZS"
+    items = quote.items.billable().select_related("product") if quote else []
+    template = company_template_for(supplier, "DELIVERY_NOTE")
+    body = render_delivery_note_body(
+        fulfillment, items, ccy, template, seller=brand.get("seller"), seller_profile=brand.get("seller_profile")
+    )
+    html_string = render_to_string(
+        "crm/delivery_note_pdf_templated.html",
+        {
+            "fulfillment": fulfillment,
+            "note_number": f"DN-{fulfillment.id}",
+            "company": fulfillment.deal.company,
+            "contact": getattr(fulfillment.deal, "contact", None),
+            "body_html": body,
+            **brand_context_for_pdf(brand),
+        },
+    )
+    buf = BytesIO()
+    HTML(string=html_string).write_pdf(buf)
+    fulfillment.pdf_file.save(f"DeliveryNote_DN-{fulfillment.id}.pdf", ContentFile(buf.getvalue()), save=True)
