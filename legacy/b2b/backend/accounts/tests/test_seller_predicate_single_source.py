@@ -19,8 +19,8 @@ from accounts.models import Company, CompanyType, VerificationStatus, seller_com
 
 BACKEND_ROOT = pathlib.Path(__file__).resolve().parents[2]
 
-# Единственный законный дом предиката.
-CANONICAL_HOME = BACKEND_ROOT / "accounts" / "models" / "company.py"
+# Единственный законный дом предиката (company.py распилен в пакет — #509-волна).
+CANONICAL_HOME = BACKEND_ROOT / "accounts" / "models" / "company" / "core.py"
 
 # Инлайн-написания, которые обходят канон.
 FORBIDDEN_FRAGMENTS = (
@@ -54,7 +54,7 @@ def test_no_inline_seller_predicate_outside_canonical_home():
         for fragment in FORBIDDEN_FRAGMENTS:
             if fragment in text:
                 offenders.append(f"{path.relative_to(BACKEND_ROOT)}: {fragment}")
-    assert not offenders, "предикат «продавец» продублирован вне accounts/models/company.py:\n" + "\n".join(offenders)
+    assert not offenders, "предикат «продавец» продублирован вне accounts/models/company/core.py:\n" + "\n".join(offenders)
 
 
 def test_canonical_home_is_importable_and_exported():

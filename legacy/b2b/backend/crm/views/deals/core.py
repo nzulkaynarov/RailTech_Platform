@@ -23,7 +23,8 @@ from crm.services import (
     transition_deal_stage,
 )
 
-from .workflow import AiDraftThrottle, DealWorkflowActionsMixin  # noqa: F401 — реэкспорт для __init__
+from .ai import DealAiActionsMixin
+from .workflow import DealWorkflowActionsMixin
 
 # Экшены, открывающие ОДНУ конкретную сделку (read-only). Видимость у них шире списочной:
 # продавец вправе открыть сделку, где он покупатель, и наоборот. Раньше это условие было
@@ -60,7 +61,7 @@ SINGLE_DEAL_READ_ACTIONS = frozenset({"retrieve", "documents"})
     partial_update=extend_schema(summary="Partially update deal", tags=["CRM"]),
     destroy=extend_schema(summary="Delete deal", tags=["CRM"]),
 )
-class DealViewSet(DealWorkflowActionsMixin, viewsets.ModelViewSet):
+class DealViewSet(DealAiActionsMixin, DealWorkflowActionsMixin, viewsets.ModelViewSet):
     """
     CRUD for deals (the core CRM entity).
 
