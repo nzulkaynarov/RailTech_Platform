@@ -73,7 +73,7 @@ deploy/caddy/               # Caddy edge config FRAGMENT (prod applies it manual
 Docs/                       # Docs by audience (reorg 2026-07-07 — map: Docs/README.md):
   dev/                      #   adr/ (0001–0006), architecture/ (MSD, techspec, diagrams, schema.json,
                             #   websocket), ops/ (RUNBOOK, deploy/observability/staging/smoke/e2e…,
-                            #   latest session-handoff), specs/ (spec-remaining, client-base/rbac design)
+                            #   3 latest session-handoffs), specs/ (только живые ТЗ; выполненные — в old/specs/)
   business/                 #   ROADMAP, business-logic, ux-ui-brief, presentations/, mockups/
   user/                     #   end-user guides (stub — app Help lives in code, HelpPage.tsx)
   old/                      #   archive: handoffs/, audits/, roadmaps/, checkups/, misc/ (frozen)
@@ -309,7 +309,7 @@ make clean               # remove all containers, volumes, cache (DESTRUCTIVE)
 ### Rule 1: No fake data
 - NEVER create mock data, static arrays, or fake API responses in production code
 - EVERY endpoint MUST query the real database via Django ORM
-- If test data is needed — use management commands (`core_seed`, `seed_demo`), not hardcode
+- If test data is needed — use management commands (`core_seed`), not hardcode
 - **Seed = data migrations.** Business lookup rows (SystemRole.ADMIN, DealStage.RFQ_OPEN, VerificationStatus.L2_VERIFIED, etc.) are created via `migrations.RunPython` with `get_or_create` and a reverse no-op. `loaddata` fixtures and management commands are **dev/demo-only**. After `migrate` on a fresh DB, every code referenced by services / FSM / permissions MUST already exist. Any `Model.objects.get_or_create(code=...)` in hot paths is a violation — use `Model.objects.get(code=...)` that raises clearly if the migration was not applied.
 
 ### Rule 2: No hardcoded values

@@ -27,7 +27,7 @@ head: 8b89b17
 > [`Docs/dev/ops/session-handoff-*`](../ops/). Схема API: [`schema.json`](schema.json) +
 > сгенерированный `frontend/src/api/schema.d.ts`.
 >
-> HEAD на момент рефреша: `8b89b17` (post PR #351). Миграционные головы: `accounts/0039`, `crm/0062`.
+> HEAD на момент рефреша: `8b89b17` (post PR #351). Миграционные головы: см. CLAUDE.md «Migration heads» (документ не поспевает за ними; на 2026-08-02 — accounts/0043, crm/0090). 
 
 ---
 

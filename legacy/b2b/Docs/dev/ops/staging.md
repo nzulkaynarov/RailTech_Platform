@@ -1,5 +1,7 @@
 # Staging environment
 
+> СТАТУС (2026-08-02): окружения staging ещё НЕ существует — это план создания (нужны DNS, GitHub environment `staging`, Caddy-блок). Держит владелец.
+
 **Why:** today every push to `main` deploys straight to production. A staging
 buffer means a bad change is caught on `staging.b2b.railtech.uz` and the smoke
 checklist, not by a client on prod.

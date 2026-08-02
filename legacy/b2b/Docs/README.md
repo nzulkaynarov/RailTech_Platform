@@ -2,16 +2,16 @@
 
 Организовано по аудитории. Актуальное — в `dev/`, `business/`, `user/`. Историческое (снапшоты, закрытые аудиты, вытесненные планы) — в `old/`.
 
-> Структура наведена 2026-07-07. Корневые `CLAUDE.md` (инструкции для Claude Code) и `README.md` (обзор проекта для GitHub) остаются в корне репозитория по требованию инструментов.
+> Структура наведена 2026-07-07; генеральная уборка 2026-08-02 (хендоффы старше трёх последних, выполненные спеки и закрытые аудиты — в `old/`). Корневые `CLAUDE.md` (инструкции для Claude Code) и `README.md` (обзор проекта для GitHub) остаются в корне репозитория по требованию инструментов.
 
 ## `dev/` — для разработки
 
 | Папка | Что внутри |
 |---|---|
 | `dev/adr/` | Архитектурные решения (ADR 0001–0006) — **действующий канон**: разделение админок, ролевая модель, три админ-плоскости, единая навигация, wedge-loop + entitlements |
-| `dev/architecture/` | Карта системы (`master-system-document.md` — v7 living-doc, сверять с ADR), техспека, диаграммы (`architecture-diagrams.md` + `diagrams/*.drawio`), WebSocket-словарь, `schema.json` (OpenAPI) |
-| `dev/ops/` | Эксплуатация: `RUNBOOK-b2b-vps.md`, деплой-уроки, observability (Sentry), email-setup, staging, smoke-checklist, stability-program, VPS-ограничения, post-deploy-todos, e2e, api-types, docker-* , **последний** session-handoff |
-| `dev/specs/` | Актуальные ТЗ и дизайны: `spec-remaining-2026-07-07.md` (оставшаяся работа), `client-base-design`, `rbac-roles-design` |
+| `dev/architecture/` | Карта системы (`master-system-document.md` — living-doc, сверять с ADR; головы миграций смотреть в CLAUDE.md), техспека, диаграммы (`architecture-diagrams.md` + `diagrams/*.drawio`), WebSocket-словарь. OpenAPI-канон — `backend/schema.json` (гейт api-contract) |
+| `dev/ops/` | Эксплуатация (только ЖИВЫЕ процедуры): `RUNBOOK-b2b-vps.md`, observability (Sentry), email-setup, staging (план — окружения ещё нет), smoke-checklist, VPS-ограничения, e2e, api-types, docker-* + **три последних** session-handoff'а. Одноразовые отчёты и старые хендоффы — в `old/` |
+| `dev/specs/` | ТОЛЬКО живые ТЗ (выполненные — в `old/specs/`): `client-base-design`, `rbac-roles-design` (ссылается код), `settings-profile-redesign`, `spec-settings-reorg` (DRAFT), `spec-numbering-templater` (частично), `spec-inbound-rfq-gap-analysis` (карта разрывов), `spec-kp-blank` (ждёт материалов владельца) |
 
 ## `business/` — для бизнеса
 
@@ -35,6 +35,7 @@
 | `old/audits/` | Закрытые аудиты (security/arch/UX, e2e, catalog, platform, checklist) |
 | `old/roadmaps/` | Вытесненные планы: `master-scope`, `ai-features-roadmap`, прежние `roadmap-*` |
 | `old/checkups/` | Ранние чек-апы из корня репозитория |
-| `old/misc/` | Прочее историческое: status/tech-debt снапшоты, вытесненные референсы (`role-model`, `interface-architecture`) |
+| `old/specs/` | Выполненные ТЗ (E-волны документов, quote-ideal, КП-станция, post-contract и др.) — план сдан, файл заморожен |
+| `old/misc/` | Прочее историческое: status/tech-debt снапшоты, одноразовые ops-отчёты (post-deploy-todos, deploy-lessons, stability-program), вытесненные референсы |
 
 > Ссылки внутри `old/` — это фиксированные снапшоты и могут указывать на прежнюю раскладку файлов; они сохранены как есть для точности истории.

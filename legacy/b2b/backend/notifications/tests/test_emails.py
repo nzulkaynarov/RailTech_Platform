@@ -7,7 +7,7 @@ honest as they evolve.
 
 from django.conf import settings
 from django.core import mail
-from django.test import SimpleTestCase, TestCase, override_settings
+from django.test import TestCase, override_settings
 
 from notifications.emails import EmailDeliveryError, _render_bodies, send_templated_email
 from notifications.models import EmailLog
@@ -60,7 +60,38 @@ TEMPLATE_CASES = [
 ]
 
 
-@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+def _locmem_channel() -> dict:
+    """Тестовый канал: locmem-бэкенд, чтобы письма попадали в mail.outbox.
+
+    Файл был написан ДО механики EMAIL_CHANNELS и никогда не собирался pytest'ом из-за
+    имени tests_emails.py (уборка 02-08): канальный get_connection(backend=...) обходит
+    подмену EMAIL_BACKEND тест-раннером, поэтому канал переопределяется явно.
+    """
+    return {
+        "backend": "django.core.mail.backends.locmem.EmailBackend",
+        "host": "",
+        "port": 25,
+        "username": "",
+        "password": "",
+        "use_tls": False,
+        "from_email": "test@railtech.uz",
+    }
+
+
+LOCMEM_CHANNELS = {ch: _locmem_channel() for ch in ("transactional", "marketing", "system")}
+
+
+class _BrokenBackend:
+    """Транспорт, падающий на send_messages, — для теста fault-барьера EmailLog(FAILED)."""
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def send_messages(self, messages):
+        raise OSError("smtp down (test)")
+
+
+@override_settings(EMAIL_CHANNELS=LOCMEM_CHANNELS)
 class TemplatedEmailRenderingTests(TestCase):
     """Each template renders + sends without errors and logs to EmailLog."""
 
@@ -118,7 +149,7 @@ class TemplatedEmailRenderingTests(TestCase):
             "transactional": {
                 **settings.EMAIL_CHANNELS["transactional"],
                 # Force a send-time failure via a non-existent module path.
-                "backend": "notifications.tests_emails._BrokenBackend",
+                "backend": "notifications.tests.test_emails._BrokenBackend",
             },
         }
         with override_settings(EMAIL_CHANNELS=broken):
@@ -134,7 +165,8 @@ class TemplatedEmailRenderingTests(TestCase):
         )
 
 
-class EmailLinkIntegrityTests(SimpleTestCase):
+@override_settings(EMAIL_CHANNELS=LOCMEM_CHANNELS)
+class EmailLinkIntegrityTests(TestCase):
     """Regression guard for the &-escaping bug (2026-06-08).
 
     A setup/reset link '?uid=X&token=Y' must survive in the PLAIN-TEXT body as a

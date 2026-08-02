@@ -26,7 +26,7 @@ docker compose up -d --build frontend
 Тест-доступы (локальный seed `make seed`, пароль `Demo1234!`, env-override `SEED_USER_PASSWORD`):
 - `buyer.local@railtech.uz` — покупатель, KYC L2
 - `seller.local@railtech.uz` — продавец, KYC L2, entitled на quote.send
-- `solo.seller@railtech.uz` — соло-продавец (company 28), для соло-флоу КП
+- соло-продавец — email зависит от машины: `solo.seller@railtech.uz` (машина владельца, company 28) или `solo.seller@wave-h.test` (эта машина); проверить `CustomUser.objects.filter(email__icontains='solo')`
 
 Если логин падает 401 — проверить, что seed прогнан; при странных 429 локально — Redis копит throttle/lockout между прогонами: `docker compose exec backend python manage.py shell -c "from django.core.cache import cache; cache.clear()"`.
 
