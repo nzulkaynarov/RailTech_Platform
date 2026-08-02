@@ -43,6 +43,24 @@ test-frontend:
 	cd frontend && npm test
 
 # Linting commands
+# ── i18n (L0, spec-bilingual-ru-en) ──────────────────────────────────────────
+# .po — исходник переводов, лежит в git и ревьюится. .mo — производный бинарник:
+# генерируется здесь и при сборке образа, в git не попадает.
+i18n-extract:
+	docker compose exec backend python manage.py makemessages -l en \
+		--ignore=migrations --ignore=venv --ignore=node_modules --ignore=staticfiles
+
+i18n-compile:
+	docker compose exec backend python manage.py compilemessages
+
+# Гейт свежести: после правки строк каталог обязан быть перегенерирован. Падает, если
+# makemessages меняет .po (кроме служебной строки POT-Creation-Date).
+i18n-check:
+	@docker compose exec -T backend sh -c "cp locale/en/LC_MESSAGES/django.po /tmp/before.po && \
+		python manage.py makemessages -l en --ignore=migrations --ignore=venv --ignore=node_modules --ignore=staticfiles >/dev/null 2>&1 && \
+		diff <(grep -v '^\"POT-Creation-Date' /tmp/before.po) <(grep -v '^\"POT-Creation-Date' locale/en/LC_MESSAGES/django.po) >/dev/null \
+		&& echo 'i18n catalog: up to date' || (echo 'i18n catalog STALE — run make i18n-extract and translate new strings' && cp /tmp/before.po locale/en/LC_MESSAGES/django.po && exit 1)"
+
 lint: lint-backend lint-frontend
 
 lint-backend:

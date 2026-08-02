@@ -80,6 +80,19 @@ def collect_used_keys():
     return used
 
 
+_CYRILLIC_RE = re.compile(r'[А-Яа-яЁё]')
+
+
+def _collect_values(node, out, prefix=''):
+    """Плоский {ключ: строковое значение} — для проверки самих ТЕКСТОВ, не только ключей."""
+    for key, value in node.items():
+        full = f'{prefix}.{key}' if prefix else key
+        if isinstance(value, dict):
+            _collect_values(value, out, full)
+        elif isinstance(value, str):
+            out[full] = value
+
+
 def main() -> int:
     problems = 0
     try:
@@ -117,7 +130,28 @@ def main() -> int:
         for k in only_en:
             print(f'  - {k}')
 
-    # 3. Used-in-code keys missing from locales (would render raw)
+    # 3. Cyrillic leaking into en.json (L0, spec-bilingual-ru-en). Кириллица в английской
+    # локали — это непереведённая строка ИЛИ русская аббревиатура в английском предложении
+    # («…your first КП sent» — найдено глазами при EN-проходе 02-08). Исключения — подписи
+    # самого переключателя языка: они по канону пишутся на своём языке.
+    CYRILLIC_ALLOWED = {
+        'languageSwitcher.switchToRu',
+        'languageSwitcher.labelRu',
+        'settings.general.langRu',
+    }
+    en_flat_values = {}
+    _collect_values(en_data, en_flat_values)
+    cyrillic = sorted(
+        (k, v) for k, v in en_flat_values.items()
+        if k not in CYRILLIC_ALLOWED and _CYRILLIC_RE.search(v)
+    )
+    if cyrillic:
+        problems = 1
+        print(f'\nCyrillic text in en.json ({len(cyrillic)}) — untranslated or a RU abbreviation:')
+        for k, v in cyrillic:
+            print(f'  - {k}: {v[:70]}')
+
+    # 4. Used-in-code keys missing from locales (would render raw)
     used = collect_used_keys()
     valid = ru_keys | ru_ns  # leaf keys + namespace prefixes
     _PLURALS = ('_zero', '_one', '_two', '_few', '_many', '_other')

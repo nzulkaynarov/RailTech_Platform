@@ -89,3 +89,6 @@ graphify-out/*
 !graphify-out/cache/
 graphify-out/cache/*
 !graphify-out/cache/semantic/
+
+# Скомпилированные каталоги переводов — производные от .po (генерируются в сборке образа)
+*.mo

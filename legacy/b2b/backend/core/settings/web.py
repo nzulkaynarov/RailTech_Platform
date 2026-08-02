@@ -29,6 +29,12 @@ MIDDLEWARE = [
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
+    # L0 (spec-bilingual-ru-en): активация языка запроса по Accept-Language, который SPA
+    # шлёт из i18n.language. БЕЗ него ~1500 gettext_lazy по проекту всегда рендерили
+    # русский источник — слой i18n был декоративным. Канонная позиция Django: после
+    # SessionMiddleware, до CommonMiddleware. Добавляет `Vary: Accept-Language` — именно
+    # тот заголовок, по которому уже варьируются кэшируемые справочники.
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -68,7 +74,7 @@ CORS_ALLOWED_ORIGINS = (
 # same-origin (no preflight) but this keeps cross-origin dev honest.
 from corsheaders.defaults import default_headers  # noqa: E402
 
-CORS_ALLOW_HEADERS = (*default_headers, "x-active-context", "idempotency-key", "if-match")
+CORS_ALLOW_HEADERS = (*default_headers, "x-active-context", "idempotency-key", "if-match", "accept-language")
 # Let the SPA read these response headers cross-origin.
 CORS_EXPOSE_HEADERS = ["ETag", "Idempotent-Replay", "Deprecation", "Sunset"]
 

@@ -63,6 +63,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gosu \
     fonts-paratype \
     fonts-inter \
+    gettext \
     && rm -rf /var/lib/apt/lists/*
 
 # Копируем установленные пакеты из builder
@@ -77,6 +78,12 @@ RUN mkdir -p /app/staticfiles /app/media && \
 
 # Копируем исходники (appuser владеет кодом)
 COPY --chown=appuser:appuser . .
+
+# L0 (spec-bilingual-ru-en): компиляция каталогов переводов .po → .mo.
+# В git лежат только .po (ревьюируемый исходник), .mo генерируются здесь — иначе бинарник
+# в репозитории расходится с исходником. msgfmt напрямую, а не `manage.py compilemessages`:
+# команда грузит settings и потребовала бы боевых env-переменных на этапе сборки.
+RUN find locale -name '*.po' -exec sh -c 'msgfmt -o "${1%.po}.mo" "$1"' _ {} \;
 
 # Entrypoint: фиксит права на volume-директории, затем переключается на appuser
 COPY --chmod=755 entrypoint.sh /entrypoint.sh

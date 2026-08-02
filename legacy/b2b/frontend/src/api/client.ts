@@ -1,4 +1,5 @@
 import axios from 'axios';
+import i18n from '@/i18n';
 import { useUserStore } from '@/store/userStore';
 import { getAccessToken, setAccessToken } from './accessToken';
 
@@ -37,6 +38,18 @@ apiClient.interceptors.request.use((config) => {
 		// real boundary server-side, so this is defense-in-depth, not the primary control.
 		const ctx = useUserStore.getState().activeStatus || 'BUYER';
 		config.headers['X-Active-Context'] = ctx;
+	} catch { /* noop */ }
+	return config;
+});
+
+// L0 (spec-bilingual-ru-en): язык запроса. Бэкенд активирует его LocaleMiddleware'ом, поэтому
+// ошибки валидации, choices и прочие серверные строки приходят на языке интерфейса. Читаем
+// i18n.language ЛЕНИВО в интерсепторе — переключение языка применяется к следующему же запросу
+// без пересоздания клиента. Импорт инстанса i18n (а не хука) — модуль вне React-дерева.
+apiClient.interceptors.request.use((config) => {
+	try {
+		const lang = i18n.language?.split('-')[0];
+		if (lang) config.headers['Accept-Language'] = lang;
 	} catch { /* noop */ }
 	return config;
 });
