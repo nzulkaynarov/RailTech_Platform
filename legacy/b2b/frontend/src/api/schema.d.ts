@@ -8445,6 +8445,12 @@ export interface components {
              */
             key: string;
             /**
+             * Язык
+             * @description Код языка (ru, en). Пусто — шаблон применяется для всех языков.
+             * @default
+             */
+            language: string;
+            /**
              * Тема
              * @description Шаблон темы письма. Поддерживает переменные контекста, напр. {{ company_name }}.
              */
@@ -8491,6 +8497,12 @@ export interface components {
              * @description Совпадает с именем файлового шаблона: 'setup_password', 'kyc_verified', 'quote_sent', …
              */
             key: string;
+            /**
+             * Язык
+             * @description Код языка (ru, en). Пусто — шаблон применяется для всех языков.
+             * @default
+             */
+            language: string;
             /**
              * Тема
              * @description Шаблон темы письма. Поддерживает переменные контекста, напр. {{ company_name }}.
@@ -10310,6 +10322,12 @@ export interface components {
              * @description Совпадает с именем файлового шаблона: 'setup_password', 'kyc_verified', 'quote_sent', …
              */
             key?: string;
+            /**
+             * Язык
+             * @description Код языка (ru, en). Пусто — шаблон применяется для всех языков.
+             * @default
+             */
+            language: string;
             /**
              * Тема
              * @description Шаблон темы письма. Поддерживает переменные контекста, напр. {{ company_name }}.

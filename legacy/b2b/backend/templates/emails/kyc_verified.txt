@@ -1,7 +1,7 @@
-Здравствуйте!
+{% load i18n %}{% translate "Здравствуйте!" %}
 
-{% if level_code == "L3_CONTRACTED" %}Контракт для компании «{{ company_name }}» активирован. Все премиум-функции RailTech B2B теперь доступны вашей команде.{% else %}KYC уровень L2 для компании «{{ company_name }}» (ИНН {{ company_inn }}) успешно подтверждён. Теперь вы можете работать в полном объёме на платформе.{% endif %}
+{% if level_code == "L3_CONTRACTED" %}{% blocktranslate %}Контракт для компании «{{ company_name }}» активирован. Все премиум-функции RailTech B2B теперь доступны вашей команде.{% endblocktranslate %}{% else %}{% blocktranslate %}KYC уровень L2 для компании «{{ company_name }}» (ИНН {{ company_inn }}) успешно подтверждён. Теперь вы можете работать в полном объёме на платформе.{% endblocktranslate %}{% endif %}
 
-Открыть кабинет: {{ frontend_url }}
+{% translate "Открыть кабинет" %}: {{ frontend_url }}
 
-— Команда RailTech B2B
+{% translate "— Команда RailTech B2B" %}

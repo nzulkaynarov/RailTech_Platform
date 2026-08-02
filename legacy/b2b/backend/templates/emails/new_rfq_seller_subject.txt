@@ -1,1 +1,1 @@
-Новая заявка{% if buyer_name %} от {{ buyer_name }}{% endif %} — ожидает КП
+{% load i18n %}{% translate "Новая заявка" %}{% if buyer_name %} {% blocktranslate %}от {{ buyer_name }}{% endblocktranslate %}{% endif %} {% translate "— ожидает КП" %}

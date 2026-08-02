@@ -1,10 +1,10 @@
-Здравствуйте!
+{% load i18n %}{% translate "Здравствуйте!" %}
 
-{% if seller_name %}Компания «{{ seller_name }}» выставила{% else %}Выставлен{% endif %} счёт {{ invoice_number }}{% if deal_title %} по сделке «{{ deal_title }}»{% endif %} на сумму {{ total }}.
+{% if seller_name %}{% blocktranslate %}Компания «{{ seller_name }}» выставила{% endblocktranslate %}{% else %}{% translate "Выставлен" %}{% endif %} {% blocktranslate %}счёт {{ invoice_number }}{% endblocktranslate %}{% if deal_title %} {% blocktranslate %}по сделке «{{ deal_title }}»{% endblocktranslate %}{% endif %} {% blocktranslate %}на сумму {{ total }}.{% endblocktranslate %}
 {% if due_date %}
-Срок оплаты — до {{ due_date }}.
+{% blocktranslate %}Срок оплаты — до {{ due_date }}.{% endblocktranslate %}
 {% endif %}
-Открыть счёт:
+{% translate "Открыть счёт:" %}
 
 {{ invoice_url }}
 

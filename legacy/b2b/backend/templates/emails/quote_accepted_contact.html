@@ -1,17 +1,18 @@
 {% extends "emails/base.html" %}
-{% block subject %}Предложение {{ quote_number }} принято{% endblock %}
-{% block header_hint %}Предложение принято{% endblock %}
+{% load i18n %}
+{% block subject %}{% blocktranslate %}Предложение {{ quote_number }} принято{% endblocktranslate %}{% endblock %}
+{% block header_hint %}{% translate "Предложение принято" %}{% endblock %}
 {% block content %}
-  <h1 style="margin:0 0 16px 0; font-size:22px; line-height:1.3; color:#111827;">Спасибо! Предложение принято</h1>
+  <h1 style="margin:0 0 16px 0; font-size:22px; line-height:1.3; color:#111827;">{% translate "Спасибо! Предложение принято" %}</h1>
   <p style="margin:0 0 16px 0;">
-    Вы приняли коммерческое предложение <strong>{{ quote_number }}</strong> от {{ seller_name }}.
+    {% blocktranslate %}Вы приняли коммерческое предложение <strong>{{ quote_number }}</strong> от {{ seller_name }}.{% endblocktranslate %}
   </p>
   <p style="margin:0 0 16px 0;">
-    Следующий шаг: договор <strong>{{ contract_number }}</strong> готовится к подписанию.
-    С вами свяжется менеджер поставщика для оформления.
+    {% blocktranslate %}Следующий шаг: договор <strong>{{ contract_number }}</strong> готовится к подписанию.{% endblocktranslate %}
+    {% translate "С вами свяжется менеджер поставщика для оформления." %}
   </p>
   <p style="margin:16px 0 0 0; font-size:13px; color:#6b7280;">
-    Принятие предложения — это коммерческий акцепт оферты, а не электронная подпись.
-    Договор подписывается отдельно.
+    {% translate "Принятие предложения — это коммерческий акцепт оферты, а не электронная подпись." %}
+    {% translate "Договор подписывается отдельно." %}
   </p>
 {% endblock %}

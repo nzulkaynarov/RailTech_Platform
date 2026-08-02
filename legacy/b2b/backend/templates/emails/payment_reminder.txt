@@ -1,12 +1,12 @@
-Здравствуйте!
+{% load i18n %}{% translate "Здравствуйте!" %}
 
-Счёт {{ invoice_number }}{% if deal_title %} по сделке «{{ deal_title }}»{% endif %}{% if seller_name %} от компании «{{ seller_name }}»{% endif %} остаётся неоплаченным{% if due_date %}: срок был до {{ due_date }}{% endif %}.
+{% blocktranslate %}Счёт {{ invoice_number }}{% endblocktranslate %}{% if deal_title %} {% blocktranslate %}по сделке «{{ deal_title }}»{% endblocktranslate %}{% endif %}{% if seller_name %} {% blocktranslate %}от компании «{{ seller_name }}»{% endblocktranslate %}{% endif %} {% translate "остаётся неоплаченным" %}{% if due_date %}{% blocktranslate %}: срок был до {{ due_date }}{% endblocktranslate %}{% endif %}.
 
-К оплате: {{ balance_due }} из {{ total }}.
+{% blocktranslate %}К оплате: {{ balance_due }} из {{ total }}.{% endblocktranslate %}
 
-Если оплата уже отправлена, просто отметьте её в системе — напоминание больше не придёт.
+{% translate "Если оплата уже отправлена, просто отметьте её в системе — напоминание больше не придёт." %}
 
-Открыть счёт:
+{% translate "Открыть счёт:" %}
 
 {{ invoice_url }}
 

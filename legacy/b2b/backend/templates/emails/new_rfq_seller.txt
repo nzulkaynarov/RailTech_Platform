@@ -1,13 +1,13 @@
-Здравствуйте!
+{% load i18n %}{% translate "Здравствуйте!" %}
 
-{% if buyer_name %}Компания «{{ buyer_name }}» направила{% else %}Поступила{% endif %} заявку{% if deal_title %} «{{ deal_title }}»{% endif %} — она ожидает вашего коммерческого предложения.
+{% if buyer_name %}{% blocktranslate %}Компания «{{ buyer_name }}» направила{% endblocktranslate %}{% else %}{% translate "Поступила" %}{% endif %} {% translate "заявку" %}{% if deal_title %} {% blocktranslate %}«{{ deal_title }}»{% endblocktranslate %}{% endif %} {% translate "— она ожидает вашего коммерческого предложения." %}
 {% if assigned %}
-Заявка назначена лично вам.
+{% translate "Заявка назначена лично вам." %}
 {% endif %}
-Открыть заявку:
+{% translate "Открыть заявку:" %}
 
 {{ deal_url }}
 
-Быстрый ответ заметно повышает шанс выиграть сделку.
+{% translate "Быстрый ответ заметно повышает шанс выиграть сделку." %}
 
 — RailTech B2B

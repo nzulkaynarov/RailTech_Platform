@@ -13,13 +13,30 @@ from notifications.emails import EmailDeliveryError, _render_bodies, send_templa
 from notifications.models import EmailLog
 
 TEMPLATE_CASES = [
+    # ВСЕ бандлы писем: раньше в наборе было 5 из 17, и 12 шаблонов не рендерились
+    # тестом вовсе — правка в них (в т.ч. разметка {% translate %} волной L2) ломала бы
+    # отправку молча. Контексты заполнены целиком, чтобы проходились обе ветки условий.
     (
         "setup_password",
-        {"first_name": "Алиса", "setup_url": "https://app.example.com/setup?token=abc"},
+        {"first_name": "Алиса", "name": "Алиса", "setup_url": "https://app.example.com/setup?token=abc"},
     ),
     (
-        "invite_member",
-        {"company_name": "Alpha LLC", "setup_url": "https://app.example.com/setup?token=xyz"},
+        "reset_password",
+        {"first_name": "Алиса", "name": "Алиса", "reset_url": "https://app.example.com/reset?token=abc"},
+    ),
+    (
+        "register_existing_account",
+        {
+            "first_name": "Алиса",
+            "name": "Алиса",
+            "login_url": "https://app.example.com/",
+            "forgot_url": "https://app.example.com/forgot?a=1&b=2",
+        },
+    ),
+    ("invite_member", {"company_name": "Alpha LLC", "setup_url": "https://app.example.com/setup?token=xyz"}),
+    (
+        "invite_client",
+        {"company_name": "Alpha LLC", "contact_name": "Пётр", "invite_url": "https://app.example.com/invite?token=xyz"},
     ),
     (
         "kyc_verified",
@@ -45,6 +62,7 @@ TEMPLATE_CASES = [
             "company_name": "Alpha LLC",
             "requested_type_name": "Поставщик",
             "trial_granted": True,
+            "days": 30,
             "frontend_url": "https://app.example.com",
         },
     ),
@@ -55,6 +73,117 @@ TEMPLATE_CASES = [
             "requested_type_name": "Производитель",
             "review_notes": "Не хватает устава.",
             "frontend_url": "https://app.example.com",
+        },
+    ),
+    (
+        "new_rfq_seller",
+        {
+            "deal_title": "Рельсы Р65",
+            "buyer_name": "Beta LLC",
+            "deal_url": "https://app.example.com/deal/1",
+            "assigned": True,
+        },
+    ),
+    (
+        "new_rfq_seller",
+        {
+            "deal_title": "Рельсы Р65",
+            "buyer_name": "Beta LLC",
+            "deal_url": "https://app.example.com/deal/1",
+            "assigned": False,
+        },
+    ),
+    (
+        "quote_sent",
+        {
+            "quote_number": "КП-2026-00042",
+            "quote_version": 2,
+            "recipient_name": "Пётр",
+            "seller_name": "Alpha LLC",
+            "total_incl_vat": "12 500 000 UZS",
+            "valid_until": "31.12.2026",
+            "public_link": "https://app.example.com/q/tok",
+        },
+    ),
+    (
+        "quote_acceptance_code",
+        {"code": "123456", "expires_minutes": 15, "quote_number": "КП-2026-00042", "seller_name": "Alpha LLC"},
+    ),
+    (
+        "quote_accepted_contact",
+        {"quote_number": "КП-2026-00042", "contract_number": "CT-2026-00007", "seller_name": "Alpha LLC"},
+    ),
+    (
+        "invoice_issued",
+        {
+            "invoice_number": "INV-2026-00001",
+            "deal_title": "Рельсы Р65",
+            "seller_name": "Alpha LLC",
+            "total": "12 500 000 UZS",
+            "due_date": "31.12.2026",
+            "invoice_url": "https://app.example.com/invoices/1",
+        },
+    ),
+    (
+        "invoice_issued",
+        {
+            "invoice_number": "INV-2026-00001",
+            "total": "12 500 000 UZS",
+            "invoice_url": "https://app.example.com/invoices/1",
+        },
+    ),
+    (
+        "payment_received",
+        {
+            "invoice_number": "INV-2026-00001",
+            "deal_title": "Рельсы Р65",
+            "buyer_name": "Beta LLC",
+            "amount": "5 000 000 UZS",
+            "paid_total": "5 000 000 UZS",
+            "total": "12 500 000 UZS",
+            "is_fully_paid": False,
+            "invoice_url": "https://app.example.com/invoices/1",
+        },
+    ),
+    (
+        "payment_received",
+        {
+            "invoice_number": "INV-2026-00001",
+            "amount": "12 500 000 UZS",
+            "paid_total": "12 500 000 UZS",
+            "total": "12 500 000 UZS",
+            "is_fully_paid": True,
+            "invoice_url": "https://app.example.com/invoices/1",
+        },
+    ),
+    (
+        "payment_reminder",
+        {
+            "invoice_number": "INV-2026-00001",
+            "deal_title": "Рельсы Р65",
+            "seller_name": "Alpha LLC",
+            "total": "12 500 000 UZS",
+            "balance_due": "7 500 000 UZS",
+            "due_date": "31.12.2026",
+            "invoice_url": "https://app.example.com/invoices/1",
+        },
+    ),
+    (
+        "act_awaiting_acceptance",
+        {
+            "act_number": "ACT-2026-00003",
+            "deal_title": "Рельсы Р65",
+            "total": "12 500 000 UZS",
+            "deal_url": "https://app.example.com/deal/1",
+        },
+    ),
+    (
+        "generated_document",
+        {
+            "document_number": "DOC-2026-00001",
+            "document_title": "Гарантийное письмо",
+            "company_name": "Alpha LLC",
+            "public_link": "https://app.example.com/d/tok",
         },
     ),
 ]

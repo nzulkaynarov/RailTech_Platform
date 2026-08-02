@@ -1,10 +1,10 @@
-Здравствуйте!
+{% load i18n %}{% translate "Здравствуйте!" %}
 
-Акт {{ act_number }}{% if deal_title %} по сделке «{{ deal_title }}»{% endif %} на сумму {{ total }} ожидает вашего решения.
+{% blocktranslate %}Акт {{ act_number }}{% endblocktranslate %}{% if deal_title %} {% blocktranslate %}по сделке «{{ deal_title }}»{% endblocktranslate %}{% endif %} {% blocktranslate %}на сумму {{ total }} ожидает вашего решения.{% endblocktranslate %}
 
-Акт можно принять или вернуть с указанием причины — тогда поставщик исправит его и выставит заново.
+{% translate "Акт можно принять или вернуть с указанием причины — тогда поставщик исправит его и выставит заново." %}
 
-Открыть сделку:
+{% translate "Открыть сделку:" %}
 
 {{ deal_url }}
 

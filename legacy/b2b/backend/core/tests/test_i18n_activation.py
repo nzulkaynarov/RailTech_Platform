@@ -126,3 +126,19 @@ def test_catalog_placeholders_are_intact():
         and sorted(placeholder.findall(value(src))) != sorted(placeholder.findall(value(dst)))
     ]
     assert not mismatched, f"перевод потерял плейсхолдеры: {mismatched[:3]}"
+
+
+def test_catalog_has_no_fuzzy_or_empty_entries():
+    """Fuzzy-запись — это ДОГАДКА gettext, которую Django при компиляции игнорирует.
+
+    Ловушка волны L2: `makemessages` подставил новым строкам писем переводы похожих
+    старых («Здравствуйте!» → «Valid until») и пометил их fuzzy. Каталог выглядел
+    заполненным, а письмо приходило по-русски. Пустая запись — то же самое, только явно.
+    """
+    from pathlib import Path
+
+    po = Path(settings.BASE_DIR / "locale" / "en" / "LC_MESSAGES" / "django.po").read_text(encoding="utf-8")
+    # Первый fuzzy — служебный заголовок каталога (msgid ""), он таким и рождается.
+    body = po.split("\n\n", 1)[1] if "\n\n" in po else po
+    fuzzy_count = body.count("#, fuzzy")
+    assert fuzzy_count == 0, f"{fuzzy_count} fuzzy-записей: Django их не применит, строка останется русской"

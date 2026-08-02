@@ -22398,6 +22398,13 @@
                         "maxLength": 100,
                         "pattern": "^[-a-zA-Z0-9_]+$"
                     },
+                    "language": {
+                        "type": "string",
+                        "default": "",
+                        "title": "Язык",
+                        "description": "Код языка (ru, en). Пусто — шаблон применяется для всех языков.",
+                        "maxLength": 16
+                    },
                     "subject": {
                         "type": "string",
                         "title": "Тема",
@@ -22472,6 +22479,13 @@
                         "description": "Совпадает с именем файлового шаблона: 'setup_password', 'kyc_verified', 'quote_sent', …",
                         "maxLength": 100,
                         "pattern": "^[-a-zA-Z0-9_]+$"
+                    },
+                    "language": {
+                        "type": "string",
+                        "default": "",
+                        "title": "Язык",
+                        "description": "Код языка (ru, en). Пусто — шаблон применяется для всех языков.",
+                        "maxLength": 16
                     },
                     "subject": {
                         "type": "string",
@@ -25828,6 +25842,13 @@
                         "description": "Совпадает с именем файлового шаблона: 'setup_password', 'kyc_verified', 'quote_sent', …",
                         "maxLength": 100,
                         "pattern": "^[-a-zA-Z0-9_]+$"
+                    },
+                    "language": {
+                        "type": "string",
+                        "default": "",
+                        "title": "Язык",
+                        "description": "Код языка (ru, en). Пусто — шаблон применяется для всех языков.",
+                        "maxLength": 16
                     },
                     "subject": {
                         "type": "string",

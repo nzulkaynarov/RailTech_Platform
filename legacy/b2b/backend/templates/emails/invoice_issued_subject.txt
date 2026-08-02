@@ -1,1 +1,1 @@
-Счёт {{ invoice_number }} на оплату{% if seller_name %} от {{ seller_name }}{% endif %}
+{% load i18n %}{% blocktranslate %}Счёт {{ invoice_number }} на оплату{% endblocktranslate %}{% if seller_name %} {% blocktranslate %}от {{ seller_name }}{% endblocktranslate %}{% endif %}

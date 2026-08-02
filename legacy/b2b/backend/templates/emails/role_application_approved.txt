@@ -1,8 +1,8 @@
-Здравствуйте!
+{% load i18n %}{% translate "Здравствуйте!" %}
 
-Заявка компании «{{ company_name }}» на роль «{{ requested_type_name }}» одобрена.
-{% if trial_granted %}Для поставщиков и производителей активирован пробный период на 30 дней — вы можете сразу приступить к работе.{% endif %}
+{% blocktranslate %}Заявка компании «{{ company_name }}» на роль «{{ requested_type_name }}» одобрена.{% endblocktranslate %}
+{% if trial_granted %}{% translate "Для поставщиков и производителей активирован пробный период на 30 дней — вы можете сразу приступить к работе." %}{% endif %}
 
-Открыть кабинет: {{ frontend_url }}
+{% translate "Открыть кабинет" %}: {{ frontend_url }}
 
-— Команда RailTech B2B
+{% translate "— Команда RailTech B2B" %}

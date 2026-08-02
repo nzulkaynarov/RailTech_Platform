@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-02 20:43+0500\n"
+"POT-Creation-Date: 2026-08-02 23:24+0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,6 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
 #: accounts/admin.py:46
 msgid "Разрешений"
 msgstr "Permissions"
@@ -35,7 +36,7 @@ msgstr "Model"
 
 #: accounts/admin.py:150 accounts/models/company/membership.py:91
 #: accounts/models/users.py:88 crm/models/deals.py:399
-#: notifications/models.py:25 notifications/models.py:153
+#: notifications/models.py:25 notifications/models.py:171
 msgid "Пользователь"
 msgstr "User"
 
@@ -94,7 +95,7 @@ msgstr "KYC"
 #: crm/models/billing.py:49 crm/models/billing.py:257
 #: crm/models/contracts.py:49 crm/models/documents.py:132
 #: crm/models/fulfillment.py:33 crm/models/quotes.py:57
-#: notifications/admin.py:127 notifications/models.py:169
+#: notifications/admin.py:127 notifications/models.py:187
 msgid "Статус"
 msgstr "Status"
 
@@ -182,8 +183,9 @@ msgstr "Rejected"
 #: accounts/models/company/membership.py:41
 #: accounts/models/company/membership.py:98 accounts/models/kyc.py:18
 #: accounts/models/subscriptions.py:34 accounts/models/subscriptions.py:156
-#: core/models.py:193 crm/models/charges.py:186 crm/models/deals.py:42
-#: crm/models/deals.py:319 crm/models/documents.py:37
+#: core/models.py:193 core/tests/test_i18n_activation.py:102
+#: core/tests/test_i18n_activation.py:106 crm/models/charges.py:186
+#: crm/models/deals.py:42 crm/models/deals.py:319 crm/models/documents.py:37
 #: crm/models/documents.py:103 crm/models/documents.py:239
 #: crm/models/sequences.py:52 crm/models/sequences.py:132
 #: sourcing/models.py:128
@@ -339,7 +341,7 @@ msgstr "Default payment terms"
 
 #: accounts/models/company/company_settings.py:88
 msgid "Напр. «100% предоплата» — подставляется в блок «Условия поставки» КП"
-msgstr "E.g. \"100% prepayment\" — prefilled into the \"Delivery terms\" block of the quote"
+msgstr "E.g. “100% prepayment” — inserted into the “Delivery terms” block of the quote"
 
 #: accounts/models/company/company_settings.py:93
 msgid "Гарантия по умолчанию (мес.)"
@@ -347,7 +349,7 @@ msgstr "Default warranty (months)"
 
 #: accounts/models/company/company_settings.py:94
 msgid "Срок гарантии в месяцах для блока «Условия поставки» КП"
-msgstr "Warranty period in months for the \"Delivery terms\" block of the quote"
+msgstr "Warranty period in months for the “Delivery terms” block of the quote"
 
 #: accounts/models/company/company_settings.py:104
 msgid "Порог маржи (%)"
@@ -371,7 +373,7 @@ msgstr "Document numbering prefix"
 
 #: accounts/models/company/company_settings.py:120
 msgid "Префикс номеров документов компании (напр. «ACME» → ACME-CT-2026-00001)"
-msgstr "Prefix for the company's document numbers (e.g. \"ACME\" → ACME-CT-2026-00001)"
+msgstr "Company document number prefix (e.g. “ACME” → ACME-CT-2026-00001)"
 
 #: accounts/models/company/company_settings.py:123
 #: accounts/models/company/document_profile.py:182 core/models.py:206
@@ -810,7 +812,7 @@ msgstr "Contract: quality and acceptance"
 msgid ""
 "Пункт «Качество, комплектность и приёмка». Пусто — печатается стандартная "
 "формулировка."
-msgstr "The \"Quality, completeness and acceptance\" clause. Empty — the standard wording is printed."
+msgstr "The “Quality, completeness and acceptance” clause. Leave empty to print the standard wording."
 
 #: accounts/models/company/document_profile.py:164
 msgid "Договор: ответственность сторон"
@@ -820,7 +822,7 @@ msgstr "Contract: liability"
 msgid ""
 "Пункт «Ответственность сторон» — здесь компании чаще всего меняют ставку "
 "неустойки."
-msgstr "The \"Liability of the parties\" clause — this is where companies most often change the penalty rate."
+msgstr "The “Liability of the parties” clause — this is where companies most often change the penalty rate."
 
 #: accounts/models/company/document_profile.py:169
 msgid "Договор: особые условия"
@@ -924,7 +926,7 @@ msgstr "The user's primary workspace"
 #: accounts/models/company/membership.py:127 catalog/models/offers.py:126
 #: catalog/models/taxonomy.py:223 crm/models/charges.py:225
 #: crm/models/documents.py:65 master_data/models.py:30
-#: notifications/models.py:235
+#: notifications/models.py:265
 msgid "Активен"
 msgstr "Active"
 
@@ -1187,9 +1189,10 @@ msgstr "Internal administrator notes"
 
 #: accounts/models/subscriptions.py:101 catalog/models/offers.py:132
 #: catalog/models/products.py:166 catalog/models/taxonomy.py:228
-#: crm/models/charges.py:119 crm/models/deals.py:118 crm/models/documents.py:74
+#: core/tests/test_i18n_activation.py:104 crm/models/charges.py:119
+#: crm/models/deals.py:118 crm/models/documents.py:74
 #: crm/models/documents.py:205 crm/models/documents.py:258
-#: crm/models/quotes.py:300 notifications/models.py:91 sourcing/models.py:226
+#: crm/models/quotes.py:300 notifications/models.py:109 sourcing/models.py:226
 #: sourcing/models.py:267
 msgid "Дата создания"
 msgstr "Created at"
@@ -2155,7 +2158,7 @@ msgstr "Feature request"
 msgid "Другое"
 msgstr "Other"
 
-#: core/models.py:151 notifications/models.py:136 notifications/models.py:216
+#: core/models.py:151 notifications/models.py:154 notifications/models.py:246
 msgid "Тема"
 msgstr "Subject"
 
@@ -2196,7 +2199,7 @@ msgid "Тикет"
 msgstr "Ticket"
 
 #: core/models.py:236 crm/admin/deals_admin.py:198 crm/models/documents.py:248
-#: notifications/models.py:64
+#: notifications/models.py:82
 msgid "Текст"
 msgstr "Text"
 
@@ -2368,11 +2371,11 @@ msgstr "Notification types"
 msgid "Аудит и мониторинг"
 msgstr "Audit and monitoring"
 
-#: core/settings/apps.py:196 notifications/models.py:96
+#: core/settings/apps.py:196 notifications/models.py:114
 msgid "Уведомления"
 msgstr "Notifications"
 
-#: core/settings/apps.py:197 notifications/models.py:183
+#: core/settings/apps.py:197 notifications/models.py:201
 msgid "Журнал email"
 msgstr "Email log"
 
@@ -2392,12 +2395,12 @@ msgstr "Русский"
 msgid "English"
 msgstr "English"
 
-#: crm/admin/deals_admin.py:58 crm/models/billing.py:32
-#: crm/models/billing.py:234 crm/models/contracts.py:30 crm/models/deals.py:135
-#: crm/models/deals.py:177 crm/models/deals.py:233 crm/models/deals.py:482
-#: crm/models/documents.py:111 crm/models/fulfillment.py:18
-#: crm/models/quotes.py:31 notifications/models.py:79 sourcing/models.py:101
-#: sourcing/models.py:215
+#: core/tests/test_i18n_activation.py:103 crm/admin/deals_admin.py:58
+#: crm/models/billing.py:32 crm/models/billing.py:234
+#: crm/models/contracts.py:30 crm/models/deals.py:135 crm/models/deals.py:177
+#: crm/models/deals.py:233 crm/models/deals.py:482 crm/models/documents.py:111
+#: crm/models/fulfillment.py:18 crm/models/quotes.py:31
+#: notifications/models.py:97 sourcing/models.py:101 sourcing/models.py:215
 msgid "Сделка"
 msgstr "Deal"
 
@@ -3035,7 +3038,9 @@ msgstr "Notification"
 msgid "Сделка, к которой относится сообщение"
 msgstr "Deal the message belongs to"
 
-#: crm/models/deals.py:241 notifications/models.py:140
+#: crm/models/deals.py:241 notifications/models.py:158
+#: templates/emails/generated_document.html:10
+#: templates/emails/generated_document.txt:3
 msgid "Отправитель"
 msgstr "Sender"
 
@@ -3140,7 +3145,7 @@ msgid "Предупреждение"
 msgstr "Warning"
 
 #: crm/models/deals.py:363 notifications/admin.py:118
-#: notifications/models.py:118 notifications/models.py:173
+#: notifications/models.py:136 notifications/models.py:191
 msgid "Ошибка"
 msgstr "Bug"
 
@@ -3152,7 +3157,7 @@ msgstr "Action"
 msgid "Краткое описание совершённого действия"
 msgstr "Short description of the action performed"
 
-#: crm/models/deals.py:379
+#: crm/models/deals.py:379 notifications/models.py:67
 msgid "Код события"
 msgstr "Event code"
 
@@ -3162,7 +3167,7 @@ msgid ""
 "quote.sent, ...)"
 msgstr "Machine-readable event code for the localizable timeline (deal.created, quote.sent, ...)"
 
-#: crm/models/deals.py:385
+#: crm/models/deals.py:385 notifications/models.py:73
 msgid "Параметры события"
 msgstr "Event parameters"
 
@@ -3283,7 +3288,7 @@ msgstr "Document template"
 msgid "Шаблоны документов"
 msgstr "Document templates"
 
-#: crm/models/documents.py:125 notifications/models.py:124
+#: crm/models/documents.py:125 notifications/models.py:142
 msgid "Шаблон"
 msgstr "Template"
 
@@ -3291,7 +3296,7 @@ msgstr "Template"
 msgid "Номер"
 msgstr "Number"
 
-#: crm/models/documents.py:134 notifications/models.py:60
+#: crm/models/documents.py:134 notifications/models.py:78
 msgid "Заголовок"
 msgstr "Heading"
 
@@ -3689,7 +3694,8 @@ msgstr "Approved by"
 msgid "Кто одобрил коммерческое предложение"
 msgstr "Who approved the commercial offer"
 
-#: crm/models/quotes.py:308
+#: crm/models/quotes.py:308 templates/emails/quote_sent.html:3
+#: templates/emails/quote_sent.html:4 templates/emails/quote_sent_subject.txt:1
 msgid "Коммерческое предложение"
 msgstr "Commercial Offer"
 
@@ -4053,7 +4059,7 @@ msgstr "Reset period"
 #: crm/models/sequences.py:62
 msgid ""
 "Ключ периода счётчика: «ALL» (без сброса), «2026» (год) или «2026-07» (месяц)"
-msgstr "Counter period key: \"ALL\" (never resets), \"2026\" (year) or \"2026-07\" (month)"
+msgstr "Counter period key: “ALL” (no reset), “2026” (year) or “2026-07” (month)"
 
 #: crm/models/sequences.py:64
 msgid "Последний номер"
@@ -4273,7 +4279,7 @@ msgstr "Currency rate"
 msgid "Справочник: Курсы валют"
 msgstr "Master data: Currency rates"
 
-#: notifications/admin.py:34 notifications/models.py:85
+#: notifications/admin.py:34 notifications/models.py:103
 msgid "Прочитано"
 msgstr "Read"
 
@@ -4344,136 +4350,153 @@ msgstr "Type"
 msgid "Тип уведомления из справочника"
 msgstr "Notification type from the master data"
 
-#: notifications/models.py:61
-msgid "Краткий заголовок уведомления"
-msgstr "Short notification title"
+#: notifications/models.py:68
+msgid "Машинный код для локализуемого текста (deal.created, act.issued, ...)"
+msgstr "Machine code for the localizable text (deal.created, act.issued, ...)"
 
-#: notifications/models.py:65
+#: notifications/models.py:74
+msgid "Значения для подстановки в перевод на клиенте"
+msgstr "Values substituted into the translation on the client"
+
+#: notifications/models.py:79
+msgid ""
+"Краткий заголовок уведомления (RU-fallback; текст собирается по event_code)"
+msgstr "Short notification title (RU fallback; the text is composed from event_code)"
+
+#: notifications/models.py:83
 msgid "Полный текст уведомления"
 msgstr "Full notification text"
 
-#: notifications/models.py:70
+#: notifications/models.py:88
 msgid "Ссылка"
 msgstr "Link"
 
-#: notifications/models.py:71
+#: notifications/models.py:89
 msgid "URL для перехода при клике на уведомление"
 msgstr "URL to open when the notification is clicked"
 
-#: notifications/models.py:80
+#: notifications/models.py:98
 msgid "Связанная сделка (опционально)"
 msgstr "Related deal (optional)"
 
-#: notifications/models.py:86
+#: notifications/models.py:104
 msgid "Пользователь прочитал уведомление"
 msgstr "The user has read the notification"
 
-#: notifications/models.py:95
+#: notifications/models.py:113
 msgid "Уведомление"
 msgstr "Notification"
 
-#: notifications/models.py:117
+#: notifications/models.py:135
 msgid "Отправлено"
 msgstr "Sent"
 
-#: notifications/models.py:125
+#: notifications/models.py:143
 msgid "Код шаблона, например 'setup_password', 'kyc_verified'"
 msgstr "Template code, e.g. 'setup_password', 'kyc_verified'"
 
-#: notifications/models.py:131
+#: notifications/models.py:149
 msgid "Канал"
 msgstr "Channel"
 
-#: notifications/models.py:132
+#: notifications/models.py:150
 msgid "Ключ из settings.EMAIL_CHANNELS: transactional / marketing / system"
 msgstr "Key from settings.EMAIL_CHANNELS: transactional / marketing / system"
 
-#: notifications/models.py:144
+#: notifications/models.py:162
 msgid "Получатели"
 msgstr "Recipients"
 
-#: notifications/models.py:145
+#: notifications/models.py:163
 msgid "Список email-адресов"
 msgstr "List of email addresses"
 
-#: notifications/models.py:154
+#: notifications/models.py:172
 msgid "Основной адресат, если известен (для поиска по user__email)"
 msgstr "Primary addressee, if known (for lookup by user__email)"
 
-#: notifications/models.py:158 notifications/models.py:225
+#: notifications/models.py:176 notifications/models.py:255
 msgid "Текст (plain)"
 msgstr "Text (plain)"
 
-#: notifications/models.py:162 notifications/models.py:221
+#: notifications/models.py:180 notifications/models.py:251
 msgid "Тело (HTML)"
 msgstr "Body (HTML)"
 
-#: notifications/models.py:174
+#: notifications/models.py:192
 msgid "Текст исключения, если отправка не удалась"
 msgstr "Exception text if sending failed"
 
-#: notifications/models.py:179
+#: notifications/models.py:197
 msgid "Время"
 msgstr "Time"
 
-#: notifications/models.py:184
+#: notifications/models.py:202
 msgid "Журнал email-рассылок"
 msgstr "Email log"
 
-#: notifications/models.py:211
+#: notifications/models.py:229
 msgid "Ключ"
 msgstr "Key"
 
-#: notifications/models.py:212
+#: notifications/models.py:230
 msgid ""
 "Совпадает с именем файлового шаблона: 'setup_password', 'kyc_verified', "
 "'quote_sent', …"
 msgstr "Matches the file template name: 'setup_password', 'kyc_verified', 'quote_sent', …"
 
-#: notifications/models.py:217
+#: notifications/models.py:241
+msgid "Язык"
+msgstr "Language"
+
+#: notifications/models.py:242
+msgid "Код языка (ru, en). Пусто — шаблон применяется для всех языков."
+msgstr "Language code (ru, en). Leave empty to apply the template to all languages."
+
+#: notifications/models.py:247
 msgid ""
 "Шаблон темы письма. Поддерживает переменные контекста, напр. "
 "{{ company_name }}."
 msgstr "Email subject template. Supports context variables, e.g. {{ company_name }}."
 
-#: notifications/models.py:222
+#: notifications/models.py:252
 msgid "HTML-версия письма. Пусто — HTML-альтернатива не прикладывается."
 msgstr "HTML version of the email. Empty means no HTML alternative is attached."
 
-#: notifications/models.py:226
+#: notifications/models.py:256
 msgid ""
 "Текстовая версия письма. Рендерится без HTML-экранирования (ссылки не "
 "ломаются)."
 msgstr "Plain-text version of the email. Rendered without HTML escaping (links stay intact)."
 
-#: notifications/models.py:230
+#: notifications/models.py:260
 msgid "Доступные переменные"
 msgstr "Available variables"
 
-#: notifications/models.py:231
+#: notifications/models.py:261
 msgid ""
 "Человекочитаемая справка по merge-переменным, которые передаёт контекст для "
 "этого ключа."
 msgstr "Human-readable reference for the merge variables the context provides for this key."
 
-#: notifications/models.py:236
+#: notifications/models.py:266
 msgid ""
 "Неактивный шаблон игнорируется — отправка возвращается к файловому шаблону."
 msgstr "An inactive template is ignored — sending falls back to the file template."
 
-#: notifications/models.py:244
+#: notifications/models.py:274
 msgid "Кто изменил"
 msgstr "Changed by"
 
-#: notifications/models.py:248
+#: notifications/models.py:278
 msgid "Изменён"
 msgstr "Changed at"
 
-#: notifications/models.py:252
+#: notifications/models.py:282
 msgid "Шаблон email"
 msgstr "Email template"
 
-#: notifications/models.py:253
+#: notifications/models.py:283
 msgid "Шаблоны email"
 msgstr "Email templates"
 
@@ -4507,7 +4530,7 @@ msgstr "Domain keywords"
 msgid "Исходник заявки"
 msgstr "Request source"
 
-#: sourcing/models.py:40
+#: sourcing/models.py:40 templates/emails/generated_document.html:4
 msgid "Документ"
 msgstr "Document"
 
@@ -4646,3 +4669,1068 @@ msgstr "No data to display yet"
 #: templates/admin/index.html:63
 msgid "Все разделы"
 msgstr "All sections"
+
+#: templates/emails/act_awaiting_acceptance.html:3
+#: templates/emails/act_awaiting_acceptance_subject.txt:1
+#, python-format
+msgid "Акт %(act_number)s ожидает вашего подтверждения"
+msgstr "Act %(act_number)s is awaiting your confirmation"
+
+#: templates/emails/act_awaiting_acceptance.html:4
+msgid "Акт на подтверждение"
+msgstr "Act awaiting confirmation"
+
+#: templates/emails/act_awaiting_acceptance.html:7
+msgid "Вам выставлен акт"
+msgstr "An act has been issued to you"
+
+#: templates/emails/act_awaiting_acceptance.html:10
+#, python-format
+msgid "Акт <strong>%(act_number)s</strong>"
+msgstr "Act <strong>%(act_number)s</strong>"
+
+#: templates/emails/act_awaiting_acceptance.html:10
+#: templates/emails/act_awaiting_acceptance.txt:3
+#: templates/emails/invoice_issued.html:11
+#: templates/emails/invoice_issued.txt:3
+#: templates/emails/payment_reminder.html:10
+#: templates/emails/payment_reminder.txt:3
+#, python-format
+msgid "по сделке «%(deal_title)s»"
+msgstr "for deal “%(deal_title)s”"
+
+#: templates/emails/act_awaiting_acceptance.html:11
+#, python-format
+msgid "на сумму <strong>%(total)s</strong> ожидает вашего решения."
+msgstr "for <strong>%(total)s</strong> is awaiting your decision."
+
+#: templates/emails/act_awaiting_acceptance.html:14
+msgid ""
+"Акт можно принять или вернуть с указанием причины — в этом случае поставщик "
+"исправит его\n"
+"    и выставит заново."
+msgstr "You can accept the act or send it back with a reason — in that case the supplier will correct it\n    and reissue it."
+
+#: templates/emails/act_awaiting_acceptance.html:19
+msgid "Открыть сделку"
+msgstr "Open the deal"
+
+#: templates/emails/act_awaiting_acceptance.html:23
+#: templates/emails/generated_document.html:21
+#: templates/emails/invite_client.html:24
+#: templates/emails/invite_member.html:19
+#: templates/emails/invoice_issued.html:23
+#: templates/emails/new_rfq_seller.html:22
+#: templates/emails/payment_received.html:23
+#: templates/emails/payment_reminder.html:24
+#: templates/emails/quote_sent.html:25
+msgid "Если кнопка не работает, скопируйте ссылку в браузер:"
+msgstr "If the button does not work, copy the link into your browser:"
+
+#: templates/emails/act_awaiting_acceptance.html:27
+msgid "Акт виден в карточке сделки, в блоке «Цепочка сделки»."
+msgstr "The act is visible on the deal card, in the “Deal chain” block."
+
+#: templates/emails/act_awaiting_acceptance.txt:1
+#: templates/emails/generated_document.html:7
+#: templates/emails/generated_document.txt:1
+#: templates/emails/invite_client.txt:1 templates/emails/invite_member.txt:1
+#: templates/emails/invoice_issued.txt:1 templates/emails/kyc_verified.txt:1
+#: templates/emails/new_rfq_seller.txt:1
+#: templates/emails/payment_received.txt:1
+#: templates/emails/payment_reminder.txt:1
+#: templates/emails/quote_acceptance_code.txt:1
+#: templates/emails/quote_accepted_contact.txt:1
+#: templates/emails/register_existing_account.html:7
+#: templates/emails/reset_password.html:7
+#: templates/emails/role_application_approved.txt:1
+#: templates/emails/role_application_rejected.txt:1
+#: templates/emails/setup_password.html:7
+msgid "Здравствуйте!"
+msgstr "Hello!"
+
+#: templates/emails/act_awaiting_acceptance.txt:3
+#, python-format
+msgid "Акт %(act_number)s"
+msgstr "Act %(act_number)s"
+
+#: templates/emails/act_awaiting_acceptance.txt:3
+#, python-format
+msgid "на сумму %(total)s ожидает вашего решения."
+msgstr "for %(total)s is awaiting your decision."
+
+#: templates/emails/act_awaiting_acceptance.txt:5
+msgid ""
+"Акт можно принять или вернуть с указанием причины — тогда поставщик исправит "
+"его и выставит заново."
+msgstr "You can accept the act or return it with a reason — the supplier will then correct it and issue it again."
+
+#: templates/emails/act_awaiting_acceptance.txt:7
+msgid "Открыть сделку:"
+msgstr "Open the deal:"
+
+#: templates/emails/base.html:24
+msgid "Уведомление платформы"
+msgstr "Platform notification"
+
+#: templates/emails/base.html:37
+msgid ""
+"Это автоматическое письмо от платформы RailTech B2B — отвечать на него не "
+"нужно."
+msgstr "This is an automated email from the RailTech B2B platform — no reply is needed."
+
+#: templates/emails/base.html:40
+msgid "Возникли вопросы? Напишите на"
+msgstr "Questions? Write to"
+
+#: templates/emails/base.html:46
+msgid "Ташкент, Узбекистан"
+msgstr "Tashkent, Uzbekistan"
+
+#: templates/emails/generated_document.html:3
+#: templates/emails/generated_document_subject.txt:1
+#, python-format
+msgid "Вам направлен документ %(document_number)s"
+msgstr "Document %(document_number)s has been sent to you"
+
+#: templates/emails/generated_document.html:10
+#, python-format
+msgid "Компания <strong>%(company_name)s</strong>"
+msgstr "Company <strong>%(company_name)s</strong>"
+
+#: templates/emails/generated_document.html:11
+#, python-format
+msgid ""
+"направила вам документ <strong>«%(document_title)s»</strong> "
+"(%(document_number)s)."
+msgstr "has sent you the document <strong>“%(document_title)s”</strong> (%(document_number)s)."
+
+#: templates/emails/generated_document.html:13
+msgid "PDF документа приложен к этому письму."
+msgstr "The document PDF is attached to this email."
+
+#: templates/emails/generated_document.html:17
+msgid "Открыть документ"
+msgstr "Open the document"
+
+#: templates/emails/generated_document.txt:3
+#, python-format
+msgid "Компания %(company_name)s"
+msgstr "Company %(company_name)s"
+
+#: templates/emails/generated_document.txt:3
+#, python-format
+msgid "направила вам документ «%(document_title)s» (%(document_number)s)."
+msgstr "has sent you the document “%(document_title)s” (%(document_number)s)."
+
+#: templates/emails/generated_document.txt:5
+msgid "Открыть и скачать документ можно по ссылке (без регистрации):"
+msgstr "You can open and download the document via this link (no registration required):"
+
+#: templates/emails/generated_document.txt:8
+#: templates/emails/quote_acceptance_code.txt:11
+#: templates/emails/quote_accepted_contact.txt:9
+#: templates/emails/quote_sent.txt:13
+msgid "С уважением,"
+msgstr "Best regards,"
+
+#: templates/emails/generated_document.txt:9
+#: templates/emails/quote_acceptance_code.txt:12
+#: templates/emails/quote_accepted_contact.txt:10
+#: templates/emails/quote_sent.txt:14
+msgid "команда RailTech"
+msgstr "the RailTech team"
+
+#: templates/emails/invite_client.html:3
+#: templates/emails/invite_client_subject.txt:1
+#, python-format
+msgid "%(company_name)s приглашает вас на RailTech B2B"
+msgstr "%(company_name)s invites you to RailTech B2B"
+
+#: templates/emails/invite_client.html:4
+msgid "Приглашение к регистрации"
+msgstr "Invitation to register"
+
+#: templates/emails/invite_client.html:7
+msgid "Зарегистрируйтесь на RailTech B2B"
+msgstr "Register on RailTech B2B"
+
+#: templates/emails/invite_client.html:10
+#, python-format
+msgid ""
+"%(contact_name)s, компания\n"
+"    <strong>%(company_name)s</strong> приглашает вас зарегистрироваться на "
+"платформе RailTech B2B,\n"
+"    чтобы получать коммерческие предложения и документы напрямую. "
+"Регистрация подтянет уже\n"
+"    накопленную историю взаимодействий под ваш аккаунт — без создания дубля."
+msgstr "%(contact_name)s, the company\n    <strong>%(company_name)s</strong> invites you to register on the RailTech B2B platform\n    so you can receive quotes and documents directly. Registering will bring the history of your\n    past interactions into your account — without creating a duplicate."
+
+#: templates/emails/invite_client.html:13
+#, python-format
+msgid ""
+"Компания\n"
+"    <strong>%(company_name)s</strong> приглашает вас зарегистрироваться на "
+"платформе RailTech B2B,\n"
+"    чтобы получать коммерческие предложения и документы напрямую. "
+"Регистрация подтянет уже\n"
+"    накопленную историю взаимодействий под ваш аккаунт — без создания дубля."
+msgstr "The company\n    <strong>%(company_name)s</strong> invites you to register on the RailTech B2B platform\n    so you can receive quotes and documents directly. Registering will bring the history of your\n    past interactions into your account — without creating a duplicate."
+
+#: templates/emails/invite_client.html:20
+msgid "Зарегистрироваться"
+msgstr "Register"
+
+#: templates/emails/invite_client.html:28
+msgid "Не ожидали приглашения? Проигнорируйте письмо."
+msgstr "Not expecting an invitation? Just ignore this email."
+
+#: templates/emails/invite_client.txt:1
+#, python-format
+msgid "Здравствуйте, %(contact_name)s!"
+msgstr "Hello, %(contact_name)s!"
+
+#: templates/emails/invite_client.txt:3
+#, python-format
+msgid ""
+"Компания «%(company_name)s» приглашает вас зарегистрироваться на платформе\n"
+"RailTech B2B. Регистрация подтянет уже накопленную историю\n"
+"взаимодействий — заявки, КП и переписку — под ваш аккаунт."
+msgstr "The company “%(company_name)s” invites you to register on the\nRailTech B2B platform. Registering will bring your accumulated history of\ninteractions — requests, quotes and correspondence — into your account."
+
+#: templates/emails/invite_client.txt:7
+msgid "Чтобы зарегистрироваться, перейдите по ссылке:"
+msgstr "To register, follow this link:"
+
+#: templates/emails/invite_client.txt:11 templates/emails/invite_member.txt:8
+msgid "Если вы не ожидали это приглашение, просто проигнорируйте письмо."
+msgstr "If you were not expecting this invitation, simply ignore this email."
+
+#: templates/emails/invite_client.txt:13 templates/emails/invite_member.txt:10
+#: templates/emails/reset_password.txt:10
+#: templates/emails/setup_password.txt:10
+msgid "Команда RailTech B2B"
+msgstr "The RailTech B2B team"
+
+#: templates/emails/invite_member.html:3
+#, python-format
+msgid "Приглашение в команду %(company_name)s"
+msgstr "Invitation to join the %(company_name)s team"
+
+#: templates/emails/invite_member.html:4
+msgid "Приглашение в команду"
+msgstr "Team invitation"
+
+#: templates/emails/invite_member.html:7
+msgid "Вас пригласили в RailTech B2B"
+msgstr "You have been invited to RailTech B2B"
+
+#: templates/emails/invite_member.html:10
+#, python-format
+msgid ""
+"Компания <strong>%(company_name)s</strong> приглашает вас присоединиться к "
+"команде\n"
+"    на платформе RailTech B2B. Чтобы принять приглашение, установите пароль "
+"для своего аккаунта."
+msgstr "The company <strong>%(company_name)s</strong> invites you to join its team\n    on the RailTech B2B platform. To accept the invitation, set a password for your account."
+
+#: templates/emails/invite_member.html:15
+msgid "Принять приглашение"
+msgstr "Accept the invitation"
+
+#: templates/emails/invite_member.html:23
+msgid "Не ожидали приглашения от этой компании? Проигнорируйте письмо."
+msgstr "Not expecting an invitation from this company? Just ignore this email."
+
+#: templates/emails/invite_member.txt:3
+#, python-format
+msgid ""
+"Вас пригласили в команду компании «%(company_name)s» на платформе RailTech "
+"B2B.\n"
+"Чтобы принять приглашение, установите пароль по ссылке:"
+msgstr "You have been invited to join the team of “%(company_name)s” on the RailTech B2B platform.\nTo accept the invitation, set your password using the link below:"
+
+#: templates/emails/invite_member_subject.txt:1
+#, python-format
+msgid "Приглашение в команду %(company_name)s на RailTech B2B"
+msgstr "Invitation to the %(company_name)s team on RailTech B2B"
+
+#: templates/emails/invoice_issued.html:3
+#: templates/emails/invoice_issued_subject.txt:1
+#, python-format
+msgid "Счёт %(invoice_number)s на оплату"
+msgstr "Invoice %(invoice_number)s for payment"
+
+#: templates/emails/invoice_issued.html:3
+#: templates/emails/invoice_issued_subject.txt:1
+#: templates/emails/quote_sent.html:3 templates/emails/quote_sent_subject.txt:1
+#, python-format
+msgid "от %(seller_name)s"
+msgstr "from %(seller_name)s"
+
+#: templates/emails/invoice_issued.html:4
+msgid "Счёт к оплате"
+msgstr "Invoice for payment"
+
+#: templates/emails/invoice_issued.html:7
+msgid "Вам выставлен счёт на оплату"
+msgstr "An invoice has been issued to you"
+
+#: templates/emails/invoice_issued.html:10
+#, python-format
+msgid "Компания <strong>%(seller_name)s</strong> выставила"
+msgstr "Company <strong>%(seller_name)s</strong> has issued"
+
+#: templates/emails/invoice_issued.html:10
+#: templates/emails/invoice_issued.txt:3
+msgid "Выставлен"
+msgstr "Issued"
+
+#: templates/emails/invoice_issued.html:11
+#, python-format
+msgid "счёт <strong>%(invoice_number)s</strong>"
+msgstr "invoice <strong>%(invoice_number)s</strong>"
+
+#: templates/emails/invoice_issued.html:12
+#, python-format
+msgid "на сумму <strong>%(total)s</strong>."
+msgstr "for <strong>%(total)s</strong>."
+
+#: templates/emails/invoice_issued.html:15
+#, python-format
+msgid "Срок оплаты — до <strong>%(due_date)s</strong>."
+msgstr "Payment is due by <strong>%(due_date)s</strong>."
+
+#: templates/emails/invoice_issued.html:19
+#: templates/emails/payment_received.html:19
+#: templates/emails/payment_reminder.html:20
+msgid "Открыть счёт"
+msgstr "Open the invoice"
+
+#: templates/emails/invoice_issued.html:27
+msgid "Счёт и его PDF доступны в вашем кабинете."
+msgstr "The invoice and its PDF are available in your account."
+
+#: templates/emails/invoice_issued.txt:3
+#, python-format
+msgid "Компания «%(seller_name)s» выставила"
+msgstr "Company “%(seller_name)s” has issued"
+
+#: templates/emails/invoice_issued.txt:3
+#, python-format
+msgid "счёт %(invoice_number)s"
+msgstr "invoice %(invoice_number)s"
+
+#: templates/emails/invoice_issued.txt:3
+#, python-format
+msgid "на сумму %(total)s."
+msgstr "for %(total)s."
+
+#: templates/emails/invoice_issued.txt:5
+#, python-format
+msgid "Срок оплаты — до %(due_date)s."
+msgstr "Payment is due by %(due_date)s."
+
+#: templates/emails/invoice_issued.txt:7
+#: templates/emails/payment_received.txt:7
+#: templates/emails/payment_reminder.txt:9
+msgid "Открыть счёт:"
+msgstr "Open the invoice:"
+
+#: templates/emails/kyc_verified.html:3
+msgid "Контракт активирован"
+msgstr "Contract activated"
+
+#: templates/emails/kyc_verified.html:3
+msgid "KYC подтверждён"
+msgstr "KYC verified"
+
+#: templates/emails/kyc_verified.html:4
+msgid "Верификация"
+msgstr "Verification"
+
+#: templates/emails/kyc_verified.html:8
+#, python-format
+msgid "Контракт для %(company_name)s активирован"
+msgstr "Contract for %(company_name)s activated"
+
+#: templates/emails/kyc_verified.html:10
+#, python-format
+msgid "KYC компании %(company_name)s подтверждён"
+msgstr "KYC for %(company_name)s has been verified"
+
+#: templates/emails/kyc_verified.html:16
+msgid ""
+"Контракт между вашей компанией и RailTech активирован.\n"
+"      Все премиум-функции платформы открыты для команды."
+msgstr "The contract between your company and RailTech is now active.\n      All premium platform features are open to your team."
+
+#: templates/emails/kyc_verified.html:21
+#, python-format
+msgid ""
+"KYC-уровень <strong>L2</strong> для компании «%(company_name)s»\n"
+"      (ИНН %(company_inn)s) успешно подтверждён.\n"
+"      Теперь вы можете работать в полном объёме на платформе."
+msgstr "KYC level <strong>L2</strong> for “%(company_name)s”\n      (TIN %(company_inn)s) has been confirmed.\n      You can now use the platform to its full extent."
+
+#: templates/emails/kyc_verified.html:29 templates/emails/kyc_verified.txt:5
+#: templates/emails/role_application_approved.html:20
+#: templates/emails/role_application_approved.txt:6
+msgid "Открыть кабинет"
+msgstr "Open your account"
+
+#: templates/emails/kyc_verified.html:34
+msgid "Уведомление также доступно в разделе «Колокольчик» в кабинете."
+msgstr "The notification is also available in the “Bell” section of your account."
+
+#: templates/emails/kyc_verified.txt:3
+#, python-format
+msgid ""
+"Контракт для компании «%(company_name)s» активирован. Все премиум-функции "
+"RailTech B2B теперь доступны вашей команде."
+msgstr "The contract for “%(company_name)s” has been activated. All RailTech B2B premium features are now available to your team."
+
+#: templates/emails/kyc_verified.txt:3
+#, python-format
+msgid ""
+"KYC уровень L2 для компании «%(company_name)s» (ИНН %(company_inn)s) успешно "
+"подтверждён. Теперь вы можете работать в полном объёме на платформе."
+msgstr "KYC level L2 for company “%(company_name)s” (TIN %(company_inn)s) has been successfully verified. You can now work on the platform without restrictions."
+
+#: templates/emails/kyc_verified.txt:7
+#: templates/emails/register_existing_account.txt:15
+#: templates/emails/role_application_approved.txt:8
+#: templates/emails/role_application_rejected.txt:11
+msgid "— Команда RailTech B2B"
+msgstr "— The RailTech B2B team"
+
+#: templates/emails/kyc_verified_subject.txt:1
+#, python-format
+msgid "RailTech: контракт для %(company_name)s активирован"
+msgstr "RailTech: contract for %(company_name)s activated"
+
+#: templates/emails/kyc_verified_subject.txt:1
+#, python-format
+msgid "RailTech: KYC компании %(company_name)s подтверждён"
+msgstr "RailTech: KYC for %(company_name)s has been verified"
+
+#: templates/emails/new_rfq_seller.html:3
+#: templates/emails/new_rfq_seller.html:4
+#: templates/emails/new_rfq_seller_subject.txt:1
+msgid "Новая заявка"
+msgstr "New request"
+
+#: templates/emails/new_rfq_seller.html:3
+#: templates/emails/new_rfq_seller_subject.txt:1
+#, python-format
+msgid "от %(buyer_name)s"
+msgstr "from %(buyer_name)s"
+
+#: templates/emails/new_rfq_seller.html:3
+#: templates/emails/new_rfq_seller_subject.txt:1
+msgid "— ожидает КП"
+msgstr "— awaiting a quote"
+
+#: templates/emails/new_rfq_seller.html:7
+msgid "Вам поступила новая заявка"
+msgstr "You have received a new request"
+
+#: templates/emails/new_rfq_seller.html:10
+#, python-format
+msgid "Компания <strong>%(buyer_name)s</strong> направила"
+msgstr "Company <strong>%(buyer_name)s</strong> has sent"
+
+#: templates/emails/new_rfq_seller.html:10
+#: templates/emails/new_rfq_seller.txt:3
+msgid "Поступила"
+msgstr "You have received a"
+
+#: templates/emails/new_rfq_seller.html:11
+#: templates/emails/new_rfq_seller.txt:3
+msgid "заявку"
+msgstr "request"
+
+#: templates/emails/new_rfq_seller.html:11
+#: templates/emails/new_rfq_seller.txt:3
+#, python-format
+msgid "«%(deal_title)s»"
+msgstr "“%(deal_title)s”"
+
+#: templates/emails/new_rfq_seller.html:11
+#: templates/emails/new_rfq_seller.txt:3
+msgid "— она ожидает вашего коммерческого предложения."
+msgstr "— it is awaiting your quote."
+
+#: templates/emails/new_rfq_seller.html:14
+#: templates/emails/new_rfq_seller.txt:5
+msgid "Заявка назначена лично вам."
+msgstr "This request has been assigned to you personally."
+
+#: templates/emails/new_rfq_seller.html:18
+msgid "Открыть заявку"
+msgstr "Open the request"
+
+#: templates/emails/new_rfq_seller.html:26
+#: templates/emails/new_rfq_seller.txt:11
+msgid "Быстрый ответ заметно повышает шанс выиграть сделку."
+msgstr "A quick response noticeably increases your chance of winning the deal."
+
+#: templates/emails/new_rfq_seller.txt:3
+#, python-format
+msgid "Компания «%(buyer_name)s» направила"
+msgstr "Company “%(buyer_name)s” has sent"
+
+#: templates/emails/new_rfq_seller.txt:7
+msgid "Открыть заявку:"
+msgstr "Open the request:"
+
+#: templates/emails/payment_received.html:3
+#: templates/emails/payment_received_subject.txt:1
+#, python-format
+msgid "Оплата по счёту %(invoice_number)s получена"
+msgstr "Payment for invoice %(invoice_number)s received"
+
+#: templates/emails/payment_received.html:4
+msgid "Оплата получена"
+msgstr "Payment received"
+
+#: templates/emails/payment_received.html:7
+msgid "По вашему счёту поступила оплата"
+msgstr "A payment has been received for your invoice"
+
+#: templates/emails/payment_received.html:10
+#, python-format
+msgid "По счёту <strong>%(invoice_number)s</strong>"
+msgstr "For invoice <strong>%(invoice_number)s</strong>"
+
+#: templates/emails/payment_received.html:10
+#: templates/emails/payment_received.txt:3
+#, python-format
+msgid "(сделка «%(deal_title)s»)"
+msgstr "(deal “%(deal_title)s”)"
+
+#: templates/emails/payment_received.html:11
+#, python-format
+msgid "от компании <strong>%(buyer_name)s</strong>"
+msgstr "from <strong>%(buyer_name)s</strong>"
+
+#: templates/emails/payment_received.html:12
+#, python-format
+msgid "записана оплата на сумму <strong>%(amount)s</strong>."
+msgstr "a payment of <strong>%(amount)s</strong> has been recorded."
+
+#: templates/emails/payment_received.html:15
+#: templates/emails/payment_received.txt:5
+msgid "Счёт оплачен полностью."
+msgstr "The invoice is paid in full."
+
+#: templates/emails/payment_received.html:15
+#: templates/emails/payment_received.txt:5
+#, python-format
+msgid "Оплачено %(paid_total)s из %(total)s."
+msgstr "Paid %(paid_total)s of %(total)s."
+
+#: templates/emails/payment_received.html:27
+msgid "Когда поставка состоится, можно будет выставить акт."
+msgstr "Once delivery takes place, an act can be issued."
+
+#: templates/emails/payment_received.txt:3
+#, python-format
+msgid "По счёту %(invoice_number)s"
+msgstr "For invoice %(invoice_number)s"
+
+#: templates/emails/payment_received.txt:3
+#, python-format
+msgid "от компании «%(buyer_name)s»"
+msgstr "from “%(buyer_name)s”"
+
+#: templates/emails/payment_received.txt:3
+#, python-format
+msgid "записана оплата на сумму %(amount)s."
+msgstr "a payment of %(amount)s has been recorded."
+
+#: templates/emails/payment_reminder.html:3
+#: templates/emails/payment_reminder_subject.txt:1
+#, python-format
+msgid "Напоминание: счёт %(invoice_number)s не оплачен"
+msgstr "Reminder: invoice %(invoice_number)s is unpaid"
+
+#: templates/emails/payment_reminder.html:4
+msgid "Напоминание об оплате"
+msgstr "Payment reminder"
+
+#: templates/emails/payment_reminder.html:7
+msgid "Срок оплаты по счёту прошёл"
+msgstr "The invoice payment due date has passed"
+
+#: templates/emails/payment_reminder.html:10
+#, python-format
+msgid "Счёт <strong>%(invoice_number)s</strong>"
+msgstr "Invoice <strong>%(invoice_number)s</strong>"
+
+#: templates/emails/payment_reminder.html:11
+#, python-format
+msgid "от компании <strong>%(seller_name)s</strong>"
+msgstr "from <strong>%(seller_name)s</strong>"
+
+#: templates/emails/payment_reminder.html:12
+#: templates/emails/payment_reminder.txt:3
+msgid "остаётся неоплаченным"
+msgstr "remains unpaid"
+
+#: templates/emails/payment_reminder.html:12
+#, python-format
+msgid ": срок был до <strong>%(due_date)s</strong>"
+msgstr ": it was due by <strong>%(due_date)s</strong>"
+
+#: templates/emails/payment_reminder.html:14
+#, python-format
+msgid "К оплате: <strong>%(balance_due)s</strong> из %(total)s."
+msgstr "Amount due: <strong>%(balance_due)s</strong> of %(total)s."
+
+#: templates/emails/payment_reminder.html:16
+#: templates/emails/payment_reminder.txt:7
+msgid ""
+"Если оплата уже отправлена, просто отметьте её в системе — напоминание "
+"больше не придёт."
+msgstr "If the payment has already been sent, just record it in the system — you will not get this reminder again."
+
+#: templates/emails/payment_reminder.html:28
+msgid "Это письмо отправляется один раз по каждому счёту."
+msgstr "This email is sent only once per invoice."
+
+#: templates/emails/payment_reminder.txt:3
+#, python-format
+msgid "Счёт %(invoice_number)s"
+msgstr "Invoice %(invoice_number)s"
+
+#: templates/emails/payment_reminder.txt:3
+#, python-format
+msgid "от компании «%(seller_name)s»"
+msgstr "from “%(seller_name)s”"
+
+#: templates/emails/payment_reminder.txt:3
+#, python-format
+msgid ": срок был до %(due_date)s"
+msgstr ": it was due by %(due_date)s"
+
+#: templates/emails/payment_reminder.txt:5
+#, python-format
+msgid "К оплате: %(balance_due)s из %(total)s."
+msgstr "Amount due: %(balance_due)s of %(total)s."
+
+#: templates/emails/quote_acceptance_code.html:3
+#, python-format
+msgid "Код для принятия КП %(quote_number)s"
+msgstr "Code to accept quote %(quote_number)s"
+
+#: templates/emails/quote_acceptance_code.html:4
+msgid "Код подтверждения"
+msgstr "Verification code"
+
+#: templates/emails/quote_acceptance_code.html:6
+msgid "Код для принятия предложения"
+msgstr "Code to accept the quote"
+
+#: templates/emails/quote_acceptance_code.html:8
+#, python-format
+msgid ""
+"Вы запросили код для принятия коммерческого предложения "
+"<strong>%(quote_number)s</strong>\n"
+"    от %(seller_name)s."
+msgstr "You requested a code to accept quote <strong>%(quote_number)s</strong>\n    from %(seller_name)s."
+
+#: templates/emails/quote_acceptance_code.html:17
+#, python-format
+msgid ""
+"Код действует <strong>%(expires_minutes)s минут</strong>. Введите его на "
+"странице предложения, чтобы принять его."
+msgstr "The code is valid for <strong>%(expires_minutes)s minutes</strong>. Enter it on the quote page to accept the quote."
+
+#: templates/emails/quote_acceptance_code.html:20
+#: templates/emails/quote_acceptance_code.txt:9
+msgid "Если вы не запрашивали этот код — просто игнорируйте это письмо."
+msgstr "If you did not request this code, simply ignore this email."
+
+#: templates/emails/quote_acceptance_code.txt:3
+#, python-format
+msgid ""
+"Вы запросили код для принятия коммерческого предложения %(quote_number)s от "
+"%(seller_name)s."
+msgstr "You requested a code to accept quote %(quote_number)s from %(seller_name)s."
+
+#: templates/emails/quote_acceptance_code.txt:5
+msgid "Ваш код:"
+msgstr "Your code:"
+
+#: templates/emails/quote_acceptance_code.txt:7
+#, python-format
+msgid ""
+"Код действует %(expires_minutes)s минут. Введите его на странице "
+"предложения, чтобы принять его."
+msgstr "The code is valid for %(expires_minutes)s minutes. Enter it on the quote page to accept the quote."
+
+#: templates/emails/quote_acceptance_code_subject.txt:1
+#, python-format
+msgid "Код для принятия КП %(quote_number)s: %(code)s"
+msgstr "Code to accept quote %(quote_number)s: %(code)s"
+
+#: templates/emails/quote_accepted_contact.html:3
+#, python-format
+msgid "Предложение %(quote_number)s принято"
+msgstr "Quote %(quote_number)s accepted"
+
+#: templates/emails/quote_accepted_contact.html:4
+msgid "Предложение принято"
+msgstr "Quote accepted"
+
+#: templates/emails/quote_accepted_contact.html:6
+msgid "Спасибо! Предложение принято"
+msgstr "Thank you! The quote has been accepted"
+
+#: templates/emails/quote_accepted_contact.html:8
+#, python-format
+msgid ""
+"Вы приняли коммерческое предложение <strong>%(quote_number)s</strong> от "
+"%(seller_name)s."
+msgstr "You have accepted quote <strong>%(quote_number)s</strong> from %(seller_name)s."
+
+#: templates/emails/quote_accepted_contact.html:11
+#, python-format
+msgid ""
+"Следующий шаг: договор <strong>%(contract_number)s</strong> готовится к "
+"подписанию."
+msgstr "Next step: contract <strong>%(contract_number)s</strong> is being prepared for signing."
+
+#: templates/emails/quote_accepted_contact.html:12
+#: templates/emails/quote_accepted_contact.txt:5
+msgid "С вами свяжется менеджер поставщика для оформления."
+msgstr "A manager from the supplier will contact you to complete the paperwork."
+
+#: templates/emails/quote_accepted_contact.html:15
+msgid ""
+"Принятие предложения — это коммерческий акцепт оферты, а не электронная "
+"подпись."
+msgstr "Accepting a quote is a commercial acceptance of the offer, not an electronic signature."
+
+#: templates/emails/quote_accepted_contact.html:16
+msgid "Договор подписывается отдельно."
+msgstr "The contract is signed separately."
+
+#: templates/emails/quote_accepted_contact.txt:3
+#, python-format
+msgid ""
+"Вы приняли коммерческое предложение %(quote_number)s от %(seller_name)s."
+msgstr "You have accepted quote %(quote_number)s from %(seller_name)s."
+
+#: templates/emails/quote_accepted_contact.txt:3
+msgid "Спасибо!"
+msgstr "Thank you!"
+
+#: templates/emails/quote_accepted_contact.txt:5
+#, python-format
+msgid "Следующий шаг: договор %(contract_number)s готовится к подписанию."
+msgstr "Next step: contract %(contract_number)s is being prepared for signing."
+
+#: templates/emails/quote_accepted_contact.txt:7
+msgid ""
+"Обратите внимание: принятие предложения — это коммерческий акцепт оферты, а "
+"не электронная подпись. Договор подписывается отдельно."
+msgstr "Please note: accepting a quote is a commercial acceptance of the offer, not an electronic signature. The contract is signed separately."
+
+#: templates/emails/quote_accepted_contact_subject.txt:1
+#, python-format
+msgid "Предложение %(quote_number)s принято — договор готовится к подписанию"
+msgstr "Quote %(quote_number)s accepted — the contract is being prepared for signing"
+
+#: templates/emails/quote_sent.html:3
+#, python-format
+msgid "№ %(quote_number)s"
+msgstr "No. %(quote_number)s"
+
+#: templates/emails/quote_sent.html:7 templates/emails/quote_sent.txt:1
+msgid "Здравствуйте"
+msgstr "Hello"
+
+#: templates/emails/quote_sent.html:10
+#, python-format
+msgid "Компания <strong>%(seller_name)s</strong> подготовила"
+msgstr "Company <strong>%(seller_name)s</strong> has prepared"
+
+#: templates/emails/quote_sent.html:10 templates/emails/quote_sent.txt:3
+msgid "Для вас подготовлено"
+msgstr "Prepared for you"
+
+#: templates/emails/quote_sent.html:10
+#, python-format
+msgid ""
+"коммерческое предложение\n"
+"    <strong>№ %(quote_number)s</strong> (версия %(quote_version)s)."
+msgstr "quote\n    <strong>No. %(quote_number)s</strong> (version %(quote_version)s)."
+
+#: templates/emails/quote_sent.html:14 templates/emails/quote_sent.txt:5
+msgid "Сумма с НДС:"
+msgstr "Total incl. VAT:"
+
+#: templates/emails/quote_sent.html:15 templates/emails/quote_sent.txt:6
+msgid "Действительно до:"
+msgstr "Valid until:"
+
+#: templates/emails/quote_sent.html:17 templates/emails/quote_sent.txt:8
+msgid "PDF коммерческого предложения приложен к этому письму."
+msgstr "The quote PDF is attached to this email."
+
+#: templates/emails/quote_sent.html:21
+msgid "Открыть предложение онлайн"
+msgstr "Open the quote online"
+
+#: templates/emails/quote_sent.txt:3
+#, python-format
+msgid "Компания %(seller_name)s подготовила"
+msgstr "Company %(seller_name)s has prepared"
+
+#: templates/emails/quote_sent.txt:3
+#, python-format
+msgid "коммерческое предложение № %(quote_number)s (версия %(quote_version)s)."
+msgstr "quote No. %(quote_number)s (version %(quote_version)s)."
+
+#: templates/emails/quote_sent.txt:10
+msgid ""
+"Открыть предложение онлайн (без регистрации) — там же его можно принять:"
+msgstr "Open the quote online (no registration required) — you can accept it right there:"
+
+#: templates/emails/quote_sent_subject.txt:1
+#, python-format
+msgid "№ %(quote_number)s (в.%(quote_version)s)"
+msgstr "No. %(quote_number)s (v.%(quote_version)s)"
+
+#: templates/emails/register_existing_account.html:3
+msgid "Аккаунт уже существует — RailTech B2B"
+msgstr "Account already exists — RailTech B2B"
+
+#: templates/emails/register_existing_account.html:4
+#: templates/emails/reset_password.html:4
+msgid "Безопасность аккаунта"
+msgstr "Account security"
+
+#: templates/emails/register_existing_account.html:7
+#: templates/emails/reset_password.html:7
+#: templates/emails/setup_password.html:7
+#, python-format
+msgid "Здравствуйте, %(first_name)s!"
+msgstr "Hello, %(first_name)s!"
+
+#: templates/emails/register_existing_account.html:10
+msgid ""
+"На платформе <strong>RailTech B2B</strong> кто-то (возможно, вы) попытался\n"
+"    зарегистрировать аккаунт с этим email. Аккаунт с этим адресом уже "
+"существует,\n"
+"    поэтому новый создан не был."
+msgstr "Someone (possibly you) tried to register an account with this email on\n    <strong>RailTech B2B</strong>. An account with this address already exists,\n    so no new one was created."
+
+#: templates/emails/register_existing_account.html:15
+#: templates/emails/register_existing_account.txt:5
+msgid "Если это были вы — просто войдите в систему:"
+msgstr "If it was you, simply sign in:"
+
+#: templates/emails/register_existing_account.html:19
+msgid "Войти в систему"
+msgstr "Sign in"
+
+#: templates/emails/register_existing_account.html:23
+#: templates/emails/register_existing_account.txt:9
+msgid "Забыли пароль? Восстановите его по ссылке:"
+msgstr "Forgot your password? Reset it via this link:"
+
+#: templates/emails/register_existing_account.html:27
+msgid ""
+"Не пытались зарегистрироваться? Никаких действий не требуется — аккаунт не "
+"был изменён."
+msgstr "Did not try to register? No action is required — your account has not been changed."
+
+#: templates/emails/register_existing_account.txt:1
+#: templates/emails/reset_password.txt:1 templates/emails/setup_password.txt:1
+#, python-format
+msgid "Здравствуйте, %(name)s!"
+msgstr "Hello, %(name)s!"
+
+#: templates/emails/register_existing_account.txt:3
+msgid ""
+"На платформе RailTech B2B кто-то (возможно, вы) попытался зарегистрировать "
+"аккаунт с этим email. Аккаунт с этим адресом уже существует, поэтому новый "
+"создан не был."
+msgstr "Someone (possibly you) tried to register an account with this email on RailTech B2B. An account with this address already exists, so a new one was not created."
+
+#: templates/emails/register_existing_account.txt:13
+msgid ""
+"Если вы не пытались зарегистрироваться, никаких действий не требуется — "
+"аккаунт не был изменён."
+msgstr "If you did not try to register, no action is required — your account has not been changed."
+
+#: templates/emails/register_existing_account_subject.txt:1
+msgid "RailTech B2B: аккаунт с этим email уже существует"
+msgstr "RailTech B2B: an account with this email already exists"
+
+#: templates/emails/reset_password.html:3
+msgid "Сброс пароля — RailTech B2B"
+msgstr "Password reset — RailTech B2B"
+
+#: templates/emails/reset_password.html:10
+msgid ""
+"Вы запросили сброс пароля на платформе <strong>RailTech B2B</strong>.\n"
+"    Задайте новый пароль по ссылке ниже — она действительна в течение суток."
+msgstr "You requested a password reset on <strong>RailTech B2B</strong>.\n    Set a new password using the link below — it is valid for 24 hours."
+
+#: templates/emails/reset_password.html:15
+msgid "Задать новый пароль"
+msgstr "Set a new password"
+
+#: templates/emails/reset_password.html:19
+#: templates/emails/setup_password.html:19
+msgid "Если кнопка не работает, скопируйте ссылку в адресную строку браузера:"
+msgstr "If the button does not work, copy the link into your browser’s address bar:"
+
+#: templates/emails/reset_password.html:23
+msgid ""
+"Не запрашивали сброс пароля? Проигнорируйте это письмо — аккаунт не будет "
+"изменён."
+msgstr "Did not request a password reset? Ignore this email — your account will not be changed."
+
+#: templates/emails/reset_password.txt:3
+msgid ""
+"Вы запросили сброс пароля для аккаунта на RailTech B2B.\n"
+"Чтобы задать новый пароль, перейдите по ссылке:"
+msgstr "You requested a password reset for your RailTech B2B account.\nTo set a new password, follow the link:"
+
+#: templates/emails/reset_password.txt:8
+msgid ""
+"Ссылка действительна в течение суток. Если вы не запрашивали сброс пароля, "
+"просто проигнорируйте это письмо — аккаунт не будет изменён."
+msgstr "The link is valid for 24 hours. If you did not request a password reset, simply ignore this email — your account will not be changed."
+
+#: templates/emails/reset_password_subject.txt:1
+msgid "RailTech B2B: сброс пароля"
+msgstr "RailTech B2B: password reset"
+
+#: templates/emails/role_application_approved.html:3
+msgid "Заявка на роль одобрена"
+msgstr "Role application approved"
+
+#: templates/emails/role_application_approved.html:4
+#: templates/emails/role_application_approved.html:7
+msgid "Заявка одобрена"
+msgstr "Application approved"
+
+#: templates/emails/role_application_approved.html:10
+#, python-format
+msgid ""
+"Компания «<strong>%(company_name)s</strong>» получила роль\n"
+"    «<strong>%(requested_type_name)s</strong>» на платформе RailTech B2B."
+msgstr "“<strong>%(company_name)s</strong>” has been granted the\n    “<strong>%(requested_type_name)s</strong>” role on the RailTech B2B platform."
+
+#: templates/emails/role_application_approved.html:15
+#, python-format
+msgid ""
+"Активирован пробный период на %(days)s дней — вы можете сразу приступить к "
+"работе."
+msgstr "A %(days)s-day trial period has been activated — you can start working right away."
+
+#: templates/emails/role_application_approved.txt:3
+#, python-format
+msgid ""
+"Заявка компании «%(company_name)s» на роль «%(requested_type_name)s» "
+"одобрена."
+msgstr "The application from “%(company_name)s” for the “%(requested_type_name)s” role has been approved."
+
+#: templates/emails/role_application_approved.txt:4
+msgid ""
+"Для поставщиков и производителей активирован пробный период на 30 дней — вы "
+"можете сразу приступить к работе."
+msgstr "For suppliers and manufacturers a 30-day trial period has been activated — you can start working right away."
+
+#: templates/emails/role_application_approved_subject.txt:1
+#, python-format
+msgid "RailTech: заявка на роль «%(requested_type_name)s» одобрена"
+msgstr "RailTech: application for the “%(requested_type_name)s” role approved"
+
+#: templates/emails/role_application_rejected.html:3
+msgid "Заявка на роль отклонена"
+msgstr "Role application rejected"
+
+#: templates/emails/role_application_rejected.html:4
+#: templates/emails/role_application_rejected.html:7
+msgid "Заявка отклонена"
+msgstr "Application rejected"
+
+#: templates/emails/role_application_rejected.html:10
+#, python-format
+msgid ""
+"К сожалению, заявка компании «<strong>%(company_name)s</strong>» на роль\n"
+"    «<strong>%(requested_type_name)s</strong>» не была одобрена."
+msgstr "Unfortunately, the application from “<strong>%(company_name)s</strong>” for the\n    “<strong>%(requested_type_name)s</strong>” role was not approved."
+
+#: templates/emails/role_application_rejected.html:14
+#: templates/emails/role_application_rejected.txt:5
+msgid "Комментарий проверяющего:"
+msgstr "Reviewer's comment:"
+
+#: templates/emails/role_application_rejected.html:18
+msgid "Вы можете устранить замечания и подать заявку повторно из кабинета."
+msgstr "You can address the comments and submit the application again from your account."
+
+#: templates/emails/role_application_rejected.html:22
+msgid "Перейти в кабинет"
+msgstr "Go to your account"
+
+#: templates/emails/role_application_rejected.txt:3
+#, python-format
+msgid ""
+"К сожалению, заявка компании «%(company_name)s» на роль "
+"«%(requested_type_name)s» отклонена."
+msgstr "Unfortunately, the application from “%(company_name)s” for the “%(requested_type_name)s” role has been rejected."
+
+#: templates/emails/role_application_rejected.txt:8
+msgid "Вы можете устранить замечания и подать заявку повторно из кабинета:"
+msgstr "You can address the comments and submit the application again from your account:"
+
+#: templates/emails/role_application_rejected_subject.txt:1
+#, python-format
+msgid "RailTech: заявка на роль «%(requested_type_name)s» отклонена"
+msgstr "RailTech: application for the “%(requested_type_name)s” role rejected"
+
+#: templates/emails/setup_password.html:3
+#: templates/emails/setup_password_subject.txt:1
+msgid "Подтверждение регистрации в RailTech B2B"
+msgstr "Confirm your registration at RailTech B2B"
+
+#: templates/emails/setup_password.html:4
+msgid "Регистрация"
+msgstr "Registration"
+
+#: templates/emails/setup_password.html:10
+msgid ""
+"Вы создали аккаунт на платформе <strong>RailTech B2B</strong>.\n"
+"    Чтобы завершить регистрацию, установите пароль — это займёт меньше "
+"минуты."
+msgstr "You have created an account on <strong>RailTech B2B</strong>.\n    To finish signing up, set a password — it takes less than a minute."
+
+#: templates/emails/setup_password.html:15
+msgid "Установить пароль"
+msgstr "Set password"
+
+#: templates/emails/setup_password.html:23
+msgid ""
+"Не регистрировались на платформе? Проигнорируйте это письмо — никаких "
+"действий не требуется."
+msgstr "Did not sign up for the platform? Ignore this email — no action is required."
+
+#: templates/emails/setup_password.txt:3
+msgid ""
+"Вы создали аккаунт на платформе RailTech B2B.\n"
+"Чтобы завершить регистрацию и установить пароль, перейдите по ссылке:"
+msgstr "You have created an account on the RailTech B2B platform.\nTo finish signing up and set your password, follow the link:"
+
+#: templates/emails/setup_password.txt:8
+msgid ""
+"Если вы не регистрировались на платформе, просто проигнорируйте это письмо."
+msgstr "If you did not sign up for the platform, simply ignore this email."

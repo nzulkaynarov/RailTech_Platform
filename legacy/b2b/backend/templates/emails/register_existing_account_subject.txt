@@ -1,1 +1,1 @@
-RailTech B2B: аккаунт с этим email уже существует
+{% load i18n %}{% translate "RailTech B2B: аккаунт с этим email уже существует" %}

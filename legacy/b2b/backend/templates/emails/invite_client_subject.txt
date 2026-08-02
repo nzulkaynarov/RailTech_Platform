@@ -1,1 +1,1 @@
-{{ company_name }} приглашает вас на RailTech B2B
+{% load i18n %}{% blocktranslate %}{{ company_name }} приглашает вас на RailTech B2B{% endblocktranslate %}

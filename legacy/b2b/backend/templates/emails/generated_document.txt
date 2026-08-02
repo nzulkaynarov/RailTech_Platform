@@ -1,9 +1,9 @@
-Здравствуйте!
+{% load i18n %}{% translate "Здравствуйте!" %}
 
-{% if company_name %}Компания {{ company_name }}{% else %}Отправитель{% endif %} направила вам документ «{{ document_title }}» ({{ document_number }}).
+{% if company_name %}{% blocktranslate %}Компания {{ company_name }}{% endblocktranslate %}{% else %}{% translate "Отправитель" %}{% endif %} {% blocktranslate %}направила вам документ «{{ document_title }}» ({{ document_number }}).{% endblocktranslate %}
 {% if public_link %}
-Открыть и скачать документ можно по ссылке (без регистрации):
+{% translate "Открыть и скачать документ можно по ссылке (без регистрации):" %}
 {{ public_link }}
 {% endif %}
-С уважением,
-команда RailTech
+{% translate "С уважением," %}
+{% translate "команда RailTech" %}

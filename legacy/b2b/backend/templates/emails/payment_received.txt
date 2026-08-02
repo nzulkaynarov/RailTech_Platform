@@ -1,10 +1,10 @@
-Здравствуйте!
+{% load i18n %}{% translate "Здравствуйте!" %}
 
-По счёту {{ invoice_number }}{% if deal_title %} (сделка «{{ deal_title }}»){% endif %}{% if buyer_name %} от компании «{{ buyer_name }}»{% endif %} записана оплата на сумму {{ amount }}.
+{% blocktranslate %}По счёту {{ invoice_number }}{% endblocktranslate %}{% if deal_title %} {% blocktranslate %}(сделка «{{ deal_title }}»){% endblocktranslate %}{% endif %}{% if buyer_name %} {% blocktranslate %}от компании «{{ buyer_name }}»{% endblocktranslate %}{% endif %} {% blocktranslate %}записана оплата на сумму {{ amount }}.{% endblocktranslate %}
 
-{% if is_fully_paid %}Счёт оплачен полностью.{% else %}Оплачено {{ paid_total }} из {{ total }}.{% endif %}
+{% if is_fully_paid %}{% translate "Счёт оплачен полностью." %}{% else %}{% blocktranslate %}Оплачено {{ paid_total }} из {{ total }}.{% endblocktranslate %}{% endif %}
 
-Открыть счёт:
+{% translate "Открыть счёт:" %}
 
 {{ invoice_url }}
 

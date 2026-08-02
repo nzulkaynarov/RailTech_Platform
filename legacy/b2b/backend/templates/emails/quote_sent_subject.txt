@@ -1,1 +1,1 @@
-Коммерческое предложение{% if seller_name %} от {{ seller_name }}{% endif %} № {{ quote_number }} (в.{{ quote_version }})
+{% load i18n %}{% translate "Коммерческое предложение" %}{% if seller_name %} {% blocktranslate %}от {{ seller_name }}{% endblocktranslate %}{% endif %} {% blocktranslate %}№ {{ quote_number }} (в.{{ quote_version }}){% endblocktranslate %}

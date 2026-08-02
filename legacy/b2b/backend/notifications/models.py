@@ -225,9 +225,21 @@ class EmailTemplate(models.Model):
 
     key = models.SlugField(
         max_length=100,
-        unique=True,
+        db_index=True,
         verbose_name=_("Ключ"),
         help_text=_("Совпадает с именем файлового шаблона: 'setup_password', 'kyc_verified', 'quote_sent', …"),
+    )
+    # L2 (spec-bilingual-ru-en): у оверрайда появилось языковое измерение. Пустое значение =
+    # «на любом языке» — так ведут себя строки, заведённые до L2: они продолжают
+    # перекрывать файловый шаблон для всех получателей. Уникален не ключ, а ПАРА
+    # (ключ, язык), иначе английский оверрайд вытеснял бы русский.
+    language = models.CharField(
+        max_length=16,
+        blank=True,
+        default="",
+        db_index=True,
+        verbose_name=_("Язык"),
+        help_text=_("Код языка (ru, en). Пусто — шаблон применяется для всех языков."),
     )
     subject = models.CharField(
         max_length=255,
@@ -269,8 +281,12 @@ class EmailTemplate(models.Model):
     class Meta:
         verbose_name = _("Шаблон email")
         verbose_name_plural = _("Шаблоны email")
-        ordering = ["key"]
+        ordering = ["key", "language"]
+        constraints = [
+            models.UniqueConstraint(fields=["key", "language"], name="emailtemplate_key_language_unique"),
+        ]
 
     def __str__(self):
         state = "" if self.is_active else " (выкл.)"
-        return f"{self.key}{state}"
+        lang = f" [{self.language}]" if self.language else ""
+        return f"{self.key}{lang}{state}"

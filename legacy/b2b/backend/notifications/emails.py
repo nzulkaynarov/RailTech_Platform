@@ -33,6 +33,7 @@ import re
 from typing import Iterable, Optional
 
 from django.conf import settings
+from django.utils import translation
 from django.core.mail import EmailMultiAlternatives, get_connection
 from django.db import DatabaseError
 from django.template import Context, Template, TemplateDoesNotExist
@@ -91,7 +92,12 @@ def _db_template(template_name: str):
     try:
         from .models import EmailTemplate
 
-        return EmailTemplate.objects.filter(key=template_name, is_active=True).first()
+        # L2: сначала оверрайд ИМЕННО на языке письма, затем «на все языки» (пустой
+        # language — так выглядят строки, заведённые до L2). Порядок сортировки ставит
+        # языковой раньше всеязычного.
+        language = translation.get_language() or settings.LANGUAGE_CODE
+        rows = EmailTemplate.objects.filter(key=template_name, is_active=True, language__in=[language, ""])
+        return rows.order_by("-language").first()
     except DatabaseError:
         logger.exception("EmailTemplate lookup failed for key=%s — using file fallback", template_name)
         return None
@@ -153,12 +159,19 @@ def send_templated_email(
     bcc: Optional[Iterable[str]] = None,
     attachments: Optional[Iterable[tuple]] = None,
     fail_silently: bool = False,
+    language: Optional[str] = None,
 ) -> EmailLog:
     """Render a template bundle and send it through the named channel.
 
     Returns the EmailLog row. On transport failure:
       - fail_silently=False (default) → raises EmailDeliveryError AFTER logging.
       - fail_silently=True            → logs FAILED and returns normally.
+
+    L2 (spec-bilingual-ru-en): письмо рендерится на языке ПОЛУЧАТЕЛЯ — канон Odoo
+    (`partner.lang`) и Stripe (`preferred_locales`). Счёт выставляет продавец, а письмо
+    читает покупатель, поэтому язык того, кто нажал кнопку, здесь ни при чём. Порядок:
+    явный `language` (внешний адресат без учётной записи) → настройка `user` → язык
+    платформы.
     """
     recipients = list(to)
     if not recipients:
@@ -173,7 +186,14 @@ def send_templated_email(
     }
 
     cfg = _channel_config(channel)
-    subject, text_body, html_body = _render_bodies(template_name, context)
+    from core.i18n import resolve_user_language, supported_languages
+
+    requested = (language or "").strip().lower()
+    target_language = requested if requested in supported_languages() else resolve_user_language(user)
+    # Рендер (и только он) выполняется на языке адресата: активировать язык шире было бы
+    # неверно — вызывающий код продолжает работать в своём контексте.
+    with translation.override(target_language):
+        subject, text_body, html_body = _render_bodies(template_name, context)
 
     connection = get_connection(
         backend=cfg["backend"],

@@ -38,6 +38,8 @@ class EmailTemplateSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "key",
+            # L2: язык оверрайда; пусто = применяется ко всем языкам.
+            "language",
             "subject",
             "html_body",
             "text_body",

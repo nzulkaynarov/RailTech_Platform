@@ -1,1 +1,1 @@
-Оплата по счёту {{ invoice_number }} получена
+{% load i18n %}{% blocktranslate %}Оплата по счёту {{ invoice_number }} получена{% endblocktranslate %}

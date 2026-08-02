@@ -1,28 +1,29 @@
 {% extends "emails/base.html" %}
-{% block subject %}Оплата по счёту {{ invoice_number }} получена{% endblock %}
-{% block header_hint %}Оплата получена{% endblock %}
+{% load i18n %}
+{% block subject %}{% blocktranslate %}Оплата по счёту {{ invoice_number }} получена{% endblocktranslate %}{% endblock %}
+{% block header_hint %}{% translate "Оплата получена" %}{% endblock %}
 {% block content %}
   <h1 style="margin:0 0 16px 0; font-size:22px; line-height:1.3; color:#111827;">
-    По вашему счёту поступила оплата
+    {% translate "По вашему счёту поступила оплата" %}
   </h1>
   <p style="margin:0 0 16px 0;">
-    По счёту <strong>{{ invoice_number }}</strong>{% if deal_title %} (сделка «{{ deal_title }}»){% endif %}
-    {% if buyer_name %}от компании <strong>{{ buyer_name }}</strong>{% endif %}
-    записана оплата на сумму <strong>{{ amount }}</strong>.
+    {% blocktranslate %}По счёту <strong>{{ invoice_number }}</strong>{% endblocktranslate %}{% if deal_title %} {% blocktranslate %}(сделка «{{ deal_title }}»){% endblocktranslate %}{% endif %}
+    {% if buyer_name %}{% blocktranslate %}от компании <strong>{{ buyer_name }}</strong>{% endblocktranslate %}{% endif %}
+    {% blocktranslate %}записана оплата на сумму <strong>{{ amount }}</strong>.{% endblocktranslate %}
   </p>
   <p style="margin:0 0 16px 0;">
-    {% if is_fully_paid %}Счёт оплачен полностью.{% else %}Оплачено {{ paid_total }} из {{ total }}.{% endif %}
+    {% if is_fully_paid %}{% translate "Счёт оплачен полностью." %}{% else %}{% blocktranslate %}Оплачено {{ paid_total }} из {{ total }}.{% endblocktranslate %}{% endif %}
   </p>
   <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0;">
     <tr><td style="border-radius:8px; background-color:#2563eb;">
-      <a href="{{ invoice_url }}" style="display:inline-block; padding:12px 24px; font-size:15px; font-weight:600; color:#ffffff; text-decoration:none; border-radius:8px;">Открыть счёт</a>
+      <a href="{{ invoice_url }}" style="display:inline-block; padding:12px 24px; font-size:15px; font-weight:600; color:#ffffff; text-decoration:none; border-radius:8px;">{% translate "Открыть счёт" %}</a>
     </td></tr>
   </table>
   <p style="margin:16px 0 0 0; font-size:13px; color:#6b7280;">
-    Если кнопка не работает, скопируйте ссылку в браузер:<br>
+    {% translate "Если кнопка не работает, скопируйте ссылку в браузер:" %}<br>
     <a href="{{ invoice_url }}" style="color:#2563eb; word-break:break-all;">{{ invoice_url }}</a>
   </p>
   <p style="margin:24px 0 0 0; font-size:13px; color:#6b7280;">
-    Когда поставка состоится, можно будет выставить акт.
+    {% translate "Когда поставка состоится, можно будет выставить акт." %}
   </p>
 {% endblock %}

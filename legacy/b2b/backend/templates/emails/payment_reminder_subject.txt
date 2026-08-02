@@ -1,1 +1,1 @@
-Напоминание: счёт {{ invoice_number }} не оплачен
+{% load i18n %}{% blocktranslate %}Напоминание: счёт {{ invoice_number }} не оплачен{% endblocktranslate %}
