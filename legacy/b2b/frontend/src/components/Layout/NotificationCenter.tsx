@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { authedWsUrl } from '@/lib/ws';
+import { notificationMessage, notificationTitle } from '@/lib/notificationText';
 import { useTranslation } from 'react-i18next';
 import { Bell, Info, AlertTriangle, CheckCircle, Clock, Check, ExternalLink, BellOff } from 'lucide-react';
 import { notificationsApi, Notification } from '@/api/notificationsApi';
@@ -344,10 +345,10 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNaviga
                                                             ? 'text-muted-foreground'
                                                             : 'text-foreground'
                                                     )}>
-                                                        {n.title}
+                                                        {notificationTitle(t, i18n, n)}
                                                     </p>
                                                     <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
-                                                        {n.message}
+                                                        {notificationMessage(t, i18n, n)}
                                                     </p>
                                                     <div className="mt-2 flex items-center justify-between">
                                                         <span className="flex items-center gap-1 text-xs text-muted-foreground">

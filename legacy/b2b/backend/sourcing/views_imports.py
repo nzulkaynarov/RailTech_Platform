@@ -83,18 +83,18 @@ class ExcelImportView(APIView):
             deal = Deal.objects.select_related("company").get(pk=deal_id)
         except Deal.DoesNotExist:
             return Response(
-                {"detail": "Deal not found"},
+                {"detail": "DEAL_NOT_FOUND"},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
         # IDOR protection: verify deal access
         if not _check_deal_access(request.user, deal):
-            return Response({"detail": "You do not have access to this deal"}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"detail": "DEAL_ACCESS_DENIED"}, status=status.HTTP_403_FORBIDDEN)
 
         file_obj = request.FILES.get("file")
         if not file_obj:
             return Response(
-                {"detail": "No file uploaded"},
+                {"detail": "FILE_REQUIRED"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -120,7 +120,7 @@ class ExcelImportView(APIView):
                 name_lower = str(file_obj.name or "").lower()
                 if not name_lower.endswith(ai_extensions):
                     return Response(
-                        {"detail": "Unsupported file type. Allowed: Excel, CSV, PDF, image, text."},
+                        {"detail": "UNSUPPORTED_FILE_TYPE"},
                         status=status.HTTP_400_BAD_REQUEST,
                     )
                 # SEC-08: the extension is spoofable — verify the header matches it before we
@@ -131,14 +131,14 @@ class ExcelImportView(APIView):
                 ai_ext = "." + name_lower.rsplit(".", 1)[-1] if "." in name_lower else ""
                 if not content_matches_extension(file_content[:16], ai_ext):
                     return Response(
-                        {"detail": "File content does not match its extension."},
+                        {"detail": "FILE_CONTENT_MISMATCH"},
                         status=status.HTTP_400_BAD_REQUEST,
                     )
             else:
                 # MIME/magic byte validation (non-AI path is xlsx-only)
                 if not _validate_xlsx_signature(file_content):
                     return Response(
-                        {"detail": "Invalid file format. Only .xlsx files are accepted."},
+                        {"detail": "XLSX_REQUIRED"},
                         status=status.HTTP_400_BAD_REQUEST,
                     )
 
@@ -176,7 +176,7 @@ class ExcelImportView(APIView):
             # Attachment create; OperationalError: Celery broker unreachable.
             logger.exception("Failed to queue Excel import task")
             return Response(
-                {"detail": "Failed to process import. Please try again."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"detail": "IMPORT_FAILED"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 
@@ -246,7 +246,7 @@ class CatalogImportView(APIView):
         file_obj = request.FILES.get("file")
         if not file_obj:
             return Response(
-                {"detail": "No file uploaded"},
+                {"detail": "FILE_REQUIRED"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -261,7 +261,7 @@ class CatalogImportView(APIView):
 
             if not _validate_xlsx_signature(file_content):
                 return Response(
-                    {"detail": "Invalid file format. Only .xlsx files are accepted."},
+                    {"detail": "XLSX_REQUIRED"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
@@ -280,7 +280,7 @@ class CatalogImportView(APIView):
         except (OSError, ValueError, DatabaseError, OperationalError):
             logger.exception("Failed to queue catalog import task")
             return Response(
-                {"detail": "Failed to process import. Please try again."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"detail": "IMPORT_FAILED"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 
@@ -306,7 +306,7 @@ class ImportStatusView(APIView):
         if not request.user.is_platform_admin:
             task_exists = ImportTask.objects.filter(celery_task_id=task_id, owner=request.user).exists()
             if not task_exists:
-                return Response({"detail": "You do not have access to this task"}, status=status.HTTP_403_FORBIDDEN)
+                return Response({"detail": "TASK_ACCESS_DENIED"}, status=status.HTTP_403_FORBIDDEN)
 
         res = AsyncResult(task_id)
         result_data = None

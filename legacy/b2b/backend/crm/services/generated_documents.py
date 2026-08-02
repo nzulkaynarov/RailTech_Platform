@@ -517,6 +517,8 @@ def _notify_document_issued_to_counterparty(document) -> None:
             message=f"По сделке #{deal.pk} вам направлен документ {document.number}",
             link="/crm/documents",
             deal=deal,
+            event_code="document.received",
+            event_params={"deal_id": deal.pk, "number": document.number},
         )
         for uid in member_user_ids
     ]

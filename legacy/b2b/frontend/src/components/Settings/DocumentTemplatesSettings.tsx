@@ -386,7 +386,7 @@ const GROUPS_WITH_HINT = new Set(['company', 'legal_blocks']);
 function TemplateEditor({
   editor, onChange, onClose, onSave, onInsert, richEditorRef, placeholderGroups, preview, isPreviewing, isSaving,
 }: TemplateEditorProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   return (
     <Card>
@@ -470,7 +470,10 @@ function TemplateEditor({
                       onClick={() => onInsert(entry.code)}
                       title={`{{${entry.code}}}`}
                     >
-                      <span className="font-mono text-xs">{entry.label}</span>
+                      {/* L1: сервер шлёт код + ключ, слово печатает клиент; label — RU-fallback. */}
+                      <span className="font-mono text-xs">
+                        {entry.label_key && i18n.exists(entry.label_key) ? t(entry.label_key) : entry.label}
+                      </span>
                     </Button>
                   ))}
                 </div>

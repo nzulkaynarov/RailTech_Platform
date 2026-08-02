@@ -168,6 +168,8 @@ def _create_kyc_notification(company: Company, level_code: str) -> None:
             title="Статус KYC обновлён",
             message=f"KYC для {company.name} — {level_code}",
             link="/cabinet/profile",
+            event_code="company.kyc_verified",
+            event_params={"company": company.name, "level_code": level_code},
         )
 
 

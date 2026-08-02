@@ -3603,7 +3603,18 @@
     "WORDING_TEXT_REQUIRED": "Please enter the wording text",
     "WORDING_TITLE_TAKEN": "A variant with this name already exists",
     "WORDING_VARIANT_NOT_FOUND": "Wording variant not found",
-    "CONTRACT_ALREADY_SIGNED": "The contract is already signed — its wording is frozen"
+    "CONTRACT_ALREADY_SIGNED": "The contract is already signed — its wording is frozen",
+    "PRODUCT_IDS_REQUIRED": "No products selected",
+    "BATCH_TOO_LARGE": "At most 500 products can be processed at once",
+    "NO_ACTIVE_QUOTE": "This deal has no active quote",
+    "PDF_GENERATION_FAILED": "Could not generate the PDF — please try again",
+    "AI_JOB_QUEUE_FAILED": "Could not queue the AI job — please try again",
+    "TASK_ACCESS_DENIED": "You do not have access to this task",
+    "DEAL_ACCESS_DENIED": "You do not have access to this deal",
+    "UNSUPPORTED_FILE_TYPE": "Unsupported file type. Allowed: Excel, CSV, PDF, image, text",
+    "FILE_CONTENT_MISMATCH": "The file content does not match its extension",
+    "XLSX_REQUIRED": "Invalid format: only .xlsx files are accepted",
+    "IMPORT_FAILED": "Could not process the import — please try again"
   },
   "fileUpload": {
     "upload": "Upload",
@@ -4494,5 +4505,144 @@
     "text": "Wording text",
     "add": "Add variant",
     "created": "Variant added"
+  },
+  "notification": {
+    "payment.recorded": {
+      "title": "Payment received",
+      "message": "Payment of {{amount}} recorded against invoice {{number}}"
+    },
+    "act.issued": {
+      "title": "Act issued",
+      "message": "Act {{number}} issued on deal #{{deal_id}} — your signature is required"
+    },
+    "act.signed": {
+      "title": "Act signed",
+      "message": "Act {{number}} on deal #{{deal_id}} has been signed"
+    },
+    "act.rejected": {
+      "title": "Act rejected by the customer",
+      "message": "Act {{number}} on deal #{{deal_id}} was returned for rework: {{reason}}"
+    },
+    "act.cancelled": {
+      "title": "Act cancelled by the issuer",
+      "message": "Act {{number}} on deal #{{deal_id}} was withdrawn: {{reason}}"
+    },
+    "fulfillment.status_changed": {
+      "title": "Shipment status changed",
+      "message": "Deal #{{deal_id}}: shipment status is now {{status_code}}"
+    },
+    "fulfillment.overdue": {
+      "title": "Delivery overdue",
+      "message": "Deal #{{deal_id}}: expected {{expected}}, current status {{status_code}}"
+    },
+    "rfq.new": {
+      "title": "New request",
+      "message": "Request #{{deal_id}} from “{{company}}” is awaiting a quote"
+    },
+    "deal.created": {
+      "title": "New deal",
+      "message": "Deal #{{deal_id}} created by {{company}}"
+    },
+    "deal.stage_changed": {
+      "title": "Deal stage changed",
+      "message": "Deal #{{deal_id}} moved to stage: {{stage_code}}"
+    },
+    "deal.assigned": {
+      "title": "A request was assigned to you",
+      "message": "Request #{{deal_id}} is assigned to you — a quote is needed"
+    },
+    "company.kyc_status_changed": {
+      "title": "Verification status updated",
+      "message": "Your company status: {{level_code}}"
+    },
+    "company.kyc_verified": {
+      "title": "KYC status updated",
+      "message": "KYC for {{company}} — {{level_code}}"
+    },
+    "invoice.issued": {
+      "title": "Invoice issued",
+      "message": "Invoice {{number}} issued for payment on deal #{{deal_id}}"
+    },
+    "invoice.draft_created": {
+      "title": "Invoice draft created",
+      "message": "Invoice {{number}} drafted on deal #{{deal_id}} — review it and issue"
+    },
+    "contract.signature_required": {
+      "title": "Your signature is required",
+      "message": "Contract {{number}} on deal “{{deal_ref}}” is ready and awaits your signature"
+    },
+    "contract.signed": {
+      "title": "Contract signed",
+      "message": "Contract {{number}} on deal #{{deal_id}} is signed by both parties"
+    },
+    "quote.received": {
+      "title": "New quote from a supplier",
+      "message": "“{{seller}}” sent you quote v{{version}} on deal “{{deal_ref}}” — open it to accept or reject"
+    },
+    "quote.viewed_by_client": {
+      "title": "Quote viewed by the client",
+      "message": "{{client}} opened quote v{{version}}"
+    },
+    "quote.accepted_by_client": {
+      "title": "Quote accepted by the client",
+      "message": "{{client}} accepted quote v{{version}}"
+    },
+    "quote.rejected_by_client": {
+      "title": "Quote rejected by the client",
+      "message": "{{client}} rejected quote v{{version}}. {{reason}}"
+    },
+    "quote.expired": {
+      "title": "Quote expired",
+      "message": "Quote v{{version}} on deal #{{deal_id}} has expired"
+    },
+    "document.received": {
+      "title": "Document received",
+      "message": "Document {{number}} was sent to you on deal #{{deal_id}}"
+    },
+    "support.ticket_created": {
+      "title": "New support ticket",
+      "message": "Ticket #{{ticket_id}}: {{subject}}"
+    }
+  },
+  "kycLevels": {
+    "L1_UNVERIFIED": "Unverified",
+    "L2_VERIFIED": "KYC verified (L2)",
+    "L3_CONTRACTED": "Platform contract (L3)",
+    "PROFILE_SUBMITTED": "Profile submitted"
+  },
+  "docPlaceholders": {
+    "deal_number": "Deal number",
+    "deal_title": "Deal title",
+    "counterparty_name": "Counterparty — name",
+    "counterparty_inn": "Counterparty — TIN",
+    "quote_number": "Quote number",
+    "quote_total": "Quote total",
+    "contract_number": "Contract number",
+    "user_full_name": "Your full name",
+    "user_email": "Your email",
+    "today": "Today's date",
+    "company_name": "Your company — name",
+    "company_inn": "Your company — TIN",
+    "company_address": "Your company — address",
+    "doc_refs": "Block: links to the deal, contract and invoice",
+    "doc_items_table": "Block: line items table",
+    "doc_totals": "Block: totals and VAT",
+    "doc_signatures": "Block: party signatures",
+    "doc_payment_requisites": "Block: payment requisites",
+    "doc_spec_table": "Block: specification (Appendix 1)",
+    "doc_requisites_and_signatures": "Block: requisites and signatures of the Parties",
+    "doc_notes": "Block: document note",
+    "doc_extra_terms_article": "Block: special terms (from Wording settings)",
+    "doc_act_closing": "Act closing clause (from Wording settings)",
+    "doc_contract_acceptance": "Acceptance and quality (from Wording settings)",
+    "doc_contract_liability": "Liability of the parties (from Wording settings)",
+    "doc_number": "Document number",
+    "doc_date": "Document date",
+    "doc_total": "Document total",
+    "doc_currency": "Document currency",
+    "doc_vat_rate": "VAT rate, %",
+    "doc_delivery_terms": "Delivery terms (phrase)",
+    "doc_valid_from": "Contract start (phrase)",
+    "doc_valid_until": "Contract end (phrase)"
   }
 }

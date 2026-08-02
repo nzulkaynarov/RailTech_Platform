@@ -67,12 +67,16 @@ export interface TemplatePreviewResult {
 // (T1-c): dynamic data vs company requisites already printed in the letterhead шапка.
 export interface PlaceholderCatalogEntry {
   code: string;
+  /** RU-fallback с сервера — печатается, если ключа нет в локали. */
   label: string;
+  /** L1: ключ словаря SPA (`docPlaceholders.*`) — редактор шаблонов говорит на языке зрителя. */
+  label_key?: string;
 }
 
 export interface PlaceholderCatalogGroup {
   key: string;
   label: string;
+  label_key?: string;
   items: PlaceholderCatalogEntry[];
 }
 

@@ -75,6 +75,8 @@ def record_quote_view(quote, request_ip: str = "") -> bool:
             type_code="INFO",
             title="КП просмотрено клиентом",
             message=f"{_quote_client_display_name(locked)} открыл КП v{locked.version}",
+            event_code="quote.viewed_by_client",
+            event_params={"client": _quote_client_display_name(locked), "version": locked.version},
         )
     return True
 

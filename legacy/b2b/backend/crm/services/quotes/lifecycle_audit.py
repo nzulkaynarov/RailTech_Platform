@@ -64,4 +64,6 @@ def notify_client_new_quote(quote) -> None:
         f"откройте, чтобы принять или отклонить.",
         link="/cabinet/deals",
         deal=quote.deal,
+        event_code="quote.received",
+        event_params={"seller": seller_name, "version": quote.version, "deal_ref": deal_ref},
     )

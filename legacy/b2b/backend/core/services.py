@@ -35,11 +35,16 @@ def create_support_ticket(
         created_by=author,
         company=company,
     )
+    # Раньше сюда клали i18n-КЛЮЧИ как текст («support.alert.new_ticket_title»), а
+    # NotificationCenter их не переводит и самих ключей в локалях не было — оператор видел
+    # на экране буквально точечную строку. Теперь как у всех: RU-fallback + машинный код.
     notify_platform_admins(
-        title="support.alert.new_ticket_title",
-        message="support.alert.new_ticket_message",
+        title="Новый тикет поддержки",
+        message=f"Тикет #{ticket.pk}: {ticket.subject}",
         link=f"/admin/support/{ticket.pk}",
         type_code="INFO",
+        event_code="support.ticket_created",
+        event_params={"ticket_id": ticket.pk, "subject": ticket.subject},
     )
     return ticket
 

@@ -55,10 +55,28 @@ class Notification(models.Model):
         verbose_name=_("Тип"),
         help_text=_("Тип уведомления из справочника"),
     )
+    # L1 (spec-bilingual-ru-en): машинный код события + параметры интерполяции. Текст
+    # собирает клиент на языке ЗРИТЕЛЯ — тот же приём, что у ActivityLog (structured
+    # timeline). `title`/`message` остаются RU-fallback: для строк, записанных до L1, и
+    # для Unfold-админки, которая читает их напрямую.
+    event_code = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        db_index=True,
+        verbose_name=_("Код события"),
+        help_text=_("Машинный код для локализуемого текста (deal.created, act.issued, ...)"),
+    )
+    event_params = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name=_("Параметры события"),
+        help_text=_("Значения для подстановки в перевод на клиенте"),
+    )
     title = models.CharField(
         max_length=255,
         verbose_name=_("Заголовок"),
-        help_text=_("Краткий заголовок уведомления"),
+        help_text=_("Краткий заголовок уведомления (RU-fallback; текст собирается по event_code)"),
     )
     message = models.TextField(
         verbose_name=_("Текст"),

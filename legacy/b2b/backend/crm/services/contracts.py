@@ -166,6 +166,8 @@ def _notify_contract_pending(contract) -> None:
             message=f"Договор {contract.number} по сделке «{deal_ref}» готов — требуется ваша подпись.",
             link="/crm/deals",
             deal=contract.deal,
+            event_code="contract.signature_required",
+            event_params={"number": contract.number, "deal_ref": deal_ref},
         )
         push_notification_ws(notif)
 
@@ -440,6 +442,8 @@ def _notify_contract_signed(contract) -> None:
             message=f"Договор {contract.number} по сделке #{contract.deal_id} подписан обеими сторонами",
             link="/crm/deals",
             deal=contract.deal,
+            event_code="contract.signed",
+            event_params={"number": contract.number, "deal_id": contract.deal_id},
         )
         push_notification_ws(notif)  # realtime, not just the 60s poll
 

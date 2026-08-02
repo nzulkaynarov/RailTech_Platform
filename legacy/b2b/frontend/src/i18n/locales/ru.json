@@ -3615,7 +3615,18 @@
     "WORDING_TEXT_REQUIRED": "Введите текст редакции",
     "WORDING_TITLE_TAKEN": "Вариант с таким названием уже есть",
     "WORDING_VARIANT_NOT_FOUND": "Вариант формулировки не найден",
-    "CONTRACT_ALREADY_SIGNED": "Договор уже подписан — формулировки зафиксированы"
+    "CONTRACT_ALREADY_SIGNED": "Договор уже подписан — формулировки зафиксированы",
+    "PRODUCT_IDS_REQUIRED": "Не выбрано ни одного товара",
+    "BATCH_TOO_LARGE": "За один раз можно обработать не более 500 товаров",
+    "NO_ACTIVE_QUOTE": "По этой сделке нет активного КП",
+    "PDF_GENERATION_FAILED": "Не удалось сформировать PDF — попробуйте ещё раз",
+    "AI_JOB_QUEUE_FAILED": "Не удалось поставить ИИ-задачу в очередь — попробуйте ещё раз",
+    "TASK_ACCESS_DENIED": "Нет доступа к этой задаче",
+    "DEAL_ACCESS_DENIED": "Нет доступа к этой сделке",
+    "UNSUPPORTED_FILE_TYPE": "Неподдерживаемый тип файла. Допустимы: Excel, CSV, PDF, изображение, текст",
+    "FILE_CONTENT_MISMATCH": "Содержимое файла не соответствует его расширению",
+    "XLSX_REQUIRED": "Неверный формат: принимаются только файлы .xlsx",
+    "IMPORT_FAILED": "Не удалось обработать импорт — попробуйте ещё раз"
   },
   "fileUpload": {
     "upload": "Загрузить",
@@ -4514,5 +4525,144 @@
     "text": "Текст редакции",
     "add": "Добавить вариант",
     "created": "Вариант добавлен"
+  },
+  "notification": {
+    "payment.recorded": {
+      "title": "Оплата получена",
+      "message": "По счёту {{number}} записана оплата на сумму {{amount}}"
+    },
+    "act.issued": {
+      "title": "Акт выставлен",
+      "message": "По сделке #{{deal_id}} выставлен акт {{number}} — требуется подпись"
+    },
+    "act.signed": {
+      "title": "Акт подписан",
+      "message": "Акт {{number}} по сделке #{{deal_id}} подписан"
+    },
+    "act.rejected": {
+      "title": "Акт отклонён заказчиком",
+      "message": "Акт {{number}} по сделке #{{deal_id}} возвращён на доработку: {{reason}}"
+    },
+    "act.cancelled": {
+      "title": "Акт аннулирован исполнителем",
+      "message": "Акт {{number}} по сделке #{{deal_id}} отозван: {{reason}}"
+    },
+    "fulfillment.status_changed": {
+      "title": "Статус поставки изменён",
+      "message": "Сделка #{{deal_id}}: статус поставки — {{status_code}}"
+    },
+    "fulfillment.overdue": {
+      "title": "Просрочка по доставке",
+      "message": "Сделка #{{deal_id}}: ожидали {{expected}}, статус — {{status_code}}"
+    },
+    "rfq.new": {
+      "title": "Новая заявка",
+      "message": "Заявка #{{deal_id}} от «{{company}}» ожидает КП"
+    },
+    "deal.created": {
+      "title": "Новая сделка",
+      "message": "Создана сделка #{{deal_id}} от {{company}}"
+    },
+    "deal.stage_changed": {
+      "title": "Статус сделки изменён",
+      "message": "Сделка #{{deal_id}} перешла в стадию: {{stage_code}}"
+    },
+    "deal.assigned": {
+      "title": "Вам назначена заявка",
+      "message": "Заявка #{{deal_id}} назначена вам — нужен КП"
+    },
+    "company.kyc_status_changed": {
+      "title": "Статус верификации обновлён",
+      "message": "Статус вашей компании: {{level_code}}"
+    },
+    "company.kyc_verified": {
+      "title": "Статус KYC обновлён",
+      "message": "KYC для {{company}} — {{level_code}}"
+    },
+    "invoice.issued": {
+      "title": "Счёт выставлен",
+      "message": "По сделке #{{deal_id}} выставлен счёт {{number}} к оплате"
+    },
+    "invoice.draft_created": {
+      "title": "Счёт создан черновиком",
+      "message": "По сделке #{{deal_id}} создан счёт {{number}} — проверьте и выставьте"
+    },
+    "contract.signature_required": {
+      "title": "Требуется ваша подпись",
+      "message": "Договор {{number}} по сделке «{{deal_ref}}» готов — требуется ваша подпись"
+    },
+    "contract.signed": {
+      "title": "Договор подписан",
+      "message": "Договор {{number}} по сделке #{{deal_id}} подписан обеими сторонами"
+    },
+    "quote.received": {
+      "title": "Новое КП от поставщика",
+      "message": "«{{seller}}» отправил вам КП v{{version}} по сделке «{{deal_ref}}» — откройте, чтобы принять или отклонить"
+    },
+    "quote.viewed_by_client": {
+      "title": "КП просмотрено клиентом",
+      "message": "{{client}} открыл КП v{{version}}"
+    },
+    "quote.accepted_by_client": {
+      "title": "КП одобрено клиентом",
+      "message": "{{client}} одобрил КП v{{version}}"
+    },
+    "quote.rejected_by_client": {
+      "title": "КП отклонено клиентом",
+      "message": "{{client}} отклонил КП v{{version}}. {{reason}}"
+    },
+    "quote.expired": {
+      "title": "КП просрочено",
+      "message": "Срок действия КП v{{version}} по сделке #{{deal_id}} истёк"
+    },
+    "document.received": {
+      "title": "Получен документ",
+      "message": "По сделке #{{deal_id}} вам направлен документ {{number}}"
+    },
+    "support.ticket_created": {
+      "title": "Новый тикет поддержки",
+      "message": "Тикет #{{ticket_id}}: {{subject}}"
+    }
+  },
+  "kycLevels": {
+    "L1_UNVERIFIED": "Не верифицирован",
+    "L2_VERIFIED": "KYC подтверждён (L2)",
+    "L3_CONTRACTED": "Договор с платформой (L3)",
+    "PROFILE_SUBMITTED": "Профиль подан"
+  },
+  "docPlaceholders": {
+    "deal_number": "Номер сделки",
+    "deal_title": "Название сделки",
+    "counterparty_name": "Контрагент — название",
+    "counterparty_inn": "Контрагент — ИНН",
+    "quote_number": "Номер КП",
+    "quote_total": "Сумма КП",
+    "contract_number": "Номер договора",
+    "user_full_name": "Ваше ФИО",
+    "user_email": "Ваш email",
+    "today": "Сегодняшняя дата",
+    "company_name": "Ваша компания — название",
+    "company_inn": "Ваша компания — ИНН",
+    "company_address": "Ваша компания — адрес",
+    "doc_refs": "Блок: ссылки на сделку, договор и счёт",
+    "doc_items_table": "Блок: таблица позиций",
+    "doc_totals": "Блок: итоги и НДС",
+    "doc_signatures": "Блок: подписи сторон",
+    "doc_payment_requisites": "Блок: платёжные реквизиты",
+    "doc_spec_table": "Блок: спецификация (Приложение № 1)",
+    "doc_requisites_and_signatures": "Блок: реквизиты и подписи Сторон",
+    "doc_notes": "Блок: примечание документа",
+    "doc_extra_terms_article": "Блок: особые условия (настройка «Формулировки»)",
+    "doc_act_closing": "Оговорка акта (настройка «Формулировки»)",
+    "doc_contract_acceptance": "Приёмка и качество (настройка «Формулировки»)",
+    "doc_contract_liability": "Ответственность сторон (настройка «Формулировки»)",
+    "doc_number": "Номер документа",
+    "doc_date": "Дата документа",
+    "doc_total": "Сумма документа",
+    "doc_currency": "Валюта документа",
+    "doc_vat_rate": "Ставка НДС, %",
+    "doc_delivery_terms": "Условия поставки (фраза)",
+    "doc_valid_from": "Начало действия договора (фраза)",
+    "doc_valid_until": "Окончание действия договора (фраза)"
   }
 }

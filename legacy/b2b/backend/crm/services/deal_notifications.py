@@ -43,13 +43,36 @@ def seller_team_user_ids(deal) -> List[int]:
     )
 
 
-def notify_deal_users(user_ids: Iterable[int], *, deal, title: str, message: str, link: str, type_code: str) -> int:
-    """Разослать одно событие сделки списку получателей. Возвращает число отправленных."""
+def notify_deal_users(
+    user_ids: Iterable[int],
+    *,
+    deal,
+    title: str,
+    message: str,
+    link: str,
+    type_code: str,
+    event_code: str = "",
+    event_params: dict | None = None,
+) -> int:
+    """Разослать одно событие сделки списку получателей. Возвращает число отправленных.
+
+    L1: `event_code`/`event_params` едут в уведомление, чтобы текст собирался на языке
+    ЗРИТЕЛЯ; `title`/`message` остаются RU-fallback (Unfold-админка и строки до L1).
+    """
     from accounts.models import CustomUser
 
     sent = 0
     for user in CustomUser.objects.filter(id__in=list(user_ids)):
-        if notify_user(user=user, title=title, message=message, link=link, deal=deal, type_code=type_code):
+        if notify_user(
+            user=user,
+            title=title,
+            message=message,
+            link=link,
+            deal=deal,
+            type_code=type_code,
+            event_code=event_code,
+            event_params=event_params or {},
+        ):
             sent += 1
     return sent
 
@@ -66,6 +89,8 @@ def notify_payment_recorded(payment) -> int:
         message=f"По счёту {invoice.number} записана оплата на сумму {payment.amount}",
         link=spa_link("invoices", invoice.id),
         type_code="SUCCESS",
+        event_code="payment.recorded",
+        event_params={"number": invoice.number, "amount": str(payment.amount)},
     )
 
 
@@ -80,6 +105,8 @@ def notify_act_issued(act) -> int:
         message=f"По сделке #{deal.pk} выставлен акт {act.number} — требуется подпись",
         link="",
         type_code="INFO",
+        event_code="act.issued",
+        event_params={"number": act.number, "deal_id": deal.pk},
     )
 
 
@@ -95,6 +122,8 @@ def notify_act_signed(act, signer) -> int:
         message=f"Акт {act.number} по сделке #{deal.pk} подписан",
         link="",
         type_code="SUCCESS",
+        event_code="act.signed",
+        event_params={"number": act.number, "deal_id": deal.pk},
     )
 
 
@@ -114,6 +143,8 @@ def notify_act_rejected(act, actor, reason: str) -> int:
         message=f"Акт {act.number} по сделке #{deal.pk} возвращён на доработку: {reason}",
         link=spa_link("acts", act.id),
         type_code="WARNING",
+        event_code="act.rejected",
+        event_params={"number": act.number, "deal_id": deal.pk, "reason": reason},
     )
 
 
@@ -134,6 +165,8 @@ def notify_act_cancelled(act, actor, reason: str) -> int:
         message=f"Акт {act.number} по сделке #{deal.pk} отозван: {reason}",
         link="",
         type_code="WARNING",
+        event_code="act.cancelled",
+        event_params={"number": act.number, "deal_id": deal.pk, "reason": reason},
     )
 
 
@@ -166,6 +199,10 @@ def notify_fulfillment_status(fulfillment, status_code: str, actor) -> int:
         message=f"Сделка #{deal.pk}: статус поставки — {title.lower()}",
         link=spa_link("fulfillments"),
         type_code="WARNING" if status_code == FulfillmentStatusCode.DISPUTED else "INFO",
+        # Один код на все статусы: сам статус — параметр, клиент печатает его из своего же
+        # словаря статусов отгрузки (тот, что уже питает страницу «Отгрузки»).
+        event_code="fulfillment.status_changed",
+        event_params={"deal_id": deal.pk, "status_code": status_code},
     )
 
 
@@ -188,4 +225,10 @@ def notify_delivery_overdue(fulfillment) -> int:
         ),
         link=spa_link("fulfillments"),
         type_code="WARNING",
+        event_code="fulfillment.overdue",
+        event_params={
+            "deal_id": deal.pk,
+            "expected": str(fulfillment.expected_delivery_date or ""),
+            "status_code": fulfillment.status.code if fulfillment.status_id else "",
+        },
     )

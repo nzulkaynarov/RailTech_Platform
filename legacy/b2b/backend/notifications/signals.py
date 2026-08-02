@@ -92,6 +92,8 @@ def _notify_seller_team(deal, info_type):
             message=f"Заявка #{deal.pk} от «{company_name}» ожидает КП",
             link=f"/crm/deals/{deal.pk}",
             deal=deal,
+            event_code="rfq.new",
+            event_params={"deal_id": deal.pk, "company": company_name},
         )
         for uid in seller_user_ids
     ]
@@ -119,6 +121,8 @@ def notify_deal_created(sender, instance, created, **kwargs):
             message=f"Создана сделка #{instance.pk} от {company_name}",
             link="/crm/deals",
             deal=instance,
+            event_code="deal.created",
+            event_params={"deal_id": instance.pk, "company": company_name},
         )
         push_notification_ws(notif)
 
@@ -199,6 +203,10 @@ def notify_deal_stage_change(sender, instance, **kwargs):
             message=f"Сделка #{instance.pk} перешла в стадию: {new_stage_name}",
             link="/cabinet/deals",
             deal=instance,
+            event_code="deal.stage_changed",
+            # Код стадии, а не её RU-название: клиент печатает стадию из своего словаря
+            # dealStages — того же, что питает канбан и карточку сделки.
+            event_params={"deal_id": instance.pk, "stage_code": new_stage.code if new_stage else ""},
         )
         push_notification_ws(notif)
 
@@ -232,6 +240,13 @@ def notify_kyc_status_change(sender, instance, **kwargs):
                 title="Статус верификации обновлён",
                 message=f"Статус вашей компании: {new_status_name}",
                 link="/cabinet/profile",
+                event_code="company.kyc_status_changed",
+                # Имя параметра — level_code, а не status_code: у клиента разные словари для
+                # уровней KYC и статусов отгрузки, и одноимённый параметр печатал бы уровень
+                # из словаря отгрузок (то есть кодом).
+                event_params={
+                    "level_code": instance.verification_status.code if instance.verification_status_id else "",
+                },
             )
             for uid in member_user_ids
         ]

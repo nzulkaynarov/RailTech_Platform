@@ -151,6 +151,33 @@ PLACEHOLDER_GROUPS.append(_legal_group())
 PLACEHOLDER_CATALOG = {item["code"]: item["label"] for group in PLACEHOLDER_GROUPS for item in group["items"]}
 
 
+def _label_key(code: str) -> str:
+    """`doc.items_table` → `docPlaceholders.doc_items_table` — ключ словаря SPA.
+
+    L1 (spec-bilingual-ru-en): по проводам едет КОД, слово подставляет клиент. Раньше
+    каталог отдавал русские `label`, и редактор шаблонов оставался русским даже в
+    английском интерфейсе. `label` сохранён рядом как RU-fallback: незнакомый ключ
+    печатается им, а не пустотой.
+    """
+    return "docPlaceholders." + code.replace(".", "_")
+
+
+def placeholder_groups_with_keys() -> list:
+    """Каталог для SPA: к каждому коду добавлен `label_key`, группам — `label_key` группы."""
+    return [
+        {
+            "key": group["key"],
+            "label": group["label"],
+            "label_key": f"docTemplatesSettings.placeholderGroups.{group['key']}",
+            "items": [
+                {"code": item["code"], "label": item["label"], "label_key": _label_key(item["code"])}
+                for item in group["items"]
+            ],
+        }
+        for group in PLACEHOLDER_GROUPS
+    ]
+
+
 def _render_from_values(body_html: str, values: dict) -> str:
     """Flat-replace `{{code}}` with the ESCAPED snapshot value; leave unknown tokens
     verbatim. Used both at generation time and for DRAFT re-render off a stored snapshot."""

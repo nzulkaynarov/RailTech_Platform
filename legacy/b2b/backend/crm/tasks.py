@@ -334,6 +334,8 @@ def expire_stale_quotes(self) -> dict:
                 message=f"Срок действия КП v{q.version} по сделке #{q.deal_id} истёк",
                 link="/crm/quotes",
                 deal=q.deal,
+                event_code="quote.expired",
+                event_params={"version": q.version, "deal_id": q.deal_id},
             )
             push_notification_ws(notif)
         count += 1

@@ -158,7 +158,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         product_ids = request.data.get("product_ids", [])
         if not product_ids:
             return Response(
-                {"detail": "No product IDs provided"},
+                {"detail": "PRODUCT_IDS_REQUIRED"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -178,7 +178,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 
         if len(product_ids) > 500:
             return Response(
-                {"detail": "Maximum 500 products per batch"},
+                {"detail": "BATCH_TOO_LARGE"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

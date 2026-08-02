@@ -99,7 +99,9 @@ def _set_quote_status(quote, code: str) -> None:
     quote.save(update_fields=["status", "updated_at"])
 
 
-def _notify_quote_outcome(quote, *, type_code: str, title: str, message: str) -> None:
+def _notify_quote_outcome(
+    quote, *, type_code: str, title: str, message: str, event_code: str = "", event_params: dict | None = None
+) -> None:
     """Tell the seller side a client decided on a КП (approved/rejected).
 
     Targets the КП author `prepared_by` (reliably set) plus a distinct
@@ -116,7 +118,14 @@ def _notify_quote_outcome(quote, *, type_code: str, title: str, message: str) ->
     ntype = NotificationType.objects.filter(code=type_code).first()
     for uid in recipient_ids:
         notif = Notification.objects.create(
-            user_id=uid, type=ntype, title=title, message=message, link="/crm/deals", deal=quote.deal
+            user_id=uid,
+            type=ntype,
+            title=title,
+            message=message,
+            link="/crm/deals",
+            deal=quote.deal,
+            event_code=event_code,
+            event_params=event_params or {},
         )
         push_notification_ws(notif)
 

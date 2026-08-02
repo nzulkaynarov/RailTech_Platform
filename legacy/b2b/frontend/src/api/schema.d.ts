@@ -9091,7 +9091,7 @@ export interface components {
             readonly type_name: string;
             /**
              * Заголовок
-             * @description Краткий заголовок уведомления
+             * @description Краткий заголовок уведомления (RU-fallback; текст собирается по event_code)
              */
             title: string;
             /**
@@ -9099,6 +9099,16 @@ export interface components {
              * @description Полный текст уведомления
              */
             message: string;
+            /**
+             * Код события
+             * @description Машинный код для локализуемого текста (deal.created, act.issued, ...)
+             */
+            readonly event_code: string;
+            /**
+             * Параметры события
+             * @description Значения для подстановки в перевод на клиенте
+             */
+            readonly event_params: unknown;
             /**
              * Ссылка
              * @description URL для перехода при клике на уведомление
@@ -10420,7 +10430,7 @@ export interface components {
             type?: number | null;
             /**
              * Заголовок
-             * @description Краткий заголовок уведомления
+             * @description Краткий заголовок уведомления (RU-fallback; текст собирается по event_code)
              */
             title?: string;
             /**

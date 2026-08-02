@@ -17,12 +17,15 @@ class NotificationSerializer(serializers.ModelSerializer):
             "type_name",
             "title",
             "message",
+            # L1: машинная пара для локализации на клиенте; title/message — RU-fallback.
+            "event_code",
+            "event_params",
             "link",
             "deal",
             "is_read",
             "created_at",
         ]
-        read_only_fields = ["id", "created_at"]
+        read_only_fields = ["id", "created_at", "event_code", "event_params"]
 
 
 class EmailTemplateSerializer(serializers.ModelSerializer):

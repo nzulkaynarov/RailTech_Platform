@@ -189,6 +189,8 @@ def _notify_assignee(deal: Deal, assignee: CustomUser) -> None:
         message=f"Заявка #{deal.pk} назначена вам — нужен КП",
         link=f"/crm/deals/{deal.pk}",
         deal=deal,
+        event_code="deal.assigned",
+        event_params={"deal_id": deal.pk},
     )
     # Defer the WS push until the surrounding transaction commits (codebase on_commit convention) —
     # never announce a notification id that a rollback would delete.

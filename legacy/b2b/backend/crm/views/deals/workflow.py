@@ -289,7 +289,7 @@ class DealWorkflowActionsMixin:
         deal = self.get_object()
         quote = deal.active_quote
         if not quote:
-            return Response({"detail": "No active quote for this deal"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"detail": "NO_ACTIVE_QUOTE"}, status=status.HTTP_404_NOT_FOUND)
         if not quote.pdf_file:
             # ARCH-03: enqueue the off-thread render + 202 instead of running WeasyPrint
             # inline; only the cheap render guards run synchronously (409 on failure).
@@ -301,7 +301,7 @@ class DealWorkflowActionsMixin:
             except ValueError as exc:
                 if str(exc) in ("QUOTE_NOT_CLAIMED", "FX_RATE_MISSING", "QUOTE_BELOW_COST"):
                     return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
-                return Response({"detail": "Failed to generate PDF"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response({"detail": "PDF_GENERATION_FAILED"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             return pdf_generating_response("quote", quote.pk)
         from django.http import FileResponse
 

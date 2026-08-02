@@ -28,6 +28,8 @@ def _notify_invoice_issued_to_buyer(invoice) -> None:
         deal=deal,
         title="Счёт выставлен",
         message=f"По сделке #{deal.pk} выставлен счёт {invoice.number} к оплате",
+        event_code="invoice.issued",
+        event_params={"deal_id": deal.pk, "number": invoice.number},
         # Точная ссылка вместо реестра: раньше человек попадал в общий список счетов и искал
         # там тот, о котором его известили.
         link=spa_link("invoices", invoice.id),
@@ -46,6 +48,8 @@ def notify_seller_invoice_draft(invoice) -> None:
         deal=deal,
         title="Счёт создан черновиком",
         message=f"По сделке #{deal.pk} создан счёт {invoice.number} — проверьте и выставьте",
+        event_code="invoice.draft_created",
+        event_params={"deal_id": deal.pk, "number": invoice.number},
         link=spa_link("invoices", invoice.id),
         type_code="INFO",
     )

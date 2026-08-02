@@ -5,6 +5,10 @@ export interface Notification {
     id: number;
     title: string;
     message: string;
+    /** L1: машинный код события + параметры — текст собирается на языке зрителя
+     *  (см. lib/notificationText.ts); title/message остаются RU-fallback. */
+    event_code?: string | null;
+    event_params?: Record<string, unknown> | null;
     type?: number | null;
     type_code?: string;
     type_name?: string;

@@ -30,6 +30,8 @@ def notify_platform_admins(
     message: str,
     link: str = "",
     type_code: str = "WARNING",
+    event_code: str = "",
+    event_params: dict | None = None,
 ) -> Notification:
     """
     Создаёт broadcast-уведомление для всех Platform Admin (audience=PLATFORM_ADMIN, user=NULL).
@@ -47,6 +49,8 @@ def notify_platform_admins(
         title=title,
         message=message,
         link=link,
+        event_code=event_code,
+        event_params=event_params or {},
     )
     return notification
 
@@ -74,11 +78,17 @@ def notify_user(
     deal=None,
     type_code: str = "INFO",
     push: bool = True,
+    event_code: str = "",
+    event_params: dict | None = None,
 ) -> Notification | None:
     """Создать уведомление пользователю и (по умолчанию) сразу доставить его по WebSocket.
 
     Возвращает None, если получателя нет: у сделок сплошь и рядом пустой legacy-`manager`,
     и вызывающему удобнее получить None, чем городить проверку на каждой площадке.
+
+    L1: `event_code` + `event_params` — машинная пара, по которой клиент собирает текст на
+    языке ЗРИТЕЛЯ. `title`/`message` при этом обязательны: они остаются RU-fallback для
+    Unfold-админки и для строк, записанных до появления кода.
     """
     from .models import NotificationType
 
@@ -91,6 +101,8 @@ def notify_user(
         message=message,
         link=link,
         deal=deal,
+        event_code=event_code,
+        event_params=event_params or {},
     )
     if push:
         push_notification_ws(notification)
@@ -111,6 +123,11 @@ def push_notification_ws(notification: Notification):
                     "id": notification.id,
                     "title": notification.title,
                     "message": notification.message,
+                    # L1: живое WS-уведомление обязано нести ту же машинную пару, что и
+                    # ответ API, иначе оно приходило бы по-русски, а после перезагрузки
+                    # страницы то же событие внезапно печаталось на языке зрителя.
+                    "event_code": notification.event_code or "",
+                    "event_params": notification.event_params or {},
                     "link": notification.link or "",
                     # Без `deal` живое WS-уведомление приходило на фронт «безадресным» и
                     # уводило в общий список — правильная ссылка появлялась только после

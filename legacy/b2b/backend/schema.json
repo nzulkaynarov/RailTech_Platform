@@ -23703,13 +23703,24 @@
                     "title": {
                         "type": "string",
                         "title": "Заголовок",
-                        "description": "Краткий заголовок уведомления",
+                        "description": "Краткий заголовок уведомления (RU-fallback; текст собирается по event_code)",
                         "maxLength": 255
                     },
                     "message": {
                         "type": "string",
                         "title": "Текст",
                         "description": "Полный текст уведомления"
+                    },
+                    "event_code": {
+                        "type": "string",
+                        "readOnly": true,
+                        "title": "Код события",
+                        "description": "Машинный код для локализуемого текста (deal.created, act.issued, ...)"
+                    },
+                    "event_params": {
+                        "readOnly": true,
+                        "title": "Параметры события",
+                        "description": "Значения для подстановки в перевод на клиенте"
                     },
                     "link": {
                         "type": "string",
@@ -23737,6 +23748,8 @@
                 },
                 "required": [
                     "created_at",
+                    "event_code",
+                    "event_params",
                     "id",
                     "message",
                     "title",
@@ -25979,7 +25992,7 @@
                         "type": "string",
                         "minLength": 1,
                         "title": "Заголовок",
-                        "description": "Краткий заголовок уведомления",
+                        "description": "Краткий заголовок уведомления (RU-fallback; текст собирается по event_code)",
                         "maxLength": 255
                     },
                     "message": {

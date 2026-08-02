@@ -261,11 +261,11 @@ class DocumentTemplateViewSet(viewsets.ModelViewSet):
         required-block sets per legal kind (one catalogue — the editor and the integrity
         check can't drift)."""
         from crm.services.document_blocks import REQUIRED_TEMPLATE_BLOCKS
-        from crm.services.document_placeholders import PLACEHOLDER_GROUPS
+        from crm.services.document_placeholders import placeholder_groups_with_keys
 
         return Response(
             {
-                "groups": PLACEHOLDER_GROUPS,
+                "groups": placeholder_groups_with_keys(),
                 "required_blocks": {kind: list(codes) for kind, codes in REQUIRED_TEMPLATE_BLOCKS.items()},
             }
         )

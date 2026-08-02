@@ -74,6 +74,8 @@ def perform_quote_acceptance(quote_id, *, approved_by_user=None, contact_email=N
         type_code="SUCCESS",
         title="КП одобрено клиентом",
         message=f"{_quote_client_display_name(quote)} одобрил КП v{quote.version}",
+        event_code="quote.accepted_by_client",
+        event_params={"client": _quote_client_display_name(quote), "version": quote.version},
     )
 
     # Counterparty timeline (Phase A): the acceptance itself as a first-class event.
@@ -131,6 +133,8 @@ def perform_quote_rejection(
         type_code="WARNING",
         title="КП отклонено клиентом",
         message=f"{_quote_client_display_name(quote)} отклонил КП v{quote.version}. {reason}".strip(),
+        event_code="quote.rejected_by_client",
+        event_params={"client": _quote_client_display_name(quote), "version": quote.version, "reason": reason},
     )
 
     event_params = {"version": quote.version}
