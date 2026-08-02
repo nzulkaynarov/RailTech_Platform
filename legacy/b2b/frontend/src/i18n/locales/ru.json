@@ -1689,7 +1689,8 @@
     "switchToEn": "Switch to English",
     "switchToRu": "Переключить на русский",
     "labelEn": "EN",
-    "labelRu": "РУ"
+    "labelRu": "РУ",
+    "choose": "Выбрать язык"
   },
   "shell": {
     "dashboard": "Дашборд",

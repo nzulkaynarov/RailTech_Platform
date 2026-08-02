@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { openableRowProps } from '@/lib/rowClick';
+import { formatDate } from '@/lib/formatLocale';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { translateApiError } from '@/lib/apiError';
@@ -168,7 +169,7 @@ export function FulfillmentsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
-                      {f.expected_delivery_date ? new Date(f.expected_delivery_date).toLocaleDateString() : '—'}
+                      {f.expected_delivery_date ? formatDate(f.expected_delivery_date) : '—'}
                     </TableCell>
                     <TableCell>{f.tracking_number || '—'}</TableCell>
                     <TableCell>{f.carrier || '—'}</TableCell>

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Building2, Pencil, Trash2, UserPlus, GitMerge } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { formatDate } from '@/lib/formatLocale';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -286,7 +287,7 @@ function CompanyFormSheet({
                   {
                     label: t('adminCompanies.table.created'),
                     value: target.created_at
-                      ? new Date(target.created_at).toLocaleDateString()
+                      ? formatDate(target.created_at)
                       : '—',
                   },
                 ]}
@@ -481,7 +482,7 @@ export function AdminCompaniesPage() {
             cell: (c) =>
               c.created_at ? (
                 <span className="text-muted-foreground">
-                  {new Date(c.created_at).toLocaleDateString()}
+                  {formatDate(c.created_at)}
                 </span>
               ) : (
                 <span className="text-muted-foreground">—</span>

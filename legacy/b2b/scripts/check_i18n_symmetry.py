@@ -20,8 +20,12 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-RU_PATH = ROOT / 'frontend' / 'src' / 'i18n' / 'locales' / 'ru.json'
-EN_PATH = ROOT / 'frontend' / 'src' / 'i18n' / 'locales' / 'en.json'
+LOCALES_DIR = ROOT / 'frontend' / 'src' / 'i18n' / 'locales'
+# Язык-ИСТОЧНИК: его набор ключей — эталон, с ним сверяются ВСЕ остальные локали.
+# Локали не перечислены списком: скрипт обходит каталог, поэтому uz-Latn/uz-Cyrl начнут
+# проверяться автоматически, как только появятся файлы (L3, spec-bilingual-ru-en §5).
+SOURCE_LOCALE = 'ru'
+RU_PATH = LOCALES_DIR / f'{SOURCE_LOCALE}.json'
 SRC_DIR = ROOT / 'frontend' / 'src'
 
 _PLURAL_SUFFIX_RE = re.compile(r'_(?:zero|one|two|few|many|other)$')
@@ -93,63 +97,85 @@ def _collect_values(node, out, prefix=''):
             out[full] = value
 
 
+def target_locales():
+    """Все локали, кроме языка-источника, в порядке имён файлов."""
+    return sorted(
+        path.stem for path in LOCALES_DIR.glob('*.json') if path.stem != SOURCE_LOCALE
+    )
+
+
 def main() -> int:
     problems = 0
     try:
         ru_data, ru_dupes = load_with_dupes(RU_PATH)
-        en_data, en_dupes = load_with_dupes(EN_PATH)
+        targets = {code: load_with_dupes(LOCALES_DIR / f'{code}.json') for code in target_locales()}
     except json.JSONDecodeError as e:
         print(f'ERROR: invalid JSON — {e}')
         return 2
+    if not targets:
+        print(f'ERROR: no target locales next to {SOURCE_LOCALE}.json')
+        return 2
 
     # 1. Duplicate keys
-    if ru_dupes or en_dupes:
+    if ru_dupes:
         problems = 1
-        if ru_dupes:
-            print(f'DUPLICATE keys in ru.json ({len(ru_dupes)}): {sorted(set(ru_dupes))}')
-        if en_dupes:
-            print(f'DUPLICATE keys in en.json ({len(en_dupes)}): {sorted(set(en_dupes))}')
+        print(f'DUPLICATE keys in {SOURCE_LOCALE}.json ({len(ru_dupes)}): {sorted(set(ru_dupes))}')
+    for code, (_data, dupes) in targets.items():
+        if dupes:
+            problems = 1
+            print(f'DUPLICATE keys in {code}.json ({len(dupes)}): {sorted(set(dupes))}')
 
     ru_keys, ru_ns = flatten(ru_data)
-    en_keys, _ = flatten(en_data)
 
-    # 2. Symmetry (pluralization-aware)
     def bases(keys):
         return {_PLURAL_SUFFIX_RE.sub('', k) for k in keys}
-    en_bases, ru_bases = bases(en_keys), bases(ru_keys)
-    only_ru = [k for k in sorted(ru_keys - en_keys) if _PLURAL_SUFFIX_RE.sub('', k) not in en_bases]
-    only_en = [k for k in sorted(en_keys - ru_keys) if _PLURAL_SUFFIX_RE.sub('', k) not in ru_bases]
-    if only_ru:
-        problems = 1
-        print(f'Missing in en.json ({len(only_ru)}):')
-        for k in only_ru:
-            print(f'  - {k}')
-    if only_en:
-        problems = 1
-        print(f'Missing in ru.json ({len(only_en)}):')
-        for k in only_en:
-            print(f'  - {k}')
 
-    # 3. Cyrillic leaking into en.json (L0, spec-bilingual-ru-en). Кириллица в английской
-    # локали — это непереведённая строка ИЛИ русская аббревиатура в английском предложении
-    # («…your first КП sent» — найдено глазами при EN-проходе 02-08). Исключения — подписи
-    # самого переключателя языка: они по канону пишутся на своём языке.
+    ru_bases = bases(ru_keys)
+
+    # Кириллица допустима в подписях самого переключателя языка: они по канону пишутся на
+    # своём языке. Для локалей на кириллице (в будущем uz-Cyrl) проверка не применяется —
+    # см. ниже `is_latin_locale`.
     CYRILLIC_ALLOWED = {
         'languageSwitcher.switchToRu',
         'languageSwitcher.labelRu',
         'settings.general.langRu',
     }
-    en_flat_values = {}
-    _collect_values(en_data, en_flat_values)
-    cyrillic = sorted(
-        (k, v) for k, v in en_flat_values.items()
-        if k not in CYRILLIC_ALLOWED and _CYRILLIC_RE.search(v)
-    )
-    if cyrillic:
-        problems = 1
-        print(f'\nCyrillic text in en.json ({len(cyrillic)}) — untranslated or a RU abbreviation:')
-        for k, v in cyrillic:
-            print(f'  - {k}: {v[:70]}')
+
+    for code in sorted(targets):
+        data, _dupes = targets[code]
+        keys, _ns = flatten(data)
+        key_bases = bases(keys)
+
+        # 2. Симметрия с языком-источником (с учётом плюральных форм)
+        missing = [k for k in sorted(ru_keys - keys) if _PLURAL_SUFFIX_RE.sub('', k) not in key_bases]
+        extra = [k for k in sorted(keys - ru_keys) if _PLURAL_SUFFIX_RE.sub('', k) not in ru_bases]
+        if missing:
+            problems = 1
+            print(f'Missing in {code}.json ({len(missing)}):')
+            for k in missing:
+                print(f'  - {k}')
+        if extra:
+            problems = 1
+            print(f'Missing in {SOURCE_LOCALE}.json, present in {code}.json ({len(extra)}):')
+            for k in extra:
+                print(f'  - {k}')
+
+        # 3. Кириллица в ЛАТИНСКОЙ локали = непереведённая строка или русская аббревиатура
+        # внутри английской фразы («…your first КП sent», найдено глазами 02-08). Для локали
+        # на кириллице (uz-Cyrl) проверка бессмысленна и не выполняется.
+        is_latin_locale = 'Cyrl' not in code and code.split('-')[0] not in {'ru', 'uk', 'kk', 'sr'}
+        if is_latin_locale:
+            values = {}
+            _collect_values(data, values)
+            cyrillic = sorted(
+                (k, v) for k, v in values.items()
+                if k not in CYRILLIC_ALLOWED and _CYRILLIC_RE.search(v)
+            )
+            if cyrillic:
+                problems = 1
+                print(f'\nCyrillic text in {code}.json ({len(cyrillic)}) — untranslated or a RU abbreviation:')
+                for k, v in cyrillic:
+                    print(f'  - {k}: {v[:70]}')
 
     # 4. Used-in-code keys missing from locales (would render raw)
     used = collect_used_keys()
@@ -173,7 +199,8 @@ def main() -> int:
             print(f'  - {k}   (e.g. {used[k]})')
 
     if not problems:
-        print(f'OK: {len(ru_keys)} RU keys, {len(en_keys)} EN keys — symmetric, no duplicates, '
+        sizes = ', '.join(f'{code}={len(flatten(data)[0])}' for code, (data, _d) in sorted(targets.items()))
+        print(f'OK: {SOURCE_LOCALE}={len(ru_keys)} keys, {sizes} — symmetric, no duplicates, '
               f'{len(used)} static t() keys all resolve.')
         return 0
     return 1

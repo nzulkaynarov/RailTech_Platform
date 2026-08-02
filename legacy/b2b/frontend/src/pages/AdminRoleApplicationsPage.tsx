@@ -5,6 +5,7 @@ import {
   ClipboardCheck, Check, X, FileText, Download,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { formatDate } from '@/lib/formatLocale';
 import { Separator } from '@/components/ui/separator';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
@@ -119,7 +120,7 @@ function DetailSheet({
           {
             label: t('admin.roleApps.detail.submittedAt'),
             value: app.created_at
-              ? new Date(app.created_at).toLocaleDateString()
+              ? formatDate(app.created_at)
               : '—',
             hint: app.submitted_by_email || undefined,
           },
@@ -149,7 +150,7 @@ function DetailSheet({
         <div className="flex items-start justify-between gap-2">
           <dt className="text-muted-foreground">{t('admin.roleApps.detail.submittedAt')}</dt>
           <dd className="text-right">
-            {app.created_at ? new Date(app.created_at).toLocaleDateString() : '—'}
+            {app.created_at ? formatDate(app.created_at) : '—'}
           </dd>
         </div>
       </dl>
@@ -163,7 +164,7 @@ function DetailSheet({
           </div>
           <div className="mt-1 flex justify-between">
             <span className="text-muted-foreground">{t('admin.roleApps.detail.reviewedAt')}</span>
-            <span>{app.reviewed_at ? new Date(app.reviewed_at).toLocaleDateString() : '—'}</span>
+            <span>{app.reviewed_at ? formatDate(app.reviewed_at) : '—'}</span>
           </div>
           {app.review_notes ? (
             <div className="mt-2 rounded bg-muted/50 p-2">
@@ -358,7 +359,7 @@ export function AdminRoleApplicationsPage() {
             header: t('admin.roleApps.table.date'),
             cell: (a) => (
               <span className="text-muted-foreground">
-                {a.created_at ? new Date(a.created_at).toLocaleDateString() : '—'}
+                {a.created_at ? formatDate(a.created_at) : '—'}
               </span>
             ),
           },

@@ -1,4 +1,12 @@
 import Decimal from 'decimal.js';
+import i18n from '@/i18n';
+import { localeFor } from '@/i18n/locales';
+
+/** Региональный формат активного языка интерфейса (реестр локалей — единственный источник). */
+function moneyFormatLocale(): string {
+  return localeFor(i18n.language).formatLocale;
+}
+
 
 /**
  * RailTech Financial Utility
@@ -22,7 +30,11 @@ export const formatMoney = (value: string | number | undefined | null, currency 
   // the default param only covers `undefined`, NOT `''`. Fall back to USD.
   const code = (typeof currency === 'string' ? currency : '').trim().toUpperCase();
   const safeCode = /^[A-Z]{3}$/.test(code) ? code : 'USD';
-  return new Intl.NumberFormat('uz-UZ', {
+  // L3: региональный формат берётся из реестра локалей по языку ИНТЕРФЕЙСА, а не из
+  // литерала 'uz-UZ' — иначе группировка разрядов и положение символа валюты никогда не
+  // следовали за языком. Русский интерфейс в Узбекистане при этом остаётся в узбекистанском
+  // формате: `formatLocale` в реестре отделён от кода языка ровно для этого.
+  return new Intl.NumberFormat(moneyFormatLocale(), {
     style: 'currency',
     currency: safeCode,
     minimumFractionDigits: 2,

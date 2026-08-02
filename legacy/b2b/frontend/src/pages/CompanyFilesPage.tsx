@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { FolderOpen, Download, FileText } from 'lucide-react';
 import { extractBlobErrorCode, fetchDocumentBlob, saveBlob } from '@/lib/documents';
+import { formatDate } from '@/lib/formatLocale';
 import { translateApiError } from '@/lib/apiError';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -105,7 +106,7 @@ export function CompanyFilesPage() {
     },
     {
       id: 'date', sortKey: 'uploaded_at', header: t('companyFilesPage.table.date'), className: 'text-xs text-muted-foreground',
-      cell: (file) => new Date(file.uploaded_at).toLocaleDateString(),
+      cell: (file) => formatDate(file.uploaded_at),
     },
     {
       id: 'actions', header: t('companyFilesPage.table.actions'), className: 'text-right', mobileActions: true,

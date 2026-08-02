@@ -16,6 +16,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
+import { formatDate } from '@/lib/formatLocale';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -292,7 +293,7 @@ function RecentRequestsCard({ onNavigate }: { onNavigate: (page: string) => void
                   </span>
                 </TableCell>
                 <TableCell className="text-xs text-muted-foreground">
-                  {new Date(deal.created_at).toLocaleDateString()}
+                  {formatDate(deal.created_at)}
                 </TableCell>
                 <TableCell>
                   <StatusBadge label={t(status.labelKey)} variant={status.variant} />
@@ -395,7 +396,7 @@ function RecentDocumentsCard() {
                     : <span className="text-muted-foreground">—</span>}
                 </TableCell>
                 <TableCell className="text-right text-xs text-muted-foreground">
-                  {new Date(doc.date).toLocaleDateString()}
+                  {formatDate(doc.date)}
                 </TableCell>
               </TableRow>
             );

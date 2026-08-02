@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { activeDateFnsLocale } from '@/lib/formatLocale';
 import { formatDistanceToNow } from 'date-fns';
-import { ru, enUS } from 'date-fns/locale';
 import { toast } from 'sonner';
 import {
   Users, Truck, Clock, History, CheckCircle2, AlertTriangle, XCircle, Info, Send, Loader2,
@@ -65,7 +65,7 @@ const LEVEL_CLASS: Record<TimelineEntry['level'], string> = {
 function CompanyTimeline({ companyId }: { companyId: number }) {
   const { t, i18n } = useTranslation();
   const { data: entries, isLoading } = useCompanyTimeline(companyId);
-  const dateLocale = i18n.language?.startsWith('ru') ? ru : enUS;
+  const dateLocale = activeDateFnsLocale();
 
   if (isLoading || !entries || entries.length === 0) {
     // Supplementary context — an empty/failed feed must not add noise to the card.
@@ -109,12 +109,12 @@ interface CounterpartiesPageProps {
 }
 
 export function CounterpartiesPage({ direction }: CounterpartiesPageProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { data: relationships, isLoading, isError, refetch } = useRelationships(direction);
   const updateMut = useUpdateRelationship();
   const inviteMut = useInviteContact();
   const formatCurrency = useCurrencyStore((s) => s.format);
-  const dateLocale = i18n.language?.startsWith('ru') ? ru : enUS;
+  const dateLocale = activeDateFnsLocale();
 
   const listParams = useListParams([] as const, { defaultOrdering: '-last_interaction_at' });
   const [selected, setSelected] = useState<Relationship | null>(null);

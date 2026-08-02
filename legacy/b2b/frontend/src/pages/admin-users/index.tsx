@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Shield, Check, Pause, Pencil, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { formatDate } from '@/lib/formatLocale';
 import { Button } from '@/components/ui/button';
 import { AdminDataTable, useAdminTableQueryState } from '@/components/Admin/AdminDataTable';
 import {
@@ -153,7 +154,7 @@ export function AdminUsersPage() {
             header: t('pages.adminUsers.table.lastLogin'),
             cell: (u) => (
               <span className="text-muted-foreground">
-                {u.last_login ? new Date(u.last_login).toLocaleDateString() : '—'}
+                {u.last_login ? formatDate(u.last_login) : '—'}
               </span>
             ),
           },

@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { formatDistanceToNow } from 'date-fns';
-import { ru, enUS } from 'date-fns/locale';
 import { History, CheckCircle2, AlertTriangle, XCircle, Info } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { activeDateFnsLocale } from '@/lib/formatLocale';
 import { useDealTimeline } from '@/hooks/useCRM';
 import type { TimelineEntry } from '@/api/crmApi';
 import { activityTitle, activityDetail } from '@/lib/activityText';
@@ -27,7 +27,7 @@ const LEVEL_CLASS: Record<TimelineEntry['level'], string> = {
 export function DealTimeline({ dealId }: { dealId: number }) {
   const { t, i18n } = useTranslation();
   const { data: entries, isLoading } = useDealTimeline(dealId);
-  const dateLocale = i18n.language?.startsWith('ru') ? ru : enUS;
+  const dateLocale = activeDateFnsLocale();
 
   if (isLoading || !entries || entries.length === 0) {
     // The feed is supplementary context — an empty/failed load must not add noise to the page.

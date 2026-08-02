@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { translateApiError } from '@/lib/apiError';
+import { formatDate, formatDateTime } from '@/lib/formatLocale';
 import { extractBlobErrorCode, fetchDocumentBlob, saveBlob } from '@/lib/documents';
 import { PenLine, Upload, Download, Receipt, Ban, FileSignature, ShieldAlert } from 'lucide-react';
 import { DocumentActions } from '@/components/Shared/DocumentActions';
@@ -227,7 +228,7 @@ export function ContractsPage() {
     deal: (c) => <DealLink dealId={c.deal} />,
     status: (c) => <Badge variant={STATUS_VARIANT[c.status]}>{t(`contractsPage.status.${c.status}`)}</Badge>,
     total: (c) => <span className="tabular-nums">{formatCurrency(Number(c.total_amount))}</span>,
-    date: (c) => new Date(c.created_at).toLocaleDateString(),
+    date: (c) => formatDate(c.created_at),
     actions: (c) => (
       <DocumentActions
         request={() => ({ path: `crm/contracts/${c.id}/download-pdf/` })}
@@ -305,7 +306,7 @@ export function ContractsPage() {
                   <Label>{t('contractsPage.signClient')}</Label>
                   <p className="text-muted-foreground">
                     {selected.client_signed_at
-                      ? `${selected.client_signer_name} · ${new Date(selected.client_signed_at).toLocaleString()}`
+                      ? `${selected.client_signer_name} · ${formatDateTime(selected.client_signed_at)}`
                       : '—'}
                   </p>
                 </div>
@@ -313,7 +314,7 @@ export function ContractsPage() {
                   <Label>{t('contractsPage.signManager')}</Label>
                   <p className="text-muted-foreground">
                     {selected.manager_signed_at
-                      ? `${selected.manager_signer_name} · ${new Date(selected.manager_signed_at).toLocaleString()}`
+                      ? `${selected.manager_signer_name} · ${formatDateTime(selected.manager_signed_at)}`
                       : '—'}
                   </p>
                 </div>

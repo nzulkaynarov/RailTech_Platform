@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { downloadFile } from '@/lib/download';
+import { formatDate } from '@/lib/formatLocale';
 import { translateApiError } from '@/lib/apiError';
 import {
   ShieldCheck, FileText, Upload, Download, Trash2,
@@ -184,7 +185,7 @@ export function DetailSheet({
                 <div className="truncate font-medium">{doc.original_filename}</div>
                 <div className="text-muted-foreground">
                   {docTypeLabel(doc.doc_type_code, doc.doc_type_display)}
-                  {doc.uploaded_at ? ` · ${new Date(doc.uploaded_at).toLocaleDateString()}` : ''}
+                  {doc.uploaded_at ? ` · ${formatDate(doc.uploaded_at)}` : ''}
                 </div>
               </div>
               {doc.file ? (

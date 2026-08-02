@@ -10,6 +10,7 @@ import {
     CommandGroup, CommandItem,
 } from '@/components/ui/command';
 import { Badge } from '@/components/ui/badge';
+import { formatDate } from '@/lib/formatLocale';
 import { useSearchDocuments } from '@/hooks/usePageStats';
 import { useUserStore } from '@/store/userStore';
 import { documentRoute } from '@/lib/documentRoute';
@@ -141,7 +142,7 @@ export function DocumentSearchDialog({ open, onOpenChange, onNavigate }: Documen
                                         </Badge>
                                     )}
                                     <span className="shrink-0 text-xs text-muted-foreground">
-                                        {new Date(doc.date).toLocaleDateString()}
+                                        {formatDate(doc.date)}
                                     </span>
                                 </CommandItem>
                             ))}

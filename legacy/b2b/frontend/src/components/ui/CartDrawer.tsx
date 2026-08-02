@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ShoppingCart, Trash2, Plus, Minus, Package, ArrowRight, Loader2 } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
+import { formatDate } from '@/lib/formatLocale';
 import { crmApi } from '@/api/crmApi';
 import { translateApiError } from '@/lib/apiError';
 import { toast } from 'sonner';
@@ -36,7 +37,7 @@ export const CartDrawer: React.FC = () => {
         try {
             // 1. Create the request (Deal in DRAFT).
             const deal = await crmApi.createDeal({
-                title: title.trim() || `${t('cart.requestFrom')} ${new Date().toLocaleDateString()}`,
+                title: title.trim() || `${t('cart.requestFrom')} ${formatDate(new Date())}`,
             });
             if (!deal?.id) throw new Error('DEAL_CREATE_FAILED');
 
@@ -185,7 +186,7 @@ export const CartDrawer: React.FC = () => {
                                     id="cart-title"
                                     value={title}
                                     onChange={(e) => setTitle(e.target.value)}
-                                    placeholder={`${t('cart.requestFrom')} ${new Date().toLocaleDateString()}`}
+                                    placeholder={`${t('cart.requestFrom')} ${formatDate(new Date())}`}
                                     className="h-9"
                                 />
                                 <p className="text-xs text-muted-foreground">{t('cart.rfqExplanation')}</p>

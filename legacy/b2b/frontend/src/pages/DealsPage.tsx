@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { FileText, Clock, Eye, Handshake, Loader2, Undo2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { formatDate } from '@/lib/formatLocale';
 import { Button } from '@/components/ui/button';
 import { StatusBadge, getDealStageVariant } from '@/components/ui/StatusBadge';
 import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable';
@@ -127,7 +128,7 @@ export function DealsPage() {
       cell: (deal) => (
         <span className="inline-flex items-center gap-1">
           <Clock className="h-3 w-3" />
-          {new Date(deal.created_at).toLocaleDateString()}
+          {formatDate(deal.created_at)}
         </span>
       ),
     },

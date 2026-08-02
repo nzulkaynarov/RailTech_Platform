@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '@/components/ui/card';
+import { formatDate } from '@/lib/formatLocale';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable';
@@ -156,7 +157,7 @@ export function QuotesPage() {
     },
     {
       id: 'date', sortKey: 'created_at', header: t('pages.quotes.table.date'), className: 'text-muted-foreground',
-      cell: (q) => new Date(q.created_at).toLocaleDateString(),
+      cell: (q) => formatDate(q.created_at),
     },
     {
       // Unified document actions (Просмотр/Печать/Скачать/Копировать ссылку) + the status-gated

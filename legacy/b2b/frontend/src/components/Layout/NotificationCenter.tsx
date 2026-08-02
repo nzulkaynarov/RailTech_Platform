@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { authedWsUrl } from '@/lib/ws';
+import { activeDateFnsLocale } from '@/lib/formatLocale';
 import { notificationMessage, notificationTitle } from '@/lib/notificationText';
 import { useTranslation } from 'react-i18next';
 import { Bell, Info, AlertTriangle, CheckCircle, Clock, Check, ExternalLink, BellOff } from 'lucide-react';
 import { notificationsApi, Notification } from '@/api/notificationsApi';
 import { formatDistanceToNow } from 'date-fns';
-import { ru, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
 import { getAccessToken } from '@/api/accessToken';
@@ -90,7 +90,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNaviga
     /** Последняя загрузка списка не удалась — панель объясняет пустоту сбоем, а не тишиной. */
     const [loadFailed, setLoadFailed] = useState(false);
 
-    const dateLocale = i18n.language === 'ru' ? ru : enUS;
+    const dateLocale = activeDateFnsLocale();
 
     const fetchNotifications = useCallback(async () => {
         // F2.1 moved the access token to memory (never localStorage), so the old

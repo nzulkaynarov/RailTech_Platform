@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { FileSignature, Send, Ban, Mail, Loader2, Inbox, Link2Off } from 'lucide-react';
 import { translateApiError } from '@/lib/apiError';
+import { formatDate, formatDateTime } from '@/lib/formatLocale';
 import { DocumentActions } from '@/components/Shared/DocumentActions';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -113,7 +114,7 @@ export function OtherDocumentsPage() {
     {
       id: 'created', sortKey: 'created_at', header: t('otherDocumentsPage.table.created'),
       className: 'text-xs text-muted-foreground',
-      cell: (doc) => new Date(doc.created_at).toLocaleDateString(),
+      cell: (doc) => formatDate(doc.created_at),
     },
     {
       id: 'actions', header: t('otherDocumentsPage.table.actions'), className: 'text-right', mobileActions: true,
@@ -309,12 +310,12 @@ function DocumentSheet({
             </div>
             <div>
               <Label>{t('otherDocumentsPage.table.created')}</Label>
-              <p className="text-muted-foreground">{new Date(document.created_at).toLocaleString()}</p>
+              <p className="text-muted-foreground">{formatDateTime(document.created_at)}</p>
             </div>
             <div>
               <Label>{t('otherDocumentsPage.table.issued')}</Label>
               <p className="text-muted-foreground">
-                {document.issued_at ? new Date(document.issued_at).toLocaleString() : '—'}
+                {document.issued_at ? formatDateTime(document.issued_at) : '—'}
               </p>
             </div>
           </div>

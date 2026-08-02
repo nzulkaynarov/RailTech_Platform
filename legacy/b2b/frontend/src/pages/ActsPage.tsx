@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { translateApiError } from '@/lib/apiError';
+import { formatDate, formatDateTime } from '@/lib/formatLocale';
 import { extractBlobErrorCode, fetchDocumentBlob, saveBlob } from '@/lib/documents';
 import { ScrollText, PenLine, Download, Ban, BellRing } from 'lucide-react';
 import { DocumentActions } from '@/components/Shared/DocumentActions';
@@ -190,7 +191,7 @@ export function ActsPage() {
     deal: (a) => <DealLink dealId={a.deal} />,
     status: (a) => <Badge variant={STATUS_VARIANT[a.status]}>{t(`actsPage.status.${a.status}`)}</Badge>,
     total: (a) => <span className="tabular-nums">{formatCurrency(Number(a.total_amount))}</span>,
-    date: (a) => (a.issued_at ? new Date(a.issued_at).toLocaleDateString() : '—'),
+    date: (a) => (a.issued_at ? formatDate(a.issued_at) : '—'),
     actions: (a) => (
       <DocumentActions
         request={() => ({ path: `crm/acts/${a.id}/download-pdf/` })}
@@ -259,7 +260,7 @@ export function ActsPage() {
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div><Label>{t('actsPage.table.deal')}</Label><DealLink dealId={selected.deal} /></div>
                 <div><Label>{t('actsPage.table.total')}</Label><p className="tabular-nums">{formatCurrency(Number(selected.total_amount))}</p></div>
-                <div><Label>{t('actsPage.table.issued')}</Label><p className="text-muted-foreground">{selected.issued_at ? new Date(selected.issued_at).toLocaleDateString() : '—'}</p></div>
+                <div><Label>{t('actsPage.table.issued')}</Label><p className="text-muted-foreground">{selected.issued_at ? formatDate(selected.issued_at) : '—'}</p></div>
                 {/* Акт ДВУСТОРОННИЙ (волна G2): выпускает исполнитель, принимает заказчик, и
                     сервер отдаёт обе подписи с именами. Карточка показывала одно поле «Подписан»
                     по legacy `signed_at` — кто выпустил и кто принял, было не узнать, хотя данные
@@ -344,7 +345,7 @@ export function ActsPage() {
                     подсказкой `viewer_can_remind`, а не отказом после нажатия. */}
                 {!selected.viewer_can_remind && selected.reminder_sent_at && selected.status === 'ISSUED' && (
                   <p className="text-xs text-muted-foreground">
-                    {t('actsPage.remindedAt', { at: new Date(selected.reminder_sent_at).toLocaleString() })}
+                    {t('actsPage.remindedAt', { at: formatDateTime(selected.reminder_sent_at) })}
                   </p>
                 )}
                 {selected.viewer_can_cancel && (

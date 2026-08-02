@@ -10,6 +10,7 @@ import { Shield, Save } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { LOCALES } from '@/i18n/locales';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -142,8 +143,11 @@ export function ProfileSection() {
                 }}>
                   <SelectTrigger id="language"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="ru">{t('settings.general.langRu')}</SelectItem>
-                    <SelectItem value="en">{t('settings.general.langEn')}</SelectItem>
+                    {/* Список из реестра локалей: новый язык (в т.ч. uz-Latn/uz-Cyrl)
+                        появляется здесь сам, без правки формы (L3). */}
+                    {LOCALES.map((locale) => (
+                      <SelectItem key={locale.code} value={locale.code}>{locale.nativeName}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

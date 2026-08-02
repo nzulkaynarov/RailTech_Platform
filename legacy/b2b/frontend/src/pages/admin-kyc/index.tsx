@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { translateApiError } from '@/lib/apiError';
+import { formatDate } from '@/lib/formatLocale';
 import { ShieldCheck, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -171,7 +172,7 @@ export function AdminKYCPage() {
             cell: (c) =>
               c.created_at ? (
                 <span className="text-muted-foreground">
-                  {new Date(c.created_at).toLocaleDateString()}
+                  {formatDate(c.created_at)}
                 </span>
               ) : (
                 <span className="text-muted-foreground">—</span>

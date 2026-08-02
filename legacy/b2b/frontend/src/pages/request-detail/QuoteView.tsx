@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { AlertTriangle, Download, Loader2 } from 'lucide-react';
 import type { Deal, Quote, QuoteDiffFinding } from '@/api/crmApi';
+import { formatDate, formatDateTime } from '@/lib/formatLocale';
 import { crmApi } from '@/api/crmApi';
 import { quoteStatusLabelKey } from '@/lib/codes';
 import { useCurrencyStore } from '@/store/currencyStore';
@@ -79,13 +80,13 @@ export function QuoteView({
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="space-y-1">
               <CardTitle>{t('requestDetailActions.quoteTitle', { version: quote.version })}</CardTitle>
-              <CardDescription>{quoteStatusLabelKey(quote.status_code) ? t(quoteStatusLabelKey(quote.status_code)) : quote.status_name} — {new Date(quote.created_at).toLocaleString()}</CardDescription>
+              <CardDescription>{quoteStatusLabelKey(quote.status_code) ? t(quoteStatusLabelKey(quote.status_code)) : quote.status_name} — {formatDateTime(quote.created_at)}</CardDescription>
               {/* Offer validity — the acceptance deadline. Warn when past. */}
               {quote.valid_until && (
                 <p className="flex items-center gap-1.5 text-xs">
                   <span className="text-muted-foreground">{t('requestDetailActions.validUntil')}:</span>
                   <span className={validUntilExpired ? 'font-medium text-destructive' : 'text-foreground'}>
-                    {new Date(quote.valid_until).toLocaleDateString()}
+                    {formatDate(quote.valid_until)}
                   </span>
                   {validUntilExpired && (
                     <Badge variant="destructive" className="gap-1">

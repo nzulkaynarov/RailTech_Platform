@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { translateApiError } from '@/lib/apiError';
+import { formatDate } from '@/lib/formatLocale';
 import { Receipt, DollarSign, ScrollText, Send, Ban, Save } from 'lucide-react';
 import { DocumentActions } from '@/components/Shared/DocumentActions';
 import { Badge } from '@/components/ui/badge';
@@ -182,7 +183,7 @@ export function InvoicesPage() {
     deal: (inv) => <DealLink dealId={inv.deal} />,
     status: (inv) => <Badge variant={STATUS_VARIANT[inv.status]}>{t(`invoicesPage.status.${inv.status}`)}</Badge>,
     total: (inv) => <span className="tabular-nums">{formatCurrency(Number(inv.total_incl_vat))}</span>,
-    date: (inv) => (inv.issued_at ? new Date(inv.issued_at).toLocaleDateString() : '—'),
+    date: (inv) => (inv.issued_at ? formatDate(inv.issued_at) : '—'),
     actions: (inv) => (
       <DocumentActions
         request={() => ({ path: `crm/invoices/${inv.id}/download-pdf/` })}
@@ -206,7 +207,7 @@ export function InvoicesPage() {
         header: t('invoicesPage.table.due'),
         sortKey: 'due',
         className: 'text-xs text-muted-foreground',
-        cell: (inv: Invoice) => (inv.due_date ? new Date(inv.due_date).toLocaleDateString() : '—'),
+        cell: (inv: Invoice) => (inv.due_date ? formatDate(inv.due_date) : '—'),
       }],
     },
   });
@@ -271,7 +272,7 @@ export function InvoicesPage() {
                     {formatCurrency(Number(selected.balance_due))}
                   </p>
                 </div>
-                <div><Label>{t('invoicesPage.table.due')}</Label><p>{selected.due_date ? new Date(selected.due_date).toLocaleDateString() : '—'}</p></div>
+                <div><Label>{t('invoicesPage.table.due')}</Label><p>{selected.due_date ? formatDate(selected.due_date) : '—'}</p></div>
               </div>
               <Separator />
               {selected.status === 'DRAFT' ? (

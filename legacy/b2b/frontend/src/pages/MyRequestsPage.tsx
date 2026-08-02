@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ShoppingCart, ChevronRight } from 'lucide-react';
 import { useCurrencyStore } from '@/store/currencyStore';
+import { formatDate } from '@/lib/formatLocale';
 import { useDeals } from '@/hooks/useCRM';
 import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import { Toolbar, Pager, useListParams, applyListParams } from '@/components/DataTable';
@@ -120,7 +121,7 @@ export function MyRequestsPage() {
                           <StatusBadge label={t(status.labelKey)} variant={status.variant} />
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground tabular-nums">
-                          {new Date(deal.created_at).toLocaleDateString()}
+                          {formatDate(deal.created_at)}
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
                           {showTotal(deal)

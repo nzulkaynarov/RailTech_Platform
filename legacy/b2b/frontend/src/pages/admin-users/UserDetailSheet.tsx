@@ -5,6 +5,7 @@ import {
   Check, Pause, Mail, Phone, Calendar, User, Trash2, AlertTriangle,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { formatDate, formatDateTime } from '@/lib/formatLocale';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -72,7 +73,7 @@ export function UserDetailSheet({
   const infoRows = [
     { icon: Mail, value: user.email },
     ...(user.phone ? [{ icon: Phone, value: user.phone }] : []),
-    { icon: Calendar, value: user.date_joined ? new Date(user.date_joined).toLocaleDateString() : '—' },
+    { icon: Calendar, value: user.date_joined ? formatDate(user.date_joined) : '—' },
   ];
 
   const runToggleActive = async () => {
@@ -190,11 +191,11 @@ export function UserDetailSheet({
                   {
                     label: t('pages.adminUsers.table.lastLogin'),
                     value: user.last_login
-                      ? new Date(user.last_login).toLocaleDateString()
+                      ? formatDate(user.last_login)
                       : '—',
                     hint: user.date_joined
                       ? t('pages.adminUsers.joinedHint', {
-                          date: new Date(user.date_joined).toLocaleDateString(),
+                          date: formatDate(user.date_joined),
                         })
                       : undefined,
                   },
@@ -247,7 +248,7 @@ export function UserDetailSheet({
               {user.last_login && (
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>{t('pages.adminUsers.detail.lastLogin')}</span>
-                  <span className="tabular-nums">{new Date(user.last_login).toLocaleString()}</span>
+                  <span className="tabular-nums">{formatDateTime(user.last_login)}</span>
                 </div>
               )}
             </TabsContent>
