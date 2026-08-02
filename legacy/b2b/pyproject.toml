@@ -37,7 +37,12 @@ DJANGO_SETTINGS_MODULE = "core.settings"
 pythonpath = "backend"
 testpaths = ["backend"]
 python_files = ["test_*.py", "*_test.py", "*_tests.py", "tests.py"]
-addopts = "--strict-markers --disable-warnings --nomigrations --reuse-db"
+# БЕЗ --nomigrations: по Rule 1 справочники и платформенные образцы шаблонов сеются
+# ДАННЫМИ-миграциями (RunPython + get_or_create), поэтому база без миграций — это не
+# «быстрее то же самое», а другая база: 22 теста падали в CI на отсутствующих DealStage /
+# ContractStatus / образцах ACT и RECEIPT, проходя локально (в контейнере rootdir=/app,
+# этот файл туда не попадает, и addopts не применялись — расхождение и держалось незаметным).
+addopts = "--strict-markers --disable-warnings --reuse-db"
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",

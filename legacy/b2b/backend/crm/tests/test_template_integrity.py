@@ -23,11 +23,7 @@ from accounts.models import (
     WorkspaceRole,
 )
 from crm.models import DocumentTemplate, DocumentTemplateKind
-from crm.services.document_blocks import (
-    REQUIRED_TEMPLATE_BLOCKS,
-    company_template_for,
-    missing_required_blocks,
-)
+from crm.services.document_blocks import REQUIRED_TEMPLATE_BLOCKS, company_template_for, missing_required_blocks
 
 
 @pytest.fixture

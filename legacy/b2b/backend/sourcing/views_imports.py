@@ -175,9 +175,7 @@ class ExcelImportView(APIView):
             # OSError/ValueError: file read/encode; DatabaseError: ImportTask/
             # Attachment create; OperationalError: Celery broker unreachable.
             logger.exception("Failed to queue Excel import task")
-            return Response(
-                {"detail": "IMPORT_FAILED"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"detail": "IMPORT_FAILED"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @extend_schema(
@@ -279,9 +277,7 @@ class CatalogImportView(APIView):
             return Response({"task_id": task.id}, status=status.HTTP_202_ACCEPTED)
         except (OSError, ValueError, DatabaseError, OperationalError):
             logger.exception("Failed to queue catalog import task")
-            return Response(
-                {"detail": "IMPORT_FAILED"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            return Response({"detail": "IMPORT_FAILED"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @extend_schema(

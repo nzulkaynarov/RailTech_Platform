@@ -1,4 +1,5 @@
 {% extends "crm/_document_base.html" %}
+{% load i18n %}
 {% comment %}
   Произвольный документ по шаблону («Документы 2.0»). The body is the SNAPSHOT
   `rendered_html` — already sanitised (allowlist) at template-save time and with all
@@ -8,10 +9,10 @@
 {% endcomment %}
 {% block doc_meta %}
   <div class="doc-no">{{ document.number }}</div>
-  <div>от {{ document.created_at|date:"d.m.Y" }}</div>
+  {% with issued=document.created_at|date:"d.m.Y" %}<div>{% blocktranslate %}от {{ issued }}{% endblocktranslate %}</div>{% endwith %}
 {% endblock %}
 
-{% block doc_title %}{{ document.title|default:"Документ" }}{% endblock %}
+{% block doc_title %}{{ document.title|default:_("Документ") }}{% endblock %}
 
 {% block parties %}{% endblock %}
 

@@ -1,9 +1,10 @@
+{% load i18n %}
 {% comment %}
   Блок «ссылки» накладной ({{doc.refs}}): сделка, договор, перевозчик и трек-номер.
 {% endcomment %}
 <div class="term-box">
-  <span class="k">Сделка:</span> #{{ fulfillment.deal_id }}
-  {% if fulfillment.contract %} &middot; <span class="k">Договор:</span> {{ fulfillment.contract.number }}{% endif %}
-  {% if fulfillment.carrier %} &middot; <span class="k">Перевозчик:</span> {{ fulfillment.carrier }}{% endif %}
-  {% if fulfillment.tracking_number %} &middot; <span class="k">Трек:</span> {{ fulfillment.tracking_number }}{% endif %}
+  <span class="k">{% translate "Сделка:" %}</span> #{{ fulfillment.deal_id }}
+  {% if fulfillment.contract %} &middot; <span class="k">{% translate "Договор:" %}</span> {{ fulfillment.contract.number }}{% endif %}
+  {% if fulfillment.carrier %} &middot; <span class="k">{% translate "Перевозчик:" %}</span> {{ fulfillment.carrier }}{% endif %}
+  {% if fulfillment.tracking_number %} &middot; <span class="k">{% translate "Трек:" %}</span> {{ fulfillment.tracking_number }}{% endif %}
 </div>

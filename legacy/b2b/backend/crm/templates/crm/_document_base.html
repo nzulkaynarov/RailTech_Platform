@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+{% load i18n %}
 {% comment %}
   Shared document base for ALL seller-issued PDFs (КП / договор / инвойс / акт).
 
@@ -68,7 +69,8 @@
       content: element(docfooter);
     }
     @bottom-right {
-      content: "Стр. " counter(page) " из " counter(pages);
+      /* Теги перевода работают и внутри <style> — это тот же Django-шаблон. */
+      content: "{% translate 'Стр.' %} " counter(page) " {% translate 'из' %} " counter(pages);
       font-family: 'Helvetica', 'Arial', sans-serif;
       font-size: var(--fs-xs);
       color: #9aa0a6;
@@ -253,7 +255,7 @@
 </style>
 </head>
 <body class="layout-{{ layout_preset|default:'light' }}">
-  {% block watermark %}{% if is_demo %}<div class="demo-watermark">ДЕМО — не для коммерческого использования</div>{% elif is_draft %}<div class="draft-watermark">ЧЕРНОВИК · не является офертой</div>{% endif %}{% endblock %}
+  {% block watermark %}{% if is_demo %}<div class="demo-watermark">{% translate "ДЕМО — не для коммерческого использования" %}</div>{% elif is_draft %}<div class="draft-watermark">{% translate "ЧЕРНОВИК · не является офертой" %}</div>{% endif %}{% endblock %}
 
   <!-- ── Brand header ── -->
   <table class="brandbar">
@@ -271,7 +273,7 @@
             идентичность (имя + ИНН + банк по тумблеру); тел/email убраны (владелец 27-07:
             «в КП 3 раза реквизиты» — были в шапке, блоке сторон и футере одновременно).
           {% endcomment %}
-          {% if seller_profile.inn %}ИНН {{ seller_profile.inn }}{% elif seller.inn %}ИНН {{ seller.inn }}{% endif %}
+          {% if seller_profile.inn %}{% translate "ИНН" %} {{ seller_profile.inn }}{% elif seller.inn %}{% translate "ИНН" %} {{ seller.inn }}{% endif %}
           {% if not seller %}RailTech B2B Ecosystem{% endif %}
           {# Bank requisites in the letterhead (CIS practice) — spec-kp-blank, toggle on the profile. #}
           {% if seller_profile.show_bank_in_header and seller_profile.bank_details %}<br><span class="brand-bank">{{ seller_profile.bank_details|linebreaksbr }}</span>{% endif %}
@@ -298,32 +300,33 @@
     <tr>
       <td>
         <div class="party">
-          <h3>Поставщик</h3>
+          <h3>{% translate "Поставщик" %}</h3>
           {% if seller or seller_profile %}
             <div class="pname">{% firstof seller_profile.legal_name seller.name %}</div>
             {% firstof seller_profile.inn seller.inn as party_seller_inn %}
-            {% if party_seller_inn %}<p>ИНН: {{ party_seller_inn }}</p>{% endif %}
+            {% if party_seller_inn %}<p>{% translate "ИНН" %}: {{ party_seller_inn }}</p>{% endif %}
             {% firstof seller_profile.legal_address seller.legal_address as party_seller_addr %}
             {% if party_seller_addr %}<p>{{ party_seller_addr }}</p>{% endif %}
           {% else %}
             <div class="pname">RailTech B2B</div>
-            <p>Платформа b2b.railtech.uz</p>
+            <p>{% translate "Платформа" %} b2b.railtech.uz</p>
           {% endif %}
         </div>
       </td>
       <td>
         {% if company or contact %}
         <div class="party">
-          <h3>Покупатель</h3>
+          <h3>{% translate "Покупатель" %}</h3>
           {% if company %}
             <div class="pname">{{ company.name }}</div>
-            {% if company.inn %}<p>ИНН: {{ company.inn }}</p>{% endif %}
+            {% if company.inn %}<p>{% translate "ИНН" %}: {{ company.inn }}</p>{% endif %}
             {% if company.legal_address %}<p>{{ company.legal_address }}</p>{% endif %}
-            {% if company.contact_person %}<p>Контакт: {{ company.contact_person }}</p>{% endif %}
+            {% if company.contact_person %}<p>{% translate "Контакт" %}: {{ company.contact_person }}</p>{% endif %}
           {% else %}
-            <div class="pname">{% firstof contact.name "Покупатель" %}</div>
-            {% if contact.inn %}<p>ИНН: {{ contact.inn }}</p>{% endif %}
-            {% if contact.phone %}<p>Тел.: {{ contact.phone }}</p>{% endif %}
+            {% translate "Покупатель" as buyer_fallback_name %}
+            <div class="pname">{% firstof contact.name buyer_fallback_name %}</div>
+            {% if contact.inn %}<p>{% translate "ИНН" %}: {{ contact.inn }}</p>{% endif %}
+            {% if contact.phone %}<p>{% translate "Тел." %}: {{ contact.phone }}</p>{% endif %}
           {% endif %}
         </div>
         {% endif %}
@@ -357,15 +360,15 @@
             {% endif %}
             <td style="width:22%">
               {% firstof seller_profile.inn seller.inn as f_inn %}
-              {% if f_inn %}ИНН {{ f_inn }}<br>{% endif %}
-              {% if seller.phone %}тел. {{ seller.phone }}<br>{% endif %}
+              {% if f_inn %}{% translate "ИНН" %} {{ f_inn }}<br>{% endif %}
+              {% if seller.phone %}{% translate "тел." %} {{ seller.phone }}<br>{% endif %}
               {% if seller.email %}{{ seller.email }}{% endif %}
             </td>
-            <td style="width:18%">Документ сформирован<br>в RailTech B2B Ecosystem</td>
+            <td style="width:18%">{% blocktranslate with brand="RailTech B2B Ecosystem" %}Документ сформирован<br>в {{ brand }}{% endblocktranslate %}</td>
           </tr>
         </table>
       {% else %}
-        Документ сформирован в RailTech B2B Ecosystem
+        {% blocktranslate with brand="RailTech B2B Ecosystem" %}Документ сформирован в {{ brand }}{% endblocktranslate %}
       {% endif %}
     {% endblock %}
   </div>

@@ -1,4 +1,4 @@
-{% load document_format %}
+{% load document_format i18n %}
 {% comment %}
   Блок «таблица позиций». Разметка та же, что печаталась из кода: у шаблона компании и у
   платформенного образца ОДИН источник вёрстки, поэтому они не могут разъехаться.
@@ -7,11 +7,11 @@
 <table class="lines">
   <thead>
     <tr>
-      <th style="width:6%">№</th>
-      <th style="width:48%">Наименование</th>
-      <th style="width:10%" class="center">Кол-во</th>
-      <th style="width:18%" class="num">Цена, {{ ccy }}</th>
-      <th style="width:18%" class="num">Сумма, {{ ccy }}</th>
+      <th style="width:6%">{% translate "№" %}</th>
+      <th style="width:48%">{% translate "Наименование" %}</th>
+      <th style="width:10%" class="center">{% translate "Кол-во" %}</th>
+      <th style="width:18%" class="num">{% blocktranslate with currency=ccy %}Цена, {{ currency }}{% endblocktranslate %}</th>
+      <th style="width:18%" class="num">{% blocktranslate with currency=ccy %}Сумма, {{ currency }}{% endblocktranslate %}</th>
     </tr>
   </thead>
   <tbody>

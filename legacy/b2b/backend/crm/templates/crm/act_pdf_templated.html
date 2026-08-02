@@ -1,4 +1,5 @@
 {% extends "crm/_document_base.html" %}
+{% load i18n %}
 {% comment %}
   Акт, напечатанный по шаблону КОМПАНИИ (spec-editable-outgoing-documents, E1).
 
@@ -10,11 +11,11 @@
   компания правит ТЕКСТ, а не то, что делает документ документом.
 {% endcomment %}
 {% block doc_meta %}
-  <div class="doc-no">Акт № {{ act.number }}</div>
-  <div>от {{ act.issued_at|date:"d.m.Y" }}</div>
+  <div class="doc-no">{% blocktranslate with number=act.number %}Акт № {{ number }}{% endblocktranslate %}</div>
+  {% with issued=act.issued_at|date:"d.m.Y" %}<div>{% blocktranslate %}от {{ issued }}{% endblocktranslate %}</div>{% endwith %}
 {% endblock %}
 
-{% block doc_title %}Акт приёма-передачи{% endblock %}
+{% block doc_title %}{% translate "Акт приёма-передачи" %}{% endblock %}
 
 {% block content %}
   <div class="doc-body">{{ body_html|safe }}</div>

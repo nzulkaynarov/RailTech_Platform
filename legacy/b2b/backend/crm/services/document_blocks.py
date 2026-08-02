@@ -418,3 +418,30 @@ def render_delivery_note_body(fulfillment, items, ccy: str, template, *, seller=
             "doc.tracking": fulfillment.tracking_number or "",
         },
     )
+
+
+def document_recipient_language(deal) -> str:
+    """Язык, на котором получатель ЖДЁТ закрывающий документ (M1).
+
+    Канон Odoo (`partner.lang`) и Stripe (`preferred_locales`): счёт и акт выставляет
+    продавец, а читает их покупатель — язык того, кто нажал кнопку, к делу не относится.
+
+    Берём язык активных членов компании-покупателя: если команда единодушна, документ
+    печатается на нём; при расхождении (в компании и русско-, и англоязычные сотрудники)
+    остаёмся на языке платформы, потому что документ ОДИН на всю сторону, а не на человека.
+    Соло-сделка без компании-покупателя языка не сообщает — тоже язык платформы.
+    """
+    from django.conf import settings
+
+    from core.i18n import resolve_user_language
+
+    default = settings.LANGUAGE_CODE
+    if deal is None or not getattr(deal, "company_id", None):
+        return default
+    from accounts.models import CustomUser
+
+    users = CustomUser.objects.filter(memberships__company_id=deal.company_id, memberships__is_active=True)
+    languages = {resolve_user_language(user) for user in users}
+    if len(languages) == 1:
+        return languages.pop()
+    return default

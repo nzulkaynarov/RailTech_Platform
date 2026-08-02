@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
   Блок «подписи» счёта: руководитель + главный бухгалтер — как печатал код-шаблон
   invoice_pdf.html. Вставляется одним плейсхолдером {{doc.signatures}}.
@@ -6,16 +7,16 @@
   <tr>
     <td>
       <div class="sign-box">
-        <div class="role">Руководитель:</div>
+        <div class="role">{% translate "Руководитель:" %}</div>
         {% if seller_profile.signatory_name %}{{ seller_profile.signatory_name }}{% endif %}
-        <div class="sign-line">Подпись</div>
-        <div class="seal">М.П.</div>
+        <div class="sign-line">{% translate "Подпись" %}</div>
+        <div class="seal">{% translate "М.П." %}</div>
       </div>
     </td>
     <td>
       <div class="sign-box">
-        <div class="role">Главный бухгалтер:</div>
-        <div class="sign-line">Подпись</div>
+        <div class="role">{% translate "Главный бухгалтер:" %}</div>
+        <div class="sign-line">{% translate "Подпись" %}</div>
       </div>
     </td>
   </tr>

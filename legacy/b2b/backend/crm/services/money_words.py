@@ -161,3 +161,118 @@ def money_in_words(value, currency_code="UZS"):
     if negative:
         phrase = "минус " + phrase
     return f"{phrase} {tail}"
+
+
+# ── Английская пропись (M1: закрывающие документы на языке получателя) ────────────────
+#
+# Отдельный конвертер, а не «перевод» русского: у английских числительных нет ни родов, ни
+# славянских форм 1/2-4/5+, зато есть дефисы (twenty-one) и «and» после сотен в британской
+# традиции. Пропись — денежный реквизит: догадка здесь недопустима, поэтому таблицы
+# выписаны явно, как и в русской половине файла.
+
+_EN_ONES = [
+    "",
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+    "nine",
+    "ten",
+    "eleven",
+    "twelve",
+    "thirteen",
+    "fourteen",
+    "fifteen",
+    "sixteen",
+    "seventeen",
+    "eighteen",
+    "nineteen",
+]
+_EN_TENS = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"]
+#: Разряды по «короткой шкале» (US/UK-современная): 10^3, 10^6, …
+_EN_SCALES = ["", "thousand", "million", "billion", "trillion", "quadrillion", "quintillion"]
+
+#: Валютные слова: (единица, множественное, субъединица, субъединица мн.).
+_EN_CURRENCIES = {
+    "UZS": ("soum", "soums", "tiyin", "tiyin"),
+    "RUB": ("ruble", "rubles", "kopeck", "kopecks"),
+    "USD": ("dollar", "dollars", "cent", "cents"),
+    "EUR": ("euro", "euros", "cent", "cents"),
+    "KZT": ("tenge", "tenge", "tiyn", "tiyn"),
+}
+
+
+def _en_group_to_words(group: int) -> list:
+    """0..999 → слова («three hundred forty-two»)."""
+    words = []
+    hundreds, rest = divmod(group, 100)
+    if hundreds:
+        words += [_EN_ONES[hundreds], "hundred"]
+    if rest:
+        if rest < 20:
+            words.append(_EN_ONES[rest])
+        else:
+            tens, ones = divmod(rest, 10)
+            words.append(f"{_EN_TENS[tens]}-{_EN_ONES[ones]}" if ones else _EN_TENS[tens])
+    return words
+
+
+def _en_integer_to_words(number: int) -> list:
+    if number == 0:
+        return ["zero"]
+    groups = []
+    while number:
+        number, group = divmod(number, 1000)
+        groups.append(group)
+    words = []
+    for index in range(len(groups) - 1, -1, -1):
+        group = groups[index]
+        if not group:
+            continue
+        words += _en_group_to_words(group)
+        if index:
+            words.append(_EN_SCALES[index])
+    return words
+
+
+def money_in_words_en(value, currency_code="UZS") -> str:
+    """Amount in words, English: «Twelve million five hundred thousand soums 00 tiyin».
+
+    Сознательно повторяет контракт русской версии: та же обработка None/мусора («—»),
+    та же капитализация первой буквы, тот же формат субъединицы (две цифры + слово),
+    и тот же отказ печатать чужую валюту словом при неизвестном коде.
+    """
+    if value is None or value == "":
+        return "—"
+    try:
+        amount = Decimal(str(value))
+    except (InvalidOperation, ValueError, TypeError):
+        return "—"
+
+    negative = amount < 0
+    amount = abs(amount).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    integer_part = int(amount)
+    subunit = int((amount - integer_part) * 100)
+
+    if integer_part >= 10 ** (3 * len(_EN_SCALES)):
+        return "—"
+
+    words = _en_integer_to_words(integer_part)
+    known = _EN_CURRENCIES.get((currency_code or "").upper())
+    if known:
+        main_one, main_many, sub_one, sub_many = known
+        words.append(main_one if integer_part == 1 else main_many)
+        tail = f"{subunit:02d} {sub_one if subunit == 1 else sub_many}"
+    else:
+        code = (currency_code or "").upper()
+        tail = f"{code} {subunit:02d}/100".strip()
+
+    phrase = " ".join(part for part in words if part)
+    phrase = phrase[:1].upper() + phrase[1:]
+    if negative:
+        phrase = "minus " + phrase
+    return f"{phrase} {tail}"

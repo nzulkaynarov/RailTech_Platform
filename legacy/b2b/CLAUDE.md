@@ -240,7 +240,7 @@ make clean               # remove all containers, volumes, cache (DESTRUCTIVE)
 
 ## Coding Conventions
 
-- **Python:** black (120 line length), isort (profile=black), flake8; target Python 3.11
+- **Python:** black (120 line length), isort (profile=black), flake8; target Python 3.12 (Django 6.0 требует ≥3.12 — образ и CI на 3.12)
 - **Backend deps (INF-05):** `backend/requirements.txt` + `requirements-dev.txt` are GENERATED, hashed pip-compile locks — never hand-edit them. Change a floor/cap in `requirements.{in,dev.in}`, then recompile: `pip-compile --generate-hashes --no-strip-extras requirements.in -o requirements.txt` (+ the `-dev` variant with `-c requirements.txt`) in a linux py3.12 env with `gcc`+`libpq-dev` (pip-tools 7.5.3). The CI `deps-lock` gate fails on drift. psycopg2 is built from source (not `-binary`, INF-09).
 - **TypeScript:** strict mode, ESLint, path alias `@/` → `src/`
 - **Styling:** Tailwind v4 utility-first, oklch color tokens, CSS variables, dark mode via `.dark` class
@@ -275,7 +275,7 @@ make clean               # remove all containers, volumes, cache (DESTRUCTIVE)
 
 ## Testing
 
-- **Backend:** pytest + pytest-django, markers: slow, integration, unit; coverage threshold: 30% enforced on CI (`--cov-fail-under=30`). Current state (2026-07-07): **~672 tests, ~78% coverage**. CI runs `pytest --create-db --nomigrations` on an ephemeral Postgres — a `conftest.py django_db_setup` fixture installs `pg_trgm` + the pghistory/pgtrigger stubs since `--nomigrations` skips them. Local tests run against the local Docker Postgres (`db` from `docker-compose.override.yml`, `sslmode=disable`); `--reuse-db` masks pg_trgm/seed gaps — reproduce CI failures with `--create-db`.
+- **Backend:** pytest + pytest-django, markers: slow, integration, unit; coverage threshold: 30% enforced on CI (`--cov-fail-under=30`). Current state (2026-07-07): **~672 tests, ~78% coverage**. CI runs `pytest --create-db` on an ephemeral Postgres, **с миграциями** (`--nomigrations` снят 2026-08-03): по Rule 1 справочники и платформенные образцы шаблонов сеются данными-миграциями, поэтому база без них — другая база (22 теста падали на пустых `DealStage`/`ContractStatus`). Джоба также компилирует каталог (`compilemessages`) — `.mo` в git нет, а тест каталога проверяет реальный перевод. Local tests run against the local Docker Postgres (`db` from `docker-compose.override.yml`, `sslmode=disable`); `--reuse-db` masks seed gaps — reproduce CI failures with `--create-db`.
 - **Frontend:** vitest 4 + @testing-library/react + jsdom — 13 test files, 93 tests (stores/hooks/utils + component tests for AdminDataTable/DealsKanban/GenerateQuoteDialog/DashboardWidgets; shared `src/test/renderWithProviders.tsx` with a real ru.json i18n instance). Runs on the developer machine and in the CI `frontend-test` job — NOT in Compose (the frontend container is a prod nginx build).
 - **CI:** GitHub Actions — jobs: i18n-symmetry, backend-lint, backend-test, migration-check, api-contract (spectacular + openapi-typescript drift), frontend-lint, frontend-test (vitest), frontend-build, security (pip-audit + npm audit, HARD gates), docker-build. Nightly Playwright e2e is a separate workflow (targets prod, prod-safe specs).
 - **Known test debt:** none named — the last items (frontend component tests, PR #234; backend fulfillment/messaging services, PR #228) are paid. Playwright e2e specs remain thin (nightly, prod-safe subset only).

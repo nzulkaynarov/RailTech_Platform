@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
-          python-version: '3.11'
+          python-version: '3.12'
       - name: Verify ru.json / en.json key sets match
         run: python3 scripts/check_i18n_symmetry.py
 
@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.11']
+        python-version: ['3.12']
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.11']
+        python-version: ['3.12']
 
     services:
       redis:
@@ -62,16 +62,15 @@ jobs:
           --health-retries 5
         ports:
           - 6379:6379
-      # Ephemeral Postgres, NOT Neon. The suite builds its schema from models
-      # (--create-db --nomigrations), so it never needs Neon's data — and pointing
-      # it at the *shared* Neon instance caused a recurring class of CI flakes:
-      # cold-start hangs, a stale test_neondb held open by a pooled session, and
-      # the SSL connection dropping mid test-DB-create ("SSL connection has been
-      # closed unexpectedly" inside _configure_timezone). A throwaway local DB,
-      # fresh every run, removes that entire class. The real migration path is
-      # still exercised by the migration-check job. pg_trgm + the GIN trigram
-      # indexes live only in migration catalog/0006 (kept out of model state),
-      # which --nomigrations skips, so no extension is needed to build the schema.
+      # Ephemeral Postgres, NOT Neon: pointing the suite at the *shared* Neon instance
+      # caused a recurring class of CI flakes — cold-start hangs, a stale test_neondb held
+      # open by a pooled session, and the SSL connection dropping mid test-DB-create ("SSL
+      # connection has been closed unexpectedly" inside _configure_timezone). A throwaway
+      # local DB, fresh every run, removes that entire class.
+      #
+      # Схема строится МИГРАЦИЯМИ (--nomigrations снят): по Rule 1 справочники и
+      # платформенные образцы шаблонов приходят данными-миграциями, поэтому база без
+      # миграций — другая база, и тесты на ней падают на пустых DealStage/ContractStatus.
       postgres:
         image: postgres:16
         env:
@@ -97,8 +96,10 @@ jobs:
 
       # INF-09: psycopg2 is built from source (no more psycopg2-binary), so the
       # runner needs libpq-dev + a compiler (gcc is pre-installed on ubuntu).
-      - name: Install system build deps (psycopg2 source)
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq libpq-dev
+      - name: Install system build deps (psycopg2 source, gettext)
+        # gettext нужен для compilemessages: .mo в git не хранится (это артефакт сборки,
+        # его собирает Dockerfile), а тест каталога проверяет РЕАЛЬНЫЙ перевод.
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq libpq-dev gettext
 
       - name: Install dependencies
         run: |
@@ -106,6 +107,15 @@ jobs:
           # pytest-cov is in the hashed lock now — do NOT append it on the CLI
           # (an unhashed name aborts pip's --require-hashes mode).
           pip install -r requirements.txt
+
+      - name: Compile translation catalogs
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/railtech
+          DB_SSLMODE: disable
+          DJANGO_SECRET_KEY: 'ci-test-secret-key-not-for-production'
+        run: |
+          cd backend
+          python manage.py compilemessages
 
       - name: Run tests with coverage
         env:
@@ -121,19 +131,19 @@ jobs:
         run: |
           cd backend
           # --create-db: build the test schema from current models on the fresh
-          # ephemeral Postgres (we run --nomigrations, and addopts sets --reuse-db).
+          # ephemeral Postgres (--create-db перебивает --reuse-db из addopts).
           pytest --create-db --cov=. --cov-report=xml --cov-report=html --cov-fail-under=70
 
-  # The test job above runs with --nomigrations (pyproject addopts), so it builds
-  # the schema from models and never exercises the migration graph. This job does:
-  # it applies every migration to a clean Postgres, catching breakage that only
-  # surfaces on a fresh deploy (bad cross-app deps, seed FieldErrors, missing
-  # migrations). Runs against a throwaway service DB — never touches Neon.
+  # Тестовая джоба выше применяет миграции вместе со схемой, но НЕ проверяет граф
+  # отдельно: `makemigrations --check` ловит ещё и «модель поменяли, миграцию не создали».
+  # Здесь миграции накатываются на чистый Postgres — так всплывает то, что видно только
+  # на свежем деплое (кривые межприложенческие зависимости, FieldError в сидах,
+  # недостающие миграции). Работает на одноразовой service-БД — Neon не трогает.
   migration-check:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.11']
+        python-version: ['3.12']
 
     services:
       postgres:
@@ -376,7 +386,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.11']
+        python-version: ['3.12']
         node-version: ['22']
 
     steps:

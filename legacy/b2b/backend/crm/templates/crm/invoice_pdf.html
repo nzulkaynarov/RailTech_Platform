@@ -1,4 +1,5 @@
 {% extends "crm/_document_base.html" %}
+{% load i18n %}
 {% load document_format %}
 {% comment %}
   Инвойс (счёт на оплату). «Поставщик» = the REAL seller resolved from the invoice's
@@ -7,27 +8,27 @@
   (default UZS). Payment requisites + purpose-of-payment make the invoice actually payable (F-06).
 {% endcomment %}
 {% block doc_meta %}
-  <div class="doc-no">Инвойс № {{ invoice.number }}</div>
-  <div>от {% if invoice.issued_at %}{{ invoice.issued_at|date:"d.m.Y" }}{% else %}{{ invoice.created_at|date:"d.m.Y" }}{% endif %}</div>
-  {% if invoice.due_date %}<div>оплата до {{ invoice.due_date|date:"d.m.Y" }}</div>{% endif %}
-  {% if invoice.contract %}<div>по договору № {{ invoice.contract.number }}</div>{% endif %}
+  <div class="doc-no">{% blocktranslate with number=invoice.number %}Счёт № {{ number }}{% endblocktranslate %}</div>
+  {% if invoice.issued_at %}{% with issued=invoice.issued_at|date:"d.m.Y" %}<div>{% blocktranslate %}от {{ issued }}{% endblocktranslate %}</div>{% endwith %}{% else %}{% with issued=invoice.created_at|date:"d.m.Y" %}<div>{% blocktranslate %}от {{ issued }}{% endblocktranslate %}</div>{% endwith %}{% endif %}
+  {% if invoice.due_date %}<div>{% blocktranslate with due=invoice.due_date|date:"d.m.Y" %}оплата до {{ due }}{% endblocktranslate %}</div>{% endif %}
+  {% if invoice.contract %}<div>{% blocktranslate with contract_number=invoice.contract.number %}по договору № {{ contract_number }}{% endblocktranslate %}</div>{% endif %}
 {% endblock %}
 
-{% block doc_title %}Счёт на оплату{% endblock %}
+{% block doc_title %}{% translate "Счёт на оплату" %}{% endblock %}
 
 {% block parties %}
 <table class="parties">
   <tr>
     <td>
       <div class="party">
-        <h3>Поставщик</h3>
+        <h3>{% translate "Поставщик" %}</h3>
         {% if seller_profile %}
           <div class="pname">{{ seller_profile.legal_name|default:seller.name }}</div>
-          {% if seller_profile.inn %}<p>ИНН: {{ seller_profile.inn }}</p>{% elif seller.inn %}<p>ИНН: {{ seller.inn }}</p>{% endif %}
+          {% if seller_profile.inn %}<p>{% translate "ИНН:" %} {{ seller_profile.inn }}</p>{% elif seller.inn %}<p>{% translate "ИНН:" %} {{ seller.inn }}</p>{% endif %}
           {% if seller_profile.legal_address %}<p>{{ seller_profile.legal_address }}</p>{% elif seller.legal_address %}<p>{{ seller.legal_address }}</p>{% endif %}
         {% elif seller %}
           <div class="pname">{{ seller.name }}</div>
-          {% if seller.inn %}<p>ИНН: {{ seller.inn }}</p>{% endif %}
+          {% if seller.inn %}<p>{% translate "ИНН:" %} {{ seller.inn }}</p>{% endif %}
           {% if seller.legal_address %}<p>{{ seller.legal_address }}</p>{% endif %}
         {% else %}
           <div class="pname">&mdash;</div>
@@ -36,9 +37,9 @@
     </td>
     <td>
       <div class="party">
-        <h3>Плательщик</h3>
+        <h3>{% translate "Плательщик" %}</h3>
         <div class="pname">{{ company.name }}</div>
-        {% if company.inn %}<p>ИНН: {{ company.inn }}</p>{% endif %}
+        {% if company.inn %}<p>{% translate "ИНН:" %} {{ company.inn }}</p>{% endif %}
         {% if company.legal_address %}<p>{{ company.legal_address }}</p>{% endif %}
       </div>
     </td>
@@ -51,11 +52,11 @@
   <table class="lines">
     <thead>
       <tr>
-        <th style="width:6%">№</th>
-        <th style="width:48%">Описание</th>
-        <th style="width:10%" class="center">Кол-во</th>
-        <th style="width:18%" class="num">Цена, {{ ccy }}</th>
-        <th style="width:18%" class="num">Сумма, {{ ccy }}</th>
+        <th style="width:6%">{% translate "№" %}</th>
+        <th style="width:48%">{% translate "Описание" %}</th>
+        <th style="width:10%" class="center">{% translate "Кол-во" %}</th>
+        <th style="width:18%" class="num">{% blocktranslate with currency=ccy %}Цена, {{ currency }}{% endblocktranslate %}</th>
+        <th style="width:18%" class="num">{% blocktranslate with currency=ccy %}Сумма, {{ currency }}{% endblocktranslate %}</th>
       </tr>
     </thead>
     <tbody>
@@ -74,34 +75,34 @@
   {% include "crm/_totals_block.html" %}
 
   <div class="pay-block">
-    <h3>Платёжные реквизиты</h3>
-    <p><span class="k">Получатель:</span> {% firstof seller_profile.legal_name seller.name "—" %}{% if seller_profile.inn or seller.inn %} · ИНН {% firstof seller_profile.inn seller.inn %}{% endif %}</p>
+    <h3>{% translate "Платёжные реквизиты" %}</h3>
+    <p><span class="k">{% translate "Получатель:" %}</span> {% firstof seller_profile.legal_name seller.name "—" %}{% if seller_profile.inn or seller.inn %} · {% translate "ИНН" %} {% firstof seller_profile.inn seller.inn %}{% endif %}</p>
     {% if seller_profile.bank_details %}
     <p>{{ seller_profile.bank_details|linebreaksbr }}</p>
     {% elif seller.bank_account %}
-    <p><span class="k">Р/с:</span> {{ seller.bank_account }}{% if seller.mfo %} · <span class="k">МФО:</span> {{ seller.mfo }}{% endif %}</p>
+    <p><span class="k">{% translate "Р/с:" %}</span> {{ seller.bank_account }}{% if seller.mfo %} · <span class="k">{% translate "МФО:" %}</span> {{ seller.mfo }}{% endif %}</p>
     {% endif %}
-    <p><span class="k">Назначение платежа:</span> Оплата по счёту № {{ invoice.number }} от {% if invoice.issued_at %}{{ invoice.issued_at|date:"d.m.Y" }}{% else %}{{ invoice.created_at|date:"d.m.Y" }}{% endif %}{% if invoice.contract %}, договор № {{ invoice.contract.number }}{% endif %}, в т.ч. НДС {{ invoice.vat_amount|money:ccy }}.</p>
+    <p><span class="k">{% translate "Назначение платежа:" %}</span> {% if invoice.issued_at %}{% blocktranslate with number=invoice.number doc_date=invoice.issued_at|date:"d.m.Y" %}Оплата по счёту № {{ number }} от {{ doc_date }}{% endblocktranslate %}{% else %}{% blocktranslate with number=invoice.number doc_date=invoice.created_at|date:"d.m.Y" %}Оплата по счёту № {{ number }} от {{ doc_date }}{% endblocktranslate %}{% endif %}{% if invoice.contract %}{% blocktranslate with contract_number=invoice.contract.number %}, договор № {{ contract_number }}{% endblocktranslate %}{% endif %}{% blocktranslate with vat_amount=invoice.vat_amount|money:ccy %}, в т.ч. НДС {{ vat_amount }}.{% endblocktranslate %}</p>
   </div>
 
   {% if invoice.notes %}
-  <div class="notes-block"><span class="k">Примечание:</span><br>{{ invoice.notes|linebreaks }}</div>
+  <div class="notes-block"><span class="k">{% translate "Примечание:" %}</span><br>{{ invoice.notes|linebreaks }}</div>
   {% endif %}
 
   <table class="signatures">
     <tr>
       <td>
         <div class="sign-box">
-          <div class="role">Руководитель:</div>
+          <div class="role">{% translate "Руководитель:" %}</div>
           {% if seller_profile.signatory_name %}{{ seller_profile.signatory_name }}{% endif %}
-          <div class="sign-line">Подпись</div>
-          <div class="seal">М.П.</div>
+          <div class="sign-line">{% translate "Подпись" %}</div>
+          <div class="seal">{% translate "М.П." %}</div>
         </div>
       </td>
       <td>
         <div class="sign-box">
-          <div class="role">Главный бухгалтер:</div>
-          <div class="sign-line">Подпись</div>
+          <div class="role">{% translate "Главный бухгалтер:" %}</div>
+          <div class="sign-line">{% translate "Подпись" %}</div>
         </div>
       </td>
     </tr>

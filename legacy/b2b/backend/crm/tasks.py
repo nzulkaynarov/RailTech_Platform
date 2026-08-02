@@ -14,7 +14,7 @@ from datetime import timedelta
 from celery import shared_task
 from django.core.files.base import ContentFile
 from django.db import transaction
-from django.utils import timezone
+from django.utils import timezone, translation
 
 from core.storage import get_private_storage
 
@@ -345,6 +345,38 @@ def expire_stale_quotes(self) -> dict:
 # Render functions by document type. Each takes the model instance and writes its
 # `pdf_file`. Kept as a dispatch map so the task and the lazy download fallback share
 # one source of truth. The quote uses its lifecycle service (takes an id, not an obj).
+def _document_language(doc_type: str, doc_id: int) -> str:
+    """Язык печати документа: для закрывающих — язык покупателя, иначе язык платформы.
+
+    КП сюда не попадает намеренно: его язык — дело волны публичной страницы, а не этой.
+    Любая ошибка резолва (удалённая строка, гонка) не должна ронять рендер — документ
+    важнее языка, поэтому падаем на язык платформы.
+    """
+    from django.conf import settings
+
+    from .services.document_blocks import document_recipient_language
+
+    getters = {
+        "contract": ("Contract", lambda obj: obj.deal),
+        "invoice": ("Invoice", lambda obj: obj.deal),
+        "act": ("Act", lambda obj: obj.deal),
+        "receipt": ("Payment", lambda obj: obj.invoice.deal),
+        "delivery_note": ("Fulfillment", lambda obj: obj.deal),
+    }
+    entry = getters.get(doc_type)
+    if entry is None:
+        return settings.LANGUAGE_CODE
+    model_name, to_deal = entry
+    try:
+        from django.apps import apps
+
+        obj = apps.get_model("crm", model_name).objects.get(pk=doc_id)
+        return document_recipient_language(to_deal(obj))
+    except Exception:  # noqa: BLE001 — fault barrier: язык не должен ронять рендер документа
+        logger.warning("Could not resolve recipient language for %s id=%s", doc_type, doc_id, exc_info=True)
+        return settings.LANGUAGE_CODE
+
+
 def _render_pdf_for(doc_type: str, doc_id: int) -> None:
     from .models import Act, Contract, Invoice
 
@@ -402,7 +434,11 @@ def render_document_pdf(self, doc_type: str, doc_id: int) -> dict:
     keeping the API response fast. The download endpoints render lazily on demand as
     a fallback, so a download that races ahead of this task still succeeds.
     """
-    _render_pdf_for(doc_type, doc_id)
+    # M1: закрывающий документ печатается на языке ПОЛУЧАТЕЛЯ. Каркас (лейблы таблиц,
+    # итоги, подписи, «сумма прописью») переводится; тело шаблона и формулировки остаются
+    # языком автора — канон Stripe: системные лейблы локализуются, custom text нет.
+    with translation.override(_document_language(doc_type, doc_id)):
+        _render_pdf_for(doc_type, doc_id)
     logger.info("Rendered %s PDF for id=%s", doc_type, doc_id)
     return {"doc_type": doc_type, "doc_id": doc_id, "status": "rendered"}
 

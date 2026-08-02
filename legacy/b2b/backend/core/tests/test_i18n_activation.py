@@ -140,5 +140,22 @@ def test_catalog_has_no_fuzzy_or_empty_entries():
     po = Path(settings.BASE_DIR / "locale" / "en" / "LC_MESSAGES" / "django.po").read_text(encoding="utf-8")
     # Первый fuzzy — служебный заголовок каталога (msgid ""), он таким и рождается.
     body = po.split("\n\n", 1)[1] if "\n\n" in po else po
+    # Считаем подстрокой, а не целой строкой: gettext пишет флаги списком —
+    # «#, fuzzy, python-format». Волна M1 потеряла на этом 8 записей номеров и дат
+    # документов (в английском PDF стояло «Договор № …»), потому что ручная проверка
+    # сравнивала строку целиком.
     fuzzy_count = body.count("#, fuzzy")
     assert fuzzy_count == 0, f"{fuzzy_count} fuzzy-записей: Django их не применит, строка останется русской"
+
+    lines = body.split("\n")
+    untranslated = []
+    for index, line in enumerate(lines):
+        if line != 'msgstr ""':
+            continue
+        continuation = lines[index + 1] if index + 1 < len(lines) else ""
+        if continuation.startswith('"'):
+            continue  # перевод многострочный, а не пустой
+        source = lines[index - 1] if index else ""
+        if source.startswith("msgid "):
+            untranslated.append(source.removeprefix("msgid ").strip('"'))
+    assert not untranslated, f"{len(untranslated)} строк без перевода, напр.: {untranslated[:3]}"

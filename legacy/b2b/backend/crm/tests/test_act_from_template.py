@@ -9,16 +9,10 @@ PandaDoc), текст вокруг них компания пишет сама.
 образец, который дословно повторяет прежний документ.
 """
 
-from decimal import Decimal
-
 import pytest
 
 from crm.models import DocumentTemplate, DocumentTemplateKind
-from crm.services.document_blocks import (
-    DOCUMENT_BLOCKS,
-    company_template_for,
-    render_document_body,
-)
+from crm.services.document_blocks import DOCUMENT_BLOCKS, company_template_for, render_document_body
 
 
 @pytest.mark.django_db

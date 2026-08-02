@@ -33,11 +33,11 @@ import re
 from typing import Iterable, Optional
 
 from django.conf import settings
-from django.utils import translation
 from django.core.mail import EmailMultiAlternatives, get_connection
 from django.db import DatabaseError
 from django.template import Context, Template, TemplateDoesNotExist
 from django.template.loader import get_template, render_to_string
+from django.utils import translation
 
 from .models import EmailLog
 

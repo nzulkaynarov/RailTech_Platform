@@ -1,8 +1,8 @@
 """Company + QuerySet + предикат «кто такой продавец» (распил company.py 816 строк)."""
 
+import pghistory
 from django.conf import settings
 from django.core.validators import RegexValidator
-import pghistory
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 

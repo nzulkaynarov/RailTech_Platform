@@ -1,4 +1,5 @@
 {% extends "crm/_document_base.html" %}
+{% load i18n %}
 {% comment %}
   Договор, напечатанный по шаблону КОМПАНИИ (spec-editable-outgoing-documents, E1b).
 
@@ -16,34 +17,34 @@
 {% endblock %}
 
 {% block doc_meta %}
-  <div class="doc-no">Договор № {{ contract.number }}</div>
-  <div>от {{ contract.created_at|date:"d.m.Y" }}</div>
+  <div class="doc-no">{% blocktranslate with number=contract.number %}Договор № {{ number }}{% endblocktranslate %}</div>
+  {% with issued=contract.created_at|date:"d.m.Y" %}<div>{% blocktranslate %}от {{ issued }}{% endblocktranslate %}</div>{% endwith %}
 {% endblock %}
 
-{% block doc_title %}Договор поставки{% endblock %}
+{% block doc_title %}{% translate "Договор поставки" %}{% endblock %}
 
 {% block parties %}
 <table class="parties">
   <tr>
     <td>
       <div class="party">
-        <h3>Поставщик</h3>
+        <h3>{% translate "Поставщик" %}</h3>
         {% if seller or seller_profile %}
           <div class="pname">{% firstof seller_profile.legal_name seller.name %}</div>
           {% firstof seller_profile.inn seller.inn as supplier_inn %}
-          {% if supplier_inn %}<p>ИНН: {{ supplier_inn }}</p>{% endif %}
+          {% if supplier_inn %}<p>{% translate "ИНН:" %} {{ supplier_inn }}</p>{% endif %}
           {% firstof seller_profile.legal_address seller.legal_address as supplier_addr %}
           {% if supplier_addr %}<p>{{ supplier_addr }}</p>{% endif %}
         {% else %}
-          <div class="pname">Поставщик не указан</div>
+          <div class="pname">{% translate "Поставщик не указан" %}</div>
         {% endif %}
       </div>
     </td>
     <td>
       <div class="party">
-        <h3>Покупатель</h3>
+        <h3>{% translate "Покупатель" %}</h3>
         <div class="pname">{{ company.name }}</div>
-        {% if company.inn %}<p>ИНН: {{ company.inn }}</p>{% endif %}
+        {% if company.inn %}<p>{% translate "ИНН:" %} {{ company.inn }}</p>{% endif %}
         {% if company.legal_address %}<p>{{ company.legal_address }}</p>{% endif %}
       </div>
     </td>

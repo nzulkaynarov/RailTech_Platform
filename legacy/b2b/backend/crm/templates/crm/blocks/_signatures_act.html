@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
   Блок «подписи сторон» акта. Вставляется одним плейсхолдером {{doc.signatures}} — компания
   решает, где он стоит, но не что внутри (аналог locked block). Разметка — та, что печатал
@@ -7,18 +8,18 @@
   <tr>
     <td>
       <div class="sign-box">
-        <div class="role">От Поставщика:</div>
+        <div class="role">{% translate "От Поставщика:" %}</div>
         {% firstof seller_profile.legal_name seller.name "—" %}
-        {% if seller_profile.signatory_name %}<div class="sign-line">{{ seller_profile.signatory_position|default:"Подписант" }}: {{ seller_profile.signatory_name }}</div>{% else %}<div class="sign-line">Подпись / дата</div>{% endif %}
-        <div class="seal">М.П.</div>
+        {% if seller_profile.signatory_name %}<div class="sign-line">{% translate "Подписант" as default_signatory %}{{ seller_profile.signatory_position|default:default_signatory }}: {{ seller_profile.signatory_name }}</div>{% else %}<div class="sign-line">{% translate "Подпись / дата" %}</div>{% endif %}
+        <div class="seal">{% translate "М.П." %}</div>
       </div>
     </td>
     <td>
       <div class="sign-box">
-        <div class="role">От Покупателя:</div>
+        <div class="role">{% translate "От Покупателя:" %}</div>
         {% if company %}{{ company.name }}{% else %}{% firstof contact.name "—" %}{% endif %}
-        <div class="sign-line">Подпись / дата</div>
-        <div class="seal">М.П.</div>
+        <div class="sign-line">{% translate "Подпись / дата" %}</div>
+        <div class="seal">{% translate "М.П." %}</div>
       </div>
     </td>
   </tr>
