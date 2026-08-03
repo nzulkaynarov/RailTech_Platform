@@ -58,8 +58,15 @@ ENRICH_RESULT_SCHEMA = {
             "type": "string",
             "description": "Текстовая ПОДСКАЗКА вероятной категории (напр. 'Тормозное оборудование'). НЕ id. '' если непонятно.",
         },
+        "hs_code_choice": {
+            "type": "string",
+            "description": (
+                "Код ТН ВЭД, ВЫБРАННЫЙ из списка кандидатов в запросе — ровно как он там написан. "
+                "'' если ни один не подходит или кандидатов не дали. НИКОГДА не сочиняй код."
+            ),
+        },
     },
-    "required": ["description", "specifications", "suggested_category_hint"],
+    "required": ["description", "specifications", "suggested_category_hint", "hs_code_choice"],
     "additionalProperties": False,
 }
 
@@ -70,6 +77,9 @@ ENRICH_SYSTEM_PROMPT = (
     "задача — ПРЕДЛОЖИТЬ черновик для ускорения заполнения карточки: краткое описание, "
     "список ключевых характеристик и текстовую подсказку вероятной категории.\n\n"
     "ПРАВИЛА:\n"
+    "0. КОД ТН ВЭД — ТОЛЬКО ВЫБОР. Если в запросе даны кандидаты из справочника, верни в "
+    "hs_code_choice ОДИН из них дословно; если ни один не подходит или список пуст — верни ''. "
+    "Придуманный код ТН ВЭД хуже отсутствующего: продавец узнает об ошибке на таможне.\n"
     "1. КРИТИЧНО — НИЧЕГО НЕ ВЫДУМЫВАЙ. Выводи только то, что обоснованно следует из данных "
     "продавца и общеизвестных свойств такого типа товара. НЕ придумывай цены, наличие, сроки, "
     "сертификаты, гарантии или конкретные числовые параметры, которых нет во входных данных и "
@@ -88,7 +98,13 @@ ENRICH_SYSTEM_PROMPT = (
 )
 
 
-def _build_user_message(name: str, domain_code: str | None, mpn: str | None, gost: str | None) -> str:
+def _build_user_message(
+    name: str,
+    domain_code: str | None,
+    mpn: str | None,
+    gost: str | None,
+    hs_candidates: list[dict] | None = None,
+) -> str:
     """Render the seller-provided product facts as the prompt's user message. Only
     non-empty fields are included so the model is never fed phantom blanks to fill."""
     parts = [f"Наименование товара: {name}"]
@@ -98,9 +114,14 @@ def _build_user_message(name: str, domain_code: str | None, mpn: str | None, gos
         parts.append(f"ГОСТ / чертёж: {gost}")
     if domain_code:
         parts.append(f"Домен каталога: {domain_code}")
+    if hs_candidates:
+        # Кандидаты приходят ИЗ СПРАВОЧНИКА (retrieval), модель лишь выбирает — так код ТН ВЭД
+        # перестаёт быть генерацией. Пустой справочник → блока нет, и модель вернёт ''.
+        listed = "\n".join(f"  {row['code']} — {row['name'][:120]}" for row in hs_candidates)
+        parts.append("Кандидаты кода ТН ВЭД (выбери ОДИН дословно или верни пустую строку):\n" + listed)
     return (
         "Предложи черновик карточки для этого товара (описание, ключевые характеристики, "
-        "подсказку категории):\n\n" + "\n".join(parts)
+        "подсказку категории, выбор кода ТН ВЭД):\n\n" + "\n".join(parts)
     )
 
 
@@ -131,7 +152,7 @@ def enrich_product(
 ) -> dict:
     """Draft catalog fields for a product from its name (+ optional MPN/ГОСТ/domain).
 
-    Returns {description, specifications: [{key, value}], suggested_category_hint}.
+    Returns {description, specifications, suggested_category_hint, hs_code, hs_candidates}.
     The category is a HINT string only — never a resolved id (Rule 1). Returns {}
     when AI is disabled or the name is empty (neutral — never raises, so the seller's
     create/edit flow is unaffected when AI is off).
@@ -140,11 +161,18 @@ def enrich_product(
     if not getattr(settings, "AI_IMPORT_ENABLED", False) or not name:
         return {}
 
+    # Кандидаты кода берём ИЗ СПРАВОЧНИКА до вызова модели (retrieval), чтобы она выбирала, а
+    # не сочиняла цифры. Справочник пуст → кандидатов нет → модель вернёт пустой код.
+    from catalog.hs_suggest import suggest_hs_codes
+
+    hs_candidates = suggest_hs_codes(f"{name} {gost or ''} {mpn or ''}".strip(), limit=8)
+
     user_msg = _build_user_message(
         name[:255],
         (domain_code or "").strip() or None,
         (mpn or "").strip()[:120] or None,
         (gost or "").strip()[:120] or None,
+        hs_candidates,
     )
 
     client = _client()
@@ -176,4 +204,18 @@ def enrich_product(
         "specifications": _normalize_specifications(data.get("specifications")),
         # Rule 1: a HINT string only — we never invent or resolve a Category id here.
         "suggested_category_hint": str(data.get("suggested_category_hint") or "").strip()[:200],
+        # Код принимается, ТОЛЬКО если он действительно был среди кандидатов справочника: даже
+        # с прямым запретом в промпте модель может вернуть «похожий» код, а придуманный ТН ВЭД
+        # хуже пустого — продавец узнал бы об ошибке на границе. Сверка детерминированная.
+        "hs_code": _accepted_hs_code(data.get("hs_code_choice"), hs_candidates),
+        "hs_candidates": hs_candidates,
     }
+
+
+def _accepted_hs_code(choice, candidates: list[dict]) -> str:
+    """Вернуть выбранный код, только если он есть в списке кандидатов; иначе пусто."""
+    digits = "".join(ch for ch in str(choice or "") if ch.isdigit())
+    if not digits:
+        return ""
+    allowed = {row["code"] for row in candidates or []}
+    return digits if digits in allowed else ""

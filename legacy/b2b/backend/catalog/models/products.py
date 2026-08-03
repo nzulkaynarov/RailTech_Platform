@@ -247,6 +247,15 @@ class Product(models.Model):
             )
 
     def save(self, *args, **kwargs):
+        # Статус — часть жизненного цикла, а не необязательный ярлык: у 5 из 8 карточек он был
+        # пуст, и «черновик / опубликован / архив» существовал только на бумаге. Новая карточка
+        # рождается ЧЕРНОВИКОМ (Akeneo/Pimcore: запись входит в workflow, а не появляется сразу
+        # в канале). `get`, а не `get_or_create` — справочник создаётся миграцией (Rule 1), и
+        # молчаливое досоздание маскировало бы незапущенную миграцию.
+        if self.status_id is None:
+            from catalog.models import ProductStatus
+
+            self.status = ProductStatus.objects.get(code="DRAFT")
         if not self.sku:
             prefix = self.domain_type.sku_prefix if self.domain_type else "RT"
             self.sku = f"{prefix}-{uuid.uuid4().hex[:8].upper()}"

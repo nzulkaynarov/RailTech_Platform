@@ -7426,6 +7426,54 @@
                 }
             }
         },
+        "/api/v1/catalog/products/{id}/merge/": {
+            "post": {
+                "operationId": "catalog_products_merge_create",
+                "description": "Сливает карточку-дубль в текущую: пустые поля дозаполняются, спрос суммируется, офферы и строки КП переезжают, дубль уходит в АРХИВ (не удаляется — на него могут ссылаться исторические документы).",
+                "summary": "Merge a duplicate product card into this one",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Товар (PIM).",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "duplicate_id": {
+                                        "type": "integer"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Merged"
+                    },
+                    "400": {
+                        "description": "Cannot merge"
+                    }
+                }
+            }
+        },
         "/api/v1/catalog/products/{id}/publish/": {
             "post": {
                 "operationId": "catalog_products_publish_create",
@@ -7636,6 +7684,26 @@
                 }
             }
         },
+        "/api/v1/catalog/products/coverage/": {
+            "get": {
+                "operationId": "catalog_products_coverage_retrieve",
+                "description": "Доля строк КП, опирающихся на карточку товара — одна цифра, показывающая, работает ли направление «Номенклатура». Продавец видит свой срез, платформа — общий.",
+                "summary": "Catalog coverage metric",
+                "tags": [
+                    "Catalog"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{lines_total, lines_with_product, percent, candidates_pending}"
+                    }
+                }
+            }
+        },
         "/api/v1/catalog/products/export/": {
             "get": {
                 "operationId": "catalog_products_export_retrieve",
@@ -7678,6 +7746,36 @@
                             }
                         },
                         "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/products/hs-suggest/": {
+            "get": {
+                "operationId": "catalog_products_hs_suggest_retrieve",
+                "description": "Кандидаты кода ТН ВЭД из СПРАВОЧНИКА (`master_data.HSCode`) по наименованию или введённым цифрам. Не генерирует код: придуманный ТН ВЭД хуже отсутствующего — продавец узнал бы об ошибке на границе. Пустой справочник → пустой ответ.",
+                "summary": "Suggest HS (ТН ВЭД) codes for a product name",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "[{code, name, level, score}]"
                     }
                 }
             }

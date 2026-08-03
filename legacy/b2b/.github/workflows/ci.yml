@@ -4,9 +4,28 @@ on:
   push:
     branches:
       - main
+    # Правки одной документации не трогают ни код, ни контракт — полный прогон на них это
+    # чистая трата минут (docs-only PR прогонял все 11 джоб, включая backend-test и
+    # docker-build). macOS считает `docs/` и `Docs/` одним каталогом, Linux — разными:
+    # перечислены оба.
+    paths-ignore:
+      - 'Docs/**'
+      - 'docs/**'
+      - '**/*.md'
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - 'Docs/**'
+      - 'docs/**'
+      - '**/*.md'
+
+# Новый пуш в ветку ОТМЕНЯЕТ её предыдущий прогон: без этого докоммит (починил линт — запушил)
+# оставлял старый прогон крутиться до конца рядом с новым, и одна ветка съедала два-три полных
+# CI. На `main` не отменяем — там прогон подтверждает то, что уже смержено.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   i18n-symmetry:
@@ -373,6 +392,10 @@ jobs:
           file: ./backend/Dockerfile
           push: false
           tags: railtech-backend:${{ github.sha }}
+          # Без кэша слоёв образ собирается с нуля каждый прогон (psycopg2 компилируется из
+          # исходников — INF-09). Кэш GitHub Actions режет эту джобу в разы.
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,scope=backend,mode=max
 
       - name: Build frontend Docker image
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
@@ -381,6 +404,8 @@ jobs:
           file: ./frontend/Dockerfile
           push: false
           tags: railtech-frontend:${{ github.sha }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,scope=frontend,mode=max
 
   security:
     runs-on: ubuntu-latest

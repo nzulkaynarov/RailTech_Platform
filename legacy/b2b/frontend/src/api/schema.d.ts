@@ -2622,6 +2622,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/products/{id}/merge/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Merge a duplicate product card into this one
+         * @description Сливает карточку-дубль в текущую: пустые поля дозаполняются, спрос суммируется, офферы и строки КП переезжают, дубль уходит в АРХИВ (не удаляется — на него могут ссылаться исторические документы).
+         */
+        post: operations["catalog_products_merge_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/products/{id}/publish/": {
         parameters: {
             query?: never;
@@ -2702,6 +2722,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/products/coverage/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Catalog coverage metric
+         * @description Доля строк КП, опирающихся на карточку товара — одна цифра, показывающая, работает ли направление «Номенклатура». Продавец видит свой срез, платформа — общий.
+         */
+        get: operations["catalog_products_coverage_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/products/export/": {
         parameters: {
             query?: never;
@@ -2731,6 +2771,26 @@ export interface paths {
         };
         /** @description Generate an XLSX template for catalog import. */
         get: operations["catalog_products_export_template_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/products/hs-suggest/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Suggest HS (ТН ВЭД) codes for a product name
+         * @description Кандидаты кода ТН ВЭД из СПРАВОЧНИКА (`master_data.HSCode`) по наименованию или введённым цифрам. Не генерирует код: придуманный ТН ВЭД хуже отсутствующего — продавец узнал бы об ошибке на границе. Пустой справочник → пустой ответ.
+         */
+        get: operations["catalog_products_hs_suggest_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -17672,6 +17732,40 @@ export interface operations {
             };
         };
     };
+    catalog_products_merge_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Товар (PIM). */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    duplicate_id?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Merged */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Cannot merge */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     catalog_products_publish_create: {
         parameters: {
             query?: never;
@@ -17799,6 +17893,24 @@ export interface operations {
             };
         };
     };
+    catalog_products_coverage_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description {lines_total, lines_with_product, percent, candidates_pending} */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     catalog_products_export_retrieve: {
         parameters: {
             query?: never;
@@ -17833,6 +17945,26 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Product"];
                 };
+            };
+        };
+    };
+    catalog_products_hs_suggest_retrieve: {
+        parameters: {
+            query: {
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description [{code, name, level, score}] */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

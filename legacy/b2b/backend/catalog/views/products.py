@@ -128,7 +128,7 @@ class ProductViewSet(viewsets.ModelViewSet):
             return [permissions.AllowAny()]
         # Публикует ВЛАДЕЛЕЦ карточки (Amazon/Alibaba/Shopify), а порог качества держит
         # детерминированная полнота — см. `catalog/publishing.py`. Право платформы сохраняется.
-        if self.action in ("publish", "bulk_publish"):
+        if self.action in ("publish", "bulk_publish", "coverage", "merge", "hs_suggest"):
             return [permissions.IsAuthenticated()]
         from core.permissions import IsProductManagerOrAdmin
 
@@ -147,6 +147,73 @@ class ProductViewSet(viewsets.ModelViewSet):
 
             raise PermissionDenied("NO_SELLER_MEMBERSHIP")
         serializer.save(owner_company=seller_membership.company)
+
+    @extend_schema(
+        summary="Suggest HS (ТН ВЭД) codes for a product name",
+        description=(
+            "Кандидаты кода ТН ВЭД из СПРАВОЧНИКА (`master_data.HSCode`) по наименованию или "
+            "введённым цифрам. Не генерирует код: придуманный ТН ВЭД хуже отсутствующего — "
+            "продавец узнал бы об ошибке на границе. Пустой справочник → пустой ответ."
+        ),
+        parameters=[OpenApiParameter(name="q", type=str, location=OpenApiParameter.QUERY, required=True)],
+        responses={200: OpenApiResponse(description="[{code, name, level, score}]")},
+        tags=["Catalog"],
+    )
+    @action(detail=False, methods=["get"], url_path="hs-suggest", permission_classes=[permissions.IsAuthenticated])
+    def hs_suggest(self, request):
+        from catalog.hs_suggest import suggest_hs_codes
+
+        return Response({"candidates": suggest_hs_codes(request.query_params.get("q", ""), limit=8)})
+
+    @extend_schema(
+        summary="Merge a duplicate product card into this one",
+        description=(
+            "Сливает карточку-дубль в текущую: пустые поля дозаполняются, спрос суммируется, "
+            "офферы и строки КП переезжают, дубль уходит в АРХИВ (не удаляется — на него "
+            "могут ссылаться исторические документы)."
+        ),
+        request={"application/json": {"type": "object", "properties": {"duplicate_id": {"type": "integer"}}}},
+        responses={200: OpenApiResponse(description="Merged"), 400: OpenApiResponse(description="Cannot merge")},
+        tags=["Catalog"],
+    )
+    @action(detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated])
+    def merge(self, request, pk=None):
+        from catalog.merging import merge_products
+
+        survivor = self.get_object()
+        duplicate_id = request.data.get("duplicate_id")
+        if not duplicate_id:
+            return Response({"detail": "DUPLICATE_ID_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
+        duplicate = Product.objects.filter(pk=duplicate_id).first()
+        if duplicate is None:
+            return Response({"detail": "PRODUCT_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
+        merged, error = merge_products(survivor, duplicate, request.user)
+        if error:
+            code = 403 if error in ("PRODUCT_NOT_YOURS", "MERGE_CROSS_COMPANY_FORBIDDEN") else 400
+            return Response({"detail": error}, status=code)
+        return Response(self.get_serializer(merged).data)
+
+    @extend_schema(
+        summary="Catalog coverage metric",
+        description=(
+            "Доля строк КП, опирающихся на карточку товара — одна цифра, показывающая, работает "
+            "ли направление «Номенклатура». Продавец видит свой срез, платформа — общий."
+        ),
+        responses={200: OpenApiResponse(description="{lines_total, lines_with_product, percent, candidates_pending}")},
+        tags=["Catalog"],
+    )
+    @action(detail=False, methods=["get"], permission_classes=[permissions.IsAuthenticated])
+    def coverage(self, request):
+        from catalog.coverage import catalog_coverage
+
+        user = request.user
+        seller = None
+        if not user.is_platform_admin:
+            membership = user.memberships.filter(is_active=True).in_seller_company().select_related("company").first()
+            if membership is None:
+                return Response({"detail": "NO_SELLER_MEMBERSHIP"}, status=status.HTTP_403_FORBIDDEN)
+            seller = membership.company
+        return Response(catalog_coverage(seller))
 
     @extend_schema(
         summary="Publish a product (owner)",
