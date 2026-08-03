@@ -254,7 +254,13 @@ def act_on_step(step_id: int, actor, decision: str, comment: str = "") -> Tuple[
         "Шаг согласования пройден",
         f"Шаг согласован ({step.get_participation_display()})",
         event_code="quote.approval_step_approved",
-        event_params={"participation": step.get_participation_display()},
+        # `get_participation_display()` переводится на языке ТОГО, кто согласовал, и
+        # замерзает в журнале — читателю на другом языке доставалось «(Руководитель)».
+        # Витрина подбирает подпись по коду; имя остаётся для старых строк (ARCH-05).
+        event_params={
+            "participation": step.get_participation_display(),
+            "participation_code": step.participation,
+        },
     )
 
     next_order = _active_order(quote)

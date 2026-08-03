@@ -116,7 +116,15 @@ def select_contract_wording(contract, actor, *, field: str, variant_id):
         action="Формулировка договора изменена",
         detail=f"Договор {contract.number}: {field} → {chosen_title or 'стандартная редакция'}",
         event_code="contract.wording_changed",
-        event_params={"number": contract.number, "field": field, "variant": chosen_title},
+        # `field` — машинный код пункта, витрина подбирает к нему подпись. Заголовок варианта
+        # (`variant`) — пользовательский текст, он не переводится; `variant_code=STANDARD`
+        # говорит витрине, что выбрана стандартная редакция и подпись у неё своя (ARCH-05).
+        event_params={
+            "number": contract.number,
+            "field": field,
+            "variant": chosen_title,
+            "variant_code": "CUSTOM" if chosen_title else "STANDARD",
+        },
         user=actor,
         level="INFO",
         deal=contract.deal,

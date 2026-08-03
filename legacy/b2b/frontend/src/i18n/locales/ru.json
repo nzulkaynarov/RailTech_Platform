@@ -4161,6 +4161,14 @@
       "sent_below_floor": {
         "title": "КП отправлено ниже минимальной маржи",
         "detail": "КП {{number}} v{{version}}: маржа {{margin_percent}}% при минимуме {{floor_percent}}%"
+      },
+      "duplicated": {
+        "title": "КП дублировано",
+        "detail": "КП v{{version}} создано копированием КП v{{source_version}}"
+      },
+      "link_revoked": {
+        "title": "Публичная ссылка отозвана",
+        "detail": "КП v{{version}}"
       }
     },
     "lead": {
@@ -4193,6 +4201,10 @@
       "cancelled_force": {
         "title": "[FORCE_ADMIN] Договор отменён платформенным админом",
         "detail": "Договор #{{contract_id}} ({{from_status}} → CANCELLED)"
+      },
+      "wording_changed": {
+        "title": "Формулировка договора изменена",
+        "detail": "Договор {{number}}: {{field}} → {{variant}}"
       }
     },
     "invoice": {
@@ -4207,6 +4219,16 @@
       "cancelled": {
         "title": "Счёт отменён",
         "detail": "Счёт {{number}} по сделке #{{deal_id}}"
+      },
+      "created_manual": {
+        "title": "Счёт создан вручную (черновик)",
+        "detail": "Счёт {{number}} по сделке #{{deal_id}} (без договора)"
+      }
+    },
+    "support": {
+      "ticket_status_changed": {
+        "title": "Изменён статус обращения",
+        "detail": "{{from}} → {{to}}"
       }
     },
     "payment": {
@@ -4654,6 +4676,11 @@
       "title": "Новый тикет поддержки",
       "message": "Тикет #{{ticket_id}}: {{subject}}"
     }
+  },
+  "approvalParticipation": {
+    "HEAD": "Руководитель",
+    "APPROVER": "Согласовант",
+    "INFORMED": "Для информации"
   },
   "kycLevels": {
     "L1_UNVERIFIED": "Не верифицирован",

@@ -51,7 +51,13 @@ def approve_role_application(
         action="Заявка на роль одобрена",
         detail=f"{application.company.name} → {application.requested_type.name}",
         event_code="company.role_application_approved",
-        event_params={"company_name": application.company.name, "role_name": application.requested_type.name},
+        # Код роли рядом с именем — соседнее событие `company.role_added` пишет его с самого
+        # начала; здесь имя справочника замерзало по-русски и печаталось в английской ленте.
+        event_params={
+            "company_name": application.company.name,
+            "role_name": application.requested_type.name,
+            "role_code": application.requested_type.code,
+        },
         actor=reviewer,
         before={"status": before_status},
         after={"status": "APPROVED"},

@@ -1,58 +1,110 @@
 /**
- * Каждое событие журнала имеет подпись на обоих языках.
+ * Каждое событие, которое пишет бэкенд, имеет подпись на обоих языках.
  *
  * Найдено ux-review 03-08: в АНГЛИЙСКОМ интерфейсе оператора лента активности была наполовину
- * русской. Причина — у части кодов событий не было записи в словаре вовсе, и клиент падал на
- * текст, сохранённый в базе при записи (он всегда на русском). Ключи существовали для 17 кодов
- * из 21; недостающие четыре печатались по-русски в обеих локалях.
+ * русской. Одна из причин — у части кодов не было записи в словаре вовсе, и клиент падал на
+ * текст, сохранённый в базу при записи (он всегда на русском).
  *
- * Тест держит покрытие: список кодов берётся из бэкендовой карты событий, а не переписывается
- * руками, — иначе он разъедется с реальностью ровно так же, как разъехался словарь.
+ * Список кодов НЕ переписывается руками: первая редакция этого теста перечисляла 26 кодов из
+ * 65 существующих и пропустила ровно тот класс, ради которого писалась. Здесь коды читаются
+ * из исходников бэкенда, а пространство имён определяется по тому, ЧТО пишет вызов: журнал
+ * (`log_admin_action` / `ActivityLog`) печатается словарём `activity.*`, уведомление
+ * (`notify_*` / `Notification`) — словарём `notification.*`. Одного «есть хоть где-нибудь»
+ * мало: подпись в чужом пространстве имён не печатается.
  */
+
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 
 import { describe, it, expect } from 'vitest';
 
 import en from '../locales/en.json';
 import ru from '../locales/ru.json';
 
-/**
- * Коды, которые пишет бэкенд. Держится синхронно с `crm/migrations/0059_backfill_activitylog…`
- * и живыми райтерами; при добавлении нового кода тест упадёт, пока не появится подпись.
- */
-const EVENT_CODES = [
-  'deal.created', 'deal.submitted', 'deal.routed', 'deal.claimed', 'deal.released',
-  'deal.stage_changed', 'deal.item_added',
-  'quote.sent', 'quote.viewed', 'quote.accepted', 'quote.submitted_for_review',
-  'quote.approval_step_approved', 'quote.approval_complete', 'quote.approval_auto',
-  'quote.approval_recalled', 'quote.sent_below_floor',
-  'contract.created', 'contract.signed_client', 'contract.signed_manager',
-  'invoice.created', 'invoice.issued', 'invoice.cancelled',
-  'act.rejected', 'act.cancelled', 'act.reminded',
-  'payment.recorded',
-];
+const BACKEND = join(process.cwd(), '..', 'backend');
+const SKIP_DIRS = new Set(['migrations', '__pycache__', 'tests', 'node_modules', '.venv']);
 
-function titleOf(dict: unknown, code: string): unknown {
-  return code.split('.').reduce<unknown>(
-    (node, part) => (node as Record<string, unknown>)?.[part],
-    (dict as Record<string, unknown>).activity,
-  );
+const WRITES_NOTIFICATION = /notify_|Notification\.objects\.create\(|Notification\(/;
+const WRITES_ACTIVITY = /log_admin_action\(|ActivityLog\.objects\.create\(|ActivityLog\(|_log\(|_log_quote\(|_log_activity\(/;
+
+function pythonFiles(dir: string): string[] {
+  const out: string[] = [];
+  for (const name of readdirSync(dir)) {
+    const path = join(dir, name);
+    if (statSync(path).isDirectory()) {
+      if (!SKIP_DIRS.has(name)) out.push(...pythonFiles(path));
+    } else if (name.endsWith('.py') && !name.startsWith('test')) {
+      out.push(path);
+    }
+  }
+  return out;
 }
 
-describe('покрытие журнала активности подписями', () => {
-  it.each(EVENT_CODES)('%s имеет заголовок в обеих локалях', (code) => {
-    const inRu = titleOf(ru, code) as { title?: string } | undefined;
-    const inEn = titleOf(en, code) as { title?: string } | undefined;
+/** `{ code → пространства имён, в которых он обязан иметь подпись }`. */
+function collectEventCodes(): Map<string, Set<'activity' | 'notification'>> {
+  const codes = new Map<string, Set<'activity' | 'notification'>>();
+  for (const file of pythonFiles(BACKEND)) {
+    const lines = readFileSync(file, 'utf-8').split('\n');
+    lines.forEach((line, index) => {
+      const match = /event_code="([a-z_.]+)"/.exec(line);
+      if (!match) return;
+      // Ближайший вверх по тексту вызов-производитель и решает, чья это лента.
+      for (let cursor = index; cursor >= 0 && cursor > index - 45; cursor -= 1) {
+        const kind = WRITES_NOTIFICATION.test(lines[cursor])
+          ? ('notification' as const)
+          : WRITES_ACTIVITY.test(lines[cursor])
+            ? ('activity' as const)
+            : null;
+        if (!kind) continue;
+        const known = codes.get(match[1]) ?? new Set<'activity' | 'notification'>();
+        known.add(kind);
+        codes.set(match[1], known);
+        return;
+      }
+    });
+  }
+  return codes;
+}
 
-    expect(inRu?.title, `нет ru-заголовка для ${code}`).toBeTypeOf('string');
-    expect(inEn?.title, `нет en-заголовка для ${code}`).toBeTypeOf('string');
+const EVENT_CODES = collectEventCodes();
+
+function activityTitle(dict: unknown, code: string): string | undefined {
+  const node = code
+    .split('.')
+    .reduce<unknown>(
+      (branch, part) => (branch as Record<string, unknown>)?.[part],
+      (dict as Record<string, unknown>).activity,
+    );
+  return (node as { title?: string } | undefined)?.title;
+}
+
+function notificationTitle(dict: unknown, code: string): string | undefined {
+  const notifications = (dict as Record<string, Record<string, { title?: string }>>).notification;
+  return notifications?.[code]?.title;
+}
+
+const titleOf = (dict: unknown, code: string, kind: 'activity' | 'notification') =>
+  kind === 'activity' ? activityTitle(dict, code) : notificationTitle(dict, code);
+
+/** Пары «код + чья лента» — по одной строке на каждое требование. */
+const REQUIREMENTS = [...EVENT_CODES].flatMap(([code, kinds]) => [...kinds].map((kind) => ({ code, kind })));
+
+describe('покрытие событий подписями', () => {
+  it('коды прочитаны из бэкенда, а не выдуманы', () => {
+    // Защита от молчаливого нуля: сломанный обход каталога сделал бы тест ниже пустым и зелёным.
+    expect(REQUIREMENTS.length).toBeGreaterThan(50);
+  });
+
+  it.each(REQUIREMENTS)('$code имеет подпись в словаре $kind на обоих языках', ({ code, kind }) => {
+    expect(titleOf(ru, code, kind), `нет ru-подписи ${kind}.${code}`).toBeTypeOf('string');
+    expect(titleOf(en, code, kind), `нет en-подписи ${kind}.${code}`).toBeTypeOf('string');
   });
 
   it('английские подписи действительно английские, а не копия русских', () => {
     // Копия русского значения в en.json — та же проблема, только замаскированная.
-    const cyrillic = EVENT_CODES.filter((code) => {
-      const title = (titleOf(en, code) as { title?: string } | undefined)?.title ?? '';
-      return /[А-Яа-я]/.test(title);
-    });
+    const cyrillic = REQUIREMENTS.filter(({ code, kind }) => /[А-Яа-я]/.test(titleOf(en, code, kind) ?? '')).map(
+      ({ code }) => code,
+    );
 
     expect(cyrillic).toEqual([]);
   });

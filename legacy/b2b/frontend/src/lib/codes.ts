@@ -67,6 +67,29 @@ export const WorkspaceRole = {
 export const workspaceRoleLabelKey = (code: string | undefined | null): string =>
   code && code in WorkspaceRole ? `workspaceRoles.${code}` : '';
 
+/** `StepParticipation` CODEs (crm.models.approvals) — роль шага в цепочке согласования. */
+export const StepParticipation = {
+  HEAD: 'HEAD',
+  APPROVER: 'APPROVER',
+  INFORMED: 'INFORMED',
+} as const;
+
+/** Mirrors `approvalParticipation.*` in ru/en.json. */
+export const approvalParticipationLabelKey = (code: string | undefined | null): string =>
+  code && code in StepParticipation ? `approvalParticipation.${code}` : '';
+
+/** `SupportTicket.status` CODEs (core.models STATUS_CHOICES). Mirrors `admin.support.status.*`. */
+export const SupportTicketStatus = {
+  OPEN: 'OPEN',
+  IN_PROGRESS: 'IN_PROGRESS',
+  RESOLVED: 'RESOLVED',
+  CLOSED: 'CLOSED',
+} as const;
+
+/** Resolve a support-ticket-status label key from a code, `''` when unknown. */
+export const supportTicketStatusLabelKey = (code: string | undefined | null): string =>
+  code && code in SupportTicketStatus ? `admin.support.status.${code}` : '';
+
 export const QuoteStatus = {
   DRAFT: 'DRAFT',
   PENDING_TRADE_REVIEW: 'PENDING_TRADE_REVIEW',
@@ -142,6 +165,11 @@ export const VerificationStatus = {
   L2_VERIFIED: 'L2_VERIFIED',
   L3_CONTRACTED: 'L3_CONTRACTED',
 } as const;
+
+/** i18n key for a KYC-level CODE — уровни верификации компании. Returns `''` when unknown so
+ *  callers can fall back to the raw DB name. Mirrors `kycLevels.*` in ru.json / en.json. */
+export const kycLevelLabelKey = (code: string | undefined | null): string =>
+  code && code in VerificationStatus ? `kycLevels.${code}` : '';
 
 /** Product PUBLICATION-status CODEs (catalog `ProductStatus` lookup: DRAFT/PUBLISHED/
  *  ARCHIVED). Distinct from the stock-availability `productStatuses.*` keys. */

@@ -214,7 +214,16 @@ def transition_deal_stage(
         action="Стадия изменена" if validate_fsm else "Force: стадия изменена",
         detail=f"Сделка #{deal.id}: {old_stage_name} → {target_stage.name}",
         event_code="deal.stage_changed" if validate_fsm else "deal.stage_changed_force",
-        event_params={"deal_id": deal.id, "from_stage": old_stage_name, "to_stage": target_stage.name},
+        # Коды рядом с именами: имя стадии — русская строка справочника, и, замороженная в
+        # журнале, она печаталась в английской ленте как есть. Витрина подбирает подпись по
+        # коду; имена остаются ради СТАРЫХ строк, у которых кода нет (ARCH-05).
+        event_params={
+            "deal_id": deal.id,
+            "from_stage": old_stage_name,
+            "to_stage": target_stage.name,
+            "from_stage_code": old_stage_code,
+            "to_stage_code": target_stage.code,
+        },
         actor=actor,
         reason=reason,
         before={"stage_code": old_stage_code, "stage_name": old_stage_name},

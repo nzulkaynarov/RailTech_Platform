@@ -79,10 +79,15 @@ def verify_company_kyc(
         action="KYC: понижение уровня" if is_downgrade else "KYC: подтверждение",
         detail=f"{company.name}: {before_name or before_code} → {target_status.name}",
         event_code="company.kyc_downgraded" if is_downgrade else "company.kyc_verified",
+        # Имя уровня — русская строка справочника; замороженная в журнале, она печаталась
+        # в английской ленте как есть. Витрина подбирает подпись по коду, имена остаются
+        # ради старых строк (ARCH-05).
         event_params={
             "company_name": company.name,
             "from_status": before_name or before_code,
             "to_status": target_status.name,
+            "from_status_code": before_code,
+            "to_status_code": level_code,
         },
         actor=approver,
         reason=reason,

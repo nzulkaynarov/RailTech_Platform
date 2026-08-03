@@ -4149,6 +4149,14 @@
       "sent_below_floor": {
         "title": "Quote sent below the margin floor",
         "detail": "Quote {{number}} v{{version}}: margin {{margin_percent}}% against a {{floor_percent}}% floor"
+      },
+      "duplicated": {
+        "title": "Quote duplicated",
+        "detail": "Quote v{{version}} created by copying quote v{{source_version}}"
+      },
+      "link_revoked": {
+        "title": "Public link revoked",
+        "detail": "Quote v{{version}}"
       }
     },
     "lead": {
@@ -4181,6 +4189,10 @@
       "cancelled_force": {
         "title": "[FORCE_ADMIN] Contract cancelled by platform admin",
         "detail": "Contract #{{contract_id}} ({{from_status}} → CANCELLED)"
+      },
+      "wording_changed": {
+        "title": "Contract wording updated",
+        "detail": "Contract {{number}}: {{field}} → {{variant}}"
       }
     },
     "invoice": {
@@ -4195,6 +4207,16 @@
       "cancelled": {
         "title": "Invoice cancelled",
         "detail": "Invoice {{number}} for deal #{{deal_id}}"
+      },
+      "created_manual": {
+        "title": "Invoice created manually (draft)",
+        "detail": "Invoice {{number}} for deal #{{deal_id}} (no contract)"
+      }
+    },
+    "support": {
+      "ticket_status_changed": {
+        "title": "Support ticket status changed",
+        "detail": "{{from}} → {{to}}"
       }
     },
     "payment": {
@@ -4634,6 +4656,11 @@
       "title": "New support ticket",
       "message": "Ticket #{{ticket_id}}: {{subject}}"
     }
+  },
+  "approvalParticipation": {
+    "HEAD": "Head of unit",
+    "APPROVER": "Approver",
+    "INFORMED": "For information"
   },
   "kycLevels": {
     "L1_UNVERIFIED": "Unverified",
