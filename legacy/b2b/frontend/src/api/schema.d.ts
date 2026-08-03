@@ -2622,6 +2622,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/products/{id}/publish/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publish a product (owner)
+         * @description Публикует карточку. Доступно ВЛАДЕЛЬЦУ и платформе. Требует полноты: неполная карточка отвечает `PRODUCT_INCOMPLETE:<коды недостающих полей>`.
+         */
+        post: operations["catalog_products_publish_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/products/{id}/upload-document/": {
         parameters: {
             query?: never;
@@ -2673,7 +2693,7 @@ export interface paths {
         put?: never;
         /**
          * Bulk publish products
-         * @description Publish multiple products at once by providing a list of product IDs. Maximum 500 products per batch. Admin only.
+         * @description Publish multiple products at once by providing a list of product IDs. Maximum 500 products per batch. Доступно владельцу карточек и платформе.
          */
         post: operations["catalog_products_bulk_publish_create"];
         delete?: never;
@@ -10525,6 +10545,22 @@ export interface components {
              */
             status?: number | null;
             /**
+             * Сколько раз спрашивали
+             * @description Число КП, где встретилась эта позиция. Очередь наполнения сортируется по нему.
+             */
+            demand_count?: number;
+            /**
+             * Последний запрос
+             * Format: date-time
+             * @description Когда позицию спрашивали в последний раз.
+             */
+            last_requested_at?: string | null;
+            /**
+             * Заявка-источник
+             * @description Заявка, из строки которой родилась карточка (провенанс кандидата).
+             */
+            source_deal?: number | null;
+            /**
              * Тип домена
              * @description Домен каталога: ж/д техника, общие товары или услуги
              */
@@ -11258,6 +11294,25 @@ export interface components {
             status?: number | null;
             readonly status_name: string | null;
             readonly status_code: string | null;
+            readonly completeness: {
+                [key: string]: unknown;
+            };
+            /**
+             * Сколько раз спрашивали
+             * @description Число КП, где встретилась эта позиция. Очередь наполнения сортируется по нему.
+             */
+            demand_count?: number;
+            /**
+             * Последний запрос
+             * Format: date-time
+             * @description Когда позицию спрашивали в последний раз.
+             */
+            last_requested_at?: string | null;
+            /**
+             * Заявка-источник
+             * @description Заявка, из строки которой родилась карточка (провенанс кандидата).
+             */
+            source_deal?: number | null;
             /**
              * Тип домена
              * @description Домен каталога: ж/д техника, общие товары или услуги
@@ -11445,6 +11500,25 @@ export interface components {
             readonly status_name: string | null;
             readonly status_code: string | null;
             /**
+             * Сколько раз спрашивали
+             * @description Число КП, где встретилась эта позиция. Очередь наполнения сортируется по нему.
+             */
+            demand_count?: number;
+            readonly completeness: {
+                [key: string]: unknown;
+            };
+            /**
+             * Последний запрос
+             * Format: date-time
+             * @description Когда позицию спрашивали в последний раз.
+             */
+            last_requested_at?: string | null;
+            /**
+             * Заявка-источник
+             * @description Заявка, из строки которой родилась карточка (провенанс кандидата).
+             */
+            source_deal?: number | null;
+            /**
              * Тип домена
              * @description Домен каталога: ж/д техника, общие товары или услуги
              */
@@ -11522,6 +11596,22 @@ export interface components {
              * @description Статус жизненного цикла: черновик, опубликован, архив
              */
             status?: number | null;
+            /**
+             * Сколько раз спрашивали
+             * @description Число КП, где встретилась эта позиция. Очередь наполнения сортируется по нему.
+             */
+            demand_count?: number;
+            /**
+             * Последний запрос
+             * Format: date-time
+             * @description Когда позицию спрашивали в последний раз.
+             */
+            last_requested_at?: string | null;
+            /**
+             * Заявка-источник
+             * @description Заявка, из строки которой родилась карточка (провенанс кандидата).
+             */
+            source_deal?: number | null;
             /**
              * Тип домена
              * @description Домен каталога: ж/д техника, общие товары или услуги
@@ -17575,6 +17665,40 @@ export interface operations {
             };
             /** @description Image not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    catalog_products_publish_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Товар (PIM). */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ProductRequest"];
+                "multipart/form-data": components["schemas"]["ProductRequest"];
+            };
+        };
+        responses: {
+            /** @description Published */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Incomplete */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };

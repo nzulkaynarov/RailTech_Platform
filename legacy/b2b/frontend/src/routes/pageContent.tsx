@@ -19,6 +19,9 @@ const ProductManagement = lazyWithRetry(() =>
   import('@/pages/ProductManagement').then((m) => ({ default: m.ProductManagement })),
 );
 const ProductDetail = lazyWithRetry(() => import('@/pages/ProductDetail').then((m) => ({ default: m.ProductDetail })));
+const NomenclatureQueuePage = lazyWithRetry(() =>
+  import('@/pages/NomenclatureQueuePage').then((m) => ({ default: m.NomenclatureQueuePage })),
+);
 const Dashboard = lazyWithRetry(() => import('@/pages/Dashboard').then((m) => ({ default: m.Dashboard })));
 const SettingsPage = lazyWithRetry(() => import('@/pages/SettingsPage').then((m) => ({ default: m.SettingsPage })));
 const RequestDetailPage = lazyWithRetry(() =>
@@ -149,6 +152,10 @@ function renderContent(ctx: PageRenderContext): ReactNode {
       return renderDashboard(ctx);
     case 'products':
       return <ProductManagement onProductClick={onProductClick} />;
+    // «Номенклатура» продавца — рабочее место, а не витрина: очередь кандидатов из заявок,
+    // готовность карточки и публикация владельцем (волна A, spec-nomenclature-lifecycle).
+    case 'nomenclature':
+      return <NomenclatureQueuePage onNavigate={ctx.onNavigate} />;
     case 'product_detail':
       return (
         <ProductDetail

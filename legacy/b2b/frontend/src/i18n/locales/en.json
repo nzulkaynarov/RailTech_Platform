@@ -1636,7 +1636,8 @@
     "mySubscription": "My subscription",
     "forgotPassword": "Reset password",
     "resetPassword": "New password",
-    "adminOperatorRoles": "Operator roles"
+    "adminOperatorRoles": "Operator roles",
+    "nomenclature": "Nomenclature"
   },
   "dealsKanban": {
     "list": "List",
@@ -4705,5 +4706,41 @@
     "doc_delivery_terms": "Delivery terms (phrase)",
     "doc_valid_from": "Contract start (phrase)",
     "doc_valid_until": "Contract end (phrase)"
+  },
+  "nomenclature": {
+    "title": "Nomenclature",
+    "subtitle": "Your product cards: candidates from requests and the published catalog",
+    "tabs": {
+      "DRAFT": "Candidates",
+      "PUBLISHED": "Published"
+    },
+    "columns": {
+      "product": "Item",
+      "demand": "Demand",
+      "completeness": "Readiness"
+    },
+    "fromRequest": "from request #{{id}}",
+    "missing": "missing",
+    "readyToPublish": "Ready to publish",
+    "enrich": "Complete",
+    "publish": "Publish",
+    "open": "Open",
+    "publishSelected": "Publish selected ({{count}})",
+    "published": "“{{name}}” published",
+    "publishedMany": "Published cards: {{count}}",
+    "publishFailed": "Could not publish — check the required fields",
+    "selectRow": "Select “{{name}}”",
+    "empty": {
+      "DRAFT": "No candidates",
+      "PUBLISHED": "No published cards"
+    },
+    "emptyHint": {
+      "DRAFT": "Candidates appear on their own: when you send a quote with items that are not in the catalog, they land here together with what you filled in — part number, standard, HS code.",
+      "PUBLISHED": "Published cards take part in matching: the next request with the same item fills in automatically."
+    },
+    "whyTitle": "Why this matters",
+    "whyBody": "Every published card removes manual typing from future quotes: the system fills in the part number, unit and HS code by itself.",
+    "askedTimes_one": "asked {{count}} time",
+    "askedTimes_other": "asked {{count}} times"
   }
 }

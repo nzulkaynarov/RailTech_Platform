@@ -93,6 +93,18 @@ export interface Product {
     brand_country?: string | null;
     manufacturer_part_number?: string | null;
 
+    /**
+     * Полнота карточки — ВЫЧИСЛЯЕТСЯ сервером (Akeneo): `missing` называет, чего не хватает,
+     * и публикация открывается сама, когда обязательное заполнено. Это заменило ручное
+     * благословение платформы: до волны A опубликовать карточку мог только оператор.
+     */
+    completeness?: { percent: number; missing: { code: string; label: string }[]; is_publishable: boolean };
+    /** Сколько КП спрашивали эту позицию — очередь наполнения сортируется по спросу (Ariba). */
+    demand_count?: number;
+    last_requested_at?: string | null;
+    /** Заявка, из строки которой родилась карточка. */
+    source_deal?: number | null;
+
     uom?: number | null;
     uom_data?: { id: number; code: string; name: string } | null;
 
@@ -200,6 +212,19 @@ export const catalogApi = {
     },
     getProduct: async (id: number | string): Promise<Product> => {
         const response = await apiClient.get<Product>(`catalog/products/${id}/`);
+        return response.data;
+    },
+    /** Очередь наполнения продавца: свои карточки, сначала самые спрашиваемые. */
+    getMyCandidates: async (statusCode = 'DRAFT'): Promise<Product[]> => {
+        const response = await apiClient.get<{ results?: Product[] } | Product[]>('catalog/products/', {
+            params: { mine: 'true', status: statusCode, order: 'demand', page_size: 200 },
+        });
+        const body = response.data as { results?: Product[] };
+        return body.results ?? (response.data as Product[]);
+    },
+    /** Публикация карточки её ВЛАДЕЛЬЦЕМ (Amazon/Alibaba/Shopify), гейт — полнота. */
+    publishProduct: async (id: number): Promise<Product> => {
+        const response = await apiClient.post<Product>(`catalog/products/${id}/publish/`, {});
         return response.data;
     },
     createProduct: async (data: Partial<Product>): Promise<Product> => {

@@ -349,5 +349,11 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
         item = self.get_object()
         raw = item.imported_raw_name or (item.product.name if item.product else "")
         domain_hint = item.product.domain_type.code if (item.product and item.product.domain_type) else None
-        candidates = smart_match_candidates(raw, limit=5, domain_hint=domain_hint)
+        # Продавец видит опубликованный каталог ПЛЮС свои неопубликованные карточки —
+        # чужой черновик в подсказках был бы утечкой (ADR-0003 §5, «скрытая конкуренция»).
+        from crm.services.quotes import _quote_seller_company
+
+        candidates = smart_match_candidates(
+            raw, limit=5, domain_hint=domain_hint, owner_company=_quote_seller_company(item.quote)
+        )
         return Response({"raw": raw, "candidates": candidates})

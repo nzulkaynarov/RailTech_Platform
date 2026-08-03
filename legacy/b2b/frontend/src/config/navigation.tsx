@@ -133,7 +133,8 @@ export const TENANT_NAV: NavNodeDef[] = [
     // Managing/publishing nomenclature is a T2 (catalog.*) seller action → KYC L2+ floor.
     requires: { kyc: true, anyPerm: ['catalog.manage', 'catalog.publish'] },
     children: [
-      { labelKey: 'shell.nomenclature', id: 'products' },
+      { labelKey: 'shell.nomenclature', id: 'nomenclature' },
+      { labelKey: 'shell.catalog', id: 'products' },
       { labelKey: 'shell.categories', id: 'categories' },
       { labelKey: 'shell.equipmentGroups', id: 'equipment-groups' },
       { labelKey: 'shell.catalogImport', id: 'catalog-import' },

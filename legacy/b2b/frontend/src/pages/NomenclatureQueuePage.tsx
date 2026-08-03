@@ -1,0 +1,235 @@
+import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Boxes, CheckCircle2, Loader2, PackagePlus } from 'lucide-react';
+import { toast } from 'sonner';
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ResponsiveDataTable } from '@/components/ResponsiveDataTable';
+import { useMyCandidates, usePublishProduct, useBulkPublishProducts } from '@/hooks/useCatalog';
+import type { Product } from '@/api/catalogApi';
+
+/**
+ * Очередь наполнения номенклатуры продавца (волна A).
+ *
+ * До неё пункт меню «Номенклатура» открывал витрину ЧУЖОГО каталога с кнопкой «в корзину» —
+ * то есть про покупку, а не про ведение своих товаров; завести карточку продавец не мог вовсе
+ * (форма жила только в плоскости оператора), а опубликовать — тем более (право было у
+ * платформы). При этом 90 из 98 строк КП шли мимо каталога.
+ *
+ * Эталон — Ariba/Coupa catalog enablement + Akeneo enrichment queue: позиции, которых нет в
+ * каталоге, собираются в очередь, сортируются ПО СПРОСУ (сначала то, что окупится быстрее), и
+ * карточка публикуется, когда заполнено обязательное — порог считается, а не назначается.
+ */
+
+type TabKey = 'DRAFT' | 'PUBLISHED';
+
+/** Полнота словами: процент мотивирует, но действие подсказывает список недостающего. */
+function CompletenessCell({ product, t }: { product: Product; t: (k: string, o?: Record<string, unknown>) => string }) {
+  const report = product.completeness;
+  if (!report) return <span className="text-muted-foreground">—</span>;
+  if (report.is_publishable) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-sm text-success">
+        <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+        {t('nomenclature.readyToPublish')}
+      </span>
+    );
+  }
+  return (
+    <div className="min-w-0">
+      <div className="text-sm font-medium tabular-nums">{report.percent}%</div>
+      <div className="truncate text-xs text-muted-foreground">
+        {t('nomenclature.missing')}: {report.missing.map((item) => item.label).join(', ')}
+      </div>
+    </div>
+  );
+}
+
+export function NomenclatureQueuePage({ onNavigate }: { onNavigate: (target: string) => void }) {
+  const { t } = useTranslation();
+  const [tab, setTab] = useState<TabKey>('DRAFT');
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const { data: rows, isLoading } = useMyCandidates(tab);
+  const publishOne = usePublishProduct();
+  const publishMany = useBulkPublishProducts();
+
+  const items = useMemo(() => rows ?? [], [rows]);
+  const publishableSelected = useMemo(
+    () => items.filter((p) => selected.has(p.id) && p.completeness?.is_publishable),
+    [items, selected],
+  );
+
+  const toggle = (id: number) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const columns = [
+    {
+      id: 'select',
+      header: '',
+      cell: (p: Product) => (
+        <Checkbox
+          checked={selected.has(p.id)}
+          onCheckedChange={() => toggle(p.id)}
+          aria-label={t('nomenclature.selectRow', { name: p.name })}
+        />
+      ),
+    },
+    {
+      id: 'name',
+      header: t('nomenclature.columns.product'),
+      cell: (p: Product) => (
+        <div className="min-w-0">
+          <div className="truncate font-medium">{p.name}</div>
+          <div className="truncate text-xs text-muted-foreground">
+            {p.source_deal ? t('nomenclature.fromRequest', { id: p.source_deal }) : p.sku}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'demand',
+      header: t('nomenclature.columns.demand'),
+      cell: (p: Product) => (
+        <span className="tabular-nums">
+          {p.demand_count ? t('nomenclature.askedTimes', { count: p.demand_count }) : '—'}
+        </span>
+      ),
+    },
+    {
+      id: 'completeness',
+      header: t('nomenclature.columns.completeness'),
+      cell: (p: Product) => <CompletenessCell product={p} t={t} />,
+    },
+    {
+      id: 'actions',
+      header: '',
+      cell: (p: Product) =>
+        tab === 'DRAFT' ? (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => onNavigate(`product/${p.id}`)}>
+              {t('nomenclature.enrich')}
+            </Button>
+            <Button
+              size="sm"
+              disabled={!p.completeness?.is_publishable || publishOne.isPending}
+              onClick={() =>
+                publishOne.mutate(p.id, {
+                  onSuccess: () => toast.success(t('nomenclature.published', { name: p.name })),
+                  onError: () => toast.error(t('nomenclature.publishFailed')),
+                })
+              }
+            >
+              {t('nomenclature.publish')}
+            </Button>
+          </div>
+        ) : (
+          <Button variant="ghost" size="sm" onClick={() => onNavigate(`product/${p.id}`)}>
+            {t('nomenclature.open')}
+          </Button>
+        ),
+    },
+  ];
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+          <Boxes className="h-5 w-5" aria-hidden="true" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold">{t('nomenclature.title')}</h1>
+          <p className="text-sm text-muted-foreground">{t('nomenclature.subtitle')}</p>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {(['DRAFT', 'PUBLISHED'] as TabKey[]).map((key) => (
+          <Button
+            key={key}
+            variant={tab === key ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => {
+              setTab(key);
+              setSelected(new Set());
+            }}
+          >
+            {t(`nomenclature.tabs.${key}`)}
+          </Button>
+        ))}
+        {publishableSelected.length > 0 && (
+          <Button
+            size="sm"
+            className="ml-auto"
+            disabled={publishMany.isPending}
+            onClick={() =>
+              publishMany.mutate(
+                publishableSelected.map((p) => p.id),
+                {
+                  onSuccess: () => {
+                    toast.success(t('nomenclature.publishedMany', { count: publishableSelected.length }));
+                    setSelected(new Set());
+                  },
+                  onError: () => toast.error(t('nomenclature.publishFailed')),
+                },
+              )
+            }
+          >
+            {publishMany.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> : null}
+            {t('nomenclature.publishSelected', { count: publishableSelected.length })}
+          </Button>
+        )}
+      </div>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">{t(`nomenclature.tabs.${tab}`)}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <Skeleton key={index} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : items.length === 0 ? (
+            // Пустой экран объясняет, ОТКУДА здесь берутся строки, а не просто молчит:
+            // кандидаты появляются сами после отправки КП с позициями вне каталога.
+            <div className="flex flex-col items-center gap-3 py-12 text-center">
+              <PackagePlus className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
+              <p className="text-sm font-medium">{t(`nomenclature.empty.${tab}`)}</p>
+              <p className="max-w-md text-xs text-muted-foreground">{t(`nomenclature.emptyHint.${tab}`)}</p>
+            </div>
+          ) : (
+            <ResponsiveDataTable
+              columns={columns}
+              rows={items}
+              getRowId={(p: Product) => p.id}
+              onRowClick={(p: Product) => onNavigate(`product/${p.id}`)}
+            />
+          )}
+        </CardContent>
+      </Card>
+
+      {tab === 'DRAFT' && items.length > 0 && (
+        <p className="text-xs text-muted-foreground">
+          <Badge variant="secondary" className="mr-2">
+            {t('nomenclature.whyTitle')}
+          </Badge>
+          {t('nomenclature.whyBody')}
+        </p>
+      )}
+    </div>
+  );
+}
+
+export default NomenclatureQueuePage;

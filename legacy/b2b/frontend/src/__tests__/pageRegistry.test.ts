@@ -87,6 +87,8 @@ describe('реестр страниц: эквивалентность прежн
       asSorted([
         'dashboard', 'profile', 'settings', 'help',
         'products', 'product_detail', 'categories', 'equipment-groups', 'catalog-import',
+        // + волна A номенклатуры: очередь наполнения продавца (spec-nomenclature-lifecycle).
+        'nomenclature',
         'sourcing-requests', 'crm-deals', 'crm-quotes',
         'deal-quote', 'request-detail', 'my-subscription',
         'contracts', 'invoices', 'payments', 'acts', 'fulfillments', 'other-documents', 'company-files',
@@ -110,6 +112,8 @@ describe('реестр страниц: эквивалентность прежн
         'admin-operator-roles', 'admin-access-log', 'admin-support', 'admin-leads',
         'contracts', 'invoices', 'payments', 'acts', 'fulfillments', 'other-documents', 'company-files',
         'my-subscription', 'catalog-import',
+        // + волна A номенклатуры.
+        'nomenclature',
       ]),
     );
   });

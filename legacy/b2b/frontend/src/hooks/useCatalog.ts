@@ -184,6 +184,26 @@ export const useDeleteOffer = () => {
   });
 };
 
+/**
+ * Очередь наполнения номенклатуры продавца.
+ *
+ * Ключ включает статус: «Кандидаты» и «Опубликовано» — разные выборки одного каталога, и один
+ * ключ на двоих затирал бы их друг другом.
+ */
+export const useMyCandidates = (statusCode = 'DRAFT') => useQuery({
+  queryKey: ['products', 'mine', statusCode],
+  queryFn: () => catalogApi.getMyCandidates(statusCode),
+});
+
+/** Публикация карточки её владельцем; сервер откажет, если полнота не достигнута. */
+export const usePublishProduct = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => catalogApi.publishProduct(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['products'] }),
+  });
+};
+
 export const useBulkPublishProducts = () => {
   const qc = useQueryClient();
   return useMutation({

@@ -240,6 +240,15 @@ class QuoteLifecycleService:
 
         finalize_outcomes_on_send(quote)
 
+        # Номенклатура, волна A: строки БЕЗ товара уходят в очередь кандидатов продавца вместе с
+        # тем, что он в них заполнил (ТН ВЭД, ГОСТ, артикул, единица) — до этого знание умирало
+        # вместе с КП, и 92% строк шли мимо каталога. Момент выбран как у Ariba catalog
+        # enablement: в очередь попадает ОТПРАВЛЕННЫЙ документ, а не заготовка, которую продавец
+        # ещё крутит. Сбор никогда не роняет отправку (см. `capture_quote_lines`).
+        from catalog.candidates import capture_quote_lines
+
+        capture_quote_lines(quote)
+
         # Counterparty timeline events (see lifecycle_audit): the plain send, plus a separate
         # first-class below-floor event carrying the seller's written justification.
         lifecycle_audit.log_quote_sent(quote, sent_by_user)

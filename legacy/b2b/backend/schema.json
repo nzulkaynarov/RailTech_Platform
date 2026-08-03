@@ -7426,6 +7426,60 @@
                 }
             }
         },
+        "/api/v1/catalog/products/{id}/publish/": {
+            "post": {
+                "operationId": "catalog_products_publish_create",
+                "description": "Публикует карточку. Доступно ВЛАДЕЛЬЦУ и платформе. Требует полноты: неполная карточка отвечает `PRODUCT_INCOMPLETE:<коды недостающих полей>`.",
+                "summary": "Publish a product (owner)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Товар (PIM).",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProductRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProductRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProductRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Published"
+                    },
+                    "400": {
+                        "description": "Incomplete"
+                    }
+                }
+            }
+        },
         "/api/v1/catalog/products/{id}/upload-document/": {
             "post": {
                 "operationId": "catalog_products_upload_document_create",
@@ -7545,7 +7599,7 @@
         "/api/v1/catalog/products/bulk_publish/": {
             "post": {
                 "operationId": "catalog_products_bulk_publish_create",
-                "description": "Publish multiple products at once by providing a list of product IDs. Maximum 500 products per batch. Admin only.",
+                "description": "Publish multiple products at once by providing a list of product IDs. Maximum 500 products per batch. Доступно владельцу карточек и платформе.",
                 "summary": "Bulk publish products",
                 "tags": [
                     "Catalog"
@@ -26134,6 +26188,26 @@
                         "title": "Статус",
                         "description": "Статус жизненного цикла: черновик, опубликован, архив"
                     },
+                    "demand_count": {
+                        "type": "integer",
+                        "maximum": 2147483647,
+                        "minimum": 0,
+                        "title": "Сколько раз спрашивали",
+                        "description": "Число КП, где встретилась эта позиция. Очередь наполнения сортируется по нему."
+                    },
+                    "last_requested_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true,
+                        "title": "Последний запрос",
+                        "description": "Когда позицию спрашивали в последний раз."
+                    },
+                    "source_deal": {
+                        "type": "integer",
+                        "nullable": true,
+                        "title": "Заявка-источник",
+                        "description": "Заявка, из строки которой родилась карточка (провенанс кандидата)."
+                    },
                     "domain_type": {
                         "type": "integer",
                         "nullable": true,
@@ -27197,6 +27271,31 @@
                         "nullable": true,
                         "readOnly": true
                     },
+                    "completeness": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "readOnly": true
+                    },
+                    "demand_count": {
+                        "type": "integer",
+                        "maximum": 2147483647,
+                        "minimum": 0,
+                        "title": "Сколько раз спрашивали",
+                        "description": "Число КП, где встретилась эта позиция. Очередь наполнения сортируется по нему."
+                    },
+                    "last_requested_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true,
+                        "title": "Последний запрос",
+                        "description": "Когда позицию спрашивали в последний раз."
+                    },
+                    "source_deal": {
+                        "type": "integer",
+                        "nullable": true,
+                        "title": "Заявка-источник",
+                        "description": "Заявка, из строки которой родилась карточка (провенанс кандидата)."
+                    },
                     "domain_type": {
                         "type": "integer",
                         "nullable": true,
@@ -27362,6 +27461,7 @@
                     "brand_country",
                     "brand_name",
                     "category_data",
+                    "completeness",
                     "created_at",
                     "documents",
                     "domain_type_code",
@@ -27615,6 +27715,31 @@
                         "nullable": true,
                         "readOnly": true
                     },
+                    "demand_count": {
+                        "type": "integer",
+                        "maximum": 2147483647,
+                        "minimum": 0,
+                        "title": "Сколько раз спрашивали",
+                        "description": "Число КП, где встретилась эта позиция. Очередь наполнения сортируется по нему."
+                    },
+                    "completeness": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "readOnly": true
+                    },
+                    "last_requested_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true,
+                        "title": "Последний запрос",
+                        "description": "Когда позицию спрашивали в последний раз."
+                    },
+                    "source_deal": {
+                        "type": "integer",
+                        "nullable": true,
+                        "title": "Заявка-источник",
+                        "description": "Заявка, из строки которой родилась карточка (провенанс кандидата)."
+                    },
                     "domain_type": {
                         "type": "integer",
                         "nullable": true,
@@ -27733,6 +27858,7 @@
                     "brand_country",
                     "brand_name",
                     "category_data",
+                    "completeness",
                     "created_at",
                     "domain_type_code",
                     "domain_type_name",
@@ -27768,6 +27894,26 @@
                         "nullable": true,
                         "title": "Статус",
                         "description": "Статус жизненного цикла: черновик, опубликован, архив"
+                    },
+                    "demand_count": {
+                        "type": "integer",
+                        "maximum": 2147483647,
+                        "minimum": 0,
+                        "title": "Сколько раз спрашивали",
+                        "description": "Число КП, где встретилась эта позиция. Очередь наполнения сортируется по нему."
+                    },
+                    "last_requested_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true,
+                        "title": "Последний запрос",
+                        "description": "Когда позицию спрашивали в последний раз."
+                    },
+                    "source_deal": {
+                        "type": "integer",
+                        "nullable": true,
+                        "title": "Заявка-источник",
+                        "description": "Заявка, из строки которой родилась карточка (провенанс кандидата)."
                     },
                     "domain_type": {
                         "type": "integer",

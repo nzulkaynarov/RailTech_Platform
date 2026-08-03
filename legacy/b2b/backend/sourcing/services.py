@@ -28,7 +28,24 @@ def normalize_string(text: str) -> str:
     return re.sub(r"\s+", " ", text)
 
 
-def smart_match_product(raw_name: str, domain_hint: Optional[str] = None) -> Optional[Product]:
+def visible_catalog(owner_company=None):
+    """Карточки, которые ЗАКОННО подставлять в КП.
+
+    Опубликованные видны всем; НЕОПУБЛИКОВАННЫЕ — только своей компании. До волны A матчинг
+    работал по `Product.objects.all()`: чужой черновик-кандидат был законным кандидатом на
+    подстановку, а это одновременно мусор в подборе и утечка в модели «скрытой конкуренции»
+    (ADR-0003 §5) — конкурент узнавал бы, что заводит сосед. Поймано живым прогоном волны A,
+    когда очередь кандидатов впервые наполнилась.
+    """
+    from django.db.models import Q
+
+    qs = Product.objects.filter(Q(status__code="PUBLISHED"))
+    if owner_company is not None:
+        qs = Product.objects.filter(Q(status__code="PUBLISHED") | Q(owner_company=owner_company))
+    return qs
+
+
+def smart_match_product(raw_name: str, domain_hint: Optional[str] = None, owner_company=None) -> Optional[Product]:
     """
     Advanced Product Matching Engine.
     Strategy:
@@ -40,8 +57,8 @@ def smart_match_product(raw_name: str, domain_hint: Optional[str] = None) -> Opt
 
     clean_name = normalize_string(raw_name)
 
-    # Base queryset
-    qs = Product.objects.all().select_related("domain_type")
+    # Base queryset — только законно видимое зрителю (см. `visible_catalog`).
+    qs = visible_catalog(owner_company).select_related("domain_type")
     if domain_hint:
         qs = qs.filter(domain_type__code=domain_hint)
 
@@ -88,7 +105,9 @@ def smart_match_product(raw_name: str, domain_hint: Optional[str] = None) -> Opt
     return match
 
 
-def smart_match_candidates(raw_name: str, limit: int = 5, domain_hint: Optional[str] = None) -> List[dict]:
+def smart_match_candidates(
+    raw_name: str, limit: int = 5, domain_hint: Optional[str] = None, owner_company=None
+) -> List[dict]:
     """Return up to N candidate products with scores, for manual re-match UI.
 
     Returns list of dicts: [{product_id, sku, name, gost, score}]
@@ -96,7 +115,7 @@ def smart_match_candidates(raw_name: str, limit: int = 5, domain_hint: Optional[
     if not raw_name:
         return []
     clean_name = normalize_string(raw_name)
-    qs = Product.objects.all().select_related("domain_type")
+    qs = visible_catalog(owner_company).select_related("domain_type")
     if domain_hint:
         qs = qs.filter(domain_type__code=domain_hint)
 

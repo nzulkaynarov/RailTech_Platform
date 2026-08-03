@@ -92,6 +92,21 @@ class ProductViewSet(viewsets.ModelViewSet):
             else:
                 queryset = queryset.filter(status__code="PUBLISHED")
 
+        # Очередь наполнения продавца: только СВОИ карточки, отсортированные по спросу —
+        # сначала то, что спрашивают чаще (эталон Ariba enablement: заниматься тем, что окупится
+        # быстрее). Без этого «Номенклатура» продавца оставалась витриной чужого каталога.
+        if self.request.query_params.get("mine") in ("1", "true", "True"):
+            if not user.is_authenticated:
+                queryset = queryset.none()
+            else:
+                own_ids = list(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
+                queryset = queryset.filter(owner_company_id__in=own_ids)
+        status_code = self.request.query_params.get("status")
+        if status_code:
+            queryset = queryset.filter(status__code=status_code)
+        if self.request.query_params.get("order") == "demand":
+            queryset = queryset.order_by("-demand_count", "-last_requested_at", "name")
+
         # Filter by stock_status (from supplier offers)
         stock_status = self.request.query_params.get("stock_status")
         if stock_status:
@@ -111,10 +126,10 @@ class ProductViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
             return [permissions.AllowAny()]
-        if self.action == "bulk_publish":
-            from core.permissions import IsPlatformAdmin
-
-            return [permissions.IsAuthenticated(), IsPlatformAdmin()]
+        # Публикует ВЛАДЕЛЕЦ карточки (Amazon/Alibaba/Shopify), а порог качества держит
+        # детерминированная полнота — см. `catalog/publishing.py`. Право платформы сохраняется.
+        if self.action in ("publish", "bulk_publish"):
+            return [permissions.IsAuthenticated()]
         from core.permissions import IsProductManagerOrAdmin
 
         return [permissions.IsAuthenticated(), IsProductManagerOrAdmin()]
@@ -134,10 +149,30 @@ class ProductViewSet(viewsets.ModelViewSet):
         serializer.save(owner_company=seller_membership.company)
 
     @extend_schema(
+        summary="Publish a product (owner)",
+        description=(
+            "Публикует карточку. Доступно ВЛАДЕЛЬЦУ и платформе. Требует полноты: неполная "
+            "карточка отвечает `PRODUCT_INCOMPLETE:<коды недостающих полей>`."
+        ),
+        responses={200: OpenApiResponse(description="Published"), 400: OpenApiResponse(description="Incomplete")},
+        tags=["Catalog"],
+    )
+    @action(detail=True, methods=["post"])
+    def publish(self, request, pk=None):
+        from catalog.publishing import publish_product
+
+        product = self.get_object()
+        published, error = publish_product(product, request.user)
+        if error:
+            code = 403 if error == "PRODUCT_NOT_YOURS" else status.HTTP_400_BAD_REQUEST
+            return Response({"detail": error}, status=code)
+        return Response(self.get_serializer(published).data)
+
+    @extend_schema(
         summary="Bulk publish products",
         description=(
             "Publish multiple products at once by providing a list of product IDs. "
-            "Maximum 500 products per batch. Admin only."
+            "Maximum 500 products per batch. Доступно владельцу карточек и платформе."
         ),
         request={
             "application/json": {
@@ -182,18 +217,16 @@ class ProductViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        from .. import services
+        # Пакет отчитывается ПОСТРОЧНО: частичный успех честнее отказа всей пачки (Akeneo,
+        # Shopify делают так же). Каждая карточка проходит те же владение и полноту, что и
+        # одиночная публикация.
+        from catalog.publishing import publish_many
 
-        products = Product.objects.filter(id__in=product_ids)
-        updated, skipped = services.publish_products(products)
-
-        if not updated and skipped:
-            return Response(
-                {"detail": skipped[0] if len(skipped) == 1 else f"Skipped: {', '.join(skipped)}"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        report = publish_many(product_ids, request.user)
+        if not report["published"] and report["skipped"]:
+            return Response({"detail": report["skipped"][0]["error"], **report}, status=status.HTTP_400_BAD_REQUEST)
         return Response(
-            {"message": f"Successfully published {updated} products."},
+            {"message": f"Successfully published {len(report['published'])} products.", **report},
             status=status.HTTP_200_OK,
         )
 

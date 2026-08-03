@@ -199,6 +199,16 @@ class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
     # Computed display fields
     status_name = serializers.SerializerMethodField()
     status_code = serializers.SerializerMethodField()
+    # Полнота ВЫЧИСЛЯЕТСЯ (Akeneo): `missing` называет, чего не хватает, — интерфейс говорит
+    # «не хватает: категория, ТН ВЭД» вместо абстрактного процента, а публикация открывается
+    # сама, когда обязательное заполнено.
+    completeness = serializers.SerializerMethodField()
+
+    def get_completeness(self, obj) -> dict:
+        from catalog.completeness import completeness as compute
+
+        return compute(obj)
+
     domain_type_name = serializers.SerializerMethodField()
     domain_type_code = serializers.SerializerMethodField()
     brand_name = serializers.SerializerMethodField()
@@ -216,6 +226,10 @@ class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
             "status",
             "status_name",
             "status_code",
+            "completeness",
+            "demand_count",
+            "last_requested_at",
+            "source_deal",
             "domain_type",
             "domain_type_name",
             "domain_type_code",
@@ -346,6 +360,15 @@ class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
 class ProductListSerializer(_CostGateMixin, serializers.ModelSerializer):
     """Lightweight serializer for list endpoints — no nested offers/documents."""
 
+    # Полнота нужна ИМЕННО в списке: очередь наполнения продавца показывает, чего не хватает,
+    # прямо в строке — иначе пришлось бы открывать каждую карточку, чтобы это узнать.
+    completeness = serializers.SerializerMethodField()
+
+    def get_completeness(self, obj) -> dict:
+        from catalog.completeness import completeness as compute
+
+        return compute(obj)
+
     cost_fields = ("base_price",)
 
     category_data = CategorySerializer(source="category", read_only=True)
@@ -371,6 +394,10 @@ class ProductListSerializer(_CostGateMixin, serializers.ModelSerializer):
             "status",
             "status_name",
             "status_code",
+            "demand_count",
+            "completeness",
+            "last_requested_at",
+            "source_deal",
             "domain_type",
             "domain_type_name",
             "domain_type_code",
