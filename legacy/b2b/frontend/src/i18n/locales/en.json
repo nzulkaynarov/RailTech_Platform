@@ -1359,7 +1359,9 @@
       "custom": "Custom",
       "contract": "Contract",
       "invoice": "Invoice",
-      "act": "Act"
+      "act": "Act",
+      "receipt": "Receipt",
+      "delivery_note": "Delivery note"
     },
     "toast": {
       "created": "Template created",
@@ -4139,6 +4141,14 @@
       "viewed": {
         "title": "Quote viewed by client",
         "detail": "Quote v{{version}} ({{number}})"
+      },
+      "approval_auto": {
+        "title": "Approved automatically",
+        "detail": "The only approver is the sender — the chain passed automatically"
+      },
+      "sent_below_floor": {
+        "title": "Quote sent below the margin floor",
+        "detail": "Quote {{number}} v{{version}}: margin {{margin_percent}}% against a {{floor_percent}}% floor"
       }
     },
     "lead": {
@@ -4177,6 +4187,14 @@
       "issued": {
         "title": "Invoice issued",
         "detail": "Invoice {{number}} for deal #{{deal_id}}"
+      },
+      "created": {
+        "title": "Invoice created (draft)",
+        "detail": "Invoice {{number}} for deal #{{deal_id}}"
+      },
+      "cancelled": {
+        "title": "Invoice cancelled",
+        "detail": "Invoice {{number}} for deal #{{deal_id}}"
       }
     },
     "payment": {
@@ -4189,6 +4207,18 @@
       "signed": {
         "title": "[MANUAL_MODE] Act signed",
         "detail": "Act {{number}} for deal #{{deal_id}}"
+      },
+      "rejected": {
+        "title": "Act returned by the customer",
+        "detail": "Act {{number}} for deal #{{deal_id}}: {{reason}}"
+      },
+      "cancelled": {
+        "title": "Act cancelled by the issuer",
+        "detail": "Act {{number}} for deal #{{deal_id}}: {{reason}}"
+      },
+      "reminded": {
+        "title": "Reminder sent for the act",
+        "detail": "Act {{number}} for deal #{{deal_id}}: the customer was reminded"
       }
     },
     "subscription": {

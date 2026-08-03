@@ -1363,7 +1363,9 @@
       "custom": "Произвольный",
       "contract": "Договор",
       "invoice": "Счёт",
-      "act": "Акт"
+      "act": "Акт",
+      "receipt": "Квитанция",
+      "delivery_note": "Накладная"
     },
     "toast": {
       "created": "Шаблон создан",
@@ -4151,6 +4153,14 @@
       "viewed": {
         "title": "КП просмотрено клиентом",
         "detail": "КП v{{version}} ({{number}})"
+      },
+      "approval_auto": {
+        "title": "Согласовано автоматически",
+        "detail": "Единственный согласующий — отправитель: цепочка пройдена автоматически"
+      },
+      "sent_below_floor": {
+        "title": "КП отправлено ниже минимальной маржи",
+        "detail": "КП {{number}} v{{version}}: маржа {{margin_percent}}% при минимуме {{floor_percent}}%"
       }
     },
     "lead": {
@@ -4189,6 +4199,14 @@
       "issued": {
         "title": "Счёт выставлен",
         "detail": "Счёт {{number}} по сделке #{{deal_id}}"
+      },
+      "created": {
+        "title": "Счёт создан (черновик)",
+        "detail": "Счёт {{number}} по сделке #{{deal_id}}"
+      },
+      "cancelled": {
+        "title": "Счёт отменён",
+        "detail": "Счёт {{number}} по сделке #{{deal_id}}"
       }
     },
     "payment": {
@@ -4201,6 +4219,18 @@
       "signed": {
         "title": "[MANUAL_MODE] Подписан акт",
         "detail": "Акт {{number}} по сделке #{{deal_id}}"
+      },
+      "rejected": {
+        "title": "Акт отклонён заказчиком",
+        "detail": "Акт {{number}} по сделке #{{deal_id}}: {{reason}}"
+      },
+      "cancelled": {
+        "title": "Акт аннулирован исполнителем",
+        "detail": "Акт {{number}} по сделке #{{deal_id}}: {{reason}}"
+      },
+      "reminded": {
+        "title": "Напоминание по акту",
+        "detail": "Акт {{number}} по сделке #{{deal_id}}: заказчику отправлено напоминание"
       }
     },
     "subscription": {

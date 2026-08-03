@@ -16,6 +16,26 @@ export interface ActivityLike {
 }
 
 /**
+ * Шаблон по ключу с учётом ЦЕПОЧКИ языков, а не «сырого» тега.
+ *
+ * Браузер присылает региональный код (`en-US`, `ru-RU`), а ресурсы лежат под базовым (`en`,
+ * `ru`): `nonExplicitSupportedLngs` заставляет i18next переводить правильно, но
+ * `i18n.language` остаётся региональным. Запрос `getResource('en-US', …)` возвращал
+ * undefined — и КАЖДАЯ строка журнала без параметров падала на текст, записанный в базу.
+ *
+ * В русском интерфейсе это было незаметно: запасной текст тоже русский. Дефект стал виден
+ * только в английском — половина ленты оператора осталась русской (ux-review 03-08).
+ */
+function templateFor(i18n: I18nType, key: string): string | undefined {
+  const chain = [i18n.resolvedLanguage, ...(i18n.languages ?? []), i18n.language].filter(Boolean);
+  for (const lng of chain as string[]) {
+    const template = i18n.getResource(lng, 'translation', key) as string | undefined;
+    if (typeof template === 'string') return template;
+  }
+  return undefined;
+}
+
+/**
  * True when the stored template can be rendered with the given params: either the row
  * carries params, or the template needs none. Backfilled legacy rows (migration crm/0059)
  * have event_code but EMPTY params — interpolating a {{placeholder}} template with no
@@ -23,7 +43,7 @@ export interface ActivityLike {
  */
 function renderable(i18n: I18nType, key: string, params: Record<string, unknown>): boolean {
   if (Object.keys(params).length > 0) return true;
-  const template = i18n.getResource(i18n.language, 'translation', key) as string | undefined;
+  const template = templateFor(i18n, key);
   return typeof template === 'string' && !template.includes('{{');
 }
 
