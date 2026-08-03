@@ -40,6 +40,15 @@ class Fulfillment(models.Model):
     carrier = models.CharField(max_length=128, blank=True)
     notes = models.TextField(blank=True)
     # D2b (Odoo Delivery Slip): отгрузка остаётся статусной лентой, печатается её НАКЛАДНАЯ.
+    #
+    # Номер берётся из ОБЩЕЙ схемы нумерации при первой печати и дальше не меняется. Раньше он
+    # собирался как `DN-{id}` в пяти местах кода — мимо схемы, по которой идут все остальные
+    # документы (квитанция уже по схеме: `RCP-2026-00001`). Эталон: Odoo даёт `stock.picking`
+    # имя из последовательности (`WH/OUT/00001`), у SAP delivery note — собственный номерной
+    # диапазон. Пустое поле = накладная ещё не печаталась; у СТАРЫХ отгрузок печатается прежний
+    # `DN-{id}`, потому что этот номер уже на руках у контрагента (правило E3 «выпущенный
+    # документ не переписывается»).
+    note_number = models.CharField(max_length=64, blank=True, default="", verbose_name=_("Номер накладной"))
     pdf_file = models.FileField(upload_to=fulfillment_pdf_path, storage=get_private_storage, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

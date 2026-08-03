@@ -4,6 +4,7 @@ import { screen } from '@testing-library/react';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import type { Deal } from '@/api/crmApi';
 import { RequestDetailPage } from '@/pages/RequestDetailPage';
+import ru from '@/i18n/locales/ru.json';
 import {
   useDeal,
   useChangeDealStage,
@@ -22,7 +23,9 @@ import {
  * Wave H — a SELLER's SOLO deal (calculator draft, `deal.company === null`) is a legitimate state
  * since Wave E / crm.0065. The deal-detail surface must render cleanly for it: no crash on the
  * null counterparty, an explicit «Без клиента (расчёт)» label instead of a blank line, and the
- * «Документы сделки» block still present so the seller is never dead-ended on their own deal.
+ * блок произвольных документов сделки still present so the seller is never dead-ended on their
+ * own deal. Заголовок берётся ИЗ СЛОВАРЯ: блок переименован волной G7 («документы» значили две
+ * разные вещи на одном экране), и тест обязан держать ПРИСУТСТВИЕ блока, а не его название.
  *
  * It also pins the DT1 per-line margin distinction in this exact (solo) context: an inheriting
  * (null) line reads «—», an explicit-0 line reads «0.0%».
@@ -144,10 +147,10 @@ describe('RequestDetailPage — seller SOLO deal (company === null)', () => {
     expect(screen.getByText('Без клиента (расчёт)')).toBeInTheDocument();
   });
 
-  it('still shows the «Документы сделки» block for a solo deal', () => {
+  it('still shows the free-form documents block for a solo deal', () => {
     renderWithProviders(<RequestDetailPage dealId={99} onBack={() => {}} />);
 
-    expect(screen.getByText('Документы сделки')).toBeInTheDocument();
+    expect(screen.getByText(ru.dealDocuments.title)).toBeInTheDocument();
   });
 
   it('distinguishes inherit («—») from an explicit-0 margin («0.0%») on the solo КП', () => {

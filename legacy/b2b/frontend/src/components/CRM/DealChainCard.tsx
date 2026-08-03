@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { useDealDocuments } from '@/hooks/useCRM';
 import { useCurrencyStore } from '@/store/currencyStore';
 import type { DealDocumentHub, DealDocumentStep } from '@/api/crmApi';
+import { documentStatusLabelKey } from '@/lib/codes';
 
 /**
  * «Цепочка сделки» — договор / счета / акты / отгрузка одним блоком на карточке сделки (F1).
@@ -87,7 +88,35 @@ function ChainTile({ tile }: { tile: Tile }) {
   );
 }
 
-function buildTiles(hub: DealDocumentHub, t: (key: string, opts?: Record<string, unknown>) => string, money: (v: string) => string): Tile[] {
+/**
+ * Подпись статуса документа — по КОДУ, а не по имени, пришедшему с сервера.
+ *
+ * `deal_documents` отдаёт и `status` (код), и `status_name` (имя справочника, всегда русское).
+ * Цепочка печатала имя, и в английском интерфейсе на карточке сделки стояло
+ * «CT-2026-00004 · Подписан сторонами», «INV-… · Оплачен», «Принято клиентом» (проход глазами
+ * 03-08). Канон ARCH-05 «по проводам коды, слова на краях» — тот же, что закрыл ленты событий.
+ *
+ * Имя остаётся ЗАПАСНЫМ путём: оператор может завести свой статус через Unfold, и словаря на
+ * него не будет — тогда честнее показать имя из справочника, чем пустоту.
+ */
+function statusCaption(
+  t: (key: string, opts?: Record<string, unknown>) => string,
+  i18n: { exists: (key: string) => boolean },
+  type: string,
+  code?: string | null,
+  name?: string | null,
+): string {
+  const key = documentStatusLabelKey(type, code);
+  if (key && i18n.exists(key)) return t(key);
+  return name ?? code ?? '';
+}
+
+function buildTiles(
+  hub: DealDocumentHub,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+  money: (v: string) => string,
+  i18n: { exists: (key: string) => boolean },
+): Tile[] {
   const tiles: Tile[] = [];
 
   tiles.push({
@@ -95,7 +124,7 @@ function buildTiles(hub: DealDocumentHub, t: (key: string, opts?: Record<string,
     icon: FileSignature,
     label: t('dealChain.tiles.contract'),
     caption: hub.contract
-      ? `${hub.contract.number} · ${hub.contract.status_name ?? hub.contract.status ?? ''}`
+      ? `${hub.contract.number} · ${statusCaption(t, i18n, 'contract', hub.contract.status, hub.contract.status_name)}`
       : t('dealChain.tiles.none'),
     hash: hub.contract ? openHash('contracts', hub.contract.id) : null,
   });
@@ -106,7 +135,7 @@ function buildTiles(hub: DealDocumentHub, t: (key: string, opts?: Record<string,
     icon: Receipt,
     label: t('dealChain.tiles.invoices'),
     caption: openInvoice
-      ? `${openInvoice.number} · ${openInvoice.status_name ?? openInvoice.status ?? ''}`
+      ? `${openInvoice.number} · ${statusCaption(t, i18n, 'invoice', openInvoice.status, openInvoice.status_name)}`
       : t('dealChain.tiles.none'),
     hash: openInvoice ? openHash('invoices', openInvoice.id) : null,
     count: hub.invoices.length,
@@ -128,7 +157,9 @@ function buildTiles(hub: DealDocumentHub, t: (key: string, opts?: Record<string,
     key: 'acts',
     icon: ScrollText,
     label: t('dealChain.tiles.acts'),
-    caption: act ? `${act.number} · ${act.status_name ?? act.status ?? ''}` : t('dealChain.tiles.none'),
+    caption: act
+      ? `${act.number} · ${statusCaption(t, i18n, 'act', act.status, act.status_name)}`
+      : t('dealChain.tiles.none'),
     hash: act ? 'acts' : null,
     count: hub.acts.length,
   });
@@ -138,7 +169,7 @@ function buildTiles(hub: DealDocumentHub, t: (key: string, opts?: Record<string,
     icon: Truck,
     label: t('dealChain.tiles.fulfillment'),
     caption: hub.fulfillment
-      ? (hub.fulfillment.status_name ?? hub.fulfillment.status ?? '')
+      ? statusCaption(t, i18n, 'fulfillment', hub.fulfillment.status, hub.fulfillment.status_name)
       : t('dealChain.tiles.none'),
     hash: hub.fulfillment ? 'fulfillments' : null,
   });
@@ -147,7 +178,7 @@ function buildTiles(hub: DealDocumentHub, t: (key: string, opts?: Record<string,
 }
 
 export function DealChainCard({ dealId }: { dealId: number }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { data: hub, isLoading } = useDealDocuments(dealId);
   const format = useCurrencyStore((state) => state.format);
 
@@ -155,7 +186,7 @@ export function DealChainCard({ dealId }: { dealId: number }) {
   if (isLoading || !hub || (!hub.contract && hub.invoices.length === 0 && !hub.fulfillment)) return null;
 
   const money = (value: string) => format(Number(value));
-  const tiles = buildTiles(hub, t, money);
+  const tiles = buildTiles(hub, t, money, i18n);
 
   return (
     <Card>

@@ -52,6 +52,36 @@ def _assigned_at(obj, request):
     return routing.assigned_at if routing else None
 
 
+def _viewer_is_seller(obj, request) -> bool:
+    """Смотрит ли зритель на ЭТУ сделку со стороны продавца.
+
+    Сторона — свойство ЗАПИСИ, а не сессии: одна и та же компания в одной сделке продавец, в
+    другой покупатель. Фронт выводил её из `activeStatus` (= первый тип компании), и у компании
+    с типами CLIENT+SUPPLIER продавец видел ПОКУПАТЕЛЬСКУЮ карточку своей же заявки — без
+    кнопок подготовки КП (проход глазами 03-08).
+
+    Бенчмарк: GitHub отдаёт `viewerCanUpdate`/`viewerDidAuthor` на каждом объекте, Salesforce —
+    `UserRecordAccess`, Odoo Portal сверяет партнёра на сервере. Клиент роль ЧИТАЕТ, а не
+    вычисляет. Тот же канон уже записан для пути «после контракта» (`DealSideResolver`).
+    """
+    return _viewer_routing(obj, request) is not None
+
+
+def _viewer_is_buyer(obj, request) -> bool:
+    """Смотрит ли зритель на эту сделку со стороны покупателя — членство в компании-заказчике.
+
+    Платформенный оператор — наблюдатель (ADR-0002): ни одна из сторон ему не принадлежит.
+    """
+    from accounts.services import is_member_of, is_platform_admin_viewer
+
+    user = getattr(request, "user", None)
+    if user is None or not getattr(user, "is_authenticated", False):
+        return False
+    if is_platform_admin_viewer(user):
+        return False
+    return bool(obj.company_id) and is_member_of(user, obj.company_id)
+
+
 def _viewer_can_release(obj, request):
     """Может ли зритель вернуть эту сделку в очередь своей компании.
 
@@ -113,6 +143,15 @@ class DealListSerializer(serializers.ModelSerializer):
     assigned_to_name = serializers.SerializerMethodField()
     assigned_at = serializers.SerializerMethodField()
     viewer_can_release = serializers.SerializerMethodField()
+    # Сторона зрителя относительно ЭТОЙ сделки — считает сервер (см. `_viewer_is_seller`).
+    viewer_is_seller = serializers.SerializerMethodField()
+    viewer_is_buyer = serializers.SerializerMethodField()
+
+    def get_viewer_is_seller(self, obj) -> bool:
+        return _viewer_is_seller(obj, self.context.get("request"))
+
+    def get_viewer_is_buyer(self, obj) -> bool:
+        return _viewer_is_buyer(obj, self.context.get("request"))
 
     def get_assigned_to(self, obj) -> int | None:
         return _assigned_to_id(obj, self.context.get("request"))
@@ -147,6 +186,8 @@ class DealListSerializer(serializers.ModelSerializer):
             "assigned_to_name",
             "assigned_at",
             "viewer_can_release",
+            "viewer_is_seller",
+            "viewer_is_buyer",
             "active_quote",
             "target_sellers_data",
             "created_at",
@@ -171,8 +212,17 @@ class DealDetailSerializer(serializers.ModelSerializer):
     assigned_to_name = serializers.SerializerMethodField()
     assigned_at = serializers.SerializerMethodField()
     viewer_can_release = serializers.SerializerMethodField()
+    # Сторона зрителя относительно ЭТОЙ сделки — считает сервер (см. `_viewer_is_seller`).
+    viewer_is_seller = serializers.SerializerMethodField()
+    viewer_is_buyer = serializers.SerializerMethodField()
     can_edit_request = serializers.SerializerMethodField()
     target_sellers_data = serializers.SerializerMethodField()
+
+    def get_viewer_is_seller(self, obj) -> bool:
+        return _viewer_is_seller(obj, self.context.get("request"))
+
+    def get_viewer_is_buyer(self, obj) -> bool:
+        return _viewer_is_buyer(obj, self.context.get("request"))
 
     def get_assigned_to(self, obj) -> int | None:
         return _assigned_to_id(obj, self.context.get("request"))
@@ -215,6 +265,8 @@ class DealDetailSerializer(serializers.ModelSerializer):
             "assigned_to_name",
             "assigned_at",
             "viewer_can_release",
+            "viewer_is_seller",
+            "viewer_is_buyer",
             "stage",
             "stage_code",
             "stage_name",

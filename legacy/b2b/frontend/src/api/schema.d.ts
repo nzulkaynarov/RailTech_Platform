@@ -8087,6 +8087,8 @@ export interface components {
             /** Format: date-time */
             readonly assigned_at: string | null;
             readonly viewer_can_release: boolean;
+            readonly viewer_is_seller: boolean;
+            readonly viewer_is_buyer: boolean;
             /**
              * Этап воронки
              * @description Текущий этап сделки в воронке продаж
@@ -8188,6 +8190,8 @@ export interface components {
             /** Format: date-time */
             readonly assigned_at: string | null;
             readonly viewer_can_release: boolean;
+            readonly viewer_is_seller: boolean;
+            readonly viewer_is_buyer: boolean;
             readonly active_quote: components["schemas"]["Quote"];
             /** @description Seller companies this RFQ is routed to (multi-seller routing). */
             readonly target_sellers_data: unknown[];

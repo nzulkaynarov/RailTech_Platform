@@ -14,6 +14,36 @@ from .deals import transition_deal_stage
 
 
 @transaction.atomic
+def delivery_note_number(fulfillment) -> str:
+    """Номер накладной для показа: присвоенный из схемы либо ЛЕГАСИ-вид `DN-{id}`.
+
+    У отгрузок, напечатанных до перехода на схему, номер уже у контрагента на руках —
+    переписывать его нельзя (правило E3 «выпущенный документ не переписывается»).
+    """
+    return fulfillment.note_number or f"DN-{fulfillment.id}"
+
+
+def ensure_delivery_note_number(fulfillment, seller_company) -> str:
+    """Присвоить номер из ОБЩЕЙ схемы при первой печати; дальше он неизменен.
+
+    Эталон: Odoo даёт `stock.picking` имя из последовательности, у SAP delivery note —
+    собственный номерной диапазон. До этого номер собирался как `DN-{id}` в пяти местах кода,
+    мимо схемы, по которой идут все прочие документы (квитанция уже по схеме).
+    """
+    from django.db import transaction
+
+    from .numbering import next_document_number
+
+    if fulfillment.note_number:
+        return fulfillment.note_number
+    with transaction.atomic():
+        # Блокировка счётчика живёт до коммита — контракт `next_document_number`.
+        number = next_document_number("DN", "DN", company=seller_company)
+        fulfillment.note_number = number
+        fulfillment.save(update_fields=["note_number", "updated_at"])
+    return number
+
+
 def ensure_fulfillment(deal: Deal, contract=None) -> object:
     """Отгрузка сделки, создаётся идемпотентно.
 
@@ -121,6 +151,7 @@ def _render_delivery_note_pdf(fulfillment) -> None:
     contract = fulfillment.contract
     quote = contract.quote if (contract and contract.quote_id) else None
     supplier = _quote_seller_company(quote) if quote else None
+    number = ensure_delivery_note_number(fulfillment, supplier)
     brand = document_brand_context(supplier)
     ccy = contract.currency.code if (contract and contract.currency_id) else "UZS"
     items = quote.items.billable().select_related("product") if quote else []
@@ -132,7 +163,7 @@ def _render_delivery_note_pdf(fulfillment) -> None:
         "crm/delivery_note_pdf_templated.html",
         {
             "fulfillment": fulfillment,
-            "note_number": f"DN-{fulfillment.id}",
+            "note_number": number,
             "company": fulfillment.deal.company,
             "contact": getattr(fulfillment.deal, "contact", None),
             "body_html": body,
@@ -141,4 +172,4 @@ def _render_delivery_note_pdf(fulfillment) -> None:
     )
     buf = BytesIO()
     HTML(string=html_string).write_pdf(buf)
-    fulfillment.pdf_file.save(f"DeliveryNote_DN-{fulfillment.id}.pdf", ContentFile(buf.getvalue()), save=True)
+    fulfillment.pdf_file.save(f"DeliveryNote_{number}.pdf", ContentFile(buf.getvalue()), save=True)

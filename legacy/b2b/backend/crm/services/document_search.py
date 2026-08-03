@@ -20,6 +20,8 @@ from crm.services.recent_documents import (  # noqa: F401 — shared helpers, si
     clamp_limit,
 )
 
+from .fulfillment import delivery_note_number
+
 MIN_QUERY_LEN = 2
 
 
@@ -211,7 +213,7 @@ def _search_delivery_notes(user, request, query: str, limit: int) -> List[dict]:
         {
             "type": "delivery_note",
             "id": fulfillment.id,
-            "label": f"DN-{fulfillment.id}",
+            "label": delivery_note_number(fulfillment),
             "status_code": fulfillment.status.code if fulfillment.status_id else "",
             "_date": fulfillment.shipped_at,
             "deal": fulfillment.deal_id,

@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
-import { PRE_KP_STAGES, formatWaiting, isUnclaimedRfq } from '@/lib/waiting';
+import { formatWaiting, isUnclaimedRfq, needsQuoteWork } from '@/lib/waiting';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -139,7 +139,9 @@ export function SellerAttentionStrip({ onNavigate }: { onNavigate: (p: string) =
   const { t } = useTranslation();
   const approvalsQuery = useMyApprovalQueue();
   const contractsQuery = useContracts({ status: 'PENDING_MANAGER' });
-  const dealsQuery = useDeals();
+  // ЯВНЫЙ продавцовый скоуп: дашборд общий для обеих ролей, глобальный контекст на нём — BUYER,
+  // и без этого продавец не видел собственных заявок в своей же полосе внимания (03-08).
+  const dealsQuery = useDeals('SELLER');
   const quotesQuery = useQuotes();
   const { data: approvals } = approvalsQuery;
   const { data: pendingContracts } = contractsQuery;
@@ -147,12 +149,13 @@ export function SellerAttentionStrip({ onNavigate }: { onNavigate: (p: string) =
   const { data: quotes } = quotesQuery;
   const state = gridState([approvalsQuery, contractsQuery, dealsQuery, quotesQuery]);
 
-  // «Заявки без КП» — ЧЕСТНЫЙ счёт (ресерч 2026-07-28): pre-КП стадия И КП ещё НЕТ.
-  // Раньше считали только по стадии — плитка кричала «6 без КП», когда у всех шести уже
-  // лежали черновики КП (воронка врала глазам).
-  const rfqQueue = (deals ?? []).filter(
-    (d) => PRE_KP_STAGES.includes(d.stage_code ?? '') && !d.active_quote,
-  );
+  // «Заявки без КП» — по СОСТОЯНИЮ КП, а не по факту его существования.
+  //
+  // Ресерч 2026-07-28 заменил счёт «только по стадии» на «стадия И нет active_quote», но заявка
+  // покупателя ФИЗИЧЕСКИ ХРАНИТСЯ в DRAFT-КП, поэтому `!active_quote` не бывает истинным ни для
+  // одной отправленной заявки — плитка стала показывать 0 ВСЕГДА (проход глазами 03-08).
+  // Признак «продавец ещё не работал» = КП в черновике и без денег (см. `needsQuoteWork`).
+  const rfqQueue = (deals ?? []).filter(needsQuoteWork);
   const rfqsNeedingKp = rfqQueue.length;
   // W3 aging-counter (Bitrix24): сколько ждёт самая старая заявка из этой же выборки.
   const oldestUnclaimed = rfqQueue

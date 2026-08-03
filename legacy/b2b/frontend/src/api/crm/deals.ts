@@ -12,8 +12,15 @@ import { PaginatedResponse } from '../types';
 import type { ChargeTemplate, Deal, DealDocumentHub, Lead, QuoteItem, QuoteItemDisplayType, SellerCompanyRef, SuggestedSeller, TimeToFirstQuoteStats } from './types';
 
 export const dealsApi = {
-	getDeals: async () => {
-		const response = await apiClient.get<PaginatedResponse<Deal>>('crm/deals/');
+	/**
+	 * Список сделок. `context` задаёт скоуп ЯВНО — им пользуются продавцовые виджеты дашборда:
+	 * дашборд общий для обеих ролей, поэтому глобальный `activeStatus` там остаётся BUYER, и
+	 * без явного SELLER плитки продавца считались по покупательской выборке (03-08).
+	 */
+	getDeals: async (context?: 'BUYER' | 'SELLER') => {
+		const response = await apiClient.get<PaginatedResponse<Deal>>('crm/deals/', {
+			headers: context ? { 'X-Active-Context': context } : undefined,
+		});
 		return response.data.results;
 	},
 	getDeal: async (id: number) => {

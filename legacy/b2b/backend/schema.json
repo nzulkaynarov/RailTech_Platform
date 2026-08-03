@@ -21682,6 +21682,14 @@
                         "type": "boolean",
                         "readOnly": true
                     },
+                    "viewer_is_seller": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "viewer_is_buyer": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
                     "stage": {
                         "type": "integer",
                         "nullable": true,
@@ -21763,7 +21771,9 @@
                     "stage_name",
                     "target_sellers_data",
                     "updated_at",
-                    "viewer_can_release"
+                    "viewer_can_release",
+                    "viewer_is_buyer",
+                    "viewer_is_seller"
                 ]
             },
             "DealDetailRequest": {
@@ -21882,6 +21892,14 @@
                         "type": "boolean",
                         "readOnly": true
                     },
+                    "viewer_is_seller": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "viewer_is_buyer": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
                     "active_quote": {
                         "allOf": [
                             {
@@ -21916,7 +21934,9 @@
                     "stage_name",
                     "target_sellers_data",
                     "total_value",
-                    "viewer_can_release"
+                    "viewer_can_release",
+                    "viewer_is_buyer",
+                    "viewer_is_seller"
                 ]
             },
             "DealStageLookup": {

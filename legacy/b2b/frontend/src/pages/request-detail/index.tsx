@@ -28,6 +28,7 @@ import { RequestHeader } from './RequestHeader';
 import { RequestActionBar } from './RequestActionBar';
 import { QuoteView } from './QuoteView';
 import { BuyerRequestEditor } from './BuyerRequestEditor';
+import { needsQuoteWork } from '@/lib/waiting';
 
 /**
  * Canonical buyer-facing deal/КП detail surface. Reached via the `request-detail/<dealId>` hash
@@ -64,9 +65,15 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
 
   // Gate seller-side actions (start sourcing / calculation / send quote) to sellers. A buyer would
   // only hit backend guards — and the buttons are meaningless on their screen.
+  //
+  // Сторону считает СЕРВЕР и присылает на КАЖДОЙ сделке (`viewer_is_seller`/`viewer_is_buyer`).
+  // Раньше она выводилась из `activeStatus` — а это ПЕРВЫЙ тип компании: у компании с типами
+  // CLIENT+SUPPLIER продавец открывал свою же заявку и видел ПОКУПАТЕЛЬСКИЙ экран без единой
+  // кнопки подготовки КП (проход глазами 03-08). Бенчмарк: GitHub отдаёт `viewerCan*` на
+  // объекте, Salesforce — `UserRecordAccess`; клиент роль ЧИТАЕТ, а не вычисляет.
+  //
+  // `activeStatus` остаётся ЗАПАСНЫМ путём для старых ответов без этих полей.
   const activeStatus = useUserStore((s) => s.activeStatus);
-  const isSellerSide = activeStatus === 'SELLER';
-  const isBuyerSide = activeStatus === 'BUYER';
 
   if (isLoading && !deal) return <LoadingSkeleton />;
   // A failed fetch (404 / no-access / network) must read as an error with a way out — not a bare
@@ -85,22 +92,29 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
   );
   if (!deal) return <div className="p-8 text-center text-muted-foreground">{t('pages.common.noData')}</div>;
 
+  const isSellerSide = deal.viewer_is_seller ?? activeStatus === 'SELLER';
+  const isBuyerSide = deal.viewer_is_buyer ?? activeStatus === 'BUYER';
+
   const quote = deal.active_quote ?? deal.quotes?.[deal.quotes.length - 1] ?? null;
 
   const isDraft = deal.stage_code === DealStage.DRAFT;
-  const isRfqOpen = deal.stage_code === DealStage.RFQ_OPEN;
   const isSourcing = deal.stage_code === DealStage.SOURCING;
   const isCalculating = deal.stage_code === DealStage.CALCULATING;
   const isQuoteSent = deal.stage_code === DealStage.QUOTE_SENT;
   const isWon = deal.stage_code === DealStage.CLOSED_WON || deal.stage_code === DealStage.CONTRACT_SIGNED;
   // W2 «одна кнопка» (one-click-quotation): claim + стадия + предзаполненный КП одним действием.
-  // Виден во всём пред-КП наборе стадий, пока КП нет и заявку не взял коллега.
-  const canTakeAndPrepare =
-    isSellerSide && (isRfqOpen || isSourcing || isCalculating) && !deal.active_quote;
+  //
+  // Условие «КП ещё нет» выражается через `needsQuoteWork`, а НЕ через `!active_quote`: позиции
+  // заявки покупателя физически лежат в DRAFT-КП, поэтому `active_quote` есть у каждой
+  // отправленной заявки — и кнопка волны W2 не показывалась НИКОГДА (проход глазами 03-08, тот
+  // же корень, что у плитки «Заявки без КП»).
+  const quoteNotStarted = needsQuoteWork(deal);
+  const canTakeAndPrepare = isSellerSide && quoteNotStarted;
   // Q5 (устранение рассинхрона гейтов): «Сформировать КП» — резервный ручной путь, НЕ показываем
   // рядом с одной кнопкой W2 (иначе две кнопки создания на одной стадии сбивают с толку).
-  const canBuildQuote = isSellerSide && (isSourcing || isCalculating) && !deal.active_quote && !canTakeAndPrepare;
-  const hasQuote = isSellerSide && !!deal.active_quote;
+  const canBuildQuote = isSellerSide && (isSourcing || isCalculating) && quoteNotStarted && !canTakeAndPrepare;
+  // «КП уже собирают» — тоже по состоянию: пустой черновик-хранилище позиций за КП не считается.
+  const hasQuote = isSellerSide && !!deal.active_quote && !quoteNotStarted;
   // Q4: send a DRAFT КП into internal review straight from the request card (no builder detour).
   // The server re-runs every gate; a sole-approver КП auto-approves → «Отправить» surfaces next.
   const canSubmitForReview = isSellerSide && deal.active_quote?.status_code === QuoteStatus.DRAFT;

@@ -19,6 +19,8 @@ this feed from drifting away from the canonical querysets.
 
 from typing import List, Optional
 
+from .fulfillment import delivery_note_number
+
 MIN_LIMIT = 1
 MAX_LIMIT = 20
 DEFAULT_LIMIT = 8
@@ -220,7 +222,7 @@ def _recent_delivery_notes(user, request, limit: int) -> List[dict]:
         {
             "type": "delivery_note",
             "id": fulfillment.id,
-            "label": f"DN-{fulfillment.id}",
+            "label": delivery_note_number(fulfillment),
             "status_code": fulfillment.status.code if fulfillment.status_id else "",
             "_date": fulfillment.shipped_at,
             "deal": fulfillment.deal_id,

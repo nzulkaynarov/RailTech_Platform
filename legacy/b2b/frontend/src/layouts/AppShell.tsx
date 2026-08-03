@@ -8,6 +8,8 @@ import {
   LogOut,
   ChevronUp,
   Search,
+  Coins,
+  Compass,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -349,6 +351,28 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour, fullBlee
                   </div>
                 </div>
 
+                {/* Мобильный дубль вторичных действий шапки: на узком экране правый кластер
+                    занимал 459px при вьюпорте 375px и толкал страницу. Эталон (Gmail, Odoo):
+                    вторичное уезжает в меню, а не пропадает. На sm+ эти пункты скрыты — там
+                    работают исходные контролы в шапке. */}
+                <DropdownMenuSeparator className="sm:hidden" />
+                <DropdownMenuItem
+                  className="sm:hidden"
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    setCurrency(currency === 'UZS' ? 'USD' : 'UZS');
+                  }}
+                >
+                  <Coins className="mr-2 h-4 w-4" />
+                  {t('shell.currencySelector')}
+                  <span className="ml-auto text-xs font-medium tabular-nums">{currency}</span>
+                </DropdownMenuItem>
+                {onStartTour && (
+                  <DropdownMenuItem className="sm:hidden" onClick={onStartTour}>
+                    <Compass className="mr-2 h-4 w-4" />
+                    {t('shell.startTour')}
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => onNavigate('profile')}>
                   <User className="mr-2 h-4 w-4" />
@@ -383,7 +407,10 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour, fullBlee
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               {/* Currency toggle */}
-              <div className="flex items-center rounded-lg border p-0.5 gap-0.5" role="radiogroup" aria-label={t('shell.currencySelector')}>
+              {/* На узком экране валюта и тур уезжают в меню «ещё» — правый кластер занимал 459px
+                  при вьюпорте 375px и толкал страницу (проход глазами 03-08). Эталон: Gmail и
+                  Odoo оставляют на мобильном 1–2 ключевых действия, остальное под «⋮». */}
+              <div className="hidden sm:flex items-center rounded-lg border p-0.5 gap-0.5" role="radiogroup" aria-label={t('shell.currencySelector')}>
                 <Button
                   variant={currency === 'USD' ? 'default' : 'ghost'}
                   size="sm"
@@ -415,7 +442,7 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour, fullBlee
               {onStartTour && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="outline" size="sm" className="text-xs gap-1.5 h-8" onClick={onStartTour}>
+                    <Button variant="outline" size="sm" className="hidden sm:inline-flex text-xs gap-1.5 h-8" onClick={onStartTour}>
                       {t('shell.startTour')}
                     </Button>
                   </TooltipTrigger>

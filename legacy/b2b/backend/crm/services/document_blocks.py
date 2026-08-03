@@ -19,6 +19,8 @@
 from django.template.loader import render_to_string
 from django.utils.safestring import mark_safe
 
+from .fulfillment import delivery_note_number
+
 #: Токен → человеческая подпись. Каталог один: и редактор показывает его пользователю, и
 #: проверка целостности (E2) сверяется с ним, поэтому разъехаться они не могут.
 DOCUMENT_BLOCKS = {
@@ -412,7 +414,7 @@ def render_delivery_note_body(fulfillment, items, ccy: str, template, *, seller=
         template.body_html,
         blocks=delivery_note_block_values(fulfillment, items, ccy, seller=seller, seller_profile=seller_profile),
         scalars={
-            "doc.number": f"DN-{fulfillment.id}",
+            "doc.number": delivery_note_number(fulfillment),
             "doc.date": fulfillment.shipped_at.strftime("%d.%m.%Y") if fulfillment.shipped_at else "",
             "doc.carrier_phrase": carrier_phrase,
             "doc.tracking": fulfillment.tracking_number or "",

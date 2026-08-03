@@ -33,3 +33,27 @@ export function formatWaiting(t: TFunction, createdAt?: string | null): string |
 export function isUnclaimedRfq(deal: { stage_code?: string | null; assigned_to?: number | null }): boolean {
   return deal.assigned_to == null && PRE_KP_STAGES.includes(deal.stage_code ?? '');
 }
+
+/**
+ * Заявка, по которой КП ещё НЕ СОБИРАЛИ.
+ *
+ * Признак «нет объекта КП» здесь не работает: позиции заявки покупателя ФИЗИЧЕСКИ ЛЕЖАТ в
+ * DRAFT-КП (`_request_draft_quote`: «The single DRAFT quote holding the buyer's requested
+ * items»), поэтому `active_quote` есть у КАЖДОЙ отправленной заявки — плитка «Заявки без КП»
+ * структурно всегда показывала 0 (проход глазами 03-08), хотя комментарий рядом обещал
+ * «честный счёт».
+ *
+ * Эталон считает по СОСТОЯНИЮ документа, а не по факту его существования: Odoo Purchase меряет
+ * плитки по `state` (draft/sent/purchase), Salesforce CPQ — «нет КП, помеченного основным».
+ * Наше состояние «продавец ещё не работал» = КП в черновике И без денег.
+ */
+export function needsQuoteWork(deal: {
+  stage_code?: string | null;
+  active_quote?: { status_code?: string; total_incl_vat?: string | number | null } | null;
+}): boolean {
+  if (!PRE_KP_STAGES.includes(deal.stage_code ?? '')) return false;
+  const quote = deal.active_quote;
+  if (!quote) return true;
+  if (quote.status_code !== 'DRAFT') return false;
+  return Number(quote.total_incl_vat ?? 0) === 0;
+}

@@ -468,6 +468,9 @@ const DOCUMENT_STATUS_NAMESPACE: Record<string, string> = {
   contract: 'contractsPage.status',
   invoice: 'invoicesPage.status',
   generated: 'otherDocumentsPage.status',
+  // Отгрузка — тоже звено цепочки сделки: без неё плитка печатала «Принято клиентом» в
+  // английском интерфейсе (проход глазами 03-08), потому что резолвер не знал этот тип.
+  fulfillment: 'fulfillmentPage.status',
 };
 
 export const documentStatusLabelKey = (

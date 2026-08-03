@@ -150,8 +150,17 @@ def _apply_company_defaults(seller_company, row) -> None:
         bank_parts.append(f"МФО: {seller_company.mfo}")
     if bank_parts:
         row.bank_details = ", ".join(bank_parts)
-    if seller_company.contact_person:
-        row.signatory_name = seller_company.contact_person
+    # ПОДПИСАНТ СЮДА НЕ ПОДСТАВЛЯЕТСЯ.
+    #
+    # `Company.contact_person` — это «с кем связаться», а подписант — «кто подписывает»; в
+    # юридическом документе роли разные. Раньше контактное лицо перекрывало `signatory_name`, и
+    # в акте с квитанцией печаталось «Подписант: System Admin» — контакт демо-компании (проход
+    # глазами 03-08). Эталон: у DocuSign и Adobe Sign подписант — отдельно назначаемая роль, у
+    # Odoo «Ответственный» (`user_id`) не равен подписи компании.
+    #
+    # Правило #287 «Company authoritative» остаётся в силе для остальных полей — имя, ИНН,
+    # адрес, банк действительно живут в карточке компании. Подпись живёт в профиле документов;
+    # пусто там — документ печатает «Подпись / дата», а не чужое имя.
 
 
 def _brand_context_from_row(seller_company, row, *, is_demo: bool = False) -> dict:

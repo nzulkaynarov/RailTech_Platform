@@ -249,7 +249,7 @@
     }
   },
   "createDeal": {
-    "title": "Новая заявка (RFQ)",
+    "title": "Новая заявка",
     "description": "Создайте новую заявку. Позже вы сможете импортировать позиции из Excel и пригласить поставщиков.",
     "submit": "Создать",
     "titleRequired": "Укажите название заявки",
@@ -2215,7 +2215,7 @@
         "duplicated": "Создана копия КП #{{id}}"
       },
       "confirmForceApprove": "Force-согласование КП (платформенный админ)",
-      "forceApproveHint": "КП #{{id}} будет переведено в APPROVED независимо от текущего статуса. Действие логируется маркером [FORCE_ADMIN].",
+      "forceApproveHint": "КП #{{id}} будет согласовано принудительно, независимо от текущего статуса. Действие логируется маркером [FORCE_ADMIN] и требует обоснования.",
       "forceApproveReason": "Причина (обязательна, попадёт в audit-лог)"
     },
     "clients": {
@@ -2296,7 +2296,7 @@
           "does": [
             "OWNER — управляет командой, распределяет can_sell/can_buy, оплачивает подписку, приглашает сотрудников",
             "SALES_MANAGER — подаёт SupplierBid, формирует Quote, отправляет клиенту, подписывает Contract, чат с клиентом, sales-аналитика (только если can_sell)",
-            "LOGIST — управляет Fulfillment после CLOSED_WON (отгрузка, трекинг)",
+            "Логист — ведёт отгрузку и приёмку по выигранной сделке (доставка, трек-номер)",
             "CONTRACT_MANAGER (MANUFACTURER) — подписывает договоры производителя, ведёт договорной флоу",
             "FOREIGN_TRADE_SPECIALIST (MANUFACTURER) — ВЭД и экспортная документация"
           ],
@@ -2643,7 +2643,7 @@
     "reason": "Причина",
     "reasonRequired": "Причина обязательна",
     "transitionNotAllowed": "Переход запрещён FSM. Укажите корректную стадию.",
-    "closedWonRequiresContract": "Перевод в CLOSED_WON требует подписанного договора",
+    "closedWonRequiresContract": "Чтобы закрыть сделку как выигранную, нужен подписанный договор",
     "stageNotFound": "Стадия не найдена",
     "pickStage": "Выберите целевую стадию",
     "forceDescription": "Сделка #{{id}} {{title}}. Принудительная смена стадии — действие логируется в аудит.",
@@ -3511,7 +3511,7 @@
     "ACT_INVALID_INVOICE_STATUS": "Акт нельзя выставить для счёта в этом статусе",
     "ACT_SIGN_NOT_ALLOWED": "Акт нельзя подписать в текущем статусе",
     "FULFILLMENT_INVALID_STATUS": "Недопустимый статус исполнения",
-    "BID_ONLY_IN_RFQ_OPEN": "Предложение можно подать только на сделке в статусе RFQ_OPEN",
+    "BID_ONLY_IN_RFQ_OPEN": "Предложение можно подать только по заявке, открытой для КП",
     "BID_ITEM_INVALID_AMOUNT": "Некорректное количество или цена в позиции предложения",
     "BID_ACCEPT_NOT_ALLOWED": "Нельзя принять предложение в текущем статусе",
     "BID_REJECT_NOT_ALLOWED": "Нельзя отклонить предложение в текущем статусе",
@@ -4086,23 +4086,29 @@
       },
       "item_added": {
         "title": "Добавлена позиция заявки",
-        "detail": "Deal #{{deal_id}}: «{{name}}» × {{quantity}}"
+        "detail": "Сделка #{{deal_id}}: «{{name}}» × {{quantity}}"
       },
       "items_added_bulk": {
         "title": "Добавлены позиции заявки (корзина)",
-        "detail": "Deal #{{deal_id}}: {{count}} позиц."
+        "detail_one": "Сделка #{{deal_id}}: {{count}} позиция",
+        "detail_few": "Сделка #{{deal_id}}: {{count}} позиции",
+        "detail_many": "Сделка #{{deal_id}}: {{count}} позиций"
       },
       "item_removed": {
         "title": "Удалена позиция заявки",
-        "detail": "Deal #{{deal_id}}: QuoteItem #{{item_id}}"
+        "detail": "Сделка #{{deal_id}}: позиция #{{item_id}} удалена"
       },
       "routed": {
-        "title": "Заявка адресована продавцам (RFQ routing)",
-        "detail": "Deal #{{deal_id}}: {{count}} продавц."
+        "title": "Заявка направлена продавцам",
+        "detail_one": "Сделка #{{deal_id}}: {{count}} продавцу",
+        "detail_few": "Сделка #{{deal_id}}: {{count}} продавцам",
+        "detail_many": "Сделка #{{deal_id}}: {{count}} продавцам"
       },
       "submitted": {
-        "title": "Заявка отправлена поставщику (RFQ)",
-        "detail": "Deal #{{deal_id}}: {{count}} позиц."
+        "title": "Заявка отправлена поставщику",
+        "detail_one": "Сделка #{{deal_id}}: {{count}} позиция",
+        "detail_few": "Сделка #{{deal_id}}: {{count}} позиции",
+        "detail_many": "Сделка #{{deal_id}}: {{count}} позиций"
       }
     },
     "quote": {
@@ -4136,7 +4142,7 @@
       },
       "approval_complete": {
         "title": "Согласование КП завершено",
-        "detail": "Все согласования получены → READY_TO_SEND"
+        "detail": "Все согласования получены — КП готово к отправке"
       },
       "approval_recalled": {
         "title": "КП отозван из согласования",
@@ -4144,11 +4150,11 @@
       },
       "expired": {
         "title": "КП просрочено",
-        "detail": "Quote #{{quote_id}} v{{version}} (deal #{{deal_id}}) — valid_until={{valid_until}}"
+        "detail": "КП #{{quote_id}} v{{version}} (сделка #{{deal_id}}) — действовало до {{valid_until}}"
       },
       "approved_force": {
         "title": "[FORCE_ADMIN] КП одобрено платформенным админом",
-        "detail": "КП #{{quote_id}} ({{from_status}} → APPROVED)"
+        "detail": "КП #{{quote_id}}: принудительно согласовано (было «{{from_status}}»)"
       },
       "viewed": {
         "title": "КП просмотрено клиентом",
@@ -4174,7 +4180,7 @@
     "lead": {
       "converted": {
         "title": "Lead конвертирован в сделку",
-        "detail": "Lead #{{lead_id}} → Deal #{{deal_id}}"
+        "detail": "Лид #{{lead_id}} → сделка #{{deal_id}}"
       },
       "received": {
         "title": "Новый лид с сайта",
@@ -4195,12 +4201,12 @@
         "detail": "Договор {{number}} / сделка #{{deal_id}}"
       },
       "auto_close_failed": {
-        "title": "Авто-переход в CLOSED_WON не выполнен",
+        "title": "Не удалось автоматически закрыть сделку как выигранную",
         "detail": "Договор {{number}} / сделка #{{deal_id}}: {{error}}"
       },
       "cancelled_force": {
         "title": "[FORCE_ADMIN] Договор отменён платформенным админом",
-        "detail": "Договор #{{contract_id}} ({{from_status}} → CANCELLED)"
+        "detail": "Договор #{{contract_id}}: отменён (было «{{from_status}}»)"
       },
       "wording_changed": {
         "title": "Формулировка договора изменена",
@@ -4427,9 +4433,9 @@
     "newVersionDescription": "Будет создан черновик следующей версии этого КП для правок и повторной отправки."
   },
   "dealDocuments": {
-    "title": "Документы сделки",
+    "title": "Письма и доп. документы",
     "create": "Создать документ",
-    "empty": "По сделке пока нет документов",
+    "empty": "По сделке пока нет писем и доп. документов",
     "emptyHint": "Соберите письмо или документ по шаблону кнопкой «Создать документ»."
   },
   "search": {

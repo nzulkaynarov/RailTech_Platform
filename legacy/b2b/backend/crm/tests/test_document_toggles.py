@@ -147,7 +147,13 @@ def test_preview_html_reflects_profile_branding_and_toggles():
 def test_company_defaults_override_stale_profile_name():
     """With use_company_defaults=True the live Company is authoritative: a STALE name/ИНН sitting
     in the profile row must NOT shadow the company's current data (that regressed the #287 single
-    source of truth). The rendered branding reflects the Company, not the stale profile fields."""
+    source of truth). The rendered branding reflects the Company, not the stale profile fields.
+
+    ГРАНИЦА правила #287: оно про РЕКВИЗИТЫ (имя, ИНН, адрес, банк), а НЕ про подпись.
+    `Company.contact_person` — «с кем связаться», подписант — «кто подписывает»; смешение
+    печатало в акте «Подписант: System Admin» (контакт демо-компании, проход глазами 03-08).
+    У DocuSign и Adobe Sign подписант — отдельно назначаемая роль, у Odoo «Ответственный» не
+    равен подписи компании. Подпись живёт ТОЛЬКО в профиле документов."""
     seller = Company.objects.create(
         name="ООО «Актуальное Имя»",
         inn="3000000010",
@@ -168,7 +174,8 @@ def test_company_defaults_override_stale_profile_name():
     assert profile.legal_name == "ООО «Актуальное Имя»"
     assert profile.inn == "3000000010"
     assert profile.legal_address == "г. Ташкент, ул. Новая, 5"
-    assert profile.signatory_name == "Иванов И.И."
+    # Подпись НЕ перекрывается контактным лицом компании — остаётся то, что завёл профиль.
+    assert profile.signatory_name == "Петров П.П."
 
 
 @pytest.mark.django_db

@@ -9,9 +9,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { crmApi, QuoteItem } from '../../api/crmApi';
 
-export const useDeals = () => useQuery({
-  queryKey: ['deals'],
-  queryFn: crmApi.getDeals,
+export const useDeals = (context?: 'BUYER' | 'SELLER') => useQuery({
+  // Скоуп входит в ключ кэша: иначе покупательская и продавцовая выборки затирали бы друг друга.
+  queryKey: context ? ['deals', { context }] : ['deals'],
+  queryFn: () => crmApi.getDeals(context),
 });
 
 export const useDeal = (id: number) => useQuery({
