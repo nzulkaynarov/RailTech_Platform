@@ -73,6 +73,7 @@ import {
 } from '@/components/Layout/CommandPalette';
 import { AdminShortcuts } from '@/components/Admin/AdminShortcuts';
 import { usePlatformDashboard } from '@/hooks/usePageStats';
+import { sidebarDefaultOpen } from './sidebarDefaultOpen';
 
 /* ─── Types ─────────────────────────────────────────────────────────── */
 
@@ -257,8 +258,9 @@ interface PlatformAdminShellProps {
 }
 
 export function PlatformAdminShell(props: PlatformAdminShellProps) {
+  // Планшет: сайдбар стартует свёрнутым в иконки — см. `sidebarDefaultOpen`.
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={sidebarDefaultOpen()}>
       <PlatformAdminShellInner {...props} />
     </SidebarProvider>
   );

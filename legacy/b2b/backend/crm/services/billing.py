@@ -426,6 +426,10 @@ def _act_wordings(seller_company) -> dict:
     return {"act_closing_text": resolve_wording(profile, "act_closing_text")}
 
 
+# Нумератор держит блокировку счётчика ДО КОММИТА вызывающего (контракт
+# `next_document_number`), поэтому выпуск акта обязан быть атомарным. Без декоратора продавец
+# получал 500 на кнопку «Сформировать акт» — найдено проходом глазами 03-08.
+@transaction.atomic
 def generate_act(
     invoice_id: int,
     actor: Optional[CustomUser] = None,
@@ -615,12 +619,19 @@ def _locked_act(act_id: int):
     """`of=("self",)` блокирует ТОЛЬКО строку акта. `Act.status` — nullable FK, поэтому
     `select_related("status")` даёт LEFT OUTER JOIN, а PostgreSQL запрещает `FOR UPDATE` по
     nullable-стороне внешнего соединения: без `of` запрос падал с NotSupportedError, то есть
-    подписание акта отвечало 500."""
+    подписание акта отвечало 500.
+
+    ⚠️ Любой вызывающий ОБЯЗАН быть `@transaction.atomic`: вне транзакции Django поднимает
+    `TransactionManagementError`. Тесты этого не ловят — `pytest.mark.django_db` держит
+    каждый тест в транзакции, поэтому дефект виден только в живом запросе (проход глазами
+    03-08: приёмка акта отвечала 500). Инвариант закреплён `test_locked_paths_are_atomic.py`.
+    """
     from ..models import Act
 
     return Act.objects.select_for_update(of=("self",)).select_related("status", "deal").get(pk=act_id)
 
 
+@transaction.atomic
 def sign_act(act_id: int, actor: CustomUser, signed_file=None) -> Tuple[Optional[object], Optional[str]]:
     """ЗАКАЗЧИК принимает выставленный акт → SIGNED (G2).
 
@@ -736,6 +747,7 @@ def reject_act(act_id: int, actor: CustomUser, reason: str = "") -> Tuple[Option
 ACT_REMINDER_COOLDOWN_HOURS = 24
 
 
+@transaction.atomic
 def remind_act_acceptance(act_id: int, actor: CustomUser) -> Tuple[Optional[object], Optional[str]]:
     """Исполнитель напоминает заказчику, что акт ждёт ответа.
 
@@ -780,6 +792,7 @@ def remind_act_acceptance(act_id: int, actor: CustomUser) -> Tuple[Optional[obje
     return act, None
 
 
+@transaction.atomic
 def cancel_act(act_id: int, actor: CustomUser, reason: str = "") -> Tuple[Optional[object], Optional[str]]:
     """Исполнитель отзывает собственный акт с обязательной причиной.
 

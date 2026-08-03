@@ -43,6 +43,10 @@ def _initial_contract_wordings(seller_company) -> dict:
     return {field: resolve_wording(profile, field) for field in fields}
 
 
+# Тот же контракт нумератора, что и у акта: блокировка счётчика живёт до коммита вызывающего.
+# Путь «клиент принял КП на публичной странице» работал только потому, что его вызывающий уже
+# был атомарным; прямое создание договора из КП падало бы 500.
+@transaction.atomic
 def generate_contract_from_quote(
     quote_id: int,
     actor: Optional[CustomUser] = None,
@@ -293,12 +297,18 @@ def viewer_can_sign_manager(user, contract) -> bool:
     return (is_seller(user) or has_sign_perm) and seller_company_routed_to_deal(user, contract.deal_id)
 
 
+@transaction.atomic
 def sign_contract_by_client(
     contract_id: int,
     client_user: CustomUser,
 ) -> Tuple[Optional["Contract"], Optional[str]]:  # noqa: F821
     """Click-to-sign by client. MANUAL MODE — to be replaced by E-IMZO/DocuSign.
     See memory `tech_debt_payment_esign.md`.
+
+    `@transaction.atomic` обязателен: ниже берётся `select_for_update()`, а вне транзакции
+    Django поднимает `TransactionManagementError` — покупатель получал 500 и НЕ МОГ подписать
+    договор (проход глазами 03-08). Близнец `sign_contract_by_manager` декоратор имел, этот —
+    нет: две функции одного двустороннего документа разошлись.
     """
     from django.utils import timezone
 

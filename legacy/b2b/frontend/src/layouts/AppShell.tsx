@@ -61,6 +61,7 @@ import { DocumentSearchDialog } from '@/components/Layout/DocumentSearchDialog';
 import { useCommandPaletteShortcut, useCommandPaletteState } from '@/components/Layout/CommandPalette';
 import { SubscriptionStatusBanner } from '@/components/Shared/SubscriptionStatusBanner';
 import { CartDrawer } from '@/components/ui/CartDrawer';
+import { sidebarDefaultOpen } from './sidebarDefaultOpen';
 
 /* ─── Types ─────────────────────────────────────────────────────────── */
 
@@ -214,7 +215,9 @@ export function AppShell(props: AppShellProps) {
     // height). `h-svh` gives the wrapper that definite height, so the existing min-h-0 chain finally
     // resolves. Scoped to fullBleed workspace pages, so the standard `overflow-y-auto p-6` page
     // scroll everywhere else is untouched.
-    <SidebarProvider className={props.fullBleed ? 'h-svh' : undefined}>
+    // На планшете сайдбар стартует свёрнутым в иконки — иначе его 256px режут таблицы
+    // (см. `sidebarDefaultOpen`).
+    <SidebarProvider className={props.fullBleed ? 'h-svh' : undefined} defaultOpen={sidebarDefaultOpen()}>
       <AppShellInner {...props} />
     </SidebarProvider>
   );
