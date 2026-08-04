@@ -2799,6 +2799,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/products/hs-validate/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Validate an HS (ТН ВЭД) code softly
+         * @description Статус кода для мягкой валидации поля: known/active/name. НИЧЕГО не блокирует — интерфейс лишь подсвечивает «нет в справочнике» или «выведен из редакции».
+         */
+        get: operations["catalog_products_hs_validate_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/stock-statuses/": {
         parameters: {
             query?: never;
@@ -10651,6 +10671,11 @@ export interface components {
              */
             gost_drawing?: string;
             /**
+             * Код ТНВЭД
+             * @description Код товарной номенклатуры ВЭД (ТНВЭД/HS). Хранится в карточке, чтобы не искать заново.
+             */
+            hs_code?: string;
+            /**
              * Технические параметры
              * @description Динамические характеристики в формате ключ: значение
              */
@@ -11416,6 +11441,11 @@ export interface components {
              */
             gost_drawing?: string;
             /**
+             * Код ТНВЭД
+             * @description Код товарной номенклатуры ВЭД (ТНВЭД/HS). Хранится в карточке, чтобы не искать заново.
+             */
+            hs_code?: string;
+            /**
              * Технические параметры
              * @description Динамические характеристики в формате ключ: значение
              */
@@ -11620,6 +11650,11 @@ export interface components {
              * @description Номер ГОСТ или чертежа
              */
             gost_drawing?: string;
+            /**
+             * Код ТНВЭД
+             * @description Код товарной номенклатуры ВЭД (ТНВЭД/HS). Хранится в карточке, чтобы не искать заново.
+             */
+            hs_code?: string;
             readonly main_image_url: string | null;
             readonly stock_status: string | null;
             readonly base_price: string;
@@ -11702,6 +11737,11 @@ export interface components {
              * @description Номер ГОСТ или чертежа
              */
             gost_drawing?: string;
+            /**
+             * Код ТНВЭД
+             * @description Код товарной номенклатуры ВЭД (ТНВЭД/HS). Хранится в карточке, чтобы не искать заново.
+             */
+            hs_code?: string;
             /**
              * Технические параметры
              * @description Динамические характеристики в формате ключ: значение
@@ -17960,6 +18000,26 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description [{code, name, level, score}] */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    catalog_products_hs_validate_retrieve: {
+        parameters: {
+            query: {
+                code: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description {known, active, name} */
             200: {
                 headers: {
                     [name: string]: unknown;

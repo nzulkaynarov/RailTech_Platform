@@ -195,6 +195,22 @@ export const useMyCandidates = (statusCode = 'DRAFT') => useQuery({
   queryFn: () => catalogApi.getMyCandidates(statusCode),
 });
 
+/** Автокомплит кода ТН ВЭД: пустой запрос — пустой список без похода в сеть. */
+export const useHSCodeSuggest = (q: string) => useQuery({
+  queryKey: ['hs-suggest', q],
+  queryFn: () => catalogApi.suggestHSCodes(q),
+  enabled: q.length > 0,
+  staleTime: 5 * 60_000,
+});
+
+/** Мягкая валидация кода ТН ВЭД (после ввода, не на каждое нажатие). */
+export const useHSCodeValidation = (code: string) => useQuery({
+  queryKey: ['hs-validate', code],
+  queryFn: () => catalogApi.validateHSCode(code),
+  enabled: code.length >= 4,
+  staleTime: 5 * 60_000,
+});
+
 /** Публикация карточки её владельцем; сервер откажет, если полнота не достигнута. */
 export const usePublishProduct = () => {
   const qc = useQueryClient();

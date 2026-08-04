@@ -128,7 +128,7 @@ class ProductViewSet(viewsets.ModelViewSet):
             return [permissions.AllowAny()]
         # Публикует ВЛАДЕЛЕЦ карточки (Amazon/Alibaba/Shopify), а порог качества держит
         # детерминированная полнота — см. `catalog/publishing.py`. Право платформы сохраняется.
-        if self.action in ("publish", "bulk_publish", "coverage", "merge", "hs_suggest"):
+        if self.action in ("publish", "bulk_publish", "coverage", "merge", "hs_suggest", "hs_validate"):
             return [permissions.IsAuthenticated()]
         from core.permissions import IsProductManagerOrAdmin
 
@@ -164,6 +164,22 @@ class ProductViewSet(viewsets.ModelViewSet):
         from catalog.hs_suggest import suggest_hs_codes
 
         return Response({"candidates": suggest_hs_codes(request.query_params.get("q", ""), limit=8)})
+
+    @extend_schema(
+        summary="Validate an HS (ТН ВЭД) code softly",
+        description=(
+            "Статус кода для мягкой валидации поля: known/active/name. НИЧЕГО не блокирует — "
+            "интерфейс лишь подсвечивает «нет в справочнике» или «выведен из редакции»."
+        ),
+        parameters=[OpenApiParameter(name="code", type=str, location=OpenApiParameter.QUERY, required=True)],
+        responses={200: OpenApiResponse(description="{known, active, name}")},
+        tags=["Catalog"],
+    )
+    @action(detail=False, methods=["get"], url_path="hs-validate", permission_classes=[permissions.IsAuthenticated])
+    def hs_validate(self, request):
+        from catalog.hs_suggest import validate_hs_code
+
+        return Response(validate_hs_code(request.query_params.get("code", "")))
 
     @extend_schema(
         summary="Merge a duplicate product card into this one",

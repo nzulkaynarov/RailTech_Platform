@@ -92,6 +92,8 @@ export interface Product {
     brand_name?: string | null;
     brand_country?: string | null;
     manufacturer_part_number?: string | null;
+    /** Код ТН ВЭД — постоянный дом кода (PIM); КП наследует и замораживает. */
+    hs_code?: string;
 
     /**
      * Полнота карточки — ВЫЧИСЛЯЕТСЯ сервером (Akeneo): `missing` называет, чего не хватает,
@@ -221,6 +223,20 @@ export const catalogApi = {
         });
         const body = response.data as { results?: Product[] };
         return body.results ?? (response.data as Product[]);
+    },
+    /** Кандидаты кода ТН ВЭД из справочника: текст → пословный поиск, цифры → ветка кода. */
+    suggestHSCodes: async (q: string): Promise<{ code: string; name: string; level: number; score: number }[]> => {
+        const response = await apiClient.get<{ candidates: { code: string; name: string; level: number; score: number }[] }>(
+            'catalog/products/hs-suggest/', { params: { q } },
+        );
+        return response.data.candidates;
+    },
+    /** Мягкая валидация кода: known/active/name. Ничего не блокирует — только подсветка. */
+    validateHSCode: async (code: string): Promise<{ known: boolean; active: boolean; name: string }> => {
+        const response = await apiClient.get<{ known: boolean; active: boolean; name: string }>(
+            'catalog/products/hs-validate/', { params: { code } },
+        );
+        return response.data;
     },
     /** Публикация карточки её ВЛАДЕЛЬЦЕМ (Amazon/Alibaba/Shopify), гейт — полнота. */
     publishProduct: async (id: number): Promise<Product> => {

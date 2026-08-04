@@ -10,6 +10,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ResponsiveDataTable } from '@/components/ResponsiveDataTable';
 import { useMyCandidates, usePublishProduct, useBulkPublishProducts } from '@/hooks/useCatalog';
+import { useAuthStore } from '@/store/authStore';
+import { ProductFormSheet } from './AdminCatalogPage';
 import type { Product } from '@/api/catalogApi';
 
 /**
@@ -53,6 +55,12 @@ export function NomenclatureQueuePage({ onNavigate }: { onNavigate: (target: str
   const { t } = useTranslation();
   const [tab, setTab] = useState<TabKey>('DRAFT');
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  // «Дополнить» открывает ФОРМУ карточки прямо здесь, а не read-only витрину: тупик волны T1 —
+  // очередь требовала «не хватает: Код ТН ВЭД», а вести пользователя было некуда. Тот же
+  // ProductFormSheet, что у страницы каталога (одна форма — один опыт).
+  const [editTarget, setEditTarget] = useState<Product | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const sellerCompanyId = useAuthStore((s) => s.user?.company?.id);
   const { data: rows, isLoading } = useMyCandidates(tab);
   const publishOne = usePublishProduct();
   const publishMany = useBulkPublishProducts();
@@ -116,7 +124,14 @@ export function NomenclatureQueuePage({ onNavigate }: { onNavigate: (target: str
       cell: (p: Product) =>
         tab === 'DRAFT' ? (
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => onNavigate(`product/${p.id}`)}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setEditTarget(p);
+                setEditOpen(true);
+              }}
+            >
               {t('nomenclature.enrich')}
             </Button>
             <Button
@@ -133,7 +148,7 @@ export function NomenclatureQueuePage({ onNavigate }: { onNavigate: (target: str
             </Button>
           </div>
         ) : (
-          <Button variant="ghost" size="sm" onClick={() => onNavigate(`product/${p.id}`)}>
+          <Button variant="ghost" size="sm" onClick={() => onNavigate(`product_detail/${p.id}`)}>
             {t('nomenclature.open')}
           </Button>
         ),
@@ -214,11 +229,20 @@ export function NomenclatureQueuePage({ onNavigate }: { onNavigate: (target: str
               columns={columns}
               rows={items}
               getRowId={(p: Product) => p.id}
-              onRowClick={(p: Product) => onNavigate(`product/${p.id}`)}
+              onRowClick={(p: Product) => {
+                if (tab === 'DRAFT') {
+                  setEditTarget(p);
+                  setEditOpen(true);
+                } else {
+                  onNavigate(`product_detail/${p.id}`);
+                }
+              }}
             />
           )}
         </CardContent>
       </Card>
+
+      <ProductFormSheet open={editOpen} onOpenChange={setEditOpen} target={editTarget} sellerCompanyId={sellerCompanyId} />
 
       {tab === 'DRAFT' && items.length > 0 && (
         <p className="text-xs text-muted-foreground">

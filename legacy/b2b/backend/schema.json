@@ -7780,6 +7780,36 @@
                 }
             }
         },
+        "/api/v1/catalog/products/hs-validate/": {
+            "get": {
+                "operationId": "catalog_products_hs_validate_retrieve",
+                "description": "Статус кода для мягкой валидации поля: known/active/name. НИЧЕГО не блокирует — интерфейс лишь подсвечивает «нет в справочнике» или «выведен из редакции».",
+                "summary": "Validate an HS (ТН ВЭД) code softly",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "code",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{known, active, name}"
+                    }
+                }
+            }
+        },
         "/api/v1/catalog/stock-statuses/": {
             "get": {
                 "operationId": "catalog_stock_statuses_list",
@@ -26342,6 +26372,12 @@
                         "description": "Номер ГОСТ или чертежа",
                         "maxLength": 100
                     },
+                    "hs_code": {
+                        "type": "string",
+                        "title": "Код ТНВЭД",
+                        "description": "Код товарной номенклатуры ВЭД (ТНВЭД/HS). Хранится в карточке, чтобы не искать заново.",
+                        "maxLength": 14
+                    },
                     "specifications": {
                         "title": "Технические параметры",
                         "description": "Динамические характеристики в формате ключ: значение"
@@ -27481,6 +27517,12 @@
                         "description": "Номер ГОСТ или чертежа",
                         "maxLength": 100
                     },
+                    "hs_code": {
+                        "type": "string",
+                        "title": "Код ТНВЭД",
+                        "description": "Код товарной номенклатуры ВЭД (ТНВЭД/HS). Хранится в карточке, чтобы не искать заново.",
+                        "maxLength": 14
+                    },
                     "specifications": {
                         "title": "Технические параметры",
                         "description": "Динамические характеристики в формате ключ: значение"
@@ -27924,6 +27966,12 @@
                         "description": "Номер ГОСТ или чертежа",
                         "maxLength": 100
                     },
+                    "hs_code": {
+                        "type": "string",
+                        "title": "Код ТНВЭД",
+                        "description": "Код товарной номенклатуры ВЭД (ТНВЭД/HS). Хранится в карточке, чтобы не искать заново.",
+                        "maxLength": 14
+                    },
                     "main_image_url": {
                         "type": "string",
                         "nullable": true,
@@ -28048,6 +28096,12 @@
                         "title": "ГОСТ / Чертёж",
                         "description": "Номер ГОСТ или чертежа",
                         "maxLength": 100
+                    },
+                    "hs_code": {
+                        "type": "string",
+                        "title": "Код ТНВЭД",
+                        "description": "Код товарной номенклатуры ВЭД (ТНВЭД/HS). Хранится в карточке, чтобы не искать заново.",
+                        "maxLength": 14
                     },
                     "specifications": {
                         "title": "Технические параметры",

@@ -5,7 +5,6 @@ import type { QuoteItem } from '@/api/crmApi';
 import { cn } from '@/lib/utils';
 import { formatMoney } from '@/utils/decimal';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { TableRow, TableCell } from '@/components/ui/table';
@@ -20,6 +19,7 @@ import {
 import { useQuoteBuilderGrid } from './QuoteBuilderGridContext';
 import { lineSignalOf, type LineSignal } from './lineSignal';
 import type { LineMirror } from './usePricingMirror';
+import { HSCodeField } from '@/components/Shared/HSCodeField';
 
 interface GridRowProps {
 	item: QuoteItem;
@@ -524,14 +524,16 @@ const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, m
 										</TooltipTrigger>
 										<TooltipContent>{t('quote.hsCodeHelp')}</TooltipContent>
 									</Tooltip>
-									<Input
-										type="text"
+									{/* T1: автокомплит по справочнику ГТК вместо свободного текста (паттерн Shopify —
+									    поле в месте работы). Свободный ввод и bulk-сохранение не меняются. */}
+									<HSCodeField
+										dense
 										placeholder={t('quote.hsCodePlaceholder')}
 										aria-invalid={!!cellError(item.id, 'hs_code') || undefined}
 										title={cellError(item.id, 'hs_code')}
-										className={cn('h-8 w-40 text-xs font-mono', cellError(item.id, 'hs_code') && 'border-destructive ring-1 ring-destructive')}
+										className={cn(cellError(item.id, 'hs_code') && '[&_input]:border-destructive [&_input]:ring-1 [&_input]:ring-destructive')}
 										value={item.hs_code || ''}
-										onChange={(e) => handleFieldChange(item.id, 'hs_code', e.target.value)}
+										onChange={(value) => handleFieldChange(item.id, 'hs_code', value)}
 									/>
 								</label>
 								{canViewCost && (

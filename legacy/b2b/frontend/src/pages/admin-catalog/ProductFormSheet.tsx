@@ -12,6 +12,7 @@ import { productStatusLabelKey } from '@/lib/codes';
 import type { Product } from '@/api/catalogApi';
 import { ProductMediaSection } from './ProductMediaSection';
 import { useProductForm } from './useProductForm';
+import { HSCodeField } from '@/components/Shared/HSCodeField';
 
 export function ProductFormSheet({
   open, onOpenChange, target, sellerCompanyId,
@@ -163,6 +164,12 @@ export function ProductFormSheet({
           <div className="space-y-2">
             <Label>{t('adminCatalog.fields.gost')}</Label>
             <Input value={draft.gost_drawing ?? ''} onChange={(e) => update({ gost_drawing: e.target.value })} />
+          </div>
+          {/* T1: поля ТН ВЭД в форме НЕ БЫЛО ВОВСЕ — очередь номенклатуры требовала «не хватает:
+              Код ТН ВЭД», а ввести его было негде (единственным местом была строка КП). */}
+          <div className="space-y-2">
+            <Label>{t('adminCatalog.fields.hsCode')}</Label>
+            <HSCodeField value={draft.hs_code ?? ''} onChange={(hs_code) => update({ hs_code })} />
           </div>
 
           {isRailway && (

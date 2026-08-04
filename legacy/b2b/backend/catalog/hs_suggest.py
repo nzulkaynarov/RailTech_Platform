@@ -105,3 +105,32 @@ def is_known_code(code: str) -> bool:
     if not HSCode.objects.exists():
         return True
     return HSCode.objects.filter(code=digits).exists()
+
+
+def validate_hs_code(code: str) -> dict:
+    """Статус кода для МЯГКОЙ валидации поля: `{known, active, name}`.
+
+    Три состояния, три разных подсказки в интерфейсе:
+    * известен и действует — тихое подтверждение;
+    * известен, но ЗАКРЫТ редакцией (`valid_until` в прошлом) — «выведен из редакции»;
+    * неизвестен — «нет в справочнике».
+
+    Ни одно из них не блокирует сохранение (PRODUCT RULE 2): справочник может быть ещё не
+    загружен, а код — известен продавцу из декларации. Пустой справочник → любой код считается
+    известным и действующим, предупреждений нет.
+    """
+    from django.utils import timezone
+
+    from master_data.models import HSCode
+
+    digits = "".join(ch for ch in (code or "") if ch.isdigit())
+    if not digits:
+        return {"known": False, "active": False, "name": ""}
+    if not HSCode.objects.exists():
+        return {"known": True, "active": True, "name": ""}
+    row = HSCode.objects.filter(code=digits).first()
+    if row is None:
+        return {"known": False, "active": False, "name": ""}
+    today = timezone.now().date()
+    active = not (row.valid_until and row.valid_until < today)
+    return {"known": True, "active": active, "name": row.name}

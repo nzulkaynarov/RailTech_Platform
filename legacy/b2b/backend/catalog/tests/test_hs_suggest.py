@@ -144,3 +144,28 @@ def test_retired_codes_are_not_suggested_for_new_cards(db):
     assert "8482109008" not in codes, "закрытый код не подсказывается"
     # …но старый документ с ним по-прежнему валиден.
     assert is_known_code("8482109008") is True
+
+
+def test_validate_distinguishes_three_states(db):
+    """Три состояния — три разных подсказки поля; ни одно не блокирует сохранение."""
+    import datetime
+
+    from catalog.hs_suggest import validate_hs_code
+
+    HSCode.objects.create(code="8482100000", name="Подшипники шариковые прочие", level=10)
+    HSCode.objects.create(code="8607191000", name="Оси в сборе", level=10, valid_until=datetime.date(2025, 1, 1))
+
+    alive = validate_hs_code("8482 10 0000")
+    retired = validate_hs_code("8607191000")
+    unknown = validate_hs_code("9999999999")
+
+    assert alive == {"known": True, "active": True, "name": "Подшипники шариковые прочие"}
+    assert retired["known"] is True and retired["active"] is False
+    assert unknown == {"known": False, "active": False, "name": ""}
+
+
+def test_validate_is_silent_when_the_classifier_is_empty(db):
+    """Справочник не загружен → любой код «известен»: предупреждать не о чем."""
+    from catalog.hs_suggest import validate_hs_code
+
+    assert validate_hs_code("8482100000") == {"known": True, "active": True, "name": ""}

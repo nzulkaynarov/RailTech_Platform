@@ -151,6 +151,9 @@ export function useProductForm({
       manufacturer_part_number: draft.manufacturer_part_number || '',
       equipment_groups: groupIds,
       gost_drawing: draft.gost_drawing || '',
+      // T1: код ТН ВЭД теперь редактируется из формы — раньше поля не было вовсе, и очередь
+      // номенклатуры требовала то, что негде ввести.
+      hs_code: (draft.hs_code || '').replace(/\D/g, ''),
       specifications: draft.specifications ?? undefined,
     } as unknown as Partial<Product>;
     try {

@@ -2758,7 +2758,8 @@
       "gost": "GOST / Drawing",
       "sku": "SKU",
       "partNumber": "Manufacturer part number",
-      "equipmentGroups": "Equipment groups"
+      "equipmentGroups": "Equipment groups",
+      "hsCode": "HS code"
     },
     "stats": {
       "total": "Total",
@@ -4742,5 +4743,10 @@
     "whyBody": "Every published card removes manual typing from future quotes: the system fills in the part number, unit and HS code by itself.",
     "askedTimes_one": "asked {{count}} time",
     "askedTimes_other": "asked {{count}} times"
+  },
+  "hsField": {
+    "placeholder": "code or product name…",
+    "unknown": "Code is not in the classifier — check the digits",
+    "retired": "Code retired from the current edition — pick a current one"
   }
 }
