@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BookOpenText, ChevronRight, Copy, Loader2, Sparkles } from 'lucide-react';
+import { BookOpenText, ChevronRight, Copy, Landmark, Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import { CustomsDutiesSheet } from '@/components/Shared/CustomsDutiesSheet';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -51,6 +52,8 @@ function TreeNode({ node, depth }: { node: HSNode; depth: number }) {
   const [open, setOpen] = useState(false);
   const [children, setChildren] = useState<HSNode[] | null>(null);
   const [loading, setLoading] = useState(false);
+  // Панель платежей открывается по конкретному коду — монтируем её только на время показа.
+  const [dutiesCode, setDutiesCode] = useState('');
 
   const toggle = async () => {
     if (!node.has_children) return;
@@ -82,6 +85,21 @@ function TreeNode({ node, depth }: { node: HSNode; depth: number }) {
         )}
         <span className="font-mono text-xs font-semibold tabular-nums">{formatHSCode(node.code)}</span>
         <span className="min-w-0 flex-1 text-sm">{leafName(node.name)}</span>
+        {node.code.length === 10 && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 shrink-0"
+            aria-label={t('customsDuties.action')}
+            title={t('customsDuties.action')}
+            onClick={(event) => {
+              event.stopPropagation();
+              setDutiesCode(node.code);
+            }}
+          >
+            <Landmark className="h-3.5 w-3.5" aria-hidden="true" />
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="icon"
@@ -95,6 +113,14 @@ function TreeNode({ node, depth }: { node: HSNode; depth: number }) {
           <Copy className="h-3.5 w-3.5" aria-hidden="true" />
         </Button>
       </div>
+      {dutiesCode && (
+        <CustomsDutiesSheet
+          hsCode={dutiesCode}
+          hsName={leafName(node.name)}
+          open
+          onOpenChange={(next) => !next && setDutiesCode('')}
+        />
+      )}
       {open && loading && <Skeleton className="ml-10 h-6 w-64" />}
       {open && children?.map((child) => <TreeNode key={child.code} node={child} depth={depth + 1} />)}
     </div>

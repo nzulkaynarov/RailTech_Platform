@@ -39,4 +39,37 @@ export const masterDataApi = {
   remove: async (kind: MasterKind, id: number) => {
     await apiClient.delete(`master-data/${kind}/${id}/`);
   },
+  /** Платежи по коду ТН ВЭД и стране происхождения (витрина ГТК, суточный кэш на бэкенде). */
+  getCustomsDuties: (hsCode: string, originCode: string) =>
+    apiClient
+      .get<CustomsDuties>(`master-data/hs-codes/${hsCode}/duties/`, { params: { origin: originCode } })
+      .then((r) => r.data),
 };
+
+/** Строка платежа из интегрированного тарифа ГТК. `rate` пуст, когда ставки в тарифе нет —
+ *  интерфейс рисует «—» и НЕ подставляет «0%» (это додумывание за таможню). */
+export interface CustomsPayment {
+  /** Цифровой код платежа ГТК: 10 сбор, 20 пошлина, 27 акциз, 29 НДС. Пусто — строка без кода. */
+  code: string;
+  /** Подпись источника (узбекская) — показываем только для строк без известного кода. */
+  source_label: string;
+  rate: string;
+  legal_basis: string;
+}
+
+export interface CustomsPermit {
+  organization: string;
+  document: string;
+  legal_basis: string;
+  document_kind: string;
+}
+
+export interface CustomsDuties {
+  hs_code: string;
+  hs_name: string;
+  origin: string;
+  payments: CustomsPayment[];
+  permits: CustomsPermit[];
+  fetched_at: string;
+  source_url: string;
+}

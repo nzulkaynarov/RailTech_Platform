@@ -59,3 +59,14 @@ export const useDeleteLookup = () => {
     onSuccess: (_r, v) => qc.invalidateQueries({ queryKey: keyFor(v.kind) }),
   });
 };
+
+/** Таможенные платежи по коду ТН ВЭД. Запрос идёт только когда выбрана страна происхождения:
+ *  без неё ставка бессмысленна (преференции зависят именно от страны). */
+export const useCustomsDuties = (hsCode: string, originCode: string) => useQuery({
+  queryKey: ['customs-duties', hsCode, originCode],
+  queryFn: () => masterDataApi.getCustomsDuties(hsCode, originCode),
+  enabled: Boolean(hsCode) && Boolean(originCode),
+  // Бэкенд держит суточный кэш; на клиенте достаточно не дёргать повтор в рамках сессии.
+  staleTime: 30 * 60_000,
+  retry: false,
+});

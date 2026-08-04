@@ -100,7 +100,13 @@ from crm.views import (
     TimeToFirstQuoteView,
     WordingVariantViewSet,
 )
-from master_data.views import CountryViewSet, CurrencyViewSet, DeliveryBasisViewSet, UnitOfMeasureViewSet
+from master_data.views import (
+    CountryViewSet,
+    CurrencyViewSet,
+    DeliveryBasisViewSet,
+    UnitOfMeasureViewSet,
+    hs_code_duties,
+)
 from notifications.views import EmailTemplateViewSet, NotificationViewSet
 from sourcing.ai_jobs import AIJobStatusView
 from sourcing.views import (  # noqa: F811
@@ -232,6 +238,8 @@ urlpatterns = (
         path("api/v1/sourcing/import-status/<str:task_id>/", ImportStatusView.as_view(), name="import-status"),
         # ARCH-01: polling endpoint for the off-thread AI jobs (202 + task_id pattern).
         path("api/v1/sourcing/ai-status/<str:task_id>/", AIJobStatusView.as_view(), name="ai-status"),
+        # Витрина интегрированного тарифа ГТК: платежи по коду ТН ВЭД и стране происхождения.
+        path("api/v1/master-data/hs-codes/<str:code>/duties/", hs_code_duties, name="hs-code-duties"),
         path("api/v1/crm/analytics/dashboard/", DashboardAnalyticsView.as_view(), name="dashboard-analytics"),
         path("api/v1/crm/analytics/time-to-first-quote/", TimeToFirstQuoteView.as_view(), name="time-to-first-quote"),
         path("api/v1/crm/analytics/recent-documents/", RecentDocumentsView.as_view(), name="recent-documents"),

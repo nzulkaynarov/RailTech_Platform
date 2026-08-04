@@ -17059,6 +17059,44 @@
                 }
             }
         },
+        "/api/v1/master-data/hs-codes/{code}/duties/": {
+            "get": {
+                "operationId": "master_data_hs_codes_duties_retrieve",
+                "description": "Ставки сбора/пошлины/акциза/НДС и разрешительные документы по коду и стране происхождения. Данные НЕ хранятся у нас: запрос к tarif.customs.uz с суточным кэшем. 503 HS_DUTIES_UNAVAILABLE — источник недоступен, интерфейс показывает ссылку на калькулятор ГТК.",
+                "summary": "Таможенные платежи по коду ТН ВЭД (витрина интегрированного тарифа ГТК)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "code",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "origin",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Код страны происхождения (ISO alpha-2, напр. CN)"
+                    }
+                ],
+                "tags": [
+                    "Master Data"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{payments, permits, fetched_at, source_url}"
+                    }
+                }
+            }
+        },
         "/api/v1/master-data/units/": {
             "get": {
                 "operationId": "master_data_units_list",

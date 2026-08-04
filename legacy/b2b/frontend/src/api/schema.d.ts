@@ -5904,6 +5904,26 @@ export interface paths {
         patch: operations["master_data_delivery_basis_partial_update"];
         trace?: never;
     };
+    "/api/v1/master-data/hs-codes/{code}/duties/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Таможенные платежи по коду ТН ВЭД (витрина интегрированного тарифа ГТК)
+         * @description Ставки сбора/пошлины/акциза/НДС и разрешительные документы по коду и стране происхождения. Данные НЕ хранятся у нас: запрос к tarif.customs.uz с суточным кэшем. 503 HS_DUTIES_UNAVAILABLE — источник недоступен, интерфейс показывает ссылку на калькулятор ГТК.
+         */
+        get: operations["master_data_hs_codes_duties_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/master-data/units/": {
         parameters: {
             query?: never;
@@ -23422,6 +23442,29 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["DeliveryBasis"];
                 };
+            };
+        };
+    };
+    master_data_hs_codes_duties_retrieve: {
+        parameters: {
+            query?: {
+                /** @description Код страны происхождения (ISO alpha-2, напр. CN) */
+                origin?: string;
+            };
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description {payments, permits, fetched_at, source_url} */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

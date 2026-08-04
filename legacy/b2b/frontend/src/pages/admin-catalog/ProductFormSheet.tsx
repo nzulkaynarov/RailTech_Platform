@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Sparkles, Loader2 } from 'lucide-react';
+import { Sparkles, Loader2, Landmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { productStatusLabelKey } from '@/lib/codes';
+import { CustomsDutiesSheet } from '@/components/Shared/CustomsDutiesSheet';
 import type { Product } from '@/api/catalogApi';
 import { ProductMediaSection } from './ProductMediaSection';
 import { useProductForm } from './useProductForm';
@@ -25,6 +27,7 @@ export function ProductFormSheet({
   sellerCompanyId?: number;
 }) {
   const { t } = useTranslation();
+  const [dutiesOpen, setDutiesOpen] = useState(false);
   const {
     domainTypes, statuses, categories, units, manufacturers, equipmentGroups,
     currencies, stockStatuses, deliveryBases,
@@ -170,6 +173,27 @@ export function ProductFormSheet({
           <div className="space-y-2">
             <Label>{t('adminCatalog.fields.hsCode')}</Label>
             <HSCodeField value={draft.hs_code ?? ''} onChange={(hs_code) => update({ hs_code })} />
+            {/* Ставки видны там, где код уже выбран: раньше менеджер уходил за ними на сайт ГТК
+                и возвращался переносить цифры руками. Полный код — 10 знаков; у более короткой
+                ветки тарифа нет. */}
+            {(draft.hs_code ?? '').replace(/\D/g, '').length === 10 && (
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                className="h-auto gap-1 p-0 text-xs"
+                onClick={() => setDutiesOpen(true)}
+              >
+                <Landmark className="h-3.5 w-3.5" aria-hidden="true" />
+                {t('customsDuties.action')}
+              </Button>
+            )}
+            <CustomsDutiesSheet
+              hsCode={(draft.hs_code ?? '').replace(/\D/g, '')}
+              hsName={draft.name ?? ''}
+              open={dutiesOpen}
+              onOpenChange={setDutiesOpen}
+            />
           </div>
 
           {isRailway && (

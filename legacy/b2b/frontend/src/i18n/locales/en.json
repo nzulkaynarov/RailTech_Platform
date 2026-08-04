@@ -4791,5 +4791,30 @@
     "placeholder": "Select a country",
     "searchPlaceholder": "Search by name or code",
     "empty": "No country found"
+  },
+  "customsDuties": {
+    "title": "Customs payments",
+    "originLabel": "Country of origin",
+    "originPlaceholder": "Select a country",
+    "originHint": "Preferences and the duty rate depend on the country of origin.",
+    "chooseOriginFirst": "Select a country of origin to see the payments.",
+    "loading": "Requesting customs data…",
+    "unavailableTitle": "Could not retrieve customs data",
+    "unavailableHint": "The customs service did not respond. You can check the rate in the official calculator.",
+    "openSource": "Open the customs calculator",
+    "permitsTitle": "Required permits",
+    "disclaimer": "Per Uzbekistan Customs data as of {{date}}, for reference only. Not customs advice.",
+    "columns": {
+      "payment": "Payment type",
+      "rate": "Rate",
+      "legalBasis": "Legal basis"
+    },
+    "payments": {
+      "fee": "Customs fee",
+      "duty": "Customs duty",
+      "excise": "Excise tax",
+      "vat": "VAT"
+    },
+    "action": "Customs payments"
   }
 }

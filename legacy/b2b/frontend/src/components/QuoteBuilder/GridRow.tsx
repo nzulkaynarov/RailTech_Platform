@@ -1,8 +1,9 @@
-import React, { useCallback, useLayoutEffect, useRef } from 'react';
+import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronRight, ChevronDown, ChevronUp, AlertCircle, RotateCcw, Trash2 } from 'lucide-react';
+import { ChevronRight, ChevronDown, ChevronUp, AlertCircle, Landmark, RotateCcw, Trash2 } from 'lucide-react';
 import type { QuoteItem } from '@/api/crmApi';
 import { cn } from '@/lib/utils';
+import { CustomsDutiesSheet } from '@/components/Shared/CustomsDutiesSheet';
 import { formatMoney } from '@/utils/decimal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -172,6 +173,9 @@ MarginCell.displayName = 'MarginCell';
  */
 const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, measureElement, resizeItem }) => {
 	const { t } = useTranslation();
+	// Ставки ГТК рядом с полем пошлины: менеджер смотрит и вносит цифру САМ — автоподстановки нет
+	// (пошлина зависит от происхождения, преференций и сертификата СТ-1, это его решение).
+	const [dutiesOpen, setDutiesOpen] = useState(false);
 	const {
 		activeQuote, econ, canViewCost, showCostColumns, presentationCurrency, currencies,
 		pricingMirror, selection, handleFieldChange, cellError, cellErrors, hiddenErrorFields,
@@ -526,15 +530,36 @@ const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, m
 									</Tooltip>
 									{/* T1: автокомплит по справочнику ГТК вместо свободного текста (паттерн Shopify —
 									    поле в месте работы). Свободный ввод и bulk-сохранение не меняются. */}
-									<HSCodeField
-										dense
-										placeholder={t('quote.hsCodePlaceholder')}
-										aria-invalid={!!cellError(item.id, 'hs_code') || undefined}
-										title={cellError(item.id, 'hs_code')}
-										className={cn(cellError(item.id, 'hs_code') && '[&_input]:border-destructive [&_input]:ring-1 [&_input]:ring-destructive')}
-										value={item.hs_code || ''}
-										onChange={(value) => handleFieldChange(item.id, 'hs_code', value)}
-									/>
+									<div className="flex items-center gap-1">
+										<HSCodeField
+											dense
+											placeholder={t('quote.hsCodePlaceholder')}
+											aria-invalid={!!cellError(item.id, 'hs_code') || undefined}
+											title={cellError(item.id, 'hs_code')}
+											className={cn('min-w-0 flex-1', cellError(item.id, 'hs_code') && '[&_input]:border-destructive [&_input]:ring-1 [&_input]:ring-destructive')}
+											value={item.hs_code || ''}
+											onChange={(value) => handleFieldChange(item.id, 'hs_code', value)}
+										/>
+										{(item.hs_code || '').replace(/\D/g, '').length === 10 && (
+											<button
+												type="button"
+												className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+												aria-label={t('customsDuties.action')}
+												title={t('customsDuties.action')}
+												onClick={() => setDutiesOpen(true)}
+											>
+												<Landmark className="h-3.5 w-3.5" aria-hidden="true" />
+											</button>
+										)}
+									</div>
+									{dutiesOpen && (
+										<CustomsDutiesSheet
+											hsCode={(item.hs_code || '').replace(/\D/g, '')}
+											hsName={item.product_name ?? ''}
+											open
+											onOpenChange={setDutiesOpen}
+										/>
+									)}
 								</label>
 								{canViewCost && (
 									<label className="flex flex-col gap-1">
