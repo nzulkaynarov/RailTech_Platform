@@ -4767,6 +4767,27 @@
       "applied": "Codes applied: {{count}}",
       "nothing": "No matching codes found",
       "failed": "Could not classify — try again"
+    },
+    "coverage": "{{with_product}} of {{total}} quote lines are catalog-backed",
+    "emptyCta": {
+      "create": "Create a card",
+      "import": "Import a file"
+    },
+    "duplicates": {
+      "title": "Possible duplicates ({{count}})",
+      "hint": "An exact key matches: brand + part number, GOST/drawing or name. The duplicate is archived; demand and references move to the surviving card.",
+      "merge": "Merge",
+      "confirmTitle": "Merge the cards?",
+      "confirmBody": "“{{duplicate}}” will be merged into “{{survivor}}” and archived. Empty fields are filled in, demand adds up, offers and quote lines move over.",
+      "merged": "Cards merged"
+    },
+    "requirement": {
+      "name": "Name",
+      "uom": "Unit of measure",
+      "category": "Category",
+      "identity": "Part number or GOST/drawing",
+      "equipment_groups": "Equipment group",
+      "hs_code": "HS code (current)"
     }
   },
   "hsField": {
@@ -4791,7 +4812,8 @@
       "ask": "Pick a code",
       "copy": "Copy",
       "failed": "Could not get an answer — try again",
-      "nothing": "No matching code found — check the nearest branches:"
+      "nothing": "No matching code found — check the nearest branches:",
+      "minLength": "Describe the product in at least {{count}} characters"
     },
     "treeFailed": "Failed to load the classifier tree",
     "retry": "Retry"

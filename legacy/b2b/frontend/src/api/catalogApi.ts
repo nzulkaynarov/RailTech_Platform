@@ -261,6 +261,37 @@ export const catalogApi = {
         const response = await apiClient.post<Product>(`catalog/products/${id}/publish/`, {});
         return response.data;
     },
+    /** N4: покрытие каталога — доля строк КП, опирающихся на карточку (Ariba catalog spend). */
+    getCatalogCoverage: async (): Promise<{
+        lines_total: number; lines_with_product: number; percent: number; candidates_pending: number;
+    }> => {
+        const response = await apiClient.get<{
+            lines_total: number; lines_with_product: number; percent: number; candidates_pending: number;
+        }>('catalog/products/coverage/');
+        return response.data;
+    },
+    /** N4: группы вероятных дублей своих карточек — система предлагает, человек решает. */
+    getDuplicateSuggestions: async (): Promise<{
+        groups: {
+            survivor: { id: number; name: string; status_code: string | null };
+            duplicates: { id: number; name: string; status_code: string | null }[];
+        }[];
+    }> => {
+        const response = await apiClient.get<{
+            groups: {
+                survivor: { id: number; name: string; status_code: string | null };
+                duplicates: { id: number; name: string; status_code: string | null }[];
+            }[];
+        }>('catalog/products/duplicate-suggestions/');
+        return response.data;
+    },
+    /** N4: слить дубль в выжившую карточку (дубль уходит в архив, ссылки переезжают). */
+    mergeProducts: async (survivorId: number, duplicateId: number): Promise<Product> => {
+        const response = await apiClient.post<Product>(`catalog/products/${survivorId}/merge/`, {
+            duplicate_id: duplicateId,
+        });
+        return response.data;
+    },
     createProduct: async (data: Partial<Product>): Promise<Product> => {
         const response = await apiClient.post<Product>('catalog/products/', data);
         return response.data;

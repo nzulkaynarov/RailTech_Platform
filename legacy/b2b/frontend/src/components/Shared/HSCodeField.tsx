@@ -8,7 +8,8 @@ import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useHSCodeSuggest, useHSCodeValidation } from '@/hooks/useCatalog';
 
-const MIN_QUERY_LENGTH = 3;
+/** Единый порог начала поиска по справочнику — им пользуется и страница справочника (N4). */
+export const MIN_QUERY_LENGTH = 3;
 
 /**
  * Поле кода ТН ВЭД с автокомплитом по справочнику и МЯГКОЙ валидацией (волна T1).

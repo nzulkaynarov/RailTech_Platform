@@ -107,7 +107,9 @@ export function ResponsiveDataTable<T>({
             <div
               key={getRowId(row)}
               className={cn('flex flex-col gap-2 p-4', onRowClick && 'cursor-pointer', rowClassName?.(row))}
-              onClick={onRowClick ? () => onRowClick(row) : undefined}
+              // N4 (мобильный аудит «Номенклатуры»): тот же гард, что у десктопной строки, —
+              // тап по чекбоксу или кнопке внутри карточки не должен заодно открывать строку.
+              onClick={onRowClick ? (event) => { if (!clickOriginatesFromControl(event.target)) onRowClick(row); } : undefined}
             >
               {visible.map((col) => {
                 if (col.mobileTitle) {

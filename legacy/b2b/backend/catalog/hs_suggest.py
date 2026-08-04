@@ -45,13 +45,20 @@ def suggest_hs_codes(text: str, limit: int = 5, min_level: int = 6) -> list[dict
     # Пользователь мог ввести сам код — тогда это точный поиск, а не текстовый.
     digits = "".join(ch for ch in query if ch.isdigit())
     if len(digits) >= 4:
-        exact = list(
-            HSCode.objects.filter(Q(code=digits) | Q(code__startswith=digits))
-            .order_by("code")[:limit]
-            .values("code", "name", "level")
-        )
-        if exact:
-            return [dict(row, score=1.0) for row in exact]
+        # N4: несуществующий код деградирует к ветке МАКСИМАЛЬНОГО префикса, а не в текстовый
+        # поиск — тот на цифрах выдаёт мусор (триграммы находят цифры в чужих именах: запрос
+        # «7302100000» отдавал деревообработку). «7302100000» нет в редакции → ветка 730210.
+        prefix = digits
+        while len(prefix) >= 4:
+            exact = list(
+                HSCode.objects.filter(Q(code=prefix) | Q(code__startswith=prefix))
+                .order_by("code")[:limit]
+                .values("code", "name", "level")
+            )
+            if exact:
+                return [dict(row, score=1.0) for row in exact]
+            prefix = prefix[:-1]
+        return []
 
     # ПОСЛОВНОЕ сходство, а не сходство целых строк, и не только по запросу целиком, но и по
     # КАЖДОМУ его значимому слову. Две причины, обе с живой базы ГТК (13 тыс. кодов):

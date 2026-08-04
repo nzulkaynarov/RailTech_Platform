@@ -2745,6 +2745,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/products/duplicate-suggestions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Duplicate-card suggestions for the caller's own catalog
+         * @description Группы вероятных дублей СВОИХ карточек по точным ключам (бренд+артикул, ГОСТ, точное имя). Система предлагает — человек решает (Akeneo/Salesforce dedupe).
+         */
+        get: operations["catalog_products_duplicate_suggestions_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/products/export/": {
         parameters: {
             query?: never;
@@ -18096,6 +18116,24 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description {lines_total, lines_with_product, percent, candidates_pending} */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    catalog_products_duplicate_suggestions_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description [{survivor, duplicates}] */
             200: {
                 headers: {
                     [name: string]: unknown;

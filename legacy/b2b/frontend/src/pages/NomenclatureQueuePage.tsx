@@ -9,7 +9,26 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ResponsiveDataTable } from '@/components/ResponsiveDataTable';
-import { useMyCandidates, usePublishProduct, useBulkPublishProducts, useReclassificationWorklist } from '@/hooks/useCatalog';
+import {
+  useMyCandidates,
+  usePublishProduct,
+  useBulkPublishProducts,
+  useReclassificationWorklist,
+  useCatalogCoverage,
+  useDuplicateSuggestions,
+  useMergeProducts,
+} from '@/hooks/useCatalog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { useAuthStore } from '@/store/authStore';
 import { runAiJob } from '@/lib/aiJob';
 import { extractApiErrorCode, translateApiError } from '@/lib/apiError';
@@ -50,17 +69,25 @@ function CompletenessCell({ product, t }: { product: Product; t: (k: string, o?:
     <div className="min-w-0">
       <div className="text-sm font-medium tabular-nums">{report.percent}%</div>
       <div className="truncate text-xs text-muted-foreground">
-        {t('nomenclature.missing')}: {report.missing.map((item) => item.label).join(', ')}
+        {/* N4: подпись — по КОДУ требования на языке интерфейса (item.label с сервера был
+            только русским: EN-продавец видел «missing: Код ТН ВЭД»). label — фолбэк на случай
+            нового серверного требования, ещё не известного словарю. */}
+        {t('nomenclature.missing')}:{' '}
+        {report.missing.map((item) => t(`nomenclature.requirement.${item.code}`, { defaultValue: item.label })).join(', ')}
       </div>
     </div>
   );
 }
 
-// N2 (B1 аудита): раньше сюда приходил onNavigate, и «Открыть» звал
-// onNavigate(`product_detail/${id}`) — строки с параметром нет в реестре страниц, App.tsx
-// молча отскакивал в дашборд, вся вкладка «Опубликованные» была непроходима. Параметризованный
-// переход умеет только onProductClick (navigateTo({type:'product_detail', productId})).
-export function NomenclatureQueuePage({ onProductClick }: { onProductClick: (productId: string) => void }) {
+// N2 (B1 аудита): «Открыть» ходит через onProductClick (параметризованный переход);
+// onNavigate — только для валидных id реестра (CTA импорта в пустой очереди, N4).
+export function NomenclatureQueuePage({
+  onProductClick,
+  onNavigate,
+}: {
+  onProductClick: (productId: string) => void;
+  onNavigate: (target: string) => void;
+}) {
   const { t } = useTranslation();
   const [tab, setTab] = useState<TabKey>('DRAFT');
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -72,6 +99,12 @@ export function NomenclatureQueuePage({ onProductClick }: { onProductClick: (pro
   const sellerCompanyId = useAuthStore((s) => s.user?.company?.id);
   const { data: rows, isLoading } = useMyCandidates(tab);
   const { data: retiredCards } = useReclassificationWorklist();
+  // N4: метрика направления (Ariba catalog spend) + подсказки дублей (система предлагает,
+  // человек решает — Akeneo/Salesforce dedupe).
+  const { data: coverage } = useCatalogCoverage();
+  const { data: duplicateData } = useDuplicateSuggestions();
+  const mergeMut = useMergeProducts();
+  const duplicateGroups = duplicateData?.groups ?? [];
   const publishOne = usePublishProduct();
   const publishMany = useBulkPublishProducts();
   const queryClient = useQueryClient();
@@ -218,6 +251,19 @@ export function NomenclatureQueuePage({ onProductClick }: { onProductClick: (pro
           <h1 className="text-2xl font-bold">{t('nomenclature.title')}</h1>
           <p className="text-sm text-muted-foreground">{t('nomenclature.subtitle')}</p>
         </div>
+        {/* N4: «северная звезда» направления — доля строк КП по каталогу (Ariba catalog
+            spend). Меряем строки, не число карточек: тысяча невостребованных ничего не стоит. */}
+        {coverage && coverage.lines_total > 0 && (
+          <div className="ml-auto rounded-lg border px-4 py-2 text-right">
+            <div className="text-lg font-bold tabular-nums">{coverage.percent}%</div>
+            <div className="text-xs text-muted-foreground">
+              {t('nomenclature.coverage', {
+                with_product: coverage.lines_with_product,
+                total: coverage.lines_total,
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -282,6 +328,24 @@ export function NomenclatureQueuePage({ onProductClick }: { onProductClick: (pro
               <PackagePlus className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
               <p className="text-sm font-medium">{t(`nomenclature.empty.${tab}`)}</p>
               <p className="max-w-md text-xs text-muted-foreground">{t(`nomenclature.emptyHint.${tab}`)}</p>
+              {/* N4: пустой экран ведёт к следующему шагу (Ariba: enablement-очередь всегда
+                  предлагает действие), а не только объясняет, откуда берутся строки. */}
+              {tab === 'DRAFT' && (
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setEditTarget(null);
+                      setEditOpen(true);
+                    }}
+                  >
+                    {t('nomenclature.emptyCta.create')}
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => onNavigate('catalog-import')}>
+                    {t('nomenclature.emptyCta.import')}
+                  </Button>
+                </div>
+              )}
             </div>
           ) : (
             <ResponsiveDataTable
@@ -330,6 +394,67 @@ export function NomenclatureQueuePage({ onProductClick }: { onProductClick: (pro
               <Button size="sm" onClick={applySuggestions}>{t('nomenclature.classify.applyAll', { count: suggestions.length })}</Button>
               <Button variant="outline" size="sm" onClick={() => setSuggestions(null)}>{t('nomenclature.classify.cancel')}</Button>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* N4: вероятные дубли (точные ключи — бренд+артикул, ГОСТ, имя). Система ПРЕДЛАГАЕТ,
+          человек решает (Akeneo/Salesforce dedupe): дубль уходит в архив, спрос и ссылки
+          переезжают в выжившую — старейшую, на неё уже могут ссылаться строки КП. */}
+      {duplicateGroups.length > 0 && (
+        <Card className="border-warning/40 bg-warning/5">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">{t('nomenclature.duplicates.title', { count: duplicateGroups.length })}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            <p className="text-xs text-muted-foreground">{t('nomenclature.duplicates.hint')}</p>
+            {duplicateGroups.map((group) =>
+              group.duplicates.map((dup) => (
+                <div key={`${group.survivor.id}-${dup.id}`} className="flex items-center justify-between gap-3">
+                  <div className="min-w-0 text-sm">
+                    <span className="font-medium">{group.survivor.name}</span>
+                    <span className="text-muted-foreground"> ← {dup.name}</span>
+                  </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" size="sm" disabled={mergeMut.isPending}>
+                        {t('nomenclature.duplicates.merge')}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>{t('nomenclature.duplicates.confirmTitle')}</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {t('nomenclature.duplicates.confirmBody', {
+                            survivor: group.survivor.name,
+                            duplicate: dup.name,
+                          })}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>{t('nomenclature.classify.cancel')}</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() =>
+                            mergeMut.mutate(
+                              { survivorId: group.survivor.id, duplicateId: dup.id },
+                              {
+                                onSuccess: () => toast.success(t('nomenclature.duplicates.merged')),
+                                onError: (err) =>
+                                  toast.error(
+                                    extractApiErrorCode(err) ? translateApiError(err) : t('nomenclature.publishFailed'),
+                                  ),
+                              },
+                            )
+                          }
+                        >
+                          {t('nomenclature.duplicates.merge')}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              )),
+            )}
           </CardContent>
         </Card>
       )}

@@ -7839,6 +7839,26 @@
                 }
             }
         },
+        "/api/v1/catalog/products/duplicate-suggestions/": {
+            "get": {
+                "operationId": "catalog_products_duplicate_suggestions_retrieve",
+                "description": "Группы вероятных дублей СВОИХ карточек по точным ключам (бренд+артикул, ГОСТ, точное имя). Система предлагает — человек решает (Akeneo/Salesforce dedupe).",
+                "summary": "Duplicate-card suggestions for the caller's own catalog",
+                "tags": [
+                    "Catalog"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "[{survivor, duplicates}]"
+                    }
+                }
+            }
+        },
         "/api/v1/catalog/products/export/": {
             "get": {
                 "operationId": "catalog_products_export_retrieve",

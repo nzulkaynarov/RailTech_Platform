@@ -301,3 +301,26 @@ export const useEnrichProduct = () =>
     mutationFn: (params: Parameters<typeof catalogApi.enrichProduct>[0]) =>
       catalogApi.enrichProduct(params),
   });
+
+/** N4: покрытие каталога — «северная звезда» направления (Ariba catalog spend). */
+export const useCatalogCoverage = () => useQuery({
+  queryKey: ['products', 'coverage'],
+  queryFn: catalogApi.getCatalogCoverage,
+  staleTime: 60_000,
+});
+
+/** N4: группы вероятных дублей своих карточек (точные ключи: бренд+артикул, ГОСТ, имя). */
+export const useDuplicateSuggestions = () => useQuery({
+  queryKey: ['products', 'duplicate-suggestions'],
+  queryFn: catalogApi.getDuplicateSuggestions,
+});
+
+/** N4: слияние дубля — дубль уходит в архив, спрос и ссылки переезжают в выжившую. */
+export const useMergeProducts = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ survivorId, duplicateId }: { survivorId: number; duplicateId: number }) =>
+      catalogApi.mergeProducts(survivorId, duplicateId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['products'] }),
+  });
+};

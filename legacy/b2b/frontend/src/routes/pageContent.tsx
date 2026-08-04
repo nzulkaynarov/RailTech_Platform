@@ -158,7 +158,7 @@ function renderContent(ctx: PageRenderContext): ReactNode {
     // «Номенклатура» продавца — рабочее место, а не витрина: очередь кандидатов из заявок,
     // готовность карточки и публикация владельцем (волна A, spec-nomenclature-lifecycle).
     case 'nomenclature':
-      return <NomenclatureQueuePage onProductClick={onProductClick} />;
+      return <NomenclatureQueuePage onProductClick={onProductClick} onNavigate={ctx.onNavigate} />;
     // T3: справочник ТН ВЭД — дерево + поиск + ИИ-режим (WCO/tarif-паттерн).
     case 'hs-directory':
       return <HSDirectoryPage />;

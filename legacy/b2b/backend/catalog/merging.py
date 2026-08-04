@@ -86,3 +86,46 @@ def merge_products(survivor, duplicate, actor) -> tuple[object | None, str | Non
     duplicate.status = archived
     duplicate.save(update_fields=["status", "updated_at"])
     return survivor, None
+
+
+def duplicate_suggestions(owner_company, limit: int = 20) -> list[dict]:
+    """Группы вероятных дублей ОДНОГО владельца: `[{survivor, duplicates}]` (N4).
+
+    Ключи — те же, что у дедупликации кандидатов (Grainger/Würth): бренд+артикул, ГОСТ/чертёж,
+    точное имя без регистра. По ПОХОЖЕМУ имени не группируем — «подшипник буксовый» есть у
+    каждого второго, ложное слияние дороже дубля. Выжившая — старейшая карточка (на неё уже
+    могут ссылаться строки КП); система ПРЕДЛАГАЕТ, человек решает.
+    """
+    from catalog.models import Product
+
+    cards = list(
+        Product.objects.filter(owner_company=owner_company)
+        .exclude(status__code="ARCHIVED")
+        .select_related("status")
+        .order_by("pk")
+        .values("pk", "name", "manufacturer_part_number", "gost_drawing", "brand_id", "status__code")
+    )
+
+    groups: dict[tuple, list[dict]] = {}
+    for card in cards:
+        mpn = (card["manufacturer_part_number"] or "").strip().lower()
+        gost = (card["gost_drawing"] or "").strip().lower()
+        if mpn:
+            key = ("mpn", card["brand_id"], mpn)
+        elif gost:
+            key = ("gost", gost)
+        else:
+            key = ("name", (card["name"] or "").strip().lower())
+        groups.setdefault(key, []).append(card)
+
+    def _row(card):
+        return {"id": card["pk"], "name": card["name"], "status_code": card["status__code"]}
+
+    suggestions = []
+    for members in groups.values():
+        if len(members) < 2:
+            continue
+        suggestions.append({"survivor": _row(members[0]), "duplicates": [_row(m) for m in members[1:]]})
+        if len(suggestions) >= limit:
+            break
+    return suggestions

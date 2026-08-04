@@ -403,6 +403,31 @@ class ProductViewSet(viewsets.ModelViewSet):
         return Response(self.get_serializer(merged).data)
 
     @extend_schema(
+        summary="Duplicate-card suggestions for the caller's own catalog",
+        description=(
+            "Группы вероятных дублей СВОИХ карточек по точным ключам (бренд+артикул, ГОСТ, "
+            "точное имя). Система предлагает — человек решает (Akeneo/Salesforce dedupe)."
+        ),
+        responses={200: OpenApiResponse(description="[{survivor, duplicates}]")},
+        tags=["Catalog"],
+    )
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="duplicate-suggestions",
+        permission_classes=[permissions.IsAuthenticated],
+    )
+    def duplicate_suggestions(self, request):
+        from catalog.merging import duplicate_suggestions
+
+        membership = (
+            request.user.memberships.filter(is_active=True).in_seller_company().select_related("company").first()
+        )
+        if membership is None:
+            return Response({"detail": "NO_SELLER_MEMBERSHIP"}, status=status.HTTP_403_FORBIDDEN)
+        return Response({"groups": duplicate_suggestions(membership.company)})
+
+    @extend_schema(
         summary="Catalog coverage metric",
         description=(
             "Доля строк КП, опирающихся на карточку товара — одна цифра, показывающая, работает "

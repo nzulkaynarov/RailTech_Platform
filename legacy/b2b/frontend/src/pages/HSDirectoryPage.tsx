@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useHSCodeSuggest } from '@/hooks/useCatalog';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { formatHSCode, leafName } from '@/components/Shared/HSCodeField';
+import { MIN_QUERY_LENGTH, formatHSCode, leafName } from '@/components/Shared/HSCodeField';
 import { runAiJob } from '@/lib/aiJob';
 import { apiClient } from '@/api/client';
 import { extractApiErrorCode, translateApiError } from '@/lib/apiError';
@@ -43,6 +43,9 @@ interface LookupResult {
   explanation: string;
   candidates: { code: string; name: string }[];
 }
+
+/** N4: кнопка ИИ-режима не активна до этой длины — и интерфейс говорит об этом словами. */
+const AI_MIN_DESCRIPTION = 5;
 
 function copyCode(code: string, done: (message: string) => void) {
   navigator.clipboard?.writeText(code).then(() => done(code));
@@ -139,7 +142,7 @@ export function HSDirectoryPage() {
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const debounced = useDebouncedValue(query, 300);
-  const { data: found } = useHSCodeSuggest(debounced.length >= 3 ? debounced : '');
+  const { data: found } = useHSCodeSuggest(debounced.length >= MIN_QUERY_LENGTH ? debounced : '');
 
   // N2 (M5): раньше корни грузились прямо в теле рендера без .catch — любая ошибка сети
   // давала БЕСКОНЕЧНЫЙ цикл запросов и вечно пустое дерево без ретрая. useQuery даёт
@@ -255,7 +258,10 @@ export function HSDirectoryPage() {
               placeholder={t('hsDirectory.ai.placeholder')}
               rows={3}
             />
-            <Button onClick={askAi} disabled={aiBusy || description.trim().length < 5} className="self-start">
+            {description.trim().length > 0 && description.trim().length < AI_MIN_DESCRIPTION && (
+              <p className="text-xs text-muted-foreground">{t('hsDirectory.ai.minLength', { count: AI_MIN_DESCRIPTION })}</p>
+            )}
+            <Button onClick={askAi} disabled={aiBusy || description.trim().length < AI_MIN_DESCRIPTION} className="self-start">
               {aiBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> : null}
               {t('hsDirectory.ai.ask')}
             </Button>
