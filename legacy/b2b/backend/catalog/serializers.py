@@ -1,3 +1,4 @@
+from django.utils.translation import gettext_lazy
 from drf_spectacular.utils import extend_schema_serializer
 from rest_framework import serializers
 
@@ -271,12 +272,25 @@ class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
         card. We validate here so the request gets a clean 400 instead.
         """
         attrs = super().validate(attrs)
+        # Бренд на лету (N1): форма шлёт `brand_name` строкой, нормализатор общий с импортом.
+        # `brand_name` в чтении — SerializerMethodField, поэтому на запись берём из initial_data;
+        # явный `brand` (id) имеет приоритет.
+        raw_brand_name = (self.initial_data or {}).get("brand_name")
+        if raw_brand_name is not None and "brand" not in (self.initial_data or {}):
+            from catalog.services import find_or_create_manufacturer
+
+            attrs["brand"] = find_or_create_manufacturer(str(raw_brand_name))
         domain_type = attrs.get("domain_type")
         # On partial update domain_type may be absent — fall back to the instance.
         if domain_type is None and self.instance is not None:
             domain_type = self.instance.domain_type
         is_railway = bool(domain_type) and getattr(domain_type, "code", None) == "RAILWAY_MACHINERY"
         if not is_railway:
+            return attrs
+        from catalog.services import equipment_groups_available
+
+        # Пустой справочник групп не блокирует сохранение (канон ТН ВЭД, N1).
+        if not equipment_groups_available():
             return attrs
 
         # equipment_groups present in the payload? use it; else fall back to the
@@ -290,8 +304,8 @@ class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
         if not groups:
             raise serializers.ValidationError(
                 {
-                    "equipment_groups": (
-                        "Товары домена RAILWAY_MACHINERY должны быть привязаны " "минимум к одной группе оборудования."
+                    "equipment_groups": gettext_lazy(
+                        "Товары домена RAILWAY_MACHINERY должны быть привязаны минимум к одной группе оборудования."
                     )
                 }
             )

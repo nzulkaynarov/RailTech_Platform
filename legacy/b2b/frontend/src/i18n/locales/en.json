@@ -4816,5 +4816,12 @@
       "vat": "VAT"
     },
     "action": "Customs payments"
+  },
+  "manufacturerField": {
+    "placeholder": "No brand",
+    "searchPlaceholder": "Brand name…",
+    "empty": "No matches — type a name to create it",
+    "clear": "Clear brand",
+    "create": "Use “{{name}}”"
   }
 }

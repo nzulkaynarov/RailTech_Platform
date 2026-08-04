@@ -47,10 +47,21 @@ _IDENTITY = (
     _("Артикул производителя или ГОСТ/чертёж"),
     lambda p: bool((p.manufacturer_part_number or "").strip() or (p.gost_drawing or "").strip()),
 )
+
+
+def _equipment_satisfied(product) -> bool:
+    """Группа выбрана — либо справочник групп пуст и требование выключено (канон ТН ВЭД, N1)."""
+    from catalog.services import equipment_groups_available
+
+    if not equipment_groups_available():
+        return True
+    return product.pk is not None and product.equipment_groups.exists()
+
+
 _EQUIPMENT = (
     "equipment_groups",
     _("Группа оборудования"),
-    lambda p: p.pk is not None and p.equipment_groups.exists(),
+    _equipment_satisfied,
 )
 
 REQUIREMENTS_BY_DOMAIN: dict[str, tuple] = {

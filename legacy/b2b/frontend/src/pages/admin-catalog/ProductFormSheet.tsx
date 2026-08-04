@@ -15,6 +15,7 @@ import type { Product } from '@/api/catalogApi';
 import { ProductMediaSection } from './ProductMediaSection';
 import { useProductForm } from './useProductForm';
 import { HSCodeField } from '@/components/Shared/HSCodeField';
+import { ManufacturerField } from '@/components/Shared/ManufacturerField';
 
 export function ProductFormSheet({
   open, onOpenChange, target, sellerCompanyId,
@@ -29,7 +30,7 @@ export function ProductFormSheet({
   const { t } = useTranslation();
   const [dutiesOpen, setDutiesOpen] = useState(false);
   const {
-    domainTypes, statuses, categories, units, manufacturers, equipmentGroups,
+    domainTypes, statuses, categories, units, equipmentGroups,
     currencies, stockStatuses, deliveryBases,
     draft, groupIds, offerDraft, categoryHint,
     sellerMode, isEdit, isRailway, busy, enrichPending,
@@ -144,17 +145,12 @@ export function ProductFormSheet({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label>{t('adminCatalog.fields.manufacturer')}</Label>
-              <Select
-                value={draft.brand ? String(draft.brand) : undefined}
-                onValueChange={(v) => update({ brand: Number(v) })}
-              >
-                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                <SelectContent>
-                  {(manufacturers ?? []).map((m) => (
-                    <SelectItem key={m.id} value={String(m.id)}>{m.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {/* N1: свободный ввод с созданием на лету — Select по вечно пустому read-only
+                  справочнику был тупиком (наполнить его продавец не мог). */}
+              <ManufacturerField
+                value={draft.brand_name ?? ''}
+                onChange={(brand_name) => update({ brand_name })}
+              />
             </div>
             <div className="space-y-2">
               <Label>{t('adminCatalog.fields.partNumber')}</Label>

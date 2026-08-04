@@ -36,6 +36,36 @@ def publish_products(products: QuerySet[Product]) -> Tuple[int, List[str]]:
     return updated, skipped
 
 
+def find_or_create_manufacturer(name: str):
+    """Бренд по имени без дублей (`iexact`) — ЕДИНЫЙ нормализатор формы и Excel-импорта (N1).
+
+    До N1 бренд можно было завести только побочным эффектом импорта (свободный текст из
+    файла), а селект в форме карточки был вечно пуст. Паттерн Odoo «create on the fly» /
+    Amazon brand: бренд — нормализуемый ввод продавца, не закрытый справочник. Пустое имя →
+    None (бренд снят).
+    """
+    from .models import Manufacturer
+
+    cleaned = (name or "").strip()
+    if not cleaned:
+        return None
+    existing = Manufacturer.objects.filter(name__iexact=cleaned).first()
+    return existing or Manufacturer.objects.create(name=cleaned)
+
+
+def equipment_groups_available() -> bool:
+    """Есть ли в справочнике групп оборудования хоть одна строка.
+
+    Канон ТН ВЭД (N1): ПУСТОЙ справочник не блокирует работу — требовать выбрать группу,
+    когда выбирать не из чего и завести её продавец не может (запись только у платформы),
+    значит запереть сохранение карточки наглухо. Требование «ж/д товар привязан к группе»
+    включается вместе с наполнением справочника.
+    """
+    from .models import EquipmentGroup
+
+    return EquipmentGroup.objects.exists()
+
+
 def log_hs_code_change(product, old_code: str, actor, origin: str) -> None:
     """Журнал присвоений кода ТН ВЭД (T2, паттерн Avalara: у классификации есть источник).
 

@@ -72,11 +72,13 @@ class TaxonomyDedupeTest(TestCase):
         self.assertTrue(Category.objects.filter(id=correct.id, name="Безопасность").exists())
 
     def test_merges_equipment_groups_and_is_idempotent(self):
-        canon = EquipmentGroup.objects.create(name="Тепловозы")
-        EquipmentGroup.objects.create(name="Тепловозы")
+        # Имя ВНЕ стартовой таксономии (catalog/0015): сид уже содержит «Тепловозы»,
+        # и канон дедупликации — старейшая строка, то есть посеянная, а не тестовая.
+        canon = EquipmentGroup.objects.create(name="Мотовозы")
+        EquipmentGroup.objects.create(name="Мотовозы")
         self.mig.dedupe_taxonomy(django_apps, None)
-        self.assertEqual(EquipmentGroup.objects.filter(name="Тепловозы").count(), 1)
+        self.assertEqual(EquipmentGroup.objects.filter(name="Мотовозы").count(), 1)
         # second run is a no-op
         self.mig.dedupe_taxonomy(django_apps, None)
-        self.assertEqual(EquipmentGroup.objects.filter(name="Тепловозы").count(), 1)
+        self.assertEqual(EquipmentGroup.objects.filter(name="Мотовозы").count(), 1)
         self.assertTrue(EquipmentGroup.objects.filter(id=canon.id).exists())

@@ -98,7 +98,7 @@ class Command(BaseCommand):
         pcs, _ = UnitOfMeasure.objects.get_or_create(code="PCS", defaults={"name": "Piece", "sort_order": 10})
         country, _ = Country.objects.get_or_create(code="UZ", defaults={"name": "Uzbekistan", "sort_order": 10})
         published = _must(ProductStatus, "PUBLISHED")
-        domain_general = _must(DomainType, "GENERAL")
+        domain_general = _must(DomainType, "GENERAL_GOODS")
         stock_in = _must(StockStatus, "IN_STOCK")
 
         step(1, "Buyer user + company")

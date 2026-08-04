@@ -78,7 +78,7 @@ def master_data(db):
     Currency.objects.get_or_create(code="USD", defaults={"name": "US Dollar", "symbol": "$", "sort_order": 10})
     UnitOfMeasure.objects.get_or_create(code="PCS", defaults={"name": "Piece", "sort_order": 10})
     DomainType.objects.get_or_create(
-        code="GENERAL", defaults={"name": "General", "sku_prefix": "GEN", "sort_order": 10}
+        code="GENERAL_GOODS", defaults={"name": "General goods", "sku_prefix": "GG", "sort_order": 10}
     )
     ProductStatus.objects.get_or_create(code="PUBLISHED", defaults={"name": "Published", "sort_order": 20})
     StockStatus.objects.get_or_create(code="IN_STOCK", defaults={"name": "In stock", "sort_order": 10})

@@ -217,7 +217,10 @@ class Product(models.Model):
     def clean(self):
         super().clean()
         if self.domain_type and getattr(self.domain_type, "code", None) == "RAILWAY_MACHINERY":
-            if self.pk and not self.equipment_groups.exists():
+            from catalog.services import equipment_groups_available
+
+            # Пустой справочник групп не блокирует (канон ТН ВЭД, N1).
+            if self.pk and equipment_groups_available() and not self.equipment_groups.exists():
                 raise ValidationError(
                     {
                         "equipment_groups": _(
@@ -233,9 +236,12 @@ class Product(models.Model):
         Post-save validation: call after setting M2M equipment_groups.
         Raises ValidationError if RAILWAY_MACHINERY product has no groups.
         """
+        from catalog.services import equipment_groups_available
+
         if (
             product.domain_type
             and getattr(product.domain_type, "code", None) == "RAILWAY_MACHINERY"
+            and equipment_groups_available()
             and not product.equipment_groups.exists()
         ):
             raise ValidationError(

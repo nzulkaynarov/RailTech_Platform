@@ -166,7 +166,10 @@ def _resolve_brand(ctx: _Ctx, name: str):
         return ctx.brand_cache[key]
     brand = ctx.Manufacturer.objects.filter(name__iexact=name).first()
     if not brand and not ctx.dry_run:
-        brand = ctx.Manufacturer.objects.create(name=name)
+        # Тот же нормализатор, что у формы карточки (catalog.services.find_or_create_manufacturer).
+        from catalog.services import find_or_create_manufacturer
+
+        brand = find_or_create_manufacturer(name)
     ctx.brand_cache[key] = brand
     return brand
 

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import {
   useCreateProduct, useUpdateProduct,
-  useDomainTypes, useProductStatuses, useCategories, useManufacturers, useEquipmentGroups,
+  useDomainTypes, useProductStatuses, useCategories, useEquipmentGroups,
   useStockStatuses, useOffers, useCreateOffer, useUpdateOffer,
   useEnrichProduct,
 } from '@/hooks/useCatalog';
@@ -25,7 +25,6 @@ export function useProductForm({
   const { data: statuses } = useProductStatuses();
   const { data: categories } = useCategories();
   const { data: units } = useUnits();
-  const { data: manufacturers } = useManufacturers({ fetchAll: true });
   const { data: equipmentGroups } = useEquipmentGroups();
   const createMut = useCreateProduct();
   const updateMut = useUpdateProduct();
@@ -133,13 +132,16 @@ export function useProductForm({
       toast.error(t('adminCatalog.nameRequired'));
       return;
     }
-    if (isRailway && groupIds.length === 0) {
+    // Пустой справочник групп не блокирует сохранение (канон ТН ВЭД, N1) — требование
+    // включается вместе с наполнением; бэкенд проверяет то же условие.
+    if (isRailway && (equipmentGroups ?? []).length > 0 && groupIds.length === 0) {
       toast.error(t('adminCatalog.equipmentGroupsRequired'));
       return;
     }
-    // brand (catalog.Manufacturer) replaces the deprecated manufacturer Company FK.
-    // equipment_groups is an M2M write (list of ids) — the read type is
-    // EquipmentGroup[], so the body goes through a write-shaped cast.
+    // brand_name — строка: сервер нормализует (iexact) и создаёт бренд на лету (N1),
+    // тем же нормализатором, что Excel-импорт. equipment_groups is an M2M write (list
+    // of ids) — the read type is EquipmentGroup[], so the body goes through a
+    // write-shaped cast.
     const payload = {
       name: draft.name,
       description: draft.description || '',
@@ -147,7 +149,7 @@ export function useProductForm({
       status: draft.status ? Number(draft.status) : undefined,
       category: draft.category ? Number(draft.category) : null,
       uom: draft.uom ? Number(draft.uom) : null,
-      brand: draft.brand ? Number(draft.brand) : null,
+      brand_name: (draft.brand_name || '').trim(),
       manufacturer_part_number: draft.manufacturer_part_number || '',
       equipment_groups: groupIds,
       gost_drawing: draft.gost_drawing || '',
@@ -198,7 +200,7 @@ export function useProductForm({
 
   return {
     // lookups
-    domainTypes, statuses, categories, units, manufacturers, equipmentGroups,
+    domainTypes, statuses, categories, units, equipmentGroups,
     currencies, stockStatuses, deliveryBases,
     // state
     draft, groupIds, offerDraft, categoryHint,
