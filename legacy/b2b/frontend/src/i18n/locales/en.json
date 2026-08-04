@@ -4756,6 +4756,17 @@
       "hint": "The HS classifier was updated and these codes were retired. New quotes must not inherit them — pick current ones.",
       "code": "code {{code}} retired from the edition",
       "fix": "Pick a code"
+    },
+    "classify": {
+      "run": "Pick codes with AI ({{count}})",
+      "title": "HS code suggestions: {{count}}",
+      "hint": "The AI picked codes FROM the classifier. Review and apply — cards change only after your confirmation.",
+      "applyAll": "Apply all ({{count}})",
+      "reject": "Reject",
+      "cancel": "Cancel",
+      "applied": "Codes applied: {{count}}",
+      "nothing": "No matching codes found",
+      "failed": "Could not classify — try again"
     }
   },
   "hsField": {

@@ -232,6 +232,16 @@ export const catalogApi = {
         const body = response.data as { results?: Product[] };
         return body.results ?? (response.data as Product[]);
     },
+    /** T4: пакетный подбор кодов (202 + ai-status). Возвращает task_id. */
+    classifyHSCodes: async (productIds: number[]): Promise<{ task_id: string }> => {
+        const response = await apiClient.post<{ task_id: string }>('catalog/products/hs-classify/', { product_ids: productIds });
+        return response.data;
+    },
+    /** T4: применить ПОДТВЕРЖДЁННЫЕ человеком коды. */
+    applyHSCodes: async (assignments: { product_id: number; code: string }[]): Promise<{ applied: number[]; skipped: { product_id: number; error: string }[] }> => {
+        const response = await apiClient.post<{ applied: number[]; skipped: { product_id: number; error: string }[] }>('catalog/products/hs-apply/', { assignments });
+        return response.data;
+    },
     /** Кандидаты кода ТН ВЭД из справочника: текст → пословный поиск, цифры → ветка кода. */
     suggestHSCodes: async (q: string): Promise<{ code: string; name: string; level: number; score: number }[]> => {
         const response = await apiClient.get<{ candidates: { code: string; name: string; level: number; score: number }[] }>(

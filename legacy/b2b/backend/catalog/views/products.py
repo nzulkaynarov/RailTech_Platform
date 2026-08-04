@@ -222,6 +222,78 @@ class ProductViewSet(viewsets.ModelViewSet):
         )
 
     @extend_schema(
+        summary="Bulk classify HS codes (202, suggestions only)",
+        description=(
+            "Пакетный подбор кодов ТН ВЭД для СВОИХ карточек. Возвращает ПРЕДЛОЖЕНИЯ — карточки "
+            "меняются только через hs-apply после подтверждения человеком (Avalara-паттерн)."
+        ),
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {"product_ids": {"type": "array", "items": {"type": "integer"}}},
+            }
+        },
+        responses={202: OpenApiResponse(description="{task_id}")},
+        tags=["Catalog"],
+    )
+    @action(detail=False, methods=["post"], url_path="hs-classify", permission_classes=[permissions.IsAuthenticated])
+    def hs_classify(self, request):
+        from catalog.publishing import can_manage
+        from sourcing.ai_jobs import enqueue_ai_job
+
+        ids = [int(pk) for pk in (request.data.get("product_ids") or []) if str(pk).isdigit()][:100]
+        if not ids:
+            return Response({"detail": "PRODUCT_IDS_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
+        # Только свои карточки: чужие молча выбрасываются ДО постановки платной задачи.
+        own = [p.pk for p in Product.objects.filter(pk__in=ids) if can_manage(request.user, p)]
+        if not own:
+            return Response({"detail": "PRODUCT_NOT_YOURS"}, status=status.HTTP_403_FORBIDDEN)
+        return enqueue_ai_job("hs_classify", {"product_ids": own}, request.user)
+
+    @extend_schema(
+        summary="Apply confirmed HS codes to products",
+        description="Применить ПОДТВЕРЖДЁННЫЕ человеком коды: [{product_id, code}]. Код обязан быть в справочнике.",
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {
+                    "assignments": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {"product_id": {"type": "integer"}, "code": {"type": "string"}},
+                        },
+                    }
+                },
+            }
+        },
+        responses={200: OpenApiResponse(description="{applied, skipped}")},
+        tags=["Catalog"],
+    )
+    @action(detail=False, methods=["post"], url_path="hs-apply", permission_classes=[permissions.IsAuthenticated])
+    def hs_apply(self, request):
+        from catalog.hs_suggest import is_known_code
+        from catalog.publishing import can_manage
+        from catalog.services import log_hs_code_change
+
+        applied, skipped = [], []
+        for row in (request.data.get("assignments") or [])[:100]:
+            product = Product.objects.filter(pk=row.get("product_id")).first()
+            code = "".join(ch for ch in str(row.get("code") or "") if ch.isdigit())
+            if product is None or not code or not can_manage(request.user, product):
+                skipped.append({"product_id": row.get("product_id"), "error": "PRODUCT_NOT_YOURS"})
+                continue
+            if not is_known_code(code):
+                skipped.append({"product_id": product.pk, "error": "HS_CODE_UNKNOWN"})
+                continue
+            old = product.hs_code or ""
+            product.hs_code = code
+            product.save(update_fields=["hs_code", "updated_at"])
+            log_hs_code_change(product, old, request.user, origin="ai")
+            applied.append(product.pk)
+        return Response({"applied": applied, "skipped": skipped})
+
+    @extend_schema(
         summary="AI lookup: describe the product in your own words (202)",
         description=(
             "ИИ-режим справочника: свободное описание → код из классификатора с объяснением. "

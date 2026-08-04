@@ -2779,6 +2779,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/products/hs-apply/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply confirmed HS codes to products
+         * @description Применить ПОДТВЕРЖДЁННЫЕ человеком коды: [{product_id, code}]. Код обязан быть в справочнике.
+         */
+        post: operations["catalog_products_hs_apply_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/products/hs-browse/": {
         parameters: {
             query?: never;
@@ -2793,6 +2813,26 @@ export interface paths {
         get: operations["catalog_products_hs_browse_retrieve"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/products/hs-classify/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bulk classify HS codes (202, suggestions only)
+         * @description Пакетный подбор кодов ТН ВЭД для СВОИХ карточек. Возвращает ПРЕДЛОЖЕНИЯ — карточки меняются только через hs-apply после подтверждения человеком (Avalara-паттерн).
+         */
+        post: operations["catalog_products_hs_classify_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -18028,6 +18068,33 @@ export interface operations {
             };
         };
     };
+    catalog_products_hs_apply_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    assignments?: {
+                        product_id?: number;
+                        code?: string;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description {applied, skipped} */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     catalog_products_hs_browse_retrieve: {
         parameters: {
             query?: {
@@ -18041,6 +18108,30 @@ export interface operations {
         responses: {
             /** @description {children: [{code,name,level,has_children}]} */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    catalog_products_hs_classify_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    product_ids?: number[];
+                };
+            };
+        };
+        responses: {
+            /** @description {task_id} */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };

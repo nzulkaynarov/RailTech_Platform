@@ -7750,6 +7750,51 @@
                 }
             }
         },
+        "/api/v1/catalog/products/hs-apply/": {
+            "post": {
+                "operationId": "catalog_products_hs_apply_create",
+                "description": "Применить ПОДТВЕРЖДЁННЫЕ человеком коды: [{product_id, code}]. Код обязан быть в справочнике.",
+                "summary": "Apply confirmed HS codes to products",
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "assignments": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "product_id": {
+                                                    "type": "integer"
+                                                },
+                                                "code": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{applied, skipped}"
+                    }
+                }
+            }
+        },
         "/api/v1/catalog/products/hs-browse/": {
             "get": {
                 "operationId": "catalog_products_hs_browse_retrieve",
@@ -7775,6 +7820,43 @@
                 "responses": {
                     "200": {
                         "description": "{children: [{code,name,level,has_children}]}"
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/products/hs-classify/": {
+            "post": {
+                "operationId": "catalog_products_hs_classify_create",
+                "description": "Пакетный подбор кодов ТН ВЭД для СВОИХ карточек. Возвращает ПРЕДЛОЖЕНИЯ — карточки меняются только через hs-apply после подтверждения человеком (Avalara-паттерн).",
+                "summary": "Bulk classify HS codes (202, suggestions only)",
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "product_ids": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "{task_id}"
                     }
                 }
             }

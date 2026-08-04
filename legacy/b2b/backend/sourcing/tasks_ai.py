@@ -196,6 +196,13 @@ def _handle_suggest_sellers(payload: dict) -> dict:
     return {"sellers": suggest_sellers_for_deal_ai(deal)}
 
 
+def _handle_hs_classify(payload: dict, user_id: int) -> dict:
+    """T4: пакетный подбор кодов для карточек. Предложения, НЕ применение."""
+    from catalog.hs_lookup_ai import classify_products
+
+    return classify_products(payload.get("product_ids") or [], user_id)
+
+
 def _handle_hs_lookup(payload: dict, user_id: int) -> dict:
     """T3: «опишите товар своими словами» → код ТН ВЭД из справочника с объяснением."""
     from catalog.hs_lookup_ai import lookup_hs_code
@@ -215,6 +222,7 @@ FEATURE_HANDLERS = {
     "draft_quote": _handle_draft_quote,
     "suggest_sellers": _handle_suggest_sellers,
     "hs_lookup": _handle_hs_lookup,
+    "hs_classify": _handle_hs_classify,
 }
 
 

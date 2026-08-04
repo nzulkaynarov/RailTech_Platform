@@ -11,6 +11,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ResponsiveDataTable } from '@/components/ResponsiveDataTable';
 import { useMyCandidates, usePublishProduct, useBulkPublishProducts, useReclassificationWorklist } from '@/hooks/useCatalog';
 import { useAuthStore } from '@/store/authStore';
+import { runAiJob } from '@/lib/aiJob';
+import { catalogApi } from '@/api/catalogApi';
+import { formatHSCode } from '@/components/Shared/HSCodeField';
+import { useQueryClient } from '@tanstack/react-query';
 import { ProductFormSheet } from './AdminCatalogPage';
 import type { Product } from '@/api/catalogApi';
 
@@ -65,6 +69,40 @@ export function NomenclatureQueuePage({ onNavigate }: { onNavigate: (target: str
   const { data: retiredCards } = useReclassificationWorklist();
   const publishOne = usePublishProduct();
   const publishMany = useBulkPublishProducts();
+  const queryClient = useQueryClient();
+  // T4 (Avalara bulk classification): ИИ подбирает коды пакетом, человек ПОДТВЕРЖДАЕТ.
+  const [classifyBusy, setClassifyBusy] = useState(false);
+  const [suggestions, setSuggestions] = useState<
+    { product_id: number; name: string; suggested_code: string; suggested_name: string; explanation: string }[] | null
+  >(null);
+
+  const classifySelected = async () => {
+    setClassifyBusy(true);
+    setSuggestions(null);
+    try {
+      const outcome = await runAiJob<{ results: typeof suggestions }>(() =>
+        catalogApi.classifyHSCodes([...selected]),
+      );
+      const withCodes = (outcome.results ?? []).filter((row) => row.suggested_code);
+      setSuggestions(withCodes);
+      if (withCodes.length === 0) toast.info(t('nomenclature.classify.nothing'));
+    } catch {
+      toast.error(t('nomenclature.classify.failed'));
+    } finally {
+      setClassifyBusy(false);
+    }
+  };
+
+  const applySuggestions = async () => {
+    if (!suggestions?.length) return;
+    const result = await catalogApi.applyHSCodes(
+      suggestions.map((row) => ({ product_id: row.product_id, code: row.suggested_code })),
+    );
+    toast.success(t('nomenclature.classify.applied', { count: result.applied.length }));
+    setSuggestions(null);
+    setSelected(new Set());
+    queryClient.invalidateQueries({ queryKey: ['products'] });
+  };
 
   const items = useMemo(() => rows ?? [], [rows]);
   const publishableSelected = useMemo(
@@ -182,10 +220,15 @@ export function NomenclatureQueuePage({ onNavigate }: { onNavigate: (target: str
             {t(`nomenclature.tabs.${key}`)}
           </Button>
         ))}
+        {selected.size > 0 && tab === 'DRAFT' && (
+          <Button variant="outline" size="sm" className="ml-auto" disabled={classifyBusy} onClick={classifySelected}>
+            {classifyBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> : null}
+            {t('nomenclature.classify.run', { count: selected.size })}
+          </Button>
+        )}
         {publishableSelected.length > 0 && (
           <Button
             size="sm"
-            className="ml-auto"
             disabled={publishMany.isPending}
             onClick={() =>
               publishMany.mutate(
@@ -242,6 +285,39 @@ export function NomenclatureQueuePage({ onNavigate }: { onNavigate: (target: str
           )}
         </CardContent>
       </Card>
+
+      {suggestions && suggestions.length > 0 && (
+        <Card className="border-info/40 bg-info/5">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">{t('nomenclature.classify.title', { count: suggestions.length })}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            <p className="text-xs text-muted-foreground">{t('nomenclature.classify.hint')}</p>
+            {suggestions.map((row) => (
+              <div key={row.product_id} className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium">{row.name}</div>
+                  <div className="text-xs text-muted-foreground">
+                    <span className="font-mono font-semibold">{formatHSCode(row.suggested_code)}</span>
+                    {row.explanation ? ` — ${row.explanation}` : ''}
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSuggestions((rows) => rows?.filter((r) => r.product_id !== row.product_id) ?? null)}
+                >
+                  {t('nomenclature.classify.reject')}
+                </Button>
+              </div>
+            ))}
+            <div className="flex gap-2 pt-1">
+              <Button size="sm" onClick={applySuggestions}>{t('nomenclature.classify.applyAll', { count: suggestions.length })}</Button>
+              <Button variant="outline" size="sm" onClick={() => setSuggestions(null)}>{t('nomenclature.classify.cancel')}</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* T2, паттерн SAP-переклассификации: автосинк закрыл код → карточка попадает СЮДА с
           конкретным действием, а не тихо наследует мёртвый код в новые КП. */}

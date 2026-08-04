@@ -107,3 +107,44 @@ def lookup_hs_code(description: str) -> dict:
         "explanation": str(data.get("explanation") or "").strip()[:500],
         "candidates": candidates,
     }
+
+
+def classify_products(product_ids: list[int], user_id: int | None = None) -> dict:
+    """Пакетный подбор кодов ТН ВЭД для карточек (T4, паттерн Avalara bulk classification).
+
+    Для каждой карточки без действующего кода: retrieval по имени+ГОСТ+артикулу → модель
+    выбирает из кандидатов → детерминированная сверка. Предложение НЕ применяется молча —
+    результат возвращается со статусом `suggested`, карточка меняется только после
+    подтверждения человеком (Avalara/Zonos: у классификации всегда есть подтверждающий).
+
+    Работает и без AI: тогда предлагается лучший retrieval-кандидат с score ≥ 0.5 — честный
+    детерминированный фолбэк, тоже под подтверждение.
+    """
+    from catalog.models import Product
+
+    results: list[dict] = []
+    cards = Product.objects.filter(pk__in=product_ids[:100]).select_related("status")
+    for card in cards:
+        query = " ".join(
+            part for part in [card.name, card.gost_drawing or "", card.manufacturer_part_number or ""] if part
+        ).strip()
+        outcome = lookup_hs_code(query)
+        suggested = outcome["code"]
+        explanation = outcome["explanation"]
+        if not suggested and outcome["candidates"]:
+            top = outcome["candidates"][0]
+            if float(top.get("score") or 0) >= 0.5:
+                suggested = top["code"]
+                explanation = ""
+        results.append(
+            {
+                "product_id": card.pk,
+                "name": card.name[:120],
+                "current_code": card.hs_code or "",
+                "suggested_code": suggested,
+                "suggested_name": outcome["name"]
+                or next((c["name"] for c in outcome["candidates"] if c["code"] == suggested), ""),
+                "explanation": explanation,
+            }
+        )
+    return {"results": results}
