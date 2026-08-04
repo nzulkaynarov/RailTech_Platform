@@ -31,7 +31,7 @@ export function ProductFormSheet({
   const [dutiesOpen, setDutiesOpen] = useState(false);
   const {
     domainTypes, categories, units, equipmentGroups,
-    currencies, stockStatuses, deliveryBases,
+    currencies, stockStatuses, deliveryBases, adminCompanies,
     draft, groupIds, offerDraft, categoryHint,
     sellerMode, isEdit, isRailway, busy, enrichPending,
     update, updateOffer, toggleGroup, runEnrich, submit,
@@ -49,6 +49,28 @@ export function ProductFormSheet({
             <Label>{t('adminCatalog.fields.name')}</Label>
             <Input value={draft.name ?? ''} onChange={(e) => update({ name: e.target.value })} />
           </div>
+
+          {/* N3: оператор создаёт карточку ОТ ИМЕНИ компании — «ничья» карточка недоступна
+              продавцу навсегда. На редактировании владелец не меняется (иммутабелен на бэке). */}
+          {!sellerMode && !isEdit && (
+            <div className="space-y-2">
+              <Label>
+                {t('adminCatalog.fields.ownerCompany')}
+                <span className="ml-1 text-destructive">*</span>
+              </Label>
+              <Select
+                value={draft.owner_company ? String(draft.owner_company) : undefined}
+                onValueChange={(v) => update({ owner_company: Number(v) })}
+              >
+                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectContent>
+                  {(adminCompanies ?? []).map((company) => (
+                    <SelectItem key={company.id} value={String(company.id)}>{company.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="flex items-start justify-between gap-3 rounded-md border border-dashed bg-muted/40 p-3">
             <div className="space-y-0.5">

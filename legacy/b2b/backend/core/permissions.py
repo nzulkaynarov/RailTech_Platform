@@ -92,11 +92,14 @@ class IsSupplierWithActiveSubscription(BasePermission):
 
 class IsProductManagerOrAdmin(BasePermission):
     """
-    Product edit rights:
-      - Platform admin: full access.
-      - Members of the product's owner_company (the seller that created the card):
-        full access to their own products.
-      - On create: any authenticated member of a SUPPLIER company.
+    Product edit rights (N3: слой прав `catalog.manage` теперь ДЕЙСТВУЮЩИЙ, а не декоративный):
+      - Platform operator: чтение свободно; запись — только суб-роли с
+        `moderation.force_override` (ADR-0004: SUPPORT «только просмотр» не должен уметь
+        удалять товары).
+      - Seller: членство владельца + `catalog.manage` из CompanyRole (до N3 код проверялся
+        только меню — «Наблюдатель» не видел «Номенклатуру», но правил карточки по прямому
+        API). Legacy-фолбэк без CompanyRole сохраняется в member_has_permission
+        (OWNER → всё; иначе can_sell).
     """
 
     message = "You can only manage products of your own company."
@@ -106,15 +109,21 @@ class IsProductManagerOrAdmin(BasePermission):
         if not (user and user.is_authenticated):
             return False
         if user.is_platform_admin:
-            return True
+            return self._operator_allowed(request, view)
         if view.action == "create":
-            return user.memberships.filter(is_active=True).in_seller_company().exists()
+            from accounts.constants import Permission
+            from accounts.services.permissions import member_has_permission
+
+            seller_company_ids = (
+                user.memberships.filter(is_active=True).in_seller_company().values_list("company_id", flat=True)
+            )
+            return any(member_has_permission(user, cid, Permission.CATALOG_MANAGE) for cid in seller_company_ids)
         return True  # object-level check below for retrieve/update/delete
 
     def has_object_permission(self, request, view, obj):
         user = request.user
         if user.is_platform_admin:
-            return True
+            return self._operator_allowed(request, view)
         # Ownership moved from the deprecated `manufacturer` FK (always NULL now) to
         # `owner_company` (the seller that created the card). Falling back to the
         # legacy field covers any pre-split rows. The old code only checked
@@ -122,10 +131,20 @@ class IsProductManagerOrAdmin(BasePermission):
         owner_id = getattr(obj, "owner_company_id", None) or getattr(obj, "manufacturer_id", None)
         if not owner_id:
             return False
-        return user.memberships.filter(
-            is_active=True,
-            company_id=owner_id,
-        ).exists()
+        from accounts.constants import Permission
+        from accounts.services.permissions import member_has_permission
+
+        return member_has_permission(user, owner_id, Permission.CATALOG_MANAGE)
+
+    @staticmethod
+    def _operator_allowed(request, view) -> bool:
+        """Оператору чтение свободно, запись — по суб-способности (ADR-0004)."""
+        if request.method in SAFE_METHODS:
+            return True
+        from accounts.constants import OperatorPermission
+        from accounts.services.permissions import operator_has_permission
+
+        return operator_has_permission(request.user, OperatorPermission.MODERATION_FORCE_OVERRIDE)
 
 
 class IsOfferSupplierOrAdmin(BasePermission):

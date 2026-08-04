@@ -1,6 +1,11 @@
 import type { Product } from '@/api/catalogApi';
 
-export type Draft = Partial<Product> & { gost_drawing?: string | null; description?: string };
+export type Draft = Partial<Product> & {
+  gost_drawing?: string | null;
+  description?: string;
+  /** N3: владелец карточки при создании оператором (id компании; продавцу ставит сервер). */
+  owner_company?: number | null;
+};
 
 export type OfferDraft = {
   base_price?: string;

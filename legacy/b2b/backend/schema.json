@@ -6462,7 +6462,7 @@
         "/api/v1/catalog/equipment-groups/{id}/": {
             "get": {
                 "operationId": "catalog_equipment_groups_retrieve",
-                "description": "CRUD for equipment groups (hierarchical classification).\n\nPublic read access; write operations require Admin role.",
+                "description": "CRUD for equipment groups (hierarchical classification).\n\nPublic read access; write operations require an operator with `platform.settings`\n(N3, ADR-0004: раньше писала ЛЮБАЯ суб-роль оператора, включая SUPPORT «только просмотр»).",
                 "summary": "Get equipment group",
                 "parameters": [
                     {
@@ -6555,7 +6555,7 @@
             },
             "patch": {
                 "operationId": "catalog_equipment_groups_partial_update",
-                "description": "CRUD for equipment groups (hierarchical classification).\n\nPublic read access; write operations require Admin role.",
+                "description": "CRUD for equipment groups (hierarchical classification).\n\nPublic read access; write operations require an operator with `platform.settings`\n(N3, ADR-0004: раньше писала ЛЮБАЯ суб-роль оператора, включая SUPPORT «только просмотр»).",
                 "summary": "Partially update equipment group",
                 "parameters": [
                     {
@@ -6610,7 +6610,7 @@
             },
             "delete": {
                 "operationId": "catalog_equipment_groups_destroy",
-                "description": "CRUD for equipment groups (hierarchical classification).\n\nPublic read access; write operations require Admin role.",
+                "description": "CRUD for equipment groups (hierarchical classification).\n\nPublic read access; write operations require an operator with `platform.settings`\n(N3, ADR-0004: раньше писала ЛЮБАЯ суб-роль оператора, включая SUPPORT «только просмотр»).",
                 "summary": "Delete equipment group",
                 "parameters": [
                     {

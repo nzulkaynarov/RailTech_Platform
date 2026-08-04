@@ -161,9 +161,10 @@ export const useToggleUserActive = () => {
   });
 };
 
-export const useCompanies = (params?: CompanyFilterParams) => useQuery({
+export const useCompanies = (params?: CompanyFilterParams, enabled = true) => useQuery({
   queryKey: ['companies', params],
   queryFn: () => accountsApi.getCompanies(params),
+  enabled,
 });
 
 /** Verified-supplier directory for the open-RFQ invite flow (member-accessible). */

@@ -2763,7 +2763,8 @@
       "sku": "SKU",
       "partNumber": "Manufacturer part number",
       "equipmentGroups": "Equipment groups",
-      "hsCode": "HS code"
+      "hsCode": "HS code",
+      "ownerCompany": "Owner company"
     },
     "stats": {
       "total": "Total",
@@ -2802,7 +2803,8 @@
       "applied": "AI suggestions applied — review and save.",
       "failed": "Could not get AI suggestions.",
       "categoryHint": "Suggested category: {{hint}}"
-    }
+    },
+    "ownerCompanyRequired": "Choose the card's owner company"
   },
   "adminCategories": {
     "title": "Catalog · Categories",
@@ -3627,7 +3629,8 @@
     "PRODUCT_INCOMPLETE": "The card is not ready to publish — fill in the required fields (the Readiness column lists them)",
     "PRODUCT_NOT_YOURS": "This card belongs to another company",
     "PRODUCT_STATUS_MISSING": "The product status reference is not seeded — contact the platform operator",
-    "HS_CODE_UNKNOWN": "This code is not in the HS classifier"
+    "HS_CODE_UNKNOWN": "This code is not in the HS classifier",
+    "OWNER_COMPANY_REQUIRED": "The card's owner company is not set"
   },
   "fileUpload": {
     "upload": "Upload",

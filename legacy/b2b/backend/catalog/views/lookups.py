@@ -64,7 +64,8 @@ class EquipmentGroupViewSet(viewsets.ModelViewSet):
     """
     CRUD for equipment groups (hierarchical classification).
 
-    Public read access; write operations require Admin role.
+    Public read access; write operations require an operator with `platform.settings`
+    (N3, ADR-0004: раньше писала ЛЮБАЯ суб-роль оператора, включая SUPPORT «только просмотр»).
     """
 
     # EquipmentGroup has no domain_type FK (only a self-referential `parent`);
@@ -73,13 +74,14 @@ class EquipmentGroupViewSet(viewsets.ModelViewSet):
     serializer_class = EquipmentGroupSerializer
     filter_backends = [filters.SearchFilter]
     search_fields = ["name"]
+    operator_permission = "platform.settings"
 
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
             return [permissions.AllowAny()]
-        from core.permissions import IsPlatformAdmin
+        from core.permissions import OperatorScoped
 
-        return [permissions.IsAuthenticated(), IsPlatformAdmin()]
+        return [OperatorScoped()]
 
 
 @extend_schema_view(
@@ -114,13 +116,16 @@ class CategoryViewSet(viewsets.ModelViewSet):
         "domain_type__code": ["exact"],
     }
     search_fields = ["name"]
+    # N3: дерево категорий — «справочники» из ADR-0004; пишет только оператор
+    # с `platform.settings`, а не любая суб-роль.
+    operator_permission = "platform.settings"
 
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
             return [permissions.AllowAny()]
-        from core.permissions import IsPlatformAdmin
+        from core.permissions import OperatorScoped
 
-        return [permissions.IsAuthenticated(), IsPlatformAdmin()]
+        return [OperatorScoped()]
 
 
 @extend_schema_view(

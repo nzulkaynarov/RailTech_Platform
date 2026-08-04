@@ -8,6 +8,7 @@ import {
   useEnrichProduct,
 } from '@/hooks/useCatalog';
 import { useUnits, useCurrencies, useDeliveryBases } from '@/hooks/useMasterData';
+import { useCompanies } from '@/hooks/useAccounts';
 import type { Product } from '@/api/catalogApi';
 import { extractApiErrorCode, translateApiError } from '@/lib/apiError';
 import { emptyDraft, type Draft, type OfferDraft } from './types';
@@ -30,6 +31,9 @@ export function useProductForm({
 
   // --- Seller pricing (H3) ---
   const sellerMode = Boolean(sellerCompanyId);
+  // N3: операторская карточка обязана иметь владельца (иначе она «ничья» и продавец никогда
+  // не сможет взять её в работу) — админ-форма выбирает компанию из списка.
+  const { data: adminCompanies } = useCompanies({ fetchAll: true }, !sellerMode);
   const { data: currencies } = useCurrencies();
   const { data: stockStatuses } = useStockStatuses();
   const { data: deliveryBases } = useDeliveryBases();
@@ -156,6 +160,12 @@ export function useProductForm({
       toast.error(t('adminCatalog.equipmentGroupsRequired'));
       return;
     }
+    // N3: оператор обязан назвать владельца создаваемой карточки (бэкенд ответит
+    // OWNER_COMPANY_REQUIRED — но честнее не пускать запрос вовсе).
+    if (!sellerMode && !isEdit && !draft.owner_company) {
+      toast.error(t('adminCatalog.ownerCompanyRequired'));
+      return;
+    }
     // brand_name — строка: сервер нормализует (iexact) и создаёт бренд на лету (N1),
     // тем же нормализатором, что Excel-импорт. equipment_groups is an M2M write (list
     // of ids) — the read type is EquipmentGroup[], so the body goes through a
@@ -175,6 +185,8 @@ export function useProductForm({
       // номенклатуры требовала то, что негде ввести.
       hs_code: (draft.hs_code || '').replace(/\D/g, ''),
       specifications: draft.specifications ?? undefined,
+      // N3: владелец карточки при создании оператором (у продавца его ставит сервер).
+      owner_company: !sellerMode && !isEdit && draft.owner_company ? Number(draft.owner_company) : undefined,
     } as unknown as Partial<Product>;
     try {
       let productId = target?.id;
@@ -221,7 +233,7 @@ export function useProductForm({
   return {
     // lookups
     domainTypes, categories, units, equipmentGroups,
-    currencies, stockStatuses, deliveryBases,
+    currencies, stockStatuses, deliveryBases, adminCompanies,
     // state
     draft, groupIds, offerDraft, categoryHint,
     // derived

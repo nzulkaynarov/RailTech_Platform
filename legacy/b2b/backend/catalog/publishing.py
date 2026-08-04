@@ -19,14 +19,27 @@ from .completeness import completeness
 MAX_BATCH = 500
 
 
-def can_manage(user, product) -> bool:
-    """Владелец карточки или платформенный оператор."""
-    if getattr(user, "is_platform_admin", False) or getattr(user, "is_superuser", False):
+def can_manage(user, product, *, permission: str = "catalog.manage") -> bool:
+    """Право распоряжаться карточкой (N3: слой `catalog.*` действующий, не декоративный).
+
+    Продавец: членство владельца + пермишен CompanyRole (`catalog.manage` для правок,
+    `catalog.publish` для публикации; legacy-фолбэк без роли — в member_has_permission).
+    Оператор: только суб-роль с `moderation.force_override` — SUPPORT «только просмотр»
+    не публикует и не правит чужие карточки (ADR-0004). Superuser — DBA-эскалация.
+    """
+    if getattr(user, "is_superuser", False):
         return True
+    if getattr(user, "is_platform_admin", False):
+        from accounts.constants import OperatorPermission
+        from accounts.services.permissions import operator_has_permission
+
+        return operator_has_permission(user, OperatorPermission.MODERATION_FORCE_OVERRIDE)
     owner_id = getattr(product, "owner_company_id", None)
     if not owner_id:
         return False
-    return user.memberships.filter(is_active=True, company_id=owner_id).exists()
+    from accounts.services.permissions import member_has_permission
+
+    return member_has_permission(user, owner_id, permission)
 
 
 @transaction.atomic
@@ -34,7 +47,9 @@ def publish_product(product, actor) -> tuple[object | None, str | None]:
     """Опубликовать одну карточку. Возвращает `(product, error_code)`."""
     from .models import ProductStatus
 
-    if not can_manage(actor, product):
+    # Публикация — отдельная способность (`catalog.publish`): наполнять карточку может
+    # менеджер каталога, а выпускать в общий каталог — тот, кому это доверено.
+    if not can_manage(actor, product, permission="catalog.publish"):
         return None, "PRODUCT_NOT_YOURS"
     report = completeness(product)
     if not report["is_publishable"]:

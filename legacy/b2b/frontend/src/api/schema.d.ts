@@ -2305,7 +2305,8 @@ export interface paths {
          * Get equipment group
          * @description CRUD for equipment groups (hierarchical classification).
          *
-         *     Public read access; write operations require Admin role.
+         *     Public read access; write operations require an operator with `platform.settings`
+         *     (N3, ADR-0004: раньше писала ЛЮБАЯ суб-роль оператора, включая SUPPORT «только просмотр»).
          */
         get: operations["catalog_equipment_groups_retrieve"];
         /**
@@ -2318,7 +2319,8 @@ export interface paths {
          * Delete equipment group
          * @description CRUD for equipment groups (hierarchical classification).
          *
-         *     Public read access; write operations require Admin role.
+         *     Public read access; write operations require an operator with `platform.settings`
+         *     (N3, ADR-0004: раньше писала ЛЮБАЯ суб-роль оператора, включая SUPPORT «только просмотр»).
          */
         delete: operations["catalog_equipment_groups_destroy"];
         options?: never;
@@ -2327,7 +2329,8 @@ export interface paths {
          * Partially update equipment group
          * @description CRUD for equipment groups (hierarchical classification).
          *
-         *     Public read access; write operations require Admin role.
+         *     Public read access; write operations require an operator with `platform.settings`
+         *     (N3, ADR-0004: раньше писала ЛЮБАЯ суб-роль оператора, включая SUPPORT «только просмотр»).
          */
         patch: operations["catalog_equipment_groups_partial_update"];
         trace?: never;

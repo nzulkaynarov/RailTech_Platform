@@ -9,6 +9,25 @@ from ..models import Product, ProductDocument, ProductImage
 from ..serializers import ProductDocumentSerializer, ProductImageSerializer, ProductListSerializer, ProductSerializer
 
 
+def _ai_enrich_entitlement_gate(user):
+    """403, если платный ИИ-подбор кода не входит в план компании; None — путь открыт.
+
+    N3 (дыра №7 аудита): `hs_lookup`/`hs_classify` зовут LLM, но в отличие от enrich на той же
+    странице не были под entitlement — две монетизации у одной механики. Гейт тот же:
+    `ai.enrich` (подписка даёт по умолчанию, CompanyEntitlement переопределяет), superuser —
+    DBA-эскалация, глобальный дневной спенд-кап действует дальше в enqueue_ai_job.
+    """
+    if getattr(user, "is_superuser", False):
+        return None
+    from accounts.constants import FeatureKey
+    from accounts.services import has_entitlement, primary_seller_company_id
+
+    seller_company_id = primary_seller_company_id(user)
+    if not has_entitlement(seller_company_id, FeatureKey.AI_ENRICH):
+        return Response({"detail": "AI_FEATURE_NOT_ENTITLED"}, status=status.HTTP_403_FORBIDDEN)
+    return None
+
+
 @extend_schema_view(
     list=extend_schema(
         summary="List products",
@@ -160,10 +179,31 @@ class ProductViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         user = self.request.user
         if user.is_platform_admin:
-            serializer.save()
+            # N3 (дыра №4 аудита): карточка БЕЗ owner_company — ничья, продавец никогда не
+            # сможет взять её в работу (can_manage вечно False). Оператор обязан назвать
+            # компанию-владельца (SAP: материал всегда в орг-области).
+            from rest_framework.exceptions import ValidationError
+
+            from accounts.models import Company
+
+            owner_id = self.request.data.get("owner_company")
+            owner = Company.objects.filter(pk=owner_id).first() if owner_id else None
+            if owner is None:
+                raise ValidationError({"detail": "OWNER_COMPANY_REQUIRED"})
+            serializer.save(owner_company=owner)
             return
-        seller_membership = (
-            user.memberships.filter(is_active=True).in_seller_company().select_related("company").first()
+        from accounts.constants import Permission
+        from accounts.services.permissions import member_has_permission
+
+        seller_membership = next(
+            (
+                membership
+                for membership in user.memberships.filter(is_active=True).in_seller_company().select_related("company")
+                # N3: карточка приписывается компании, где у автора ЕСТЬ catalog.manage, —
+                # первое попавшееся членство могло быть компанией без такого права.
+                if member_has_permission(user, membership.company_id, Permission.CATALOG_MANAGE)
+            ),
+            None,
         )
         if not seller_membership:
             from rest_framework.exceptions import PermissionDenied
@@ -241,6 +281,9 @@ class ProductViewSet(viewsets.ModelViewSet):
         from catalog.publishing import can_manage
         from sourcing.ai_jobs import enqueue_ai_job
 
+        gate = _ai_enrich_entitlement_gate(request.user)
+        if gate is not None:
+            return gate
         ids = [int(pk) for pk in (request.data.get("product_ids") or []) if str(pk).isdigit()][:100]
         if not ids:
             return Response({"detail": "PRODUCT_IDS_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
@@ -307,6 +350,9 @@ class ProductViewSet(viewsets.ModelViewSet):
     def hs_lookup(self, request):
         from sourcing.ai_jobs import enqueue_ai_job
 
+        gate = _ai_enrich_entitlement_gate(request.user)
+        if gate is not None:
+            return gate
         description = (request.data.get("description") or "").strip()
         if not description:
             return Response({"detail": "DESCRIPTION_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
