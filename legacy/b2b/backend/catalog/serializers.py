@@ -261,7 +261,10 @@ class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
         ]
         # owner_company is stamped by the server (perform_create) and immutable after —
         # making it writable would let a seller PATCH their product to another tenant (M6).
-        read_only_fields = ["sku", "created_at", "updated_at", "owner_company"]
+        # status — жизненный цикл, а не поле формы (N2, B4 аудита): записываемый status
+        # позволял опубликовать PATCH'ем в обход порога полноты publish_product(). Смена
+        # статуса — ТОЛЬКО сервисами (publishing.py, merging.py, Unfold emergency).
+        read_only_fields = ["sku", "created_at", "updated_at", "owner_company", "status"]
 
     def validate(self, attrs):
         """Enforce the RAILWAY_MACHINERY "≥1 equipment group" rule at the API layer (H5).

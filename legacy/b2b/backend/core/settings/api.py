@@ -57,7 +57,9 @@ REST_FRAMEWORK = {
     # Tolerate an empty/blank env value (e.g. DRF_NUM_PROXIES= in a .env) so a
     # malformed override fails safe to 0 instead of crashing app boot on int("").
     "NUM_PROXIES": int((os.environ.get("DRF_NUM_PROXIES") or "0").strip() or "0"),
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    # N2: клиент может попросить больше строк (?page_size=), верхняя граница 200 —
+    # см. core/pagination.py (раньше page_size молча игнорировался и списки резались на 20).
+    "DEFAULT_PAGINATION_CLASS": "core.pagination.DefaultPageNumberPagination",
     "PAGE_SIZE": 20,
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     # API versioning (F2.6): formal contract instead of a hardcoded "v1". Routes are

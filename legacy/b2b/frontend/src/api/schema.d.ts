@@ -10750,11 +10750,6 @@ export interface components {
              */
             description?: string;
             /**
-             * Статус
-             * @description Статус жизненного цикла: черновик, опубликован, архив
-             */
-            status?: number | null;
-            /**
              * Сколько раз спрашивали
              * @description Число КП, где встретилась эта позиция. Очередь наполнения сортируется по нему.
              */
@@ -11506,7 +11501,7 @@ export interface components {
              * Статус
              * @description Статус жизненного цикла: черновик, опубликован, архив
              */
-            status?: number | null;
+            readonly status: number | null;
             readonly status_name: string | null;
             readonly status_code: string | null;
             readonly completeness: {
@@ -11816,11 +11811,6 @@ export interface components {
              * @description Подробное описание товара для каталога
              */
             description?: string;
-            /**
-             * Статус
-             * @description Статус жизненного цикла: черновик, опубликован, архив
-             */
-            status?: number | null;
             /**
              * Сколько раз спрашивали
              * @description Число КП, где встретилась эта позиция. Очередь наполнения сортируется по нему.
@@ -13539,6 +13529,8 @@ export interface operations {
             query?: {
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 /** @description A search term. */
                 search?: string;
                 types__code?: string;
@@ -14161,6 +14153,8 @@ export interface operations {
             query?: {
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 /** @description A search term. */
                 search?: string;
                 types__code?: string;
@@ -14434,6 +14428,8 @@ export interface operations {
             query?: {
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 /** @description A search term. */
                 search?: string;
             };
@@ -14651,6 +14647,8 @@ export interface operations {
             query?: {
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 /** @description A search term. */
                 search?: string;
             };
@@ -14817,6 +14815,8 @@ export interface operations {
                 company?: number;
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 requested_type?: number;
                 /** @description A search term. */
                 search?: string;
@@ -15042,6 +15042,8 @@ export interface operations {
                 company?: number;
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 /**
                  * @description Базовый, Стандартный или Премиум
                  *
@@ -15416,6 +15418,8 @@ export interface operations {
                 is_active?: boolean;
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 role__code?: string;
                 /** @description A search term. */
                 search?: string;
@@ -15993,6 +15997,8 @@ export interface operations {
             query?: {
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 /** @description A search term. */
                 search?: string;
             };
@@ -16203,6 +16209,8 @@ export interface operations {
                 feature_key?: string;
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 /** @description A search term. */
                 search?: string;
             };
@@ -16389,6 +16397,8 @@ export interface operations {
             query?: {
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 /** @description A search term. */
                 search?: string;
             };
@@ -17071,6 +17081,8 @@ export interface operations {
                 domain_type__code?: string;
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 /** @description A search term. */
                 search?: string;
             };
@@ -17263,6 +17275,8 @@ export interface operations {
             query?: {
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 /** @description A search term. */
                 search?: string;
             };
@@ -17411,6 +17425,8 @@ export interface operations {
             query?: {
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 /** @description A search term. */
                 search?: string;
             };
@@ -17457,6 +17473,8 @@ export interface operations {
             query?: {
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 product?: number;
                 stock_status?: number;
                 supplier?: number;
@@ -17699,6 +17717,8 @@ export interface operations {
                 equipment_groups?: number[];
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 /** @description A search term. */
                 search?: string;
                 /** @description Filter by supplier offer stock status code (e.g. IN_STOCK, ON_ORDER) */
@@ -18302,6 +18322,8 @@ export interface operations {
             query?: {
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 /** @description A search term. */
                 search?: string;
             };
@@ -18351,6 +18373,8 @@ export interface operations {
                 invoice?: number;
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 /** @description A search term. */
                 search?: string;
                 /** @description Несколько значений могут быть разделены запятыми. */
@@ -18847,6 +18871,8 @@ export interface operations {
                 deal?: number;
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 quote?: number;
                 /** @description A search term. */
                 search?: string;
@@ -19285,6 +19311,8 @@ export interface operations {
             query?: {
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 /** @description A search term. */
                 search?: string;
             };
@@ -19488,6 +19516,8 @@ export interface operations {
             query?: {
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 /** @description A search term. */
                 search?: string;
             };
@@ -20262,6 +20292,8 @@ export interface operations {
                 deal?: number;
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 /** @description A search term. */
                 search?: string;
                 /** @description Несколько значений могут быть разделены запятыми. */
@@ -20599,6 +20631,8 @@ export interface operations {
                 deal?: number;
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 /** @description A search term. */
                 search?: string;
                 /** @description Несколько значений могут быть разделены запятыми. */
@@ -20894,6 +20928,8 @@ export interface operations {
             query?: {
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 /** @description A search term. */
                 search?: string;
             };
@@ -21078,6 +21114,8 @@ export interface operations {
                 message_type?: "CHAT" | "NOTIFICATION" | "SYSTEM";
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 /** @description A search term. */
                 search?: string;
                 seller_company?: number;
@@ -21333,6 +21371,8 @@ export interface operations {
                 invoice?: number;
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 /** @description A search term. */
                 search?: string;
             };
@@ -21401,6 +21441,8 @@ export interface operations {
             query?: {
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 quote?: number;
                 quote__deal_id?: number;
                 /** @description A search term. */
@@ -21898,6 +21940,8 @@ export interface operations {
             query?: {
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 /** @description A search term. */
                 search?: string;
             };
@@ -22712,6 +22756,8 @@ export interface operations {
             query?: {
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 /** @description A search term. */
                 search?: string;
             };
@@ -22738,6 +22784,8 @@ export interface operations {
                 direction?: "CLIENT" | "SUPPLIER";
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 /** @description A search term. */
                 search?: string;
             };
@@ -23619,6 +23667,8 @@ export interface operations {
             query?: {
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 /** @description A search term. */
                 search?: string;
             };
@@ -23905,6 +23955,8 @@ export interface operations {
             query?: {
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 /** @description A search term. */
                 search?: string;
             };
@@ -24436,6 +24488,8 @@ export interface operations {
                 ordering?: string;
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 /**
                  * @description * `LOW` - Низкий
                  *     * `NORMAL` - Обычный
@@ -24672,6 +24726,8 @@ export interface operations {
                 ordering?: string;
                 /** @description A page number within the paginated result set. */
                 page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
                 /**
                  * @description * `LOW` - Низкий
                  *     * `NORMAL` - Обычный

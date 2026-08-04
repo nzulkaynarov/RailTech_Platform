@@ -12,6 +12,7 @@ export const useProduct = (id: string) => useQuery({
   queryKey: ['product', id],
   queryFn: () => catalogApi.getProduct(id),
   staleTime: 3 * 60_000,
+  enabled: Boolean(id),
 });
 
 export const useProducts = (params?: Parameters<typeof catalogApi.getProducts>[0]) => useQuery({

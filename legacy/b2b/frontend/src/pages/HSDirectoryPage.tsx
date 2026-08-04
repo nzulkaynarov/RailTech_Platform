@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { BookOpenText, ChevronRight, Copy, Landmark, Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
@@ -15,6 +16,7 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { formatHSCode, leafName } from '@/components/Shared/HSCodeField';
 import { runAiJob } from '@/lib/aiJob';
 import { apiClient } from '@/api/client';
+import { extractApiErrorCode, translateApiError } from '@/lib/apiError';
 
 /**
  * Страница «Справочник ТН ВЭД» (T3, spec-tnved-flow) — две модальности поиска.
@@ -65,6 +67,12 @@ function TreeNode({ node, depth }: { node: HSNode; depth: number }) {
           params: { parent: node.code },
         });
         setChildren(response.data.children);
+      } catch {
+        // N2 (M5): без catch отказ сети оставлял ветку молча пустой; null позволяет
+        // повторить раскрытие, а пользователь видит тост вместо тишины.
+        setChildren(null);
+        setOpen(false);
+        toast.error(t('hsDirectory.treeFailed'));
       } finally {
         setLoading(false);
       }
@@ -133,15 +141,21 @@ export function HSDirectoryPage() {
   const debounced = useDebouncedValue(query, 300);
   const { data: found } = useHSCodeSuggest(debounced.length >= 3 ? debounced : '');
 
-  const [roots, setRoots] = useState<HSNode[] | null>(null);
-  const [rootsLoading, setRootsLoading] = useState(false);
-  if (roots === null && !rootsLoading) {
-    setRootsLoading(true);
-    apiClient
-      .get<{ children: HSNode[] }>('catalog/products/hs-browse/')
-      .then((response) => setRoots(response.data.children))
-      .finally(() => setRootsLoading(false));
-  }
+  // N2 (M5): раньше корни грузились прямо в теле рендера без .catch — любая ошибка сети
+  // давала БЕСКОНЕЧНЫЙ цикл запросов и вечно пустое дерево без ретрая. useQuery даёт
+  // состояние ошибки и кнопку «повторить».
+  const {
+    data: rootsData,
+    isLoading: rootsLoading,
+    isError: rootsError,
+    refetch: refetchRoots,
+  } = useQuery({
+    queryKey: ['hs-browse-roots'],
+    queryFn: async () =>
+      (await apiClient.get<{ children: HSNode[] }>('catalog/products/hs-browse/')).data.children,
+    staleTime: 10 * 60_000,
+  });
+  const roots = rootsData ?? null;
 
   const [description, setDescription] = useState('');
   const [aiBusy, setAiBusy] = useState(false);
@@ -156,8 +170,9 @@ export function HSDirectoryPage() {
         return response.data;
       });
       setAiResult(result);
-    } catch {
-      toast.error(t('hsDirectory.ai.failed'));
+    } catch (err) {
+      // Честный тост (N2, M3): 429/403 несут код — показываем его, а не безликое «не удалось».
+      toast.error(extractApiErrorCode(err) ? translateApiError(err) : t('hsDirectory.ai.failed'));
     } finally {
       setAiBusy(false);
     }
@@ -208,6 +223,14 @@ export function HSDirectoryPage() {
             )}
             <div className="max-h-112 overflow-y-auto rounded-md border p-1">
               {rootsLoading && <Skeleton className="m-2 h-6 w-64" />}
+              {rootsError && (
+                <div className="flex flex-col items-start gap-2 p-4">
+                  <p className="text-sm text-muted-foreground">{t('hsDirectory.treeFailed')}</p>
+                  <Button variant="outline" size="sm" onClick={() => refetchRoots()}>
+                    {t('hsDirectory.retry')}
+                  </Button>
+                </div>
+              )}
               {roots?.map((node) => <TreeNode key={node.code} node={node} depth={0} />)}
               {roots !== null && roots.length === 0 && (
                 <p className="p-4 text-sm text-muted-foreground">{t('hsDirectory.empty')}</p>

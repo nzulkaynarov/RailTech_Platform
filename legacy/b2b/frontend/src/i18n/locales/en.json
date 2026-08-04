@@ -3623,7 +3623,11 @@
     "UNSUPPORTED_FILE_TYPE": "Unsupported file type. Allowed: Excel, CSV, PDF, image, text",
     "FILE_CONTENT_MISMATCH": "The file content does not match its extension",
     "XLSX_REQUIRED": "Invalid format: only .xlsx files are accepted",
-    "IMPORT_FAILED": "Could not process the import — please try again"
+    "IMPORT_FAILED": "Could not process the import — please try again",
+    "PRODUCT_INCOMPLETE": "The card is not ready to publish — fill in the required fields (the Readiness column lists them)",
+    "PRODUCT_NOT_YOURS": "This card belongs to another company",
+    "PRODUCT_STATUS_MISSING": "The product status reference is not seeded — contact the platform operator",
+    "HS_CODE_UNKNOWN": "This code is not in the HS classifier"
   },
   "fileUpload": {
     "upload": "Upload",
@@ -4785,7 +4789,9 @@
       "copy": "Copy",
       "failed": "Could not get an answer — try again",
       "nothing": "No matching code found — check the nearest branches:"
-    }
+    },
+    "treeFailed": "Failed to load the classifier tree",
+    "retry": "Retry"
   },
   "countrySelect": {
     "placeholder": "Select a country",

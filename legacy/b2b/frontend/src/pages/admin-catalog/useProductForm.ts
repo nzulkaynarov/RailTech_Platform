@@ -2,14 +2,14 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import {
-  useCreateProduct, useUpdateProduct,
-  useDomainTypes, useProductStatuses, useCategories, useEquipmentGroups,
+  useCreateProduct, useUpdateProduct, useProduct,
+  useDomainTypes, useCategories, useEquipmentGroups,
   useStockStatuses, useOffers, useCreateOffer, useUpdateOffer,
   useEnrichProduct,
 } from '@/hooks/useCatalog';
 import { useUnits, useCurrencies, useDeliveryBases } from '@/hooks/useMasterData';
 import type { Product } from '@/api/catalogApi';
-import { translateApiError } from '@/lib/apiError';
+import { extractApiErrorCode, translateApiError } from '@/lib/apiError';
 import { emptyDraft, type Draft, type OfferDraft } from './types';
 
 export function useProductForm({
@@ -22,7 +22,6 @@ export function useProductForm({
 }) {
   const { t } = useTranslation();
   const { data: domainTypes } = useDomainTypes();
-  const { data: statuses } = useProductStatuses();
   const { data: categories } = useCategories();
   const { data: units } = useUnits();
   const { data: equipmentGroups } = useEquipmentGroups();
@@ -44,10 +43,27 @@ export function useProductForm({
   const [groupIds, setGroupIds] = useState<number[]>(() => target?.equipment_groups?.map((g) => g.id) ?? []);
   const [offerDraft, setOfferDraft] = useState<OfferDraft>({});
 
+  // N2 (B2/B3 аудита): `target` — строка СПИСКА, а ProductListSerializer не отдаёт
+  // description и equipment_groups. Форма, сидящая на строке списка, слала PATCH с
+  // description:"" и equipment_groups:[] — молча стирая карточку при каждом «Дополнить».
+  // Поэтому на редактировании добираем ПОЛНУЮ карточку и пересаживаем черновик на неё;
+  // до её прихода сохранение закрыто (fullCardReady в busy).
+  const { data: fullCard } = useProduct(target?.id ? String(target.id) : '');
   useEffect(() => {
     setDraft(target ? { ...target } : emptyDraft());
     setGroupIds(target?.equipment_groups?.map((g) => g.id) ?? []);
   }, [target]);
+  useEffect(() => {
+    if (!fullCard || fullCard.id !== target?.id) return;
+    setDraft({ ...fullCard });
+    // Полный сериализатор отдаёт M2M PK-списком (number[]), списочный — объектами.
+    setGroupIds(
+      ((fullCard.equipment_groups ?? []) as Array<number | { id: number }>).map((g) =>
+        typeof g === 'number' ? g : g.id,
+      ),
+    );
+  }, [fullCard, target]);
+  const fullCardReady = !target?.id || fullCard?.id === target.id;
 
   useEffect(() => {
     setOfferDraft(ownOffer
@@ -65,7 +81,9 @@ export function useProductForm({
   }, [ownOffer]);
 
   const updateOffer = (patch: Partial<OfferDraft>) => setOfferDraft((d) => ({ ...d, ...patch }));
-  const busy = createMut.isPending || updateMut.isPending || createOfferMut.isPending || updateOfferMut.isPending;
+  const busy =
+    createMut.isPending || updateMut.isPending || createOfferMut.isPending || updateOfferMut.isPending ||
+    !fullCardReady;
   const isEdit = Boolean(target?.id);
 
   // Equipment groups are a RAILWAY_MACHINERY taxonomy and are required for that
@@ -146,7 +164,7 @@ export function useProductForm({
       name: draft.name,
       description: draft.description || '',
       domain_type: draft.domain_type ? Number(draft.domain_type) : undefined,
-      status: draft.status ? Number(draft.status) : undefined,
+      // status намеренно НЕ шлём (N2, B4): жизненный цикл меняют только сервисы публикации.
       category: draft.category ? Number(draft.category) : null,
       uom: draft.uom ? Number(draft.uom) : null,
       brand_name: (draft.brand_name || '').trim(),
@@ -189,8 +207,10 @@ export function useProductForm({
       }
       toast.success(isEdit ? t('adminCatalog.updated') : t('adminCatalog.created'));
       onOpenChange(false);
-    } catch {
-      toast.error(t('adminCatalog.saveFailed'));
+    } catch (err) {
+      // Честный тост (N2, M3): показываем код бэкенда, если он есть, — «не удалось» без
+      // причины оставляло пользователя гадать.
+      toast.error(extractApiErrorCode(err) ? translateApiError(err) : t('adminCatalog.saveFailed'));
     }
   };
 
@@ -200,7 +220,7 @@ export function useProductForm({
 
   return {
     // lookups
-    domainTypes, statuses, categories, units, equipmentGroups,
+    domainTypes, categories, units, equipmentGroups,
     currencies, stockStatuses, deliveryBases,
     // state
     draft, groupIds, offerDraft, categoryHint,

@@ -45,9 +45,10 @@ function extractCode(err: unknown): string | null {
   };
   const data = anyErr.response?.data;
   for (const candidate of [data?.detail, data?.error, data?.message, anyErr.code, anyErr.message]) {
-    if (typeof candidate === 'string' && /^[A-Z][A-Z0-9_]+$/.test(candidate)) {
-      return candidate;
-    }
+    // Код может нести машинный суффикс после двоеточия («PRODUCT_INCOMPLETE:uom,category»,
+    // как TEMPLATE_MISSING_REQUIRED_BLOCKS) — локализуется ГОЛОВА, суффикс отбрасывается.
+    const match = typeof candidate === 'string' ? candidate.match(/^([A-Z][A-Z0-9_]+)(?::.*)?$/) : null;
+    if (match) return match[1];
   }
   return null;
 }

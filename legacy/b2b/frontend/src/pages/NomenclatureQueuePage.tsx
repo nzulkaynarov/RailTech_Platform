@@ -12,6 +12,7 @@ import { ResponsiveDataTable } from '@/components/ResponsiveDataTable';
 import { useMyCandidates, usePublishProduct, useBulkPublishProducts, useReclassificationWorklist } from '@/hooks/useCatalog';
 import { useAuthStore } from '@/store/authStore';
 import { runAiJob } from '@/lib/aiJob';
+import { extractApiErrorCode, translateApiError } from '@/lib/apiError';
 import { catalogApi } from '@/api/catalogApi';
 import { formatHSCode } from '@/components/Shared/HSCodeField';
 import { useQueryClient } from '@tanstack/react-query';
@@ -55,7 +56,11 @@ function CompletenessCell({ product, t }: { product: Product; t: (k: string, o?:
   );
 }
 
-export function NomenclatureQueuePage({ onNavigate }: { onNavigate: (target: string) => void }) {
+// N2 (B1 аудита): раньше сюда приходил onNavigate, и «Открыть» звал
+// onNavigate(`product_detail/${id}`) — строки с параметром нет в реестре страниц, App.tsx
+// молча отскакивал в дашборд, вся вкладка «Опубликованные» была непроходима. Параметризованный
+// переход умеет только onProductClick (navigateTo({type:'product_detail', productId})).
+export function NomenclatureQueuePage({ onProductClick }: { onProductClick: (productId: string) => void }) {
   const { t } = useTranslation();
   const [tab, setTab] = useState<TabKey>('DRAFT');
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -86,8 +91,10 @@ export function NomenclatureQueuePage({ onNavigate }: { onNavigate: (target: str
       const withCodes = (outcome.results ?? []).filter((row) => row.suggested_code);
       setSuggestions(withCodes);
       if (withCodes.length === 0) toast.info(t('nomenclature.classify.nothing'));
-    } catch {
-      toast.error(t('nomenclature.classify.failed'));
+    } catch (err) {
+      // Честный тост (N2, M3): 429 AI_DAILY_CAP_REACHED и прочие коды доходили сюда как
+      // безликое «не удалось» — показываем причину, когда бэкенд её назвал.
+      toast.error(extractApiErrorCode(err) ? translateApiError(err) : t('nomenclature.classify.failed'));
     } finally {
       setClassifyBusy(false);
     }
@@ -95,19 +102,25 @@ export function NomenclatureQueuePage({ onNavigate }: { onNavigate: (target: str
 
   const applySuggestions = async () => {
     if (!suggestions?.length) return;
-    const result = await catalogApi.applyHSCodes(
-      suggestions.map((row) => ({ product_id: row.product_id, code: row.suggested_code })),
-    );
-    toast.success(t('nomenclature.classify.applied', { count: result.applied.length }));
-    setSuggestions(null);
-    setSelected(new Set());
-    queryClient.invalidateQueries({ queryKey: ['products'] });
+    try {
+      const result = await catalogApi.applyHSCodes(
+        suggestions.map((row) => ({ product_id: row.product_id, code: row.suggested_code })),
+      );
+      toast.success(t('nomenclature.classify.applied', { count: result.applied.length }));
+      setSuggestions(null);
+      setSelected(new Set());
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    } catch (err) {
+      toast.error(extractApiErrorCode(err) ? translateApiError(err) : t('nomenclature.classify.failed'));
+    }
   };
 
   const items = useMemo(() => rows ?? [], [rows]);
+  // Кнопка публикации осмысленна только на табе черновиков (N2, M4): без фильтра по табу
+  // она предлагала «опубликовать» уже опубликованные строки.
   const publishableSelected = useMemo(
-    () => items.filter((p) => selected.has(p.id) && p.completeness?.is_publishable),
-    [items, selected],
+    () => (tab === 'DRAFT' ? items.filter((p) => selected.has(p.id) && p.completeness?.is_publishable) : []),
+    [items, selected, tab],
   );
 
   const toggle = (id: number) => {
@@ -179,7 +192,8 @@ export function NomenclatureQueuePage({ onNavigate }: { onNavigate: (target: str
               onClick={() =>
                 publishOne.mutate(p.id, {
                   onSuccess: () => toast.success(t('nomenclature.published', { name: p.name })),
-                  onError: () => toast.error(t('nomenclature.publishFailed')),
+                  onError: (err) =>
+                    toast.error(extractApiErrorCode(err) ? translateApiError(err) : t('nomenclature.publishFailed')),
                 })
               }
             >
@@ -187,7 +201,7 @@ export function NomenclatureQueuePage({ onNavigate }: { onNavigate: (target: str
             </Button>
           </div>
         ) : (
-          <Button variant="ghost" size="sm" onClick={() => onNavigate(`product_detail/${p.id}`)}>
+          <Button variant="ghost" size="sm" onClick={() => onProductClick(String(p.id))}>
             {t('nomenclature.open')}
           </Button>
         ),
@@ -238,7 +252,8 @@ export function NomenclatureQueuePage({ onNavigate }: { onNavigate: (target: str
                     toast.success(t('nomenclature.publishedMany', { count: publishableSelected.length }));
                     setSelected(new Set());
                   },
-                  onError: () => toast.error(t('nomenclature.publishFailed')),
+                  onError: (err) =>
+                    toast.error(extractApiErrorCode(err) ? translateApiError(err) : t('nomenclature.publishFailed')),
                 },
               )
             }
@@ -278,7 +293,7 @@ export function NomenclatureQueuePage({ onNavigate }: { onNavigate: (target: str
                   setEditTarget(p);
                   setEditOpen(true);
                 } else {
-                  onNavigate(`product_detail/${p.id}`);
+                  onProductClick(String(p.id));
                 }
               }}
             />

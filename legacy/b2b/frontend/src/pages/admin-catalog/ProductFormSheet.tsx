@@ -30,7 +30,7 @@ export function ProductFormSheet({
   const { t } = useTranslation();
   const [dutiesOpen, setDutiesOpen] = useState(false);
   const {
-    domainTypes, statuses, categories, units, equipmentGroups,
+    domainTypes, categories, units, equipmentGroups,
     currencies, stockStatuses, deliveryBases,
     draft, groupIds, offerDraft, categoryHint,
     sellerMode, isEdit, isRailway, busy, enrichPending,
@@ -95,21 +95,15 @@ export function ProductFormSheet({
                 </SelectContent>
               </Select>
             </div>
+            {/* N2 (B4): селекта статуса здесь больше НЕТ — статус меняют только сервисы
+                публикации (порог полноты), выбор «Опубликован» руками обходил его. */}
             <div className="space-y-2">
               <Label>{t('adminCatalog.fields.status')}</Label>
-              <Select
-                value={draft.status ? String(draft.status) : undefined}
-                onValueChange={(v) => update({ status: Number(v) })}
-              >
-                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                <SelectContent>
-                  {(statuses ?? []).map((s) => (
-                    <SelectItem key={s.id} value={String(s.id)}>
-                      {productStatusLabelKey(s.code) ? t(productStatusLabelKey(s.code)) : s.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex h-9 items-center rounded-md border bg-muted/40 px-3 text-sm text-muted-foreground">
+                {target?.status_code && productStatusLabelKey(target.status_code)
+                  ? t(productStatusLabelKey(target.status_code))
+                  : (target?.status_name ?? t('nomenclature.tabs.DRAFT'))}
+              </div>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
