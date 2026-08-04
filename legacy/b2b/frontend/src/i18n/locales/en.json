@@ -4275,6 +4275,12 @@
         "title": "Role added: {{role_code}}",
         "detail": "Application #{{application_id}} approved"
       }
+    },
+    "product": {
+      "hs_code_changed": {
+        "title": "HS code changed",
+        "detail": "Product “{{name}}”: {{from_code}} → {{to_code}}"
+      }
     }
   },
   "companyTypes": {
@@ -4742,7 +4748,13 @@
     "whyTitle": "Why this matters",
     "whyBody": "Every published card removes manual typing from future quotes: the system fills in the part number, unit and HS code by itself.",
     "askedTimes_one": "asked {{count}} time",
-    "askedTimes_other": "asked {{count}} times"
+    "askedTimes_other": "asked {{count}} times",
+    "reclass": {
+      "title": "Need reclassification: {{count}}",
+      "hint": "The HS classifier was updated and these codes were retired. New quotes must not inherit them — pick current ones.",
+      "code": "code {{code}} retired from the edition",
+      "fix": "Pick a code"
+    }
   },
   "hsField": {
     "placeholder": "code or product name…",

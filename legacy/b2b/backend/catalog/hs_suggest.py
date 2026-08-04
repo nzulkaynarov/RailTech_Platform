@@ -134,3 +134,27 @@ def validate_hs_code(code: str) -> dict:
     today = timezone.now().date()
     active = not (row.valid_until and row.valid_until < today)
     return {"known": True, "active": active, "name": row.name}
+
+
+def cards_with_retired_codes(owner_company=None):
+    """Карточки, чей код ТН ВЭД выведен из редакции классификатора.
+
+    Паттерн SAP GTS: смена редакции номенклатуры порождает WORKLIST на переклассификацию, а не
+    тихо устаревшие мастер-данные. У нас автосинк закрывает исчезнувшие коды `valid_until` —
+    без этого запроса карточка с закрытым кодом продолжила бы наследовать мёртвый код в каждое
+    новое КП, и продавец узнал бы об этом на границе.
+
+    Замороженные коды в ОТПРАВЛЕННЫХ документах не трогаются (правило E3) — речь только о
+    карточках, то есть об источнике БУДУЩИХ документов.
+    """
+    from django.utils import timezone
+
+    from catalog.models import Product
+    from master_data.models import HSCode
+
+    today = timezone.now().date()
+    retired = HSCode.objects.filter(valid_until__lt=today).values_list("code", flat=True)
+    cards = Product.objects.filter(hs_code__in=list(retired)).exclude(status__code="ARCHIVED")
+    if owner_company is not None:
+        cards = cards.filter(owner_company=owner_company)
+    return cards

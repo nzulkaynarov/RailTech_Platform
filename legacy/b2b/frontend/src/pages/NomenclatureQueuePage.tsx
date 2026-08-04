@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ResponsiveDataTable } from '@/components/ResponsiveDataTable';
-import { useMyCandidates, usePublishProduct, useBulkPublishProducts } from '@/hooks/useCatalog';
+import { useMyCandidates, usePublishProduct, useBulkPublishProducts, useReclassificationWorklist } from '@/hooks/useCatalog';
 import { useAuthStore } from '@/store/authStore';
 import { ProductFormSheet } from './AdminCatalogPage';
 import type { Product } from '@/api/catalogApi';
@@ -62,6 +62,7 @@ export function NomenclatureQueuePage({ onNavigate }: { onNavigate: (target: str
   const [editOpen, setEditOpen] = useState(false);
   const sellerCompanyId = useAuthStore((s) => s.user?.company?.id);
   const { data: rows, isLoading } = useMyCandidates(tab);
+  const { data: retiredCards } = useReclassificationWorklist();
   const publishOne = usePublishProduct();
   const publishMany = useBulkPublishProducts();
 
@@ -241,6 +242,37 @@ export function NomenclatureQueuePage({ onNavigate }: { onNavigate: (target: str
           )}
         </CardContent>
       </Card>
+
+      {/* T2, паттерн SAP-переклассификации: автосинк закрыл код → карточка попадает СЮДА с
+          конкретным действием, а не тихо наследует мёртвый код в новые КП. */}
+      {(retiredCards?.length ?? 0) > 0 && (
+        <Card className="border-warning/40 bg-warning/5">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">{t('nomenclature.reclass.title', { count: retiredCards!.length })}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            <p className="text-xs text-muted-foreground">{t('nomenclature.reclass.hint')}</p>
+            {retiredCards!.map((card) => (
+              <div key={card.id} className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium">{card.name}</div>
+                  <div className="text-xs text-muted-foreground">{t('nomenclature.reclass.code', { code: card.hs_code })}</div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setEditTarget(card);
+                    setEditOpen(true);
+                  }}
+                >
+                  {t('nomenclature.reclass.fix')}
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <ProductFormSheet open={editOpen} onOpenChange={setEditOpen} target={editTarget} sellerCompanyId={sellerCompanyId} />
 

@@ -211,6 +211,12 @@ export const useHSCodeValidation = (code: string) => useQuery({
   staleTime: 5 * 60_000,
 });
 
+/** Worklist переклассификации (SAP GTS): карточки, чей код ТН ВЭД выведен из редакции. */
+export const useReclassificationWorklist = () => useQuery({
+  queryKey: ['products', 'reclassification'],
+  queryFn: catalogApi.getReclassificationWorklist,
+});
+
 /** Публикация карточки её владельцем; сервер откажет, если полнота не достигнута. */
 export const usePublishProduct = () => {
   const qc = useQueryClient();

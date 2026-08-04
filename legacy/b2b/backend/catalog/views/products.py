@@ -106,6 +106,12 @@ class ProductViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(status__code=status_code)
         if self.request.query_params.get("order") == "demand":
             queryset = queryset.order_by("-demand_count", "-last_requested_at", "name")
+        # Worklist переклассификации (SAP GTS): карточки, чей код ТН ВЭД выведен из редакции
+        # автосинком. Без него карточка тихо наследовала бы мёртвый код в каждое новое КП.
+        if self.request.query_params.get("needs_reclassification") in ("1", "true", "True"):
+            from catalog.hs_suggest import cards_with_retired_codes
+
+            queryset = queryset.filter(pk__in=cards_with_retired_codes().values_list("pk", flat=True))
 
         # Filter by stock_status (from supplier offers)
         stock_status = self.request.query_params.get("stock_status")
@@ -133,6 +139,14 @@ class ProductViewSet(viewsets.ModelViewSet):
         from core.permissions import IsProductManagerOrAdmin
 
         return [permissions.IsAuthenticated(), IsProductManagerOrAdmin()]
+
+    def perform_update(self, serializer):
+        # T2: смена кода ТН ВЭД оставляет след с источником (manual — правка из формы).
+        old_code = serializer.instance.hs_code or ""
+        product = serializer.save()
+        from catalog.services import log_hs_code_change
+
+        log_hs_code_change(product, old_code, self.request.user, origin="manual")
 
     def perform_create(self, serializer):
         user = self.request.user

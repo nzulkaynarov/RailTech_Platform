@@ -224,6 +224,14 @@ export const catalogApi = {
         const body = response.data as { results?: Product[] };
         return body.results ?? (response.data as Product[]);
     },
+    /** Worklist переклассификации: свои карточки, чей код ТН ВЭД выведен из редакции. */
+    getReclassificationWorklist: async (): Promise<Product[]> => {
+        const response = await apiClient.get<{ results?: Product[] } | Product[]>('catalog/products/', {
+            params: { mine: 'true', needs_reclassification: 'true', page_size: 100 },
+        });
+        const body = response.data as { results?: Product[] };
+        return body.results ?? (response.data as Product[]);
+    },
     /** Кандидаты кода ТН ВЭД из справочника: текст → пословный поиск, цифры → ветка кода. */
     suggestHSCodes: async (q: string): Promise<{ code: string; name: string; level: number; score: number }[]> => {
         const response = await apiClient.get<{ candidates: { code: string; name: string; level: number; score: number }[] }>(

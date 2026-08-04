@@ -22,7 +22,26 @@ from django.utils.translation import gettext_lazy as _
 _NAME = ("name", _("Наименование"), lambda p: bool((p.name or "").strip()))
 _UOM = ("uom", _("Единица измерения"), lambda p: p.uom_id is not None)
 _CATEGORY = ("category", _("Категория"), lambda p: p.category_id is not None)
-_HS = ("hs_code", _("Код ТН ВЭД"), lambda p: bool((p.hs_code or "").strip()))
+
+
+def _hs_is_current(product) -> bool:
+    """Код заполнен И не выведен из редакции классификатора.
+
+    Паттерн SAP-переклассификации: после автосинка закрытый код перестаёт удовлетворять
+    требованию полноты, карточка возвращается в очередь наполнения с конкретной подсказкой —
+    а не тихо наследует мёртвый код в новые КП. При пустом справочнике любой код считается
+    действующим (работа без данных не блокируется).
+    """
+    from catalog.hs_suggest import validate_hs_code
+
+    code = (product.hs_code or "").strip()
+    if not code:
+        return False
+    verdict = validate_hs_code(code)
+    return verdict["known"] and verdict["active"]
+
+
+_HS = ("hs_code", _("Код ТН ВЭД (действующий)"), _hs_is_current)
 _IDENTITY = (
     "identity",
     _("Артикул производителя или ГОСТ/чертёж"),

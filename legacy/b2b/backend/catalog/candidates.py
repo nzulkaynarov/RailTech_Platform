@@ -137,11 +137,16 @@ def ensure_candidate_for_line(item, owner_company, *, deal=None):
 
     existing = find_existing_card(item, owner_company)
     if existing is not None:
+        old_hs = existing.hs_code or ""
         fields = capture_line_knowledge(item, existing)
         existing.demand_count = (existing.demand_count or 0) + 1
         existing.last_requested_at = timezone.now()
         fields += ["demand_count", "last_requested_at"]
         existing.save(update_fields=list(dict.fromkeys(fields)))
+        if "hs_code" in fields:
+            from catalog.services import log_hs_code_change
+
+            log_hs_code_change(existing, old_hs, None, origin="quote_line")
         return existing, False
 
     draft_status = ProductStatus.objects.filter(code="DRAFT").first()

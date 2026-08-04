@@ -34,3 +34,32 @@ def publish_products(products: QuerySet[Product]) -> Tuple[int, List[str]]:
     publishable = draft_products.exclude(domain_type__isnull=True)
     updated = publishable.update(status=published_status)
     return updated, skipped
+
+
+def log_hs_code_change(product, old_code: str, actor, origin: str) -> None:
+    """Журнал присвоений кода ТН ВЭД (T2, паттерн Avalara: у классификации есть источник).
+
+    `origin` — откуда пришёл код: manual (поле в форме) / ai (выбор модели из кандидатов) /
+    quote_line (перенос из строки КП) / sync (закрыт автосинком). Позволяет спорить с
+    классификацией по существу: «кто так решил» перестаёт быть вопросом.
+    """
+    from crm.models import ActivityLog
+
+    new_code = (product.hs_code or "").strip()
+    if (old_code or "").strip() == new_code:
+        return
+    ActivityLog.objects.create(
+        action="Код ТН ВЭД изменён",
+        detail=f"Товар «{product.name[:60]}»: {old_code or '—'} → {new_code or '—'}",
+        event_code="product.hs_code_changed",
+        event_params={
+            "product_id": product.pk,
+            "name": product.name[:120],
+            "from_code": old_code or "",
+            "to_code": new_code,
+            "origin": origin,
+        },
+        user=actor if getattr(actor, "is_authenticated", False) else None,
+        level="INFO",
+        company_id=product.owner_company_id,
+    )
