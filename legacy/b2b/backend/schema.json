@@ -21771,15 +21771,28 @@
                     "alpha2": {
                         "type": "string",
                         "title": "ISO Alpha-2",
-                        "description": "Двухбуквенный код страны ISO 3166-1 (UZ, RU, CN)",
+                        "description": "Двухбуквенный код страны ISO 3166-1 (UZ, RU, CN) — дублирует `code`",
                         "maxLength": 2
+                    },
+                    "alpha3": {
+                        "type": "string",
+                        "title": "ISO Alpha-3",
+                        "description": "Трёхбуквенный код ISO 3166-1 (UZB, RUS, CHN) — используется в документах",
+                        "maxLength": 3
+                    },
+                    "iso_numeric": {
+                        "type": "string",
+                        "title": "ISO цифровой код",
+                        "description": "Цифровой код ISO 3166-1 (860, 643, 156) — язык таможенных систем",
+                        "maxLength": 3
                     },
                     "vat_rate": {
                         "type": "string",
                         "format": "decimal",
                         "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
+                        "nullable": true,
                         "title": "Ставка НДС (%)",
-                        "description": "Ставка НДС по умолчанию для данной страны"
+                        "description": "Выверенная ставка НДС страны; пусто = неизвестна (не выдумываем)"
                     }
                 },
                 "required": [
@@ -21820,15 +21833,28 @@
                     "alpha2": {
                         "type": "string",
                         "title": "ISO Alpha-2",
-                        "description": "Двухбуквенный код страны ISO 3166-1 (UZ, RU, CN)",
+                        "description": "Двухбуквенный код страны ISO 3166-1 (UZ, RU, CN) — дублирует `code`",
                         "maxLength": 2
+                    },
+                    "alpha3": {
+                        "type": "string",
+                        "title": "ISO Alpha-3",
+                        "description": "Трёхбуквенный код ISO 3166-1 (UZB, RUS, CHN) — используется в документах",
+                        "maxLength": 3
+                    },
+                    "iso_numeric": {
+                        "type": "string",
+                        "title": "ISO цифровой код",
+                        "description": "Цифровой код ISO 3166-1 (860, 643, 156) — язык таможенных систем",
+                        "maxLength": 3
                     },
                     "vat_rate": {
                         "type": "string",
                         "format": "decimal",
                         "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
+                        "nullable": true,
                         "title": "Ставка НДС (%)",
-                        "description": "Ставка НДС по умолчанию для данной страны"
+                        "description": "Выверенная ставка НДС страны; пусто = неизвестна (не выдумываем)"
                     }
                 },
                 "required": [
@@ -26011,15 +26037,28 @@
                     "alpha2": {
                         "type": "string",
                         "title": "ISO Alpha-2",
-                        "description": "Двухбуквенный код страны ISO 3166-1 (UZ, RU, CN)",
+                        "description": "Двухбуквенный код страны ISO 3166-1 (UZ, RU, CN) — дублирует `code`",
                         "maxLength": 2
+                    },
+                    "alpha3": {
+                        "type": "string",
+                        "title": "ISO Alpha-3",
+                        "description": "Трёхбуквенный код ISO 3166-1 (UZB, RUS, CHN) — используется в документах",
+                        "maxLength": 3
+                    },
+                    "iso_numeric": {
+                        "type": "string",
+                        "title": "ISO цифровой код",
+                        "description": "Цифровой код ISO 3166-1 (860, 643, 156) — язык таможенных систем",
+                        "maxLength": 3
                     },
                     "vat_rate": {
                         "type": "string",
                         "format": "decimal",
                         "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
+                        "nullable": true,
                         "title": "Ставка НДС (%)",
-                        "description": "Ставка НДС по умолчанию для данной страны"
+                        "description": "Выверенная ставка НДС страны; пусто = неизвестна (не выдумываем)"
                     }
                 }
             },

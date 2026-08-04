@@ -47,9 +47,12 @@ class Step1RequisitesForm(forms.Form):
         help_text=_("Идентификационный номер налогоплательщика"),
     )
     country = forms.ModelChoiceField(
-        queryset=Country.objects.all(),
+        queryset=Country.objects.all().order_by("sort_order", "name"),
         label=_("Страна регистрации"),
-        help_text=_("Определяет ставку НДС по умолчанию"),
+        # Подсказка обещала, что страна «определяет ставку НДС», — это неправда: ставку КП
+        # берёт из настроек компании (`CompanySettings.default_vat_rate`), а `Country.vat_rate`
+        # ценообразование не читает. Оператор выбирал страну, ожидая несуществующего эффекта.
+        help_text=_("Страна регистрации юридического лица"),
         required=False,
     )
     logo = forms.ImageField(

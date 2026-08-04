@@ -2613,7 +2613,8 @@
     },
     "countryFields": {
       "alpha2": "ISO alpha-2",
-      "vatRate": "VAT rate"
+      "vatRate": "VAT rate",
+      "isoNumeric": "ISO numeric"
     },
     "currencyFields": {
       "symbol": "Symbol"
@@ -2623,7 +2624,8 @@
       "currencies": "Currencies",
       "units": "Units",
       "deliveryBases": "Bases"
-    }
+    },
+    "filterPlaceholder": "Search by code or name"
   },
   "adminDeals": {
     "title": "Deals (admin)",
@@ -4353,15 +4355,6 @@
     "rub": "Russian Ruble",
     "uzs": "Uzbek Som"
   },
-  "countries": {
-    "de": "Germany",
-    "in": "India",
-    "kz": "Kazakhstan",
-    "cn": "China",
-    "ru": "Russia",
-    "tr": "Turkey",
-    "uz": "Uzbekistan"
-  },
   "uoms": {
     "h87": "pcs",
     "set": "set",
@@ -4793,5 +4786,10 @@
       "failed": "Could not get an answer — try again",
       "nothing": "No matching code found — check the nearest branches:"
     }
+  },
+  "countrySelect": {
+    "placeholder": "Select a country",
+    "searchPlaceholder": "Search by name or code",
+    "empty": "No country found"
   }
 }

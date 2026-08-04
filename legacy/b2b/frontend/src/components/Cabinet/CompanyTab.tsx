@@ -17,12 +17,12 @@ import {
 
 import { useUserStore, companyStatusLabels } from '@/store/userStore';
 import { useHasCompanyPermission } from '@/hooks/useCapabilities';
-import { useCountries } from '@/hooks/useMasterData';
 import { accountsApi, type KYCDocument, type Company } from '@/api/accountsApi';
 import { kycDocTypeLabelKey } from '@/lib/codes';
 import { toast } from 'sonner';
 import { ImageUpload } from '@/components/Shared/ImageUpload';
 import { FileUpload } from '@/components/Shared/FileUpload';
+import { CountrySelect } from '@/components/Shared/CountrySelect';
 
 /**
  * Company section of the Settings Hub (spec PR 3): one form grouped into three cards —
@@ -48,7 +48,6 @@ export function CompanyTab() {
   // INN is locked once KYC is verified — it becomes a checked legal identifier.
   const innLocked = company.kycStatus === 'verified';
 
-  const { data: countries = [] } = useCountries();
 
   const companyId = company.id;
   const [savingCompany, setSavingCompany] = useState(false);
@@ -186,18 +185,12 @@ export function CompanyTab() {
             </div>
             <div className="space-y-2">
               <Label>{t('profile.companyInfo.country')}</Label>
-              <Select
-                value={cForm.country ? String(cForm.country) : undefined}
-                onValueChange={(v) => setCForm({ ...cForm, country: v })}
+              <CountrySelect
+                value={cForm.country ? String(cForm.country) : ''}
+                onChange={(country) => setCForm({ ...cForm, country })}
                 disabled={!canEdit}
-              >
-                <SelectTrigger><SelectValue placeholder={t('profile.companyInfo.countryPlaceholder')} /></SelectTrigger>
-                <SelectContent>
-                  {countries.map((c) => (
-                    <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder={t('profile.companyInfo.countryPlaceholder')}
+              />
             </div>
             <div className="space-y-2 sm:col-span-2">
               <Label>{t('profile.companyInfo.legalAddress')}</Label>

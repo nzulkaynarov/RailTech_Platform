@@ -281,10 +281,10 @@ class ProductViewSet(viewsets.ModelViewSet):
             product = Product.objects.filter(pk=row.get("product_id")).first()
             code = "".join(ch for ch in str(row.get("code") or "") if ch.isdigit())
             if product is None or not code or not can_manage(request.user, product):
-                skipped.append({"product_id": row.get("product_id"), "error": "PRODUCT_NOT_YOURS"})
+                skipped.append({"product_id": row.get("product_id"), "reason": "PRODUCT_NOT_YOURS"})
                 continue
             if not is_known_code(code):
-                skipped.append({"product_id": product.pk, "error": "HS_CODE_UNKNOWN"})
+                skipped.append({"product_id": product.pk, "reason": "HS_CODE_UNKNOWN"})
                 continue
             old = product.hs_code or ""
             product.hs_code = code

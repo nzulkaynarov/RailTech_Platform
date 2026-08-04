@@ -8135,15 +8135,25 @@ export interface components {
             is_active?: boolean;
             /**
              * ISO Alpha-2
-             * @description Двухбуквенный код страны ISO 3166-1 (UZ, RU, CN)
+             * @description Двухбуквенный код страны ISO 3166-1 (UZ, RU, CN) — дублирует `code`
              */
             alpha2?: string;
             /**
+             * ISO Alpha-3
+             * @description Трёхбуквенный код ISO 3166-1 (UZB, RUS, CHN) — используется в документах
+             */
+            alpha3?: string;
+            /**
+             * ISO цифровой код
+             * @description Цифровой код ISO 3166-1 (860, 643, 156) — язык таможенных систем
+             */
+            iso_numeric?: string;
+            /**
              * Ставка НДС (%)
              * Format: decimal
-             * @description Ставка НДС по умолчанию для данной страны
+             * @description Выверенная ставка НДС страны; пусто = неизвестна (не выдумываем)
              */
-            vat_rate?: string;
+            vat_rate?: string | null;
         };
         CountryRequest: {
             /**
@@ -8168,15 +8178,25 @@ export interface components {
             is_active?: boolean;
             /**
              * ISO Alpha-2
-             * @description Двухбуквенный код страны ISO 3166-1 (UZ, RU, CN)
+             * @description Двухбуквенный код страны ISO 3166-1 (UZ, RU, CN) — дублирует `code`
              */
             alpha2?: string;
             /**
+             * ISO Alpha-3
+             * @description Трёхбуквенный код ISO 3166-1 (UZB, RUS, CHN) — используется в документах
+             */
+            alpha3?: string;
+            /**
+             * ISO цифровой код
+             * @description Цифровой код ISO 3166-1 (860, 643, 156) — язык таможенных систем
+             */
+            iso_numeric?: string;
+            /**
              * Ставка НДС (%)
              * Format: decimal
-             * @description Ставка НДС по умолчанию для данной страны
+             * @description Выверенная ставка НДС страны; пусто = неизвестна (не выдумываем)
              */
-            vat_rate?: string;
+            vat_rate?: string | null;
         };
         CreateManualInvoiceRequest: {
             deal: number;
@@ -10370,15 +10390,25 @@ export interface components {
             is_active?: boolean;
             /**
              * ISO Alpha-2
-             * @description Двухбуквенный код страны ISO 3166-1 (UZ, RU, CN)
+             * @description Двухбуквенный код страны ISO 3166-1 (UZ, RU, CN) — дублирует `code`
              */
             alpha2?: string;
             /**
+             * ISO Alpha-3
+             * @description Трёхбуквенный код ISO 3166-1 (UZB, RUS, CHN) — используется в документах
+             */
+            alpha3?: string;
+            /**
+             * ISO цифровой код
+             * @description Цифровой код ISO 3166-1 (860, 643, 156) — язык таможенных систем
+             */
+            iso_numeric?: string;
+            /**
              * Ставка НДС (%)
              * Format: decimal
-             * @description Ставка НДС по умолчанию для данной страны
+             * @description Выверенная ставка НДС страны; пусто = неизвестна (не выдумываем)
              */
-            vat_rate?: string;
+            vat_rate?: string | null;
         };
         PatchedCurrencyRequest: {
             /**

@@ -4,8 +4,9 @@ import { toast } from 'sonner';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { Quote } from '@/api/crmApi';
 import { useUpdateQuoteSettings, useSetQuoteDeliveryBasis, useApplyQuoteDefaults } from '@/hooks/useCRM';
-import { useCountries, useCurrencies } from '@/hooks/useMasterData';
-import { countryLabelKey, currencyLabelKey } from '@/lib/codes';
+import { useCurrencies } from '@/hooks/useMasterData';
+import { currencyLabelKey } from '@/lib/codes';
+import { CountrySelect } from '@/components/Shared/CountrySelect';
 import { DeliveryBasisSelect } from './DeliveryBasisSelect';
 import {
 	Dialog,
@@ -53,7 +54,6 @@ const VAT_RATE_MAX = 100;
 // QUOTE_FROZEN), but the gear button is hidden in that case upstream.
 export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettingsDialogProps) {
 	const { t } = useTranslation();
-	const { data: countries = [] } = useCountries();
 	const { data: currencies = [] } = useCurrencies();
 	const updateSettings = useUpdateQuoteSettings();
 	// Delivery basis (Incoterm) has its OWN endpoint (auto-applies the charge template), so it
@@ -246,18 +246,12 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 
 						<div className="flex flex-col gap-1.5">
 							<Label htmlFor="quote-tax-country">{t('quote.settings.taxCountry')}</Label>
-							<Select value={taxCountry} onValueChange={setTaxCountry}>
-								<SelectTrigger id="quote-tax-country">
-									<SelectValue placeholder={t('quote.settings.taxCountryPlaceholder')} />
-								</SelectTrigger>
-								<SelectContent>
-									{countries.map((country) => (
-										<SelectItem key={country.id} value={String(country.id)}>
-											{countryLabelKey(country.code) ? t(countryLabelKey(country.code)) : country.name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
+							<CountrySelect
+								id="quote-tax-country"
+								value={taxCountry}
+								onChange={setTaxCountry}
+								placeholder={t('quote.settings.taxCountryPlaceholder')}
+							/>
 						</div>
 
 						<div className="flex flex-col gap-1.5">

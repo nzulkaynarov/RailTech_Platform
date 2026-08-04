@@ -6067,3 +6067,22 @@ msgstr "Additional unit of measure"
 
 msgid "Дополнительная единица учёта (напр. «шт», «пар»), если предусмотрена номенклатурой."
 msgstr "Additional accounting unit (e.g. pcs, pairs) when the nomenclature defines one."
+
+#: master_data/models.py (Country ISO fields)
+msgid "Двухбуквенный код страны ISO 3166-1 (UZ, RU, CN) — дублирует `code`"
+msgstr "Two-letter ISO 3166-1 country code (UZ, RU, CN) — mirrors `code`"
+
+msgid "ISO Alpha-3"
+msgstr "ISO Alpha-3"
+
+msgid "Трёхбуквенный код ISO 3166-1 (UZB, RUS, CHN) — используется в документах"
+msgstr "Three-letter ISO 3166-1 code (UZB, RUS, CHN) — used in documents"
+
+msgid "ISO цифровой код"
+msgstr "ISO numeric code"
+
+msgid "Цифровой код ISO 3166-1 (860, 643, 156) — язык таможенных систем"
+msgstr "ISO 3166-1 numeric code (860, 643, 156) — the language of customs systems"
+
+msgid "Выверенная ставка НДС страны; пусто = неизвестна (не выдумываем)"
+msgstr "Verified VAT rate for the country; empty = unknown (never invented)"

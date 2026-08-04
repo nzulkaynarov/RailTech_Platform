@@ -10,7 +10,11 @@ export interface LookupItem {
 
 export interface Country extends LookupItem {
   alpha2: string;
-  vat_rate: string;
+  alpha3: string;
+  /** Цифровой код ISO 3166-1 («860», «643») — язык таможенных систем. */
+  iso_numeric: string;
+  /** Выверенная ставка НДС; `null` = неизвестна (для большинства стран мира). */
+  vat_rate: string | null;
 }
 
 export interface Currency extends LookupItem {

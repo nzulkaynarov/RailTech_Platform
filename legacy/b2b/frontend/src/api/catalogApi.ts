@@ -238,8 +238,8 @@ export const catalogApi = {
         return response.data;
     },
     /** T4: применить ПОДТВЕРЖДЁННЫЕ человеком коды. */
-    applyHSCodes: async (assignments: { product_id: number; code: string }[]): Promise<{ applied: number[]; skipped: { product_id: number; error: string }[] }> => {
-        const response = await apiClient.post<{ applied: number[]; skipped: { product_id: number; error: string }[] }>('catalog/products/hs-apply/', { assignments });
+    applyHSCodes: async (assignments: { product_id: number; code: string }[]): Promise<{ applied: number[]; skipped: { product_id: number; reason: string }[] }> => {
+        const response = await apiClient.post<{ applied: number[]; skipped: { product_id: number; reason: string }[] }>('catalog/products/hs-apply/', { assignments });
         return response.data;
     },
     /** Кандидаты кода ТН ВЭД из справочника: текст → пословный поиск, цифры → ветка кода. */

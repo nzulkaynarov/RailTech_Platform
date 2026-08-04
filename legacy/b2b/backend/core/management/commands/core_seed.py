@@ -20,7 +20,7 @@ from accounts.models import (
 )
 from catalog.models import DomainType, ProductStatus, StockStatus
 from crm.models import DealStage, QuoteStatus
-from master_data.models import Country, Currency
+from master_data.models import Currency
 from notifications.models import NotificationType
 
 User = get_user_model()
@@ -64,17 +64,9 @@ class Command(BaseCommand):
         seed_data = json.loads(SEED_DATA_PATH.read_text(encoding="utf-8"))
 
         # ─── 1. Страны ───
-        countries = [
-            ("UZ", "Узбекистан", "UZ", 12.00),
-            ("KZ", "Казахстан", "KZ", 12.00),
-            ("RU", "Россия", "RU", 20.00),
-            ("CN", "Китай", "CN", 13.00),
-            ("DE", "Германия", "DE", 19.00),
-            ("TR", "Турция", "TR", 20.00),
-            ("IN", "Индия", "IN", 18.00),
-        ]
-        for code, name, alpha2, vat in countries:
-            _seed(Country, code, name=name, alpha2=alpha2, vat_rate=vat)
+        # Справочник стран целиком (ISO 3166-1) сеет миграция master_data/0015 — здесь его
+        # больше нет намеренно: две копии перечня расходятся, а ставки НДС из дев-сида уже
+        # однажды перетирали выверенные (миграция 0003).
 
         # ─── 2. Валюты ───
         currencies = [

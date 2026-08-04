@@ -407,21 +407,10 @@ export const CURRENCY_LABEL_KEY: Record<string, string> = {
 export const currencyLabelKey = (code: string | undefined | null): string =>
   code && CURRENCY_LABEL_KEY[code] ? CURRENCY_LABEL_KEY[code] : '';
 
-/** `Country` lookup CODEs (master_data.Country, alpha-2). Mirrors `countries.*` in ru/en.json. */
-export const COUNTRY_LABEL_KEY: Record<string, string> = {
-  DE: 'countries.de',
-  IN: 'countries.in',
-  KZ: 'countries.kz',
-  CN: 'countries.cn',
-  RU: 'countries.ru',
-  TR: 'countries.tr',
-  UZ: 'countries.uz',
-};
-
-/** Resolve a country label key from a code, returning `''` when unknown (operators may add
- *  lookup rows via Unfold) so callers can fall back to the raw DB name (`|| country.name`). */
-export const countryLabelKey = (code: string | undefined | null): string =>
-  code && COUNTRY_LABEL_KEY[code] ? COUNTRY_LABEL_KEY[code] : '';
+// Названий стран здесь БОЛЬШЕ НЕТ. Пока справочник состоял из семи торговых партнёров, их
+// имена лежали ключами `countries.*`; со всем перечнем ISO (249) рукописный словарь стал бы
+// источником разъезда — новая страна печаталась бы по-русски в английском интерфейсе.
+// Локализованное название даёт `lib/regionName.ts` через `Intl.DisplayNames` (CLDR).
 
 /** `UnitOfMeasure` lookup CODEs (master_data.UnitOfMeasure, UN/ECE Rec 20). Mirrors
  *  `uoms.*` in ru/en.json — the short display name («шт.» / «pcs»). */

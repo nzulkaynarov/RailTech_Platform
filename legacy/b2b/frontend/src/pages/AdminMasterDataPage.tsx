@@ -42,6 +42,7 @@ function LookupEditor({
   const [editTarget, setEditTarget] = useState<AnyItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AnyItem | null>(null);
   const [draft, setDraft] = useState<Record<string, unknown>>({});
+  const [filter, setFilter] = useState('');
 
   useEffect(() => {
     if (editTarget) {
@@ -86,9 +87,25 @@ function LookupEditor({
     }
   };
 
+  // Справочники перестали быть короткими: стран после наполнения по ISO 3166-1 — 249,
+  // и таблица без фильтра превращается в прокрутку. Фильтр общий для всех вкладок.
+  const visibleItems = (items ?? []).filter((it) => {
+    if (!filter.trim()) return true;
+    const rec = it as unknown as Record<string, unknown>;
+    const haystack = `${rec.code ?? ''} ${rec.name ?? ''}`.toLowerCase();
+    return haystack.includes(filter.trim().toLowerCase());
+  });
+
   return (
     <div className="space-y-3">
-      <div className="flex">
+      <div className="flex flex-wrap items-center gap-2">
+        <Input
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          placeholder={t('adminMasterData.filterPlaceholder')}
+          className="max-w-xs"
+          aria-label={t('adminMasterData.filterPlaceholder')}
+        />
         <Button onClick={openNew} className="gap-2 ml-auto">
           <Plus className="h-4 w-4" />
           {t('adminMasterData.new')}
@@ -97,7 +114,7 @@ function LookupEditor({
 
       <Card>
         <CardContent className="p-0">
-          {isError ? <ErrorState onRetry={onRetry} /> : isLoading ? <LoadingRows rows={5} /> : !items?.length ? (
+          {isError ? <ErrorState onRetry={onRetry} /> : isLoading ? <LoadingRows rows={5} /> : !visibleItems.length ? (
             <EmptyState icon={<Database className="h-5 w-5" />} message={t('adminMasterData.empty')} />
           ) : (
             <Table>
@@ -114,7 +131,7 @@ function LookupEditor({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.map((it) => {
+                {visibleItems.map((it) => {
                   const rec = it as unknown as Record<string, unknown>;
                   return (
                     <TableRow key={(it as { id: number }).id}>
@@ -263,6 +280,7 @@ export function AdminMasterDataPage() {
             onRetry={() => countries.refetch()}
             extraFields={[
               { key: 'alpha2', label: t('adminMasterData.countryFields.alpha2') },
+              { key: 'iso_numeric', label: t('adminMasterData.countryFields.isoNumeric') },
               { key: 'vat_rate', label: t('adminMasterData.countryFields.vatRate') },
             ]}
           />

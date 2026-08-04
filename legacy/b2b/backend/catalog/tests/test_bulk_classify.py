@@ -77,7 +77,7 @@ def test_apply_rejects_codes_outside_the_classifier(world):
 
     body = response.json()
     assert body["applied"] == []
-    assert body["skipped"][0]["error"] == "HS_CODE_UNKNOWN"
+    assert body["skipped"][0]["reason"] == "HS_CODE_UNKNOWN"
 
 
 def test_apply_refuses_someone_elses_card(world):
@@ -90,7 +90,7 @@ def test_apply_refuses_someone_elses_card(world):
         format="json",
     )
 
-    assert response.json()["skipped"][0]["error"] == "PRODUCT_NOT_YOURS"
+    assert response.json()["skipped"][0]["reason"] == "PRODUCT_NOT_YOURS"
     theirs.refresh_from_db()
     assert theirs.hs_code == ""
 
