@@ -169,3 +169,50 @@ def test_validate_is_silent_when_the_classifier_is_empty(db):
     from catalog.hs_suggest import validate_hs_code
 
     assert validate_hs_code("8482100000") == {"known": True, "active": True, "name": ""}
+
+
+def test_ai_lookup_never_returns_a_code_outside_the_candidates(db, settings, monkeypatch):
+    """ИИ-режим справочника: выбор модели сверяется со списком кандидатов детерминированно.
+
+    Даже если модель вернёт «похожий» код, которого не было в списке, — ответ пустой с честным
+    объяснением. Тот же приём, что в обогащении карточки и с деньгами («числа ИИ для денег не
+    используются»).
+    """
+    import json as jsonlib
+
+    from catalog import hs_lookup_ai
+
+    HSCode.objects.create(code="8482100000", name="Подшипники шариковые прочие", level=10)
+    settings.AI_IMPORT_ENABLED = True
+
+    class _FakeBlock:
+        type = "text"
+        text = jsonlib.dumps({"hs_code_choice": "8482100001", "explanation": "похожий, но выдуманный"})
+
+    class _FakeResponse:
+        content = [_FakeBlock()]
+        usage = None
+        stop_reason = None
+
+    class _FakeClient:
+        class messages:  # noqa: N801 — форма SDK
+            @staticmethod
+            def create(**kwargs):
+                return _FakeResponse()
+
+    monkeypatch.setattr("sourcing.services_ai._client", lambda: _FakeClient())
+
+    result = hs_lookup_ai.lookup_hs_code("подшипник шариковый")
+
+    assert result["code"] == "", "код вне списка кандидатов отвергается"
+    assert result["candidates"], "кандидаты честно возвращаются для ручного выбора"
+
+
+def test_ai_lookup_is_neutral_without_ai_or_data(db, settings):
+    """AI выключен или справочник пуст — режим тихо отдаёт кандидатов (или ничего), не падает."""
+    from catalog.hs_lookup_ai import lookup_hs_code
+
+    settings.AI_IMPORT_ENABLED = False
+
+    assert lookup_hs_code("что угодно")["code"] == ""
+    assert lookup_hs_code("")["candidates"] == []

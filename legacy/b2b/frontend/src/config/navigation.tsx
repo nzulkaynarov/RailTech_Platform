@@ -134,6 +134,7 @@ export const TENANT_NAV: NavNodeDef[] = [
     requires: { kyc: true, anyPerm: ['catalog.manage', 'catalog.publish'] },
     children: [
       { labelKey: 'shell.nomenclature', id: 'nomenclature' },
+      { labelKey: 'shell.hsDirectory', id: 'hs-directory' },
       { labelKey: 'shell.catalog', id: 'products' },
       { labelKey: 'shell.categories', id: 'categories' },
       { labelKey: 'shell.equipmentGroups', id: 'equipment-groups' },

@@ -134,7 +134,16 @@ class ProductViewSet(viewsets.ModelViewSet):
             return [permissions.AllowAny()]
         # Публикует ВЛАДЕЛЕЦ карточки (Amazon/Alibaba/Shopify), а порог качества держит
         # детерминированная полнота — см. `catalog/publishing.py`. Право платформы сохраняется.
-        if self.action in ("publish", "bulk_publish", "coverage", "merge", "hs_suggest", "hs_validate"):
+        if self.action in (
+            "publish",
+            "bulk_publish",
+            "coverage",
+            "merge",
+            "hs_suggest",
+            "hs_validate",
+            "hs_browse",
+            "hs_lookup",
+        ):
             return [permissions.IsAuthenticated()]
         from core.permissions import IsProductManagerOrAdmin
 
@@ -178,6 +187,58 @@ class ProductViewSet(viewsets.ModelViewSet):
         from catalog.hs_suggest import suggest_hs_codes
 
         return Response({"candidates": suggest_hs_codes(request.query_params.get("q", ""), limit=8)})
+
+    @extend_schema(
+        summary="Browse the HS classifier tree",
+        description="Дети узла дерева ТН ВЭД. Без parent — корневые группы (2 знака).",
+        parameters=[OpenApiParameter(name="parent", type=str, location=OpenApiParameter.QUERY, required=False)],
+        responses={200: OpenApiResponse(description="{children: [{code,name,level,has_children}]}")},
+        tags=["Catalog"],
+    )
+    @action(detail=False, methods=["get"], url_path="hs-browse", permission_classes=[permissions.IsAuthenticated])
+    def hs_browse(self, request):
+        from django.db.models import Count
+        from django.db.models import Q as DQ
+        from django.utils import timezone
+
+        from master_data.models import HSCode
+
+        today = timezone.now().date()
+        parent = "".join(ch for ch in request.query_params.get("parent", "") if ch.isdigit())
+        base = HSCode.objects.exclude(valid_until__lt=today)
+        rows = base.filter(parent__code=parent) if parent else base.filter(level=2)
+        children = list(
+            rows.annotate(child_count=Count("children", filter=DQ(children__valid_until__isnull=True)))
+            .order_by("code")
+            .values("code", "name", "level", "child_count")[:500]
+        )
+        return Response(
+            {
+                "children": [
+                    {"code": r["code"], "name": r["name"], "level": r["level"], "has_children": r["child_count"] > 0}
+                    for r in children
+                ]
+            }
+        )
+
+    @extend_schema(
+        summary="AI lookup: describe the product in your own words (202)",
+        description=(
+            "ИИ-режим справочника: свободное описание → код из классификатора с объяснением. "
+            "ARCH-01: 202 {task_id}, результат по sourcing/ai-status/."
+        ),
+        request={"application/json": {"type": "object", "properties": {"description": {"type": "string"}}}},
+        responses={202: OpenApiResponse(description="{task_id}")},
+        tags=["Catalog"],
+    )
+    @action(detail=False, methods=["post"], url_path="hs-lookup", permission_classes=[permissions.IsAuthenticated])
+    def hs_lookup(self, request):
+        from sourcing.ai_jobs import enqueue_ai_job
+
+        description = (request.data.get("description") or "").strip()
+        if not description:
+            return Response({"detail": "DESCRIPTION_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
+        return enqueue_ai_job("hs_lookup", {"description": description[:500]}, request.user)
 
     @extend_schema(
         summary="Validate an HS (ТН ВЭД) code softly",

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from unfold.admin import ModelAdmin
 
-from .models import Country, Currency, DeliveryBasis, ExchangeRate, UnitOfMeasure
+from .models import Country, Currency, DeliveryBasis, ExchangeRate, HSCode, UnitOfMeasure
 
 
 @admin.register(Country)
@@ -48,3 +48,26 @@ class ExchangeRateAdmin(ModelAdmin):
     search_fields = ["currency__code", "currency__name"]
     autocomplete_fields = ["currency"]
     date_hierarchy = "rate_date"
+
+
+@admin.register(HSCode)
+class HSCodeAdmin(ModelAdmin):
+    """Инспекция классификатора ТН ВЭД (ADR-0001: Unfold — для инженеров, read-only).
+
+    Править классификатор нельзя НИКОМУ: он приходит из ГТК автосинком, и локальная правка
+    разошлась бы с редакцией при первом же прогоне. Только чтение и поиск.
+    """
+
+    list_display = ("code", "name", "level", "unit_name", "valid_until", "source")
+    list_filter = ("level",)
+    search_fields = ("code", "name")
+    ordering = ("code",)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

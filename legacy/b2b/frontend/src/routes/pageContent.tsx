@@ -22,6 +22,9 @@ const ProductDetail = lazyWithRetry(() => import('@/pages/ProductDetail').then((
 const NomenclatureQueuePage = lazyWithRetry(() =>
   import('@/pages/NomenclatureQueuePage').then((m) => ({ default: m.NomenclatureQueuePage })),
 );
+const HSDirectoryPage = lazyWithRetry(() =>
+  import('@/pages/HSDirectoryPage').then((m) => ({ default: m.HSDirectoryPage })),
+);
 const Dashboard = lazyWithRetry(() => import('@/pages/Dashboard').then((m) => ({ default: m.Dashboard })));
 const SettingsPage = lazyWithRetry(() => import('@/pages/SettingsPage').then((m) => ({ default: m.SettingsPage })));
 const RequestDetailPage = lazyWithRetry(() =>
@@ -156,6 +159,9 @@ function renderContent(ctx: PageRenderContext): ReactNode {
     // готовность карточки и публикация владельцем (волна A, spec-nomenclature-lifecycle).
     case 'nomenclature':
       return <NomenclatureQueuePage onNavigate={ctx.onNavigate} />;
+    // T3: справочник ТН ВЭД — дерево + поиск + ИИ-режим (WCO/tarif-паттерн).
+    case 'hs-directory':
+      return <HSDirectoryPage />;
     case 'product_detail':
       return (
         <ProductDetail

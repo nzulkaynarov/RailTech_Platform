@@ -7750,6 +7750,69 @@
                 }
             }
         },
+        "/api/v1/catalog/products/hs-browse/": {
+            "get": {
+                "operationId": "catalog_products_hs_browse_retrieve",
+                "description": "Дети узла дерева ТН ВЭД. Без parent — корневые группы (2 знака).",
+                "summary": "Browse the HS classifier tree",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "parent",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{children: [{code,name,level,has_children}]}"
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/products/hs-lookup/": {
+            "post": {
+                "operationId": "catalog_products_hs_lookup_create",
+                "description": "ИИ-режим справочника: свободное описание → код из классификатора с объяснением. ARCH-01: 202 {task_id}, результат по sourcing/ai-status/.",
+                "summary": "AI lookup: describe the product in your own words (202)",
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "description": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "{task_id}"
+                    }
+                }
+            }
+        },
         "/api/v1/catalog/products/hs-suggest/": {
             "get": {
                 "operationId": "catalog_products_hs_suggest_retrieve",

@@ -52,6 +52,8 @@ const CATALOG_READ = [
   { id: 'products', buyer: true, seller: true, kycExempt: true, navigable: true },
   // Очередь наполнения номенклатуры — только продавцовая сторона (у покупателя своего каталога нет).
   { id: 'nomenclature', seller: true, navigable: true },
+  // Справочник ТН ВЭД — инструмент продавца (коды нужны в карточках и КП).
+  { id: 'hs-directory', seller: true, navigable: true },
   { id: 'product_detail', buyer: true, seller: true, kycExempt: true },
 ] as const satisfies readonly PageDefinition[];
 

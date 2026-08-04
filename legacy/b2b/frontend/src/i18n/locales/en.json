@@ -1637,7 +1637,8 @@
     "forgotPassword": "Reset password",
     "resetPassword": "New password",
     "adminOperatorRoles": "Operator roles",
-    "nomenclature": "Nomenclature"
+    "nomenclature": "Nomenclature",
+    "hsDirectory": "HS classifier"
   },
   "dealsKanban": {
     "list": "List",
@@ -1738,7 +1739,8 @@
     "emailTemplates": "Email templates",
     "operatorRoles": "Operator roles",
     "accessLog": "Access log",
-    "fxRateFallback": "Exchange rate unavailable — USD amounts are approximate"
+    "fxRateFallback": "Exchange rate unavailable — USD amounts are approximate",
+    "hsDirectory": "HS classifier"
   },
   "productDetail": {
     "specifications": "Specifications",
@@ -4760,5 +4762,25 @@
     "placeholder": "code or product name…",
     "unknown": "Code is not in the classifier — check the digits",
     "retired": "Code retired from the current edition — pick a current one"
+  },
+  "hsDirectory": {
+    "title": "HS classifier",
+    "subtitle": "Uzbekistan customs classifier: search, tree and AI lookup",
+    "search": {
+      "title": "Search & tree",
+      "placeholder": "product name or code digits…"
+    },
+    "empty": "The classifier is empty — the next auto-sync will fill it",
+    "copy": "Copy {{code}}",
+    "copied": "Code {{code}} copied",
+    "ai": {
+      "title": "AI lookup",
+      "hint": "Describe the product in your own words — the AI picks a code FROM the classifier and explains the choice. An invented code is impossible: the pick is verified against the classifier.",
+      "placeholder": "e.g.: a rubber pad that goes under a rail fastening…",
+      "ask": "Pick a code",
+      "copy": "Copy",
+      "failed": "Could not get an answer — try again",
+      "nothing": "No matching code found — check the nearest branches:"
+    }
   }
 }

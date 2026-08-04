@@ -89,6 +89,8 @@ describe('реестр страниц: эквивалентность прежн
         'products', 'product_detail', 'categories', 'equipment-groups', 'catalog-import',
         // + волна A номенклатуры: очередь наполнения продавца (spec-nomenclature-lifecycle).
         'nomenclature',
+        // + T3: справочник ТН ВЭД (spec-tnved-flow).
+        'hs-directory',
         'sourcing-requests', 'crm-deals', 'crm-quotes',
         'deal-quote', 'request-detail', 'my-subscription',
         'contracts', 'invoices', 'payments', 'acts', 'fulfillments', 'other-documents', 'company-files',
@@ -114,6 +116,8 @@ describe('реестр страниц: эквивалентность прежн
         'my-subscription', 'catalog-import',
         // + волна A номенклатуры.
         'nomenclature',
+        // + T3: справочник ТН ВЭД.
+        'hs-directory',
       ]),
     );
   });

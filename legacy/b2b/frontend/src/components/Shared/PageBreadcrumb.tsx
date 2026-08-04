@@ -24,6 +24,7 @@ const pageI18nKeys: Record<string, string> = {
   dashboard: 'breadcrumbs.dashboard',
   products: 'breadcrumbs.products',
   nomenclature: 'breadcrumbs.nomenclature',
+  'hs-directory': 'breadcrumbs.hsDirectory',
   'my-requests': 'breadcrumbs.myRequests',
   'request-detail': 'breadcrumbs.requestDetail',
   'crm-deals': 'breadcrumbs.crmDeals',
