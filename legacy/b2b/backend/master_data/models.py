@@ -182,6 +182,20 @@ class HSCode(models.Model):
         help_text=_("Только цифры, без пробелов и разделителей (2/4/6/8/10 знаков)."),
     )
     name = models.TextField(verbose_name=_("Наименование позиции"))
+    unit_name = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        verbose_name=_("Единица измерения"),
+        help_text=_("Базовая единица учёта по номенклатуре (обычно «кг»)."),
+    )
+    extra_unit_name = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        verbose_name=_("Доп. единица измерения"),
+        help_text=_("Дополнительная единица учёта (напр. «шт», «пар»), если предусмотрена номенклатурой."),
+    )
     level = models.PositiveSmallIntegerField(
         db_index=True,
         verbose_name=_("Уровень"),

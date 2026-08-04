@@ -15,8 +15,11 @@
 
 from __future__ import annotations
 
-from django.contrib.postgres.search import TrigramSimilarity
-from django.db.models import Q
+import re
+
+from django.contrib.postgres.search import TrigramWordSimilarity
+from django.db.models import F, Func, Q, TextField, Value
+from django.db.models.functions import Greatest
 
 
 def suggest_hs_codes(text: str, limit: int = 5, min_level: int = 6) -> list[dict]:
@@ -31,7 +34,14 @@ def suggest_hs_codes(text: str, limit: int = 5, min_level: int = 6) -> list[dict
     if not query:
         return []
 
-    rows = HSCode.objects.filter(level__gte=min_level)
+    # Закрытые коды (valid_until в прошлом) не предлагаются: после автосинка с tarif.customs.uz
+    # исчезнувшие из редакции коды закрываются датой, и подсказывать их в НОВУЮ карточку нельзя —
+    # декларацию с выведенным кодом развернут. `is_known_code` при этом закрытые коды по-прежнему
+    # признаёт: старые документы держат старые коды законно.
+    from django.utils import timezone
+
+    today = timezone.now().date()
+    rows = HSCode.objects.filter(level__gte=min_level).exclude(valid_until__lt=today)
     # Пользователь мог ввести сам код — тогда это точный поиск, а не текстовый.
     digits = "".join(ch for ch in query if ch.isdigit())
     if len(digits) >= 4:
@@ -43,13 +53,46 @@ def suggest_hs_codes(text: str, limit: int = 5, min_level: int = 6) -> list[dict
         if exact:
             return [dict(row, score=1.0) for row in exact]
 
+    # ПОСЛОВНОЕ сходство, а не сходство целых строк, и не только по запросу целиком, но и по
+    # КАЖДОМУ его значимому слову. Две причины, обе с живой базы ГТК (13 тыс. кодов):
+    #
+    # 1. Имена — длинные пути по дереву через двоеточия. Короткий запрос против такой строки
+    #    целиком даёт почти ноль: «тормозная колодка» не находила НИЧЕГО, хотя позиция 6813 81
+    #    в базе есть (word-сходство 0.571 против нуля у сходства целых строк).
+    # 2. Словарь таможни ≠ словарь инженера: «стрелочный перевод» в номенклатуре зовётся
+    #    «рельсы переводные, крестовины глухого пересечения». Слово «перевод» дотягивается до
+    #    «переводные», только если мерять по словам запроса, а не по всей фразе.
+    #
+    # Retrieval здесь отвечает за ОТЗЫВ, точность — за моделью и человеком: лишний кандидат в
+    # хвосте безвреден (модель обязана вернуть '' если ничего не подходит), а пропущенный
+    # правильный — невосполним, модель из ничего выбрать не может.
+    words = [w for w in re.split(r"[^\wА-Яа-яЁё]+", query) if len(w) >= 4][:5]
+
+    def best_similarity(target):
+        similarities = [TrigramWordSimilarity(query, target)] + [TrigramWordSimilarity(w, target) for w in words]
+        return similarities[0] if len(similarities) == 1 else Greatest(*similarities)
+
+    # Имя ГТК — путь по дереву через «:», и у СОСЕДНИХ кодов он почти одинаков: «перевод»
+    # матчился во всей ветке 7302 с равным score, сортировка при равенстве шла по коду, и
+    # правильный 7302300000 не влезал в лимит, вытесненный собственными братьями. Последний
+    # сегмент пути — СОБСТВЕННОЕ имя позиции («рельсы переводные, крестовины…»), различающее
+    # братьев; он и есть главный сигнал ранжирования, полный путь — вторичный.
+    leaf = Func(F("name"), Value(r"^.*:"), Value(""), function="regexp_replace", output_field=TextField())
     scored = (
-        rows.annotate(score=TrigramSimilarity("name", query))
-        .filter(score__gt=0.15)
-        .order_by("-score", "code")[:limit]
-        .values("code", "name", "level", "score")
+        rows.annotate(leaf_score=best_similarity(leaf), score=best_similarity("name"))
+        .filter(score__gt=0.3)
+        .order_by("-leaf_score", "-score", "code")[:limit]
+        .values("code", "name", "level", "score", "leaf_score")
     )
-    return [dict(row, score=round(float(row["score"]), 3)) for row in scored]
+    return [
+        {
+            "code": row["code"],
+            "name": row["name"],
+            "level": row["level"],
+            "score": round(float(max(row["score"], row["leaf_score"] or 0)), 3),
+        }
+        for row in scored
+    ]
 
 
 def is_known_code(code: str) -> bool:

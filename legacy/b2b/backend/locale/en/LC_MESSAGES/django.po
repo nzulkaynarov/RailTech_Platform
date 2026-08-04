@@ -6057,3 +6057,13 @@ msgstr ""
 #: templates/emails/setup_password.txt:8
 msgid "Если вы не регистрировались на платформе, просто проигнорируйте это письмо."
 msgstr "If you did not sign up for the platform, simply ignore this email."
+
+#: master_data/models.py (HSCode unit fields)
+msgid "Базовая единица учёта по номенклатуре (обычно «кг»)."
+msgstr "Base accounting unit per the nomenclature (usually kg)."
+
+msgid "Доп. единица измерения"
+msgstr "Additional unit of measure"
+
+msgid "Дополнительная единица учёта (напр. «шт», «пар»), если предусмотрена номенклатурой."
+msgstr "Additional accounting unit (e.g. pcs, pairs) when the nomenclature defines one."

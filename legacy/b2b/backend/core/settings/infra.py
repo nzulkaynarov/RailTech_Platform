@@ -34,6 +34,9 @@ CELERY_TASK_DEFAULT_QUEUE = "default"
 CELERY_TASK_ROUTES = {
     "sourcing.tasks.process_excel_import": {"queue": "imports"},
     "sourcing.tasks.process_catalog_import": {"queue": "imports"},
+    # Синхронизация ТН ВЭД — получасовая выгрузка с медленного tarif.customs.uz: ей место
+    # рядом с bulk-импортами, а не в default-очереди транзакционных задач.
+    "master_data.tasks.refresh_tnved_codes": {"queue": "imports"},
     # ARCH-01: interactive AI jobs (request-path LLM calls offloaded from DRF views) go to
     # the "ai" queue, consumed ONLY by the dedicated celery-worker-ai service (IO-bound
     # HTTP waits — a bulk import can never occupy the slots an interactive job needs).

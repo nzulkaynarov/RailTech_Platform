@@ -20,18 +20,13 @@
 from __future__ import annotations
 
 import csv
-import re
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from master_data.models import HSCode
-
-DIGITS = re.compile(r"\D+")
-
-
-def normalize_code(raw: str) -> str:
-    return DIGITS.sub("", raw or "")
+from master_data.tnved import link_hs_parents
+from master_data.tnved import normalize_hs_code as normalize_code
 
 
 class Command(BaseCommand):
@@ -69,25 +64,10 @@ class Command(BaseCommand):
                 created += int(was_created)
                 updated += int(not was_created)
 
-        linked = self._link_parents()
+        linked = link_hs_parents()
         self.stdout.write(
             self.style.SUCCESS(
                 f"ТН ВЭД: добавлено {created}, обновлено {updated}, пропущено {skipped}, "
                 f"проставлено родителей {linked}"
             )
         )
-
-    def _link_parents(self) -> int:
-        """Иерархия выводится из самих кодов: у 10-значного родитель — ближайший более короткий."""
-        by_code = dict(HSCode.objects.values_list("code", "id"))
-        linked = 0
-        for code, pk in by_code.items():
-            parent_id = None
-            for cut in range(len(code) - 2, 1, -2):
-                parent_id = by_code.get(code[:cut])
-                if parent_id:
-                    break
-            if parent_id and parent_id != pk:
-                HSCode.objects.filter(pk=pk).update(parent_id=parent_id)
-                linked += 1
-        return linked

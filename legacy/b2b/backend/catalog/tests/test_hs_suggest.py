@@ -102,3 +102,45 @@ def test_reimport_updates_names_without_duplicating(db, tmp_path):
 
     assert HSCode.objects.filter(code="8482").count() == 1
     assert HSCode.objects.get(code="8482").name == "Новое наименование"
+
+
+def test_short_query_finds_a_long_tree_path_name(db):
+    """Имена ГТК — длинные пути по дереву; пословное сходство обязано до них дотягиваться.
+
+    До правки «тормозная колодка» не находила НИЧЕГО (сходство целых строк ≈ 0 против
+    длинного имени), хотя правильная позиция 6813 81 в базе была.
+    """
+    HSCode.objects.create(
+        code="6813810009",
+        name=(
+            "Фрикционные материалы и изделия из них (например, листы, рулоны, ленты, "
+            "сегменты, диски, шайбы, прокладки), несмонтированные, для тормозов: "
+            "не содержащие асбест: тормозные накладки и колодки: прочие"
+        ),
+        level=10,
+    )
+
+    candidates = suggest_hs_codes("тормозная колодка", limit=3)
+
+    assert candidates, "короткий запрос обязан находить длинное имя-путь"
+    assert candidates[0]["code"] == "6813810009"
+
+
+def test_retired_codes_are_not_suggested_for_new_cards(db):
+    """Автосинк закрывает исчезнувшие коды датой — предлагать их в новую карточку нельзя."""
+    import datetime
+
+    HSCode.objects.create(code="8482100000", name="Подшипники шариковые прочие", level=10)
+    HSCode.objects.create(
+        code="8482109008",
+        name="Подшипники шариковые устаревшие",
+        level=10,
+        valid_until=datetime.date(2025, 1, 1),
+    )
+
+    codes = [c["code"] for c in suggest_hs_codes("подшипники шариковые", limit=5)]
+
+    assert "8482100000" in codes
+    assert "8482109008" not in codes, "закрытый код не подсказывается"
+    # …но старый документ с ним по-прежнему валиден.
+    assert is_known_code("8482109008") is True
