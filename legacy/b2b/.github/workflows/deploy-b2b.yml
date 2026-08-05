@@ -180,6 +180,47 @@ jobs:
           $COMPOSE up -d --build
           docker image prune -f
 
+      # Конфиг Caddy — ЕДИНСТВЕННАЯ часть прода вне этого пайплайна: деплой его не
+      # затирает, но и не обновляет. Опасность поэтому перевёрнутая: правка руками на
+      # боксе переживёт любой деплой, а правка в репозитории может НИКОГДА до прода не
+      # доехать — и репозиторий будет утверждать то, чего на проде нет.
+      #
+      # Применять автоматически нельзя: нужен root, а перезагрузка edge затрагивает и
+      # соседние сайты на этом же Caddy (общий master Caddyfile). Поэтому не трогаем —
+      # только СРАВНИВАЕМ и кричим. Шаг намеренно не валит деплой приложения: держать
+      # выкатку заложником конфига edge хуже, чем громкое предупреждение.
+      - name: Проверить дрейф конфига Caddy
+        if: always()
+        run: |
+          REPO_FRAGMENT=/opt/railtech-b2b/deploy/caddy/b2b.railtech.uz.caddy
+          LIVE_FRAGMENT=/etc/caddy/conf.d/b2b.caddy
+          if [ ! -r "$LIVE_FRAGMENT" ]; then
+            echo "::warning::Живой конфиг Caddy ($LIVE_FRAGMENT) не читается раннером — дрейф не проверен."
+            exit 0
+          fi
+          if diff -q "$REPO_FRAGMENT" "$LIVE_FRAGMENT" >/dev/null 2>&1; then
+            echo "Конфиг Caddy совпадает с репозиторием."
+            exit 0
+          fi
+          echo "::warning::Конфиг Caddy на проде РАСХОДИТСЯ с репозиторием — правка из репозитория на прод не доехала."
+          {
+            echo "### ⚠️ Конфиг Caddy разошёлся с репозиторием"
+            echo
+            echo "Деплой конфиг edge не применяет. Чтобы привести прод в соответствие:"
+            echo
+            echo '```bash'
+            echo "sudo cp $REPO_FRAGMENT $LIVE_FRAGMENT"
+            echo "sudo caddy validate --config /etc/caddy/Caddyfile"
+            echo "sudo systemctl reload caddy"
+            echo '```'
+            echo
+            echo "Расхождение (репозиторий → прод):"
+            echo
+            echo '```diff'
+            diff -u "$LIVE_FRAGMENT" "$REPO_FRAGMENT" | head -60 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Health check
         run: |
           for i in $(seq 1 12); do
