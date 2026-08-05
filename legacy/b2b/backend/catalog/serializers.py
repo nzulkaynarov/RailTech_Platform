@@ -138,8 +138,29 @@ class SupplierOfferSerializer(serializers.ModelSerializer):
             "in_stock_lead_time_days",
             "order_lead_time_days",
             "min_order_qty",
+            # R7: окно действия цены было в модели, но не в контракте — задать срок было
+            # негде, и «цена до конца квартала» жила в переписке, а не в карточке.
+            "valid_from",
+            "valid_until",
             "is_active",
         ]
+
+    def validate(self, attrs):
+        """Окно действия цены проверяется ЦЕЛИКОМ, включая частичное обновление.
+
+        На PATCH в теле приходит одна граница из двух — сравнивать её надо со второй,
+        уже сохранённой, иначе перевёрнутое окно собиралось бы двумя запросами.
+        """
+        attrs = super().validate(attrs)
+        instance = self.instance
+        valid_from = attrs.get("valid_from", getattr(instance, "valid_from", None))
+        valid_until = attrs.get("valid_until", getattr(instance, "valid_until", None))
+        from catalog.services import offer_validity_error
+
+        error = offer_validity_error(valid_from, valid_until)
+        if error:
+            raise serializers.ValidationError({"detail": error})
+        return attrs
 
 
 # --- Main Product Serializer (PIM) ---

@@ -15,6 +15,7 @@ import type { Product } from '@/api/catalogApi';
 import { ProductMediaSection } from './ProductMediaSection';
 import { useProductForm } from './useProductForm';
 import { AiEnrichPanel } from './AiEnrichPanel';
+import { OfferSection } from './OfferSection';
 import { HSCodeField } from '@/components/Shared/HSCodeField';
 import { ManufacturerField } from '@/components/Shared/ManufacturerField';
 
@@ -32,12 +33,11 @@ export function ProductFormSheet({
   const [dutiesOpen, setDutiesOpen] = useState(false);
   const form = useProductForm({ open, onOpenChange, target, sellerCompanyId });
   const {
-    domainTypes, categories, units, equipmentGroups,
-    currencies, stockStatuses, deliveryBases, adminCompanies,
-    draft, groupIds, offerDraft, categoryHint,
+    domainTypes, categories, units, equipmentGroups, adminCompanies,
+    draft, groupIds, categoryHint,
     sellerMode, isEdit, isRailway, busy, enrichPending,
     aiDailyCap, aiDailyRemaining,
-    update, updateOffer, toggleGroup, runEnrich, submit,
+    update, toggleGroup, runEnrich, submit,
   } = form;
   // Безлимит (`null`) — это НЕ «осталось 0»; когда бэкенд лимит не прислал, не показываем ничего.
   const aiLimitText = aiDailyCap === undefined && aiDailyRemaining === undefined
@@ -247,114 +247,7 @@ export function ProductFormSheet({
             </div>
           )}
 
-          {sellerMode && (
-            <>
-              <Separator />
-              <div className="space-y-1">
-                <Label className="text-base">{t('adminCatalog.pricing.title')}</Label>
-                <p className="text-xs text-muted-foreground">{t('adminCatalog.pricing.hint')}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>{t('adminOffers.fields.basePrice')}</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={offerDraft.base_price ?? ''}
-                    onChange={(e) => updateOffer({ base_price: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('adminOffers.fields.currency')}</Label>
-                  <Select
-                    value={offerDraft.currency ? String(offerDraft.currency) : undefined}
-                    onValueChange={(v) => updateOffer({ currency: Number(v) })}
-                  >
-                    <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                    <SelectContent>
-                      {(currencies ?? []).map((c) => (
-                        <SelectItem key={c.id} value={String(c.id)}>{c.code}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>{t('adminOffers.fields.stockStatus')}</Label>
-                  <Select
-                    value={offerDraft.stock_status ? String(offerDraft.stock_status) : undefined}
-                    onValueChange={(v) => updateOffer({ stock_status: Number(v) })}
-                  >
-                    <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                    <SelectContent>
-                      {(stockStatuses ?? []).map((s) => (
-                        <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('adminOffers.fields.deliveryBasis')}</Label>
-                  <Select
-                    value={offerDraft.delivery_basis ? String(offerDraft.delivery_basis) : undefined}
-                    onValueChange={(v) => updateOffer({ delivery_basis: Number(v) })}
-                  >
-                    <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                    <SelectContent>
-                      {(deliveryBases ?? []).map((d) => (
-                        <SelectItem key={d.id} value={String(d.id)}>{d.code}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>{t('adminOffers.fields.supplierSku')}</Label>
-                <Input
-                  value={offerDraft.supplier_sku ?? ''}
-                  onChange={(e) => updateOffer({ supplier_sku: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-base">{t('adminOffers.availability.title')}</Label>
-                <p className="text-xs text-muted-foreground">{t('adminOffers.availability.hint')}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>{t('adminOffers.fields.stockQuantity')}</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={offerDraft.stock_quantity ?? 0}
-                    onChange={(e) => updateOffer({ stock_quantity: Number(e.target.value) })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('adminOffers.fields.inStockLeadTimeDays')}</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={offerDraft.in_stock_lead_time_days ?? 0}
-                    onChange={(e) => updateOffer({ in_stock_lead_time_days: Number(e.target.value) })}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>{t('adminOffers.fields.orderLeadTimeDays')}</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={offerDraft.order_lead_time_days ?? 0}
-                  onChange={(e) => updateOffer({ order_lead_time_days: Number(e.target.value) })}
-                />
-              </div>
-            </>
-          )}
+          {sellerMode && <OfferSection form={form} />}
 
           {isEdit && target?.sku && (
             <>

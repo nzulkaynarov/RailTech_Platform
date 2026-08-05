@@ -176,6 +176,13 @@ export function useProductForm({
           stock_quantity: ownOffer.stock_quantity ?? 0,
           in_stock_lead_time_days: ownOffer.in_stock_lead_time_days ?? 0,
           order_lead_time_days: ownOffer.order_lead_time_days ?? 0,
+          // R7: поля жили в модели и писались импортом, но продавцу их негде было задать —
+          // условия из прайса нельзя было ни поправить, ни завести руками.
+          delivery_lead_time: ownOffer.delivery_lead_time ?? '',
+          min_order_qty: ownOffer.min_order_qty,
+          valid_from: ownOffer.valid_from ?? null,
+          valid_until: ownOffer.valid_until ?? null,
+          is_active: ownOffer.is_active,
         }
       : {});
   }, [ownOffer]);
@@ -330,6 +337,17 @@ export function useProductForm({
       toast.error(t('adminCatalog.ownerCompanyRequired'));
       return;
     }
+    // Перевёрнутое окно действия цены сервер отвергает (OFFER_VALIDITY_RANGE_INVALID) —
+    // но называем причину ДО запроса, тем же приёмом, что и проверка владельца выше.
+    if (
+      sellerMode
+      && offerDraft.valid_from
+      && offerDraft.valid_until
+      && offerDraft.valid_until < offerDraft.valid_from
+    ) {
+      toast.error(t('adminCatalog.pricing.validityRangeInvalid'));
+      return;
+    }
     // brand_name — строка: сервер нормализует (iexact) и создаёт бренд на лету (N1),
     // тем же нормализатором, что Excel-импорт. equipment_groups is an M2M write (list
     // of ids) — the read type is EquipmentGroup[], so the body goes through a
@@ -374,6 +392,16 @@ export function useProductForm({
           stock_quantity: Number(offerDraft.stock_quantity ?? 0),
           in_stock_lead_time_days: Number(offerDraft.in_stock_lead_time_days ?? 0),
           order_lead_time_days: Number(offerDraft.order_lead_time_days ?? 0),
+          delivery_lead_time: offerDraft.delivery_lead_time ?? '',
+          // Пустые поля НЕ шлём: умолчания (`min_order_qty=1`, `is_active=True`) живут в
+          // модели, и дублировать их на клиенте значило бы завести вторую точку правды.
+          ...(offerDraft.min_order_qty === undefined
+            ? {}
+            : { min_order_qty: Number(offerDraft.min_order_qty) }),
+          ...(offerDraft.is_active === undefined ? {} : { is_active: offerDraft.is_active }),
+          // Пустая граница окна — осознанный `null` («бессрочно»), а не «не трогать».
+          valid_from: offerDraft.valid_from || null,
+          valid_until: offerDraft.valid_until || null,
         };
         if (ownOffer) {
           await updateOfferMut.mutateAsync({ id: ownOffer.id, data: offerPayload });

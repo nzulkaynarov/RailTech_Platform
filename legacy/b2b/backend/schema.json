@@ -27366,6 +27366,20 @@
                         "title": "Мин. заказ",
                         "description": "Минимальное количество для заказа"
                     },
+                    "valid_from": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true,
+                        "title": "Действует с",
+                        "description": "Дата начала действия предложения"
+                    },
+                    "valid_until": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true,
+                        "title": "Действует до",
+                        "description": "Дата окончания действия предложения"
+                    },
                     "is_active": {
                         "type": "boolean",
                         "title": "Активен",
@@ -30485,6 +30499,20 @@
                         "title": "Мин. заказ",
                         "description": "Минимальное количество для заказа"
                     },
+                    "valid_from": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true,
+                        "title": "Действует с",
+                        "description": "Дата начала действия предложения"
+                    },
+                    "valid_until": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true,
+                        "title": "Действует до",
+                        "description": "Дата окончания действия предложения"
+                    },
                     "is_active": {
                         "type": "boolean",
                         "title": "Активен",
@@ -30577,6 +30605,20 @@
                         "minimum": 0,
                         "title": "Мин. заказ",
                         "description": "Минимальное количество для заказа"
+                    },
+                    "valid_from": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true,
+                        "title": "Действует с",
+                        "description": "Дата начала действия предложения"
+                    },
+                    "valid_until": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true,
+                        "title": "Действует до",
+                        "description": "Дата окончания действия предложения"
                     },
                     "is_active": {
                         "type": "boolean",

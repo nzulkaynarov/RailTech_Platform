@@ -2809,14 +2809,29 @@
     "media": {
       "images": "Product images",
       "documents": "Documents (datasheets, certificates)",
-      "documentsHelp": "PDF, DOCX, XLSX — technical documents"
+      "documentsHelp": "PDF, DOCX, XLSX — technical documents",
+      "altText": "Image caption (alt text)",
+      "altTextPlaceholder": "e.g. Brake pad assembly",
+      "altTextHint": "Applied to the photo you upload next. Used by search engines and screen readers.",
+      "documentName": "Document name",
+      "documentNamePlaceholder": "e.g. Product datasheet",
+      "documentNameHint": "Applied to the file you upload next. Leave empty to use the file name."
     },
     "mediaAfterCreate": "Images and documents can be uploaded after creating the product",
     "equipmentGroupsHint": "Required for the Railway machinery domain: pick at least one group.",
     "equipmentGroupsRequired": "Select at least one equipment group for a railway product.",
     "pricing": {
       "title": "Price & availability",
-      "hint": "Your offer for this product (price is visible only to you and the platform)."
+      "hint": "Your offer for this product (price is visible only to you and the platform).",
+      "leadTimeText": "Delivery time (free text)",
+      "leadTimeTextHint": "Shown on the public product page. For cases a number cannot express: “14-21 days”, “by agreement”.",
+      "validity": "Price validity",
+      "validityHint": "An empty date means an open boundary: without a start the price is already in effect, without an end it never expires.",
+      "validFrom": "Valid from",
+      "validUntil": "Valid until",
+      "validityRangeInvalid": "“Valid until” cannot be earlier than “valid from”.",
+      "isActive": "Offer on sale",
+      "isActiveHint": "A withdrawn offer is not used in quotes and is hidden from buyers. It is not deleted — the same switch puts it back on sale."
     },
     "published": "Product published",
     "publish": "Publish",
@@ -3667,7 +3682,8 @@
     "PRODUCT_NOT_YOURS": "This card belongs to another company",
     "PRODUCT_STATUS_MISSING": "The product status reference is not seeded — contact the platform operator",
     "HS_CODE_UNKNOWN": "This code is not in the HS classifier",
-    "OWNER_COMPANY_REQUIRED": "The card's owner company is not set"
+    "OWNER_COMPANY_REQUIRED": "The card's owner company is not set",
+    "OFFER_VALIDITY_RANGE_INVALID": "“Valid until” cannot be earlier than “valid from”."
   },
   "fileUpload": {
     "upload": "Upload",

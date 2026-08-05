@@ -66,6 +66,20 @@ def equipment_groups_available() -> bool:
     return EquipmentGroup.objects.exists()
 
 
+def offer_validity_error(valid_from, valid_until) -> str | None:
+    """Код ошибки окна действия цены (`None` — окно корректно).
+
+    Эталон — `product.supplierinfo` в Odoo (Validity Start/End) и info-record SAP: у цены
+    поставщика есть срок, и «действует до» не может стоять раньше «действует с». Открытые
+    границы законны: пустое «с» — «действует уже сейчас», пустое «до» — «бессрочно».
+
+    Rule 8: правило живёт здесь, сериализатор его только вызывает.
+    """
+    if valid_from and valid_until and valid_until < valid_from:
+        return "OFFER_VALIDITY_RANGE_INVALID"
+    return None
+
+
 def log_hs_code_change(product, old_code: str, actor, origin: str) -> None:
     """Журнал присвоений кода ТН ВЭД (T2, паттерн Avalara: у классификации есть источник).
 

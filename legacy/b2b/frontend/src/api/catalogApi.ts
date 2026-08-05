@@ -62,6 +62,12 @@ export interface SupplierOffer {
     in_stock_lead_time_days?: number;
     order_lead_time_days?: number;
     min_order_qty?: number;
+    /**
+     * Окно действия цены (`YYYY-MM-DD`), эталон — Validity Start/End у
+     * `product.supplierinfo` в Odoo. Пустая граница = открытая.
+     */
+    valid_from?: string | null;
+    valid_until?: string | null;
     is_active?: boolean;
 }
 
@@ -79,8 +85,6 @@ export interface Product {
     
     category?: number | null;
     category_data?: { id: number, name: string } | null;
-    
-    manufacturer?: number | null;
 
     // The SELLER company that owns the listing (tenancy), NOT the OEM.
     owner_company_data?: { id: number; name: string; inn?: string; logo?: string | null } | null;
@@ -125,7 +129,7 @@ export interface Product {
         [key: string]: string | number | boolean | null | undefined;
     } | null;
     
-    images?: { id: number, image: string | null, image_url: string | null, is_main: boolean }[];
+    images?: { id: number, image: string | null, image_url: string | null, is_main: boolean, alt_text?: string }[];
     documents?: { id: number, file: string | null, file_url: string | null, name: string }[];
     
     main_image_url?: string | null;
