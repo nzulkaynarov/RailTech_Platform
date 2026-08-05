@@ -9,7 +9,7 @@
 
 import pytest
 
-from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, VerificationStatus, WorkspaceRole
 from catalog.completeness import completeness
 from catalog.models import Category, DomainType, Product, ProductStatus
 from catalog.publishing import publish_many, publish_product
@@ -24,7 +24,15 @@ def seller_world(db):
         ProductStatus.objects.get_or_create(code=code, defaults={"name": name, "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Поставщик", "sort_order": 20})
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
-    company = Company.objects.create(name="ООО Издатель", inn="9300000001")
+    # Публикация требует пройденной верификации (эталон Amazon: листинг готовится до
+    # проверки, живым становится после). Фикстура моделирует ПУБЛИКУЮЩЕГО продавца,
+    # поэтому компания здесь верифицирована; отказ до верификации проверяется отдельно
+    # в test_fill_before_kyc.py.
+    company = Company.objects.create(
+        name="ООО Издатель",
+        inn="9300000001",
+        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
+    )
     user = CustomUser.objects.create_user(email="own@pub.test", username="own@pub.test", password="pw")
     CompanyMember.objects.create(
         user=user, company=company, role=WorkspaceRole.objects.get(code="OWNER"), is_active=True, is_primary=True

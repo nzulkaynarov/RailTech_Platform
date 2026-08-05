@@ -47,13 +47,20 @@ const UTILITY = [
   { id: 'help', buyer: true, seller: true, adminReachable: true, kycExempt: true, navigable: true },
 ] as const satisfies readonly PageDefinition[];
 
-/** Каталог — чтение, разрешено до KYC; `product_detail` параметризован. */
+/**
+ * Каталог — чтение, разрешено до KYC; `product_detail` параметризован.
+ *
+ * Наполнение номенклатуры тоже `kycExempt`: эталон Amazon Seller Central — листинги
+ * готовятся, пока идёт проверка аккаунта, а живыми становятся после неё. Ниже L2 продавец
+ * заводит и правит карточки, грузит прайс и смотрит справочники; ПУБЛИКАЦИЯ остаётся за
+ * порогом и отказывает на сервере (`SELLER_KYC_REQUIRED`, catalog/publishing.py).
+ */
 const CATALOG_READ = [
   { id: 'products', buyer: true, seller: true, kycExempt: true, navigable: true },
   // Очередь наполнения номенклатуры — только продавцовая сторона (у покупателя своего каталога нет).
-  { id: 'nomenclature', seller: true, navigable: true },
+  { id: 'nomenclature', seller: true, kycExempt: true, navigable: true },
   // Справочник ТН ВЭД — инструмент продавца (коды нужны в карточках и КП).
-  { id: 'hs-directory', seller: true, navigable: true },
+  { id: 'hs-directory', seller: true, kycExempt: true, navigable: true },
   { id: 'product_detail', buyer: true, seller: true, kycExempt: true },
 ] as const satisfies readonly PageDefinition[];
 
@@ -98,9 +105,9 @@ const BUYER_ONLY = [
 ] as const satisfies readonly PageDefinition[];
 
 const SELLER_ONLY = [
-  { id: 'categories', seller: true, navigable: true },
-  { id: 'equipment-groups', seller: true, navigable: true },
-  { id: 'catalog-import', seller: true, navigable: true },
+  { id: 'categories', seller: true, kycExempt: true, navigable: true },
+  { id: 'equipment-groups', seller: true, kycExempt: true, navigable: true },
+  { id: 'catalog-import', seller: true, kycExempt: true, navigable: true },
   { id: 'sourcing-requests', seller: true, navigable: true },
   { id: 'crm-deals', seller: true, navigable: true },
   { id: 'crm-quotes', seller: true, adminReachable: true, navigable: true },

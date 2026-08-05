@@ -4824,7 +4824,11 @@
     "resetFilters": "Clear filters",
     "filters": {
       "allDomains": "All domains"
-    }
+    },
+    "publishNeedsKyc": "Publishing unlocks once your company is verified",
+    "kycGateTitle": "Fill your catalog now — publishing unlocks after verification",
+    "kycGateHint": "While your company documents are being reviewed you can create cards, upload a price list and enrich data. Publishing to the shared catalog unlocks right after verification.",
+    "kycGateCta": "Check status"
   },
   "hsField": {
     "placeholder": "code or product name…",

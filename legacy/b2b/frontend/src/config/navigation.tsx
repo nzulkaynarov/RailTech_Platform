@@ -130,8 +130,16 @@ export const TENANT_NAV: NavNodeDef[] = [
   { labelKey: 'shell.catalog', id: 'products', icon: <Package className="h-4 w-4" />, side: 'buy' },
   {
     labelKey: 'shell.nomenclatureSection', icon: <Boxes className="h-4 w-4" />, side: 'sell',
-    // Managing/publishing nomenclature is a T2 (catalog.*) seller action → KYC L2+ floor.
-    requires: { kyc: true, anyPerm: ['catalog.manage', 'catalog.publish'] },
+    // НАПОЛНЕНИЕ каталога доступно до верификации, ПУБЛИКАЦИЯ — нет.
+    //
+    // Эталон Amazon Seller Central: пока идёт проверка аккаунта, продавец готовит листинги, а
+    // живыми они становятся после неё. Раньше `kyc: true` прятал раздел целиком, и новый
+    // продавец не мог ни завести карточку, ни загрузить прайс, пока оператор не проверит
+    // документы, — то есть простаивал ровно в тот момент, когда готов работать.
+    //
+    // Гейт не исчез, а переехал на само действие: `catalog/publishing.py` возвращает
+    // `SELLER_KYC_REQUIRED`. Прав стало строго больше — ничего из работавшего не отнято.
+    requires: { anyPerm: ['catalog.manage', 'catalog.publish'] },
     children: [
       { labelKey: 'shell.nomenclature', id: 'nomenclature' },
       { labelKey: 'shell.hsDirectory', id: 'hs-directory' },

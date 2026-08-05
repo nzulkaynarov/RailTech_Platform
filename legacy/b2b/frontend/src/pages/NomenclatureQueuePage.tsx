@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Boxes, CheckCircle2, Loader2, PackagePlus, SearchX } from 'lucide-react';
+import { Boxes, CheckCircle2, Loader2, PackagePlus, SearchX, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ResponsiveDataTable } from '@/components/ResponsiveDataTable';
 import { Pager, Toolbar, useListParams } from '@/components/DataTable';
 import { ErrorState } from '@/pages/shared/PageShell';
+import { useCatalogPublishGate } from '@/hooks/useCatalogPublishGate';
 import { getDomainLabelKey } from '@/config/domainConfig';
 import {
   useProductsPage,
@@ -139,6 +140,9 @@ export function NomenclatureQueuePage({
   const duplicateGroups = duplicateData?.groups ?? [];
   const publishOne = usePublishProduct();
   const publishMany = useBulkPublishProducts();
+  // Наполнять можно до верификации, публиковать — нет. Предупреждаем ЗАРАНЕЕ: иначе
+  // продавец заводит десятки карточек и упирается в порог на последней кнопке.
+  const publishGate = useCatalogPublishGate();
   const queryClient = useQueryClient();
   // T4 (Avalara bulk classification): ИИ подбирает коды пакетом, человек ПОДТВЕРЖДАЕТ.
   const [classifyBusy, setClassifyBusy] = useState(false);
@@ -282,7 +286,8 @@ export function NomenclatureQueuePage({
             </Button>
             <Button
               size="sm"
-              disabled={!p.completeness?.is_publishable || publishOne.isPending}
+              title={publishGate.blocked ? t('nomenclature.publishNeedsKyc') : undefined}
+              disabled={!p.completeness?.is_publishable || publishOne.isPending || publishGate.blocked}
               onClick={() =>
                 publishOne.mutate(p.id, {
                   onSuccess: () => toast.success(t('nomenclature.published', { name: p.name })),
@@ -327,6 +332,30 @@ export function NomenclatureQueuePage({
         )}
       </div>
 
+      {/* Порог верификации назван ЗАРАНЕЕ и не выглядит поломкой: наполнять каталог можно
+          прямо сейчас, а публикация откроется после проверки документов (эталон Amazon
+          Seller Central). Без этой плашки отключённая кнопка «Опубликовать» читалась бы
+          как сбой. */}
+      {publishGate.blocked && (
+        <Card className="border-warning/40 bg-warning/5">
+          <CardContent className="flex items-start gap-3 py-4">
+            <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-warning" aria-hidden="true" />
+            <div className="flex flex-col gap-1">
+              <p className="text-sm font-medium">{t('nomenclature.kycGateTitle')}</p>
+              <p className="text-sm text-muted-foreground">{t('nomenclature.kycGateHint')}</p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="ml-auto shrink-0"
+              onClick={() => { window.location.hash = 'settings?section=company'; }}
+            >
+              {t('nomenclature.kycGateCta')}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="flex flex-wrap items-center gap-2">
         {(['DRAFT', 'PUBLISHED'] as TabKey[]).map((key) => (
           <Button
@@ -362,7 +391,8 @@ export function NomenclatureQueuePage({
         {publishableSelected.length > 0 && (
           <Button
             size="sm"
-            disabled={publishMany.isPending}
+            title={publishGate.blocked ? t('nomenclature.publishNeedsKyc') : undefined}
+            disabled={publishMany.isPending || publishGate.blocked}
             onClick={() =>
               publishMany.mutate(
                 publishableSelected.map((p) => p.id),

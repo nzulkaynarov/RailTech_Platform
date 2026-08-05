@@ -42,6 +42,22 @@ def can_manage(user, product, *, permission: str = "catalog.manage") -> bool:
     return member_has_permission(user, owner_id, permission)
 
 
+def _seller_kyc_verified(product, actor) -> bool:
+    """Прошла ли верификацию компания-владелец карточки.
+
+    Оператор и суперпользователь проверке не подлежат: они публикуют не от своего имени,
+    а в порядке модерации (`moderation.force_override`), и собственной компании у них нет.
+    """
+    if getattr(actor, "is_superuser", False) or getattr(actor, "is_platform_admin", False):
+        return True
+    owner_id = getattr(product, "owner_company_id", None)
+    if not owner_id:
+        return False
+    from accounts.services.kyc import company_kyc_verified
+
+    return company_kyc_verified(owner_id)
+
+
 @transaction.atomic
 def publish_product(product, actor) -> tuple[object | None, str | None]:
     """Опубликовать одну карточку. Возвращает `(product, error_code)`."""
@@ -51,6 +67,13 @@ def publish_product(product, actor) -> tuple[object | None, str | None]:
     # менеджер каталога, а выпускать в общий каталог — тот, кому это доверено.
     if not can_manage(actor, product, permission="catalog.publish"):
         return None, "PRODUCT_NOT_YOURS"
+    # Верификация компании нужна, чтобы карточка стала ВИДНА рынку, но не чтобы её завести.
+    # Эталон Amazon Seller Central: листинги готовятся, пока идёт проверка аккаунта, а живыми
+    # становятся после неё. Гейт не новый — он переехал СЮДА из навигации, где прятал раздел
+    # целиком: до этой волны непроверенный продавец не мог ни наполнять каталог, ни грузить
+    # прайс. Прав стало строго больше, публикация осталась там же, где была.
+    if not _seller_kyc_verified(product, actor):
+        return None, "SELLER_KYC_REQUIRED"
     report = completeness(product)
     if not report["is_publishable"]:
         # Код ошибки называет НЕДОСТАЮЩЕЕ — пользователь не должен гадать, как у волны E2

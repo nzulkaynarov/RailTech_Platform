@@ -29,6 +29,8 @@ import {
 //     договоров ведут ссылки именно туда;
 //   • KYC_ALLOWED_PAGES += `my-requests`, `my-subscription` — чек-лист онбординга и баннер
 //     тарифа зовут новичка ровно сюда ДО верификации.
+//   • KYC_ALLOWED_PAGES += страницы номенклатуры — наполнение каталога разрешено до
+//     верификации, публикация осталась за порогом (гейт переехал в catalog/publishing.py).
 
 const asSorted = (value: Set<string> | readonly string[]) => [...value].sort();
 
@@ -54,6 +56,10 @@ describe('реестр страниц: эквивалентность прежн
       asSorted([
         'dashboard', 'profile', 'settings', 'help', 'products', 'product_detail',
         'my-requests', 'my-subscription',
+        // Наполнение каталога до верификации (эталон Amazon Seller Central): карточки,
+        // справочники и загрузка прайса открыты, ПУБЛИКАЦИЯ — нет, её держит сервер
+        // (`SELLER_KYC_REQUIRED` в catalog/publishing.py).
+        'nomenclature', 'hs-directory', 'categories', 'equipment-groups', 'catalog-import',
       ]),
     );
   });
@@ -154,7 +160,11 @@ describe('реестр страниц: инварианты', () => {
     // гейтом до подтверждения L2 — здесь фиксируем, что список исключений короткий.
     // Потолок поднят с 6 до 8 волной U1: до верификации доступны ещё свои заявки
     // (черновик разрешён KYC-floor'ом) и подписка (страница счёта, а не бизнес-операция).
-    expect(KYC_ALLOWED_PAGES.size).toBeLessThanOrEqual(8);
+    // С 8 до 13 — волной «наполнение до верификации»: пять страниц номенклатуры перестали
+    // прятаться, потому что ГОТОВИТЬ каталог до проверки документов можно (Amazon Seller
+    // Central), а выпускать в общий каталог — нет. Порог не исчез, он переехал с раздела на
+    // действие публикации, и держит его сервер.
+    expect(KYC_ALLOWED_PAGES.size).toBeLessThanOrEqual(13);
   });
 
   it('до KYC доступно ровно то, куда зовут подсказки новичку', () => {
