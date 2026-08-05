@@ -8,24 +8,63 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PageShell } from './shared/PageShell';
-import { sourcingApi, type CatalogImportResult } from '@/api/sourcingApi';
+import { sourcingApi, type CatalogImportResult, type CatalogImportRowMessage } from '@/api/sourcingApi';
 import { translateApiError } from '@/lib/apiError';
 
 type TaskStatus = 'PENDING' | 'STARTED' | 'PROGRESS' | 'SUCCESS' | 'FAILURE' | 'REVOKED' | string;
 
-/** Map a backend row-error code to a friendly message. */
-function useRowErrorText() {
+/**
+ * Коды с параметром после двоеточия (`CODE:значение`) — значение подставляется в `{{code}}`.
+ * Единая таблица вместо цепочки `startsWith`: новый код бэкенда добавляется одной строкой,
+ * и невозможно забыть про него ветку.
+ */
+const PARAMETERIZED_MESSAGE_KEYS: Record<string, string> = {
+  UNKNOWN_CURRENCY: 'catalogImport.err.unknownCurrency',
+  UNKNOWN_STOCK_STATUS: 'catalogImport.err.unknownStock',
+  UNKNOWN_CATEGORY: 'catalogImport.err.unknownCategory',
+  UNKNOWN_DOMAIN: 'catalogImport.err.unknownDomain',
+  HS_CODE_NOT_IN_CLASSIFIER: 'catalogImport.err.hsCodeNotInClassifier',
+  HS_CODE_RETIRED: 'catalogImport.err.hsCodeRetired',
+};
+
+/** Коды без параметра. */
+const PLAIN_MESSAGE_KEYS: Record<string, string> = {
+  PRICE_NOT_A_NUMBER: 'catalogImport.err.badPrice',
+  PRICE_NOT_POSITIVE: 'catalogImport.err.priceNotPositive',
+  NAME_COLUMN_NOT_FOUND: 'catalogImport.err.nameColumnNotFound',
+  EQUIPMENT_GROUP_REQUIRED: 'catalogImport.err.equipmentGroupRequired',
+  ROW_FAILED: 'catalogImport.err.rowFailed',
+};
+
+/** Похоже ли начало сообщения на машинный код, а не на готовую фразу сервера. */
+const MACHINE_CODE_RE = /^[A-Z][A-Z0-9_]*$/;
+
+/**
+ * Переводит сообщение бэкенда (ошибку строки, замечание или фатальную ошибку файла)
+ * в человеческий текст.
+ *
+ * Незнакомый код НЕ выдаётся за перевод: он показывается как есть внутри честной
+ * обёртки «неизвестная причина», чтобы поддержка увидела код, а пользователь понял,
+ * что это не текст для него. Не-код (готовая фраза сервера) возвращается без изменений.
+ */
+function useImportMessageText() {
   const { t } = useTranslation();
   return (message: string): string => {
-    if (message.startsWith('UNKNOWN_CURRENCY')) {
-      return t('catalogImport.err.unknownCurrency', { code: message.split(':')[1] ?? '' });
+    const raw = (message ?? '').trim();
+    if (!raw) return '';
+    const separator = raw.indexOf(':');
+    const code = separator === -1 ? raw : raw.slice(0, separator).trim();
+    const value = separator === -1 ? '' : raw.slice(separator + 1).trim();
+
+    if (separator !== -1) {
+      const parameterizedKey = PARAMETERIZED_MESSAGE_KEYS[code];
+      if (parameterizedKey) return t(parameterizedKey, { code: value });
     }
-    if (message.startsWith('UNKNOWN_STOCK_STATUS')) {
-      return t('catalogImport.err.unknownStock', { code: message.split(':')[1] ?? '' });
-    }
-    if (message === 'PRICE_NOT_A_NUMBER') return t('catalogImport.err.badPrice');
-    if (message === 'ROW_FAILED') return t('catalogImport.err.rowFailed');
-    return message;
+    const plainKey = PLAIN_MESSAGE_KEYS[code];
+    if (plainKey) return value ? `${t(plainKey)}: ${value}` : t(plainKey);
+
+    if (MACHINE_CODE_RE.test(code)) return t('catalogImport.err.unknownCode', { code: raw });
+    return raw;
   };
 }
 
@@ -37,7 +76,7 @@ function useRowErrorText() {
  */
 export function CatalogImportPage() {
   const { t } = useTranslation();
-  const rowErrorText = useRowErrorText();
+  const importMessageText = useImportMessageText();
   const [file, setFile] = useState<File | null>(null);
   const [taskId, setTaskId] = useState<string | null>(null);
   const [taskStatus, setTaskStatus] = useState<TaskStatus | null>(null);
@@ -140,6 +179,16 @@ export function CatalogImportPage() {
   const isTerminal = taskStatus === 'SUCCESS' || taskStatus === 'FAILURE' || taskStatus === 'REVOKED';
   const isError = taskResult?.status === 'error';
   const errors = taskResult?.errors ?? [];
+  const warnings = taskResult?.warnings ?? [];
+  // Списки строк усечены сервером, а счётчики продолжают считать. Раньше экран
+  // показывал только усечённый список и молча выдавал его за полный.
+  const errorCount = taskResult?.error_count ?? errors.length;
+  const warningCount = taskResult?.warning_count ?? warnings.length;
+  const rowsTruncated = taskResult?.rows_truncated ?? 0;
+  /** `null` — бэкенд старше бандла и порог публикации не считал: врать нечем, блок скрываем. */
+  const unpublishable = typeof taskResult?.unpublishable === 'number' ? taskResult.unpublishable : null;
+  const missingBreakdown = taskResult?.missing_breakdown ?? [];
+  const touchedCards = (taskResult?.created ?? 0) + (taskResult?.updated ?? 0);
   const progress =
     taskMeta?.total && taskMeta.total > 0
       ? Math.round(((taskMeta.current ?? 0) / taskMeta.total) * 100)
@@ -262,12 +311,77 @@ export function CatalogImportPage() {
 
               {isTerminal && taskStatus === 'SUCCESS' && !isError ? (
                 <div className="space-y-3">
+                  {rowsTruncated > 0 ? (
+                    <div className="flex items-start gap-3 rounded-md border-2 border-warning/50 bg-warning/10 p-3">
+                      <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" aria-hidden="true" />
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <p className="text-sm font-semibold text-warning tabular-nums">
+                          {t('catalogImport.rowsTruncatedTitle', { n: rowsTruncated })}
+                        </p>
+                        <p className="text-xs text-foreground">{t('catalogImport.rowsTruncatedHint')}</p>
+                      </div>
+                    </div>
+                  ) : null}
+
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                     <Stat label={t('catalogImport.stat.created')} value={taskResult?.created} />
                     <Stat label={t('catalogImport.stat.updated')} value={taskResult?.updated} />
                     <Stat label={t('catalogImport.stat.offers')} value={taskResult?.offers_upserted} />
                     <Stat label={t('catalogImport.stat.skipped')} value={taskResult?.skipped} tone="warn" />
                   </div>
+
+                  {/*
+                    Главное число экрана: сколько карточек нельзя будет опубликовать.
+                    Без него продавец создавал 3000 карточек и узнавал о непроходимом
+                    пороге по одной карточке за раз.
+                  */}
+                  {unpublishable !== null && unpublishable > 0 ? (
+                    <div className="rounded-md border-2 border-warning/50 bg-warning/10 p-4">
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className="mt-1 h-5 w-5 shrink-0 text-warning" aria-hidden="true" />
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <p className="text-2xl font-bold tabular-nums text-warning">{unpublishable}</p>
+                          <p className="text-sm font-semibold text-foreground">
+                            {t('catalogImport.unpublishableTitle')}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {taskResult?.dry_run
+                              ? t('catalogImport.unpublishableHintDryRun')
+                              : t('catalogImport.unpublishableHint')}
+                          </p>
+                        </div>
+                      </div>
+                      {missingBreakdown.length > 0 ? (
+                        <div className="mt-3 space-y-1 border-t border-warning/30 pt-3">
+                          <p className="text-xs font-medium text-foreground">
+                            {t('catalogImport.missingBreakdownTitle')}
+                          </p>
+                          <ul className="space-y-1">
+                            {missingBreakdown.map((requirement) => (
+                              <li
+                                key={requirement.code}
+                                className="flex items-center justify-between gap-3 text-xs"
+                              >
+                                {/* label приходит уже переведённым сервером — через t() не гоняем */}
+                                <span className="min-w-0 truncate text-foreground">{requirement.label}</span>
+                                <span className="shrink-0 tabular-nums text-muted-foreground">
+                                  {t('catalogImport.missingOnCards', { n: requirement.count })}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {/* Хвалить нечего, если карточек вообще нет: «все пройдут порог» при нуле — ложь. */}
+                  {unpublishable === 0 && touchedCards > 0 ? (
+                    <div className="flex items-start gap-2 rounded-md border border-success/40 bg-success/5 p-3 text-xs">
+                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" aria-hidden="true" />
+                      <div className="text-foreground">{t('catalogImport.allPublishable')}</div>
+                    </div>
+                  ) : null}
 
                   {taskResult?.dry_run ? (
                     <div className="flex items-start gap-2 rounded-md border border-info/40 bg-info/5 p-3 text-xs">
@@ -284,26 +398,41 @@ export function CatalogImportPage() {
                   {errors.length > 0 ? (
                     <div className="space-y-1">
                       <p className="text-xs font-semibold text-destructive">
-                        {t('catalogImport.errorsTitle', { count: taskResult?.error_count ?? errors.length })}
+                        {t('catalogImport.errorsTitle', { count: errorCount })}
                       </p>
-                      <div className="max-h-48 overflow-auto rounded-md border border-border">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="w-20">{t('catalogImport.errRow')}</TableHead>
-                              <TableHead>{t('catalogImport.errReason')}</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {errors.map((rowError) => (
-                              <TableRow key={rowError.row}>
-                                <TableCell className="tabular-nums text-muted-foreground">{rowError.row}</TableCell>
-                                <TableCell>{rowErrorText(rowError.message)}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
+                      <p className="text-xs text-muted-foreground">{t('catalogImport.errorsHint')}</p>
+                      <RowMessageTable
+                        rows={errors}
+                        rowLabel={t('catalogImport.errRow')}
+                        reasonLabel={t('catalogImport.errReason')}
+                        format={importMessageText}
+                      />
+                      {errorCount > errors.length ? (
+                        <p className="text-xs text-muted-foreground">
+                          {t('catalogImport.shownFirst', { shown: errors.length, total: errorCount })}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {/* Замечания — НЕ отказы: строка загружена, но к ней есть вопрос. */}
+                  {warnings.length > 0 ? (
+                    <div className="space-y-1">
+                      <p className="text-xs font-semibold text-warning">
+                        {t('catalogImport.warningsTitle', { n: warningCount })}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{t('catalogImport.warningsHint')}</p>
+                      <RowMessageTable
+                        rows={warnings}
+                        rowLabel={t('catalogImport.errRow')}
+                        reasonLabel={t('catalogImport.warnReason')}
+                        format={importMessageText}
+                      />
+                      {warningCount > warnings.length ? (
+                        <p className="text-xs text-muted-foreground">
+                          {t('catalogImport.shownFirst', { shown: warnings.length, total: warningCount })}
+                        </p>
+                      ) : null}
                     </div>
                   ) : null}
                 </div>
@@ -311,8 +440,12 @@ export function CatalogImportPage() {
 
               {(isTerminal && taskStatus !== 'SUCCESS') || isError ? (
                 <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-xs">
-                  <AlertCircle className="mt-0.5 h-3.5 w-3.5 text-destructive" aria-hidden="true" />
-                  <div className="text-destructive">{taskResult?.message || t('catalogImport.failed')}</div>
+                  <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-destructive" aria-hidden="true" />
+                  {/* Фатальная ошибка файла (например, NAME_COLUMN_NOT_FOUND) приходит тем же
+                      машинным кодом — переводим её той же таблицей, а не печатаем код в лицо. */}
+                  <div className="text-destructive">
+                    {taskResult?.message ? importMessageText(taskResult.message) : t('catalogImport.failed')}
+                  </div>
                 </div>
               ) : null}
             </CardContent>
@@ -329,12 +462,48 @@ export function CatalogImportPage() {
               <li>• {t('catalogImport.req1')}</li>
               <li>• {t('catalogImport.req2')}</li>
               <li>• {t('catalogImport.req3')}</li>
+              <li>• {t('catalogImport.req5')}</li>
               <li>• {t('catalogImport.req4')}</li>
             </ul>
           </CardContent>
         </Card>
       </div>
     </PageShell>
+  );
+}
+
+/** Таблица «строка файла → причина». Одна разметка на ошибки и на замечания. */
+function RowMessageTable({
+  rows,
+  rowLabel,
+  reasonLabel,
+  format,
+}: {
+  rows: CatalogImportRowMessage[];
+  rowLabel: string;
+  reasonLabel: string;
+  format: (message: string) => string;
+}) {
+  return (
+    <div className="max-h-48 overflow-auto rounded-md border border-border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-20">{rowLabel}</TableHead>
+            <TableHead>{reasonLabel}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {/* На одну строку файла может прийти несколько сообщений — ключ по номеру строки не уникален. */}
+          {rows.map((rowMessage, index) => (
+            <TableRow key={`${rowMessage.row}-${index}`}>
+              <TableCell className="tabular-nums text-muted-foreground">{rowMessage.row}</TableCell>
+              <TableCell>{format(rowMessage.message)}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
 

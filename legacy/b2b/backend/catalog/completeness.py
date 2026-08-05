@@ -15,7 +15,12 @@
 
 from __future__ import annotations
 
+from django.db.models import prefetch_related_objects
 from django.utils.translation import gettext_lazy as _
+
+#: Размер пачки для догрузки m2m в `summarize_completeness`. Держит `IN (...)` в разумных
+#: рамках на импорте в десятки тысяч строк, оставляя цену «запросов на карточку» нулевой.
+COMPLETENESS_BATCH = 500
 
 
 def hs_digits(product) -> str:
@@ -171,3 +176,41 @@ def completeness(product, ctx: CompletenessContext | None = None) -> dict:
     filled = len(requirements) - len(missing)
     percent = round(filled * 100 / len(requirements)) if requirements else 100
     return {"percent": percent, "missing": missing, "is_publishable": not missing}
+
+
+def summarize_completeness(products) -> dict:
+    """Сводка по ПАЧКЕ карточек: `{unpublishable, missing_breakdown}`.
+
+    Зачем отдельная функция: массовая загрузка прайс-листа создаёт тысячи черновиков, и
+    единственный честный ответ продавцу — «столько-то из них опубликовать нельзя, и вот чего
+    им не хватает». Считать это надо ТЕМИ ЖЕ правилами, что и порог публикации, иначе отчёт
+    начнёт расходиться с кнопкой «Опубликовать» (Akeneo показывает полноту тем же движком,
+    которым закрывает канал).
+
+    Цена в запросах не растёт со строками: один `CompletenessContext` на всю пачку +
+    пакетная догрузка `equipment_groups` вместо `.exists()` на карточку.
+    """
+    products = [product for product in products if product is not None]
+    if not products:
+        return {"unpublishable": 0, "missing_breakdown": []}
+
+    saved = [product for product in products if product.pk is not None]
+    for start in range(0, len(saved), COMPLETENESS_BATCH):
+        prefetch_related_objects(saved[start : start + COMPLETENESS_BATCH], "equipment_groups")
+
+    ctx = CompletenessContext(products)
+    counts: dict[str, int] = {}
+    labels: dict[str, str] = {}
+    unpublishable = 0
+    for product in products:
+        report = completeness(product, ctx)
+        if report["is_publishable"]:
+            continue
+        unpublishable += 1
+        for item in report["missing"]:
+            counts[item["code"]] = counts.get(item["code"], 0) + 1
+            labels[item["code"]] = item["label"]
+
+    breakdown = [{"code": code, "label": labels[code], "count": count} for code, count in counts.items()]
+    breakdown.sort(key=lambda item: (-item["count"], item["code"]))
+    return {"unpublishable": unpublishable, "missing_breakdown": breakdown}

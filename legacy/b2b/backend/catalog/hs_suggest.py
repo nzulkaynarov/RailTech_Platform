@@ -102,16 +102,58 @@ def suggest_hs_codes(text: str, limit: int = 5, min_level: int = 6) -> list[dict
     ]
 
 
+def code_digits(code: str) -> str:
+    """Ключ справочника: только цифры. Разделители и пробелы кода не меняют."""
+    return "".join(ch for ch in (code or "") if ch.isdigit())
+
+
 def is_known_code(code: str) -> bool:
     """Есть ли код в справочнике. Пустой справочник → True: не блокируем работу без данных."""
     from master_data.models import HSCode
 
-    digits = "".join(ch for ch in (code or "") if ch.isdigit())
+    digits = code_digits(code)
     if not digits:
         return False
     if not HSCode.objects.exists():
         return True
     return HSCode.objects.filter(code=digits).exists()
+
+
+def validate_hs_codes(codes) -> dict[str, dict]:
+    """Пакетный `validate_hs_code`: тот же вердикт, но ДВА запроса на пачку, а не на код.
+
+    Нужен там, где кодов много сразу — прежде всего в импорте прайс-листа: построчный
+    `validate_hs_code` стоил бы два запроса на КАЖДУЮ из тысяч строк. Ключ ответа —
+    нормализованный код (только цифры); пустые значения в ответ не попадают, у «кода нет»
+    вердикта не существует.
+    """
+    from django.utils import timezone
+
+    from master_data.models import HSCode
+
+    wanted = {digits for digits in (code_digits(code) for code in codes) if digits}
+    if not wanted:
+        return {}
+
+    rows = {
+        code: (valid_until, name)
+        for code, valid_until, name in HSCode.objects.filter(code__in=wanted).values_list("code", "valid_until", "name")
+    }
+    # Пустой справочник → любой код известен и действует. Спрашиваем `exists()` только когда
+    # НИ ОДИН код не нашёлся: иначе наполненность уже доказана найденной строкой.
+    if not rows and not HSCode.objects.exists():
+        return {digits: {"known": True, "active": True, "name": ""} for digits in wanted}
+
+    today = timezone.now().date()
+    verdicts = {}
+    for digits in wanted:
+        row = rows.get(digits)
+        if row is None:
+            verdicts[digits] = {"known": False, "active": False, "name": ""}
+            continue
+        valid_until, name = row
+        verdicts[digits] = {"known": True, "active": not (valid_until and valid_until < today), "name": name}
+    return verdicts
 
 
 def validate_hs_code(code: str) -> dict:
@@ -126,21 +168,10 @@ def validate_hs_code(code: str) -> dict:
     загружен, а код — известен продавцу из декларации. Пустой справочник → любой код считается
     известным и действующим, предупреждений нет.
     """
-    from django.utils import timezone
-
-    from master_data.models import HSCode
-
-    digits = "".join(ch for ch in (code or "") if ch.isdigit())
+    digits = code_digits(code)
     if not digits:
         return {"known": False, "active": False, "name": ""}
-    if not HSCode.objects.exists():
-        return {"known": True, "active": True, "name": ""}
-    row = HSCode.objects.filter(code=digits).first()
-    if row is None:
-        return {"known": False, "active": False, "name": ""}
-    today = timezone.now().date()
-    active = not (row.valid_until and row.valid_until < today)
-    return {"known": True, "active": active, "name": row.name}
+    return validate_hs_codes([digits])[digits]
 
 
 def cards_with_retired_codes(owner_company=None):

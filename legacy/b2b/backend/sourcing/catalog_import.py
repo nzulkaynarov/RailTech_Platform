@@ -6,6 +6,11 @@ A seller uploads an .xlsx of their products + commercial terms. We:
     or GOST/drawing — so two suppliers of the same item share ONE PIM card,
   * upsert the seller's **SupplierOffer** (price / currency / stock / lead / MOQ).
 
+Файл несёт и ТАКСОНОМИЮ карточки — категорию, код ТН ВЭД и направление. Без них загрузка
+физически не могла дать публикуемую карточку: порог публикации (`catalog/completeness.py`)
+требует ровно эти поля, и прайс-лист на 3000 строк давал 3000 черновиков, о чём отчёт молчал.
+Поэтому же отчёт теперь считает, сколько карточек порог не пройдут и чего им не хватает.
+
 The supplier is the UPLOADER's own company (derived from membership in the
 view) — never a column in the file. Each row is processed in its own savepoint
 so one bad row can't poison the batch; per-row problems are returned as a
@@ -21,12 +26,15 @@ from decimal import Decimal, InvalidOperation
 from io import BytesIO
 
 import pandas as pd
+from django.core.exceptions import ValidationError
 from django.db import transaction
 
 logger = logging.getLogger(__name__)
 
 MAX_EXCEL_ROWS = 50_000
 MAX_REPORTED_ERRORS = 200
+#: Предупреждения живут по тем же правилам, что и ошибки: показываем первые N, считаем все.
+MAX_REPORTED_WARNINGS = MAX_REPORTED_ERRORS
 
 # Logical field -> substring aliases (matched against lower-cased headers).
 # Order matters: more specific fields claim their column before generic ones
@@ -37,6 +45,10 @@ MAX_REPORTED_ERRORS = 200
 # "производитель" is a substring of "артикул производителя" (MPN) and would
 # otherwise steal it.
 COLUMN_ALIASES = {
+    # `category` стоит ПЕРВЫМ намеренно. Алиас «категор» не встречается ни в одном заголовке
+    # остальных полей, так что ничего у них он не отнимает; зато заголовок «Категория товара»
+    # иначе достался бы полю `name` (у него алиас «товар»), и карточки назвались бы категориями.
+    "category": ["категор", "category"],
     "name": ["name", "наименование", "товар", "название", "изделие"],
     "mpn": ["артикул производителя", "mpn", "part number", "part_no", "заводской", "номер детали"],
     "gost": ["гост", "gost", "чертеж", "drawing"],
@@ -49,6 +61,12 @@ COLUMN_ALIASES = {
     "stock": ["наличие", "склад", "stock"],
     "lead": ["срок", "lead", "поставк"],
     "moq": ["мин", "moq", "минимальн"],
+    # Остальные новинки — в САМОМ КОНЦЕ: так они могут занять только колонку, которую не
+    # забрал никто до них, и разбор существующих файлов не меняется. Алиасы узкие осознанно:
+    # общее «код» отобрало бы у артикула «Код поставщика», а «направление» безопасно только
+    # целиком — с «наименованием» оно не пересекается ни одной подстрокой.
+    "hs_code": ["тн вэд", "тнвэд", "тн-вэд", "hs code", "hs_code", "hs-code", "hscode"],
+    "domain_type": ["направление", "домен", "domain"],
 }
 
 
@@ -59,12 +77,26 @@ class ImportResult:
     offers_upserted: int = 0
     skipped: int = 0
     errors: list = field(default_factory=list)
+    #: Мягкие замечания: строка ЗАГРУЖЕНА, но к ней есть вопрос (код ТН ВЭД вне справочника).
+    #: Предупреждение не откатывает строку и не попадает в `skipped` — иначе это был бы блок.
+    warnings: list = field(default_factory=list)
+    warning_count: int = 0
+    #: Сколько строк файла не попало в разбор из-за `MAX_EXCEL_ROWS` (раньше исчезали молча).
+    rows_truncated: int = 0
+    #: Сколько затронутых карточек НЕ пройдут порог публикации и чего им не хватает.
+    unpublishable: int = 0
+    missing_breakdown: list = field(default_factory=list)
     dry_run: bool = False
 
     def add_error(self, row_number: int, message: str) -> None:
         self.skipped += 1
         if len(self.errors) < MAX_REPORTED_ERRORS:
             self.errors.append({"row": row_number, "message": message})
+
+    def add_warning(self, row_number: int, message: str) -> None:
+        self.warning_count += 1
+        if len(self.warnings) < MAX_REPORTED_WARNINGS:
+            self.warnings.append({"row": row_number, "message": message})
 
     def as_dict(self) -> dict:
         return {
@@ -74,8 +106,16 @@ class ImportResult:
             "updated": self.updated,
             "offers_upserted": self.offers_upserted,
             "skipped": self.skipped,
+            # `error_count`/`warning_count` считают ВСЕ находки, а списки усечены до
+            # MAX_REPORTED_*: интерфейсу этого достаточно, чтобы сказать «показаны первые 200
+            # из N», а не делать вид, что их всего 200.
             "error_count": self.skipped,
             "errors": self.errors,
+            "warning_count": self.warning_count,
+            "warnings": self.warnings,
+            "rows_truncated": self.rows_truncated,
+            "unpublishable": self.unpublishable,
+            "missing_breakdown": self.missing_breakdown,
             # Backward-compatible key consumed by the existing frontend.
             "items_processed": self.created + self.updated,
         }
@@ -136,6 +176,19 @@ def _parse_int(text: str, default: int) -> int:
         return default
 
 
+def _hs_digits(text: str) -> str:
+    """Цифры кода ТН ВЭД из ячейки.
+
+    Excel отдаёт числовую ячейку как `8482100000.0` — дробный хвост принадлежит представлению
+    числа, а не коду, и без его отсечения десятизначный код превращался бы в одиннадцатизначный.
+    """
+    text = (text or "").strip()
+    whole, dot, frac = text.partition(".")
+    if dot and whole.isdigit() and set(frac) <= {"0"}:
+        text = whole
+    return "".join(char for char in text if char.isdigit())
+
+
 @dataclass
 class _Ctx:
     """Per-import shared state (caches + lookups) — avoids per-row DB queries."""
@@ -148,8 +201,18 @@ class _Ctx:
     currency: dict
     stock: dict
     domain: dict
+    #: Домен по КОДУ и по НАЗВАНИЮ в нижнем регистре — продавец пишет в файле любое из двух.
+    domain_by_key: dict
+    #: Категория по названию в нижнем регистре. Таксономия платформенная: импорт её ЧИТАЕТ.
+    category_by_name: dict
+    #: Вердикт справочника ТН ВЭД по каждому коду файла — считается пачкой ДО обхода строк.
+    hs_status: dict
+    hs_code_max_length: int
     status_draft: object
     brand_cache: dict
+    #: Затронутые карточки по pk (одна и та же строка может встретиться дважды) — по ним
+    #: считается сводка публикуемости.
+    touched_products: dict
     dry_run: bool
 
 
@@ -175,59 +238,101 @@ def _resolve_brand(ctx: _Ctx, name: str):
 
 
 def _find_existing_product(ctx: _Ctx, brand, mpn: str, gost: str):
-    """De-dup key: (brand + manufacturer part number), else GOST/drawing."""
+    """De-dup key: (brand + manufacturer part number), else GOST/drawing.
+
+    `select_related("domain_type")` — не украшение: домен читает и порог публикации, и
+    сводка отчёта, и без него каждая обновлённая карточка стоила бы лишний запрос.
+    """
+    query = ctx.Product.objects.select_related("domain_type")
     if brand and mpn:
-        return ctx.Product.objects.filter(brand=brand, manufacturer_part_number__iexact=mpn).first()
+        return query.filter(brand=brand, manufacturer_part_number__iexact=mpn).first()
     if gost:
-        query = ctx.Product.objects.filter(gost_drawing__iexact=gost)
+        query = query.filter(gost_drawing__iexact=gost)
         if brand:
             query = query.filter(brand=brand)
         return query.first()
     return None
 
 
-def _apply_product(ctx: _Ctx, fields: dict):
-    """Create or update the canonical Product card. Returns (product, created)."""
+def _save_product(product) -> None:
+    """Сохранить карточку, назвав ту ошибку модели, которую импорт реально умеет вызвать.
+
+    `Product.save()` зовёт `full_clean()`, а `clean()` требует у СУЩЕСТВУЮЩЕЙ ж/д карточки хотя
+    бы одну группу оборудования (когда справочник групп наполнен). Продавец видел за этим
+    безымянное `ROW_FAILED` и не мог догадаться, что делать. Модельную проверку не ослабляем —
+    даём ей имя и адрес карточки.
+    """
+    try:
+        product.save()
+    except ValidationError as exc:
+        if "equipment_groups" in (getattr(exc, "error_dict", None) or {}):
+            raise ValueError(f"EQUIPMENT_GROUP_REQUIRED:{product.sku}") from exc
+        raise
+
+
+def _update_product(ctx: _Ctx, existing, fields: dict, brand, uom) -> None:
+    """Обновить существующую карточку значениями строки (пустая ячейка ничего не стирает)."""
+    existing.name = fields["name"]
+    if fields["description"]:
+        existing.description = fields["description"]
+    if brand:
+        existing.brand = brand
+    if fields["mpn"]:
+        existing.manufacturer_part_number = fields["mpn"]
+    if fields["gost"]:
+        existing.gost_drawing = fields["gost"]
+    if uom:
+        existing.uom = uom
+    if fields["category"]:
+        existing.category = fields["category"]
+    if fields["hs_code"]:
+        existing.hs_code = fields["hs_code"]
+    # ЯВНО указанное направление применяется и при обновлении: иначе домен карточки, однажды
+    # угаданный по ключевым словам, нельзя было исправить ничем, кроме ручной правки. ДОГАДКА
+    # же остаётся только для создания — молча переклассифицировать чужую готовую карточку по
+    # совпадению слова в наименовании нельзя.
+    if fields["domain"]:
+        existing.domain_type = fields["domain"]
+    # Backfill ownership for an orphaned card (C3), but never hijack a product
+    # another tenant already owns — de-dup matches globally on brand+MPN.
+    if ctx.supplier and existing.owner_company_id is None:
+        existing.owner_company = ctx.supplier
+    _save_product(existing)
+
+
+def _create_product(ctx: _Ctx, fields: dict, brand, uom):
     from .tasks import route_domain
 
-    brand = _resolve_brand(ctx, fields["brand_name"])
-    existing = _find_existing_product(ctx, brand, fields["mpn"], fields["gost"])
-    domain = ctx.domain.get(route_domain(fields["name"]))
-    uom = ctx.uom.get(fields["uom_code"]) if fields["uom_code"] else None
-
-    if existing:
-        existing.name = fields["name"]
-        if fields["description"]:
-            existing.description = fields["description"]
-        if brand:
-            existing.brand = brand
-        if fields["mpn"]:
-            existing.manufacturer_part_number = fields["mpn"]
-        if fields["gost"]:
-            existing.gost_drawing = fields["gost"]
-        if uom:
-            existing.uom = uom
-        # Backfill ownership for an orphaned card (C3), but never hijack a product
-        # another tenant already owns — de-dup matches globally on brand+MPN.
-        if ctx.supplier and existing.owner_company_id is None:
-            existing.owner_company = ctx.supplier
-        existing.save()
-        return existing, False
-
-    product = ctx.Product.objects.create(
+    domain = fields["domain"] or ctx.domain.get(route_domain(fields["name"]))
+    product = ctx.Product(
         name=fields["name"],
         description=fields["description"],
         brand=brand,
         manufacturer_part_number=fields["mpn"],
         gost_drawing=fields["gost"],
         domain_type=domain,
+        category=fields["category"],
+        hs_code=fields["hs_code"],
         status=ctx.status_draft,
         uom=uom,
         # Stamp the importing seller as owner so they can see/manage their own cards
         # (C3) — without this, imported products are orphaned and invisible to them.
         owner_company=ctx.supplier,
     )
-    return product, True
+    _save_product(product)
+    return product
+
+
+def _apply_product(ctx: _Ctx, fields: dict):
+    """Create or update the canonical Product card. Returns (product, created)."""
+    brand = _resolve_brand(ctx, fields["brand_name"])
+    existing = _find_existing_product(ctx, brand, fields["mpn"], fields["gost"])
+    uom = ctx.uom.get(fields["uom_code"]) if fields["uom_code"] else None
+
+    if existing:
+        _update_product(ctx, existing, fields, brand, uom)
+        return existing, False
+    return _create_product(ctx, fields, brand, uom), True
 
 
 def _upsert_offer(ctx: _Ctx, product, offer: dict) -> None:
@@ -247,16 +352,44 @@ def _upsert_offer(ctx: _Ctx, product, offer: dict) -> None:
     )
 
 
-def _process_one_row(ctx: _Ctx, row, columns: dict):
-    """Handle a single row. Returns an outcome dict, or None for a blank row.
+def _row_taxonomy(ctx: _Ctx, row, columns: dict):
+    """Категория / код ТН ВЭД / направление строки. Возвращает `(значения, предупреждения)`.
 
-    Raises ValueError with a stable code for row-level problems so the caller
-    can roll back this row's savepoint and report it.
+    Категория и направление СТРОГИЕ: продавец написал слово, которого в справочнике нет —
+    молча проглотить его значит соврать. Категорию при этом импорт только ЧИТАЕТ: таксономия
+    платформенная, продавец в неё не пишет (это продуктовое решение, а не недосмотр).
+
+    Код ТН ВЭД, наоборот, МЯГКИЙ (PRODUCT RULE 2): классификатор может быть ещё не загружен, а
+    код продавец знает из своей декларации — расхождение со справочником это ПРЕДУПРЕЖДЕНИЕ.
     """
-    name = _cell(row, columns["name"])
-    if not name:
-        return None
+    category_name = _cell(row, columns["category"])
+    category = ctx.category_by_name.get(category_name.lower()) if category_name else None
+    if category_name and category is None:
+        raise ValueError(f"UNKNOWN_CATEGORY:{category_name}")
 
+    domain_text = _cell(row, columns["domain_type"])
+    domain = ctx.domain_by_key.get(domain_text.lower()) if domain_text else None
+    if domain_text and domain is None:
+        raise ValueError(f"UNKNOWN_DOMAIN:{domain_text}")
+
+    warnings = []
+    hs_code = _hs_digits(_cell(row, columns["hs_code"]))
+    if hs_code and len(hs_code) > ctx.hs_code_max_length:
+        # Длиннее поля карточки — записать нельзя, но и ронять строку из-за этого не за что.
+        warnings.append(f"HS_CODE_TOO_LONG:{hs_code}")
+        hs_code = ""
+    elif hs_code:
+        verdict = ctx.hs_status.get(hs_code)
+        if verdict and not verdict["known"]:
+            warnings.append(f"HS_CODE_NOT_IN_CLASSIFIER:{hs_code}")
+        elif verdict and not verdict["active"]:
+            warnings.append(f"HS_CODE_RETIRED:{hs_code}")
+
+    return {"category": category, "domain": domain, "hs_code": hs_code}, warnings
+
+
+def _row_commercials(ctx: _Ctx, row, columns: dict):
+    """Валюта / наличие / цена строки. Коды сверяются со справочниками строго."""
     currency_code = _cell(row, columns["currency"]).upper()
     currency = ctx.currency.get(currency_code) if currency_code else None
     if currency_code and not currency:
@@ -267,7 +400,21 @@ def _process_one_row(ctx: _Ctx, row, columns: dict):
     if stock_code and not stock:
         raise ValueError(f"UNKNOWN_STOCK_STATUS:{stock_code}")
 
-    price = _parse_decimal(_cell(row, columns["price"]))
+    return currency, stock, _parse_decimal(_cell(row, columns["price"]))
+
+
+def _process_one_row(ctx: _Ctx, row, columns: dict):
+    """Handle a single row. Returns an outcome dict, or None for a blank row.
+
+    Raises ValueError with a stable code for row-level problems so the caller
+    can roll back this row's savepoint and report it.
+    """
+    name = _cell(row, columns["name"])
+    if not name:
+        return None
+
+    currency, stock, price = _row_commercials(ctx, row, columns)
+    taxonomy, warnings = _row_taxonomy(ctx, row, columns)
 
     product, created = _apply_product(
         ctx,
@@ -278,6 +425,7 @@ def _process_one_row(ctx: _Ctx, row, columns: dict):
             "mpn": _cell(row, columns["mpn"]),
             "gost": _cell(row, columns["gost"]),
             "uom_code": _cell(row, columns["uom"]).lower(),
+            **taxonomy,
         },
     )
 
@@ -297,13 +445,24 @@ def _process_one_row(ctx: _Ctx, row, columns: dict):
         )
         offer_written = True
 
-    return {"created": created, "offer": offer_written}
+    return {"created": created, "offer": offer_written, "product": product, "warnings": warnings}
 
 
-def _build_context(supplier, dry_run: bool) -> _Ctx:
-    from catalog.models import DomainType, Manufacturer, Product, ProductStatus, StockStatus, SupplierOffer
+def _domain_keys(domains) -> dict:
+    """Направление и по коду (`RAILWAY_MACHINERY`), и по человеческому названию — регистр не важен.
+
+    Название кладём первым, код — вторым: при совпадении выигрывает КОД, он однозначен.
+    """
+    by_key = {domain.name.lower(): domain for domain in domains if domain.name}
+    by_key.update({domain.code.lower(): domain for domain in domains})
+    return by_key
+
+
+def _build_context(supplier, dry_run: bool, hs_status: dict = None) -> _Ctx:
+    from catalog.models import Category, DomainType, Manufacturer, Product, ProductStatus, StockStatus, SupplierOffer
     from master_data.models import Currency, UnitOfMeasure
 
+    domains = list(DomainType.objects.all())
     return _Ctx(
         supplier=supplier,
         Product=Product,
@@ -312,9 +471,19 @@ def _build_context(supplier, dry_run: bool) -> _Ctx:
         uom={u.code.lower(): u for u in UnitOfMeasure.objects.all()},
         currency={c.code.upper(): c for c in Currency.objects.all()},
         stock={s.code.upper(): s for s in StockStatus.objects.all()},
-        domain={d.code: d for d in DomainType.objects.all()},
+        domain={d.code: d for d in domains},
+        domain_by_key=_domain_keys(domains),
+        # Только ДЕЙСТВУЮЩИЕ категории: выключенная ветка таксономии — не цель для новых карточек.
+        # `order_by` фиксирует победителя при одинаковых названиях в разных ветках дерева.
+        category_by_name={
+            category.name.strip().lower(): category
+            for category in Category.objects.filter(is_active=True).order_by("-sort_order", "-id")
+        },
+        hs_status=hs_status or {},
+        hs_code_max_length=Product._meta.get_field("hs_code").max_length,
         status_draft=ProductStatus.objects.filter(code="DRAFT").first(),
         brand_cache={},
+        touched_products={},
         dry_run=dry_run,
     )
 
@@ -342,10 +511,73 @@ def _iterate_rows(ctx: _Ctx, data_frame, columns: dict, result: ImportResult, pr
             result.updated += 1
         if outcome["offer"]:
             result.offers_upserted += 1
+        # Предупреждения записываются ТОЛЬКО после успеха строки: у откатанной строки их нет.
+        for message in outcome["warnings"]:
+            result.add_warning(row_number, message)
+        ctx.touched_products[outcome["product"].pk] = outcome["product"]
 
         processed = result.created + result.updated + result.skipped
         if progress_callback and processed % 500 == 0:
             progress_callback(processed, total)
+
+
+def _count_file_rows(file_content: bytes) -> int:
+    """Сколько СОДЕРЖАТЕЛЬНЫХ строк данных в первом листе (без строки заголовка).
+
+    Считаем потоком (`read_only=True` у openpyxl отдаёт строки по одной и не поднимает лист
+    в память целиком) и только когда файл заведомо длиннее предела: платить за второй проход
+    ради числа «сколько отрезано» имеет смысл лишь тогда, когда отрезать действительно есть что.
+    """
+    from openpyxl import load_workbook
+
+    workbook = load_workbook(BytesIO(file_content), read_only=True, data_only=True)
+    try:
+        sheet = workbook.worksheets[0]
+        filled = sum(
+            1
+            for cells in sheet.iter_rows(values_only=True)
+            if any(cell is not None and str(cell).strip() for cell in cells)
+        )
+    finally:
+        workbook.close()
+    return max(0, filled - 1)  # первая содержательная строка — заголовок
+
+
+def _read_rows(file_content: bytes):
+    """`(DataFrame, сколько строк файла не попало в разбор)`.
+
+    `nrows=MAX_EXCEL_ROWS` раньше отрезал хвост МОЛЧА: продавец видел «создано 50 000» и не
+    узнавал, что остальные строки его прайса система просто не читала. Читаем на одну строку
+    больше предела — лишняя строка и есть признак переполнения.
+    """
+    data_frame = pd.read_excel(BytesIO(file_content), nrows=MAX_EXCEL_ROWS + 1)
+    if len(data_frame) <= MAX_EXCEL_ROWS:
+        return data_frame, 0
+    return data_frame.head(MAX_EXCEL_ROWS), max(0, _count_file_rows(file_content) - MAX_EXCEL_ROWS)
+
+
+def _prescan_hs_codes(data_frame, columns: dict) -> dict:
+    """Вердикт классификатора по ВСЕМ кодам файла — два запроса на импорт вместо двух на строку."""
+    column = columns.get("hs_code")
+    if not column:
+        return {}
+
+    from catalog.hs_suggest import validate_hs_codes
+
+    values = data_frame[column]
+    if getattr(values, "ndim", 1) > 1:  # два заголовка совпали после нормализации регистра
+        values = values.iloc[:, 0]
+    codes = {_hs_digits(str(value)) for value in values.tolist()}
+    return validate_hs_codes(codes)
+
+
+def _summarize_publishability(ctx: _Ctx, result: ImportResult) -> None:
+    """Дописать в отчёт, сколько карточек НЕ пройдут порог публикации и чего им не хватает."""
+    from catalog.completeness import summarize_completeness
+
+    summary = summarize_completeness(ctx.touched_products.values())
+    result.unpublishable = summary["unpublishable"]
+    result.missing_breakdown = summary["missing_breakdown"]
 
 
 def run_catalog_import(file_content: bytes, supplier_company_id=None, dry_run=False, progress_callback=None) -> dict:
@@ -359,20 +591,23 @@ def run_catalog_import(file_content: bytes, supplier_company_id=None, dry_run=Fa
 
     supplier = Company.objects.filter(id=supplier_company_id).first() if supplier_company_id else None
 
-    data_frame = pd.read_excel(BytesIO(file_content), nrows=MAX_EXCEL_ROWS)
+    data_frame, rows_truncated = _read_rows(file_content)
     data_frame.columns = [str(column).lower().strip() for column in data_frame.columns]
     columns = _resolve_columns(list(data_frame.columns))
     if not columns["name"]:
         raise ValueError("NAME_COLUMN_NOT_FOUND")
 
-    ctx = _build_context(supplier, dry_run)
-    result = ImportResult(dry_run=dry_run)
+    ctx = _build_context(supplier, dry_run, hs_status=_prescan_hs_codes(data_frame, columns))
+    result = ImportResult(dry_run=dry_run, rows_truncated=rows_truncated)
 
     if dry_run:
         with transaction.atomic():
             _iterate_rows(ctx, data_frame, columns, result, progress_callback)
+            # Сводка считается ВНУТРИ транзакции: карточки предпросмотра живут только в ней.
+            _summarize_publishability(ctx, result)
             transaction.set_rollback(True)
     else:
         _iterate_rows(ctx, data_frame, columns, result, progress_callback)
+        _summarize_publishability(ctx, result)
 
     return result.as_dict()

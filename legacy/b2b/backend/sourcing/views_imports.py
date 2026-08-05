@@ -330,6 +330,13 @@ class ImportStatusView(APIView):
                     "skipped": raw_result.get("skipped"),
                     "error_count": raw_result.get("error_count"),
                     "errors": raw_result.get("errors"),
+                    # Мягкие замечания и цена наполнения: без них отчёт бодро рапортует
+                    # «создано 3000», умалчивая, что опубликовать нельзя ни одну карточку.
+                    "warning_count": raw_result.get("warning_count"),
+                    "warnings": raw_result.get("warnings"),
+                    "unpublishable": raw_result.get("unpublishable"),
+                    "missing_breakdown": raw_result.get("missing_breakdown"),
+                    "rows_truncated": raw_result.get("rows_truncated"),
                 }
             else:
                 result_data = {"status": "completed"}
@@ -338,6 +345,9 @@ class ImportStatusView(APIView):
 
 
 # Exact headers the import engine recognizes (see sourcing/catalog_import.py).
+# «Категория», «Код ТН ВЭД» и «Направление» — не украшение шапки: без них порог публикации
+# (catalog/completeness.py) не пропускает НИ ОДНУ загруженную карточку, и прайс-лист на 3000
+# строк превращался в 3000 черновиков, каждый из которых надо было дозаполнять руками.
 CATALOG_TEMPLATE_HEADERS = [
     "Наименование",
     "Бренд",
@@ -345,6 +355,9 @@ CATALOG_TEMPLATE_HEADERS = [
     "ГОСТ / Чертёж",
     "Артикул поставщика",
     "Описание",
+    "Категория",
+    "Код ТН ВЭД",
+    "Направление",
     "Ед. изм.",
     "Цена",
     "Валюта",
@@ -352,6 +365,10 @@ CATALOG_TEMPLATE_HEADERS = [
     "Срок поставки",
     "Мин. заказ",
 ]
+#: Пример строки. Категория / направление / код ТН ВЭД оставлены ПУСТЫМИ намеренно: подставить
+#: сюда придуманные значения значит выдать пример, который сам же не импортируется (категория
+#: и направление сверяются со справочником). Реальные значения подставляет `_template_example`
+#: из живой базы — как и коды валют/наличия на листе справочников.
 CATALOG_TEMPLATE_EXAMPLE = [
     "Тормозная колодка",
     "Knorr-Bremse",
@@ -359,6 +376,9 @@ CATALOG_TEMPLATE_EXAMPLE = [
     "ГОСТ 1234-89",
     "SUP-55",
     "Композитная тормозная колодка",
+    "",
+    "",
+    "",
     "шт",
     "150.50",
     "UZS",
@@ -366,6 +386,27 @@ CATALOG_TEMPLATE_EXAMPLE = [
     "14-21 дн.",
     "5",
 ]
+
+
+def _template_example(categories, domains) -> list:
+    """Пример строки с ЖИВЫМИ значениями справочников — чтобы его можно было импортировать as-is.
+
+    Код ТН ВЭД берётся ПОДСКАЗКОЙ по наименованию примера: так в шаблоне оказывается настоящий
+    код из редакции ГТК, а не десять правдоподобных цифр (`catalog/hs_suggest.py`: придуманный
+    код ТН ВЭД хуже отсутствующего). Классификатор не загружен — ячейка остаётся пустой.
+    """
+    from catalog.hs_suggest import suggest_hs_codes
+
+    example = list(CATALOG_TEMPLATE_EXAMPLE)
+    example_name = example[CATALOG_TEMPLATE_HEADERS.index("Наименование")]
+    railway = next((domain for domain in domains if domain.code == "RAILWAY_MACHINERY"), None)
+    domain = railway or (domains[0] if domains else None)
+    suggestions = suggest_hs_codes(example_name, limit=1)
+
+    example[CATALOG_TEMPLATE_HEADERS.index("Категория")] = categories[0].name if categories else ""
+    example[CATALOG_TEMPLATE_HEADERS.index("Направление")] = domain.name if domain else ""
+    example[CATALOG_TEMPLATE_HEADERS.index("Код ТН ВЭД")] = suggestions[0]["code"] if suggestions else ""
+    return example
 
 
 @extend_schema(
@@ -386,14 +427,17 @@ class CatalogTemplateView(APIView):
     def get(self, request):
         from openpyxl import Workbook
 
-        from catalog.models import StockStatus
+        from catalog.models import Category, DomainType, StockStatus
         from master_data.models import Currency, UnitOfMeasure
+
+        categories = list(Category.objects.filter(is_active=True).order_by("sort_order", "name"))
+        domains = list(DomainType.objects.all().order_by("sort_order", "code"))
 
         workbook = Workbook()
         sheet = workbook.active
         sheet.title = "Товары"
         sheet.append(CATALOG_TEMPLATE_HEADERS)
-        sheet.append(CATALOG_TEMPLATE_EXAMPLE)
+        sheet.append(_template_example(categories, domains))
 
         reference = workbook.create_sheet("Справочники (коды)")
         reference.append(["Тип", "Код", "Название"])
@@ -403,6 +447,12 @@ class CatalogTemplateView(APIView):
             reference.append(["Наличие", stock.code, stock.name])
         for unit in UnitOfMeasure.objects.all().order_by("code"):
             reference.append(["Ед. изм.", unit.code, unit.name])
+        # Категория и направление сверяются со справочником построчно: продавец должен видеть
+        # ДОПУСТИМЫЕ значения здесь же, иначе первая же загрузка вернёт UNKNOWN_CATEGORY.
+        for domain in domains:
+            reference.append(["Направление", domain.code, domain.name])
+        for category in categories:
+            reference.append(["Категория", "", category.name])
 
         response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         response["Content-Disposition"] = 'attachment; filename="railtech_catalog_template.xlsx"'

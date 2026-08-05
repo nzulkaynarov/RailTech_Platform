@@ -85,6 +85,28 @@ export const sourcingApi = {
   },
 };
 
+/** Строка отчёта импорта: номер строки файла + машинный код причины. */
+export interface CatalogImportRowMessage {
+  row: number;
+  message: string;
+}
+
+/**
+ * Одно невыполненное требование порога публикации: машинный код, УЖЕ переведённое
+ * сервером название и число карточек, которым его не хватает.
+ */
+export interface CatalogImportMissingRequirement {
+  code: string;
+  label: string;
+  count: number;
+}
+
+/**
+ * Итог импорта каталога.
+ *
+ * Все поля опциональны намеренно: во время выкатки бандл может оказаться новее
+ * бэкенда (или наоборот), и страница обязана деградировать молча, а не падать.
+ */
 export interface CatalogImportResult {
   status?: string;
   message?: string | null;
@@ -94,6 +116,16 @@ export interface CatalogImportResult {
   offers_upserted?: number | null;
   skipped?: number | null;
   error_count?: number | null;
-  errors?: { row: number; message: string }[] | null;
+  errors?: CatalogImportRowMessage[] | null;
   items_processed?: number | null;
+  /** Сколько созданных/обновлённых карточек НЕ пройдут порог публикации. */
+  unpublishable?: number | null;
+  /** Чего именно не хватает и на скольких карточках (по убыванию count). */
+  missing_breakdown?: CatalogImportMissingRequirement[] | null;
+  /** Мягкие замечания: строка загружена, но к ней есть вопрос. Список усечён. */
+  warnings?: CatalogImportRowMessage[] | null;
+  /** Полное число замечаний — может быть больше длины `warnings`. */
+  warning_count?: number | null;
+  /** Сколько строк файла отброшено лимитом (0 — ничего не отброшено). */
+  rows_truncated?: number | null;
 }
