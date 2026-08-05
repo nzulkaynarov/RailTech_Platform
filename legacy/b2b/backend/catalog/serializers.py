@@ -182,7 +182,9 @@ class _CostGateMixin:
 
 
 class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
-    cost_fields = ("offers", "base_price")
+    # `base_price_currency` уезжает вместе с ценой: валюта цены, которую зрителю не показали,
+    # сама по себе бессмысленна и лишь намекает на скрытое.
+    cost_fields = ("offers", "base_price", "base_price_currency")
 
     # Readable Nested Objects (for GET)
     category_data = CategorySerializer(source="category", read_only=True)
@@ -216,6 +218,7 @@ class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
     brand_country = serializers.SerializerMethodField()
     stock_status = serializers.SerializerMethodField()
     base_price = serializers.SerializerMethodField()
+    base_price_currency = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -256,6 +259,7 @@ class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
             "main_document_url",
             "stock_status",
             "base_price",
+            "base_price_currency",
             "created_at",
             "updated_at",
         ]
@@ -344,11 +348,19 @@ class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
             return offer.stock_status.code
         return None
 
-    def get_base_price(self, obj) -> str:
+    def get_base_price(self, obj) -> str | None:
+        """Цена ИЛИ `null` — как в списке: «нет оффера» и «стоит ноль» не одно и то же."""
         offer = self._first_offer(obj)
-        if offer:
-            return str(offer.base_price)
-        return "0"
+        return str(offer.base_price) if offer else None
+
+    def get_base_price_currency(self, obj) -> str | None:
+        """ISO-код валюты ТОГО ЖЕ оффера, что дал `base_price` (иначе `null`).
+
+        Карточка товара печатала цену жёстко в UZS. Поле обязано быть и здесь, а не только
+        в списке: без него карточка либо снова врёт валютой, либо не печатает цену вовсе.
+        """
+        offer = self._first_offer(obj)
+        return offer.currency.code if offer and offer.currency_id else None
 
     def get_main_image_url(self, obj) -> str | None:
         images = obj.images.all()
@@ -385,9 +397,32 @@ class ProductListSerializer(_CostGateMixin, serializers.ModelSerializer):
     def get_completeness(self, obj) -> dict:
         from catalog.completeness import completeness as compute
 
-        return compute(obj)
+        return compute(obj, self._completeness_context(obj))
 
-    cost_fields = ("base_price",)
+    def _completeness_context(self, obj):
+        """Один `CompletenessContext` на ВЕСЬ проход сериализации страницы, а не на строку.
+
+        DRF переиспользует ОДИН экземпляр дочернего сериализатора для всех элементов
+        `many=True`-списка, поэтому память здесь живёт ровно столько, сколько сам ответ.
+        `self.root.instance` — это страница пагинатора (список моделей); когда сериализатор
+        работает в одиночку (`self.root is self`), контекст строится по одной карточке.
+        """
+        context = getattr(self, "_completeness_ctx", None)
+        if context is None:
+            from catalog.completeness import CompletenessContext
+
+            page = getattr(self.root, "instance", None)
+            # Модель не итерируема, страница пагинатора и queryset — да; всё остальное
+            # честно деградирует до одной карточки (медленнее, но никогда не неверно).
+            batch = page if (self.root is not self and hasattr(page, "__iter__")) else None
+            products = list(batch) if batch is not None else [obj]
+            context = CompletenessContext(products)
+            self._completeness_ctx = context
+        return context
+
+    # Валюта уходит вместе с ценой: показать «USD» без самой цены — не защита, а бессмыслица
+    # (и наоборот, цена без валюты уже врала — фронтенд печатал её как UZS).
+    cost_fields = ("base_price", "base_price_currency")
 
     category_data = CategorySerializer(source="category", read_only=True)
     owner_company_data = CompanyLightSerializer(source="owner_company", read_only=True)
@@ -402,6 +437,7 @@ class ProductListSerializer(_CostGateMixin, serializers.ModelSerializer):
     brand_country = serializers.SerializerMethodField()
     stock_status = serializers.SerializerMethodField()
     base_price = serializers.SerializerMethodField()
+    base_price_currency = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -434,6 +470,7 @@ class ProductListSerializer(_CostGateMixin, serializers.ModelSerializer):
             "main_image_url",
             "stock_status",
             "base_price",
+            "base_price_currency",
             "created_at",
             "updated_at",
         ]
@@ -457,6 +494,12 @@ class ProductListSerializer(_CostGateMixin, serializers.ModelSerializer):
         return obj.brand.country.name if obj.brand and obj.brand.country else None
 
     def _first_offer(self, obj):
+        """Первый АКТИВНЫЙ оффер из предзагруженных, иначе любой.
+
+        `SupplierOffer.Meta.ordering = ["base_price"]`, то есть это САМЫЙ ДЕШЁВЫЙ оффер —
+        поведение сознательное и неизменное. Цену и валюту обязан отдавать ОДИН И ТОТ ЖЕ
+        объект: второй проход мог бы выбрать другой оффер и склеить цену с чужой валютой.
+        """
         offers = obj.offers.all()
         active = next((o for o in offers if o.is_active), None)
         return active or next(iter(offers), None)
@@ -465,9 +508,23 @@ class ProductListSerializer(_CostGateMixin, serializers.ModelSerializer):
         offer = self._first_offer(obj)
         return offer.stock_status.code if offer and offer.stock_status else None
 
-    def get_base_price(self, obj) -> str:
+    def get_base_price(self, obj) -> str | None:
+        """Цена ИЛИ `null` — «нет оффера» и «стоит ноль» не одно и то же.
+
+        Строка "0" рендерилась как настоящая цена и делала карточку без единого предложения
+        похожей на бесплатную (Odoo/Shopify так же различают «нет прайса» и «цена 0»).
+        """
         offer = self._first_offer(obj)
-        return str(offer.base_price) if offer else "0"
+        return str(offer.base_price) if offer else None
+
+    def get_base_price_currency(self, obj) -> str | None:
+        """ISO-код валюты ТОГО ЖЕ оффера, что дал `base_price` (иначе `null`).
+
+        Без него список печатал любую цену как UZS — долларовый оффер выглядел дешевле
+        собственной цены в 12 тысяч раз.
+        """
+        offer = self._first_offer(obj)
+        return offer.currency.code if offer and offer.currency_id else None
 
     def get_main_image_url(self, obj) -> str | None:
         images = obj.images.all()

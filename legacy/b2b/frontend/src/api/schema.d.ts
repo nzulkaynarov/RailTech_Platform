@@ -2502,7 +2502,7 @@ export interface paths {
         };
         /**
          * List products
-         * @description Returns products from the PIM catalog. Non-admin users only see PUBLISHED products. Filterable by domain_type, category, manufacturer, equipment_groups, stock_status. Searchable by name, GOST/drawing, SKU.
+         * @description Returns products from the PIM catalog. Non-admin users only see PUBLISHED products. Filterable by domain_type, category, manufacturer, equipment_groups, stock_status. Searchable by name, GOST/drawing, SKU. Server-side ordering via `?ordering=` (name, sku, demand_count, last_requested_at, created_at, updated_at; prefix with `-` for descending). `?ordering=` overrides the legacy `?order=demand` default.
          */
         get: operations["catalog_products_list"];
         put?: never;
@@ -2545,8 +2545,12 @@ export interface paths {
          *     NOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER
          *     (catalog _CostGateMixin), so a response is viewer-specific and must never be
          *     shared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%
-         *     hit rate + per-token cache bloat anyway. The queryset is select_related/
-         *     prefetch (N+1-free), so uncached list reads are cheap.
+         *     hit rate + per-token cache bloat anyway.
+         *
+         *     N+1 (fixed in R1 — until then this docstring claimed a freedom the code lacked):
+         *     the list branch prefetches EVERY relation the row serializer touches and batches the
+         *     reference-table probes behind `completeness` once per page via `CompletenessContext`,
+         *     so the query count is flat in page_size (guarded by tests/test_r1_list_contract.py).
          */
         delete: operations["catalog_products_destroy"];
         options?: never;
@@ -2561,8 +2565,12 @@ export interface paths {
          *     NOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER
          *     (catalog _CostGateMixin), so a response is viewer-specific and must never be
          *     shared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%
-         *     hit rate + per-token cache bloat anyway. The queryset is select_related/
-         *     prefetch (N+1-free), so uncached list reads are cheap.
+         *     hit rate + per-token cache bloat anyway.
+         *
+         *     N+1 (fixed in R1 — until then this docstring claimed a freedom the code lacked):
+         *     the list branch prefetches EVERY relation the row serializer touches and batches the
+         *     reference-table probes behind `completeness` once per page via `CompletenessContext`,
+         *     so the query count is flat in page_size (guarded by tests/test_r1_list_contract.py).
          */
         patch: operations["catalog_products_partial_update"];
         trace?: never;
@@ -2587,8 +2595,12 @@ export interface paths {
          *     NOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER
          *     (catalog _CostGateMixin), so a response is viewer-specific and must never be
          *     shared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%
-         *     hit rate + per-token cache bloat anyway. The queryset is select_related/
-         *     prefetch (N+1-free), so uncached list reads are cheap.
+         *     hit rate + per-token cache bloat anyway.
+         *
+         *     N+1 (fixed in R1 — until then this docstring claimed a freedom the code lacked):
+         *     the list branch prefetches EVERY relation the row serializer touches and batches the
+         *     reference-table probes behind `completeness` once per page via `CompletenessContext`,
+         *     so the query count is flat in page_size (guarded by tests/test_r1_list_contract.py).
          */
         delete: operations["catalog_products_delete_document_destroy"];
         options?: never;
@@ -2616,8 +2628,12 @@ export interface paths {
          *     NOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER
          *     (catalog _CostGateMixin), so a response is viewer-specific and must never be
          *     shared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%
-         *     hit rate + per-token cache bloat anyway. The queryset is select_related/
-         *     prefetch (N+1-free), so uncached list reads are cheap.
+         *     hit rate + per-token cache bloat anyway.
+         *
+         *     N+1 (fixed in R1 — until then this docstring claimed a freedom the code lacked):
+         *     the list branch prefetches EVERY relation the row serializer touches and batches the
+         *     reference-table probes behind `completeness` once per page via `CompletenessContext`,
+         *     so the query count is flat in page_size (guarded by tests/test_r1_list_contract.py).
          */
         delete: operations["catalog_products_delete_image_destroy"];
         options?: never;
@@ -11610,7 +11626,15 @@ export interface components {
             readonly main_image_url: string | null;
             readonly main_document_url: string | null;
             readonly stock_status: string | null;
-            readonly base_price: string;
+            /** @description Цена ИЛИ `null` — как в списке: «нет оффера» и «стоит ноль» не одно и то же. */
+            readonly base_price: string | null;
+            /**
+             * @description ISO-код валюты ТОГО ЖЕ оффера, что дал `base_price` (иначе `null`).
+             *
+             *     Карточка товара печатала цену жёстко в UZS. Поле обязано быть и здесь, а не только
+             *     в списке: без него карточка либо снова врёт валютой, либо не печатает цену вовсе.
+             */
+            readonly base_price_currency: string | null;
             /**
              * Дата создания
              * Format: date-time
@@ -11805,7 +11829,20 @@ export interface components {
             hs_code?: string;
             readonly main_image_url: string | null;
             readonly stock_status: string | null;
-            readonly base_price: string;
+            /**
+             * @description Цена ИЛИ `null` — «нет оффера» и «стоит ноль» не одно и то же.
+             *
+             *     Строка "0" рендерилась как настоящая цена и делала карточку без единого предложения
+             *     похожей на бесплатную (Odoo/Shopify так же различают «нет прайса» и «цена 0»).
+             */
+            readonly base_price: string | null;
+            /**
+             * @description ISO-код валюты ТОГО ЖЕ оффера, что дал `base_price` (иначе `null`).
+             *
+             *     Без него список печатал любую цену как UZS — долларовый оффер выглядел дешевле
+             *     собственной цены в 12 тысяч раз.
+             */
+            readonly base_price_currency: string | null;
             /**
              * Дата создания
              * Format: date-time
@@ -17738,6 +17775,8 @@ export interface operations {
                 category?: number;
                 domain_type__code?: string;
                 equipment_groups?: number[];
+                /** @description Which field to use when ordering the results. */
+                ordering?: string;
                 /** @description A page number within the paginated result set. */
                 page?: number;
                 /** @description Number of results to return per page. */

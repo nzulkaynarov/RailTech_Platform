@@ -333,10 +333,7 @@
   "productManagement": {
     "kpi": {
       "totalItems": "Total Items",
-      "inStock": "In Stock",
-      "toOrder": "To Order",
-      "inCart": "In Cart",
-      "sourcing": "Sourcing"
+      "inCart": "In Cart"
     },
     "title": {
       "buyer": "Product Catalog",
@@ -357,7 +354,9 @@
     "filters": {
       "allDomains": "All Domains",
       "allStatuses": "All Statuses",
-      "allManufacturers": "All manufacturers"
+      "allManufacturers": "All manufacturers",
+      "allOwners": "All listings",
+      "onlyMine": "Mine only"
     },
     "table": {
       "name": "Name",
@@ -366,7 +365,11 @@
       "category": "Category",
       "uom": "UOM",
       "priceFca": "Price FCA",
-      "status": "Status"
+      "status": "Status",
+      "select": "Select",
+      "owner": "Listing owner",
+      "mine": "Mine",
+      "actions": "Actions"
     },
     "noResults": "No products found"
   },
@@ -1681,7 +1684,8 @@
     "in_stock": "In Stock",
     "to_order": "To Order",
     "sourcing": "Sourcing",
-    "inactive": "Inactive"
+    "inactive": "Inactive",
+    "out_of_stock": "Out of stock"
   },
   "languageSwitcher": {
     "switchToEn": "Switch to English",
@@ -4788,6 +4792,15 @@
       "identity": "Part number or GOST/drawing",
       "equipment_groups": "Equipment group",
       "hs_code": "HS code (current)"
+    },
+    "searchPlaceholder": "Search by name, GOST or SKU",
+    "selectAllOnPage": "Select all rows on this page",
+    "selectionScope": "Selection applies to the current page",
+    "noMatches": "Nothing found",
+    "noMatchesHint": "Try another query or clear the filters — the item may be on another page.",
+    "resetFilters": "Clear filters",
+    "filters": {
+      "allDomains": "All domains"
     }
   },
   "hsField": {

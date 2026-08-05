@@ -472,3 +472,32 @@ export const documentStatusLabelKey = (
   const namespace = type ? DOCUMENT_STATUS_NAMESPACE[type] : undefined;
   return namespace ? `${namespace}.${code}` : '';
 };
+
+/**
+ * Коды наличия оффера (`catalog.StockStatus.code`) → ключ подписи.
+ *
+ * До R1 подпись собиралась цепочкой тернарников в трёх местах, и у всех трёх был один
+ * и тот же дефект: любой код, кроме первых трёх, печатался как «Неактивен». Справочный
+ * `OUT_OF_STOCK` («Нет в наличии») из-за этого выглядел как отключённая карточка, хотя
+ * `getStockVariant` уже красил его в danger — цвет и текст говорили разное.
+ *
+ * Неизвестный код возвращает пустой ключ: печатать сырой код пользователю нельзя, а
+ * выдумывать ему подпись — тем более.
+ */
+export const StockStatus = {
+  IN_STOCK: 'IN_STOCK',
+  ON_ORDER: 'ON_ORDER',
+  EXPECTED: 'EXPECTED',
+  OUT_OF_STOCK: 'OUT_OF_STOCK',
+} as const;
+export type StockStatusCode = (typeof StockStatus)[keyof typeof StockStatus];
+
+const STOCK_STATUS_LABEL_KEY: Record<string, string> = {
+  IN_STOCK: 'productStatuses.in_stock',
+  ON_ORDER: 'productStatuses.to_order',
+  EXPECTED: 'productStatuses.sourcing',
+  OUT_OF_STOCK: 'productStatuses.out_of_stock',
+};
+
+export const stockStatusLabelKey = (code: string | undefined | null): string =>
+  (code && STOCK_STATUS_LABEL_KEY[code]) || '';

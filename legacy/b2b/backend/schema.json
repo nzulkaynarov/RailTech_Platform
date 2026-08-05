@@ -7156,7 +7156,7 @@
         "/api/v1/catalog/products/": {
             "get": {
                 "operationId": "catalog_products_list",
-                "description": "Returns products from the PIM catalog. Non-admin users only see PUBLISHED products. Filterable by domain_type, category, manufacturer, equipment_groups, stock_status. Searchable by name, GOST/drawing, SKU.",
+                "description": "Returns products from the PIM catalog. Non-admin users only see PUBLISHED products. Filterable by domain_type, category, manufacturer, equipment_groups, stock_status. Searchable by name, GOST/drawing, SKU. Server-side ordering via `?ordering=` (name, sku, demand_count, last_requested_at, created_at, updated_at; prefix with `-` for descending). `?ordering=` overrides the legacy `?order=demand` default.",
                 "summary": "List products",
                 "parameters": [
                     {
@@ -7191,6 +7191,15 @@
                         },
                         "explode": true,
                         "style": "form"
+                    },
+                    {
+                        "name": "ordering",
+                        "required": false,
+                        "in": "query",
+                        "description": "Which field to use when ordering the results.",
+                        "schema": {
+                            "type": "string"
+                        }
                     },
                     {
                         "name": "page",
@@ -7392,7 +7401,7 @@
             },
             "patch": {
                 "operationId": "catalog_products_partial_update",
-                "description": "CRUD for PIM products.\n\nPublic read access (PUBLISHED only for non-admin);\nwrite operations require Admin role.\n\nNOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER\n(catalog _CostGateMixin), so a response is viewer-specific and must never be\nshared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%\nhit rate + per-token cache bloat anyway. The queryset is select_related/\nprefetch (N+1-free), so uncached list reads are cheap.",
+                "description": "CRUD for PIM products.\n\nPublic read access (PUBLISHED only for non-admin);\nwrite operations require Admin role.\n\nNOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER\n(catalog _CostGateMixin), so a response is viewer-specific and must never be\nshared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%\nhit rate + per-token cache bloat anyway.\n\nN+1 (fixed in R1 — until then this docstring claimed a freedom the code lacked):\nthe list branch prefetches EVERY relation the row serializer touches and batches the\nreference-table probes behind `completeness` once per page via `CompletenessContext`,\nso the query count is flat in page_size (guarded by tests/test_r1_list_contract.py).",
                 "summary": "Partially update product",
                 "parameters": [
                     {
@@ -7447,7 +7456,7 @@
             },
             "delete": {
                 "operationId": "catalog_products_destroy",
-                "description": "CRUD for PIM products.\n\nPublic read access (PUBLISHED only for non-admin);\nwrite operations require Admin role.\n\nNOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER\n(catalog _CostGateMixin), so a response is viewer-specific and must never be\nshared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%\nhit rate + per-token cache bloat anyway. The queryset is select_related/\nprefetch (N+1-free), so uncached list reads are cheap.",
+                "description": "CRUD for PIM products.\n\nPublic read access (PUBLISHED only for non-admin);\nwrite operations require Admin role.\n\nNOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER\n(catalog _CostGateMixin), so a response is viewer-specific and must never be\nshared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%\nhit rate + per-token cache bloat anyway.\n\nN+1 (fixed in R1 — until then this docstring claimed a freedom the code lacked):\nthe list branch prefetches EVERY relation the row serializer touches and batches the\nreference-table probes behind `completeness` once per page via `CompletenessContext`,\nso the query count is flat in page_size (guarded by tests/test_r1_list_contract.py).",
                 "summary": "Delete product",
                 "parameters": [
                     {
@@ -7478,7 +7487,7 @@
         "/api/v1/catalog/products/{id}/delete-document/{doc_id}/": {
             "delete": {
                 "operationId": "catalog_products_delete_document_destroy",
-                "description": "CRUD for PIM products.\n\nPublic read access (PUBLISHED only for non-admin);\nwrite operations require Admin role.\n\nNOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER\n(catalog _CostGateMixin), so a response is viewer-specific and must never be\nshared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%\nhit rate + per-token cache bloat anyway. The queryset is select_related/\nprefetch (N+1-free), so uncached list reads are cheap.",
+                "description": "CRUD for PIM products.\n\nPublic read access (PUBLISHED only for non-admin);\nwrite operations require Admin role.\n\nNOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER\n(catalog _CostGateMixin), so a response is viewer-specific and must never be\nshared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%\nhit rate + per-token cache bloat anyway.\n\nN+1 (fixed in R1 — until then this docstring claimed a freedom the code lacked):\nthe list branch prefetches EVERY relation the row serializer touches and batches the\nreference-table probes behind `completeness` once per page via `CompletenessContext`,\nso the query count is flat in page_size (guarded by tests/test_r1_list_contract.py).",
                 "summary": "Delete product document",
                 "parameters": [
                     {
@@ -7521,7 +7530,7 @@
         "/api/v1/catalog/products/{id}/delete-image/{image_id}/": {
             "delete": {
                 "operationId": "catalog_products_delete_image_destroy",
-                "description": "CRUD for PIM products.\n\nPublic read access (PUBLISHED only for non-admin);\nwrite operations require Admin role.\n\nNOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER\n(catalog _CostGateMixin), so a response is viewer-specific and must never be\nshared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%\nhit rate + per-token cache bloat anyway. The queryset is select_related/\nprefetch (N+1-free), so uncached list reads are cheap.",
+                "description": "CRUD for PIM products.\n\nPublic read access (PUBLISHED only for non-admin);\nwrite operations require Admin role.\n\nNOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER\n(catalog _CostGateMixin), so a response is viewer-specific and must never be\nshared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%\nhit rate + per-token cache bloat anyway.\n\nN+1 (fixed in R1 — until then this docstring claimed a freedom the code lacked):\nthe list branch prefetches EVERY relation the row serializer touches and batches the\nreference-table probes behind `completeness` once per page via `CompletenessContext`,\nso the query count is flat in page_size (guarded by tests/test_r1_list_contract.py).",
                 "summary": "Delete product image",
                 "parameters": [
                     {
@@ -28115,6 +28124,14 @@
                     },
                     "base_price": {
                         "type": "string",
+                        "nullable": true,
+                        "description": "Цена ИЛИ `null` — как в списке: «нет оффера» и «стоит ноль» не одно и то же.",
+                        "readOnly": true
+                    },
+                    "base_price_currency": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "ISO-код валюты ТОГО ЖЕ оффера, что дал `base_price` (иначе `null`).\n\nКарточка товара печатала цену жёстко в UZS. Поле обязано быть и здесь, а не только\nв списке: без него карточка либо снова врёт валютой, либо не печатает цену вовсе.",
                         "readOnly": true
                     },
                     "created_at": {
@@ -28132,6 +28149,7 @@
                 },
                 "required": [
                     "base_price",
+                    "base_price_currency",
                     "brand_country",
                     "brand_name",
                     "category_data",
@@ -28519,6 +28537,14 @@
                     },
                     "base_price": {
                         "type": "string",
+                        "nullable": true,
+                        "description": "Цена ИЛИ `null` — «нет оффера» и «стоит ноль» не одно и то же.\n\nСтрока \"0\" рендерилась как настоящая цена и делала карточку без единого предложения\nпохожей на бесплатную (Odoo/Shopify так же различают «нет прайса» и «цена 0»).",
+                        "readOnly": true
+                    },
+                    "base_price_currency": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "ISO-код валюты ТОГО ЖЕ оффера, что дал `base_price` (иначе `null`).\n\nБез него список печатал любую цену как UZS — долларовый оффер выглядел дешевле\nсобственной цены в 12 тысяч раз.",
                         "readOnly": true
                     },
                     "created_at": {
@@ -28536,6 +28562,7 @@
                 },
                 "required": [
                     "base_price",
+                    "base_price_currency",
                     "brand_country",
                     "brand_name",
                     "category_data",

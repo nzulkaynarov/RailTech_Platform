@@ -5,6 +5,7 @@ from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
+from ..filters import StableOrderingFilter
 from ..models import Product, ProductDocument, ProductImage
 from ..serializers import ProductDocumentSerializer, ProductImageSerializer, ProductListSerializer, ProductSerializer
 
@@ -34,7 +35,9 @@ def _ai_enrich_entitlement_gate(user):
         description=(
             "Returns products from the PIM catalog. Non-admin users only see PUBLISHED products. "
             "Filterable by domain_type, category, manufacturer, equipment_groups, stock_status. "
-            "Searchable by name, GOST/drawing, SKU."
+            "Searchable by name, GOST/drawing, SKU. Server-side ordering via `?ordering=` "
+            "(name, sku, demand_count, last_requested_at, created_at, updated_at; prefix with "
+            "`-` for descending). `?ordering=` overrides the legacy `?order=demand` default."
         ),
         parameters=[
             OpenApiParameter(
@@ -66,8 +69,12 @@ class ProductViewSet(viewsets.ModelViewSet):
     NOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER
     (catalog _CostGateMixin), so a response is viewer-specific and must never be
     shared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%
-    hit rate + per-token cache bloat anyway. The queryset is select_related/
-    prefetch (N+1-free), so uncached list reads are cheap.
+    hit rate + per-token cache bloat anyway.
+
+    N+1 (fixed in R1 — until then this docstring claimed a freedom the code lacked):
+    the list branch prefetches EVERY relation the row serializer touches and batches the
+    reference-table probes behind `completeness` once per page via `CompletenessContext`,
+    so the query count is flat in page_size (guarded by tests/test_r1_list_contract.py).
     """
 
     serializer_class = ProductSerializer
@@ -86,6 +93,11 @@ class ProductViewSet(viewsets.ModelViewSet):
             queryset = base.prefetch_related(
                 "images",
                 "offers__stock_status",
+                # R1: обе связи читает КАЖДАЯ строка списка — `offers__currency` для валюты
+                # цены (`base_price_currency`), `equipment_groups` для полноты карточки.
+                # Без prefetch это было бы по запросу на строку, то есть N+1 на всю страницу.
+                "offers__currency",
+                "equipment_groups",
             )
         else:
             queryset = base.prefetch_related(
@@ -123,6 +135,11 @@ class ProductViewSet(viewsets.ModelViewSet):
         status_code = self.request.query_params.get("status")
         if status_code:
             queryset = queryset.filter(status__code=status_code)
+        # Легаси-порядок очереди наполнения (`catalogApi.getMyCandidates` шлёт `?order=demand`).
+        # Приоритет СОЗНАТЕЛЬНО отдан явному `?ordering=`: `OrderingFilter` работает позже
+        # `get_queryset()` и его `order_by` перекрывает эту ветку. `?order=demand` остаётся
+        # умолчанием очереди, `?ordering=` — осознанным выбором пользователя, и выбор человека
+        # сильнее умолчания.
         if self.request.query_params.get("order") == "demand":
             queryset = queryset.order_by("-demand_count", "-last_requested_at", "name")
         # Worklist переклассификации (SAP GTS): карточки, чей код ТН ВЭД выведен из редакции
@@ -139,13 +156,26 @@ class ProductViewSet(viewsets.ModelViewSet):
 
         return queryset
 
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    # `StableOrderingFilter` — ПОСЛЕДНИЙ: его `order_by` обязан перекрывать порядок, заданный
+    # в `get_queryset()` (легаси `?order=demand`), а не наоборот.
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, StableOrderingFilter]
     filterset_fields = {
         "domain_type__code": ["exact"],
         "category": ["exact"],
         "brand": ["exact"],
+        # `equipment_groups` — m2m, и JOIN по нему МОГ БЫ размножить строку карточки (запрос с
+        # двумя группами вернул бы карточку из обеих дважды и завысил `count`). Ручной
+        # `.distinct()` здесь не нужен и добавлять его НЕ НАДО: django-filter генерирует для
+        # m2m `ModelMultipleChoiceFilter`, а тот схлопывает выборку сам (`distinct=True` по
+        # умолчанию). Проверено тестом test_r1_list_contract.py — он же сторожит инвариант,
+        # если фильтр когда-нибудь объявят вручную другим классом.
         "equipment_groups": ["exact"],
     }
+    #: Белый список сортировок. До R1 `?ordering=` молча не работал вовсе: бэкенд не подключал
+    #: `OrderingFilter`, и клик по заголовку колонки ничего не менял. Поле вне списка DRF
+    #: игнорирует (порядок остаётся прежним) — сортировка по произвольному столбцу была бы
+    #: дырой: `?ordering=offers__base_price` раскрыл бы закрытую костгейтом цену перестановкой.
+    ordering_fields = ["name", "sku", "demand_count", "last_requested_at", "created_at", "updated_at"]
     search_fields = ["name", "gost_drawing", "sku"]
 
     def get_permissions(self):

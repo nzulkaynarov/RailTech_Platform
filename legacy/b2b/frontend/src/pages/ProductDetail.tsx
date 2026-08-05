@@ -19,7 +19,7 @@ import { useCartStore } from '@/store/cartStore';
 import { formatMoney } from '@/utils/decimal';
 import { useUserStore } from '@/store/userStore';
 import { getDomainLabelKey } from '@/config/domainConfig';
-import { deliveryBasisLabelKey, uomLabelKey } from '@/lib/codes';
+import { deliveryBasisLabelKey, stockStatusLabelKey, uomLabelKey } from '@/lib/codes';
 
 interface ProductDetailProps {
   productId: string;
@@ -86,9 +86,20 @@ export function ProductDetail({ productId, onBack }: ProductDetailProps) {
   const hasDocs = product.documents && product.documents.length > 0;
   const activeOffers = (product.offers ?? []).filter(o => o.is_active);
 
-  const stockStatusKey = product.stock_status === 'IN_STOCK' ? 'in_stock'
-    : product.stock_status === 'ON_ORDER' ? 'to_order'
-    : product.stock_status === 'EXPECTED' ? 'sourcing' : 'inactive';
+  // Подпись наличия берётся из общего словаря кодов: цепочка тернарников роняла всё,
+  // кроме первых трёх кодов, в «Неактивен» — справочный OUT_OF_STOCK печатался как
+  // отключённая карточка, хотя getStockVariant красил его в danger. Незнакомый код
+  // даёт пустой ключ, и бейдж не рисуется вовсе — выдумывать ему подпись нельзя.
+  const stockStatus = product.stock_status ?? '';
+  const stockLabelKey = stockStatusLabelKey(stockStatus);
+
+  // Заголовочная цена печатается ТОЛЬКО парой «число + валюта того же оффера».
+  // `base_price` теперь null, когда активного оффера нет вовсе (раньше сервер отдавал
+  // строку "0", и витрина показывала настоящий нулевой ценник), а cost-gate срезает
+  // цену и валюту разом у того, кто карточкой не владеет. В обоих случаях правильный
+  // ответ — не показывать ничего: ни «0», ни подписи, намекающей на незаполненность.
+  const basePrice = product.base_price;
+  const basePriceCurrency = product.base_price_currency;
 
   const attributes = [
     { label: t('productDetail.article'), value: product.sku },
@@ -126,8 +137,8 @@ export function ProductDetail({ productId, onBack }: ProductDetailProps) {
                 <p className="text-sm text-muted-foreground font-mono">{product.sku}</p>
               )}
               <div className="flex flex-wrap items-center gap-1.5 mt-auto">
-                {product.stock_status && (
-                  <StatusBadge label={t(`productStatuses.${stockStatusKey}`)} variant={getStockVariant(product.stock_status)} />
+                {stockLabelKey && (
+                  <StatusBadge label={t(stockLabelKey)} variant={getStockVariant(stockStatus)} />
                 )}
                 <Badge variant="secondary" className="text-xs">
                   {t(getDomainLabelKey(product.domain_type_code ?? ''), product.domain_type_name)}
@@ -250,12 +261,12 @@ export function ProductDetail({ productId, onBack }: ProductDetailProps) {
         {/* ─── Right column (1/3) — actions & commercial ─── */}
         <div className="flex flex-col gap-4 lg:sticky lg:top-6 lg:self-start">
           {/* Price card (seller/manufacturer) */}
-          {showPrices && product.base_price && parseFloat(product.base_price) > 0 && (
+          {showPrices && basePrice && basePriceCurrency && Number(basePrice) > 0 && (
             <Card>
               <CardContent className="p-5 text-center">
                 <p className="text-xs text-muted-foreground mb-1">{t('productDetail.priceFCA')}</p>
                 <p className="text-2xl font-bold text-primary tabular-nums">
-                  {formatMoney(product.base_price, 'UZS')}
+                  {formatMoney(basePrice, basePriceCurrency)}
                 </p>
 
               </CardContent>
@@ -316,7 +327,13 @@ export function ProductDetail({ productId, onBack }: ProductDetailProps) {
                           <span className="text-sm font-medium truncate">{offer.supplier_data?.name}</span>
                         </div>
                         <p className="text-lg font-bold text-primary tabular-nums">
-                          {formatMoney(offer.base_price, offer.currency_data?.code || 'UZS')}
+                          {/* Валюта берётся только у самого оффера. Дефолт `|| 'UZS'` подставлял
+                              сумы офферу, у которого валюта не проставлена, — то же враньё, что
+                              и жёсткое 'UZS' в шапке карточки (R1). Без валюты печатаем голое
+                              число: неверный знак хуже отсутствующего. */}
+                          {offer.currency_data?.code
+                            ? formatMoney(offer.base_price, offer.currency_data.code)
+                            : offer.base_price}
                         </p>
                         <div className="flex flex-col gap-1 text-xs text-muted-foreground">
                           {offer.delivery_basis_data && (

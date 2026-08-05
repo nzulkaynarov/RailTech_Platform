@@ -39,11 +39,10 @@ export interface ProductStatusItem {
 
 export interface Manufacturer {
     id: number;
+    // FK на master_data.Country; читаемое имя приходит отдельным полем.
+    country?: number | null;
+    country_name?: string | null;
     name: string;
-    country: string;
-    is_verified?: boolean;
-    has_iso9001?: boolean;
-    trust_score?: number;
 }
 
 export interface SupplierOffer {
@@ -111,7 +110,14 @@ export interface Product {
     uom_data?: { id: number; code: string; name: string } | null;
 
     stock_status?: string | null;
-    base_price: string;
+    /**
+     * Цена самого дешёвого активного оффера. `null` — офферов нет вовсе: раньше сервер
+     * отдавал строку "0", и витрина печатала настоящий нулевой ценник (R1).
+     * Срезается cost-gate'ом вместе с `base_price_currency` у того, кто не владелец.
+     */
+    base_price?: string | null;
+    /** Валюта ТОГО ЖЕ оффера — форматировать цену без неё нельзя (оффер бывает в USD). */
+    base_price_currency?: string | null;
 
     gost_drawing?: string | null;
     specifications?: {
@@ -157,9 +163,66 @@ async function fetchAllPages<T>(firstUrl: string): Promise<T[]> {
     return all;
 }
 
+/**
+ * Параметры серверного списка товаров. Ровно то, что понимает `ProductViewSet`:
+ * фильтры + `?search=` + `?ordering=` + постраничка. Клиентская пагинация поверх
+ * первых 20 строк (до R1) врала и покупателю, и продавцу — теперь считает сервер.
+ */
+export interface ProductListParams {
+    domain_type?: string;
+    search?: string;
+    category?: number;
+    brand?: number;
+    equipment_groups?: number;
+    stock_status?: string;
+    /** Только карточки своей компании (бэкенд: `?mine=1`). */
+    mine?: boolean;
+    /** Код статуса карточки: DRAFT / PUBLISHED / ARCHIVED. */
+    status?: string;
+    /** DRF-порядок: `name`, `-demand_count`, … Пустая строка = порядок по умолчанию. */
+    ordering?: string;
+    /**
+     * Составной порядок очереди наполнения (спрос → дата запроса → имя). Это НЕ то же,
+     * что `ordering=-demand_count`: одним полем тай-брейкеры не выразить. Явный
+     * пользовательский `ordering` имеет приоритет.
+     */
+    order?: 'demand';
+    page?: number;
+    page_size?: number;
+}
+
+function buildProductListQuery(params: ProductListParams): string {
+    const query = new URLSearchParams();
+    if (params.domain_type) query.append('domain_type__code', params.domain_type);
+    if (params.search) query.append('search', params.search);
+    if (params.category) query.append('category', String(params.category));
+    if (params.brand) query.append('brand', String(params.brand));
+    if (params.equipment_groups) query.append('equipment_groups', String(params.equipment_groups));
+    if (params.stock_status) query.append('stock_status', params.stock_status);
+    if (params.mine) query.append('mine', '1');
+    if (params.status) query.append('status', params.status);
+    if (params.ordering) query.append('ordering', params.ordering);
+    if (params.order) query.append('order', params.order);
+    if (params.page && params.page > 1) query.append('page', String(params.page));
+    if (params.page_size) query.append('page_size', String(params.page_size));
+    return query.toString();
+}
+
 export const catalogApi = {
     getDomainTypes: async (): Promise<DomainTypeItem[]> => {
         const response = await apiClient.get<DomainTypeItem[]>('catalog/domain-types/');
+        return response.data;
+    },
+
+    /**
+     * Страница списка ЦЕЛИКОМ — с `count`, а не только `results`. Витрина обязана
+     * знать общее число: KPI «Всего позиций» и пагинатор считают именно по нему.
+     */
+    getProductsPage: async (params: ProductListParams = {}): Promise<PaginatedResponse<Product>> => {
+        const query = buildProductListQuery(params);
+        const response = await apiClient.get<PaginatedResponse<Product>>(
+            `catalog/products/${query ? `?${query}` : ''}`,
+        );
         return response.data;
     },
 

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { catalogApi } from '../api/catalogApi';
+import type { ProductListParams } from '../api/catalogApi';
 
 export const useDomainTypes = () => useQuery({
   queryKey: ['domain-types'],
@@ -21,6 +22,20 @@ export const useProducts = (params?: Parameters<typeof catalogApi.getProducts>[0
   staleTime: 3 * 60_000,      // кеш 3 минуты — повторный клик на ту же категорию мгновенный
   gcTime: 10 * 60_000,        // держим в памяти 10 минут после размонтирования
   placeholderData: (prev) => prev, // показываем предыдущие данные пока грузятся новые (нет мигания)
+});
+
+/**
+ * Страница списка товаров с сервера: возвращает `{count, results}` целиком.
+ * `count` — единственный честный источник для KPI и пагинатора; клиентская
+ * постраничка поверх первых 20 строк показывала «Всего позиций: 20» на любом каталоге.
+ * Ключ содержит все параметры, поэтому смена страницы/сортировки перезапрашивает.
+ */
+export const useProductsPage = (params: ProductListParams = {}) => useQuery({
+  queryKey: ['products', 'page', params],
+  queryFn: () => catalogApi.getProductsPage(params),
+  staleTime: 3 * 60_000,
+  gcTime: 10 * 60_000,
+  placeholderData: (prev) => prev, // страница не мигает при листании
 });
 
 /**

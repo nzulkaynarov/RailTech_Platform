@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Boxes, CheckCircle2, Loader2, PackagePlus } from 'lucide-react';
+import { Boxes, CheckCircle2, Loader2, PackagePlus, SearchX } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
@@ -9,8 +9,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ResponsiveDataTable } from '@/components/ResponsiveDataTable';
+import { Pager, Toolbar, useListParams } from '@/components/DataTable';
+import { ErrorState } from '@/pages/shared/PageShell';
+import { getDomainLabelKey } from '@/config/domainConfig';
 import {
-  useMyCandidates,
+  useProductsPage,
+  useDomainTypes,
   usePublishProduct,
   useBulkPublishProducts,
   useReclassificationWorklist,
@@ -36,7 +40,7 @@ import { catalogApi } from '@/api/catalogApi';
 import { formatHSCode } from '@/components/Shared/HSCodeField';
 import { useQueryClient } from '@tanstack/react-query';
 import { ProductFormSheet } from './AdminCatalogPage';
-import type { Product } from '@/api/catalogApi';
+import type { Product, ProductListParams } from '@/api/catalogApi';
 
 /**
  * Очередь наполнения номенклатуры продавца (волна A).
@@ -97,7 +101,35 @@ export function NomenclatureQueuePage({
   const [editTarget, setEditTarget] = useState<Product | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const sellerCompanyId = useAuthStore((s) => s.user?.company?.id);
-  const { data: rows, isLoading } = useMyCandidates(tab);
+
+  // R1 («правда в списках»): очередь спрашивала 200 строк одним запросом и печатала, что
+  // пришло, — у продавца с 201-й карточкой остаток был НЕВИДИМ, а найти одну позицию среди
+  // двух сотен было нечем. Серверная постраничка + поиск + фильтр направления, как на всех
+  // остальных реестрах (тот же useListParams/Toolbar/Pager, что у AdminSupportPage).
+  const {
+    searchInput, setSearchInput, search,
+    filters, setFilter,
+    ordering, toggleOrdering,
+    page, setPage, pageSize,
+  } = useListParams(['domain'] as const);
+  const { data: domainTypes = [] } = useDomainTypes();
+  const domainFilter = filters.domain !== 'all' ? filters.domain : undefined;
+
+  const queryParams: ProductListParams = {
+    mine: true,
+    status: tab,
+    search: search || undefined,
+    domain_type: domainFilter,
+    // По умолчанию очередь идёт СОСТАВНЫМ порядком (спрос → дата запроса → имя): одним полем
+    // `ordering` тай-брейкеры не выразить. Как только продавец сам ткнул в заголовок колонки —
+    // порядок его, и составной уступает.
+    ordering: ordering || undefined,
+    order: ordering ? undefined : 'demand',
+    page,
+    page_size: pageSize,
+  };
+  const { data: pageData, isLoading, isError, refetch } = useProductsPage(queryParams);
+  const total = pageData?.count ?? 0;
   const { data: retiredCards } = useReclassificationWorklist();
   // N4: метрика направления (Ariba catalog spend) + подсказки дублей (система предлагает,
   // человек решает — Akeneo/Salesforce dedupe).
@@ -148,13 +180,29 @@ export function NomenclatureQueuePage({
     }
   };
 
-  const items = useMemo(() => rows ?? [], [rows]);
+  const items = useMemo(() => pageData?.results ?? [], [pageData]);
+  const isFiltered = Boolean(search) || Boolean(domainFilter);
   // Кнопка публикации осмысленна только на табе черновиков (N2, M4): без фильтра по табу
   // она предлагала «опубликовать» уже опубликованные строки.
   const publishableSelected = useMemo(
     () => (tab === 'DRAFT' ? items.filter((p) => selected.has(p.id) && p.completeness?.is_publishable) : []),
     [items, selected, tab],
   );
+
+  // Выбор живёт РОВНО на показанной странице и сбрасывается, как только выборка сменилась
+  // (страница, таб, поиск, фильтр, порядок). Так же ведут себя Gmail, GitHub и Odoo: массовое
+  // действие применяется к тому, что человек видит. Хранить галочки от строк, ушедших с экрана,
+  // значило бы публиковать вслепую — и «готовность» этих строк у нас на руках уже нет.
+  useEffect(() => {
+    setSelected(new Set());
+  }, [page, tab, search, ordering, domainFilter]);
+
+  // Опубликовали последние строки последней страницы — не оставляем человека на странице,
+  // которой больше нет: она выглядела бы как «в очереди пусто».
+  useEffect(() => {
+    const lastPage = Math.max(1, Math.ceil(total / pageSize));
+    if (page > lastPage) setPage(lastPage);
+  }, [total, pageSize, page, setPage]);
 
   const toggle = (id: number) => {
     setSelected((prev) => {
@@ -168,7 +216,18 @@ export function NomenclatureQueuePage({
   const columns = [
     {
       id: 'select',
-      header: '',
+      // «Выбрать всё» — это всё НА ЭТОЙ СТРАНИЦЕ, ничего сверх показанного.
+      header: (
+        <Checkbox
+          checked={items.length > 0 && items.every((p) => selected.has(p.id))}
+          onCheckedChange={(value) =>
+            setSelected(value ? new Set(items.map((p) => p.id)) : new Set())
+          }
+          aria-label={t('nomenclature.selectAllOnPage')}
+        />
+      ),
+      mobileLabel: t('adminTable.selectRow'),
+      className: 'w-10',
       cell: (p: Product) => (
         <Checkbox
           checked={selected.has(p.id)}
@@ -180,6 +239,7 @@ export function NomenclatureQueuePage({
     {
       id: 'name',
       header: t('nomenclature.columns.product'),
+      sortKey: 'name',
       cell: (p: Product) => (
         <div className="min-w-0">
           <div className="truncate font-medium">{p.name}</div>
@@ -192,6 +252,7 @@ export function NomenclatureQueuePage({
     {
       id: 'demand',
       header: t('nomenclature.columns.demand'),
+      sortKey: 'demand_count',
       cell: (p: Product) => (
         <span className="tabular-nums">
           {p.demand_count ? t('nomenclature.askedTimes', { count: p.demand_count }) : '—'}
@@ -274,14 +335,26 @@ export function NomenclatureQueuePage({
             size="sm"
             onClick={() => {
               setTab(key);
+              setPage(1);
               setSelected(new Set());
             }}
           >
             {t(`nomenclature.tabs.${key}`)}
           </Button>
         ))}
+        {/* Честная подпись к массовым действиям: галочки собраны на показанной странице —
+            обещать «все 300» кнопкой, которая знает только 20 строк, нельзя. */}
+        {selected.size > 0 && total > pageSize && (
+          <span className="ml-auto text-xs text-muted-foreground">{t('nomenclature.selectionScope')}</span>
+        )}
         {selected.size > 0 && tab === 'DRAFT' && (
-          <Button variant="outline" size="sm" className="ml-auto" disabled={classifyBusy} onClick={classifySelected}>
+          <Button
+            variant="outline"
+            size="sm"
+            className={total > pageSize ? undefined : 'ml-auto'}
+            disabled={classifyBusy}
+            onClick={classifySelected}
+          >
             {classifyBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> : null}
             {t('nomenclature.classify.run', { count: selected.size })}
           </Button>
@@ -312,14 +385,57 @@ export function NomenclatureQueuePage({
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">{t(`nomenclature.tabs.${tab}`)}</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base">
+            {t(`nomenclature.tabs.${tab}`)}
+            {/* Число — с сервера (`count`), а не длина показанного куска: до R1 экран вообще
+                не сообщал, сколько карточек за пределами первых двухсот. */}
+            {total > 0 && <Badge variant="secondary" className="tabular-nums">{total}</Badge>}
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          {isLoading ? (
+        <CardContent className="flex flex-col gap-3">
+          <Toolbar
+            searchValue={searchInput}
+            onSearchChange={setSearchInput}
+            searchPlaceholder={t('nomenclature.searchPlaceholder')}
+            filters={[
+              {
+                key: 'domain',
+                value: filters.domain,
+                onChange: (value) => setFilter('domain', value),
+                allLabel: t('nomenclature.filters.allDomains'),
+                options: domainTypes.map((domain) => ({
+                  value: domain.code,
+                  label: t(getDomainLabelKey(domain.code), domain.name),
+                })),
+              },
+            ]}
+          />
+
+          {isError ? (
+            <ErrorState onRetry={() => refetch()} />
+          ) : isLoading ? (
             <div className="space-y-2">
               {Array.from({ length: 4 }).map((_, index) => (
                 <Skeleton key={index} className="h-12 w-full" />
               ))}
+            </div>
+          ) : items.length === 0 && isFiltered ? (
+            // Пустой поиск — это НЕ пустая очередь: предлагать «создать карточку» там, где
+            // человек просто не нашёл строку по запросу, значит врать о состоянии данных.
+            <div className="flex flex-col items-center gap-3 py-12 text-center">
+              <SearchX className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
+              <p className="text-sm font-medium">{t('nomenclature.noMatches')}</p>
+              <p className="max-w-md text-xs text-muted-foreground">{t('nomenclature.noMatchesHint')}</p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSearchInput('');
+                  setFilter('domain', 'all');
+                }}
+              >
+                {t('nomenclature.resetFilters')}
+              </Button>
             </div>
           ) : items.length === 0 ? (
             // Пустой экран объясняет, ОТКУДА здесь берутся строки, а не просто молчит:
@@ -360,8 +476,14 @@ export function NomenclatureQueuePage({
                   onProductClick(String(p.id));
                 }
               }}
+              // Сортировка только по тем полям, которые умеет сервер (имя, спрос). У «Готовности»
+              // заголовка-сортировки НЕТ намеренно: полнота считается на лету в Python, сервер её
+              // не упорядочивает — обещать сортировку, которой нет, и есть тот самый дефект.
+              sorting={{ ordering, onToggle: toggleOrdering }}
             />
           )}
+
+          <Pager page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
         </CardContent>
       </Card>
 

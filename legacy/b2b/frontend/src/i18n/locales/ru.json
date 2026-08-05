@@ -335,10 +335,7 @@
   "productManagement": {
     "kpi": {
       "totalItems": "Всего позиций",
-      "inStock": "В наличии",
-      "toOrder": "Под заказ",
-      "inCart": "В корзине",
-      "sourcing": "На поиске"
+      "inCart": "В корзине"
     },
     "title": {
       "buyer": "Каталог товаров",
@@ -359,7 +356,9 @@
     "filters": {
       "allDomains": "Все домены",
       "allStatuses": "Все статусы",
-      "allManufacturers": "Все производители"
+      "allManufacturers": "Все производители",
+      "allOwners": "Все карточки",
+      "onlyMine": "Только мои"
     },
     "table": {
       "name": "Наименование",
@@ -368,7 +367,11 @@
       "category": "Категория",
       "uom": "Ед. изм",
       "priceFca": "Цена FCA",
-      "status": "Статус"
+      "status": "Статус",
+      "select": "Выбрать",
+      "owner": "Владелец карточки",
+      "mine": "Моя",
+      "actions": "Действия"
     },
     "noResults": "Товары не найдены"
   },
@@ -1687,7 +1690,8 @@
     "in_stock": "В наличии",
     "to_order": "Под заказ",
     "sourcing": "Поиск",
-    "inactive": "Неактивен"
+    "inactive": "Неактивен",
+    "out_of_stock": "Нет в наличии"
   },
   "languageSwitcher": {
     "switchToEn": "Switch to English",
@@ -4812,6 +4816,15 @@
       "identity": "Артикул или ГОСТ/чертёж",
       "equipment_groups": "Группа оборудования",
       "hs_code": "Код ТН ВЭД (действующий)"
+    },
+    "searchPlaceholder": "Поиск по названию, ГОСТ или артикулу",
+    "selectAllOnPage": "Выбрать все строки на странице",
+    "selectionScope": "Выбор действует на текущей странице",
+    "noMatches": "Ничего не найдено",
+    "noMatchesHint": "Измените запрос или снимите фильтры — позиция может быть на другой странице.",
+    "resetFilters": "Сбросить фильтры",
+    "filters": {
+      "allDomains": "Все направления"
     }
   },
   "hsField": {
