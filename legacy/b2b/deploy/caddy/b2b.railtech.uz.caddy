@@ -141,20 +141,29 @@ b2b.railtech.uz {
         # the project ever moves regions. No bare `wss:` wildcard (any-host
         # WebSocket = exfil channel if a script is injected). Inter is self-hosted
         # (@fontsource, same origin) so no fonts.gstatic.com in font-src.
-        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://b2b.railtech.uz; font-src 'self' data:; connect-src 'self' https://b2b.railtech.uz wss://b2b.railtech.uz https://*.ingest.de.sentry.io; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
     }
 
-    # ── /admin/ CSP override: Unfold's Alpine.js needs 'unsafe-eval' ───────────
-    # Alpine compiles its x-* directive expressions with new Function() at runtime.
-    # The strict script-src 'self' above blocks that (EvalError) → Alpine never
-    # boots, x-cloak is never cleared, and the /admin login/dashboard renders
-    # dimmed and unclickable. Add 'unsafe-eval' for /admin/* ONLY, so the public
-    # React SPA (a Vite build that never evals) keeps the strict script-src 'self'.
-    # This `header` runs AFTER the block above, so for /admin/* it REPLACES the CSP;
-    # every other path is untouched. Verify after `systemctl reload caddy`:
-    #   curl -sI https://b2b.railtech.uz/admin/login/ | grep -i content-security
-    @admin_csp path /admin/*
-    header @admin_csp Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://b2b.railtech.uz; font-src 'self' data:; connect-src 'self' https://b2b.railtech.uz wss://b2b.railtech.uz https://*.ingest.de.sentry.io; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
+    # ── CSP: ДВА взаимоисключающих матчера, ни одного безматчерного ───────────
+    #
+    # Почему не «общий блок + переопределение для /admin/*», как было раньше:
+    # Caddy сортирует обработчики по СПЕЦИФИЧНОСТИ, а не по порядку в файле, и
+    # безматчерный `header` выполняется ПОСЛЕДНИМ. Скомпилированный конфиг:
+    #     1. headers match=/admin/*   ← переопределение с 'unsafe-eval'
+    #     2. headers match=None       ← общий блок, ЗАТИРАЛ его
+    # Поэтому админка получала строгий `script-src 'self'`, Alpine падал с
+    # EvalError, x-cloak не снимался — страница «мутная и некликабельная».
+    # Прежний комментарий утверждал обратное («runs AFTER … so it REPLACES»), и
+    # ошибку не замечали месяц: фрагмент ни разу не применяли на прод, а на боксе
+    # жила редакция от 08-07 вообще без этого блока. Проверено на живом Caddy
+    # через `caddy adapt` 2026-08-05.
+    #
+    # Матчеры ниже не пересекаются, поэтому порядок между ними роли не играет и
+    # затирать друг друга им нечем.
+    @csp_admin path /admin/*
+    header @csp_admin Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://b2b.railtech.uz; font-src 'self' data:; connect-src 'self' https://b2b.railtech.uz wss://b2b.railtech.uz https://*.ingest.de.sentry.io; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
+
+    @csp_public not path /admin/*
+    header @csp_public Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://b2b.railtech.uz; font-src 'self' data:; connect-src 'self' https://b2b.railtech.uz wss://b2b.railtech.uz https://*.ingest.de.sentry.io; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'"
 
     log {
         output file /var/log/caddy/b2b.railtech.uz.log {
