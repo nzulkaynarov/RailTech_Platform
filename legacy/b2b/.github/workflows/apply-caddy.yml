@@ -1,0 +1,144 @@
+# ═══════════════════════════════════════════════════════════════════════════
+#  Применить фрагмент Caddy на app-VPS — ОТДЕЛЬНО от деплоя приложения.
+#
+#  Зачем отдельный workflow, а не шаг в deploy-b2b.yml:
+#    • edge общий с соседним сайтом (grades.railtech.uz) на том же Caddy —
+#      сломанный фрагмент кладёт TLS всему боксу, а не только этому проекту.
+#      Такое не должно происходить автоматически при каждом мерже в main;
+#    • выкатка приложения не должна быть заложником конфига edge и наоборот.
+#
+#  Поэтому: только ручной запуск, и процедура сама себя страхует —
+#    бэкап → копия → validate ВСЕГО мастер-конфига → reload → проверка ОБОИХ
+#    сайтов → при любой осечке откат на бэкап и повторный reload.
+#
+#  Дрейф (репозиторий разошёлся с боксом) показывает шаг «Проверить дрейф
+#  конфига Caddy» в deploy-b2b.yml — он только сообщает, ничего не меняя.
+# ═══════════════════════════════════════════════════════════════════════════
+name: Apply Caddy config (b2b)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Введите APPLY, чтобы подтвердить перезагрузку общего edge'
+        required: true
+        default: ''
+
+concurrency:
+  group: apply-caddy-b2b
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: [self-hosted, railtech-b2b]
+    env:
+      REPO_FRAGMENT: deploy/caddy/b2b.railtech.uz.caddy
+      LIVE_FRAGMENT: /etc/caddy/conf.d/b2b.caddy
+      BACKUP_DIR: /var/backups/caddy
+      NEIGHBOUR: https://grades.railtech.uz/
+
+    steps:
+      - name: Проверить подтверждение
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "APPLY" ]; then
+            echo "::error::Не подтверждено. Введите APPLY — шаг перезагружает edge, общий с соседним сайтом."
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Проверить права и наличие caddy
+        run: |
+          if ! sudo -n true 2>/dev/null; then
+            echo "::error::У раннера нет беспарольного sudo — применить конфиг отсюда нельзя. Нужны руки владельца (RUNBOOK § 7)."
+            exit 1
+          fi
+          command -v caddy >/dev/null || { echo "::error::caddy не найден в PATH"; exit 1; }
+          test -f "$REPO_FRAGMENT" || { echo "::error::нет $REPO_FRAGMENT"; exit 1; }
+          caddy version | head -1
+
+      - name: Снять бэкап живого фрагмента
+        id: backup
+        run: |
+          sudo mkdir -p "$BACKUP_DIR"
+          STAMP=$(date -u +%Y%m%dT%H%M%SZ)
+          BACKUP="$BACKUP_DIR/b2b.caddy.$STAMP.bak"
+          if [ -f "$LIVE_FRAGMENT" ]; then
+            sudo cp -a "$LIVE_FRAGMENT" "$BACKUP"
+            echo "бэкап: $BACKUP"
+          else
+            # Фрагмента ещё нет — откатывать будем удалением, а не восстановлением.
+            echo "живого фрагмента нет, это первое применение"
+            BACKUP=""
+          fi
+          echo "backup=$BACKUP" >> "$GITHUB_OUTPUT"
+          # Расширение .bak специально: master импортирует conf.d/*.caddy,
+          # поэтому бэкап не должен подхватиться как второй сайт.
+
+      - name: Применить, провалидировать и перезагрузить
+        run: |
+          set -u
+          BACKUP="${{ steps.backup.outputs.backup }}"
+
+          restore() {
+            echo "::warning::Откатываю конфиг Caddy."
+            if [ -n "$BACKUP" ]; then
+              sudo cp -a "$BACKUP" "$LIVE_FRAGMENT"
+            else
+              sudo rm -f "$LIVE_FRAGMENT"
+            fi
+            sudo systemctl reload caddy || sudo systemctl restart caddy || true
+          }
+
+          sudo cp "$REPO_FRAGMENT" "$LIVE_FRAGMENT"
+
+          # Валидируем ВЕСЬ мастер-конфиг: он импортирует и соседний сайт,
+          # поэтому ошибка у соседа тоже обязана остановить нас здесь.
+          if ! sudo caddy validate --config /etc/caddy/Caddyfile; then
+            echo "::error::caddy validate не прошёл — reload НЕ выполняю."
+            restore
+            exit 1
+          fi
+
+          sudo systemctl reload caddy
+
+          # ── Проверка: наш сайт получил заголовки, сосед жив ───────────────
+          sleep 3
+          OURS=$(curl -sS -o /dev/null -w '%{http_code}' https://b2b.railtech.uz/ || echo 000)
+          CACHE=$(curl -sSI https://b2b.railtech.uz/ | tr -d '\r' | grep -i '^cache-control:' || true)
+          NEIGH=$(curl -sS -o /dev/null -w '%{http_code}' "$NEIGHBOUR" || echo 000)
+
+          echo "b2b: HTTP $OURS | $CACHE"
+          echo "сосед ($NEIGHBOUR): HTTP $NEIGH"
+
+          if [ "$OURS" != "200" ]; then
+            echo "::error::b2b.railtech.uz отвечает $OURS после reload."
+            restore; exit 1
+          fi
+          # Сосед мог и раньше отвечать не-200 (свои редиректы/авторизация), но
+          # 000 — это отказ соединения, то есть мы уронили ему TLS.
+          if [ "$NEIGH" = "000" ]; then
+            echo "::error::Соседний сайт перестал отвечать — это наш reload."
+            restore; exit 1
+          fi
+          if ! echo "$CACHE" | grep -qi 'no-cache'; then
+            echo "::error::Cache-Control не появился — конфиг применился не так, как ожидалось."
+            restore; exit 1
+          fi
+
+          {
+            echo "### ✅ Конфиг Caddy применён"
+            echo
+            echo '```'
+            echo "b2b.railtech.uz : HTTP $OURS"
+            echo "$CACHE"
+            echo "сосед           : HTTP $NEIGH"
+            echo "бэкап           : ${BACKUP:-（первое применение, бэкапа нет）}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Убрать старые бэкапы (оставить 10)
+        if: always()
+        run: |
+          sudo sh -c 'ls -t '"$BACKUP_DIR"'/b2b.caddy.*.bak 2>/dev/null | tail -n +11 | xargs -r rm --' || true
