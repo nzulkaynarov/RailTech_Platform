@@ -6276,6 +6276,255 @@
                 }
             }
         },
+        "/api/v1/catalog/category-requests/": {
+            "get": {
+                "operationId": "catalog_category_requests_list",
+                "description": "Seller: own company's requests. Platform operator: every request, filterable by `?status=PENDING|APPROVED|REJECTED`.",
+                "summary": "List category requests",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "A page number within the paginated result set.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "required": false,
+                        "in": "query",
+                        "description": "Number of results to return per page.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "A search term.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedCategoryRequestList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_category_requests_create",
+                "description": "Escape-hatch for the platform-owned taxonomy (Google Merchant Center pattern): the seller asks for a category instead of creating one. Never a gate — the product card lives on without it.",
+                "summary": "Request a new catalog category",
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CategoryRequestRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CategoryRequestRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CategoryRequestRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CategoryRequest"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/category-requests/{id}/": {
+            "get": {
+                "operationId": "catalog_category_requests_retrieve",
+                "summary": "Get category request",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CategoryRequest"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/category-requests/{id}/approve/": {
+            "post": {
+                "operationId": "catalog_category_requests_approve_create",
+                "description": "Links the request to the category the operator actually created. Operator only.",
+                "summary": "Approve a category request",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CategoryRequestReviewRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CategoryRequestReviewRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CategoryRequestReviewRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CategoryRequest"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/category-requests/{id}/reject/": {
+            "post": {
+                "operationId": "catalog_category_requests_reject_create",
+                "description": "Requires a reason — a refusal without grounds is not reviewable. Operator only.",
+                "summary": "Reject a category request",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CategoryRequestReviewRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CategoryRequestReviewRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CategoryRequestReviewRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CategoryRequest"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/v1/catalog/domain-types/": {
             "get": {
                 "operationId": "catalog_domain_types_list",
@@ -20312,6 +20561,51 @@
                     "name"
                 ]
             },
+            "CategoryRequestRequest": {
+                "type": "object",
+                "description": "Чтение — вложенные имена, запись — плоские id (конвенция проекта).",
+                "properties": {
+                    "proposed_name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "title": "Предлагаемая категория",
+                        "description": "Название категории, которой не хватает в справочнике",
+                        "maxLength": 255
+                    },
+                    "parent": {
+                        "type": "integer",
+                        "nullable": true,
+                        "title": "Предлагаемое место в дереве",
+                        "description": "Категория, внутри которой продавец ожидает увидеть новую"
+                    },
+                    "domain_type": {
+                        "type": "integer",
+                        "nullable": true,
+                        "title": "Домен каталога",
+                        "description": "Домен, к которому относится предлагаемая категория"
+                    },
+                    "justification": {
+                        "type": "string",
+                        "title": "Пояснение",
+                        "description": "Примеры товаров и почему существующие категории не подходят"
+                    }
+                },
+                "required": [
+                    "proposed_name"
+                ]
+            },
+            "CategoryRequestReviewRequest": {
+                "type": "object",
+                "description": "Тело решения оператора: категория (одобрение) или причина (отказ).",
+                "properties": {
+                    "category": {
+                        "type": "integer"
+                    },
+                    "reason": {
+                        "type": "string"
+                    }
+                }
+            },
             "ChangePasswordRequestRequest": {
                 "type": "object",
                 "properties": {
@@ -24895,6 +25189,37 @@
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/Category"
+                        }
+                    }
+                }
+            },
+            "PaginatedCategoryRequestList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CategoryRequest"
                         }
                     }
                 }

@@ -9,6 +9,7 @@ from core.admin_mixins import ReadOnlyInspectionMixin, superuser_only_action
 
 from .models import (
     Category,
+    CategoryRequest,
     DomainType,
     EquipmentGroup,
     Manufacturer,
@@ -319,3 +320,27 @@ class SupplierOfferAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelA
             },
         ),
     )
+
+
+# ────────────────────────────────────────────
+# Заявки на категорию (R6) — ТОЛЬКО инспекция
+# ────────────────────────────────────────────
+
+
+@admin.register(CategoryRequest)
+class CategoryRequestAdmin(ReadOnlyInspectionMixin, ModelAdmin):
+    """Просмотр обращений инженером. Рассматривают их в операторской плоскости (ADR-0001).
+
+    Кнопки «одобрить/отклонить» здесь СОЗНАТЕЛЬНО отсутствуют: решение по заявке — бизнес-
+    действие со side-effect'ами (аудит, уведомление автору, привязка категории), и его место —
+    DRF-эндпоинт `catalog/category-requests/{id}/approve|reject/`, вызывающий сервис. Дублировать
+    его @admin.action'ом запрещено (Rule 8).
+    """
+
+    list_display = ("proposed_name", "company", "status", "resulting_category", "created_at")
+    list_filter = ("status", "domain_type")
+    list_filter_submit = True
+    search_fields = ("proposed_name", "company__name")
+    list_select_related = ("company", "parent", "domain_type", "resulting_category")
+    readonly_fields = ("created_at", "updated_at", "reviewed_at")
+    list_per_page = 30

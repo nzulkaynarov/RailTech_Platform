@@ -1664,7 +1664,8 @@
     "resetPassword": "New password",
     "adminOperatorRoles": "Operator roles",
     "nomenclature": "Nomenclature",
-    "hsDirectory": "HS classifier"
+    "hsDirectory": "HS classifier",
+    "catalogReference": "Reference data"
   },
   "dealsKanban": {
     "list": "List",
@@ -1724,8 +1725,6 @@
     "documents": "Documents",
     "nomenclature": "Nomenclature",
     "nomenclatureSection": "Nomenclature",
-    "categories": "Categories",
-    "equipmentGroups": "Equipment Groups",
     "quotes": "Quotes",
     "deals": "Deals",
     "settings": "Settings",
@@ -1767,7 +1766,7 @@
     "operatorRoles": "Operator roles",
     "accessLog": "Access log",
     "fxRateFallback": "Exchange rate unavailable — USD amounts are approximate",
-    "hsDirectory": "HS classifier"
+    "catalogReference": "Reference data"
   },
   "productDetail": {
     "specifications": "Specifications",
@@ -2251,15 +2250,6 @@
     "productionSchedule": {
       "title": "Production Schedule",
       "description": "Production planning and deadline control"
-    },
-    "categories": {
-      "title": "Categories",
-      "description": "Manage nomenclature category tree"
-    },
-    "equipmentGroups": {
-      "title": "Equipment Groups",
-      "description": "Railway equipment hierarchy: Type → Series → Unit",
-      "hasParent": "Subgroup"
     },
     "integrations": {
       "title": "Integrations",
@@ -3683,7 +3673,13 @@
     "PRODUCT_STATUS_MISSING": "The product status reference is not seeded — contact the platform operator",
     "HS_CODE_UNKNOWN": "This code is not in the HS classifier",
     "OWNER_COMPANY_REQUIRED": "The card's owner company is not set",
-    "OFFER_VALIDITY_RANGE_INVALID": "“Valid until” cannot be earlier than “valid from”."
+    "OFFER_VALIDITY_RANGE_INVALID": "“Valid until” cannot be earlier than “valid from”.",
+    "CATEGORY_REQUEST_ALREADY_PENDING": "A request like this is already under review",
+    "CATEGORY_REQUEST_ALREADY_REVIEWED": "The request has already been reviewed",
+    "CATEGORY_REQUEST_NAME_REQUIRED": "Enter the category name",
+    "CATEGORY_REQUIRED": "Pick a category from the directory",
+    "COMPANY_REQUIRED": "The action is available to a company member",
+    "REASON_REQUIRED": "Provide a reason"
   },
   "fileUpload": {
     "upload": "Upload",
@@ -4345,6 +4341,12 @@
         "title": "HS code changed",
         "detail": "Product “{{name}}”: {{from_code}} → {{to_code}}"
       }
+    },
+    "catalog": {
+      "category_request_reviewed": {
+        "title": "Category request reviewed",
+        "detail": "{{company_name}} → “{{category_name}}”: {{status_code}}"
+      }
     }
   },
   "companyTypes": {
@@ -4721,6 +4723,18 @@
     "support.ticket_created": {
       "title": "New support ticket",
       "message": "Ticket #{{ticket_id}}: {{subject}}"
+    },
+    "catalog.category_requested": {
+      "title": "New category requested",
+      "message": "{{company_name}}: “{{category_name}}”"
+    },
+    "catalog.category_request_approved": {
+      "title": "Category created",
+      "message": "“{{category_name}}” is now available as “{{resulting_name}}”"
+    },
+    "catalog.category_request_rejected": {
+      "title": "Category request rejected",
+      "message": "“{{category_name}}”: {{reason}}"
     }
   },
   "approvalParticipation": {
@@ -4862,8 +4876,6 @@
     "retired": "Code retired from the current edition — pick a current one"
   },
   "hsDirectory": {
-    "title": "HS classifier",
-    "subtitle": "Uzbekistan customs classifier: search, tree and AI lookup",
     "search": {
       "title": "Search & tree",
       "placeholder": "product name or code digits…"
@@ -4920,5 +4932,49 @@
     "empty": "No matches — type a name to create it",
     "clear": "Clear brand",
     "create": "Use “{{name}}”"
+  },
+  "catalogReference": {
+    "title": "Reference data",
+    "description": "Platform classifiers: HS codes, categories and equipment groups. The taxonomy is maintained by the platform — if a category is missing, send a request.",
+    "showProducts": "Products",
+    "tabs": {
+      "hs": "HS codes",
+      "categories": "Categories",
+      "groups": "Equipment groups"
+    },
+    "categories": {
+      "hint": "The category tree is maintained by the platform: it is shared by every seller — buyers browse by it and HS codes are matched against it.",
+      "emptyHint": "The directory is still empty. Request a category — an operator will create it."
+    },
+    "groups": {
+      "hint": "Equipment groups — the hierarchy of rolling-stock and track-machinery units, maintained by the platform.",
+      "searchPlaceholder": "Search groups by name",
+      "emptyHint": "The group directory is not populated yet — the «pick a group» requirement turns on with it."
+    },
+    "products": {
+      "brand": "Brand",
+      "subtitle": "Catalog items: {{total}}",
+      "empty": "No products in this directory row yet",
+      "emptyHint": "Create a product card or set this classification on an existing one."
+    },
+    "request": {
+      "cta": "Request a category",
+      "title": "Request a category",
+      "description": "Categories are created by the platform, so buyers find goods the same way across sellers. Describe the one you need: an operator will review the request. It does not block your work on product cards.",
+      "nameLabel": "Category name",
+      "namePlaceholder": "For example: Composite brake pads",
+      "parentLabel": "Where it belongs",
+      "parentTopLevel": "Top level",
+      "justificationLabel": "Details",
+      "justificationPlaceholder": "Examples of goods that do not fit the existing categories",
+      "success": "Request sent — an operator will review it",
+      "myTitle": "My requests",
+      "resulting": "Category created: {{name}}",
+      "status": {
+        "PENDING": "Under review",
+        "APPROVED": "Approved",
+        "REJECTED": "Rejected"
+      }
+    }
   }
 }

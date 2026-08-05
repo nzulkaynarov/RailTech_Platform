@@ -2230,6 +2230,87 @@ export interface paths {
         patch: operations["catalog_categories_partial_update"];
         trace?: never;
     };
+    "/api/v1/catalog/category-requests/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List category requests
+         * @description Seller: own company's requests. Platform operator: every request, filterable by `?status=PENDING|APPROVED|REJECTED`.
+         */
+        get: operations["catalog_category_requests_list"];
+        put?: never;
+        /**
+         * Request a new catalog category
+         * @description Escape-hatch for the platform-owned taxonomy (Google Merchant Center pattern): the seller asks for a category instead of creating one. Never a gate — the product card lives on without it.
+         */
+        post: operations["catalog_category_requests_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/category-requests/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get category request */
+        get: operations["catalog_category_requests_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/category-requests/{id}/approve/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a category request
+         * @description Links the request to the category the operator actually created. Operator only.
+         */
+        post: operations["catalog_category_requests_approve_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/category-requests/{id}/reject/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject a category request
+         * @description Requires a reason — a refusal without grounds is not reviewable. Operator only.
+         */
+        post: operations["catalog_category_requests_reject_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/domain-types/": {
         parameters: {
             query?: never;
@@ -7183,6 +7264,34 @@ export interface components {
              */
             icon?: string | null;
         };
+        /** @description Чтение — вложенные имена, запись — плоские id (конвенция проекта). */
+        CategoryRequestRequest: {
+            /**
+             * Предлагаемая категория
+             * @description Название категории, которой не хватает в справочнике
+             */
+            proposed_name: string;
+            /**
+             * Предлагаемое место в дереве
+             * @description Категория, внутри которой продавец ожидает увидеть новую
+             */
+            parent?: number | null;
+            /**
+             * Домен каталога
+             * @description Домен, к которому относится предлагаемая категория
+             */
+            domain_type?: number | null;
+            /**
+             * Пояснение
+             * @description Примеры товаров и почему существующие категории не подходят
+             */
+            justification?: string;
+        };
+        /** @description Тело решения оператора: категория (одобрение) или причина (отказ). */
+        CategoryRequestReviewRequest: {
+            category?: number;
+            reason?: string;
+        };
         ChangePasswordRequestRequest: {
             current_password: string;
             new_password: string;
@@ -9565,6 +9674,21 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["Category"][];
         };
+        PaginatedCategoryRequestList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["CategoryRequest"][];
+        };
         PaginatedCompanyEntitlementList: {
             /** @example 123 */
             count: number;
@@ -11184,6 +11308,18 @@ export interface components {
              * @description Минимальное количество для заказа
              */
             min_order_qty?: number;
+            /**
+             * Действует с
+             * Format: date
+             * @description Дата начала действия предложения
+             */
+            valid_from?: string | null;
+            /**
+             * Действует до
+             * Format: date
+             * @description Дата окончания действия предложения
+             */
+            valid_until?: string | null;
             /**
              * Активен
              * @description Неактивные офферы не отображаются при выборе
@@ -12921,6 +13057,18 @@ export interface components {
              */
             min_order_qty?: number;
             /**
+             * Действует с
+             * Format: date
+             * @description Дата начала действия предложения
+             */
+            valid_from?: string | null;
+            /**
+             * Действует до
+             * Format: date
+             * @description Дата окончания действия предложения
+             */
+            valid_until?: string | null;
+            /**
              * Активен
              * @description Неактивные офферы не отображаются при выборе
              */
@@ -12988,6 +13136,18 @@ export interface components {
              * @description Минимальное количество для заказа
              */
             min_order_qty?: number;
+            /**
+             * Действует с
+             * Format: date
+             * @description Дата начала действия предложения
+             */
+            valid_from?: string | null;
+            /**
+             * Действует до
+             * Format: date
+             * @description Дата окончания действия предложения
+             */
+            valid_until?: string | null;
             /**
              * Активен
              * @description Неактивные офферы не отображаются при выборе
@@ -17282,6 +17442,132 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Category"];
+                };
+            };
+        };
+    };
+    catalog_category_requests_list: {
+        parameters: {
+            query?: {
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedCategoryRequestList"];
+                };
+            };
+        };
+    };
+    catalog_category_requests_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CategoryRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CategoryRequestRequest"];
+                "multipart/form-data": components["schemas"]["CategoryRequestRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryRequest"];
+                };
+            };
+        };
+    };
+    catalog_category_requests_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryRequest"];
+                };
+            };
+        };
+    };
+    catalog_category_requests_approve_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CategoryRequestReviewRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CategoryRequestReviewRequest"];
+                "multipart/form-data": components["schemas"]["CategoryRequestReviewRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryRequest"];
+                };
+            };
+        };
+    };
+    catalog_category_requests_reject_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CategoryRequestReviewRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CategoryRequestReviewRequest"];
+                "multipart/form-data": components["schemas"]["CategoryRequestReviewRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryRequest"];
                 };
             };
         };

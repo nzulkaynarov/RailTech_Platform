@@ -41,6 +41,7 @@ from accounts.views import (
 )
 from accounts.wizard import WIZARD_FORMS, CompanyWizardView
 from catalog.views import (
+    CategoryRequestViewSet,
     CategoryViewSet,
     DomainTypeViewSet,
     EquipmentGroupViewSet,
@@ -127,6 +128,8 @@ router.register(r"catalog/products", ProductViewSet, basename="product")
 router.register(r"catalog/offers", SupplierOfferViewSet, basename="offer")
 router.register(r"catalog/equipment-groups", EquipmentGroupViewSet, basename="equipmentgroup")
 router.register(r"catalog/categories", CategoryViewSet, basename="category")
+# Escape-hatch платформенной таксономии (R6): продавец ПРОСИТ категорию, а не заводит её.
+router.register(r"catalog/category-requests", CategoryRequestViewSet, basename="categoryrequest")
 router.register(r"catalog/manufacturers", ManufacturerViewSet, basename="manufacturer")
 router.register(r"catalog/domain-types", DomainTypeViewSet, basename="domaintype")
 router.register(r"catalog/product-statuses", ProductStatusViewSet, basename="productstatus")

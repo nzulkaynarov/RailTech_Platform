@@ -142,11 +142,12 @@ export const TENANT_NAV: NavNodeDef[] = [
     requires: { anyPerm: ['catalog.manage', 'catalog.publish'] },
     children: [
       { labelKey: 'shell.nomenclature', id: 'nomenclature' },
-      { labelKey: 'shell.hsDirectory', id: 'hs-directory' },
       { labelKey: 'shell.catalog', id: 'products' },
-      { labelKey: 'shell.categories', id: 'categories' },
-      { labelKey: 'shell.equipmentGroups', id: 'equipment-groups' },
       { labelKey: 'shell.catalogImport', id: 'catalog-import' },
+      // R6 (D14): три справочника были тремя пунктами — ТН ВЭД, категории, группы
+      // оборудования. Классификаторы платформы — один узел с вкладками (Akeneo Settings /
+      // Odoo Configuration), а рабочие места остаются отдельными пунктами.
+      { labelKey: 'shell.catalogReference', id: 'catalog-reference' },
     ],
   },
 

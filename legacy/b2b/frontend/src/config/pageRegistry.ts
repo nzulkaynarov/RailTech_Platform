@@ -59,7 +59,10 @@ const CATALOG_READ = [
   { id: 'products', buyer: true, seller: true, kycExempt: true, navigable: true },
   // Очередь наполнения номенклатуры — только продавцовая сторона (у покупателя своего каталога нет).
   { id: 'nomenclature', seller: true, kycExempt: true, navigable: true },
-  // Справочник ТН ВЭД — инструмент продавца (коды нужны в карточках и КП).
+  // Справочники платформы одной страницей: ТН ВЭД · категории · группы оборудования (R6).
+  // Пункт меню теперь ОДИН — раздел «Номенклатура» состоял из шести, и три из них были
+  // справочниками (D14). Старые маршруты ниже остались рабочими алиасами на свою вкладку.
+  { id: 'catalog-reference', seller: true, kycExempt: true, navigable: true },
   { id: 'hs-directory', seller: true, kycExempt: true, navigable: true },
   { id: 'product_detail', buyer: true, seller: true, kycExempt: true },
 ] as const satisfies readonly PageDefinition[];
@@ -105,6 +108,9 @@ const BUYER_ONLY = [
 ] as const satisfies readonly PageDefinition[];
 
 const SELLER_ONLY = [
+  // R6: собственных страниц у этих маршрутов больше нет — оба открывают «Справочники» на
+  // своей вкладке. Строки оставлены намеренно: хэши напечатаны в закладках и старых письмах,
+  // а удалить маршрут — значит отправить такую ссылку на дашборд.
   { id: 'categories', seller: true, kycExempt: true, navigable: true },
   { id: 'equipment-groups', seller: true, kycExempt: true, navigable: true },
   { id: 'catalog-import', seller: true, kycExempt: true, navigable: true },

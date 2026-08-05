@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { BookOpenText, ChevronRight, Copy, Landmark, Loader2, Sparkles } from 'lucide-react';
+import { ChevronRight, Copy, Landmark, Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { CustomsDutiesSheet } from '@/components/Shared/CustomsDutiesSheet';
 
@@ -138,7 +138,14 @@ function TreeNode({ node, depth }: { node: HSNode; depth: number }) {
   );
 }
 
-export function HSDirectoryPage() {
+/**
+ * Тело справочника БЕЗ заголовка страницы — вкладка «ТН ВЭД» на странице справочников (R6).
+ *
+ * Три классификатора платформы (ТН ВЭД, категории, группы оборудования) были тремя пунктами
+ * меню и тремя страницами; собранные в один экран, они перестают дробить раздел
+ * «Номенклатура» на шесть пунктов (D14). Свой `<h1>` вкладке не нужен — он у страницы.
+ */
+export function HSDirectorySection() {
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const debounced = useDebouncedValue(query, 300);
@@ -183,16 +190,6 @@ export function HSDirectoryPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-          <BookOpenText className="h-5 w-5" aria-hidden="true" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold">{t('hsDirectory.title')}</h1>
-          <p className="text-sm text-muted-foreground">{t('hsDirectory.subtitle')}</p>
-        </div>
-      </div>
-
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Обычный поиск + дерево */}
         <Card>
@@ -308,4 +305,4 @@ export function HSDirectoryPage() {
   );
 }
 
-export default HSDirectoryPage;
+export default HSDirectorySection;

@@ -4,6 +4,7 @@ Public API re-exported so existing import paths keep working.
 """
 
 from .ai import ProductEnrichView
+from .category_requests import CategoryRequestViewSet
 from .lookups import (
     LIST_CACHE_TTL,
     LOOKUP_CACHE_TTL,
@@ -18,6 +19,7 @@ from .offers import SupplierOfferViewSet
 from .products import ProductViewSet
 
 __all__ = [
+    "CategoryRequestViewSet",
     "CategoryViewSet",
     "DomainTypeViewSet",
     "EquipmentGroupViewSet",

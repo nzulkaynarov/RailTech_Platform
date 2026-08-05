@@ -22,8 +22,10 @@ const ProductDetail = lazyWithRetry(() => import('@/pages/ProductDetail').then((
 const NomenclatureQueuePage = lazyWithRetry(() =>
   import('@/pages/NomenclatureQueuePage').then((m) => ({ default: m.NomenclatureQueuePage })),
 );
-const HSDirectoryPage = lazyWithRetry(() =>
-  import('@/pages/HSDirectoryPage').then((m) => ({ default: m.HSDirectoryPage })),
+// R6: три справочника (ТН ВЭД · категории · группы оборудования) стали ОДНОЙ страницей с
+// вкладками. Старые хэши остались рабочими маршрутами и открывают свою вкладку.
+const CatalogReferencePage = lazyWithRetry(() =>
+  import('@/pages/CatalogReferencePage').then((m) => ({ default: m.CatalogReferencePage })),
 );
 const Dashboard = lazyWithRetry(() => import('@/pages/Dashboard').then((m) => ({ default: m.Dashboard })));
 const SettingsPage = lazyWithRetry(() => import('@/pages/SettingsPage').then((m) => ({ default: m.SettingsPage })));
@@ -33,8 +35,6 @@ const RequestDetailPage = lazyWithRetry(() =>
 const PlatformAdminDashboard = lazyWithRetry(() => import('@/pages/PlatformAdminDashboard'));
 const DealsPage = lazyWithRetry(() => import('@/pages/DealsPage'));
 const QuotesPage = lazyWithRetry(() => import('@/pages/QuotesPage'));
-const CategoriesPage = lazyWithRetry(() => import('@/pages/CategoriesPage'));
-const EquipmentGroupsPage = lazyWithRetry(() => import('@/pages/EquipmentGroupsPage'));
 const HelpPage = lazyWithRetry(() => import('@/pages/HelpPage'));
 const MyRequestsPage = lazyWithRetry(() => import('@/pages/MyRequestsPage'));
 const AdminUsersPage = lazyWithRetry(() => import('@/pages/AdminUsersPage'));
@@ -71,8 +71,6 @@ const PLAIN_PAGES: Record<string, ComponentType> = {
   settings: SettingsPage,
   'crm-deals': DealsPage,
   'crm-quotes': QuotesPage,
-  categories: CategoriesPage,
-  'equipment-groups': EquipmentGroupsPage,
   help: HelpPage,
   'my-requests': MyRequestsPage,
   'admin-users': AdminUsersPage,
@@ -124,6 +122,12 @@ function activePageIdFor(page: Page, activeStatus: CompanyStatus): string {
     case 'sourcing-requests':
     case 'deal-quote':
       return 'crm-deals';
+    // Старые маршруты справочников подсвечивают единый пункт меню — иначе переход по
+    // закладке `#categories` не подсвечивал бы ничего (пункта с таким id в меню больше нет).
+    case 'hs-directory':
+    case 'categories':
+    case 'equipment-groups':
+      return 'catalog-reference';
     default:
       return page.type;
   }
@@ -159,9 +163,16 @@ function renderContent(ctx: PageRenderContext): ReactNode {
     // готовность карточки и публикация владельцем (волна A, spec-nomenclature-lifecycle).
     case 'nomenclature':
       return <NomenclatureQueuePage onProductClick={onProductClick} onNavigate={ctx.onNavigate} />;
-    // T3: справочник ТН ВЭД — дерево + поиск + ИИ-режим (WCO/tarif-паттерн).
+    // Справочники платформы одной страницей (R6). Старые маршруты — алиасы на свою вкладку:
+    // их печатают закладки, письма и уведомления, и ломать их нельзя.
+    case 'catalog-reference':
+      return <CatalogReferencePage />;
     case 'hs-directory':
-      return <HSDirectoryPage />;
+      return <CatalogReferencePage defaultTab="hs" />;
+    case 'categories':
+      return <CatalogReferencePage defaultTab="categories" />;
+    case 'equipment-groups':
+      return <CatalogReferencePage defaultTab="groups" />;
     case 'product_detail':
       return (
         <ProductDetail
