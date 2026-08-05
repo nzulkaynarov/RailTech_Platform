@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Package, Upload, FileSpreadsheet, Download, CheckCircle2, Loader2, AlertCircle, AlertTriangle, SearchCheck } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -77,6 +78,7 @@ function useImportMessageText() {
 export function CatalogImportPage() {
   const { t } = useTranslation();
   const importMessageText = useImportMessageText();
+  const queryClient = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
   const [taskId, setTaskId] = useState<string | null>(null);
   const [taskStatus, setTaskStatus] = useState<TaskStatus | null>(null);
@@ -117,6 +119,13 @@ export function CatalogImportPage() {
           const result = data.result ?? null;
           setTaskResult(result);
           if (result?.dry_run && result?.status === 'success') setCheckedOk(true);
+          // Настоящий импорт создал карточки МИМО React Query, поэтому список товаров о них
+          // не знает и по `staleTime` отдаёт прежний ответ. Без сброса продавец уходил в
+          // «Каталог» сразу после загрузки и своих новых позиций там не видел — поймано
+          // проходом глазами. Проверка (dry-run) ничего не пишет, ей сбрасывать нечего.
+          if (!result?.dry_run && result?.status === 'success') {
+            queryClient.invalidateQueries({ queryKey: ['products'] });
+          }
         }
       } catch {
         if (cancelled) return;
@@ -130,7 +139,7 @@ export function CatalogImportPage() {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [taskId, taskStatus, pollAttempt]);
+  }, [taskId, taskStatus, pollAttempt, queryClient]);
 
   function pickFile(next: File | null) {
     setFile(next);

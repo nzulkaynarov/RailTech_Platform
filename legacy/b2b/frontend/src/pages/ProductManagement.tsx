@@ -194,6 +194,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
           // со своими черновиками и никак не мог понять, чья перед ним карточка.
           id: 'owner',
           header: t('productManagement.table.owner'),
+          className: 'whitespace-nowrap',
           cell: (product: Product) => {
             const owner = product.owner_company_data;
             if (!owner) return null;
@@ -227,7 +228,12 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
         }]
       : []),
     {
-      id: 'stock', header: t('productManagement.table.status'),
+      // `whitespace-nowrap` не косметика. Колонок стало больше (добавился владелец), таблица
+      // ужалась ровно в ширину карточки, и бейдж наличия обрезался ВНУТРИ своей ячейки —
+      // «В наличии» читалось как «В наличи», причём молча. Запрет переноса заставляет таблицу
+      // вырасти, и она честно прокручивается в собственной обёртке shadcn `Table`.
+      // Поймано проходом глазами: ни один тест ширину текста не меряет.
+      id: 'stock', header: t('productManagement.table.status'), className: 'whitespace-nowrap',
       cell: (product) => stockBadge(product),
     },
     {

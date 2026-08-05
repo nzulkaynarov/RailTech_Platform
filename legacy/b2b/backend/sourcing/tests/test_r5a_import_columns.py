@@ -559,3 +559,94 @@ def test_template_carries_the_new_columns_and_real_reference_values(world, user_
     assert example["Направление"] == world["railway"].name
     assert ("Категория", world["category"].name) in reference
     assert ("Направление", world["railway"].name) in reference
+
+
+# ── 6. Ведущий ноль в коде ТН ВЭД ────────────────────────────────────────────────────────
+#
+# Найдено ПРОХОДОМ ГЛАЗАМИ, а не тестом: файл разбирался «успешно», просто у кода пропадала
+# первая цифра. `pd.read_excel` без `dtype` выводит тип колонки сам, и колонка кодов из
+# текстовой становилась числовой — `0101210000` приезжало как `101210000`. Продавец получал
+# замечание «кода нет в справочнике» на ВЕРНЫЙ код, а в карточку писался испорченный, из-за
+# чего она ещё и объявлялась неопубликуемой. Нулём начинаются целые группы классификатора
+# (01–09), так что случай не экзотический.
+
+ZERO_HS = "0101210000"
+
+
+@pytest.mark.django_db
+def test_leading_zero_in_hs_code_survives_the_import(world, seller):
+    from catalog.models import Product
+    from master_data.models import HSCode
+
+    HSCode.objects.create(code=ZERO_HS, name="Лошади племенные", level=10)
+
+    result = run_catalog_import(
+        _xlsx(
+            [
+                {
+                    "Наименование": "Позиция с нулевым кодом",
+                    "Артикул производителя": "Z-1",
+                    "Бренд": "NN",
+                    "Код ТН ВЭД": ZERO_HS,
+                }
+            ]
+        ),
+        supplier_company_id=seller.id,
+    )
+
+    assert result["warning_count"] == 0, "верный код не должен давать замечание"
+    assert Product.objects.get(manufacturer_part_number="Z-1").hs_code == ZERO_HS
+
+
+@pytest.mark.django_db
+def test_leading_zero_code_does_not_make_the_card_unpublishable(world, seller):
+    from master_data.models import HSCode
+
+    HSCode.objects.create(code=ZERO_HS, name="Лошади племенные", level=10)
+
+    result = run_catalog_import(
+        _xlsx(
+            [
+                {
+                    "Наименование": "Полная карточка",
+                    "Артикул производителя": "Z-2",
+                    "Бренд": "NN",
+                    "Категория": "Тормозное оборудование",
+                    "Код ТН ВЭД": ZERO_HS,
+                    "Ед. изм.": "PCS",
+                    "Направление": "GENERAL_GOODS",
+                }
+            ]
+        ),
+        supplier_company_id=seller.id,
+    )
+
+    assert result["unpublishable"] == 0, "испорченный код делал карточку непубликуемой"
+
+
+@pytest.mark.django_db
+def test_numeric_cells_still_parse_after_reading_the_sheet_as_text(world, seller):
+    """Читаем лист текстом — значит числовые ячейки обязаны разбираться нашими парсерами."""
+    from catalog.models import SupplierOffer
+
+    result = run_catalog_import(
+        _xlsx(
+            [
+                {
+                    "Наименование": "Позиция с ценой",
+                    "Артикул производителя": "P-1",
+                    "Бренд": "NN",
+                    "Цена": 1250.5,
+                    "Валюта": "UZS",
+                    "Наличие": "IN_STOCK",
+                    "Мин. заказ": 12,
+                }
+            ]
+        ),
+        supplier_company_id=seller.id,
+    )
+
+    assert result["skipped"] == 0
+    offer = SupplierOffer.objects.get(product__manufacturer_part_number="P-1")
+    assert str(offer.base_price) == "1250.50"
+    assert offer.min_order_qty == 12
