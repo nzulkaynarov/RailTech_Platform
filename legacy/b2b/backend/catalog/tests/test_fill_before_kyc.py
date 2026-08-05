@@ -11,14 +11,7 @@
 
 import pytest
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, VerificationStatus, WorkspaceRole
 from catalog.completeness import completeness
 from catalog.models import Category, DomainType, Product, ProductStatus
 from catalog.publishing import publish_many, publish_product
