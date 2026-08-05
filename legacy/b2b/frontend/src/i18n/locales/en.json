@@ -2824,12 +2824,22 @@
     "confirmPublishDesc": "Product \"{{name}}\" will become visible to buyers in the catalog.",
     "aiEnrich": {
       "title": "AI enrichment",
-      "hint": "AI suggests a description and specs from the product name — review and edit before saving.",
+      "hint": "The AI will suggest a description, specifications, category, HS code and unit — you pick what to apply.",
       "button": "Fill with AI",
       "empty": "The AI returned no suggestions.",
       "applied": "AI suggestions applied — review and save.",
       "failed": "Could not get AI suggestions.",
-      "categoryHint": "Suggested category: {{hint}}"
+      "categoryHint": "Suggested category: {{hint}}",
+      "nothingNew": "The AI found nothing to add — the card already holds these values.",
+      "panelTitle": "AI suggestions: {{count}}",
+      "panelHint": "The AI suggests, you decide. Uncheck anything you don't want — the card changes only after Apply.",
+      "columnField": "Field",
+      "columnCurrent": "Current",
+      "columnSuggested": "AI suggestion",
+      "specsRows": "Rows: {{count}}",
+      "apply": "Apply ({{count}})",
+      "limitLeft": "Left today: {{remaining}} of {{cap}}",
+      "limitUnlimited": "No daily AI limit"
     },
     "ownerCompanyRequired": "Choose the card's owner company"
   },

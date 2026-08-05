@@ -4,7 +4,8 @@ Mirrors sourcing.MatchCatalogView: IsAuthenticated, ScopedRateThrottle, a hard i
 cap, a 503 AI_DISABLED short-circuit when the feature is off, and a 400 on bad input.
 The view is a THIN wrapper (Rule 8) — it authorizes, validates, calls ONE service
 function (`catalog.ai_enrich.enrich_product`) and returns the suggestion. The seller
-reviews/edits the draft in the product form before saving; nothing is auto-written.
+reviews the proposal FIELD BY FIELD in the product form and accepts or rejects each
+(Akeneo AI suggestions / Shopify Magic); nothing is auto-written.
 """
 
 from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
@@ -19,9 +20,11 @@ from rest_framework.views import APIView
     summary="AI enrich: draft PIM product fields (advisory)",
     description=(
         "From a product name (+ optional MPN / ГОСТ / domain) DRAFTS a description, key "
-        "specifications, and a likely-category HINT string for a seller's catalog card. "
+        "specifications, and PROPOSES the card's reference fields — category, unit of measure, "
+        "ТН ВЭД code — plus a free-text category hint as a fallback. "
         "SUGGESTION ONLY — the seller reviews/edits before saving; nothing is auto-written. "
-        "The category is a free-text hint, never a resolved id (Rule 1). 503 when AI is off. "
+        "Reference fields are CHOSEN from DB-built candidate lists and verified against them "
+        "server-side, never invented (Rule 1). 503 when AI is off. "
         "ARCH-01: the LLM call runs on Celery — returns 202 + task_id; poll "
         "sourcing/ai-status/<task_id>/ for {suggestion: {}}."
     ),

@@ -54,6 +54,16 @@ export interface Capabilities {
    * claim button keeps its prior behaviour. UI-gating only — claim/assignment stays authoritative
    * server-side. See useIsSoloSeller. */
   is_solo_seller?: boolean;
+  /**
+   * Дневной расход ИИ. Не гейт, а ИНФОРМАЦИЯ: механизм потолков существовал давно, но
+   * пользователь узнавал о нём, лишь упёршись в 429. Эталоны (Shopify Magic в подписке,
+   * Akeneo как add-on) подтверждения стоимости перед пачкой не спрашивают, поэтому новых
+   * блокировок волна не вносит — только показ остатка.
+   * `null` в потолке и остатке = безлимит (это НЕ то же, что остаток 0).
+   */
+  ai_daily_used?: number;
+  ai_daily_cap?: number | null;
+  ai_daily_remaining?: number | null;
 }
 
 /* ─── System Role (Platform-level) ─────────────────────────────────────

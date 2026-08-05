@@ -493,7 +493,19 @@ export const catalogApi = {
 export interface ProductEnrichSuggestion {
     description?: string;
     specifications?: { key: string; value: string }[];
+    /** Текстовая подсказка — запасной вариант, когда ни один кандидат-категория не подошёл. */
     suggested_category_hint?: string;
+    /**
+     * Код ТН ВЭД, ВЫБРАННЫЙ из справочника и детерминированно сверенный сервером
+     * (`""` — не подошёл ни один). Раньше сервер его считал, а клиент даже не объявлял:
+     * продавец платил за обогащение, кода не видел и жал вторую платную кнопку.
+     */
+    hs_code?: string;
+    hs_candidates?: { code: string; name: string; level: number; score: number }[];
+    /** id категории ИЗ справочника (`null` — не подошла ни одна). Выдумать id сервер не даёт. */
+    category_id?: number | null;
+    /** Код единицы измерения из справочника UN/ECE (`""` — не подошла ни одна). */
+    uom_code?: string;
 }
 
 export interface ProductImage {

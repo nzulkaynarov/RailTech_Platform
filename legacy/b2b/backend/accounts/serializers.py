@@ -519,6 +519,7 @@ class MeSerializer(serializers.ModelSerializer):
         CompanyRole.has_perm's short-circuit, so a perm added later isn't wrongly missing for an
         existing company admin). Drives the unified nav's per-item `requires` gates."""
         from accounts.services import is_demo, is_seller, primary_seller_company_id, quote_send_entitled
+        from sourcing.ai_spend_cap import ai_daily_usage
 
         from .constants import ALL_PERMISSIONS, FeatureKey
 
@@ -534,6 +535,7 @@ class MeSerializer(serializers.ModelSerializer):
         # UI show the distinct "output watermarked" message. UI-gating only — send_to_client stays
         # authoritative. None seller company → both False (no seller context to gate).
         seller_company_id = primary_seller_company_id(obj)
+        ai_usage = ai_daily_usage(obj)
         # `can_sell` здесь — «пользователь на стороне ПРОДАВЦА», ровно как это понимает авторизация
         # (`is_seller`: активное членство с can_sell И компания типа SUPPLIER/MANUFACTURER).
         # Плоское поле `can_sell` выше по сериализатору — флаг УЧАСТНИКА и типа компании не знает;
@@ -550,6 +552,14 @@ class MeSerializer(serializers.ModelSerializer):
             # sell — for them the deal-claim button is pure noise (nobody else to claim against),
             # so the SPA hides it. UI-only signal; claim/routing services stay authoritative.
             "is_solo_seller": self._is_solo_seller(seller_company_id),
+            # R4 §7.4: ОСТАТОК дневного лимита ИИ — информация, а не гейт. Механизм потолка уже
+            # есть (sourcing/ai_spend_cap.py), не хватало видимости: пользователь узнавал о лимите,
+            # только упёршись в 429 посреди работы. Ни одна кнопка от этих полей не выключается —
+            # запрещает по-прежнему ТОЛЬКО enqueue_ai_job. cap/remaining = null — БЕЗЛИМИТ
+            # (тариф Безлимит, отключённый потолок, оператор), это отличимо от «осталось 0».
+            "ai_daily_used": ai_usage["used"],
+            "ai_daily_cap": ai_usage["cap"],
+            "ai_daily_remaining": ai_usage["remaining"],
             "permissions": permissions,
             "is_platform_admin": bool(getattr(obj, "is_platform_admin", False)),
             "operator_permissions": self.get_operator_permissions(obj),

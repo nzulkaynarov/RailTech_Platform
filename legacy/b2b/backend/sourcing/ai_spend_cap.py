@@ -5,7 +5,10 @@ each enqueued job is a paid Anthropic call. Without a ceiling a runaway script o
 an abusive tenant could run an unbounded bill. This module answers ONE question —
 "has the requesting user's company already used its daily quota?" — so the
 enqueue choke-point can refuse with a 429 BEFORE queuing the task or spending a
-credit.
+credit. The same numbers answer a second, purely informational question —
+"сколько осталось на сегодня?" (``ai_daily_usage``) — которую ``/me`` показывает в
+интерфейсе: аудит R4 §7.4, механизм был, не хватало ВИДИМОСТИ (пользователь узнавал
+о лимите, лишь упёршись в 429). Показ ничего не запрещает.
 
 Design notes (a safety fuse AND, now, a product lever):
 - TIER-AWARE ceiling: each subscription plan maps to a daily allowance
@@ -99,6 +102,80 @@ def _daily_cap_for_companies(company_ids) -> int:
     return max(caps)
 
 
+def _capped_company_ids(user) -> list:
+    """Компании, чей дневной бюджет тратит этот пользователь. Пусто = лимита к нему нет:
+    платформенный оператор действует не от имени тенанта, а пользователь без активного
+    членства — не тот вектор злоупотребления, ради которого потолок вводился."""
+    if getattr(user, "is_platform_admin", False):
+        return []
+    return list(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
+
+
+def _used_today(company_ids) -> int:
+    """Сколько ИИ-задач компании потратили СЕГОДНЯ (календарный день ``settings.TIME_ZONE``).
+
+    Счёт по всей команде: бюджет платит компания, поэтому в бакет идут задачи каждого активного
+    участника, а не только вызывающего. Один индексированный COUNT (список участников уходит
+    подзапросом)."""
+    # Local imports keep this module free of app-load ordering / circular-import risk.
+    from accounts.models import CompanyMember
+
+    from .models import AIJob
+
+    member_user_ids = CompanyMember.objects.filter(
+        company_id__in=company_ids,
+        is_active=True,
+    ).values_list("user_id", flat=True)
+
+    start_of_day = timezone.localtime().replace(hour=0, minute=0, second=0, microsecond=0)
+    return AIJob.objects.filter(owner_id__in=member_user_ids, created_at__gte=start_of_day).count()
+
+
+def ai_daily_usage(user) -> dict:
+    """Остаток дневного лимита ИИ для ПОКАЗА: ``{"cap": int|None, "used": int, "remaining": int|None}``.
+
+    Это ИНФОРМАЦИЯ, а не гейт (решение владельца по §7.4 аудита R4): ни одного нового запрета
+    здесь нет — потолок как работал в ``enqueue_ai_job``, так и работает. Не хватало ровно того,
+    что пользователь узнавал о лимите, лишь упёршись в 429; эталоны (Shopify Magic в подписке,
+    Akeneo как add-on) остаток показывают, но подтверждения стоимости перед пачкой не спрашивают.
+
+    ``cap=None`` (и ``remaining=None``) — БЕЗЛИМИТ, отличимый от «0 осталось»: тариф Безлимит,
+    отключённый потолок, платформенный оператор, пользователь без компании.
+
+    Потолок тарифа кэшируется на ``AI_DAILY_USAGE_CACHE_TTL`` секунд (его разрешение — это
+    запросы к подпискам и энтайтлментам, а ``/me`` дёргается часто); ИЗРАСХОДОВАННОЕ всегда
+    считается заново — это то самое число, которое меняется. Кэш живёт ТОЛЬКО в показе:
+    ``is_ai_daily_cap_reached`` (предохранитель) резолвит потолок напрямую, чтобы снятие
+    лимита оператором действовало на самом деле немедленно.
+    """
+    company_ids = _capped_company_ids(user)
+    if not company_ids:
+        return {"cap": None, "used": 0, "remaining": None}
+
+    cap = _cached_cap_for_companies(company_ids)
+    used = _used_today(company_ids)
+    if cap <= 0:
+        return {"cap": None, "used": used, "remaining": None}
+    return {"cap": cap, "used": used, "remaining": max(cap - used, 0)}
+
+
+def _cached_cap_for_companies(company_ids) -> int:
+    """Потолок компаний с коротким кэшем — только для ПОКАЗА остатка (см. ``ai_daily_usage``).
+
+    TTL 0/отрицательный отключает кэш (тесты, отладка)."""
+    from django.core.cache import cache
+
+    ttl = int(getattr(settings, "AI_DAILY_USAGE_CACHE_TTL", 0) or 0)
+    if ttl <= 0:
+        return _daily_cap_for_companies(company_ids)
+    key = "ai_daily_cap:" + ",".join(str(company_id) for company_id in sorted(company_ids))
+    cap = cache.get(key)
+    if cap is None:
+        cap = _daily_cap_for_companies(company_ids)
+        cache.set(key, cap, ttl)
+    return cap
+
+
 def is_ai_daily_cap_reached(user) -> bool:
     """True when the requesting user's company has hit the daily AI-job ceiling.
 
@@ -108,36 +185,18 @@ def is_ai_daily_cap_reached(user) -> bool:
     ``AI_DAILY_JOB_CAP_FREE``. Returns False (never capped) for a disabled tier, platform admins,
     and users with no active company membership. Called at the enqueue choke-point.
     """
-    if getattr(user, "is_platform_admin", False):
-        return False
-
-    # Local imports keep this module free of app-load ordering / circular-import risk.
-    from accounts.models import CompanyMember
-
-    from .models import AIJob
-
-    company_ids = list(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
+    company_ids = _capped_company_ids(user)
     if not company_ids:
-        # No tenant to bill against — a lone / platform user is not an abuse vector here.
         return False
 
+    # Предохранитель считает потолок БЕЗ кэша: устаревшее значение здесь либо пропустило бы
+    # перерасход, либо продолжило бы запрещать после снятия лимита оператором.
     cap = _daily_cap_for_companies(company_ids)
     if cap <= 0:
         # The applicable tier is disabled (opt-out) — never capped.
         return False
 
-    # The bill is per company: the whole team shares one daily bucket, so count every
-    # active member's jobs, not just the caller's.
-    member_user_ids = CompanyMember.objects.filter(
-        company_id__in=company_ids,
-        is_active=True,
-    ).values_list("user_id", flat=True)
-
-    start_of_day = timezone.localtime().replace(hour=0, minute=0, second=0, microsecond=0)
-    used_today = AIJob.objects.filter(
-        owner_id__in=member_user_ids,
-        created_at__gte=start_of_day,
-    ).count()
+    used_today = _used_today(company_ids)
 
     if used_today >= cap:
         logger.warning(

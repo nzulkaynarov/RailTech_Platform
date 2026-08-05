@@ -14,6 +14,7 @@ import { CustomsDutiesSheet } from '@/components/Shared/CustomsDutiesSheet';
 import type { Product } from '@/api/catalogApi';
 import { ProductMediaSection } from './ProductMediaSection';
 import { useProductForm } from './useProductForm';
+import { AiEnrichPanel } from './AiEnrichPanel';
 import { HSCodeField } from '@/components/Shared/HSCodeField';
 import { ManufacturerField } from '@/components/Shared/ManufacturerField';
 
@@ -29,13 +30,21 @@ export function ProductFormSheet({
 }) {
   const { t } = useTranslation();
   const [dutiesOpen, setDutiesOpen] = useState(false);
+  const form = useProductForm({ open, onOpenChange, target, sellerCompanyId });
   const {
     domainTypes, categories, units, equipmentGroups,
     currencies, stockStatuses, deliveryBases, adminCompanies,
     draft, groupIds, offerDraft, categoryHint,
     sellerMode, isEdit, isRailway, busy, enrichPending,
+    aiDailyCap, aiDailyRemaining,
     update, updateOffer, toggleGroup, runEnrich, submit,
-  } = useProductForm({ open, onOpenChange, target, sellerCompanyId });
+  } = form;
+  // Безлимит (`null`) — это НЕ «осталось 0»; когда бэкенд лимит не прислал, не показываем ничего.
+  const aiLimitText = aiDailyCap === undefined && aiDailyRemaining === undefined
+    ? ''
+    : aiDailyCap === null || aiDailyRemaining === null
+      ? t('adminCatalog.aiEnrich.limitUnlimited')
+      : t('adminCatalog.aiEnrich.limitLeft', { remaining: aiDailyRemaining ?? 0, cap: aiDailyCap ?? 0 });
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -77,20 +86,26 @@ export function ProductFormSheet({
               <p className="text-sm font-medium">{t('adminCatalog.aiEnrich.title')}</p>
               <p className="text-xs text-muted-foreground">{t('adminCatalog.aiEnrich.hint')}</p>
             </div>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={runEnrich}
-              disabled={enrichPending || !draft.name?.trim()}
-              className="shrink-0"
-            >
-              {enrichPending
-                ? <Loader2 className="size-4 animate-spin" />
-                : <Sparkles className="size-4" />}
-              {t('adminCatalog.aiEnrich.button')}
-            </Button>
+            {/* Остаток дневного лимита — ИНФОРМАЦИЯ рядом с кнопкой (Shopify Magic показывает
+                расход, но не запирает кнопку): гейт живёт на сервере и ответит 429. */}
+            <div className="flex shrink-0 flex-col items-end gap-1">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={runEnrich}
+                disabled={enrichPending || !draft.name?.trim()}
+              >
+                {enrichPending
+                  ? <Loader2 className="size-4 animate-spin" />
+                  : <Sparkles className="size-4" />}
+                {t('adminCatalog.aiEnrich.button')}
+              </Button>
+              {aiLimitText && <p className="text-xs text-muted-foreground">{aiLimitText}</p>}
+            </div>
           </div>
+
+          <AiEnrichPanel form={form} />
 
           <div className="space-y-2">
             <Label>{t('adminCatalog.fields.description')}</Label>
