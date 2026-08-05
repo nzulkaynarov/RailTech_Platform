@@ -4944,7 +4944,8 @@
     },
     "categories": {
       "hint": "The category tree is maintained by the platform: it is shared by every seller — buyers browse by it and HS codes are matched against it.",
-      "emptyHint": "The directory is still empty. Request a category — an operator will create it."
+      "emptyHint": "The directory is still empty. Request a category — an operator will create it.",
+      "subcategories": "Subcategories: {{count}}"
     },
     "groups": {
       "hint": "Equipment groups — the hierarchy of rolling-stock and track-machinery units, maintained by the platform.",

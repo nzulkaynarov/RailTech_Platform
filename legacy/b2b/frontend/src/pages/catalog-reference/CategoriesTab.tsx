@@ -77,8 +77,12 @@ export function CategoriesTab() {
                         <Button variant="ghost" className="h-auto flex-1 justify-start gap-2 p-4 hover:bg-muted/50">
                           <ChevronDown className="h-4 w-4 transition-transform" aria-hidden="true" />
                           <span className="font-medium">{category.name}</span>
+                          {/* Бейдж считает ПОДКАТЕГОРИИ. Ключ `pages.common.items` переводится
+                              как «позиций», и строка читалась как «0 товаров» у категории, где
+                              их девятнадцать, — поймано проходом глазами. Счёт товаров живёт в
+                              панели «Товары» рядом и берётся с сервера. */}
                           <Badge variant="outline" className="ml-2 text-xs">
-                            {children.length} {t('pages.common.items')}
+                            {t('catalogReference.categories.subcategories', { count: children.length })}
                           </Badge>
                         </Button>
                       </CollapsibleTrigger>
