@@ -588,25 +588,28 @@ def _summarize_publishability(ctx: _Ctx, result: ImportResult) -> None:
     result.missing_breakdown = summary["missing_breakdown"]
 
 
-def run_catalog_import(file_content: bytes, supplier_company_id=None, dry_run=False, progress_callback=None) -> dict:
-    """Parse an .xlsx and upsert PIM products + the uploader's offers.
+def run_catalog_import_frame(data_frame, supplier_company_id=None, dry_run=False, progress_callback=None) -> dict:
+    """Ядро импорта: DataFrame строк → upsert PIM-карточек + офферов загрузившего.
 
-    Returns a structured result dict (see ImportResult.as_dict). Raises
-    ValueError('NAME_COLUMN_NOT_FOUND') when the file has no recognizable name
+    Выделено из байтовой версии (R5b), чтобы ИИ-путь (`services_ai_catalog` собирает строки из
+    PDF/фото/произвольного файла) проходил через ТОТ ЖЕ разбор шапки, те же справочники и тот же
+    отчёт, а не через параллельный движок. Заголовки колонок нормализуются здесь же, поэтому на
+    вход годится и DataFrame прямо из файла, и DataFrame из словарей с русскими заголовками
+    шаблона. Returns a structured result dict (see ImportResult.as_dict). Raises
+    ValueError('NAME_COLUMN_NOT_FOUND') when the frame has no recognizable name
     column — the only fatal, file-level error.
     """
     from accounts.models import Company
 
     supplier = Company.objects.filter(id=supplier_company_id).first() if supplier_company_id else None
 
-    data_frame, rows_truncated = _read_rows(file_content)
     data_frame.columns = [str(column).lower().strip() for column in data_frame.columns]
     columns = _resolve_columns(list(data_frame.columns))
     if not columns["name"]:
         raise ValueError("NAME_COLUMN_NOT_FOUND")
 
     ctx = _build_context(supplier, dry_run, hs_status=_prescan_hs_codes(data_frame, columns))
-    result = ImportResult(dry_run=dry_run, rows_truncated=rows_truncated)
+    result = ImportResult(dry_run=dry_run)
 
     if dry_run:
         with transaction.atomic():
@@ -619,3 +622,20 @@ def run_catalog_import(file_content: bytes, supplier_company_id=None, dry_run=Fa
         _summarize_publishability(ctx, result)
 
     return result.as_dict()
+
+
+def run_catalog_import(file_content: bytes, supplier_company_id=None, dry_run=False, progress_callback=None) -> dict:
+    """Parse an .xlsx and upsert PIM products + the uploader's offers.
+
+    Тонкая байтовая обёртка над `run_catalog_import_frame`: читает файл (с пределом строк) и
+    дописывает в отчёт `rows_truncated` — единственное, что знает только файловый слой.
+    """
+    data_frame, rows_truncated = _read_rows(file_content)
+    result = run_catalog_import_frame(
+        data_frame,
+        supplier_company_id=supplier_company_id,
+        dry_run=dry_run,
+        progress_callback=progress_callback,
+    )
+    result["rows_truncated"] = rows_truncated
+    return result

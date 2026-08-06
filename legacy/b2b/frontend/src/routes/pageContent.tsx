@@ -19,8 +19,13 @@ const ProductManagement = lazyWithRetry(() =>
   import('@/pages/ProductManagement').then((m) => ({ default: m.ProductManagement })),
 );
 const ProductDetail = lazyWithRetry(() => import('@/pages/ProductDetail').then((m) => ({ default: m.ProductDetail })));
-const NomenclatureQueuePage = lazyWithRetry(() =>
-  import('@/pages/NomenclatureQueuePage').then((m) => ({ default: m.NomenclatureQueuePage })),
+// R2: единый реестр «Мои товары» заменил очередь «Номенклатуры»; старый хэш — алиас.
+const MyProductsPage = lazyWithRetry(() =>
+  import('@/pages/MyProductsPage').then((m) => ({ default: m.MyProductsPage })),
+);
+// R3: карточка-редактор страницей вместо шторки.
+const ProductEditorPage = lazyWithRetry(() =>
+  import('@/pages/product-editor').then((m) => ({ default: m.ProductEditorPage })),
 );
 // R6: три справочника (ТН ВЭД · категории · группы оборудования) стали ОДНОЙ страницей с
 // вкладками. Старые хэши остались рабочими маршрутами и открывают свою вкладку.
@@ -115,6 +120,10 @@ function activePageIdFor(page: Page, activeStatus: CompanyStatus): string {
   switch (page.type) {
     case 'product_detail':
       return 'products';
+    case 'nomenclature':
+    case 'product-new':
+    case 'product-edit':
+      return 'my-products';
     case 'profile':
       return 'settings';
     case 'request-detail':
@@ -162,7 +171,12 @@ function renderContent(ctx: PageRenderContext): ReactNode {
     // «Номенклатура» продавца — рабочее место, а не витрина: очередь кандидатов из заявок,
     // готовность карточки и публикация владельцем (волна A, spec-nomenclature-lifecycle).
     case 'nomenclature':
-      return <NomenclatureQueuePage onProductClick={onProductClick} onNavigate={ctx.onNavigate} />;
+    case 'my-products':
+      return <MyProductsPage onProductClick={onProductClick} onNavigate={ctx.onNavigate} />;
+    case 'product-new':
+      return <ProductEditorPage onNavigate={ctx.onNavigate} />;
+    case 'product-edit':
+      return <ProductEditorPage productId={page.productId} onNavigate={ctx.onNavigate} />;
     // Справочники платформы одной страницей (R6). Старые маршруты — алиасы на свою вкладку:
     // их печатают закладки, письма и уведомления, и ломать их нельзя.
     case 'catalog-reference':
@@ -179,6 +193,7 @@ function renderContent(ctx: PageRenderContext): ReactNode {
           productId={page.productId}
           onBack={() => navigateTo({ type: 'products' })}
           onNavigate={(id) => navigateTo({ type: 'product_detail', productId: id })}
+          onProductEdit={(id) => navigateTo({ type: 'product-edit', productId: id })}
         />
       );
     case 'profile':

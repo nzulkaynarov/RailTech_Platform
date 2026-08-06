@@ -303,6 +303,19 @@ function MainApp() {
   };
 
   const handleNavigate = (target: string) => {
+    // Параметрные цели из страниц («product-edit/42»): NAVIGABLE_PAGES хранит голые
+    // идентификаторы, и без этой ветки переход в редактор молча отскакивал на дашборд —
+    // поймано проходом глазами: «Дополнить» из реестра вела в никуда.
+    if (target.startsWith('product-edit/')) {
+      const productId = target.slice('product-edit/'.length);
+      const decision = evaluatePageGuard({
+        pageType: 'product-edit', role, kycStatus, activeStatus, statusEntries, bootstrapped,
+      });
+      if (decision.action !== 'bounce' && productId) {
+        navigateTo({ type: 'product-edit', productId });
+        return;
+      }
+    }
     // Цели меню — из реестра страниц (`navigable`). Раньше здесь лежал четвёртый
     // рукописный список идентификаторов, и он уже расходился с остальными: пункты
     // «Клиенты»/«Поставщики» существовали и в рендере, и в наборах контекста, но
@@ -350,6 +363,10 @@ function MainApp() {
           ? { label: getPageLabel('crm-deals', t), pageId: 'crm-deals' }
           : { label: getPageLabel('my-requests', t), pageId: 'my-requests' },
         { label: t('breadcrumb.requestDetail') },
+      ];
+      case 'product-edit': return [
+        { label: getPageLabel('my-products', t), pageId: 'my-products' },
+        { label: t('breadcrumbs.productEdit') },
       ];
       case 'deal-quote': return [
         { label: getPageLabel('crm-deals', t), pageId: 'crm-deals' },

@@ -174,10 +174,6 @@
   "catalogImport": {
     "title": "Catalog import",
     "description": "Bulk-upload your product catalog to the PIM. Admin sees every import in the history.",
-    "template": "Excel template",
-    "templateHint": "Download the template — column headers must match, otherwise rows are skipped.",
-    "downloadTemplate": "Download template",
-    "uploadFile": "Upload file",
     "pickFile": "Pick file",
     "noFile": "No file selected",
     "checkFile": "Check file",
@@ -216,7 +212,6 @@
       "unknownCode": "Unknown reason (code: {{code}})"
     },
     "requirements": "File requirements",
-    "req1": "Format: .xlsx only",
     "req2": "Required column: Name. For an offer add Price (and Currency/Stock).",
     "req3": "For a shared product card provide Brand + Manufacturer part number (or GOST).",
     "req4": "Check the file first, then Import. Every import is logged.",
@@ -234,7 +229,14 @@
     "warningsHint": "Not a failure: the row was loaded, but its data raises a question — review the card later.",
     "warnReason": "Warning",
     "shownFirst": "Showing the first {{shown}} of {{total}}.",
-    "req5": "Fill the Category, HS code and Domain columns: without them a card is still created but can never be published."
+    "req5": "Fill the Category, HS code and Domain columns: without them a card is still created but can never be published.",
+    "uploadAnyTitle": "Upload your price list",
+    "uploadAnyHint": "Excel, PDF or a photo — up to 20 MB. Non-Excel files are parsed by AI.",
+    "aiWillParse": "AI will parse this file",
+    "aiParsing": "AI is parsing the file… This may take a couple of minutes.",
+    "aiUsedNotice": "Rows extracted by AI: {{n}} — review the preview carefully.",
+    "templateSecondary": "Exact Excel template — if you prefer to fill it in manually",
+    "reqFormats": "Formats: Excel (.xlsx), PDF or photo (.png, .jpg, .jpeg) — up to 20 MB"
   },
   "mySubscription": {
     "title": "My subscription",
@@ -1663,9 +1665,11 @@
     "forgotPassword": "Reset password",
     "resetPassword": "New password",
     "adminOperatorRoles": "Operator roles",
-    "nomenclature": "Nomenclature",
     "hsDirectory": "HS classifier",
-    "catalogReference": "Reference data"
+    "catalogReference": "Reference data",
+    "myProducts": "My products",
+    "productEdit": "Product card",
+    "productNew": "New product"
   },
   "dealsKanban": {
     "list": "List",
@@ -1724,7 +1728,7 @@
     "myRequests": "My Requests",
     "documents": "Documents",
     "nomenclature": "Nomenclature",
-    "nomenclatureSection": "Nomenclature",
+    "nomenclatureSection": "Products",
     "quotes": "Quotes",
     "deals": "Deals",
     "settings": "Settings",
@@ -1752,7 +1756,7 @@
     "otherDocuments": "Other documents",
     "files": "Files",
     "leads": "Leads",
-    "catalogImport": "Catalog import",
+    "catalogImport": "Price list upload",
     "help": "Help",
     "b2bPlatform": "B2B Platform",
     "profile": "Profile",
@@ -1766,7 +1770,8 @@
     "operatorRoles": "Operator roles",
     "accessLog": "Access log",
     "fxRateFallback": "Exchange rate unavailable — USD amounts are approximate",
-    "catalogReference": "Reference data"
+    "catalogReference": "Reference data",
+    "myProducts": "My products"
   },
   "productDetail": {
     "specifications": "Specifications",
@@ -1789,7 +1794,17 @@
     "minOrder": "Min. order: {{qty}} pcs",
     "quantity": "Quantity",
     "decrease": "Decrease",
-    "increase": "Increase"
+    "increase": "Increase",
+    "actions": {
+      "edit": "Edit",
+      "unpublish": "Unpublish",
+      "unpublished": "“{{name}}” unpublished",
+      "archive": "Archive",
+      "archived": "“{{name}}” moved to archive",
+      "restore": "Restore",
+      "restored": "“{{name}}” restored to drafts",
+      "failed": "Action failed"
+    }
   },
   "dashboardPage": {
     "title": "Dashboard",
@@ -3617,7 +3632,7 @@
     "CANNOT_REMOVE_LAST_COMPANY_ADMIN": "Cannot remove the last Company Admin — assign another one first.",
     "CANNOT_DEACTIVATE_SOLE_COMPANY_ADMIN": "Cannot deactivate the sole Company Admin — assign another one first.",
     "ONLY_COMPANY_ADMIN_CAN_MANAGE_TEAM": "Only the Company Admin can manage the team.",
-    "FILE_TOO_LARGE": "File is too large (max 10 MB)",
+    "FILE_TOO_LARGE": "The file exceeds the allowed size",
     "FILE_REQUIRED": "Choose a file to upload",
     "FILE_TYPE_UNSUPPORTED": "Unsupported file format. Upload an Excel, CSV, PDF or photo.",
     "IMPORT_NO_LINES": "No lines to add were found in the file",
@@ -3679,7 +3694,12 @@
     "CATEGORY_REQUEST_NAME_REQUIRED": "Enter the category name",
     "CATEGORY_REQUIRED": "Pick a category from the directory",
     "COMPANY_REQUIRED": "The action is available to a company member",
-    "REASON_REQUIRED": "Provide a reason"
+    "REASON_REQUIRED": "Provide a reason",
+    "AI_EXTRACT_EMPTY": "AI found no product rows in the file. Make sure it contains a list of items with names and prices.",
+    "NOT_A_SELLER_MEMBER": "Catalog upload is available to members of a seller company",
+    "PRODUCT_NOT_PUBLISHED": "The card is not published",
+    "PRODUCT_ALREADY_ARCHIVED": "The card is already archived",
+    "PRODUCT_NOT_ARCHIVED": "Only an archived card can be restored"
   },
   "fileUpload": {
     "upload": "Upload",
@@ -4976,6 +4996,79 @@
         "APPROVED": "Approved",
         "REJECTED": "Rejected"
       }
+    }
+  },
+  "myProducts": {
+    "title": "My products",
+    "subtitle": "One registry for your product cards: from RFQ candidate to publication and archive",
+    "addProduct": "Add product",
+    "importPrice": "Upload price list",
+    "unpublish": "Unpublish",
+    "archive": "Archive",
+    "restore": "Restore",
+    "unpublished": "“{{name}}” unpublished",
+    "archivedOne": "“{{name}}” moved to archive",
+    "restored": "“{{name}}” restored to drafts",
+    "actionFailed": "Action failed — please try again",
+    "archiveSelected": "Archive ({{count}})",
+    "unpublishSelected": "Unpublish ({{count}})",
+    "bulkArchived": "Cards archived: {{count}}",
+    "bulkArchiveSkipped": "Skipped: {{count}} — {{reasons}}",
+    "bulkUnpublished": "Unpublished: {{count}}",
+    "bulkUnpublishFailed": "Failed to unpublish: {{count}} — {{reason}}",
+    "rowMenu": "Actions",
+    "coverageTitle": "Catalog coverage: {{percent}}% of quote lines",
+    "archiveHint": "Archiving is reversible: unpublished cards and merged duplicates land here; “Restore” returns them to drafts",
+    "tabs": {
+      "CANDIDATES": "RFQ candidates",
+      "DRAFTS": "Drafts",
+      "PUBLISHED": "Published",
+      "ARCHIVED": "Archive"
+    },
+    "columns": {
+      "price": "Price"
+    },
+    "empty": {
+      "DRAFTS": "No drafts",
+      "ARCHIVED": "Archive is empty"
+    },
+    "emptyHint": {
+      "DRAFTS": "Create a card manually or upload a price list — drafts become publishable once required fields are filled.",
+      "ARCHIVED": "Cards removed from the storefront or merged as duplicates end up here. Any of them can be restored."
+    }
+  },
+  "productEditor": {
+    "titleNew": "New product",
+    "saveDraft": "Save draft",
+    "categoryPlaceholder": "Search categories…",
+    "categoryEmpty": "Nothing found — try another query or request a category in Reference data",
+    "categoryNone": "No category",
+    "mediaNeedsDraft": "Save a draft and photos & documents unlock here. A name alone is enough.",
+    "sections": {
+      "basics": "Basics",
+      "classification": "Classification",
+      "media": "Media",
+      "actions": "Actions"
+    },
+    "completeness": {
+      "title": "Publication readiness",
+      "missingTitle": "Still missing",
+      "done": "All required fields are filled — the card is ready to publish",
+      "createHint": "Readiness is computed after the first save"
+    },
+    "specs": {
+      "add": "Add specification",
+      "key": "Parameter",
+      "value": "Value",
+      "remove": "Remove row",
+      "empty": "No specifications yet — add them manually or let AI suggest"
+    },
+    "actions": {
+      "unpublish": "Unpublish",
+      "archive": "Archive",
+      "restore": "Restore",
+      "failed": "Action failed",
+      "publishBlocked": "Fill the required fields — see the list on the left"
     }
   }
 }

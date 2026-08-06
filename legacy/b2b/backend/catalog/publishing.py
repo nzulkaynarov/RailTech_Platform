@@ -87,6 +87,99 @@ def publish_product(product, actor) -> tuple[object | None, str | None]:
     return product, None
 
 
+@transaction.atomic
+def unpublish_product(product, actor) -> tuple[object | None, str | None]:
+    """Снять карточку с витрины: PUBLISHED → DRAFT. Возвращает `(product, error_code)`.
+
+    R2 (аудит §D10): до этой волны публикация была улицей с односторонним движением —
+    выпустить карточку продавец мог, а убрать (ошибка в цене, товар закончился навсегда,
+    юридическая претензия) — нет. Эталон Shopify: Active → Draft двусторонне.
+
+    Право то же, что у публикации (`catalog.publish`): кто выпускает на витрину, тот и
+    снимает. KYC-гейта здесь НЕТ намеренно: верификация нужна, чтобы карточка стала ВИДНА
+    рынку, а снятие с витрины ЭКСПОЗИЦИЮ УМЕНЬШАЕТ — непроверенная компания обязана мочь
+    убрать своё (наполнение до KYC открыто той же логикой, #550). Закреплено тестом.
+    """
+    from .models import ProductStatus
+
+    if not can_manage(actor, product, permission="catalog.publish"):
+        return None, "PRODUCT_NOT_YOURS"
+    if getattr(product.status, "code", None) != "PUBLISHED":
+        return None, "PRODUCT_NOT_PUBLISHED"
+    draft = ProductStatus.objects.filter(code="DRAFT").first()
+    if draft is None:
+        return None, "PRODUCT_STATUS_MISSING"
+    product.status = draft
+    product.save(update_fields=["status", "updated_at"])
+    return product, None
+
+
+@transaction.atomic
+def archive_product(product, actor) -> tuple[object | None, str | None]:
+    """Убрать карточку в архив (любой статус → ARCHIVED). Возвращает `(product, error_code)`.
+
+    Архив отделён от снятия с публикации (Shopify: Archive — отдельное, ОБРАТИМОЕ действие):
+    Draft — «ещё готовится», Archive — «больше не работаем». Право — `catalog.manage`
+    (распоряжение составом каталога, не витриной). KYC-гейта нет намеренно — архив
+    уменьшает экспозицию, см. unpublish_product.
+    """
+    from .models import ProductStatus
+
+    if not can_manage(actor, product, permission="catalog.manage"):
+        return None, "PRODUCT_NOT_YOURS"
+    if getattr(product.status, "code", None) == "ARCHIVED":
+        return None, "PRODUCT_ALREADY_ARCHIVED"
+    archived = ProductStatus.objects.filter(code="ARCHIVED").first()
+    if archived is None:
+        return None, "PRODUCT_STATUS_MISSING"
+    product.status = archived
+    product.save(update_fields=["status", "updated_at"])
+    return product, None
+
+
+@transaction.atomic
+def restore_product(product, actor) -> tuple[object | None, str | None]:
+    """Вернуть карточку из архива в черновики: ARCHIVED → DRAFT.
+
+    Закрывает «архив — чёрную дыру» (аудит §D15): слитый дубль уходил в ARCHIVED и исчезал
+    из всех вкладок без пути назад. Возврат — в DRAFT, а не сразу в PUBLISHED: витрину
+    карточка должна заслужить заново через publish (полнота + KYC), как у Shopify
+    unarchive → Draft.
+    """
+    from .models import ProductStatus
+
+    if not can_manage(actor, product, permission="catalog.manage"):
+        return None, "PRODUCT_NOT_YOURS"
+    if getattr(product.status, "code", None) != "ARCHIVED":
+        return None, "PRODUCT_NOT_ARCHIVED"
+    draft = ProductStatus.objects.filter(code="DRAFT").first()
+    if draft is None:
+        return None, "PRODUCT_STATUS_MISSING"
+    product.status = draft
+    product.save(update_fields=["status", "updated_at"])
+    return product, None
+
+
+def archive_many(product_ids, actor) -> dict:
+    """Пакетный архив с ПОСТРОЧНЫМ отчётом `{archived: [...], skipped: [{product_id, error}]}`.
+
+    Тот же контракт частичного успеха, что у publish_many: смесь своих и чужих карточек не
+    валит всю пачку — чужие честно перечисляются в skipped.
+    """
+    from .models import Product
+
+    ids = list(dict.fromkeys(product_ids))[:MAX_BATCH]
+    archived: list[int] = []
+    skipped: list[dict] = []
+    for product in Product.objects.filter(pk__in=ids).select_related("status"):
+        _card, error = archive_product(product, actor)
+        if error:
+            skipped.append({"product_id": product.pk, "error": error})
+        else:
+            archived.append(product.pk)
+    return {"archived": archived, "skipped": skipped}
+
+
 def publish_many(product_ids, actor) -> dict:
     """Пакетная публикация: владелец прямо просил «массово или единично».
 

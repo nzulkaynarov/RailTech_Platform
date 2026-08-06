@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Package, Upload, FileSpreadsheet, Download, CheckCircle2, Loader2, AlertCircle, AlertTriangle, SearchCheck } from 'lucide-react';
+import { Package, Upload, FileSpreadsheet, Download, CheckCircle2, Loader2, AlertCircle, AlertTriangle, SearchCheck, Sparkles } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { PageShell } from './shared/PageShell';
 import { sourcingApi, type CatalogImportResult, type CatalogImportRowMessage } from '@/api/sourcingApi';
 import { translateApiError } from '@/lib/apiError';
+import { runAiJob } from '@/lib/aiJob';
 
 type TaskStatus = 'PENDING' | 'STARTED' | 'PROGRESS' | 'SUCCESS' | 'FAILURE' | 'REVOKED' | string;
 
@@ -35,7 +36,15 @@ const PLAIN_MESSAGE_KEYS: Record<string, string> = {
   NAME_COLUMN_NOT_FOUND: 'catalogImport.err.nameColumnNotFound',
   EQUIPMENT_GROUP_REQUIRED: 'catalogImport.err.equipmentGroupRequired',
   ROW_FAILED: 'catalogImport.err.rowFailed',
+  // ИИ-путь может вернуть штатный отчёт со status=error и этим кодом в message —
+  // переводим той же таблицей, ключ живёт в общем словаре apiErrors.
+  AI_EXTRACT_EMPTY: 'apiErrors.AI_EXTRACT_EMPTY',
 };
+
+/** Файлы, которые идут СТАРЫМ (бесплатным, шаблонным) путём; всё остальное разбирает ИИ. */
+const XLSX_FILE_RE = /\.xlsx$/i;
+/** Форматы, которые принимает вход (xlsx — шаблонный путь; pdf/фото — ИИ). */
+const ACCEPTED_FORMATS = '.xlsx,.pdf,.png,.jpg,.jpeg';
 
 /** Похоже ли начало сообщения на машинный код, а не на готовую фразу сервера. */
 const MACHINE_CODE_RE = /^[A-Z][A-Z0-9_]*$/;
@@ -70,16 +79,22 @@ function useImportMessageText() {
 }
 
 /**
- * SELLER / MANUFACTURER self-serve catalog bulk import (true-PIM). Two steps:
- * a dry-run "check" that previews counts + row errors without persisting, then
- * the real import. Posts to `/sourcing/import-catalog/` (member-gated) and polls
- * task status. The uploader's company is the supplier on every offer.
+ * SELLER / MANUFACTURER self-serve catalog bulk import (true-PIM). One file input
+ * accepts any price list (Shopify-import pattern), the routing is backstage:
+ * `.xlsx` goes the old free path (`/sourcing/import-catalog/` + import-status polling),
+ * anything else (PDF/photo) goes `/sourcing/import-catalog-ai/` + `runAiJob` polling —
+ * the AI extracts rows and the worker returns the SAME import report shape.
+ * Both paths keep the two-step flow: a dry-run "check" that previews counts + row
+ * errors without persisting, then the real import. The uploader's company is the
+ * supplier on every offer.
  */
 export function CatalogImportPage() {
   const { t } = useTranslation();
   const importMessageText = useImportMessageText();
   const queryClient = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
+  /** Каким путём пошёл ТЕКУЩИЙ запуск (не выбранный файл): 'xlsx' — шаблонный, 'ai' — ИИ. */
+  const [route, setRoute] = useState<'xlsx' | 'ai' | null>(null);
   const [taskId, setTaskId] = useState<string | null>(null);
   const [taskStatus, setTaskStatus] = useState<TaskStatus | null>(null);
   const [taskResult, setTaskResult] = useState<CatalogImportResult | null>(null);
@@ -96,7 +111,27 @@ export function CatalogImportPage() {
   const [checkedOk, setCheckedOk] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Poll the Celery task status while it's running.
+  /**
+   * Общая посадка результата для ОБОИХ путей: удачная проверка открывает кнопку
+   * импорта, настоящий импорт сбрасывает кэш списка товаров (см. комментарий ниже).
+   */
+  const applyImportResult = useCallback(
+    (result: CatalogImportResult | null) => {
+      setTaskResult(result);
+      if (result?.dry_run && result?.status === 'success') setCheckedOk(true);
+      // Настоящий импорт создал карточки МИМО React Query, поэтому список товаров о них
+      // не знает и по `staleTime` отдаёт прежний ответ. Без сброса продавец уходил в
+      // «Каталог» сразу после загрузки и своих новых позиций там не видел — поймано
+      // проходом глазами. Проверка (dry-run) ничего не пишет, ей сбрасывать нечего.
+      if (!result?.dry_run && result?.status === 'success') {
+        queryClient.invalidateQueries({ queryKey: ['products'] });
+      }
+    },
+    [queryClient],
+  );
+
+  // Poll the Celery task status while it's running (xlsx path only; the AI path
+  // is awaited straight through runAiJob and never sets taskId).
   useEffect(() => {
     if (!taskId) return;
     const isTerminal = (s: TaskStatus | null) => s === 'SUCCESS' || s === 'FAILURE' || s === 'REVOKED';
@@ -116,16 +151,7 @@ export function CatalogImportPage() {
         setTaskStatus(data.status);
         setTaskMeta(data.meta ?? null);
         if (data.status === 'SUCCESS') {
-          const result = data.result ?? null;
-          setTaskResult(result);
-          if (result?.dry_run && result?.status === 'success') setCheckedOk(true);
-          // Настоящий импорт создал карточки МИМО React Query, поэтому список товаров о них
-          // не знает и по `staleTime` отдаёт прежний ответ. Без сброса продавец уходил в
-          // «Каталог» сразу после загрузки и своих новых позиций там не видел — поймано
-          // проходом глазами. Проверка (dry-run) ничего не пишет, ей сбрасывать нечего.
-          if (!result?.dry_run && result?.status === 'success') {
-            queryClient.invalidateQueries({ queryKey: ['products'] });
-          }
+          applyImportResult(data.result ?? null);
         }
       } catch {
         if (cancelled) return;
@@ -139,30 +165,52 @@ export function CatalogImportPage() {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [taskId, taskStatus, pollAttempt, queryClient]);
+  }, [taskId, taskStatus, pollAttempt, applyImportResult]);
 
   function pickFile(next: File | null) {
     setFile(next);
     setCheckedOk(false);
+    setRoute(null);
     setTaskId(null);
     setTaskStatus(null);
     setTaskResult(null);
     setTaskMeta(null);
+    setPollLost(false);
   }
 
   async function runImport(dryRun: boolean) {
     if (!file) return;
+    // Маршрутизация за кулисами: .xlsx — старый бесплатный путь, остальное разбирает ИИ.
+    const aiRoute = !XLSX_FILE_RE.test(file.name);
     setBusy(dryRun ? 'check' : 'import');
+    setRoute(aiRoute ? 'ai' : 'xlsx');
     setTaskId(null);
     setTaskStatus(null);
     setTaskResult(null);
     setTaskMeta(null);
+    setPollLost(false);
     try {
-      const { task_id } = await sourcingApi.importCatalog(file, dryRun);
-      setTaskId(task_id);
-      setTaskStatus('PENDING');
-      toast.success(dryRun ? t('catalogImport.checkQueued') : t('catalogImport.queued'));
+      if (aiRoute) {
+        // ИИ-путь опрашивается через ai-status (runAiJob), а не import-status:
+        // ждём результат прямо здесь, прогресс — неопределённый лоадер в карточке отчёта.
+        setTaskStatus('PROGRESS');
+        const result = await runAiJob<CatalogImportResult>(() => sourcingApi.importCatalogAi(file, dryRun));
+        setTaskStatus('SUCCESS');
+        applyImportResult(result);
+      } else {
+        const { task_id } = await sourcingApi.importCatalog(file, dryRun);
+        setTaskId(task_id);
+        setTaskStatus('PENDING');
+        toast.success(dryRun ? t('catalogImport.checkQueued') : t('catalogImport.queued'));
+      }
     } catch (e) {
+      if (aiRoute) {
+        // Карточка отчёта уже на экране («ИИ разбирает файл…») — оставляем причину и в ней,
+        // а не только в исчезающем тосте. Текст уже переведён, машинный код сюда не попадает
+        // (перевод падает в сам код только пока ключ не доехал до локали — честная деградация).
+        setTaskStatus('FAILURE');
+        setTaskResult({ status: 'error', message: translateApiError(e) });
+      }
       toast.error(translateApiError(e));
     } finally {
       setBusy(null);
@@ -216,30 +264,15 @@ export function CatalogImportPage() {
       <div className="max-w-4xl space-y-6">
         <Card>
           <CardContent className="space-y-3 p-5">
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="flex items-center gap-2 text-sm font-semibold">
-                <Badge variant="outline" className="text-xs">1</Badge>
-                {t('catalogImport.template')}
-              </h3>
-              <Button size="sm" variant="outline" className="gap-1.5 text-xs" onClick={downloadTemplate}>
-                <Download className="h-3.5 w-3.5" aria-hidden="true" />
-                {t('catalogImport.downloadTemplate')}
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">{t('catalogImport.templateHint')}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="space-y-3 p-5">
             <h3 className="flex items-center gap-2 text-sm font-semibold">
-              <Badge variant="outline" className="text-xs">2</Badge>
-              {t('catalogImport.uploadFile')}
+              <Upload className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+              {t('catalogImport.uploadAnyTitle')}
             </h3>
+            <p className="text-xs text-muted-foreground">{t('catalogImport.uploadAnyHint')}</p>
             <input
               ref={inputRef}
               type="file"
-              accept=".xlsx"
+              accept={ACCEPTED_FORMATS}
               className="hidden"
               onChange={(e) => pickFile(e.target.files?.[0] ?? null)}
             />
@@ -252,6 +285,13 @@ export function CatalogImportPage() {
                 {file ? file.name : t('catalogImport.noFile')}
               </span>
             </div>
+            {/* Скромная пометка: не-Excel файл разберёт ИИ. Пользователю не нужно знать про два пути. */}
+            {file && !XLSX_FILE_RE.test(file.name) ? (
+              <p className="flex items-center gap-1.5 text-xs text-info">
+                <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                {t('catalogImport.aiWillParse')}
+              </p>
+            ) : null}
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button
                 variant="outline"
@@ -278,15 +318,24 @@ export function CatalogImportPage() {
             {file && !checkedOk ? (
               <p className="text-xs text-muted-foreground">{t('catalogImport.checkFirstHint')}</p>
             ) : null}
+            {/* Шаблон — второстепенная ссылка, а не первый шаг: любой прайс разберёт ИИ. */}
+            <Button
+              variant="link"
+              size="sm"
+              className="h-auto gap-1.5 p-0 text-xs text-muted-foreground"
+              onClick={downloadTemplate}
+            >
+              <Download className="h-3.5 w-3.5" aria-hidden="true" />
+              {t('catalogImport.templateSecondary')}
+            </Button>
           </CardContent>
         </Card>
 
-        {taskId ? (
+        {taskId || route === 'ai' ? (
           <Card>
             <CardContent className="space-y-3 p-5">
               <div className="flex items-center justify-between">
                 <h3 className="flex items-center gap-2 text-sm font-semibold">
-                  <Badge variant="outline" className="text-xs">3</Badge>
                   {taskResult?.dry_run ? t('catalogImport.previewTitle') : t('catalogImport.progress')}
                 </h3>
                 <Badge
@@ -301,12 +350,25 @@ export function CatalogImportPage() {
                   {taskResult?.dry_run ? t('catalogImport.dryRunBadge') : taskStatus ?? 'PENDING'}
                 </Badge>
               </div>
-              <Progress value={progress} className="h-2" />
-              {taskMeta?.current != null && taskMeta.total ? (
-                <p className="text-xs tabular-nums text-muted-foreground">
-                  {taskMeta.current} / {taskMeta.total}
-                </p>
-              ) : null}
+              {route === 'ai' ? (
+                // У ИИ-пути нет счётчика строк (ai-status не отдаёт meta) — честный
+                // неопределённый лоадер вместо придуманного процента.
+                !isTerminal ? (
+                  <div className="flex items-center gap-3 rounded-md border border-border p-3">
+                    <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" aria-hidden="true" />
+                    <span className="text-xs text-muted-foreground">{t('catalogImport.aiParsing')}</span>
+                  </div>
+                ) : null
+              ) : (
+                <>
+                  <Progress value={progress} className="h-2" />
+                  {taskMeta?.current != null && taskMeta.total ? (
+                    <p className="text-xs tabular-nums text-muted-foreground">
+                      {taskMeta.current} / {taskMeta.total}
+                    </p>
+                  ) : null}
+                </>
+              )}
 
               {pollLost && !isTerminal ? (
                 <div className="flex items-center gap-3 rounded-md border border-warning/30 bg-warning/5 p-3">
@@ -328,6 +390,16 @@ export function CatalogImportPage() {
                           {t('catalogImport.rowsTruncatedTitle', { n: rowsTruncated })}
                         </p>
                         <p className="text-xs text-foreground">{t('catalogImport.rowsTruncatedHint')}</p>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {/* Строки извлёк ИИ, а не шаблонный парсер — предпросмотр надо смотреть внимательнее. */}
+                  {taskResult?.ai_used ? (
+                    <div className="flex items-start gap-2 rounded-md border border-info/40 bg-info/5 p-3 text-xs">
+                      <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-info" aria-hidden="true" />
+                      <div className="text-foreground">
+                        {t('catalogImport.aiUsedNotice', { n: taskResult?.ai_rows ?? 0 })}
                       </div>
                     </div>
                   ) : null}
@@ -468,7 +540,7 @@ export function CatalogImportPage() {
               {t('catalogImport.requirements')}
             </h3>
             <ul className="space-y-1 text-xs text-muted-foreground">
-              <li>• {t('catalogImport.req1')}</li>
+              <li>• {t('catalogImport.reqFormats')}</li>
               <li>• {t('catalogImport.req2')}</li>
               <li>• {t('catalogImport.req3')}</li>
               <li>• {t('catalogImport.req5')}</li>

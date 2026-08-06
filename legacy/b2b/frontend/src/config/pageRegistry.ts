@@ -59,6 +59,12 @@ const CATALOG_READ = [
   { id: 'products', buyer: true, seller: true, kycExempt: true, navigable: true },
   // Очередь наполнения номенклатуры — только продавцовая сторона (у покупателя своего каталога нет).
   { id: 'nomenclature', seller: true, kycExempt: true, navigable: true },
+  // R2/R3: единый реестр «Мои товары» и карточка-редактор. `nomenclature` выше остаётся
+  // рабочим алиасом (закладки, ссылки из уведомлений) и в меню больше не показывается.
+  // Наполнение открыто до KYC (#550), поэтому все три — kycExempt; публикацию держит сервер.
+  { id: 'my-products', seller: true, kycExempt: true, navigable: true },
+  { id: 'product-new', seller: true, kycExempt: true, navigable: true },
+  { id: 'product-edit', seller: true, kycExempt: true },
   // Справочники платформы одной страницей: ТН ВЭД · категории · группы оборудования (R6).
   // Пункт меню теперь ОДИН — раздел «Номенклатура» состоял из шести, и три из них были
   // справочниками (D14). Старые маршруты ниже остались рабочими алиасами на свою вкладку.

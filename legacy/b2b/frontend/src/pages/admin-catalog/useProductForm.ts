@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   useCreateProduct, useUpdateProduct, useProduct,
@@ -109,15 +110,24 @@ function buildEnrichProposals(
   return proposals;
 }
 
-export function useProductForm({
-  open, onOpenChange, target, sellerCompanyId,
-}: {
-  open: boolean;
-  onOpenChange: (o: boolean) => void;
+export interface UseProductFormOptions {
   target: Product | null;
   sellerCompanyId?: number;
-}) {
+  /**
+   * Форма «открыта». Шторка передаёт своё состояние (закрытие сбрасывает панель ИИ);
+   * полноэкранная страница-редактор живёт всегда открытой — умолчание `true` (R3).
+   */
+  open?: boolean;
+  /**
+   * Вызывается после успешного сохранения с id карточки. Шторка закрывает себя, страница
+   * остаётся на месте (бесшовное «Сохранить черновик» → сразу медиа, D17).
+   */
+  onSaved?: (productId: number) => void;
+}
+
+export function useProductForm({ target, sellerCompanyId, open = true, onSaved }: UseProductFormOptions) {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const { data: domainTypes } = useDomainTypes();
   const { data: categories } = useCategories();
   const { data: units } = useUnits();
@@ -149,12 +159,23 @@ export function useProductForm({
   // Поэтому на редактировании добираем ПОЛНУЮ карточку и пересаживаем черновик на неё;
   // до её прихода сохранение закрыто (fullCardReady в busy).
   const { data: fullCard } = useProduct(target?.id ? String(target.id) : '');
+  // R3: черновик пересаживается только при СМЕНЕ карточки, а не на каждый рефетч той же.
+  // Страница-редактор живёт дольше шторки: загрузка фото инвалидирует ['product', id],
+  // запрос возвращает НОВЫЙ объект — без этого гарда рефетч стирал несохранённые правки.
+  const seededTargetId = useRef<number | null>(null);
+  const seededFullId = useRef<number | null>(null);
   useEffect(() => {
+    const targetId = target?.id ?? null;
+    if (targetId !== null && seededTargetId.current === targetId) return;
+    seededTargetId.current = targetId;
+    seededFullId.current = null;
     setDraft(target ? { ...target } : emptyDraft());
     setGroupIds(target?.equipment_groups?.map((g) => g.id) ?? []);
   }, [target]);
   useEffect(() => {
     if (!fullCard || fullCard.id !== target?.id) return;
+    if (seededFullId.current === fullCard.id) return;
+    seededFullId.current = fullCard.id;
     setDraft({ ...fullCard });
     // Полный сериализатор отдаёт M2M PK-списком (number[]), списочный — объектами.
     setGroupIds(
@@ -165,7 +186,13 @@ export function useProductForm({
   }, [fullCard, target]);
   const fullCardReady = !target?.id || fullCard?.id === target.id;
 
+  // Тот же гард, что и у черновика карточки: рефетч списка офферов возвращает новый объект
+  // того же оффера — пересаживаем оффер-черновик только при смене самого оффера.
+  const seededOfferId = useRef<number | null>(null);
   useEffect(() => {
+    const offerId = ownOffer?.id ?? null;
+    if (offerId !== null && seededOfferId.current === offerId) return;
+    seededOfferId.current = offerId;
     setOfferDraft(ownOffer
       ? {
           base_price: ownOffer.base_price,
@@ -410,7 +437,12 @@ export function useProductForm({
         }
       }
       toast.success(isEdit ? t('adminCatalog.updated') : t('adminCatalog.created'));
-      onOpenChange(false);
+      if (productId !== undefined) {
+        // Детальная карточка живёт под ДРУГИМ ключом (['product', id], не ['products']) —
+        // без явной инвалидации витрина и редактор ещё 3 минуты показывали бы старое.
+        queryClient.invalidateQueries({ queryKey: ['product', String(productId)] });
+        onSaved?.(productId);
+      }
     } catch (err) {
       // Честный тост (N2, M3): показываем код бэкенда, если он есть, — «не удалось» без
       // причины оставляло пользователя гадать.

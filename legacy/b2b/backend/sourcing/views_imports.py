@@ -3,7 +3,6 @@ import logging
 
 from celery.result import AsyncResult
 from django.db import DatabaseError
-from django.http import HttpResponse
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from kombu.exceptions import OperationalError
 from rest_framework import status
@@ -15,6 +14,10 @@ from rest_framework.views import APIView
 
 from .models import ImportTask
 from .tasks import process_catalog_import, process_excel_import
+
+# Шаблон импорта вынесен в views_templates.py (файл перерос предел 500 строк, R5b);
+# ре-экспорт сохраняет прежние точки импорта (тесты, фасад sourcing/views.py).
+from .views_templates import CATALOG_TEMPLATE_EXAMPLE, CATALOG_TEMPLATE_HEADERS, CatalogTemplateView  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +31,32 @@ XLSX_MAGIC = b"PK\x03\x04"
 def _validate_xlsx_signature(file_bytes: bytes) -> bool:
     """Validate that file starts with ZIP/XLSX magic bytes."""
     return file_bytes[:4] == XLSX_MAGIC
+
+
+def _resolve_seller_company(user):
+    """Продавцовая авторизация каталожного импорта → (supplier_company_id, error_response).
+
+    Platform admin → (None, None): продукты без офферов (компании у него нет). Иначе нужен
+    активный член SUPPLIER-компании с can_sell — его компания и станет supplier на офферах
+    (self-service: supplier НИКОГДА не колонка файла). Не продавец → (None, 403).
+    """
+    if getattr(user, "is_platform_admin", False) or user.is_superuser:
+        return None, None
+    from accounts.models import CompanyMember
+
+    seller_membership = (
+        CompanyMember.objects.filter(
+            user=user,
+            is_active=True,
+            can_sell=True,
+            company__types__code="SUPPLIER",
+        )
+        .order_by("-is_primary")
+        .first()
+    )
+    if not seller_membership:
+        return None, Response({"detail": "NOT_A_SELLER_MEMBER"}, status=status.HTTP_403_FORBIDDEN)
+    return seller_membership.company_id, None
 
 
 def _check_deal_access(user, deal) -> bool:
@@ -213,33 +242,12 @@ class CatalogImportView(APIView):
     throttle_scope = "import_upload"
 
     def post(self, request):
-        # Authorisation: allow platform admin OR a member with can_sell in
-        # at least one SUPPLIER/MANUFACTURER company. The uploader's seller
-        # company becomes the supplier on every upserted offer (self-service
-        # path — supplier is NEVER a column in the file). Platform admin has no
-        # company → products-only (no offers); the Unfold path is theirs.
-        user = request.user
-        is_admin = getattr(user, "is_platform_admin", False) or user.is_superuser
-        supplier_company_id = None
-        if not is_admin:
-            from accounts.models import CompanyMember
-
-            seller_membership = (
-                CompanyMember.objects.filter(
-                    user=user,
-                    is_active=True,
-                    can_sell=True,
-                    company__types__code="SUPPLIER",
-                )
-                .order_by("-is_primary")
-                .first()
-            )
-            if not seller_membership:
-                return Response(
-                    {"detail": "NOT_A_SELLER_MEMBER"},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
-            supplier_company_id = seller_membership.company_id
+        # Authorisation: platform admin (products-only, no offers — has no company; the
+        # Unfold path is theirs) OR a can_sell member of a SUPPLIER company, whose company
+        # becomes the supplier on every upserted offer (see _resolve_seller_company).
+        supplier_company_id, auth_error = _resolve_seller_company(request.user)
+        if auth_error is not None:
+            return auth_error
 
         file_obj = request.FILES.get("file")
         if not file_obj:
@@ -278,6 +286,97 @@ class CatalogImportView(APIView):
         except (OSError, ValueError, DatabaseError, OperationalError):
             logger.exception("Failed to queue catalog import task")
             return Response({"detail": "IMPORT_FAILED"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# Файлы, из которых ИИ-путь умеет доставать прайс: наш xlsx (бесплатный разбор без токенов
+# внутри extract_price_rows) + PDF/фото — vision-механизм заявок (services_ai_catalog).
+AI_CATALOG_EXTENSIONS = ("xlsx", "pdf", "png", "jpg", "jpeg")
+
+
+@extend_schema(
+    summary="Импорт каталога ЛЮБЫМ файлом через ИИ (R5b)",
+    description=(
+        "Продавец загружает прайс-лист как есть — xlsx/PDF/фото. Наш xlsx-шаблон разбирается "
+        "бесплатно (без вызова ИИ); остальное дословно переносит Claude в схему шаблона, после "
+        "чего строки идут через штатный движок импорта (тот же отчёт created/updated/errors). "
+        "ARCH-01: файл едет storage-ключом, извлечение — на Celery. Возвращает 202 {task_id}; "
+        "поллинг sourcing/ai-status/<task_id>/ — результат = отчёт импорта + ai_used/ai_rows. "
+        "dry_run=true — предпросмотр без записи."
+    ),
+    request={
+        "multipart/form-data": {
+            "type": "object",
+            "properties": {
+                "file": {"type": "string", "format": "binary", "description": "Прайс-лист: xlsx/pdf/png/jpg"},
+                "dry_run": {"type": "boolean"},
+            },
+        }
+    },
+    responses={
+        202: OpenApiResponse(description="AI job queued, task_id returned (poll sourcing/ai-status/)"),
+        400: OpenApiResponse(description="No file, unsupported type, spoofed content or too large"),
+        403: OpenApiResponse(description="Not a can_sell member of a SUPPLIER company"),
+        503: OpenApiResponse(description="AI import disabled"),
+    },
+    tags=["Sourcing"],
+)
+class ImportCatalogAiView(APIView):
+    """R5b — зеркало CatalogImportView для произвольных файлов (staging как у extract-document).
+
+    Entitlement-гейта нет СОЗНАТЕЛЬНО — как у extract (закреплено test_ai_enrich_entitlement:
+    extract не за стеной); дневной cap применяется внутри enqueue_ai_job.
+    """
+
+    parser_classes = [MultiPartParser]
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "import_upload"
+
+    def post(self, request):
+        from django.conf import settings
+
+        if not getattr(settings, "AI_IMPORT_ENABLED", False):
+            return Response({"detail": "AI_DISABLED"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+        supplier_company_id, auth_error = _resolve_seller_company(request.user)
+        if auth_error is not None:
+            return auth_error
+
+        file_obj = request.FILES.get("file")
+        if not file_obj:
+            return Response({"detail": "FILE_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
+        if file_obj.size > MAX_EXCEL_FILE_SIZE:
+            return Response({"detail": "FILE_TOO_LARGE"}, status=status.HTTP_400_BAD_REQUEST)
+        name_lower = str(file_obj.name or "").lower()
+        extension = name_lower.rsplit(".", 1)[-1] if "." in name_lower else ""
+        if extension not in AI_CATALOG_EXTENSIONS:
+            return Response({"detail": "FILE_TYPE_UNSUPPORTED"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # SEC-08: расширение подделываемо — сверяем магию заголовка с ним до staging/оплаты
+        # (тот же байтовый гард, что у AI-путей extract-document / import-quote-lines).
+        from core.validators import content_matches_extension
+
+        raw = file_obj.read()
+        if not content_matches_extension(raw[:16], extension):
+            return Response({"detail": "FILE_CONTENT_MISMATCH"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # ARCH-01: байты НИКОГДА не едут через Redis-брокер — staging в default_storage,
+        # воркер читает по ключу и удаляет файл после попытки (см. _handle_catalog_import_ai).
+        import uuid
+
+        from django.core.files.base import ContentFile
+        from django.core.files.storage import default_storage
+
+        from .ai_jobs import enqueue_ai_job
+
+        storage_path = default_storage.save(f"ai_extract_tmp/{uuid.uuid4().hex}.{extension}", ContentFile(raw))
+        payload = {
+            "storage_path": storage_path,
+            "filename": file_obj.name,
+            "supplier_company_id": supplier_company_id,
+            "dry_run": str(request.data.get("dry_run", "")).lower() in ("1", "true", "yes"),
+        }
+        return enqueue_ai_job("catalog_import_ai", payload, request.user)
 
 
 @extend_schema(
@@ -342,119 +441,3 @@ class ImportStatusView(APIView):
                 result_data = {"status": "completed"}
 
         return Response({"task_id": task_id, "status": res.status, "result": result_data})
-
-
-# Exact headers the import engine recognizes (see sourcing/catalog_import.py).
-# «Категория», «Код ТН ВЭД» и «Направление» — не украшение шапки: без них порог публикации
-# (catalog/completeness.py) не пропускает НИ ОДНУ загруженную карточку, и прайс-лист на 3000
-# строк превращался в 3000 черновиков, каждый из которых надо было дозаполнять руками.
-CATALOG_TEMPLATE_HEADERS = [
-    "Наименование",
-    "Бренд",
-    "Артикул производителя",
-    "ГОСТ / Чертёж",
-    "Артикул поставщика",
-    "Описание",
-    "Категория",
-    "Код ТН ВЭД",
-    "Направление",
-    "Ед. изм.",
-    "Цена",
-    "Валюта",
-    "Наличие",
-    "Срок поставки",
-    "Мин. заказ",
-]
-#: Пример строки. Категория / направление / код ТН ВЭД оставлены ПУСТЫМИ намеренно: подставить
-#: сюда придуманные значения значит выдать пример, который сам же не импортируется (категория
-#: и направление сверяются со справочником). Реальные значения подставляет `_template_example`
-#: из живой базы — как и коды валют/наличия на листе справочников.
-CATALOG_TEMPLATE_EXAMPLE = [
-    "Тормозная колодка",
-    "Knorr-Bremse",
-    "KB-100",
-    "ГОСТ 1234-89",
-    "SUP-55",
-    "Композитная тормозная колодка",
-    "",
-    "",
-    "",
-    "шт",
-    "150.50",
-    "UZS",
-    "IN_STOCK",
-    "14-21 дн.",
-    "5",
-]
-
-
-def _template_example(categories, domains) -> list:
-    """Пример строки с ЖИВЫМИ значениями справочников — чтобы его можно было импортировать as-is.
-
-    Код ТН ВЭД берётся ПОДСКАЗКОЙ по наименованию примера: так в шаблоне оказывается настоящий
-    код из редакции ГТК, а не десять правдоподобных цифр (`catalog/hs_suggest.py`: придуманный
-    код ТН ВЭД хуже отсутствующего). Классификатор не загружен — ячейка остаётся пустой.
-    """
-    from catalog.hs_suggest import suggest_hs_codes
-
-    example = list(CATALOG_TEMPLATE_EXAMPLE)
-    example_name = example[CATALOG_TEMPLATE_HEADERS.index("Наименование")]
-    railway = next((domain for domain in domains if domain.code == "RAILWAY_MACHINERY"), None)
-    domain = railway or (domains[0] if domains else None)
-    suggestions = suggest_hs_codes(example_name, limit=1)
-
-    example[CATALOG_TEMPLATE_HEADERS.index("Категория")] = categories[0].name if categories else ""
-    example[CATALOG_TEMPLATE_HEADERS.index("Направление")] = domain.name if domain else ""
-    example[CATALOG_TEMPLATE_HEADERS.index("Код ТН ВЭД")] = suggestions[0]["code"] if suggestions else ""
-    return example
-
-
-@extend_schema(
-    summary="Download catalog import template",
-    description=(
-        "Returns an .xlsx with the exact headers the importer recognizes, one "
-        "example row, and a reference sheet of allowed currency / stock / unit "
-        "codes (read live from the database)."
-    ),
-    responses={200: OpenApiResponse(description="XLSX template")},
-    tags=["Sourcing"],
-)
-class CatalogTemplateView(APIView):
-    """Seller-facing catalog import template (true-PIM headers + allowed codes)."""
-
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        from openpyxl import Workbook
-
-        from catalog.models import Category, DomainType, StockStatus
-        from master_data.models import Currency, UnitOfMeasure
-
-        categories = list(Category.objects.filter(is_active=True).order_by("sort_order", "name"))
-        domains = list(DomainType.objects.all().order_by("sort_order", "code"))
-
-        workbook = Workbook()
-        sheet = workbook.active
-        sheet.title = "Товары"
-        sheet.append(CATALOG_TEMPLATE_HEADERS)
-        sheet.append(_template_example(categories, domains))
-
-        reference = workbook.create_sheet("Справочники (коды)")
-        reference.append(["Тип", "Код", "Название"])
-        for currency in Currency.objects.all().order_by("code"):
-            reference.append(["Валюта", currency.code, currency.name])
-        for stock in StockStatus.objects.all().order_by("code"):
-            reference.append(["Наличие", stock.code, stock.name])
-        for unit in UnitOfMeasure.objects.all().order_by("code"):
-            reference.append(["Ед. изм.", unit.code, unit.name])
-        # Категория и направление сверяются со справочником построчно: продавец должен видеть
-        # ДОПУСТИМЫЕ значения здесь же, иначе первая же загрузка вернёт UNKNOWN_CATEGORY.
-        for domain in domains:
-            reference.append(["Направление", domain.code, domain.name])
-        for category in categories:
-            reference.append(["Категория", "", category.name])
-
-        response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-        response["Content-Disposition"] = 'attachment; filename="railtech_catalog_template.xlsx"'
-        workbook.save(response)
-        return response

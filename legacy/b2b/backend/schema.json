@@ -7733,6 +7733,60 @@
                 }
             }
         },
+        "/api/v1/catalog/products/{id}/archive/": {
+            "post": {
+                "operationId": "catalog_products_archive_create",
+                "description": "Убирает карточку в архив (обратимо — см. restore). Отдельное действие от снятия с публикации: Draft — «ещё готовится», Archive — «больше не работаем» (Shopify).",
+                "summary": "Archive a product (owner)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Товар (PIM).",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProductRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProductRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProductRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Archived"
+                    },
+                    "400": {
+                        "description": "Already archived"
+                    }
+                }
+            }
+        },
         "/api/v1/catalog/products/{id}/delete-document/{doc_id}/": {
             "delete": {
                 "operationId": "catalog_products_delete_document_destroy",
@@ -7921,6 +7975,114 @@
                 }
             }
         },
+        "/api/v1/catalog/products/{id}/restore/": {
+            "post": {
+                "operationId": "catalog_products_restore_create",
+                "description": "Возвращает карточку из архива в черновики (ARCHIVED → DRAFT). Витрину карточка заслуживает заново через publish. Закрывает «архив — чёрную дыру» слитых дублей.",
+                "summary": "Restore a product from the archive",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Товар (PIM).",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProductRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProductRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProductRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Restored"
+                    },
+                    "400": {
+                        "description": "Not archived"
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/products/{id}/unpublish/": {
+            "post": {
+                "operationId": "catalog_products_unpublish_create",
+                "description": "Снимает карточку с витрины: PUBLISHED → DRAFT (Shopify: Active → Draft двусторонне). Право то же, что у публикации; KYC не требуется — снятие уменьшает экспозицию.",
+                "summary": "Unpublish a product (owner)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Товар (PIM).",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProductRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProductRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProductRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Unpublished"
+                    },
+                    "400": {
+                        "description": "Not published"
+                    }
+                }
+            }
+        },
         "/api/v1/catalog/products/{id}/upload-document/": {
             "post": {
                 "operationId": "catalog_products_upload_document_create",
@@ -8033,6 +8195,46 @@
                             }
                         },
                         "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/products/bulk_archive/": {
+            "post": {
+                "operationId": "catalog_products_bulk_archive_create",
+                "description": "Archive multiple products at once. Maximum 500 products per batch. Отчёт построчный: {archived: [...], skipped: [{product_id, error}]}.",
+                "summary": "Bulk archive products",
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "product_ids": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Products archived (line-by-line report)"
+                    },
+                    "400": {
+                        "description": "Invalid IDs or batch too large"
                     }
                 }
             }
@@ -18738,6 +18940,54 @@
                     },
                     "400": {
                         "description": "No file, invalid format, or too large"
+                    }
+                }
+            }
+        },
+        "/api/v1/sourcing/import-catalog-ai/": {
+            "post": {
+                "operationId": "sourcing_import_catalog_ai_create",
+                "description": "Продавец загружает прайс-лист как есть — xlsx/PDF/фото. Наш xlsx-шаблон разбирается бесплатно (без вызова ИИ); остальное дословно переносит Claude в схему шаблона, после чего строки идут через штатный движок импорта (тот же отчёт created/updated/errors). ARCH-01: файл едет storage-ключом, извлечение — на Celery. Возвращает 202 {task_id}; поллинг sourcing/ai-status/<task_id>/ — результат = отчёт импорта + ai_used/ai_rows. dry_run=true — предпросмотр без записи.",
+                "summary": "Импорт каталога ЛЮБЫМ файлом через ИИ (R5b)",
+                "tags": [
+                    "Sourcing"
+                ],
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "file": {
+                                        "type": "string",
+                                        "format": "binary",
+                                        "description": "Прайс-лист: xlsx/pdf/png/jpg"
+                                    },
+                                    "dry_run": {
+                                        "type": "boolean"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "AI job queued, task_id returned (poll sourcing/ai-status/)"
+                    },
+                    "400": {
+                        "description": "No file, unsupported type, spoofed content or too large"
+                    },
+                    "403": {
+                        "description": "Not a can_sell member of a SUPPLIER company"
+                    },
+                    "503": {
+                        "description": "AI import disabled"
                     }
                 }
             }

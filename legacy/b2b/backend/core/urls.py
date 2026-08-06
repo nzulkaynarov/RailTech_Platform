@@ -116,6 +116,7 @@ from sourcing.views import (  # noqa: F811
     CatalogTemplateView,
     DocumentExtractView,
     ExcelImportView,
+    ImportCatalogAiView,
     ImportStatusView,
     MatchCatalogView,
     PreflightCheckView,
@@ -237,6 +238,7 @@ urlpatterns = (
             "api/v1/crm/quotes/<int:quote_id>/request-diff/", QuoteRequestDiffView.as_view(), name="quote-request-diff"
         ),
         path("api/v1/sourcing/import-catalog/", CatalogImportView.as_view(), name="import-catalog"),
+        path("api/v1/sourcing/import-catalog-ai/", ImportCatalogAiView.as_view(), name="import-catalog-ai"),
         path("api/v1/sourcing/catalog-template/", CatalogTemplateView.as_view(), name="catalog-template"),
         path("api/v1/sourcing/import-status/<str:task_id>/", ImportStatusView.as_view(), name="import-status"),
         # ARCH-01: polling endpoint for the off-thread AI jobs (202 + task_id pattern).

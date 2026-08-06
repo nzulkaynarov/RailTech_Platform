@@ -23,7 +23,11 @@ interface PageBreadcrumbProps {
 const pageI18nKeys: Record<string, string> = {
   dashboard: 'breadcrumbs.dashboard',
   products: 'breadcrumbs.products',
-  nomenclature: 'breadcrumbs.nomenclature',
+  // R2: «Номенклатура» стала «Мои товары»; старый id — алиас и печатает ту же крошку.
+  nomenclature: 'breadcrumbs.myProducts',
+  'my-products': 'breadcrumbs.myProducts',
+  'product-new': 'breadcrumbs.productNew',
+  'product-edit': 'breadcrumbs.productEdit',
   'hs-directory': 'breadcrumbs.hsDirectory',
   'my-requests': 'breadcrumbs.myRequests',
   'request-detail': 'breadcrumbs.requestDetail',

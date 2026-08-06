@@ -2,7 +2,6 @@ import { useTranslation } from 'react-i18next';
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -24,9 +23,10 @@ export function OfferSection({ form }: { form: ProductFormState }) {
   const { t } = useTranslation();
   const { currencies, stockStatuses, deliveryBases, offerDraft, updateOffer } = form;
 
+  // Разделитель НЕ здесь: в шторке его ставит сама шторка между блоками, а на
+  // странице-редакторе (R3) секция живёт в собственной карточке и линия сверху лишняя.
   return (
     <>
-      <Separator />
       <div className="space-y-1">
         <Label className="text-base">{t('adminCatalog.pricing.title')}</Label>
         <p className="text-xs text-muted-foreground">{t('adminCatalog.pricing.hint')}</p>

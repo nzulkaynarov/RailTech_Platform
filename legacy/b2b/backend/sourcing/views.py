@@ -26,6 +26,7 @@ from .views_imports import (  # noqa: F401
     CatalogImportView,
     CatalogTemplateView,
     ExcelImportView,
+    ImportCatalogAiView,
     ImportStatusView,
     _check_deal_access,
     _validate_xlsx_signature,
@@ -34,6 +35,7 @@ from .views_imports import (  # noqa: F401
 __all__ = [
     "AttachmentViewSet",
     "CatalogImportView",
+    "ImportCatalogAiView",
     "CatalogTemplateView",
     "DocumentExtractView",
     "QuoteImportFileView",

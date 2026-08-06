@@ -70,6 +70,23 @@ export const sourcingApi = {
     );
     return response.data;
   },
+  /**
+   * ИИ-путь массовой загрузки (волна R5b): любой файл (xlsx/pdf/png/jpg/jpeg, до 20 МБ),
+   * строки извлекает ИИ. Отвечает 202 {task_id} — результат забирается через
+   * `runAiJob` (@/lib/aiJob), НЕ через import-status. Внутри бэкенда xlsx по нашему
+   * шаблону идёт бесплатным путём (в отчёте ai_used=false).
+   */
+  importCatalogAi: async (file: File, dryRun = false): Promise<{ task_id: string }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('dry_run', dryRun ? 'true' : 'false');
+    const response = await apiClient.post<{ task_id: string }>(
+      'sourcing/import-catalog-ai/',
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+    return response.data;
+  },
   downloadCatalogTemplate: async (): Promise<Blob> => {
     const response = await apiClient.get('sourcing/catalog-template/', { responseType: 'blob' });
     return response.data as Blob;
@@ -128,4 +145,8 @@ export interface CatalogImportResult {
   warning_count?: number | null;
   /** Сколько строк файла отброшено лимитом (0 — ничего не отброшено). */
   rows_truncated?: number | null;
+  /** true — строки из файла извлекал ИИ (не шаблонный парсер): предпросмотр стоит проверить внимательнее. */
+  ai_used?: boolean;
+  /** Сколько строк извлёк ИИ (осмысленно только при ai_used=true). */
+  ai_rows?: number;
 }

@@ -2656,6 +2656,26 @@ export interface paths {
         patch: operations["catalog_products_partial_update"];
         trace?: never;
     };
+    "/api/v1/catalog/products/{id}/archive/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Archive a product (owner)
+         * @description Убирает карточку в архив (обратимо — см. restore). Отдельное действие от снятия с публикации: Draft — «ещё готовится», Archive — «больше не работаем» (Shopify).
+         */
+        post: operations["catalog_products_archive_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/products/{id}/delete-document/{doc_id}/": {
         parameters: {
             query?: never;
@@ -2762,6 +2782,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/products/{id}/restore/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restore a product from the archive
+         * @description Возвращает карточку из архива в черновики (ARCHIVED → DRAFT). Витрину карточка заслуживает заново через publish. Закрывает «архив — чёрную дыру» слитых дублей.
+         */
+        post: operations["catalog_products_restore_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/products/{id}/unpublish/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unpublish a product (owner)
+         * @description Снимает карточку с витрины: PUBLISHED → DRAFT (Shopify: Active → Draft двусторонне). Право то же, что у публикации; KYC не требуется — снятие уменьшает экспозицию.
+         */
+        post: operations["catalog_products_unpublish_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/products/{id}/upload-document/": {
         parameters: {
             query?: never;
@@ -2796,6 +2856,26 @@ export interface paths {
          * @description Attach an image file to a product. Multipart upload.
          */
         post: operations["catalog_products_upload_image_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/products/bulk_archive/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bulk archive products
+         * @description Archive multiple products at once. Maximum 500 products per batch. Отчёт построчный: {archived: [...], skipped: [{product_id, error}]}.
+         */
+        post: operations["catalog_products_bulk_archive_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6505,6 +6585,26 @@ export interface paths {
          * @description Upload an XLSX file to bulk-import products to the PIM catalog. Staff only. Max file size: 20MB. Returns a Celery task_id.
          */
         post: operations["sourcing_import_catalog_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sourcing/import-catalog-ai/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Импорт каталога ЛЮБЫМ файлом через ИИ (R5b)
+         * @description Продавец загружает прайс-лист как есть — xlsx/PDF/фото. Наш xlsx-шаблон разбирается бесплатно (без вызова ИИ); остальное дословно переносит Claude в схему шаблона, после чего строки идут через штатный движок импорта (тот же отчёт created/updated/errors). ARCH-01: файл едет storage-ключом, извлечение — на Celery. Возвращает 202 {task_id}; поллинг sourcing/ai-status/<task_id>/ — результат = отчёт импорта + ai_used/ai_rows. dry_run=true — предпросмотр без записи.
+         */
+        post: operations["sourcing_import_catalog_ai_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -18212,6 +18312,40 @@ export interface operations {
             };
         };
     };
+    catalog_products_archive_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Товар (PIM). */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ProductRequest"];
+                "multipart/form-data": components["schemas"]["ProductRequest"];
+            };
+        };
+        responses: {
+            /** @description Archived */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Already archived */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     catalog_products_delete_document_destroy: {
         parameters: {
             query?: never;
@@ -18338,6 +18472,74 @@ export interface operations {
             };
         };
     };
+    catalog_products_restore_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Товар (PIM). */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ProductRequest"];
+                "multipart/form-data": components["schemas"]["ProductRequest"];
+            };
+        };
+        responses: {
+            /** @description Restored */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not archived */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    catalog_products_unpublish_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Товар (PIM). */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ProductRequest"];
+                "multipart/form-data": components["schemas"]["ProductRequest"];
+            };
+        };
+        responses: {
+            /** @description Unpublished */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not published */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     catalog_products_upload_document_create: {
         parameters: {
             query?: never;
@@ -18397,6 +18599,37 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ProductImage"];
                 };
+            };
+        };
+    };
+    catalog_products_bulk_archive_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    product_ids?: number[];
+                };
+            };
+        };
+        responses: {
+            /** @description Products archived (line-by-line report) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid IDs or batch too large */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -24620,6 +24853,56 @@ export interface operations {
             };
             /** @description No file, invalid format, or too large */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    sourcing_import_catalog_ai_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description Прайс-лист: xlsx/pdf/png/jpg
+                     */
+                    file?: string;
+                    dry_run?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description AI job queued, task_id returned (poll sourcing/ai-status/) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No file, unsupported type, spoofed content or too large */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not a can_sell member of a SUPPLIER company */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description AI import disabled */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

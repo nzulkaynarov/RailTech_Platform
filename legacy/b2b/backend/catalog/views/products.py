@@ -135,6 +135,16 @@ class ProductViewSet(viewsets.ModelViewSet):
         status_code = self.request.query_params.get("status")
         if status_code:
             queryset = queryset.filter(status__code=status_code)
+        # Происхождение карточки — питает табы единого реестра (аудит §5.2): «Кандидаты из
+        # заявок» (`?origin=rfq` — карточка родилась из строки КП/заявки: есть спрос или
+        # заявка-источник) vs «Черновики» (`?origin=manual` — заведена руками). Иные значения
+        # молча игнорируются.
+        origin = self.request.query_params.get("origin")
+        if origin in ("rfq", "manual"):
+            from django.db.models import Q
+
+            came_from_rfq = Q(demand_count__gt=0) | Q(source_deal__isnull=False)
+            queryset = queryset.filter(came_from_rfq) if origin == "rfq" else queryset.exclude(came_from_rfq)
         # Легаси-порядок очереди наполнения (`catalogApi.getMyCandidates` шлёт `?order=demand`).
         # Приоритет СОЗНАТЕЛЬНО отдан явному `?ordering=`: `OrderingFilter` работает позже
         # `get_queryset()` и его `order_by` перекрывает эту ветку. `?order=demand` остаётся
@@ -186,6 +196,10 @@ class ProductViewSet(viewsets.ModelViewSet):
         if self.action in (
             "publish",
             "bulk_publish",
+            "unpublish",
+            "archive",
+            "restore",
+            "bulk_archive",
             "coverage",
             "merge",
             "hs_suggest",
@@ -558,6 +572,111 @@ class ProductViewSet(viewsets.ModelViewSet):
             return Response({"detail": report["skipped"][0]["error"], **report}, status=status.HTTP_400_BAD_REQUEST)
         return Response(
             {"message": f"Successfully published {len(report['published'])} products.", **report},
+            status=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        summary="Unpublish a product (owner)",
+        description=(
+            "Снимает карточку с витрины: PUBLISHED → DRAFT (Shopify: Active → Draft двусторонне). "
+            "Право то же, что у публикации; KYC не требуется — снятие уменьшает экспозицию."
+        ),
+        responses={200: OpenApiResponse(description="Unpublished"), 400: OpenApiResponse(description="Not published")},
+        tags=["Catalog"],
+    )
+    @action(detail=True, methods=["post"])
+    def unpublish(self, request, pk=None):
+        from catalog.publishing import unpublish_product
+
+        product = self.get_object()
+        unpublished, error = unpublish_product(product, request.user)
+        if error:
+            code = 403 if error == "PRODUCT_NOT_YOURS" else status.HTTP_400_BAD_REQUEST
+            return Response({"detail": error}, status=code)
+        return Response(self.get_serializer(unpublished).data)
+
+    @extend_schema(
+        summary="Archive a product (owner)",
+        description=(
+            "Убирает карточку в архив (обратимо — см. restore). Отдельное действие от снятия "
+            "с публикации: Draft — «ещё готовится», Archive — «больше не работаем» (Shopify)."
+        ),
+        responses={200: OpenApiResponse(description="Archived"), 400: OpenApiResponse(description="Already archived")},
+        tags=["Catalog"],
+    )
+    @action(detail=True, methods=["post"])
+    def archive(self, request, pk=None):
+        from catalog.publishing import archive_product
+
+        product = self.get_object()
+        archived, error = archive_product(product, request.user)
+        if error:
+            code = 403 if error == "PRODUCT_NOT_YOURS" else status.HTTP_400_BAD_REQUEST
+            return Response({"detail": error}, status=code)
+        return Response(self.get_serializer(archived).data)
+
+    @extend_schema(
+        summary="Restore a product from the archive",
+        description=(
+            "Возвращает карточку из архива в черновики (ARCHIVED → DRAFT). Витрину карточка "
+            "заслуживает заново через publish. Закрывает «архив — чёрную дыру» слитых дублей."
+        ),
+        responses={200: OpenApiResponse(description="Restored"), 400: OpenApiResponse(description="Not archived")},
+        tags=["Catalog"],
+    )
+    @action(detail=True, methods=["post"])
+    def restore(self, request, pk=None):
+        from catalog.publishing import restore_product
+
+        product = self.get_object()
+        restored, error = restore_product(product, request.user)
+        if error:
+            code = 403 if error == "PRODUCT_NOT_YOURS" else status.HTTP_400_BAD_REQUEST
+            return Response({"detail": error}, status=code)
+        return Response(self.get_serializer(restored).data)
+
+    @extend_schema(
+        summary="Bulk archive products",
+        description=(
+            "Archive multiple products at once. Maximum 500 products per batch. "
+            "Отчёт построчный: {archived: [...], skipped: [{product_id, error}]}."
+        ),
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {
+                    "product_ids": {"type": "array", "items": {"type": "integer"}},
+                },
+            }
+        },
+        responses={
+            200: OpenApiResponse(description="Products archived (line-by-line report)"),
+            400: OpenApiResponse(description="Invalid IDs or batch too large"),
+        },
+        tags=["Catalog"],
+    )
+    @action(detail=False, methods=["post"])
+    def bulk_archive(self, request):
+        product_ids = request.data.get("product_ids", [])
+        if not product_ids:
+            return Response({"detail": "PRODUCT_IDS_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
+        if not isinstance(product_ids, list):
+            return Response({"detail": "product_ids must be a list"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            product_ids = [int(pid) for pid in product_ids]
+        except (ValueError, TypeError):
+            return Response({"detail": "product_ids must contain valid integers"}, status=status.HTTP_400_BAD_REQUEST)
+        if len(product_ids) > 500:
+            return Response({"detail": "BATCH_TOO_LARGE"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Построчный отчёт — тот же контракт частичного успеха, что у bulk_publish.
+        from catalog.publishing import archive_many
+
+        report = archive_many(product_ids, request.user)
+        if not report["archived"] and report["skipped"]:
+            return Response({"detail": report["skipped"][0]["error"], **report}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"message": f"Successfully archived {len(report['archived'])} products.", **report},
             status=status.HTTP_200_OK,
         )
 

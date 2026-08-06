@@ -234,6 +234,39 @@ export const useReclassificationWorklist = () => useQuery({
 });
 
 /** Публикация карточки её владельцем; сервер откажет, если полнота не достигнута. */
+/** R2: снятие с витрины / архив / восстановление. Все сбрасывают списки товаров. */
+export const useUnpublishProduct = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => catalogApi.unpublishProduct(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['products'] }),
+  });
+};
+
+export const useArchiveProduct = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => catalogApi.archiveProduct(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['products'] }),
+  });
+};
+
+export const useRestoreProduct = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => catalogApi.restoreProduct(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['products'] }),
+  });
+};
+
+export const useBulkArchiveProducts = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: number[]) => catalogApi.bulkArchiveProducts(ids),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['products'] }),
+  });
+};
+
 export const usePublishProduct = () => {
   const qc = useQueryClient();
   return useMutation({

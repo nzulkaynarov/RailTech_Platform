@@ -140,13 +140,13 @@ export const TENANT_NAV: NavNodeDef[] = [
     // Гейт не исчез, а переехал на само действие: `catalog/publishing.py` возвращает
     // `SELLER_KYC_REQUIRED`. Прав стало строго больше — ничего из работавшего не отнято.
     requires: { anyPerm: ['catalog.manage', 'catalog.publish'] },
+    // Целевая структура аудита §5.1: «Товары → Мои товары / Загрузка прайса / Справочники».
+    // «Номенклатуры» в трёх смыслах больше нет: раздел назван по объекту, единственный
+    // «Каталог» — витрина покупателя (верхний пункт side: buy). Дубль «Каталога» у компании,
+    // которая и покупает, и продаёт, ушёл вместе с этим. Старые хэши живы алиасами.
     children: [
-      { labelKey: 'shell.nomenclature', id: 'nomenclature' },
-      { labelKey: 'shell.catalog', id: 'products' },
+      { labelKey: 'shell.myProducts', id: 'my-products' },
       { labelKey: 'shell.catalogImport', id: 'catalog-import' },
-      // R6 (D14): три справочника были тремя пунктами — ТН ВЭД, категории, группы
-      // оборудования. Классификаторы платформы — один узел с вкладками (Akeneo Settings /
-      // Odoo Configuration), а рабочие места остаются отдельными пунктами.
       { labelKey: 'shell.catalogReference', id: 'catalog-reference' },
     ],
   },

@@ -183,6 +183,50 @@ def _handle_draft_quote(payload: dict) -> dict:
     }
 
 
+def _handle_catalog_import_ai(payload: dict) -> dict:
+    """R5b — массовая загрузка каталога ЛЮБЫМ файлом (Excel/PDF/фото) через существующий ИИ.
+
+    Файл едет storage-ключом (не через брокер — как extract/import_lines) и удаляется после
+    попытки. Строки извлекает `services_ai_catalog.extract_price_rows` (бесплатный путь для
+    нашего xlsx-шаблона, иначе vision-экстракция), дальше — ШТАТНОЕ ядро импорта
+    `run_catalog_import_frame`: тот же разбор шапки, справочники и отчёт, что у import-catalog.
+    Продавцовая авторизация выполнена вьюхой ДО постановки (supplier_company_id уже разрешён).
+    """
+    import pandas as pd
+    from django.core.files.storage import default_storage
+
+    from sourcing.catalog_import import run_catalog_import_frame
+    from sourcing.services_ai_catalog import extract_price_rows
+
+    storage_path = payload["storage_path"]
+    try:
+        with default_storage.open(storage_path) as stored:
+            raw = stored.read()
+        try:
+            rows, ai_used = extract_price_rows(raw, payload.get("filename") or "upload")
+        except RuntimeError as exc:
+            logger.warning("AI catalog import: extract failed: %s", exc)
+            return {"status": "error", "message": "AI_EXTRACT_FAILED"}
+    finally:
+        default_storage.delete(storage_path)
+
+    if not rows:
+        return {"status": "error", "message": "AI_EXTRACT_EMPTY"}
+
+    try:
+        result = run_catalog_import_frame(
+            pd.DataFrame(rows),
+            supplier_company_id=payload.get("supplier_company_id"),
+            dry_run=bool(payload.get("dry_run")),
+        )
+    except ValueError as exc:
+        # File-level fatal (NAME_COLUMN_NOT_FOUND) — same contract as process_catalog_import.
+        return {"status": "error", "message": str(exc)}
+    result["ai_used"] = ai_used
+    result["ai_rows"] = len(rows)
+    return result
+
+
 def _handle_suggest_sellers(payload: dict) -> dict:
     """R3 — AI-enhanced seller-routing suggestions off-thread. The view already buyer-gated the
     deal before enqueue; the worker just runs the enhanced (trigram + AI fallback) match. Falls
@@ -196,14 +240,21 @@ def _handle_suggest_sellers(payload: dict) -> dict:
     return {"sellers": suggest_sellers_for_deal_ai(deal)}
 
 
-def _handle_hs_classify(payload: dict, user_id: int) -> dict:
-    """T4: пакетный подбор кодов для карточек. Предложения, НЕ применение."""
+def _handle_hs_classify(payload: dict) -> dict:
+    """T4: пакетный подбор кодов для карточек. Предложения, НЕ применение.
+
+    Сигнатура — СТРОГО (payload): диспетчер `run_ai_job` зовёт handler(payload), и лишний
+    обязательный `user_id` ронял обе ТН ВЭД-фичи TypeError'ом в рантайме, при зелёных
+    тестах — dispatch-тест существовал только для enrich. Владение карточками проверяется
+    ДО постановки задачи (вьюха фильтрует can_manage), а `user_id` внутри
+    `classify_products` не использовался вовсе.
+    """
     from catalog.hs_lookup_ai import classify_products
 
-    return classify_products(payload.get("product_ids") or [], user_id)
+    return classify_products(payload.get("product_ids") or [])
 
 
-def _handle_hs_lookup(payload: dict, user_id: int) -> dict:
+def _handle_hs_lookup(payload: dict) -> dict:
     """T3: «опишите товар своими словами» → код ТН ВЭД из справочника с объяснением."""
     from catalog.hs_lookup_ai import lookup_hs_code
 
@@ -215,6 +266,7 @@ FEATURE_HANDLERS = {
     "preflight": _handle_preflight,
     "extract": _handle_extract,
     "import_lines": _handle_import_lines,
+    "catalog_import_ai": _handle_catalog_import_ai,
     "compose": _handle_compose,
     "enrich": _handle_enrich,
     "chat_reply": _handle_chat_reply,

@@ -183,6 +183,11 @@ export interface ProductListParams {
     mine?: boolean;
     /** Код статуса карточки: DRAFT / PUBLISHED / ARCHIVED. */
     status?: string;
+    /**
+     * Происхождение черновика — питает табы единого реестра (аудит §5.2):
+     * `rfq` — кандидаты из заявок (есть спрос или исходная сделка), `manual` — заведённые руками.
+     */
+    origin?: 'rfq' | 'manual';
     /** DRF-порядок: `name`, `-demand_count`, … Пустая строка = порядок по умолчанию. */
     ordering?: string;
     /**
@@ -205,6 +210,7 @@ function buildProductListQuery(params: ProductListParams): string {
     if (params.stock_status) query.append('stock_status', params.stock_status);
     if (params.mine) query.append('mine', '1');
     if (params.status) query.append('status', params.status);
+    if (params.origin) query.append('origin', params.origin);
     if (params.ordering) query.append('ordering', params.ordering);
     if (params.order) query.append('order', params.order);
     if (params.page && params.page > 1) query.append('page', String(params.page));
@@ -324,6 +330,30 @@ export const catalogApi = {
         return response.data;
     },
     /** Публикация карточки её ВЛАДЕЛЬЦЕМ (Amazon/Alibaba/Shopify), гейт — полнота. */
+    /**
+     * Жизненный цикл карточки (R2). Бенчмарк Shopify: Active → Draft двусторонне,
+     * Archive отдельно и ОБРАТИМО — до этой волны продавец умел только публиковать,
+     * а слитый дубль исчезал в архиве безвозвратно.
+     */
+    unpublishProduct: async (id: number): Promise<Product> => {
+        const response = await apiClient.post<Product>(`catalog/products/${id}/unpublish/`);
+        return response.data;
+    },
+    archiveProduct: async (id: number): Promise<Product> => {
+        const response = await apiClient.post<Product>(`catalog/products/${id}/archive/`);
+        return response.data;
+    },
+    restoreProduct: async (id: number): Promise<Product> => {
+        const response = await apiClient.post<Product>(`catalog/products/${id}/restore/`);
+        return response.data;
+    },
+    bulkArchiveProducts: async (ids: number[]): Promise<{ archived: number[]; skipped: { product_id: number; error: string }[] }> => {
+        // Подчёркивание в пути — консистентность с историческим bulk_publish.
+        const response = await apiClient.post<{ archived: number[]; skipped: { product_id: number; error: string }[] }>(
+            'catalog/products/bulk_archive/', { product_ids: ids },
+        );
+        return response.data;
+    },
     publishProduct: async (id: number): Promise<Product> => {
         const response = await apiClient.post<Product>(`catalog/products/${id}/publish/`, {});
         return response.data;

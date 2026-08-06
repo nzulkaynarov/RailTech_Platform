@@ -31,7 +31,8 @@ export function ProductFormSheet({
 }) {
   const { t } = useTranslation();
   const [dutiesOpen, setDutiesOpen] = useState(false);
-  const form = useProductForm({ open, onOpenChange, target, sellerCompanyId });
+  // Шторка закрывается после сохранения; страница-редактор (R3) с тем же хуком остаётся на месте.
+  const form = useProductForm({ target, sellerCompanyId, open, onSaved: () => onOpenChange(false) });
   const {
     domainTypes, categories, units, equipmentGroups, adminCompanies,
     draft, groupIds, categoryHint,
@@ -247,7 +248,12 @@ export function ProductFormSheet({
             </div>
           )}
 
-          {sellerMode && <OfferSection form={form} />}
+          {sellerMode && (
+            <>
+              <Separator />
+              <OfferSection form={form} />
+            </>
+          )}
 
           {isEdit && target?.sku && (
             <>

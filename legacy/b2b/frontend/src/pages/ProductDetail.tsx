@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   ArrowLeft, ShoppingCart, Minus, Plus, Package, FileText,
-  Building2, Clock, Truck,
+  Building2, Clock, Truck, Pencil, Send, EyeOff, Archive, ArchiveRestore,
 } from 'lucide-react';
 
 import { Card, CardContent } from '@/components/ui/card';
@@ -14,25 +15,52 @@ import { Separator } from '@/components/ui/separator';
 import { StatusBadge, getStockVariant } from '@/components/ui/StatusBadge';
 import { Skeleton } from '@/components/ui/skeleton';
 
-import { useProduct } from '@/hooks/useCatalog';
+import {
+  useProduct, usePublishProduct, useUnpublishProduct, useArchiveProduct, useRestoreProduct,
+} from '@/hooks/useCatalog';
+import { useHasCompanyPermission } from '@/hooks/useCapabilities';
+import { useCatalogPublishGate } from '@/hooks/useCatalogPublishGate';
 import { useCartStore } from '@/store/cartStore';
 import { formatMoney } from '@/utils/decimal';
 import { useUserStore } from '@/store/userStore';
+import { useAuthStore } from '@/store/authStore';
 import { getDomainLabelKey } from '@/config/domainConfig';
-import { deliveryBasisLabelKey, stockStatusLabelKey, uomLabelKey } from '@/lib/codes';
+import { deliveryBasisLabelKey, productStatusLabelKey, stockStatusLabelKey, uomLabelKey } from '@/lib/codes';
+import { extractApiErrorCode, translateApiError } from '@/lib/apiError';
 
 interface ProductDetailProps {
   productId: string;
   onBack: () => void;
   onNavigate: (productId: string) => void;
+  /** Переход в страницу-редактор (`product-edit/{id}`); подключается роутингом R3. */
+  onProductEdit?: (id: string) => void;
 }
 
-export function ProductDetail({ productId, onBack }: ProductDetailProps) {
+/** Тот же светофор статусов карточки, что в реестре и редакторе (R2/R3). */
+const STATUS_BADGE_VARIANT: Record<string, 'success' | 'warning' | 'neutral'> = {
+  PUBLISHED: 'success',
+  DRAFT: 'warning',
+  ARCHIVED: 'neutral',
+};
+
+export function ProductDetail({ productId, onBack, onProductEdit }: ProductDetailProps) {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const { addItem, openCart } = useCartStore();
   const { activeStatus } = useUserStore();
   const canSendRequest = activeStatus === 'BUYER';
   const showPrices = activeStatus === 'SELLER';
+
+  // Слой владельца (D15): статус и действия видит ТОЛЬКО компания-владелец карточки,
+  // кнопки — по правам CompanyRole (скрыты без права, не disabled), как в редакторе.
+  const viewerCompanyId = useAuthStore((s) => s.user?.company?.id);
+  const canManage = useHasCompanyPermission('catalog.manage');
+  const canPublish = useHasCompanyPermission('catalog.publish');
+  const publishGate = useCatalogPublishGate();
+  const publishMut = usePublishProduct();
+  const unpublishMut = useUnpublishProduct();
+  const archiveMut = useArchiveProduct();
+  const restoreMut = useRestoreProduct();
 
   const { data: product, isLoading, error, refetch } = useProduct(productId);
   // `qty` is the always-valid (>=1) source of truth used by add-to-request;
@@ -101,6 +129,25 @@ export function ProductDetail({ productId, onBack }: ProductDetailProps) {
   const basePrice = product.base_price;
   const basePriceCurrency = product.base_price_currency;
 
+  // ─── Владелец карточки: статус + действия жизненного цикла (D15) ───
+  const isOwner = viewerCompanyId != null && product.owner_company_data?.id === viewerCompanyId;
+  const statusCode = product.status_code ?? '';
+  const statusLabelKey = productStatusLabelKey(statusCode);
+  const actionPending = publishMut.isPending || unpublishMut.isPending
+    || archiveMut.isPending || restoreMut.isPending;
+  // Хуки инвалидируют списки (['products']); детальная карточка живёт под своим ключом.
+  const actionSuccess = (message: string) => () => {
+    queryClient.invalidateQueries({ queryKey: ['product', productId] });
+    toast.success(message);
+  };
+  const actionError = (fallbackKey: string) => (err: unknown) =>
+    toast.error(extractApiErrorCode(err) ? translateApiError(err) : t(fallbackKey));
+
+  // «Опубликовать» — только DRAFT с достигнутой полнотой; при неполноте кнопка скрыта
+  // (дозаполнение живёт в редакторе). KYC-гейт — disabled с подсказкой, как в реестре.
+  const showPublish = canPublish && statusCode === 'DRAFT' && Boolean(product.completeness?.is_publishable);
+  const showOwnerActions = isOwner && (canManage || canPublish);
+
   const attributes = [
     { label: t('productDetail.article'), value: product.sku },
     { label: t('productDetail.gostDrawing'), value: product.gost_drawing },
@@ -121,7 +168,7 @@ export function ProductDetail({ productId, onBack }: ProductDetailProps) {
       {/* Header — full width */}
       <Card>
         <CardContent className="p-5">
-          <div className="flex gap-5">
+          <div className="flex flex-wrap gap-5">
             {hasImages && (
               <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-lg bg-muted overflow-hidden">
                 {imageUrl ? (
@@ -137,6 +184,13 @@ export function ProductDetail({ productId, onBack }: ProductDetailProps) {
                 <p className="text-sm text-muted-foreground font-mono">{product.sku}</p>
               )}
               <div className="flex flex-wrap items-center gap-1.5 mt-auto">
+                {/* Статус публикации — только владельцу: чужие видят лишь PUBLISHED-карточки. */}
+                {isOwner && statusLabelKey && (
+                  <StatusBadge
+                    label={t(statusLabelKey)}
+                    variant={STATUS_BADGE_VARIANT[statusCode] ?? 'neutral'}
+                  />
+                )}
                 {stockLabelKey && (
                   <StatusBadge label={t(stockLabelKey)} variant={getStockVariant(stockStatus)} />
                 )}
@@ -148,6 +202,90 @@ export function ProductDetail({ productId, onBack }: ProductDetailProps) {
                 )}
               </div>
             </div>
+            {/* Действия владельца — по правам, скрыты без права (у покупателя вид не меняется). */}
+            {showOwnerActions && (
+              <div className="flex flex-wrap items-start justify-end gap-1.5 shrink-0">
+                {canManage && onProductEdit && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => onProductEdit(String(product.id))}
+                  >
+                    <Pencil className="size-4" aria-hidden="true" />
+                    {t('productDetail.actions.edit')}
+                  </Button>
+                )}
+                {showPublish && (
+                  <Button
+                    size="sm"
+                    className="gap-1.5"
+                    disabled={actionPending || publishGate.blocked}
+                    title={publishGate.blocked ? t('nomenclature.publishNeedsKyc') : undefined}
+                    onClick={() =>
+                      publishMut.mutate(product.id, {
+                        onSuccess: actionSuccess(t('nomenclature.published', { name: product.name })),
+                        onError: actionError('nomenclature.publishFailed'),
+                      })
+                    }
+                  >
+                    <Send className="size-4" aria-hidden="true" />
+                    {t('nomenclature.publish')}
+                  </Button>
+                )}
+                {canPublish && statusCode === 'PUBLISHED' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    disabled={actionPending}
+                    onClick={() =>
+                      unpublishMut.mutate(product.id, {
+                        onSuccess: actionSuccess(t('productDetail.actions.unpublished', { name: product.name })),
+                        onError: actionError('productDetail.actions.failed'),
+                      })
+                    }
+                  >
+                    <EyeOff className="size-4" aria-hidden="true" />
+                    {t('productDetail.actions.unpublish')}
+                  </Button>
+                )}
+                {canManage && statusCode !== 'ARCHIVED' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    disabled={actionPending}
+                    onClick={() =>
+                      archiveMut.mutate(product.id, {
+                        onSuccess: actionSuccess(t('productDetail.actions.archived', { name: product.name })),
+                        onError: actionError('productDetail.actions.failed'),
+                      })
+                    }
+                  >
+                    <Archive className="size-4" aria-hidden="true" />
+                    {t('productDetail.actions.archive')}
+                  </Button>
+                )}
+                {canManage && statusCode === 'ARCHIVED' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    disabled={actionPending}
+                    onClick={() =>
+                      restoreMut.mutate(product.id, {
+                        onSuccess: actionSuccess(t('productDetail.actions.restored', { name: product.name })),
+                        onError: actionError('productDetail.actions.failed'),
+                      })
+                    }
+                  >
+                    <ArchiveRestore className="size-4" aria-hidden="true" />
+                    {t('productDetail.actions.restore')}
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

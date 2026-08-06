@@ -9,11 +9,12 @@
 import type { PageId } from '@/config/pageRegistry';
 
 /** Маршруты, несущие параметр в хэше (`#deal-quote/7`). */
-export type ParameterisedPageId = 'product_detail' | 'request-detail' | 'deal-quote';
+export type ParameterisedPageId = 'product_detail' | 'product-edit' | 'request-detail' | 'deal-quote';
 
 export type Page =
   | { type: Exclude<PageId, ParameterisedPageId> }
   | { type: 'product_detail'; productId: string }
+  | { type: 'product-edit'; productId: string }
   | { type: 'request-detail'; dealId: number }
   | { type: 'deal-quote'; dealId: number };
 
@@ -29,6 +30,12 @@ export function parseHashToPage(rawHash: string): Page {
   if (!path || path === 'dashboard') return { type: 'dashboard' };
   if (path.startsWith('product_detail/')) {
     return { type: 'product_detail', productId: path.slice('product_detail/'.length) } as Page;
+  }
+  // Редактор карточки (R3). Голый `#product-edit` без id — откат в реестр, не сломанный экран.
+  if (path === 'product-edit' || path.startsWith('product-edit/')) {
+    const productId = path.slice('product-edit/'.length);
+    if (productId) return { type: 'product-edit', productId } as Page;
+    return { type: 'my-products' } as Page;
   }
   // Голая форма (`#deal-quote` без номера) обрабатывается наравне с `deal-quote/abc`:
   // раньше она проваливалась в общий `return { type: path }` и рендерила билдер КП с
@@ -60,6 +67,8 @@ export function pageToHash(page: Page): string {
   switch (page.type) {
     case 'product_detail':
       return `product_detail/${page.productId}`;
+    case 'product-edit':
+      return `product-edit/${page.productId}`;
     case 'request-detail':
       return `request-detail/${page.dealId}`;
     case 'deal-quote':
