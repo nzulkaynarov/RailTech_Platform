@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Loader2, Wallet, Upload, X } from 'lucide-react';
@@ -67,6 +67,24 @@ export function RecordPaymentDialog({
 
   const balanceDueStr = selectedInvoice?.balance_due ?? '';
   const balanceDue = Number(balanceDueStr) || 0;
+
+  // Диалог смонтирован ВМЕСТЕ со страницей, поэтому `useState(defaultInvoiceId …)` отработал,
+  // когда счёт ещё не был выбран, и застыл пустым: пользователь открывал конкретный счёт,
+  // жал «Зафиксировать платёж» — и снова выбирал в списке тот же счёт руками. Синхронизируем
+  // на КАЖДОМ открытии.
+  useEffect(() => {
+    if (!open) return;
+    setInvoiceId(defaultInvoiceId ? String(defaultInvoiceId) : '');
+  }, [open, defaultInvoiceId]);
+
+  // Сумма по умолчанию — весь остаток к оплате (Stripe/Odoo/QuickBooks предлагают именно его:
+  // полная оплата — самый частый случай, частичную пользователь исправит одним движением).
+  // Только пока поле не тронуто, чтобы не затирать введённое вручную.
+  const [amountTouched, setAmountTouched] = useState(false);
+  useEffect(() => {
+    if (!open) { setAmountTouched(false); return; }
+    if (!amountTouched && balanceDue > 0) setAmount(balanceDueStr);
+  }, [open, amountTouched, balanceDue, balanceDueStr]);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -175,7 +193,7 @@ export function RecordPaymentDialog({
                   step="0.01"
                   min="0.01"
                   value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                  onChange={(e) => { setAmountTouched(true); setAmount(e.target.value); }}
                   placeholder="0.00"
                   inputMode="decimal"
                 />
