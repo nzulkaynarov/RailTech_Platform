@@ -63,6 +63,12 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
     # A quote is a bounded document (line items per КП), so returning the full list is safe.
     pagination_class = None
     filterset_fields = {
+        # `quote` — позиции ОДНОГО документа. Его не было, и `?quote=24` молча
+        # игнорировался: эндпоинт отдавал строки ВСЕХ КП сделки. Пока у сделки был один
+        # КП, это совпадало; как только появился второй (контейнер строк заявки покупателя
+        # + КП продавца), билдер стал показывать их вперемешку — продавец видел дубли с
+        # нулевыми ценами и мог отправить такое клиенту. Поймано прогоном глазами 06-08.
+        "quote": ["exact"],
         "quote__deal_id": ["exact"],
         "product": ["isnull", "exact"],
     }

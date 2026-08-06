@@ -10,13 +10,17 @@ import { PaginatedResponse } from '../types';
 import type { Product, QuoteItem } from './types';
 
 export const quoteItemsApi = {
-	getQuoteItems: async (params?: { deal_id?: number, product_is_null?: boolean }) => {
+	getQuoteItems: async (params?: { quote?: number, deal_id?: number, product_is_null?: boolean }) => {
 		let url = 'crm/quote-items/';
 		if (params) {
 			const query = new URLSearchParams();
 			// Backend filterset key is `quote__deal_id` (QuoteItemViewSet.filterset_fields).
 			// Sending `deal_id` was silently IGNORED by DRF → the КП builder loaded the
 			// seller's items from ALL deals (opening one deal's КП showed another's lines).
+			// `quote` — позиции ОДНОГО документа. У сделки бывает несколько КП (контейнер
+			// строк заявки покупателя + КП продавца), и фильтр по сделке смешивает их:
+			// билдер показывал 4 позиции вместо 2, половину — с нулевой ценой.
+			if (params.quote) query.append('quote', params.quote.toString());
 			if (params.deal_id) query.append('quote__deal_id', params.deal_id.toString());
 			if (params.product_is_null) query.append('product__isnull', 'true');
 			if (query.toString()) url += `?${query.toString()}`;

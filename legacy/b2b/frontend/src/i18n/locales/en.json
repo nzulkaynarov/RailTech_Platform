@@ -1281,13 +1281,14 @@
     "added": "«{{name}}» added to request",
     "remove": "Remove",
     "clear": "Clear",
-    "itemsCount": "{{count}} items in request",
     "increase": "Increase quantity",
     "decrease": "Decrease quantity",
     "requestQuote": "Request Quote",
     "requestFrom": "Request from",
     "requestCreated": "Request #{{id}} created",
-    "titleLabel": "Request name (optional)"
+    "titleLabel": "Request name (optional)",
+    "itemsCount_one": "{{count}} item in request",
+    "itemsCount_other": "{{count}} items in request"
   },
   "nav": {
     "profile": "Profile",

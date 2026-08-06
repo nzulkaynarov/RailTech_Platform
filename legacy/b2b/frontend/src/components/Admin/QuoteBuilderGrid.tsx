@@ -56,8 +56,15 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	const { t } = useTranslation();
 	const dealId = propDealId || 0;
 
-	const { data: quoteItems = [], isLoading: itemsLoading } = useQuoteItems({ deal_id: dealId });
 	const { data: deal, isLoading: dealLoading } = useDeal(dealId);
+	// Позиции берём у АКТИВНОГО КП, а не у сделки: у сделки бывает несколько документов
+	// (контейнер строк заявки покупателя и КП продавца), и фильтр по сделке показывал их
+	// вперемешку — 4 строки вместо 2, половина с нулевой ценой, и такое можно было
+	// отправить клиенту. Пока активный КП не приехал, запрос не уходит.
+	const activeQuoteId = deal?.active_quote?.id;
+	const { data: quoteItems = [], isLoading: itemsLoading } = useQuoteItems(
+		activeQuoteId ? { quote: activeQuoteId } : undefined,
+	);
 	const { data: currencies = [] } = useCurrencies();
 	const updateMutation = useUpdateQuoteItem();
 	const bulkUpdateMutation = useBulkUpdateQuoteItems();

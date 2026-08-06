@@ -33,6 +33,10 @@ export const useDealDocuments = (dealId: number) => useQuery({
 });
 
 export interface QuoteItemsFilterParams {
+  /** Позиции ОДНОГО КП. Билдер обязан спрашивать именно так: у сделки бывает несколько
+   *  документов (контейнер строк заявки покупателя и КП продавца), и фильтр по сделке
+   *  смешивает их в одну таблицу. */
+  quote?: number;
   deal_id?: number;
   product_is_null?: boolean;
 }
@@ -40,6 +44,10 @@ export interface QuoteItemsFilterParams {
 export const useQuoteItems = (params?: QuoteItemsFilterParams) => useQuery({
   queryKey: ['quote-items', params],
   queryFn: () => crmApi.getQuoteItems(params),
+  // Запрос БЕЗ единого фильтра вернул бы все позиции, видимые продавцу, — чужие строки
+  // в чужой таблице. Пока вызывающий не знает, ЧТО именно грузит (активный КП ещё не
+  // приехал), запроса нет: пустой результат честнее случайного.
+  enabled: Boolean(params && (params.quote || params.deal_id)),
 });
 
 export const useUpdateQuoteItem = () => {

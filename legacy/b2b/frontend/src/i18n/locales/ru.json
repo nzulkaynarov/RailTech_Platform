@@ -1285,13 +1285,15 @@
     "added": "«{{name}}» добавлен в запрос",
     "remove": "Удалить",
     "clear": "Очистить",
-    "itemsCount": "{{count}} позиций в запросе",
     "increase": "Увеличить количество",
     "decrease": "Уменьшить количество",
     "requestQuote": "Запросить КП",
     "requestFrom": "Запрос от",
     "requestCreated": "Заявка #{{id}} создана",
-    "titleLabel": "Название заявки (необязательно)"
+    "titleLabel": "Название заявки (необязательно)",
+    "itemsCount_one": "{{count}} позиция в запросе",
+    "itemsCount_few": "{{count}} позиции в запросе",
+    "itemsCount_many": "{{count}} позиций в запросе"
   },
   "nav": {
     "profile": "Профиль",

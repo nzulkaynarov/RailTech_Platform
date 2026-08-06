@@ -405,8 +405,12 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
                       {product.sku && (
                         <p className="text-xs text-muted-foreground font-mono">{product.sku}</p>
                       )}
-                      <div className="flex items-center gap-1 flex-wrap mt-auto">
-                        <Badge variant="secondary" className="text-xs">{t(getDomainLabelKey(product.domain_type_code ?? ''), product.domain_type_name)}</Badge>
+                      {/* `min-w-0` + `truncate` у бейджа: длинное название направления
+                          («Железнодорожное оборудование») вылезало из колонки и уезжало
+                          ПОД кнопку корзины — текст резался вперемешку с иконкой.
+                          Поймано прогоном глазами 06-08. */}
+                      <div className="flex min-w-0 items-center gap-1 flex-wrap mt-auto">
+                        <Badge variant="secondary" className="max-w-full truncate text-xs">{t(getDomainLabelKey(product.domain_type_code ?? ''), product.domain_type_name)}</Badge>
                         {stockBadge(product)}
                       </div>
                     </div>
