@@ -11,7 +11,7 @@ B2B marketplace for railway equipment (Uzbekistan). Monorepo: Django backend + R
 
 ## Tech Stack
 
-- **Backend:** Django 6.0, DRF, Daphne (ASGI), Channels (WebSocket), Celery + Redis, PostgreSQL 17 (self-hosted on a dedicated DB-VPS; Neon retired 2026-06-19)
+- **Backend:** Django 6.0 (6.0.8 с 17-08), DRF 3.18, Daphne (ASGI), Channels (WebSocket), Celery + Redis, PostgreSQL 17 (self-hosted on a dedicated DB-VPS; Neon retired 2026-06-19)
 - **Frontend:** React 18, TypeScript 5.6, Vite 7, Tailwind CSS 4, shadcn/ui, Zustand 5, React Query 5, i18next (RU/EN)
 - **Infra:** Docker Compose (dev), **Caddy (prod edge on the app-VPS — owns TLS, CSP headers, XFF)**, nginx only *inside* the frontend container serving the SPA, GitHub Actions CI + self-hosted deploy runner, Sentry (backend + SPA)
 - **Storage:** Django FileSystemStorage by default (== prod); MinIO is **opt-in** via compose profile `with-minio` (prod VPS CPU lacks x86-64-v2)
@@ -303,7 +303,7 @@ docker compose exec backend pytest -m "not slow" --create-db                    
 
 - **Python:** black (120 line length), isort (profile=black), flake8; target Python 3.12 (Django 6.0 требует ≥3.12 — образ и CI на 3.12)
 - **Backend deps (INF-05):** `backend/requirements.txt` + `requirements-dev.txt` are GENERATED, hashed pip-compile locks — never hand-edit them. Change a floor/cap in `requirements.{in,dev.in}`, then recompile: `pip-compile --generate-hashes --no-strip-extras requirements.in -o requirements.txt` (+ the `-dev` variant with `-c requirements.txt`) in a linux py3.12 env with `gcc`+`libpq-dev` (pip-tools 7.5.3). The CI `deps-lock` gate fails on drift. psycopg2 is built from source (not `-binary`, INF-09).
-- **TypeScript:** strict mode, ESLint, path alias `@/` → `src/`
+- **TypeScript:** strict mode, ESLint 10 (flat config; в `eslint.config.js` ТОЛЬКО классические `react-hooks/rules-of-hooks` + `exhaustive-deps` — `configs.recommended` плагина v7 тянет правила React Compiler, 77 ошибок по живому коду = отдельная волна), path alias `@/` → `src/`
 - **Styling:** Tailwind v4 utility-first, oklch color tokens, CSS variables, dark mode via `.dark` class
 - **Models:** `AbstractLookup` base for reference tables (code, name, sort_order, is_active)
 - **Serializers:** Nested read, flat write pattern; `_data` suffix for nested representations
