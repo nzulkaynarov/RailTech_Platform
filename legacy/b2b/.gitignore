@@ -53,6 +53,7 @@ dist-ssr
 *.sw?
 
 # Testing
+.ci-local/
 .pytest_cache/
 htmlcov/
 coverage/

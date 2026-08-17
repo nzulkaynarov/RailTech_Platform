@@ -1,5 +1,8 @@
 # Browser E2E (Playwright)
 
+> **2026-08-17.** Nightly `e2e.yml` не стартует (GitHub-hosted раннеры — биллинг). Замена — `make e2e-prod` с машины разработчика после каждого деплоя: тот же prod-safe набор (`E2E_BASE_URL=https://b2b.railtech.uz`), 4 теста проходят, 14 сами `skip` (нужен локальный стек). Протокол — `merge-without-ci.md`.
+
+
 Proves the actual buyer/seller **clicks** work end-to-end, complementing the
 backend service-level golden path (`backend/crm/tests/test_golden_path.py`).
 

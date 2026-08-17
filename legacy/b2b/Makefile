@@ -1,4 +1,4 @@
-.PHONY: up down logs shell migrate makemigrations createsuperuser seed test test-backend test-frontend lint lint-backend lint-frontend typecheck tools-reset build clean format security security-backend security-frontend collectstatic celery-logs frontend-shell i18n-extract i18n-compile i18n-check
+.PHONY: ci-local e2e-prod up down logs shell migrate makemigrations createsuperuser seed test test-backend test-frontend lint lint-backend lint-frontend typecheck tools-reset build clean format security security-backend security-frontend collectstatic celery-logs frontend-shell i18n-extract i18n-compile i18n-check
 
 # Docker Compose commands
 up:
@@ -134,6 +134,19 @@ format: _tools-check
 # Было до 2026-08-13: `pip audit` (нет такой подкоманды pip — нужен отдельный пакет
 # pip-audit) и `npm audit` в nginx-контейнере без npm; обе ошибки глотал `|| true`,
 # поэтому цель ВСЕГДА рапортовала успех и не поймала ни одной уязвимости.
+# Зеркало ВСЕХ джоб ci.yml на машине разработчика — протокол мержа при мёртвом CI
+# (Docs/dev/ops/merge-without-ci.md). SKIP=deps-lock,docker-build / ONLY=api-contract —
+# выборочно; таблица для тела PR ложится в .ci-local/report.md.
+ci-local:
+	bash scripts/ci_local.sh
+
+# Prod-safe Playwright с машины разработчика — замена nightly e2e, который лежит вместе с
+# GitHub-hosted раннерами. Read-only smoke (health, /register, /setup-password, сырые i18n-ключи);
+# остальные спеки сами skip вне локального стека. Нужны @playwright/test + chromium
+# (`npx playwright install chromium`). Гонять после каждого деплоя (merge-without-ci.md, шаг 6).
+e2e-prod:
+	cd frontend && E2E_BASE_URL=$${E2E_BASE_URL:-https://b2b.railtech.uz} npx playwright test --reporter=list
+
 security: security-backend security-frontend
 
 # pip-audit без аргументов проверяет установленное окружение, а оно в образе ==
