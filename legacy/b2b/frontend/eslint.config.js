@@ -71,7 +71,12 @@ export default tseslint.config(
       'railtech': railtechPlugin,
     },
     rules: {
-      ...reactHooks.configs.recommended.rules,
+      // eslint 10 + eslint-plugin-react-hooks 7 (17-08): `configs.recommended` в v7 включает
+      // правила React Compiler (set-state-in-effect, refs-during-render, purity …) — 77 новых
+      // ошибок по живому коду. Это отдельная волна рефакторинга, а не побочный эффект бампа
+      // линтера, поэтому здесь ЯВНО только классические правила хуков — поведение как у v5.
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
       'react-refresh/only-export-components': [
         'warn',
         { allowConstantExport: true },
