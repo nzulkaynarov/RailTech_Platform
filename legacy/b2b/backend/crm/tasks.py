@@ -165,7 +165,7 @@ def check_overdue_deliveries(self) -> dict:
     from .models import Fulfillment
     from .services.deal_notifications import notify_delivery_overdue
 
-    today = timezone.now().date()
+    today = timezone.localdate()
     overdue_qs = Fulfillment.objects.filter(
         expected_delivery_date__lt=today,
         # status is a FK now (F5.4) — match by the lookup's code.
@@ -294,7 +294,7 @@ def expire_stale_quotes(self) -> dict:
 
     from .models import ActivityLog, Quote, QuoteStatus
 
-    today = timezone.now().date()
+    today = timezone.localdate()
     expired_status = QuoteStatus.objects.filter(code="EXPIRED").first()
     if expired_status is None:
         logger.error("QuoteStatus 'EXPIRED' missing — seed migration not applied")
@@ -625,7 +625,7 @@ def send_payment_reminders(self, grace_days: int = 3) -> dict:
     from .models import Invoice
     from .services.deal_emails import email_payment_reminder
 
-    cutoff = timezone.now().date() - timedelta(days=grace_days)
+    cutoff = timezone.localdate() - timedelta(days=grace_days)
     overdue_qs = (
         Invoice.objects.filter(
             due_date__lt=cutoff,

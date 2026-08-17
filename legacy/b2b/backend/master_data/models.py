@@ -269,7 +269,7 @@ class HSCode(models.Model):
     def is_active(self) -> bool:
         from django.utils import timezone
 
-        today = timezone.now().date()
+        today = timezone.localdate()
         if self.valid_from and self.valid_from > today:
             return False
         return not (self.valid_until and self.valid_until < today)

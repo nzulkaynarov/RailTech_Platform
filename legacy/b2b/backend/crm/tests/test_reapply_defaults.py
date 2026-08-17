@@ -53,7 +53,7 @@ def seller_company(lookups):
         CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})[0]
     )
     SupplierSubscription.objects.create(
-        company=company, plan="PREMIUM", status="ACTIVE", valid_until=timezone.now().date() + timedelta(days=365)
+        company=company, plan="PREMIUM", status="ACTIVE", valid_until=timezone.localdate() + timedelta(days=365)
     )
     return company
 
@@ -95,7 +95,7 @@ def test_reapply_overwrites_all_five_fields(draft_quote, seller_company, configu
     assert draft_quote.margin_percent == Decimal("25.00")
     assert draft_quote.delivery_basis.code == "EXW"
     assert draft_quote.cost_currency_default.code == "USD"
-    assert draft_quote.valid_until == timezone.now().date() + timedelta(days=30)
+    assert draft_quote.valid_until == timezone.localdate() + timedelta(days=30)
 
 
 def test_reapply_is_noop_when_already_current(draft_quote, seller_company, configured_settings):

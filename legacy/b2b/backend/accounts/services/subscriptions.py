@@ -21,7 +21,7 @@ def ensure_trial_subscription(company: Company, trial_days: int = TRIAL_SUBSCRIP
     sub = getattr(company, "subscription", None)
     if sub:
         return sub
-    today = timezone.now().date()
+    today = timezone.localdate()
     sub = SupplierSubscription.objects.create(
         company=company,
         plan="BASIC",
@@ -65,7 +65,7 @@ def record_subscription_payment(
             getattr(actor, "is_superuser", False) or is_member_of(actor, subscription.company_id, capability="sell")
         ):
             return None, "MEMBER_REQUIRED_FOR_ACTION"
-    today = timezone.now().date()
+    today = timezone.localdate()
     base = max(today, subscription.valid_until or today)
     subscription.valid_until = base + timedelta(days=30 * months)
     subscription.last_payment_date = today
@@ -106,7 +106,7 @@ def check_and_expire_subscriptions() -> dict:
     """Move expired TRIAL/ACTIVE subscriptions to PAST_DUE, then to SUSPENDED if 14+ days overdue."""
     from datetime import timedelta
 
-    today = timezone.now().date()
+    today = timezone.localdate()
     # Step 1: fresh expirations → PAST_DUE
     just_expired = SupplierSubscription.objects.filter(
         status__in=["TRIAL", "ACTIVE"],

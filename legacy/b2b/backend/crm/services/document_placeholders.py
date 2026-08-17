@@ -15,10 +15,10 @@ upgrade if it ever lands in requirements).
 
 import re
 from dataclasses import dataclass
-from datetime import date
 from html.parser import HTMLParser
 from typing import Callable, Optional
 
+from django.utils import timezone
 from django.utils.html import escape
 
 # {{ code }} — code is a dotted whitelist key (deal.number, company.name, today …).
@@ -85,7 +85,7 @@ RESOLVERS: dict = {
     "contract.number": lambda ctx: _fmt(ctx.contract.number) if ctx.contract else "",
     "user.full_name": lambda ctx: _fmt(ctx.user.get_full_name() or ctx.user.email) if ctx.user else "",
     "user.email": lambda ctx: _fmt(ctx.user.email) if ctx.user else "",
-    "today": lambda ctx: date.today().strftime("%d.%m.%Y"),
+    "today": lambda ctx: timezone.localdate().strftime("%d.%m.%Y"),
 }
 
 # Advertised catalogue for the UI (settings placeholder helper), split into two GROUPS (T1-c):

@@ -144,7 +144,7 @@ def dual_company_world(lookups):
     """
     dual_co = _company("Dual Trading", "D900", "CLIENT", "SUPPLIER")
     SupplierSubscription.objects.create(
-        company=dual_co, plan="PREMIUM", status="ACTIVE", valid_until=timezone.now().date() + timedelta(days=30)
+        company=dual_co, plan="PREMIUM", status="ACTIVE", valid_until=timezone.localdate() + timedelta(days=30)
     )
     dual_user = _member(dual_co, "dual@sides.test", can_sell=True, can_buy=True)
 

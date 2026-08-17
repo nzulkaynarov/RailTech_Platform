@@ -287,7 +287,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 
         from master_data.models import HSCode
 
-        today = timezone.now().date()
+        today = timezone.localdate()
         parent = "".join(ch for ch in request.query_params.get("parent", "") if ch.isdigit())
         base = HSCode.objects.exclude(valid_until__lt=today)
         rows = base.filter(parent__code=parent) if parent else base.filter(level=2)

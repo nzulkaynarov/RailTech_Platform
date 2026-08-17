@@ -60,7 +60,7 @@ def _seller_user(email="seller@gate.test", *, with_subscription, operational=Tru
             company=company,
             plan="PREMIUM",
             status="ACTIVE" if operational else "PAST_DUE",
-            valid_until=timezone.now().date() + timedelta(days=30),
+            valid_until=timezone.localdate() + timedelta(days=30),
         )
     return user, company
 

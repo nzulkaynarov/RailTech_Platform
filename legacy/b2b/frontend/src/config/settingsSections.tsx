@@ -1,5 +1,5 @@
 /**
- * Settings Hub — единый source of truth секций (spec: Docs/dev/specs/spec-settings-reorg-2026-07-23.md).
+ * Settings Hub — единый source of truth секций (spec: Docs/old/specs/spec-settings-reorg-2026-07-23.md).
  *
  * По аналогии с buildNavigation (ADR-0005, config/navigation.tsx): ОДНА функция строит список
  * секций из деклараций с гейтингом по capabilities/permissions; секции СКРЫВАЮТСЯ, не

@@ -14,11 +14,14 @@ repos:
         args: ['--baseline', '.secrets.baseline']
         exclude: package.lock.json
 
+  # Версии ПРИБИТЫ к тем, что ставит CI (джоба backend-lint: flake8 / black>=24,<25 /
+  # isort>=5,<6 на Python 3.12). Разойдутся — хук отформатирует одним black, а гейт
+  # проверит другим, и мерж встанет на форматировании, которое «уже поправлено».
   - repo: https://github.com/psf/black
-    rev: 23.12.0
+    rev: 24.10.0
     hooks:
       - id: black
-        language_version: python3.11
+        language_version: python3.12
         exclude: ^backend/migrations/
 
   - repo: https://github.com/PyCQA/isort
@@ -28,13 +31,12 @@ repos:
         args: [--profile=black]
         exclude: ^backend/migrations/
 
+  # Без flake8-docstrings/bugbear: CI ставит ГОЛЫЙ flake8, и лишние плагины ругались бы
+  # на то, что гейт пропускает.
   - repo: https://github.com/PyCQA/flake8
-    rev: 6.1.0
+    rev: 7.1.1
     hooks:
       - id: flake8
-        additional_dependencies:
-          - flake8-docstrings
-          - flake8-bugbear
         exclude: ^backend/migrations/
 
   - repo: https://github.com/pre-commit/mirrors-eslint

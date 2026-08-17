@@ -121,7 +121,12 @@
     .btn-primary { background: var(--accent); color: var(--accent-contrast); border-color: var(--accent); }
     .btn-danger { color: var(--danger); border-color: var(--danger); }
     .panel { margin-top: 14px; border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: var(--panel); }
-    .panel[hidden] { display: none; }
+    /* Атрибут `hidden` даёт лишь `display:none` НИЗКОГО приоритета, и любое явное правило
+       его перебивает. Так панель действий (#cta — `.cta-row{display:flex}`) оставалась на
+       экране после акцепта: скрипт исправно ставил hidden, а flex его игнорировал, и клиент
+       видел «Отклонить…» под зелёным «Предложение принято» (найдено прогоном глазами 14-08).
+       Правило общее, а не для .cta-row: иначе следующий блок с display наступит на те же грабли. */
+    [hidden] { display: none !important; }
     label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
     input[type=text], textarea { width: 100%; padding: 10px 12px; font-size: 15px;
       border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); }

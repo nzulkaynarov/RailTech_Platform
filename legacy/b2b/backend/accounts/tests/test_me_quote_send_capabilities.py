@@ -59,7 +59,7 @@ def _seller_user(email, *, with_subscription, operational=True, kyc=True):
             company=company,
             plan="PREMIUM",
             status="ACTIVE" if operational else "PAST_DUE",
-            valid_until=timezone.now().date() + timedelta(days=30),
+            valid_until=timezone.localdate() + timedelta(days=30),
         )
     return user, company
 

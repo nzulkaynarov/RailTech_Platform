@@ -28,6 +28,7 @@ from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
 from django.conf import settings
+from django.utils import timezone
 
 from .services_ai import _client, file_to_payload
 
@@ -263,7 +264,7 @@ def reconcile(extracted: dict, expected_total, expected_currency_code: str | Non
             )
 
     valid_until = _parse_iso_date(extracted.get("valid_until"))
-    if valid_until is not None and valid_until < date.today():
+    if valid_until is not None and valid_until < timezone.localdate():
         mismatches.append({"code": "DOCUMENT_EXPIRED", "valid_until": valid_until.isoformat()})
 
     return {

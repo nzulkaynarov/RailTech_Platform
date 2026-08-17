@@ -3,7 +3,7 @@
 Status: Accepted (2026-06-30, owner: «принимаю все»). Supersedes the "broad multi-service platform"
 framing of the prior discussion; refines (does NOT reverse) ADR-0005.
 
-Amended 2026-07-07 (owner decision, see `Docs/dev/specs/spec-remaining-2026-07-07.md` §2/§3):
+Amended 2026-07-07 (owner decision, see `Docs/old/specs/spec-remaining-2026-07-07.md` §2/§3):
 **Leads reclassified CUT → KEEP** as the top-of-funnel of the CRM counterparty layer — see
 "Amendment 2026-07-07" below.
 
@@ -52,7 +52,7 @@ differentiator you monetize". This is a refinement, not a reversal.
 
 Owner decision (2026-07-07): the platform gets a **CRM counterparty layer** — "книга контрагентов
 с историей" (clients AND suppliers with an interaction timeline), spec:
-`Docs/dev/specs/spec-remaining-2026-07-07.md` §2. That changes the cut-list:
+`Docs/old/specs/spec-remaining-2026-07-07.md` §2. That changes the cut-list:
 
 - **Leads — KEEP (was CUT).** `Lead` (`crm/models/deals.py`) + `LeadViewSet`/public `LeadCreateView`
   + `convert_lead_to_deal` are NOT ballast: they are the canonical top-of-funnel of the CRM layer

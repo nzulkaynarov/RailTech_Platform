@@ -312,10 +312,15 @@ jobs:
           cd frontend
           npm run lint
 
+      # `tsc --noEmit` здесь НИЧЕГО не проверял: frontend/tsconfig.json — solution-style
+      # (`"files": []` + references), а вне build-режима tsc по ссылкам не ходит и
+      # компилирует ноль файлов (проверено 2026-08-13: файл с заведомой ошибкой типа
+      # проходил с кодом 0). Типы ловила только джоба frontend-build через `tsc -b`.
+      # Теперь шаг зовёт тот же скрипт, что и локальный `make typecheck`.
       - name: Run TypeScript compiler
         run: |
           cd frontend
-          npx tsc --noEmit
+          npm run lint:tsc
 
   frontend-build:
     runs-on: ubuntu-latest
@@ -457,12 +462,27 @@ jobs:
           cd frontend
           npm ci
 
-      # INF-02: hard gate — the runtime advisories were fixed (npm audit fix in #204)
-      # and the dev-only vite/vitest chain was cleared by the vitest 4 upgrade (#209).
-      # Verified clean 2026-07-03: `npm audit --audit-level=high` → 0 vulnerabilities.
-      # A new high/critical advisory now FAILS the job; for an accepted risk, pin/patch
-      # or add a documented `--omit` rather than re-adding continue-on-error.
-      - name: Run npm audit
+      # INF-02: hard gate — но ТОЛЬКО по прод-зависимостям (`--omit=dev`), это и есть
+      # документированный `--omit`, который прежний комментарий разрешал вместо
+      # continue-on-error. Причина (2026-08-08): гейт был красным из-за js-yaml
+      # (CVE-2026-59870) в цепочках eslint и openapi-typescript — обе dev-only, в бандл
+      # не попадают, а починить их мы не можем: `npm audit fix` упирается в 4.3.0,
+      # который ещё в уязвимом диапазоне, дальше только мажорный бамп самих eslint /
+      # openapi-typescript. Прод-достижимый nanoid тем же проходом закрыт (3.3.16→3.3.18),
+      # и `--omit=dev` сейчас даёт ровно 0 уязвимостей любой серьёзности.
+      # Рантайм-библиотеки (react, axios, zustand, i18next, react-query, decimal.js)
+      # лежат в `dependencies`, поэтому гейт НЕ слепнет — он проверяет всё, что уезжает
+      # пользователю. Новая high/critical в проде по-прежнему РОНЯЕТ джобу.
+      - name: Run npm audit (production dependencies — hard gate)
+        run: |
+          cd frontend
+          npm audit --omit=dev --audit-level=high
+
+      # Dev-зависимости остаются ВИДИМЫМИ, но не блокируют мерж: находка в тулчейне —
+      # повод обновить инструмент, а не повод держать main красным. Отдельная ночная
+      # джоба ради этого не заводится (минуты CI — дефицит), хватает строк в логе.
+      - name: Report dev-dependency advisories (non-blocking)
+        continue-on-error: true
         run: |
           cd frontend
           npm audit --audit-level=high

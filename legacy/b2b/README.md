@@ -3,7 +3,7 @@
 B2B маркетплейс и CRM для ж/д оборудования (Узбекистан).
 Django 6.0 + React 18 + TypeScript, полностью в Docker.
 
-**Актуальность документации:** 2026-07-06
+**Актуальность документации:** 2026-08-14
 
 ---
 
@@ -185,13 +185,31 @@ make test-backend        # Backend-тесты с coverage
 make test-frontend       # Frontend-тесты (vitest) — на машине разработчика, НЕ в контейнере
 ```
 
+Один тест на бэкенде (пути относительно `/app` == `backend/`). Внутри контейнера
+корневой `pyproject.toml` не смонтирован, поэтому его `addopts` не действуют — флаги
+передавать явно:
+
+```bash
+docker compose exec backend pytest crm/tests/test_deals.py --reuse-db -q       # файл
+docker compose exec backend pytest -k "invoice and not pdf" --reuse-db -q      # по имени
+docker compose exec backend pytest --create-db                                 # как в CI
+```
+
 ### Линтинг и форматирование
 
 ```bash
-make lint                # Все линтеры (flake8 + black + isort + eslint)
+make lint                # Все линтеры (flake8 + black + isort из корня + eslint на хосте)
+make typecheck           # Проверка типов фронта (tsc -b; --noEmit НЕ проверяет ничего)
 make format              # Автоформатирование (black + isort)
-make security            # Аудит зависимостей (pip audit + npm audit)
+make security            # Аудит зависимостей (pip-audit + npm audit) — зеркало джобы CI
+make i18n-check          # Свежесть каталога переводов бэкенда (.po)
+make tools-reset         # Пересобрать .venv-tools с линтерами версий CI
 ```
+
+Линтеры бэкенда живут в `.venv-tools/` (gitignored, создаётся сам версиями CI) и
+гоняются ИЗ КОРНЯ по `backend/` — только так подхватывается корневой `.flake8`.
+Фронтенд (eslint, vitest, tsc) — только на хосте: контейнер `frontend` это прод-сборка
+nginx, в нём нет ни `npm`, ни `bash`.
 
 ### Celery и статика
 

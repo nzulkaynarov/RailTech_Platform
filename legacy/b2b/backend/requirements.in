@@ -1,7 +1,7 @@
 # ==============================================================================
 # INF-05/09 — SOURCE of truth for backend deps. Edit HERE (floors/caps + intent),
 # then recompile the hashed lock:
-#   pip-compile --generate-hashes --strip-extras requirements.in -o requirements.txt
+#   pip-compile --generate-hashes --no-strip-extras requirements.in -o requirements.txt
 # (run in a linux py3.12 env with gcc + libpq-dev; the CI `deps-lock` gate fails
 #  on drift). Never hand-edit requirements.txt — it is generated.
 # ==============================================================================

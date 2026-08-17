@@ -1,6 +1,6 @@
 """Акт — двусторонний документ: выпускает исполнитель, принимает заказчик (G2).
 
-Решение и его основания — `Docs/dev/specs/spec-post-contract-open-questions-2026-07-30.md` §4.
+Решение и его основания — `Docs/old/specs/spec-post-contract-open-questions-2026-07-30.md` §4.
 
 Было: одно поле `signed_at`, НИ ОДНОГО подписанта и никакой проверки стороны — кто первый нажал,
 тот и закрыл документ, включая того, кто его же и выпустил. Между тем акт двусторонний и в
@@ -101,7 +101,7 @@ def act_world(lookups):
     seller_co = _company("Seller G2", "S200", "SUPPLIER")
     seller_user = _member(seller_co, "seller@g2.test", can_sell=True)
     SupplierSubscription.objects.create(
-        company=seller_co, plan="PREMIUM", status="ACTIVE", valid_until=timezone.now().date() + timedelta(days=30)
+        company=seller_co, plan="PREMIUM", status="ACTIVE", valid_until=timezone.localdate() + timedelta(days=30)
     )
     outsider = CustomUser.objects.create_user(email="outsider@g2.test", username="outsider@g2.test", password="x")
 

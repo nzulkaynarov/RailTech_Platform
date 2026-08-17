@@ -74,7 +74,7 @@ def won_deal(db):
         company=seller_co,
         plan="PREMIUM",
         status="ACTIVE",
-        valid_until=timezone.now().date() + timedelta(days=30),
+        valid_until=timezone.localdate() + timedelta(days=30),
     )
 
     deal = Deal.objects.create(title="Выигранная", company=buyer_co, stage=DealStage.objects.get(code="CLOSED_WON"))

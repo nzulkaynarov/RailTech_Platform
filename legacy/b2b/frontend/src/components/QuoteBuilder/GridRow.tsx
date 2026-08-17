@@ -103,8 +103,15 @@ const MarginCell: React.FC<MarginCellProps> = React.memo(({
 							maxToastKey="quote.validation.marginTooLarge"
 							ariaLabel={t('quote.marginOverride.ariaLabel', { index })}
 							placeholder={inheritedPercent}
+							// `px-1 min-w-[3rem]` — не косметика: до 14-08 наценка ОБРЕЗАЛАСЬ. Базовый Input даёт
+							// `px-3` (24px), а колонка в таблице с авто-раскладкой ужалась до 61px, из которых
+							// кнопка отката забирает ~26px — полю оставалось 35px, тексту 11px. Продавец вводил
+							// 25 и видел «2»; потолок значения — 500, то есть ТРИ знака. Ширину лечим ЗДЕСЬ, а не
+							// классом `w-*` на `<th>`: при `table-layout: auto` браузер такую подсказку игнорирует
+							// (проверено — заголовок с `w-32` остался 61px), а min-width содержимого раздвигает
+							// колонку. Найдено прогоном клина глазами.
 							className={cn(
-								'h-8 w-full rounded-none border-none text-xs tabular-nums shadow-none text-center focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
+								'h-8 w-full min-w-[3rem] rounded-none border-none px-1 text-xs tabular-nums shadow-none text-center focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
 								isOverridden ? 'font-semibold text-foreground' : 'text-muted-foreground',
 							)}
 							dataCellRow={rowId}

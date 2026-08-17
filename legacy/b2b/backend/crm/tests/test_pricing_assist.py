@@ -72,7 +72,7 @@ def test_inactive_offer_excluded(base):
 
 def test_expired_offer_excluded(base):
     expired_product = Product.objects.create(name="Просроченный товар")
-    yesterday = timezone.now().date() - timedelta(days=1)
+    yesterday = timezone.localdate() - timedelta(days=1)
     _offer(expired_product, base["seller_a"], "200.00", currency=base["usd"], valid_until=yesterday)
     assert suggest_line_pricing(expired_product.id, base["seller_a"].id) is None
 

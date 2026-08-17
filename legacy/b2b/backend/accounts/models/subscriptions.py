@@ -116,7 +116,7 @@ class SupplierSubscription(models.Model):
     def is_active(self):
         from django.utils import timezone
 
-        today = timezone.now().date()
+        today = timezone.localdate()
         return self.status == "ACTIVE" and self.valid_until and self.valid_until >= today
 
     @property
@@ -124,7 +124,7 @@ class SupplierSubscription(models.Model):
         """Subscription permits supplier operations (ACTIVE or TRIAL within validity)."""
         from django.utils import timezone
 
-        today = timezone.now().date()
+        today = timezone.localdate()
         if self.status not in ("ACTIVE", "TRIAL"):
             return False
         if self.valid_until and self.valid_until < today:

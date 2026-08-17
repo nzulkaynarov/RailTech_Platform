@@ -2,6 +2,25 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { catalogApi } from '../api/catalogApi';
 import type { ProductListParams } from '../api/catalogApi';
 
+/**
+ * Баннеры-подсказки «Мои товары» (переклассификация, дубли, покрытие) — списки ЗАДАЧ,
+ * а не витрина: пользователь идёт по ним чинить карточки и обязан видеть результат
+ * СРАЗУ, иначе экран обвиняет его в том, что он только что исправил.
+ *
+ * Глобальные умолчания клиента (`lib/queryClient.ts`: `refetchOnMount: false`,
+ * `staleTime: 2m`) им не годятся. `invalidateQueries(['products'])` из мутации
+ * сохранения помечает эти ключи устаревшими, но НЕ перезапрашивает: пока открыта
+ * карточка товара, список размонтирован, запрос неактивен — а при возврате
+ * `refetchOnMount: false` отдаёт устаревший кэш без похода на сервер.
+ *
+ * Найдено прогоном глазами 14-08 (W4): продавец менял выведенный из обращения код ТН
+ * ВЭД, карточка сохранялась (готовность 75% → 100%), но баннер «Need reclassification»
+ * продолжал требовать починить её же — со СТАРЫМ кодом; правда возвращалась только
+ * после перезагрузки страницы. В эталонах (SAP GTS worklist, Akeneo) очередь работ
+ * пустеет по мере закрытия задач — иначе она перестаёт быть очередью.
+ */
+const WORKLIST_ALWAYS_FRESH = { staleTime: 0, refetchOnMount: 'always' } as const;
+
 export const useDomainTypes = () => useQuery({
   queryKey: ['domain-types'],
   queryFn: catalogApi.getDomainTypes,
@@ -231,6 +250,8 @@ export const useHSCodeValidation = (code: string) => useQuery({
 export const useReclassificationWorklist = () => useQuery({
   queryKey: ['products', 'reclassification'],
   queryFn: catalogApi.getReclassificationWorklist,
+  // Баннер-подсказка ОБЯЗАН быть свежим на монтировании — см. WORKLIST_ALWAYS_FRESH.
+  ...WORKLIST_ALWAYS_FRESH,
 });
 
 /** Публикация карточки её владельцем; сервер откажет, если полнота не достигнута. */
@@ -354,13 +375,14 @@ export const useEnrichProduct = () =>
 export const useCatalogCoverage = () => useQuery({
   queryKey: ['products', 'coverage'],
   queryFn: catalogApi.getCatalogCoverage,
-  staleTime: 60_000,
+  ...WORKLIST_ALWAYS_FRESH,
 });
 
 /** N4: группы вероятных дублей своих карточек (точные ключи: бренд+артикул, ГОСТ, имя). */
 export const useDuplicateSuggestions = () => useQuery({
   queryKey: ['products', 'duplicate-suggestions'],
   queryFn: catalogApi.getDuplicateSuggestions,
+  ...WORKLIST_ALWAYS_FRESH,
 });
 
 /** N4: слияние дубля — дубль уходит в архив, спрос и ссылки переезжают в выжившую. */

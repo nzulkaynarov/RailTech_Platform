@@ -4,7 +4,7 @@ name: Deploy staging.b2b.railtech.uz
 # project (/opt/railtech-staging) with its OWN database and subdomain.
 #
 # INERT until set up — manual trigger only. Before this can run, complete the 3
-# prerequisites in Docs/ops/staging.md:
+# prerequisites in Docs/dev/ops/staging.md:
 #   1. DNS A record  staging.b2b.railtech.uz → 176.101.56.141
 #   2. GitHub environment `staging` with its OWN secrets (separate staging DB —
 #      e.g. the `railtech_staging` database on the DB-VPS, NOT the prod DB!)

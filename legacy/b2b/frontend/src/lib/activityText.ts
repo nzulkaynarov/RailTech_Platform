@@ -20,20 +20,31 @@ export interface ActivityLike {
   detail?: string;
 }
 
+/**
+ * `exists()` ОБЯЗАН получать те же params, что и `t()`.
+ *
+ * У событий со счётчиком (`deal.routed`, `deal.submitted`) простого ключа `detail` нет —
+ * есть только формы `detail_one` / `detail_other` (и `_few`/`_many` для русского). Без
+ * `count` в опциях i18next ищет ровно `…detail`, не находит и возвращает false: гейт
+ * проваливался, и лента печатала «сырое» поле, которое бэкенд записал ПО-РУССКИ. В русском
+ * интерфейсе подмена невидима (фолбэк тоже русский), а в английском рядом с переведённым
+ * заголовком стояло «Deal #19: 1 продавцу» — найдено прогоном клина глазами 14-08.
+ */
+function localizedOr(t: TFunction, i18n: I18nType, key: string, params: Record<string, unknown>, raw: string): string {
+  if (i18n.exists(key, params) && renderable(i18n, key, params)) return t(key, params);
+  return raw;
+}
+
 export function activityTitle(t: TFunction, i18n: I18nType, entry: ActivityLike): string {
   const code = entry.event_code;
+  if (!code) return entry.action;
   const params = localizeParams(t, i18n, entry.event_params ?? {});
-  if (code && i18n.exists(`activity.${code}.title`) && renderable(i18n, `activity.${code}.title`, params)) {
-    return t(`activity.${code}.title`, params);
-  }
-  return entry.action;
+  return localizedOr(t, i18n, `activity.${code}.title`, params, entry.action);
 }
 
 export function activityDetail(t: TFunction, i18n: I18nType, entry: ActivityLike): string {
   const code = entry.event_code;
+  if (!code) return entry.detail ?? '';
   const params = localizeParams(t, i18n, entry.event_params ?? {});
-  if (code && i18n.exists(`activity.${code}.detail`) && renderable(i18n, `activity.${code}.detail`, params)) {
-    return t(`activity.${code}.detail`, params);
-  }
-  return entry.detail ?? '';
+  return localizedOr(t, i18n, `activity.${code}.detail`, params, entry.detail ?? '');
 }

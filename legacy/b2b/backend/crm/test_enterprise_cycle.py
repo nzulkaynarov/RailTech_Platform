@@ -184,7 +184,7 @@ def test_ensure_trial_subscription_creates_30_day_trial(supplier):
 def test_subscription_expires_to_past_due(supplier):
     _, company = supplier
     sub = acc_services.ensure_trial_subscription(company)
-    sub.valid_until = timezone.now().date() - timedelta(days=1)
+    sub.valid_until = timezone.localdate() - timedelta(days=1)
     sub.save()
     result = acc_services.check_and_expire_subscriptions()
     assert result["past_due"] >= 1
@@ -198,7 +198,7 @@ def test_subscription_past_due_suspends_after_14_days(supplier):
     _, company = supplier
     sub = acc_services.ensure_trial_subscription(company)
     sub.status = "PAST_DUE"
-    sub.valid_until = timezone.now().date() - timedelta(days=20)
+    sub.valid_until = timezone.localdate() - timedelta(days=20)
     sub.save()
     result = acc_services.check_and_expire_subscriptions()
     assert result["suspended"] >= 1
@@ -410,7 +410,7 @@ def test_record_payment_marks_invoice_paid(master_data, deal, manager, buyer):
         invoice.id,
         manager,
         amount=invoice.total_incl_vat,
-        paid_at=timezone.now().date(),
+        paid_at=timezone.localdate(),
         manual=True,
     )
     assert err is None
@@ -437,7 +437,7 @@ def test_record_payment_rejects_negative(master_data, deal, manager, buyer):
     crm_services.sign_contract_by_client(contract.id, buyer_user)
     crm_services.sign_contract_by_manager(contract.id, manager)
     invoice, _ = crm_services.generate_invoice_from_contract(contract.id, actor=manager)
-    _, err = crm_services.record_payment(invoice.id, manager, amount="-1", paid_at=timezone.now().date())
+    _, err = crm_services.record_payment(invoice.id, manager, amount="-1", paid_at=timezone.localdate())
     assert err is not None
 
 

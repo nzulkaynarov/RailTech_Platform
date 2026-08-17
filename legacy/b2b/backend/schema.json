@@ -14562,6 +14562,13 @@
                     },
                     {
                         "in": "query",
+                        "name": "quote",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
                         "name": "quote__deal_id",
                         "schema": {
                             "type": "integer"
@@ -14943,6 +14950,13 @@
                     },
                     {
                         "in": "query",
+                        "name": "quote",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
                         "name": "quote__deal_id",
                         "schema": {
                             "type": "integer"
@@ -15030,6 +15044,13 @@
                         "name": "product__isnull",
                         "schema": {
                             "type": "boolean"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "quote",
+                        "schema": {
+                            "type": "integer"
                         }
                     },
                     {

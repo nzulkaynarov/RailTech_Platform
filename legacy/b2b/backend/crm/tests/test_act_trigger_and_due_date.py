@@ -1,6 +1,6 @@
 """G1 — акт выпускается по факту поставки, срок оплаты считается от выставления.
 
-Источник решений: `Docs/dev/specs/spec-post-contract-open-questions-2026-07-30.md` §1 и §5.
+Источник решений: `Docs/old/specs/spec-post-contract-open-questions-2026-07-30.md` §1 и §5.
 
 Два изменения поведения:
 
@@ -104,7 +104,7 @@ def won_deal(lookups):
     seller_co = _company("Seller G1", "S300", "SUPPLIER")
     seller_user = _member(seller_co, "seller@g1.test", can_sell=True)
     SupplierSubscription.objects.create(
-        company=seller_co, plan="PREMIUM", status="ACTIVE", valid_until=timezone.now().date() + timedelta(days=30)
+        company=seller_co, plan="PREMIUM", status="ACTIVE", valid_until=timezone.localdate() + timedelta(days=30)
     )
 
     deal = Deal.objects.create(title="G1 deal", company=buyer_co, stage=DealStage.objects.get(code="CLOSED_WON"))
@@ -198,7 +198,7 @@ def _issued_invoice(won_deal, code="PAID"):
         status=InvoiceStatus.objects.get(code=code),
         total_incl_vat=Decimal("112"),
         amount_paid=Decimal("112") if code == "PAID" else Decimal("0"),
-        issued_at=timezone.now().date(),
+        issued_at=timezone.localdate(),
     )
 
 
@@ -282,7 +282,7 @@ def test_due_date_is_counted_from_issue_not_from_draft_creation(won_deal):
         number="INV-G1-STALE",
         status=InvoiceStatus.objects.get(code="DRAFT"),
         total_incl_vat=Decimal("112"),
-        due_date=timezone.now().date() - timedelta(days=10) + timedelta(days=DEFAULT_INVOICE_DUE_DAYS),
+        due_date=timezone.localdate() - timedelta(days=10) + timedelta(days=DEFAULT_INVOICE_DUE_DAYS),
     )
     stale_due_date = invoice.due_date
 
@@ -304,7 +304,7 @@ def test_a_manually_set_due_date_survives_issuing(won_deal):
         status=InvoiceStatus.objects.get(code="DRAFT"),
         total_incl_vat=Decimal("112"),
     )
-    agreed = timezone.now().date() + timedelta(days=45)
+    agreed = timezone.localdate() + timedelta(days=45)
     updated, error = update_invoice_draft(invoice, won_deal["seller_user"], due_date=agreed)
     assert error is None, error
     assert updated.due_date_is_manual is True

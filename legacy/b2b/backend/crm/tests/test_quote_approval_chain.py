@@ -72,7 +72,7 @@ def seller(lookups):
     company = Company.objects.create(name="Seller LLC", inn="7700000001")
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
     SupplierSubscription.objects.create(
-        company=company, plan="PREMIUM", status="ACTIVE", valid_until=timezone.now().date() + timedelta(days=365)
+        company=company, plan="PREMIUM", status="ACTIVE", valid_until=timezone.localdate() + timedelta(days=365)
     )
     admin_role = CompanyRole.objects.create(company=company, name="Администратор компании", is_system=True)
     sales_role = CompanyRole.objects.create(company=company, name="Продажи", permissions=[Permission.QUOTE_BUILD.value])

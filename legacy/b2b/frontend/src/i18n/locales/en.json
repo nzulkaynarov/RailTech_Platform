@@ -761,36 +761,6 @@
       "recentActivity": "Recent Activity",
       "viewAllLogs": "View all logs"
     },
-    "nomenclature": {
-      "title": "Nomenclature",
-      "importExcel": "Import from Excel",
-      "masterTitle": "Master",
-      "masterHighlight": "Nomenclature",
-      "subtitle": "Global Product Registry & Taxonomy Control",
-      "description": "Product registry and taxonomy control",
-      "stats": {
-        "total": "Total items",
-        "domains": "Domains"
-      },
-      "batchSync": "Batch Sync",
-      "createSKU": "Create SKU",
-      "searchPlaceholder": "SEARCH_BY_SKU_OR_NAME...",
-      "syncingData": "Synchronizing Registry Data...",
-      "emptyState": "Registry entry not found for current filter set",
-      "universal": "UNIVERSAL",
-      "confirmDelete": "Confirm removal of this master record?",
-      "confirmBulkDelete": "Delete {{count}} records permanently?",
-      "operationFailed": "Operation failed",
-      "bulkOperationFailed": "Bulk operation failed",
-      "selected": "{{count}} SELECTED",
-      "columns": {
-        "objectDescription": "Name / SKU",
-        "domainSegment": "Domain",
-        "baseValue": "Price (FCA)",
-        "eqGroups": "Equipment Groups",
-        "protoActions": "Actions"
-      }
-    },
     "users": {
       "title": "Personnel",
       "registry": "Registry",
@@ -1509,7 +1479,6 @@
   },
   "passwordSetup": {
     "title": "Password Setup",
-    "step": "Step 2 of 4",
     "newPassword": "New password",
     "newPasswordPlaceholder": "Enter password",
     "confirmPassword": "Confirm password",
@@ -1524,7 +1493,8 @@
       "minLength": "Password must be at least 8 characters.",
       "confirm": "Please confirm password.",
       "mismatch": "Passwords do not match."
-    }
+    },
+    "subtitle": "Choose a password and your account will be activated."
   },
   "registration": {
     "title": "Register at RailTech",
@@ -3433,7 +3403,7 @@
     "numCol": "#",
     "noteCol": "Note",
     "notePlaceholder": "Note (spec, standard…)",
-    "incomplete": "Incomplete — add a name or a code",
+    "incomplete": "Incomplete — needs a name or code, and a unit",
     "namePlaceholder": "Product name",
     "uploadFile": "Upload file",
     "add": "Add",
@@ -3444,7 +3414,7 @@
     "submit": "Submit request to the seller",
     "submitHint": "Review the items and submit — the seller will prepare a quote.",
     "submitHintEmpty": "Add at least one line item to submit the request.",
-    "submitHintIncomplete": "Complete the highlighted rows (name or code) to submit.",
+    "submitHintIncomplete": "Complete the highlighted rows (name or code, and unit of measure) to submit.",
     "submittedToast": "Request submitted to the seller",
     "fromCatalog": "from catalog",
     "gostLabel": "GOST / drawing",
@@ -3466,7 +3436,8 @@
     "aiSuggestAdded_other": "AI found {{count}} more suppliers",
     "aiSuggestNoneNew": "AI found no new suppliers — the list is already complete",
     "removeConfirmTitle": "Delete this line?",
-    "removeConfirmDescription": "Line {{name}} will be removed from the request. It cannot be restored — you would need to add it again."
+    "removeConfirmDescription": "Line {{name}} will be removed from the request. It cannot be restored — you would need to add it again.",
+    "unitRequired": "Pick a unit of measure — without it the seller cannot price the line."
   },
   "requestDetailActions": {
     "titleLabel": "Request title",
@@ -3616,8 +3587,8 @@
     "USER_EMAIL_ALREADY_EXISTS": "A user with this email already exists",
     "EMAIL_SEND_FAILED": "Failed to send email. Please try again later",
     "EMAIL_REQUIRED": "Email is required",
-    "SETUP_PASSWORD_INVALID_USER": "Invalid user",
-    "SETUP_PASSWORD_INVALID_TOKEN": "Invalid or expired token",
+    "SETUP_PASSWORD_INVALID_USER": "This link is not valid — it may have been copied from somewhere other than the email. Open the link from your registration email or request a new one.",
+    "SETUP_PASSWORD_INVALID_TOKEN": "This link has expired or was already used. Request a new activation email.",
     "PROFILE_FIELDS_REQUIRED": "Fill in INN, company name and role",
     "COMPANY_INN_TAKEN": "A company with this INN is already registered. Double-check the INN or ask the company owner to invite you.",
     "SALES_MANAGER_ROLE_NOT_FOUND": "Sales manager role not found",

@@ -89,7 +89,7 @@ def issue_invoice(invoice, user) -> Tuple[Optional[object], Optional[str]]:
         return None, "INVOICE_ALREADY_ISSUED"
 
     invoice.status = _istatus(InvoiceStatusCode.ISSUED)
-    invoice.issued_at = timezone.now().date()
+    invoice.issued_at = timezone.localdate()
     updated = ["status", "issued_at", "updated_at"]
     # E3: заморозить редакцию шаблона, действующую в момент выставления, — дальнейшие правки
     # шаблона не должны переписывать уже выставленный счёт.

@@ -76,7 +76,7 @@ def _seller(name, inn, email):
         company=company,
         plan="PREMIUM",
         status="ACTIVE",
-        valid_until=timezone.now().date() + timedelta(days=30),
+        valid_until=timezone.localdate() + timedelta(days=30),
     )
     return user, company
 

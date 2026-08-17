@@ -90,7 +90,7 @@ def world(lookups):
         can_buy=True,
     )
     SupplierSubscription.objects.create(
-        company=seller_co, plan="PREMIUM", status="ACTIVE", valid_until=timezone.now().date() + timedelta(days=30)
+        company=seller_co, plan="PREMIUM", status="ACTIVE", valid_until=timezone.localdate() + timedelta(days=30)
     )
     deal = Deal.objects.create(title="R deal", company=buyer_co, stage=DealStage.objects.get(code="CONTRACT_SIGNED"))
     DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)
@@ -125,7 +125,7 @@ def _paid_invoice(world):
     assert err is None
     invoice, err = issue_invoice(invoice, world["seller_user"])
     assert err is None
-    payment, err = record_payment(invoice.id, world["buyer_user"], amount=Decimal("112"), paid_at=timezone.now().date())
+    payment, err = record_payment(invoice.id, world["buyer_user"], amount=Decimal("112"), paid_at=timezone.localdate())
     assert err is None, err
     invoice.refresh_from_db()
     return invoice, payment

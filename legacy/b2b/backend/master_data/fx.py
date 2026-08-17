@@ -8,6 +8,8 @@ import datetime
 import logging
 from decimal import Decimal, InvalidOperation
 
+from django.utils import timezone
+
 logger = logging.getLogger(__name__)
 
 CBU_URL = "https://cbu.uz/ru/arkhiv-kursov-valyut/json/"
@@ -36,7 +38,7 @@ def fetch_cbu_rates(timeout: int = 15) -> int:
         try:
             rate_date = datetime.datetime.strptime(row.get("Date"), "%d.%m.%Y").date()
         except (ValueError, TypeError):
-            rate_date = datetime.date.today()
+            rate_date = timezone.localdate()
         currency = Currency.objects.filter(code=code).first()
         if not currency:
             continue

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-03 00:52+0500\n"
+"POT-Creation-Date: 2026-08-14 00:20+0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -88,7 +88,8 @@ msgstr "KYC"
 
 #: accounts/admin.py:342 accounts/admin.py:430
 #: accounts/models/applications.py:55 accounts/models/subscriptions.py:48
-#: catalog/admin.py:197 catalog/models/products.py:67 core/models.py:176
+#: catalog/admin.py:198 catalog/models/products.py:67
+#: catalog/models/requests.py:91 core/models.py:176
 #: crm/admin/billing_admin.py:54 crm/admin/billing_admin.py:88
 #: crm/admin/billing_admin.py:134 crm/admin/billing_admin.py:159
 #: crm/admin/deals_admin.py:130 crm/admin/quotes_admin.py:51
@@ -156,7 +157,7 @@ msgstr "[Emergency] Suspend"
 msgid "%(count)d приостановлено."
 msgstr "%(count)d suspended."
 
-#: accounts/models/applications.py:30
+#: accounts/models/applications.py:30 catalog/models/requests.py:35
 msgid "На рассмотрении"
 msgstr "Under review"
 
@@ -168,11 +169,12 @@ msgstr "Documents required"
 msgid "Ожидание оплаты"
 msgstr "Awaiting payment"
 
-#: accounts/models/applications.py:33
+#: accounts/models/applications.py:33 catalog/models/requests.py:36
 msgid "Одобрено"
 msgstr "Approved"
 
-#: accounts/models/applications.py:34 crm/models/approvals.py:29
+#: accounts/models/applications.py:34 catalog/models/requests.py:37
+#: crm/models/approvals.py:29
 msgid "Отклонено"
 msgstr "Rejected"
 
@@ -183,7 +185,8 @@ msgstr "Rejected"
 #: accounts/models/company/membership.py:41
 #: accounts/models/company/membership.py:98 accounts/models/kyc.py:18
 #: accounts/models/subscriptions.py:34 accounts/models/subscriptions.py:156
-#: core/models.py:193 core/tests/test_i18n_activation.py:102
+#: catalog/models/requests.py:46 core/models.py:193
+#: core/tests/test_i18n_activation.py:102
 #: core/tests/test_i18n_activation.py:106 crm/models/charges.py:186
 #: crm/models/deals.py:42 crm/models/deals.py:319 crm/models/documents.py:37
 #: crm/models/documents.py:103 crm/models/documents.py:239
@@ -240,7 +243,7 @@ msgstr "Partnership agreement"
 msgid "Партнёрское соглашение (обязательно для MANUFACTURER)"
 msgstr "Partnership agreement (required for MANUFACTURER)"
 
-#: accounts/models/applications.py:101
+#: accounts/models/applications.py:101 catalog/models/requests.py:109
 msgid "Рассмотрел"
 msgstr "Reviewed by"
 
@@ -256,7 +259,7 @@ msgstr "Notes"
 msgid "Внутренний комментарий администратора"
 msgstr "Internal administrator comment"
 
-#: accounts/models/applications.py:112
+#: accounts/models/applications.py:112 catalog/models/requests.py:115
 msgid "Дата рассмотрения"
 msgstr "Reviewed at"
 
@@ -266,8 +269,9 @@ msgstr "Submitted At"
 
 #: accounts/models/applications.py:121 accounts/models/company/core.py:214
 #: accounts/models/subscriptions.py:105 catalog/models/offers.py:136
-#: catalog/models/products.py:170 catalog/models/taxonomy.py:232
-#: crm/models/charges.py:120 crm/models/deals.py:122 crm/models/documents.py:75
+#: catalog/models/products.py:202 catalog/models/requests.py:123
+#: catalog/models/taxonomy.py:232 crm/models/charges.py:120
+#: crm/models/deals.py:122 crm/models/documents.py:75
 #: crm/models/documents.py:206 crm/models/documents.py:259
 #: crm/models/quotes.py:304
 msgid "Дата обновления"
@@ -330,8 +334,12 @@ msgid "Срок оплаты счёта (дней)"
 msgstr "Invoice payment term (days)"
 
 #: accounts/models/company/company_settings.py:72
-msgid "Через сколько дней после ВЫСТАВЛЕНИЯ счёт должен быть оплачен. Пусто — платформенное умолчание. От этого срока считается напоминание об оплате."
-msgstr "How many days after ISSUING the invoice must be paid. Empty — platform default. The payment reminder is counted from this deadline."
+msgid ""
+"Через сколько дней после ВЫСТАВЛЕНИЯ счёт должен быть оплачен. Пусто — "
+"платформенное умолчание. От этого срока считается напоминание об оплате."
+msgstr ""
+"How many days after ISSUING the invoice must be paid. Empty — platform "
+"default. The payment reminder is counted from this deadline."
 
 #: accounts/models/company/company_settings.py:87
 msgid "Условия оплаты по умолчанию"
@@ -339,7 +347,9 @@ msgstr "Default payment terms"
 
 #: accounts/models/company/company_settings.py:88
 msgid "Напр. «100% предоплата» — подставляется в блок «Условия поставки» КП"
-msgstr "E.g. “100% prepayment” — inserted into the “Delivery terms” block of the quote"
+msgstr ""
+"E.g. “100% prepayment” — inserted into the “Delivery terms” block of the "
+"quote"
 
 #: accounts/models/company/company_settings.py:93
 msgid "Гарантия по умолчанию (мес.)"
@@ -355,7 +365,8 @@ msgstr "Margin threshold (%)"
 
 #: accounts/models/company/company_settings.py:105
 msgid "Минимальная валовая маржа (на цене). Ниже — КП требует согласования."
-msgstr "Minimum gross margin (on price). Below it, the quote requires approval."
+msgstr ""
+"Minimum gross margin (on price). Below it, the quote requires approval."
 
 #: accounts/models/company/company_settings.py:111
 msgid "Целевая маржа (%)"
@@ -363,14 +374,16 @@ msgstr "Target margin (%)"
 
 #: accounts/models/company/company_settings.py:112
 msgid "Желаемая валовая маржа (на цене) — зелёная зона в конструкторе КП."
-msgstr "Desired gross margin (on price) — the green zone in the quote builder."
+msgstr ""
+"Desired gross margin (on price) — the green zone in the quote builder."
 
 #: accounts/models/company/company_settings.py:119
 msgid "Префикс нумерации документов"
 msgstr "Document numbering prefix"
 
 #: accounts/models/company/company_settings.py:120
-msgid "Префикс номеров документов компании (напр. «ACME» → ACME-CT-2026-00001)"
+msgid ""
+"Префикс номеров документов компании (напр. «ACME» → ACME-CT-2026-00001)"
 msgstr "Company document number prefix (e.g. “ACME” → ACME-CT-2026-00001)"
 
 #: accounts/models/company/company_settings.py:123
@@ -403,12 +416,12 @@ msgid "ФИО"
 msgstr "Full name"
 
 #: accounts/models/company/contacts.py:23 accounts/models/company/core.py:176
-#: accounts/models/users.py:21 accounts/wizard.py:89 crm/models/deals.py:328
+#: accounts/models/users.py:21 accounts/wizard.py:92 crm/models/deals.py:328
 msgid "Email"
 msgstr "Email"
 
 #: accounts/models/company/contacts.py:24 accounts/models/company/core.py:171
-#: accounts/models/users.py:27 accounts/wizard.py:85 crm/models/deals.py:324
+#: accounts/models/users.py:27 accounts/wizard.py:88 crm/models/deals.py:324
 msgid "Телефон"
 msgstr "Phone"
 
@@ -506,8 +519,10 @@ msgid "ИНН (со слов, до проверки)"
 msgstr "TIN (as stated, before verification)"
 
 #: accounts/models/company/core.py:100
-msgid "ИНН клиента, указанный продавцом; канонический ИНН присваивается на KYC"
-msgstr "Client TIN entered by the seller; the canonical TIN is assigned during KYC"
+msgid ""
+"ИНН клиента, указанный продавцом; канонический ИНН присваивается на KYC"
+msgstr ""
+"Client TIN entered by the seller; the canonical TIN is assigned during KYC"
 
 #: accounts/models/company/core.py:106
 msgid "Роли на платформе"
@@ -518,7 +533,7 @@ msgid "Роли компании: клиент, поставщик, произв
 msgstr "Company roles: client, supplier, manufacturer"
 
 #: accounts/models/company/core.py:115 accounts/models/lookups.py:70
-#: accounts/wizard.py:124
+#: accounts/wizard.py:127
 msgid "Статус верификации"
 msgstr "Verification Status"
 
@@ -551,16 +566,16 @@ msgid "Рейтинг доверия поставщика (0-100)"
 msgstr "Supplier trust rating (0-100)"
 
 #: accounts/models/company/core.py:140 catalog/models/taxonomy.py:204
-#: master_data/models.py:60
+#: master_data/models.py:91
 msgid "Страна"
 msgstr "Country"
 
-#: accounts/models/company/core.py:141
+#: accounts/models/company/core.py:141 accounts/wizard.py:55
 msgid "Страна регистрации юридического лица"
 msgstr "Country of incorporation of the legal entity"
 
 #: accounts/models/company/core.py:147
-#: accounts/models/company/document_profile.py:47 accounts/wizard.py:74
+#: accounts/models/company/document_profile.py:47 accounts/wizard.py:77
 msgid "Юридический адрес"
 msgstr "Legal address"
 
@@ -568,7 +583,7 @@ msgstr "Legal address"
 msgid "Полный юридический адрес организации"
 msgstr "Full legal address of the organization"
 
-#: accounts/models/company/core.py:153 accounts/wizard.py:99
+#: accounts/models/company/core.py:153 accounts/wizard.py:102
 msgid "Расчётный счёт"
 msgstr "Bank account"
 
@@ -576,7 +591,7 @@ msgstr "Bank account"
 msgid "Номер расчётного счёта в банке"
 msgstr "Bank account number"
 
-#: accounts/models/company/core.py:159 accounts/wizard.py:104
+#: accounts/models/company/core.py:159 accounts/wizard.py:107
 msgid "МФО"
 msgstr "MFO code"
 
@@ -584,7 +599,7 @@ msgstr "MFO code"
 msgid "Межфилиальный оборот (код банка)"
 msgstr "MFO — interbranch turnover (bank code)"
 
-#: accounts/models/company/core.py:165 accounts/wizard.py:79
+#: accounts/models/company/core.py:165 accounts/wizard.py:82
 #: crm/models/deals.py:51
 msgid "Контактное лицо"
 msgstr "Contact person"
@@ -601,7 +616,7 @@ msgstr "Company contact phone"
 msgid "Основной email компании для уведомлений"
 msgstr "Primary company email for notifications"
 
-#: accounts/models/company/core.py:182 accounts/wizard.py:94
+#: accounts/models/company/core.py:182 accounts/wizard.py:97
 msgid "Веб-сайт"
 msgstr "Website"
 
@@ -609,7 +624,7 @@ msgstr "Website"
 msgid "Адрес корпоративного сайта"
 msgstr "Corporate website URL"
 
-#: accounts/models/company/core.py:190 accounts/wizard.py:56
+#: accounts/models/company/core.py:190 accounts/wizard.py:59
 msgid "Логотип"
 msgstr "Logo"
 
@@ -617,7 +632,7 @@ msgstr "Logo"
 msgid "Логотип компании для отображения на платформе"
 msgstr "Company logo shown on the platform"
 
-#: accounts/models/company/core.py:195 accounts/wizard.py:131
+#: accounts/models/company/core.py:195 accounts/wizard.py:134
 msgid "Заметки по KYC"
 msgstr "KYC notes"
 
@@ -738,7 +753,8 @@ msgid "Макет документов"
 msgstr "Document layout"
 
 #: accounts/models/company/document_profile.py:102
-msgid "Именованный макет оформления всех PDF компании (как в Odoo Document Layout)"
+msgid ""
+"Именованный макет оформления всех PDF компании (как в Odoo Document Layout)"
 msgstr "Named layout preset for all company PDFs (as in Odoo Document Layout)"
 
 #: accounts/models/company/document_profile.py:108
@@ -755,7 +771,8 @@ msgstr "Secondary color"
 
 #: accounts/models/company/document_profile.py:115
 msgid "HEX-цвет подложек и полос таблиц (напр. #f6f8fb); пусто — нейтральный"
-msgstr "HEX color for backgrounds and table stripes (e.g. #f6f8fb); empty — neutral"
+msgstr ""
+"HEX color for backgrounds and table stripes (e.g. #f6f8fb); empty — neutral"
 
 #: accounts/models/company/document_profile.py:119
 msgid "Использовать реквизиты компании"
@@ -763,7 +780,8 @@ msgstr "Use company details"
 
 #: accounts/models/company/document_profile.py:120
 msgid "Автоматически наследовать название, ИНН и адрес из профиля компании"
-msgstr "Automatically inherit the name, TIN and address from the company profile"
+msgstr ""
+"Automatically inherit the name, TIN and address from the company profile"
 
 #: accounts/models/company/document_profile.py:125
 msgid "Показывать логотип"
@@ -786,16 +804,22 @@ msgid "Показывать курс ЦБ в КП"
 msgstr "Show the CBU rate in the quote"
 
 #: accounts/models/company/document_profile.py:136
-msgid "Печатать курс ЦБ (FX-базис) на клиентском КП. По умолчанию скрыто — клиент видит цену в сумах."
-msgstr "Print the CBU rate (FX basis) on the client-facing quote. Hidden by default — the client sees the price in soums."
+msgid ""
+"Печатать курс ЦБ (FX-базис) на клиентском КП. По умолчанию скрыто — клиент "
+"видит цену в сумах."
+msgstr ""
+"Print the CBU rate (FX basis) on the client-facing quote. Hidden by default "
+"— the client sees the price in soums."
 
 #: accounts/models/company/document_profile.py:144
 msgid "Сопроводительный текст КП"
 msgstr "Quote cover text"
 
 #: accounts/models/company/document_profile.py:145
-msgid "Вступительный абзац перед таблицей. Токены: {{buyer}}, {{deal}}, {{seller}}."
-msgstr "Intro paragraph before the table. Tokens: {{buyer}}, {{deal}}, {{seller}}."
+msgid ""
+"Вступительный абзац перед таблицей. Токены: {{buyer}}, {{deal}}, {{seller}}."
+msgstr ""
+"Intro paragraph before the table. Tokens: {{buyer}}, {{deal}}, {{seller}}."
 
 #: accounts/models/company/document_profile.py:149
 msgid "Печатать сопроводительный текст"
@@ -810,16 +834,24 @@ msgid "Договор: качество и приёмка"
 msgstr "Contract: quality and acceptance"
 
 #: accounts/models/company/document_profile.py:160
-msgid "Пункт «Качество, комплектность и приёмка». Пусто — печатается стандартная формулировка."
-msgstr "The “Quality, completeness and acceptance” clause. Leave empty to print the standard wording."
+msgid ""
+"Пункт «Качество, комплектность и приёмка». Пусто — печатается стандартная "
+"формулировка."
+msgstr ""
+"The “Quality, completeness and acceptance” clause. Leave empty to print the "
+"standard wording."
 
 #: accounts/models/company/document_profile.py:164
 msgid "Договор: ответственность сторон"
 msgstr "Contract: liability"
 
 #: accounts/models/company/document_profile.py:165
-msgid "Пункт «Ответственность сторон» — здесь компании чаще всего меняют ставку неустойки."
-msgstr "The “Liability of the parties” clause — this is where companies most often change the penalty rate."
+msgid ""
+"Пункт «Ответственность сторон» — здесь компании чаще всего меняют ставку "
+"неустойки."
+msgstr ""
+"The “Liability of the parties” clause — this is where companies most often "
+"change the penalty rate."
 
 #: accounts/models/company/document_profile.py:169
 msgid "Договор: особые условия"
@@ -835,15 +867,21 @@ msgstr "Act: acceptance statement"
 
 #: accounts/models/company/document_profile.py:175
 msgid "Абзац под таблицей акта об объёме и отсутствии претензий."
-msgstr "Paragraph under the act table on the scope delivered and the absence of claims."
+msgstr ""
+"Paragraph under the act table on the scope delivered and the absence of "
+"claims."
 
 #: accounts/models/company/document_profile.py:179
 msgid "Банковские реквизиты в шапке"
 msgstr "Bank details in the header"
 
 #: accounts/models/company/document_profile.py:180
-msgid "Печатать банк/МФО/р-с в шапке документа (СНГ-практика). Выкл — только в блоке «Поставщик»."
-msgstr "Print bank / MFO / account in the document header (CIS practice). Off — only in the \"Supplier\" block."
+msgid ""
+"Печатать банк/МФО/р-с в шапке документа (СНГ-практика). Выкл — только в "
+"блоке «Поставщик»."
+msgstr ""
+"Print bank / MFO / account in the document header (CIS practice). Off — only"
+" in the \"Supplier\" block."
 
 #: accounts/models/company/document_profile.py:186
 msgid "Профиль документов компании"
@@ -908,7 +946,8 @@ msgstr "Role (with permissions)"
 
 #: accounts/models/company/membership.py:118
 msgid "Роль компании с набором прав; назначается администратором компании"
-msgstr "Company role with a permission set; assigned by the company administrator"
+msgstr ""
+"Company role with a permission set; assigned by the company administrator"
 
 #: accounts/models/company/membership.py:122
 msgid "Основная компания"
@@ -934,16 +973,24 @@ msgid "Может продавать"
 msgstr "Can sell"
 
 #: accounts/models/company/membership.py:136
-msgid "Разрешено управлять каталогом и офферами от лица компании. Выключается владельцем компании."
-msgstr "Allowed to manage the catalog and offers on behalf of the company. Turned off by the company owner."
+msgid ""
+"Разрешено управлять каталогом и офферами от лица компании. Выключается "
+"владельцем компании."
+msgstr ""
+"Allowed to manage the catalog and offers on behalf of the company. Turned "
+"off by the company owner."
 
 #: accounts/models/company/membership.py:140
 msgid "Может покупать"
 msgstr "Can buy"
 
 #: accounts/models/company/membership.py:142
-msgid "Разрешено создавать заявки/сделки и принимать bid'ы от лица компании. Выключается владельцем компании."
-msgstr "Allowed to create requests/deals and accept bids on behalf of the company. Turned off by the company owner."
+msgid ""
+"Разрешено создавать заявки/сделки и принимать bid'ы от лица компании. "
+"Выключается владельцем компании."
+msgstr ""
+"Allowed to create requests/deals and accept bids on behalf of the company. "
+"Turned off by the company owner."
 
 #: accounts/models/company/membership.py:147
 msgid "Дата вступления"
@@ -965,7 +1012,7 @@ msgstr "Document type"
 msgid "Вид документа из справочника (устав, лицензия, паспорт)"
 msgstr "Document kind from the reference book (charter, license, passport)"
 
-#: accounts/models/kyc.py:31 catalog/models/products.py:293
+#: accounts/models/kyc.py:31 catalog/models/products.py:340
 #: sourcing/models.py:55
 msgid "Файл"
 msgstr "File"
@@ -982,7 +1029,7 @@ msgstr "Original file name"
 msgid "Имя файла, загруженного пользователем"
 msgstr "Name of the file uploaded by the user"
 
-#: accounts/models/kyc.py:41 catalog/models/products.py:310
+#: accounts/models/kyc.py:41 catalog/models/products.py:357
 #: sourcing/models.py:82
 msgid "Дата загрузки"
 msgstr "Uploaded at"
@@ -1016,8 +1063,12 @@ msgid "Применимо к типам компаний"
 msgstr "Applies to company types"
 
 #: accounts/models/lookups.py:54
-msgid "Если пусто — роль универсальна. Если указаны типы — роль доступна только в компаниях этих типов."
-msgstr "If empty, the role is universal. If types are listed, the role is available only in companies of those types."
+msgid ""
+"Если пусто — роль универсальна. Если указаны типы — роль доступна только в "
+"компаниях этих типов."
+msgstr ""
+"If empty, the role is universal. If types are listed, the role is available "
+"only in companies of those types."
 
 #: accounts/models/lookups.py:60
 msgid "Справочник: Роли в компании"
@@ -1040,8 +1091,11 @@ msgid "Код роли"
 msgstr "Role code"
 
 #: accounts/models/operators.py:23
-msgid "Стабильный код (accounts.constants.OperatorRoleCode); сравнение в коде по нему"
-msgstr "Stable code (accounts.constants.OperatorRoleCode); code comparisons use it"
+msgid ""
+"Стабильный код (accounts.constants.OperatorRoleCode); сравнение в коде по "
+"нему"
+msgstr ""
+"Stable code (accounts.constants.OperatorRoleCode); code comparisons use it"
 
 #: accounts/models/operators.py:30
 msgid "Список кодов прав (accounts.constants.OperatorPermission)"
@@ -1057,7 +1111,7 @@ msgstr "Full operator role — cannot be deleted or restricted"
 
 #: accounts/models/operators.py:37 catalog/models/products.py:46
 #: catalog/models/taxonomy.py:113 core/models.py:154 crm/models/charges.py:45
-#: crm/templates/crm/invoice_pdf.html:56 master_data/models.py:92
+#: crm/templates/crm/invoice_pdf.html:56 master_data/models.py:123
 msgid "Описание"
 msgstr "Description"
 
@@ -1127,8 +1181,8 @@ msgid "Сумма ежемесячного платежа"
 msgstr "Monthly payment amount"
 
 #: accounts/models/subscriptions.py:66 catalog/models/offers.py:59
-#: crm/models/contracts.py:63 crm/models/quotes.py:556 master_data/models.py:75
-#: master_data/models.py:133
+#: crm/models/contracts.py:63 crm/models/quotes.py:556
+#: master_data/models.py:106 master_data/models.py:164
 msgid "Валюта"
 msgstr "Currency"
 
@@ -1137,6 +1191,7 @@ msgid "Валюта расчётов"
 msgstr "Settlement currency"
 
 #: accounts/models/subscriptions.py:72 catalog/models/offers.py:114
+#: master_data/models.py:243
 msgid "Действует с"
 msgstr "Valid from"
 
@@ -1175,12 +1230,12 @@ msgid "Внутренние заметки администратора"
 msgstr "Internal administrator notes"
 
 #: accounts/models/subscriptions.py:101 catalog/models/offers.py:132
-#: catalog/models/products.py:166 catalog/models/taxonomy.py:228
-#: core/tests/test_i18n_activation.py:104 crm/models/charges.py:119
-#: crm/models/deals.py:118 crm/models/documents.py:74
-#: crm/models/documents.py:205 crm/models/documents.py:258
-#: crm/models/quotes.py:300 notifications/models.py:109 sourcing/models.py:226
-#: sourcing/models.py:267
+#: catalog/models/products.py:198 catalog/models/requests.py:122
+#: catalog/models/taxonomy.py:228 core/tests/test_i18n_activation.py:104
+#: crm/models/charges.py:119 crm/models/deals.py:118
+#: crm/models/documents.py:74 crm/models/documents.py:205
+#: crm/models/documents.py:258 crm/models/quotes.py:300
+#: notifications/models.py:109 sourcing/models.py:226 sourcing/models.py:267
 msgid "Дата создания"
 msgstr "Created at"
 
@@ -1209,7 +1264,8 @@ msgid "Ключ функции"
 msgstr "Feature key"
 
 #: accounts/models/subscriptions.py:162
-msgid "Стабильный код функции (accounts.constants.FeatureKey), напр. quote.send"
+msgid ""
+"Стабильный код функции (accounts.constants.FeatureKey), напр. quote.send"
 msgstr "Stable feature code (accounts.constants.FeatureKey), e.g. quote.send"
 
 #: accounts/models/subscriptions.py:166
@@ -1273,8 +1329,10 @@ msgid "TOTP Secret"
 msgstr "TOTP Secret"
 
 #: accounts/models/users.py:55
-msgid "Секретный ключ для 2FA, зашифрован at rest (accounts/services/two_factor.py)"
-msgstr "Secret key for 2FA, encrypted at rest (accounts/services/two_factor.py)"
+msgid ""
+"Секретный ключ для 2FA, зашифрован at rest (accounts/services/two_factor.py)"
+msgstr ""
+"Secret key for 2FA, encrypted at rest (accounts/services/two_factor.py)"
 
 #: accounts/models/users.py:59
 msgid "2FA Включена"
@@ -1289,8 +1347,12 @@ msgid "Глобальная роль: определяет права досту
 msgstr "Global role: defines access rights across the whole platform"
 
 #: accounts/models/users.py:79
-msgid "Гранулярная под-роль платформенного оператора (ADR-0004 G1). Имеет смысл только для SystemRole=ADMIN; пусто = полный доступ (Супероператор)."
-msgstr "Granular platform operator sub-role (ADR-0004 G1). Meaningful only for SystemRole=ADMIN; empty = full access (Super Operator)."
+msgid ""
+"Гранулярная под-роль платформенного оператора (ADR-0004 G1). Имеет смысл "
+"только для SystemRole=ADMIN; пусто = полный доступ (Супероператор)."
+msgstr ""
+"Granular platform operator sub-role (ADR-0004 G1). Meaningful only for "
+"SystemRole=ADMIN; empty = full access (Super Operator)."
 
 #: accounts/models/users.py:89 core/settings/apps.py:123
 msgid "Пользователи"
@@ -1313,7 +1375,7 @@ msgid "Системная роль (код)"
 msgstr "System role (code)"
 
 #: accounts/templates/admin/accounts/company_wizard.html:4
-#: accounts/wizard.py:189
+#: accounts/wizard.py:192
 msgid "Создание компании"
 msgstr "Create company"
 
@@ -1352,7 +1414,8 @@ msgstr "Fill in the contact information and bank details."
 
 #: accounts/templates/admin/accounts/company_wizard.html:39
 msgid "Выберите роль компании на платформе и статус верификации."
-msgstr "Select the company's role on the platform and its verification status."
+msgstr ""
+"Select the company's role on the platform and its verification status."
 
 #: accounts/templates/admin/accounts/company_wizard.html:41
 msgid "Добавьте администратора компании (владельца аккаунта)."
@@ -1382,119 +1445,155 @@ msgstr "Company name"
 msgid "Страна регистрации"
 msgstr "Country of registration"
 
-#: accounts/wizard.py:52
-msgid "Определяет ставку НДС по умолчанию"
-msgstr "Defines the default VAT rate"
-
-#: accounts/wizard.py:58
+#: accounts/wizard.py:61
 msgid "Логотип компании (PNG, JPG, SVG)"
 msgstr "Company logo (PNG, JPG, SVG)"
 
-#: accounts/wizard.py:64
+#: accounts/wizard.py:67
 msgid "Компания с таким ИНН уже существует."
 msgstr "A company with this TIN already exists."
 
-#: accounts/wizard.py:80
+#: accounts/wizard.py:83
 msgid "ФИО ответственного представителя"
 msgstr "Full name of the responsible representative"
 
-#: accounts/wizard.py:90
+#: accounts/wizard.py:93
 msgid "Для уведомлений и переписки"
 msgstr "For notifications and correspondence"
 
-#: accounts/wizard.py:105
+#: accounts/wizard.py:108
 msgid "Код банка"
 msgstr "Bank code"
 
-#: accounts/wizard.py:115
+#: accounts/wizard.py:118
 msgid "Роли компании"
 msgstr "Company Roles"
 
-#: accounts/wizard.py:117
-msgid "Выберите одну или несколько ролей. Клиент — покупает товары. Поставщик — продаёт. Производитель — OEM."
-msgstr "Select one or more roles. Client — buys products. Supplier — sells. Manufacturer — OEM."
+#: accounts/wizard.py:120
+msgid ""
+"Выберите одну или несколько ролей. Клиент — покупает товары. Поставщик — "
+"продаёт. Производитель — OEM."
+msgstr ""
+"Select one or more roles. Client — buys products. Supplier — sells. "
+"Manufacturer — OEM."
 
-#: accounts/wizard.py:126
+#: accounts/wizard.py:129
 msgid "Начальный статус KYC. По умолчанию — не верифицирован."
 msgstr "Initial KYC status. Not verified by default."
 
-#: accounts/wizard.py:132
+#: accounts/wizard.py:135
 msgid "Внутренние комментарии (не видны клиенту)"
 msgstr "Internal comments (not visible to the client)"
 
-#: accounts/wizard.py:140
+#: accounts/wizard.py:143
 msgid "Email владельца"
 msgstr "Owner email"
 
-#: accounts/wizard.py:142
-msgid "Если пользователь с таким email уже есть — он будет привязан. Если нет — будет создан новый аккаунт."
-msgstr "If a user with this email already exists, they will be linked. If not, a new account will be created."
+#: accounts/wizard.py:145
+msgid ""
+"Если пользователь с таким email уже есть — он будет привязан. Если нет — "
+"будет создан новый аккаунт."
+msgstr ""
+"If a user with this email already exists, they will be linked. If not, a new"
+" account will be created."
 
-#: accounts/wizard.py:148
+#: accounts/wizard.py:151
 msgid "Имя"
 msgstr "First name"
 
-#: accounts/wizard.py:153
+#: accounts/wizard.py:156
 msgid "Фамилия"
 msgstr "Last name"
 
-#: accounts/wizard.py:158
+#: accounts/wizard.py:161
 msgid "Телефон владельца"
 msgstr "Owner phone"
 
-#: accounts/wizard.py:277
+#: accounts/wizard.py:280
 #, python-format
 msgid "Компания «%(name)s» успешно создана! Владелец: %(email)s"
 msgstr "Company «%(name)s» created successfully! Owner: %(email)s"
 
-#: catalog/admin.py:181 catalog/models/offers.py:28
-#: catalog/models/products.py:237 catalog/models/products.py:286
+#: catalog/admin.py:182 catalog/models/offers.py:28
+#: catalog/models/products.py:284 catalog/models/products.py:333
 #: crm/models/quotes.py:444 sourcing/models.py:92
 msgid "Товар"
 msgstr "Product"
 
-#: catalog/admin.py:186
+#: catalog/admin.py:187
 msgid "Домен"
 msgstr "Domain"
 
-#: catalog/admin.py:215
+#: catalog/admin.py:216
 msgid "Характеристики"
 msgstr "Specifications"
 
-#: catalog/admin.py:227
+#: catalog/admin.py:228
 msgid "Оборудование"
 msgstr "Equipment"
 
-#: catalog/admin.py:234 core/admin.py:41 crm/admin/deals_admin.py:98
+#: catalog/admin.py:235 core/admin.py:41 crm/admin/deals_admin.py:98
 #: crm/admin/quotes_admin.py:96
 msgid "Системное"
 msgstr "System"
 
-#: catalog/admin.py:242
+#: catalog/admin.py:243
 msgid "[Emergency] Опубликовать (PUBLISHED)"
 msgstr "[Emergency] Publish (PUBLISHED)"
 
-#: catalog/admin.py:249
+#: catalog/admin.py:250
 #, python-format
 msgid "Не опубликовано: %(names)s"
 msgstr "Not published: %(names)s"
 
-#: catalog/admin.py:251
+#: catalog/admin.py:252
 #, python-format
 msgid "%(count)d опубликовано."
 msgstr "%(count)d published."
 
-#: catalog/admin.py:276
+#: catalog/admin.py:277
 msgid "Наличие"
 msgstr "Stock"
 
-#: catalog/admin.py:298
+#: catalog/admin.py:299
 msgid "Цена и условия"
 msgstr "Price and terms"
 
-#: catalog/admin.py:311
+#: catalog/admin.py:312
 msgid "Срок действия"
 msgstr "Valid until"
+
+#: catalog/completeness.py:35 catalog/models/products.py:33
+#: crm/templates/crm/act_pdf.html:35
+#: crm/templates/crm/blocks/_delivery_items.html:12
+#: crm/templates/crm/blocks/_items_table.html:11
+#: crm/templates/crm/blocks/_spec_table.html:12
+#: crm/templates/crm/contract_pdf.html:73
+msgid "Наименование"
+msgstr "Name"
+
+#: catalog/completeness.py:36 catalog/models/products.py:85
+#: crm/models/quotes.py:485 master_data/models.py:114
+#: master_data/models.py:220
+msgid "Единица измерения"
+msgstr "Unit of measure"
+
+#: catalog/completeness.py:37 catalog/models/products.py:76
+#: catalog/models/taxonomy.py:66 catalog/resources.py:30 core/models.py:162
+msgid "Категория"
+msgstr "Category"
+
+#: catalog/completeness.py:58
+msgid "Код ТН ВЭД (действующий)"
+msgstr "HS code (current)"
+
+#: catalog/completeness.py:61
+msgid "Артикул производителя или ГОСТ/чертёж"
+msgstr "Manufacturer part number or GOST/drawing"
+
+#: catalog/completeness.py:79 catalog/models/taxonomy.py:134
+msgid "Группа оборудования"
+msgstr "Equipment group"
 
 #: catalog/models/lookups.py:24
 msgid "Префикс артикула"
@@ -1570,7 +1669,7 @@ msgid "Валюта базовой цены"
 msgstr "Base price currency"
 
 #: catalog/models/offers.py:68 core/settings/apps.py:152
-#: crm/models/charges.py:193 master_data/models.py:121
+#: crm/models/charges.py:193 master_data/models.py:152
 msgid "Базис поставки"
 msgstr "Delivery basis"
 
@@ -1642,14 +1741,6 @@ msgstr "Supplier offer"
 msgid "Каталог: Офферы поставщиков"
 msgstr "Catalog: Supplier offers"
 
-#: catalog/models/products.py:33 crm/templates/crm/act_pdf.html:35
-#: crm/templates/crm/blocks/_delivery_items.html:12
-#: crm/templates/crm/blocks/_items_table.html:11
-#: crm/templates/crm/blocks/_spec_table.html:12
-#: crm/templates/crm/contract_pdf.html:73
-msgid "Наименование"
-msgstr "Name"
-
 #: catalog/models/products.py:34
 msgid "Полное наименование товара"
 msgstr "Full product name"
@@ -1674,19 +1765,9 @@ msgstr "Catalog domain: railway equipment, general goods or services"
 msgid "Статус жизненного цикла: черновик, опубликован, архив"
 msgstr "Lifecycle status: draft, published, archived"
 
-#: catalog/models/products.py:76 catalog/models/taxonomy.py:66
-#: catalog/resources.py:30 core/models.py:162
-msgid "Категория"
-msgstr "Category"
-
 #: catalog/models/products.py:77
 msgid "Категория товара в иерархии каталога"
 msgstr "Product category in the catalog hierarchy"
-
-#: catalog/models/products.py:85 crm/models/quotes.py:485
-#: master_data/models.py:83
-msgid "Единица измерения"
-msgstr "Unit of measure"
 
 #: catalog/models/products.py:86
 msgid "Базовая единица измерения (шт, кг, м)"
@@ -1746,8 +1827,12 @@ msgid "Код ТНВЭД"
 msgstr "HS code"
 
 #: catalog/models/products.py:155
-msgid "Код товарной номенклатуры ВЭД (ТНВЭД/HS). Хранится в карточке, чтобы не искать заново."
-msgstr "Foreign trade commodity code (HS code). Stored on the record so it does not have to be looked up again."
+msgid ""
+"Код товарной номенклатуры ВЭД (ТНВЭД/HS). Хранится в карточке, чтобы не "
+"искать заново."
+msgstr ""
+"Foreign trade commodity code (HS code). Stored on the record so it does not "
+"have to be looked up again."
 
 #: catalog/models/products.py:160
 msgid "Технические параметры"
@@ -1757,90 +1842,199 @@ msgstr "Technical specifications"
 msgid "Динамические характеристики в формате ключ: значение"
 msgstr "Dynamic specifications in key: value format"
 
-#: catalog/models/products.py:174
+#: catalog/models/products.py:180
+msgid "Заявка-источник"
+msgstr "Source request"
+
+#: catalog/models/products.py:181
+msgid "Заявка, из строки которой родилась карточка (провенанс кандидата)."
+msgstr "The request whose line item spawned this card (candidate provenance)."
+
+#: catalog/models/products.py:186
+msgid "Сколько раз спрашивали"
+msgstr "Times requested"
+
+#: catalog/models/products.py:187
+msgid ""
+"Число КП, где встретилась эта позиция. Очередь наполнения сортируется по "
+"нему."
+msgstr ""
+"Number of quotes this item appeared in. The enrichment queue is sorted by "
+"it."
+
+#: catalog/models/products.py:192
+msgid "Последний запрос"
+msgstr "Last requested"
+
+#: catalog/models/products.py:193
+msgid "Когда позицию спрашивали в последний раз."
+msgstr "When the item was last requested."
+
+#: catalog/models/products.py:206
 msgid "Товар (PIM)"
 msgstr "Product (PIM)"
 
-#: catalog/models/products.py:175
+#: catalog/models/products.py:207
 msgid "Каталог: Товары (PIM)"
 msgstr "Catalog: Products (PIM)"
 
-#: catalog/models/products.py:192 catalog/models/products.py:212
-msgid "Товары домена RAILWAY_MACHINERY должны быть привязаны минимум к одной группе оборудования."
-msgstr "Products in the RAILWAY_MACHINERY domain must be linked to at least one equipment group."
+#: catalog/models/products.py:227 catalog/models/products.py:250
+#: catalog/serializers.py:336
+msgid ""
+"Товары домена RAILWAY_MACHINERY должны быть привязаны минимум к одной группе"
+" оборудования."
+msgstr ""
+"Products in the RAILWAY_MACHINERY domain must be linked to at least one "
+"equipment group."
 
-#: catalog/models/products.py:244
+#: catalog/models/products.py:291
 msgid "Изображение"
 msgstr "Image"
 
-#: catalog/models/products.py:245
+#: catalog/models/products.py:292
 msgid "Файл фотографии товара"
 msgstr "Product photo file"
 
-#: catalog/models/products.py:251
+#: catalog/models/products.py:298
 msgid "URL изображения"
 msgstr "Image URL"
 
-#: catalog/models/products.py:252
+#: catalog/models/products.py:299
 msgid "Внешняя ссылка на фото (если файл не загружен)"
 msgstr "External link to the photo (if no file is uploaded)"
 
-#: catalog/models/products.py:256
+#: catalog/models/products.py:303
 msgid "Главное фото"
 msgstr "Main photo"
 
-#: catalog/models/products.py:257
+#: catalog/models/products.py:304
 msgid "Отображается первым в карточке товара"
 msgstr "Shown first on the product page"
 
-#: catalog/models/products.py:262
+#: catalog/models/products.py:309
 msgid "Alt-текст"
 msgstr "Alt text"
 
-#: catalog/models/products.py:263
+#: catalog/models/products.py:310
 msgid "Альтернативный текст для SEO и доступности"
 msgstr "Alternative text for SEO and accessibility"
 
-#: catalog/models/products.py:267 catalog/models/taxonomy.py:56
+#: catalog/models/products.py:314 catalog/models/taxonomy.py:56
 #: catalog/models/taxonomy.py:118 master_data/models.py:25
 msgid "Порядок сортировки"
 msgstr "Sort order"
 
-#: catalog/models/products.py:271
+#: catalog/models/products.py:318
 msgid "Фото товара"
 msgstr "Product photo"
 
-#: catalog/models/products.py:272
+#: catalog/models/products.py:319
 msgid "Фото товаров"
 msgstr "Product photos"
 
-#: catalog/models/products.py:294
+#: catalog/models/products.py:341
 msgid "Загруженный документ (PDF, DOCX)"
 msgstr "Uploaded document (PDF, DOCX)"
 
-#: catalog/models/products.py:300
+#: catalog/models/products.py:347
 msgid "URL документа"
 msgstr "Document URL"
 
-#: catalog/models/products.py:301
+#: catalog/models/products.py:348
 msgid "Внешняя ссылка на документ (если файл не загружен)"
 msgstr "External link to the document (if no file is uploaded)"
 
-#: catalog/models/products.py:305
+#: catalog/models/products.py:352
 msgid "Название документа"
 msgstr "Document title"
 
-#: catalog/models/products.py:306
+#: catalog/models/products.py:353
 msgid "Напр: Паспорт изделия, Сертификат ГОСТ"
 msgstr "E.g. product datasheet, GOST certificate"
 
-#: catalog/models/products.py:314
+#: catalog/models/products.py:361
 msgid "Документ товара"
 msgstr "Product document"
 
-#: catalog/models/products.py:315
+#: catalog/models/products.py:362
 msgid "Документы товаров"
 msgstr "Product documents"
+
+#: catalog/models/requests.py:47
+msgid "Компания-продавец, которой не хватило категории"
+msgstr "Seller company that was missing the category"
+
+#: catalog/models/requests.py:55
+msgid "Автор заявки"
+msgstr "Request author"
+
+#: catalog/models/requests.py:56
+msgid "Пользователь, отправивший обращение"
+msgstr "User who submitted the request"
+
+#: catalog/models/requests.py:60
+msgid "Предлагаемая категория"
+msgstr "Proposed category"
+
+#: catalog/models/requests.py:61
+msgid "Название категории, которой не хватает в справочнике"
+msgstr "Name of the category missing from the reference book"
+
+#: catalog/models/requests.py:69
+msgid "Предлагаемое место в дереве"
+msgstr "Proposed place in the tree"
+
+#: catalog/models/requests.py:70
+msgid "Категория, внутри которой продавец ожидает увидеть новую"
+msgstr "The category the seller expects the new one to sit under"
+
+#: catalog/models/requests.py:78
+msgid "Домен каталога"
+msgstr "Catalog domain"
+
+#: catalog/models/requests.py:79
+msgid "Домен, к которому относится предлагаемая категория"
+msgstr "Catalog domain the proposed category belongs to"
+
+#: catalog/models/requests.py:83
+msgid "Пояснение"
+msgstr "Rationale"
+
+#: catalog/models/requests.py:84
+msgid "Примеры товаров и почему существующие категории не подходят"
+msgstr "Product examples and why the existing categories do not fit"
+
+#: catalog/models/requests.py:92
+msgid "Текущий статус рассмотрения обращения"
+msgstr "Current review status of the request"
+
+#: catalog/models/requests.py:100
+msgid "Заведённая категория"
+msgstr "Created category"
+
+#: catalog/models/requests.py:101
+msgid "Категория справочника, которой оператор закрыл обращение"
+msgstr "The reference-book category the operator closed the request with"
+
+#: catalog/models/requests.py:110
+msgid "Оператор платформы, принявший решение"
+msgstr "Platform operator who made the decision"
+
+#: catalog/models/requests.py:119
+msgid "Комментарий оператора"
+msgstr "Operator comment"
+
+#: catalog/models/requests.py:120
+msgid "Основание решения — обязательно при отказе"
+msgstr "Grounds for the decision — required when rejecting"
+
+#: catalog/models/requests.py:126
+msgid "Заявка на категорию"
+msgstr "Category request"
+
+#: catalog/models/requests.py:127
+msgid "Заявки на категории"
+msgstr "Category requests"
 
 #: catalog/models/taxonomy.py:26
 msgid "Название категории товаров"
@@ -1905,10 +2099,6 @@ msgstr "Auto-generated path in the hierarchy (read-only)"
 #: catalog/models/taxonomy.py:130
 msgid "Неактивные группы скрыты в формах выбора"
 msgstr "Inactive groups are hidden in selection forms"
-
-#: catalog/models/taxonomy.py:134
-msgid "Группа оборудования"
-msgstr "Equipment group"
 
 #: catalog/models/taxonomy.py:196
 msgid "Название бренда/производителя (OEM)"
@@ -2042,7 +2232,7 @@ msgstr "Revenue by region (UZS)"
 msgid "Сумма"
 msgstr "Amount"
 
-#: core/models.py:37 crm/models/quotes.py:154 master_data/models.py:55
+#: core/models.py:37 crm/models/quotes.py:154 master_data/models.py:86
 msgid "Ставка НДС (%)"
 msgstr "VAT rate (%)"
 
@@ -2437,6 +2627,7 @@ msgid "%(count)d сообщений архивировано в %(files)d фай
 msgstr "%(count)d messages archived into %(files)d file(s)"
 
 #: crm/admin/deals_admin.py:252 crm/models/deals.py:406
+#: master_data/models.py:232
 msgid "Уровень"
 msgstr "Level"
 
@@ -2467,7 +2658,9 @@ msgstr "Recipient email"
 
 #: crm/models/acceptance.py:35
 msgid "Адрес, на который отправлен код (взят из сделки, не из запроса)"
-msgstr "Email address the code was sent to (taken from the deal, not from the request)"
+msgstr ""
+"Email address the code was sent to (taken from the deal, not from the "
+"request)"
 
 #: crm/models/acceptance.py:41
 msgid "Хэш кода"
@@ -2475,7 +2668,8 @@ msgstr "Code hash"
 
 #: crm/models/acceptance.py:42
 msgid "sha256 одноразового кода акцепта (открытый код никогда не хранится)"
-msgstr "sha256 of the one-time acceptance code (the plaintext code is never stored)"
+msgstr ""
+"sha256 of the one-time acceptance code (the plaintext code is never stored)"
 
 #: crm/models/acceptance.py:46
 msgid "Попыток ввода"
@@ -2483,7 +2677,9 @@ msgstr "Entry attempts"
 
 #: crm/models/acceptance.py:47
 msgid "Число неверных попыток ввода — код блокируется по достижении лимита"
-msgstr "Number of failed entry attempts — the code is blocked once the limit is reached"
+msgstr ""
+"Number of failed entry attempts — the code is blocked once the limit is "
+"reached"
 
 #: crm/models/acceptance.py:56
 msgid "Момент, после которого код недействителен (короткий TTL)"
@@ -2495,7 +2691,9 @@ msgstr "Used at"
 
 #: crm/models/acceptance.py:62
 msgid "Момент успешного акцепта — код одноразовый и больше не принимается"
-msgstr "The moment of successful acceptance — the code is single-use and is no longer accepted"
+msgstr ""
+"The moment of successful acceptance — the code is single-use and is no "
+"longer accepted"
 
 #: crm/models/acceptance.py:69
 msgid "IP запроса"
@@ -2563,7 +2761,9 @@ msgid "Порядок"
 msgstr "Order"
 
 #: crm/models/approvals.py:53
-msgid "Одинаковый порядок = параллельно; меньший = раньше. Руководитель — последним."
+msgid ""
+"Одинаковый порядок = параллельно; меньший = раньше. Руководитель — "
+"последним."
 msgstr "Equal order = parallel; lower = earlier. The head comes last."
 
 #: crm/models/approvals.py:59
@@ -2648,7 +2848,8 @@ msgstr "Due date set manually"
 
 #: crm/models/billing.py:59
 msgid "Установлен продавцом явно — не пересчитывается при выставлении счёта"
-msgstr "Set explicitly by the seller — not recalculated when the invoice is issued"
+msgstr ""
+"Set explicitly by the seller — not recalculated when the invoice is issued"
 
 #: crm/models/billing.py:68
 msgid "Напоминание об оплате отправлено"
@@ -2733,15 +2934,24 @@ msgstr "Rejection Reason"
 
 #: crm/models/billing.py:295
 msgid "Заполняется, когда заказчик отклоняет акт: основание попадает в аудит"
-msgstr "Filled in when the customer rejects the act: the reason goes into the audit trail"
+msgstr ""
+"Filled in when the customer rejects the act: the reason goes into the audit "
+"trail"
 
 #: crm/models/billing.py:299
 msgid "Причина аннулирования"
 msgstr "Cancellation reason"
 
 #: crm/models/billing.py:301
-msgid "Заполняется, когда акт аннулирует ВЫПУСТИВШАЯ сторона. Отдельно от причины отклонения: отклонение — ответ заказчика, аннулирование — отзыв исполнителя, и смешивать их в одном поле значит терять, кто именно закрыл документ."
-msgstr "Filled in when the act is cancelled by the ISSUING party. Kept separate from the rejection reason: a rejection is the customer's response, a cancellation is the contractor's withdrawal, and mixing them in one field means losing track of who exactly closed the document."
+msgid ""
+"Заполняется, когда акт аннулирует ВЫПУСТИВШАЯ сторона. Отдельно от причины "
+"отклонения: отклонение — ответ заказчика, аннулирование — отзыв исполнителя,"
+" и смешивать их в одном поле значит терять, кто именно закрыл документ."
+msgstr ""
+"Filled in when the act is cancelled by the ISSUING party. Kept separate from"
+" the rejection reason: a rejection is the customer's response, a "
+"cancellation is the contractor's withdrawal, and mixing them in one field "
+"means losing track of who exactly closed the document."
 
 #: crm/models/billing.py:313
 msgid "Напоминание отправлено"
@@ -2784,16 +2994,23 @@ msgid "Процент (%)"
 msgstr "Percent (%)"
 
 #: crm/models/charges.py:65
-msgid "Процент от суммы позиций. Если задан — приоритетнее фиксированной суммы"
-msgstr "Percent of the line items total. If set, it takes priority over the fixed amount"
+msgid ""
+"Процент от суммы позиций. Если задан — приоритетнее фиксированной суммы"
+msgstr ""
+"Percent of the line items total. If set, it takes priority over the fixed "
+"amount"
 
 #: crm/models/charges.py:77
 msgid "Ваша стоимость статьи"
 msgstr "Your cost for the charge"
 
 #: crm/models/charges.py:78
-msgid "Сколько статья реально стоит продавцу. Пусто = по себестоимости (= выставленной сумме)."
-msgstr "What the charge actually costs the seller. Empty = at cost (= the billed amount)."
+msgid ""
+"Сколько статья реально стоит продавцу. Пусто = по себестоимости (= "
+"выставленной сумме)."
+msgstr ""
+"What the charge actually costs the seller. Empty = at cost (= the billed "
+"amount)."
 
 #: crm/models/charges.py:83 crm/models/charges.py:221
 msgid "Скидка (вычет)"
@@ -2801,7 +3018,8 @@ msgstr "Discount (allowance)"
 
 #: crm/models/charges.py:84
 msgid "Если включено — сумма вычитается из базы до НДС (UBL allowance)"
-msgstr "When enabled, the amount is deducted from the pre-VAT base (UBL allowance)"
+msgstr ""
+"When enabled, the amount is deducted from the pre-VAT base (UBL allowance)"
 
 #: crm/models/charges.py:90
 msgid "Из шаблона"
@@ -2812,8 +3030,12 @@ msgid "Строка создана автоматически из шаблон�
 msgstr "The row was created automatically from the delivery basis template"
 
 #: crm/models/charges.py:100
-msgid "Позиция в каскаде: статья считается от нарастающего итога всех строк выше неё."
-msgstr "Position in the cascade: the charge is calculated from the running total of all rows above it."
+msgid ""
+"Позиция в каскаде: статья считается от нарастающего итога всех строк выше "
+"неё."
+msgstr ""
+"Position in the cascade: the charge is calculated from the running total of "
+"all rows above it."
 
 #: crm/models/charges.py:105
 msgid "База (нарастающий итог до строки)"
@@ -2865,7 +3087,8 @@ msgstr "Default percent (%)"
 
 #: crm/models/charges.py:217
 msgid "Предзаполняемый процент от суммы позиций (приоритетнее суммы)"
-msgstr "Prefilled percent of the line items total (takes priority over the amount)"
+msgstr ""
+"Prefilled percent of the line items total (takes priority over the amount)"
 
 #: crm/models/charges.py:222
 msgid "Шаблонная строка — скидка, а не расход"
@@ -2920,8 +3143,12 @@ msgid "Контракты"
 msgstr "Contracts"
 
 #: crm/models/deals.py:43
-msgid "Компания-клиент, с которой ведётся сделка. Пусто — черновик-калькулятор без клиента."
-msgstr "Client company the deal is run with. Empty — a calculator draft without a client."
+msgid ""
+"Компания-клиент, с которой ведётся сделка. Пусто — черновик-калькулятор без "
+"клиента."
+msgstr ""
+"Client company the deal is run with. Empty — a calculator draft without a "
+"client."
 
 #: crm/models/deals.py:52
 msgid "Представитель клиента в данной сделке"
@@ -2948,8 +3175,11 @@ msgid "Ответственный (взял в работу)"
 msgstr "Owner (claimed)"
 
 #: crm/models/deals.py:86
-msgid "Кто из команды продавца ведёт эту заявку. Пусто — в общей очереди, не взята."
-msgstr "Who on the seller team owns this request. Empty — in the shared queue, not claimed."
+msgid ""
+"Кто из команды продавца ведёт эту заявку. Пусто — в общей очереди, не взята."
+msgstr ""
+"Who on the seller team owns this request. Empty — in the shared queue, not "
+"claimed."
 
 #: crm/models/deals.py:91 crm/models/deals.py:200
 msgid "Взята в работу"
@@ -2957,7 +3187,8 @@ msgstr "Claimed at"
 
 #: crm/models/deals.py:92
 msgid "Когда заявку взяли в работу — основа SLA «время до первого касания»."
-msgstr "When the request was claimed — the basis for the “time to first touch” SLA."
+msgstr ""
+"When the request was claimed — the basis for the “time to first touch” SLA."
 
 #: crm/models/deals.py:100
 msgid "Этап воронки"
@@ -3139,8 +3370,12 @@ msgid "Код события"
 msgstr "Event code"
 
 #: crm/models/deals.py:380
-msgid "Машинный код события для локализуемого таймлайна (deal.created, quote.sent, ...)"
-msgstr "Machine-readable event code for the localizable timeline (deal.created, quote.sent, ...)"
+msgid ""
+"Машинный код события для локализуемого таймлайна (deal.created, quote.sent, "
+"...)"
+msgstr ""
+"Machine-readable event code for the localizable timeline (deal.created, "
+"quote.sent, ...)"
 
 #: crm/models/deals.py:385 notifications/models.py:73
 msgid "Параметры события"
@@ -3175,8 +3410,12 @@ msgid "Тип сущности"
 msgstr "Entity type"
 
 #: crm/models/deals.py:420
-msgid "Код сущности, к которой относится запись (company, user, deal, subscription, ...)"
-msgstr "Code of the entity the record belongs to (company, user, deal, subscription, ...)"
+msgid ""
+"Код сущности, к которой относится запись (company, user, deal, subscription,"
+" ...)"
+msgstr ""
+"Code of the entity the record belongs to (company, user, deal, subscription,"
+" ...)"
 
 #: crm/models/deals.py:426
 msgid "ID сущности"
@@ -3195,8 +3434,14 @@ msgid "Состояние после"
 msgstr "State after"
 
 #: crm/models/deals.py:449
-msgid "Срок действия временно́го доступа (break-glass): до этого момента оператор вправе видеть приватные данные тенанта по указанной причине. Пусто для обычных записей журнала."
-msgstr "Expiry of temporary (break-glass) access: until this moment the operator may view the tenant's private data for the stated reason. Empty for regular log records."
+msgid ""
+"Срок действия временно́го доступа (break-glass): до этого момента оператор "
+"вправе видеть приватные данные тенанта по указанной причине. Пусто для "
+"обычных записей журнала."
+msgstr ""
+"Expiry of temporary (break-glass) access: until this moment the operator may"
+" view the tenant's private data for the stated reason. Empty for regular log"
+" records."
 
 #: crm/models/deals.py:465
 msgid "Компания-контрагент"
@@ -3248,7 +3493,8 @@ msgstr "Platform sample"
 
 #: crm/models/documents.py:63
 msgid "Глобальный шаблон-заготовка (company пусто) для копирования к себе."
-msgstr "Global starter template (company empty) that can be copied to your own."
+msgstr ""
+"Global starter template (company empty) that can be copied to your own."
 
 #: crm/models/documents.py:78
 msgid "Шаблон документа"
@@ -3276,7 +3522,8 @@ msgstr "Placeholder values"
 
 #: crm/models/documents.py:139
 msgid "Снапшот подставленных значений на момент генерации (НЕ живые ссылки)."
-msgstr "Snapshot of the substituted values at generation time (NOT live references)."
+msgstr ""
+"Snapshot of the substituted values at generation time (NOT live references)."
 
 #: crm/models/documents.py:144
 msgid "Готовый HTML"
@@ -3291,16 +3538,28 @@ msgid "Снапшот тела шаблона"
 msgstr "Template body snapshot"
 
 #: crm/models/documents.py:152
-msgid "Копия body_html шаблона на момент генерации. DRAFT ре-рендерится из НЕЁ, а не из живого template.body_html — иначе поздняя правка шаблона молча меняла бы документ."
-msgstr "A copy of the template body_html at generation time. A DRAFT is re-rendered from IT, not from the live template.body_html — otherwise a late template edit would silently change the document."
+msgid ""
+"Копия body_html шаблона на момент генерации. DRAFT ре-рендерится из НЕЁ, а "
+"не из живого template.body_html — иначе поздняя правка шаблона молча меняла "
+"бы документ."
+msgstr ""
+"A copy of the template body_html at generation time. A DRAFT is re-rendered "
+"from IT, not from the live template.body_html — otherwise a late template "
+"edit would silently change the document."
 
 #: crm/models/documents.py:159
 msgid "Снапшот бренд-контекста"
 msgstr "Brand context snapshot"
 
 #: crm/models/documents.py:161
-msgid "Бренд-шапка (лого/реквизиты/accent) на момент ВЫПУСКА. ISSUED-документ рендерится из неё, поэтому не «плывёт» при поздней правке CompanyDocumentProfile (иммутабельность)."
-msgstr "Brand header (logo/company details/accent) at the moment of ISSUE. An ISSUED document is rendered from it, so it does not drift when CompanyDocumentProfile is edited later (immutability)."
+msgid ""
+"Бренд-шапка (лого/реквизиты/accent) на момент ВЫПУСКА. ISSUED-документ "
+"рендерится из неё, поэтому не «плывёт» при поздней правке "
+"CompanyDocumentProfile (иммутабельность)."
+msgstr ""
+"Brand header (logo/company details/accent) at the moment of ISSUE. An ISSUED"
+" document is rendered from it, so it does not drift when "
+"CompanyDocumentProfile is edited later (immutability)."
 
 #: crm/models/documents.py:170
 msgid "PDF"
@@ -3311,15 +3570,18 @@ msgid "Публичный токен доступа"
 msgstr "Public access token"
 
 #: crm/models/documents.py:183
-msgid "Секретный токен для просмотра/скачивания выпущенного документа без входа"
-msgstr "Secret token for viewing/downloading the issued document without signing in"
+msgid ""
+"Секретный токен для просмотра/скачивания выпущенного документа без входа"
+msgstr ""
+"Secret token for viewing/downloading the issued document without signing in"
 
 #: crm/models/documents.py:187 crm/models/quotes.py:262
 msgid "Публичная ссылка отозвана"
 msgstr "Public link revoked"
 
 #: crm/models/documents.py:188
-msgid "Если включено — публичная ссылка на документ больше не открывается (410)"
+msgid ""
+"Если включено — публичная ссылка на документ больше не открывается (410)"
 msgstr "If enabled, the public document link no longer opens (410)"
 
 #: crm/models/documents.py:193 crm/models/quotes.py:268
@@ -3362,11 +3624,15 @@ msgstr "Wording variant"
 msgid "Варианты формулировок"
 msgstr "Wording variants"
 
-#: crm/models/fulfillment.py:48
+#: crm/models/fulfillment.py:51
+msgid "Номер накладной"
+msgstr "Delivery note number"
+
+#: crm/models/fulfillment.py:57
 msgid "Исполнение сделки"
 msgstr "Deal fulfillment"
 
-#: crm/models/fulfillment.py:49
+#: crm/models/fulfillment.py:58
 msgid "Исполнение сделок"
 msgstr "Deal fulfillment"
 
@@ -3455,8 +3721,12 @@ msgid "Номер КП"
 msgstr "Quote number"
 
 #: crm/models/quotes.py:47
-msgid "Человекочитаемый сквозной номер КП, выдаётся при отправке клиенту (напр. ACME-КП-2026-00001). Пусто, пока КП не отправлено."
-msgstr "Human-readable end-to-end quote number, assigned when the quote is sent to the client (e.g. ACME-КП-2026-00001). Empty until the quote is sent."
+msgid ""
+"Человекочитаемый сквозной номер КП, выдаётся при отправке клиенту (напр. "
+"ACME-КП-2026-00001). Пусто, пока КП не отправлено."
+msgstr ""
+"Human-readable end-to-end quote number, assigned when the quote is sent to "
+"the client (e.g. ACME-КП-2026-00001). Empty until the quote is sent."
 
 #: crm/models/quotes.py:58
 msgid "Текущий статус КП (черновик, отправлено, одобрено)"
@@ -3471,8 +3741,17 @@ msgid "Менеджер, составивший данное КП"
 msgstr "The manager who prepared this quote"
 
 #: crm/models/quotes.py:77
-msgid "Компания-продавец, владеющая КП (выставляет оферту). Закрепляется при создании или при отправке на согласование за продавцом, на которого маршрутизирована сделка. Источник истины для шапки документа и цепочки согласования — НЕ выводится из основной компании автора (он мог состоять в нескольких компаниях)."
-msgstr "Seller company that owns the quote (issues the offer). Assigned at creation, or on submission for review, to the seller the deal is routed to. Source of truth for the document header and the approval chain — NOT derived from the author's primary company (they may belong to several companies)."
+msgid ""
+"Компания-продавец, владеющая КП (выставляет оферту). Закрепляется при "
+"создании или при отправке на согласование за продавцом, на которого "
+"маршрутизирована сделка. Источник истины для шапки документа и цепочки "
+"согласования — НЕ выводится из основной компании автора (он мог состоять в "
+"нескольких компаниях)."
+msgstr ""
+"Seller company that owns the quote (issues the offer). Assigned at creation,"
+" or on submission for review, to the seller the deal is routed to. Source of"
+" truth for the document header and the approval chain — NOT derived from the"
+" author's primary company (they may belong to several companies)."
 
 #: crm/models/quotes.py:93
 msgid "Базис поставки (Incoterm)"
@@ -3491,7 +3770,8 @@ msgid "Валюта итогового КП для клиента (по умол
 msgstr "Currency of the final quote for the client (UZS by default)"
 
 #: crm/models/quotes.py:118
-msgid "Валюта базовой цены, наследуемая новыми позициями КП (UZS по умолчанию)"
+msgid ""
+"Валюта базовой цены, наследуемая новыми позициями КП (UZS по умолчанию)"
 msgstr "Base price currency inherited by new quote items (UZS by default)"
 
 #: crm/models/quotes.py:127
@@ -3499,7 +3779,8 @@ msgid "Снимок курсов (FX)"
 msgstr "FX rate snapshot"
 
 #: crm/models/quotes.py:128
-msgid "Замороженные курсы валют себестоимости к UZS на момент расчёта {код: курс}"
+msgid ""
+"Замороженные курсы валют себестоимости к UZS на момент расчёта {код: курс}"
 msgstr "Cost currency rates to UZS frozen at calculation time {code: rate}"
 
 #: crm/models/quotes.py:136
@@ -3507,8 +3788,12 @@ msgid "Ручные курсы КП (FX override)"
 msgstr "Manual quote rates (FX override)"
 
 #: crm/models/quotes.py:137
-msgid "Договорные курсы валют к UZS, заданные вручную {код: курс} — побеждают снимок"
-msgstr "Contractual currency rates to UZS set manually {code: rate} — they override the snapshot"
+msgid ""
+"Договорные курсы валют к UZS, заданные вручную {код: курс} — побеждают "
+"снимок"
+msgstr ""
+"Contractual currency rates to UZS set manually {code: rate} — they override "
+"the snapshot"
 
 #: crm/models/quotes.py:147
 msgid "Страна налогообложения"
@@ -3579,8 +3864,11 @@ msgid "Срок поставки КП (дней)"
 msgstr "Quote delivery lead time (days)"
 
 #: crm/models/quotes.py:220
-msgid "Срок поставки всего КП в днях. Если пусто — берётся максимум по позициям"
-msgstr "Delivery lead time for the whole quote in days. If empty, the maximum across items is used"
+msgid ""
+"Срок поставки всего КП в днях. Если пусто — берётся максимум по позициям"
+msgstr ""
+"Delivery lead time for the whole quote in days. If empty, the maximum across"
+" items is used"
 
 #: crm/models/quotes.py:226
 msgid "Условие поставки"
@@ -3588,7 +3876,8 @@ msgstr "Delivery condition"
 
 #: crm/models/quotes.py:227
 msgid "Уточнение по срокам/наличию («в наличии», «под заказ» и т. п.)"
-msgstr "Clarification of lead time/availability (“in stock”, “made to order”, etc.)"
+msgstr ""
+"Clarification of lead time/availability (“in stock”, “made to order”, etc.)"
 
 #: crm/models/quotes.py:235
 msgid "PDF-файл"
@@ -3608,23 +3897,32 @@ msgstr "The moment prices are frozen when the quote is sent to the client"
 
 #: crm/models/quotes.py:255
 msgid "Секретный токен для просмотра/скачивания КП клиентом без входа"
-msgstr "Secret token for the client to view/download the quote without signing in"
+msgstr ""
+"Secret token for the client to view/download the quote without signing in"
 
 #: crm/models/quotes.py:263
 msgid "Если включено — публичная ссылка на КП больше не открывается (410)"
 msgstr "If enabled, the public quote link no longer opens (410)"
 
 #: crm/models/quotes.py:269
-msgid "Явный TTL публичной ссылки. NULL — без отдельного TTL (действует срок valid_until)"
-msgstr "Explicit TTL of the public link. NULL — no separate TTL (the valid_until date applies)"
+msgid ""
+"Явный TTL публичной ссылки. NULL — без отдельного TTL (действует срок "
+"valid_until)"
+msgstr ""
+"Explicit TTL of the public link. NULL — no separate TTL (the valid_until "
+"date applies)"
 
 #: crm/models/quotes.py:279
 msgid "Впервые просмотрено клиентом"
 msgstr "First viewed by the client at"
 
 #: crm/models/quotes.py:280
-msgid "Момент первого реального открытия публичной страницы КП клиентом (маркер, не статус)"
-msgstr "The moment the client actually opened the public quote page for the first time (a marker, not a status)"
+msgid ""
+"Момент первого реального открытия публичной страницы КП клиентом (маркер, не"
+" статус)"
+msgstr ""
+"The moment the client actually opened the public quote page for the first "
+"time (a marker, not a status)"
 
 #: crm/models/quotes.py:285
 msgid "Дата одобрения"
@@ -3643,7 +3941,8 @@ msgid "Кто одобрил коммерческое предложение"
 msgstr "Who approved the commercial offer"
 
 #: crm/models/quotes.py:308 templates/emails/quote_sent.html:3
-#: templates/emails/quote_sent.html:4 templates/emails/quote_sent_subject.txt:1
+#: templates/emails/quote_sent.html:4
+#: templates/emails/quote_sent_subject.txt:1
 msgid "Коммерческое предложение"
 msgstr "Commercial Offer"
 
@@ -3673,7 +3972,8 @@ msgstr "Optional item"
 
 #: crm/models/quotes.py:425
 msgid "Показывается с ценой, но не входит в итоги КП (доп. предложение)"
-msgstr "Shown with a price but not included in the quote totals (an add-on offer)"
+msgstr ""
+"Shown with a price but not included in the quote totals (an add-on offer)"
 
 #: crm/models/quotes.py:433
 msgid "Порядок строки"
@@ -3704,7 +4004,8 @@ msgid "Каноническое наименование (RU)"
 msgstr "Canonical name (RU)"
 
 #: crm/models/quotes.py:473
-msgid "Нормализованное русское наименование из AI-импорта (для поиска по каталогу)"
+msgid ""
+"Нормализованное русское наименование из AI-импорта (для поиска по каталогу)"
 msgstr "Normalized Russian name from the AI import (for catalog search)"
 
 #: crm/models/quotes.py:478 crm/models/quotes.py:734
@@ -3716,8 +4017,10 @@ msgid "Количество единиц товара"
 msgstr "Number of product units"
 
 #: crm/models/quotes.py:486
-msgid "Ед. изм. как в заявке клиента (шт./дона/компл. и т.п.) — для отображения"
-msgstr "Unit as stated in the client's request (pcs/dona/set, etc.) — for display"
+msgid ""
+"Ед. изм. как в заявке клиента (шт./дона/компл. и т.п.) — для отображения"
+msgstr ""
+"Unit as stated in the client's request (pcs/dona/set, etc.) — for display"
 
 #: crm/models/quotes.py:495
 msgid "Код ед. изм. (UN/ECE Rec 20)"
@@ -3744,7 +4047,8 @@ msgid "Номер ГОСТ или чертежа из заявки (канони
 msgstr "GOST or drawing number from the request (canonical part identifier)"
 
 #: crm/models/quotes.py:524
-msgid "Код ТНВЭД позиции (наследуется из карточки товара, замораживается в КП)"
+msgid ""
+"Код ТНВЭД позиции (наследуется из карточки товара, замораживается в КП)"
 msgstr "Item HS code (inherited from the product card, frozen in the quote)"
 
 #: crm/models/quotes.py:529
@@ -3752,8 +4056,11 @@ msgid "Примечание клиента"
 msgstr "Client note"
 
 #: crm/models/quotes.py:530
-msgid "Комментарий/спецификация/ссылка из заявки (Примечание, Izoh) — UBL line Note"
-msgstr "Comment/specification/link from the request (Примечание, Izoh) — UBL line Note"
+msgid ""
+"Комментарий/спецификация/ссылка из заявки (Примечание, Izoh) — UBL line Note"
+msgstr ""
+"Comment/specification/link from the request (Примечание, Izoh) — UBL line "
+"Note"
 
 #: crm/models/quotes.py:535
 msgid "Дата привязки"
@@ -3796,8 +4103,10 @@ msgid "Наценка позиции (%)"
 msgstr "Item markup (%)"
 
 #: crm/models/quotes.py:590
-msgid "Позиционное переопределение наценки (0–500%); пусто — наследовать маржу КП"
-msgstr "Per-item markup override (0–500%); empty means inherit the quote margin"
+msgid ""
+"Позиционное переопределение наценки (0–500%); пусто — наследовать маржу КП"
+msgstr ""
+"Per-item markup override (0–500%); empty means inherit the quote margin"
 
 #: crm/models/quotes.py:599 crm/models/quotes.py:721
 msgid "Скидка (%)"
@@ -3836,7 +4145,8 @@ msgid "Версия строки"
 msgstr "Line version"
 
 #: crm/models/quotes.py:636
-msgid "Счётчик оптимистичной блокировки — растёт при каждом сохранении позиции"
+msgid ""
+"Счётчик оптимистичной блокировки — растёт при каждом сохранении позиции"
 msgstr "Optimistic locking counter — increments on every item save"
 
 #: crm/models/quotes.py:640 crm/models/quotes.py:683
@@ -3936,7 +4246,8 @@ msgid "Роль контрагента"
 msgstr "Counterparty role"
 
 #: crm/models/relationships.py:59
-msgid "Кем контрагент является ДЛЯ владельца книги (Rule 2: сравнивать по коду)"
+msgid ""
+"Кем контрагент является ДЛЯ владельца книги (Rule 2: сравнивать по коду)"
 msgstr "What the counterparty is FOR the book owner (Rule 2: compare by code)"
 
 #: crm/models/relationships.py:66
@@ -3951,7 +4262,7 @@ msgstr "Account owner"
 msgid "Сотрудник команды, ответственный за отношение"
 msgstr "Team member responsible for the relationship"
 
-#: crm/models/relationships.py:81 master_data/models.py:139
+#: crm/models/relationships.py:81 master_data/models.py:170
 msgid "Источник"
 msgstr "Source"
 
@@ -4000,8 +4311,11 @@ msgid "Период сброса"
 msgstr "Reset period"
 
 #: crm/models/sequences.py:62
-msgid "Ключ периода счётчика: «ALL» (без сброса), «2026» (год) или «2026-07» (месяц)"
-msgstr "Counter period key: “ALL” (no reset), “2026” (year) or “2026-07” (month)"
+msgid ""
+"Ключ периода счётчика: «ALL» (без сброса), «2026» (год) или «2026-07» "
+"(месяц)"
+msgstr ""
+"Counter period key: “ALL” (no reset), “2026” (year) or “2026-07” (month)"
 
 #: crm/models/sequences.py:64
 msgid "Последний номер"
@@ -4067,8 +4381,12 @@ msgstr "Document type labels"
 
 #: crm/models/sequences.py:163
 #, python-brace-format
-msgid "Что подставляется в токен {type} для каждого вида документа (КП / договор / инвойс / акт / произвольный) — редактируется компанией."
-msgstr "What is substituted into the {type} token for each document kind (quote / contract / invoice / act / custom) — editable by the company."
+msgid ""
+"Что подставляется в токен {type} для каждого вида документа (КП / договор / "
+"инвойс / акт / произвольный) — редактируется компанией."
+msgstr ""
+"What is substituted into the {type} token for each document kind (quote / "
+"contract / invoice / act / custom) — editable by the company."
 
 #: crm/models/sequences.py:171
 msgid "Схема нумерации документов"
@@ -4206,7 +4524,8 @@ msgstr "Invoice:"
 #: crm/templates/crm/blocks/_delivery_items.html:11
 #: crm/templates/crm/blocks/_items_table.html:10
 #: crm/templates/crm/blocks/_spec_table.html:11
-#: crm/templates/crm/contract_pdf.html:72 crm/templates/crm/invoice_pdf.html:55
+#: crm/templates/crm/contract_pdf.html:72
+#: crm/templates/crm/invoice_pdf.html:55
 msgid "№"
 msgstr "No."
 
@@ -4214,14 +4533,16 @@ msgstr "No."
 #: crm/templates/crm/blocks/_delivery_items.html:13
 #: crm/templates/crm/blocks/_items_table.html:12
 #: crm/templates/crm/blocks/_spec_table.html:13
-#: crm/templates/crm/contract_pdf.html:74 crm/templates/crm/invoice_pdf.html:57
+#: crm/templates/crm/contract_pdf.html:74
+#: crm/templates/crm/invoice_pdf.html:57
 msgid "Кол-во"
 msgstr "Qty"
 
 #: crm/templates/crm/act_pdf.html:37
 #: crm/templates/crm/blocks/_items_table.html:13
 #: crm/templates/crm/blocks/_spec_table.html:14
-#: crm/templates/crm/contract_pdf.html:75 crm/templates/crm/invoice_pdf.html:58
+#: crm/templates/crm/contract_pdf.html:75
+#: crm/templates/crm/invoice_pdf.html:58
 #, python-format
 msgid "Цена, %(currency)s"
 msgstr "Unit price, %(currency)s"
@@ -4229,7 +4550,8 @@ msgstr "Unit price, %(currency)s"
 #: crm/templates/crm/act_pdf.html:38
 #: crm/templates/crm/blocks/_items_table.html:14
 #: crm/templates/crm/blocks/_spec_table.html:15
-#: crm/templates/crm/contract_pdf.html:76 crm/templates/crm/invoice_pdf.html:59
+#: crm/templates/crm/contract_pdf.html:76
+#: crm/templates/crm/invoice_pdf.html:59
 #, python-format
 msgid "Сумма, %(currency)s"
 msgstr "Amount, %(currency)s"
@@ -4420,7 +4742,8 @@ msgstr "Director:"
 
 #: crm/templates/crm/blocks/_signatures_invoice.html:12
 #: crm/templates/crm/blocks/_signatures_invoice.html:19
-#: crm/templates/crm/invoice_pdf.html:98 crm/templates/crm/invoice_pdf.html:105
+#: crm/templates/crm/invoice_pdf.html:98
+#: crm/templates/crm/invoice_pdf.html:105
 msgid "Подпись"
 msgstr "Signature"
 
@@ -4548,101 +4871,182 @@ msgstr "Display order in the interface"
 msgid "Неактивные записи скрыты в формах выбора"
 msgstr "Inactive records are hidden in selection forms"
 
-#: master_data/models.py:48
+#: master_data/models.py:62
 msgid "ISO Alpha-2"
 msgstr "ISO Alpha-2"
 
-#: master_data/models.py:49
-msgid "Двухбуквенный код страны ISO 3166-1 (UZ, RU, CN)"
-msgstr "Two-letter ISO 3166-1 country code (UZ, RU, CN)"
+#: master_data/models.py:63
+msgid "Двухбуквенный код страны ISO 3166-1 (UZ, RU, CN) — дублирует `code`"
+msgstr "Two-letter ISO 3166-1 country code (UZ, RU, CN) — mirrors `code`"
 
-#: master_data/models.py:56
-msgid "Ставка НДС по умолчанию для данной страны"
-msgstr "Default VAT rate for this country"
+#: master_data/models.py:69
+msgid "ISO Alpha-3"
+msgstr "ISO Alpha-3"
 
-#: master_data/models.py:61
+#: master_data/models.py:70
+msgid ""
+"Трёхбуквенный код ISO 3166-1 (UZB, RUS, CHN) — используется в документах"
+msgstr "Three-letter ISO 3166-1 code (UZB, RUS, CHN) — used in documents"
+
+#: master_data/models.py:77
+msgid "ISO цифровой код"
+msgstr "ISO numeric code"
+
+#: master_data/models.py:78
+msgid "Цифровой код ISO 3166-1 (860, 643, 156) — язык таможенных систем"
+msgstr ""
+"ISO 3166-1 numeric code (860, 643, 156) — the language of customs systems"
+
+#: master_data/models.py:87
+msgid "Выверенная ставка НДС страны; пусто = неизвестна (не выдумываем)"
+msgstr "Verified VAT rate for the country; empty = unknown (never invented)"
+
+#: master_data/models.py:92
 msgid "Справочник: Страны"
 msgstr "Master data: Countries"
 
-#: master_data/models.py:70
+#: master_data/models.py:101
 msgid "Символ"
 msgstr "Symbol"
 
-#: master_data/models.py:71
+#: master_data/models.py:102
 msgid "Символ валюты (₽, $, €, сўм)"
 msgstr "Currency symbol (₽, $, €, сўм)"
 
-#: master_data/models.py:76
+#: master_data/models.py:107
 msgid "Справочник: Валюты"
 msgstr "Master data: Currencies"
 
-#: master_data/models.py:84
+#: master_data/models.py:115
 msgid "Справочник: Единицы измерения"
 msgstr "Master data: Units of measure"
 
-#: master_data/models.py:93
+#: master_data/models.py:124
 msgid "Описание условий поставки по Incoterms"
 msgstr "Description of the Incoterms delivery terms"
 
-#: master_data/models.py:101
+#: master_data/models.py:132
 msgid "Продавец оплачивает фрахт"
 msgstr "Seller pays freight"
 
-#: master_data/models.py:102
+#: master_data/models.py:133
 msgid "Основная перевозка лежит на продавце (C- и D-термы)"
 msgstr "Main carriage is on the seller (C- and D-terms)"
 
-#: master_data/models.py:106
+#: master_data/models.py:137
 msgid "Продавец оплачивает страхование"
 msgstr "Seller pays insurance"
 
-#: master_data/models.py:107
+#: master_data/models.py:138
 msgid "Продавец несёт транзитный риск/страхование груза (CIF, CIP, D-термы)"
 msgstr "Seller bears transit risk / cargo insurance (CIF, CIP, D-terms)"
 
-#: master_data/models.py:111
+#: master_data/models.py:142
 msgid "Продавец оплачивает импортную растаможку"
 msgstr "Seller pays import clearance"
 
-#: master_data/models.py:112
+#: master_data/models.py:143
 msgid "Импортная пошлина/оформление/НДС на стороне продавца (только DDP)"
 msgstr "Import duty/clearance/VAT on the seller side (DDP only)"
 
-#: master_data/models.py:116
+#: master_data/models.py:147
 msgid "Продавец оплачивает доставку до места"
 msgstr "Seller pays delivery to the place"
 
-#: master_data/models.py:117
+#: master_data/models.py:148
 msgid "Доставка до названного места назначения (D-термы)"
 msgstr "Delivery to the named place of destination (D-terms)"
 
-#: master_data/models.py:122
+#: master_data/models.py:153
 msgid "Справочник: Базисы поставок (Incoterms)"
 msgstr "Master data: Delivery bases (Incoterms)"
 
-#: master_data/models.py:136
+#: master_data/models.py:167
 msgid "Курс к UZS"
 msgstr "Rate to UZS"
 
-#: master_data/models.py:136
+#: master_data/models.py:167
 msgid "Сколько сум за 1 единицу валюты"
 msgstr "How many soums per 1 unit of currency"
 
-#: master_data/models.py:138
+#: master_data/models.py:169
 msgid "Дата курса"
 msgstr "Rate date"
 
-#: master_data/models.py:139
+#: master_data/models.py:170
 msgid "CBU или MANUAL"
 msgstr "CBU or MANUAL"
 
-#: master_data/models.py:143
+#: master_data/models.py:174
 msgid "Курс валюты"
 msgstr "Currency rate"
 
-#: master_data/models.py:144
+#: master_data/models.py:175
 msgid "Справочник: Курсы валют"
 msgstr "Master data: Currency rates"
+
+#: master_data/models.py:212 master_data/models.py:261
+msgid "Код ТН ВЭД"
+msgstr "HS code"
+
+#: master_data/models.py:213
+msgid "Только цифры, без пробелов и разделителей (2/4/6/8/10 знаков)."
+msgstr "Digits only, no spaces or separators (2/4/6/8/10 characters)."
+
+#: master_data/models.py:215
+msgid "Наименование позиции"
+msgstr "Item name"
+
+#: master_data/models.py:221
+msgid "Базовая единица учёта по номенклатуре (обычно «кг»)."
+msgstr "Base accounting unit per the nomenclature (usually kg)."
+
+#: master_data/models.py:227
+msgid "Доп. единица измерения"
+msgstr "Additional unit of measure"
+
+#: master_data/models.py:228
+msgid ""
+"Дополнительная единица учёта (напр. «шт», «пар»), если предусмотрена "
+"номенклатурой."
+msgstr ""
+"Additional accounting unit (e.g. pcs, pairs) when the nomenclature defines "
+"one."
+
+#: master_data/models.py:233
+msgid ""
+"Число знаков кода: 2 — группа, 4 — позиция, 6 — субпозиция, 8/10 — "
+"национальные."
+msgstr ""
+"Number of digits in the code: 2 — chapter, 4 — heading, 6 — subheading, 8/10"
+" — national."
+
+#: master_data/models.py:241
+msgid "Родительская позиция"
+msgstr "Parent item"
+
+#: master_data/models.py:247
+msgid "Действует по"
+msgstr "Valid until"
+
+#: master_data/models.py:248
+msgid ""
+"Выведенный из обращения код НЕ удаляется — старые документы должны читаться."
+msgstr ""
+"A withdrawn code is NOT deleted — historical documents must stay readable."
+
+#: master_data/models.py:254
+msgid "Источник редакции"
+msgstr "Revision source"
+
+#: master_data/models.py:255
+msgid "Откуда загружена редакция классификатора — для прослеживаемости."
+msgstr ""
+"Where this revision of the classifier was loaded from — for traceability."
+
+#: master_data/models.py:262
+msgid "Справочник: Коды ТН ВЭД"
+msgstr "Reference: HS codes"
 
 #: notifications/admin.py:34 notifications/models.py:103
 msgid "Прочитано"
@@ -4694,8 +5098,12 @@ msgid "Аудитория"
 msgstr "Audience"
 
 #: notifications/models.py:36
-msgid "USER — персональное или broadcast для обычных пользователей. PLATFORM_ADMIN — операционные алёрты платформы (видит только admin)."
-msgstr "USER — personal or broadcast notifications for regular users. PLATFORM_ADMIN — platform operational alerts (visible to admins only)."
+msgid ""
+"USER — персональное или broadcast для обычных пользователей. PLATFORM_ADMIN "
+"— операционные алёрты платформы (видит только admin)."
+msgstr ""
+"USER — personal or broadcast notifications for regular users. PLATFORM_ADMIN"
+" — platform operational alerts (visible to admins only)."
 
 #: notifications/models.py:46
 msgid "Получатель"
@@ -4722,8 +5130,10 @@ msgid "Значения для подстановки в перевод на к�
 msgstr "Values substituted into the translation on the client"
 
 #: notifications/models.py:79
-msgid "Краткий заголовок уведомления (RU-fallback; текст собирается по event_code)"
-msgstr "Short notification title (RU fallback; the text is composed from event_code)"
+msgid ""
+"Краткий заголовок уведомления (RU-fallback; текст собирается по event_code)"
+msgstr ""
+"Short notification title (RU fallback; the text is composed from event_code)"
 
 #: notifications/models.py:83
 msgid "Полный текст уведомления"
@@ -4802,8 +5212,12 @@ msgid "Ключ"
 msgstr "Key"
 
 #: notifications/models.py:230
-msgid "Совпадает с именем файлового шаблона: 'setup_password', 'kyc_verified', 'quote_sent', …"
-msgstr "Matches the file template name: 'setup_password', 'kyc_verified', 'quote_sent', …"
+msgid ""
+"Совпадает с именем файлового шаблона: 'setup_password', 'kyc_verified', "
+"'quote_sent', …"
+msgstr ""
+"Matches the file template name: 'setup_password', 'kyc_verified', "
+"'quote_sent', …"
 
 #: notifications/models.py:241
 msgid "Язык"
@@ -4811,31 +5225,46 @@ msgstr "Language"
 
 #: notifications/models.py:242
 msgid "Код языка (ru, en). Пусто — шаблон применяется для всех языков."
-msgstr "Language code (ru, en). Leave empty to apply the template to all languages."
+msgstr ""
+"Language code (ru, en). Leave empty to apply the template to all languages."
 
 #: notifications/models.py:247
-msgid "Шаблон темы письма. Поддерживает переменные контекста, напр. {{ company_name }}."
-msgstr "Email subject template. Supports context variables, e.g. {{ company_name }}."
+msgid ""
+"Шаблон темы письма. Поддерживает переменные контекста, напр. {{ company_name"
+" }}."
+msgstr ""
+"Email subject template. Supports context variables, e.g. {{ company_name }}."
 
 #: notifications/models.py:252
 msgid "HTML-версия письма. Пусто — HTML-альтернатива не прикладывается."
-msgstr "HTML version of the email. Empty means no HTML alternative is attached."
+msgstr ""
+"HTML version of the email. Empty means no HTML alternative is attached."
 
 #: notifications/models.py:256
-msgid "Текстовая версия письма. Рендерится без HTML-экранирования (ссылки не ломаются)."
-msgstr "Plain-text version of the email. Rendered without HTML escaping (links stay intact)."
+msgid ""
+"Текстовая версия письма. Рендерится без HTML-экранирования (ссылки не "
+"ломаются)."
+msgstr ""
+"Plain-text version of the email. Rendered without HTML escaping (links stay "
+"intact)."
 
 #: notifications/models.py:260
 msgid "Доступные переменные"
 msgstr "Available variables"
 
 #: notifications/models.py:261
-msgid "Человекочитаемая справка по merge-переменным, которые передаёт контекст для этого ключа."
-msgstr "Human-readable reference for the merge variables the context provides for this key."
+msgid ""
+"Человекочитаемая справка по merge-переменным, которые передаёт контекст для "
+"этого ключа."
+msgstr ""
+"Human-readable reference for the merge variables the context provides for "
+"this key."
 
 #: notifications/models.py:266
-msgid "Неактивный шаблон игнорируется — отправка возвращается к файловому шаблону."
-msgstr "An inactive template is ignored — sending falls back to the file template."
+msgid ""
+"Неактивный шаблон игнорируется — отправка возвращается к файловому шаблону."
+msgstr ""
+"An inactive template is ignored — sending falls back to the file template."
 
 #: notifications/models.py:274
 msgid "Кто изменил"
@@ -4866,8 +5295,11 @@ msgid "Ключевое слово"
 msgstr "Keyword"
 
 #: sourcing/models.py:23
-msgid "Слово для автоматического определения домена при Excel-импорте (регистронезависимое)"
-msgstr "Word used to auto-detect the domain during Excel import (case-insensitive)"
+msgid ""
+"Слово для автоматического определения домена при Excel-импорте "
+"(регистронезависимое)"
+msgstr ""
+"Word used to auto-detect the domain during Excel import (case-insensitive)"
 
 #: sourcing/models.py:27
 msgid "Ключевое слово домена"
@@ -4898,8 +5330,12 @@ msgid "Тип вложения"
 msgstr "Attachment type"
 
 #: sourcing/models.py:69
-msgid "SOURCE = исходный файл заявки (из него распознаны позиции); SUPPORTING = доп. документ"
-msgstr "SOURCE = the source request file (items were extracted from it); SUPPORTING = supplementary document"
+msgid ""
+"SOURCE = исходный файл заявки (из него распознаны позиции); SUPPORTING = "
+"доп. документ"
+msgstr ""
+"SOURCE = the source request file (items were extracted from it); SUPPORTING "
+"= supplementary document"
 
 #: sourcing/models.py:77
 msgid "Загрузил"
@@ -4986,8 +5422,12 @@ msgid "AI-функция"
 msgstr "AI feature"
 
 #: sourcing/models.py:263
-msgid "Код AI-функции (match, preflight, extract, compose, enrich, chat_reply, quote_diff, draft_quote)"
-msgstr "AI feature code (match, preflight, extract, compose, enrich, chat_reply, quote_diff, draft_quote)"
+msgid ""
+"Код AI-функции (match, preflight, extract, compose, enrich, chat_reply, "
+"quote_diff, draft_quote)"
+msgstr ""
+"AI feature code (match, preflight, extract, compose, enrich, chat_reply, "
+"quote_diff, draft_quote)"
 
 #: sourcing/models.py:271
 msgid "AI-задача"
@@ -5104,8 +5544,12 @@ msgid "на сумму %(total)s ожидает вашего решения."
 msgstr "for %(total)s is awaiting your decision."
 
 #: templates/emails/act_awaiting_acceptance.txt:5
-msgid "Акт можно принять или вернуть с указанием причины — тогда поставщик исправит его и выставит заново."
-msgstr "You can accept the act or return it with a reason — the supplier will then correct it and issue it again."
+msgid ""
+"Акт можно принять или вернуть с указанием причины — тогда поставщик исправит"
+" его и выставит заново."
+msgstr ""
+"You can accept the act or return it with a reason — the supplier will then "
+"correct it and issue it again."
 
 #: templates/emails/act_awaiting_acceptance.txt:7
 msgid "Открыть сделку:"
@@ -5116,8 +5560,12 @@ msgid "Уведомление платформы"
 msgstr "Platform notification"
 
 #: templates/emails/base.html:37
-msgid "Это автоматическое письмо от платформы RailTech B2B — отвечать на него не нужно."
-msgstr "This is an automated email from the RailTech B2B platform — no reply is needed."
+msgid ""
+"Это автоматическое письмо от платформы RailTech B2B — отвечать на него не "
+"нужно."
+msgstr ""
+"This is an automated email from the RailTech B2B platform — no reply is "
+"needed."
 
 #: templates/emails/base.html:40
 msgid "Возникли вопросы? Напишите на"
@@ -5140,8 +5588,12 @@ msgstr "Company <strong>%(company_name)s</strong>"
 
 #: templates/emails/generated_document.html:11
 #, python-format
-msgid "направила вам документ <strong>«%(document_title)s»</strong> (%(document_number)s)."
-msgstr "has sent you the document <strong>“%(document_title)s”</strong> (%(document_number)s)."
+msgid ""
+"направила вам документ <strong>«%(document_title)s»</strong> "
+"(%(document_number)s)."
+msgstr ""
+"has sent you the document <strong>“%(document_title)s”</strong> "
+"(%(document_number)s)."
 
 #: templates/emails/generated_document.html:13
 msgid "PDF документа приложен к этому письму."
@@ -5163,7 +5615,9 @@ msgstr "has sent you the document “%(document_title)s” (%(document_number)s)
 
 #: templates/emails/generated_document.txt:5
 msgid "Открыть и скачать документ можно по ссылке (без регистрации):"
-msgstr "You can open and download the document via this link (no registration required):"
+msgstr ""
+"You can open and download the document via this link (no registration "
+"required):"
 
 #: templates/emails/generated_document.txt:8
 #: templates/emails/quote_acceptance_code.txt:11
@@ -5285,7 +5739,8 @@ msgstr "Accept the invitation"
 
 #: templates/emails/invite_member.html:23
 msgid "Не ожидали приглашения от этой компании? Проигнорируйте письмо."
-msgstr "Not expecting an invitation from this company? Just ignore this email."
+msgstr ""
+"Not expecting an invitation from this company? Just ignore this email."
 
 #: templates/emails/invite_member.txt:3
 #, python-format
@@ -5309,7 +5764,8 @@ msgstr "Invoice %(invoice_number)s for payment"
 
 #: templates/emails/invoice_issued.html:3
 #: templates/emails/invoice_issued_subject.txt:1
-#: templates/emails/quote_sent.html:3 templates/emails/quote_sent_subject.txt:1
+#: templates/emails/quote_sent.html:3
+#: templates/emails/quote_sent_subject.txt:1
 #, python-format
 msgid "от %(seller_name)s"
 msgstr "from %(seller_name)s"
@@ -5432,17 +5888,27 @@ msgstr "Open your account"
 
 #: templates/emails/kyc_verified.html:34
 msgid "Уведомление также доступно в разделе «Колокольчик» в кабинете."
-msgstr "The notification is also available in the “Bell” section of your account."
+msgstr ""
+"The notification is also available in the “Bell” section of your account."
 
 #: templates/emails/kyc_verified.txt:3
 #, python-format
-msgid "Контракт для компании «%(company_name)s» активирован. Все премиум-функции RailTech B2B теперь доступны вашей команде."
-msgstr "The contract for “%(company_name)s” has been activated. All RailTech B2B premium features are now available to your team."
+msgid ""
+"Контракт для компании «%(company_name)s» активирован. Все премиум-функции "
+"RailTech B2B теперь доступны вашей команде."
+msgstr ""
+"The contract for “%(company_name)s” has been activated. All RailTech B2B "
+"premium features are now available to your team."
 
 #: templates/emails/kyc_verified.txt:3
 #, python-format
-msgid "KYC уровень L2 для компании «%(company_name)s» (ИНН %(company_inn)s) успешно подтверждён. Теперь вы можете работать в полном объёме на платформе."
-msgstr "KYC level L2 for company “%(company_name)s” (TIN %(company_inn)s) has been successfully verified. You can now work on the platform without restrictions."
+msgid ""
+"KYC уровень L2 для компании «%(company_name)s» (ИНН %(company_inn)s) успешно"
+" подтверждён. Теперь вы можете работать в полном объёме на платформе."
+msgstr ""
+"KYC level L2 for company “%(company_name)s” (TIN %(company_inn)s) has been "
+"successfully verified. You can now work on the platform without "
+"restrictions."
 
 #: templates/emails/kyc_verified.txt:7
 #: templates/emails/register_existing_account.txt:15
@@ -5520,7 +5986,8 @@ msgstr "Open the request"
 #: templates/emails/new_rfq_seller.html:26
 #: templates/emails/new_rfq_seller.txt:11
 msgid "Быстрый ответ заметно повышает шанс выиграть сделку."
-msgstr "A quick response noticeably increases your chance of winning the deal."
+msgstr ""
+"A quick response noticeably increases your chance of winning the deal."
 
 #: templates/emails/new_rfq_seller.txt:3
 #, python-format
@@ -5637,8 +6104,12 @@ msgstr "Amount due: <strong>%(balance_due)s</strong> of %(total)s."
 
 #: templates/emails/payment_reminder.html:16
 #: templates/emails/payment_reminder.txt:7
-msgid "Если оплата уже отправлена, просто отметьте её в системе — напоминание больше не придёт."
-msgstr "If the payment has already been sent, just record it in the system — you will not get this reminder again."
+msgid ""
+"Если оплата уже отправлена, просто отметьте её в системе — напоминание "
+"больше не придёт."
+msgstr ""
+"If the payment has already been sent, just record it in the system — you "
+"will not get this reminder again."
 
 #: templates/emails/payment_reminder.html:28
 msgid "Это письмо отправляется один раз по каждому счёту."
@@ -5688,8 +6159,12 @@ msgstr ""
 
 #: templates/emails/quote_acceptance_code.html:17
 #, python-format
-msgid "Код действует <strong>%(expires_minutes)s минут</strong>. Введите его на странице предложения, чтобы принять его."
-msgstr "The code is valid for <strong>%(expires_minutes)s minutes</strong>. Enter it on the quote page to accept the quote."
+msgid ""
+"Код действует <strong>%(expires_minutes)s минут</strong>. Введите его на "
+"странице предложения, чтобы принять его."
+msgstr ""
+"The code is valid for <strong>%(expires_minutes)s minutes</strong>. Enter it"
+" on the quote page to accept the quote."
 
 #: templates/emails/quote_acceptance_code.html:20
 #: templates/emails/quote_acceptance_code.txt:9
@@ -5698,8 +6173,11 @@ msgstr "If you did not request this code, simply ignore this email."
 
 #: templates/emails/quote_acceptance_code.txt:3
 #, python-format
-msgid "Вы запросили код для принятия коммерческого предложения %(quote_number)s от %(seller_name)s."
-msgstr "You requested a code to accept quote %(quote_number)s from %(seller_name)s."
+msgid ""
+"Вы запросили код для принятия коммерческого предложения %(quote_number)s от "
+"%(seller_name)s."
+msgstr ""
+"You requested a code to accept quote %(quote_number)s from %(seller_name)s."
 
 #: templates/emails/quote_acceptance_code.txt:5
 msgid "Ваш код:"
@@ -5707,8 +6185,12 @@ msgstr "Your code:"
 
 #: templates/emails/quote_acceptance_code.txt:7
 #, python-format
-msgid "Код действует %(expires_minutes)s минут. Введите его на странице предложения, чтобы принять его."
-msgstr "The code is valid for %(expires_minutes)s minutes. Enter it on the quote page to accept the quote."
+msgid ""
+"Код действует %(expires_minutes)s минут. Введите его на странице "
+"предложения, чтобы принять его."
+msgstr ""
+"The code is valid for %(expires_minutes)s minutes. Enter it on the quote "
+"page to accept the quote."
 
 #: templates/emails/quote_acceptance_code_subject.txt:1
 #, python-format
@@ -5730,22 +6212,35 @@ msgstr "Thank you! The quote has been accepted"
 
 #: templates/emails/quote_accepted_contact.html:8
 #, python-format
-msgid "Вы приняли коммерческое предложение <strong>%(quote_number)s</strong> от %(seller_name)s."
-msgstr "You have accepted quote <strong>%(quote_number)s</strong> from %(seller_name)s."
+msgid ""
+"Вы приняли коммерческое предложение <strong>%(quote_number)s</strong> от "
+"%(seller_name)s."
+msgstr ""
+"You have accepted quote <strong>%(quote_number)s</strong> from "
+"%(seller_name)s."
 
 #: templates/emails/quote_accepted_contact.html:11
 #, python-format
-msgid "Следующий шаг: договор <strong>%(contract_number)s</strong> готовится к подписанию."
-msgstr "Next step: contract <strong>%(contract_number)s</strong> is being prepared for signing."
+msgid ""
+"Следующий шаг: договор <strong>%(contract_number)s</strong> готовится к "
+"подписанию."
+msgstr ""
+"Next step: contract <strong>%(contract_number)s</strong> is being prepared "
+"for signing."
 
 #: templates/emails/quote_accepted_contact.html:12
 #: templates/emails/quote_accepted_contact.txt:5
 msgid "С вами свяжется менеджер поставщика для оформления."
-msgstr "A manager from the supplier will contact you to complete the paperwork."
+msgstr ""
+"A manager from the supplier will contact you to complete the paperwork."
 
 #: templates/emails/quote_accepted_contact.html:15
-msgid "Принятие предложения — это коммерческий акцепт оферты, а не электронная подпись."
-msgstr "Accepting a quote is a commercial acceptance of the offer, not an electronic signature."
+msgid ""
+"Принятие предложения — это коммерческий акцепт оферты, а не электронная "
+"подпись."
+msgstr ""
+"Accepting a quote is a commercial acceptance of the offer, not an electronic"
+" signature."
 
 #: templates/emails/quote_accepted_contact.html:16
 msgid "Договор подписывается отдельно."
@@ -5753,7 +6248,8 @@ msgstr "The contract is signed separately."
 
 #: templates/emails/quote_accepted_contact.txt:3
 #, python-format
-msgid "Вы приняли коммерческое предложение %(quote_number)s от %(seller_name)s."
+msgid ""
+"Вы приняли коммерческое предложение %(quote_number)s от %(seller_name)s."
 msgstr "You have accepted quote %(quote_number)s from %(seller_name)s."
 
 #: templates/emails/quote_accepted_contact.txt:3
@@ -5763,16 +6259,22 @@ msgstr "Thank you!"
 #: templates/emails/quote_accepted_contact.txt:5
 #, python-format
 msgid "Следующий шаг: договор %(contract_number)s готовится к подписанию."
-msgstr "Next step: contract %(contract_number)s is being prepared for signing."
+msgstr ""
+"Next step: contract %(contract_number)s is being prepared for signing."
 
 #: templates/emails/quote_accepted_contact.txt:7
-msgid "Обратите внимание: принятие предложения — это коммерческий акцепт оферты, а не электронная подпись. Договор подписывается отдельно."
-msgstr "Please note: accepting a quote is a commercial acceptance of the offer, not an electronic signature. The contract is signed separately."
+msgid ""
+"Обратите внимание: принятие предложения — это коммерческий акцепт оферты, а "
+"не электронная подпись. Договор подписывается отдельно."
+msgstr ""
+"Please note: accepting a quote is a commercial acceptance of the offer, not "
+"an electronic signature. The contract is signed separately."
 
 #: templates/emails/quote_accepted_contact_subject.txt:1
 #, python-format
 msgid "Предложение %(quote_number)s принято — договор готовится к подписанию"
-msgstr "Quote %(quote_number)s accepted — the contract is being prepared for signing"
+msgstr ""
+"Quote %(quote_number)s accepted — the contract is being prepared for signing"
 
 #: templates/emails/quote_sent.html:3
 #, python-format
@@ -5824,12 +6326,16 @@ msgstr "Company %(seller_name)s has prepared"
 
 #: templates/emails/quote_sent.txt:3
 #, python-format
-msgid "коммерческое предложение № %(quote_number)s (версия %(quote_version)s)."
+msgid ""
+"коммерческое предложение № %(quote_number)s (версия %(quote_version)s)."
 msgstr "quote No. %(quote_number)s (version %(quote_version)s)."
 
 #: templates/emails/quote_sent.txt:10
-msgid "Открыть предложение онлайн (без регистрации) — там же его можно принять:"
-msgstr "Open the quote online (no registration required) — you can accept it right there:"
+msgid ""
+"Открыть предложение онлайн (без регистрации) — там же его можно принять:"
+msgstr ""
+"Open the quote online (no registration required) — you can accept it right "
+"there:"
 
 #: templates/emails/quote_sent_subject.txt:1
 #, python-format
@@ -5877,8 +6383,12 @@ msgid "Забыли пароль? Восстановите его по ссыл�
 msgstr "Forgot your password? Reset it via this link:"
 
 #: templates/emails/register_existing_account.html:27
-msgid "Не пытались зарегистрироваться? Никаких действий не требуется — аккаунт не был изменён."
-msgstr "Did not try to register? No action is required — your account has not been changed."
+msgid ""
+"Не пытались зарегистрироваться? Никаких действий не требуется — аккаунт не "
+"был изменён."
+msgstr ""
+"Did not try to register? No action is required — your account has not been "
+"changed."
 
 #: templates/emails/register_existing_account.txt:1
 #: templates/emails/reset_password.txt:1 templates/emails/setup_password.txt:1
@@ -5887,12 +6397,22 @@ msgid "Здравствуйте, %(name)s!"
 msgstr "Hello, %(name)s!"
 
 #: templates/emails/register_existing_account.txt:3
-msgid "На платформе RailTech B2B кто-то (возможно, вы) попытался зарегистрировать аккаунт с этим email. Аккаунт с этим адресом уже существует, поэтому новый создан не был."
-msgstr "Someone (possibly you) tried to register an account with this email on RailTech B2B. An account with this address already exists, so a new one was not created."
+msgid ""
+"На платформе RailTech B2B кто-то (возможно, вы) попытался зарегистрировать "
+"аккаунт с этим email. Аккаунт с этим адресом уже существует, поэтому новый "
+"создан не был."
+msgstr ""
+"Someone (possibly you) tried to register an account with this email on "
+"RailTech B2B. An account with this address already exists, so a new one was "
+"not created."
 
 #: templates/emails/register_existing_account.txt:13
-msgid "Если вы не пытались зарегистрироваться, никаких действий не требуется — аккаунт не был изменён."
-msgstr "If you did not try to register, no action is required — your account has not been changed."
+msgid ""
+"Если вы не пытались зарегистрироваться, никаких действий не требуется — "
+"аккаунт не был изменён."
+msgstr ""
+"If you did not try to register, no action is required — your account has not"
+" been changed."
 
 #: templates/emails/register_existing_account_subject.txt:1
 msgid "RailTech B2B: аккаунт с этим email уже существует"
@@ -5917,11 +6437,16 @@ msgstr "Set a new password"
 #: templates/emails/reset_password.html:19
 #: templates/emails/setup_password.html:19
 msgid "Если кнопка не работает, скопируйте ссылку в адресную строку браузера:"
-msgstr "If the button does not work, copy the link into your browser’s address bar:"
+msgstr ""
+"If the button does not work, copy the link into your browser’s address bar:"
 
 #: templates/emails/reset_password.html:23
-msgid "Не запрашивали сброс пароля? Проигнорируйте это письмо — аккаунт не будет изменён."
-msgstr "Did not request a password reset? Ignore this email — your account will not be changed."
+msgid ""
+"Не запрашивали сброс пароля? Проигнорируйте это письмо — аккаунт не будет "
+"изменён."
+msgstr ""
+"Did not request a password reset? Ignore this email — your account will not "
+"be changed."
 
 #: templates/emails/reset_password.txt:3
 msgid ""
@@ -5932,8 +6457,12 @@ msgstr ""
 "To set a new password, follow the link:"
 
 #: templates/emails/reset_password.txt:8
-msgid "Ссылка действительна в течение суток. Если вы не запрашивали сброс пароля, просто проигнорируйте это письмо — аккаунт не будет изменён."
-msgstr "The link is valid for 24 hours. If you did not request a password reset, simply ignore this email — your account will not be changed."
+msgid ""
+"Ссылка действительна в течение суток. Если вы не запрашивали сброс пароля, "
+"просто проигнорируйте это письмо — аккаунт не будет изменён."
+msgstr ""
+"The link is valid for 24 hours. If you did not request a password reset, "
+"simply ignore this email — your account will not be changed."
 
 #: templates/emails/reset_password_subject.txt:1
 msgid "RailTech B2B: сброс пароля"
@@ -5959,17 +6488,29 @@ msgstr ""
 
 #: templates/emails/role_application_approved.html:15
 #, python-format
-msgid "Активирован пробный период на %(days)s дней — вы можете сразу приступить к работе."
-msgstr "A %(days)s-day trial period has been activated — you can start working right away."
+msgid ""
+"Активирован пробный период на %(days)s дней — вы можете сразу приступить к "
+"работе."
+msgstr ""
+"A %(days)s-day trial period has been activated — you can start working right"
+" away."
 
 #: templates/emails/role_application_approved.txt:3
 #, python-format
-msgid "Заявка компании «%(company_name)s» на роль «%(requested_type_name)s» одобрена."
-msgstr "The application from “%(company_name)s” for the “%(requested_type_name)s” role has been approved."
+msgid ""
+"Заявка компании «%(company_name)s» на роль «%(requested_type_name)s» "
+"одобрена."
+msgstr ""
+"The application from “%(company_name)s” for the “%(requested_type_name)s” "
+"role has been approved."
 
 #: templates/emails/role_application_approved.txt:4
-msgid "Для поставщиков и производителей активирован пробный период на 30 дней — вы можете сразу приступить к работе."
-msgstr "For suppliers and manufacturers a 30-day trial period has been activated — you can start working right away."
+msgid ""
+"Для поставщиков и производителей активирован пробный период на 30 дней — вы "
+"можете сразу приступить к работе."
+msgstr ""
+"For suppliers and manufacturers a 30-day trial period has been activated — "
+"you can start working right away."
 
 #: templates/emails/role_application_approved_subject.txt:1
 #, python-format
@@ -6001,7 +6542,9 @@ msgstr "Reviewer's comment:"
 
 #: templates/emails/role_application_rejected.html:18
 msgid "Вы можете устранить замечания и подать заявку повторно из кабинета."
-msgstr "You can address the comments and submit the application again from your account."
+msgstr ""
+"You can address the comments and submit the application again from your "
+"account."
 
 #: templates/emails/role_application_rejected.html:22
 msgid "Перейти в кабинет"
@@ -6009,12 +6552,18 @@ msgstr "Go to your account"
 
 #: templates/emails/role_application_rejected.txt:3
 #, python-format
-msgid "К сожалению, заявка компании «%(company_name)s» на роль «%(requested_type_name)s» отклонена."
-msgstr "Unfortunately, the application from “%(company_name)s” for the “%(requested_type_name)s” role has been rejected."
+msgid ""
+"К сожалению, заявка компании «%(company_name)s» на роль "
+"«%(requested_type_name)s» отклонена."
+msgstr ""
+"Unfortunately, the application from “%(company_name)s” for the "
+"“%(requested_type_name)s” role has been rejected."
 
 #: templates/emails/role_application_rejected.txt:8
 msgid "Вы можете устранить замечания и подать заявку повторно из кабинета:"
-msgstr "You can address the comments and submit the application again from your account:"
+msgstr ""
+"You can address the comments and submit the application again from your "
+"account:"
 
 #: templates/emails/role_application_rejected_subject.txt:1
 #, python-format
@@ -6043,8 +6592,11 @@ msgid "Установить пароль"
 msgstr "Set password"
 
 #: templates/emails/setup_password.html:23
-msgid "Не регистрировались на платформе? Проигнорируйте это письмо — никаких действий не требуется."
-msgstr "Did not sign up for the platform? Ignore this email — no action is required."
+msgid ""
+"Не регистрировались на платформе? Проигнорируйте это письмо — никаких "
+"действий не требуется."
+msgstr ""
+"Did not sign up for the platform? Ignore this email — no action is required."
 
 #: templates/emails/setup_password.txt:3
 msgid ""
@@ -6055,34 +6607,15 @@ msgstr ""
 "To finish signing up and set your password, follow the link:"
 
 #: templates/emails/setup_password.txt:8
-msgid "Если вы не регистрировались на платформе, просто проигнорируйте это письмо."
+msgid ""
+"Если вы не регистрировались на платформе, просто проигнорируйте это письмо."
 msgstr "If you did not sign up for the platform, simply ignore this email."
 
-#: master_data/models.py (HSCode unit fields)
-msgid "Базовая единица учёта по номенклатуре (обычно «кг»)."
-msgstr "Base accounting unit per the nomenclature (usually kg)."
+#~ msgid "Определяет ставку НДС по умолчанию"
+#~ msgstr "Defines the default VAT rate"
 
-msgid "Доп. единица измерения"
-msgstr "Additional unit of measure"
+#~ msgid "Двухбуквенный код страны ISO 3166-1 (UZ, RU, CN)"
+#~ msgstr "Two-letter ISO 3166-1 country code (UZ, RU, CN)"
 
-msgid "Дополнительная единица учёта (напр. «шт», «пар»), если предусмотрена номенклатурой."
-msgstr "Additional accounting unit (e.g. pcs, pairs) when the nomenclature defines one."
-
-#: master_data/models.py (Country ISO fields)
-msgid "Двухбуквенный код страны ISO 3166-1 (UZ, RU, CN) — дублирует `code`"
-msgstr "Two-letter ISO 3166-1 country code (UZ, RU, CN) — mirrors `code`"
-
-msgid "ISO Alpha-3"
-msgstr "ISO Alpha-3"
-
-msgid "Трёхбуквенный код ISO 3166-1 (UZB, RUS, CHN) — используется в документах"
-msgstr "Three-letter ISO 3166-1 code (UZB, RUS, CHN) — used in documents"
-
-msgid "ISO цифровой код"
-msgstr "ISO numeric code"
-
-msgid "Цифровой код ISO 3166-1 (860, 643, 156) — язык таможенных систем"
-msgstr "ISO 3166-1 numeric code (860, 643, 156) — the language of customs systems"
-
-msgid "Выверенная ставка НДС страны; пусто = неизвестна (не выдумываем)"
-msgstr "Verified VAT rate for the country; empty = unknown (never invented)"
+#~ msgid "Ставка НДС по умолчанию для данной страны"
+#~ msgstr "Default VAT rate for this country"

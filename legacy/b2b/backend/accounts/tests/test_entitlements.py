@@ -32,7 +32,7 @@ def _operational_sub(company):
         company=company,
         plan="BASIC",
         status="ACTIVE",
-        valid_from=timezone.now().date(),
+        valid_from=timezone.localdate(),
         valid_until=(timezone.now() + timedelta(days=365)).date(),
     )
 

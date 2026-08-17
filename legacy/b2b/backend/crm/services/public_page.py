@@ -177,9 +177,14 @@ def verify_code_and_accept(quote, code: str, request_ip: str = ""):
         # Correct code → burn it and accept in the SAME transaction.
         row.consumed_at = timezone.now()
         row.save(update_fields=["consumed_at"])
-        accepted = QuoteLifecycleService.accept_quote_as_contact(
-            quote.pk, contact_email=row.email, request_ip=request_ip or ""
-        )
+        # Симметрично отказу: жизненный цикл кидает ValueError, если КП уже не SENT
+        # (успели решить из другой вкладки). Отвечаем кодом, а не пятисоткой.
+        try:
+            accepted = QuoteLifecycleService.accept_quote_as_contact(
+                quote.pk, contact_email=row.email, request_ip=request_ip or ""
+            )
+        except ValueError:
+            return None, "QUOTE_ALREADY_DECIDED"
 
     _send_accepted_next_step_email(accepted, row.email)
     return accepted, None
@@ -219,7 +224,16 @@ def reject_from_public_page(quote, reason: str, request_ip: str = ""):
     cleaned = (reason or "").strip()
     if not cleaned:
         return None, "REASON_REQUIRED"
-    rejected = QuoteLifecycleService.reject_quote_as_contact(
-        quote.pk, reason=cleaned, contact_email="", request_ip=request_ip or ""
-    )
+    # Решение по КП уже принято — отвечаем КОДОМ, а не падаем. Жизненный цикл кидает
+    # ValueError на любом статусе кроме SENT, и до 14-08 он улетал наружу пятисоткой:
+    # клиент, принявший предложение, видел в той же сессии кнопку «Отклонить» (страница
+    # дорисовывала успех, не убирая панель действий) и ловил ошибку сервера. Ловим
+    # исключение, а не проверяем статус заранее: между проверкой и вызовом остаётся окно
+    # гонки — два клика из двух вкладок.
+    try:
+        rejected = QuoteLifecycleService.reject_quote_as_contact(
+            quote.pk, reason=cleaned, contact_email="", request_ip=request_ip or ""
+        )
+    except ValueError:
+        return None, "QUOTE_ALREADY_DECIDED"
     return rejected, None

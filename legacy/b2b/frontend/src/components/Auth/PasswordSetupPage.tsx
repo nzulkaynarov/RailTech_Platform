@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Lock, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
+import { Lock, CheckCircle, Loader2, AlertCircle, Train } from 'lucide-react';
 import { accountsApi } from '@/api/accountsApi';
+import { translateApiError } from '@/lib/apiError';
 import {
     Card,
     CardHeader,
@@ -81,18 +82,36 @@ export const PasswordSetupPage: React.FC<PasswordSetupPageProps> = ({ uid, token
             });
             setSuccess(true);
         } catch (err: unknown) {
-            const errorMessage =
-                err instanceof Error
-                    ? err.message
-                    : t('passwordSetup.setupError');
-            setServerError(errorMessage);
+            // `err.message` у axios — это «Request failed with status code 400», то есть
+            // отладочный шум вместо ответа человеку. Новый клиент на ПЕРВОМ экране продукта
+            // видел именно его и не понимал ни что случилось, ни что делать. Канонический
+            // переводчик (Rule: коды сравниваем по значению, показываем текст) разбирает
+            // {"detail": CODE} и знает SETUP_PASSWORD_INVALID_USER / _INVALID_TOKEN.
+            setServerError(translateApiError(err));
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div data-testid="password-setup-page" className="min-h-screen bg-background flex items-center justify-center p-6 font-sans">
+        <div data-testid="password-setup-page" className="min-h-screen bg-background flex flex-col items-center justify-center p-6 font-sans">
+            {/*
+             * Логотип — не украшение. Это ПЕРВЫЙ экран нового клиента: он приходит по ссылке из
+             * письма на страницу, которая просит придумать пароль. Без имени продукта такая
+             * страница неотличима от фишинговой, и здравый человек закроет её, не заполнив.
+             * Экран входа логотип показывает — активация показывать его обязана тем более.
+             * Найдено 14-08 по жалобе владельца на ссылку из письма новым клиентам.
+             */}
+            <div className="mb-8 flex items-center justify-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary">
+                    <Train className="h-6 w-6 text-primary-foreground" />
+                </div>
+                <span className="text-3xl font-black tracking-tight text-foreground">
+                    Rail<span className="text-primary">Tech</span>{' '}
+                    <span className="font-medium text-muted-foreground">B2B</span>
+                </span>
+            </div>
+
             <Card className="w-full max-w-md">
                 <CardHeader>
                     <div className="flex items-center gap-3">
@@ -103,8 +122,11 @@ export const PasswordSetupPage: React.FC<PasswordSetupPageProps> = ({ uid, token
                             <CardTitle className="text-2xl font-black tracking-tight">
                                 {t('passwordSetup.title')}
                             </CardTitle>
-                            <CardDescription className="text-sm font-medium tracking-wide uppercase">
-                                {t('passwordSetup.step')}
+                            {/* Было «Шаг 2 из 4» — счётчик без остальных шагов: ни первого, ни
+                                третьего человек не видел, и обещание прогресса оказывалось ложным.
+                                Вместо него — что именно сейчас произойдёт. */}
+                            <CardDescription>
+                                {t('passwordSetup.subtitle')}
                             </CardDescription>
                         </div>
                     </div>

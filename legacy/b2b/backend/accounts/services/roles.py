@@ -2,7 +2,7 @@
 
 The company admin (team.manage) creates/edits company-scoped roles and assigns them to
 members. The system "Company administrator" role is immutable. See
-Docs/dev/specs/rbac-roles-design-2026-06-25.md.
+Docs/old/specs/rbac-roles-design-2026-06-25.md.
 """
 
 from typing import Optional, Tuple

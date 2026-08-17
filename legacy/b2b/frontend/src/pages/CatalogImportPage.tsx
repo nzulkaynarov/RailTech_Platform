@@ -27,6 +27,7 @@ const PARAMETERIZED_MESSAGE_KEYS: Record<string, string> = {
   UNKNOWN_DOMAIN: 'catalogImport.err.unknownDomain',
   HS_CODE_NOT_IN_CLASSIFIER: 'catalogImport.err.hsCodeNotInClassifier',
   HS_CODE_RETIRED: 'catalogImport.err.hsCodeRetired',
+  HS_CODE_TOO_LONG: 'catalogImport.err.hsCodeTooLong',
 };
 
 /** Коды без параметра. */

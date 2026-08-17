@@ -40,7 +40,7 @@ def suggest_hs_codes(text: str, limit: int = 5, min_level: int = 6) -> list[dict
     # признаёт: старые документы держат старые коды законно.
     from django.utils import timezone
 
-    today = timezone.now().date()
+    today = timezone.localdate()
     rows = HSCode.objects.filter(level__gte=min_level).exclude(valid_until__lt=today)
     # Пользователь мог ввести сам код — тогда это точный поиск, а не текстовый.
     digits = "".join(ch for ch in query if ch.isdigit())
@@ -144,7 +144,7 @@ def validate_hs_codes(codes) -> dict[str, dict]:
     if not rows and not HSCode.objects.exists():
         return {digits: {"known": True, "active": True, "name": ""} for digits in wanted}
 
-    today = timezone.now().date()
+    today = timezone.localdate()
     verdicts = {}
     for digits in wanted:
         row = rows.get(digits)
@@ -190,7 +190,7 @@ def cards_with_retired_codes(owner_company=None):
     from catalog.models import Product
     from master_data.models import HSCode
 
-    today = timezone.now().date()
+    today = timezone.localdate()
     retired = HSCode.objects.filter(valid_until__lt=today).values_list("code", flat=True)
     cards = Product.objects.filter(hs_code__in=list(retired)).exclude(status__code="ARCHIVED")
     if owner_company is not None:

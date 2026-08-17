@@ -1,6 +1,6 @@
 """Четыре письма пути «после контракта» (G3).
 
-Решение и его основания — `Docs/dev/specs/spec-post-contract-open-questions-2026-07-30.md` §3.
+Решение и его основания — `Docs/old/specs/spec-post-contract-open-questions-2026-07-30.md` §3.
 
 До этой волны на отрезке счёт → оплата → закрывающий документ не было ни одного письма, только
 уведомления внутри приложения. Покупатель здесь часто внешний контрагент, который в систему
@@ -96,7 +96,7 @@ def world(lookups):
     seller_co = _company("Seller G3", "S100", "SUPPLIER")
     seller_user = _member(seller_co, "seller@g3.test", can_sell=True)
     SupplierSubscription.objects.create(
-        company=seller_co, plan="PREMIUM", status="ACTIVE", valid_until=timezone.now().date() + timedelta(days=30)
+        company=seller_co, plan="PREMIUM", status="ACTIVE", valid_until=timezone.localdate() + timedelta(days=30)
     )
 
     deal = Deal.objects.create(title="G3 deal", company=buyer_co, stage=DealStage.objects.get(code="CLOSED_WON"))
@@ -196,7 +196,7 @@ def test_recording_a_payment_emails_the_seller(world, django_capture_on_commit_c
     with patch("notifications.tasks.send_transactional_email") as mail:
         with django_capture_on_commit_callbacks(execute=True):
             payment, error = record_payment(
-                invoice.id, world["buyer_user"], amount=Decimal("112"), paid_at=timezone.now().date()
+                invoice.id, world["buyer_user"], amount=Decimal("112"), paid_at=timezone.localdate()
             )
 
     assert error is None, error
@@ -230,7 +230,7 @@ def test_issuing_an_act_emails_the_buyer(world, django_capture_on_commit_callbac
 def test_overdue_invoice_gets_one_reminder(world, django_capture_on_commit_callbacks):
     from crm.tasks import send_payment_reminders
 
-    invoice = _invoice(world, "ISSUED", due_date=timezone.now().date() - timedelta(days=10))
+    invoice = _invoice(world, "ISSUED", due_date=timezone.localdate() - timedelta(days=10))
 
     with patch("notifications.tasks.send_transactional_email") as mail:
         with django_capture_on_commit_callbacks(execute=True):
@@ -248,7 +248,7 @@ def test_the_reminder_is_not_repeated_daily(world, django_capture_on_commit_call
     """Хранится ровно факт отправки — иначе ежедневная задача слала бы письмо каждый день."""
     from crm.tasks import send_payment_reminders
 
-    _invoice(world, "ISSUED", due_date=timezone.now().date() - timedelta(days=10))
+    _invoice(world, "ISSUED", due_date=timezone.localdate() - timedelta(days=10))
     with django_capture_on_commit_callbacks(execute=True):
         send_payment_reminders()
 
@@ -264,7 +264,7 @@ def test_an_invoice_within_its_grace_period_is_not_reminded(world, django_captur
     """Напоминание уходит не в день срока, а после льготных дней."""
     from crm.tasks import send_payment_reminders
 
-    _invoice(world, "ISSUED", due_date=timezone.now().date() - timedelta(days=1))
+    _invoice(world, "ISSUED", due_date=timezone.localdate() - timedelta(days=1))
 
     with patch("notifications.tasks.send_transactional_email") as mail:
         with django_capture_on_commit_callbacks(execute=True):
@@ -277,7 +277,7 @@ def test_an_invoice_within_its_grace_period_is_not_reminded(world, django_captur
 def test_a_paid_invoice_is_never_reminded(world, django_capture_on_commit_callbacks):
     from crm.tasks import send_payment_reminders
 
-    _invoice(world, "PAID", paid=Decimal("112"), due_date=timezone.now().date() - timedelta(days=30))
+    _invoice(world, "PAID", paid=Decimal("112"), due_date=timezone.localdate() - timedelta(days=30))
 
     with patch("notifications.tasks.send_transactional_email") as mail:
         with django_capture_on_commit_callbacks(execute=True):

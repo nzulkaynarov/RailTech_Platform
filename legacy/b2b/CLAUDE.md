@@ -1,6 +1,6 @@
 # RailTech B2B SaaS — Claude Code Context
 
-_Last full refresh: 2026-07-06 (HEAD c6cb04f, post PR #229); partial touch-ups: 2026-08-01 (heads crm 0090; направление «Документы» ЗАКРЫТО: шаблоны юр-видов E1–E4 + артефакты регистров D2 — PR #496–#506); 2026-07-27 («Документы 2.0», PR #383–#418); 2026-07-12 (2FA/sessions, Settings Hub). Verify against code when in doubt — Rule 6._
+_Last full refresh: 2026-07-06 (HEAD c6cb04f, post PR #229); partial touch-ups: 2026-08-08 (heads catalog 0016 / master_data 0015; направление «Номенклатура» ЗАКРЫТО — треки N1–N4, T1–T4, R1–R7, PR #527–#561; Caddy как управляемый конфиг — PR #551–#554; генеральная уборка Docs — живой осталась одна спека); 2026-08-01 (направление «Документы» ЗАКРЫТО: шаблоны юр-видов E1–E4 + артефакты регистров D2 — PR #496–#506); 2026-07-27 («Документы 2.0», PR #383–#418); 2026-07-12 (2FA/sessions, Settings Hub). Verify against code when in doubt — Rule 6._
 
 ## Project Overview
 
@@ -29,21 +29,35 @@ backend/                    # Django project
                             #   dashboard, admin_mixins, validators (upload: size/type/ext/magic-bytes)
   accounts/                 # CustomUser, Company, CompanyMember, CompanyRole, OperatorRole, KYC,
                             #   Subscriptions + CompanyEntitlement, CompanyDocumentProfile, Contact
-  accounts/views/           # applications, auth, company, lookups, operators, roles, users
+  accounts/views/           # applications, auth, company, clients, company_documents, company_kyc,
+                            #   company_team, lookups, operators, roles, users (company.py распилен —
+                            #   KYC/команда/документы лежат в отдельных модулях, не в company.py)
   accounts/services/        # applications, auth, clients, company_settings, document_profile,
                             #   entitlements, kyc, login_guard, members, operators, permissions,
                             #   profile, roles, subscriptions
-  catalog/                  # Product (PIM), Category, EquipmentGroup, SupplierOffer
-  catalog/views/            # ai (PIM enrichment), lookups, offers, products
+  catalog/                  # Product (PIM), Category, EquipmentGroup, SupplierOffer, HSCode-привязка,
+                            #   CategoryRequest. Направление «Номенклатура» (треки N/T/R, PR #527–#561):
+                            #   publishing (жизненный цикл карточки), completeness (метрика полноты),
+                            #   merging + candidates (дубли), coverage, hs_suggest + hs_lookup_ai (ТН ВЭД),
+                            #   field_candidates (ИИ предлагает ПО ПОЛЯМ, не патчит молча), category_requests
+  catalog/views/            # ai (PIM enrichment), category_requests, lookups, offers, products
   crm/                      # Deal, DealSellerRouting, Quote, QuoteItem, Contract, Fulfillment,
                             #   Invoice/Act/Payment, Message, Lead, ActivityLog, ChargeTemplate
-  crm/views/                # ai, ai_diff, analytics, billing, deals, exports, leads, messages, quotes
+  crm/views/                # ai, ai_diff, analytics, billing, billing_filters, documents,
+                            #   documents_public, exports, leads, messages, numbering, relationships,
+                            #   timeline, wording, _pdf; deals/ и quotes/ — ПАКЕТЫ, не модули
   crm/services/             # _params, ai_chat, ai_diff, approvals, assignment, availability, billing,
                             #   charges, contracts, deals, draft_quote, exporters, fulfillment,
-                            #   messaging, metrics, numbering, pricing_assist, quotes, rfq
-  sourcing/                 # Attachment, ImportTask, DomainKeyword; services_ai*.py (AI import/
+                            #   messaging, metrics, numbering, pricing_assist, quotes, rfq +
+                            #   deal_documents (цепочка документов сделки), deal_emails (4 письма),
+                            #   document_blocks (каталог блоков), documents/ (пакет), wording_variants,
+                            #   invoice_lifecycle, manual_invoice, generated_documents, public_page,
+                            #   document_search, recent_documents, relationships, dashboard_analytics
+  sourcing/                 # Attachment, ImportTask, DomainKeyword, AIJob (владение AI-задачей —
+                            #   на нём стоит IDOR-гард ai-status); services_ai*.py (AI import/
                             #   preflight/conversational), views_ai_conversational.py
-  master_data/              # AbstractLookup, Country, Currency, UOM, DeliveryBasis
+  master_data/              # AbstractLookup, Country, Currency, UOM, DeliveryBasis, ExchangeRate,
+                            #   HSCode (классификатор ТН ВЭД + недельный автосинк)
   notifications/            # Notification (FK → deal; deep-links derive from it), EmailLog, EmailTemplate
   {crm,accounts,catalog}/models/   # Packages split by domain. Same-app FKs use string refs ("app.Model")
 frontend/                   # React app
@@ -66,10 +80,14 @@ frontend/                   # React app
                             #   NotificationCenter, SupportButton — NOT shells)
   src/hooks/                # useAccounts, useAdmin, useBilling, useCRM, useCapabilities, useCatalog,
                             #   useMasterData, usePageStats, useSupport, useSystemSettings, useUrlState,
-                            #   useViewerMode, use-mobile (exports useMediaQuery)
+                            #   useViewerMode, useSourcing, useDocuments, useCategoryRequests,
+                            #   useCatalogPublishGate, useQuoteSendGate, useDebouncedValue,
+                            #   use-mobile (exports useMediaQuery); hooks/crm/ — ПОДКАТАЛОГ, там useLeads
   src/i18n/locales/         # ru.json, en.json
-deploy/caddy/               # Caddy edge config FRAGMENT (prod applies it manually — see Production)
-# (root nginx/ removed 2026-07-12 — was dead; the SPA's nginx.conf lives in frontend/)
+deploy/caddy/               # Caddy edge config FRAGMENT — источник правды; применяет workflow
+                            #   apply-caddy.yml по кнопке, деплой лишь сторожит дрейф (см. Production)
+# (root nginx/ вычищен 2026-07-12 — в нём остался только .gitkeep, конфигов там НЕТ;
+#  реальный nginx.conf SPA лежит в frontend/)
 Docs/                       # Docs by audience (reorg 2026-07-07 — map: Docs/README.md):
   dev/                      #   adr/ (0001–0006), architecture/ (MSD, techspec, diagrams, schema.json,
                             #   websocket), ops/ (RUNBOOK, deploy/observability/staging/smoke/e2e…,
@@ -115,7 +133,7 @@ ADR index (`Docs/dev/adr/`): **0001** admin separation · **0002** role responsi
 - **Local dev:** a local **Postgres container** is added via `docker-compose.override.yml` (gitignored, auto-loaded by `make up`; prod/staging use explicit `-f ...prod.yml` so never load it). Backend reaches it as `db:5432`; `.env` → `DATABASE_URL=postgresql://railtech:railtech@db:5432/railtech?sslmode=disable`.
 - **Connection:** `DATABASE_URL` env var parsed via `urlparse` (query params → DB `OPTIONS`, `sslmode` defaults to `require`), fallback to individual `POSTGRES_*` vars
 - **Auth user:** `accounts.CustomUser` (email login)
-- **Migration heads (2026-08-04):** `accounts/0043`, `crm/0092`, `catalog/0014`, `sourcing/0007`, `master_data/0013`, `notifications/0010`, `core/0004`. master_data: `0011` (HSCode — классификатор ТН ВЭД), `0012` (единицы измерения на HSCode), `0013` (beat-график недельного автосинка ТН ВЭД с tarif.customs.uz). Recent crm: `0085` (образцы счёта/договора + починка образца акта), `0086` (ActivityLog «одно слово»: инвойс→счёт, контракт→договор), `0087` (`frozen_template_body` на Contract/Invoice/Act — E3-снапшот), `0088` (`CompanyWordingVariant` + `wording_selections` — библиотека формулировок E4), `0089`/`0090` (квитанция RCP + накладная — D2, виды RECEIPT/DELIVERY_NOTE). Recent accounts: `0043` (D1 wording-поля)
+- **Migration heads (2026-08-08):** `accounts/0043`, `crm/0092`, `catalog/0016`, `sourcing/0007`, `master_data/0015`, `notifications/0010`, `core/0004`. master_data: `0011` (HSCode — классификатор ТН ВЭД), `0012` (единицы измерения на HSCode), `0013` (beat-график недельного автосинка ТН ВЭД с tarif.customs.uz), `0014`/`0015` (ISO-справочник стран — было 7 стран из dev-команды; названия отдаёт `Intl.DisplayNames`, ставки НДС/пошлин НЕ храним — витрина ГТК). Recent catalog: `0015` (N1 — слияние доменов + стартовая таксономия), `0016` (`CategoryRequest` — R6, «нужной категории нет» перестало быть тупиком). Recent crm: `0085` (образцы счёта/договора + починка образца акта), `0086` (ActivityLog «одно слово»: инвойс→счёт, контракт→договор), `0087` (`frozen_template_body` на Contract/Invoice/Act — E3-снапшот), `0088` (`CompanyWordingVariant` + `wording_selections` — библиотека формулировок E4), `0089`/`0090` (квитанция RCP + накладная — D2, виды RECEIPT/DELIVERY_NOTE). Recent accounts: `0043` (D1 wording-поля)
 
 ## API Surface (prefix: `/api/v1/`)
 
@@ -125,7 +143,7 @@ ADR index (`Docs/dev/adr/`): **0001** admin separation · **0002** role responsi
 - `crm/` — deals (change-stage, claim, export-pdf, AI draft КП, **`documents/` — цепочка документов сделки одним ответом**), quotes (generate-pdf, send-to-client, approve, internal review chain), quote-items, messages, activity-logs, analytics (incl. time-to-first-quote), leads, exports, AI chat-assist + КП-diff, billing (invoices/acts/payments; **`acts/{id}/reject/` — возврат акта заказчиком с причиной**)
 - `admin/` — entitlements, operator-roles, operator-permissions, break-glass (audited), platform admin CRUD
 - `public/` — quotes/<token>/ (unauthenticated КП, 202-pattern), public media whitelist
-- `sourcing/` — requests, import-deal/{id}, import-catalog, import-status/{task_id}, ai-status/{task_id} (poll for ALL interactive AI jobs), match-catalog, preflight-check, extract-document, compose-request — AI endpoints answer 202 {task_id} (ARCH-01)
+- `sourcing/` — attachments, import-deal/{id}, import-catalog, import-catalog-ai, catalog-template, import-quote-lines, import-status/{task_id}, ai-status/{task_id} (poll for ALL interactive AI jobs), match-catalog, preflight-check, extract-document, compose-request — AI endpoints answer 202 {task_id} (ARCH-01). **Роута `sourcing/requests` НЕТ** (числился здесь до 2026-08-08): заявки живут в `crm/deals`
 - `master-data/` — countries, currencies, units, delivery-basis
 - `notifications/` — CRUD + mark as read (structured FKs for deep-links)
 - `health/` — health check (also at root `/health/`)
@@ -216,26 +234,64 @@ make migrate             # run migrations
 make makemigrations      # create migrations
 make seed                # core_seed: dev/demo справочники + тест-пользователи (НЕ loaddata)
 make createsuperuser     # interactive superuser creation
-make test                # pytest
-make test-backend        # pytest with coverage
-make test-frontend       # vitest
-make lint                # flake8 + black + isort + eslint
-make format              # black + isort
-make security            # pip audit + npm audit
+make test                # pytest (весь бэкенд, в контейнере)
+make test-backend        # pytest with coverage (htmlcov/)
+make test-frontend       # vitest — на ХОСТЕ (cd frontend && npm test)
+make lint                # lint-backend + lint-frontend
+make lint-backend        # flake8 + black --check + isort --check-only ИЗ КОРНЯ по backend/
+make lint-frontend       # eslint — на ХОСТЕ
+make typecheck           # tsc --noEmit
+make format              # black + isort (пишет)
+make security            # security-backend + security-frontend (жёсткие гейты)
+make tools-reset         # пересобрать .venv-tools после смены пинов линтеров в ci.yml
 make shell               # backend bash
 make frontend-shell      # frontend bash
 make celery-logs         # celery worker logs
 make collectstatic       # django collectstatic
+make i18n-extract        # makemessages -l en (обновить backend/locale/en/…/django.po)
+make i18n-compile        # compilemessages (.mo — артефакт сборки, в git не хранится)
+make i18n-check          # гейт свежести каталога: падает, если .po устарел
 make clean               # remove all containers, volumes, cache (DESTRUCTIVE)
 ```
+
+**Локальные гейты — зеркало CI, а не самостоятельная механика.** Починены 2026-08-13, до этого не работал НИ ОДИН: `make lint` падал громко (`flake8: command not found`, Error 127 — линтеров нет в контейнере), `make security` «проходил» МОЛЧА (ошибки глотал `|| true`), `make i18n-check` падал на разборе строки (`<(...)` в dash), а `make typecheck` был пустышкой (`tsc --noEmit` при solution-style `tsconfig.json` компилирует НОЛЬ файлов — типы ловит только `tsc -b`; та же дыра была в шаге CI `frontend-lint`, закрыта тем же коммитом). Урок общий: «цель отработала» ≠ «цель проверила» — каждый новый гейт проверять заведомо ломаным входом.
+- **Бэкенд-линтеры живут в `.venv-tools/`** (gitignored, создаётся сам) — версиями CI: `flake8`, `black>=24,<25`, `isort>=5,<6`. Пины штампуются в `.venv-tools/.pins`, и venv пересобирается САМ, когда строка пинов в Makefile разошлась с отпечатком (иначе `make format` перепишет файлы старым black при зелёном `make lint` — и CI упадёт на форматировании). Гонять ТОЛЬКО из корня по `backend/`: корневой `.flake8` несёт `per-file-ignores` для `core/settings/*` (F403/F405 от звёздочных импортов), а `backend/.flake8` их НЕ содержит — запуск изнутри `backend/` даёт ложняки.
+- **Фронт целиком на хосте** (eslint, vitest, tsc): контейнер `frontend` — прод-сборка nginx, в нём нет ни `npm`, ни `bash`.
+- **`make security` = джоба `security` из ci.yml.** Бэкенд: `pip-audit` в ОДНОРАЗОВОМ контейнере (`docker compose run --rm --no-deps`), не в живом через `exec` — иначе хвост pip-audit (requests, rich, cachecontrol…) оседает в рабочем окружении, и `import requests` работает локально, но падает в свежесобранном прод-образе. Внутри сначала апгрейд самого pip: базовый pip образа приносит свои advisories и топит находки по НАШИМ зависимостям (8 строк вместо 2). Фронт: жёсткий `npm audit --omit=dev --audit-level=high` (то, что уезжает пользователю) + информативный полный прогон с dev-цепочкой, который цель не роняет.
+- **`make i18n-check` требует `bash -c`**: `/bin/sh` в образе — dash, подстановки процессов `<(...)` там нет, и цель падала на РАЗБОРЕ строки, не добравшись до makemessages.
+
+**Фронтенд — только с хоста** (`cd frontend`):
+```bash
+npm test                 # vitest run (весь набор)
+npm test -- src/store/userStore.test.ts          # один файл
+npm test -- -t "имя теста"                        # один тест по имени
+npm run lint             # eslint (то, что гоняет CI-джоба frontend-lint)
+npm run lint:tsc         # tsc -b — проверка типов БЕЗ сборки бандла (== make typecheck).
+                         #   Именно -b: `tsc --noEmit` при solution-style tsconfig.json
+                         #   (files: [] + references) не ходит по ссылкам и молча
+                         #   проверяет НОЛЬ файлов
+npm run build            # tsc -b && vite build — полная сборка
+npm run gen:api-types    # openapi-typescript из backend/schema.json (гейт api-contract)
+```
+
+**Один тест на бэкенде** (пути относительно `/app` == `backend/`):
+```bash
+docker compose exec backend pytest core/tests/test_error_shape.py --reuse-db -q      # файл
+docker compose exec backend pytest crm/tests/test_deals.py::test_stage_change --reuse-db
+docker compose exec backend pytest -k "invoice and not pdf" --reuse-db -q            # по имени
+docker compose exec backend pytest -m "not slow" --create-db                          # как в CI
+```
+ВАЖНО: внутри контейнера `rootdir=/app`, а корневой `pyproject.toml` туда НЕ смонтирован (`./backend:/app`) — значит `addopts` из него (в т.ч. `--reuse-db`, `--strict-markers`) НЕ применяются. Флаги передавать явно: `--reuse-db` для скорости, `--create-db` чтобы воспроизвести CI (пустая база + миграции ловят пробелы сидов).
+
+**Pre-commit (husky + lint-staged, корневой `package.json`):** на коммит гоняются `eslint --fix` по изменённым `frontend/src/**/*.{ts,tsx}` и `scripts/check_i18n_symmetry.py` по изменённым `ru.json`/`en.json`. Установка на свежем клоне — `npm install` в корне (скрипт `prepare`).
 
 ## Production Deployment
 
 - **App-VPS** hosts Docker stack + host **Caddy** as the edge (TLS, CSP headers, X-Forwarded-For overwrite). Domain: `b2b.railtech.uz`; SPA served from `/var/www/railtech-b2b`
 - Deploy: self-hosted GitHub runner, `.github/workflows/deploy-b2b.yml` (`-f docker-compose.yml -f docker-compose.prod.yml`); prod `.env` rendered from GitHub production secrets (heredoc) — includes `CSP_REPORT_ONLY=false`, `DRF_NUM_PROXIES=1`, `PRODUCTION=true`
-- **Caddy config is applied MANUALLY**: repo fragment `deploy/caddy/b2b.railtech.uz.caddy` → `/etc/caddy/conf.d/b2b.caddy`, validate, `systemctl reload caddy`. Caddy's site-level headers REPLACE Django's for the whole origin — `core/csp.py` is only a fallback for /api+/admin
+- **Caddy config: репозиторий — источник правды, применение — отдельный workflow** (PR #551–#554). Фрагмент `deploy/caddy/b2b.railtech.uz.caddy` → `/etc/caddy/conf.d/b2b.caddy`. Применяет `.github/workflows/apply-caddy.yml` — только вручную (`workflow_dispatch` с подтверждением словом `APPLY`), потому что reload перезагружает edge, ОБЩИЙ с соседним сайтом: бэкап → копия → `caddy validate` ВСЕГО мастер-конфига → reload → проверка обоих сайтов → откат при провале. Деплой (`deploy-b2b.yml`) конфиг НЕ применяет — только сверяет дрейф и падает, если живой файл разошёлся с репозиторием. Caddy's site-level headers REPLACE Django's for the whole origin — `core/csp.py` is only a fallback for /api+/admin. Грабли (#554): безматчерный `header` в блоке ЗАТИРАЕТ более специфичные переопределения — CSP админки не работал никогда
 - **Deploy race:** two quick merges can cancel the newer run — after back-to-back merges verify the deployed bundle hash on the box matches main HEAD
-- **Staging does not exist yet** (needs DNS + `staging` GitHub environment + Caddy block); nightly Playwright e2e targets prod with prod-safe specs only
+- **Staging does not exist yet** — workflow `.github/workflows/deploy-staging.yml` в репозитории ЕСТЬ, но ИНЕРТЕН: только `workflow_dispatch`, push-триггер закомментирован, а до первого запуска нужны 3 предусловия (DNS `staging.b2b.railtech.uz`, GitHub environment `staging` со СВОЕЙ базой, блок Caddy) — см. `Docs/dev/ops/staging.md`. Nightly Playwright e2e targets prod with prod-safe specs only
 - CI security gates are HARD: pip-audit + `npm audit --audit-level=high`; all GitHub Actions SHA-pinned
 
 ## Coding Conventions
@@ -259,6 +315,7 @@ make clean               # remove all containers, volumes, cache (DESTRUCTIVE)
 - **AI calls:** NEVER call the Anthropic client from an HTTP handler — new interactive AI features go through `enqueue_ai_job(feature, payload, user)` (202 + `ai-status` polling; add the handler to `sourcing/tasks_ai.py` FEATURE_HANDLERS). The job task is single-attempt; AI match/enrich failures inside services are logged no-ops, never user-facing 500s
 - **Uploads:** every new upload path must call the `core/validators.py` helpers incl. magic-byte content check (`assert_content_matches_extension`)
 - **API errors:** always `{"detail": "<CODE>"}` (DRF-native shape; codes compared by value on the frontend) — NEVER `{"error": ...}`. Guarded by `core/tests/test_error_shape.py`
+- **Бизнес-даты:** «сегодня» — это `timezone.localdate()`, НИКОГДА не `timezone.now().date()`. `USE_TZ=True`, и `now()` — момент в UTC, поэтому его дата с 00:00 до 05:00 по Ташкенту (`TIME_ZONE=Asia/Tashkent`, UTC+5) отстаёт на сутки: счёт печатался вчерашним числом, КП жило на день меньше, вчера закрытый код ТН ВЭД ещё пять часов считался действующим. Держит `core/tests/test_business_date_timezone.py`
 - **Exception handling:** Use specific exceptions (`ValidationError`, `OSError`, `ValueError`) — NEVER bare `except Exception`
 - **Variable naming:** Descriptive names always — NEVER single-letter variables in business logic
 - **Function length:** Max 50 lines for production code. **File length:** max 500 lines — split into packages. **Parameters:** max 5 — use dataclasses beyond that
@@ -275,9 +332,9 @@ make clean               # remove all containers, volumes, cache (DESTRUCTIVE)
 
 ## Testing
 
-- **Backend:** pytest + pytest-django, markers: slow, integration, unit; coverage threshold: 30% enforced on CI (`--cov-fail-under=30`). Current state (2026-07-07): **~672 tests, ~78% coverage**. CI runs `pytest --create-db` on an ephemeral Postgres, **с миграциями** (`--nomigrations` снят 2026-08-03): по Rule 1 справочники и платформенные образцы шаблонов сеются данными-миграциями, поэтому база без них — другая база (22 теста падали на пустых `DealStage`/`ContractStatus`). Джоба также компилирует каталог (`compilemessages`) — `.mo` в git нет, а тест каталога проверяет реальный перевод. Local tests run against the local Docker Postgres (`db` from `docker-compose.override.yml`, `sslmode=disable`); `--reuse-db` masks seed gaps — reproduce CI failures with `--create-db`.
-- **Frontend:** vitest 4 + @testing-library/react + jsdom — 13 test files, 93 tests (stores/hooks/utils + component tests for AdminDataTable/DealsKanban/GenerateQuoteDialog/DashboardWidgets; shared `src/test/renderWithProviders.tsx` with a real ru.json i18n instance). Runs on the developer machine and in the CI `frontend-test` job — NOT in Compose (the frontend container is a prod nginx build).
-- **CI:** GitHub Actions — jobs: i18n-symmetry, backend-lint, backend-test, migration-check, api-contract (spectacular + openapi-typescript drift), frontend-lint, frontend-test (vitest), frontend-build, security (pip-audit + npm audit, HARD gates), docker-build. Nightly Playwright e2e is a separate workflow (targets prod, prod-safe specs).
+- **Backend:** pytest + pytest-django, markers: slow, integration, unit. **Порог покрытия на CI — 70%** (`--cov-fail-under=70`, `.github/workflows/ci.yml`); `fail_under = 30` в корневом `pyproject.toml` — это дефолт ЛОКАЛЬНОГО отчёта, не то, что гейтит мерж (расхождение врало до 2026-08-08 и обещало красный CI тому, кто поверил 30). Current state (2026-08-08): **240 файлов `test_*.py`, 1971 тест-функция, полный прогон — 2026 passed**. CI runs `pytest --create-db` on an ephemeral Postgres, **с миграциями** (`--nomigrations` снят 2026-08-03): по Rule 1 справочники и платформенные образцы шаблонов сеются данными-миграциями, поэтому база без них — другая база (22 теста падали на пустых `DealStage`/`ContractStatus`). Джоба также компилирует каталог (`compilemessages`) — `.mo` в git нет, а тест каталога проверяет реальный перевод. Local tests run against the local Docker Postgres (`db` from `docker-compose.override.yml`, `sslmode=disable`); `--reuse-db` masks seed gaps — reproduce CI failures with `--create-db`.
+- **Frontend:** vitest 4 + @testing-library/react + jsdom — **112 файлов `*.test.ts(x)`, 783 теста** (на 2026-08-08; stores/hooks/utils + компонентные; shared `src/test/renderWithProviders.tsx` with a real ru.json i18n instance). Runs on the developer machine and in the CI `frontend-test` job — NOT in Compose (the frontend container is a prod nginx build).
+- **CI:** GitHub Actions — 11 джоб: i18n-symmetry, backend-lint, backend-test, migration-check, api-contract (spectacular + openapi-typescript drift), frontend-lint, frontend-test (vitest), frontend-build, security (pip-audit + npm audit по ПРОД-зависимостям, HARD gate; dev-находки отдельным неблокирующим шагом), **deps-lock** (пересборка hashed-локов, HARD gate), docker-build. Nightly Playwright e2e is a separate workflow (targets prod, prod-safe specs).
 - **Known test debt:** none named — the last items (frontend component tests, PR #234; backend fulfillment/messaging services, PR #228) are paid. Playwright e2e specs remain thin (nightly, prod-safe subset only).
 
 ## Auth Flow (production)
@@ -401,7 +458,7 @@ Canonical sources: `Docs/dev/adr/0002-role-responsibilities.md` (layers), `0003`
 - NO `POST /api/v1/catalog/products/import_excel/` — use `sourcing/import-catalog/`
 - NO *standalone* frontend Analytics page — analytics render inside the Operations Dashboard (`Dashboard.tsx` via `dashboardApi` → `crm/analytics/dashboard/`). (Leads and Clients/Suppliers pages DO exist — see the "DO exist" list above.)
 - NO `SourcingImportPage` — deleted; import lives inline in the request dialog
-- `users` table has NO `username` login field (email is USERNAME_FIELD); `deals` has NO `discount` field; `products` has NO `price` field (prices in `SupplierOffer`)
+- Логин по `username` НЕ используется — `USERNAME_FIELD = "email"`. Но **колонка `username` в таблице ЕСТЬ**: `CustomUser` наследует `AbstractUser`, и `REQUIRED_FIELDS = ["username"]` (`accounts/models/users.py:84-85`) — не считать её отсутствующей при написании миграций и фикстур. `deals` has NO `discount` field; `products` has NO `price` field (prices in `SupplierOffer`)
 - NO `data/products.ts` — deleted entirely; products come only from `catalogApi.getProducts()`
 
 ## Data Transformations

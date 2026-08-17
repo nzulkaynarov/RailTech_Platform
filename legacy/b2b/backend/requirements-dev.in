@@ -1,7 +1,7 @@
 # ==============================================================================
 # INF-05 — dev/test tooling SOURCE. Superset of the base lock (includes it), so
 # `pip install -r requirements-dev.txt` gives a full local env. Recompile:
-#   pip-compile --generate-hashes --strip-extras -c requirements.txt \
+#   pip-compile --generate-hashes --no-strip-extras -c requirements.txt \
 #       requirements-dev.in -o requirements-dev.txt
 # The `-c requirements.txt` pins every shared package to the exact base-lock
 # version, so the dev lock never drifts from prod. Never hand-edit the .txt.

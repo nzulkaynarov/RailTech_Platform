@@ -107,7 +107,7 @@ def world(lookups):
         company=seller_co,
         plan="PREMIUM",
         status="ACTIVE",
-        valid_until=timezone.now().date() + timedelta(days=30),
+        valid_until=timezone.localdate() + timedelta(days=30),
     )
 
     # Компания, не имеющая к сделке НИКАКОГО отношения: ни покупатель, ни зароутиненный продавец.

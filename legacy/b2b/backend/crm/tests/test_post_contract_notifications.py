@@ -97,7 +97,7 @@ def chain(lookups):
     seller_co = _company("Seller Notify", "S600", "SUPPLIER")
     seller_user = _member(seller_co, "seller@notify.test", can_sell=True)
     SupplierSubscription.objects.create(
-        company=seller_co, plan="PREMIUM", status="ACTIVE", valid_until=timezone.now().date() + timedelta(days=30)
+        company=seller_co, plan="PREMIUM", status="ACTIVE", valid_until=timezone.localdate() + timedelta(days=30)
     )
 
     deal = Deal.objects.create(title="Notify deal", company=buyer_co, stage=DealStage.objects.get(code="CLOSED_WON"))
@@ -147,7 +147,7 @@ def test_seller_is_notified_when_a_payment_is_recorded(chain, django_capture_on_
             chain["invoice"].id,
             chain["buyer_user"],
             amount=Decimal("112"),
-            paid_at=timezone.now().date(),
+            paid_at=timezone.localdate(),
         )
     assert error is None, error
     assert payment is not None
@@ -237,7 +237,7 @@ def test_overdue_delivery_notifies_both_sides_and_reports_honestly(chain):
         deal=chain["deal"],
         contract=chain["contract"],
         status=FulfillmentStatus.objects.get(code="SHIPPED"),
-        expected_delivery_date=timezone.now().date() - timedelta(days=3),
+        expected_delivery_date=timezone.localdate() - timedelta(days=3),
     )
 
     result = check_overdue_deliveries()
@@ -259,7 +259,7 @@ def test_payment_notification_is_not_created_when_the_transaction_rolls_back(cha
         chain["invoice"].id,
         chain["buyer_user"],
         amount=Decimal("50"),
-        paid_at=timezone.now().date(),
+        paid_at=timezone.localdate(),
     )
     assert error is None
     assert payment is not None
@@ -271,7 +271,7 @@ def test_payment_recorded_still_writes_the_ledger_row(chain, django_capture_on_c
     from crm.services.billing import record_payment
 
     with django_capture_on_commit_callbacks(execute=True):
-        record_payment(chain["invoice"].id, chain["buyer_user"], amount=Decimal("112"), paid_at=timezone.now().date())
+        record_payment(chain["invoice"].id, chain["buyer_user"], amount=Decimal("112"), paid_at=timezone.localdate())
 
     chain["invoice"].refresh_from_db()
     assert Payment.objects.filter(invoice=chain["invoice"]).count() == 1

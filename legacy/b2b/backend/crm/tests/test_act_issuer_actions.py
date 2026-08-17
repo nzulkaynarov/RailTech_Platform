@@ -82,7 +82,7 @@ def world(db):
     seller_co = company("Seller A4", "S400", "SUPPLIER")
     seller_user = member(seller_co, "seller@a4.test", can_sell=True, can_buy=False)
     SupplierSubscription.objects.create(
-        company=seller_co, plan="PREMIUM", status="ACTIVE", valid_until=timezone.now().date() + timedelta(days=30)
+        company=seller_co, plan="PREMIUM", status="ACTIVE", valid_until=timezone.localdate() + timedelta(days=30)
     )
 
     deal = Deal.objects.create(title="A4 deal", company=buyer_co, stage=DealStage.objects.get(code="CLOSED_WON"))

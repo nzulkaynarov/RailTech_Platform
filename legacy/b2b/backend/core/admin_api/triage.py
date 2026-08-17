@@ -161,7 +161,7 @@ def _queue_subscriptions() -> list[dict[str, Any]]:
 def _queue_invoices() -> list[dict[str, Any]]:
     from crm.models import Invoice
 
-    today = timezone.now().date()
+    today = timezone.localdate()
     qs = (
         Invoice.objects.select_related("contract", "contract__deal", "contract__deal__company")
         .filter(

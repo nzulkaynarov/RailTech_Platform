@@ -190,6 +190,14 @@ export function RequestItemsEditor({
       toast.error(t('requestItems.nameRequired'));
       return;
     }
+    // Единица измерения обязательна (решение владельца 14-08): без неё продавец не
+    // понимает, за ЧТО назначает цену, а «Кол-во 4» уходит в КП и договор голым числом.
+    // Тот же вердикт выносит сервер (`is_incomplete`) — здесь мы лишь не даём создать
+    // заведомо неполную строку, чтобы человек не узнавал об этом на шаге отправки.
+    if (!newUnit) {
+      toast.error(t('requestItems.unitRequired'));
+      return;
+    }
     try {
       await addItem.mutateAsync({
         dealId,

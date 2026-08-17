@@ -71,7 +71,7 @@ def world(lookups):
         company=seller_co,
         plan="PREMIUM",
         status="ACTIVE",
-        valid_until=timezone.now().date() + timedelta(days=30),
+        valid_until=timezone.localdate() + timedelta(days=30),
     )
     deal = Deal.objects.create(title="W deal", company=buyer_co, stage=DealStage.objects.get(code="DRAFT"))
     DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)

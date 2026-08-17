@@ -99,7 +99,7 @@ def _subscribe(company):
         company=company,
         plan="PREMIUM",
         status="ACTIVE",
-        valid_until=timezone.now().date() + timedelta(days=30),
+        valid_until=timezone.localdate() + timedelta(days=30),
     )
 
 
@@ -339,7 +339,7 @@ def test_cancelled_documents_are_excluded_from_the_chain(world):
 def test_payments_total_sums_only_visible_payments(world):
     contract = _sign_contract(world)
     invoice = _invoice(world, contract, "PARTIAL", paid=Decimal("50"))
-    Payment.objects.create(invoice=invoice, amount=Decimal("50"), paid_at=timezone.now().date())
+    Payment.objects.create(invoice=invoice, amount=Decimal("50"), paid_at=timezone.localdate())
 
     body = _api(world["buyer_user"]).get(_hub_url(world["deal"].id)).json()
     assert body["payments_count"] == 1

@@ -272,7 +272,7 @@ def test_golden_path_rfq_to_closed_won(deal, buyer, manager):
         invoice.id,
         manager,
         amount=invoice.total_incl_vat,
-        paid_at=timezone.now().date(),
+        paid_at=timezone.localdate(),
         manual=True,
     )
     assert err is None, f"record_payment failed: {err}"
@@ -335,7 +335,7 @@ def test_contract_and_billing_events_are_structured(deal, buyer, manager):
     assert issued.event_params == {"number": invoice.number, "deal_id": deal.id}
 
     _, err = crm_services.record_payment(
-        invoice.id, manager, amount=invoice.total_incl_vat, paid_at=timezone.now().date(), manual=True
+        invoice.id, manager, amount=invoice.total_incl_vat, paid_at=timezone.localdate(), manual=True
     )
     assert err is None
     invoice.refresh_from_db()

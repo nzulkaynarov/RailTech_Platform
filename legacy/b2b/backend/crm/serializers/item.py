@@ -30,17 +30,31 @@ class QuoteItemSerializer(serializers.ModelSerializer):
         return obj.product.uom.name if (obj.product_id and obj.product.uom_id) else ""
 
     # UBL data-quality gate: a line must be identified by a name OR an item code
-    # (mpn / ГОСТ-чертёж) OR a matched product. Incomplete lines are highlighted in
-    # the buyer's review grid and block submission until completed.
+    # (mpn / ГОСТ-чертёж) OR a matched product, AND must carry a unit of measure.
+    # Incomplete lines are highlighted in the buyer's review grid and block submission.
+    #
+    # Единица измерения — ОБЯЗАТЕЛЬНА (решение владельца 14-08). Без неё строка не имеет
+    # смысла ни для одной стороны: продавец не понимает, за что назначает цену («10 — чего:
+    # штук, метров, тонн?»), а «Кол-во 4» в КП и в договоре печатается голым числом. В
+    # прогоне клина 14-08 заявка ушла продавцу с прочерками в колонке «Ед.», и это увидели
+    # уже в отправленном документе. Гейт живёт ЗДЕСЬ, рядом с остальными требованиями к
+    # строке: интерфейс лишь отражает вердикт сервера, а не заводит свою вторую правду.
+    #
+    # Годится ЛЮБАЯ из двух форм: нормализованный `unit_code` (UN/ECE, выбор из справочника)
+    # ИЛИ свободный текст `unit` — так импорт прайса и разбор файла ИИ, кладущие «штук» без
+    # кода, не превращаются разом в неполные строки. Ненормализованную единицу грид и так
+    # помечает отдельным предупреждением.
     is_incomplete = serializers.SerializerMethodField()
 
     def get_is_incomplete(self, obj) -> bool:
-        return not (
+        identified = bool(
             (obj.imported_raw_name or "").strip()
             or (obj.mpn or "").strip()
             or (obj.gost_drawing or "").strip()
             or obj.product_id
         )
+        has_unit = bool((obj.unit_code or "").strip() or (obj.unit or "").strip())
+        return not (identified and has_unit)
 
     # Currency travels as its code ("USD") in both directions — the frontend grid
     # (formatMoney) and the manual "Add item" path use the code, never the PK.

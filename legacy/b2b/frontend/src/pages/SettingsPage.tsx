@@ -1,5 +1,5 @@
 /**
- * Settings Hub (spec: Docs/dev/specs/settings-profile-redesign.md, PR 1) — единственный
+ * Settings Hub (spec: Docs/old/specs/settings-profile-redesign.md, PR 1) — единственный
  * хаб настроек: плоский список секций (buildSettingsSections, §2.2) в SettingsLayout
  * вместо «табов над табами». Контент секций монтируется как есть (редизайн — PR 2-4);
  * активная секция синхронизирована с `?section=` через useUrlState (deep-link + refresh).

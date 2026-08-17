@@ -135,7 +135,7 @@ class CompletenessContext:
 
         from master_data.models import HSCode
 
-        today = timezone.now().date()
+        today = timezone.localdate()
         rows = list(HSCode.objects.filter(code__in=codes).values_list("code", "valid_until"))
         self.current_hs_codes = frozenset(
             code for code, valid_until in rows if not (valid_until and valid_until < today)

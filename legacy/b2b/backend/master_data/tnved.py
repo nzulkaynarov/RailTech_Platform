@@ -19,7 +19,6 @@ Celery-задаче на очереди `imports`, а не в request path.
 
 from __future__ import annotations
 
-import datetime
 import logging
 import re
 from pathlib import Path
@@ -121,7 +120,7 @@ def sync_tnved_codes(rows: list[list] | None = None) -> dict:
             "похоже на оборванный ответ, синхронизация прервана, справочник не тронут."
         )
 
-    today = datetime.date.today()
+    today = timezone.localdate()
     now = timezone.now()
     existing = {hs_code.code: hs_code for hs_code in HSCode.objects.all()}
     # На первом наполнении valid_from не проставляем: коды действовали задолго до нас.

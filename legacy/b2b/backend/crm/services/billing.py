@@ -479,7 +479,7 @@ def generate_act(
         invoice=invoice,
         number=_next_act_number(seller_company),
         status=_astatus(ActStatusCode.ISSUED),
-        issued_at=timezone.now().date(),
+        issued_at=timezone.localdate(),
         total_amount=invoice.total_incl_vat,
         # E3: акт рождается выпущенным — редакция шаблона замораживается сразу. Продавец
         # резолвится той же цепочкой, что при рендере (акт зеркалит счёт).

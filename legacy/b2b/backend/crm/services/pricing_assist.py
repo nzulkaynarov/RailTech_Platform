@@ -22,7 +22,7 @@ def suggest_line_pricing(product_id: Optional[int], seller_company_id: Optional[
     КП line. None when the seller has no offer for that product (they price it manually)."""
     if not product_id or not seller_company_id:
         return None
-    today = timezone.now().date()
+    today = timezone.localdate()
     offer = (
         SupplierOffer.objects.filter(product_id=product_id, supplier_id=seller_company_id, is_active=True)
         .filter(Q(valid_from__isnull=True) | Q(valid_from__lte=today))
@@ -55,7 +55,7 @@ def suggest_pricing_for_products(product_ids, seller_company_id: Optional[int]) 
     ids = [pid for pid in set(product_ids or []) if pid]
     if not ids or not seller_company_id:
         return {}
-    today = timezone.now().date()
+    today = timezone.localdate()
     offers = (
         SupplierOffer.objects.filter(product_id__in=ids, supplier_id=seller_company_id, is_active=True)
         .filter(Q(valid_from__isnull=True) | Q(valid_from__lte=today))

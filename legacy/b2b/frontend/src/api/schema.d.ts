@@ -22192,6 +22192,7 @@ export interface operations {
             query?: {
                 product?: number;
                 product__isnull?: boolean;
+                quote?: number;
                 quote__deal_id?: number;
                 /** @description A search term. */
                 search?: string;
@@ -22391,6 +22392,7 @@ export interface operations {
             query?: {
                 product?: number;
                 product__isnull?: boolean;
+                quote?: number;
                 quote__deal_id?: number;
                 /** @description A search term. */
                 search?: string;
@@ -22443,6 +22445,7 @@ export interface operations {
             query?: {
                 product?: number;
                 product__isnull?: boolean;
+                quote?: number;
                 quote__deal_id?: number;
                 /** @description A search term. */
                 search?: string;

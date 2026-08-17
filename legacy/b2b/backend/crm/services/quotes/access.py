@@ -93,7 +93,7 @@ def apply_company_quote_defaults(quote: Quote, company: Optional[Company]) -> Qu
         quote.margin_percent = settings_row.default_margin_percent
         changed.append("margin_percent")
     if settings_row.default_offer_validity_days is not None and quote.valid_until is None:
-        quote.valid_until = timezone.now().date() + timedelta(days=settings_row.default_offer_validity_days)
+        quote.valid_until = timezone.localdate() + timedelta(days=settings_row.default_offer_validity_days)
         changed.append("valid_until")
 
     if changed:
@@ -147,7 +147,7 @@ def reapply_company_defaults(quote: Quote, company: Optional[Company]) -> list:
         quote.margin_percent = settings_row.default_margin_percent
         changed.append("margin_percent")
     if settings_row.default_offer_validity_days is not None:
-        new_valid_until = timezone.now().date() + timedelta(days=settings_row.default_offer_validity_days)
+        new_valid_until = timezone.localdate() + timedelta(days=settings_row.default_offer_validity_days)
         if quote.valid_until != new_valid_until:
             quote.valid_until = new_valid_until
             changed.append("valid_until")
@@ -176,7 +176,7 @@ def compute_default_valid_until(company: Optional[Company]):
     settings_row = CompanySettings.objects.filter(company=company).first()
     if settings_row is None or settings_row.default_offer_validity_days is None:
         return None
-    return timezone.now().date() + timedelta(days=settings_row.default_offer_validity_days)
+    return timezone.localdate() + timedelta(days=settings_row.default_offer_validity_days)
 
 
 def _has_legacy_send_role(actor, company_id: int) -> bool:

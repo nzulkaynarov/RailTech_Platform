@@ -41,7 +41,7 @@ VALID_PERIODS = {"7d": 7, "30d": 30, "90d": 90}
 
 def _daily_series(qs, date_field: str, days: int, value_aggr=None) -> list[dict[str, Any]]:
     """Group a queryset by day into a dense series [{date, count, value}]."""
-    today = timezone.now().date()
+    today = timezone.localdate()
     start = today - timedelta(days=days - 1)
     annotated = (
         qs.filter(**{f"{date_field}__date__gte": start})

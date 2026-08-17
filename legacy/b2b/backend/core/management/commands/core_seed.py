@@ -347,7 +347,7 @@ class Command(BaseCommand):
         # seed_data.json (e.g. {"status": "PAST_DUE"}) to exercise the gate realistically.
         seller_type_codes = {"SUPPLIER"}
         usd = Currency.objects.filter(code="USD").first()
-        today = timezone.now().date()
+        today = timezone.localdate()
         plan_rates = {"BASIC": "150", "STANDARD": "400", "PREMIUM": "900"}
         for company_data in seed_data.get("companies", []):
             codes = set(company_data.get("company_types") or [company_data.get("company_type")])

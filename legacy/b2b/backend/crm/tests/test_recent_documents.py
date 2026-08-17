@@ -123,7 +123,7 @@ def world(lookups):
         company=seller_co,
         plan="PREMIUM",
         status="ACTIVE",
-        valid_until=timezone.now().date() + timedelta(days=30),
+        valid_until=timezone.localdate() + timedelta(days=30),
     )
 
     other_co = _company("Other Seller Co", "O100", "SUPPLIER", kyc="L2_VERIFIED")

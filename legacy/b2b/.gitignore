@@ -5,6 +5,9 @@
 .env
 *.env
 
+# Локальный venv с линтерами версий CI (создаёт `make lint-backend`, см. Makefile)
+.venv-tools/
+
 # Backend
 backend/venv/
 backend/__pycache__/

@@ -765,36 +765,6 @@
       "recentActivity": "Последние события",
       "viewAllLogs": "Все события"
     },
-    "nomenclature": {
-      "title": "Номенклатура",
-      "importExcel": "Импорт из Excel",
-      "masterTitle": "Master",
-      "masterHighlight": "Nomenclature",
-      "subtitle": "Global Product Registry & Taxonomy Control",
-      "description": "Реестр продуктов и управление таксономией",
-      "stats": {
-        "total": "Всего позиций",
-        "domains": "Доменов"
-      },
-      "batchSync": "Batch Sync",
-      "createSKU": "Create SKU",
-      "searchPlaceholder": "SEARCH_BY_SKU_OR_NAME...",
-      "syncingData": "Synchronizing Registry Data...",
-      "emptyState": "Registry entry not found for current filter set",
-      "universal": "UNIVERSAL",
-      "confirmDelete": "Confirm removal of this master record?",
-      "confirmBulkDelete": "Delete {{count}} records permanently?",
-      "operationFailed": "Ошибка операции",
-      "bulkOperationFailed": "Ошибка массовой операции",
-      "selected": "{{count}} SELECTED",
-      "columns": {
-        "objectDescription": "Наименование / SKU",
-        "domainSegment": "Домен",
-        "baseValue": "Цена (FCA)",
-        "eqGroups": "Группы техники",
-        "protoActions": "Действия"
-      }
-    },
     "users": {
       "title": "Персонал",
       "registry": "Реестр",
@@ -1514,7 +1484,6 @@
   },
   "passwordSetup": {
     "title": "Установка пароля",
-    "step": "Шаг 2 из 4",
     "newPassword": "Новый пароль",
     "newPasswordPlaceholder": "Введите пароль",
     "confirmPassword": "Подтвердите пароль",
@@ -1529,7 +1498,8 @@
       "minLength": "Пароль должен быть не менее 8 символов.",
       "confirm": "Подтвердите пароль.",
       "mismatch": "Пароли не совпадают."
-    }
+    },
+    "subtitle": "Придумайте пароль — и аккаунт будет активирован."
   },
   "registration": {
     "title": "Регистрация в RailTech",
@@ -3442,7 +3412,7 @@
     "numCol": "№",
     "noteCol": "Примечание",
     "notePlaceholder": "Примечание (спецификация, ГОСТ…)",
-    "incomplete": "Неполная — добавьте наименование или код",
+    "incomplete": "Неполная строка — нужны название или код и единица измерения",
     "namePlaceholder": "Наименование товара",
     "uploadFile": "Загрузить файл",
     "add": "Добавить",
@@ -3453,7 +3423,7 @@
     "submit": "Отправить заявку поставщику",
     "submitHint": "Проверьте позиции и отправьте заявку — продавец подготовит КП.",
     "submitHintEmpty": "Добавьте хотя бы одну позицию, чтобы отправить заявку.",
-    "submitHintIncomplete": "Заполните подсвеченные строки (название или код), чтобы отправить.",
+    "submitHintIncomplete": "Заполните подсвеченные строки (название или код и единица измерения), чтобы отправить.",
     "submittedToast": "Заявка отправлена поставщику",
     "fromCatalog": "из каталога",
     "gostLabel": "ГОСТ / чертёж",
@@ -3479,7 +3449,8 @@
     "aiSuggestAdded_other": "ИИ нашёл ещё {{count}} поставщиков",
     "aiSuggestNoneNew": "ИИ не нашёл новых поставщиков — список уже полный",
     "removeConfirmTitle": "Удалить позицию?",
-    "removeConfirmDescription": "Позиция «{{name}}» будет удалена из заявки. Восстановить её нельзя — потребуется добавить заново."
+    "removeConfirmDescription": "Позиция «{{name}}» будет удалена из заявки. Восстановить её нельзя — потребуется добавить заново.",
+    "unitRequired": "Выберите единицу измерения — без неё продавец не поймёт, за что назначать цену."
   },
   "requestDetailActions": {
     "titleLabel": "Название заявки",
@@ -3629,8 +3600,8 @@
     "USER_EMAIL_ALREADY_EXISTS": "Пользователь с таким email уже существует",
     "EMAIL_SEND_FAILED": "Не удалось отправить письмо. Попробуйте позже",
     "EMAIL_REQUIRED": "Email обязателен",
-    "SETUP_PASSWORD_INVALID_USER": "Недействительный пользователь",
-    "SETUP_PASSWORD_INVALID_TOKEN": "Недействительный или истёкший токен",
+    "SETUP_PASSWORD_INVALID_USER": "Ссылка недействительна — возможно, вы скопировали её не из письма. Откройте ссылку из письма о регистрации или запросите новую.",
+    "SETUP_PASSWORD_INVALID_TOKEN": "Срок действия ссылки истёк или она уже использована. Запросите новое письмо для входа.",
     "PROFILE_FIELDS_REQUIRED": "Заполните ИНН, название компании и роль",
     "COMPANY_INN_TAKEN": "Компания с таким ИНН уже зарегистрирована. Уточните ИНН или попросите владельца компании пригласить вас.",
     "SALES_MANAGER_ROLE_NOT_FOUND": "Роль SALES_MANAGER не найдена",

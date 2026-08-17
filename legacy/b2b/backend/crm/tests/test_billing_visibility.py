@@ -130,7 +130,7 @@ def world(lookups):
         company=seller_co,
         plan="PREMIUM",
         status="ACTIVE",
-        valid_until=timezone.now().date() + timedelta(days=30),
+        valid_until=timezone.localdate() + timedelta(days=30),
     )
 
     # A competing seller — a real seller (is_seller True) but NOT routed to our deal.
@@ -192,7 +192,7 @@ def billing_docs(world):
         status=InvoiceStatus.objects.get(code="ISSUED"),
         total_incl_vat=Decimal("112"),
     )
-    payment = Payment.objects.create(invoice=invoice, amount=Decimal("112"), paid_at=timezone.now().date())
+    payment = Payment.objects.create(invoice=invoice, amount=Decimal("112"), paid_at=timezone.localdate())
     act = Act.objects.create(
         deal=deal,
         contract=contract,

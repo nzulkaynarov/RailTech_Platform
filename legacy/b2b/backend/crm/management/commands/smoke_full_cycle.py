@@ -252,7 +252,7 @@ class Command(BaseCommand):
             invoice.id,
             manager,
             amount=invoice.total_incl_vat,
-            paid_at=timezone.now().date(),
+            paid_at=timezone.localdate(),
             method="BANK_TRANSFER",
             reference="smoke",
             manual=True,

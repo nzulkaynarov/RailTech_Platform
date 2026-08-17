@@ -147,7 +147,7 @@ def test_quote_expired_writes_event_code_and_params(lookups):
 
     buyer_company = _company("Buyer Co", "CLIENT")
     deal = Deal.objects.create(title="Q", company=buyer_company, stage=DealStage.objects.get(code="DRAFT"))
-    yesterday = timezone.now().date() - timedelta(days=1)
+    yesterday = timezone.localdate() - timedelta(days=1)
     quote = Quote.objects.create(
         deal=deal,
         version=1,

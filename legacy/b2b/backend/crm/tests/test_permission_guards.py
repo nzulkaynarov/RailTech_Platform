@@ -78,7 +78,7 @@ def _op_subscription(company):
         company=company,
         plan="BASIC",
         status="ACTIVE",
-        valid_from=timezone.now().date(),
+        valid_from=timezone.localdate(),
         valid_until=(timezone.now() + timedelta(days=365)).date(),
     )
 
@@ -481,7 +481,7 @@ def test_record_payment_with_perm_passes(lookups, buyer_company, seller_company,
         invoice.id,
         buyer,
         amount=Decimal("112"),
-        paid_at=timezone.now().date(),
+        paid_at=timezone.localdate(),
         method="BANK_TRANSFER",
         reference="REF-PERM-001",
     )
@@ -507,7 +507,7 @@ def test_record_payment_without_perm_denied(lookups, buyer_company, seller_compa
         invoice.id,
         buyer,
         amount=Decimal("112"),
-        paid_at=timezone.now().date(),
+        paid_at=timezone.localdate(),
         method="BANK_TRANSFER",
         reference="REF-NOPERM-002",
     )
@@ -533,7 +533,7 @@ def test_record_payment_legacy_can_buy_passes(lookups, buyer_company, seller_com
         invoice.id,
         buyer,
         amount=Decimal("112"),
-        paid_at=timezone.now().date(),
+        paid_at=timezone.localdate(),
         method="BANK_TRANSFER",
         reference="REF-LEGACY-003",
     )

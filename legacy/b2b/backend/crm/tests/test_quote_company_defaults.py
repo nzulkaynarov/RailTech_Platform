@@ -51,7 +51,7 @@ def test_new_quote_inherits_company_defaults():
     assert quote.cost_currency_default_id == usd.id
     assert quote.vat_rate == Decimal("0.00")
     assert quote.margin_percent == Decimal("18.00")
-    assert quote.valid_until == timezone.now().date() + timedelta(days=21)
+    assert quote.valid_until == timezone.localdate() + timedelta(days=21)
 
 
 def test_defaults_never_overwrite_existing_quote_values():

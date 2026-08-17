@@ -76,7 +76,7 @@ def _member(company, user, *, workspace_role="MEMBER", company_role=None):
 
 def _sub(company):
     SupplierSubscription.objects.create(
-        company=company, plan="PREMIUM", status="ACTIVE", valid_until=timezone.now().date() + timedelta(days=365)
+        company=company, plan="PREMIUM", status="ACTIVE", valid_until=timezone.localdate() + timedelta(days=365)
     )
 
 
@@ -304,7 +304,7 @@ def test_valid_until_populated_on_send_when_configured(lookups):
     with mock.patch("crm.services.quotes.lifecycle.compute_quote_economics", return_value=_clean_econ()):
         QLS.send_to_client(quote.id, seller_user)
     quote.refresh_from_db()
-    assert quote.valid_until == timezone.now().date() + timedelta(days=14)
+    assert quote.valid_until == timezone.localdate() + timedelta(days=14)
 
 
 def test_valid_until_left_none_when_company_unconfigured(lookups):
