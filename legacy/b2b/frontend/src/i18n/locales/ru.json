@@ -4181,7 +4181,8 @@
       },
       "rejected": {
         "title": "КП отклонено клиентом",
-        "detail": "КП v{{version}}"
+        "detail": "КП v{{version}}",
+        "detail_reason": "КП v{{version}} — {{reason}}"
       },
       "item_rematched": {
         "title": "Переназначен продукт в позиции КП",

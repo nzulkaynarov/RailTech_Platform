@@ -277,7 +277,20 @@ def _pending_act_step(acts: list) -> Optional[dict]:
     return _step(STEP_SIGN_ACT, for_viewer=True, page="acts", object_id=issued["id"])
 
 
-def _generate_act_step(acts: list, fulfillment_data: Optional[dict], sides: dict) -> Optional[dict]:
+def _act_source_invoice_id(invoices: list) -> Optional[int]:
+    """Счёт, из панели которого выпускается акт («Generate act» живёт в панели счёта).
+
+    Предпочитаем оплаченный, затем любой выставленный, иначе первый: без `object_id`
+    подсказка «Go to invoices» приводила в реестр БЕЗ открытой панели, и продавец искал
+    кнопку сам (прогон глазами 17-08 — тупик на последнем шаге цепочки)."""
+    for status in (InvoiceStatusCode.PAID, InvoiceStatusCode.PARTIAL, InvoiceStatusCode.ISSUED):
+        found = next((inv for inv in invoices if inv["status"] == status), None)
+        if found is not None:
+            return found["id"]
+    return invoices[0]["id"] if invoices else None
+
+
+def _generate_act_step(acts: list, fulfillment_data: Optional[dict], sides: dict, invoices: list) -> Optional[dict]:
     """Пора выпустить акт — по ФАКТУ ПОСТАВКИ (G1, спека post-contract-open-questions §1).
 
     Раньше подсказка появлялась по оплаченному счёту. Бенчмарк показал, что оплата не является
@@ -290,7 +303,12 @@ def _generate_act_step(acts: list, fulfillment_data: Optional[dict], sides: dict
     delivered = fulfillment_data["status"] in (FulfillmentStatusCode.DELIVERED, FulfillmentStatusCode.ACCEPTED)
     if not delivered:
         return None
-    return _step(STEP_GENERATE_ACT, for_viewer=sides["is_seller_side"], page="invoices")
+    return _step(
+        STEP_GENERATE_ACT,
+        for_viewer=sides["is_seller_side"],
+        page="invoices",
+        object_id=_act_source_invoice_id(invoices),
+    )
 
 
 def _fulfillment_step(fulfillment_data: Optional[dict], sides: dict) -> Optional[dict]:
@@ -327,7 +345,7 @@ def _next_step(*, contract_data, invoices, acts, fulfillment_data, sides) -> Opt
         _pending_act_step(acts),
         _invoice_step(invoices, sides),
         _fulfillment_step(fulfillment_data, sides),
-        _generate_act_step(acts, fulfillment_data, sides),
+        _generate_act_step(acts, fulfillment_data, sides, invoices),
     ):
         if step is not None:
             return step

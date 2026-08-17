@@ -387,7 +387,9 @@ export function RequestItemsEditor({
                     )}
                     </div>
                   ) : (
-                    <span className="text-sm text-muted-foreground">{item.unit || '—'}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {uomLabelKey(item.unit_code) ? t(uomLabelKey(item.unit_code)) : (item.unit || '—')}
+                    </span>
                   )}
                 </TableCell>
                 <TableCell className="text-right">

@@ -27726,14 +27726,6 @@
                         "title": "Сделка",
                         "description": "Сделка, к которой относится КП"
                     },
-                    "version": {
-                        "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 0,
-                        "default": 1,
-                        "title": "Версия",
-                        "description": "Порядковый номер версии КП внутри сделки"
-                    },
                     "status": {
                         "type": "integer",
                         "nullable": true,
@@ -29327,9 +29319,7 @@
                     },
                     "version": {
                         "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 0,
-                        "default": 1,
+                        "readOnly": true,
                         "title": "Версия",
                         "description": "Порядковый номер версии КП внутри сделки"
                     },
@@ -29600,7 +29590,8 @@
                     "subtotal_excl_vat",
                     "total_incl_vat",
                     "updated_at",
-                    "vat_amount"
+                    "vat_amount",
+                    "version"
                 ]
             },
             "QuoteCharge": {
@@ -30189,14 +30180,6 @@
                         "type": "integer",
                         "title": "Сделка",
                         "description": "Сделка, к которой относится КП"
-                    },
-                    "version": {
-                        "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 0,
-                        "default": 1,
-                        "title": "Версия",
-                        "description": "Порядковый номер версии КП внутри сделки"
                     },
                     "status": {
                         "type": "integer",

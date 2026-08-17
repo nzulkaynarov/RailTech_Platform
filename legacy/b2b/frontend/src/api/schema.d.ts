@@ -11221,12 +11221,6 @@ export interface components {
              */
             deal?: number;
             /**
-             * Версия
-             * @description Порядковый номер версии КП внутри сделки
-             * @default 1
-             */
-            version: number;
-            /**
              * Статус
              * @description Текущий статус КП (черновик, отправлено, одобрено)
              */
@@ -12192,9 +12186,8 @@ export interface components {
             /**
              * Версия
              * @description Порядковый номер версии КП внутри сделки
-             * @default 1
              */
-            version: number;
+            readonly version: number;
             /**
              * Номер КП
              * @description Человекочитаемый сквозной номер КП, выдаётся при отправке клиенту (напр. ACME-КП-2026-00001). Пусто, пока КП не отправлено.
@@ -12754,12 +12747,6 @@ export interface components {
              * @description Сделка, к которой относится КП
              */
             deal: number;
-            /**
-             * Версия
-             * @description Порядковый номер версии КП внутри сделки
-             * @default 1
-             */
-            version: number;
             /**
              * Статус
              * @description Текущий статус КП (черновик, отправлено, одобрено)

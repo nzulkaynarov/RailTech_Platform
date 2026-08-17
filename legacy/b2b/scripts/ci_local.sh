@@ -10,7 +10,7 @@
 # Принципы (уроки 14-08 и 17-08):
 #   * «цель отработала» ≠ «цель проверила»: каждый шаг возвращает код выхода
 #     САМОЙ проверки, ничего не глотается через `|| true`;
-#   * deps-lock: пустой `git diff` при УПАВШЕМ pip-compile — ложный OK (файлы
+#   * deps-lock: «файлы не изменились» при УПАВШЕМ pip-compile — ложный OK (файлы
 #     просто не переписаны). Поэтому проверяем и код выхода контейнера, и mtime
 #     обоих локов ПОСЛЕ компиляции;
 #   * бэкенд-тесты идут в контейнере из СВЕЖЕГО образа (docker-build раньше
@@ -105,11 +105,31 @@ step_backend_test() {
     pytest --create-db --cov=. --cov-report=term --cov-fail-under=70 -q -p no:cacheprovider
 }
 
+# Сравниваем НЕ с git-индексом, а со снимком файлов ДО регенерации: иначе корректные, но ещё
+# не закоммиченные schema.json/schema.d.ts всегда давали «дрейф» (в CI сравнение с коммитом —
+# то же самое по смыслу: «регенерация ничего не меняет»). Регенерированные файлы остаются
+# в дереве — при красном шаге их просто нужно закоммитить.
+_snapshot_differs() {
+  local snap_dir="$1"; shift
+  local f changed=0
+  for f in "$@"; do
+    if ! cmp -s "$f" "$snap_dir/$(echo "$f" | tr '/' '_')"; then echo "   изменился: $f"; changed=1; fi
+  done
+  return $changed
+}
+_snapshot_take() {
+  local snap_dir="$1"; shift
+  mkdir -p "$snap_dir"
+  local f; for f in "$@"; do cp "$f" "$snap_dir/$(echo "$f" | tr '/' '_')"; done
+}
+
 step_api_contract() {
+  local files=(backend/schema.json frontend/src/api/schema.d.ts) snap=".ci-local/snap-api"
+  _snapshot_take "$snap" "${files[@]}"
   docker compose exec -T backend python manage.py spectacular --format openapi-json --file schema.json >/dev/null 2>&1
   (cd frontend && npm run gen:api-types >/dev/null)
-  if ! git diff --exit-code --stat -- backend/schema.json frontend/src/api/schema.d.ts; then
-    echo "OpenAPI schema / schema.d.ts устарели — закоммить перегенерированные файлы"; return 1
+  if ! _snapshot_differs "$snap" "${files[@]}"; then
+    echo "OpenAPI schema / schema.d.ts устарели — регенерированные файлы лежат в дереве, закоммить их"; return 1
   fi
 }
 
@@ -122,9 +142,11 @@ step_security() { make security; }
 step_i18n_check() { make i18n-check; }
 
 # deps-lock: linux py3.12 + gcc + libpq-dev + pip-tools==7.5.3, обе компиляции как в джобе.
-# Проверка тройная: код выхода контейнера, mtime обоих локов ПОСЛЕ старта шага, git diff.
+# Проверка тройная: код выхода контейнера, mtime обоих локов ПОСЛЕ старта шага, сравнение со снимком.
 step_deps_lock() {
   local t_start; t_start=$(date +%s)
+  local files=(backend/requirements.txt backend/requirements-dev.txt) snap=".ci-local/snap-deps"
+  _snapshot_take "$snap" "${files[@]}"
   docker run --rm -v "$ROOT/backend:/w" -w /w python:3.12 bash -c '
     set -e
     export PIP_DEFAULT_TIMEOUT=60 PIP_RETRIES=8 PIP_DISABLE_PIP_VERSION_CHECK=1
@@ -141,8 +163,8 @@ step_deps_lock() {
       echo "$f НЕ переписан компиляцией (mtime старее старта шага) — результат недостоверен"; return 1
     fi
   done
-  if ! git diff --exit-code --stat -- backend/requirements.txt backend/requirements-dev.txt; then
-    echo "requirements*.txt разошлись с requirements*.in — закоммить перекомпилированные локи"; return 1
+  if ! _snapshot_differs "$snap" "${files[@]}"; then
+    echo "requirements*.txt разошлись с requirements*.in — перекомпилированные локи лежат в дереве, закоммить их"; return 1
   fi
 }
 

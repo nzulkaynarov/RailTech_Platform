@@ -63,7 +63,12 @@ export const GridTable: React.FC = () => {
 				<Table className="w-full text-left text-sm">
 					<TableHeader className="sticky top-0 z-20 border-b bg-muted">
 						<TableRow>
-							<TableHead className="w-8 px-1 py-2 text-center sticky left-0 z-30 bg-muted">
+							{/* `min-w-8`/`min-w-10` рядом с `w-8`/`w-10`: при `table-layout: auto` браузер даёт
+							    этим колонкам 20px и 28px вместо объявленных 32/40, а sticky-смещение второй
+							    (`left-8` = 32px) считается от объявленной ширины — z-30 непрозрачная шапка
+							    шеврона наезжала на заголовок «Name» и съедала первую букву («ame»).
+							    min-width авто-раскладка уважает. Найдено прогоном глазами 17-08. */}
+							<TableHead className="w-8 min-w-8 px-1 py-2 text-center sticky left-0 z-30 bg-muted">
 								{/* DT7: `onCheckedChange` (not `onClick`) so keyboard toggling reports the same way. */}
 								<Checkbox
 									checked={selection.allSelected ? true : selection.someSelected ? 'indeterminate' : false}
@@ -73,7 +78,7 @@ export const GridTable: React.FC = () => {
 							</TableHead>
 							{/* DT9: `w-10` (was `w-8`) — the chevron + row-error marker stack was cramped. The
 							    name column's sticky offset follows it (left-8 + w-10 → left-18). */}
-							<TableHead className="w-10 px-1 py-2 sticky left-8 z-30 bg-muted" />
+							<TableHead className="w-10 min-w-10 px-1 py-2 sticky left-8 z-30 bg-muted" />
 							{/* B2: `w-full` on the name header makes it the elastic absorber — the table gives it
 							    every pixel the fixed numeric columns don't claim, instead of truncating early. */}
 							{/* B1: the name column is `w-full` (elastic absorber) but NOT horizontally sticky.

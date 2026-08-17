@@ -386,8 +386,10 @@ export function InvoicesPage() {
                           <TableCell>{idx + 1}</TableCell>
                           <TableCell>{it.description}</TableCell>
                           <TableCell>{it.quantity}</TableCell>
-                          <TableCell className="tabular-nums">{it.unit_price_excl_vat}</TableCell>
-                          <TableCell className="tabular-nums">{it.line_total_excl_vat}</TableCell>
+                          {/* Позиции печатались сырой строкой API («1440000.00») рядом с
+                              форматированным итогом «UZS 32,256,000.00» — глазами 17-08. */}
+                          <TableCell className="text-right tabular-nums">{formatCurrency(Number(it.unit_price_excl_vat))}</TableCell>
+                          <TableCell className="text-right tabular-nums">{formatCurrency(Number(it.line_total_excl_vat))}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

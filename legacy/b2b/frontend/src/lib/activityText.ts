@@ -46,5 +46,10 @@ export function activityDetail(t: TFunction, i18n: I18nType, entry: ActivityLike
   const code = entry.event_code;
   if (!code) return entry.detail ?? '';
   const params = localizeParams(t, i18n, entry.event_params ?? {});
-  return localizedOr(t, i18n, `activity.${code}.detail`, params, entry.detail ?? '');
+  // Непустая причина включает i18next-контекст `reason`: у события может быть вариант
+  // `detail_reason` («КП v2 — дорого»), а без причины печатается базовый `detail`. Так лента
+  // не показывает висящее «—» и не падает в русский фолбэк из-за пустого плейсхолдера.
+  const reason = params.reason;
+  const withContext = typeof reason === 'string' && reason.trim() ? { ...params, context: 'reason' } : params;
+  return localizedOr(t, i18n, `activity.${code}.detail`, withContext, entry.detail ?? '');
 }

@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select';
 import { ManualModeBanner } from '@/components/Shared/ManualModeBanner';
 import { useInvoices, useRecordPayment } from '@/hooks/useBilling';
+import { useCurrencyStore } from '@/store/currencyStore';
 import { translateApiError } from '@/lib/apiError';
 
 interface RecordPaymentDialogProps {
@@ -65,6 +66,9 @@ export function RecordPaymentDialog({
     [payableInvoices, invoiceId],
   );
 
+  // Суммы в селекте и подписи «Balance due» — через форматтер валюты, а не сырой строкой
+  // API («32256000.00»): в остальном интерфейсе те же деньги печатаются как «UZS 32,256,000.00».
+  const formatCurrency = useCurrencyStore((s) => s.format);
   const balanceDueStr = selectedInvoice?.balance_due ?? '';
   const balanceDue = Number(balanceDueStr) || 0;
 
@@ -170,7 +174,7 @@ export function RecordPaymentDialog({
                   ) : (
                     payableInvoices.map((inv) => (
                       <SelectItem key={inv.id} value={String(inv.id)}>
-                        {inv.number} · {inv.balance_due} · {t(`invoicesPage.status.${inv.status}`, inv.status)}
+                        {inv.number} · {formatCurrency(Number(inv.balance_due))} · {t(`invoicesPage.status.${inv.status}`, inv.status)}
                       </SelectItem>
                     ))
                   )}
@@ -178,7 +182,7 @@ export function RecordPaymentDialog({
               </Select>
               {selectedInvoice ? (
                 <div className="text-xs text-muted-foreground">
-                  {t('recordPayment.balanceDue', { value: selectedInvoice.balance_due })}
+                  {t('recordPayment.balanceDue', { value: formatCurrency(Number(selectedInvoice.balance_due)) })}
                 </div>
               ) : null}
             </div>

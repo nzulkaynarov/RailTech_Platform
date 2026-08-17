@@ -231,6 +231,10 @@ def test_delivery_asks_the_seller_for_an_act(won_deal):
 
     assert step["code"] == "GENERATE_ACT"
     assert step["for_viewer"] is True, "выпускает акт продавец"
+    # Подсказка ведёт В ПАНЕЛЬ счёта (`#invoices?open=<id>`), а не в пустой реестр: кнопка
+    # «Generate act» живёт в панели, без object_id продавец искал её сам (глазами 17-08).
+    assert step["page"] == "invoices"
+    assert step["object_id"] is not None, "подсказка про акт без счёта — тупик в реестре"
 
 
 def test_delivered_but_unpaid_still_asks_for_payment_first(won_deal):

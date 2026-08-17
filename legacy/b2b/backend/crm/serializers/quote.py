@@ -272,7 +272,14 @@ class QuoteSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+        # Версию КП назначает СЕРВЕР (perform_create: max(version)+1). Без явного отключения
+        # DRF генерирует UniqueTogetherValidator по unique_together=(deal, version) и проверяет
+        # его ДО perform_create с дефолтом version=1 → второй POST на ту же сделку падал 400
+        # «должны производить массив с уникальными значениями»: кнопка «Create new version»
+        # не работала НИКОГДА (v1 у сделки есть всегда). Найдено прогоном глазами 2026-08-17.
+        validators = []
         read_only_fields = [
+            "version",
             "number",
             "subtotal_excl_vat",
             "charges_total",

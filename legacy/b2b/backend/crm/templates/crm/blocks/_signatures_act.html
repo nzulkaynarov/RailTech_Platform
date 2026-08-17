@@ -10,7 +10,9 @@
       <div class="sign-box">
         <div class="role">{% translate "От Поставщика:" %}</div>
         {% firstof seller_profile.legal_name seller.name "—" %}
-        {% if seller_profile.signatory_name %}<div class="sign-line">{% translate "Подписант" as default_signatory %}{{ seller_profile.signatory_position|default:default_signatory }}: {{ seller_profile.signatory_name }}</div>{% else %}<div class="sign-line">{% translate "Подпись / дата" %}</div>{% endif %}
+        {# ПЭП-штампы как в блоке договора: акт двусторонний, подписанный печатал пустые линии (глазами 17-08). #}
+        {% if act.issuer_signer %}<div class="sign-line">{% translate "Простая электронная подпись" %} · {{ act.issuer_signed_at|date:"d.m.Y H:i" }}<br>{% translate "Идентификация:" %} {{ act.issuer_signer.email }}</div>
+        {% elif seller_profile.signatory_name %}<div class="sign-line">{% translate "Подписант" as default_signatory %}{{ seller_profile.signatory_position|default:default_signatory }}: {{ seller_profile.signatory_name }}</div>{% else %}<div class="sign-line">{% translate "Подпись / дата" %}</div>{% endif %}
         <div class="seal">{% translate "М.П." %}</div>
       </div>
     </td>
@@ -18,7 +20,8 @@
       <div class="sign-box">
         <div class="role">{% translate "От Покупателя:" %}</div>
         {% if company %}{{ company.name }}{% else %}{% firstof contact.name "—" %}{% endif %}
-        <div class="sign-line">{% translate "Подпись / дата" %}</div>
+        {% if act.acceptor_signer %}<div class="sign-line">{% translate "Простая электронная подпись" %} · {{ act.acceptor_signed_at|date:"d.m.Y H:i" }}<br>{% translate "Идентификация:" %} {{ act.acceptor_signer.email }}</div>
+        {% else %}<div class="sign-line">{% translate "Подпись / дата" %}</div>{% endif %}
         <div class="seal">{% translate "М.П." %}</div>
       </div>
     </td>

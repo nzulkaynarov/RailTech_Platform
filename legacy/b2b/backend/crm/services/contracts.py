@@ -297,6 +297,19 @@ def viewer_can_sign_manager(user, contract) -> bool:
     return (is_seller(user) or has_sign_perm) and seller_company_routed_to_deal(user, contract.deal_id)
 
 
+def _rerender_pdf_after_signature(contract) -> None:
+    """Перерисовать PDF договора ПОСЛЕ подписи (off-thread, после коммита).
+
+    PDF рендерится при создании и кэшируется; подпись меняет только строки модели. Без
+    перерисовки скачанный «подписанный» договор печатал ПУСТЫЕ линии подписи, хотя шаблон
+    ставит ПЭП-штампы (кто/когда/идентификация). Найдено прогоном глазами 2026-08-17: файл
+    12:46, подписи 13:05, скачивание — старый файл. Тот же рендер, что и при создании."""
+    from ..tasks import render_document_pdf
+
+    contract_id = contract.id
+    transaction.on_commit(lambda: render_document_pdf.delay("contract", contract_id))
+
+
 @transaction.atomic
 def sign_contract_by_client(
     contract_id: int,
@@ -342,6 +355,7 @@ def sign_contract_by_client(
         company_id=contract.deal.company_id,
     )
     _finalize_if_signed(contract)
+    _rerender_pdf_after_signature(contract)
     return contract, None
 
 
@@ -396,6 +410,7 @@ def sign_contract_by_manager(
         company_id=contract.deal.company_id,
     )
     _finalize_if_signed(contract)
+    _rerender_pdf_after_signature(contract)
     return contract, None
 
 

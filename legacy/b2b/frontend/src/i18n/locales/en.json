@@ -4165,7 +4165,8 @@
       },
       "rejected": {
         "title": "Quote rejected by client",
-        "detail": "Quote v{{version}}"
+        "detail": "Quote v{{version}}",
+        "detail_reason": "Quote v{{version}} — {{reason}}"
       },
       "item_rematched": {
         "title": "Product re-matched on quote line",

@@ -137,6 +137,7 @@ def act_block_values(act, invoice, totals, ccy: str, *, seller=None, seller_prof
             render_to_string(
                 "crm/blocks/_signatures_act.html",
                 {
+                    "act": act,
                     "seller": seller,
                     "seller_profile": seller_profile,
                     "company": act.deal.company,

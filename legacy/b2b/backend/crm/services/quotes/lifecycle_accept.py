@@ -137,15 +137,17 @@ def perform_quote_rejection(
         event_params={"client": _quote_client_display_name(quote), "version": quote.version, "reason": reason},
     )
 
-    event_params = {"version": quote.version}
-    detail = f"КП v{quote.version}"
+    # `reason` кладём ВСЕГДА (не только для офлайн-контакта): лента показывает вариант
+    # `detail_reason`, когда причина есть, — до 17-08 продавец видел «КП отклонено клиентом,
+    # КП v2» и нигде на экране не находил, ПОЧЕМУ (найдено прогоном глазами).
+    event_params = {"version": quote.version, "reason": reason}
+    detail = f"КП v{quote.version}" + (f" — {reason}" if reason else "")
     if rejected_by_user is None:
         event_params.update(
             {
                 "channel": "offline_contact",
                 "contact_email": contact_email or "",
                 "ip": request_ip or "",
-                "reason": reason,
             }
         )
         detail = f"КП v{quote.version} — отклонено офлайн-контактом. {reason}".strip()

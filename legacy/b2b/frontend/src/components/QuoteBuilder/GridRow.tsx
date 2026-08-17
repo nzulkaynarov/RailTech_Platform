@@ -261,14 +261,14 @@ const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, m
 					isOptional && 'opacity-60',
 				)}
 			>
-				<TableCell className={cn('w-8 px-1 text-center sticky left-0 z-10', rowPaddingY, stickyBg)}>
+				<TableCell className={cn('w-8 min-w-8 px-1 text-center sticky left-0 z-10', rowPaddingY, stickyBg)}>
 					<RowSelectCheckbox
 						checked={isRowSelected}
 						onToggle={(shiftKey) => selection.toggle(item.id, shiftKey)}
 						ariaLabel={t('quote.bulk.selectRow', { index: index + 1 })}
 					/>
 				</TableCell>
-				<TableCell className={cn('w-10 px-1 text-center sticky left-8 z-10', rowPaddingY, stickyBg)}>
+				<TableCell className={cn('w-10 min-w-10 px-1 text-center sticky left-8 z-10', rowPaddingY, stickyBg)}>
 					{/* Stack vertically: the chevron (20px) + the bulk-error marker (16px) would overflow the
 					    cell side-by-side; column layout keeps both centred and inside the cell. DT9: the
 					    column is `w-10` (40px) so the stacked pair is no longer cramped on narrow screens. */}
@@ -340,7 +340,10 @@ const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, m
 						maxToastKey="quote.validation.qtyTooLarge"
 						maxFractionDigits={0}
 						ariaLabel={t('quote.quantity')}
-						className="h-8 border-none shadow-none rounded-none text-xs font-semibold text-center focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+						// `min-w-[3.5rem]` — тот же урок, что у наценки (14-08): при `table-layout: auto`
+						// колонка ужимается до 37px и «20» читается как «2C». Ширину раздвигает min-width
+						// содержимого, а не класс на <th>. Найдено прогоном клина глазами 17-08.
+						className="h-8 min-w-[3.5rem] border-none shadow-none rounded-none text-xs font-semibold text-center focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
 						dataCellRow={item.id}
 						dataCellCol="quantity"
 						value={item.quantity}
@@ -360,7 +363,10 @@ const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, m
 											max={QUOTE_ITEM_MAX_UNIT_PRICE}
 											maxToastKey="quote.validation.priceTooLarge"
 											ariaLabel={t('quote.basePrice')}
-											className="h-8 w-full border-none shadow-none rounded-none text-xs font-mono text-right pr-2 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+											// `min-w-[7rem]` — до 17-08 полю стоимости оставалось 20px (ячейка 100px делилась
+											// с селектом валюты): продавец вводил 1 200 000 и НЕ ВИДЕЛ ни одной цифры. Корень
+											// тот же, что у наценки 14-08 — `table-layout: auto` игнорирует `w-*` на <th>.
+											className="h-8 w-full min-w-[7rem] border-none shadow-none rounded-none text-xs font-mono text-right pr-2 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
 											dataCellRow={item.id}
 											dataCellCol="frozen_base_price"
 											value={item.frozen_base_price}

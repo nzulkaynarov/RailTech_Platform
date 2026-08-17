@@ -688,6 +688,12 @@ def sign_act(act_id: int, actor: CustomUser, signed_file=None) -> Tuple[Optional
     from .deal_notifications import notify_act_signed
 
     transaction.on_commit(lambda: notify_act_signed(act, actor))
+    # Перерисовать PDF акта после приёмки: кэшированный файл создан при выпуске и не знает о
+    # подписи заказчика (глазами 17-08 — скачанный «подписанный» акт с пустыми линиями).
+    from ..tasks import render_document_pdf
+
+    act_id = act.id
+    transaction.on_commit(lambda: render_document_pdf.delay("act", act_id))
     return act, None
 
 

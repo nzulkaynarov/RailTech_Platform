@@ -5,7 +5,7 @@ import { AlertTriangle, Download, Loader2 } from 'lucide-react';
 import type { Deal, Quote, QuoteDiffFinding } from '@/api/crmApi';
 import { formatDate, formatDateTime } from '@/lib/formatLocale';
 import { crmApi } from '@/api/crmApi';
-import { quoteStatusLabelKey } from '@/lib/codes';
+import { quoteStatusLabelKey, uomLabelKey } from '@/lib/codes';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useQuoteRequestDiff } from '@/hooks/useCRM';
 import { translateApiError } from '@/lib/apiError';
@@ -147,7 +147,12 @@ export function QuoteView({
                       {(item.gost_drawing || item.product_gost) && <span>{t('requestItems.gostLabel')}: {item.gost_drawing || item.product_gost}</span>}
                     </span>
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{item.unit || item.product_uom || '—'}</TableCell>
+                  {/* Единица — по КОДУ через словарь i18n (как в редакторе заявки), иначе EN-интерфейс
+                      печатал «шт.» рядом с «pcs» в соседней таблице (прогон глазами 17-08). Свободный
+                      текст остаётся фолбэком для строк без нормализованного кода. */}
+                  <TableCell className="text-sm text-muted-foreground">
+                    {uomLabelKey(item.unit_code) ? t(uomLabelKey(item.unit_code)) : (item.unit || item.product_uom || '—')}
+                  </TableCell>
                   <TableCell className="text-xs text-muted-foreground">{item.offer_supplier_name || '—'}</TableCell>
                   <TableCell className="text-right tabular-nums">{item.quantity}</TableCell>
                   {isSellerSide && <TableCell className="text-right tabular-nums">{formatCurrency(Number(item.frozen_base_price))}</TableCell>}
