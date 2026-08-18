@@ -1,6 +1,6 @@
 # RailTech B2B SaaS — Claude Code Context
 
-_Last full refresh: 2026-07-06 (HEAD c6cb04f, post PR #229); partial touch-ups: 2026-08-17 (CI GitHub-hosted МЁРТВ по биллингу — владелец решил не платить; мерж по протоколу `make ci-local` — `Docs/dev/ops/merge-without-ci.md`; деплой на self-hosted работает; диск app-VPS 25 %; прогоны глазами C2/C3 → 7 дефектов починены #570 — `Docs/dev/ops/ux-review-2026-08-17-wedge-and-post-contract.md`; единственная живая спека — `plan-remaining-work-2026-08-17.md`); 2026-08-08 (heads catalog 0016 / master_data 0015; направление «Номенклатура» ЗАКРЫТО — треки N1–N4, T1–T4, R1–R7, PR #527–#561; Caddy как управляемый конфиг — PR #551–#554; генеральная уборка Docs — живой осталась одна спека); 2026-08-01 (направление «Документы» ЗАКРЫТО: шаблоны юр-видов E1–E4 + артефакты регистров D2 — PR #496–#506); 2026-07-27 («Документы 2.0», PR #383–#418); 2026-07-12 (2FA/sessions, Settings Hub). Verify against code when in doubt — Rule 6._
+_Last full refresh: 2026-07-06 (HEAD c6cb04f, post PR #229); partial touch-ups: 2026-08-18 (мерж без CI по протоколу `Docs/dev/ops/merge-without-ci.md` + `make ci-local`; правила React Compiler ВКЛЮЧЕНЫ — `set-state-in-effect` и `refs`, исключения точечные и с причиной в файлах; хуки `useDraftState`/`useNow`/`useLatestRef`; бэкапы прод-базы проверяются и сторожатся с app-VPS — `deploy/db/`; `npm audit` чист по всему дереву); partial touch-ups: 2026-08-17 (CI GitHub-hosted МЁРТВ по биллингу — владелец решил не платить; мерж по протоколу `make ci-local` — `Docs/dev/ops/merge-without-ci.md`; деплой на self-hosted работает; диск app-VPS 25 %; прогоны глазами C2/C3 → 7 дефектов починены #570 — `Docs/dev/ops/ux-review-2026-08-17-wedge-and-post-contract.md`; единственная живая спека — `plan-remaining-work-2026-08-17.md`); 2026-08-08 (heads catalog 0016 / master_data 0015; направление «Номенклатура» ЗАКРЫТО — треки N1–N4, T1–T4, R1–R7, PR #527–#561; Caddy как управляемый конфиг — PR #551–#554; генеральная уборка Docs — живой осталась одна спека); 2026-08-01 (направление «Документы» ЗАКРЫТО: шаблоны юр-видов E1–E4 + артефакты регистров D2 — PR #496–#506); 2026-07-27 («Документы 2.0», PR #383–#418); 2026-07-12 (2FA/sessions, Settings Hub). Verify against code when in doubt — Rule 6._
 
 ## Project Overview
 
@@ -82,7 +82,11 @@ frontend/                   # React app
                             #   useMasterData, usePageStats, useSupport, useSystemSettings, useUrlState,
                             #   useViewerMode, useSourcing, useDocuments, useCategoryRequests,
                             #   useCatalogPublishGate, useQuoteSendGate, useDebouncedValue,
-                            #   use-mobile (exports useMediaQuery); hooks/crm/ — ПОДКАТАЛОГ, там useLeads
+                            #   use-mobile (exports useMediaQuery); hooks/crm/ — ПОДКАТАЛОГ, там useLeads.
+                            #   Канон вместо самоделок (18-08): useDraftState — форма/сброс при смене
+                            #   источника (вместо setState в эффекте), useNow — «сейчас» как значение
+                            #   (вместо Date.now() в рендере), useLatestRef — свежее значение для
+                            #   стабильных колбэков (вместо ref.current = value в рендере)
   src/i18n/locales/         # ru.json, en.json
 deploy/caddy/               # Caddy edge config FRAGMENT — источник правды; применяет workflow
                             #   apply-caddy.yml по кнопке, деплой лишь сторожит дрейф (см. Production)
@@ -303,7 +307,17 @@ docker compose exec backend pytest -m "not slow" --create-db                    
 
 - **Python:** black (120 line length), isort (profile=black), flake8; target Python 3.12 (Django 6.0 требует ≥3.12 — образ и CI на 3.12)
 - **Backend deps (INF-05):** `backend/requirements.txt` + `requirements-dev.txt` are GENERATED, hashed pip-compile locks — never hand-edit them. Change a floor/cap in `requirements.{in,dev.in}`, then recompile: `pip-compile --generate-hashes --no-strip-extras requirements.in -o requirements.txt` (+ the `-dev` variant with `-c requirements.txt`) in a linux py3.12 env with `gcc`+`libpq-dev` (pip-tools 7.5.3). The CI `deps-lock` gate fails on drift. psycopg2 is built from source (not `-binary`, INF-09).
-- **TypeScript:** strict mode, ESLint 10 (flat config; в `eslint.config.js` ТОЛЬКО классические `react-hooks/rules-of-hooks` + `exhaustive-deps` — `configs.recommended` плагина v7 тянет правила React Compiler, 77 ошибок по живому коду = отдельная волна), path alias `@/` → `src/`
+- **TypeScript:** strict mode, ESLint 10 (flat config), path alias `@/` → `src/`
+- **Правила React Compiler ВКЛЮЧЕНЫ** (18-08, `eslint-plugin-react-hooks` 7 — весь `configs.recommended`,
+  включая `set-state-in-effect` и `refs`). Это не стиль, а детектор класса багов, которые не ловят ни
+  vitest, ни прогон глазами. Канон вместо самоделок: форма из `useQuery.data` и сброс диалога —
+  `useDraftState`; «подставить единственное значение» / «сбросить выбор при смене выборки» — ВЫЧИСЛЕНИЕ,
+  состояние там лишнее; свежее значение в стабильном колбэке — `useLatestRef` (читать `.current` только
+  ПОСЛЕ коммита; если значение нужно разметке — это состояние, а не ref). Настоящий эффект (подписка,
+  таймер, websocket, разбор URL, императивная загрузка) гасится ТОЧЕЧНО —
+  `eslint-disable-next-line … -- причина` в самом файле, НЕ общим `off` в `eslint.config.js`.
+  Осознанно выключены только `immutability` (hash-навигация ADR-0005), `preserve-manual-memoization`
+  (ref-колбэк виртуализатора) и `use-memo` (`useStaticMemo`) — с обоснованием в конфиге
 - **Styling:** Tailwind v4 utility-first, oklch color tokens, CSS variables, dark mode via `.dark` class
 - **Models:** `AbstractLookup` base for reference tables (code, name, sort_order, is_active)
 - **Serializers:** Nested read, flat write pattern; `_data` suffix for nested representations
