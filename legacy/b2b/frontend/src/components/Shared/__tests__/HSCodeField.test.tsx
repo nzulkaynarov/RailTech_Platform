@@ -13,7 +13,9 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 
 import { renderWithProviders } from '@/test/renderWithProviders';
-import { HSCodeField, formatHSCode, leafName } from '../HSCodeField';
+import { HSCodeField } from '../HSCodeField';
+import { leafName } from '@/lib/hsCode';
+import { formatHSCode } from '@/lib/hsCode';
 import { catalogApi } from '@/api/catalogApi';
 
 vi.mock('@/api/catalogApi', async (importOriginal) => {

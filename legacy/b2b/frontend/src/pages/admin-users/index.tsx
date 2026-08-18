@@ -5,7 +5,8 @@ import { Shield, Check, Pause, Pencil, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/lib/formatLocale';
 import { Button } from '@/components/ui/button';
-import { AdminDataTable, useAdminTableQueryState } from '@/components/Admin/AdminDataTable';
+import { AdminDataTable } from '@/components/Admin/AdminDataTable';
+import { useAdminTableQueryState } from '@/components/Admin/useAdminTableQueryState';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,

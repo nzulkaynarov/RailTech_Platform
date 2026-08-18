@@ -66,11 +66,8 @@ import { useTranslation } from 'react-i18next';
 import { useUserStore } from '@/store/userStore';
 import { useAuthStore } from '@/store/authStore';
 import { NotificationCenter } from '@/components/Layout/NotificationCenter';
-import {
-  CommandPalette,
-  CommandPaletteTrigger,
-  useCommandPaletteShortcut,
-} from '@/components/Layout/CommandPalette';
+import { CommandPalette, CommandPaletteTrigger } from '@/components/Layout/CommandPalette';
+import { useCommandPaletteShortcut } from '@/components/Layout/useCommandPalette';
 import { AdminShortcuts } from '@/components/Admin/AdminShortcuts';
 import { usePlatformDashboard } from '@/hooks/usePageStats';
 import { sidebarDefaultOpen } from './sidebarDefaultOpen';

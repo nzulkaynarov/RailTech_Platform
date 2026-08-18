@@ -1,14 +1,5 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
-import { Handshake, Trash2, ArrowRight } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHeader, TableRow } from '@/components/ui/table';
-import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
+import { useState } from 'react'; import { useTranslation } from 'react-i18next'; import { toast } from 'sonner'; import { Handshake, Trash2, ArrowRight } from 'lucide-react'; import { Card, CardContent } from '@/components/ui/card'; import { Badge } from '@/components/ui/badge'; import { Button } from '@/components/ui/button'; import { Label } from '@/components/ui/label'; import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; import { Table, TableBody, TableCell, TableHeader, TableRow } from '@/components/ui/table'; import { Toolbar, SortableHead, Pager } from '@/components/DataTable';
+import { useListParams, applyListParams } from '@/components/DataTable/listParams';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,

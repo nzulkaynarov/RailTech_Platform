@@ -1,9 +1,5 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { getDomainLabelKey } from '@/config/domainConfig';
-import { toast } from 'sonner';
-import { Package } from 'lucide-react';
-import { Toolbar, useListParams } from '@/components/DataTable';
+import { useState } from 'react'; import { useTranslation } from 'react-i18next'; import { getDomainLabelKey } from '@/config/domainConfig'; import { toast } from 'sonner'; import { Package } from 'lucide-react'; import { Toolbar } from '@/components/DataTable';
+import { useListParams } from '@/components/DataTable/listParams';
 import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';
 import { PageShell } from '../shared/PageShell';
 import {

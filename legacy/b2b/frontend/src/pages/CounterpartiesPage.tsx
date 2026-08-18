@@ -1,23 +1,5 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { activeDateFnsLocale } from '@/lib/formatLocale';
-import { formatDistanceToNow } from 'date-fns';
-import { toast } from 'sonner';
-import {
-  Users, Truck, Clock, History, CheckCircle2, AlertTriangle, XCircle, Info, Send, Loader2,
-} from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
-import {
-  Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle,
-} from '@/components/ui/sheet';
-import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable';
-import { Toolbar, Pager, useListParams, applyListParams } from '@/components/DataTable';
+import { useState } from 'react'; import { useTranslation } from 'react-i18next'; import { activeDateFnsLocale } from '@/lib/formatLocale'; import { formatDistanceToNow } from 'date-fns'; import { toast } from 'sonner'; import {   Users, Truck, Clock, History, CheckCircle2, AlertTriangle, XCircle, Info, Send, Loader2, } from 'lucide-react'; import { Card, CardContent } from '@/components/ui/card'; import { Badge } from '@/components/ui/badge'; import { Button } from '@/components/ui/button'; import { Label } from '@/components/ui/label'; import {   Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/components/ui/select'; import {   Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, } from '@/components/ui/sheet'; import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable'; import { Toolbar, Pager } from '@/components/DataTable';
+import { useListParams, applyListParams } from '@/components/DataTable/listParams';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useRelationships, useUpdateRelationship, useCompanyTimeline, useInviteContact } from '@/hooks/useCRM';
 import { translateApiError } from '@/lib/apiError';

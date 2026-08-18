@@ -108,4 +108,19 @@ export default tseslint.config(
       'railtech/no-arbitrary-text-size': 'error',
     },
   },
+  {
+    // Vendored-примитивы shadcn/ui: апстрим экспортирует варианты (`buttonVariants`,
+    // `badgeVariants`, `useFormField`, `useSidebar`) РЯДОМ с компонентом — это контракт
+    // реестра, компонент возвращается одной командой `npx shadcn add <name>` и любая наша
+    // перестановка при этом затрётся. Правило Fast Refresh здесь только шумит.
+    files: ['src/components/ui/badge.tsx', 'src/components/ui/button.tsx', 'src/components/ui/form.tsx', 'src/components/ui/sidebar.tsx', 'src/components/ui/tabs.tsx', 'src/components/ui/toggle.tsx'],
+    rules: { 'react-refresh/only-export-components': 'off' },
+  },
+  {
+    // Тонкие ре-экспорт-шимы: файл существует РОВНО чтобы старые пути импорта продолжали
+    // работать после распила страницы на пакет. Компонентов он не определяет — Fast Refresh
+    // здесь нечего обновлять.
+    files: ['src/pages/AdminCatalogPage.tsx', 'src/pages/AdminKYCPage.tsx', 'src/pages/AdminUsersPage.tsx', 'src/pages/RequestDetailPage.tsx'],
+    rules: { 'react-refresh/only-export-components': 'off' },
+  },
 )

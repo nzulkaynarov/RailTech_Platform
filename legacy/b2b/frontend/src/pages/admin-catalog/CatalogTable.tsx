@@ -1,10 +1,5 @@
-import { useTranslation } from 'react-i18next';
-import { Package, Pencil, Trash2, Send } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { SortableHead, Pager, applyListParams, type useListParams } from '@/components/DataTable';
+import { useTranslation } from 'react-i18next'; import { Package, Pencil, Trash2, Send } from 'lucide-react'; import { Card, CardContent } from '@/components/ui/card'; import { Badge } from '@/components/ui/badge'; import { Button } from '@/components/ui/button'; import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'; import { SortableHead, Pager } from '@/components/DataTable';
+import { applyListParams, type useListParams } from '@/components/DataTable/listParams';
 import { LoadingRows, EmptyState, ErrorState } from '../shared/PageShell';
 import { productStatusLabelKey } from '@/lib/codes';
 import { getDomainLabelKey } from '@/config/domainConfig';

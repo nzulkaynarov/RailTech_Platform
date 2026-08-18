@@ -1,44 +1,5 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
-import {
-    LifeBuoy, MessageSquare, Send, UserCheck, Lock, Mail,
-} from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import {
-    Table, TableBody, TableCell, TableHeader, TableRow,
-} from '@/components/ui/table';
-import {
-    Sheet, SheetContent, SheetHeader, SheetTitle,
-} from '@/components/ui/sheet';
-import {
-    Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-
-import {
-    useSupportTickets,
-    useSupportTicket,
-    useSupportTicketMessages,
-    useAddSupportMessage,
-    useChangeSupportStatus,
-    useAssignSupportTicket,
-} from '@/hooks/useSupport';
-import type {
-    SupportTicket,
-    SupportTicketStatus,
-    SupportTicketPriority,
-    SupportTicketCategory,
-    SupportTicketListParams,
-} from '@/api/supportApi';
-import {
-    Toolbar, SortableHead, Pager, useListParams,
-} from '@/components/DataTable';
+import { useState } from 'react'; import { useTranslation } from 'react-i18next'; import { toast } from 'sonner'; import {     LifeBuoy, MessageSquare, Send, UserCheck, Lock, Mail, } from 'lucide-react'; import { Card, CardContent } from '@/components/ui/card'; import { Badge } from '@/components/ui/badge'; import { Button } from '@/components/ui/button'; import { Separator } from '@/components/ui/separator'; import { Textarea } from '@/components/ui/textarea'; import { Label } from '@/components/ui/label'; import {     Table, TableBody, TableCell, TableHeader, TableRow, } from '@/components/ui/table'; import {     Sheet, SheetContent, SheetHeader, SheetTitle, } from '@/components/ui/sheet'; import {     Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/components/ui/select'; import { Switch } from '@/components/ui/switch';  import {     useSupportTickets, useSupportTicket, useSupportTicketMessages, useAddSupportMessage, useChangeSupportStatus, useAssignSupportTicket, } from '@/hooks/useSupport'; import type {     SupportTicket, SupportTicketStatus, SupportTicketPriority, SupportTicketCategory, SupportTicketListParams, } from '@/api/supportApi'; import {     Toolbar, SortableHead, Pager } from '@/components/DataTable';
+import { useListParams } from '@/components/DataTable/listParams';
 import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import { translateApiError } from '@/lib/apiError';
 

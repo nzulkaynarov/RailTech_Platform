@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import { formatHSCode, leafName, MIN_QUERY_LENGTH } from '@/lib/hsCode';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 
@@ -7,9 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useHSCodeSuggest, useHSCodeValidation } from '@/hooks/useCatalog';
-
-/** Единый порог начала поиска по справочнику — им пользуется и страница справочника (N4). */
-export const MIN_QUERY_LENGTH = 3;
 
 /**
  * Поле кода ТН ВЭД с автокомплитом по справочнику и МЯГКОЙ валидацией (волна T1).
@@ -176,14 +174,4 @@ export function HSCodeField({ value, onChange, dense = false, placeholder, class
 }
 
 /** «8482100000» → «8482 10 000 0» — так коды печатает сама номенклатура. */
-export function formatHSCode(code: string): string {
-  const digits = (code || '').replace(/\D/g, '');
-  if (digits.length <= 4) return digits;
-  return [digits.slice(0, 4), digits.slice(4, 6), digits.slice(6, 9), digits.slice(9)].filter(Boolean).join(' ');
-}
 
-/** Имя ГТК — путь по дереву через «:»; пользователю показывается СОБСТВЕННОЕ имя позиции. */
-export function leafName(name: string): string {
-  const last = (name || '').split(':').pop() ?? '';
-  return last.trim() || name;
-}

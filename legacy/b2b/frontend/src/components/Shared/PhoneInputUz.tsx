@@ -17,7 +17,7 @@ function nationalFromInput(input: string): string {
 }
 
 /** Raw value to store/submit, e.g. "+998901234567". */
-export function toRawUzPhone(input: string): string {
+function toRawUzPhone(input: string): string {
 	return PREFIX + nationalFromInput(input);
 }
 

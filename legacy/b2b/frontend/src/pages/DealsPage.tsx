@@ -1,13 +1,5 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
-import { FileText, Clock, Eye, Handshake, Loader2, Undo2 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { formatDate } from '@/lib/formatLocale';
-import { Button } from '@/components/ui/button';
-import { StatusBadge, getDealStageVariant } from '@/components/ui/StatusBadge';
-import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable';
-import { Toolbar, Pager, useListParams, applyListParams } from '@/components/DataTable';
+import { useState } from 'react'; import { useTranslation } from 'react-i18next'; import { toast } from 'sonner'; import { FileText, Clock, Eye, Handshake, Loader2, Undo2 } from 'lucide-react'; import { Card, CardContent } from '@/components/ui/card'; import { formatDate } from '@/lib/formatLocale'; import { Button } from '@/components/ui/button'; import { StatusBadge } from '@/components/ui/StatusBadge'; import { getDealStageVariant } from '@/lib/statusVariants'; import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable'; import { Toolbar, Pager } from '@/components/DataTable';
+import { useListParams, applyListParams } from '@/components/DataTable/listParams';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useUserStore } from '@/store/userStore';
 import { useDeals, useDealStages, useClaimDeal, useReleaseDeal } from '@/hooks/useCRM';

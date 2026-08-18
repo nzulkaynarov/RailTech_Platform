@@ -13,7 +13,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 
-import { useListParams } from '../index';
+import { useListParams } from '../listParams';
 
 describe('useListParams — сброс страницы при смене выборки', () => {
   it('смена фильтра обнуляет страницу вместе с фильтром', () => {

@@ -11,7 +11,8 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
 } from '@/components/ui/sheet';
 import { useRoleApplications, useApproveRoleApplication, useRejectRoleApplication } from '@/hooks/useAccounts';
-import { AdminDataTable, useAdminTableQueryState } from '@/components/Admin/AdminDataTable';
+import { AdminDataTable } from '@/components/Admin/AdminDataTable';
+import { useAdminTableQueryState } from '@/components/Admin/useAdminTableQueryState';
 import { AdminDetailLayout } from '@/components/Admin/AdminDetailLayout';
 import { AdminActivityTimeline } from '@/components/Admin/AdminActivityTimeline';
 import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';

@@ -60,7 +60,7 @@ import { NotificationCenter } from '@/components/Layout/NotificationCenter';
 import { SupportButton } from '@/components/Layout/SupportButton';
 import { ChatDrawer } from '@/components/Layout/ChatDrawer';
 import { DocumentSearchDialog } from '@/components/Layout/DocumentSearchDialog';
-import { useCommandPaletteShortcut, useCommandPaletteState } from '@/components/Layout/CommandPalette';
+import { useCommandPaletteShortcut, useCommandPaletteState } from '@/components/Layout/useCommandPalette';
 import { SubscriptionStatusBanner } from '@/components/Shared/SubscriptionStatusBanner';
 import { CartDrawer } from '@/components/ui/CartDrawer';
 import { sidebarDefaultOpen } from './sidebarDefaultOpen';

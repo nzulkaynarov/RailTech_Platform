@@ -10,7 +10,8 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { AdminDataTable, useAdminTableQueryState } from '@/components/Admin/AdminDataTable';
+import { AdminDataTable } from '@/components/Admin/AdminDataTable';
+import { useAdminTableQueryState } from '@/components/Admin/useAdminTableQueryState';
 import { AdminActivityTimeline } from '@/components/Admin/AdminActivityTimeline';
 import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';
 import { DetailKPIGrid } from '@/components/Admin/DetailKPIGrid';

@@ -1,13 +1,5 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Wallet } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { formatDate } from '@/lib/formatLocale';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
-import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
-import { Toolbar, SortableHead, Pager, useListParams, applyListParams } from '@/components/DataTable';
+import { useState } from 'react'; import { useTranslation } from 'react-i18next'; import { Wallet } from 'lucide-react'; import { Card, CardContent } from '@/components/ui/card'; import { formatDate } from '@/lib/formatLocale'; import {   Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from '@/components/ui/table'; import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell'; import { Toolbar, SortableHead, Pager } from '@/components/DataTable';
+import { useListParams, applyListParams } from '@/components/DataTable/listParams';
 import { usePayments } from '@/hooks/useBilling';
 import { DocumentActions } from '@/components/Shared/DocumentActions';
 import { RecordPaymentDialog } from '@/components/Billing/RecordPaymentDialog';

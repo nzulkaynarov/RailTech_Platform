@@ -2,7 +2,7 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+export type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
 type BadgeSize = 'sm' | 'md';
 
 interface StatusBadgeProps {
@@ -57,38 +57,3 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
 
 /* ─── Preset mapping helpers ─── */
 
-const stockVariantMap: Record<string, BadgeVariant> = {
-  IN_STOCK: 'success',
-  ON_ORDER: 'warning',
-  EXPECTED: 'info',
-  OUT_OF_STOCK: 'danger',
-};
-
-export function getStockVariant(status: string): BadgeVariant {
-  return stockVariantMap[status] ?? 'neutral';
-}
-
-const dealStageVariantMap: Record<string, BadgeVariant> = {
-  DRAFT: 'neutral',
-  KYC_PENDING: 'warning',
-  SOURCING: 'info',
-  CALCULATING: 'info',
-  QUOTE_SENT: 'warning',
-  CONTRACT_SIGNED: 'success',
-  CLOSED_WON: 'success',
-  CLOSED_LOST: 'danger',
-};
-
-export function getDealStageVariant(stage: string): BadgeVariant {
-  return dealStageVariantMap[stage] ?? 'neutral';
-}
-
-const kycVariantMap: Record<string, BadgeVariant> = {
-  L1_UNVERIFIED: 'warning',
-  L2_VERIFIED: 'success',
-  L3_CONTRACTED: 'success',
-};
-
-export function getKycVariant(status: string): BadgeVariant {
-  return kycVariantMap[status] ?? 'neutral';
-}

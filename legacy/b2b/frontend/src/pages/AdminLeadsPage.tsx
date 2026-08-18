@@ -7,7 +7,8 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
 } from '@/components/ui/sheet';
 import { useLeads, useConvertLead } from '@/hooks/useCRM';
-import { AdminDataTable, useAdminTableQueryState } from '@/components/Admin/AdminDataTable';
+import { AdminDataTable } from '@/components/Admin/AdminDataTable';
+import { useAdminTableQueryState } from '@/components/Admin/useAdminTableQueryState';
 import { ErrorState, PageShell } from './shared/PageShell';
 import { translateApiError } from '@/lib/apiError';
 import type { Lead } from '@/api/crmApi';

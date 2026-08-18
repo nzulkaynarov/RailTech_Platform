@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { formatHSCode } from '@/components/Shared/HSCodeField';
+import { formatHSCode } from '@/lib/hsCode';
 
 import { ENRICH_FIELD_LABEL_KEY, type EnrichField, type ProductFormState } from './useProductForm';
 

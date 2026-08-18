@@ -1,4 +1,5 @@
 import { FormEvent, useState } from 'react';
+import { operatorPermLabelKey } from '@/lib/operatorPermLabels';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { ShieldCheck, Loader2, Plus, Pencil, Trash2, Lock } from 'lucide-react';
@@ -66,14 +67,6 @@ const OPERATOR_ROLE_ERROR_KEYS: Record<string, string> = {
   ROLE_NAME_TAKEN: 'operatorRoles.errors.ROLE_NAME_TAKEN',
 };
 
-/**
- * i18next uses '.' as its key separator, but operator-permission codes contain
- * dots (e.g. "kyc.verify"). Map the dotted code to a single-segment key under
- * `operatorPermissions` so it resolves against the (nested) locale object.
- */
-export function operatorPermLabelKey(code: string): string {
-  return `operatorPermissions.${code.replace(/\./g, '_')}`;
-}
 
 /** Resolve a thrown axios error to a localized, human-readable message. */
 function resolveOperatorRoleError(

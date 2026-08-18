@@ -4,7 +4,8 @@ import { toast } from 'sonner';
 import { ArrowLeft, Calculator, FileText, Send, FileSignature, AlertTriangle, MessageSquare, ChevronDown, Plus, Wand2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { StatusBadge, getDealStageVariant } from '@/components/ui/StatusBadge';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { getDealStageVariant } from '@/lib/statusVariants';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,

@@ -191,19 +191,6 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
     return v;
 }
 
-export function useCommandPaletteShortcut(onOpen: () => void) {
-    useEffect(() => {
-        const handler = (e: KeyboardEvent) => {
-            if ((e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey)) {
-                e.preventDefault();
-                onOpen();
-            }
-        };
-        window.addEventListener('keydown', handler);
-        return () => window.removeEventListener('keydown', handler);
-    }, [onOpen]);
-}
-
 export function CommandPaletteTrigger({ onOpen }: { onOpen: () => void }) {
     const { t } = useTranslation();
     return (
@@ -220,8 +207,3 @@ export function CommandPaletteTrigger({ onOpen }: { onOpen: () => void }) {
     );
 }
 
-export function useCommandPaletteState(): [boolean, (v: boolean) => void, () => void] {
-    const [open, setOpen] = useState(false);
-    const openPalette = () => setOpen(true);
-    return [open, setOpen, openPalette];
-}

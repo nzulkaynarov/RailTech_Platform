@@ -1,27 +1,5 @@
-import { useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
-import { FileSignature, Send, Ban, Mail, Loader2, Inbox, Link2Off } from 'lucide-react';
-import { translateApiError } from '@/lib/apiError';
-import { formatDate, formatDateTime } from '@/lib/formatLocale';
-import { DocumentActions } from '@/components/Shared/DocumentActions';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import {
-  Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle,
-} from '@/components/ui/sheet';
-import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable';
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
-import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
-import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';
-import {
-  Toolbar, Pager, useListParams, applyListParams,
-} from '@/components/DataTable';
+import { useMemo, useState } from 'react'; import { useTranslation } from 'react-i18next'; import { toast } from 'sonner'; import { FileSignature, Send, Ban, Mail, Loader2, Inbox, Link2Off } from 'lucide-react'; import { translateApiError } from '@/lib/apiError'; import { formatDate, formatDateTime } from '@/lib/formatLocale'; import { DocumentActions } from '@/components/Shared/DocumentActions'; import { Card, CardContent } from '@/components/ui/card'; import { Badge } from '@/components/ui/badge'; import { Button } from '@/components/ui/button'; import { Label } from '@/components/ui/label'; import { Input } from '@/components/ui/input'; import {   Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, } from '@/components/ui/sheet'; import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable'; import {   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, } from '@/components/ui/dialog'; import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell'; import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog'; import {   Toolbar, Pager } from '@/components/DataTable';
+import { useListParams, applyListParams } from '@/components/DataTable/listParams';
 import {
   useGeneratedDocuments, useGeneratedDocument, useIssueDocument, useCancelDocument,
   useUpdateDocumentValues, useSendDocument, useRevokeDocument,

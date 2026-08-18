@@ -1,11 +1,5 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { ShoppingCart, ChevronRight } from 'lucide-react';
-import { useCurrencyStore } from '@/store/currencyStore';
-import { formatDate } from '@/lib/formatLocale';
-import { useDeals } from '@/hooks/useCRM';
-import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
-import { Toolbar, Pager, useListParams, applyListParams } from '@/components/DataTable';
+import { useState } from 'react'; import { useTranslation } from 'react-i18next'; import { ShoppingCart, ChevronRight } from 'lucide-react'; import { useCurrencyStore } from '@/store/currencyStore'; import { formatDate } from '@/lib/formatLocale'; import { useDeals } from '@/hooks/useCRM'; import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell'; import { Toolbar, Pager } from '@/components/DataTable';
+import { useListParams, applyListParams } from '@/components/DataTable/listParams';
 import { CreateDealDialog } from '@/components/CRM/CreateDealDialog';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';

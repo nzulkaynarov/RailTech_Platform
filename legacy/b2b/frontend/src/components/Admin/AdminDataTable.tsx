@@ -697,13 +697,3 @@ export function AdminDataTable<T>(props: AdminDataTableProps<T>): React.ReactNod
  * Small hook for pages that want to read current query state (tab / search / sort)
  * without duplicating the storage-key namespacing convention.
  */
-export function useAdminTableQueryState(storageKey: string) {
-  const urlState = useUrlState();
-  const getParam = (k: keyof typeof QP_KEYS) => urlState.get(`${storageKey}.${QP_KEYS[k]}`);
-  return {
-    search: getParam('search'),
-    tab: getParam('tab'),
-    sort: getParam('sort'),
-    page: Number(getParam('page') || '1') || 1,
-  };
-}

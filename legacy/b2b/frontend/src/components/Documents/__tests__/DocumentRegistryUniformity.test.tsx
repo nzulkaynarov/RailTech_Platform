@@ -14,11 +14,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 
 import { renderWithProviders } from '@/test/renderWithProviders';
-import {
-  DOCUMENT_CORE_COLUMN_ORDER,
-  DocumentRegistry,
-  useDocumentCoreColumns,
-} from '../DocumentRegistry';
+import { DocumentRegistry } from '../DocumentRegistry';
+import { useDocumentCoreColumns, DOCUMENT_CORE_COLUMN_ORDER } from '../useDocumentCoreColumns';
 
 interface Row { id: number; number: string }
 

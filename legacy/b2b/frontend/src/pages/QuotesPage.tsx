@@ -1,39 +1,5 @@
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Card, CardContent } from '@/components/ui/card';
-import { formatDate } from '@/lib/formatLocale';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Calculator, Files, MoreHorizontal, Send, ShieldAlert,
-} from 'lucide-react';
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { NewQuoteDialog } from '@/components/CRM/NewQuoteDialog';
-import { SendQuoteDialog } from '@/components/CRM/SendQuoteDialog';
-import { translateApiError } from '@/lib/apiError';
-import { useUserStore } from '@/store/userStore';
-import { QuoteStatus, quoteStatusLabelKey } from '@/lib/codes';
-import { publicQuoteUrl } from '@/lib/quoteSend';
-import { DocumentActions } from '@/components/Shared/DocumentActions';
-import { useCurrencyStore } from '@/store/currencyStore';
-import { useQuotes, useQuote, useDeal, useQuoteStatuses, useForceApproveQuote, useDuplicateQuote } from '@/hooks/useCRM';
-import { sumMoney } from '@/utils/decimal';
-import type { Quote } from '@/api/crmApi';
-import { toast } from 'sonner';
-import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
-import { Toolbar, Pager, useListParams, applyListParams } from '@/components/DataTable';
+import { useState } from 'react'; import { useTranslation } from 'react-i18next'; import { Card, CardContent } from '@/components/ui/card'; import { formatDate } from '@/lib/formatLocale'; import { Badge } from '@/components/ui/badge'; import { Button } from '@/components/ui/button'; import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable'; import {   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, } from '@/components/ui/dropdown-menu'; import {   Calculator, Files, MoreHorizontal, Send, ShieldAlert, } from 'lucide-react'; import {   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, } from '@/components/ui/alert-dialog'; import { Label } from '@/components/ui/label'; import { Textarea } from '@/components/ui/textarea'; import { NewQuoteDialog } from '@/components/CRM/NewQuoteDialog'; import { SendQuoteDialog } from '@/components/CRM/SendQuoteDialog'; import { translateApiError } from '@/lib/apiError'; import { useUserStore } from '@/store/userStore'; import { QuoteStatus, quoteStatusLabelKey } from '@/lib/codes'; import { publicQuoteUrl } from '@/lib/quoteSend'; import { DocumentActions } from '@/components/Shared/DocumentActions'; import { useCurrencyStore } from '@/store/currencyStore'; import { useQuotes, useQuote, useDeal, useQuoteStatuses, useForceApproveQuote, useDuplicateQuote } from '@/hooks/useCRM'; import { sumMoney } from '@/utils/decimal'; import type { Quote } from '@/api/crmApi'; import { toast } from 'sonner'; import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell'; import { Toolbar, Pager } from '@/components/DataTable';
+import { useListParams, applyListParams } from '@/components/DataTable/listParams';
 
 export function QuotesPage() {
   const { t } = useTranslation();

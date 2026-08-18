@@ -1,17 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Boxes, Loader2, PackagePlus, Plus, SearchX, ShieldAlert, Upload } from 'lucide-react';
-import { toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
-
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable';
-import { Pager, Toolbar, useListParams } from '@/components/DataTable';
+import { useEffect, useMemo, useState } from 'react'; import { useTranslation } from 'react-i18next'; import { Boxes, Loader2, PackagePlus, Plus, SearchX, ShieldAlert, Upload } from 'lucide-react'; import { toast } from 'sonner'; import { useQueryClient } from '@tanstack/react-query';  import { Badge } from '@/components/ui/badge'; import { Button } from '@/components/ui/button'; import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; import { Checkbox } from '@/components/ui/checkbox'; import { Skeleton } from '@/components/ui/skeleton'; import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'; import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable'; import { Pager, Toolbar } from '@/components/DataTable';
+import { useListParams } from '@/components/DataTable/listParams';
 import { ErrorState } from '@/pages/shared/PageShell';
 import { useCatalogPublishGate } from '@/hooks/useCatalogPublishGate';
 import { getDomainLabelKey } from '@/config/domainConfig';

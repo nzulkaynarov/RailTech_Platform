@@ -1,28 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
-import { translateApiError } from '@/lib/apiError';
-import { formatDate } from '@/lib/formatLocale';
-import { Receipt, DollarSign, ScrollText, Send, Ban, Save } from 'lucide-react';
-import { DocumentActions } from '@/components/Shared/DocumentActions';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
-import {
-  Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle,
-} from '@/components/ui/sheet';
-import { Separator } from '@/components/ui/separator';
-import { PageShell } from './shared/PageShell';
-import { DocumentRegistry, useDocumentCoreColumns } from '@/components/Documents/DocumentRegistry';
-import { ManualModeBanner } from '@/components/Shared/ManualModeBanner';
-import { RecordPaymentDialog } from '@/components/Billing/RecordPaymentDialog';
-import { DealLink } from '@/components/Shared/DealLink';
-import { Toolbar, useListParams, applyListParams } from '@/components/DataTable';
+import { useEffect, useMemo, useState } from 'react'; import { useTranslation } from 'react-i18next'; import { toast } from 'sonner'; import { translateApiError } from '@/lib/apiError'; import { formatDate } from '@/lib/formatLocale'; import { Receipt, DollarSign, ScrollText, Send, Ban, Save } from 'lucide-react'; import { DocumentActions } from '@/components/Shared/DocumentActions'; import { Badge } from '@/components/ui/badge'; import { Button } from '@/components/ui/button'; import { Input } from '@/components/ui/input'; import { Textarea } from '@/components/ui/textarea'; import { Label } from '@/components/ui/label'; import {   Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from '@/components/ui/table'; import {   Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, } from '@/components/ui/sheet'; import { Separator } from '@/components/ui/separator'; import { PageShell } from './shared/PageShell'; import { DocumentRegistry } from '@/components/Documents/DocumentRegistry'; import { useDocumentCoreColumns } from '@/components/Documents/useDocumentCoreColumns'; import { ManualModeBanner } from '@/components/Shared/ManualModeBanner'; import { RecordPaymentDialog } from '@/components/Billing/RecordPaymentDialog'; import { DealLink } from '@/components/Shared/DealLink'; import { Toolbar } from '@/components/DataTable';
+import { useListParams, applyListParams } from '@/components/DataTable/listParams';
 import {
   useInvoices, useGenerateAct, useIssueInvoice, useCancelInvoice, useUpdateInvoiceDraft,
 } from '@/hooks/useBilling';
