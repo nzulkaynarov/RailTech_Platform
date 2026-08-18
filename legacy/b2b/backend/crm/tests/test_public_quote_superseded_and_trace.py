@@ -87,3 +87,27 @@ def test_page_has_no_leaked_template_comments(lookups):  # noqa: F811
     body = _page(quote).content.decode()
     assert "{#" not in body and "#}" not in body, "комментарий шаблона утёк на страницу клиента"
     assert "O2:" not in body
+
+
+@pytest.mark.django_db
+def test_returned_state_wording_matches_on_both_screens(lookups):  # noqa: F811
+    """Серверный экран «возвращено» и его JS-двойник говорят ОДНО И ТО ЖЕ.
+
+    Прогон на проде 18-08: серверный блок переименовали в «возвращено продавцу», а блок
+    `#rejected-state`, который скрипт показывает сразу после ответа (без перезагрузки),
+    остался со старым «Предложение отклонено» — клиент видел ОТКАЗ там, где действие
+    называется возвратом. Двойники обязаны совпадать словами.
+    """
+    # 1. Живое КП: на странице есть скрытый JS-двойник и кнопка возврата.
+    live, _ = _make_sent_quote(token="tok_wording_live")
+    live_body = _page(live).content.decode()
+    assert "Вернуть на доработку" in live_body
+    assert "Предложение возвращено продавцу" in live_body, "JS-двойник не переименован"
+    assert "Предложение отклонено" not in live_body
+
+    # 2. Уже возвращённое КП: серверный экран говорит теми же словами.
+    returned, _ = _make_sent_quote(token="tok_wording_returned")
+    APIClient().post(_url(returned, "reject/"), {"reason": "дорого"}, format="json", SERVER_NAME="localhost")
+    returned_body = _page(returned).content.decode()
+    assert "Предложение возвращено продавцу" in returned_body
+    assert "Предложение отклонено" not in returned_body
