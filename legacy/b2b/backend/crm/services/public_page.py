@@ -230,9 +230,16 @@ def reject_from_public_page(quote, reason: str, request_ip: str = ""):
     # дорисовывала успех, не убирая панель действий) и ловил ошибку сервера. Ловим
     # исключение, а не проверяем статус заранее: между проверкой и вызовом остаётся окно
     # гонки — два клика из двух вкладок.
+    # O1: кто вернул КП — в журнал. Ссылку могли переслать, кода на этом действии нет (оно
+    # обратимо, как reject в Odoo), поэтому единственная защита — СЛЕД: e-mail получателя,
+    # которому мы отправляли ссылку, и IP запроса. Без него в ленте было «КП отклонено» без
+    # единой зацепки, кто это сделал.
+    from crm.services.quotes._shared import resolve_quote_recipient
+
+    recipient = resolve_quote_recipient(quote)
     try:
         rejected = QuoteLifecycleService.reject_quote_as_contact(
-            quote.pk, reason=cleaned, contact_email="", request_ip=request_ip or ""
+            quote.pk, reason=cleaned, contact_email=recipient[0] if recipient else "", request_ip=request_ip or ""
         )
     except ValueError:
         return None, "QUOTE_ALREADY_DECIDED"

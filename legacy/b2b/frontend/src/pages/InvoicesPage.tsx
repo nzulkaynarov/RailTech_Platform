@@ -285,6 +285,11 @@ export function InvoicesPage() {
                     <Save className="mr-2 h-4 w-4" />
                     {t('invoicesPage.saveDraft')}
                   </Button>
+                  {/* O3: мягкий слой поверх жёсткого гейта — предупреждаем ДО нажатия, а не
+                      ошибкой в момент выпуска (onboarding-баннер Odoo рядом с блокировкой). */}
+                  {selected.seller_bank_details_ready === false && (
+                    <p className="w-full text-sm text-warning">{t('invoicesPage.bankDetailsMissing')}</p>
+                  )}
                   <Button
                     onClick={onIssue}
                     disabled={issueInvoice.isPending || isViewer}

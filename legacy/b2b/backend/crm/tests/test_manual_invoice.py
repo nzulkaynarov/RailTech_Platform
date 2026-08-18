@@ -54,7 +54,10 @@ def scenario(db):
     usd = Currency.objects.get_or_create(code="USD", defaults={"name": "Dollar", "symbol": "$", "sort_order": 2})[0]
 
     def _seller(name, inn):
-        co = Company.objects.create(name=name, inn=inn, verification_status=vs)
+        # O3: продавец с платёжными реквизитами — иначе `issue_invoice` не выпустит счёт (он неоплатен).
+        co = Company.objects.create(
+            name=name, inn=inn, verification_status=vs, bank_account="20208000900001234567", mfo="00443"
+        )
         co.types.add(CompanyType.objects.get(code="SUPPLIER"))
         _grant_subscription(co)
         user = CustomUser.objects.create_user(email=f"{inn}@s.test", username=f"{inn}@s.test", password="pw")
@@ -66,7 +69,8 @@ def scenario(db):
     seller, seller_user = _seller("Seller A", "3000000001")
     competitor, competitor_user = _seller("Seller B", "3000000002")
 
-    buyer = Company.objects.create(name="Buyer LLC", inn="6600000001")
+    # O3: продавец с платёжными реквизитами — иначе `issue_invoice` не выпустит счёт (он неоплатен).
+    buyer = Company.objects.create(name="Buyer LLC", inn="6600000001", bank_account="20208000900001234567", mfo="00443")
     buyer.types.add(CompanyType.objects.get(code="CLIENT"))
     buyer_user = CustomUser.objects.create_user(email="buyer@b.test", username="buyer@b.test", password="pw")
     CompanyMember.objects.create(

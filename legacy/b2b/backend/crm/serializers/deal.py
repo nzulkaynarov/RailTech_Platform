@@ -138,6 +138,7 @@ class DealListSerializer(serializers.ModelSerializer):
     contact_name = serializers.CharField(source="contact.name", read_only=True, allow_null=True)
     active_quote = QuoteSerializer(read_only=True)
     target_sellers_data = serializers.SerializerMethodField()
+    execution_complete = serializers.SerializerMethodField()
     # Per-seller ownership (ADR-0006 Move 2): these reflect the VIEWER's own company routing.
     assigned_to = serializers.SerializerMethodField()
     assigned_to_name = serializers.SerializerMethodField()
@@ -169,6 +170,16 @@ class DealListSerializer(serializers.ModelSerializer):
         """Seller companies this RFQ is routed to (multi-seller routing)."""
         return _target_sellers_for_viewer(obj, self.context.get("request"))
 
+    def get_execution_complete(self, obj) -> bool:
+        """Исполнение закрыто целиком (оплата + поставка + акт) — НЕ то же, что «сделка выиграна».
+
+        O4: `CLOSED_WON` наступает при подписании договора, когда покупателю ещё платить и
+        принимать. Слово «Завершено» в интерфейсе опирается на этот флаг, а не на стадию.
+        """
+        from crm.services.deal_documents import deal_execution_is_complete
+
+        return deal_execution_is_complete(obj)
+
     class Meta:
         model = Deal
         fields = [
@@ -190,6 +201,7 @@ class DealListSerializer(serializers.ModelSerializer):
             "viewer_is_buyer",
             "active_quote",
             "target_sellers_data",
+            "execution_complete",
             "created_at",
         ]
 
@@ -217,6 +229,7 @@ class DealDetailSerializer(serializers.ModelSerializer):
     viewer_is_buyer = serializers.SerializerMethodField()
     can_edit_request = serializers.SerializerMethodField()
     target_sellers_data = serializers.SerializerMethodField()
+    execution_complete = serializers.SerializerMethodField()
 
     def get_viewer_is_seller(self, obj) -> bool:
         return _viewer_is_seller(obj, self.context.get("request"))
@@ -239,6 +252,16 @@ class DealDetailSerializer(serializers.ModelSerializer):
     def get_target_sellers_data(self, obj) -> list:
         """Seller companies this RFQ is routed to (multi-seller routing)."""
         return _target_sellers_for_viewer(obj, self.context.get("request"))
+
+    def get_execution_complete(self, obj) -> bool:
+        """Исполнение закрыто целиком (оплата + поставка + акт) — НЕ то же, что «сделка выиграна».
+
+        O4: `CLOSED_WON` наступает при подписании договора, когда покупателю ещё платить и
+        принимать. Слово «Завершено» в интерфейсе опирается на этот флаг, а не на стадию.
+        """
+        from crm.services.deal_documents import deal_execution_is_complete
+
+        return deal_execution_is_complete(obj)
 
     def get_can_edit_request(self, obj) -> bool:
         """Whether the current user may add/edit/remove this deal's request rows."""
@@ -276,6 +299,7 @@ class DealDetailSerializer(serializers.ModelSerializer):
             "quotes",
             "can_edit_request",
             "target_sellers_data",
+            "execution_complete",
             "created_at",
             "updated_at",
         ]

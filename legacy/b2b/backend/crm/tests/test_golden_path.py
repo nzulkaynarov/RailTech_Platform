@@ -114,6 +114,9 @@ def _make_company_with_owner(*, name, inn, type_code, email, username):
         name=name,
         inn=inn,
         verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
+        # O3: продавец с платёжными реквизитами — иначе `issue_invoice` не выпустит счёт (он неоплатен).
+        bank_account="20208000900001234567",
+        mfo="00443",
     )
     company.types.add(CompanyType.objects.get(code=type_code))
     # OWNER membership; can_sell / can_buy default to True (see CompanyMember model).

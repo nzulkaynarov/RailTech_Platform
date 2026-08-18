@@ -69,6 +69,9 @@ def _company(name, inn, type_code, *, kyc=None):
         name=name,
         inn=inn,
         verification_status=(VerificationStatus.objects.get(code=kyc) if kyc else None),
+        # O3: продавец с платёжными реквизитами — иначе `issue_invoice` не выпустит счёт (он неоплатен).
+        bank_account="20208000900001234567",
+        mfo="00443",
     )
     company.types.add(CompanyType.objects.get(code=type_code))
     return company

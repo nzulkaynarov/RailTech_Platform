@@ -352,6 +352,33 @@ def _next_step(*, contract_data, invoices, acts, fulfillment_data, sides) -> Opt
     return _step(STEP_DONE, for_viewer=False, page="fulfillments")
 
 
+def deal_execution_is_complete(deal) -> bool:
+    """Исполнение сделки закрыто целиком: акт подписан, счёт оплачен, поставка принята.
+
+    O4 (18-08): «выиграна» и «исполнена» — РАЗНЫЕ шкалы. У Odoo продажная шкала кончается
+    нейтральным «Sales Order», а рядом живут `invoice_status` и `delivery_status`; Salesforce
+    и HubSpot добиваются того же переносом исполнения на другой объект. У нас `CLOSED_WON`
+    ставится при подписании договора — до оплаты и поставки, поэтому слово «Завершено»
+    отдаётся ТОЛЬКО этому предикату (аналог ручного Lock у Odoo — терминальное состояние).
+
+    Считается по фактам, без нового поля: одна функция для списка сделок и для витрин.
+    """
+    from crm.constants import ActStatusCode, FulfillmentStatusCode, InvoiceStatusCode
+
+    invoices = list(deal.invoices.all())
+    if not invoices or any(inv.status_code != InvoiceStatusCode.PAID for inv in invoices):
+        return False
+    acts = list(deal.acts.all())
+    if not acts or any(act.status_code != ActStatusCode.SIGNED for act in acts):
+        return False
+    fulfillment = getattr(deal, "fulfillment", None)
+    # У Fulfillment статус — FK-справочник без свойства `status_code` (в отличие от счёта и акта).
+    fulfillment_code = getattr(getattr(fulfillment, "status", None), "code", None)
+    if fulfillment_code != FulfillmentStatusCode.ACCEPTED:
+        return False
+    return True
+
+
 def deal_document_hub(deal, user, request) -> dict:
     """Цепочка документов сделки + права зрителя + подсказка следующего шага.
 

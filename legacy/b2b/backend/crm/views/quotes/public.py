@@ -121,6 +121,26 @@ class _PublicQuoteBase(APIView):
         return quote, None
 
 
+def _newer_sent_version(quote):
+    """Номер более новой РАЗОСЛАННОЙ редакции того же КП, если она есть.
+
+    Считается по факту, без отдельного статуса: «superseded» — это не состояние документа,
+    а наличие следующей версии на той же сделке (как «Quote Document version» в Salesforce CPQ,
+    где версия — снимок, а живёт одна запись). Учитываются только версии, ДОШЕДШИЕ до клиента
+    (SENT/APPROVED/REJECTED): черновик, который продавец ещё правит, ничего не отменяет.
+    """
+    from crm.models import Quote
+
+    newer = (
+        Quote.objects.filter(deal_id=quote.deal_id, version__gt=quote.version)
+        .filter(status__code__in=(QuoteStatusCode.SENT, QuoteStatusCode.APPROVED, QuoteStatusCode.REJECTED))
+        .order_by("-version")
+        .values_list("version", flat=True)
+        .first()
+    )
+    return newer
+
+
 class PublicQuoteView(_PublicQuoteBase):
     """Content-negotiated public КП: HTML page for browsers, client-projection PDF for downloads."""
 
@@ -165,6 +185,11 @@ class PublicQuoteView(_PublicQuoteBase):
                 "is_open": status_code == QuoteStatusCode.SENT,
                 "is_approved": status_code == QuoteStatusCode.APPROVED,
                 "is_rejected": status_code == QuoteStatusCode.REJECTED,
+                # O2: у ссылки на СТАРУЮ редакцию клиент должен видеть, что цена уже не та.
+                # Эталоны (HubSpot recall&edit, Odoo reset-to-draft) переиздают КП по тому же
+                # адресу; у нас каждая версия несёт свой токен, поэтому старая ссылка живёт
+                # своей жизнью — и без пометки клиент принимал бы устаревшее предложение.
+                "superseded_by_version": _newer_sent_version(quote),
             }
         )
         return render(request, "crm/quote_public_page.html", context)

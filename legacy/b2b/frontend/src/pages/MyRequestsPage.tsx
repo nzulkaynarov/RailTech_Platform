@@ -23,7 +23,7 @@ export function MyRequestsPage() {
   // KPI stats from the same dataset the list renders (no cross-endpoint drift).
   // Tiles are clickable filters synced with the status tab — clicking an active
   // tile clears the filter back to "all".
-  const countBy = (key: string) => myDeals.filter((d) => buyerStatusKey(d.stage_code) === key).length;
+  const countBy = (key: string) => myDeals.filter((d) => buyerStatusKey(d.stage_code, d.execution_complete) === key).length;
   const tile = (key: string) => ({
     label: t(`requestStatus.${key}`),
     value: String(countBy(key)),
@@ -40,7 +40,7 @@ export function MyRequestsPage() {
 
   const byTab = statusTab === 'all'
     ? myDeals
-    : myDeals.filter((d) => buyerStatusKey(d.stage_code) === statusTab);
+    : myDeals.filter((d) => buyerStatusKey(d.stage_code, d.execution_complete) === statusTab);
 
   return (
     <PageShell
@@ -97,7 +97,7 @@ export function MyRequestsPage() {
                 </TableHeader>
                 <TableBody>
                   {pageItems.map((deal: Deal) => {
-                    const status = buyerStatus(deal.stage_code);
+                    const status = buyerStatus(deal.stage_code, deal.execution_complete);
                     return (
                       <TableRow
                         key={deal.id}

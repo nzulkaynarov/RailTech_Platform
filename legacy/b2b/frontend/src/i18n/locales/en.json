@@ -3063,7 +3063,8 @@
     "cancelled": "Invoice cancelled",
     "draftSaved": "Draft saved",
     "cancelConfirmTitle": "Cancel this invoice?",
-    "cancelConfirmDescription": "Invoice {{number}} will be cancelled. This cannot be undone — a new invoice will be needed for payment."
+    "cancelConfirmDescription": "Invoice {{number}} will be cancelled. This cannot be undone — a new invoice will be needed for payment.",
+    "bankDetailsMissing": "Company bank details are empty — the client will have no account to pay to. Settings → Company"
   },
   "paymentsPage": {
     "title": "Payments",
@@ -3671,7 +3672,8 @@
     "NOT_A_SELLER_MEMBER": "Catalog upload is available to members of a seller company",
     "PRODUCT_NOT_PUBLISHED": "The card is not published",
     "PRODUCT_ALREADY_ARCHIVED": "The card is already archived",
-    "PRODUCT_NOT_ARCHIVED": "Only an archived card can be restored"
+    "PRODUCT_NOT_ARCHIVED": "Only an archived card can be restored",
+    "SELLER_BANK_DETAILS_REQUIRED": "Fill in the company bank details — without an account number the client cannot pay this invoice. Settings → Company"
   },
   "fileUpload": {
     "upload": "Upload",
@@ -4164,7 +4166,7 @@
         "detail": "Quote v{{version}} submitted for approval (chain built)"
       },
       "rejected": {
-        "title": "Quote rejected by client",
+        "title": "Quote returned for revision",
         "detail": "Quote v{{version}}",
         "detail_reason": "Quote v{{version}} — {{reason}}"
       },
@@ -4459,7 +4461,7 @@
     "pending": "—",
     "yes": "Yes",
     "decisionAccepted": "Accepted",
-    "decisionRejected": "Rejected",
+    "decisionRejected": "Returned for revision",
     "copyLink": "Copy link",
     "revokeLink": "Revoke link",
     "linkRevokedNote": "Link revoked",
@@ -4471,7 +4473,7 @@
     "revokeTitle": "Revoke the public link?",
     "revokeDescription": "Anyone with the link will no longer be able to open the quote.",
     "newVersionTitle": "Create a new quote version?",
-    "newVersionDescription": "A draft of the next version of this quote will be created for edits and re-sending."
+    "newVersionDescription": "A copy of this quote with all prices and line items will be created — adjust what you need and send it again. The previous revision stays in history."
   },
   "dealDocuments": {
     "title": "Letters & extra documents",
@@ -4702,8 +4704,8 @@
       "message": "{{client}} accepted quote v{{version}}"
     },
     "quote.rejected_by_client": {
-      "title": "Quote rejected by the client",
-      "message": "{{client}} rejected quote v{{version}}. {{reason}}"
+      "title": "Client returned the quote for revision",
+      "message": "{{client}} returned quote v{{version}} for revision. {{reason}}"
     },
     "quote.expired": {
       "title": "Quote expired",

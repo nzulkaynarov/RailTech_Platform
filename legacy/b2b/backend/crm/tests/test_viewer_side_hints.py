@@ -69,7 +69,12 @@ def lookups(db):
 
 def _company(name, inn, *type_codes):
     company = Company.objects.create(
-        name=name, inn=inn, verification_status=VerificationStatus.objects.get(code="L2_VERIFIED")
+        name=name,
+        inn=inn,
+        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
+        # O3: продавец с платёжными реквизитами — иначе `issue_invoice` не выпустит счёт (он неоплатен).
+        bank_account="20208000900001234567",
+        mfo="00443",
     )
     for code in type_codes:
         company.types.add(CompanyType.objects.get(code=code))

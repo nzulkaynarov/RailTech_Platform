@@ -131,6 +131,8 @@
     input[type=text], textarea { width: 100%; padding: 10px 12px; font-size: 15px;
       border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); }
     .code-input { letter-spacing: 6px; font-size: 22px; text-align: center; font-variant-numeric: tabular-nums; }
+    .notice { border-radius: 8px; padding: 12px 14px; font-size: 14px; line-height: 1.45; }
+    .notice-warn { border: 1px solid var(--warn, #b45309); background: rgba(180, 83, 9, .07); color: var(--ink); }
     .msg { margin-top: 10px; font-size: 14px; }
     .msg.error { color: var(--danger); }
     .msg.ok { color: var(--success); }
@@ -301,8 +303,8 @@
             <h2>Предложение принято</h2>
             <p>Спасибо! Коммерческое предложение принято{% if quote.approved_at %} {{ quote.approved_at|date:"d.m.Y H:i" }}{% endif %}. Договор готовится к подписанию — с вами свяжется менеджер.</p>
           {% elif is_rejected %}
-            <h2>Предложение отклонено</h2>
-            <p>Это предложение было отклонено. Свяжитесь с менеджером, если это ошибка.</p>
+            <h2>Предложение возвращено продавцу</h2>
+            <p>Предложение отправлено на доработку — продавец подготовит новую редакцию. Свяжитесь с менеджером, если это ошибка.</p>
           {% else %}
             <h2>Действие недоступно</h2>
             <p>Это предложение сейчас нельзя принять или отклонить онлайн. Свяжитесь с менеджером.</p>
@@ -310,10 +312,23 @@
         </div>
       </div>
 
+      {% if superseded_by_version %}
+      {% comment %}
+        O2: ссылка ведёт на СТАРУЮ редакцию — предупреждаем до того, как клиент примет цену,
+        которой уже нет. Пометка вычисляется по факту наличия более новой разосланной версии.
+        ВАЖНО: только `{% comment %}`. Однострочный `{#…#}` при переносе строки Django НЕ
+        распознаёт как комментарий и печатает его клиенту — поймано прогоном глазами 18-08.
+      {% endcomment %}
+      <div class="notice notice-warn" role="status" style="margin-top:14px">
+        <strong>Есть более новая редакция.</strong>
+        Продавец выпустил редакцию №{{ superseded_by_version }} этого предложения — запросите у менеджера актуальную ссылку.
+      </div>
+      {% endif %}
+
       {% if is_open %}
       <div id="cta" class="cta-row" style="margin-top:14px">
         <button type="button" class="btn btn-primary" id="btn-accept">Принять предложение</button>
-        <button type="button" class="btn btn-danger" id="btn-reject">Отклонить…</button>
+        <button type="button" class="btn" id="btn-reject">Вернуть на доработку…</button>
         <a class="btn" href="?export=pdf">Скачать PDF</a>
         {% if quote.prepared_by.email %}<a class="btn" href="mailto:{{ quote.prepared_by.email }}?subject=Вопрос по КП {{ quote.number }}">Задать вопрос</a>{% endif %}
       </div>
@@ -338,10 +353,10 @@
 
       <!-- Reject: required reason -->
       <div id="reject-panel" class="panel" hidden>
-        <label for="reason">Причина отклонения</label>
-        <textarea id="reason" rows="3" placeholder="Укажите причину…"></textarea>
+        <label for="reason">Что поправить в предложении</label>
+        <textarea id="reason" rows="3" placeholder="Например: не подходит срок поставки или нужна другая цена…"></textarea>
         <div class="cta-row" style="margin-top:12px">
-          <button type="button" class="btn btn-danger" id="btn-confirm-reject">Отклонить предложение</button>
+          <button type="button" class="btn btn-primary" id="btn-confirm-reject">Вернуть продавцу</button>
           <button type="button" class="btn" id="btn-cancel-reject">Отмена</button>
         </div>
         <div class="msg" id="reject-msg" role="status"></div>

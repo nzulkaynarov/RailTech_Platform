@@ -64,11 +64,21 @@ def lookups(db):
 @pytest.fixture
 def world(lookups):
     buyer_co = Company.objects.create(
-        name="Buyer R", inn="B907", verification_status=VerificationStatus.objects.get(code="L2_VERIFIED")
+        name="Buyer R",
+        inn="B907",
+        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
+        # O3: продавец с платёжными реквизитами — иначе `issue_invoice` не выпустит счёт (он неоплатен).
+        bank_account="20208000900001234567",
+        mfo="00443",
     )
     buyer_co.types.add(CompanyType.objects.get(code="CLIENT"))
     seller_co = Company.objects.create(
-        name="Seller R", inn="S907", verification_status=VerificationStatus.objects.get(code="L2_VERIFIED")
+        name="Seller R",
+        inn="S907",
+        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
+        # O3: продавец с платёжными реквизитами — иначе `issue_invoice` не выпустит счёт (он неоплатен).
+        bank_account="20208000900001234567",
+        mfo="00443",
     )
     seller_co.types.add(CompanyType.objects.get(code="SUPPLIER"))
     seller_user = CustomUser.objects.create_user(email="s@reg.test", username="s@reg.test", password="x")

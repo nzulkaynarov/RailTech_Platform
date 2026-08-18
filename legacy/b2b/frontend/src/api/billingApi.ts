@@ -55,6 +55,8 @@ export interface Invoice {
    */
   viewer_can_pay: boolean;
   viewer_can_manage: boolean;
+  /** O3: у продавца заполнены банковские реквизиты — иначе счёт нечем оплатить. */
+  seller_bank_details_ready?: boolean;
   created_at: string;
   updated_at: string;
 }

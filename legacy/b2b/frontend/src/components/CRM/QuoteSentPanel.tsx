@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { CheckCircle2, ChevronRight, Copy, Eye, FilePlus2, Files, Link2Off, Loader2, Send, XCircle } from 'lucide-react';
-import type { Deal, Quote } from '@/api/crmApi';
+import { CheckCircle2, ChevronRight, Copy, Eye, FilePlus2, Link2Off, Loader2, Send, XCircle } from 'lucide-react';
+import type { Quote } from '@/api/crmApi';
 import { publicQuoteUrl, resolveDecision } from '@/lib/quoteSend';
-import { useRevokePublicLink, useCreateQuote, useDuplicateQuote } from '@/hooks/useCRM';
+import { useRevokePublicLink, useDuplicateQuote } from '@/hooks/useCRM';
 import { translateApiError } from '@/lib/apiError';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/alert-dialog';
 
 interface QuoteSentPanelProps {
-  deal: Deal;
   quote: Quote;
 }
 
@@ -40,10 +39,9 @@ function Stage({ label, value, tone, icon }: { label: string; value: string; ton
  * actions (копировать / отозвать публичную ссылку, создать новую версию). Every action degrades
  * gracefully — the link controls appear only when the backend exposes the share token.
  */
-export function QuoteSentPanel({ deal, quote }: QuoteSentPanelProps) {
+export function QuoteSentPanel({ quote }: QuoteSentPanelProps) {
   const { t } = useTranslation();
   const revoke = useRevokePublicLink();
-  const createQuote = useCreateQuote();
   const duplicateQuote = useDuplicateQuote();
   const [revokeOpen, setRevokeOpen] = useState(false);
   const [newVersionOpen, setNewVersionOpen] = useState(false);
@@ -75,28 +73,22 @@ export function QuoteSentPanel({ deal, quote }: QuoteSentPanelProps) {
     });
   };
 
+  // O2 (18-08): «новая версия» = ГЛУБОКАЯ КОПИЯ с ценами, а не пустой черновик. Бенчмарк
+  // (HubSpot «Recall & edit», Salesforce CPQ, PandaDoc, Qwilr, Odoo) показал: НИ ОДИН эталон
+  // не обнуляет цены при переиздании — продавец правит существующее предложение, а не набирает
+  // его заново. Раньше кнопка звала `POST /crm/quotes/` (пустой КП), а копию делала соседняя
+  // «Дублировать»; теперь операция одна, и она делает то, чего ждёт продавец.
   const confirmNewVersion = () => {
-    createQuote.mutate(
-      { deal: deal.id },
-      {
-        onSuccess: () => { toast.success(t('sentPanel.newVersionCreated')); setNewVersionOpen(false); },
-        onError: (err) => toast.error(translateApiError(err)),
-      },
-    );
-  };
-
-  // WP-G1 — one-click «Дублировать» (Odoo Duplicate): deep-copy this КП into a new DRAFT version
-  // and drop the seller straight into the builder of the filled copy. No confirm modal — Odoo
-  // duplicates on one click; the copy is just a draft, harmless if unwanted (PRODUCT RULE 2).
-  const duplicate = () => {
     duplicateQuote.mutate(quote.id, {
       onSuccess: (newQuote) => {
-        toast.success(t('sentPanel.duplicated'));
+        toast.success(t('sentPanel.newVersionCreated'));
+        setNewVersionOpen(false);
         window.location.hash = `deal-quote/${newQuote.deal}`;
       },
       onError: (err) => toast.error(translateApiError(err)),
     });
   };
+
 
   return (
     <div className="rounded-lg border bg-muted/30 p-3">
@@ -142,12 +134,8 @@ export function QuoteSentPanel({ deal, quote }: QuoteSentPanelProps) {
           <span className="text-xs text-muted-foreground">{t('sentPanel.linkRevokedNote')}</span>
         )}
         {/* «Дублировать» (fills a new draft) sits beside «Новая версия» (empty next version). */}
-        <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-xs" onClick={duplicate} disabled={duplicateQuote.isPending}>
-          {duplicateQuote.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Files className="h-3.5 w-3.5" aria-hidden="true" />}
-          {t('sentPanel.duplicate')}
-        </Button>
-        <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-xs" onClick={() => setNewVersionOpen(true)} disabled={createQuote.isPending}>
-          {createQuote.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FilePlus2 className="h-3.5 w-3.5" aria-hidden="true" />}
+        <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-xs" onClick={() => setNewVersionOpen(true)} disabled={duplicateQuote.isPending}>
+          {duplicateQuote.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FilePlus2 className="h-3.5 w-3.5" aria-hidden="true" />}
           {t('sentPanel.newVersion')}
         </Button>
       </div>
@@ -174,8 +162,8 @@ export function QuoteSentPanel({ deal, quote }: QuoteSentPanelProps) {
             <AlertDialogDescription>{t('sentPanel.newVersionDescription')}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={createQuote.isPending}>{t('common.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={(e) => { e.preventDefault(); confirmNewVersion(); }} disabled={createQuote.isPending}>
+            <AlertDialogCancel disabled={duplicateQuote.isPending}>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); confirmNewVersion(); }} disabled={duplicateQuote.isPending}>
               {t('sentPanel.newVersion')}
             </AlertDialogAction>
           </AlertDialogFooter>

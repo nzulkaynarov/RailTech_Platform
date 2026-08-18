@@ -276,7 +276,7 @@ function RecentRequestsCard({ onNavigate }: { onNavigate: (page: string) => void
         </TableHeader>
         <TableBody>
           {recent.map((deal) => {
-            const status = buyerStatus(deal.stage_code);
+            const status = buyerStatus(deal.stage_code, deal.execution_complete);
             const hasTotal = Number(deal.total_value) > 0;
             return (
               <TableRow

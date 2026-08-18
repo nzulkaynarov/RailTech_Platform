@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen, fireEvent } from '@testing-library/react';
 
 import { renderWithProviders } from '@/test/renderWithProviders';
-import type { Deal, Quote } from '@/api/crmApi';
+import type { Quote } from '@/api/crmApi';
 import { QuoteSentPanel } from '@/components/CRM/QuoteSentPanel';
 
 /**
@@ -25,7 +25,6 @@ vi.mock('@/hooks/useCRM', () => ({
   useDuplicateQuote: () => ({ mutate: dup.mutate, isPending: false }),
 }));
 
-const deal = { id: 42, created_at: '' } as Deal;
 const makeQuote = (over: Partial<Quote> = {}): Quote => ({
   id: 100, deal: 42, version: 1, status: 1, status_code: 'SENT', status_name: '',
   items: [], subtotal_excl_vat: '0', vat_amount: '0', total_incl_vat: '0',
@@ -37,16 +36,17 @@ beforeEach(() => {
   window.location.hash = '';
 });
 
-describe('QuoteSentPanel — «Дублировать»', () => {
-  it('renders the duplicate action beside «Новая версия»', () => {
-    renderWithProviders(<QuoteSentPanel deal={deal} quote={makeQuote()} />);
-    expect(screen.getByText('Дублировать')).toBeInTheDocument();
+describe('QuoteSentPanel — «Создать новую версию»', () => {
+  it('показывает ОДНУ операцию переиздания — «Дублировать» больше нет', () => {
+    renderWithProviders(<QuoteSentPanel quote={makeQuote()} />);
     expect(screen.getByText('Создать новую версию')).toBeInTheDocument();
+    expect(screen.queryByText('Дублировать')).not.toBeInTheDocument();
   });
 
-  it('calls the duplicate endpoint with the source id and redirects into the new draft', () => {
-    renderWithProviders(<QuoteSentPanel deal={deal} quote={makeQuote()} />);
-    fireEvent.click(screen.getByText('Дублировать'));
+  it('зовёт глубокую копию с id ИСХОДНОГО КП и уводит в билдер копии', () => {
+    renderWithProviders(<QuoteSentPanel quote={makeQuote()} />);
+    fireEvent.click(screen.getByText('Создать новую версию'));
+    fireEvent.click(screen.getByRole('button', { name: 'Создать новую версию' }));
     expect(dup.mutate).toHaveBeenCalledTimes(1);
     expect(dup.mutate.mock.calls[0][0]).toBe(100); // source quote id
     // Redirect uses the NEW quote's deal id returned by the mutation.

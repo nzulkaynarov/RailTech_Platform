@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-17 18:43+0500\n"
+"POT-Creation-Date: 2026-08-18 13:05+0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -93,7 +93,7 @@ msgstr "KYC"
 #: crm/admin/billing_admin.py:54 crm/admin/billing_admin.py:88
 #: crm/admin/billing_admin.py:134 crm/admin/billing_admin.py:159
 #: crm/admin/deals_admin.py:130 crm/admin/quotes_admin.py:51
-#: crm/models/billing.py:49 crm/models/billing.py:257
+#: crm/models/billing.py:49 crm/models/billing.py:267
 #: crm/models/contracts.py:49 crm/models/documents.py:132
 #: crm/models/fulfillment.py:33 crm/models/quotes.py:57
 #: notifications/admin.py:127 notifications/models.py:187
@@ -2326,7 +2326,7 @@ msgstr "Billing"
 msgid "Пожелание"
 msgstr "Feature request"
 
-#: core/models.py:146 crm/models/billing.py:164
+#: core/models.py:146 crm/models/billing.py:174
 msgid "Другое"
 msgstr "Other"
 
@@ -2568,7 +2568,7 @@ msgid "English"
 msgstr "English"
 
 #: core/tests/test_i18n_activation.py:103 crm/admin/deals_admin.py:58
-#: crm/models/billing.py:32 crm/models/billing.py:234
+#: crm/models/billing.py:32 crm/models/billing.py:244
 #: crm/models/contracts.py:30 crm/models/deals.py:135 crm/models/deals.py:177
 #: crm/models/deals.py:233 crm/models/deals.py:482 crm/models/documents.py:111
 #: crm/models/fulfillment.py:18 crm/models/quotes.py:31
@@ -2848,94 +2848,94 @@ msgstr ""
 msgid "Напоминание об оплате отправлено"
 msgstr "Payment reminder sent"
 
-#: crm/models/billing.py:107 crm/models/billing.py:131
-#: crm/models/billing.py:173
+#: crm/models/billing.py:117 crm/models/billing.py:141
+#: crm/models/billing.py:183
 msgid "Инвойс"
 msgstr "Invoice"
 
-#: crm/models/billing.py:108
+#: crm/models/billing.py:118
 msgid "Инвойсы"
 msgstr "Invoices"
 
-#: crm/models/billing.py:146
+#: crm/models/billing.py:156
 msgid "Позиция инвойса"
 msgstr "Invoice item"
 
-#: crm/models/billing.py:147
+#: crm/models/billing.py:157
 msgid "Позиции инвойсов"
 msgstr "Invoice items"
 
-#: crm/models/billing.py:161
+#: crm/models/billing.py:171
 msgid "Банковский перевод"
 msgstr "Bank transfer"
 
-#: crm/models/billing.py:162
+#: crm/models/billing.py:172
 msgid "Банковская карта"
 msgstr "Bank card"
 
-#: crm/models/billing.py:163
+#: crm/models/billing.py:173
 msgid "Наличные"
 msgstr "Cash"
 
-#: crm/models/billing.py:177
+#: crm/models/billing.py:187
 msgid "Дата платежа"
 msgstr "Payment date"
 
-#: crm/models/billing.py:181
+#: crm/models/billing.py:191
 msgid "Референс / номер операции"
 msgstr "Reference / transaction number"
 
-#: crm/models/billing.py:185
+#: crm/models/billing.py:195
 msgid "Номер квитанции"
 msgstr "Receipt number"
 
-#: crm/models/billing.py:192
+#: crm/models/billing.py:202
 msgid "Подтверждение"
 msgstr "Confirmation"
 
-#: crm/models/billing.py:204
+#: crm/models/billing.py:214
 msgid "Платёж"
 msgstr "Payment"
 
-#: crm/models/billing.py:205
+#: crm/models/billing.py:215
 msgid "Платежи"
 msgstr "Payments"
 
-#: crm/models/billing.py:250
+#: crm/models/billing.py:260
 msgid "Номер акта"
 msgstr "Act number"
 
-#: crm/models/billing.py:280
+#: crm/models/billing.py:290
 msgid "Выпустил (сторона исполнителя)"
 msgstr "Issued by (contractor side)"
 
-#: crm/models/billing.py:282
+#: crm/models/billing.py:292
 msgid "Выпущен"
 msgstr "Issued"
 
-#: crm/models/billing.py:289
+#: crm/models/billing.py:299
 msgid "Принял (сторона заказчика)"
 msgstr "Accepted by (customer side)"
 
-#: crm/models/billing.py:291
+#: crm/models/billing.py:301
 msgid "Принят"
 msgstr "Accepted"
 
-#: crm/models/billing.py:294
+#: crm/models/billing.py:304
 msgid "Причина отклонения"
 msgstr "Rejection Reason"
 
-#: crm/models/billing.py:295
+#: crm/models/billing.py:305
 msgid "Заполняется, когда заказчик отклоняет акт: основание попадает в аудит"
 msgstr ""
 "Filled in when the customer rejects the act: the reason goes into the audit "
 "trail"
 
-#: crm/models/billing.py:299
+#: crm/models/billing.py:309
 msgid "Причина аннулирования"
 msgstr "Cancellation reason"
 
-#: crm/models/billing.py:301
+#: crm/models/billing.py:311
 msgid ""
 "Заполняется, когда акт аннулирует ВЫПУСТИВШАЯ сторона. Отдельно от причины "
 "отклонения: отклонение — ответ заказчика, аннулирование — отзыв исполнителя, "
@@ -2946,19 +2946,19 @@ msgstr ""
 "is the contractor's withdrawal, and mixing them in one field means losing "
 "track of who exactly closed the document."
 
-#: crm/models/billing.py:313
+#: crm/models/billing.py:323
 msgid "Напоминание отправлено"
 msgstr "Reminder sent"
 
-#: crm/models/billing.py:328
+#: crm/models/billing.py:338
 msgid "Формулировки акта"
 msgstr "Act wording"
 
-#: crm/models/billing.py:348
+#: crm/models/billing.py:358
 msgid "Акт"
 msgstr "Act"
 
-#: crm/models/billing.py:349
+#: crm/models/billing.py:359
 msgid "Акты"
 msgstr "Acts"
 

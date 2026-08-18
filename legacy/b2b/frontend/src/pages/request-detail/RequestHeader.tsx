@@ -62,7 +62,7 @@ export function RequestHeader({
             <h1 className="text-2xl font-bold">{deal.title || `#${deal.id}`}</h1>
           )}
           {isBuyerSide ? (
-            <StatusBadge label={t(buyerStatus(deal.stage_code).labelKey)} variant={buyerStatus(deal.stage_code).variant} />
+            <StatusBadge label={t(buyerStatus(deal.stage_code, deal.execution_complete).labelKey)} variant={buyerStatus(deal.stage_code, deal.execution_complete).variant} />
           ) : (
             <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
               {deal.stage_code && DEAL_STAGE_LABEL_KEY[deal.stage_code]

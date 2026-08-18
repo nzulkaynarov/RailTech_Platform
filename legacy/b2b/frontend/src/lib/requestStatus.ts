@@ -47,11 +47,26 @@ export const BUYER_STATUS_ORDER: BuyerStatusKey[] = [
   'cancelled',
 ];
 
-export function buyerStatusKey(stageCode?: string | null): BuyerStatusKey {
-  return STAGE_TO_BUYER[stageCode ?? ''] ?? 'draft';
+/**
+ * Статус заявки глазами ПОКУПАТЕЛЯ.
+ *
+ * O4 (18-08): «сделка выиграна» и «заказ исполнен» — разные шкалы. `CLOSED_WON` наступает при
+ * подписании договора, когда покупателю ещё платить и принимать поставку, поэтому сам по себе
+ * он даёт «В исполнении», а не «Завершено». Слово «Завершено» появляется, только когда сервер
+ * подтвердил закрытую цепочку (`execution_complete`: счёт оплачен, поставка принята, акт
+ * подписан) — это ровно граница, которую держат Odoo (Lock поверх Sales Order), Salesforce
+ * (Opportunity → Order) и HubSpot (сделка → Invoice paid).
+ */
+export function buyerStatusKey(stageCode?: string | null, executionComplete?: boolean): BuyerStatusKey {
+  const key = STAGE_TO_BUYER[stageCode ?? ''] ?? 'draft';
+  if (key === 'completed' && !executionComplete) return 'confirmed';
+  return key;
 }
 
-export function buyerStatus(stageCode?: string | null): { key: BuyerStatusKey; labelKey: string; variant: BadgeVariant } {
-  const key = buyerStatusKey(stageCode);
+export function buyerStatus(
+  stageCode?: string | null,
+  executionComplete?: boolean,
+): { key: BuyerStatusKey; labelKey: string; variant: BadgeVariant } {
+  const key = buyerStatusKey(stageCode, executionComplete);
   return { key, labelKey: `requestStatus.${key}`, variant: VARIANT[key] };
 }

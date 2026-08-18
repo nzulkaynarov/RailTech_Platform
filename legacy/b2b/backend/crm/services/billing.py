@@ -202,6 +202,13 @@ def _render_invoice_pdf(invoice) -> None:
 
     supplier = _invoice_seller_company(invoice)
     invoice_brand = document_brand_context(supplier)
+    # O3: выставленный счёт печатает ЗАМОРОЖЕННЫЕ реквизиты (снимок момента выставления),
+    # а не сегодняшние из профиля — как и замороженный шаблон рядом (E3). Черновик следует
+    # за живым профилем: пока счёт не выставлен, продавец как раз и правит реквизиты.
+    if invoice.frozen_bank_details:
+        profile = invoice_brand.get("seller_profile")
+        if profile is not None:
+            profile.bank_details = invoice.frozen_bank_details
 
     # D1: shared 3-line VAT bridge (+ paid/balance rows). Same block as КП/договор/акт.
     ccy = invoice.currency.code if invoice.currency_id else "UZS"

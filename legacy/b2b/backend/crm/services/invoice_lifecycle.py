@@ -70,6 +70,26 @@ def _assert_seller_may_act_on_invoice(invoice, user) -> Optional[str]:
 
 
 @transaction.atomic
+def _seller_and_bank_details(invoice):
+    """Продавец счёта и его платёжные реквизиты строкой — то же, что печатает документ.
+
+    Единственный источник (Rule 8): собираем из компании-продавца счёта, чтобы гейт выпуска
+    и печатный блок не разошлись — иначе гейт пропустит счёт, на котором реквизитов нет.
+    Возвращает ``(seller_or_None, "р/с: …, МФО: …")``.
+    """
+    from .billing import _invoice_seller_company
+
+    seller = _invoice_seller_company(invoice)
+    if seller is None:
+        return None, ""
+    parts = []
+    if getattr(seller, "bank_account", ""):
+        parts.append(f"р/с: {seller.bank_account}")
+    if getattr(seller, "mfo", ""):
+        parts.append(f"МФО: {seller.mfo}")
+    return seller, ", ".join(parts)
+
+
 def issue_invoice(invoice, user) -> Tuple[Optional[object], Optional[str]]:
     """Issue a DRAFT invoice → ISSUED: stamps the issue date, renders the PDF off-thread and
     notifies the buyer. Seller-side action; only DRAFT invoices can be issued."""
@@ -88,6 +108,18 @@ def issue_invoice(invoice, user) -> Tuple[Optional[object], Optional[str]]:
     if invoice.status_code != InvoiceStatusCode.DRAFT:
         return None, "INVOICE_ALREADY_ISSUED"
 
+    # O3 (18-08): счёт без расчётного счёта неоплатен — печатать его молча нельзя. Паттерн
+    # Odoo RedirectWarning («Go to the Bank Settings…»): не тихий PDF, а внятная ошибка со
+    # ссылкой в настройки. Гейт стоит ИМЕННО на выпуске счёта (как переход draft → open у
+    # HubSpot: «all of the details needed to be sent to the buyer»), КП и договор он не трогает.
+    seller, bank_details = _seller_and_bank_details(invoice)
+    if seller is not None and not bank_details:
+        # Гейт бьёт ТОЛЬКО когда продавец известен, а реквизиты у него пусты — тогда их и
+        # правда некому заполнить, кроме него. Счёт, у которого продавец вообще не выводится
+        # (старые/ручные данные), этот гейт не трогает: там другая проблема, документ и так
+        # печатает «—» вместо ИНН, и запрет выпуска её не решает.
+        return None, "SELLER_BANK_DETAILS_REQUIRED"
+
     invoice.status = _istatus(InvoiceStatusCode.ISSUED)
     invoice.issued_at = timezone.localdate()
     updated = ["status", "issued_at", "updated_at"]
@@ -98,6 +130,10 @@ def issue_invoice(invoice, user) -> Tuple[Optional[object], Optional[str]]:
 
     invoice.frozen_template_body = frozen_body_for(_invoice_seller_company(invoice), "INVOICE")
     updated.append("frozen_template_body")
+    # Снимок реквизитов (Odoo «Recipient Bank» — свойство документа): клиент платит по тому,
+    # что напечатано, и смена банка задним числом не переписывает выставленный счёт.
+    invoice.frozen_bank_details = bank_details
+    updated.append("frozen_bank_details")
     # Срок оплаты отсчитывается от ВЫСТАВЛЕНИЯ, а не от создания черновика: черновик может
     # пролежать неделю, и покупатель получал бы счёт с уже наполовину истёкшим сроком (G1).
     # Дату, выставленную продавцом вручную, не трогаем — это условие конкретного договора.

@@ -407,6 +407,8 @@ export interface Deal {
 	can_edit_request?: boolean;
 	// Seller companies this RFQ is routed to (read-only; populated by routeDeal).
 	target_sellers_data?: SellerCompanyRef[];
+	/** O4: исполнение закрыто целиком (оплата + поставка + акт) — не то же, что «сделка выиграна». */
+	execution_complete?: boolean;
 	created_at: string;
 	updated_at?: string;
 }

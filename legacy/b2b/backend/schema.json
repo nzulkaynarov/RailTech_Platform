@@ -23023,6 +23023,11 @@
                         "description": "Seller companies this RFQ is routed to (multi-seller routing).",
                         "readOnly": true
                     },
+                    "execution_complete": {
+                        "type": "boolean",
+                        "description": "Исполнение закрыто целиком (оплата + поставка + акт) — НЕ то же, что «сделка выиграна».\n\nO4: `CLOSED_WON` наступает при подписании договора, когда покупателю ещё платить и\nпринимать. Слово «Завершено» в интерфейсе опирается на этот флаг, а не на стадию.",
+                        "readOnly": true
+                    },
                     "created_at": {
                         "type": "string",
                         "format": "date-time",
@@ -23046,6 +23051,7 @@
                     "company_name",
                     "contact_name",
                     "created_at",
+                    "execution_complete",
                     "id",
                     "manager_name",
                     "quotes",
@@ -23196,6 +23202,11 @@
                         "description": "Seller companies this RFQ is routed to (multi-seller routing).",
                         "readOnly": true
                     },
+                    "execution_complete": {
+                        "type": "boolean",
+                        "description": "Исполнение закрыто целиком (оплата + поставка + акт) — НЕ то же, что «сделка выиграна».\n\nO4: `CLOSED_WON` наступает при подписании договора, когда покупателю ещё платить и\nпринимать. Слово «Завершено» в интерфейсе опирается на этот флаг, а не на стадию.",
+                        "readOnly": true
+                    },
                     "created_at": {
                         "type": "string",
                         "format": "date-time",
@@ -23211,6 +23222,7 @@
                     "company_name",
                     "contact_name",
                     "created_at",
+                    "execution_complete",
                     "id",
                     "stage_code",
                     "stage_name",
@@ -24392,6 +24404,11 @@
                         "description": "Выставить / отменить / сформировать акт — сторона ПРОДАВЦА.",
                         "readOnly": true
                     },
+                    "seller_bank_details_ready": {
+                        "type": "boolean",
+                        "description": "Есть ли чем оплатить этот счёт — реквизиты продавца заполнены.\n\nO3: гейт выпуска (`SELLER_BANK_DETAILS_REQUIRED`) не должен быть сюрпризом в момент\nнажатия — карточка черновика показывает предупреждение заранее (мягкий слой поверх\nжёсткого, как onboarding-баннер Odoo рядом с блокировкой проводки). ОДИН источник\nправды с гейтом — тот же `_seller_bank_details`, иначе подсказка и запрет разойдутся.",
+                        "readOnly": true
+                    },
                     "created_at": {
                         "type": "string",
                         "format": "date-time",
@@ -24414,6 +24431,7 @@
                     "payments",
                     "pdf_file",
                     "pdf_url",
+                    "seller_bank_details_ready",
                     "status",
                     "status_name",
                     "updated_at",

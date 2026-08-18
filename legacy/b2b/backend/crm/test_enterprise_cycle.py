@@ -98,6 +98,9 @@ def buyer(master_data):
         name="T Buyer LLC",
         inn="1000000001",
         verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
+        # O3: продавец с платёжными реквизитами — иначе `issue_invoice` не выпустит счёт (он неоплатен).
+        bank_account="20208000900001234567",
+        mfo="00443",
     )
     company.types.add(CompanyType.objects.get(code="CLIENT"))
     CompanyMember.objects.create(
@@ -124,6 +127,9 @@ def supplier(master_data):
         name="T Supplier LLC",
         inn="2000000002",
         verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
+        # O3: продавец с платёжными реквизитами — иначе `issue_invoice` не выпустит счёт (он неоплатен).
+        bank_account="20208000900001234567",
+        mfo="00443",
     )
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
     CompanyMember.objects.create(

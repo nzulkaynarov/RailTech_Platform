@@ -8581,6 +8581,13 @@ export interface components {
             /** @description Seller companies this RFQ is routed to (multi-seller routing). */
             readonly target_sellers_data: unknown[];
             /**
+             * @description Исполнение закрыто целиком (оплата + поставка + акт) — НЕ то же, что «сделка выиграна».
+             *
+             *     O4: `CLOSED_WON` наступает при подписании договора, когда покупателю ещё платить и
+             *     принимать. Слово «Завершено» в интерфейсе опирается на этот флаг, а не на стадию.
+             */
+            readonly execution_complete: boolean;
+            /**
              * Дата создания
              * Format: date-time
              */
@@ -8663,6 +8670,13 @@ export interface components {
             readonly active_quote: components["schemas"]["Quote"];
             /** @description Seller companies this RFQ is routed to (multi-seller routing). */
             readonly target_sellers_data: unknown[];
+            /**
+             * @description Исполнение закрыто целиком (оплата + поставка + акт) — НЕ то же, что «сделка выиграна».
+             *
+             *     O4: `CLOSED_WON` наступает при подписании договора, когда покупателю ещё платить и
+             *     принимать. Слово «Завершено» в интерфейсе опирается на этот флаг, а не на стадию.
+             */
+            readonly execution_complete: boolean;
             /**
              * Дата создания
              * Format: date-time
@@ -9255,6 +9269,15 @@ export interface components {
             readonly viewer_can_pay: boolean;
             /** @description Выставить / отменить / сформировать акт — сторона ПРОДАВЦА. */
             readonly viewer_can_manage: boolean;
+            /**
+             * @description Есть ли чем оплатить этот счёт — реквизиты продавца заполнены.
+             *
+             *     O3: гейт выпуска (`SELLER_BANK_DETAILS_REQUIRED`) не должен быть сюрпризом в момент
+             *     нажатия — карточка черновика показывает предупреждение заранее (мягкий слой поверх
+             *     жёсткого, как onboarding-баннер Odoo рядом с блокировкой проводки). ОДИН источник
+             *     правды с гейтом — тот же `_seller_bank_details`, иначе подсказка и запрет разойдутся.
+             */
+            readonly seller_bank_details_ready: boolean;
             /** Format: date-time */
             readonly created_at: string;
             /** Format: date-time */

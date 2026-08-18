@@ -251,7 +251,7 @@ export function DealQuotePage({ dealId, onBack, onNavigate }: DealQuotePageProps
           silent builder with a live status line + link/version actions above the (now frozen) grid. */}
       {quote && quoteSentToBuyer && (
         <div className="px-2 pt-2">
-          <QuoteSentPanel deal={deal} quote={quote} />
+          <QuoteSentPanel quote={quote} />
         </div>
       )}
 
