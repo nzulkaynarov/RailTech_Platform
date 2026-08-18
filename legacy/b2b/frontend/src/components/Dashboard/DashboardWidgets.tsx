@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useNow } from '@/hooks/useNow';
 import { useTranslation } from 'react-i18next';
 import {
   ClipboardCheck, PenLine, FileWarning, FileClock, FileCheck2, FilePlus2, Wallet, ScrollText,
@@ -162,8 +163,11 @@ export function SellerAttentionStrip({ onNavigate }: { onNavigate: (p: string) =
     .filter((d) => isUnclaimedRfq(d))
     .reduce<string | null>((oldest, d) => (!oldest || (d.created_at ?? '') < oldest ? d.created_at ?? oldest : oldest), null);
   const oldestWaiting = formatWaiting(t, oldestUnclaimed);
+  // `now` из хука, а не `Date.now()` в рендере: счётчик просрочки живёт своей жизнью и
+  // обновляется сам, а рендер остаётся чистым (react-hooks/purity).
+  const now = useNow();
   const expiredQuotes = (quotes ?? []).filter(
-    (q) => ACTIVE_QUOTE_STATUSES.includes(q.status_code) && q.valid_until && new Date(q.valid_until).getTime() < Date.now(),
+    (q) => ACTIVE_QUOTE_STATUSES.includes(q.status_code) && q.valid_until && new Date(q.valid_until).getTime() < now,
   ).length;
 
   const items: AttentionItem[] = [

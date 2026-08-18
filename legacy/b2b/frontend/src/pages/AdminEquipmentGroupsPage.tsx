@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
+import { useDraftState } from '@/hooks/useDraftState';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Factory, Pencil, Trash2 } from 'lucide-react';
@@ -31,9 +32,8 @@ function GroupFormSheet({
   const { t } = useTranslation();
   const createMut = useCreateEquipmentGroup();
   const updateMut = useUpdateEquipmentGroup();
-  const [draft, setDraft] = useState<Draft>(() => target ?? { name: '' });
+  const [draft, setDraft] = useDraftState<EquipmentGroup | null, Draft>(target, (t) => t ?? { name: '' });
 
-  useMemo(() => setDraft(target ?? { name: '' }), [target]);
 
   const busy = createMut.isPending || updateMut.isPending;
   const isEdit = Boolean(target?.id);

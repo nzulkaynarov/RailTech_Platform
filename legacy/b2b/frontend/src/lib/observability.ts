@@ -32,6 +32,5 @@ export function captureError(error: unknown, context?: Record<string, unknown>):
     return;
   }
   // Dev/no-DSN fallback: keep it visible in the console.
-  // eslint-disable-next-line no-console
   console.error('[observability] captured error:', error, context ?? '');
 }

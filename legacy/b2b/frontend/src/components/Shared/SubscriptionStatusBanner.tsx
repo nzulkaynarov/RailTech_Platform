@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useNow } from '@/hooks/useNow';
 import { useTranslation } from 'react-i18next';
 import { AlertCircle, Clock, Pause, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -26,6 +27,8 @@ export function SubscriptionStatusBanner({ onNavigate, onDismiss }: Subscription
   const role = useUserStore((s) => s.role);
   const sellerSubscriptionOperational = useUserStore((s) => s.sellerSubscriptionOperational);
   const { data: sub } = useMySubscription();
+  // Часы для «осталось дней»: чистый рендер + баннер сам переходит в «истекла» без перезагрузки.
+  const now = useNow();
 
   const relevantForRole =
     activeStatus === 'SELLER';
@@ -65,7 +68,7 @@ export function SubscriptionStatusBanner({ onNavigate, onDismiss }: Subscription
       };
     }
     if (sub.valid_until) {
-      const diff = new Date(sub.valid_until).getTime() - Date.now();
+      const diff = new Date(sub.valid_until).getTime() - now;
       const days = Math.ceil(diff / 86_400_000);
       if (diff < 0) {
         return {
@@ -85,7 +88,7 @@ export function SubscriptionStatusBanner({ onNavigate, onDismiss }: Subscription
       }
     }
     return null;
-  }, [role, relevantForRole, sub, sellerSubscriptionOperational, t]);
+  }, [role, relevantForRole, sub, sellerSubscriptionOperational, now, t]);
 
   if (!alert) return null;
 

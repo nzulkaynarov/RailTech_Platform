@@ -77,7 +77,6 @@ export function ConversationalRequest({ dealId }: { dealId: number }) {
     for (let index = 0; index < proposed.length; index += 1) {
       if (!accepted.has(index)) {
         // Sequential so the backend stage/quote bootstrap stays consistent.
-        // eslint-disable-next-line no-await-in-loop
         await acceptOne(proposed[index], index);
       }
     }

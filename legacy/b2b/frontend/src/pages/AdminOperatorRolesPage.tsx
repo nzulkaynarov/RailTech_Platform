@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { ShieldCheck, Loader2, Plus, Pencil, Trash2, Lock } from 'lucide-react';
@@ -111,14 +111,22 @@ function OperatorRoleEditorSheet({ open, onOpenChange, editingRole }: RoleSheetP
   const [description, setDescription] = useState('');
   const [selectedPerms, setSelectedPerms] = useState<Set<string>>(new Set());
 
-  // Sync state when sheet opens or editingRole changes.
-  useMemo(() => {
+  // Пересобрать форму, когда лист открылся или сменилась роль. Раньше синхронизацию делал
+  // `useMemo` — побочный эффект в мемо, который React вправе пересчитать в любой момент
+  // (react-hooks/set-state-in-render). Здесь официальный паттерн React «adjusting state when
+  // props change»: сравнение с предыдущими значениями прямо в рендере, без промежуточного кадра.
+  const [syncedFor, setSyncedFor] = useState<{ open: boolean; role: OperatorRole | null }>({
+    open,
+    role: editingRole,
+  });
+  if (syncedFor.open !== open || syncedFor.role !== editingRole) {
+    setSyncedFor({ open, role: editingRole });
     if (open) {
       setName(editingRole?.name ?? '');
       setDescription(editingRole?.description ?? '');
       setSelectedPerms(new Set(editingRole?.permissions ?? []));
     }
-  }, [open, editingRole]);
+  }
 
   function togglePerm(code: string) {
     setSelectedPerms((prev) => {

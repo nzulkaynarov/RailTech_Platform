@@ -206,13 +206,19 @@ export function AdminDataTable<T>(props: AdminDataTableProps<T>): React.ReactNod
   // Selection state
   const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
   useEffect(() => {
-    // clear selection when rows fundamentally change
+    // Отбрасываем из выборки строки, которых больше нет. Апдейтер возвращает ПРЕЖНИЙ Set,
+    // когда состав не изменился: `getRowId` во всех шести местах передаётся инлайн-стрелкой,
+    // то есть новая функция на каждый рендер родителя — раньше эффект срабатывал каждый раз
+    // и всегда создавал новый Set, а значит перерисовывал всю тяжёлую админ-таблицу и панель
+    // массовых действий. Найдено триажем правил React Compiler 18-08.
     setSelectedIds((prev) => {
+      if (prev.size === 0) return prev;
       const valid = new Set<string | number>();
       for (const row of rows) {
         const id = getRowId(row);
         if (prev.has(id)) valid.add(id);
       }
+      if (valid.size === prev.size) return prev;
       return valid;
     });
   }, [rows, getRowId]);

@@ -165,16 +165,23 @@ export function useListParams<F extends Record<string, string> = Record<string, 
   const [page, setPage] = useState(1);
 
   useEffect(() => {
-    const id = setTimeout(() => setSearch(searchInput), debounceMs);
+    const id = setTimeout(() => {
+      // Применение поиска и сброс страницы — одно событие (см. комментарий у setFilter ниже).
+      // Эффект просыпается только на смену ввода, поэтому лишних сбросов страницы нет.
+      setSearch(searchInput);
+      setPage(1);
+    }, debounceMs);
     return () => clearTimeout(id);
   }, [searchInput, debounceMs]);
 
-  useEffect(() => {
-    setPage(1);
-  }, [search, filters, ordering]);
-
+  // Страница обнуляется ВМЕСТЕ со сменой выборки, одним событием. Раньше это делал эффект
+  // ПОСЛЕ коммита: у реестров с серверной постраничкой (MyProductsPage, ProductManagement)
+  // уходил запрос с новым поиском и СТАРОЙ страницей — пользователь видел кадр «Ничего не
+  // найдено», затем летел второй запрос уже с page=1. Два похода в бэкенд на каждую смену
+  // поиска/фильтра/сортировки. Найдено триажем правил React Compiler 18-08.
   const setFilter = useCallback((key: string, value: string) => {
     setFilters((f) => ({ ...f, [key]: value }));
+    setPage(1);
   }, []);
 
   const toggleOrdering = useCallback((key: string) => {
@@ -183,6 +190,7 @@ export function useListParams<F extends Record<string, string> = Record<string, 
       if (prev === `-${key}`) return '';
       return key;
     });
+    setPage(1);
   }, []);
 
   return {

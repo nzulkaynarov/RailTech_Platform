@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useDraftState } from '@/hooks/useDraftState';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Building2, Pencil, Trash2, UserPlus, GitMerge } from 'lucide-react';
@@ -201,9 +202,8 @@ function CompanyFormSheet({
   const { t } = useTranslation();
   const createMut = useCreateCompany();
   const updateMut = useUpdateCompany();
-  const [draft, setDraft] = useState<Draft>(() => target ?? emptyDraft());
+  const [draft, setDraft] = useDraftState<Company | null, Draft>(target, (t) => (t ? { ...t } : emptyDraft()));
 
-  useMemo(() => setDraft(target ? { ...target } : emptyDraft()), [target]);
 
   const busy = createMut.isPending || updateMut.isPending;
   const isEdit = Boolean(target?.id);

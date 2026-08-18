@@ -28,7 +28,6 @@ export function DocumentHtmlPreview({ html, title, className }: DocumentHtmlPrev
       title={title ?? t('docLetterhead.previewTitle')}
       srcDoc={html}
       sandbox="allow-same-origin"
-      // eslint-disable-next-line railtech/no-hardcoded-colors -- A4 paper: white in BOTH themes (justified Rule 4 exception, same as the brand-settings iframe)
       className={`w-full rounded-lg border border-border bg-white ${className ?? 'h-[70vh]'}`}
     />
   );

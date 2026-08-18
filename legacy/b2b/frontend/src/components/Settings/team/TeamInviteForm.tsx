@@ -3,7 +3,7 @@
  * verbatim from the former monolithic Cabinet/CompanyTeamSettings.tsx (spec PR 4
  * package split); logic unchanged.
  */
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { UserPlus, Loader2 } from 'lucide-react';
@@ -46,12 +46,13 @@ export function TeamInviteForm({ companyId, onInvited }: TeamInviteFormProps) {
   const defaultWorkspaceRole = availableWorkspaceRoles[0]?.code ?? 'PROCUREMENT_MANAGER';
 
   const [email, setEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<string>(defaultWorkspaceRole);
-
-  // Keep the selected role in sync with the fetched list on first load
-  useMemo(() => {
-    if (!inviteRole && defaultWorkspaceRole) setInviteRole(defaultWorkspaceRole);
-  }, [inviteRole, defaultWorkspaceRole]);
+  // Роль — ПРОИЗВОДНОЕ значение: пока пользователь не выбрал свою, показываем дефолт из
+  // подгруженного справочника. Раньше догоняющий `useMemo` дописывал состояние после загрузки
+  // списка (побочный эффект в мемо, react-hooks/set-state-in-render); состояние здесь просто
+  // не нужно — «ничего не выбрано» и есть корректное начальное значение.
+  const [pickedRole, setPickedRole] = useState<string>('');
+  const inviteRole = pickedRole || defaultWorkspaceRole;
+  const setInviteRole = setPickedRole;
 
   async function handleInvite(e: FormEvent) {
     e.preventDefault();

@@ -2,7 +2,7 @@
  * Create/edit sheet for per-tenant CompanyRoles (ADR-0004 G4). Moved verbatim from the
  * former monolithic Cabinet/CompanyTeamSettings.tsx (spec PR 4 package split); logic unchanged.
  */
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Loader2, Lock } from 'lucide-react';
@@ -42,13 +42,19 @@ export function RoleEditorSheet({ open, onOpenChange, editingRole }: RoleSheetPr
   const [name, setName] = useState('');
   const [selectedPerms, setSelectedPerms] = useState<Set<string>>(new Set());
 
-  // Sync state when sheet opens or editingRole changes
-  useMemo(() => {
+  // Пересобрать форму на открытии/смене роли — паттерн React «adjusting state when props
+  // change» вместо побочного эффекта в `useMemo` (react-hooks/set-state-in-render).
+  const [syncedFor, setSyncedFor] = useState<{ open: boolean; role: CompanyRole | null }>({
+    open,
+    role: editingRole,
+  });
+  if (syncedFor.open !== open || syncedFor.role !== editingRole) {
+    setSyncedFor({ open, role: editingRole });
     if (open) {
       setName(editingRole?.name ?? '');
       setSelectedPerms(new Set(editingRole?.permissions ?? []));
     }
-  }, [open, editingRole]);
+  }
 
   function togglePerm(code: string) {
     setSelectedPerms((prev) => {

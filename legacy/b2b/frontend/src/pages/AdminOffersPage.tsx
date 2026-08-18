@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useDraftState } from '@/hooks/useDraftState';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Tags, Pencil, Trash2 } from 'lucide-react';
@@ -41,8 +42,7 @@ function OfferFormSheet({
   const { data: deliveryBases } = useDeliveryBases();
   const { data: stockStatuses } = useStockStatuses();
 
-  const [draft, setDraft] = useState<Draft>(() => target ?? { is_active: true, min_order_qty: 1 });
-  useMemo(() => setDraft(target ?? { is_active: true, min_order_qty: 1 }), [target]);
+  const [draft, setDraft] = useDraftState<SupplierOffer | null, Draft>(target, (t) => t ?? { is_active: true, min_order_qty: 1 });
 
   const busy = createMut.isPending || updateMut.isPending;
   const isEdit = Boolean(target?.id);

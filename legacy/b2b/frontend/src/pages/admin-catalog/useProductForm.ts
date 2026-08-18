@@ -459,7 +459,16 @@ export function useProductForm({ target, sellerCompanyId, open = true, onSaved }
     setRejectedSpecKeys(new Set());
     setCategoryHint('');
   }, [open]);
+  // Тот же гард, что у черновика выше (seededTargetId): сбрасываем панель ИИ при СМЕНЕ
+  // карточки, а не на каждый новый объект той же карточки. Без него любая инвалидация
+  // ['product', id] — например, загрузка фото — молча стирала разобранные предложения
+  // ИИ и отметки отклонённых полей, то есть результат ПЛАТНОГО вызова. Дефект найден
+  // триажем правил React Compiler 18-08 (гард стоял у соседних эффектов, у этого — нет).
+  const suggestionTargetId = useRef<number | null>(null);
   useEffect(() => {
+    const targetId = target?.id ?? null;
+    if (targetId !== null && suggestionTargetId.current === targetId) return;
+    suggestionTargetId.current = targetId;
     setSuggestion(null);
     setRejectedFields(new Set());
     setRejectedSpecKeys(new Set());

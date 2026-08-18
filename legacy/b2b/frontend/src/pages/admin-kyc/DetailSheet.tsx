@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useNow } from '@/hooks/useNow';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { downloadFile } from '@/lib/download';
@@ -39,6 +40,8 @@ export function DetailSheet({
   onOpenChange: (open: boolean) => void;
 }) {
   const { t } = useTranslation();
+  // Часы для «возраст компании» — хук зовём безусловно, до любых ранних возвратов.
+  const now = useNow();
   // `doc_type_display` is the Russian-only lookup name — fallback for an unknown code
   // (operators can add KYCDocType rows via Unfold).
   const docTypeLabel = (code?: string | null, fallback?: string | null): string => {
@@ -105,7 +108,7 @@ export function DetailSheet({
 
   const createdDate = company.created_at ? new Date(company.created_at) : null;
   const ageDays = createdDate
-    ? Math.max(0, Math.floor((Date.now() - createdDate.getTime()) / 86_400_000))
+    ? Math.max(0, Math.floor((now - createdDate.getTime()) / 86_400_000))
     : null;
 
   const overview = (

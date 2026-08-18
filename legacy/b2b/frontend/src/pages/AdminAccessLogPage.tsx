@@ -23,7 +23,9 @@ import { PageShell, ErrorState } from './shared/PageShell';
 export function AdminAccessLogPage() {
   const { t, i18n } = useTranslation();
   const { data, isLoading, isError, refetch } = useAccessLog(200);
-  const items = data?.items ?? [];
+  // Зависимость мемо — САМ `data?.items` (ссылка из кэша React Query, стабильная между
+  // рендерами), а не `?? []`: литерал пересоздавался каждый рендер и мемо не работало вовсе.
+  const items = useMemo(() => data?.items ?? [], [data?.items]);
 
   const stats = useMemo(() => {
     const activeBreakGlass = items.filter((entry) => entry.is_break_glass && entry.is_active).length;

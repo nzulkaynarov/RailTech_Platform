@@ -75,8 +75,30 @@ export default tseslint.config(
       // правила React Compiler (set-state-in-effect, refs-during-render, purity …) — 77 новых
       // ошибок по живому коду. Это отдельная волна рефакторинга, а не побочный эффект бампа
       // линтера, поэтому здесь ЯВНО только классические правила хуков — поведение как у v5.
-      'react-hooks/rules-of-hooks': 'error',
-      'react-hooks/exhaustive-deps': 'warn',
+      // eslint-plugin-react-hooks 7 приносит правила React Compiler. Включаем ВЕСЬ
+      // recommended и точечно гасим то, что осталось долгом (18-08): так починенное
+      // закрепляется гейтом, а не откатывается следующей правкой.
+      ...reactHooks.configs.recommended.rules,
+      // ── Долг, разобранный 2026-08-18 (`Docs/dev/specs/plan-remaining-work-2026-08-17.md` §2.3)
+      // 47 мест: setState в эффекте. Разобраны по категориям; настоящие каскады починены,
+      // остальное — «синхронизация с props» (канон: derived / adjust-in-render) и легальные
+      // эффекты (подписки, таймеры, async). Включать после переписывания категории B.
+      'react-hooks/set-state-in-effect': 'off',
+      // 10 мест, все в билдере КП: паттерн «live mirror ref» (`ref.current = value` в рендере),
+      // чтобы колбэки видели свежие данные без пересоздания. Сегодня не баг (значения
+      // иммутабельны и перезаписываются целиком), но в concurrent-рендере ref может пережить
+      // выброшенный рендер. Лечится объединением состояний draft-машины в одно — это
+      // рефакторинг сердца билдера, отдельной волной с прогоном глазами.
+      'react-hooks/refs': 'off',
+      // 3 места: `window.location.hash = ...` — hash-навигация вместо React Router (ADR-0005).
+      // Компилятор видит мутацию внешнего значения; архитектурное решение, а не дефект.
+      'react-hooks/immutability': 'off',
+      // 2 места (GridRow, SectionNoteRow): ручная мемоизация ref-колбэка, которую компилятор
+      // не может сохранить. Стабильность ссылки там ОБЯЗАТЕЛЬНА (иначе виртуализатор
+      // переобсервит строку и список прыгает — B3). Потеря авто-оптимизации, не баг.
+      'react-hooks/preserve-manual-memoization': 'off',
+      // 1 место: `useStaticMemo(factory, deps)` — осознанная обёртка с динамическим списком.
+      'react-hooks/use-memo': 'off',
       'react-refresh/only-export-components': [
         'warn',
         { allowConstantExport: true },
