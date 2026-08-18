@@ -327,6 +327,25 @@ A failed/empty/unlistable dump **aborts the deploy** — migrations never run
 against a database we can't restore. Independently, the DB-VPS keeps a daily
 `pg_dump` cron (`/var/backups/railtech-db/`, 14-day retention).
 
+### Daily backup + its watchdog (18-08)
+
+Scripts live in the repo — `deploy/db/` (source of truth, see its README):
+
+- **DB-VPS 02:30** `railtech-db-backup.sh` — dumps, then **validates the dump with
+  `pg_restore --list`** and a size floor, and writes a machine-readable
+  `/var/backups/railtech-db/LAST_BACKUP_STATUS` (JSON: ts/status/bytes/detail).
+- **app-VPS 03:30** `railtech-backup-check.sh` — reads that status over SSH and raises a
+  **Sentry error** if the status is not `OK`, the file is unreachable, or the last success
+  is older than 26 h.
+
+The check runs on the *other* box on purpose: a backup script cannot report that it stopped
+being run at all (dead cron, full disk, box down after a reboot) — silence is
+indistinguishable from success. Two traps, both caught by probing with a broken input:
+`pg_restore` must run as **root** (the dump is `root:600`; running it as `postgres` failed on
+permissions and looked like a corrupt dump), and Sentry must be reached via
+`manage.py shell -c`, **not** `python -c` (`sentry_sdk.init` lives in Django settings — a bare
+interpreter has no client and `capture_message` silently goes nowhere).
+
 **Restore a pre-deploy dump** (after a bad migration):
 ```bash
 cd /opt/railtech-b2b
@@ -343,6 +362,24 @@ curl -s http://127.0.0.1:8000/health/
 ```
 > Restore drops data written AFTER the dump — it is a disaster rollback, not an
 > undo button. For surgical fixes prefer a reverse migration.
+
+### DB-VPS restarts — what the two 2026-08 events actually were
+
+Both looked alarming in `uptime` and neither was a fault; prod stayed healthy through both.
+
+- **12-08 06:33** — *not* a reboot. `unattended-upgrade` upgraded systemd
+  (255.4-1ubuntu8.16 → .17) and restarted services; Postgres did a fast shutdown at 06:33:52
+  and finished recovery in ~1 s.
+- **18-08 16:18** — a real, graceful reboot with **no local initiator**: no human login that
+  day (`last`/`auth.log` empty), no apt activity since 12-08, and `Automatic-Reboot` is *not*
+  enabled for unattended-upgrades. The box came up on kernel 6.8.0-137, which had been
+  installed on 07-08 and was waiting for a restart for 11 days. Read: the hoster rebooted the
+  host, and the pending kernel was picked up on the way.
+
+Consequence to remember: **kernel upgrades sit unapplied for weeks by design** (a DB box must
+not auto-reboot), so the reboot moment is chosen by someone else. Postgres comes back on its
+own and the app reconnects; if it ever doesn't, the usual suspect is the cached dead pool —
+restart `backend` + `celery-*` (see "DB-VPS connectivity").
 
 ## Post-deploy TODO (not blocking, schedule soon)
 - **Public file URLs:** MinIO is internal-only. Public assets (logos/images) currently
