@@ -1,4 +1,6 @@
-import { useCallback, useRef } from 'react';
+import { useCallback } from 'react';
+
+import { useLatestRef } from '@/hooks/useLatestRef';
 import {
 	rowCellsOf, columnCellsOf, siblingColumnCell, tabTargetInDom, caretAtStart, caretAtEnd,
 } from './gridCellNav';
@@ -42,8 +44,7 @@ export interface GridKeyboardVirtualization {
 export function useGridKeyboard(virtualization?: GridKeyboardVirtualization) {
 	// Held through a ref so the handler stays referentially stable while always reading the latest
 	// window model — the config is a fresh object on every render.
-	const virtualizationRef = useRef(virtualization);
-	virtualizationRef.current = virtualization;
+	const virtualizationRef = useLatestRef(virtualization);
 
 	// Resolve the model index `delta` steps from `currentRowId`, skipping non-navigable (SECTION/NOTE)
 	// rows. Returns the target index, or -1 at a true grid boundary / when the source row is unknown.
@@ -61,7 +62,7 @@ export function useGridKeyboard(virtualization?: GridKeyboardVirtualization) {
 			target += delta;
 		}
 		return target >= 0 && target < config.rowIds.length ? target : -1;
-	}, []);
+	}, [virtualizationRef]);
 
 	const onKeyDown = useCallback((event: React.KeyboardEvent<HTMLElement>) => {
 		const { key } = event;
@@ -166,7 +167,7 @@ export function useGridKeyboard(virtualization?: GridKeyboardVirtualization) {
 		// just-committed value. A synchronous refocus would re-enter edit mode holding the STALE
 		// pre-commit value (the prop hasn't updated yet), silently reverting the edit on the next blur.
 		queueMicrotask(() => cell.focus());
-	}, [stepModelIndex]);
+	}, [stepModelIndex, virtualizationRef]);
 
 	return { onKeyDown };
 }

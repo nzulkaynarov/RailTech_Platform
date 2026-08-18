@@ -32,7 +32,11 @@ export const ExcelUpload: React.FC<ExcelUploadProps> = ({ dealId, onUploadSucces
     // different file). lastFileRef keeps the dispatched file so retry needs no
     // re-selection (it's cleared from `file` state once the import is enqueued).
     const [canRetry, setCanRetry] = useState(false);
-    const lastFileRef = useRef<File | null>(null);
+    // Отправленный файл — СОСТОЯНИЕ, а не ref: от него зависит, показывать ли кнопку «Повторить»,
+    // то есть его читает разметка. Чтение ref в рендере — та же нечистота, что и запись: React
+    // вправе выбросить рендер, а видимость кнопки при этом не пересчитается (правило
+    // `react-hooks/refs`, волна 18-08).
+    const [lastFile, setLastFile] = useState<File | null>(null);
     const [taskId, setTaskId] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { addTask, tasks } = useTaskStore();
@@ -99,7 +103,7 @@ export const ExcelUpload: React.FC<ExcelUploadProps> = ({ dealId, onUploadSucces
     };
 
     const dispatchImport = async (toSend: File) => {
-        lastFileRef.current = toSend;
+        setLastFile(toSend);
         setIsDispatching(true);
         setError(null);
         setCanRetry(false);
@@ -123,7 +127,7 @@ export const ExcelUpload: React.FC<ExcelUploadProps> = ({ dealId, onUploadSucces
     };
 
     const handleRetry = () => {
-        if (lastFileRef.current) dispatchImport(lastFileRef.current);
+        if (lastFile) dispatchImport(lastFile);
     };
 
     const acceptText = useAI ? t('aiImport.acceptedAi') : '.xlsx, .xls';
@@ -215,7 +219,7 @@ export const ExcelUpload: React.FC<ExcelUploadProps> = ({ dealId, onUploadSucces
                     <AlertTriangle className="h-4 w-4" aria-hidden="true" />
                     <AlertDescription className="flex items-center justify-between gap-3">
                         <span className="min-w-0">{error}</span>
-                        {canRetry && !isImporting && !isDispatching && lastFileRef.current && (
+                        {canRetry && !isImporting && !isDispatching && lastFile && (
                             <Button
                                 size="sm"
                                 variant="outline"

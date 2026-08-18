@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useLatestRef } from '@/hooks/useLatestRef';
+
 export interface UseRowSelectionResult {
 	/** The currently selected row ids. */
 	selectedIds: Set<number>;
@@ -40,13 +42,11 @@ export function useRowSelection(orderedIds: number[], selectableIds?: number[]):
 	// it. The PRUNE deliberately stays on `orderedIds` (below), so merely hiding a row by filtering
 	// does not drop its selection. Omitted ⇒ byte-identical to the pre-filter behaviour.
 	const visibleIds = selectableIds ?? orderedIds;
-	const visibleIdsRef = useRef(visibleIds);
-	visibleIdsRef.current = visibleIds;
+	const visibleIdsRef = useLatestRef(visibleIds);
 
 	// Stable access to the latest row order inside the callbacks (orderedIds is a fresh array
 	// every render — a new draftItems.map — so we never want it in a callback dep list).
-	const orderedIdsRef = useRef(orderedIds);
-	orderedIdsRef.current = orderedIds;
+	const orderedIdsRef = useLatestRef(orderedIds);
 
 	// Prune ids that left the server row set (a deleted / replaced row must not stay selected).
 	// Keyed on the joined id list so it only runs when the actual set of rows changes.
@@ -57,7 +57,7 @@ export function useRowSelection(orderedIds: number[], selectableIds?: number[]):
 			const next = new Set([...previous].filter((id) => present.has(id)));
 			return next.size === previous.size ? previous : next;
 		});
-	}, [idsKey]);
+	}, [idsKey, orderedIdsRef]);
 
 	const toggle = useCallback((id: number, shiftKey = false) => {
 		// Shift-range walks the VISIBLE order: under a filter the range is what sits between the two
@@ -81,7 +81,7 @@ export function useRowSelection(orderedIds: number[], selectableIds?: number[]):
 			lastSelectedIdRef.current = id;
 			return next;
 		});
-	}, []);
+	}, [visibleIdsRef]);
 
 	// "All" means all VISIBLE rows (== all rows when no filter is active).
 	const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
@@ -97,7 +97,7 @@ export function useRowSelection(orderedIds: number[], selectableIds?: number[]):
 			else visible.forEach((id) => next.add(id));
 			return next;
 		});
-	}, []);
+	}, [visibleIdsRef]);
 
 	const clear = useCallback(() => {
 		setSelectedIds((previous) => (previous.size === 0 ? previous : new Set()));

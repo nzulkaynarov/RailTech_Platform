@@ -1,3 +1,4 @@
+import { useLatestRef } from '@/hooks/useLatestRef';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { QuoteItem } from '@/api/crmApi';
 
@@ -74,19 +75,16 @@ export function useQuoteDraft(serverItems: QuoteItem[]): UseQuoteDraftResult {
 	// this future (standard editor semantics — see pushUndoSnapshot).
 	const [redoStack, setRedoStack] = useState<DraftSnapshot[]>([]);
 
-	// Live mirrors so the state updaters can snapshot the pre-edit state without re-creating
-	// callbacks on every render. draftItems/dirtyIds are replaced (never mutated) on each edit,
-	// so holding the reference is a valid immutable snapshot.
-	const draftItemsRef = useRef(draftItems);
-	draftItemsRef.current = draftItems;
-	const dirtyIdsRef = useRef(dirtyIds);
-	dirtyIdsRef.current = dirtyIds;
-	const undoStackRef = useRef(undoStack);
-	undoStackRef.current = undoStack;
-	const redoStackRef = useRef(redoStack);
-	redoStackRef.current = redoStack;
-	const serverItemsRef = useRef(serverItems);
-	serverItemsRef.current = serverItems;
+	// Зеркала последнего значения, чтобы апдейтеры состояния снимали снимок «до правки», не
+	// пересоздавая колбэки на каждый рендер. draftItems/dirtyIds на каждой правке ЗАМЕНЯЮТСЯ
+	// (не мутируются), поэтому держать ссылку — корректный неизменяемый снимок.
+	// Запись идёт после коммита (`useLatestRef`), а не в рендере: рендер обязан быть чистым.
+	// Все чтения ниже — из колбэков и апдейтеров, то есть уже после коммита.
+	const draftItemsRef = useLatestRef(draftItems);
+	const dirtyIdsRef = useLatestRef(dirtyIds);
+	const undoStackRef = useLatestRef(undoStack);
+	const redoStackRef = useLatestRef(redoStack);
+	const serverItemsRef = useLatestRef(serverItems);
 
 	// A snapshot captures a row set + dirty flags; restoring it rebuilds CLEAN rows from CURRENT
 	// server truth and overlays ONLY the snapshot's dirty rows. Replaying snapshot.items wholesale
@@ -100,7 +98,7 @@ export function useQuoteDraft(serverItems: QuoteItem[]): UseQuoteDraftResult {
 			),
 		);
 		setDirtyIds(snapshot.dirty);
-	}, []);
+	}, [serverItemsRef]);
 
 	// Push the CURRENT draft state onto the undo stack (bounded to UNDO_DEPTH) before an edit. A fresh
 	// edit also invalidates the redo future — you cannot redo past a branch you just diverged from.
@@ -111,7 +109,7 @@ export function useQuoteDraft(serverItems: QuoteItem[]): UseQuoteDraftResult {
 			return next;
 		});
 		setRedoStack([]);
-	}, []);
+	}, [draftItemsRef, dirtyIdsRef]);
 
 	// Re-derive the draft from the authoritative server list whenever it changes,
 	// preserving local values on rows that are still dirty. Runs on every server
@@ -231,7 +229,7 @@ export function useQuoteDraft(serverItems: QuoteItem[]): UseQuoteDraftResult {
 		setRedoStack((previous) => [...previous, { items: draftItemsRef.current, dirty: dirtyIdsRef.current }]);
 		restoreSnapshot(snapshot);
 		setUndoStack(stack.slice(0, -1));
-	}, [restoreSnapshot]);
+	}, [restoreSnapshot, undoStackRef, draftItemsRef, dirtyIdsRef]);
 
 	const redo = useCallback(() => {
 		const stack = redoStackRef.current;
@@ -241,7 +239,7 @@ export function useQuoteDraft(serverItems: QuoteItem[]): UseQuoteDraftResult {
 		setUndoStack((previous) => [...previous, { items: draftItemsRef.current, dirty: dirtyIdsRef.current }]);
 		restoreSnapshot(snapshot);
 		setRedoStack(stack.slice(0, -1));
-	}, [restoreSnapshot]);
+	}, [restoreSnapshot, redoStackRef, draftItemsRef, dirtyIdsRef]);
 
 	const hasUnsavedChanges = dirtyIds.size > 0;
 	const canUndo = undoStack.length > 0;

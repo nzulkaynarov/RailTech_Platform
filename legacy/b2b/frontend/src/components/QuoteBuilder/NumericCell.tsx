@@ -125,6 +125,17 @@ export const NumericCell: React.FC<NumericCellProps> = ({
 			parsed = max;
 			if (maxToastKey) toast.warning(t(maxToastKey, { max }));
 		}
+		// ПРОХОД ЧЕРЕЗ ЯЧЕЙКУ — НЕ ПРАВКА. Фокус наполняет буфер текущим значением, поэтому уход
+		// фокуса (клик по кнопке, Tab, Enter) записывал его обратно НЕИЗМЕНЁННЫМ: строка помечалась
+		// «грязной» без единого исправления, в шапке загоралось «есть несохранённые изменения», а в
+		// стек отмены падал пустой шаг — и первое нажатие «Отменить» ничего видимого не делало,
+		// потому что откатывало этот фантом. Найдено прогоном глазами 18-08. Тот же принцип уже
+		// защищал ветку очистки выше (`!isEmptyValue`), просто не был доведён до обычной ветки.
+		const committedNumber = isEmptyValue ? null : Number(value);
+		if (committedNumber !== null && !Number.isNaN(committedNumber) && committedNumber === parsed) {
+			setEditBuffer(null);
+			return;
+		}
 		onCommit(String(parsed));
 		setEditBuffer(null);
 	};
