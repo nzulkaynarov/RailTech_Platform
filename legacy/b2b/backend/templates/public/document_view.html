@@ -13,16 +13,14 @@ ran at generation), so autoescape is disabled ONLY for that field.
   <title>{{ document.title|default:document.number }}</title>
   <style>
     :root {
-      color-scheme: light dark;
+      /* client-facing document — always light, never auto-dark by device (benchmark: PandaDoc/Qwilr; see quote_public_page.html) */
+      color-scheme: light;
       /* D2 document theme — same accent / font the issuing company's PDF uses, so the online
          document carries the seller's brand instead of a platform-blue button (one theme). */
       --accent: {{ accent|default:"#15294d" }};
       --accent-contrast: {{ accent_contrast|default:"#ffffff" }};
       --font-main: {{ font_stack|default:"-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"|safe }};
       --bg: #f3f4f6; --ink: #111827; --ink-soft: #4b5563; --card: #ffffff; --line: #e6e9ef;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root { --bg: #0b0f19; --ink: #f3f4f6; --ink-soft: #9ca3af; --card: #111827; --line: #2a2f38; }
     }
     * { box-sizing: border-box; }
     body {
@@ -50,7 +48,6 @@ ran at generation), so autoescape is disabled ONLY for that field.
       box-shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
     }
     .doc img { max-width: 100%; }
-    @media (prefers-color-scheme: dark) { .doc { box-shadow: none; } }
   </style>
 </head>
 <body>

@@ -10,7 +10,7 @@
   {% if auto_retry %}<meta http-equiv="refresh" content="{{ retry_after }}; url={{ next_query }}">{% endif %}
   <title>Коммерческое предложение готовится…</title>
   <style>
-    :root { color-scheme: light dark; }
+    :root { color-scheme: light; } /* client-facing document page — always light, never auto-dark by device (see quote_public_page.html) */
     * { box-sizing: border-box; }
     body {
       margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
@@ -31,11 +31,6 @@
     .btn {
       display: inline-block; padding: 12px 24px; font-size: 15px; font-weight: 600;
       color: #ffffff; background: #2563eb; border: 0; border-radius: 8px; text-decoration: none; cursor: pointer;
-    }
-    @media (prefers-color-scheme: dark) {
-      body { background: #0b0f19; color: #f3f4f6; }
-      .card { background: #111827; box-shadow: none; }
-      p { color: #9ca3af; }
     }
   </style>
 </head>

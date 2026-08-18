@@ -21,7 +21,11 @@
   <title>КП {% if quote.number %}№ {{ quote.number }}{% else %}{{ quote.deal_id }}-{{ quote.version }}{% endif %}</title>
   <style>
     :root {
-      color-scheme: light dark;
+      /* A commercial КП is a document — it renders LIGHT for every recipient regardless of their
+         device dark-mode (benchmark: PandaDoc / Qwilr public proposal links). Auto-dark was dropped:
+         it showed the seller's proposal in colours they never chose and read as "sometimes dark,
+         sometimes light" depending on the client's phone. */
+      color-scheme: light;
       /* D2 document theme — the SAME accent / secondary tint / font the PDF uses, so the emailed
          PDF and this public page read as one branded document (not two designs). */
       --accent: {{ accent|default:"#15294d" }};
@@ -30,11 +34,6 @@
       --ink: #20242b; --ink-soft: #3c424c; --muted: #7a828f;
       --line: #e6e9ef; --panel: {{ secondary|default:"#f7f9fc" }}; --bg: #eef1f5; --card: #ffffff;
       --success: #15803d; --danger: #b91c1c;
-    }
-    @media (prefers-color-scheme: dark) {
-      /* Seller's light secondary tint is unreadable on a dark screen — fall back to a dark panel. */
-      :root { --ink: #e8eaee; --ink-soft: #c2c7cf; --muted: #9aa0a6;
-        --line: #2a2f38; --panel: #1a1f27; --bg: #0b0f19; --card: #111827; }
     }
     * { box-sizing: border-box; }
     body { margin: 0; background: var(--bg); color: var(--ink);
