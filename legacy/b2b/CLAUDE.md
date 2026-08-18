@@ -309,6 +309,8 @@ docker compose exec backend pytest -m "not slow" --create-db                    
 - **Serializers:** Nested read, flat write pattern; `_data` suffix for nested representations
 - **i18n:** All UI text via `useTranslation()`, keys in `ru.json`/`en.json`
 - **State:** Zustand stores with `persist` middleware for auth/theme; no Redux
+- **Формы диалогов:** сброс при смене `target` — через `useDraftState(source, build)` (`hooks/useDraftState.ts`), НЕ через `useMemo(() => setDraft(...), [target])`: побочный эффект в мемо, которое React вправе пересчитать (правило `react-hooks/set-state-in-render` теперь это ловит). «Сейчас» в рендере — `useNow()` (`hooks/useNow.ts`), а не `Date.now()`: нечистый рендер + замирающие счётчики
+- **Правила React Compiler включены** (`eslint-plugin-react-hooks` 7 в `eslint.config.js`) — кроме пяти с обоснованием в комментариях: `set-state-in-effect`, `refs`, `immutability`, `preserve-manual-memoization`, `use-memo`. Не выключать остальные: на них поймано 4 живых дефекта (18-08). Хелперы и константы держать ВНЕ файлов-компонентов — иначе ломается Fast Refresh (`react-refresh`, 0 предупреждений на 18-08)
 - **UI:** Only shadcn/ui components + Tailwind semantic tokens. No custom CSS, no hardcoded hex colors, no `text-white`/`text-black` — use `text-foreground`/`text-primary-foreground`
 - **Text sizes:** Only Tailwind scale (`text-xs` minimum) — NEVER `text-[9px]`, `text-[10px]`, `text-[11px]` or arbitrary pixel values
 - **Chart colors:** Use `bg-[var(--color-chart-N)]` for dynamic chart legend dots — NEVER inline `style={{ backgroundColor }}`
