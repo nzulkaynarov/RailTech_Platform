@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -8,6 +7,7 @@ import { accountsApi, CompanySettings, CompanySettingsUpdate } from '@/api/accou
 import { currencyLabelKey, deliveryBasisLabelKey } from '@/lib/codes';
 import { useAuthStore } from '@/store/authStore';
 import { useHasCompanyPermission } from '@/hooks/useCapabilities';
+import { useDraftState } from '@/hooks/useDraftState';
 import { useCurrencies, useDeliveryBases } from '@/hooks/useMasterData';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
@@ -81,17 +81,15 @@ export function CompanyDefaultsSettings() {
   const companyId = user?.company?.id ?? user?.primary_company?.id ?? null;
   const canEditSettings = useHasCompanyPermission('settings.edit');
 
-  const [form, setForm] = useState<DefaultsForm>(EMPTY_FORM);
-
   const { data: settings, isLoading } = useQuery({
     queryKey: ['company-settings', companyId],
     queryFn: () => accountsApi.getCompanySettings(companyId as number),
     enabled: companyId != null && canEditSettings,
   });
 
-  useEffect(() => {
-    if (settings) setForm(toForm(settings));
-  }, [settings]);
+  // Форма пересобирается при СМЕНЕ загруженных настроек, прямо в рендере: эффект показал бы
+  // пустую форму на кадр, а потом заполненную (react.dev, «You Might Not Need an Effect»).
+  const [form, setForm] = useDraftState(settings ?? null, (loaded) => (loaded ? toForm(loaded) : EMPTY_FORM));
 
   const saveMut = useMutation({
     mutationFn: (data: CompanySettingsUpdate) =>

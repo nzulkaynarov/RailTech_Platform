@@ -57,11 +57,11 @@ export function DealChatPanel({ dealId, sellers }: DealChatPanelProps = {}): Rea
   // with exactly one it's auto-selected; a seller-viewer never sees the selector.
   const isBuyer = activeStatus === 'BUYER';
   const laneOptions = useMemo(() => (isBuyer ? (sellers ?? []) : []), [isBuyer, sellers]);
-  const [lane, setLane] = useState<number | null>(null);
-  useEffect(() => {
-    if (isBuyer && laneOptions.length === 1) setLane(laneOptions[0].id);
-    else if (!isBuyer) setLane(null);
-  }, [isBuyer, laneOptions]);
+  // Единственный продавец подставляется ВЫЧИСЛЕНИЕМ, а не эффектом: у продавца дорожки нет
+  // вовсе, у покупателя с одним продавцом она единственная — состояние тут ничего не помнит.
+  const [pickedLane, setPickedLane] = useState<number | null>(null);
+  const lane = !isBuyer ? null : pickedLane ?? (laneOptions.length === 1 ? laneOptions[0].id : null);
+  const setLane = setPickedLane;
   const needsLanePick = isBuyer && laneOptions.length > 1 && lane == null;
   const laneParam = isBuyer ? lane : null; // seller → backend auto-scopes to own lane
 
@@ -85,6 +85,7 @@ export function DealChatPanel({ dealId, sellers }: DealChatPanelProps = {}): Rea
 
   useEffect(() => {
     if (!dealId || needsLanePick) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- загрузка ленты сообщений с отменой — внешний вызов
       setMessages([]);
       return;
     }
@@ -110,6 +111,7 @@ export function DealChatPanel({ dealId, sellers }: DealChatPanelProps = {}): Rea
 
   useEffect(() => {
     if (!dealId || !accessToken || needsLanePick) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- жизненный цикл websocket-подписки
       setIsConnected(false);
       return;
     }

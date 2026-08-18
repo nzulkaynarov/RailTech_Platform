@@ -135,6 +135,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNaviga
     }, [page, hasMore, isLoadingMore]);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- опрос по таймеру + подписка на видимость вкладки — ровно то, для чего эффекты и существуют
         fetchNotifications();
         const interval = setInterval(fetchNotifications, 60_000);
         const onVisibility = () => { if (!document.hidden) fetchNotifications(); };

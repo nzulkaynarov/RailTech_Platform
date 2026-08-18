@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useDraftState } from '@/hooks/useDraftState';
 import { useTranslation } from 'react-i18next';
 import {
     LayoutDashboard, Users, Store, ShieldCheck, CreditCard, ClipboardList,
@@ -87,13 +88,10 @@ const ENTITY_TARGET_PAGE: Record<string, string> = {
 
 export function CommandPalette({ open, onOpenChange, onNavigate }: CommandPaletteProps) {
     const { t } = useTranslation();
-    const [query, setQuery] = useState('');
+    // Запрос принадлежит сессии открытия: каждое новое открытие начинается пустым.
+    const [query, setQuery] = useDraftState(open, () => '');
     const debouncedQuery = useDebouncedValue(query, 250);
     const search = useAdminSearch(debouncedQuery);
-
-    useEffect(() => {
-        if (!open) setQuery('');
-    }, [open]);
 
     const handleSelect = (id: string) => {
         onOpenChange(false);

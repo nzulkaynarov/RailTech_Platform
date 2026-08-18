@@ -120,6 +120,7 @@ export function useQuoteDraft(serverItems: QuoteItem[]): UseQuoteDraftResult {
 		// A row deleted server-side (own trash action or a teammate) must also leave
 		// the dirty set, or hasUnsavedChanges sticks forever with nothing to save.
 		const serverIds = new Set(serverItems.map((item) => item.id));
+		// eslint-disable-next-line react-hooks/set-state-in-effect -- зеркало серверных строк в черновик билдера КП: долг 2.3c (объединение draft-машины), волна с прогоном глазами
 		setDirtyIds((previous) => {
 			const next = new Set([...previous].filter((id) => serverIds.has(id)));
 			return next.size === previous.size ? previous : next;

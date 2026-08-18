@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -48,7 +48,11 @@ export const PasswordSetupPage: React.FC<PasswordSetupPageProps> = ({ uid, token
     const { t } = useTranslation();
 
     const [loading, setLoading] = useState(false);
-    const [serverError, setServerError] = useState('');
+    const [submitError, setSubmitError] = useState('');
+    // Кривая ссылка видна СРАЗУ, без кадра с годной формой; ошибка отправки её перекрывает.
+    const linkInvalid = !uid || !token;
+    const serverError = submitError || (linkInvalid ? t('passwordSetup.invalidLink') : '');
+    const setServerError = setSubmitError;
     const [success, setSuccess] = useState(false);
 
     const passwordSetupSchema = createPasswordSetupSchema(t);
@@ -61,11 +65,8 @@ export const PasswordSetupPage: React.FC<PasswordSetupPageProps> = ({ uid, token
         },
     });
 
-    useEffect(() => {
-        if (!uid || !token) {
-            setServerError(t('passwordSetup.invalidLink'));
-        }
-    }, [uid, token, t]);
+    // «Ссылка недействительна» — не состояние, а свойство самой ссылки: считаем в рендере,
+    // иначе первый кадр показывает годную форму, и только потом появляется ошибка.
 
     const onSubmit = async (data: PasswordSetupFormData) => {
         if (!uid || !token) {

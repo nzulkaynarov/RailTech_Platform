@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'; import { useTranslation } from 'react-i18next'; import { Boxes, Loader2, PackagePlus, Plus, SearchX, ShieldAlert, Upload } from 'lucide-react'; import { toast } from 'sonner'; import { useQueryClient } from '@tanstack/react-query';  import { Badge } from '@/components/ui/badge'; import { Button } from '@/components/ui/button'; import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; import { Checkbox } from '@/components/ui/checkbox'; import { Skeleton } from '@/components/ui/skeleton'; import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'; import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable'; import { Pager, Toolbar } from '@/components/DataTable';
 import { useListParams } from '@/components/DataTable/listParams';
+import { useDraftState } from '@/hooks/useDraftState';
 import { ErrorState } from '@/pages/shared/PageShell';
 import { useCatalogPublishGate } from '@/hooks/useCatalogPublishGate';
 import { getDomainLabelKey } from '@/config/domainConfig';
@@ -42,7 +43,6 @@ export function MyProductsPage({
 }) {
   const { t, i18n } = useTranslation();
   const [tab, setTab] = useState<MyProductsTabKey>('CANDIDATES');
-  const [selected, setSelected] = useState<Set<number>>(new Set());
   const queryClient = useQueryClient();
 
   // R1 («правда в списках»): серверная постраничка + поиск + фильтр направления — тот же
@@ -92,17 +92,17 @@ export function MyProductsPage({
 
   const items = useMemo(() => pageData?.results ?? [], [pageData]);
   const isFiltered = Boolean(search) || Boolean(domainFilter);
+  // Выбор живёт РОВНО на показанной выборке и обнуляется, как только она сменилась (страница,
+  // таб, поиск, фильтр, порядок) — как в Gmail/GitHub/Odoo: массовое действие применяется к
+  // тому, что человек видит. Источник — ключ выборки, поэтому обнуление происходит в рендере,
+  // а не кадром позже (иначе панель массовых действий мигала бы старым числом).
+  const selectionKey = `${page}|${tab}|${search}|${ordering}|${domainFilter}`;
+  const [selected, setSelected] = useDraftState(selectionKey, () => new Set<number>());
+
   const publishableSelected = useMemo(
     () => (isDraftLike ? items.filter((p) => selected.has(p.id) && p.completeness?.is_publishable) : []),
     [items, selected, isDraftLike],
   );
-
-  // Выбор живёт РОВНО на показанной странице и сбрасывается, как только выборка сменилась
-  // (страница, таб, поиск, фильтр, порядок) — как в Gmail/GitHub/Odoo: массовое действие
-  // применяется к тому, что человек видит.
-  useEffect(() => {
-    setSelected(new Set());
-  }, [page, tab, search, ordering, domainFilter]);
 
   // Опубликовали/заархивировали последние строки последней страницы — не оставляем человека
   // на странице, которой больше нет: она выглядела бы как «пусто».

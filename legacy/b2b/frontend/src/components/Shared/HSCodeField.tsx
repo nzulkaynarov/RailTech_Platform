@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { formatHSCode, leafName, MIN_QUERY_LENGTH } from '@/lib/hsCode';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, CheckCircle2 } from 'lucide-react';
@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { useDraftState } from '@/hooks/useDraftState';
 import { useHSCodeSuggest, useHSCodeValidation } from '@/hooks/useCatalog';
 
 /**
@@ -44,7 +45,6 @@ export function HSCodeField({ value, onChange, dense = false, placeholder, class
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
-  const [highlighted, setHighlighted] = useState(0);
   // Подсказки — по НАБИРАЕМОМУ тексту; после выбора кандидата запрос гасится, чтобы список
   // не переоткрывался поверх только что выбранного кода.
   const [query, setQuery] = useState('');
@@ -55,7 +55,9 @@ export function HSCodeField({ value, onChange, dense = false, placeholder, class
   const digits = (value || '').replace(/\D/g, '');
   const { data: validation } = useHSCodeValidation(open ? '' : digits);
 
-  useEffect(() => setHighlighted(0), [candidates]);
+  // Подсветка возвращается на первую строку при смене списка подсказок — корректировкой
+  // состояния в рендере, а не эффектом (иначе один кадр подсвечена строка из прошлого списка).
+  const [highlighted, setHighlighted] = useDraftState(candidates, () => 0);
 
   const rows = candidates ?? [];
   const showList = open && rows.length > 0;

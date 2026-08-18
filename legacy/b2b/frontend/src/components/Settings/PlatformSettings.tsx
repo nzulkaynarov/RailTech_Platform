@@ -2,7 +2,7 @@
  * Platform SystemSettings CRUD (Platform Operator only) — вынесен из SettingsPage.tsx
  * как есть (spec PR 1, файл-лимит 500 строк); поведение и вёрстка без изменений.
  */
-import { useState, useEffect } from 'react';
+import { useDraftState } from '@/hooks/useDraftState';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { ShieldCheck } from 'lucide-react';
@@ -19,17 +19,17 @@ export function PlatformSettings() {
   const { data, isLoading } = useSystemSettings();
   const updateMut = useUpdateSystemSettings();
 
-  const [vatRate, setVatRate] = useState('');
-  const [exchangeRate, setExchangeRate] = useState('');
-  const [platformName, setPlatformName] = useState('');
-
-  useEffect(() => {
-    if (data) {
-      setVatRate(data.vat_rate ?? '');
-      setExchangeRate(data.exchange_rate_usd_uzs ?? '');
-      setPlatformName(data.platform_name ?? '');
-    }
-  }, [data]);
+  // Одна форма вместо трёх состояний: пересобирается при смене загруженных настроек в рендере,
+  // без промежуточного кадра с пустыми полями.
+  const [form, setForm] = useDraftState(data ?? null, (loaded) => ({
+    vatRate: loaded?.vat_rate ?? '',
+    exchangeRate: loaded?.exchange_rate_usd_uzs ?? '',
+    platformName: loaded?.platform_name ?? '',
+  }));
+  const { vatRate, exchangeRate, platformName } = form;
+  const setVatRate = (value: string) => setForm((prev) => ({ ...prev, vatRate: value }));
+  const setExchangeRate = (value: string) => setForm((prev) => ({ ...prev, exchangeRate: value }));
+  const setPlatformName = (value: string) => setForm((prev) => ({ ...prev, platformName: value }));
 
   const handleSave = async () => {
     try {

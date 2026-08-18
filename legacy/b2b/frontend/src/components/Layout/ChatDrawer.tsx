@@ -40,6 +40,7 @@ export function ChatDrawer({ onNavigate }: ChatDrawerProps) {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- загрузка сообщений при открытии шторки — внешний вызов, не синхронизация с пропсами
     if (isOpen) fetchMessages();
   }, [isOpen, fetchMessages]);
 

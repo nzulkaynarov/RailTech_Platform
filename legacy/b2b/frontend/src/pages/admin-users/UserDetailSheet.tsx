@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import {
@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AdminActivityTimeline } from '@/components/Admin/AdminActivityTimeline';
 import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';
+import { useDraftState } from '@/hooks/useDraftState';
 import { DetailKPIGrid } from '@/components/Admin/DetailKPIGrid';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
@@ -51,16 +52,11 @@ export function UserDetailSheet({
   // (audit F3-UX) — it otherwise only 403s on save.
   const canManageOperators = useOperatorCan('operators.manage');
 
-  const [draft, setDraft] = useState<Draft>(() => user ?? {});
-  const [roleCode, setRoleCode] = useState<string>('');
+  // Черновик и роль пересобираются при смене пользователя прямо в рендере — без кадра,
+  // на котором в шторке ещё видны поля предыдущего сотрудника.
+  const [draft, setDraft] = useDraftState<typeof user, Draft>(user, (source) => (source ? { ...source } : {}));
+  const [roleCode, setRoleCode] = useDraftState(user, (source) => source?.role_code ?? source?.role_data?.code ?? '');
   const [confirmDeactivate, setConfirmDeactivate] = useState(false);
-
-  useEffect(() => {
-    if (user) {
-      setDraft({ ...user });
-      setRoleCode(user.role_code ?? user.role_data?.code ?? '');
-    }
-  }, [user]);
 
   if (!user) return null;
 

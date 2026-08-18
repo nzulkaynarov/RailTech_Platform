@@ -1,4 +1,5 @@
-import { FormEvent, ReactNode, useEffect, useState } from 'react';
+import { FormEvent, ReactNode } from 'react';
+import { useDraftState } from '@/hooks/useDraftState';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import {
@@ -81,17 +82,13 @@ export function ConfirmActionDialog(props: ConfirmActionDialogProps): React.Reac
     translateError,
   } = props;
 
-  const [reason, setReason] = useState('');
-  const [typed, setTyped] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!open) {
-      setReason('');
-      setTyped('');
-      setSubmitting(false);
-    }
-  }, [open]);
+  // Всё содержимое диалога принадлежит сессии открытия: следующее открытие начинается с нуля,
+  // без эффекта-уборщика (и без кадра, на котором ещё видна прошлая причина).
+  const [form, setForm] = useDraftState(open, () => ({ reason: '', typed: '', submitting: false }));
+  const { reason, typed, submitting } = form;
+  const setReason = (value: string) => setForm((prev) => ({ ...prev, reason: value }));
+  const setTyped = (value: string) => setForm((prev) => ({ ...prev, typed: value }));
+  const setSubmitting = (value: boolean) => setForm((prev) => ({ ...prev, submitting: value }));
 
   const reasonOk = !requireReason || reason.trim().length > 0;
   const typedOk = !typeToConfirm || typed.trim() === typeToConfirm.trim();

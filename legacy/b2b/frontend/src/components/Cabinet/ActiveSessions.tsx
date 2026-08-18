@@ -30,6 +30,7 @@ export function ActiveSessions() {
   }, [t]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- императивная загрузка списка сессий (внешний вызов). Правильный ремонт — перевести на useQuery, отдельной задачей
     fetchSessions();
   }, [fetchSessions]);
 

@@ -64,6 +64,7 @@ export function CompanyTab() {
   // Pull the full record so every editable field is populated, not blanked.
   useEffect(() => {
     if (!companyId) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- императивная догрузка полной карточки компании (внешний вызов). Правильный ремонт — useQuery, отдельной задачей
     setLoadingDocs(true);
     accountsApi.getCompanyDetail(companyId)
       .then((c) => {

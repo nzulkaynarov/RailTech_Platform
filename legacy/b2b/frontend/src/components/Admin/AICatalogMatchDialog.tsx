@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo } from 'react';
+import { useDraftState } from '@/hooks/useDraftState';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Check, Loader2, Sparkles, AlertTriangle } from 'lucide-react';
@@ -34,22 +35,29 @@ export const AICatalogMatchDialog: React.FC<AICatalogMatchDialogProps> = ({ open
   // backend returns, so index N here ↔ line_index N in the response.
   const unmatchedItems = useMemo(() => items.filter((item) => !item.product), [items]);
 
-  const [matches, setMatches] = useState<CatalogMatch[]>([]);
-  const [aiDisabled, setAiDisabled] = useState(false);
-  const [failed, setFailed] = useState(false);
-  // QuoteItem ids that have just been bound in this session (visual "done" mark).
-  const [boundItemIds, setBoundItemIds] = useState<Set<number>>(new Set());
-  // QuoteItem id currently being bound (spinner on its chip group).
-  const [bindingItemId, setBindingItemId] = useState<number | null>(null);
+  // Результат подбора принадлежит СЕССИИ ОТКРЫТИЯ: следующее открытие не должно показывать
+  // чужой прогон. Одно состояние на всю сессию — вместо пяти, которые чистил эффект.
+  const [session, setSession] = useDraftState(open, () => ({
+    matches: [] as CatalogMatch[],
+    aiDisabled: false,
+    failed: false,
+    // QuoteItem ids that have just been bound in this session (visual "done" mark).
+    boundItemIds: new Set<number>(),
+    // QuoteItem id currently being bound (spinner on its chip group).
+    bindingItemId: null as number | null,
+  }));
+  const { matches, aiDisabled, failed, boundItemIds, bindingItemId } = session;
+  const setMatches = (value: CatalogMatch[]) => setSession((prev) => ({ ...prev, matches: value }));
+  const setAiDisabled = (value: boolean) => setSession((prev) => ({ ...prev, aiDisabled: value }));
+  const setFailed = (value: boolean) => setSession((prev) => ({ ...prev, failed: value }));
+  const setBoundItemIds = (update: (prev: Set<number>) => Set<number>) =>
+    setSession((prev) => ({ ...prev, boundItemIds: update(prev.boundItemIds) }));
+  const setBindingItemId = (value: number | null) => setSession((prev) => ({ ...prev, bindingItemId: value }));
 
+  // Эффект остался ЗАПУСКОМ подбора (внешнее действие — платный вызов ИИ), а чистка состояния
+  // ушла в сессию открытия выше: сбрасывать пять полей руками больше не нужно.
   useEffect(() => {
     if (!open) return;
-    setMatches([]);
-    setAiDisabled(false);
-    setFailed(false);
-    setBoundItemIds(new Set());
-    setBindingItemId(null);
-
     if (unmatchedItems.length === 0) return;
 
     matchMutation.mutate(

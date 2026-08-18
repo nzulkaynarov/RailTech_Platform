@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Database, Plus, Pencil, Trash2 } from 'lucide-react';
@@ -15,6 +15,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
+import { useDraftState } from '@/hooks/useDraftState';
 import {
   useCountries, useCurrencies, useUnits, useDeliveryBases,
   useCreateLookup, useUpdateLookup, useDeleteLookup,
@@ -41,16 +42,14 @@ function LookupEditor({
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<AnyItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AnyItem | null>(null);
-  const [draft, setDraft] = useState<Record<string, unknown>>({});
+  // Черновик собирается из редактируемой записи прямо в рендере (создание — пустая заготовка).
+  const [draft, setDraft] = useDraftState<typeof editTarget, Record<string, unknown>>(
+    editTarget,
+    (target) => (target
+      ? { ...(target as unknown as Record<string, unknown>) }
+      : { code: '', name: '', sort_order: 0, is_active: true }),
+  );
   const [filter, setFilter] = useState('');
-
-  useEffect(() => {
-    if (editTarget) {
-      setDraft({ ...editTarget as unknown as Record<string, unknown> });
-    } else {
-      setDraft({ code: '', name: '', sort_order: 0, is_active: true });
-    }
-  }, [editTarget]);
 
   const openNew = () => { setEditTarget(null); setSheetOpen(true); };
   const openEdit = (it: AnyItem) => { setEditTarget(it); setSheetOpen(true); };

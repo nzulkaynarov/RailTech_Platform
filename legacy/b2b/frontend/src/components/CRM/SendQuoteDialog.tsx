@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useDraftState } from '@/hooks/useDraftState';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { AlertTriangle, CheckCircle2, FileText, Loader2, Send, User } from 'lucide-react';
@@ -52,11 +53,9 @@ export function SendQuoteDialog({ deal, quote, open, onOpenChange, onSent }: Sen
   // null) gets prompted REACTIVELY once the backend returns BELOW_FLOOR_JUSTIFICATION_REQUIRED.
   const [justificationRequired, setJustificationRequired] = useState(false);
   const [reason, setReason] = useState('');
-  const [validUntil, setValidUntil] = useState(summary.validUntil ?? '');
+  // Срок пересобирается, когда диалог открывает ДРУГОЕ КП (React переиспользует экземпляр).
+  const [validUntil, setValidUntil] = useDraftState(quote.id, () => quote.valid_until ?? '');
   const [previewing, setPreviewing] = useState(false);
-
-  // Re-sync the editable validity when a different КП opens the dialog (React reuses the instance).
-  useEffect(() => { setValidUntil(quote.valid_until ?? ''); }, [quote.id, quote.valid_until]);
 
   const needJustification = justificationRequired || summary.marginState === 'below';
   const missingReason = needJustification && !reason.trim();

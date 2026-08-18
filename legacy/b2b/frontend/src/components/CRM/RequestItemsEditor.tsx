@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, Fragment } from 'react';
+import { useState, useMemo, Fragment } from 'react';
+import { useDraftState } from '@/hooks/useDraftState';
 import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, PackagePlus, AlertTriangle, Send, Upload, Sparkles, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -62,7 +63,7 @@ export function RequestItemsEditor({
   const [importOpen, setImportOpen] = useState(false);
   const [pendingRemoval, setPendingRemoval] = useState<QuoteItem | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [selectedSellerIds, setSelectedSellerIds] = useState<number[]>([]);
+  const [pickedSellerIds, setSelectedSellerIds] = useState<number[]>([]);
   // The catalog-implied routing happens server-side at submit, so client-side we only
   // know about EXPLICIT routings (hasRecipients) or catalog-linked lines (product set).
   const hasCatalogLines = items.some((item) => item.product != null);
@@ -71,9 +72,8 @@ export function RequestItemsEditor({
   const { data: suggested } = useSuggestedSellers(dealId, pickerOpen);
   // R3 — опциональное AI-усиление подбора (покупатель запускает явно); мержим на клиенте.
   const suggestAi = useSuggestSellersAi();
-  const [aiSellers, setAiSellers] = useState<SuggestedSeller[] | null>(null);
-  // Сбрасываем AI-результат при (пере)открытии пикера, чтобы не показывать чужой прогон.
-  useEffect(() => { if (!pickerOpen) setAiSellers(null); }, [pickerOpen]);
+  // AI-результат принадлежит сессии открытия пикера — чужой прогон не показываем.
+  const [aiSellers, setAiSellers] = useDraftState(pickerOpen, () => null as SuggestedSeller[] | null);
   // Итоговые подсказки = trigram ∪ AI (по компании берём бо́льший счёт совпадений).
   const mergedSuggested = useMemo(() => {
     const byId = new Map<number, SuggestedSeller>();
@@ -85,13 +85,12 @@ export function RequestItemsEditor({
     return [...byId.values()];
   }, [suggested, aiSellers]);
   const suggestedById = new Map(mergedSuggested.map((s) => [s.company_id, s]));
-  // Предвыбор: когда подсказка пришла (или AI её дополнил) и покупатель ещё ничего не трогал — отмечаем совпавших.
+  // Предвыбор: пока покупатель ничего не трогал, отмеченные — это ВЫЧИСЛЕНИЕ из подсказок
+  // (trigram ∪ AI). Как только он тронул список, работает его собственный выбор.
   const [touchedPicker, setTouchedPicker] = useState(false);
-  useEffect(() => {
-    if (pickerOpen && !touchedPicker && mergedSuggested.length > 0) {
-      setSelectedSellerIds(mergedSuggested.map((s) => s.company_id));
-    }
-  }, [pickerOpen, touchedPicker, mergedSuggested]);
+  const selectedSellerIds = touchedPicker
+    ? pickedSellerIds
+    : mergedSuggested.map((seller) => seller.company_id);
 
   const runAiSuggest = async () => {
     try {
@@ -180,8 +179,12 @@ export function RequestItemsEditor({
   };
 
   const toggleSeller = (id: number) => {
+    // Первое касание переключает от ТОГО, ЧТО ЧЕЛОВЕК ВИДИТ (предвыбор из подсказок), а не от
+    // пустого списка: иначе снятие галочки с подсказанного продавца оставляло бы выбранным
+    // только его одного.
+    const base = selectedSellerIds;
     setTouchedPicker(true);  // покупатель сам управляет выбором — больше не перетираем предвыбором
-    setSelectedSellerIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    setSelectedSellerIds(base.includes(id) ? base.filter((x) => x !== id) : [...base, id]);
   };
 
   const handleAdd = async () => {

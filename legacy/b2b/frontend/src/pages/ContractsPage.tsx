@@ -37,6 +37,7 @@ export function ContractsPage() {
     const query = window.location.hash.split('?')[1];
     if (!query) return;
     const openId = Number(new URLSearchParams(query).get('open'));
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- разбор deep-link из URL при монтировании — чтение внешнего состояния (адресной строки)
     if (Number.isFinite(openId) && openId > 0) setSelectedId(openId);
   }, []);
 

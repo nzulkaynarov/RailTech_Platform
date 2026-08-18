@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'; import { useTranslation } from 'react-i18next'; import { toast } from 'sonner'; import { translateApiError } from '@/lib/apiError'; import { formatDate } from '@/lib/formatLocale'; import { Receipt, DollarSign, ScrollText, Send, Ban, Save } from 'lucide-react'; import { DocumentActions } from '@/components/Shared/DocumentActions'; import { Badge } from '@/components/ui/badge'; import { Button } from '@/components/ui/button'; import { Input } from '@/components/ui/input'; import { Textarea } from '@/components/ui/textarea'; import { Label } from '@/components/ui/label'; import {   Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from '@/components/ui/table'; import {   Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, } from '@/components/ui/sheet'; import { Separator } from '@/components/ui/separator'; import { PageShell } from './shared/PageShell'; import { DocumentRegistry } from '@/components/Documents/DocumentRegistry'; import { useDocumentCoreColumns } from '@/components/Documents/useDocumentCoreColumns'; import { ManualModeBanner } from '@/components/Shared/ManualModeBanner'; import { RecordPaymentDialog } from '@/components/Billing/RecordPaymentDialog'; import { DealLink } from '@/components/Shared/DealLink'; import { Toolbar } from '@/components/DataTable';
+import { useDraftState } from '@/hooks/useDraftState';
 import { useListParams, applyListParams } from '@/components/DataTable/listParams';
 import {
   useInvoices, useGenerateAct, useIssueInvoice, useCancelInvoice, useUpdateInvoiceDraft,
@@ -72,16 +73,17 @@ export function InvoicesPage() {
 
   // DRAFT-only editable fields. Kept in local state, synced when the open
   // invoice changes; amounts are NOT editable (they derive from the contract).
-  const [draftDue, setDraftDue] = useState('');
-  const [draftNotes, setDraftNotes] = useState('');
-  // Sync the editable draft fields when the opened invoice changes or its server
-  // values change. Keyed on the primitives (not the memoized `selected` object,
-  // whose identity churns on every cache refetch) so a background refetch that
-  // returns identical data doesn't wipe an in-progress edit.
-  useEffect(() => {
-    setDraftDue(selected?.due_date ?? '');
-    setDraftNotes(selected?.notes ?? '');
-  }, [selectedId, selected?.due_date, selected?.notes]);
+  // Поля пересобираются, когда открыт другой счёт ИЛИ сервер вернул другие значения. Ключ —
+  // строка из примитивов, а не объект `selected`: его ссылка меняется на каждом фоновом
+  // рефетче, и пересборка по ней стирала бы правку прямо под руками.
+  const invoiceDraftKey = `${selectedId ?? ''}:${selected?.due_date ?? ''}:${selected?.notes ?? ''}`;
+  const [invoiceDraft, setInvoiceDraft] = useDraftState(invoiceDraftKey, () => ({
+    due: selected?.due_date ?? '',
+    notes: selected?.notes ?? '',
+  }));
+  const { due: draftDue, notes: draftNotes } = invoiceDraft;
+  const setDraftDue = (value: string) => setInvoiceDraft((prev) => ({ ...prev, due: value }));
+  const setDraftNotes = (value: string) => setInvoiceDraft((prev) => ({ ...prev, notes: value }));
 
   const stats = useMemo(() => {
     const list = invoices ?? [];

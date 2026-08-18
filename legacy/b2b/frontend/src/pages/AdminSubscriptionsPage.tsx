@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { CreditCard, Play, Pause, Pencil, Trash2, Wallet } from 'lucide-react';
@@ -16,6 +16,7 @@ import { AdminActivityTimeline } from '@/components/Admin/AdminActivityTimeline'
 import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';
 import { DetailKPIGrid } from '@/components/Admin/DetailKPIGrid';
 import { useBulkSubscriptionStatus } from '@/hooks/useAdmin';
+import { useDraftState } from '@/hooks/useDraftState';
 import { Tabs as TabsRoot, TabsList as TabsListRoot, TabsTrigger as TabsTriggerRoot, TabsContent as TabsContentRoot } from '@/components/ui/tabs';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter,
@@ -93,13 +94,11 @@ function FormSheet({
   const createMut = useCreateSubscription();
   const updateMut = useUpdateSubscription();
 
-  const [draft, setDraft] = useState<Draft>(() => sub ?? {
-    plan: 'BASIC', status: 'TRIAL', monthly_rate: '0',
-  });
-
-  useEffect(() => {
-    setDraft(sub ?? { plan: 'BASIC', status: 'TRIAL', monthly_rate: '0' });
-  }, [sub]);
+  // Черновик собирается из редактируемой подписки прямо в рендере.
+  const [draft, setDraft] = useDraftState<typeof sub, Draft>(
+    sub,
+    (source) => source ?? { plan: 'BASIC', status: 'TRIAL', monthly_rate: '0' },
+  );
 
   const busy = createMut.isPending || updateMut.isPending;
   const isEdit = Boolean(sub?.id);

@@ -11,6 +11,7 @@ import {
 import { useUnits, useCurrencies, useDeliveryBases } from '@/hooks/useMasterData';
 import { useCompanies } from '@/hooks/useAccounts';
 import { useUserStore } from '@/store/userStore';
+import { useDraftState } from '@/hooks/useDraftState';
 import type { Category, Product, ProductEnrichSuggestion } from '@/api/catalogApi';
 import type { LookupItem } from '@/api/masterDataApi';
 import { extractApiErrorCode, translateApiError } from '@/lib/apiError';
@@ -235,12 +236,18 @@ export function useProductForm({ target, sellerCompanyId, open = true, onSaved }
   // Category hint is advisory text — the seller still picks the real category from
   // the DB dropdown (Rule 1: we never resolve/invent a Category id from the hint).
   // Остаётся ЗАПАСНЫМ вариантом на случай, когда сервер не выбрал category_id.
-  const [categoryHint, setCategoryHint] = useState<string>('');
-  const [suggestion, setSuggestion] = useState<ProductEnrichSuggestion | null>(null);
+  // Панель ИИ принадлежит ОТКРЫТОЙ карточке: закрыли форму или переключились на другой товар —
+  // панель уходит, иначе чужие подсказки применились бы к другой карточке. Источник — пара
+  // «открыта форма + id карточки», поэтому рефетч ТОЙ ЖЕ карточки (например, загрузка фото
+  // инвалидирует ['product', id]) панель НЕ трогает: раньше это молча стирало результат
+  // ПЛАТНОГО вызова ИИ — дефект, найденный триажем правил React Compiler 18-08.
+  const aiPanelSource = open ? `card:${target?.id ?? 'new'}` : 'closed';
+  const [categoryHint, setCategoryHint] = useDraftState(aiPanelSource, () => '');
+  const [suggestion, setSuggestion] = useDraftState(aiPanelSource, () => null as ProductEnrichSuggestion | null);
   // Отклонения, а не согласия: по умолчанию отмечено всё (как в пакетном подборе ТН ВЭД),
   // человек снимает лишнее и жмёт одно явное «Применить».
-  const [rejectedFields, setRejectedFields] = useState<Set<EnrichField>>(new Set());
-  const [rejectedSpecKeys, setRejectedSpecKeys] = useState<Set<string>>(new Set());
+  const [rejectedFields, setRejectedFields] = useDraftState(aiPanelSource, () => new Set<EnrichField>());
+  const [rejectedSpecKeys, setRejectedSpecKeys] = useDraftState(aiPanelSource, () => new Set<string>());
 
   // Дневной расход ИИ — ИНФОРМАЦИЯ рядом с кнопкой, а не гейт: потолок живёт на сервере
   // (429 AI_DAILY_CAP_REACHED). `null` = безлимит, `undefined` = бэкенд не прислал.
@@ -450,30 +457,6 @@ export function useProductForm({ target, sellerCompanyId, open = true, onSaved }
     }
   };
 
-  // Предложения принадлежат ОТКРЫТОЙ карточке: закрыли форму или переключились на другой
-  // товар — панель уходит, иначе чужие подсказки применились бы к другой карточке.
-  useEffect(() => {
-    if (open) return;
-    setSuggestion(null);
-    setRejectedFields(new Set());
-    setRejectedSpecKeys(new Set());
-    setCategoryHint('');
-  }, [open]);
-  // Тот же гард, что у черновика выше (seededTargetId): сбрасываем панель ИИ при СМЕНЕ
-  // карточки, а не на каждый новый объект той же карточки. Без него любая инвалидация
-  // ['product', id] — например, загрузка фото — молча стирала разобранные предложения
-  // ИИ и отметки отклонённых полей, то есть результат ПЛАТНОГО вызова. Дефект найден
-  // триажем правил React Compiler 18-08 (гард стоял у соседних эффектов, у этого — нет).
-  const suggestionTargetId = useRef<number | null>(null);
-  useEffect(() => {
-    const targetId = target?.id ?? null;
-    if (targetId !== null && suggestionTargetId.current === targetId) return;
-    suggestionTargetId.current = targetId;
-    setSuggestion(null);
-    setRejectedFields(new Set());
-    setRejectedSpecKeys(new Set());
-    setCategoryHint('');
-  }, [target]);
 
   return {
     // lookups

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -45,16 +45,16 @@ type FormData = z.infer<ReturnType<typeof createSchema>>;
 export const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ uid, token, onLogin, onForgot }) => {
     const { t } = useTranslation();
     const [loading, setLoading] = useState(false);
-    const [serverError, setServerError] = useState('');
+    const [submitError, setSubmitError] = useState('');
+    // Кривая ссылка — вычисляемое свойство, не состояние (см. PasswordSetupPage).
+    const linkInvalid = !uid || !token;
+    const serverError = submitError || (linkInvalid ? t('resetPassword.invalidLink') : '');
+    const setServerError = setSubmitError;
     const [success, setSuccess] = useState(false);
     const form = useForm<FormData>({
         resolver: zodResolver(createSchema(t)),
         defaultValues: { password: '', confirmPassword: '' },
     });
-
-    useEffect(() => {
-        if (!uid || !token) setServerError(t('resetPassword.invalidLink'));
-    }, [uid, token, t]);
 
     const onSubmit = async (data: FormData) => {
         if (!uid || !token) {

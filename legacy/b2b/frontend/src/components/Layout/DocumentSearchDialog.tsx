@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useDraftState } from '@/hooks/useDraftState';
 import { useTranslation } from 'react-i18next';
 import {
     FileText, FileSignature, Receipt, ClipboardCheck, FileType, Loader2,
@@ -47,18 +48,14 @@ const DEBOUNCE_MS = 250;
 
 export function DocumentSearchDialog({ open, onOpenChange, onNavigate }: DocumentSearchDialogProps) {
     const { t } = useTranslation();
-    const [query, setQuery] = useState('');
+    // Запрос принадлежит сессии открытия — см. CommandPalette.
+    const [query, setQuery] = useDraftState(open, () => '');
     const debouncedQuery = useDebouncedValue(query, DEBOUNCE_MS);
     const term = debouncedQuery.trim();
     const search = useSearchDocuments(term);
     const activeStatus = useUserStore((state) => state.activeStatus);
     const isPlatformAdmin = useUserStore((state) => state.role === 'ADMIN');
     const viewer = { isSeller: activeStatus === 'SELLER', isPlatformAdmin };
-
-    // Reset the input each time the dialog closes so a re-open starts clean.
-    useEffect(() => {
-        if (!open) setQuery('');
-    }, [open]);
 
     const grouped = useMemo(() => {
         const results = search.data ?? [];

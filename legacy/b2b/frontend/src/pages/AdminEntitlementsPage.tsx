@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { KeyRound, Pencil, Trash2, Check, X } from 'lucide-react';
@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { useDraftState } from '@/hooks/useDraftState';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -66,18 +67,20 @@ function EntitlementForm({
 
   const companies = useMemo(() => (companiesRaw ?? []) as { id: number; name: string }[], [companiesRaw]);
 
-  const [draft, setDraft] = useState<CompanyEntitlementDraft>(() => blank());
   function blank(): CompanyEntitlementDraft {
     return { company: 0, feature_key: '', access: 'ENABLED', limit: null, credits: null, expires_at: null, note: '' };
   }
-  useEffect(() => {
-    setDraft(entitlement
+  // Источник черновика — пара «открытие диалога + редактируемая запись»: каждое новое открытие
+  // начинается с чистого листа, а правки внутри одного открытия переживают рефетч списка.
+  const [draft, setDraft] = useDraftState(
+    open ? entitlement ?? null : null,
+    (source) => (source
       ? {
-          company: entitlement.company, feature_key: entitlement.feature_key, access: entitlement.access,
-          limit: entitlement.limit, credits: entitlement.credits, expires_at: entitlement.expires_at, note: entitlement.note,
+          company: source.company, feature_key: source.feature_key, access: source.access,
+          limit: source.limit, credits: source.credits, expires_at: source.expires_at, note: source.note,
         }
-      : blank());
-  }, [entitlement, open]);
+      : blank()),
+  );
 
   const busy = createMut.isPending || updateMut.isPending;
   const patch = (p: Partial<CompanyEntitlementDraft>) => setDraft((d) => ({ ...d, ...p }));

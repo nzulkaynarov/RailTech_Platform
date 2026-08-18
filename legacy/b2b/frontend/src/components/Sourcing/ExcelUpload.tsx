@@ -50,6 +50,7 @@ export const ExcelUpload: React.FC<ExcelUploadProps> = ({ dealId, onUploadSucces
     const progressPercent = progressTotal ? Math.round(((task?.progress?.current ?? 0) / progressTotal) * 100) : 0;
     const [elapsedSec, setElapsedSec] = useState(0);
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- счётчик секунд импорта на таймере
         if (!isImporting) { setElapsedSec(0); return; }
         const id = setInterval(() => setElapsedSec((s) => s + 1), 1000);
         return () => clearInterval(id);
@@ -62,6 +63,7 @@ export const ExcelUpload: React.FC<ExcelUploadProps> = ({ dealId, onUploadSucces
         if (!task) return;
         if (task.status === 'SUCCESS') {
             const summary = task.result ?? undefined;
+            // eslint-disable-next-line react-hooks/set-state-in-effect -- реакция на статус ОПРАШИВАЕМОЙ задачи Celery — внешняя система
             setTaskId(null);
             onUploadSuccess?.(summary);
         } else if (task.status === 'FAILURE') {

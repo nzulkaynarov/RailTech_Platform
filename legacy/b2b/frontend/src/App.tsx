@@ -257,6 +257,7 @@ function MainApp() {
     } else {
       toast.info(t('guards.notAvailableHere'));
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- гейт страницы: не синхронизация, а НАВИГАЦИЯ с побочными действиями (toast + history.replaceState)
     setPage({ type: 'dashboard' });
     window.history.replaceState(null, '', '#dashboard');
   }, [page.type, role, kycStatus, activeStatus, statusEntries, bootstrapped, setActiveStatus, queryClient, t]);
@@ -296,6 +297,7 @@ function MainApp() {
       '',
       `${window.location.pathname}?${params.toString()}#settings`,
     );
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- нормализация legacy-URL `#profile`: пишет в history, то есть работает с внешней системой
     setPage({ type: 'settings' });
   }, [page.type]);
 

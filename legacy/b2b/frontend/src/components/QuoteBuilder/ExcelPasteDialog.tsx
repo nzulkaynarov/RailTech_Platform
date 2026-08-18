@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
+import { useDraftState } from '@/hooks/useDraftState';
 import { useTranslation } from 'react-i18next';
 import { Loader2, AlertTriangle } from 'lucide-react';
 
@@ -48,22 +49,15 @@ export const ExcelPasteDialog: React.FC<ExcelPasteDialogProps> = ({
 	open, onOpenChange, initialText, maxRows, submitting, rowErrors, onConfirm,
 }) => {
 	const { t } = useTranslation();
-	const [text, setText] = useState(initialText);
-	const [roles, setRoles] = useState<ColumnRole[]>([]);
-
-	// Reset the editable source whenever the dialog (re)opens with fresh clipboard text.
-	useEffect(() => {
-		if (open) setText(initialText);
-	}, [open, initialText]);
+	// Источник принадлежит открытию: каждое новое открытие приносит свежий текст из буфера.
+	const [text, setText] = useDraftState(open ? initialText : null, () => initialText);
 
 	// Re-parse on every source change; identity is stable while `text` is unchanged.
 	const table = useMemo(() => parseClipboardTable(text), [text]);
 
-	// Any source change re-derives the heuristic roles; a lone role-select change leaves `text`
-	// untouched, so this effect does not fire and the manual override survives.
-	useEffect(() => {
-		setRoles(table.roles);
-	}, [table]);
+	// Роли колонок ВЫВОДЯТСЯ из разобранной таблицы; ручное переопределение живёт до следующей
+	// смены источника — источник и есть сама таблица (её ссылка стабильна, пока текст не менялся).
+	const [roles, setRoles] = useDraftState(table, (parsed) => parsed.roles);
 
 	const previewRows = useMemo(() => table.rows.slice(0, maxRows), [table.rows, maxRows]);
 	const totalRows = table.rows.length;

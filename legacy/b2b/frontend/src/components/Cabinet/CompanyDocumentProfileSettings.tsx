@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -14,6 +14,7 @@ import {
   DocumentPreviewType,
 } from '@/api/accountsApi';
 import { useAuthStore } from '@/store/authStore';
+import { useDraftState } from '@/hooks/useDraftState';
 import { useHasCompanyPermission } from '@/hooks/useCapabilities';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { Button } from '@/components/ui/button';
@@ -152,7 +153,7 @@ export function CompanyDocumentProfileSettings() {
   const companyId = user?.company?.id ?? user?.primary_company?.id ?? null;
   const canEditSettings = useHasCompanyPermission('settings.edit');
 
-  const [form, setForm] = useState<ProfileForm>(EMPTY_FORM);
+
   const [previewType, setPreviewType] = useState<DocumentPreviewType>('KP');
 
   const { data: profile, isLoading } = useQuery({
@@ -161,9 +162,8 @@ export function CompanyDocumentProfileSettings() {
     enabled: companyId != null && canEditSettings,
   });
 
-  useEffect(() => {
-    if (profile) setForm(toForm(profile));
-  }, [profile]);
+  // Форма пересобирается при смене загруженного профиля прямо в рендере.
+  const [form, setForm] = useDraftState(profile ?? null, (loaded) => (loaded ? toForm(loaded) : EMPTY_FORM));
 
   // Live WYSIWYG preview (Odoo Document-Layout wizard): the CURRENT form state overlays the
   // saved profile in-memory server-side, so every unsaved edit (accent, layout, font…) shows

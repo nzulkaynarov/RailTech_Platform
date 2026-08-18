@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUrlState } from '@/hooks/useUrlState';
+import { useDraftState } from '@/hooks/useDraftState';
 import {
   Table,
   TableBody,
@@ -155,8 +156,9 @@ export function AdminDataTable<T>(props: AdminDataTableProps<T>): React.ReactNod
   const currentTab = urlState.get(ns(QP_KEYS.tab)) || (tabs?.[0]?.id ?? '');
   const currentSort = urlState.get(ns(QP_KEYS.sort));
 
-  const [searchInput, setSearchInput] = useState(currentSearch);
-  useEffect(() => setSearchInput(currentSearch), [currentSearch]);
+  // Поле поиска следует за URL (кнопка «назад», очистка фильтров) — корректировкой состояния
+  // в рендере, а не эффектом: иначе на кадр в поле остаётся прежний запрос.
+  const [searchInput, setSearchInput] = useDraftState(currentSearch, (value: string) => value);
 
   // Density preference (persisted in localStorage)
   const densityKey = `admin.${storageKey}.density`;
@@ -211,6 +213,7 @@ export function AdminDataTable<T>(props: AdminDataTableProps<T>): React.ReactNod
     // то есть новая функция на каждый рендер родителя — раньше эффект срабатывал каждый раз
     // и всегда создавал новый Set, а значит перерисовывал всю тяжёлую админ-таблицу и панель
     // массовых действий. Найдено триажем правил React Compiler 18-08.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- чистка выборки от строк, которых больше нет: зависит от ОТРИСОВАННЫХ строк и getRowId; апдейтер возвращает прежний Set, когда состав не изменился
     setSelectedIds((prev) => {
       if (prev.size === 0) return prev;
       const valid = new Set<string | number>();

@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback } from 'react';
+import { useDraftState } from '@/hooks/useDraftState';
 import { useTranslation } from 'react-i18next';
 import { ChevronUp, ChevronDown, ChevronRight, Trash2 } from 'lucide-react';
 import type { QuoteItem } from '@/api/crmApi';
@@ -45,9 +46,9 @@ export const SectionNoteRow: React.FC<SectionNoteRowProps> = ({ item, index, vir
 	const isNoteUnderSection = !isSection && itemsUnderSection.has(item.id);
 
 	// Local editing buffer so typing doesn't fire a network PATCH per keystroke — commit on blur.
-	const [text, setText] = useState(item.imported_raw_name ?? '');
-	// Re-sync when a server refetch replaces this row's persisted heading/text (e.g. after rename).
-	useEffect(() => { setText(item.imported_raw_name ?? ''); }, [item.imported_raw_name]);
+	// Пересобирается, когда сервер вернул другой текст строки (например, после переименования):
+	// корректировка в рендере, а не эффект — иначе кадр со старым текстом.
+	const [text, setText] = useDraftState(item.imported_raw_name ?? '', (value: string) => value);
 
 	const isRowSelected = selection.isSelected(item.id);
 	const isFirst = index === 0;

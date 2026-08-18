@@ -1,4 +1,5 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useMemo, useState } from 'react';
+import { useDraftState } from '@/hooks/useDraftState';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Loader2, Wallet, Upload, X } from 'lucide-react';
@@ -49,8 +50,14 @@ export function RecordPaymentDialog({
     status: 'ISSUED,PARTIAL,OVERDUE',
   });
 
-  const [invoiceId, setInvoiceId] = useState<string>(defaultInvoiceId ? String(defaultInvoiceId) : '');
-  const [amount, setAmount] = useState('');
+  // Всё, что человек вводит в диалоге, принадлежит СЕССИИ ОТКРЫТИЯ. Диалог смонтирован вместе
+  // со страницей, поэтому разовая инициализация отрабатывала, когда счёт ещё не был выбран, и
+  // застывала пустой: пользователь открывал конкретный счёт, жал «Зафиксировать платёж» — и
+  // снова выбирал в списке тот же счёт руками.
+  const openSession = open ? `open:${defaultInvoiceId ?? ''}` : 'closed';
+  const [invoiceId, setInvoiceId] = useDraftState(openSession, () =>
+    defaultInvoiceId ? String(defaultInvoiceId) : '');
+  const [typedAmount, setTypedAmount] = useDraftState(openSession, () => '');
   const [method, setMethod] = useState<'BANK_TRANSFER' | 'CARD' | 'CASH' | 'OTHER'>('BANK_TRANSFER');
   const [paidAt, setPaidAt] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [reference, setReference] = useState('');
@@ -72,23 +79,13 @@ export function RecordPaymentDialog({
   const balanceDueStr = selectedInvoice?.balance_due ?? '';
   const balanceDue = Number(balanceDueStr) || 0;
 
-  // Диалог смонтирован ВМЕСТЕ со страницей, поэтому `useState(defaultInvoiceId …)` отработал,
-  // когда счёт ещё не был выбран, и застыл пустым: пользователь открывал конкретный счёт,
-  // жал «Зафиксировать платёж» — и снова выбирал в списке тот же счёт руками. Синхронизируем
-  // на КАЖДОМ открытии.
-  useEffect(() => {
-    if (!open) return;
-    setInvoiceId(defaultInvoiceId ? String(defaultInvoiceId) : '');
-  }, [open, defaultInvoiceId]);
-
   // Сумма по умолчанию — весь остаток к оплате (Stripe/Odoo/QuickBooks предлагают именно его:
   // полная оплата — самый частый случай, частичную пользователь исправит одним движением).
-  // Только пока поле не тронуто, чтобы не затирать введённое вручную.
-  const [amountTouched, setAmountTouched] = useState(false);
-  useEffect(() => {
-    if (!open) { setAmountTouched(false); return; }
-    if (!amountTouched && balanceDue > 0) setAmount(balanceDueStr);
-  }, [open, amountTouched, balanceDue, balanceDueStr]);
+  // Это ВЫЧИСЛЕНИЕ, а не состояние: пока поле не тронуто, показываем остаток выбранного счёта,
+  // и он следует за сменой счёта без всякого эффекта.
+  const [amountTouched, setAmountTouched] = useDraftState(openSession, () => false);
+  const amount = amountTouched || balanceDue <= 0 ? typedAmount : balanceDueStr;
+  const setAmount = (value: string) => setTypedAmount(value);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -117,8 +114,6 @@ export function RecordPaymentDialog({
       toast.success(t('recordPayment.success'));
       onRecorded?.();
       onOpenChange(false);
-      setInvoiceId(defaultInvoiceId ? String(defaultInvoiceId) : '');
-      setAmount('');
       setReference('');
       setProofFile(null);
     } catch (e) {
@@ -152,8 +147,7 @@ export function RecordPaymentDialog({
                 value={invoiceId || undefined}
                 onValueChange={(v) => {
                   setInvoiceId(v);
-                  const inv = payableInvoices.find((i) => String(i.id) === v);
-                  if (inv && !amount) setAmount(inv.balance_due);
+                  // Сумма не тронута — она сама последует за остатком нового счёта.
                 }}
                 disabled={invoicesLoading || recordMut.isPending}
               >

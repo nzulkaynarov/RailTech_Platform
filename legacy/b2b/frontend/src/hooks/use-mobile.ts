@@ -20,6 +20,7 @@ export function useMediaQuery(query: string): boolean {
     const onChange = () => setMatches(mql.matches)
     mql.addEventListener("change", onChange)
     // Один синк после подписки: между рендером и эффектом ширина могла измениться.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- единственный синк после подписки на matchMedia: между рендером и эффектом ширина могла измениться
     if (mql.matches !== matches) setMatches(mql.matches)
     return () => mql.removeEventListener("change", onChange)
     // `matches` намеренно вне списка: эффект — подписка на query, а не на текущее значение.

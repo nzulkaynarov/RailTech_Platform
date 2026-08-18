@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useDraftState } from '@/hooks/useDraftState';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -67,13 +67,6 @@ export function CompanyNumberingSettings() {
   const companyId = user?.company?.id ?? user?.primary_company?.id ?? null;
   const canEditSettings = useHasCompanyPermission('settings.edit');
 
-  const [prefix, setPrefix] = useState('');
-  const [pattern, setPattern] = useState('');
-  const [padding, setPadding] = useState(5);
-  const [resetPeriod, setResetPeriod] = useState<NumberingResetPeriod>('yearly');
-  const [startValue, setStartValue] = useState(0);
-  const [typeLabels, setTypeLabels] = useState<Record<string, string>>({});
-
   const { data: settings, isLoading: settingsLoading } = useQuery({
     queryKey: ['company-settings', companyId],
     queryFn: () => accountsApi.getCompanySettings(companyId as number),
@@ -86,19 +79,22 @@ export function CompanyNumberingSettings() {
     enabled: canEditSettings,
   });
 
-  useEffect(() => {
-    if (settings) setPrefix(settings.doc_number_prefix ?? '');
-  }, [settings]);
-
-  useEffect(() => {
-    if (scheme) {
-      setPattern(scheme.pattern);
-      setPadding(scheme.padding);
-      setResetPeriod(scheme.reset_period);
-      setStartValue(scheme.start_value);
-      setTypeLabels(scheme.type_labels ?? {});
-    }
-  }, [scheme]);
+  // Поля пересобираются при смене загруженных данных прямо в рендере — без кадра с пустой формой.
+  const [prefix, setPrefix] = useDraftState(settings ?? null, (loaded) => loaded?.doc_number_prefix ?? '');
+  const [schemeForm, setSchemeForm] = useDraftState(scheme ?? null, (loaded) => ({
+    pattern: loaded?.pattern ?? '',
+    padding: loaded?.padding ?? 5,
+    resetPeriod: (loaded?.reset_period ?? 'yearly') as NumberingResetPeriod,
+    startValue: loaded?.start_value ?? 0,
+    typeLabels: loaded?.type_labels ?? {},
+  }));
+  const { pattern, padding, resetPeriod, startValue, typeLabels } = schemeForm;
+  const setPattern = (value: string) => setSchemeForm((prev) => ({ ...prev, pattern: value }));
+  const setPadding = (value: number) => setSchemeForm((prev) => ({ ...prev, padding: value }));
+  const setResetPeriod = (value: NumberingResetPeriod) => setSchemeForm((prev) => ({ ...prev, resetPeriod: value }));
+  const setStartValue = (value: number) => setSchemeForm((prev) => ({ ...prev, startValue: value }));
+  const setLabelValue = (code: string, value: string) =>
+    setSchemeForm((prev) => ({ ...prev, typeLabels: { ...prev.typeLabels, [code]: value } }));
 
   const presetId = patternToPresetId(pattern);
   const patternValid = pattern.trim() !== '' && pattern.includes('{seq}');
@@ -123,7 +119,11 @@ export function CompanyNumberingSettings() {
   const { data: preview } = useQuery({
     queryKey: ['numbering-preview', debouncedKey],
     queryFn: () => crmApi.previewNumberingScheme(JSON.parse(debouncedKey) as NumberingPreviewInput),
-    enabled: canEditSettings && patternValid,
+    // Ждём, пока ОТЛОЖЕННЫЙ ключ догонит текущий ввод. Иначе на открытии экрана уходил запрос
+    // со ВЧЕРАШНИМ ключом: маска приходит с сервера и делает `patternValid` истинным раньше,
+    // чем отпустит debounce, — превью просилось с пустой маской и падало 400 ERR_BAD_REQUEST
+    // красным тостом прямо в лицо. Найдено прогоном глазами 18-08.
+    enabled: canEditSettings && patternValid && debouncedKey === previewKey,
     placeholderData: (previous) => previous,
   });
 
@@ -170,8 +170,7 @@ export function CompanyNumberingSettings() {
     if (preset) setPattern(preset.pattern);
   };
 
-  const setLabel = (code: string, value: string) =>
-    setTypeLabels((previous) => ({ ...previous, [code]: value }));
+  const setLabel = setLabelValue;
 
   // §2.4 reading-form pattern: section header left, form card right with a width cap.
   return (

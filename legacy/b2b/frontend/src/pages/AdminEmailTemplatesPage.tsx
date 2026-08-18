@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useDraftState } from '@/hooks/useDraftState';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Mail, Eye, Send, Trash2, Plus } from 'lucide-react';
@@ -126,11 +127,8 @@ function TestSendDialog({
 }) {
   const { t } = useTranslation();
   const testSend = useTestSendEmailTemplate();
-  const [email, setEmail] = useState('');
-
-  useEffect(() => {
-    if (open) setEmail('');
-  }, [open]);
+  // Поле очищается на каждом открытии диалога — источником служит сама сессия открытия.
+  const [email, setEmail] = useDraftState(open, () => '');
 
   const submit = async () => {
     if (!template || !email.trim()) {
@@ -193,22 +191,19 @@ function Editor({
   const updateMut = useUpdateEmailTemplate();
   const previewMut = usePreviewEmailTemplate();
 
-  const [draft, setDraft] = useState<EmailTemplateDraft>(EMPTY_DRAFT);
-
-  useEffect(() => {
-    if (template) {
-      setDraft({
-        key: template.key,
-        subject: template.subject,
-        html_body: template.html_body,
-        text_body: template.text_body,
-        available_variables: template.available_variables,
-        is_active: template.is_active,
-      });
-    } else {
-      setDraft(EMPTY_DRAFT);
-    }
-  }, [template]);
+  // Черновик собирается из редактируемого шаблона прямо в рендере.
+  const [draft, setDraft] = useDraftState<typeof template, EmailTemplateDraft>(template, (source) =>
+    source
+      ? {
+          key: source.key,
+          subject: source.subject,
+          html_body: source.html_body,
+          text_body: source.text_body,
+          available_variables: source.available_variables,
+          is_active: source.is_active,
+        }
+      : EMPTY_DRAFT,
+  );
 
   const update = (patch: Partial<EmailTemplateDraft>) => setDraft((d) => ({ ...d, ...patch }));
   const busy = createMut.isPending || updateMut.isPending;
