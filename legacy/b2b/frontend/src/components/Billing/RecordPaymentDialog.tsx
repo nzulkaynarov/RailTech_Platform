@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useMemo } from 'react';
 import { useDraftState } from '@/hooks/useDraftState';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -58,10 +58,19 @@ export function RecordPaymentDialog({
   const [invoiceId, setInvoiceId] = useDraftState(openSession, () =>
     defaultInvoiceId ? String(defaultInvoiceId) : '');
   const [typedAmount, setTypedAmount] = useDraftState(openSession, () => '');
-  const [method, setMethod] = useState<'BANK_TRANSFER' | 'CARD' | 'CASH' | 'OTHER'>('BANK_TRANSFER');
-  const [paidAt, setPaidAt] = useState<string>(() => new Date().toISOString().slice(0, 10));
-  const [reference, setReference] = useState('');
-  const [proofFile, setProofFile] = useState<File | null>(null);
+  // Остальные поля — той же сессии, и это НЕ косметика. Пока они жили в обычном `useState`,
+  // брошенное открытие уносило свои данные на следующий счёт: назначение платежа, ФАЙЛ-скан
+  // «подтверждение оплаты» и дата оставались от прошлого раза, и человек фиксировал оплату
+  // счёта B с платёжкой от счёта A. Тихая порча финансового регистра — хуже, чем пустая форма.
+  // Дата берётся на КАЖДОЕ открытие: диалог, открытый вчера и закрытый без отправки, ставил
+  // вчерашнее число (`timezone.localdate()`-грабли, но на фронте).
+  const [method, setMethod] = useDraftState<string, 'BANK_TRANSFER' | 'CARD' | 'CASH' | 'OTHER'>(
+    openSession,
+    () => 'BANK_TRANSFER',
+  );
+  const [paidAt, setPaidAt] = useDraftState(openSession, () => new Date().toISOString().slice(0, 10));
+  const [reference, setReference] = useDraftState(openSession, () => '');
+  const [proofFile, setProofFile] = useDraftState(openSession, () => null as File | null);
 
   const payableInvoices = useMemo(
     () => invoices.filter((i) => ['ISSUED', 'PARTIAL', 'OVERDUE'].includes(i.status)),
@@ -114,8 +123,7 @@ export function RecordPaymentDialog({
       toast.success(t('recordPayment.success'));
       onRecorded?.();
       onOpenChange(false);
-      setReference('');
-      setProofFile(null);
+      // Ручная уборка после отправки больше не нужна: следующее открытие пересоберёт всё.
     } catch (e) {
       toast.error(translateApiError(e));
     }

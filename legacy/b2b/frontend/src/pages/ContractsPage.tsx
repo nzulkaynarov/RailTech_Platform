@@ -11,6 +11,7 @@ import type { Contract, ContractStatus } from '@/api/contractsApi';
 import { ContractWordingSection } from '@/components/CRM/ContractWordingSection';
 import { DealLink } from '@/components/Shared/DealLink';
 import { DocumentCheck } from '@/components/CRM/DocumentCheck';
+import { useDraftState } from '@/hooks/useDraftState';
 
 const STATUS_VARIANT: Record<ContractStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   DRAFT: 'secondary',
@@ -41,9 +42,14 @@ export function ContractsPage() {
     if (Number.isFinite(openId) && openId > 0) setSelectedId(openId);
   }, []);
 
-  const [cancelReason, setCancelReason] = useState('');
+  // Основание аннулирования принадлежит ТОМУ ДОГОВОРУ, для которого его написали. Пока оно
+  // жило в обычном `useState`, текст, набранный для одного договора и брошенный без отправки,
+  // всплывал в диалоге ДРУГОГО — и уходил на сервер, где дописывается в карточку договора
+  // (`crm/services/contracts.py`). Юридическая запись с чужим основанием — тихий, но дорогой
+  // дефект: заголовок диалога называл один номер, а причина была написана про другой.
+  const [cancelReason, setCancelReason] = useDraftState(cancelTarget, () => '');
   const [forceCancelTarget, setForceCancelTarget] = useState<Contract | null>(null);
-  const [forceCancelReason, setForceCancelReason] = useState('');
+  const [forceCancelReason, setForceCancelReason] = useDraftState(forceCancelTarget, () => '');
 
   const role = useUserStore((s) => s.role);
   const isPlatformAdmin = role === 'ADMIN';
@@ -167,7 +173,6 @@ export function ContractsPage() {
       await cancelMut.mutateAsync({ id: cancelTarget.id, reason: cancelReason });
       toast.success(t('contractsPage.cancelled'));
       setCancelTarget(null);
-      setCancelReason('');
     } catch (e) {
       toast.error(translateApiError(e));
     }
@@ -183,7 +188,6 @@ export function ContractsPage() {
       await forceCancelMut.mutateAsync({ id: forceCancelTarget.id, reason: forceCancelReason });
       toast.success(t('contractsPage.forceCancelled'));
       setForceCancelTarget(null);
-      setForceCancelReason('');
       setSelectedId(null);
     } catch (e) {
       toast.error(translateApiError(e));
@@ -436,7 +440,7 @@ export function ContractsPage() {
 
       <AlertDialog
         open={!!forceCancelTarget}
-        onOpenChange={(o) => { if (!o) { setForceCancelTarget(null); setForceCancelReason(''); } }}
+        onOpenChange={(o) => { if (!o) setForceCancelTarget(null); }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>

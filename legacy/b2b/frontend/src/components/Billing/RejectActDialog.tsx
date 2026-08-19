@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { useDraftState } from '@/hooks/useDraftState';
 
 interface RejectActDialogProps {
   actNumber: string | null;
@@ -26,7 +27,11 @@ interface RejectActDialogProps {
  */
 export function RejectActDialog({ actNumber, open, onOpenChange, onConfirm }: RejectActDialogProps) {
   const { t } = useTranslation();
-  const [reason, setReason] = useState('');
+  // Причина принадлежит ТОМУ АКТУ, для которого её написали, и сессии открытия диалога.
+  // Пока она жила в обычном `useState`, брошенный без отправки текст всплывал при следующем
+  // открытии — и уходил исполнителю по ДРУГОМУ акту. Для двустороннего акта причина возврата
+  // и есть весь смысл действия, поэтому чужая причина здесь дороже пустого поля.
+  const [reason, setReason] = useDraftState(`${open ? 'open' : 'closed'}:${actNumber ?? ''}`, () => '');
   const [busy, setBusy] = useState(false);
 
   const submit = async () => {
@@ -37,7 +42,6 @@ export function RejectActDialog({ actNumber, open, onOpenChange, onConfirm }: Re
     setBusy(true);
     try {
       await onConfirm(reason.trim());
-      setReason('');
       onOpenChange(false);
     } catch (e) {
       toast.error(translateApiError(e));

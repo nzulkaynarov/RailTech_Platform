@@ -43,9 +43,14 @@ function LookupEditor({
   const [editTarget, setEditTarget] = useState<AnyItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AnyItem | null>(null);
   // Черновик собирается из редактируемой записи прямо в рендере (создание — пустая заготовка).
-  const [draft, setDraft] = useDraftState<typeof editTarget, Record<string, unknown>>(
-    editTarget,
-    (target) => (target
+  // Источник — пара «шторка открыта + запись», а не одна запись: иначе брошенная без сохранения
+  // правка возвращалась при СЛЕДУЮЩЕМ открытии той же строки, и «Сохранить» записывал её как
+  // намеренную. Радиус тут — вся платформа: страны, валюты и единицы печатаются в документах
+  // всех арендаторов.
+  const draftSource = sheetOpen ? editTarget ?? 'new' : null;
+  const [draft, setDraft] = useDraftState<typeof draftSource, Record<string, unknown>>(
+    draftSource,
+    (target) => (target && target !== 'new'
       ? { ...(target as unknown as Record<string, unknown>) }
       : { code: '', name: '', sort_order: 0, is_active: true }),
   );
@@ -166,7 +171,7 @@ function LookupEditor({
         </CardContent>
       </Card>
 
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+      <Sheet open={sheetOpen} onOpenChange={(o) => { setSheetOpen(o); if (!o) setEditTarget(null); }}>
         <SheetContent className="sm:max-w-md">
           <SheetHeader>
             <SheetTitle>{editTarget ? t('adminMasterData.edit') : t('adminMasterData.new')}</SheetTitle>

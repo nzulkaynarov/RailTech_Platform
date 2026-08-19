@@ -94,10 +94,14 @@ function FormSheet({
   const createMut = useCreateSubscription();
   const updateMut = useUpdateSubscription();
 
-  // Черновик собирается из редактируемой подписки прямо в рендере.
-  const [draft, setDraft] = useDraftState<typeof sub, Draft>(
-    sub,
-    (source) => source ?? { plan: 'BASIC', status: 'TRIAL', monthly_rate: '0' },
+  // Черновик собирается из редактируемой подписки прямо в рендере. Источник — пара «шторка
+  // открыта + подписка»: иначе брошенная без сохранения правка ставки возвращалась при
+  // следующем открытии той же строки, а плашка KPI рядом печатала настоящее значение — в одном
+  // окне два разных ответа про деньги арендатора, и «Сохранить» записывал выброшенный черновик.
+  const draftSource = open ? sub ?? 'new' : null;
+  const [draft, setDraft] = useDraftState<typeof draftSource, Draft>(
+    draftSource,
+    (source) => (source && source !== 'new' ? source : { plan: 'BASIC', status: 'TRIAL', monthly_rate: '0' }),
   );
 
   const busy = createMut.isPending || updateMut.isPending;
@@ -518,7 +522,7 @@ export function AdminSubscriptionsPage() {
       <FormSheet
         sub={editTarget}
         open={sheetOpen}
-        onOpenChange={setSheetOpen}
+        onOpenChange={(o) => { setSheetOpen(o); if (!o) setEditTarget(null); }}
       />
 
       <SubscriptionPayDialog
