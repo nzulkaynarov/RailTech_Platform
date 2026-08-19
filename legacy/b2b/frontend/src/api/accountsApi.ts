@@ -207,6 +207,8 @@ export interface CompanyFilterParams {
 }
 
 export interface UserFilterParams {
+	/** Обойти постраничку и вернуть весь список — операторские реестры без пагинации в UI. */
+	fetchAll?: boolean;
 	search?: string;
 	role?: string;
 	is_active?: boolean;
@@ -439,6 +441,30 @@ export const accountsApi = {
 	},
 	// Admin specific endpoints
 	getUsers: async (params?: UserFilterParams) => {
+		// Операторский реестр показывает список ЦЕЛИКОМ и печатает по нему счётчики, а страницы
+		// в интерфейсе нет: без обхода `next` оператор видел ровно первые 20 записей и плашку
+		// «Всего 20», хотя в базе их было 24 — вместе с ним самим и владельцем стенда. Тот же
+		// обход, что у `getCompanies`; размеры операторских справочников это позволяют.
+		if (params?.fetchAll) {
+			const query = { ...params };
+			delete query.fetchAll;
+			const all: User[] = [];
+			let url: string | null = 'accounts/users/';
+			let isFirst = true;
+			let guard = 0;
+			while (url && guard < 500) {
+				const response: { data: PaginatedResponse<User> } = await apiClient.get<PaginatedResponse<User>>(
+					url,
+					isFirst ? { params: query } : undefined,
+				);
+				all.push(...response.data.results);
+				const next = response.data.next;
+				url = next ? next.replace(/^.*\/api\/v1\//, '') : null;
+				isFirst = false;
+				guard += 1;
+			}
+			return all.map(normalizeUser);
+		}
 		const response = await apiClient.get<PaginatedResponse<User>>('accounts/users/', { params });
 		return response.data.results.map(normalizeUser);
 	},

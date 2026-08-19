@@ -350,9 +350,13 @@ export function AdminDataTable<T>(props: AdminDataTableProps<T>): React.ReactNod
     <Card className="flex flex-col overflow-hidden">
       {/* Top: tabs + search + tools */}
       <div className="flex flex-col gap-2 border-b p-3 md:flex-row md:items-center">
+        {/* Полоса вкладок при узком экране РАСПИРАЛА тулбар и накрывала собой кнопки справа:
+            на 1280 и 1440 клик по видимой «New user» попадал в скрытую под ней вкладку и молча
+            включал фильтр по роли (найдено прогоном глазами 19-08). Даём полосе прокручиваться
+            и сжиматься: `min-w-0` на самом флекс-элементе + overflow на списке вкладок. */}
         {tabs && tabs.length > 0 ? (
-          <Tabs value={currentTab} onValueChange={onTabChange} className="min-w-0">
-            <TabsList className="h-8">
+          <Tabs value={currentTab} onValueChange={onTabChange} className="min-w-0 max-w-full shrink">
+            <TabsList className="h-8 max-w-full justify-start overflow-x-auto">
               {tabs.map((tab) => (
                 <TabsTrigger key={tab.id} value={tab.id} className="text-xs">
                   {tab.label}

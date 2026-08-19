@@ -40,8 +40,11 @@ export function AdminUsersPage() {
     return Object.keys(p).length ? p : undefined;
   }, [tableState.search, tableState.tab]);
 
-  const { data: allUsers = [] } = useUsers();
-  const { data: users = [], isLoading, isError, refetch } = useUsers(queryParams);
+  // Оба запроса — полные: по первому считаются плашки и счётчики вкладок, второй показывается
+  // в таблице. Пагинации в этом реестре нет, поэтому «первая страница» означала бы «оператор
+  // видит первые 20 и не знает об остальных».
+  const { data: allUsers = [] } = useUsers({ fetchAll: true });
+  const { data: users = [], isLoading, isError, refetch } = useUsers({ ...(queryParams ?? {}), fetchAll: true });
 
   const selectedUser = useMemo(() => {
     if (!detailTarget) return null;

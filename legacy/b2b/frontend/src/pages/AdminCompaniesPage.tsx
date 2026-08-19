@@ -375,7 +375,9 @@ export function AdminCompaniesPage() {
     }
     return Object.keys(p).length ? p : undefined;
   }, [tableState.search, tableState.tab]);
-  const { data: companies = [], isLoading, isError, refetch } = useCompanies(queryParams);
+  // Реестр без пагинации в UI: без полной выборки оператор видел первые 20 компаний из 42,
+  // а плашка «Всего» печатала 20 — то есть врала уверенно.
+  const { data: companies = [], isLoading, isError, refetch } = useCompanies({ ...(queryParams ?? {}), fetchAll: true });
   const deleteMut = useDeleteCompany();
 
   const [sheetOpen, setSheetOpen] = useState(false);

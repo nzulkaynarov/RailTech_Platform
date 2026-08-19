@@ -59,7 +59,10 @@ function EntitlementForm({
 }) {
   const { t } = useTranslation();
   const accessLabel = useAccessLabel();
-  const { data: companiesRaw } = useCompanies();
+  // Оператор выдаёт права и заводит подписки КОНКРЕТНОЙ компании, поэтому список должен быть
+  // полным: без fetchAll сюда приходила только первая страница (20 из 42), и боевых компаний
+  // в выборе просто не было — путь монетизации упирался в невидимый предел страницы.
+  const { data: companiesRaw } = useCompanies({ fetchAll: true });
   const { data: choices } = useEntitlementChoices();
   const createMut = useCreateEntitlement();
   const updateMut = useUpdateEntitlement();
@@ -198,7 +201,7 @@ export function AdminEntitlementsPage() {
   // Пока состояние загрузки не читалось, во время запроса страница утверждала «прав нет»
   // — оператор видел готовый ответ там, где ответа ещё не было (аудит UI, U2).
   const { data: rows = [], isLoading, isError, refetch } = useEntitlements(params);
-  const { data: companiesRaw } = useCompanies();
+  const { data: companiesRaw } = useCompanies({ fetchAll: true });
   const del = useDeleteEntitlement();
 
   const [editing, setEditing] = useState<CompanyEntitlement | null>(null);

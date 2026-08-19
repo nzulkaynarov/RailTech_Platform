@@ -89,7 +89,10 @@ function FormSheet({
 }) {
   const { t } = useTranslation();
   const { planLabel, statusLabel } = useSubscriptionLabels();
-  const { data: companies } = useCompanies();
+  // Оператор выдаёт права и заводит подписки КОНКРЕТНОЙ компании, поэтому список должен быть
+  // полным: без fetchAll сюда приходила только первая страница (20 из 42), и боевых компаний
+  // в выборе просто не было — путь монетизации упирался в невидимый предел страницы.
+  const { data: companies } = useCompanies({ fetchAll: true });
   const { data: currencies } = useCurrencies();
   const createMut = useCreateSubscription();
   const updateMut = useUpdateSubscription();

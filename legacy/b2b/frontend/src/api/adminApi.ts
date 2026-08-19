@@ -150,8 +150,11 @@ export interface EmailTemplateTestSendResult {
 
 export const emailTemplatesApi = {
   list: async () => {
-    const res = await apiClient.get<EmailTemplate[]>('admin/email-templates/');
-    return res.data;
+    // Эндпоинт ПАГИНИРОВАН (schema.json: PaginatedEmailTemplateList), а метод отдавал объект
+    // страницы как массив — страница падала на `templates.filter` и уносила с собой всю SPA
+    // («n?.filter is not a function»). Разворачиваем так же, как соседние методы файла.
+    const res = await apiClient.get<EmailTemplate[] | { results: EmailTemplate[] }>('admin/email-templates/');
+    return Array.isArray(res.data) ? res.data : res.data.results;
   },
   create: async (data: EmailTemplateDraft) => {
     const res = await apiClient.post<EmailTemplate>('admin/email-templates/', data);

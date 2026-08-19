@@ -30,6 +30,15 @@ _EDITABLE_FIELDS = (
     "accent_color",
     "secondary_color",
     "cover_letter_text",
+    # Формулировки договора и акта (D1). Поля появились миграцией accounts/0043 и объявлены в
+    # сериализаторе, но в этот список не попали — и сервис молча их выбрасывал: интерфейс
+    # показывал зелёное «сохранено», а текст исчезал из поля НАВСЕГДА. Задать прозу договора
+    # из интерфейса было невозможно с рождения фичи (найдено прогоном глазами 19-08).
+    # Состав списка держит тест `test_document_wording_fields_are_writable`.
+    "contract_acceptance_text",
+    "contract_liability_text",
+    "contract_extra_terms_text",
+    "act_closing_text",
 )
 
 # Theme choice fields (D2, Odoo Document Layout model) — validated against the model's
