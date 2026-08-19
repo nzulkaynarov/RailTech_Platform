@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'; import { useTranslation } from 'react-i18next'; import { toast } from 'sonner'; import { translateApiError } from '@/lib/apiError'; import { formatDate, formatDateTime } from '@/lib/formatLocale'; import { extractBlobErrorCode, fetchDocumentBlob, saveBlob } from '@/lib/documents'; import { PenLine, Upload, Download, Receipt, Ban, FileSignature, ShieldAlert } from 'lucide-react'; import { DocumentActions } from '@/components/Shared/DocumentActions'; import { Badge } from '@/components/ui/badge'; import { Button } from '@/components/ui/button'; import { Label } from '@/components/ui/label'; import { Textarea } from '@/components/ui/textarea'; import {   Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, } from '@/components/ui/sheet'; import {   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, } from '@/components/ui/alert-dialog'; import { PageShell } from './shared/PageShell'; import { DocumentRegistry } from '@/components/Documents/DocumentRegistry'; import { useDocumentCoreColumns } from '@/components/Documents/useDocumentCoreColumns'; import { ManualModeBanner } from '@/components/Shared/ManualModeBanner'; import { Toolbar } from '@/components/DataTable';
+import { useMemo, useState } from 'react'; import { useTranslation } from 'react-i18next'; import { toast } from 'sonner'; import { translateApiError } from '@/lib/apiError'; import { formatDate, formatDateTime } from '@/lib/formatLocale'; import { extractBlobErrorCode, fetchDocumentBlob, saveBlob } from '@/lib/documents'; import { PenLine, Upload, Download, Receipt, Ban, FileSignature, ShieldAlert } from 'lucide-react'; import { DocumentActions } from '@/components/Shared/DocumentActions'; import { Badge } from '@/components/ui/badge'; import { Button } from '@/components/ui/button'; import { Label } from '@/components/ui/label'; import { Textarea } from '@/components/ui/textarea'; import {   Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, } from '@/components/ui/sheet'; import {   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, } from '@/components/ui/alert-dialog'; import { PageShell } from './shared/PageShell'; import { DocumentRegistry } from '@/components/Documents/DocumentRegistry'; import { useDocumentCoreColumns } from '@/components/Documents/useDocumentCoreColumns'; import { ManualModeBanner } from '@/components/Shared/ManualModeBanner'; import { Toolbar } from '@/components/DataTable';
 import { useListParams, applyListParams } from '@/components/DataTable/listParams';
 import {
   useContracts, useSignContractClient, useSignContractManager,
@@ -12,6 +12,7 @@ import { ContractWordingSection } from '@/components/CRM/ContractWordingSection'
 import { DealLink } from '@/components/Shared/DealLink';
 import { DocumentCheck } from '@/components/CRM/DocumentCheck';
 import { useDraftState } from '@/hooks/useDraftState';
+import { useHashOpenParam } from '@/hooks/useHashOpenParam';
 
 const STATUS_VARIANT: Record<ContractStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   DRAFT: 'secondary',
@@ -34,13 +35,7 @@ export function ContractsPage() {
   // Deep-link support: `#contracts?open=<id>` (used by the buyer's post-accept panel,
   // Wave A2) auto-opens that contract's detail sheet. Parsed from the hash query — the
   // SPA is hash-routed, so window.location.search is not where our params live.
-  useEffect(() => {
-    const query = window.location.hash.split('?')[1];
-    if (!query) return;
-    const openId = Number(new URLSearchParams(query).get('open'));
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- разбор deep-link из URL при монтировании — чтение внешнего состояния (адресной строки)
-    if (Number.isFinite(openId) && openId > 0) setSelectedId(openId);
-  }, []);
+  useHashOpenParam('contracts', setSelectedId);
 
   // Основание аннулирования принадлежит ТОМУ ДОГОВОРУ, для которого его написали. Пока оно
   // жило в обычном `useState`, текст, набранный для одного договора и брошенный без отправки,

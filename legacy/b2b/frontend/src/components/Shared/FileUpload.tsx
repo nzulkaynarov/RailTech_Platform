@@ -87,10 +87,13 @@ export function FileUpload({
     };
 
     const onInputChange = async (e: ChangeEvent<HTMLInputElement>) => {
-        const fileList = e.target.files;
+        // `e.target.files` — ЖИВОЙ FileList, привязанный к полю: очистка `value` опустошает его.
+        // Снимок делаем ДО сброса, иначе цикл идёт по пустому списку и «выбрать файл» молча не
+        // делает ничего — ни запроса, ни ошибки (найдено прогоном глазами 19-08). Сам сброс нужен,
+        // чтобы повторный выбор ТОГО ЖЕ файла снова дал событие change.
+        const files = e.target.files ? Array.from(e.target.files) : [];
         e.target.value = '';
-        if (!fileList) return;
-        for (const file of Array.from(fileList)) {
+        for (const file of files) {
             await handleFile(file);
         }
     };

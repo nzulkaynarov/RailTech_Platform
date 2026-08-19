@@ -89,7 +89,15 @@ export function CompanyDefaultsSettings() {
 
   // Форма пересобирается при СМЕНЕ загруженных настроек, прямо в рендере: эффект показал бы
   // пустую форму на кадр, а потом заполненную (react.dev, «You Might Not Need an Effect»).
-  const [form, setForm] = useDraftState(settings ?? null, (loaded) => (loaded ? toForm(loaded) : EMPTY_FORM));
+  // Источник — КОМПАНИЯ, а не ссылка на ответ сервера. Пересборка по ответу затирала то, что
+  // человек печатает: между нажатием «Сохранить» и ответом (замер: ~70–140 мс на localhost,
+  // на реальной сети шире) правка молча пропадала, причём на экране в этот момент висел
+  // зелёный тост «сохранено». Форму заполняем, когда данные ПРИШЛИ впервые или сменилась
+  // компания; свои же сохранения её больше не трогают (найдено прогоном глазами 19-08).
+  const [form, setForm] = useDraftState(
+    settings ? `company:${companyId}` : null,
+    () => (settings ? toForm(settings) : EMPTY_FORM),
+  );
 
   const saveMut = useMutation({
     mutationFn: (data: CompanySettingsUpdate) =>

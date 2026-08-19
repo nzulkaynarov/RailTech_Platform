@@ -2,6 +2,7 @@ import json
 
 from django.conf import settings
 from django.core.validators import RegexValidator
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
 
@@ -68,6 +69,11 @@ class CompanyDocumentProfileSerializer(serializers.ModelSerializer):
     """
 
     logo_url = serializers.SerializerMethodField()
+    # Что РЕАЛЬНО напечатается при включённом наследовании. Форма настроек показывала сырую
+    # строку профиля — пустые «Юр. адрес» и «Банковские реквизиты», хотя документ рядом печатал
+    # и адрес, и р/с с МФО из карточки компании. Продавец делал вывод, что реквизитов у его
+    # документов нет (найдено прогоном глазами 19-08). Считает ТА ЖЕ функция, что и печать.
+    inherited_preview = serializers.SerializerMethodField()
 
     class Meta:
         model = CompanyDocumentProfile
@@ -100,10 +106,11 @@ class CompanyDocumentProfileSerializer(serializers.ModelSerializer):
             "show_logo",
             "show_lead_time",
             "show_fx_note",
+            "inherited_preview",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "company", "logo", "created_at", "updated_at"]
+        read_only_fields = ["id", "company", "logo", "created_at", "updated_at", "inherited_preview"]
 
     def get_logo_url(self, obj) -> str | None:
         if not obj.logo:
@@ -111,6 +118,30 @@ class CompanyDocumentProfileSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         url = obj.logo.url
         return request.build_absolute_uri(url) if request else url
+
+    @extend_schema_field(serializers.DictField(child=serializers.CharField(), allow_null=True))
+    def get_inherited_preview(self, obj) -> dict | None:
+        """Значения, которые НАПЕЧАТАЮТСЯ при включённом наследовании из карточки компании.
+
+        Считает та же функция, что и печать (`crm.services.documents.brand`), поэтому форма
+        настроек и готовый документ не могут разойтись. Нужно ровно затем, что заблокированные
+        поля показывали пустоту, а документ рядом печатал адрес и банковские реквизиты.
+        """
+        from copy import copy
+
+        from crm.services.documents.brand import _apply_company_defaults
+
+        company = getattr(obj, "company", None)
+        if company is None:
+            return None
+        row = copy(obj)
+        _apply_company_defaults(company, row)
+        return {
+            "legal_name": row.legal_name or "",
+            "inn": row.inn or "",
+            "legal_address": row.legal_address or "",
+            "bank_details": row.bank_details or "",
+        }
 
 
 class CompanyRoleSerializer(serializers.ModelSerializer):

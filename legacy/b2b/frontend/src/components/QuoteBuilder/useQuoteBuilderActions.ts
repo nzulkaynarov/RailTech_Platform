@@ -273,9 +273,10 @@ export function useQuoteBuilderActions(params: QuoteBuilderActionsParams) {
 	// ── WP-J bulk actions over the selected rows ──────────────────────────────────────────
 	const handleBulkDelete = async () => {
 		const ids = [...selection.selectedIds];
-		if (ids.length === 0) return;
+		const quoteId = deal?.active_quote?.id;
+		if (ids.length === 0 || !quoteId) return;
 		try {
-			await bulkDeleteMutation.mutateAsync(ids);
+			await bulkDeleteMutation.mutateAsync({ quoteId, ids });
 			setCellErrors((previous) => {
 				const next = { ...previous };
 				for (const key of Object.keys(next)) {

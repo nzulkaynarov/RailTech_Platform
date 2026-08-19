@@ -40,8 +40,13 @@ const DOC_TYPE_ICON: Record<RecentDocument['type'], LucideIcon> = {
     generated: FileType,
 };
 
-// Fixed render order for the result groups.
-const DOC_TYPE_ORDER: RecentDocument['type'][] = ['quote', 'contract', 'invoice', 'act', 'generated'];
+// Fixed render order for the result groups. Порядок ЗАДАЁТ И ФИЛЬТР: тип, которого здесь нет,
+// просто не попадает в выдачу. Из-за этого квитанции и накладные (D2) сервер находил, а диалог
+// показывал «Ничего не найдено» — оба типа существуют в `RecentDocument`, но в этот список их не
+// добавили (найдено прогоном глазами 19-08). Дополняя `RecentDocument['type']`, дополнять и здесь.
+const DOC_TYPE_ORDER: RecentDocument['type'][] = [
+    'quote', 'contract', 'invoice', 'act', 'receipt', 'delivery_note', 'generated',
+];
 
 const MIN_CHARS = 2;
 const DEBOUNCE_MS = 250;

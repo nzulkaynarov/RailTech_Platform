@@ -283,7 +283,12 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNaviga
                     </div>
                 </SheetHeader>
 
-                <ScrollArea className="flex-1">
+                {/* `min-h-0` обязателен: у флекс-элемента минимальная высота по умолчанию равна
+                    высоте содержимого, поэтому список рос на всю ленту (замер: 2260 px при окне
+                    900), viewport «считал», что всё поместилось, и прокрутки не было ВООБЩЕ —
+                    доступны были только уведомления, влезшие в экран, а «Показать ещё» лежала
+                    ниже дна и была недостижима (найдено прогоном глазами 19-08). */}
+                <ScrollArea className="min-h-0 flex-1">
                     {notifications.length === 0 && loadFailed ? (
                         <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
                             <div className="flex size-16 items-center justify-center rounded-2xl bg-destructive/10">

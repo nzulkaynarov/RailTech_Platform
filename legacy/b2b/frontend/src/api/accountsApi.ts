@@ -75,6 +75,13 @@ export interface CompanyDocumentProfile {
 	contract_extra_terms_text?: string;
 	act_closing_text?: string;
 	show_cover_letter?: boolean;
+	/** Что напечатается при включённом наследовании — считает сервер той же функцией, что и печать. */
+	inherited_preview?: {
+		legal_name?: string;
+		inn?: string;
+		legal_address?: string;
+		bank_details?: string;
+	} | null;
 	show_bank_in_header?: boolean;
 	use_company_defaults?: boolean;
 	// P3 layout toggles — what the seller shows on its documents.

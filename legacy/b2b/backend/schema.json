@@ -15026,6 +15026,55 @@
                 }
             }
         },
+        "/api/v1/crm/quote-items/bulk-delete/": {
+            "post": {
+                "operationId": "crm_quote_items_bulk_delete_create",
+                "description": "Delete many КП lines atomically. ALL-OR-NOTHING: an id that does not belong to the quote rejects the whole batch with per-row errors. Replaces N parallel DELETEs, which took N row locks and N cascade recalcs and deadlocked in Postgres. Seller action.",
+                "summary": "Bulk-delete КП line items in one transaction",
+                "tags": [
+                    "CRM"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BulkDeleteQuoteItemsRequestRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BulkDeleteQuoteItemsRequestRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BulkDeleteQuoteItemsRequestRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{\"deleted\": [ids]}"
+                    },
+                    "400": {
+                        "description": "QUOTE_ITEMS_BULK_INVALID (with per-row `rows`) / QUOTE_ITEMS_BULK_EMPTY / QUOTE_ITEMS_BULK_TOO_LARGE / QUOTE_FROZEN"
+                    },
+                    "403": {
+                        "description": "ADMIN_VIEWER_CANNOT_ACT / ONLY_SELLER_CAN_BUILD_QUOTE"
+                    },
+                    "404": {
+                        "description": "QUOTE_NOT_FOUND"
+                    }
+                }
+            }
+        },
         "/api/v1/crm/quote-items/bulk-update/": {
             "post": {
                 "operationId": "crm_quote_items_bulk_update_create",
@@ -20564,6 +20613,24 @@
                     "quote"
                 ]
             },
+            "BulkDeleteQuoteItemsRequestRequest": {
+                "type": "object",
+                "properties": {
+                    "quote": {
+                        "type": "integer"
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "required": [
+                    "items",
+                    "quote"
+                ]
+            },
             "BulkUpdateQuoteItemsRequestRequest": {
                 "type": "object",
                 "properties": {
@@ -21398,6 +21465,14 @@
                         "title": "Показывать курс ЦБ в КП",
                         "description": "Печатать курс ЦБ (FX-базис) на клиентском КП. По умолчанию скрыто — клиент видит цену в сумах."
                     },
+                    "inherited_preview": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string"
+                        },
+                        "nullable": true,
+                        "readOnly": true
+                    },
                     "created_at": {
                         "type": "string",
                         "format": "date-time",
@@ -21415,6 +21490,7 @@
                     "company",
                     "created_at",
                     "id",
+                    "inherited_preview",
                     "logo",
                     "logo_url",
                     "updated_at"

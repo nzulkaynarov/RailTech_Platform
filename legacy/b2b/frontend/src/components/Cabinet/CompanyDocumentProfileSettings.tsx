@@ -240,6 +240,12 @@ export function CompanyDocumentProfileSettings() {
   // disabled + Lock/Tooltip, never opacity/pointer-events hacks.
   const inherited = form.use_company_defaults;
   const inheritedHint = t('settings.documents.inheritedFromCompany');
+  // Пока наследование включено, заблокированные поля показывают то, что РЕАЛЬНО напечатается
+  // (сервер считает это той же функцией, что и печать). Раньше здесь была сырая строка профиля:
+  // «Юр. адрес» и «Банковские реквизиты» выглядели пустыми, хотя документ рядом печатал и адрес,
+  // и р/с с МФО — продавец делал вывод, что реквизитов у его документов нет.
+  const shown = (field: 'legal_name' | 'inn' | 'legal_address' | 'bank_details') =>
+    (inherited ? profile?.inherited_preview?.[field] || form[field] : form[field]);
 
   return (
     <TooltipProvider>
@@ -269,6 +275,22 @@ export function CompanyDocumentProfileSettings() {
                 id="dp-use-company-defaults"
                 checked={form.use_company_defaults}
                 onCheckedChange={(v) => {
+                  // Выключение наследования НЕ должно молча обеднять документ: переносим
+                  // унаследованные значения в поля, чтобы банк и адрес не исчезли из договора
+                  // в тот же миг (паттерн мастера Odoo Document Layout — «отвязать с текущими
+                  // значениями», а не «отвязать в пустоту»).
+                  if (!v && profile?.inherited_preview) {
+                    const carried = profile.inherited_preview;
+                    setForm({
+                      ...form,
+                      use_company_defaults: false,
+                      legal_name: form.legal_name || carried.legal_name || '',
+                      inn: form.inn || carried.inn || '',
+                      legal_address: form.legal_address || carried.legal_address || '',
+                      bank_details: form.bank_details || carried.bank_details || '',
+                    });
+                    return;
+                  }
                   setForm({ ...form, use_company_defaults: v });
                 }}
               />
@@ -300,7 +322,7 @@ export function CompanyDocumentProfileSettings() {
                 </Label>
                 <Input
                   id="dp-legal-name"
-                  value={form.legal_name}
+                  value={shown('legal_name')}
                   onChange={(e) => setForm({ ...form, legal_name: e.target.value })}
                   placeholder={t('documentProfile.legalNamePlaceholder')}
                   disabled={inherited}
@@ -313,7 +335,7 @@ export function CompanyDocumentProfileSettings() {
                 </Label>
                 <Input
                   id="dp-inn"
-                  value={form.inn}
+                  value={shown('inn')}
                   onChange={(e) => setForm({ ...form, inn: e.target.value })}
                   disabled={inherited}
                 />
@@ -344,7 +366,7 @@ export function CompanyDocumentProfileSettings() {
                 <Textarea
                   id="dp-legal-address"
                   rows={2}
-                  value={form.legal_address}
+                  value={shown('legal_address')}
                   onChange={(e) => setForm({ ...form, legal_address: e.target.value })}
                   disabled={inherited}
                 />
@@ -357,7 +379,7 @@ export function CompanyDocumentProfileSettings() {
                 <Textarea
                   id="dp-bank"
                   rows={3}
-                  value={form.bank_details}
+                  value={shown('bank_details')}
                   onChange={(e) => setForm({ ...form, bank_details: e.target.value })}
                   placeholder={t('documentProfile.bankDetailsPlaceholder')}
                   disabled={inherited}

@@ -88,6 +88,16 @@ export function RequestItemsEditor({
   // Предвыбор: пока покупатель ничего не трогал, отмеченные — это ВЫЧИСЛЕНИЕ из подсказок
   // (trigram ∪ AI). Как только он тронул список, работает его собственный выбор.
   const [touchedPicker, setTouchedPicker] = useState(false);
+
+  // ЕДИНСТВЕННЫЙ способ закрыть пикер. Сброс жил только в `onOpenChange`, а кнопка «Отмена» и
+  // успешная отправка звали `setPickerOpen(false)` напрямую — мимо него. Из-за этого повторное
+  // открытие показывало РУЧНОЙ выбор прошлого раза вместо предвыбора по подсказкам, хотя подпись
+  // под списком обещала именно предвыбор: покупатель мог отправить заявку мимо подсказанного
+  // продавца, не заметив. Найдено прогоном глазами 19-08.
+  const closePicker = (open: boolean) => {
+    setPickerOpen(open);
+    if (!open) { setTouchedPicker(false); setSelectedSellerIds([]); }  // reopen → пере-подскажем
+  };
   const selectedSellerIds = touchedPicker
     ? pickedSellerIds
     : mergedSuggested.map((seller) => seller.company_id);
@@ -153,7 +163,7 @@ export function RequestItemsEditor({
     try {
       await submitRequest.mutateAsync(dealId);
       toast.success(t('requestItems.submittedToast'));
-      setPickerOpen(false);
+      closePicker(false);
     } catch (e) {
       toast.error(translateApiError(e));
     }
@@ -539,10 +549,7 @@ export function RequestItemsEditor({
           (NO_RECIPIENTS invariant), and typed lines imply none — so the buyer chooses here. */}
       <Dialog
         open={pickerOpen}
-        onOpenChange={(open) => {
-          setPickerOpen(open);
-          if (!open) { setTouchedPicker(false); setSelectedSellerIds([]); }  // reopen → пере-подскажем
-        }}
+        onOpenChange={closePicker}
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -607,7 +614,7 @@ export function RequestItemsEditor({
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPickerOpen(false)}>
+            <Button variant="outline" onClick={() => closePicker(false)}>
               {t('common.cancel')}
             </Button>
             <Button

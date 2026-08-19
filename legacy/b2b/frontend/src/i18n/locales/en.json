@@ -3988,7 +3988,10 @@
       "doc": "Custom document"
     },
     "saved": "Numbering settings saved",
-    "ownerOnly": "Only the company owner can configure numbering"
+    "ownerOnly": "Only the company owner can configure numbering",
+    "preset_brand": "With brand prefix",
+    "preset_slash": "Slash-separated",
+    "preset_compact": "Compact"
   },
   "accessLogPage": {
     "title": "Access log",
@@ -4493,7 +4496,9 @@
       "contract": "Contracts",
       "invoice": "Invoices",
       "act": "Acts",
-      "generated": "Documents"
+      "generated": "Documents",
+      "receipt": "Receipts",
+      "delivery_note": "Delivery notes"
     }
   },
   "deals": {

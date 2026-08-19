@@ -5311,6 +5311,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/quote-items/bulk-delete/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bulk-delete КП line items in one transaction
+         * @description Delete many КП lines atomically. ALL-OR-NOTHING: an id that does not belong to the quote rejects the whole batch with per-row errors. Replaces N parallel DELETEs, which took N row locks and N cascade recalcs and deadlocked in Postgres. Seller action.
+         */
+        post: operations["crm_quote_items_bulk_delete_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/quote-items/bulk-update/": {
         parameters: {
             query?: never;
@@ -7214,6 +7234,10 @@ export interface components {
                 [key: string]: unknown;
             }[];
         };
+        BulkDeleteQuoteItemsRequestRequest: {
+            quote: number;
+            items: number[];
+        };
         BulkUpdateQuoteItemsRequestRequest: {
             quote: number;
             items: {
@@ -7729,6 +7753,9 @@ export interface components {
              * @description Печатать курс ЦБ (FX-базис) на клиентском КП. По умолчанию скрыто — клиент видит цену в сумах.
              */
             show_fx_note?: boolean;
+            readonly inherited_preview: {
+                [key: string]: string;
+            } | null;
             /**
              * Создан
              * Format: date-time
@@ -22426,6 +22453,51 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["QuoteItem"][];
                 };
+            };
+            /** @description QUOTE_ITEMS_BULK_INVALID (with per-row `rows`) / QUOTE_ITEMS_BULK_EMPTY / QUOTE_ITEMS_BULK_TOO_LARGE / QUOTE_FROZEN */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description ADMIN_VIEWER_CANNOT_ACT / ONLY_SELLER_CAN_BUILD_QUOTE */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description QUOTE_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    crm_quote_items_bulk_delete_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkDeleteQuoteItemsRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["BulkDeleteQuoteItemsRequestRequest"];
+                "multipart/form-data": components["schemas"]["BulkDeleteQuoteItemsRequestRequest"];
+            };
+        };
+        responses: {
+            /** @description {"deleted": [ids]} */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description QUOTE_ITEMS_BULK_INVALID (with per-row `rows`) / QUOTE_ITEMS_BULK_EMPTY / QUOTE_ITEMS_BULK_TOO_LARGE / QUOTE_FROZEN */
             400: {

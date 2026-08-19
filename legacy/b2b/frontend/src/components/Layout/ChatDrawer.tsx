@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { MessageSquare } from 'lucide-react';
 import { crmApi, type Message } from '@/api/crmApi';
 import { useUserStore } from '@/store/userStore';
-import { dealsListRoute } from '@/lib/documentRoute';
+import { dealCardRoute } from '@/lib/documentRoute';
 
 import {
   Sheet,
@@ -107,7 +107,7 @@ export function ChatDrawer({ onNavigate }: ChatDrawerProps) {
                 <div key={dealId} className="border-b last:border-b-0">
                   <button
                     className="flex w-full items-center gap-2 px-5 py-2.5 text-left hover:bg-accent transition-colors"
-                    onClick={() => { setIsOpen(false); onNavigate(dealsListRoute(viewer)); }}
+                    onClick={() => { setIsOpen(false); onNavigate(dealCardRoute(dealId, viewer)); }}
                   >
                     <MessageSquare className="size-3.5 text-primary shrink-0" />
                     <span className="text-xs font-semibold text-primary">

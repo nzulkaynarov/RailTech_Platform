@@ -55,6 +55,17 @@ export const quoteItemsApi = {
 		});
 		return response.data;
 	},
+	// Транзакционное массовое удаление строк КП: ОДИН запрос, ОДНА блокировка КП, ОДИН пересчёт.
+	// Раньше здесь уходили N ПАРАЛЛЕЛЬНЫХ DELETE — они брали блокировки вразнобой и стабильно
+	// ловили deadlock в Postgres: часть строк исчезала, часть оставалась, а пользователь видел
+	// только «Operation failed» (найдено прогоном глазами 19-08).
+	bulkDeleteQuoteItems: async (quoteId: number, ids: number[]) => {
+		const response = await apiClient.post<{ deleted: number[] }>('crm/quote-items/bulk-delete/', {
+			quote: quoteId,
+			items: ids,
+		});
+		return response.data.deleted;
+	},
 	getProducts: async (search?: string) => {
 		let url = 'catalog/products/';
 		if (search) {

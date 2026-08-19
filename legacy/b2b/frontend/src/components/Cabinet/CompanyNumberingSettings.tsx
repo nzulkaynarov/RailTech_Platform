@@ -80,13 +80,21 @@ export function CompanyNumberingSettings() {
   });
 
   // Поля пересобираются при смене загруженных данных прямо в рендере — без кадра с пустой формой.
-  const [prefix, setPrefix] = useDraftState(settings ?? null, (loaded) => loaded?.doc_number_prefix ?? '');
-  const [schemeForm, setSchemeForm] = useDraftState(scheme ?? null, (loaded) => ({
-    pattern: loaded?.pattern ?? '',
-    padding: loaded?.padding ?? 5,
-    resetPeriod: (loaded?.reset_period ?? 'yearly') as NumberingResetPeriod,
-    startValue: loaded?.start_value ?? 0,
-    typeLabels: loaded?.type_labels ?? {},
+  // Источник — КОМПАНИЯ, а не ссылка на ответ сервера. Пересборка по ответу затирала то, что
+  // человек печатает: между нажатием «Сохранить» и ответом (замер: ~70–140 мс на localhost,
+  // на реальной сети шире) правка молча пропадала, причём на экране в этот момент висел
+  // зелёный тост «сохранено». Форму заполняем, когда данные ПРИШЛИ впервые или сменилась
+  // компания; свои же сохранения её больше не трогают (найдено прогоном глазами 19-08).
+  const [prefix, setPrefix] = useDraftState(
+    settings ? `company:${companyId}` : null,
+    () => settings?.doc_number_prefix ?? '',
+  );
+  const [schemeForm, setSchemeForm] = useDraftState(scheme ? 'loaded' : null, () => ({
+    pattern: scheme?.pattern ?? '',
+    padding: scheme?.padding ?? 5,
+    resetPeriod: (scheme?.reset_period ?? 'yearly') as NumberingResetPeriod,
+    startValue: scheme?.start_value ?? 0,
+    typeLabels: scheme?.type_labels ?? {},
   }));
   const { pattern, padding, resetPeriod, startValue, typeLabels } = schemeForm;
   const setPattern = (value: string) => setSchemeForm((prev) => ({ ...prev, pattern: value }));

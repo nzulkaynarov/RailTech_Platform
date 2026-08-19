@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
@@ -195,6 +195,16 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 		deleteTarget, setDeleteTarget, reassignItemId, setReassignItemId,
 		conflictOpen, setConflictOpen, conflictIds, setConflictIds,
 	} = dialogs;
+
+	// Возврат с вкладки «Начисления и скидки» ОСТАВЛЯЛ ТАБЛИЦУ ПУСТОЙ (60 позиций → 0 строк):
+	// Radix размонтирует содержимое неактивной вкладки, вместе с ним уходит контейнер прокрутки,
+	// а виртуализатор об этом не узнаёт — новый узел появляется ПОСЛЕ рендера родителя, и без
+	// повторного замера окно остаётся нулевым. Продавец возвращался к своему КП и видел одну
+	// шапку без единой строки, без объяснения. Найдено прогоном глазами 19-08.
+	// `useLayoutEffect` — чтобы пересчёт случился до отрисовки и пустой кадр не мелькнул.
+	useLayoutEffect(() => {
+		if (activeTab === 'items') virtualizer.measure();
+	}, [activeTab, virtualizer]);
 
 	// Economics-rail view state (open/collapsed persisted, inline-aside-vs-slide-over Sheet).
 	const { railAsSheet, railOpen, railSheetOpen, setRailSheetOpen, toggleRail } = useRailState();

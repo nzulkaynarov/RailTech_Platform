@@ -30,13 +30,16 @@ export const useDeleteQuoteItem = () => {
   });
 };
 
-// Bulk delete of КП lines (WP-J). Fires the per-row deletes in parallel (there is no
-// bulk-delete endpoint) but invalidates the caches ONCE at the end — N per-call invalidations
-// would thrash the grid. Single-line delete (useDeleteQuoteItem) is left untouched.
+// Массовое удаление строк КП (WP-J) — ОДИН транзакционный запрос. Раньше здесь уходили N
+// параллельных DELETE (bulk-эндпоинта не было): они брали блокировки строк вразнобой, ловили
+// `deadlock detected` в Postgres, и удаление оставалось ЧАСТИЧНЫМ — пользователь видел только
+// «Operation failed» и не знал, что именно удалилось. Одиночное удаление (useDeleteQuoteItem)
+// не тронуто.
 export const useBulkDeleteQuoteItems = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (ids: number[]) => Promise.all(ids.map((id) => crmApi.deleteQuoteItem(id))),
+    mutationFn: ({ quoteId, ids }: { quoteId: number; ids: number[] }) =>
+      crmApi.bulkDeleteQuoteItems(quoteId, ids),
     // onSettled, NOT onSuccess: a partial failure (3 of 5 deleted, 2 rejected) still
     // changed server state — without invalidation the deleted rows stay visible as
     // phantoms and the next Save sends their ids (adversarial-review MAJOR).

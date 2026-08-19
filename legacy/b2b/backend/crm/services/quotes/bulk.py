@@ -321,6 +321,73 @@ def bulk_create_quote_items(user, quote_id, items_payload, request):
 
 
 @transaction.atomic
+def bulk_delete_quote_items(user, quote_id, item_ids, request):
+    """Транзакционное удаление нескольких строк КП. ВСЁ ИЛИ НИЧЕГО.
+
+    До появления этого пути фронт слал N ПАРАЛЛЕЛЬНЫХ DELETE. Каждый запрос брал блокировку
+    строки КП и пересчитывал каскад, поэтому четыре одновременных удаления стабильно ловили
+    `deadlock detected` в Postgres: часть строк исчезала, часть оставалась, пользователь видел
+    только «Operation failed» и не знал, что именно удалилось (найдено прогоном глазами 19-08).
+    Здесь всё делается одной транзакцией, с ОДНОЙ блокировкой КП и ОДНИМ пересчётом — как уже
+    устроены bulk_update_quote_items и bulk_create_quote_items.
+
+    Возвращает (deleted_ids, error, rows):
+      • успех          → (list[int], None, None)
+      • гард/общая     → (None, "<CODE>", None)
+      • чужие строки   → (None, "QUOTE_ITEMS_BULK_INVALID", [ {id, errors}, … ])
+    """
+    from accounts.services.permissions import can_edit_quote_pricing, is_platform_admin_viewer, seller_can_access_deal
+
+    # Гарды — В ТОМ ЖЕ ПОРЯДКЕ, что у соседних массовых операций.
+    if is_platform_admin_viewer(user):
+        return None, "ADMIN_VIEWER_CANNOT_ACT", None
+    is_superuser = getattr(user, "is_superuser", False)
+    if not (is_superuser or can_edit_quote_pricing(user)):
+        return None, "ONLY_SELLER_CAN_BUILD_QUOTE", None
+
+    if not isinstance(item_ids, list) or not item_ids:
+        return None, "QUOTE_ITEMS_BULK_EMPTY", None
+    from django.conf import settings
+
+    if len(item_ids) > settings.QUOTE_ITEMS_BULK_MAX_ROWS:
+        return None, "QUOTE_ITEMS_BULK_TOO_LARGE", None
+
+    try:
+        quote_pk = int(quote_id)
+        wanted = [int(raw_id) for raw_id in item_ids]
+    except (TypeError, ValueError):
+        return None, "QUOTE_NOT_FOUND", None
+
+    quote = Quote.objects.select_for_update(of=("self",)).filter(pk=quote_pk).first()
+    if quote is None:
+        return None, "QUOTE_NOT_FOUND", None
+    if not (is_superuser or seller_can_access_deal(user, request, quote.deal_id)):
+        return None, "QUOTE_NOT_FOUND", None
+    if quote.frozen_at:
+        return None, "QUOTE_FROZEN", None
+
+    # Чужая строка — не «молча пропустить»: продавец должен узнать, что удалил не то, что видел.
+    present = set(QuoteItem.objects.filter(quote_id=quote_pk, id__in=wanted).values_list("id", flat=True))
+    missing = [item_id for item_id in wanted if item_id not in present]
+    if missing:
+        return (
+            None,
+            "QUOTE_ITEMS_BULK_INVALID",
+            [{"id": item_id, "errors": ["QUOTE_ITEM_NOT_IN_QUOTE"]} for item_id in missing],
+        )
+
+    from crm.signals import suppress_quote_item_recalc
+
+    # Гасим пересчёт «на каждую строку» из post_delete: для пачки он лишний, а с ним удаление
+    # четырёх строк давало пять пересчётов подряд.
+    with suppress_quote_item_recalc():
+        QuoteItem.objects.filter(quote_id=quote_pk, id__in=present).delete()
+    # ОДИН пересчёт на всю пачку: цены, каскад начислений, НДС и итог — как в соседних массовых.
+    QuoteCalculationService.recalculate_quote(quote_pk)
+    return sorted(present), None, None
+
+
+@transaction.atomic
 def reassign_quote_item_product(
     quote_item_id: int,
     actor: CustomUser,

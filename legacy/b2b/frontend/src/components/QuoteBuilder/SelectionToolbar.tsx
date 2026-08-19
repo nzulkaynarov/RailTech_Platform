@@ -12,6 +12,7 @@ import {
 	AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
 	AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { useDraftState } from '@/hooks/useDraftState';
 
 interface SelectionToolbarProps {
 	count: number;
@@ -54,10 +55,13 @@ export const SelectionToolbar: React.FC<SelectionToolbarProps> = ({
 	duplicating,
 }) => {
 	const { t } = useTranslation();
-	const [discountValue, setDiscountValue] = useState('');
-	const [priceValue, setPriceValue] = useState('');
 	const [discountOpen, setDiscountOpen] = useState(false);
 	const [priceOpen, setPriceOpen] = useState(false);
+	// Введённый процент принадлежит СЕССИИ ОТКРЫТИЯ поповера. Пока он жил в обычном состоянии,
+	// брошенный без применения ввод («5») встречал продавца при следующем открытии — уже с ДРУГОЙ
+	// выборкой строк, и одно нажатие «Применить» ставило прошлый процент новым строкам.
+	const [discountValue, setDiscountValue] = useDraftState(discountOpen, () => '');
+	const [priceValue, setPriceValue] = useDraftState(priceOpen, () => '');
 
 	const applyDiscount = () => {
 		const percent = parsePercent(discountValue);

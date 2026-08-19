@@ -43,6 +43,7 @@ from .bulk import (
     _validate_bulk_create_rows,
     _validate_bulk_item_rows,
     bulk_create_quote_items,
+    bulk_delete_quote_items,
     bulk_update_quote_items,
     reassign_quote_item_product,
 )
@@ -82,6 +83,7 @@ __all__ = [
     # bulk
     "bulk_update_quote_items",
     "bulk_create_quote_items",
+    "bulk_delete_quote_items",
     "reassign_quote_item_product",
     "_validate_bulk_item_rows",
     "_validate_bulk_create_rows",

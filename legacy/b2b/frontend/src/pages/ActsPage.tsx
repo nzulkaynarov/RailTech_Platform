@@ -7,6 +7,7 @@ import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { DealLink } from '@/components/Shared/DealLink';
 import type { Act, ActStatus } from '@/api/billingApi';
+import { useHashOpenParam } from '@/hooks/useHashOpenParam';
 
 const STATUS_VARIANT: Record<ActStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   DRAFT: 'secondary',
@@ -105,6 +106,9 @@ export function ActsPage() {
   const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
   const formatCurrency = useCurrencyStore((s) => s.format);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  // Ссылка `#acts?open=<id>` строится письмами, уведомлениями и глобальным поиском, но эта
+  // страница её не разбирала — акт по ссылке не открывался НИКОГДА (найдено прогоном 19-08).
+  useHashOpenParam('acts', setSelectedId);
   const selected = useMemo(() => (acts ?? []).find((a) => a.id === selectedId) ?? null, [acts, selectedId]);
 
   const stats = useMemo(() => {

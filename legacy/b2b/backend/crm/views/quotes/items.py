@@ -301,6 +301,50 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
         return Response(self.get_serializer(items, many=True).data)
 
     @extend_schema(
+        summary="Bulk-delete КП line items in one transaction",
+        description=(
+            "Delete many КП lines atomically. ALL-OR-NOTHING: an id that does not belong to the "
+            "quote rejects the whole batch with per-row errors. Replaces N parallel DELETEs, "
+            "which took N row locks and N cascade recalcs and deadlocked in Postgres. Seller action."
+        ),
+        request=inline_serializer(
+            "BulkDeleteQuoteItemsRequest",
+            fields={
+                "quote": drf_serializers.IntegerField(),
+                "items": drf_serializers.ListField(child=drf_serializers.IntegerField()),
+            },
+        ),
+        responses={
+            200: OpenApiResponse(description='{"deleted": [ids]}'),
+            400: OpenApiResponse(
+                description="QUOTE_ITEMS_BULK_INVALID (with per-row `rows`) / QUOTE_ITEMS_BULK_EMPTY / "
+                "QUOTE_ITEMS_BULK_TOO_LARGE / QUOTE_FROZEN"
+            ),
+            403: OpenApiResponse(description="ADMIN_VIEWER_CANNOT_ACT / ONLY_SELLER_CAN_BUILD_QUOTE"),
+            404: OpenApiResponse(description="QUOTE_NOT_FOUND"),
+        },
+        tags=["CRM"],
+    )
+    @action(detail=False, methods=["post"], url_path="bulk-delete", permission_classes=[IsAuthenticated])
+    def bulk_delete(self, request):
+        """Thin wrapper (Rule 8) — all logic in crm.services.quotes.bulk_delete_quote_items."""
+        from crm.services.quotes import bulk_delete_quote_items
+
+        deleted, error, rows = bulk_delete_quote_items(
+            request.user, request.data.get("quote"), request.data.get("items"), request
+        )
+        if error == "QUOTE_ITEMS_BULK_INVALID":
+            return Response({"detail": error, "rows": rows}, status=status.HTTP_400_BAD_REQUEST)
+        if error:
+            http_status = {
+                "ADMIN_VIEWER_CANNOT_ACT": status.HTTP_403_FORBIDDEN,
+                "ONLY_SELLER_CAN_BUILD_QUOTE": status.HTTP_403_FORBIDDEN,
+                "QUOTE_NOT_FOUND": status.HTTP_404_NOT_FOUND,
+            }.get(error, status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": error}, status=http_status)
+        return Response({"deleted": deleted})
+
+    @extend_schema(
         summary="Bulk-create КП line items in one transaction",
         description=(
             "Insert many new КП lines atomically (Excel-paste). ALL-OR-NOTHING: if any row is "

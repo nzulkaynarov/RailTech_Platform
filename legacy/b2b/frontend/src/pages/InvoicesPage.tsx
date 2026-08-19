@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'; import { useTranslation } from 'react-i18next'; import { toast } from 'sonner'; import { translateApiError } from '@/lib/apiError'; import { formatDate } from '@/lib/formatLocale'; import { Receipt, DollarSign, ScrollText, Send, Ban, Save } from 'lucide-react'; import { DocumentActions } from '@/components/Shared/DocumentActions'; import { Badge } from '@/components/ui/badge'; import { Button } from '@/components/ui/button'; import { Input } from '@/components/ui/input'; import { Textarea } from '@/components/ui/textarea'; import { Label } from '@/components/ui/label'; import {   Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from '@/components/ui/table'; import {   Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, } from '@/components/ui/sheet'; import { Separator } from '@/components/ui/separator'; import { PageShell } from './shared/PageShell'; import { DocumentRegistry } from '@/components/Documents/DocumentRegistry'; import { useDocumentCoreColumns } from '@/components/Documents/useDocumentCoreColumns'; import { ManualModeBanner } from '@/components/Shared/ManualModeBanner'; import { RecordPaymentDialog } from '@/components/Billing/RecordPaymentDialog'; import { DealLink } from '@/components/Shared/DealLink'; import { Toolbar } from '@/components/DataTable';
+import { useMemo, useState } from 'react'; import { useTranslation } from 'react-i18next'; import { toast } from 'sonner'; import { translateApiError } from '@/lib/apiError'; import { formatDate } from '@/lib/formatLocale'; import { Receipt, DollarSign, ScrollText, Send, Ban, Save } from 'lucide-react'; import { DocumentActions } from '@/components/Shared/DocumentActions'; import { Badge } from '@/components/ui/badge'; import { Button } from '@/components/ui/button'; import { Input } from '@/components/ui/input'; import { Textarea } from '@/components/ui/textarea'; import { Label } from '@/components/ui/label'; import {   Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from '@/components/ui/table'; import {   Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, } from '@/components/ui/sheet'; import { Separator } from '@/components/ui/separator'; import { PageShell } from './shared/PageShell'; import { DocumentRegistry } from '@/components/Documents/DocumentRegistry'; import { useDocumentCoreColumns } from '@/components/Documents/useDocumentCoreColumns'; import { ManualModeBanner } from '@/components/Shared/ManualModeBanner'; import { RecordPaymentDialog } from '@/components/Billing/RecordPaymentDialog'; import { DealLink } from '@/components/Shared/DealLink'; import { Toolbar } from '@/components/DataTable';
 import { useDraftState } from '@/hooks/useDraftState';
+import { useHashOpenParam } from '@/hooks/useHashOpenParam';
 import { useListParams, applyListParams } from '@/components/DataTable/listParams';
 import {
   useInvoices, useGenerateAct, useIssueInvoice, useCancelInvoice, useUpdateInvoiceDraft,
@@ -33,24 +34,7 @@ export function InvoicesPage() {
   // the new DRAFT's editor). Open the Sheet from the id, then strip the param so a manual close /
   // reload doesn't reopen it. `selected` derives from the live list cache, so the Sheet appears
   // once the just-created invoice is present after the create mutation's invalidation.
-  useEffect(() => {
-    const applyDeepLink = () => {
-      const query = window.location.hash.split('?')[1];
-      const openId = query ? new URLSearchParams(query).get('open') : null;
-      const parsed = openId ? Number(openId) : NaN;
-      if (Number.isFinite(parsed) && parsed > 0) {
-        setSelectedId(parsed);
-        window.history.replaceState(
-          { ...(window.history.state || {}) },
-          '',
-          `${window.location.pathname}${window.location.search}#invoices`,
-        );
-      }
-    };
-    applyDeepLink();
-    window.addEventListener('hashchange', applyDeepLink);
-    return () => window.removeEventListener('hashchange', applyDeepLink);
-  }, []);
+  useHashOpenParam('invoices', setSelectedId);
   // Render the detail Sheet from the LIVE query cache (not a captured snapshot) so
   // issue/cancel/save/generate-act always reflect fresh data — the canon shared with
   // ContractsPage/ActsPage/OtherDocuments. A mutation invalidates ['invoices'] → the

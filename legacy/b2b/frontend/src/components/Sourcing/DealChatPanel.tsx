@@ -264,6 +264,11 @@ export function DealChatPanel({ dealId, sellers }: DealChatPanelProps = {}): Rea
               </Select>
             </div>
           )}
+          {/* Пока покупатель не выбрал продавца, соединение и НЕ ДОЛЖНО существовать: эффект
+              websocket выходит сразу. Показывать при этом красное «Связь потеряна. Переподключаемся…»
+              — пугать поломкой там, где её нет (найдено прогоном глазами 19-08). Строку состояния
+              показываем только когда переписка вообще возможна. */}
+          {!needsLanePick && (
           <div className="flex items-center justify-end gap-1.5 border-b px-3 py-1.5">
             {isConnected ? (
               <>
@@ -281,6 +286,7 @@ export function DealChatPanel({ dealId, sellers }: DealChatPanelProps = {}): Rea
               </>
             )}
           </div>
+          )}
 
           <ScrollArea className="flex-1 px-3 py-2" ref={scrollContainerRef}>
             <div className="flex flex-col gap-2">

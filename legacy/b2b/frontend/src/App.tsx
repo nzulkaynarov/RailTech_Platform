@@ -306,18 +306,28 @@ function MainApp() {
   };
 
   const handleNavigate = (target: string) => {
-    // Параметрные цели из страниц («product-edit/42»): NAVIGABLE_PAGES хранит голые
-    // идентификаторы, и без этой ветки переход в редактор молча отскакивал на дашборд —
-    // поймано проходом глазами: «Дополнить» из реестра вела в никуда.
-    if (target.startsWith('product-edit/')) {
-      const productId = target.slice('product-edit/'.length);
+    // ЛЮБАЯ параметрная цель («product-edit/42», «request-detail/21», «acts?open=4») разбирается
+    // тем же парсером, что и адресная строка. Раньше здесь был частный случай ровно на один
+    // маршрут (`product-edit/`), а остальные проваливались в проверку `NAVIGABLE_PAGES`, где
+    // хранятся ГОЛЫЕ идентификаторы, — и молча уводили на дашборд. Так терялись переходы из
+    // шторки сообщений и, что дороже, ИЗ УВЕДОМЛЕНИЙ: ссылка «КП согласовано» вела не к сделке,
+    // а на главную (найдено прогоном глазами 19-08). Гейт считается по ТИПУ страницы, как и был.
+    if (target.includes('/') || target.includes('?')) {
+      const parsed = parseHashToPage(target);
       const decision = evaluatePageGuard({
-        pageType: 'product-edit', role, kycStatus, activeStatus, statusEntries, bootstrapped,
+        pageType: parsed.type, role, kycStatus, activeStatus, statusEntries, bootstrapped,
       });
-      if (decision.action !== 'bounce' && productId) {
-        navigateTo({ type: 'product-edit', productId });
+      if (decision.action === 'bounce') {
+        if (decision.reason === 'admin') toast.error(t('guards.adminRequired'));
+        else if (decision.reason === 'kyc') toast.info(t('guards.kycRequired'));
+        else toast.info(t('guards.notAvailableHere'));
+        navigateTo({ type: 'dashboard' });
         return;
       }
+      // Параметры (`?open=4`) страница читает сама — сохраняем их в адресе как есть.
+      setPage(parsed);
+      window.history.pushState({ page: parsed }, '', `#${target}`);
+      return;
     }
     // Цели меню — из реестра страниц (`navigable`). Раньше здесь лежал четвёртый
     // рукописный список идентификаторов, и он уже расходился с остальными: пункты
