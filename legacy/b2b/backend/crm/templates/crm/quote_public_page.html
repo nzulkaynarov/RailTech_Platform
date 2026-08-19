@@ -64,8 +64,6 @@
     .doc-id table.meta-grid td.mk { color: var(--muted); text-align: left; padding-left: 0; }
     .rule { height: 3px; background: var(--accent); border-radius: 3px; margin: 14px 0 18px; }
     h1.doc-title { font-size: 18px; color: var(--accent); margin: 0 0 14px; }
-    .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    @media (max-width: 640px) { .parties { grid-template-columns: 1fr; } }
     /* КП-письмо: адресат (ГОСТ) — справа до заголовка, строки по левому краю. */
     .addressee { margin: 0 0 14px auto; max-width: 46%; text-align: left; font-size: 14px; line-height: 1.5; }
     .addressee .addr-org { font-weight: 700; }
@@ -77,11 +75,6 @@
     .terms-grid td { padding: 4px 0; font-size: 13px; vertical-align: top; }
     .terms-grid td.tk { width: 38%; color: var(--muted); padding-right: 12px; }
     .terms-grid td.tv { color: var(--ink-soft); }
-    .party { border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: var(--panel); }
-    .party h3 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .5px;
-      color: var(--muted); font-weight: 700; }
-    .party .pname { font-weight: 700; }
-    .party p { margin: 2px 0; font-size: 13px; color: var(--ink-soft); }
     .table-scroll { overflow-x: auto; }
     table.lines { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 520px; }
     table.lines thead th { background: var(--accent); color: var(--accent-contrast);
@@ -129,7 +122,10 @@
     label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
     input[type=text], textarea { width: 100%; padding: 10px 12px; font-size: 15px;
       border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); }
-    .code-input { letter-spacing: 6px; font-size: 22px; text-align: center; font-variant-numeric: tabular-nums; }
+    /* `input[type=text]` выше по специфичности, чем класс, поэтому крупный шрифт поля кода
+       не применялся НИКОГДА — код набирался тем же мелким шрифтом, что и обычные поля
+       (найдено при замере шрифтов на телефоне 19-08). Поднимаем специфичность до тега. */
+    input[type=text].code-input { letter-spacing: 6px; font-size: 22px; text-align: center; font-variant-numeric: tabular-nums; }
     .notice { border-radius: 8px; padding: 12px 14px; font-size: 14px; line-height: 1.45; }
     .notice-warn { border: 1px solid var(--warn, #b45309); background: rgba(180, 83, 9, .07); color: var(--ink); }
     .msg { margin-top: 10px; font-size: 14px; }
@@ -144,6 +140,74 @@
     .demo-banner { background: color-mix(in srgb, var(--danger) 14%, transparent);
       color: var(--danger); text-align: center; padding: 8px; border-radius: 8px; font-weight: 600;
       font-size: 13px; margin-bottom: 12px; }
+
+    /* ── ТЕЛЕФОН: строка позиции вместо таблицы ─────────────────────────────────────────
+       Клиент открывает КП по QR с телефона. Пять колонок в 320–390 px не помещаются:
+       прокрутка у обёртки была (`.table-scroll{overflow-x:auto}`), но на iOS/Android
+       скроллбар оверлейный, и правый край просто обрезался — «Цена за ед.» и «Сумма»
+       уезжали за границу карточки БЕЗ признака, что туда можно доскроллить (замер 19-08:
+       390 px → 204 px скрыто, 320 px → 274 px). Человек читал это как обрезанный документ.
+
+       Паттерн — Qwilr Quote Block (единственный эталон, подтверждённый живым замером:
+       на ≤750 px строка становится flex-контейнером с переносом, ячейки — блоками,
+       описание занимает всю ширину, шапка гасится, скролл-обёртка отключается). PandaDoc
+       здесь анти-эталон: их публичный документ на телефоне не переверстывается вовсе,
+       заявка на адаптивность открыта с 2021-го, а встроенный зум закрыт как «Not Planned».
+
+       ОТКЛОНЕНИЕ ОТ ЭТАЛОНА, осознанное: Qwilr после перестроения оставляет числа без
+       подписей. У нас в строке ДВА денежных значения одного формата (цена за единицу и
+       сумма строки) — без подписи их не различить, а весь смысл починки в том, чтобы
+       клиент видел ИМЕННО цену. Поэтому подписи берём дословно из `<th>` через
+       `data-label` + `::before`. Новых формулировок не вводим.
+
+       Печать не затронута: PDF рисует WeasyPrint по отдельным шаблонам со своим CSS. */
+    @media (max-width: 640px) {
+      .card { padding: 14px; }
+
+      /* Шапка документа: адресат и мета-блок перестают тесниться в половину экрана. */
+      .addressee { max-width: 100%; margin-left: 0; }
+      .doc-id { text-align: left; }
+      .doc-id table.meta-grid { width: 100%; margin-left: 0; }
+      .doc-id table.meta-grid td { padding-left: 8px; }
+
+      /* Таблица позиций → список строк-карточек. */
+      table.lines { min-width: 0; }
+      .table-scroll { overflow-x: visible; }
+      table.lines thead { display: none; }
+      table.lines tbody tr { display: flex; flex-wrap: wrap; align-items: baseline;
+        padding: 10px 0; border-bottom: 1px solid var(--line); }
+      table.lines tbody td { display: block; padding: 2px 0; border-bottom: 0; }
+      table.lines tbody td.cell-no { width: auto; padding-right: 8px; color: var(--muted); }
+      table.lines tbody td.cell-name { flex: 1 1 auto; min-width: 0; }
+      /* Подписанные ячейки идут парами «подпись — значение» под названием позиции. */
+      table.lines tbody td[data-label] { flex: 1 1 100%; display: flex; gap: 10px;
+        justify-content: space-between; text-align: left; white-space: normal; }
+      table.lines tbody td[data-label]::before { content: attr(data-label);
+        color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .3px; }
+      table.lines tbody td.cell-total { font-weight: 700; }
+      /* Раздел: название слева, подытог справа — обе части на одной строке. Заливка и
+         акцентная линия переезжают на СТРОКУ: в режиме flex ячейки занимают только свою
+         ширину, и фон под ними рвался на два пятна с просветом посередине. */
+      table.lines tbody tr.section-row { justify-content: space-between;
+        background: var(--panel); border-top: 2px solid var(--accent); padding: 8px; }
+      table.lines tbody tr.section-row td { flex: 0 1 auto; background: transparent;
+        border-top: 0; padding: 0; }
+      /* Заметка занимает всю ширину. */
+      table.lines tbody tr.note-row td { flex: 1 1 100%; }
+      /* Полосатый макет красит СТРОКУ, а не отдельные ячейки: в режиме flex ячейки
+         перестают быть колонками, и зебра по ним рассыпается на куски. */
+      body.layout-striped table.lines tbody tr:nth-child(odd) { background: var(--panel); }
+      body.layout-striped table.lines tbody tr:nth-child(odd) td { background: transparent; }
+
+      /* Условия поставки: метка над значением вместо двух колонок. */
+      .terms-grid td.tk { display: block; width: auto; padding-right: 0; }
+      .terms-grid td.tv { display: block; }
+
+      /* iOS Safari зумит страницу, если поле ввода мельче 16 px. Ровно на шаге акцепта
+         («код из письма») это выбрасывало клиента из макета. Поле кода не трогаем — у него
+         свои 22 px. */
+      input[type=text]:not(.code-input), textarea { font-size: 16px; }
+    }
   </style>
 </head>
 <body
@@ -228,8 +292,8 @@
               </tr>
               {% else %}
               <tr>
-                <td class="num">{{ item.line_no }}</td>
-                <td>
+                <td class="num cell-no">{{ item.line_no }}</td>
+                <td class="cell-name">
                   <div class="item-name">{{ item.product.name|default:item.imported_raw_name|default:"—" }}</div>
                   {% if item.mpn or item.gost_drawing %}
                   <div class="item-sub">
@@ -239,10 +303,10 @@
                   </div>
                   {% endif %}
                 </td>
-                <td class="center">{{ item.quantity|qty:item.unit }}</td>
-                {% if show_lead_time and has_line_lead_time %}<td class="center">{% if item.lead_time_days %}до {{ item.lead_time_days }} дн.{% elif quote.effective_delivery_lead_time_days %}до {{ quote.effective_delivery_lead_time_days }} дн.{% else %}В наличии{% endif %}</td>{% endif %}
-                <td class="num">{{ item.final_price_excl_vat|money }}</td>
-                <td class="num">{{ item.line_total|money }}</td>
+                <td class="center" data-label="Кол-во">{{ item.quantity|qty:item.unit }}</td>
+                {% if show_lead_time and has_line_lead_time %}<td class="center" data-label="Срок / наличие">{% if item.lead_time_days %}до {{ item.lead_time_days }} дн.{% elif quote.effective_delivery_lead_time_days %}до {{ quote.effective_delivery_lead_time_days }} дн.{% else %}В наличии{% endif %}</td>{% endif %}
+                <td class="num" data-label="Цена за ед. без НДС">{{ item.final_price_excl_vat|money }}</td>
+                <td class="num cell-total" data-label="Сумма без НДС">{{ item.line_total|money }}</td>
               </tr>
               {% endif %}
             {% endfor %}
@@ -268,11 +332,11 @@
             <tbody>
               {% for item in optional_items %}
               <tr>
-                <td class="num">{{ forloop.counter }}</td>
-                <td><div class="item-name">{{ item.product.name|default:item.imported_raw_name|default:"—" }}</div></td>
-                <td class="center">{{ item.quantity|qty:item.unit }}</td>
-                <td class="num">{{ item.final_price_excl_vat|money }}</td>
-                <td class="num">{{ item.line_total|money }}</td>
+                <td class="num cell-no">{{ forloop.counter }}</td>
+                <td class="cell-name"><div class="item-name">{{ item.product.name|default:item.imported_raw_name|default:"—" }}</div></td>
+                <td class="center" data-label="Кол-во">{{ item.quantity|qty:item.unit }}</td>
+                <td class="num" data-label="Цена, {{ pres_ccy }}">{{ item.final_price_excl_vat|money }}</td>
+                <td class="num cell-total" data-label="Сумма, {{ pres_ccy }}">{{ item.line_total|money }}</td>
               </tr>
               {% endfor %}
             </tbody>
