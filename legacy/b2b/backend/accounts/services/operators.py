@@ -10,6 +10,8 @@ from typing import Optional, Tuple
 
 from django.db import transaction
 
+from core.audit import log_admin_action
+
 from ..constants import ALL_OPERATOR_PERMISSIONS, OperatorPermission, SystemRoleCode
 from ..models import CustomUser, OperatorRole
 from .permissions import operator_has_permission
@@ -173,6 +175,19 @@ def assign_operator_role(user, target_user_id, role_id) -> Tuple[Optional[Custom
     if currently_can_manage and not will_can_manage and _is_sole_active_operator_manager(target):
         return None, "CANNOT_DEMOTE_LAST_OPERATOR"
 
+    before_code = target.operator_role.code if target.operator_role_id else ""
     target.operator_role = new_role
     target.save(update_fields=["operator_role"])
+    log_admin_action(
+        entity_type="user",
+        entity_id=target.pk,
+        action="Операторская роль изменена",
+        detail=f"{target.email}: {before_code or 'полный доступ'} → {new_role.code if new_role else 'полный доступ'}",
+        actor=user,
+        before={"operator_role": before_code},
+        after={"operator_role": new_role.code if new_role else ""},
+        # Операторская роль решает, какие чужие данные человек видит и какие
+        # force-override может применить (ADR-0004 G1) — след обязателен.
+        level="WARNING",
+    )
     return target, None

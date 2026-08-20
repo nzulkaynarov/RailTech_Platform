@@ -32016,8 +32016,7 @@
                     },
                     "user_name": {
                         "type": "string",
-                        "readOnly": true,
-                        "default": ""
+                        "readOnly": true
                     },
                     "entity_type": {
                         "type": "string",

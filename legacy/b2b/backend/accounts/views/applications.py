@@ -110,6 +110,7 @@ class SupplierSubscriptionViewSet(viewsets.ModelViewSet):
         sub = self.get_object()
         services.change_subscription_status(SupplierSubscription.objects.filter(pk=sub.pk), "ACTIVE")
         sub.refresh_from_db()
+        self._log_status_change(request, sub, "ACTIVE")
         return Response(self.get_serializer(sub).data)
 
     @extend_schema(
@@ -124,7 +125,33 @@ class SupplierSubscriptionViewSet(viewsets.ModelViewSet):
         sub = self.get_object()
         services.change_subscription_status(SupplierSubscription.objects.filter(pk=sub.pk), "SUSPENDED")
         sub.refresh_from_db()
+        self._log_status_change(request, sub, "SUSPENDED")
         return Response(self.get_serializer(sub).data)
+
+    def _log_status_change(self, request, sub, target: str) -> None:
+        """След для ОДИНОЧНОЙ смены статуса подписки.
+
+        Массовый вариант (`bulk-set-status`) писал аудит и требовал причину, а одиночная
+        кнопка на той же странице не оставляла ничего — приостановка платящего продавца
+        отрезала его от отправки КП, и в журнале доступа этого не было видно.
+
+        Причину принимаем, но НЕ требуем: массовая операция затрагивает многих и там барьер
+        осмыслен, а вводить его для одиночной — это новая блокировка, которых владелец
+        просил не добавлять (PRODUCT RULE 2). Аудит — не гейт.
+        """
+        from core.audit import log_admin_action
+
+        log_admin_action(
+            entity_type="subscription",
+            entity_id=sub.pk,
+            action=f"Статус подписки → {target}",
+            detail=sub.company.name if sub.company_id else str(sub.pk),
+            actor=request.user,
+            reason=(request.data.get("reason") or "").strip(),
+            after={"status": target},
+            company_id=sub.company_id,
+            level="WARNING" if target == "SUSPENDED" else "SUCCESS",
+        )
 
     @extend_schema(
         summary="Export subscriptions",
@@ -412,6 +439,56 @@ class CompanyEntitlementViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return CompanyEntitlement.objects.select_related("company").order_by("-updated_at")
+
+    # Права-энтайтлменты — рычаг монетизации (ADR-0006 §3): строка здесь включает или гасит
+    # платную возможность у конкретной компании и ПЕРЕБИВАЕТ подписку. До 20-08 весь этот
+    # CRUD был безымянным: в журнале доступа не оставалось ни строки о том, кто выдал промо
+    # или посадил компанию в DEMO с водяным знаком на PDF. Пишем след на все три операции —
+    # это не гейт, порядок работы оператора не меняется.
+    def _log(self, entitlement, action: str, before=None, after=None, level: str = "INFO") -> None:
+        from core.audit import log_admin_action
+
+        log_admin_action(
+            entity_type="entitlement",
+            entity_id=entitlement.pk,
+            action=action,
+            detail=f"{entitlement.company.name if entitlement.company_id else '—'} · {entitlement.feature_key}",
+            actor=self.request.user,
+            reason=(self.request.data.get("note") or "").strip(),
+            before=before,
+            after=after,
+            company_id=entitlement.company_id,
+            level=level,
+        )
+
+    def perform_create(self, serializer):
+        entitlement = serializer.save()
+        self._log(
+            entitlement,
+            "Право выдано",
+            after={"feature_key": entitlement.feature_key, "access": entitlement.access},
+            level="SUCCESS",
+        )
+
+    def perform_update(self, serializer):
+        before = {"access": serializer.instance.access, "credits": str(serializer.instance.credits)}
+        entitlement = serializer.save()
+        self._log(
+            entitlement,
+            "Право изменено",
+            before=before,
+            after={"access": entitlement.access, "credits": str(entitlement.credits)},
+        )
+
+    def perform_destroy(self, instance):
+        # Пишем ДО удаления: после него ни `pk`, ни компании уже не спросишь.
+        self._log(
+            instance,
+            "Право отозвано",
+            before={"feature_key": instance.feature_key, "access": instance.access},
+            level="WARNING",
+        )
+        instance.delete()
 
     @extend_schema(summary="Feature-key + access-state option lists for the entitlement form", tags=["Accounts"])
     @action(detail=False, methods=["get"], url_path="choices")

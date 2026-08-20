@@ -11,6 +11,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from crm.audit_display import actor_display_name
 from crm.models import ActivityLog, Deal
 
 MAX_LIMIT = 200
@@ -18,7 +19,10 @@ DEFAULT_LIMIT = 50
 
 
 class TimelineEntrySerializer(serializers.ModelSerializer):
-    user_name = serializers.CharField(source="user.get_full_name", read_only=True, default="")
+    user_name = serializers.SerializerMethodField()
+
+    def get_user_name(self, obj) -> str:
+        return actor_display_name(obj)
 
     class Meta:
         model = ActivityLog

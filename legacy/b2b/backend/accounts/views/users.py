@@ -103,6 +103,7 @@ class UserViewSet(viewsets.ModelViewSet):
             phone=data.get("phone", ""),
             position=data.get("position", ""),
             role_code=data.get("role", ""),
+            actor=request.user,
         )
         if error:
             return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
@@ -400,7 +401,9 @@ class UserViewSet(viewsets.ModelViewSet):
     def change_role(self, request, pk=None):
         user = self.get_object()
         role_code = request.data.get("role")
-        result, error = services.change_user_role(user, role_code)
+        result, error = services.change_user_role(
+            user, role_code, actor=request.user, reason=(request.data.get("reason") or "").strip()
+        )
         if error:
             return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
         return Response(UserSerializer(result).data)

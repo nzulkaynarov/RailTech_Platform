@@ -6,6 +6,7 @@ unchanged.
 
 from rest_framework import serializers
 
+from crm.audit_display import actor_display_name
 from crm.models import ActivityLog, Lead, Message
 
 
@@ -61,7 +62,10 @@ class LeadSerializer(serializers.ModelSerializer):
 
 
 class ActivityLogSerializer(serializers.ModelSerializer):
-    user_name = serializers.CharField(source="user.get_full_name", read_only=True)
+    user_name = serializers.SerializerMethodField()
+
+    def get_user_name(self, obj) -> str:
+        return actor_display_name(obj)
 
     class Meta:
         model = ActivityLog

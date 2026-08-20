@@ -13663,7 +13663,6 @@ export interface components {
              * Format: date-time
              */
             readonly timestamp: string;
-            /** @default  */
             readonly user_name: string;
             /**
              * Тип сущности

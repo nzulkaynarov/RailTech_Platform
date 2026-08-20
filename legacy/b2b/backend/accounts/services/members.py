@@ -7,6 +7,7 @@ from django.db.models import Q
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
+from core.audit import log_admin_action
 from notifications.emails import send_templated_email
 
 from ..constants import WorkspaceRoleCode
@@ -78,6 +79,8 @@ def create_platform_user(
     phone: str = "",
     position: str = "",
     role_code: str = "",
+    actor: Optional[CustomUser] = None,
+    reason: str = "",
 ) -> Tuple[Optional[CustomUser], Optional[str]]:
     """Завести пользователя из операторской панели и позвать его установить пароль.
 
@@ -120,7 +123,7 @@ def create_platform_user(
     user.save()
 
     if role_code and default_role is not None and role_code != default_role.code:
-        _updated, role_error = change_user_role(user, role_code)
+        _updated, role_error = change_user_role(user, role_code, actor=actor, reason=reason)
         if role_error:
             # Роль не прошла инварианты — аккаунт не создаём вовсе, иначе оператор получит
             # пользователя не с той ролью и молчаливое расхождение с тем, что он выбрал.
@@ -137,6 +140,16 @@ def create_platform_user(
         channel="transactional",
         user=user,
         fail_silently=True,
+    )
+    log_admin_action(
+        entity_type="user",
+        entity_id=user.pk,
+        action="Пользователь заведён оператором",
+        detail=user.email,
+        actor=actor,
+        reason=reason,
+        after={"email": user.email, "role": user.role.code if user.role_id else ""},
+        level="SUCCESS",
     )
     return user, None
 
@@ -180,6 +193,8 @@ def can_delete_user(user: CustomUser) -> Optional[str]:
 def change_user_role(
     user: CustomUser,
     role_code: str,
+    actor: Optional[CustomUser] = None,
+    reason: str = "",
 ) -> Tuple[Optional[CustomUser], Optional[str]]:
     """
     Change SystemRole of a user.
@@ -189,6 +204,10 @@ def change_user_role(
         (Platform Admin — владелец платформы, не привязан ни к одной компании).
       - Понизить ADMIN → USER разрешено всегда.
       - USER можно выдать любому юзеру.
+
+    `actor` — кто меняет. Выдача роли ADMIN делает человека оператором платформы: он
+    начинает видеть чужие компании, KYC и деньги. До 20-08 это не оставляло следа —
+    в журнале доступа не было ни строки о том, кто и когда выдал платформенные права.
     """
     if not role_code:
         return None, "ROLE_CODE_REQUIRED"
@@ -207,8 +226,21 @@ def change_user_role(
 
         if is_last_operator_manager(user):
             return None, "CANNOT_DEMOTE_LAST_OPERATOR_MANAGER"
+    before_code = user.role.code if user.role_id else ""
     user.role = role
     user.save(update_fields=["role"])
+    log_admin_action(
+        entity_type="user",
+        entity_id=user.pk,
+        action="Системная роль изменена",
+        detail=f"{user.email}: {before_code or '—'} → {role.code}",
+        actor=actor,
+        reason=reason,
+        before={"role": before_code},
+        after={"role": role.code},
+        # Выдача ADMIN = выдача доступа ко всей платформе, это не рядовая правка профиля.
+        level="WARNING" if role.code == "ADMIN" else "INFO",
+    )
     return user, None
 
 
@@ -368,6 +400,19 @@ def toggle_user_active(
 
         if is_last_operator_manager(user):
             return None, "CANNOT_DEACTIVATE_SOLE_OPERATOR"
-    user.is_active = not user.is_active
+    was_active = user.is_active
+    user.is_active = not was_active
     user.save(update_fields=["is_active"])
+    log_admin_action(
+        entity_type="user",
+        entity_id=user.pk,
+        action="Аккаунт деактивирован" if was_active else "Аккаунт активирован",
+        detail=user.email,
+        actor=requester,
+        before={"is_active": was_active},
+        after={"is_active": user.is_active},
+        # Деактивация отрезает человека от платформы — это и есть «удаление» в терминах
+        # эталонов (Salesforce/Odoo), и оно обязано быть видно в журнале доступа.
+        level="WARNING" if was_active else "SUCCESS",
+    )
     return user, None
