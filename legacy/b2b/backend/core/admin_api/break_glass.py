@@ -47,6 +47,14 @@ def record_break_glass(operator, *, entity_type: str, entity_id: int, reason: st
         reason=reason,
         level="WARNING",
         expires_at=expires_at,
+        # Код нужен по той же причине, что и остальным событиям ленты: без него «Журнал
+        # доступа» печатает русскую строку `action` оператору с английским интерфейсом.
+        event_code="admin.break_glass.opened",
+        event_params={
+            "operator_email": operator.email,
+            "entity_type": entity_type,
+            "entity_id": entity_id,
+        },
     )
 
 
@@ -121,6 +129,7 @@ class AdminAccessLogView(APIView):
     def get(self, request):
         from django.db.models import Q
 
+        from crm.audit_display import actor_display_name
         from crm.models import ActivityLog
 
         try:
@@ -128,11 +137,24 @@ class AdminAccessLogView(APIView):
         except (TypeError, ValueError):
             limit = 100
 
-        # Sensitive-access events: break-glass grants (have expires_at) + force-overrides
-        # (action carries the [FORCE_ADMIN] marker). Both are WARNING-level audit entries.
+        # Что показывает «Журнал доступа»: всё, чем оператор трогает ЧУЖИЕ права и деньги.
+        #
+        # Раньше лента ограничивалась break-glass (есть `expires_at`) и force-override (маркер
+        # `[FORCE_ADMIN]` в тексте). Из-за этого волна аудита 20-08 писала след, которого
+        # оператор НЕ ВИДЕЛ: деактивация аккаунта, выдача роли платформенного администратора,
+        # отзыв платного права и приостановка подписки в ленту не попадали. Записано ≠ видно —
+        # тот же класс, что «показано ≠ работает».
+        #
+        # Эталон — Salesforce Setup Audit Trail: один список административных изменений (роли,
+        # права, деактивации), а не отдельная витрина под аварийный доступ.
+        #
+        # Отбор идёт по МАШИННОМУ коду `admin.*`, а не по тексту действия: `[FORCE_ADMIN]`
+        # ловился подстрокой и ломался бы от любой правки формулировки.
         qs = (
             ActivityLog.objects.select_related("user")
-            .filter(Q(expires_at__isnull=False) | Q(action__icontains="[FORCE_ADMIN]"))
+            .filter(
+                Q(expires_at__isnull=False) | Q(action__icontains="[FORCE_ADMIN]") | Q(event_code__startswith="admin.")
+            )
             .order_by("-timestamp")
         )
         now = timezone.now()
@@ -146,10 +168,19 @@ class AdminAccessLogView(APIView):
                 "entity_type": log.entity_type,
                 "entity_id": log.entity_id,
                 "user_email": log.user.email if log.user else None,
-                "user_name": log.user.get_full_name() if log.user else "",
+                # Тот же откат, что в ленте сделки и журнале активности: `get_full_name()` пуст
+                # у служебных и заведённых оператором аккаунтов, и запись С автором выглядела
+                # как запись БЕЗ автора.
+                "user_name": actor_display_name(log),
+                # Код и параметры нужны фронту, чтобы напечатать событие НА ЯЗЫКЕ СМОТРЯЩЕГО:
+                # без них `activityTitle` откатывался на русскую строку `action`, и англоязычный
+                # оператор читал русское.
+                "event_code": log.event_code,
+                "event_params": log.event_params or {},
                 "timestamp": log.timestamp.isoformat(),
                 "expires_at": log.expires_at.isoformat() if log.expires_at else None,
                 "is_break_glass": log.expires_at is not None,
+                "is_force_override": "[FORCE_ADMIN]" in (log.action or ""),
                 "is_active": bool(log.expires_at and log.expires_at > now),
             }
             for log in qs[:limit]

@@ -184,6 +184,12 @@ def assign_operator_role(user, target_user_id, role_id) -> Tuple[Optional[Custom
         action="Операторская роль изменена",
         detail=f"{target.email}: {before_code or 'полный доступ'} → {new_role.code if new_role else 'полный доступ'}",
         actor=user,
+        event_code="admin.user.operator_role_changed",
+        event_params={
+            "email": target.email,
+            "before": before_code or "",
+            "after": new_role.code if new_role else "",
+        },
         before={"operator_role": before_code},
         after={"operator_role": new_role.code if new_role else ""},
         # Операторская роль решает, какие чужие данные человек видит и какие

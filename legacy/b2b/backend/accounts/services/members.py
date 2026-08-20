@@ -148,6 +148,8 @@ def create_platform_user(
         detail=user.email,
         actor=actor,
         reason=reason,
+        event_code="admin.user.created",
+        event_params={"email": user.email},
         after={"email": user.email, "role": user.role.code if user.role_id else ""},
         level="SUCCESS",
     )
@@ -236,6 +238,11 @@ def change_user_role(
         detail=f"{user.email}: {before_code or '—'} → {role.code}",
         actor=actor,
         reason=reason,
+        # `admin.*` — машинный признак «административное действие над чужими правами». По нему
+        # событие попадает в операторский «Журнал доступа» и локализуется на языке смотрящего
+        # (до этого лента печатала русскую строку `action` и англоязычному оператору).
+        event_code="admin.user.role_changed",
+        event_params={"email": user.email, "before": before_code or "", "after": role.code},
         before={"role": before_code},
         after={"role": role.code},
         # Выдача ADMIN = выдача доступа ко всей платформе, это не рядовая правка профиля.
@@ -409,6 +416,8 @@ def toggle_user_active(
         action="Аккаунт деактивирован" if was_active else "Аккаунт активирован",
         detail=user.email,
         actor=requester,
+        event_code="admin.user.deactivated" if was_active else "admin.user.activated",
+        event_params={"email": user.email},
         before={"is_active": was_active},
         after={"is_active": user.is_active},
         # Деактивация отрезает человека от платформы — это и есть «удаление» в терминах

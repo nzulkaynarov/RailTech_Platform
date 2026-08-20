@@ -151,6 +151,8 @@ class SupplierSubscriptionViewSet(viewsets.ModelViewSet):
             after={"status": target},
             company_id=sub.company_id,
             level="WARNING" if target == "SUSPENDED" else "SUCCESS",
+            event_code="admin.subscription.suspended" if target == "SUSPENDED" else "admin.subscription.activated",
+            event_params={"company_name": sub.company.name if sub.company_id else str(sub.pk)},
         )
 
     @extend_schema(
@@ -445,7 +447,7 @@ class CompanyEntitlementViewSet(viewsets.ModelViewSet):
     # CRUD был безымянным: в журнале доступа не оставалось ни строки о том, кто выдал промо
     # или посадил компанию в DEMO с водяным знаком на PDF. Пишем след на все три операции —
     # это не гейт, порядок работы оператора не меняется.
-    def _log(self, entitlement, action: str, before=None, after=None, level: str = "INFO") -> None:
+    def _log(self, entitlement, action: str, event_code: str, before=None, after=None, level: str = "INFO") -> None:
         from core.audit import log_admin_action
 
         log_admin_action(
@@ -459,6 +461,11 @@ class CompanyEntitlementViewSet(viewsets.ModelViewSet):
             after=after,
             company_id=entitlement.company_id,
             level=level,
+            event_code=event_code,
+            event_params={
+                "company_name": entitlement.company.name if entitlement.company_id else "",
+                "feature_key": entitlement.feature_key,
+            },
         )
 
     def perform_create(self, serializer):
@@ -466,6 +473,7 @@ class CompanyEntitlementViewSet(viewsets.ModelViewSet):
         self._log(
             entitlement,
             "Право выдано",
+            "admin.entitlement.granted",
             after={"feature_key": entitlement.feature_key, "access": entitlement.access},
             level="SUCCESS",
         )
@@ -476,6 +484,7 @@ class CompanyEntitlementViewSet(viewsets.ModelViewSet):
         self._log(
             entitlement,
             "Право изменено",
+            "admin.entitlement.changed",
             before=before,
             after={"access": entitlement.access, "credits": str(entitlement.credits)},
         )
@@ -485,6 +494,7 @@ class CompanyEntitlementViewSet(viewsets.ModelViewSet):
         self._log(
             instance,
             "Право отозвано",
+            "admin.entitlement.revoked",
             before={"feature_key": instance.feature_key, "access": instance.access},
             level="WARNING",
         )

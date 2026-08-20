@@ -99,6 +99,8 @@ export interface AdminAccessLogEntry {
   timestamp: string;
   expires_at: string | null;
   is_break_glass: boolean;
+  /** Действие платформенного админа за арендатора — маркер `[FORCE_ADMIN]`. */
+  is_force_override: boolean;
   is_active: boolean;
 }
 

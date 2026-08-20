@@ -210,3 +210,77 @@ def test_system_events_stay_authorless(operator):
     rows = payload["results"] if isinstance(payload, dict) else payload
 
     assert rows[0]["user_name"] == "", "у системного события появился выдуманный автор"
+
+
+# ── Записано ≠ видно: след обязан доходить до операторского журнала ─────────
+
+
+def _access_log(operator):
+    payload = _client(operator).get("/api/v1/admin/access-log/", {"limit": 50}).data
+    return payload["items"]
+
+
+@pytest.mark.django_db
+def test_admin_actions_reach_the_access_log(operator, victim):
+    """Волна A писала след, которого оператор НЕ ВИДЕЛ.
+
+    Лента «Журнал доступа» отбирала только break-glass (`expires_at`) и force-override (маркер
+    `[FORCE_ADMIN]` в тексте). Деактивация, смена роли, отзыв платного права и приостановка
+    подписки в неё не попадали. Эталон — Salesforce Setup Audit Trail: ОДИН список
+    административных изменений, а не отдельная витрина под аварийный доступ.
+    """
+    toggle_user_active(victim, operator)
+
+    entry = next((row for row in _access_log(operator) if row["event_code"] == "admin.user.deactivated"), None)
+    assert entry is not None, "деактивация не дошла до журнала доступа"
+    assert entry["user_name"] == operator.email
+    assert entry["is_break_glass"] is False and entry["is_force_override"] is False
+
+
+@pytest.mark.django_db
+def test_access_log_still_shows_break_glass_and_force_override(operator):
+    """Расширение ленты не должно вытеснить то, ради чего она заводилась."""
+    from django.utils import timezone
+
+    from core.audit import log_admin_action
+
+    log_admin_action(
+        entity_type="company",
+        entity_id=1,
+        action="BREAK_GLASS открыт доступ",
+        actor=operator,
+        expires_at=timezone.now() + timezone.timedelta(hours=1),
+    )
+    log_admin_action(entity_type="contract", entity_id=1, action="[FORCE_ADMIN] Договор отменён", actor=operator)
+
+    rows = _access_log(operator)
+
+    assert any(row["is_break_glass"] for row in rows), "аварийный доступ пропал из ленты"
+    assert any(row["is_force_override"] for row in rows), "действие за арендатора пропало из ленты"
+
+
+@pytest.mark.django_db
+def test_access_log_carries_the_machine_code_for_localization(operator, tenant):
+    """Без кода лента печатала русскую строку `action` англоязычному оператору."""
+    subscription = SupplierSubscription.objects.create(company=tenant["company"], status="ACTIVE")
+
+    _client(operator).post(f"/api/v1/accounts/subscriptions/{subscription.pk}/suspend/", {}, format="json")
+
+    entry = next(row for row in _access_log(operator) if row["event_code"] == "admin.subscription.suspended")
+    assert entry["event_params"]["company_name"] == tenant["company"].name
+
+
+@pytest.mark.django_db
+def test_ordinary_deal_events_do_not_flood_the_access_log(operator, tenant):
+    """Отбор по `admin.*` не должен затянуть в ленту доступа обычную работу по сделкам."""
+    from core.audit import log_admin_action
+
+    log_admin_action(
+        entity_type="deal",
+        entity_id=1,
+        action="Стадия изменена",
+        actor=operator,
+        event_code="deal.stage_changed",
+    )
+
+    assert all(row["event_code"] != "deal.stage_changed" for row in _access_log(operator))

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollText, Loader2, KeyRound, ShieldAlert } from 'lucide-react';
+import { ScrollText, Loader2, KeyRound, ShieldAlert, UserCog } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import {
@@ -28,11 +28,16 @@ export function AdminAccessLogPage() {
   const items = useMemo(() => data?.items ?? [], [data?.items]);
 
   const stats = useMemo(() => {
+    // Три РАЗНЫХ счётчика: пока их было два, «Override-действия» считались как «всё, что не
+    // break-glass» — и после расширения ленты в них попала рядовая деактивация аккаунта.
+    // Счётчик, который считает «всё остальное», врёт при первом же новом виде события.
     const activeBreakGlass = items.filter((entry) => entry.is_break_glass && entry.is_active).length;
-    const forceOverrides = items.filter((entry) => !entry.is_break_glass).length;
+    const forceOverrides = items.filter((entry) => entry.is_force_override).length;
+    const adminActions = items.filter((entry) => !entry.is_break_glass && !entry.is_force_override).length;
     return [
       { label: t('accessLogPage.stats.activeBreakGlass'), value: String(activeBreakGlass) },
       { label: t('accessLogPage.stats.forceOverrides'), value: String(forceOverrides) },
+      { label: t('accessLogPage.stats.adminActions'), value: String(adminActions) },
     ];
   }, [items, t]);
 
@@ -64,20 +69,50 @@ export function AdminAccessLogPage() {
                 <TableHead className="p-4">{t('accessLogPage.col.entity')}</TableHead>
                 <TableHead className="p-4">{t('accessLogPage.col.reason')}</TableHead>
                 <TableHead className="p-4">{t('accessLogPage.col.when')}</TableHead>
-                <TableHead className="p-4">{t('accessLogPage.col.status')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {items.map((entry) => (
                 <TableRow key={entry.id} className="transition-colors hover:bg-muted/40">
-                  <TableCell className="p-4">
-                    <div className="flex items-center gap-2">
+                  <TableCell className="max-w-[380px] p-4">
+                    {/* `max-w` стоит на ЯЧЕЙКЕ: при `table-layout: auto` ширина, заданная
+                        заголовку, игнорируется — уже ловили на наценке в билдере КП. Без этого
+                        строка «событие + значок» распирала колонку до 498 px, таблица выходила
+                        за карточку, и правый край уезжал под невидимый оверлейный скроллбар. */}
+                    <div className="flex min-w-0 items-center gap-2">
+                      {/* Три РАЗНЫХ события, а не два: аварийный доступ, действие за арендатора и
+                          обычное административное (деактивация, роль, право, подписка). Пока
+                          иконок было две, рядовая деактивация рисовалась красным «вторжением». */}
                       {entry.is_break_glass ? (
-                        <KeyRound className="h-4 w-4 text-warning" aria-hidden="true" />
+                        <KeyRound className="h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
+                      ) : entry.is_force_override ? (
+                        <ShieldAlert className="h-4 w-4 shrink-0 text-destructive" aria-hidden="true" />
                       ) : (
-                        <ShieldAlert className="h-4 w-4 text-destructive" aria-hidden="true" />
+                        <UserCog className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
                       )}
-                      <span className="text-sm font-medium text-foreground">{activityTitle(t, i18n, entry)}</span>
+                      <span className="truncate text-sm font-medium text-foreground" title={activityTitle(t, i18n, entry)}>
+                        {activityTitle(t, i18n, entry)}
+                      </span>
+                      {/* Значок стоит РЯДОМ с событием, а не отдельной колонкой: при шести
+                          колонках таблица была шире карточки на 224 px, и «Статус» — то самое
+                          поле, которое говорит, действует ли ещё аварийный доступ, — уезжал за
+                          край. Прокрутка формально была, но на macOS её скроллбар оверлейный:
+                          подсказки, что справа что-то есть, не существовало. */}
+                      {entry.is_break_glass ? (
+                        entry.is_active ? (
+                          <Badge variant="secondary" className="shrink-0 text-xs">
+                            {t('accessLogPage.badge.activeUntil', { time: fmt(entry.expires_at) })}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="shrink-0 text-xs text-muted-foreground">
+                            {t('accessLogPage.badge.expired')}
+                          </Badge>
+                        )
+                      ) : entry.is_force_override ? (
+                        <Badge variant="outline" className="shrink-0 text-xs">
+                          {t('accessLogPage.badge.override')}
+                        </Badge>
+                      ) : null}
                     </div>
                   </TableCell>
                   <TableCell className="p-4">
@@ -91,27 +126,14 @@ export function AdminAccessLogPage() {
                     </span>
                   </TableCell>
                   <TableCell className="max-w-xs p-4">
-                    <span className="text-sm text-muted-foreground">{entry.reason || '—'}</span>
+                    {/* `max-w-xs` на ячейке ничего не режет: усечение задаётся ЭЛЕМЕНТУ. Без
+                        `truncate` длинная причина наезжала на колонку «Когда». */}
+                    <span className="block truncate text-sm text-muted-foreground" title={entry.reason || undefined}>
+                      {entry.reason || '—'}
+                    </span>
                   </TableCell>
                   <TableCell className="p-4">
                     <span className="text-xs tabular-nums text-muted-foreground">{fmt(entry.timestamp)}</span>
-                  </TableCell>
-                  <TableCell className="p-4">
-                    {entry.is_break_glass ? (
-                      entry.is_active ? (
-                        <Badge variant="secondary" className="text-xs">
-                          {t('accessLogPage.badge.activeUntil', { time: fmt(entry.expires_at) })}
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-xs text-muted-foreground">
-                          {t('accessLogPage.badge.expired')}
-                        </Badge>
-                      )
-                    ) : (
-                      <Badge variant="outline" className="text-xs">
-                        {t('accessLogPage.badge.override')}
-                      </Badge>
-                    )}
                   </TableCell>
                 </TableRow>
               ))}

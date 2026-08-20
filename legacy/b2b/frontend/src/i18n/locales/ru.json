@@ -4012,19 +4012,19 @@
   },
   "accessLogPage": {
     "title": "Журнал доступа",
-    "description": "Временный доступ (break-glass) и принудительные override-действия операторов — кто, к чему и почему",
+    "description": "Кто и что менял в чужих правах и доступах: аварийный доступ, действия за арендатора и административные изменения",
     "empty": "Записей доступа пока нет",
     "stats": {
       "activeBreakGlass": "Активный break-glass",
-      "forceOverrides": "Override-действия"
+      "forceOverrides": "Override-действия",
+      "adminActions": "Административные действия"
     },
     "col": {
       "event": "Событие",
       "operator": "Оператор",
       "entity": "Объект",
       "reason": "Причина",
-      "when": "Когда",
-      "status": "Статус"
+      "when": "Когда"
     },
     "badge": {
       "activeUntil": "Активен до {{time}}",
@@ -4364,6 +4364,60 @@
       "category_request_reviewed": {
         "title": "Заявка на категорию рассмотрена",
         "detail": "{{company_name}} → «{{category_name}}»: {{status_code}}"
+      }
+    },
+    "admin": {
+      "user": {
+        "created": {
+          "title": "Пользователь заведён оператором",
+          "detail": "{{email}}"
+        },
+        "activated": {
+          "title": "Аккаунт активирован",
+          "detail": "{{email}}"
+        },
+        "deactivated": {
+          "title": "Аккаунт деактивирован",
+          "detail": "{{email}}"
+        },
+        "role_changed": {
+          "title": "Системная роль изменена",
+          "detail": "{{email}}: {{before}} → {{after}}"
+        },
+        "operator_role_changed": {
+          "title": "Операторская роль изменена",
+          "detail": "{{email}}: {{before}} → {{after}}"
+        }
+      },
+      "entitlement": {
+        "granted": {
+          "title": "Право выдано",
+          "detail": "{{company_name}} · {{feature_key}}"
+        },
+        "changed": {
+          "title": "Право изменено",
+          "detail": "{{company_name}} · {{feature_key}}"
+        },
+        "revoked": {
+          "title": "Право отозвано",
+          "detail": "{{company_name}} · {{feature_key}}"
+        }
+      },
+      "subscription": {
+        "suspended": {
+          "title": "Подписка приостановлена",
+          "detail": "{{company_name}}"
+        },
+        "activated": {
+          "title": "Подписка активирована",
+          "detail": "{{company_name}}"
+        }
+      },
+      "break_glass": {
+        "opened": {
+          "title": "Открыт аварийный доступ",
+          "detail": "Оператор {{operator_email}} открыл временный доступ к {{entity_type}} #{{entity_id}}"
+        }
       }
     }
   },

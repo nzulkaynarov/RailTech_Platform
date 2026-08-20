@@ -3999,19 +3999,19 @@
   },
   "accessLogPage": {
     "title": "Access log",
-    "description": "Break-glass grants and operator force-override actions — who accessed what, and why",
+    "description": "Who changed what in other parties’ rights and access: break-glass, acting for a tenant, and administrative changes",
     "empty": "No access events yet",
     "stats": {
       "activeBreakGlass": "Active break-glass",
-      "forceOverrides": "Force-overrides"
+      "forceOverrides": "Force-overrides",
+      "adminActions": "Administrative actions"
     },
     "col": {
       "event": "Event",
       "operator": "Operator",
       "entity": "Entity",
       "reason": "Reason",
-      "when": "When",
-      "status": "Status"
+      "when": "When"
     },
     "badge": {
       "activeUntil": "Active until {{time}}",
@@ -4348,6 +4348,60 @@
       "category_request_reviewed": {
         "title": "Category request reviewed",
         "detail": "{{company_name}} → “{{category_name}}”: {{status_code}}"
+      }
+    },
+    "admin": {
+      "user": {
+        "created": {
+          "title": "User created by an operator",
+          "detail": "{{email}}"
+        },
+        "activated": {
+          "title": "Account activated",
+          "detail": "{{email}}"
+        },
+        "deactivated": {
+          "title": "Account deactivated",
+          "detail": "{{email}}"
+        },
+        "role_changed": {
+          "title": "System role changed",
+          "detail": "{{email}}: {{before}} → {{after}}"
+        },
+        "operator_role_changed": {
+          "title": "Operator role changed",
+          "detail": "{{email}}: {{before}} → {{after}}"
+        }
+      },
+      "entitlement": {
+        "granted": {
+          "title": "Entitlement granted",
+          "detail": "{{company_name}} · {{feature_key}}"
+        },
+        "changed": {
+          "title": "Entitlement changed",
+          "detail": "{{company_name}} · {{feature_key}}"
+        },
+        "revoked": {
+          "title": "Entitlement revoked",
+          "detail": "{{company_name}} · {{feature_key}}"
+        }
+      },
+      "subscription": {
+        "suspended": {
+          "title": "Subscription suspended",
+          "detail": "{{company_name}}"
+        },
+        "activated": {
+          "title": "Subscription activated",
+          "detail": "{{company_name}}"
+        }
+      },
+      "break_glass": {
+        "opened": {
+          "title": "Break-glass access opened",
+          "detail": "Operator {{operator_email}} opened temporary access to {{entity_type}} #{{entity_id}}"
+        }
       }
     }
   },
