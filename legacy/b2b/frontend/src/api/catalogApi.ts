@@ -1,5 +1,6 @@
 import { runAiJob } from '@/lib/aiJob';
 import { apiClient } from './client';
+import { fetchAllPages } from './fetchAllPages';
 import { PaginatedResponse } from './types';
 
 export interface DomainTypeItem {
@@ -141,31 +142,6 @@ export interface Product {
     updated_at?: string;
 }
 
-// DRF's default PageNumberPagination caps every list at PAGE_SIZE (20) and ignores
-// a client `page_size`/`limit` override. Admin list pages do their own client-side
-// search/sort/pagination, so they need the COMPLETE set, not the first 20 rows.
-// This walks the `next` links and concatenates every page (H4 fix). Public/seller
-// surfaces keep the single-page fetch — they opt in via `fetchAll`.
-async function fetchAllPages<T>(firstUrl: string): Promise<T[]> {
-    const all: T[] = [];
-    let nextUrl: string | null = firstUrl;
-    // Hard ceiling so a runaway `next` chain can't loop forever.
-    let guard = 0;
-    while (nextUrl && guard < 500) {
-        // Fresh const per iteration — keeps the request argument out of the
-        // reassignment cycle (`nextUrl` ← next ← data ← nextUrl) that confuses
-        // TS control-flow inference (TS7022).
-        const currentUrl: string = nextUrl;
-        const resp = await apiClient.get<PaginatedResponse<T>>(currentUrl);
-        all.push(...resp.data.results);
-        // `next` is an absolute URL; apiClient baseURL already targets the API root,
-        // so strip everything up to and including `/api/v1/` to get a relative path.
-        const rawNext: string | null = resp.data.next;
-        nextUrl = rawNext ? rawNext.replace(/^.*\/api\/v1\//, '') : null;
-        guard += 1;
-    }
-    return all;
-}
 
 /**
  * Параметры серверного списка товаров. Ровно то, что понимает `ProductViewSet`:

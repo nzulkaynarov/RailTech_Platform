@@ -326,7 +326,13 @@ export const useDeleteUserAvatar = () => {
 
 // ─── Subscriptions ─────────────────────────────────────────────────────
 
-export const useSubscriptions = (params?: { search?: string; status?: string; plan?: string; ordering?: string }) => useQuery({
+export const useSubscriptions = (params?: {
+  search?: string;
+  status?: string;
+  plan?: string;
+  ordering?: string;
+  fetchAll?: boolean;
+}) => useQuery({
   queryKey: ['subscriptions', params],
   queryFn: () => accountsApi.getSubscriptions(params),
 });
@@ -406,7 +412,13 @@ export const useCompanyTypes = () => useQuery({
   staleTime: 30 * 60_000,
 });
 
-export const useRoleApplications = (params?: { search?: string; status?: string; requested_type?: string; ordering?: string }) => useQuery({
+export const useRoleApplications = (params?: {
+  search?: string;
+  status?: string;
+  requested_type?: string;
+  ordering?: string;
+  fetchAll?: boolean;
+}) => useQuery({
   queryKey: ['roleApplications', params],
   queryFn: () => accountsApi.getRoleApplications(params),
 });

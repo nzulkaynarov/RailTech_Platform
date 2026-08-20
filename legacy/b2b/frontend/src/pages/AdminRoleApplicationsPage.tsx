@@ -258,8 +258,14 @@ export function AdminRoleApplicationsPage() {
     return Object.keys(p).length ? p : undefined;
   }, [tableState.search, tableState.tab]);
 
-  const { data: allApps = [] } = useRoleApplications();
-  const { data: apps = [], isLoading, isError, refetch } = useRoleApplications(queryParams);
+  // `fetchAll` обязателен обоим запросам: реестр не имеет пейджера и печатает счётчики
+  // вкладок по этому же списку. Без него оператор видел первые 20 записей и счётчики,
+  // посчитанные по этим же двадцати, — неправду, неотличимую от правды.
+  const { data: allApps = [] } = useRoleApplications({ fetchAll: true });
+  const { data: apps = [], isLoading, isError, refetch } = useRoleApplications({
+    ...(queryParams ?? {}),
+    fetchAll: true,
+  });
 
   const filtered = useMemo(() => {
     // For the "pending" tab there are three backend statuses, so filter client-side over the allApps snapshot.

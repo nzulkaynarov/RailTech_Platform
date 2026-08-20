@@ -77,7 +77,8 @@ export function DocumentCreateWizard({ open, onOpenChange, defaultDealId }: Docu
   const [sourceQuoteId, setSourceQuoteId] = useState<string>(NONE);
 
   const { data: templates, isLoading: templatesLoading } = useDocumentTemplates();
-  const { data: deals } = useDeals();
+  // Выбор сделки в мастере: без полного списка по 21-й сделке нельзя выставить документ.
+  const { data: deals } = useDeals(undefined, { fetchAll: true });
   const { data: contacts } = useContacts();
   const generate = useGenerateDocument();
   const createInvoice = useCreateInvoiceDraft();

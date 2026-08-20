@@ -1,4 +1,5 @@
 import { apiClient } from './client';
+import { fetchAllPages } from './fetchAllPages';
 
 export type AdminQueueSeverity = 'critical' | 'warning' | 'info';
 
@@ -294,13 +295,11 @@ export const entitlementsApi = {
     );
     return res.data;
   },
-  list: async (params?: { company?: number; feature_key?: string; access?: string; search?: string }) => {
-    const res = await apiClient.get<CompanyEntitlement[] | { results: CompanyEntitlement[] }>(
-      'admin/entitlements/',
-      { params },
-    );
-    return Array.isArray(res.data) ? res.data : res.data.results;
-  },
+  // Права-энтайтлменты — плоскость монетизации (ADR-0006 §3): строка здесь включает или гасит
+  // платную возможность у конкретной компании и ПЕРЕБИВАЕТ подписку. Первая страница вместо
+  // всего списка означала, что выданное 21-м промо не увидит и не отзовёт никто.
+  list: async (params?: { company?: number; feature_key?: string; access?: string; search?: string }) =>
+    fetchAllPages<CompanyEntitlement>('admin/entitlements/', params as Record<string, unknown>),
   create: async (data: CompanyEntitlementDraft) => {
     const res = await apiClient.post<CompanyEntitlement>('admin/entitlements/', data);
     return res.data;

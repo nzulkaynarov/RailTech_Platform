@@ -9,10 +9,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { crmApi, QuoteItem } from '../../api/crmApi';
 
-export const useDeals = (context?: 'BUYER' | 'SELLER') => useQuery({
+export const useDeals = (context?: 'BUYER' | 'SELLER', opts?: { fetchAll?: boolean }) => useQuery({
   // Скоуп входит в ключ кэша: иначе покупательская и продавцовая выборки затирали бы друг друга.
-  queryKey: context ? ['deals', { context }] : ['deals'],
-  queryFn: () => crmApi.getDeals(context),
+  // `fetchAll` — тоже часть ключа: полный список и первая страница это РАЗНЫЕ данные, и без
+  // этого виджет дашборда и реестр делили бы один кэш, отдавая друг другу свои двадцать строк.
+  queryKey: ['deals', { context: context ?? null, fetchAll: opts?.fetchAll ?? false }],
+  queryFn: () => crmApi.getDeals(context, opts),
 });
 
 export const useDeal = (id: number) => useQuery({

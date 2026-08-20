@@ -10,7 +10,8 @@ import type { Deal } from '@/api/crmApi';
 
 export function MyRequestsPage() {
   const { t } = useTranslation();
-  const { data: deals, isLoading, isError, refetch } = useDeals();
+  // Весь список заявок покупателя: собственная 21-я заявка не должна пропадать из «Моих заявок».
+  const { data: deals, isLoading, isError, refetch } = useDeals(undefined, { fetchAll: true });
   const formatCurrency = useCurrencyStore((s) => s.format);
   const [createOpen, setCreateOpen] = useState(false);
   const [statusTab, setStatusTab] = useState<string>('all');

@@ -1,4 +1,5 @@
 import { apiClient } from './client';
+import { fetchAllPages } from './fetchAllPages';
 import { PaginatedResponse } from './types';
 
 // One live refresh token = one session. The backend stores no ip/user-agent —
@@ -235,22 +236,7 @@ export const accountsApi = {
 		if (params?.fetchAll) {
 			const query = { ...params };
 			delete query.fetchAll;
-			const all: Company[] = [];
-			let url: string | null = 'accounts/companies/';
-			let isFirst = true;
-			let guard = 0;
-			while (url && guard < 500) {
-				const response: { data: PaginatedResponse<Company> } = await apiClient.get<PaginatedResponse<Company>>(
-					url,
-					isFirst ? { params: query } : undefined,
-				);
-				all.push(...response.data.results);
-				const next = response.data.next;
-				url = next ? next.replace(/^.*\/api\/v1\//, '') : null;
-				isFirst = false;
-				guard += 1;
-			}
-			return all;
+			return fetchAllPages<Company>('accounts/companies/', query);
 		}
 		const response = await apiClient.get<PaginatedResponse<Company>>('accounts/companies/', { params });
 		return response.data.results;
@@ -455,22 +441,7 @@ export const accountsApi = {
 		if (params?.fetchAll) {
 			const query = { ...params };
 			delete query.fetchAll;
-			const all: User[] = [];
-			let url: string | null = 'accounts/users/';
-			let isFirst = true;
-			let guard = 0;
-			while (url && guard < 500) {
-				const response: { data: PaginatedResponse<User> } = await apiClient.get<PaginatedResponse<User>>(
-					url,
-					isFirst ? { params: query } : undefined,
-				);
-				all.push(...response.data.results);
-				const next = response.data.next;
-				url = next ? next.replace(/^.*\/api\/v1\//, '') : null;
-				isFirst = false;
-				guard += 1;
-			}
-			return all.map(normalizeUser);
+			return (await fetchAllPages<User>('accounts/users/', query)).map(normalizeUser);
 		}
 		const response = await apiClient.get<PaginatedResponse<User>>('accounts/users/', { params });
 		return response.data.results.map(normalizeUser);
@@ -529,7 +500,20 @@ export const accountsApi = {
 	},
 
 	// ─── Subscriptions (admin) ─────────────────────────────────────────
-	getSubscriptions: async (params?: { search?: string; status?: string; plan?: string; ordering?: string }) => {
+	// Реестр подписок печатает счётчики вкладок и «Всего» по этому же списку, а пейджера у
+	// него нет — берём целиком, иначе оператор судит о платящих продавцах по первым 20.
+	getSubscriptions: async (params?: {
+		search?: string;
+		status?: string;
+		plan?: string;
+		ordering?: string;
+		fetchAll?: boolean;
+	}) => {
+		if (params?.fetchAll) {
+			const query = { ...params };
+			delete query.fetchAll;
+			return fetchAllPages<Subscription>('accounts/subscriptions/', query);
+		}
 		const response = await apiClient.get<PaginatedResponse<Subscription>>(
 			'accounts/subscriptions/',
 			{ params },
@@ -662,7 +646,20 @@ export const accountsApi = {
 		const response = await apiClient.get<{ id: number; code: string; name: string }[]>('accounts/company-types/');
 		return response.data;
 	},
-	getRoleApplications: async (params?: { search?: string; status?: string; requested_type?: string; ordering?: string }) => {
+	// Заявки на роль — очередь модерации: непросмотренная 21-я заявка висит без ответа, а
+	// счётчик «На рассмотрении» на вкладке показывает неправду.
+	getRoleApplications: async (params?: {
+		search?: string;
+		status?: string;
+		requested_type?: string;
+		ordering?: string;
+		fetchAll?: boolean;
+	}) => {
+		if (params?.fetchAll) {
+			const query = { ...params };
+			delete query.fetchAll;
+			return fetchAllPages<RoleApplication>('accounts/role-applications/', query);
+		}
 		const response = await apiClient.get<PaginatedResponse<RoleApplication>>(
 			'accounts/role-applications/',
 			{ params },

@@ -22,7 +22,8 @@ function openDeal(deal: Deal) {
 
 export function DealsPage() {
   const { t } = useTranslation();
-  const { data: deals, isLoading, isError, refetch } = useDeals();
+  // Весь список сделок, а не первые двадцать: 21-я иначе недостижима — ни открыть, ни найти.
+  const { data: deals, isLoading, isError, refetch } = useDeals(undefined, { fetchAll: true });
   const { data: stages } = useDealStages();
   const formatCurrency = useCurrencyStore((s) => s.format);
   const activeStatus = useUserStore((s) => s.activeStatus);

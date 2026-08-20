@@ -8,6 +8,7 @@
 
 import { runAiJob } from '@/lib/aiJob';
 import { apiClient } from '../client';
+import { fetchAllPages } from '../fetchAllPages';
 import { PaginatedResponse } from '../types';
 import type { ChargeTemplate, Deal, DealDocumentHub, Lead, QuoteItem, QuoteItemDisplayType, SellerCompanyRef, SuggestedSeller, TimeToFirstQuoteStats } from './types';
 
@@ -17,10 +18,15 @@ export const dealsApi = {
 	 * дашборд общий для обеих ролей, поэтому глобальный `activeStatus` там остаётся BUYER, и
 	 * без явного SELLER плитки продавца считались по покупательской выборке (03-08).
 	 */
-	getDeals: async (context?: 'BUYER' | 'SELLER') => {
-		const response = await apiClient.get<PaginatedResponse<Deal>>('crm/deals/', {
-			headers: context ? { 'X-Active-Context': context } : undefined,
-		});
+	// `fetchAll` — для экранов, которые показывают СПИСОК СДЕЛОК ЦЕЛИКОМ и пейджера не имеют:
+	// реестр сделок оператора, «Мои заявки» покупателя, «Сделки» продавца, выбор сделки в
+	// мастере документов. Без него 21-я сделка была недостижима — ни открыть, ни выставить по
+	// ней счёт. Виджеты дашборда и чек-лист онбординга берут первую страницу СОЗНАТЕЛЬНО: они
+	// показывают верхние N по свежести, а не весь список.
+	getDeals: async (context?: 'BUYER' | 'SELLER', opts?: { fetchAll?: boolean }) => {
+		const headers = context ? { 'X-Active-Context': context } : undefined;
+		if (opts?.fetchAll) return fetchAllPages<Deal>('crm/deals/', undefined, { headers });
+		const response = await apiClient.get<PaginatedResponse<Deal>>('crm/deals/', { headers });
 		return response.data.results;
 	},
 	getDeal: async (id: number) => {
@@ -153,10 +159,10 @@ export const dealsApi = {
 	deleteChargeTemplate: async (id: number) => {
 		await apiClient.delete(`crm/charge-templates/${id}/`);
 	},
-	listLeads: async () => {
-		const response = await apiClient.get<PaginatedResponse<Lead>>('crm/leads/');
-		return response.data.results;
-	},
+	// Лиды — очередь обработки: страница печатает «Новых N» по этому же списку и пейджера не
+	// имеет. Первая страница вместо всего списка означала, что 21-й лид не обработает никто и
+	// счётчик про него не скажет.
+	listLeads: async () => fetchAllPages<Lead>('crm/leads/'),
 	convertLead: async (leadId: number, companyId?: number) => {
 		const response = await apiClient.post<{ deal_id: number; stage: string }>(
 			`crm/leads/${leadId}/convert/`,

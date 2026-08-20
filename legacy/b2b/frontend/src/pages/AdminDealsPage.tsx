@@ -15,7 +15,8 @@ const CLOSED_STAGES: string[] = [DealStage.CLOSED_WON, DealStage.CLOSED_LOST];
 
 export function AdminDealsPage() {
   const { t } = useTranslation();
-  const { data: deals, isLoading, isError, refetch } = useDeals();
+  // Реестр показывает список ЦЕЛИКОМ и печатает по нему счётчики — пейджера у него нет.
+  const { data: deals, isLoading, isError, refetch } = useDeals(undefined, { fetchAll: true });
   const { data: stages } = useDealStages();
   const { data: companies } = useCompanies();
   const deleteMut = useDeleteDeal();
