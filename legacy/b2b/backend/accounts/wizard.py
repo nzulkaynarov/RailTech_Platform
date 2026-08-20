@@ -179,7 +179,12 @@ class CompanyWizardView(SessionWizardView):
     file_storage = default_storage
 
     def dispatch(self, request, *args, **kwargs):
-        if not request.user.is_staff:
+        # Тот же гейт, что у самой админки (`core.admin_site.EngineeringAdminSite`), а не голый
+        # `is_staff`: мастер живёт внутри Unfold и создаёт компании — пускать сюда шире, чем в
+        # админку, значит оставить обходную дверь.
+        from django.contrib.admin import site
+
+        if not site.has_permission(request):
             return redirect("/admin/login/")
         return super().dispatch(request, *args, **kwargs)
 

@@ -291,7 +291,7 @@
       "full_name_ru": "Азиз Кодиров",
       "role": "USER",
       "is_superuser": false,
-      "is_staff": true,
+      "is_staff": false,
       "is_active": true,
       "company_inn": "309876543",
       "workspace_role": "OWNER"
@@ -304,7 +304,7 @@
       "full_name_ru": "Диана Рахимова",
       "role": "USER",
       "is_superuser": false,
-      "is_staff": true,
+      "is_staff": false,
       "is_active": true,
       "company_inn": "309876543",
       "workspace_role": "SALES_MANAGER"
@@ -317,7 +317,7 @@
       "full_name_ru": "Фарход Махмудов",
       "role": "USER",
       "is_superuser": false,
-      "is_staff": true,
+      "is_staff": false,
       "is_active": true,
       "company_inn": "309876543",
       "workspace_role": "SALES_MANAGER"
@@ -330,7 +330,7 @@
       "full_name_ru": "Лола Искандарова",
       "role": "USER",
       "is_superuser": false,
-      "is_staff": true,
+      "is_staff": false,
       "is_active": true,
       "company_inn": "309876543",
       "workspace_role": "OWNER"
@@ -343,7 +343,7 @@
       "full_name_ru": "Умид Абдуллаев",
       "role": "USER",
       "is_superuser": false,
-      "is_staff": true,
+      "is_staff": false,
       "is_active": true,
       "company_inn": "309876543",
       "workspace_role": "SALES_MANAGER"
@@ -356,7 +356,7 @@
       "full_name_ru": "Наталья Петрова",
       "role": "USER",
       "is_superuser": false,
-      "is_staff": true,
+      "is_staff": false,
       "is_active": false,
       "company_inn": "309876543",
       "workspace_role": "SALES_MANAGER"
@@ -369,7 +369,7 @@
       "full_name_ru": "Камол Зарифов",
       "role": "USER",
       "is_superuser": false,
-      "is_staff": true,
+      "is_staff": false,
       "is_active": true,
       "company_inn": "309876543",
       "workspace_role": "SALES_MANAGER"
@@ -382,7 +382,7 @@
       "full_name_ru": "Евгений Смирнов",
       "role": "USER",
       "is_superuser": false,
-      "is_staff": true,
+      "is_staff": false,
       "is_active": true,
       "company_inn": "309876543",
       "workspace_role": "SALES_MANAGER"

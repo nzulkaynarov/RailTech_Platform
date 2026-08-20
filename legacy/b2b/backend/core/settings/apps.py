@@ -7,14 +7,21 @@ from .base import *  # noqa: F401,F403 — последовательная ко
 # Application definition
 
 INSTALLED_APPS = [
-    "unfold",
+    # Именно `BasicAppConfig`, а НЕ `"unfold"`: дефолтная конфигурация Unfold в своём
+    # `ready()` безусловно присваивает `admin.site = UnfoldAdminSite()` и затирает наш
+    # инженерный сайт с гейтом входа. Basic-вариант оставляет выбор сайта за
+    # `core.admin_config.EngineeringAdminConfig` (ниже по списку).
+    "unfold.apps.BasicAppConfig",
     "unfold.contrib.filters",
     "unfold.contrib.forms",
     "unfold.contrib.inlines",
     "unfold.contrib.import_export",
     "import_export",
     "daphne",
-    "django.contrib.admin",
+    # Не `django.contrib.admin`, а наша конфигурация: она подменяет сайт админки на
+    # инженерный (`core.admin_site.EngineeringAdminSite`) — вход только для суперпользователя
+    # или члена группы `system_engineers` (ADR-0001, Phase 5).
+    "core.admin_config.EngineeringAdminConfig",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -42,6 +49,19 @@ INSTALLED_APPS = [
 ]
 
 # Unfold Configuration
+# ── Импорт/экспорт в админке: под правами модели ──────────────────────────────────────────
+# `ImportExportModelAdmin` гейтит только доступ к самой админке, а страницы `/export/` и
+# `/import/` — НЕТ. Проверено вживую 20-08: сотрудник-арендатор (is_staff без единого права на
+# модель) получал 403 на СПИСКЕ компаний и при этом открывал `/export/` и скачивал CSV со всеми
+# 42 компаниями платформы — ИНН, юр. адреса, контакты, банковские счета. Страница `/import/`
+# была открыта так же, а `UserResource` до этой волны писал `is_staff` и `role`: загрузка XLSX
+# делала кого угодно сотрудником платформы мимо сервисов, аудита и писем.
+#
+# Коды ниже привязывают обе операции к правам НА МОДЕЛЬ: экспорт требует `view`, импорт —
+# `change`. Инженеру с правами всё доступно как прежде; арендатору — 403 на обеих страницах.
+IMPORT_EXPORT_EXPORT_PERMISSION_CODE = "view"
+IMPORT_EXPORT_IMPORT_PERMISSION_CODE = "change"
+
 UNFOLD = {
     "SITE_TITLE": "RailTech B2B Control Center",
     "SITE_HEADER": "RailTech B2B",

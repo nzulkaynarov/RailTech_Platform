@@ -112,7 +112,22 @@ class CompanyViewSet(viewsets.ModelViewSet):
    - Все бизнес-экшены помечены `[Emergency]` и доступны только для `is_superuser=True`
    - Декоратор `@superuser_only_action` в `core/admin_mixins.py`
    - Справочники (master_data, lookups) — полный CRUD без ограничений
-6. **Phase 5 — Hardening доступа (`system_engineers` group)** — TODO
+6. **Phase 5 — Hardening доступа (`system_engineers` group)** ✅ (выполнено 2026-08-20)
+   - Группу и команду выдачи (`accounts/migrations/0006`, `manage.py grant_engineer`) завели ещё в
+     апреле, но **дверь оставалась открытой**: Django пускает в админку по флагу `is_staff`, а его
+     раздавали сиды и ручные правки. Прогон глазами 20-08: сотрудник компании-арендатора видел
+     стартовый экран с оборотом ПЛАТФОРМЫ и скачал `/admin/accounts/company/export/` — CSV на 42
+     компании с ИНН и банковскими счетами.
+   - Гейт входа: `core/admin_site.py` (`EngineeringAdminSite.has_permission`), подключён через
+     `core/admin_config.py`; `unfold` в `INSTALLED_APPS` переведён на `unfold.apps.BasicAppConfig`,
+     иначе его `ready()` затирает сайт своим. Тем же гейтом закрыт мастер компаний (`accounts/wizard.py`).
+   - Гейт выгрузки: `IMPORT_EXPORT_{EXPORT,IMPORT}_PERMISSION_CODE` = `view`/`change` — по умолчанию
+     django-import-export закрывает правами только список объектов, а страницы `/export/` и `/import/`
+     не закрывает вовсе. Из `UserResource`/`CompanyResource` убраны `role`, `is_staff`,
+     `verification_status` — загруженный XLSX раздавал права мимо сервисов и аудита.
+   - Данные приведены к схеме: `accounts/migrations/0045` снимает `is_staff` со всех, кто не
+     суперпользователь и не в группе; `core/data/seed_data.json` больше не выдаёт флаг 8 бизнес-аккаунтам.
+   - Держит `core/tests/test_engineering_admin_door.py` (8 тестов, каждый проверен ломаным входом).
 7. **Phase 6 — Message history archive в S3 (через Unfold + Celery)** ✅ (выполнено)
 8. **Phase 7 — Финальная верификация и документация** — TODO
 

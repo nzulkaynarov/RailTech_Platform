@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-18 13:05+0500\n"
+"POT-Creation-Date: 2026-08-20 11:05+0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1240,7 +1240,7 @@ msgstr "Created at"
 msgid "Подписка поставщика"
 msgstr "Supplier subscription"
 
-#: accounts/models/subscriptions.py:110 core/settings/apps.py:115
+#: accounts/models/subscriptions.py:110 core/settings/apps.py:135
 msgid "Подписки поставщиков"
 msgstr "Supplier subscriptions"
 
@@ -1351,7 +1351,7 @@ msgstr ""
 "Granular platform operator sub-role (ADR-0004 G1). Meaningful only for "
 "SystemRole=ADMIN; empty = full access (Super Operator)."
 
-#: accounts/models/users.py:89 core/settings/apps.py:123
+#: accounts/models/users.py:89 core/settings/apps.py:143
 msgid "Пользователи"
 msgstr "Users"
 
@@ -1359,20 +1359,12 @@ msgstr "Users"
 msgid "Страна (код)"
 msgstr "Country (code)"
 
-#: accounts/resources.py:24
-msgid "Статус верификации (код)"
-msgstr "Verification status (code)"
-
-#: accounts/resources.py:29
+#: accounts/resources.py:27
 msgid "Роли (через ;)"
 msgstr "Roles (separated by ;)"
 
-#: accounts/resources.py:67
-msgid "Системная роль (код)"
-msgstr "System role (code)"
-
 #: accounts/templates/admin/accounts/company_wizard.html:4
-#: accounts/wizard.py:192
+#: accounts/wizard.py:197
 msgid "Создание компании"
 msgstr "Create company"
 
@@ -1505,7 +1497,7 @@ msgstr "Last name"
 msgid "Телефон владельца"
 msgstr "Owner phone"
 
-#: accounts/wizard.py:280
+#: accounts/wizard.py:285
 #, python-format
 msgid "Компания «%(name)s» успешно создана! Владелец: %(email)s"
 msgstr "Company «%(name)s» created successfully! Owner: %(email)s"
@@ -1663,7 +1655,7 @@ msgstr "Supplier price per unit (FCA/EXW)"
 msgid "Валюта базовой цены"
 msgstr "Base price currency"
 
-#: catalog/models/offers.py:68 core/settings/apps.py:152
+#: catalog/models/offers.py:68 core/settings/apps.py:172
 #: crm/models/charges.py:193 master_data/models.py:152
 msgid "Базис поставки"
 msgstr "Delivery basis"
@@ -1801,7 +1793,7 @@ msgid "Заводской артикул. Ключ дедупликации PIM:
 msgstr "Factory part number. PIM deduplication key: brand + part number."
 
 #: catalog/models/products.py:135 catalog/models/taxonomy.py:135
-#: catalog/resources.py:45 core/settings/apps.py:83
+#: catalog/resources.py:45 core/settings/apps.py:103
 msgid "Группы оборудования"
 msgstr "Equipment Groups"
 
@@ -2190,7 +2182,7 @@ msgstr "Active Deals"
 msgid "Ожидают KYC"
 msgstr "Awaiting KYC"
 
-#: core/dashboard.py:157 core/settings/apps.py:110
+#: core/dashboard.py:157 core/settings/apps.py:130
 msgid "Заявки на роли"
 msgstr "Role Applications"
 
@@ -2214,7 +2206,7 @@ msgstr "Deal pipeline"
 msgid "Без стадии"
 msgstr "No stage"
 
-#: core/dashboard.py:185 core/settings/apps.py:93 crm/models/deals.py:136
+#: core/dashboard.py:185 core/settings/apps.py:113 crm/models/deals.py:136
 msgid "Сделки"
 msgstr "Deals"
 
@@ -2395,167 +2387,167 @@ msgstr "Ticket message"
 msgid "Сообщения тикетов"
 msgstr "Ticket messages"
 
-#: core/settings/apps.py:76
+#: core/settings/apps.py:96
 msgid "Каталог"
 msgstr "Catalog"
 
-#: core/settings/apps.py:79
+#: core/settings/apps.py:99
 msgid "Товары (PIM)"
 msgstr "Products (PIM)"
 
-#: core/settings/apps.py:80
+#: core/settings/apps.py:100
 msgid "Офферы поставщиков"
 msgstr "Supplier offers"
 
-#: core/settings/apps.py:81
+#: core/settings/apps.py:101
 msgid "Категории"
 msgstr "Categories"
 
-#: core/settings/apps.py:90
+#: core/settings/apps.py:110
 msgid "Продажи"
 msgstr "Selling"
 
-#: core/settings/apps.py:94 crm/models/quotes.py:309
+#: core/settings/apps.py:114 crm/models/quotes.py:309
 msgid "Коммерческие предложения"
 msgstr "Quotes"
 
-#: core/settings/apps.py:95
+#: core/settings/apps.py:115
 msgid "Лиды с сайта"
 msgstr "Leads from the website"
 
-#: core/settings/apps.py:96 crm/models/deals.py:297
+#: core/settings/apps.py:116 crm/models/deals.py:297
 msgid "Сообщения"
 msgstr "Messages"
 
-#: core/settings/apps.py:100
+#: core/settings/apps.py:120
 msgid "Компании и верификация"
 msgstr "Companies and verification"
 
-#: core/settings/apps.py:103
+#: core/settings/apps.py:123
 msgid "Все компании"
 msgstr "All companies"
 
-#: core/settings/apps.py:105
+#: core/settings/apps.py:125
 msgid "+ Создать компанию"
 msgstr "+ Create company"
 
-#: core/settings/apps.py:119
+#: core/settings/apps.py:139
 msgid "KYC документы"
 msgstr "KYC documents"
 
-#: core/settings/apps.py:125
+#: core/settings/apps.py:145
 msgid "Все пользователи"
 msgstr "All users"
 
-#: core/settings/apps.py:129
+#: core/settings/apps.py:149
 msgid "Инженерный доступ"
 msgstr "Engineering access"
 
-#: core/settings/apps.py:132
+#: core/settings/apps.py:152
 msgid "Django Groups"
 msgstr "Django Groups"
 
-#: core/settings/apps.py:133
+#: core/settings/apps.py:153
 msgid "Django Permissions"
 msgstr "Django Permissions"
 
-#: core/settings/apps.py:137
+#: core/settings/apps.py:157
 msgid "Импорт данных"
 msgstr "Data import"
 
-#: core/settings/apps.py:140 sourcing/models.py:231
+#: core/settings/apps.py:160 sourcing/models.py:231
 msgid "Задачи импорта"
 msgstr "Import tasks"
 
-#: core/settings/apps.py:141 sourcing/models.py:134
+#: core/settings/apps.py:161 sourcing/models.py:134
 msgid "Вложения"
 msgstr "Attachments"
 
-#: core/settings/apps.py:145
+#: core/settings/apps.py:165
 msgid "Справочники: география и логистика"
 msgstr "Reference data: geography and logistics"
 
-#: core/settings/apps.py:148
+#: core/settings/apps.py:168
 msgid "Страны"
 msgstr "Countries"
 
-#: core/settings/apps.py:149
+#: core/settings/apps.py:169
 msgid "Валюты"
 msgstr "Currencies"
 
-#: core/settings/apps.py:150
+#: core/settings/apps.py:170
 msgid "Ед. измерения"
 msgstr "Unit of measure"
 
-#: core/settings/apps.py:157
+#: core/settings/apps.py:177
 msgid "Ключевые слова Smart Match"
 msgstr "Smart Match keywords"
 
-#: core/settings/apps.py:164
+#: core/settings/apps.py:184
 msgid "Справочники: роли и статусы"
 msgstr "Reference data: roles and statuses"
 
-#: core/settings/apps.py:168
+#: core/settings/apps.py:188
 msgid "Системные роли"
 msgstr "System roles"
 
-#: core/settings/apps.py:172
+#: core/settings/apps.py:192
 msgid "Роли в команде"
 msgstr "Workspace roles"
 
-#: core/settings/apps.py:173
+#: core/settings/apps.py:193
 msgid "Типы компаний"
 msgstr "Company types"
 
-#: core/settings/apps.py:175
+#: core/settings/apps.py:195
 msgid "Статусы верификации"
 msgstr "Verification statuses"
 
-#: core/settings/apps.py:179
+#: core/settings/apps.py:199
 msgid "Типы KYC-документов"
 msgstr "KYC document types"
 
-#: core/settings/apps.py:180
+#: core/settings/apps.py:200
 msgid "Этапы сделки"
 msgstr "Deal stages"
 
-#: core/settings/apps.py:181
+#: core/settings/apps.py:201
 msgid "Статусы КП"
 msgstr "Quote statuses"
 
-#: core/settings/apps.py:182
+#: core/settings/apps.py:202
 msgid "Домены каталога"
 msgstr "Catalog domains"
 
-#: core/settings/apps.py:183
+#: core/settings/apps.py:203
 msgid "Статусы товара"
 msgstr "Product statuses"
 
-#: core/settings/apps.py:184
+#: core/settings/apps.py:204
 msgid "Статусы наличия"
 msgstr "Availability statuses"
 
-#: core/settings/apps.py:186
+#: core/settings/apps.py:206
 msgid "Типы уведомлений"
 msgstr "Notification types"
 
-#: core/settings/apps.py:193
+#: core/settings/apps.py:213
 msgid "Аудит и мониторинг"
 msgstr "Audit and monitoring"
 
-#: core/settings/apps.py:196 notifications/models.py:114
+#: core/settings/apps.py:216 notifications/models.py:114
 msgid "Уведомления"
 msgstr "Notifications"
 
-#: core/settings/apps.py:197 notifications/models.py:201
+#: core/settings/apps.py:217 notifications/models.py:201
 msgid "Журнал email"
 msgstr "Email log"
 
-#: core/settings/apps.py:198
+#: core/settings/apps.py:218
 msgid "Журнал действий"
 msgstr "Activity log"
 
-#: core/settings/apps.py:199
+#: core/settings/apps.py:219
 msgid "История цен КП"
 msgstr "Quote price history"
 
@@ -6616,6 +6608,12 @@ msgstr ""
 msgid ""
 "Если вы не регистрировались на платформе, просто проигнорируйте это письмо."
 msgstr "If you did not sign up for the platform, simply ignore this email."
+
+#~ msgid "Статус верификации (код)"
+#~ msgstr "Verification status (code)"
+
+#~ msgid "Системная роль (код)"
+#~ msgstr "System role (code)"
 
 #~ msgid "Определяет ставку НДС по умолчанию"
 #~ msgstr "Defines the default VAT rate"

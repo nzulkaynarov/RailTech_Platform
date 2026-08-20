@@ -4,7 +4,7 @@ from import_export.widgets import ForeignKeyWidget, ManyToManyWidget
 
 from master_data.models import Country
 
-from .models import Company, CompanyType, CustomUser, VerificationStatus
+from .models import Company, CompanyType, CustomUser
 
 
 class CompanyResource(resources.ModelResource):
@@ -20,11 +20,9 @@ class CompanyResource(resources.ModelResource):
         attribute="country",
         widget=ForeignKeyWidget(Country, field="code"),
     )
-    verification_status = fields.Field(
-        column_name=_("Статус верификации (код)"),
-        attribute="verification_status",
-        widget=ForeignKeyWidget(VerificationStatus, field="code"),
-    )
+    # Статус верификации в импорте/экспорте НЕ участвует: KYC-уровень ставит сервис
+    # (`accounts.services.kyc.verify_company_kyc`) — с проверкой, аудитом и письмом компании.
+    # Строкой в файле его штамповать нельзя (20-08).
     types = fields.Field(
         column_name=_("Роли (через ;)"),
         attribute="types",
@@ -39,7 +37,6 @@ class CompanyResource(resources.ModelResource):
             "inn",
             "country",
             "types",
-            "verification_status",
             "legal_address",
             "contact_person",
             "phone",
@@ -58,16 +55,8 @@ class UserResource(resources.ModelResource):
     Import/Export для пользователей.
 
     Пример XLSX:
-    | Email | Имя | Фамилия | Телефон | Роль (код) |
+    | Email | Имя | Фамилия | Телефон | Активен |
     """
-
-    from .models import SystemRole
-
-    role = fields.Field(
-        column_name=_("Системная роль (код)"),
-        attribute="role",
-        widget=ForeignKeyWidget(SystemRole, field="code"),
-    )
 
     class Meta:
         model = CustomUser
@@ -78,10 +67,13 @@ class UserResource(resources.ModelResource):
             "last_name",
             "username",
             "phone",
-            "role",
             "is_active",
-            "is_staff",
         )
+        # `role` и `is_staff` СОЗНАТЕЛЬНО не импортируются и не экспортируются. Системную роль
+        # меняет сервис (`accounts.services.members.change_user_role`) — с проверкой инвариантов
+        # и записью в аудит, а `is_staff` — это доступ в инженерную админку, который выдаётся
+        # членством в группе `system_engineers`, а не строкой в таблице. Пока они были в списке,
+        # загруженный XLSX выдавал права платформы мимо всех проверок (20-08).
         export_order = fields
         skip_unchanged = True
         report_skipped = True
