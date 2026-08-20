@@ -367,6 +367,23 @@ class UserSerializer(serializers.ModelSerializer):
         return None
 
 
+class PlatformUserCreateSerializer(serializers.Serializer):
+    """Вход формы «Новый пользователь» в операторской панели.
+
+    Отдельный сериализатор, а не `UserSerializer`: у того `role` лежит в `read_only_fields`
+    (правильно для правки — роль меняется отдельным действием с проверкой инвариантов), а
+    `username` обязателен на уровне модели. Форма же спрашивает email и роль — и обе должны
+    действовать. Роль принимаем КОДОМ (Rule 2), как и весь остальной фронт.
+    """
+
+    email = serializers.EmailField()
+    first_name = serializers.CharField(required=False, allow_blank=True, max_length=150)
+    last_name = serializers.CharField(required=False, allow_blank=True, max_length=150)
+    phone = serializers.CharField(required=False, allow_blank=True, max_length=32)
+    position = serializers.CharField(required=False, allow_blank=True, max_length=120)
+    role = serializers.CharField(required=False, allow_blank=True, max_length=32)
+
+
 class SelfUpdateSerializer(serializers.ModelSerializer):
     """Fields a user may edit on their OWN profile via /users/update-me/.
 

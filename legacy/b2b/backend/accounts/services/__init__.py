@@ -37,8 +37,10 @@ from .entitlements import (
 from .kyc import bulk_verify_kyc, delete_kyc_document, upload_kyc_document, verify_company_kyc
 from .members import (
     add_company_member,
+    can_delete_user,
     change_user_role,
     company_active_admins,
+    create_platform_user,
     invite_workspace_member,
     remove_company_member,
     set_member_workspace_role,
@@ -95,7 +97,9 @@ __all__ = [
     "bulk_verify_kyc",
     "change_subscription_status",
     "change_user_password",
+    "can_delete_user",
     "change_user_role",
+    "create_platform_user",
     "check_and_expire_subscriptions",
     "company_active_admins",
     "company_has_operational_subscription",

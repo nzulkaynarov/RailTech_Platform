@@ -70,6 +70,113 @@ def invite_workspace_member(company: Company, email: str, role_code: str) -> Tup
 # ──────────────────────────────────────────────────────────────────────────
 
 
+def create_platform_user(
+    *,
+    email: str,
+    first_name: str = "",
+    last_name: str = "",
+    phone: str = "",
+    position: str = "",
+    role_code: str = "",
+) -> Tuple[Optional[CustomUser], Optional[str]]:
+    """Завести пользователя из операторской панели и позвать его установить пароль.
+
+    Путь был мёртв: форма «Новый пользователь» отдавала 400 `username` (поле обязательное у
+    `AbstractUser`, а операторская форма его не спрашивает — и правильно, вход по email), а
+    выбор системной роли не действовал вовсе (`role` лежит в `read_only_fields`
+    `UserSerializer`). Даже если бы запрос прошёл, аккаунт родился бы с непригодным паролем и
+    без единой возможности войти.
+
+    Эталоны одинаковы: Salesforce «New User» и Odoo «Invite user» создают неактивную запись и
+    шлют письмо со ссылкой на установку пароля — оператор НЕ придумывает и не передаёт пароль.
+    Делаем так же: `is_active=False`, `set_unusable_password()`, письмо со ссылкой
+    `/setup-password`, активация — в момент, когда человек задал пароль
+    (`verify_and_setup_password`).
+
+    Роль применяется через `change_user_role`, чтобы инварианты платформы (ADMIN только без
+    членств) действовали и здесь, а не только на экране смены роли.
+    """
+    email = (email or "").strip().lower()
+    if not email:
+        return None, "EMAIL_REQUIRED"
+    if CustomUser.objects.filter(email__iexact=email).exists():
+        return None, "USER_EMAIL_ALREADY_EXISTS"
+
+    default_role = SystemRole.objects.filter(code="USER").first()
+    user = CustomUser.objects.create(
+        # `username` заполняем сами: колонка обязательна (`AbstractUser`), но входа по ней нет
+        # (`USERNAME_FIELD = "email"`), поэтому спрашивать её у оператора незачем. Тот же приём
+        # уже используется при импорте XLSX (`UserResource.before_import_row`).
+        username=email,
+        email=email,
+        first_name=first_name or "",
+        last_name=last_name or "",
+        phone=phone or "",
+        position=position or "",
+        is_active=False,
+        role=default_role,
+    )
+    user.set_unusable_password()
+    user.save()
+
+    if role_code and default_role is not None and role_code != default_role.code:
+        _updated, role_error = change_user_role(user, role_code)
+        if role_error:
+            # Роль не прошла инварианты — аккаунт не создаём вовсе, иначе оператор получит
+            # пользователя не с той ролью и молчаливое расхождение с тем, что он выбрал.
+            user.delete()
+            return None, role_error
+
+    token = default_token_generator.make_token(user)
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    setup_url = f"{settings.FRONTEND_URL}/setup-password?uid={uid}&token={token}"
+    send_templated_email(
+        "account_created_by_operator",
+        {"first_name": user.first_name, "setup_url": setup_url},
+        to=[user.email],
+        channel="transactional",
+        user=user,
+        fail_silently=True,
+    )
+    return user, None
+
+
+def can_delete_user(user: CustomUser) -> Optional[str]:
+    """Почему этого пользователя нельзя удалить насовсем (или None, если можно).
+
+    Жёсткое удаление в операторской панели работало мимо всех инвариантов:
+
+    * `CompanyMember.user` каскадный — удаление последнего администратора компании оставляло
+      её без единого ответственного, хотя ровно это запрещает never-orphan
+      (`remove_company_member` → `CANNOT_REMOVE_LAST_COMPANY_ADMIN`);
+    * `crm.Message.sender` каскадный — вместе с человеком исчезала переписка по сделкам;
+    * таблицы истории pghistory ссылаются на пользователя с `DO_NOTHING` и живым FK в БД, так
+      что удаление любого, кто хоть раз действовал по сделке, падало `IntegrityError` → 500.
+
+    Эталоны здесь единодушны: Salesforce пользователя удалить нельзя в принципе, только
+    деактивировать; Odoo архивирует (`active=False`). Поэтому запрет — не «новая блокировка»,
+    а приведение к тому, что и так заявлено кнопкой «Деактивировать».
+    """
+    if user.is_superuser:
+        return "CANNOT_DELETE_SUPERUSER"
+
+    for membership in user.memberships.filter(is_active=True).select_related("company"):
+        is_admin = company_active_admins(membership.company).filter(pk=membership.pk).exists()
+        if is_admin and not company_active_admins(membership.company).exclude(pk=membership.pk).exists():
+            return "CANNOT_REMOVE_LAST_COMPANY_ADMIN"
+
+    from crm.models import Deal, Message, Quote
+
+    has_history = (
+        Message.objects.filter(sender=user).exists()
+        or Deal.objects.filter(Q(client=user) | Q(manager=user) | Q(assigned_to=user)).exists()
+        or Quote.objects.filter(Q(prepared_by=user) | Q(approved_by=user)).exists()
+    )
+    if has_history:
+        return "USER_HAS_HISTORY_DEACTIVATE_INSTEAD"
+    return None
+
+
 def change_user_role(
     user: CustomUser,
     role_code: str,

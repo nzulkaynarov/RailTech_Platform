@@ -41,9 +41,12 @@ export function AdminKYCPage() {
     return Object.keys(p).length ? p : undefined;
   }, [tableState.search, tableState.tab]);
 
-  // All-companies query for accurate tab counts
-  const { data: allCompanies = [] } = useCompanies();
-  const { data: companies = [], isLoading, isError, refetch } = useCompanies(queryParams);
+  // `fetchAll` обязателен обоим запросам. Без него оба брали ПЕРВУЮ страницу (20 записей из
+  // 42 на дев-стенде): реестр молча обрезался, а счётчики вкладок — «Всего», «На проверке»,
+  // «Верифицированы» — считались по этим же 20 и показывали неправду. Соседние реестры
+  // (AdminCompaniesPage, admin-users) давно ходят с `fetchAll`, здесь флаг просто забыли.
+  const { data: allCompanies = [] } = useCompanies({ fetchAll: true });
+  const { data: companies = [], isLoading, isError, refetch } = useCompanies({ ...(queryParams ?? {}), fetchAll: true });
   const kept = companies;
 
   const selectedCompany = useMemo(() => {

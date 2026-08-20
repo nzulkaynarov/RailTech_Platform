@@ -11701,6 +11701,23 @@ export interface components {
          * @enum {string}
          */
         PlanEnum: "BASIC" | "STANDARD" | "PREMIUM";
+        /**
+         * @description Вход формы «Новый пользователь» в операторской панели.
+         *
+         *     Отдельный сериализатор, а не `UserSerializer`: у того `role` лежит в `read_only_fields`
+         *     (правильно для правки — роль меняется отдельным действием с проверкой инвариантов), а
+         *     `username` обязателен на уровне модели. Форма же спрашивает email и роль — и обе должны
+         *     действовать. Роль принимаем КОДОМ (Rule 2), как и весь остальной фронт.
+         */
+        PlatformUserCreateRequest: {
+            /** Format: email */
+            email: string;
+            first_name?: string;
+            last_name?: string;
+            phone?: string;
+            position?: string;
+            role?: string;
+        };
         PreflightCheckRequestRequest: {
             lines: {
                 [key: string]: unknown;
@@ -15213,6 +15230,7 @@ export interface operations {
         };
         requestBody: {
             content: {
+                "application/json": components["schemas"]["CompanyRoleApplicationRequest"];
                 "multipart/form-data": components["schemas"]["CompanyRoleApplicationRequest"];
                 "application/x-www-form-urlencoded": components["schemas"]["CompanyRoleApplicationRequest"];
             };
@@ -15262,6 +15280,7 @@ export interface operations {
         };
         requestBody: {
             content: {
+                "application/json": components["schemas"]["CompanyRoleApplicationRequest"];
                 "multipart/form-data": components["schemas"]["CompanyRoleApplicationRequest"];
                 "application/x-www-form-urlencoded": components["schemas"]["CompanyRoleApplicationRequest"];
             };
@@ -15310,6 +15329,7 @@ export interface operations {
         };
         requestBody?: {
             content: {
+                "application/json": components["schemas"]["PatchedCompanyRoleApplicationRequest"];
                 "multipart/form-data": components["schemas"]["PatchedCompanyRoleApplicationRequest"];
                 "application/x-www-form-urlencoded": components["schemas"]["PatchedCompanyRoleApplicationRequest"];
             };
@@ -15337,6 +15357,7 @@ export interface operations {
         };
         requestBody: {
             content: {
+                "application/json": components["schemas"]["CompanyRoleApplicationRequest"];
                 "multipart/form-data": components["schemas"]["CompanyRoleApplicationRequest"];
                 "application/x-www-form-urlencoded": components["schemas"]["CompanyRoleApplicationRequest"];
             };
@@ -15371,6 +15392,7 @@ export interface operations {
         };
         requestBody?: {
             content: {
+                "application/json": components["schemas"]["RejectRequestRequest"];
                 "multipart/form-data": components["schemas"]["RejectRequestRequest"];
                 "application/x-www-form-urlencoded": components["schemas"]["RejectRequestRequest"];
             };
@@ -15806,9 +15828,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UserRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["UserRequest"];
-                "multipart/form-data": components["schemas"]["UserRequest"];
+                "application/json": components["schemas"]["PlatformUserCreateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PlatformUserCreateRequest"];
+                "multipart/form-data": components["schemas"]["PlatformUserCreateRequest"];
             };
         };
         responses: {
@@ -15819,6 +15841,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["User"];
                 };
+            };
+            /** @description Validation error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -15884,8 +15913,15 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
+            /** @description Deleted */
             204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Есть история или это последний администратор компании */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

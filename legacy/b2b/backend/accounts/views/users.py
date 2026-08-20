@@ -11,7 +11,7 @@ from rest_framework.response import Response
 
 from accounts import services
 from accounts.models import Company, CompanyMember, CustomUser
-from accounts.serializers import SelfUpdateSerializer, UserSerializer
+from accounts.serializers import PlatformUserCreateSerializer, SelfUpdateSerializer, UserSerializer
 from core.permissions import OperatorScoped
 
 
@@ -74,6 +74,58 @@ class UserViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ["is_active", "role__code"]
     search_fields = ["email", "first_name", "last_name", "phone"]
+
+    def get_serializer_class(self):
+        # Создание идёт через свой сериализатор: у `UserSerializer` роль read-only, а `username`
+        # обязателен моделью — форма оператора отдавала 400 и молча теряла выбранную роль.
+        if self.action == "create":
+            return PlatformUserCreateSerializer
+        return super().get_serializer_class()
+
+    @extend_schema(
+        summary="Create user",
+        description=(
+            "Заводит пользователя и шлёт ему письмо со ссылкой на установку пароля. "
+            "Аккаунт неактивен, пока человек не задал пароль (паттерн Salesforce New User / Odoo Invite)."
+        ),
+        request=PlatformUserCreateSerializer,
+        responses={201: UserSerializer, 400: OpenApiResponse(description="Validation error")},
+        tags=["Accounts"],
+    )
+    def create(self, request, *args, **kwargs):
+        payload = PlatformUserCreateSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        data = payload.validated_data
+        user, error = services.create_platform_user(
+            email=data["email"],
+            first_name=data.get("first_name", ""),
+            last_name=data.get("last_name", ""),
+            phone=data.get("phone", ""),
+            position=data.get("position", ""),
+            role_code=data.get("role", ""),
+        )
+        if error:
+            return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+
+    @extend_schema(
+        summary="Delete user",
+        description=(
+            "Удаляет пользователя без истории. Тот, кто вёл сделки или остался единственным "
+            "администратором компании, не удаляется — его деактивируют (toggle-active)."
+        ),
+        responses={
+            204: OpenApiResponse(description="Deleted"),
+            409: OpenApiResponse(description="Есть история или это последний администратор компании"),
+        },
+        tags=["Accounts"],
+    )
+    def destroy(self, request, *args, **kwargs):
+        user = self.get_object()
+        blocker = services.can_delete_user(user)
+        if blocker:
+            return Response({"detail": blocker}, status=status.HTTP_409_CONFLICT)
+        return super().destroy(request, *args, **kwargs)
 
     @extend_schema(
         summary="Export users",

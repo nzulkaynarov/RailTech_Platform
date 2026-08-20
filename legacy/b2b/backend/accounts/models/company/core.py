@@ -115,6 +115,31 @@ class Company(models.Model):
         verbose_name=_("Статус верификации"),
         help_text=_("Текущий статус KYC-проверки компании"),
     )
+
+    def save(self, *args, **kwargs):
+        """Компания всегда рождается в ОПРЕДЕЛЁННОМ состоянии KYC.
+
+        Поле nullable исторически, и часть путей создания его не заполняла: компания, заведённая
+        оператором из панели (`POST accounts/companies/` — в сериализаторе поле read-only), и
+        оффлайн-клиент из адресной книги продавца получали `verification_status = NULL`. На
+        экране KYC такие 15 из 42 компаний показывались с подстановочным бейджем «Не
+        верифицирован», но НЕ попадали ни в одну вкладку: счётчики «На проверке» и «Не
+        верифицированы» стояли на нуле при пятнадцати таких строках в таблице (найдено глазами
+        20-08). «Нет статуса» и «не верифицирован» — разные вещи только для базы; для человека и
+        для фильтра это одно и то же, поэтому и храним одно.
+
+        Ставим ровно на создании и не трогаем существующие: смену статуса выполняет
+        `accounts.services.kyc.verify_company_kyc` с аудитом (Rule 8).
+        """
+        if self._state.adding and self.verification_status_id is None:
+            from accounts.constants import VerificationStatusCode
+            from accounts.models.lookups import VerificationStatus
+
+            self.verification_status = VerificationStatus.objects.filter(
+                code=VerificationStatusCode.L1_UNVERIFIED
+            ).first()
+        super().save(*args, **kwargs)
+
     is_verified = models.BooleanField(
         default=False,
         db_index=True,

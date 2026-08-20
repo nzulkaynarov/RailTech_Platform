@@ -2219,6 +2219,11 @@
                 ],
                 "requestBody": {
                     "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CompanyRoleApplicationRequest"
+                            }
+                        },
                         "multipart/form-data": {
                             "schema": {
                                 "$ref": "#/components/schemas/CompanyRoleApplicationRequest"
@@ -2308,6 +2313,11 @@
                 ],
                 "requestBody": {
                     "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CompanyRoleApplicationRequest"
+                            }
+                        },
                         "multipart/form-data": {
                             "schema": {
                                 "$ref": "#/components/schemas/CompanyRoleApplicationRequest"
@@ -2359,6 +2369,11 @@
                 ],
                 "requestBody": {
                     "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedCompanyRoleApplicationRequest"
+                            }
+                        },
                         "multipart/form-data": {
                             "schema": {
                                 "$ref": "#/components/schemas/PatchedCompanyRoleApplicationRequest"
@@ -2440,6 +2455,11 @@
                 ],
                 "requestBody": {
                     "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CompanyRoleApplicationRequest"
+                            }
+                        },
                         "multipart/form-data": {
                             "schema": {
                                 "$ref": "#/components/schemas/CompanyRoleApplicationRequest"
@@ -2496,6 +2516,11 @@
                 ],
                 "requestBody": {
                     "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RejectRequestRequest"
+                            }
+                        },
                         "multipart/form-data": {
                             "schema": {
                                 "$ref": "#/components/schemas/RejectRequestRequest"
@@ -3288,17 +3313,17 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/UserRequest"
+                                "$ref": "#/components/schemas/PlatformUserCreateRequest"
                             }
                         },
                         "application/x-www-form-urlencoded": {
                             "schema": {
-                                "$ref": "#/components/schemas/UserRequest"
+                                "$ref": "#/components/schemas/PlatformUserCreateRequest"
                             }
                         },
                         "multipart/form-data": {
                             "schema": {
-                                "$ref": "#/components/schemas/UserRequest"
+                                "$ref": "#/components/schemas/PlatformUserCreateRequest"
                             }
                         }
                     },
@@ -3319,6 +3344,9 @@
                             }
                         },
                         "description": ""
+                    },
+                    "400": {
+                        "description": "Validation error"
                     }
                 }
             }
@@ -3496,7 +3524,10 @@
                 ],
                 "responses": {
                     "204": {
-                        "description": "No response body"
+                        "description": "Deleted"
+                    },
+                    "409": {
+                        "description": "Есть история или это последний администратор компании"
                     }
                 }
             }
@@ -28440,6 +28471,40 @@
                 ],
                 "type": "string",
                 "description": "* `BASIC` - Базовый\n* `STANDARD` - Стандартный\n* `PREMIUM` - Премиум"
+            },
+            "PlatformUserCreateRequest": {
+                "type": "object",
+                "description": "Вход формы «Новый пользователь» в операторской панели.\n\nОтдельный сериализатор, а не `UserSerializer`: у того `role` лежит в `read_only_fields`\n(правильно для правки — роль меняется отдельным действием с проверкой инвариантов), а\n`username` обязателен на уровне модели. Форма же спрашивает email и роль — и обе должны\nдействовать. Роль принимаем КОДОМ (Rule 2), как и весь остальной фронт.",
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "minLength": 1
+                    },
+                    "first_name": {
+                        "type": "string",
+                        "maxLength": 150
+                    },
+                    "last_name": {
+                        "type": "string",
+                        "maxLength": 150
+                    },
+                    "phone": {
+                        "type": "string",
+                        "maxLength": 32
+                    },
+                    "position": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "role": {
+                        "type": "string",
+                        "maxLength": 32
+                    }
+                },
+                "required": [
+                    "email"
+                ]
             },
             "PreflightCheckRequestRequest": {
                 "type": "object",

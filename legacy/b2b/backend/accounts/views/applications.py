@@ -3,11 +3,11 @@ from rest_framework import permissions
 from rest_framework import serializers as drf_serializers
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 
 from accounts import services
-from accounts.models import CompanyEntitlement, CompanyRoleApplication, SupplierSubscription
+from accounts.models import Company, CompanyEntitlement, CompanyRoleApplication, SupplierSubscription
 from accounts.serializers import (
     CompanyEntitlementSerializer,
     CompanyRoleApplicationSerializer,
@@ -239,7 +239,11 @@ class CompanyRoleApplicationViewSet(viewsets.ModelViewSet):
 
     serializer_class = CompanyRoleApplicationSerializer
     permission_classes = [permissions.IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser]
+    # JSON здесь обязателен: multipart нужен только подаче заявки (там прикладывают договор и
+    # NDA), а модерация шлёт обычный JSON `{"reason": "..."}`. Пока в списке были только
+    # multipart-парсеры, DRF отвечал на отказ 415 Unsupported Media Type — кнопка «Отклонить» в
+    # операторской панели не работала вовсе.
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
     filterset_fields = ["status", "requested_type", "company"]
     search_fields = ["company__name", "company__inn"]
     ordering = ["-created_at"]
@@ -272,25 +276,61 @@ class CompanyRoleApplicationViewSet(viewsets.ModelViewSet):
         # прятала собственные заявки от делегированного администратора компании, который по
         # правам полностью равен владельцу (у `member_has_permission` есть legacy-ветка на
         # OWNER, поэтому сам владелец ничего не теряет).
-        own_company_ids = [
+        return qs.filter(company_id__in=self._company_ids_user_may_apply_for())
+
+    def _company_ids_user_may_apply_for(self):
+        """Компании, за которые этот пользователь вправе подать заявку.
+
+        Тот же предикат, что и в `get_queryset`: кто видит заявки своей компании, тот их и
+        подаёт. Разъезд этих двух проверок дал бы список без возможности что-то в него
+        добавить — ровно тот класс «показано, но не сработает», который вычищала волна U1.
+        """
+        user = self.request.user
+        return [
             company_id
             for company_id in user.memberships.filter(is_active=True).values_list("company_id", flat=True)
             if member_has_permission(user, company_id, "team.manage")
         ]
-        return qs.filter(company_id__in=own_company_ids)
+
+    def _resolve_company(self):
+        """Чью заявку регистрируем. Считает СЕРВЕР — поле `company` не принимается от клиента.
+
+        Поле сделали read-only при закрытии M2 (владелец компании иначе перевешивал заявку на
+        чужого арендатора через PATCH), но `perform_create` продолжал читать его из
+        `validated_data` — то есть всегда None. Отсюда мёртвый путь: администратор компании
+        получал 403 `ONLY_COMPANY_OWNER_CAN_APPLY` на СВОЮ заявку, а оператор — 500 на NOT NULL.
+
+        Для сотрудника компанию выводим из членств, для оператора платформы (у него членств нет
+        по определению) берём явный `company` из запроса — он действует от имени арендатора.
+        """
+        from rest_framework.exceptions import PermissionDenied, ValidationError
+
+        user = self.request.user
+        requested_raw = self.request.data.get("company")
+
+        if user.is_platform_admin:
+            if not requested_raw:
+                raise ValidationError({"detail": "COMPANY_REQUIRED"})
+            company = Company.objects.filter(pk=requested_raw).first()
+            if company is None:
+                raise ValidationError({"detail": "COMPANY_NOT_FOUND"})
+            return company
+
+        allowed_ids = self._company_ids_user_may_apply_for()
+        if not allowed_ids:
+            raise PermissionDenied("ONLY_COMPANY_OWNER_CAN_APPLY")
+        if requested_raw:
+            requested_id = int(requested_raw) if str(requested_raw).isdigit() else None
+            if requested_id not in allowed_ids:
+                raise PermissionDenied("ONLY_COMPANY_OWNER_CAN_APPLY")
+            return Company.objects.get(pk=requested_id)
+        if len(allowed_ids) > 1:
+            # Человек администрирует несколько компаний — угадывать, за какую он подаёт, нельзя.
+            raise ValidationError({"detail": "COMPANY_REQUIRED"})
+        return Company.objects.get(pk=allowed_ids[0])
 
     def perform_create(self, serializer):
-        user = self.request.user
-        company = serializer.validated_data.get("company")
-        if not user.is_platform_admin:
-            # Тот же предикат, что и в `get_queryset`: кто видит заявки своей компании, тот их и
-            # подаёт. Разъезд этих двух проверок дал бы список без возможности что-то в него
-            # добавить — ровно тот класс «показано, но не сработает», который вычищала волна U1.
-            if not (company and member_has_permission(user, company.id, "team.manage")):
-                from rest_framework.exceptions import PermissionDenied
-
-                raise PermissionDenied("ONLY_COMPANY_OWNER_CAN_APPLY")
-        serializer.save(submitted_by=user)
+        serializer.save(company=self._resolve_company(), submitted_by=self.request.user)
 
     def perform_update(self, serializer):
         user = self.request.user

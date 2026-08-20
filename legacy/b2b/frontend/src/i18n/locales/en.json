@@ -3673,7 +3673,11 @@
     "PRODUCT_NOT_PUBLISHED": "The card is not published",
     "PRODUCT_ALREADY_ARCHIVED": "The card is already archived",
     "PRODUCT_NOT_ARCHIVED": "Only an archived card can be restored",
-    "SELLER_BANK_DETAILS_REQUIRED": "Fill in the company bank details — without an account number the client cannot pay this invoice. Settings → Company"
+    "SELLER_BANK_DETAILS_REQUIRED": "Fill in the company bank details — without an account number the client cannot pay this invoice. Settings → Company",
+    "USER_HAS_HISTORY_DEACTIVATE_INSTEAD": "This user has work history and cannot be deleted. Deactivate instead — access is revoked while deals and correspondence stay intact.",
+    "CANNOT_DELETE_SUPERUSER": "A superuser cannot be deleted from the panel — a platform engineer does that.",
+    "COMPANY_NOT_FOUND": "Company not found.",
+    "ONLY_COMPANY_OWNER_CAN_APPLY": "Only a company administrator can file an application."
   },
   "fileUpload": {
     "upload": "Upload",

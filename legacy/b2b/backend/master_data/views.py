@@ -1,6 +1,5 @@
-from django.utils.decorators import method_decorator
-from django.views.decorators.cache import cache_page
-from django.views.decorators.vary import vary_on_headers
+from django.core.cache import cache
+from django.utils.translation import get_language
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import api_view, permission_classes
@@ -11,16 +10,66 @@ from core.permissions import IsPlatformAdminOrReadOnly
 from .models import Country, Currency, DeliveryBasis, HSCode, UnitOfMeasure
 from .serializers import CountrySerializer, CurrencySerializer, DeliveryBasisSerializer, UnitOfMeasureSerializer
 
-LOOKUP_CACHE_TTL = 60 * 10  # 10 min — master data changes rarely
+LOOKUP_CACHE_TTL = 60 * 10  # 10 min — справочники меняются редко
+
+
+class _CachedLookupListMixin:
+    """Кэш списка справочника, который СБРАСЫВАЕТСЯ правкой.
+
+    До 20-08 здесь стоял `cache_page(600)` на `list` — и тот же вьюсет выполнял запись. Оператор
+    переименовывал валюту, сохранял, список отдавал прежнюю страницу ещё до десяти минут, и
+    правка выглядела пропавшей. Ровно тот класс «сделал — не видно», из-за которого путь
+    считается мёртвым, хотя запрос прошёл.
+
+    Ключ несёт номер редакции справочника; запись его увеличивает, и старые страницы перестают
+    находиться. Так же устроена инвалидация по версии в Odoo (`ormcache` сбрасывается на write)
+    и в Rails (cache key от `updated_at`) — берём тот же приём, а не «убрать кэш вовсе»: список
+    справочника читают почти все экраны.
+    """
+
+    @property
+    def _model_label(self) -> str:
+        return self.queryset.model._meta.label_lower
+
+    def _version(self) -> int:
+        return cache.get(f"lookup-version:{self._model_label}", 1)
+
+    def _bump_version(self) -> None:
+        key = f"lookup-version:{self._model_label}"
+        # Не `cache.incr`: он падает `ValueError`, если ключа ещё нет (частый случай — первая
+        # правка после рестарта Redis).
+        cache.set(key, self._version() + 1, None)
+
+    def list(self, request, *args, **kwargs):
+        # Язык — часть ключа: имена справочников переводятся, и ответ на `Accept-Language: en`
+        # не должен подменять русский (раньше это делал `vary_on_headers`).
+        key = f"lookup:{self._model_label}:{self._version()}:{get_language()}"
+        payload = cache.get(key)
+        if payload is None:
+            payload = super().list(request, *args, **kwargs).data
+            cache.set(key, payload, LOOKUP_CACHE_TTL)
+        return Response(payload)
+
+    def perform_create(self, serializer):
+        super().perform_create(serializer)
+        self._bump_version()
+
+    def perform_update(self, serializer):
+        super().perform_update(serializer)
+        self._bump_version()
+
+    def perform_destroy(self, instance):
+        super().perform_destroy(instance)
+        self._bump_version()
 
 
 class _ActiveOnlyListMixin:
     """Selection dropdowns must show only ACTIVE lookups, so deactivating a row in
     admin hides it everywhere (consistent with how services query the справочник,
     e.g. AI unit validation filters is_active=True). Applied to `list` only — so the
-    response is identical for every caller (the list is cache_page-cached and does
-    NOT vary on auth) while retrieve/update/destroy keep the full queryset so an admin
-    can still manage (and reactivate) an inactive row by id."""
+    response is identical for every caller (the list is cached by `_CachedLookupListMixin`
+    and does NOT vary on auth) while retrieve/update/destroy keep the full queryset so an
+    admin can still manage (and reactivate) an inactive row by id."""
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -37,9 +86,7 @@ class _ActiveOnlyListMixin:
     partial_update=extend_schema(summary="Partially update country", tags=["Master Data"]),
     destroy=extend_schema(summary="Delete country", tags=["Master Data"]),
 )
-@method_decorator(vary_on_headers("Accept-Language"), name="list")
-@method_decorator(cache_page(LOOKUP_CACHE_TTL), name="list")
-class CountryViewSet(_ActiveOnlyListMixin, viewsets.ModelViewSet):
+class CountryViewSet(_CachedLookupListMixin, _ActiveOnlyListMixin, viewsets.ModelViewSet):
     """CRUD for countries (read: public; write: admin)."""
 
     queryset = Country.objects.all().order_by("sort_order", "name")
@@ -56,9 +103,7 @@ class CountryViewSet(_ActiveOnlyListMixin, viewsets.ModelViewSet):
     partial_update=extend_schema(summary="Partially update currency", tags=["Master Data"]),
     destroy=extend_schema(summary="Delete currency", tags=["Master Data"]),
 )
-@method_decorator(vary_on_headers("Accept-Language"), name="list")
-@method_decorator(cache_page(LOOKUP_CACHE_TTL), name="list")
-class CurrencyViewSet(_ActiveOnlyListMixin, viewsets.ModelViewSet):
+class CurrencyViewSet(_CachedLookupListMixin, _ActiveOnlyListMixin, viewsets.ModelViewSet):
     """CRUD for currencies (read: public; write: admin)."""
 
     queryset = Currency.objects.all().order_by("sort_order", "code")
@@ -75,9 +120,7 @@ class CurrencyViewSet(_ActiveOnlyListMixin, viewsets.ModelViewSet):
     partial_update=extend_schema(summary="Partially update unit", tags=["Master Data"]),
     destroy=extend_schema(summary="Delete unit", tags=["Master Data"]),
 )
-@method_decorator(vary_on_headers("Accept-Language"), name="list")
-@method_decorator(cache_page(LOOKUP_CACHE_TTL), name="list")
-class UnitOfMeasureViewSet(_ActiveOnlyListMixin, viewsets.ModelViewSet):
+class UnitOfMeasureViewSet(_CachedLookupListMixin, _ActiveOnlyListMixin, viewsets.ModelViewSet):
     """CRUD for units of measure (read: public; write: admin)."""
 
     queryset = UnitOfMeasure.objects.all().order_by("sort_order", "code")
@@ -94,9 +137,7 @@ class UnitOfMeasureViewSet(_ActiveOnlyListMixin, viewsets.ModelViewSet):
     partial_update=extend_schema(summary="Partially update delivery basis", tags=["Master Data"]),
     destroy=extend_schema(summary="Delete delivery basis", tags=["Master Data"]),
 )
-@method_decorator(vary_on_headers("Accept-Language"), name="list")
-@method_decorator(cache_page(LOOKUP_CACHE_TTL), name="list")
-class DeliveryBasisViewSet(_ActiveOnlyListMixin, viewsets.ModelViewSet):
+class DeliveryBasisViewSet(_CachedLookupListMixin, _ActiveOnlyListMixin, viewsets.ModelViewSet):
     """CRUD for delivery basis terms (Incoterms). Read: public; write: admin."""
 
     queryset = DeliveryBasis.objects.all().order_by("sort_order", "code")

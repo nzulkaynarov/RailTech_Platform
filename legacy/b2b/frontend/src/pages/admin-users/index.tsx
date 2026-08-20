@@ -12,6 +12,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useUsers, useSystemRoles, useDeleteUser } from '@/hooks/useAccounts';
+import { translateApiError } from '@/lib/apiError';
 import { PageShell, ErrorState } from '../shared/PageShell';
 import { systemRoleLabelKey } from '@/lib/codes';
 import type { User as UserType } from '@/api/accountsApi';
@@ -74,8 +75,11 @@ export function AdminUsersPage() {
       toast.success(t('pages.adminUsers.deleted'));
       setDeleteTarget(null);
       setDetailTarget(null);
-    } catch {
-      toast.error(t('pages.adminUsers.deleteFailed'));
+    } catch (err) {
+      // Сервер отвечает кодом: «последний администратор компании» и «есть история — деактивируйте»
+      // это РАЗНЫЕ причины, и оператору нужно знать, какая из них. Общий «не удалось» оставлял
+      // его гадать и жать кнопку снова.
+      toast.error(translateApiError(err));
     }
   };
 

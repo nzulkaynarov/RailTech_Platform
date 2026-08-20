@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/sheet';
 import { useSystemRoles, useCreateUser } from '@/hooks/useAccounts';
 import { systemRoleLabelKey } from '@/lib/codes';
+import { translateApiError } from '@/lib/apiError';
 import type { Draft } from './types';
 
 export function CreateUserSheet({
@@ -42,8 +43,10 @@ export function CreateUserSheet({
       onOpenChange(false);
       setDraft({ email: '', first_name: '', last_name: '', phone: '' });
       setRoleCode('');
-    } catch {
-      toast.error(t('pages.adminUsers.createFailed'));
+    } catch (err) {
+      // Причина важна: «такой email уже есть» и «роль ADMIN не выдаётся тому, кто состоит в
+      // компании» — разные тупики, и общий «не удалось» не подсказывает выход ни из одного.
+      toast.error(translateApiError(err));
     }
   };
 

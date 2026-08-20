@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-20 11:05+0500\n"
+"POT-Creation-Date: 2026-08-20 11:15+0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -180,7 +180,7 @@ msgstr "Rejected"
 
 #: accounts/models/applications.py:41
 #: accounts/models/company/company_settings.py:22
-#: accounts/models/company/contacts.py:19 accounts/models/company/core.py:220
+#: accounts/models/company/contacts.py:19 accounts/models/company/core.py:245
 #: accounts/models/company/document_profile.py:22
 #: accounts/models/company/membership.py:41
 #: accounts/models/company/membership.py:98 accounts/models/kyc.py:18
@@ -267,7 +267,7 @@ msgstr "Reviewed at"
 msgid "Дата подачи"
 msgstr "Submitted At"
 
-#: accounts/models/applications.py:121 accounts/models/company/core.py:214
+#: accounts/models/applications.py:121 accounts/models/company/core.py:239
 #: accounts/models/subscriptions.py:105 catalog/models/offers.py:136
 #: catalog/models/products.py:202 catalog/models/requests.py:123
 #: catalog/models/taxonomy.py:232 crm/models/charges.py:120
@@ -413,12 +413,12 @@ msgstr "Organization this contact belongs to"
 msgid "ФИО"
 msgstr "Full name"
 
-#: accounts/models/company/contacts.py:23 accounts/models/company/core.py:176
+#: accounts/models/company/contacts.py:23 accounts/models/company/core.py:201
 #: accounts/models/users.py:21 accounts/wizard.py:92 crm/models/deals.py:328
 msgid "Email"
 msgstr "Email"
 
-#: accounts/models/company/contacts.py:24 accounts/models/company/core.py:171
+#: accounts/models/company/contacts.py:24 accounts/models/company/core.py:196
 #: accounts/models/users.py:27 accounts/wizard.py:88 crm/models/deals.py:324
 msgid "Телефон"
 msgstr "Phone"
@@ -538,118 +538,118 @@ msgstr "Verification Status"
 msgid "Текущий статус KYC-проверки компании"
 msgstr "Current KYC verification status of the company"
 
-#: accounts/models/company/core.py:121
+#: accounts/models/company/core.py:146
 msgid "Верифицирован"
 msgstr "Verified"
 
-#: accounts/models/company/core.py:122
+#: accounts/models/company/core.py:147
 msgid "Компания прошла базовую проверку RailTech"
 msgstr "The company has passed RailTech's basic verification"
 
-#: accounts/models/company/core.py:126
+#: accounts/models/company/core.py:151
 msgid "ISO 9001"
 msgstr "ISO 9001"
 
-#: accounts/models/company/core.py:127
+#: accounts/models/company/core.py:152
 msgid "Имеется сертификат качества ISO 9001"
 msgstr "Has an ISO 9001 quality certificate"
 
-#: accounts/models/company/core.py:131
+#: accounts/models/company/core.py:156
 msgid "Индекс доверия"
 msgstr "Trust score"
 
-#: accounts/models/company/core.py:132
+#: accounts/models/company/core.py:157
 msgid "Рейтинг доверия поставщика (0-100)"
 msgstr "Supplier trust rating (0-100)"
 
-#: accounts/models/company/core.py:140 catalog/models/taxonomy.py:204
+#: accounts/models/company/core.py:165 catalog/models/taxonomy.py:204
 #: master_data/models.py:91
 msgid "Страна"
 msgstr "Country"
 
-#: accounts/models/company/core.py:141 accounts/wizard.py:55
+#: accounts/models/company/core.py:166 accounts/wizard.py:55
 msgid "Страна регистрации юридического лица"
 msgstr "Country of incorporation of the legal entity"
 
-#: accounts/models/company/core.py:147
+#: accounts/models/company/core.py:172
 #: accounts/models/company/document_profile.py:47 accounts/wizard.py:77
 msgid "Юридический адрес"
 msgstr "Legal address"
 
-#: accounts/models/company/core.py:148
+#: accounts/models/company/core.py:173
 msgid "Полный юридический адрес организации"
 msgstr "Full legal address of the organization"
 
-#: accounts/models/company/core.py:153 accounts/wizard.py:102
+#: accounts/models/company/core.py:178 accounts/wizard.py:102
 msgid "Расчётный счёт"
 msgstr "Bank account"
 
-#: accounts/models/company/core.py:154
+#: accounts/models/company/core.py:179
 msgid "Номер расчётного счёта в банке"
 msgstr "Bank account number"
 
-#: accounts/models/company/core.py:159 accounts/wizard.py:107
+#: accounts/models/company/core.py:184 accounts/wizard.py:107
 msgid "МФО"
 msgstr "MFO code"
 
-#: accounts/models/company/core.py:160
+#: accounts/models/company/core.py:185
 msgid "Межфилиальный оборот (код банка)"
 msgstr "MFO — interbranch turnover (bank code)"
 
-#: accounts/models/company/core.py:165 accounts/wizard.py:82
+#: accounts/models/company/core.py:190 accounts/wizard.py:82
 #: crm/models/deals.py:51
 msgid "Контактное лицо"
 msgstr "Contact person"
 
-#: accounts/models/company/core.py:166
+#: accounts/models/company/core.py:191
 msgid "ФИО ответственного представителя компании"
 msgstr "Full name of the company's authorized representative"
 
-#: accounts/models/company/core.py:172
+#: accounts/models/company/core.py:197
 msgid "Контактный телефон компании"
 msgstr "Company contact phone"
 
-#: accounts/models/company/core.py:177
+#: accounts/models/company/core.py:202
 msgid "Основной email компании для уведомлений"
 msgstr "Primary company email for notifications"
 
-#: accounts/models/company/core.py:182 accounts/wizard.py:97
+#: accounts/models/company/core.py:207 accounts/wizard.py:97
 msgid "Веб-сайт"
 msgstr "Website"
 
-#: accounts/models/company/core.py:183
+#: accounts/models/company/core.py:208
 msgid "Адрес корпоративного сайта"
 msgstr "Corporate website URL"
 
-#: accounts/models/company/core.py:190 accounts/wizard.py:59
+#: accounts/models/company/core.py:215 accounts/wizard.py:59
 msgid "Логотип"
 msgstr "Logo"
 
-#: accounts/models/company/core.py:191
+#: accounts/models/company/core.py:216
 msgid "Логотип компании для отображения на платформе"
 msgstr "Company logo shown on the platform"
 
-#: accounts/models/company/core.py:195 accounts/wizard.py:134
+#: accounts/models/company/core.py:220 accounts/wizard.py:134
 msgid "Заметки по KYC"
 msgstr "KYC notes"
 
-#: accounts/models/company/core.py:196
+#: accounts/models/company/core.py:221
 msgid "Внутренние заметки менеджера (не видны клиенту)"
 msgstr "Internal manager notes (not visible to the client)"
 
-#: accounts/models/company/core.py:204
+#: accounts/models/company/core.py:229
 msgid "Зарегистрирована на платформе"
 msgstr "Registered on the platform"
 
-#: accounts/models/company/core.py:205
+#: accounts/models/company/core.py:230
 msgid "False — клиент заведён продавцом вручную (без входа в систему)"
 msgstr "False — the client was created manually by a seller (no system login)"
 
-#: accounts/models/company/core.py:210
+#: accounts/models/company/core.py:235
 msgid "Дата регистрации"
 msgstr "Registration date"
 
-#: accounts/models/company/core.py:221 core/dashboard.py:145
+#: accounts/models/company/core.py:246 core/dashboard.py:145
 msgid "Компании"
 msgstr "Companies"
 
@@ -1421,7 +1421,7 @@ msgstr "Create company"
 msgid "Далее"
 msgstr "Next"
 
-#: accounts/views/users.py:136
+#: accounts/views/users.py:188
 msgid "Password changed successfully"
 msgstr "Password changed successfully"
 
@@ -5436,6 +5436,84 @@ msgstr "No data to display yet"
 msgid "Все разделы"
 msgstr "All sections"
 
+#: templates/emails/account_created_by_operator.html:3
+#: templates/emails/account_created_by_operator_subject.txt:1
+msgid "Для вас создан аккаунт на RailTech B2B"
+msgstr "An account has been created for you on RailTech B2B"
+
+#: templates/emails/account_created_by_operator.html:4
+msgid "Новый аккаунт"
+msgstr "New account"
+
+#: templates/emails/account_created_by_operator.html:7
+msgid "Для вас создан аккаунт"
+msgstr "An account has been created for you"
+
+#: templates/emails/account_created_by_operator.html:10
+msgid ""
+"Оператор платформы RailTech B2B создал для вас аккаунт. Чтобы начать "
+"работу,\n"
+"    установите пароль — до этого войти в систему нельзя."
+msgstr ""
+"A RailTech B2B platform operator created an account for you. To get "
+"started, set a password — until then you cannot sign in."
+
+#: templates/emails/account_created_by_operator.html:15
+#: templates/emails/setup_password.html:15
+msgid "Установить пароль"
+msgstr "Set password"
+
+#: templates/emails/account_created_by_operator.html:19
+#: templates/emails/act_awaiting_acceptance.html:23
+#: templates/emails/generated_document.html:21
+#: templates/emails/invite_client.html:24
+#: templates/emails/invite_member.html:19
+#: templates/emails/invoice_issued.html:23
+#: templates/emails/new_rfq_seller.html:22
+#: templates/emails/payment_received.html:23
+#: templates/emails/payment_reminder.html:24
+#: templates/emails/quote_sent.html:25
+msgid "Если кнопка не работает, скопируйте ссылку в браузер:"
+msgstr "If the button does not work, copy the link into your browser:"
+
+#: templates/emails/account_created_by_operator.html:23
+msgid ""
+"Не ожидали этого письма? Проигнорируйте его — без пароля аккаунтом "
+"воспользоваться нельзя."
+msgstr ""
+"Not expecting this email? Ignore it — the account is unusable without a "
+"password."
+
+#: templates/emails/account_created_by_operator.txt:1
+#: templates/emails/register_existing_account.txt:1
+#: templates/emails/reset_password.txt:1 templates/emails/setup_password.txt:1
+#, python-format
+msgid "Здравствуйте, %(name)s!"
+msgstr "Hello, %(name)s!"
+
+#: templates/emails/account_created_by_operator.txt:3
+msgid ""
+"Оператор платформы RailTech B2B создал для вас аккаунт.\n"
+"Чтобы начать работу, установите пароль по ссылке:"
+msgstr ""
+"A RailTech B2B platform operator created an account for you.\n"
+"To get started, set a password using the link:"
+
+#: templates/emails/account_created_by_operator.txt:8
+msgid ""
+"Если вы не ожидали это письмо, просто проигнорируйте его — без пароля "
+"аккаунтом воспользоваться нельзя."
+msgstr ""
+"If you were not expecting this email, simply ignore it — the account is "
+"unusable without a password."
+
+#: templates/emails/account_created_by_operator.txt:10
+#: templates/emails/invite_client.txt:13 templates/emails/invite_member.txt:10
+#: templates/emails/reset_password.txt:10
+#: templates/emails/setup_password.txt:10
+msgid "Команда RailTech B2B"
+msgstr "The RailTech B2B team"
+
 #: templates/emails/act_awaiting_acceptance.html:3
 #: templates/emails/act_awaiting_acceptance_subject.txt:1
 #, python-format
@@ -5483,18 +5561,6 @@ msgstr ""
 #: templates/emails/act_awaiting_acceptance.html:19
 msgid "Открыть сделку"
 msgstr "Open the deal"
-
-#: templates/emails/act_awaiting_acceptance.html:23
-#: templates/emails/generated_document.html:21
-#: templates/emails/invite_client.html:24
-#: templates/emails/invite_member.html:19
-#: templates/emails/invoice_issued.html:23
-#: templates/emails/new_rfq_seller.html:22
-#: templates/emails/payment_received.html:23
-#: templates/emails/payment_reminder.html:24
-#: templates/emails/quote_sent.html:25
-msgid "Если кнопка не работает, скопируйте ссылку в браузер:"
-msgstr "If the button does not work, copy the link into your browser:"
 
 #: templates/emails/act_awaiting_acceptance.html:27
 msgid "Акт виден в карточке сделки, в блоке «Цепочка сделки»."
@@ -5697,12 +5763,6 @@ msgstr "To register, follow this link:"
 #: templates/emails/invite_client.txt:11 templates/emails/invite_member.txt:8
 msgid "Если вы не ожидали это приглашение, просто проигнорируйте письмо."
 msgstr "If you were not expecting this invitation, simply ignore this email."
-
-#: templates/emails/invite_client.txt:13 templates/emails/invite_member.txt:10
-#: templates/emails/reset_password.txt:10
-#: templates/emails/setup_password.txt:10
-msgid "Команда RailTech B2B"
-msgstr "The RailTech B2B team"
 
 #: templates/emails/invite_member.html:3
 #, python-format
@@ -6385,12 +6445,6 @@ msgstr ""
 "Did not try to register? No action is required — your account has not been "
 "changed."
 
-#: templates/emails/register_existing_account.txt:1
-#: templates/emails/reset_password.txt:1 templates/emails/setup_password.txt:1
-#, python-format
-msgid "Здравствуйте, %(name)s!"
-msgstr "Hello, %(name)s!"
-
 #: templates/emails/register_existing_account.txt:3
 msgid ""
 "На платформе RailTech B2B кто-то (возможно, вы) попытался зарегистрировать "
@@ -6584,10 +6638,6 @@ msgid ""
 msgstr ""
 "You have created an account on <strong>RailTech B2B</strong>.\n"
 "    To finish signing up, set a password — it takes less than a minute."
-
-#: templates/emails/setup_password.html:15
-msgid "Установить пароль"
-msgstr "Set password"
 
 #: templates/emails/setup_password.html:23
 msgid ""
