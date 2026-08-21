@@ -330,7 +330,7 @@ class Command(BaseCommand):
                 company = Company.objects.filter(inn=company_inn).first()
                 ws_role = WorkspaceRole.objects.filter(code=ws_role_code).first()
                 if company and ws_role:
-                    CompanyMember.objects.get_or_create(
+                    member, _member_created = CompanyMember.objects.get_or_create(
                         user=user_obj,
                         company=company,
                         defaults={
@@ -339,6 +339,18 @@ class Command(BaseCommand):
                             "is_active": True,
                         },
                     )
+                    # Роль КОМПАНИИ (не WorkspaceRole) — источник прав в `capabilities.permissions`,
+                    # по которым строится меню (ADR-0005). Сид её не ставил, и свежий локальный
+                    # стенд получался НЕПРИГОДНЫМ: у демо-продавца и демо-покупателя приходил
+                    # пустой список прав, меню не рисовало ни одного пункта, и проверить роль
+                    # глазами было нельзя вовсе. Боевые пути (саморегистрация `submit_profile`,
+                    # приглашение `invite_workspace_member`) роль проставляют — расходился только
+                    # dev-сид. Тот же сервис, что и на боевых путях, поэтому набор прав совпадает.
+                    if member.company_role_id is None:
+                        from accounts.services.roles import default_company_role_for
+
+                        member.company_role = default_company_role_for(company, ws_role.code)
+                        member.save(update_fields=["company_role"])
 
         # ─── 19. Подписки продавцов ───
         # Sellers (SUPPLIER / MANUFACTURER) need an operational subscription or the

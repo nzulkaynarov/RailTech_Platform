@@ -59,6 +59,13 @@ def test_stage_change_writes_stage_codes(lookups):
 
     company = Company.objects.create(name="Покупатель ООО", inn="7000000001")
     deal = Deal.objects.create(title="Тест", company=company, stage=DealStage.objects.get(code="DRAFT"))
+    # Одна позиция: с 20-08 отправка заявки продавцу требует хотя бы одной строки
+    # (`REQUEST_HAS_NO_ITEMS`) — раньше гейт жил только в браузере. Тест здесь про КОДЫ в
+    # параметрах события, поэтому просто доводим заготовку до состояния, в котором переход законен.
+    from crm.models import Quote, QuoteItem
+
+    quote = Quote.objects.create(deal=deal, version=1)
+    QuoteItem.objects.create(quote=quote, display_type=QuoteItem.DisplayType.ITEM, quantity=1)
 
     updated, error = transition_deal_stage(deal=deal, target_stage_code="RFQ_OPEN")
 

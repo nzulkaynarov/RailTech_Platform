@@ -195,6 +195,22 @@ def transition_deal_stage(
         if target_stage_code not in allowed:
             return None, "FSM_TRANSITION_NOT_ALLOWED"
 
+    # Гейт содержимого: заявку без единой позиции продавцу не отправляют.
+    #
+    # «Add at least one line item to submit the request» жило ТОЛЬКО в браузере: тем же токеном
+    # покупателя POST /crm/deals/{id}/change-stage/ {"stage_code":"RFQ_OPEN"} проходил, и продавец
+    # получал в очередь пустую заявку, по которой нечего считать (прогон 20-08). У отправки КП
+    # продавцом такой гейт есть (`QUOTE_EMPTY`), у отправки заявки покупателем не было.
+    #
+    # Гейт применяется только к обычному переходу: force-override оператора (`validate_fsm=False`)
+    # намеренно проходит мимо всех гейтов — это его смысл.
+    if validate_fsm and target_stage_code == DealStageCode.RFQ_OPEN:
+        from ..models import QuoteItem
+
+        has_items = QuoteItem.objects.filter(quote__deal=deal, display_type=QuoteItem.DisplayType.ITEM).exists()
+        if not has_items:
+            return None, "REQUEST_HAS_NO_ITEMS"
+
     # Contract gate: CLOSED_WON requires a fully signed Contract.
     if validate_fsm and target_stage_code in STAGE_REQUIRES_SIGNED_CONTRACT:
         has_signed = deal.contracts.filter(status__code=ContractStatusCode.SIGNED).exists()

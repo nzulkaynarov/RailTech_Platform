@@ -3677,7 +3677,9 @@
     "USER_HAS_HISTORY_DEACTIVATE_INSTEAD": "This user has work history and cannot be deleted. Deactivate instead — access is revoked while deals and correspondence stay intact.",
     "CANNOT_DELETE_SUPERUSER": "A superuser cannot be deleted from the panel — a platform engineer does that.",
     "COMPANY_NOT_FOUND": "Company not found.",
-    "ONLY_COMPANY_OWNER_CAN_APPLY": "Only a company administrator can file an application."
+    "ONLY_COMPANY_OWNER_CAN_APPLY": "Only a company administrator can file an application.",
+    "PAYMENT_EXCEEDS_BALANCE_DUE": "The amount is larger than the balance due. Enter an amount within the balance — overpayment is not accepted.",
+    "REQUEST_HAS_NO_ITEMS": "The request has no line items — there is nothing for the seller to quote. Add at least one and submit again."
   },
   "fileUpload": {
     "upload": "Upload",
