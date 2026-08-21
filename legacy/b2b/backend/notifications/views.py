@@ -3,7 +3,7 @@ from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from core.permissions import IsPlatformAdmin
+from core.permissions import OperatorScoped
 
 from . import services, services_email_templates
 from .models import EmailTemplate, Notification
@@ -100,7 +100,19 @@ class EmailTemplateViewSet(viewsets.ModelViewSet):
 
     queryset = EmailTemplate.objects.all()
     serializer_class = EmailTemplateSerializer
-    permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
+    # Суб-способность оператора, а не «любой платформенный админ» (ADR-0004 G1, least privilege).
+    #
+    # Раньше стоял голый `IsPlatformAdmin`: оператор «Поддержка», заведённый как ТОЛЬКО ПРОСМОТР,
+    # создавал, правил и УДАЛЯЛ шаблоны писем. Активная строка здесь немедленно подменяет файловый
+    # шаблон ДЛЯ ВСЕХ получателей — то есть это произвольный HTML в письме клиенту от имени
+    # платформы, — а `test-send` реально отправляет письмо и пишет `EmailLog`. Пункт меню был
+    # скрыт по праву `platform.settings`, но переход по адресу правом не закрывался, и за скрытой
+    # дверью не стояло ничего (прогон 20-08). Тот же образец уже применён в `catalog/views/lookups.py`.
+    #
+    # `OperatorScoped` резолвит право по `action`, поэтому кастомные `preview` и `test-send`
+    # накрываются тем же дефолтом — их открытыми оставлять нельзя.
+    permission_classes = [permissions.IsAuthenticated, OperatorScoped]
+    operator_permission = "platform.settings"
 
     def perform_create(self, serializer):
         serializer.save(updated_by=self.request.user)

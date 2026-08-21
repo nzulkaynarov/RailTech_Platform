@@ -196,6 +196,26 @@ class UserAdmin(ImportExportModelAdmin, BaseUserAdmin, ModelAdmin):
     filter_horizontal = ("groups", "user_permissions")
     autocomplete_fields = ("role",)
 
+    #: Поля, которыми человек поднимает СЕБЕ или другому уровень доступа на всю платформу.
+    PRIVILEGE_FIELDS = ("is_superuser", "is_staff", "groups", "user_permissions")
+
+    def get_readonly_fields(self, request, obj=None):
+        """Привилегированный блок редактирует ТОЛЬКО суперпользователь.
+
+        Прогон 20-08: инженер с правом `accounts.change_customuser` открывал форму пользователя и
+        сохранял себе `is_superuser=True` — тремя кликами, без следа и без второго человека.
+        Django-админка сама такой защиты не даёт: право на модель означает право на ВСЕ её поля.
+
+        Ровно так же поступает сам Django в `contrib.auth.admin.UserAdmin` (`get_form`: поле
+        `user_permissions` прячется от того, кто не суперпользователь) — здесь мы распространяем
+        тот же принцип на весь блок эскалации, включая членство в группах: `system_engineers`
+        открывает инженерную админку, и раздавать её должен тот же, кто раздаёт суперправа.
+        """
+        readonly = list(super().get_readonly_fields(request, obj))
+        if not request.user.is_superuser:
+            readonly.extend(field for field in self.PRIVILEGE_FIELDS if field not in readonly)
+        return tuple(readonly)
+
 
 # ────────────────────────────────────────────
 # Companies

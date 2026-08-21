@@ -183,9 +183,19 @@ class CompanyWizardView(SessionWizardView):
         # `is_staff`: мастер живёт внутри Unfold и создаёт компании — пускать сюда шире, чем в
         # админку, значит оставить обходную дверь.
         from django.contrib.admin import site
+        from django.core.exceptions import PermissionDenied
 
         if not site.has_permission(request):
             return redirect("/admin/login/")
+        # Вход в админку и СОЗДАНИЕ АРЕНДАТОРА — разные вещи, и Django ровно так их разделяет.
+        #
+        # Гейт двери (волна 20-08) пускает сюда суперпользователя ИЛИ члена `system_engineers`.
+        # Этого мало: мастер заводит компанию и сразу проставляет ей `verification_status`, то
+        # есть уровень KYC. Прогон 20-08 показал, что член группы БЕЗ ЕДИНОГО модельного права
+        # (`get_all_permissions() == []`) проходил мастер до конца и создавал арендатора с
+        # выставленным KYC. Модельное право — тот самый второй ключ.
+        if not request.user.has_perm("accounts.add_company"):
+            raise PermissionDenied
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):

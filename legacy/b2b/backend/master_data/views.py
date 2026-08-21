@@ -5,10 +5,32 @@ from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
-from core.permissions import IsPlatformAdminOrReadOnly
-
 from .models import Country, Currency, DeliveryBasis, HSCode, UnitOfMeasure
 from .serializers import CountrySerializer, CurrencySerializer, DeliveryBasisSerializer, UnitOfMeasureSerializer
+
+
+def _lookup_write_permissions(view):
+    """Чтение справочника — публичное, ЗАПИСЬ — по суб-способности `platform.settings`.
+
+    Раньше на всех четырёх вьюсетах стоял голый `IsPlatformAdminOrReadOnly`, проверяющий лишь
+    «оператор платформы вообще». Оператор «Поддержка», заведённый как ТОЛЬКО ПРОСМОТР, создавал,
+    правил и удалял валюты, страны и единицы измерения — а они печатаются в документах ВСЕХ
+    арендаторов (прогон 20-08). Пункт меню был скрыт по праву, но за скрытой дверью не стояло
+    ничего: переход по адресу правом не закрывался.
+
+    Образец не новый — ровно так уже сделано в `catalog/views/lookups.py` волной N3, с тем же
+    выводом в комментарии: «раньше писала ЛЮБАЯ суб-роль оператора, включая SUPPORT „только
+    просмотр“». Здесь тот же приём, чтобы механика была одна, а не две.
+
+    Публичное чтение сохраняем: списки справочников читают почти все экраны, включая
+    неавторизованные (публичная страница КП).
+    """
+    if getattr(view, "action", None) in ("list", "retrieve"):
+        return [permissions.AllowAny()]
+    from core.permissions import OperatorScoped
+
+    return [OperatorScoped()]
+
 
 LOOKUP_CACHE_TTL = 60 * 10  # 10 min — справочники меняются редко
 
@@ -91,8 +113,13 @@ class CountryViewSet(_CachedLookupListMixin, _ActiveOnlyListMixin, viewsets.Mode
 
     queryset = Country.objects.all().order_by("sort_order", "name")
     serializer_class = CountrySerializer
-    permission_classes = [IsPlatformAdminOrReadOnly]
+    # `permission_classes` здесь НЕ указан намеренно: его полностью перекрывает
+    # `get_permissions` ниже. Оставленная строка врала бы читателю о реальном правиле доступа.
     pagination_class = None
+    operator_permission = "platform.settings"
+
+    def get_permissions(self):
+        return _lookup_write_permissions(self)
 
 
 @extend_schema_view(
@@ -108,8 +135,13 @@ class CurrencyViewSet(_CachedLookupListMixin, _ActiveOnlyListMixin, viewsets.Mod
 
     queryset = Currency.objects.all().order_by("sort_order", "code")
     serializer_class = CurrencySerializer
-    permission_classes = [IsPlatformAdminOrReadOnly]
+    # `permission_classes` здесь НЕ указан намеренно: его полностью перекрывает
+    # `get_permissions` ниже. Оставленная строка врала бы читателю о реальном правиле доступа.
     pagination_class = None
+    operator_permission = "platform.settings"
+
+    def get_permissions(self):
+        return _lookup_write_permissions(self)
 
 
 @extend_schema_view(
@@ -125,8 +157,13 @@ class UnitOfMeasureViewSet(_CachedLookupListMixin, _ActiveOnlyListMixin, viewset
 
     queryset = UnitOfMeasure.objects.all().order_by("sort_order", "code")
     serializer_class = UnitOfMeasureSerializer
-    permission_classes = [IsPlatformAdminOrReadOnly]
+    # `permission_classes` здесь НЕ указан намеренно: его полностью перекрывает
+    # `get_permissions` ниже. Оставленная строка врала бы читателю о реальном правиле доступа.
     pagination_class = None
+    operator_permission = "platform.settings"
+
+    def get_permissions(self):
+        return _lookup_write_permissions(self)
 
 
 @extend_schema_view(
@@ -142,8 +179,13 @@ class DeliveryBasisViewSet(_CachedLookupListMixin, _ActiveOnlyListMixin, viewset
 
     queryset = DeliveryBasis.objects.all().order_by("sort_order", "code")
     serializer_class = DeliveryBasisSerializer
-    permission_classes = [IsPlatformAdminOrReadOnly]
+    # `permission_classes` здесь НЕ указан намеренно: его полностью перекрывает
+    # `get_permissions` ниже. Оставленная строка врала бы читателю о реальном правиле доступа.
     pagination_class = None
+    operator_permission = "platform.settings"
+
+    def get_permissions(self):
+        return _lookup_write_permissions(self)
 
 
 @extend_schema(

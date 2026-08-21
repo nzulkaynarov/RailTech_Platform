@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-20 11:57+0500\n"
+"POT-Creation-Date: 2026-08-21 12:56+0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -52,41 +52,41 @@ msgstr "Profile"
 msgid "Доступ"
 msgstr "Access"
 
-#: accounts/admin.py:228
+#: accounts/admin.py:248
 msgid "Статус KYC"
 msgstr "KYC Status"
 
-#: accounts/admin.py:240
+#: accounts/admin.py:260
 msgid "Роли"
 msgstr "Types"
 
-#: accounts/admin.py:245
+#: accounts/admin.py:265
 msgid "[Emergency] Подтвердить KYC (L2)"
 msgstr "[Emergency] Approve KYC (L2)"
 
-#: accounts/admin.py:251
+#: accounts/admin.py:271
 #, python-format
 msgid "Без KYC документов: %(names)s"
 msgstr "Without KYC documents: %(names)s"
 
-#: accounts/admin.py:255
+#: accounts/admin.py:275
 #, python-format
 msgid "%(count)d компаний подтверждено."
 msgstr "%(count)d companies verified."
 
-#: accounts/admin.py:269 accounts/models/company/contacts.py:44
+#: accounts/admin.py:289 accounts/models/company/contacts.py:44
 msgid "Контакты"
 msgstr "Contacts"
 
-#: accounts/admin.py:281
+#: accounts/admin.py:301
 msgid "Банк"
 msgstr "Bank"
 
-#: accounts/admin.py:288
+#: accounts/admin.py:308
 msgid "KYC"
 msgstr "KYC"
 
-#: accounts/admin.py:342 accounts/admin.py:430
+#: accounts/admin.py:362 accounts/admin.py:450
 #: accounts/models/applications.py:55 accounts/models/subscriptions.py:48
 #: catalog/admin.py:198 catalog/models/products.py:67
 #: catalog/models/requests.py:91 core/models.py:176
@@ -100,59 +100,59 @@ msgstr "KYC"
 msgid "Статус"
 msgstr "Status"
 
-#: accounts/admin.py:365
+#: accounts/admin.py:385
 msgid "Документы"
 msgstr "Documents"
 
-#: accounts/admin.py:376
+#: accounts/admin.py:396
 msgid "Рассмотрение"
 msgstr "Review"
 
-#: accounts/admin.py:388
+#: accounts/admin.py:408
 msgid "[Emergency] Одобрить (с проверкой документов)"
 msgstr "[Emergency] Approve (with document check)"
 
-#: accounts/admin.py:394
+#: accounts/admin.py:414
 #, python-format
 msgid "%(count)d заявок одобрено."
 msgstr "%(count)d applications approved."
 
-#: accounts/admin.py:396
+#: accounts/admin.py:416
 msgid "[Emergency] Отклонить"
 msgstr "[Emergency] Reject"
 
-#: accounts/admin.py:401
+#: accounts/admin.py:421
 #, python-format
 msgid "%(count)d заявок отклонено."
 msgstr "%(count)d applications rejected."
 
-#: accounts/admin.py:423
+#: accounts/admin.py:443
 msgid "План"
 msgstr "Plan"
 
-#: accounts/admin.py:453
+#: accounts/admin.py:473
 msgid "Биллинг"
 msgstr "Billing"
 
-#: accounts/admin.py:464 accounts/models/subscriptions.py:96
+#: accounts/admin.py:484 accounts/models/subscriptions.py:96
 #: crm/admin/deals_admin.py:91 crm/models/deals.py:111
 msgid "Заметки"
 msgstr "Notes"
 
-#: accounts/admin.py:475
+#: accounts/admin.py:495
 msgid "[Emergency] Активировать"
 msgstr "[Emergency] Activate"
 
-#: accounts/admin.py:478
+#: accounts/admin.py:498
 #, python-format
 msgid "%(count)d активировано."
 msgstr "%(count)d activated."
 
-#: accounts/admin.py:480
+#: accounts/admin.py:500
 msgid "[Emergency] Приостановить"
 msgstr "[Emergency] Suspend"
 
-#: accounts/admin.py:483
+#: accounts/admin.py:503
 #, python-format
 msgid "%(count)d приостановлено."
 msgstr "%(count)d suspended."
@@ -1364,7 +1364,7 @@ msgid "Роли (через ;)"
 msgstr "Roles (separated by ;)"
 
 #: accounts/templates/admin/accounts/company_wizard.html:4
-#: accounts/wizard.py:197
+#: accounts/wizard.py:207
 msgid "Создание компании"
 msgstr "Create company"
 
@@ -1497,7 +1497,7 @@ msgstr "Last name"
 msgid "Телефон владельца"
 msgstr "Owner phone"
 
-#: accounts/wizard.py:285
+#: accounts/wizard.py:295
 #, python-format
 msgid "Компания «%(name)s» успешно создана! Владелец: %(email)s"
 msgstr "Company «%(name)s» created successfully! Owner: %(email)s"
