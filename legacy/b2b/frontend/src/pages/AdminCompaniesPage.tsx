@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useDraftState } from '@/hooks/useDraftState';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Building2, Pencil, Trash2, UserPlus, GitMerge } from 'lucide-react';
+import { Building2, Pencil, Trash2, UserPlus, GitMerge, Archive, ArchiveRestore } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/lib/formatLocale';
 import { Button } from '@/components/ui/button';
@@ -36,9 +36,11 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { MergeDuplicatesDialog } from '@/components/Admin/MergeDuplicatesDialog';
+import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';
 import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import {
   useCompanies, useCreateCompany, useUpdateCompany, useDeleteCompany,
+  useArchiveCompany, useUnarchiveCompany,
   useCompanyTeam, useInviteMember,
   useUploadCompanyLogo, useDeleteCompanyLogo,
   useUploadDocument, useDeleteDocument,
@@ -372,17 +374,25 @@ export function AdminCompaniesPage() {
       p.verification_status__code = tab.slice(4);
     } else if (tab.startsWith('type:')) {
       p['types__code'] = tab.slice(5);
+    } else if (tab === 'archived') {
+      p.is_active = 'false';
     }
+    // Вкладка «Архивные» — единственный способ увидеть выведенные из оборота компании; на
+    // остальных вкладках их не показываем, иначе архив не выводит из оборота, а только красит.
+    if (tab !== 'archived') p.is_active = 'true';
     return Object.keys(p).length ? p : undefined;
   }, [tableState.search, tableState.tab]);
   // Реестр без пагинации в UI: без полной выборки оператор видел первые 20 компаний из 42,
   // а плашка «Всего» печатала 20 — то есть врала уверенно.
   const { data: companies = [], isLoading, isError, refetch } = useCompanies({ ...(queryParams ?? {}), fetchAll: true });
   const deleteMut = useDeleteCompany();
+  const archiveMut = useArchiveCompany();
+  const unarchiveMut = useUnarchiveCompany();
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Company | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Company | null>(null);
+  const [archiveTarget, setArchiveTarget] = useState<Company | null>(null);
   const [mergeTarget, setMergeTarget] = useState<Company | null>(null);
 
   const onEdit = (c: Company) => {
@@ -399,6 +409,22 @@ export function AdminCompaniesPage() {
       await deleteMut.mutateAsync(deleteTarget.id);
       toast.success(t('adminCompanies.deleted'));
       setDeleteTarget(null);
+    } catch (e) {
+      toast.error(translateApiError(e));
+    }
+  };
+
+  const onArchive = async (reason: string) => {
+    if (!archiveTarget) return;
+    await archiveMut.mutateAsync({ id: archiveTarget.id, reason });
+    toast.success(t('adminCompanies.archived'));
+    setArchiveTarget(null);
+  };
+
+  const onUnarchive = async (company: Company) => {
+    try {
+      await unarchiveMut.mutateAsync(company.id);
+      toast.success(t('adminCompanies.unarchived'));
     } catch (e) {
       toast.error(translateApiError(e));
     }
@@ -439,6 +465,9 @@ export function AdminCompaniesPage() {
           { id: 'type:CLIENT', label: t('companyStatus.BUYER') },
           { id: 'type:SUPPLIER', label: t('companyStatus.SELLER') },
           { id: 'type:MANUFACTURER', label: t('companyStatus.MANUFACTURER') },
+          // Odoo держит архив за фильтром, а не прячет: иначе выведенная из оборота компания
+          // исчезает навсегда — ровно тот тупик, что был у справочников (#603).
+          { id: 'archived', label: t('adminCompanies.archive.tab') },
         ]}
         columns={[
           {
@@ -507,10 +536,30 @@ export function AdminCompaniesPage() {
             onRun: (c) => setMergeTarget(c),
           },
           {
+            id: 'archive',
+            label: t('adminCompanies.archive.action'),
+            icon: <Archive className="h-3.5 w-3.5" />,
+            // Архив — штатная замена удалению (Odoo Archive): компания уходит из подбора и
+            // справочников, история остаётся. У уже архивной действие бессмысленно.
+            disabled: (c) => c.is_active === false,
+            onRun: (c) => setArchiveTarget(c),
+          },
+          {
+            id: 'unarchive',
+            label: t('adminCompanies.archive.restore'),
+            icon: <ArchiveRestore className="h-3.5 w-3.5" />,
+            disabled: (c) => c.is_active !== false,
+            onRun: (c) => onUnarchive(c),
+          },
+          {
             id: 'delete',
             label: t('adminCompanies.delete'),
             icon: <Trash2 className="h-3.5 w-3.5" />,
             variant: 'destructive',
+            // Способность приходит с сервера (Salesforce `deletable`): компанию с историей
+            // удалить нельзя ни в одном эталоне, и кнопка, которая ГАРАНТИРОВАННО откажет, —
+            // тот же тупик, только вежливый. Причина видна в подсказке пункта.
+            disabled: (c) => c.can_delete === false,
             onRun: (c) => setDeleteTarget(c),
           },
         ]}
@@ -524,6 +573,18 @@ export function AdminCompaniesPage() {
       <MergeDuplicatesDialog
         survivor={mergeTarget}
         onOpenChange={(open) => !open && setMergeTarget(null)}
+      />
+
+      <ConfirmActionDialog
+        open={!!archiveTarget}
+        onOpenChange={(open) => !open && setArchiveTarget(null)}
+        title={t('adminCompanies.archive.title')}
+        description={t('adminCompanies.archive.description', { name: archiveTarget?.name ?? '' })}
+        requireReason
+        confirmLabel={t('adminCompanies.archive.confirm')}
+        variant="warning"
+        translateError={(code) => translateApiError(code)}
+        onConfirm={(payload) => onArchive(payload.reason)}
       />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>

@@ -42,7 +42,18 @@ def verified_seller_company_q(prefix: str = "") -> models.Q:
     Держим её вместе, чтобы забыть половину было невозможно.
     """
     status_field = f"{prefix}__verification_status__code__in" if prefix else "verification_status__code__in"
-    return seller_company_q(prefix) & models.Q(**{status_field: KYC_VERIFIED_CODES})
+    return seller_company_q(prefix) & models.Q(**{status_field: KYC_VERIFIED_CODES}) & active_company_q(prefix)
+
+
+def active_company_q(prefix: str = "") -> models.Q:
+    """«Компания в обороте» — не архивирована.
+
+    Отдельный предикат, потому что архив обязан снимать компанию с ВСЕХ рабочих поверхностей
+    сразу. Вкручивать `is_active=True` по местам вызова нельзя: ровно так родился инцидент
+    #436, когда два места кодировали одно понятие и разошлись.
+    """
+    field = f"{prefix}__is_active" if prefix else "is_active"
+    return models.Q(**{field: True})
 
 
 class CompanyQuerySet(models.QuerySet):
@@ -53,8 +64,18 @@ class CompanyQuerySet(models.QuerySet):
 
         `.distinct()` обязателен: `types` — M2M, и фильтр по нему размножает строки, если у
         компании несколько подходящих типов.
+
+        Архивные сюда НЕ попадают: подбор продавцов — рабочая поверхность.
         """
-        return self.filter(seller_company_q()).distinct()
+        return self.filter(seller_company_q() & active_company_q()).distinct()
+
+    def active(self):
+        """Компании в обороте (Odoo: список по умолчанию скрывает архив)."""
+        return self.filter(active_company_q())
+
+    def archived(self):
+        """Архивные — их видно по явному фильтру, как «Archived» в Odoo."""
+        return self.filter(is_active=False)
 
     def verified_sellers(self):
         """Продавцы, которых покупатель может пригласить в заявку (продавец + KYC)."""
@@ -238,6 +259,28 @@ class Company(models.Model):
         auto_now=True,
         verbose_name=_("Дата обновления"),
     )
+
+    # ── Архив (паттерн Odoo Archive) ────────────────────────────────────────────────────
+    # Компанию с историей удалить нельзя ни в одном эталоне; из оборота её выводит архив.
+    # Флаг живёт РЯДОМ с предикатами выборок выше, а не по местам вызова: иначе повторился
+    # бы инцидент #436 — компания не видна покупателю, снять её он не может, а в
+    # маршрутизацию она уходит.
+    is_active = models.BooleanField(
+        default=True,
+        db_index=True,
+        verbose_name=_("В обороте"),
+        help_text=_("False — компания архивирована: скрыта из подбора и справочников, история сохранена"),
+    )
+    archived_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Архивирована"))
+    archived_by = models.ForeignKey(
+        "accounts.CustomUser",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="archived_companies",
+        verbose_name=_("Кто архивировал"),
+    )
+    archived_reason = models.TextField(blank=True, default="", verbose_name=_("Причина архивации"))
 
     objects = models.Manager.from_queryset(CompanyQuerySet)()
 

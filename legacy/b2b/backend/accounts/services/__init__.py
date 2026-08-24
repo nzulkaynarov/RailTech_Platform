@@ -18,6 +18,7 @@ from .auth import (
     verify_and_setup_password,
 )
 from .clients import accept_client_invite, create_offline_client, find_client_company, send_client_invite
+from .company_lifecycle import archive_company, can_delete_company, company_history_holders, unarchive_company
 from .company_settings import get_company_settings, update_company_settings
 from .document_profile import (
     get_document_profile,
@@ -143,7 +144,11 @@ __all__ = [
     "toggle_user_active",
     "upload_kyc_document",
     "verify_and_setup_password",
+    "archive_company",
+    "can_delete_company",
+    "company_history_holders",
     "kyc_evidence_gaps",
+    "unarchive_company",
     "verify_company_kyc",
     "accept_client_invite",
     "auto_populate_history",

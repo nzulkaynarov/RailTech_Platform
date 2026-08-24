@@ -2693,6 +2693,16 @@
     "emptyState": "No companies found",
     "created": "Company created",
     "updated": "Company updated",
+    "archived": "Company removed from circulation",
+    "unarchived": "Company returned to circulation",
+    "archive": {
+      "action": "Archive",
+      "restore": "Return to circulation",
+      "tab": "Archived",
+      "title": "Remove the company from circulation?",
+      "description": "\u201c{{name}}\u201d will disappear from the seller picker, directories and search. Its deals, invoices and signed documents stay in place — you can bring it back at any time.",
+      "confirm": "Archive"
+    },
     "deleted": "Company deleted",
     "requiredFields": "Name and INN are required",
     "save": "Save",
@@ -2702,7 +2712,7 @@
     "invited": "Invitation sent",
     "emailRequired": "Email is required",
     "confirmDelete": "Delete company?",
-    "confirmDeleteDesc": "Company \"{{name}}\" and all related data will be removed.",
+    "confirmDeleteDesc": "Company \"{{name}}\" will be deleted. This is only possible while it has no history: deals, quotes, documents or members. A company with history is removed from circulation instead — it stays in the archive.",
     "tabs": {
       "registry": "Registry",
       "members": "Team",
@@ -3610,6 +3620,10 @@
     "ACT_ALREADY_EXISTS": "An act for this invoice already exists — a second closing document is not created",
     "ACT_AWAITING_REISSUE": "The act for this invoice came back with a remark — re-issue it instead of creating a second one",
     "ACT_REISSUE_NOT_ALLOWED": "Only an act returned by the customer can be re-issued",
+    "COMPANY_HAS_HISTORY": "The company has history — it cannot be deleted. Remove it from circulation instead: the picker and directories forget it while documents stay",
+    "COMPANY_IN_USE": "Data still references this company — it cannot be deleted; remove it from circulation instead",
+    "COMPANY_ALREADY_ARCHIVED": "The company is already out of circulation",
+    "COMPANY_NOT_ARCHIVED": "The company is already in circulation",
     "KYC_LEVEL_UNCHANGED": "The company is already at this KYC level — nothing to change",
     "ROLE_APPLICATION_CANNOT_APPROVE": "Application cannot be approved in current status",
     "ROLE_APPLICATION_CANNOT_REJECT": "Application cannot be rejected in current status",
@@ -4416,6 +4430,16 @@
         },
         "activated": {
           "title": "Subscription activated",
+          "detail": "{{company_name}}"
+        }
+      },
+      "company": {
+        "archived": {
+          "title": "Company removed from circulation",
+          "detail": "{{company_name}}"
+        },
+        "unarchived": {
+          "title": "Company returned to circulation",
           "detail": "{{company_name}}"
         }
       },

@@ -8,12 +8,16 @@ permissions and the OpenAPI contract are unchanged. Mixins only ADD ``@action``
 methods (they override nothing), so MRO does not affect behaviour.
 """
 
+from django.db.models import ProtectedError
 from django_filters.rest_framework import DjangoFilterBackend
-from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
-from rest_framework import exceptions, filters, permissions, viewsets
+from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view, inline_serializer
+from rest_framework import exceptions, filters, permissions
+from rest_framework import serializers as drf_serializers
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from accounts import services
 from accounts.models import Company, CompanyMember
 from accounts.serializers import CompanySerializer
 from accounts.services.permissions import member_has_permission
@@ -84,6 +88,8 @@ class CompanyViewSet(CompanyKYCMixin, CompanyDocumentsMixin, CompanyTeamMixin, v
         "update": "companies.manage",
         "partial_update": "companies.manage",
         "destroy": "companies.manage",
+        "archive": "companies.manage",
+        "unarchive": "companies.manage",
         "verify_kyc": "kyc.verify",
         "bulk_verify_kyc": "kyc.verify",
         # SEC (audit #8): team-management actions are member-facing (own in-action OWNER
@@ -102,6 +108,8 @@ class CompanyViewSet(CompanyKYCMixin, CompanyDocumentsMixin, CompanyTeamMixin, v
     filterset_fields = {
         "verification_status__code": ["exact"],
         "types__code": ["exact"],
+        # `?is_active=false` — вкладка «Архивные» (Odoo держит архив за фильтром, а не прячет).
+        "is_active": ["exact"],
     }
     search_fields = ["name", "inn", "mfo", "contact_person", "email"]
 
@@ -131,6 +139,61 @@ class CompanyViewSet(CompanyKYCMixin, CompanyDocumentsMixin, CompanyTeamMixin, v
         "remove_member",
         "toggle_member_active",
     }
+
+    def destroy(self, request, *args, **kwargs):
+        """Удаление компании с историей запрещено — из оборота выводит АРХИВ.
+
+        Дефолтный `ModelViewSet.destroy` сносил компанию каскадом: замер 24-08 — 204 и 2448
+        удалённых строк, вместе с компанией исчезали её сделки, а участники оставались
+        обезличенными аккаунтами без единого членства. Ни один эталон так не делает: Odoo
+        отказывает и предлагает архив, Salesforce не даёт удалить даже пользователя, Stripe
+        не удаляет финансовый факт вовсе.
+
+        `ProtectedError` ловим ВТОРЫМ рубежом: гейт выше обязан не пропустить такие компании,
+        но пятисотка не должна быть достижима даже при дыре в перечне держателей.
+        """
+        company = self.get_object()
+        blocker = services.can_delete_company(company)
+        if blocker:
+            return Response({"detail": blocker}, status=status.HTTP_409_CONFLICT)
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except ProtectedError as exc:
+            holders = sorted({obj._meta.verbose_name.title() for obj in exc.protected_objects})
+            return Response(
+                {"detail": "COMPANY_IN_USE" + (":" + ",".join(holders) if holders else "")},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+    @extend_schema(
+        summary="Archive a company (Odoo Archive pattern)",
+        description=(
+            "Выводит компанию из оборота, сохраняя историю: она исчезает из подбора продавцов "
+            "и справочников, но её сделки и документы остаются на месте. Причина обязательна "
+            "и попадает в журнал."
+        ),
+        request=inline_serializer("ArchiveCompany", fields={"reason": drf_serializers.CharField()}),
+        responses={200: CompanySerializer, 400: OpenApiResponse(description="REASON_REQUIRED")},
+        tags=["Accounts"],
+    )
+    @action(detail=True, methods=["post"], url_path="archive")
+    def archive(self, request, pk=None):
+        company, err = services.archive_company(self.get_object(), request.user, reason=request.data.get("reason", ""))
+        if err:
+            return Response({"detail": err}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(self.get_serializer(company).data)
+
+    @extend_schema(
+        summary="Return an archived company to circulation",
+        responses={200: CompanySerializer, 400: OpenApiResponse(description="COMPANY_NOT_ARCHIVED")},
+        tags=["Accounts"],
+    )
+    @action(detail=True, methods=["post"], url_path="unarchive")
+    def unarchive(self, request, pk=None):
+        company, err = services.unarchive_company(self.get_object(), request.user)
+        if err:
+            return Response({"detail": err}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(self.get_serializer(company).data)
 
     def get_permissions(self):
         # Member-facing actions (own-company self-service / OWNER team management) carry their

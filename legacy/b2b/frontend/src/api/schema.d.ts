@@ -60,6 +60,26 @@ export interface paths {
         patch: operations["accounts_companies_partial_update"];
         trace?: never;
     };
+    "/api/v1/accounts/companies/{id}/archive/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Archive a company (Odoo Archive pattern)
+         * @description Выводит компанию из оборота, сохраняя историю: она исчезает из подбора продавцов и справочников, но её сделки и документы остаются на месте. Причина обязательна и попадает в журнал.
+         */
+        post: operations["accounts_companies_archive_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/accounts/companies/{id}/delete-document/{doc_id}/": {
         parameters: {
             query?: never;
@@ -348,6 +368,28 @@ export interface paths {
          * @description Company Admin toggles a member's account active flag (S3 / spec P8 — real status, not a fake «Active» badge). Never-orphan: refuses to deactivate the sole active admin → CANNOT_DEACTIVATE_SOLE_COMPANY_ADMIN; a member cannot deactivate themselves → CANNOT_DEACTIVATE_SELF.
          */
         post: operations["accounts_companies_toggle_member_active_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounts/companies/{id}/unarchive/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Return an archived company to circulation
+         * @description CRUD operations for companies.
+         *
+         *     Includes KYC verification, document upload, team management, and member invitations.
+         */
+        post: operations["accounts_companies_unarchive_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7156,6 +7198,9 @@ export interface components {
             /** @default  */
             comment: string;
         };
+        ArchiveCompanyRequest: {
+            reason: string;
+        };
         AssignDealRequestRequest: {
             assignee_id: number;
         };
@@ -7641,6 +7686,26 @@ export interface components {
             readonly kyc_documents: components["schemas"]["KYCDocument"][];
             readonly user_count: number;
             readonly company_types: unknown[];
+            /**
+             * В обороте
+             * @description False — компания архивирована: скрыта из подбора и справочников, история сохранена
+             */
+            readonly is_active: boolean;
+            /**
+             * Архивирована
+             * Format: date-time
+             */
+            readonly archived_at: string | null;
+            /** Причина архивации */
+            readonly archived_reason: string;
+            readonly can_delete: boolean;
+            /**
+             * @description Причина, по которой компанию нельзя удалить, — или None.
+             *
+             *     Считается только для операторского контекста: у члена компании такой кнопки нет, а
+             *     обход держателей стоит нескольких запросов на строку.
+             */
+            readonly delete_blocker: string | null;
         };
         /**
          * @description The branded requisites a company prints on its own КП / contract documents.
@@ -13928,6 +13993,7 @@ export interface operations {
     accounts_companies_list: {
         parameters: {
             query?: {
+                is_active?: boolean;
                 /** @description A page number within the paginated result set. */
                 page?: number;
                 /** @description Number of results to return per page. */
@@ -14074,6 +14140,41 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Company"];
                 };
+            };
+        };
+    };
+    accounts_companies_archive_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Компания. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ArchiveCompanyRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ArchiveCompanyRequest"];
+                "multipart/form-data": components["schemas"]["ArchiveCompanyRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            /** @description REASON_REQUIRED */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -14552,6 +14653,7 @@ export interface operations {
     accounts_companies_team_list: {
         parameters: {
             query?: {
+                is_active?: boolean;
                 /** @description A page number within the paginated result set. */
                 page?: number;
                 /** @description Number of results to return per page. */
@@ -14621,6 +14723,41 @@ export interface operations {
             };
             /** @description Cannot deactivate the sole admin */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    accounts_companies_unarchive_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Компания. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompanyRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CompanyRequest"];
+                "multipart/form-data": components["schemas"]["CompanyRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            /** @description COMPANY_NOT_ARCHIVED */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };

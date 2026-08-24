@@ -191,6 +191,28 @@ export const useUpdateCompany = () => {
   });
 };
 
+export const useArchiveCompany = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: number; reason: string }) => accountsApi.archiveCompany(id, reason),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['companies'] });
+      qc.invalidateQueries({ queryKey: ['admin-queue'] });
+    },
+  });
+};
+
+export const useUnarchiveCompany = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => accountsApi.unarchiveCompany(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['companies'] });
+      qc.invalidateQueries({ queryKey: ['admin-queue'] });
+    },
+  });
+};
+
 export const useDeleteCompany = () => {
   const qc = useQueryClient();
   return useMutation({

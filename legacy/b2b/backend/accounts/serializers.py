@@ -228,6 +228,10 @@ class CompanySerializer(serializers.ModelSerializer):
     verification_status_name = serializers.CharField(source="verification_status.name", read_only=True)
     verification_status_code = serializers.CharField(source="verification_status.code", read_only=True)
     company_types = serializers.SerializerMethodField()
+    # Способность удалить объявляется ЗАРАНЕЕ (Salesforce `deletable`): кнопка, которая
+    # гарантированно упрётся в отказ, — тупик. `delete_blocker` несёт причину с держателями.
+    delete_blocker = serializers.SerializerMethodField()
+    can_delete = serializers.SerializerMethodField()
 
     class Meta:
         model = Company
@@ -254,11 +258,26 @@ class CompanySerializer(serializers.ModelSerializer):
             "kyc_documents",
             "user_count",
             "company_types",
+            "is_active",
+            "archived_at",
+            "archived_reason",
+            "can_delete",
+            "delete_blocker",
         ]
         # kyc_notes is intentionally NOT exposed — it holds internal KYC-manager
         # notes ("не видны клиенту"). verify-kyc writes it directly on the model.
         # Trust signals are platform verdicts: a company must not self-set them.
-        read_only_fields = ["verification_status", "is_verified", "trust_score", "created_at"]
+        # `is_active` только на чтение: архив — действие со следом (`archive`/`unarchive`),
+        # а не поле формы. Иначе повторилась бы дыра «уровень KYC правился обычным Save».
+        read_only_fields = [
+            "verification_status",
+            "is_verified",
+            "trust_score",
+            "created_at",
+            "is_active",
+            "archived_at",
+            "archived_reason",
+        ]
 
     def get_user_count(self, obj) -> int:
         # Use len() to leverage prefetched members cache instead of extra COUNT query
@@ -266,6 +285,22 @@ class CompanySerializer(serializers.ModelSerializer):
             return len(obj.members.all())
         except AttributeError:
             return 0
+
+    def get_delete_blocker(self, obj) -> str | None:
+        """Причина, по которой компанию нельзя удалить, — или None.
+
+        Считается только для операторского контекста: у члена компании такой кнопки нет, а
+        обход держателей стоит нескольких запросов на строку.
+        """
+        request = self.context.get("request")
+        if not (request and getattr(request.user, "is_platform_admin", False)):
+            return None
+        from accounts.services.company_lifecycle import can_delete_company
+
+        return can_delete_company(obj)
+
+    def get_can_delete(self, obj) -> bool:
+        return self.get_delete_blocker(obj) is None
 
     def get_company_types(self, obj) -> list:
         # Use Python list comprehension to leverage prefetched types cache

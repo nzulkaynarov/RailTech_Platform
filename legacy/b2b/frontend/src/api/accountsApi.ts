@@ -29,6 +29,13 @@ export interface Company {
 	inn: string;
 	verification_status: number | string;
 	verification_status_code?: string;
+	/** Компания в обороте. `false` — архивирована: скрыта из подбора, история сохранена. */
+	is_active?: boolean;
+	archived_at?: string | null;
+	archived_reason?: string;
+	/** Способность объявлена ЗАРАНЕЕ (Salesforce `deletable`) — кнопка не должна гарантированно падать. */
+	can_delete?: boolean;
+	delete_blocker?: string | null;
 	verification_status_name?: string;
 	is_verified?: boolean;
 	has_iso9001?: boolean;
@@ -257,6 +264,15 @@ export const accountsApi = {
 	},
 	updateCompany: async (id: number, data: Partial<Company>) => {
 		const response = await apiClient.patch<Company>(`accounts/companies/${id}/`, data);
+		return response.data;
+	},
+	/** Архив вместо удаления (паттерн Odoo Archive): компания уходит из оборота, история цела. */
+	archiveCompany: async (id: number, reason: string) => {
+		const response = await apiClient.post(`accounts/companies/${id}/archive/`, { reason });
+		return response.data;
+	},
+	unarchiveCompany: async (id: number) => {
+		const response = await apiClient.post(`accounts/companies/${id}/unarchive/`);
 		return response.data;
 	},
 	deleteCompany: async (id: number) => {

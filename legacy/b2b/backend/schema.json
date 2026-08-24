@@ -20,6 +20,13 @@
                 "summary": "List companies",
                 "parameters": [
                     {
+                        "in": "query",
+                        "name": "is_active",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
                         "name": "page",
                         "required": false,
                         "in": "query",
@@ -302,6 +309,67 @@
                 "responses": {
                     "204": {
                         "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/v1/accounts/companies/{id}/archive/": {
+            "post": {
+                "operationId": "accounts_companies_archive_create",
+                "description": "Выводит компанию из оборота, сохраняя историю: она исчезает из подбора продавцов и справочников, но её сделки и документы остаются на месте. Причина обязательна и попадает в журнал.",
+                "summary": "Archive a company (Odoo Archive pattern)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Компания.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Accounts"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ArchiveCompanyRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ArchiveCompanyRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ArchiveCompanyRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Company"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "REASON_REQUIRED"
                     }
                 }
             }
@@ -1019,6 +1087,13 @@
                         "required": true
                     },
                     {
+                        "in": "query",
+                        "name": "is_active",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
                         "name": "page",
                         "required": false,
                         "in": "query",
@@ -1138,6 +1213,67 @@
                     },
                     "409": {
                         "description": "Cannot deactivate the sole admin"
+                    }
+                }
+            }
+        },
+        "/api/v1/accounts/companies/{id}/unarchive/": {
+            "post": {
+                "operationId": "accounts_companies_unarchive_create",
+                "description": "CRUD operations for companies.\n\nIncludes KYC verification, document upload, team management, and member invitations.",
+                "summary": "Return an archived company to circulation",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Компания.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Accounts"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CompanyRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CompanyRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CompanyRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Company"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "COMPANY_NOT_ARCHIVED"
                     }
                 }
             }
@@ -20514,6 +20650,18 @@
                     "step_id"
                 ]
             },
+            "ArchiveCompanyRequest": {
+                "type": "object",
+                "properties": {
+                    "reason": {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                },
+                "required": [
+                    "reason"
+                ]
+            },
             "AssignDealRequestRequest": {
                 "type": "object",
                 "properties": {
@@ -21384,12 +21532,45 @@
                         "type": "array",
                         "items": {},
                         "readOnly": true
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "readOnly": true,
+                        "title": "В обороте",
+                        "description": "False — компания архивирована: скрыта из подбора и справочников, история сохранена"
+                    },
+                    "archived_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Архивирована"
+                    },
+                    "archived_reason": {
+                        "type": "string",
+                        "readOnly": true,
+                        "title": "Причина архивации"
+                    },
+                    "can_delete": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "delete_blocker": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Причина, по которой компанию нельзя удалить, — или None.\n\nСчитается только для операторского контекста: у члена компании такой кнопки нет, а\nобход держателей стоит нескольких запросов на строку.",
+                        "readOnly": true
                     }
                 },
                 "required": [
+                    "archived_at",
+                    "archived_reason",
+                    "can_delete",
                     "company_types",
                     "created_at",
+                    "delete_blocker",
                     "id",
+                    "is_active",
                     "is_verified",
                     "kyc_documents",
                     "name",

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-24 14:00+0500\n"
+"POT-Creation-Date: 2026-08-24 16:01+0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -184,7 +184,7 @@ msgstr "Rejected"
 
 #: accounts/models/applications.py:41
 #: accounts/models/company/company_settings.py:22
-#: accounts/models/company/contacts.py:19 accounts/models/company/core.py:245
+#: accounts/models/company/contacts.py:19 accounts/models/company/core.py:288
 #: accounts/models/company/document_profile.py:22
 #: accounts/models/company/membership.py:41
 #: accounts/models/company/membership.py:98 accounts/models/kyc.py:18
@@ -271,7 +271,7 @@ msgstr "Reviewed at"
 msgid "Дата подачи"
 msgstr "Submitted At"
 
-#: accounts/models/applications.py:121 accounts/models/company/core.py:239
+#: accounts/models/applications.py:121 accounts/models/company/core.py:260
 #: accounts/models/subscriptions.py:105 catalog/models/offers.py:136
 #: catalog/models/products.py:202 catalog/models/requests.py:123
 #: catalog/models/taxonomy.py:232 crm/models/charges.py:120
@@ -417,12 +417,12 @@ msgstr "Organization this contact belongs to"
 msgid "ФИО"
 msgstr "Full name"
 
-#: accounts/models/company/contacts.py:23 accounts/models/company/core.py:201
+#: accounts/models/company/contacts.py:23 accounts/models/company/core.py:222
 #: accounts/models/users.py:21 accounts/wizard.py:93 crm/models/deals.py:328
 msgid "Email"
 msgstr "Email"
 
-#: accounts/models/company/contacts.py:24 accounts/models/company/core.py:196
+#: accounts/models/company/contacts.py:24 accounts/models/company/core.py:217
 #: accounts/models/users.py:27 accounts/wizard.py:89 crm/models/deals.py:324
 msgid "Телефон"
 msgstr "Phone"
@@ -486,21 +486,21 @@ msgstr "Client invitation"
 msgid "Приглашения клиентов"
 msgstr "Client invitations"
 
-#: accounts/models/company/core.py:74 catalog/models/taxonomy.py:25
+#: accounts/models/company/core.py:95 catalog/models/taxonomy.py:25
 #: catalog/models/taxonomy.py:99 catalog/models/taxonomy.py:195
 #: crm/models/documents.py:40 master_data/models.py:20
 msgid "Название"
 msgstr "Title"
 
-#: accounts/models/company/core.py:75 accounts/wizard.py:43
+#: accounts/models/company/core.py:96 accounts/wizard.py:43
 msgid "Полное наименование организации"
 msgstr "Full organization name"
 
-#: accounts/models/company/core.py:87
+#: accounts/models/company/core.py:108
 msgid "Некорректный формат ИНН."
 msgstr "Invalid TIN format."
 
-#: accounts/models/company/core.py:88
+#: accounts/models/company/core.py:109
 #: accounts/models/company/document_profile.py:42 accounts/wizard.py:47
 #: crm/templates/crm/_document_base.html:277
 #: crm/templates/crm/_document_base.html:309
@@ -512,148 +512,172 @@ msgstr "Invalid TIN format."
 msgid "ИНН"
 msgstr "TIN"
 
-#: accounts/models/company/core.py:89 accounts/wizard.py:48
+#: accounts/models/company/core.py:110 accounts/wizard.py:48
 msgid "Идентификационный номер налогоплательщика"
 msgstr "Taxpayer identification number"
 
-#: accounts/models/company/core.py:99
+#: accounts/models/company/core.py:120
 msgid "ИНН (со слов, до проверки)"
 msgstr "TIN (as stated, before verification)"
 
-#: accounts/models/company/core.py:100
+#: accounts/models/company/core.py:121
 msgid "ИНН клиента, указанный продавцом; канонический ИНН присваивается на KYC"
 msgstr ""
 "Client TIN entered by the seller; the canonical TIN is assigned during KYC"
 
-#: accounts/models/company/core.py:106
+#: accounts/models/company/core.py:127
 msgid "Роли на платформе"
 msgstr "Platform roles"
 
-#: accounts/models/company/core.py:107
+#: accounts/models/company/core.py:128
 msgid "Роли компании: клиент, поставщик, производитель"
 msgstr "Company roles: client, supplier, manufacturer"
 
-#: accounts/models/company/core.py:115 accounts/models/lookups.py:70
+#: accounts/models/company/core.py:136 accounts/models/lookups.py:70
 #: accounts/wizard.py:135
 msgid "Статус верификации"
 msgstr "Verification Status"
 
-#: accounts/models/company/core.py:116
+#: accounts/models/company/core.py:137
 msgid "Текущий статус KYC-проверки компании"
 msgstr "Current KYC verification status of the company"
 
-#: accounts/models/company/core.py:146
+#: accounts/models/company/core.py:167
 msgid "Верифицирован"
 msgstr "Verified"
 
-#: accounts/models/company/core.py:147
+#: accounts/models/company/core.py:168
 msgid "Компания прошла базовую проверку RailTech"
 msgstr "The company has passed RailTech's basic verification"
 
-#: accounts/models/company/core.py:151
+#: accounts/models/company/core.py:172
 msgid "ISO 9001"
 msgstr "ISO 9001"
 
-#: accounts/models/company/core.py:152
+#: accounts/models/company/core.py:173
 msgid "Имеется сертификат качества ISO 9001"
 msgstr "Has an ISO 9001 quality certificate"
 
-#: accounts/models/company/core.py:156
+#: accounts/models/company/core.py:177
 msgid "Индекс доверия"
 msgstr "Trust score"
 
-#: accounts/models/company/core.py:157
+#: accounts/models/company/core.py:178
 msgid "Рейтинг доверия поставщика (0-100)"
 msgstr "Supplier trust rating (0-100)"
 
-#: accounts/models/company/core.py:165 catalog/models/taxonomy.py:204
+#: accounts/models/company/core.py:186 catalog/models/taxonomy.py:204
 #: master_data/models.py:91
 msgid "Страна"
 msgstr "Country"
 
-#: accounts/models/company/core.py:166 accounts/wizard.py:56
+#: accounts/models/company/core.py:187 accounts/wizard.py:56
 msgid "Страна регистрации юридического лица"
 msgstr "Country of incorporation of the legal entity"
 
-#: accounts/models/company/core.py:172
+#: accounts/models/company/core.py:193
 #: accounts/models/company/document_profile.py:47 accounts/wizard.py:78
 msgid "Юридический адрес"
 msgstr "Legal address"
 
-#: accounts/models/company/core.py:173
+#: accounts/models/company/core.py:194
 msgid "Полный юридический адрес организации"
 msgstr "Full legal address of the organization"
 
-#: accounts/models/company/core.py:178 accounts/wizard.py:103
+#: accounts/models/company/core.py:199 accounts/wizard.py:103
 msgid "Расчётный счёт"
 msgstr "Bank account"
 
-#: accounts/models/company/core.py:179
+#: accounts/models/company/core.py:200
 msgid "Номер расчётного счёта в банке"
 msgstr "Bank account number"
 
-#: accounts/models/company/core.py:184 accounts/wizard.py:108
+#: accounts/models/company/core.py:205 accounts/wizard.py:108
 msgid "МФО"
 msgstr "MFO code"
 
-#: accounts/models/company/core.py:185
+#: accounts/models/company/core.py:206
 msgid "Межфилиальный оборот (код банка)"
 msgstr "MFO — interbranch turnover (bank code)"
 
-#: accounts/models/company/core.py:190 accounts/wizard.py:83
+#: accounts/models/company/core.py:211 accounts/wizard.py:83
 #: crm/models/deals.py:51
 msgid "Контактное лицо"
 msgstr "Contact person"
 
-#: accounts/models/company/core.py:191
+#: accounts/models/company/core.py:212
 msgid "ФИО ответственного представителя компании"
 msgstr "Full name of the company's authorized representative"
 
-#: accounts/models/company/core.py:197
+#: accounts/models/company/core.py:218
 msgid "Контактный телефон компании"
 msgstr "Company contact phone"
 
-#: accounts/models/company/core.py:202
+#: accounts/models/company/core.py:223
 msgid "Основной email компании для уведомлений"
 msgstr "Primary company email for notifications"
 
-#: accounts/models/company/core.py:207 accounts/wizard.py:98
+#: accounts/models/company/core.py:228 accounts/wizard.py:98
 msgid "Веб-сайт"
 msgstr "Website"
 
-#: accounts/models/company/core.py:208
+#: accounts/models/company/core.py:229
 msgid "Адрес корпоративного сайта"
 msgstr "Corporate website URL"
 
-#: accounts/models/company/core.py:215 accounts/wizard.py:60
+#: accounts/models/company/core.py:236 accounts/wizard.py:60
 msgid "Логотип"
 msgstr "Logo"
 
-#: accounts/models/company/core.py:216
+#: accounts/models/company/core.py:237
 msgid "Логотип компании для отображения на платформе"
 msgstr "Company logo shown on the platform"
 
-#: accounts/models/company/core.py:220 accounts/wizard.py:145
+#: accounts/models/company/core.py:241 accounts/wizard.py:145
 msgid "Заметки по KYC"
 msgstr "KYC notes"
 
-#: accounts/models/company/core.py:221
+#: accounts/models/company/core.py:242
 msgid "Внутренние заметки менеджера (не видны клиенту)"
 msgstr "Internal manager notes (not visible to the client)"
 
-#: accounts/models/company/core.py:229
+#: accounts/models/company/core.py:250
 msgid "Зарегистрирована на платформе"
 msgstr "Registered on the platform"
 
-#: accounts/models/company/core.py:230
+#: accounts/models/company/core.py:251
 msgid "False — клиент заведён продавцом вручную (без входа в систему)"
 msgstr "False — the client was created manually by a seller (no system login)"
 
-#: accounts/models/company/core.py:235
+#: accounts/models/company/core.py:256
 msgid "Дата регистрации"
 msgstr "Registration date"
 
-#: accounts/models/company/core.py:246 core/dashboard.py:145
+#: accounts/models/company/core.py:271
+msgid "В обороте"
+msgstr "In circulation"
+
+#: accounts/models/company/core.py:272
+msgid ""
+"False — компания архивирована: скрыта из подбора и справочников, история "
+"сохранена"
+msgstr ""
+"False — the company is archived: hidden from the picker and directories, its "
+"history is kept"
+
+#: accounts/models/company/core.py:274
+msgid "Архивирована"
+msgstr "Archived at"
+
+#: accounts/models/company/core.py:281
+msgid "Кто архивировал"
+msgstr "Archived by"
+
+#: accounts/models/company/core.py:283
+msgid "Причина архивации"
+msgstr "Archive reason"
+
+#: accounts/models/company/core.py:289 core/dashboard.py:145
 msgid "Компании"
 msgstr "Companies"
 
