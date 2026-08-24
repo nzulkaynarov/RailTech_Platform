@@ -257,6 +257,7 @@ class ActSerializer(ViewerSidesMixin, serializers.ModelSerializer):
     # Действия ВЫПУСТИВШЕЙ стороны (A4): напомнить и аннулировать. Право считает сервер тем же
     # предикатом, что и сами сервисы, — иначе кнопка появится там, где действие откажет.
     viewer_can_remind = serializers.SerializerMethodField()
+    viewer_can_reissue = serializers.SerializerMethodField()
     viewer_can_cancel = serializers.SerializerMethodField()
     issuer_signer_name = serializers.CharField(source="issuer_signer.get_full_name", read_only=True, default=None)
     acceptor_signer_name = serializers.CharField(source="acceptor_signer.get_full_name", read_only=True, default=None)
@@ -291,6 +292,7 @@ class ActSerializer(ViewerSidesMixin, serializers.ModelSerializer):
             "viewer_can_reject",
             "viewer_can_remind",
             "viewer_can_cancel",
+            "viewer_can_reissue",
             "notes",
             "created_at",
             "updated_at",
@@ -353,6 +355,15 @@ class ActSerializer(ViewerSidesMixin, serializers.ModelSerializer):
         ):
             return False
         return True
+
+    def get_viewer_can_reissue(self, obj) -> bool:
+        """Возвращённый заказчиком акт выпускает заново ТОЛЬКО исполнитель.
+
+        До 24-08 у отклонённого акта оставалась одна кнопка — «Аннулировать», хотя диалог
+        отказа обещал заказчику, что исполнитель «выставит акт заново». Единственным способом
+        было вернуться на счета и нажать «Сформировать акт», что порождало ВТОРОЙ документ.
+        """
+        return obj.status_code == ActStatusCode.DRAFT and self._is_issuer_side(obj)
 
     def get_viewer_can_cancel(self, obj) -> bool:
         """Отозвать акт может ТОЛЬКО выпустившая сторона и только пока он не согласован обеими:

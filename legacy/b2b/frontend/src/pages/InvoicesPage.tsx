@@ -3,7 +3,7 @@ import { useDraftState } from '@/hooks/useDraftState';
 import { useHashOpenParam } from '@/hooks/useHashOpenParam';
 import { useListParams, applyListParams } from '@/components/DataTable/listParams';
 import {
-  useInvoices, useGenerateAct, useIssueInvoice, useCancelInvoice, useUpdateInvoiceDraft,
+  useInvoices, useGenerateAct, useIssueInvoice, useCancelInvoice, useUpdateInvoiceDraft, useActs,
 } from '@/hooks/useBilling';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { useCurrencyStore } from '@/store/currencyStore';
@@ -29,6 +29,10 @@ export function InvoicesPage() {
   const [cancelOpen, setCancelOpen] = useState(false);
 
   const { data: invoices, isLoading, isError, refetch } = useInvoices(undefined);
+  // Акты нужны, чтобы кнопка «Сформировать акт» не предлагала ВТОРОЙ закрывающий документ по
+  // тому же счёту: до 24-08 три нажатия давали три акта. Сервер такой запрос теперь отбивает,
+  // но предлагать действие, которое заведомо откажет, — это тупик; кнопка исчезает по факту.
+  const { data: acts } = useActs(undefined);
 
   // WP-G2 — deep link `#invoices?open=<id>` (the create-invoice wizard lands the seller here on
   // the new DRAFT's editor). Open the Sheet from the id, then strip the param so a manual close /
@@ -42,6 +46,12 @@ export function InvoicesPage() {
   const selected = useMemo(
     () => (invoices ?? []).find((invoice) => invoice.id === selectedId) ?? null,
     [invoices, selectedId],
+  );
+  // Живой акт по выбранному счёту — ВЫЧИСЛЕНИЕ, не состояние: аннулированный акт документом
+  // не считается, по нему выпуск разрешён заново.
+  const liveActForSelected = useMemo(
+    () => (acts ?? []).find((act) => act.invoice === selectedId && act.status !== 'CANCELLED') ?? null,
+    [acts, selectedId],
   );
   const formatCurrency = useCurrencyStore((s) => s.format);
   const generateAct = useGenerateAct();
@@ -308,7 +318,7 @@ export function InvoicesPage() {
                       {t('invoicesPage.recordPayment')}
                     </Button>
                   )}
-                  {selected.viewer_can_manage && selected.status !== 'CANCELLED' && (
+                  {selected.viewer_can_manage && selected.status !== 'CANCELLED' && !liveActForSelected && (
                     <Button
                       variant="outline"
                       onClick={onGenerateAct}

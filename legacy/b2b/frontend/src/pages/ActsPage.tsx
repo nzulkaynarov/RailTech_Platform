@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'; import { useTranslation } from 'react-i18next'; import { toast } from 'sonner'; import { translateApiError } from '@/lib/apiError'; import { formatDate, formatDateTime } from '@/lib/formatLocale'; import { extractBlobErrorCode, fetchDocumentBlob, saveBlob } from '@/lib/documents'; import { ScrollText, PenLine, Download, Ban, BellRing } from 'lucide-react'; import { DocumentActions } from '@/components/Shared/DocumentActions'; import { ManualModeBanner } from '@/components/Shared/ManualModeBanner'; import { Badge } from '@/components/ui/badge'; import { Button } from '@/components/ui/button'; import { Label } from '@/components/ui/label'; import {   Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, } from '@/components/ui/sheet'; import { PageShell } from './shared/PageShell'; import { DocumentRegistry } from '@/components/Documents/DocumentRegistry'; import { useDocumentCoreColumns } from '@/components/Documents/useDocumentCoreColumns'; import { Toolbar } from '@/components/DataTable';
 import { useListParams, applyListParams } from '@/components/DataTable/listParams';
-import { useActs, useSignAct, useRejectAct, useRemindAct, useCancelAct } from '@/hooks/useBilling';
+import { useActs, useSignAct, useRejectAct, useRemindAct, useCancelAct, useReissueAct } from '@/hooks/useBilling';
 import { RejectActDialog } from '@/components/Billing/RejectActDialog';
 import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';
 import { useIsViewerMode } from '@/hooks/useViewerMode';
@@ -100,6 +100,7 @@ export function ActsPage() {
   const rejectAct = useRejectAct();
   const remindAct = useRemindAct();
   const cancelAct = useCancelAct();
+  const reissueAct = useReissueAct();
   const [rejectOpen, setRejectOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const isViewer = useIsViewerMode();
@@ -138,6 +139,18 @@ export function ActsPage() {
     try {
       await remindAct.mutateAsync(id);
       toast.success(t('actsPage.reminded'));
+    } catch (e) {
+      toast.error(translateApiError(e));
+    }
+  };
+
+  const onReissue = async (id: number) => {
+    // Возвращённый акт выпускается ЗАНОВО — тот же документ и тот же номер. Раньше у него
+    // оставалась одна кнопка «Аннулировать», а «выставить заново» приходилось делать со
+    // страницы счетов, что порождало ВТОРОЙ акт по тому же счёту.
+    try {
+      await reissueAct.mutateAsync(id);
+      toast.success(t('actsPage.reissued'));
     } catch (e) {
       toast.error(translateApiError(e));
     }
@@ -335,6 +348,16 @@ export function ActsPage() {
                   <p className="text-xs text-muted-foreground">
                     {t('actsPage.remindedAt', { at: formatDateTime(selected.reminder_sent_at) })}
                   </p>
+                )}
+                {selected.viewer_can_reissue && (
+                  <Button
+                    onClick={() => onReissue(selected.id)}
+                    disabled={isViewer || reissueAct.isPending}
+                    title={isViewer ? viewerTip : undefined}
+                  >
+                    <PenLine className="mr-2 h-4 w-4" />
+                    {t('actsPage.reissue')}
+                  </Button>
                 )}
                 {selected.viewer_can_cancel && (
                   <Button

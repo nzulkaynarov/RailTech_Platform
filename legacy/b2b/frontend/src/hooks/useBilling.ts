@@ -279,6 +279,17 @@ export const useRemindAct = () => {
   });
 };
 
+export const useReissueAct = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => actsApi.reissue(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['acts'] });
+      invalidateDealChain(qc);
+    },
+  });
+};
+
 export const useCancelAct = () => {
   const qc = useQueryClient();
   return useMutation({

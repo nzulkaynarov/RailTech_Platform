@@ -3285,6 +3285,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/acts/{id}/reissue/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Re-issue a rejected act — issuer side only
+         * @description Заказчик вернул акт с причиной, исполнитель исправил и выпускает ЗАНОВО. Тот же документ и тот же номер — второй акт по счёту не создаётся (эталон Odoo: исправленный черновик подтверждают, а не плодят рядом второй). Редакция шаблона и формулировки замораживаются заново — это новая выдача.
+         */
+        post: operations["crm_acts_reissue_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/acts/{id}/reject/": {
         parameters: {
             query?: never;
@@ -7023,6 +7043,14 @@ export interface components {
              *     закрытый документ не «разподписывают» (у DocuSign и Adobe отзыв тоже терминален).
              */
             readonly viewer_can_cancel: boolean;
+            /**
+             * @description Возвращённый заказчиком акт выпускает заново ТОЛЬКО исполнитель.
+             *
+             *     До 24-08 у отклонённого акта оставалась одна кнопка — «Аннулировать», хотя диалог
+             *     отказа обещал заказчику, что исполнитель «выставит акт заново». Единственным способом
+             *     было вернуться на счета и нажать «Сформировать акт», что порождало ВТОРОЙ документ.
+             */
+            readonly viewer_can_reissue: boolean;
             notes?: string;
             /** Format: date-time */
             readonly created_at: string;
@@ -19165,6 +19193,35 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Act"];
                 };
+            };
+        };
+    };
+    crm_acts_reissue_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Акт. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Act"];
+                };
+            };
+            /** @description ACT_REISSUE_NOT_ALLOWED / ACT_ISSUER_SIDE_REQUIRED */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

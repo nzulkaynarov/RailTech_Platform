@@ -490,6 +490,21 @@ def generate_act(
     if invoice.status_code not in {InvoiceStatusCode.PAID, InvoiceStatusCode.PARTIAL, InvoiceStatusCode.ISSUED}:
         return None, "ACT_INVALID_INVOICE_STATUS"
 
+    # Закрывающий документ по счёту ОДИН. Защиты не было ни в модели, ни здесь: три нажатия
+    # кнопки давали три акта с разными номерами на одну и ту же сумму (замер 24-08 — акты на
+    # 336 при счёте на 112). Ни в одном эталоне второй закрывающий документ не рождается
+    # кнопкой: в Odoo повторная валидация запрещена, исправление оформляется отдельной
+    # сущностью (кредит-нота), в SAP — сторно. Такой сущности у нас нет, поэтому дубль
+    # запрещён, а исправление идёт через аннулирование или повторный выпуск.
+    live_act = Act.objects.filter(invoice=invoice).exclude(status__code=ActStatusCode.CANCELLED).order_by("-id").first()
+    if live_act is not None:
+        # Отклонённый акт возвращается в DRAFT, и интерфейс обещает заказчику «исполнитель
+        # выставит акт заново». Выпускать ЗАНОВО надо тот же документ (Odoo подтверждает
+        # черновик, а не плодит второй), поэтому здесь называем существующий, а не молчим.
+        if live_act.status_code == ActStatusCode.DRAFT:
+            return None, f"ACT_AWAITING_REISSUE:{live_act.id}"
+        return None, f"ACT_ALREADY_EXISTS:{live_act.id}"
+
     # Seller company = the КП author's owning company → its prefix + per-company counter.
     from .document_blocks import frozen_body_for
     from .quotes import _quote_seller_company
@@ -773,6 +788,80 @@ def reject_act(act_id: int, actor: CustomUser, reason: str = "") -> Tuple[Option
 #: (manual reminder «once every 24 hours»): без него кнопка превращается в инструмент спама,
 #: а доставляемость считается по домену целиком — мусорные письма бьют по критичным.
 ACT_REMINDER_COOLDOWN_HOURS = 24
+
+
+@transaction.atomic
+def reissue_act(act_id: int, actor: CustomUser) -> Tuple[Optional[object], Optional[str]]:
+    """Исполнитель выпускает ЗАНОВО акт, который заказчик вернул с причиной.
+
+    Отклонение возвращает акт в DRAFT, и диалог отказа прямо обещает заказчику: «исполнитель
+    увидит причину и выставит акт заново». Пути для этого не существовало — у DRAFT-акта
+    оставалась одна кнопка «Аннулировать», а «Сформировать акт» на счёте порождала ВТОРОЙ
+    документ. Эталон — Odoo: исправленный черновик подтверждают, а не создают рядом второй.
+
+    Редакция шаблона и формулировки замораживаются заново: это новая выдача документа, и
+    печатать он должен то, что действует сейчас (E3/E4). Номер сохраняется — документ тот же.
+    """
+    from django.utils import timezone
+
+    from accounts.services import assert_seller_can_operate, is_platform_admin_viewer
+
+    from .document_blocks import frozen_body_for
+
+    if is_platform_admin_viewer(actor):
+        return None, "ADMIN_VIEWER_CANNOT_ACT"
+    act = _locked_act(act_id)
+    if act.status_code != ActStatusCode.DRAFT:
+        return None, "ACT_REISSUE_NOT_ALLOWED"
+    # Сторону проверяем ДО подписки: заказчику, который вернул акт, надо ответить «это не ваше
+    # действие», а не «нужна подписка продавца» — иначе отказ уводит в ложную сторону.
+    if act_viewer_side(actor, act) != "issuer":
+        return None, "ACT_ISSUER_SIDE_REQUIRED"
+    if sub_err := assert_seller_can_operate(actor):
+        return None, sub_err
+
+    seller_company = _invoice_seller_company(act.invoice) if act.invoice_id else None
+    act.status = _astatus(ActStatusCode.ISSUED)
+    act.issued_at = timezone.localdate()
+    act.issuer_signer = actor
+    act.issuer_signed_at = timezone.now()
+    # Причина прошлого отказа снимается с документа, но НЕ пропадает: она осталась в журнале
+    # и в уведомлении — иначе на выпущенном заново акте висел бы чужой отказ.
+    act.rejection_reason = ""
+    act.frozen_template_body = frozen_body_for(seller_company, "ACT")
+    act.wording_selections = _act_wordings(seller_company)
+    act.save(
+        update_fields=[
+            "status",
+            "issued_at",
+            "issuer_signer",
+            "issuer_signed_at",
+            "rejection_reason",
+            "frozen_template_body",
+            "wording_selections",
+            "updated_at",
+        ]
+    )
+    ActivityLog.objects.create(
+        action="Акт выпущен заново",
+        detail=f"Акт {act.number} по сделке #{act.deal_id}",
+        event_code="act.reissued",
+        event_params={"number": act.number, "deal_id": act.deal_id},
+        user=actor,
+        level="INFO",
+        deal=act.deal,
+        company_id=act.deal.company_id,
+    )
+
+    from ..tasks import render_document_pdf
+    from .deal_emails import email_act_awaiting_acceptance
+    from .deal_notifications import notify_act_issued
+
+    act_id_value = act.id
+    transaction.on_commit(lambda: render_document_pdf.delay("act", act_id_value))
+    transaction.on_commit(lambda: notify_act_issued(act))
+    email_act_awaiting_acceptance(act)
+    return act, None
 
 
 @transaction.atomic

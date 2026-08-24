@@ -99,6 +99,7 @@ function makeAct(id: number, canSign = true): Act {
     viewer_can_reject: canSign,
     viewer_can_remind: false,
     viewer_can_cancel: false,
+    viewer_can_reissue: false,
     cancellation_reason: '',
     reminder_sent_at: null,
     issuer_signer: null,

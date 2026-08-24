@@ -9033,6 +9033,47 @@
                 }
             }
         },
+        "/api/v1/crm/acts/{id}/reissue/": {
+            "post": {
+                "operationId": "crm_acts_reissue_create",
+                "description": "Заказчик вернул акт с причиной, исполнитель исправил и выпускает ЗАНОВО. Тот же документ и тот же номер — второй акт по счёту не создаётся (эталон Odoo: исправленный черновик подтверждают, а не плодят рядом второй). Редакция шаблона и формулировки замораживаются заново — это новая выдача.",
+                "summary": "Re-issue a rejected act — issuer side only",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Акт.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Act"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "ACT_REISSUE_NOT_ALLOWED / ACT_ISSUER_SIDE_REQUIRED"
+                    }
+                }
+            }
+        },
         "/api/v1/crm/acts/{id}/reject/": {
             "post": {
                 "operationId": "crm_acts_reject_create",
@@ -20233,6 +20274,11 @@
                         "description": "Отозвать акт может ТОЛЬКО выпустившая сторона и только пока он не согласован обеими:\nзакрытый документ не «разподписывают» (у DocuSign и Adobe отзыв тоже терминален).",
                         "readOnly": true
                     },
+                    "viewer_can_reissue": {
+                        "type": "boolean",
+                        "description": "Возвращённый заказчиком акт выпускает заново ТОЛЬКО исполнитель.\n\nДо 24-08 у отклонённого акта оставалась одна кнопка — «Аннулировать», хотя диалог\nотказа обещал заказчику, что исполнитель «выставит акт заново». Единственным способом\nбыло вернуться на счета и нажать «Сформировать акт», что порождало ВТОРОЙ документ.",
+                        "readOnly": true
+                    },
                     "notes": {
                         "type": "string"
                     },
@@ -20269,6 +20315,7 @@
                     "status_name",
                     "updated_at",
                     "viewer_can_cancel",
+                    "viewer_can_reissue",
                     "viewer_can_reject",
                     "viewer_can_remind",
                     "viewer_can_sign"

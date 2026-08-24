@@ -37,6 +37,7 @@ STEP_CREATE_INVOICE = "CREATE_INVOICE"
 STEP_ISSUE_INVOICE = "ISSUE_INVOICE"
 STEP_PAY_INVOICE = "PAY_INVOICE"
 STEP_GENERATE_ACT = "GENERATE_ACT"
+STEP_REISSUE_ACT = "REISSUE_ACT"
 STEP_SIGN_ACT = "SIGN_ACT"
 STEP_SHIP = "SHIP"
 STEP_ACCEPT_DELIVERY = "ACCEPT_DELIVERY"
@@ -298,7 +299,21 @@ def _generate_act_step(acts: list, fulfillment_data: Optional[dict], sides: dict
     в SAP — к приёмке получателем, а IFRS 15 / ASC 606 признают выручку по передаче контроля, а
     не по факту платежа. Поэтому условие — состоявшаяся поставка.
     """
-    if acts or fulfillment_data is None:
+    # Аннулированный акт цепочку НЕ закрывает: он мёртв, закрывающего документа у сделки нет.
+    # Раньше подсказку гасило наличие ЛЮБОГО акта, и система рапортовала «Завершено» по сделке
+    # без единого живого закрывающего документа (замер 24-08).
+    live_acts = [act for act in acts if act["status"] != ActStatusCode.CANCELLED]
+    rejected = next((act for act in live_acts if act["status"] == ActStatusCode.DRAFT), None)
+    if rejected is not None:
+        # Заказчик вернул акт с причиной — следующий шаг исполнителя именно этот документ,
+        # а не второй рядом (иначе продавец шёл на счета и плодил дубль).
+        return _step(
+            STEP_REISSUE_ACT,
+            for_viewer=sides["is_seller_side"],
+            page="acts",
+            object_id=rejected["id"],
+        )
+    if live_acts or fulfillment_data is None:
         return None
     delivered = fulfillment_data["status"] in (FulfillmentStatusCode.DELIVERED, FulfillmentStatusCode.ACCEPTED)
     if not delivered:
@@ -368,7 +383,9 @@ def deal_execution_is_complete(deal) -> bool:
     invoices = list(deal.invoices.all())
     if not invoices or any(inv.status_code != InvoiceStatusCode.PAID for inv in invoices):
         return False
-    acts = list(deal.acts.all())
+    # Аннулированный акт — не незакрытый документ, а отменённый: он не должен вечно держать
+    # сделку в «не завершено». Считаем только живые, но хотя бы один подписанный обязан быть.
+    acts = [act for act in deal.acts.all() if act.status_code != ActStatusCode.CANCELLED]
     if not acts or any(act.status_code != ActStatusCode.SIGNED for act in acts):
         return False
     fulfillment = getattr(deal, "fulfillment", None)

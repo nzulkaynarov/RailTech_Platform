@@ -3136,6 +3136,8 @@
     "remind": "Remind the customer",
     "reminded": "Reminder sent to the customer",
     "remindedAt": "Reminder sent {{at}} — the next one is available in 24 hours",
+    "reissue": "Re-issue",
+    "reissued": "The act was re-issued — the customer has been notified",
     "cancel": "Cancel act",
     "cancelled": "Act cancelled",
     "cancelledWithReason": "Cancelled by the issuer: {{reason}}",
@@ -3605,6 +3607,9 @@
     "TEMPLATE_IN_USE": "Documents have already been issued from this template — it cannot be deleted. Deactivate it instead",
     "KYC_DOCUMENTS_MISSING": "Company has no KYC documents uploaded",
     "KYC_REASON_REQUIRED_WITHOUT_EVIDENCE": "Verifying without checked evidence requires a reason — it goes into the audit trail",
+    "ACT_ALREADY_EXISTS": "An act for this invoice already exists — a second closing document is not created",
+    "ACT_AWAITING_REISSUE": "The act for this invoice came back with a remark — re-issue it instead of creating a second one",
+    "ACT_REISSUE_NOT_ALLOWED": "Only an act returned by the customer can be re-issued",
     "KYC_LEVEL_UNCHANGED": "The company is already at this KYC level — nothing to change",
     "ROLE_APPLICATION_CANNOT_APPROVE": "Application cannot be approved in current status",
     "ROLE_APPLICATION_CANNOT_REJECT": "Application cannot be rejected in current status",
@@ -4318,6 +4323,10 @@
         "title": "Act cancelled by the issuer",
         "detail": "Act {{number}} for deal #{{deal_id}}: {{reason}}"
       },
+      "reissued": {
+        "title": "Act re-issued",
+        "detail": "Act {{number}} for deal #{{deal_id}}"
+      },
       "reminded": {
         "title": "Reminder sent for the act",
         "detail": "Act {{number}} for deal #{{deal_id}}: the customer was reminded"
@@ -4631,6 +4640,11 @@
         "action": "Go to invoices",
         "waiting": "Payment received. The seller is preparing the act."
       },
+      "REISSUE_ACT": {
+        "title": "The act came back with a remark — re-issue it",
+        "action": "Open the act",
+        "waiting": "The act went back to the seller — awaiting a corrected one."
+      },
       "SIGN_ACT": {
         "title": "The act is issued and awaits a signature",
         "action": "Open act",
@@ -4714,6 +4728,10 @@
     "act.rejected": {
       "title": "Act rejected by the customer",
       "message": "Act {{number}} on deal #{{deal_id}} was returned for rework: {{reason}}"
+    },
+    "act.reissued": {
+      "title": "Act re-issued",
+      "message": "Act {{number}} on deal #{{deal_id}} was issued again after rework"
     },
     "act.cancelled": {
       "title": "Act cancelled by the issuer",

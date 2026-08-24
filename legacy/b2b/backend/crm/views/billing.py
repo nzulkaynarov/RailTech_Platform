@@ -719,6 +719,28 @@ class ActViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({"detail": err}, status=400)
         return Response(ActSerializer(act, context=self.get_serializer_context()).data)
 
+    @extend_schema(
+        summary="Re-issue a rejected act — issuer side only",
+        description=(
+            "Заказчик вернул акт с причиной, исполнитель исправил и выпускает ЗАНОВО. Тот же "
+            "документ и тот же номер — второй акт по счёту не создаётся (эталон Odoo: "
+            "исправленный черновик подтверждают, а не плодят рядом второй). Редакция шаблона "
+            "и формулировки замораживаются заново — это новая выдача."
+        ),
+        request=None,
+        responses={
+            200: ActSerializer,
+            400: OpenApiResponse(description="ACT_REISSUE_NOT_ALLOWED / ACT_ISSUER_SIDE_REQUIRED"),
+        },
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["post"], url_path="reissue")
+    def reissue(self, request, pk=None):
+        act, err = crm_services.reissue_act(self.get_object().id, request.user)
+        if err:
+            return Response({"detail": err}, status=400)
+        return Response(ActSerializer(act, context=self.get_serializer_context()).data)
+
 
 class FulfillmentViewSet(viewsets.ReadOnlyModelViewSet):
     """Отгрузки — только чтение плюс экшен `update-status` (Rule 8).

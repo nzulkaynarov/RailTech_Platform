@@ -187,6 +187,8 @@ export interface Act {
    */
   viewer_can_remind: boolean;
   viewer_can_cancel: boolean;
+  /** Возвращённый заказчиком акт выпускает заново ТОЛЬКО исполнитель (сторону считает сервер). */
+  viewer_can_reissue: boolean;
   issuer_signer: number | null;
   issuer_signer_name: string | null;
   issuer_signed_at: string | null;
@@ -238,6 +240,11 @@ export const actsApi = {
   // Отзыв акта выпустившей стороной: причина обязательна и уходит заказчику.
   cancel: async (id: number, reason: string) => {
     const response = await apiClient.post<Act>(`crm/acts/${id}/cancel/`, { reason });
+    return response.data;
+  },
+  // Повторный выпуск возвращённого акта: тот же документ и тот же номер, второй не создаётся.
+  reissue: async (id: number) => {
+    const response = await apiClient.post<Act>(`crm/acts/${id}/reissue/`);
     return response.data;
   },
 };

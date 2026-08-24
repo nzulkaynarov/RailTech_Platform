@@ -47,6 +47,7 @@ function makeAct(overrides: Partial<Act>): Act {
     viewer_can_reject: false,
     viewer_can_remind: false,
     viewer_can_cancel: false,
+    viewer_can_reissue: false,
     cancellation_reason: '',
     reminder_sent_at: null,
     issuer_signer: 5,
