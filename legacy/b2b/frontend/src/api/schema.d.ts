@@ -863,6 +863,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/accounts/role-applications/{id}/request-documents/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request the missing documents instead of rejecting
+         * @description Статус DOCUMENTS_REQUIRED был в модели с самого начала, но поставить его было нечем: в меню строки жили только «Одобрить» и «Отклонить», и оператору оставалось закрыть путь целиком. Эталон — Stripe verification «information needed» и Salesforce «Request more info».
+         */
+        post: operations["accounts_role_applications_request_documents_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/accounts/subscriptions/": {
         parameters: {
             query?: never;
@@ -7049,7 +7069,6 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List ticket messages
          * @description Канал прямой связи: любой пользователь создаёт тикет, Platform Admin
          *     ведёт переписку и меняет статус.
          *
@@ -7057,7 +7076,27 @@ export interface paths {
          *     - Platform Admin: видит все тикеты, меняет статус, назначает исполнителя,
          *       оставляет внутренние заметки (is_internal=True).
          */
-        get: operations["support_tickets_messages_list"];
+        get: operations["support_tickets_messages_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/support/tickets/stats/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List ticket messages
+         * @description Плитки экрана поддержки считались по `data.results` — то есть по ОДНОЙ странице из двадцати строк, тогда как рядом `Всего` бралось из `count`. При 57 тикетах экран показывал «Открытых 20» и «Срочных 0», хотя срочные лежали на страницах 2 и 3. Счётчики обязаны считаться по той же выборке, что и список — со всеми фильтрами и поиском, но без постраничного среза.
+         */
+        get: operations["support_tickets_stats_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -13262,6 +13301,9 @@ export interface components {
         RemoveMemberRequest: {
             member_id: number;
         };
+        RequestApplicationDocsRequest: {
+            reason: string;
+        };
         ResetPasswordRequest: {
             uid: string;
             token: string;
@@ -15730,6 +15772,41 @@ export interface operations {
                 };
             };
             /** @description Already processed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    accounts_role_applications_request_documents_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Заявка на роль компании. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestApplicationDocsRequest"];
+                "multipart/form-data": components["schemas"]["RequestApplicationDocsRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["RequestApplicationDocsRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanyRoleApplication"];
+                };
+            };
+            /** @description ROLE_APPLICATION_CANNOT_REQUEST_DOCS */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -25878,7 +25955,29 @@ export interface operations {
             };
         };
     };
-    support_tickets_messages_list: {
+    support_tickets_messages_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Тикет поддержки. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportTicket"];
+                };
+            };
+        };
+    };
+    support_tickets_stats_list: {
         parameters: {
             query?: {
                 assigned_to?: number;
@@ -25921,10 +26020,7 @@ export interface operations {
                 status__in?: string[];
             };
             header?: never;
-            path: {
-                /** @description A unique integer value identifying this Тикет поддержки. */
-                id: number;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;

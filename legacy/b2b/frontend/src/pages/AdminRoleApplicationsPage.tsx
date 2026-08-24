@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import {
-  ClipboardCheck, Check, X, FileText, Download,
+  ClipboardCheck, Check, X, FileText, Download, FileUp,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/lib/formatLocale';
@@ -10,7 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
 } from '@/components/ui/sheet';
-import { useRoleApplications, useApproveRoleApplication, useRejectRoleApplication } from '@/hooks/useAccounts';
+import { useRoleApplications, useApproveRoleApplication, useRejectRoleApplication, useRequestRoleApplicationDocuments } from '@/hooks/useAccounts';
 import { AdminDataTable } from '@/components/Admin/AdminDataTable';
 import { useAdminTableQueryState } from '@/components/Admin/useAdminTableQueryState';
 import { AdminDetailLayout } from '@/components/Admin/AdminDetailLayout';
@@ -240,10 +240,11 @@ export function AdminRoleApplicationsPage() {
   const { statusLabel, requestedTypeLabel } = useRoleAppLabels();
   const approveMutation = useApproveRoleApplication();
   const rejectMutation = useRejectRoleApplication();
+  const requestDocsMutation = useRequestRoleApplicationDocuments();
 
   const [detailTarget, setDetailTarget] = useState<RoleApplication | null>(null);
   const [confirm, setConfirm] = useState<null | {
-    kind: 'approve' | 'reject';
+    kind: 'approve' | 'reject' | 'request-docs';
     app: RoleApplication;
   }>(null);
 
@@ -299,6 +300,14 @@ export function AdminRoleApplicationsPage() {
   async function runReject(app: RoleApplication, reason: string) {
     await rejectMutation.mutateAsync({ id: app.id, reason });
     toast.success(t('admin.roleApps.rejected'));
+    setConfirm(null);
+  }
+
+  // Запросить недостающее вместо отказа: статус DOCUMENTS_REQUIRED существовал, а поставить
+  // его было нечем — оператору оставалось закрыть путь целиком.
+  async function runRequestDocs(app: RoleApplication, reason: string) {
+    await requestDocsMutation.mutateAsync({ id: app.id, reason });
+    toast.success(t('admin.roleApps.docsRequested'));
     setConfirm(null);
   }
 
@@ -385,6 +394,16 @@ export function AdminRoleApplicationsPage() {
             },
           },
           {
+            id: 'request-docs',
+            label: t('admin.roleApps.requestDocs'),
+            icon: <FileUp className="h-3.5 w-3.5" />,
+            // Статус DOCUMENTS_REQUIRED существовал в модели с самого начала, но поставить
+            // его было нечем: оператору оставалось отклонить заявку целиком — то есть
+            // закрыть путь вместо того, чтобы попросить недостающее.
+            disabled: (a) => !['PENDING', 'PAYMENT_REQUIRED'].includes(a.status),
+            onRun: (a) => setConfirm({ kind: 'request-docs', app: a }),
+          },
+          {
             id: 'reject',
             label: t('admin.roleApps.reject'),
             icon: <X className="h-3.5 w-3.5 text-destructive" />,
@@ -457,6 +476,25 @@ export function AdminRoleApplicationsPage() {
         variant="destructive"
         onConfirm={(p) =>
           confirm?.kind === 'reject' ? runReject(confirm.app, p.reason) : Promise.resolve()
+        }
+        translateError={(code) => translateApiError(code)}
+      />
+
+      <ConfirmActionDialog
+        open={confirm?.kind === 'request-docs'}
+        onOpenChange={(v) => !v && setConfirm(null)}
+        title={t('admin.roleApps.requestDocsDialog.title')}
+        description={
+          confirm?.kind === 'request-docs'
+            ? t('admin.roleApps.requestDocsDialog.description', { company: confirm.app.company_name })
+            : ''
+        }
+        requireReason
+        reasonLabel={t('admin.roleApps.requestDocsDialog.reason')}
+        confirmLabel={t('admin.roleApps.requestDocsDialog.confirm')}
+        variant="warning"
+        onConfirm={(payload) =>
+          confirm?.kind === 'request-docs' ? runRequestDocs(confirm.app, payload.reason) : Promise.resolve()
         }
         translateError={(code) => translateApiError(code)}
       />

@@ -904,6 +904,14 @@
         "confirm": "Reject Application",
         "cancel": "Cancel"
       },
+      "requestDocs": "Request documents",
+      "docsRequested": "Documents requested — the applicant will attach them",
+      "requestDocsDialog": {
+        "title": "Request the missing documents?",
+        "description": "The application from \u201c{{company}}\u201d goes back to the applicant: they attach the documents and it returns to your queue. No need to reject it for that.",
+        "reason": "What exactly is missing",
+        "confirm": "Request"
+      },
       "rejectTemplates": {
         "docsInvalid": "Documents are unreadable or do not meet requirements",
         "outOfScope": "Application does not match the requested role",
@@ -3641,6 +3649,7 @@
     "ACT_AWAITING_REISSUE": "The act for this invoice came back with a remark — re-issue it instead of creating a second one",
     "ACT_REISSUE_NOT_ALLOWED": "Only an act returned by the customer can be re-issued",
     "COMPANY_NOT_FOUND": "Company not found",
+    "ROLE_APPLICATION_CANNOT_REQUEST_DOCS": "Documents can only be requested for an application under review",
     "LEAD_NOT_ROUTED": "The lead has not been assigned to a company yet — it cannot be taken",
     "LEAD_NOT_YOURS": "The lead is assigned to another company",
     "PLATFORM_OPERATOR_REQUIRED": "Only a platform operator can do this",
@@ -4461,6 +4470,12 @@
           "detail": "{{company_name}}"
         }
       },
+      "role_application": {
+        "documents_requested": {
+          "title": "Documents requested for the role application",
+          "detail": "{{company_name}} → {{requested_type}}"
+        }
+      },
       "lead": {
         "routed": {
           "title": "Lead assigned to a company",
@@ -4749,6 +4764,15 @@
     "pendingHint": "A platform operator will review it and let you know. No need to apply again.",
     "rejected": "The previous application was rejected",
     "rejectedWithReason": "The previous application was rejected: {{reason}}",
+    "docs": {
+      "contract": "Contract",
+      "nda": "NDA (non-disclosure agreement)",
+      "partnership": "Partnership agreement"
+    },
+    "docsRequested": "The operator asks you to attach the missing documents.",
+    "docsRequestedWithReason": "The operator asks you to attach the missing documents: {{reason}}",
+    "docsUploaded": "Documents sent — the application is back in review",
+    "uploadDocs": "Send documents",
     "allRolesGranted": "All available roles are already granted"
   },
   "recordHistory": {

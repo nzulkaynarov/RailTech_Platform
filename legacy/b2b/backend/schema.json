@@ -2691,6 +2691,67 @@
                 }
             }
         },
+        "/api/v1/accounts/role-applications/{id}/request-documents/": {
+            "post": {
+                "operationId": "accounts_role_applications_request_documents_create",
+                "description": "Статус DOCUMENTS_REQUIRED был в модели с самого начала, но поставить его было нечем: в меню строки жили только «Одобрить» и «Отклонить», и оператору оставалось закрыть путь целиком. Эталон — Stripe verification «information needed» и Salesforce «Request more info».",
+                "summary": "Request the missing documents instead of rejecting",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Заявка на роль компании.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Accounts"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RequestApplicationDocsRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RequestApplicationDocsRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RequestApplicationDocsRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CompanyRoleApplication"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "ROLE_APPLICATION_CANNOT_REQUEST_DOCS"
+                    }
+                }
+            }
+        },
         "/api/v1/accounts/subscriptions/": {
             "get": {
                 "operationId": "accounts_subscriptions_list",
@@ -20085,8 +20146,45 @@
         },
         "/api/v1/support/tickets/{id}/messages/": {
             "get": {
-                "operationId": "support_tickets_messages_list",
+                "operationId": "support_tickets_messages_retrieve",
                 "description": "Канал прямой связи: любой пользователь создаёт тикет, Platform Admin\nведёт переписку и меняет статус.\n\n- пользователь: видит свои тикеты, может создавать и отвечать;\n- Platform Admin: видит все тикеты, меняет статус, назначает исполнителя,\n  оставляет внутренние заметки (is_internal=True).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Тикет поддержки.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "support"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SupportTicket"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/support/tickets/stats/": {
+            "get": {
+                "operationId": "support_tickets_stats_list",
+                "description": "Плитки экрана поддержки считались по `data.results` — то есть по ОДНОЙ странице из двадцати строк, тогда как рядом `Всего` бралось из `count`. При 57 тикетах экран показывал «Открытых 20» и «Срочных 0», хотя срочные лежали на страницах 2 и 3. Счётчики обязаны считаться по той же выборке, что и список — со всеми фильтрами и поиском, но без постраничного среза.",
                 "summary": "List ticket messages",
                 "parameters": [
                     {
@@ -20131,15 +20229,6 @@
                         "schema": {
                             "type": "integer"
                         }
-                    },
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Тикет поддержки.",
-                        "required": true
                     },
                     {
                         "name": "ordering",
@@ -31190,6 +31279,18 @@
                 },
                 "required": [
                     "member_id"
+                ]
+            },
+            "RequestApplicationDocsRequest": {
+                "type": "object",
+                "properties": {
+                    "reason": {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                },
+                "required": [
+                    "reason"
                 ]
             },
             "ResetPasswordRequest": {

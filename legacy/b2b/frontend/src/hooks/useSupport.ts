@@ -12,6 +12,19 @@ export const useSupportTickets = (params?: SupportTicketListParams) =>
         queryFn: () => supportApi.listTickets(params),
     });
 
+/** Счётчики плиток — по ВСЕЙ выборке, а не по текущей странице.
+ *  Ключ включает фильтры без `page`/`page_size`: смена страницы не должна перезапрашивать
+ *  счётчики, а смена фильтра — обязана. */
+export const useSupportTicketStats = (params?: SupportTicketListParams) => {
+    const scope = { ...(params ?? {}) };
+    delete scope.page;
+    delete scope.page_size;
+    return useQuery({
+        queryKey: ['support-ticket-stats', scope],
+        queryFn: () => supportApi.getStats(scope),
+    });
+};
+
 export const useSupportTicket = (id: number | null) =>
     useQuery({
         queryKey: ['support-ticket', id],

@@ -61,12 +61,29 @@ export interface CreateTicketPayload {
 
 const RESOURCE = 'support/tickets/';
 
+export interface SupportTicketStats {
+    total: number;
+    open: number;
+    in_progress: number;
+    urgent: number;
+}
+
 export const supportApi = {
     listTickets: async (params?: SupportTicketListParams) => {
         const response = await apiClient.get<PaginatedResponse<SupportTicket>>(
             RESOURCE,
             { params },
         );
+        return response.data;
+    },
+    /** Счётчики по ВСЕЙ выборке (те же фильтры и поиск, без постраничного среза).
+     *  Плитки считались по `results` — одной странице из двадцати строк, и «Срочных 0»
+     *  печаталось при живом срочном тикете на третьей странице. */
+    getStats: async (params?: SupportTicketListParams) => {
+        const query = { ...(params ?? {}) };
+        delete query.page;
+        delete query.page_size;
+        const response = await apiClient.get<SupportTicketStats>(`${RESOURCE}stats/`, { params: query });
         return response.data;
     },
     getTicket: async (id: number) => {

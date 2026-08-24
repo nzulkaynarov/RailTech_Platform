@@ -86,15 +86,33 @@ describe('роль компании на платформе', () => {
     expect(screen.getAllByText('Покупатель')[0]).toBeInTheDocument();
   });
 
-  it('отправляет заявку по выбранной роли', async () => {
+  it('отправляет заявку ВМЕСТЕ с документами, которых требует сервер', async () => {
+    // Форма их не спрашивала: заявка уходила пустой, а одобрить её было нельзя —
+    // `approve` отбивал `ROLE_APPLICATION_MISSING_CONTRACT_NDA`. Путь был замкнут в тупик.
     renderWithProviders(<CompanyRoleSection />);
 
     fireEvent.click(await screen.findByRole('combobox'));
     fireEvent.click(await screen.findByRole('option', { name: 'Поставщик' }));
-    fireEvent.click(screen.getByRole('button', { name: /Подать заявку/ }));
+
+    const submit = screen.getByRole('button', { name: /Подать заявку/ });
+    expect(submit).toBeDisabled();
+
+    const contract = new File(['x'], 'contract.pdf', { type: 'application/pdf' });
+    const nda = new File(['x'], 'nda.pdf', { type: 'application/pdf' });
+    fireEvent.change(screen.getByLabelText('Договор'), { target: { files: [contract] } });
+    fireEvent.change(screen.getByLabelText(/NDA/), { target: { files: [nda] } });
+
+    expect(submit).toBeEnabled();
+    fireEvent.click(submit);
 
     await waitFor(() =>
-      expect(accountsApi.createRoleApplication).toHaveBeenCalledWith({ company: 10, requested_type: 2 }),
+      expect(accountsApi.createRoleApplication).toHaveBeenCalledWith({
+        company: 10,
+        requested_type: 2,
+        contract_file: contract,
+        nda_file: nda,
+        partnership_agreement: null,
+      }),
     );
   });
 

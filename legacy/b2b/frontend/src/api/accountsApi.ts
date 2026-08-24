@@ -702,6 +702,31 @@ export const accountsApi = {
 		);
 		return response.data;
 	},
+	/** Догрузить недостающие документы в СВОЮ заявку (статус DOCUMENTS_REQUIRED).
+	 *  Сервер после этого возвращает её в очередь на рассмотрение. */
+	updateRoleApplicationDocuments: async (
+		id: number,
+		data: { contract_file?: File | null; nda_file?: File | null; partnership_agreement?: File | null },
+	) => {
+		const formData = new FormData();
+		if (data.contract_file) formData.append('contract_file', data.contract_file);
+		if (data.nda_file) formData.append('nda_file', data.nda_file);
+		if (data.partnership_agreement) formData.append('partnership_agreement', data.partnership_agreement);
+		const response = await apiClient.patch<RoleApplication>(
+			`accounts/role-applications/${id}/`,
+			formData,
+			{ headers: { 'Content-Type': 'multipart/form-data' } },
+		);
+		return response.data;
+	},
+	/** Оператор просит недостающее вместо отказа (Stripe «information needed»). */
+	requestRoleApplicationDocuments: async (id: number, reason: string) => {
+		const response = await apiClient.post<RoleApplication>(
+			`accounts/role-applications/${id}/request-documents/`,
+			{ reason },
+		);
+		return response.data;
+	},
 	approveRoleApplication: async (id: number) => {
 		const response = await apiClient.post<RoleApplication>(`accounts/role-applications/${id}/approve/`);
 		return response.data;

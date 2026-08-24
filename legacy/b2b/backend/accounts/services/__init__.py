@@ -7,7 +7,9 @@ from .applications import (
     approve_role_application,
     bulk_approve_role_applications,
     bulk_reject_role_applications,
+    missing_application_documents,
     reject_role_application,
+    request_application_documents,
 )
 from .auth import (
     change_user_password,
@@ -91,6 +93,8 @@ __all__ = [
     "acting_context",
     "add_company_member",
     "approve_role_application",
+    "missing_application_documents",
+    "request_application_documents",
     "assert_seller_can_operate",
     "assign_operator_role",
     "bulk_approve_role_applications",

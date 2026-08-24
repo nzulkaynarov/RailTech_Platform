@@ -1,4 +1,4 @@
-import { useState } from 'react'; import { useTranslation } from 'react-i18next'; import { toast } from 'sonner'; import {     LifeBuoy, MessageSquare, Send, UserCheck, Lock, Mail, } from 'lucide-react'; import { Card, CardContent } from '@/components/ui/card'; import { Badge } from '@/components/ui/badge'; import { Button } from '@/components/ui/button'; import { Separator } from '@/components/ui/separator'; import { Textarea } from '@/components/ui/textarea'; import { Label } from '@/components/ui/label'; import {     Table, TableBody, TableCell, TableHeader, TableRow, } from '@/components/ui/table'; import {     Sheet, SheetContent, SheetHeader, SheetTitle, } from '@/components/ui/sheet'; import {     Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/components/ui/select'; import { Switch } from '@/components/ui/switch';  import {     useSupportTickets, useSupportTicket, useSupportTicketMessages, useAddSupportMessage, useChangeSupportStatus, useAssignSupportTicket, } from '@/hooks/useSupport'; import type {     SupportTicket, SupportTicketStatus, SupportTicketPriority, SupportTicketCategory, SupportTicketListParams, } from '@/api/supportApi'; import {     Toolbar, SortableHead, Pager } from '@/components/DataTable';
+import { useState } from 'react'; import { useTranslation } from 'react-i18next'; import { toast } from 'sonner'; import {     LifeBuoy, MessageSquare, Send, UserCheck, Lock, Mail, } from 'lucide-react'; import { Card, CardContent } from '@/components/ui/card'; import { Badge } from '@/components/ui/badge'; import { Button } from '@/components/ui/button'; import { Separator } from '@/components/ui/separator'; import { Textarea } from '@/components/ui/textarea'; import { Label } from '@/components/ui/label'; import {     Table, TableBody, TableCell, TableHeader, TableRow, } from '@/components/ui/table'; import {     Sheet, SheetContent, SheetHeader, SheetTitle, } from '@/components/ui/sheet'; import {     Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/components/ui/select'; import { Switch } from '@/components/ui/switch';  import {     useSupportTickets, useSupportTicketStats, useSupportTicket, useSupportTicketMessages, useAddSupportMessage, useChangeSupportStatus, useAssignSupportTicket, } from '@/hooks/useSupport'; import type {     SupportTicket, SupportTicketStatus, SupportTicketPriority, SupportTicketCategory, SupportTicketListParams, } from '@/api/supportApi'; import {     Toolbar, SortableHead, Pager } from '@/components/DataTable';
 import { useListParams } from '@/components/DataTable/listParams';
 import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import { translateApiError } from '@/lib/apiError';
@@ -261,17 +261,17 @@ export function AdminSupportPage() {
 
     const [detailId, setDetailId] = useState<number | null>(null);
 
-    const openCount = tickets.filter((x) => x.status === 'OPEN').length;
-    const inProgressCount = tickets.filter((x) => x.status === 'IN_PROGRESS').length;
-    const urgentCount = tickets.filter(
-        (x) => x.priority === 'URGENT' && x.status !== 'CLOSED' && x.status !== 'RESOLVED',
-    ).length;
+    // Счётчики считает СЕРВЕР по всей выборке. Раньше они брались из `data.results` — то
+    // есть из ОДНОЙ страницы в двадцать строк, тогда как «Всего» рядом бралось из `count`:
+    // при 57 тикетах экран печатал «Открытых 20» и «Срочных 0», хотя срочные лежали на
+    // страницах 2 и 3. Плитка, считающая страницу, врёт уверенно.
+    const { data: ticketStats } = useSupportTicketStats(queryParams);
 
     const stats = [
-        { label: t('admin.support.stats.total'), value: String(total) },
-        { label: t('admin.support.stats.open'), value: String(openCount) },
-        { label: t('admin.support.stats.inProgress'), value: String(inProgressCount) },
-        { label: t('admin.support.stats.urgent'), value: String(urgentCount) },
+        { label: t('admin.support.stats.total'), value: String(ticketStats?.total ?? total) },
+        { label: t('admin.support.stats.open'), value: String(ticketStats?.open ?? '—') },
+        { label: t('admin.support.stats.inProgress'), value: String(ticketStats?.in_progress ?? '—') },
+        { label: t('admin.support.stats.urgent'), value: String(ticketStats?.urgent ?? '—') },
     ];
 
     return (

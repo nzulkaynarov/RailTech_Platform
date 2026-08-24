@@ -2,7 +2,7 @@ import logging
 from typing import List, Optional, Tuple
 
 from django.conf import settings
-from django.db import DatabaseError
+from django.db import DatabaseError, transaction
 from django.db.models import QuerySet
 from django.utils import timezone
 
@@ -12,6 +12,69 @@ from ..models import CompanyRoleApplication, CustomUser
 from .subscriptions import ensure_trial_subscription
 
 logger = logging.getLogger(__name__)
+
+
+def missing_application_documents(application: CompanyRoleApplication) -> list[str]:
+    """Каких документов не хватает для одобрения заявки на роль — списком ПОЛЕЙ.
+
+    Предикат один на всех: по нему сервер отказывает в одобрении, оператор просит документы,
+    а витрина рисует форму загрузки. До 24-08 требование жило только внутри `approve`, и
+    форма подачи заявки о нём не знала — заявка приходила пустой, а одобрить её было нельзя.
+    Цикл замыкался в тупик: статус «нужны документы» существовал, но приложить их было негде.
+    """
+    requested_code = application.requested_type.code if application.requested_type_id else ""
+    if requested_code == "SUPPLIER":
+        return [
+            field
+            for field, value in (("contract_file", application.contract_file), ("nda_file", application.nda_file))
+            if not value
+        ]
+    if requested_code == "MANUFACTURER":
+        return [] if application.partnership_agreement else ["partnership_agreement"]
+    return []
+
+
+@transaction.atomic
+def request_application_documents(
+    application: CompanyRoleApplication,
+    reviewer: CustomUser,
+    reason: str = "",
+) -> Tuple[Optional[CompanyRoleApplication], Optional[str]]:
+    """Оператор просит недостающие документы вместо отказа.
+
+    Статус `DOCUMENTS_REQUIRED` был в модели с самого начала, но поставить его было нечем:
+    в меню строки жили только «Одобрить» и «Отклонить». Оператору оставалось отклонить
+    заявку целиком — то есть закрыть путь вместо того, чтобы попросить недостающее.
+    Эталон — Stripe verification «information needed» и Salesforce «Request more info».
+    """
+    if application.status not in ("PENDING", "PAYMENT_REQUIRED"):
+        return None, "ROLE_APPLICATION_CANNOT_REQUEST_DOCS"
+
+    before_status = application.status
+    application.status = "DOCUMENTS_REQUIRED"
+    application.review_notes = (reason or "").strip()
+    application.save(update_fields=["status", "review_notes", "updated_at"])
+
+    from core.audit import log_admin_action
+
+    log_admin_action(
+        entity_type="role_application",
+        entity_id=application.id,
+        action="Запрошены документы по заявке на роль",
+        detail=f"{application.company.name} → {application.requested_type.name}",
+        event_code="admin.role_application.documents_requested",
+        event_params={
+            "company_name": application.company.name,
+            "requested_type": application.requested_type.name,
+        },
+        actor=reviewer,
+        reason=(reason or "").strip(),
+        before={"status": before_status},
+        after={"status": "DOCUMENTS_REQUIRED"},
+        level="INFO",
+        company_id=application.company_id,
+    )
+    return application, None
 
 
 def approve_role_application(
@@ -28,12 +91,14 @@ def approve_role_application(
         return None, "ROLE_APPLICATION_CANNOT_APPROVE"
 
     requested_code = application.requested_type.code
-    if requested_code == "SUPPLIER":
-        if not application.contract_file or not application.nda_file:
-            return None, "ROLE_APPLICATION_MISSING_CONTRACT_NDA"
-    elif requested_code == "MANUFACTURER":
-        if not application.partnership_agreement:
-            return None, "ROLE_APPLICATION_MISSING_PARTNERSHIP"
+    # Тот же предикат, что показывает форму заявителю и питает «запросить документы»:
+    # требование не должно жить в трёх местах и разойтись между ними.
+    if missing_application_documents(application):
+        return None, (
+            "ROLE_APPLICATION_MISSING_CONTRACT_NDA"
+            if requested_code == "SUPPLIER"
+            else "ROLE_APPLICATION_MISSING_PARTNERSHIP"
+        )
 
     before_status = application.status
     application.status = "APPROVED"

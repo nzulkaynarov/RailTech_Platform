@@ -21,7 +21,13 @@ import { Label } from '@/components/ui/label';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { useCompanyTypes, useCreateRoleApplication, useRoleApplications } from '@/hooks/useAccounts';
+import { Input } from '@/components/ui/input';
+import {
+  useCompanyTypes,
+  useCreateRoleApplication,
+  useRoleApplications,
+  useUpdateRoleApplication,
+} from '@/hooks/useAccounts';
 import { useUserStore } from '@/store/userStore';
 import { translateApiError } from '@/lib/apiError';
 import { companyTypeLabelKey } from '@/lib/codes';
@@ -32,6 +38,21 @@ const REQUESTABLE_CODES = ['SUPPLIER', 'MANUFACTURER'];
 /** Заявка ещё в работе — повторную по той же роли подавать незачем. */
 const OPEN_STATUSES = ['PENDING', 'DOCUMENTS_REQUIRED', 'PAYMENT_REQUIRED'];
 
+/**
+ * Какие документы сервер требует для роли (`accounts/services/applications.py`).
+ *
+ * Форма их НЕ СПРАШИВАЛА: заявка уходила пустой (`contract_file:null, nda_file:null`), а
+ * одобрить её было нельзя — `approve` отбивал `ROLE_APPLICATION_MISSING_CONTRACT_NDA`. Путь
+ * замыкался в тупик: оператор видел заявку, которую невозможно провести.
+ */
+const REQUIRED_DOCS: Record<string, { field: 'contract_file' | 'nda_file' | 'partnership_agreement'; labelKey: string }[]> = {
+  SUPPLIER: [
+    { field: 'contract_file', labelKey: 'companyRole.docs.contract' },
+    { field: 'nda_file', labelKey: 'companyRole.docs.nda' },
+  ],
+  MANUFACTURER: [{ field: 'partnership_agreement', labelKey: 'companyRole.docs.partnership' }],
+};
+
 export function CompanyRoleSection() {
   const { t } = useTranslation();
   const companyId = useUserStore((state) => state.company.id);
@@ -41,7 +62,9 @@ export function CompanyRoleSection() {
   // Список сужен сервером до собственной компании — чужие заявки сюда не попадают.
   const { data: applications, isLoading } = useRoleApplications();
   const create = useCreateRoleApplication();
+  const updateApplication = useUpdateRoleApplication();
   const [requestedType, setRequestedType] = useState<string>('');
+  const [files, setFiles] = useState<Record<string, File | null>>({});
 
   const own = useMemo(
     () => (applications ?? []).filter((app) => app.company === companyId),
@@ -61,16 +84,66 @@ export function CompanyRoleSection() {
       openApplication?.requested_type_code !== type.code,
   );
 
+  const selectedCode = (types ?? []).find((type) => String(type.id) === requestedType)?.code ?? '';
+  const requiredDocs = REQUIRED_DOCS[selectedCode] ?? [];
+  const docsReady = requiredDocs.every((doc) => files[doc.field]);
+
   const submit = async () => {
-    if (!companyId || !requestedType) return;
+    if (!companyId || !requestedType || !docsReady) return;
     try {
-      await create.mutateAsync({ company: companyId, requested_type: Number(requestedType) });
+      await create.mutateAsync({
+        company: companyId,
+        requested_type: Number(requestedType),
+        contract_file: files.contract_file ?? null,
+        nda_file: files.nda_file ?? null,
+        partnership_agreement: files.partnership_agreement ?? null,
+      });
       setRequestedType('');
+      setFiles({});
       toast.success(t('companyRole.submitted'));
     } catch (err) {
       toast.error(translateApiError(err));
     }
   };
+
+  // Оператор попросил недостающее — приложить его надо ЗДЕСЬ ЖЕ, иначе статус «нужны
+  // документы» остаётся тупиком: попросили, а положить некуда.
+  const openDocs = REQUIRED_DOCS[openApplication?.requested_type_code ?? ''] ?? [];
+  const missingForOpen = openDocs.filter(
+    (doc) => !(openApplication as unknown as Record<string, unknown> | undefined)?.[doc.field],
+  );
+
+  const uploadMissing = async () => {
+    if (!openApplication?.id) return;
+    try {
+      await updateApplication.mutateAsync({
+        id: openApplication.id,
+        data: {
+          contract_file: files.contract_file ?? null,
+          nda_file: files.nda_file ?? null,
+          partnership_agreement: files.partnership_agreement ?? null,
+        },
+      });
+      setFiles({});
+      toast.success(t('companyRole.docsUploaded'));
+    } catch (err) {
+      toast.error(translateApiError(err));
+    }
+  };
+
+  const docInput = (field: string, labelKey: string) => (
+    <div key={field} className="space-y-1">
+      <Label htmlFor={`role-doc-${field}`} className="text-xs">
+        {t(labelKey)}
+      </Label>
+      <Input
+        id={`role-doc-${field}`}
+        type="file"
+        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+        onChange={(event) => setFiles((prev) => ({ ...prev, [field]: event.target.files?.[0] ?? null }))}
+      />
+    </div>
+  );
 
   return (
     <Card>
@@ -105,6 +178,23 @@ export function CompanyRoleSection() {
               })}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">{t('companyRole.pendingHint')}</p>
+            {openApplication.status === 'DOCUMENTS_REQUIRED' ? (
+              <div className="mt-3 space-y-3 border-t pt-3">
+                <p className="text-xs font-medium text-foreground">
+                  {openApplication.review_notes
+                    ? t('companyRole.docsRequestedWithReason', { reason: openApplication.review_notes })
+                    : t('companyRole.docsRequested')}
+                </p>
+                {missingForOpen.map((doc) => docInput(doc.field, doc.labelKey))}
+                <Button
+                  size="sm"
+                  onClick={uploadMissing}
+                  disabled={updateApplication.isPending || !missingForOpen.every((doc) => files[doc.field])}
+                >
+                  {t('companyRole.uploadDocs')}
+                </Button>
+              </div>
+            ) : null}
           </div>
         ) : null}
 
@@ -119,7 +209,7 @@ export function CompanyRoleSection() {
         {/* Пока справочник ролей не приехал, «все роли выданы» — неправда: это утверждение
             о состоянии компании, а не о состоянии загрузки (класс, закрытый волной U2). */}
         {typesLoading ? null : options.length > 0 ? (
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+          <div className="flex flex-col gap-3">
             <div className="flex-1">
               <Label htmlFor="requested-role">{t('companyRole.requestLabel')}</Label>
               <Select value={requestedType} onValueChange={setRequestedType}>
@@ -135,7 +225,10 @@ export function CompanyRoleSection() {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={submit} disabled={!requestedType || create.isPending}>
+            {/* Документы спрашиваем сразу: сервер без них заявку не одобрит, и без формы она
+                уходила заведомо непроводимой. */}
+            {requiredDocs.map((doc) => docInput(doc.field, doc.labelKey))}
+            <Button onClick={submit} disabled={!requestedType || !docsReady || create.isPending}>
               {create.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
               ) : (

@@ -361,15 +361,30 @@ class CompanyRoleApplicationViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(company=self._resolve_company(), submitted_by=self.request.user)
 
+    #: Статусы, в которых заявитель ещё может доложить документы. `DOCUMENTS_REQUIRED`
+    #: существует ровно для того, чтобы их попросить, — запрещать в нём загрузку значило
+    #: делать статус тупиком: оператор просит документы, а приложить их негде.
+    _APPLICANT_EDITABLE_STATUSES = ("PENDING", "DOCUMENTS_REQUIRED")
+
     def perform_update(self, serializer):
         user = self.request.user
         if not user.is_platform_admin:
             app = serializer.instance
-            if app.status != "PENDING":
+            if app.status not in self._APPLICANT_EDITABLE_STATUSES:
                 from rest_framework.exceptions import PermissionDenied
 
                 raise PermissionDenied("APPLICATION_ALREADY_PROCESSED")
-        serializer.save()
+        application = serializer.save()
+        # Заявитель приложил недостающее — заявка возвращается в очередь на рассмотрение.
+        # Так устроен любой цикл «запросили информацию → донесли → снова на проверку»
+        # (Stripe verification, Salesforce approval): иначе она молча висит в статусе
+        # «нужны документы» и оператор не узнает, что ждать больше нечего.
+        if not user.is_platform_admin and application.status == "DOCUMENTS_REQUIRED":
+            from ..services.applications import missing_application_documents
+
+            if not missing_application_documents(application):
+                application.status = "PENDING"
+                application.save(update_fields=["status", "updated_at"])
 
     @extend_schema(
         summary="Approve role application",
@@ -404,6 +419,31 @@ class CompanyRoleApplicationViewSet(viewsets.ModelViewSet):
         app = self.get_object()
         reason = request.data.get("reason", "")
         result, error = services.reject_role_application(app, request.user, reason)
+        if error:
+            return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(self.get_serializer(result).data)
+
+    @extend_schema(
+        summary="Request the missing documents instead of rejecting",
+        description=(
+            "Статус DOCUMENTS_REQUIRED был в модели с самого начала, но поставить его было "
+            "нечем: в меню строки жили только «Одобрить» и «Отклонить», и оператору "
+            "оставалось закрыть путь целиком. Эталон — Stripe verification «information "
+            "needed» и Salesforce «Request more info»."
+        ),
+        request=inline_serializer("RequestApplicationDocs", fields={"reason": drf_serializers.CharField()}),
+        responses={
+            200: CompanyRoleApplicationSerializer,
+            400: OpenApiResponse(description="ROLE_APPLICATION_CANNOT_REQUEST_DOCS"),
+        },
+        tags=["Accounts"],
+    )
+    @action(detail=True, methods=["post"], url_path="request-documents")
+    def request_documents(self, request, pk=None):
+        """POST /api/v1/accounts/role-applications/{id}/request-documents/"""
+        result, error = services.request_application_documents(
+            self.get_object(), request.user, reason=request.data.get("reason", "")
+        )
         if error:
             return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
         return Response(self.get_serializer(result).data)

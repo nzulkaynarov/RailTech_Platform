@@ -470,6 +470,24 @@ export const useRejectRoleApplication = () => {
  * проводкой — это полноценная новая форма, то есть новая функция. Хук оставлен намеренно:
  * когда решение будет принято, подключать его не придётся заново.
  */
+export const useUpdateRoleApplication = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Parameters<typeof accountsApi.updateRoleApplicationDocuments>[1] }) =>
+      accountsApi.updateRoleApplicationDocuments(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['roleApplications'] }),
+  });
+};
+
+export const useRequestRoleApplicationDocuments = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: number; reason: string }) =>
+      accountsApi.requestRoleApplicationDocuments(id, reason),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['roleApplications'] }),
+  });
+};
+
 export const useCreateRoleApplication = () => {
   const qc = useQueryClient();
   return useMutation({

@@ -1,6 +1,6 @@
-from django.db.models import Count
+from django.db.models import Count, Q
 from django_filters.rest_framework import DjangoFilterBackend
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import filters
 from rest_framework import serializers as drf_serializers
 from rest_framework import viewsets
@@ -182,6 +182,39 @@ class SupportTicketViewSet(viewsets.ModelViewSet):
         responses={200: SupportTicketMessageSerializer(many=True)},
         tags=["Support"],
     )
+    @extend_schema(
+        summary="Counters over the WHOLE filtered selection, not the current page",
+        description=(
+            "Плитки экрана поддержки считались по `data.results` — то есть по ОДНОЙ странице "
+            "из двадцати строк, тогда как рядом `Всего` бралось из `count`. При 57 тикетах "
+            "экран показывал «Открытых 20» и «Срочных 0», хотя срочные лежали на страницах "
+            "2 и 3. Счётчики обязаны считаться по той же выборке, что и список — со всеми "
+            "фильтрами и поиском, но без постраничного среза."
+        ),
+        responses={200: OpenApiResponse(description="{total, open, in_progress, urgent}")},
+        tags=["Core"],
+    )
+    @action(detail=False, methods=["get"], url_path="stats")
+    def stats(self, request):
+        """GET /api/v1/support-tickets/stats/ — счётчики по ВСЕЙ выборке.
+
+        Один `aggregate` вместо четырёх `.count()`: реестр дорастёт до тысяч строк, и
+        отдельные запросы в цикле здесь превратились бы в задержку на каждый рендер
+        (конвенция производительности проекта).
+        """
+        queryset = self.filter_queryset(self.get_queryset())
+        totals = queryset.aggregate(
+            total=Count("id"),
+            open=Count("id", filter=Q(status=SupportTicket.STATUS_OPEN)),
+            in_progress=Count("id", filter=Q(status=SupportTicket.STATUS_IN_PROGRESS)),
+            urgent=Count(
+                "id",
+                filter=Q(priority=SupportTicket.PRIORITY_URGENT)
+                & ~Q(status__in=[SupportTicket.STATUS_CLOSED, SupportTicket.STATUS_RESOLVED]),
+            ),
+        )
+        return Response(totals)
+
     @action(detail=True, methods=["get"], url_path="messages")
     def list_messages(self, request, pk=None):
         ticket = self.get_object()
