@@ -188,7 +188,12 @@ class ChargeTemplate(models.Model):
     )
     delivery_basis = models.ForeignKey(
         DeliveryBasis,
-        on_delete=models.CASCADE,
+        # PROTECT, а не CASCADE: базис поставки — строка ПЛАТФОРМЕННОГО справочника, а шаблон
+        # статей расхода принадлежит АРЕНДАТОРУ. С каскадом удаление базиса оператором молча
+        # уносило чужие шаблоны — замер 24-08: DELETE базиса вернул 204, шаблоны исчезли без
+        # предупреждения. Соседние ссылки на тот же справочник (SupplierOffer, Quote) давно
+        # стоят с PROTECT; здесь была единственная дыра.
+        on_delete=models.PROTECT,
         related_name="charge_templates",
         verbose_name=_("Базис поставки"),
         help_text=_("Incoterm, к которому привязан шаблон статей"),

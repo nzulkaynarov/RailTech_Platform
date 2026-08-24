@@ -23,11 +23,20 @@ export interface Currency extends LookupItem {
 
 export type MasterKind = 'countries' | 'currencies' | 'units' | 'delivery-basis';
 
+/** `include_inactive=1` отдаёт и отключённые строки — сервер honours его только для оператора
+ *  с правом правки справочников и держит такой ответ в ОТДЕЛЬНОМ ключе кэша. */
+const lookupParams = (includeInactive?: boolean) =>
+  (includeInactive ? { params: { include_inactive: 1 } } : undefined);
+
 export const masterDataApi = {
-  getCountries: () => apiClient.get<Country[]>('master-data/countries/').then(r => r.data),
-  getCurrencies: () => apiClient.get<Currency[]>('master-data/currencies/').then(r => r.data),
-  getUnits: () => apiClient.get<LookupItem[]>('master-data/units/').then(r => r.data),
-  getDeliveryBases: () => apiClient.get<LookupItem[]>('master-data/delivery-basis/').then(r => r.data),
+  getCountries: (includeInactive?: boolean) =>
+    apiClient.get<Country[]>('master-data/countries/', lookupParams(includeInactive)).then(r => r.data),
+  getCurrencies: (includeInactive?: boolean) =>
+    apiClient.get<Currency[]>('master-data/currencies/', lookupParams(includeInactive)).then(r => r.data),
+  getUnits: (includeInactive?: boolean) =>
+    apiClient.get<LookupItem[]>('master-data/units/', lookupParams(includeInactive)).then(r => r.data),
+  getDeliveryBases: (includeInactive?: boolean) =>
+    apiClient.get<LookupItem[]>('master-data/delivery-basis/', lookupParams(includeInactive)).then(r => r.data),
   create: async <T extends Record<string, unknown>>(kind: MasterKind, data: T) => {
     const response = await apiClient.post(`master-data/${kind}/`, data);
     return response.data;

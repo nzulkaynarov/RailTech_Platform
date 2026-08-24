@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Database, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Database, Plus, Pencil, Trash2, RotateCcw } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
+import { translateApiError } from '@/lib/apiError';
 import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import { useDraftState } from '@/hooks/useDraftState';
 import {
@@ -25,7 +27,7 @@ import type { MasterKind, Country, Currency, LookupItem } from '@/api/masterData
 type AnyItem = Country | Currency | LookupItem;
 
 function LookupEditor({
-  kind, items, isLoading, isError, onRetry, extraFields = [],
+  kind, items, isLoading, isError, onRetry, extraFields = [], showInactive, onShowInactiveChange,
 }: {
   kind: MasterKind;
   items: AnyItem[] | undefined;
@@ -33,6 +35,8 @@ function LookupEditor({
   isError?: boolean;
   onRetry?: () => void;
   extraFields?: { key: string; label: string }[];
+  showInactive: boolean;
+  onShowInactiveChange: (value: boolean) => void;
 }) {
   const { t } = useTranslation();
   const createMut = useCreateLookup();
@@ -86,8 +90,20 @@ function LookupEditor({
       await deleteMut.mutateAsync({ kind, id: (deleteTarget as { id: number }).id });
       toast.success(t('adminMasterData.deleted'));
       setDeleteTarget(null);
-    } catch {
-      toast.error(t('adminMasterData.deleteFailed'));
+    } catch (err) {
+      // Отказ обязан НАЗЫВАТЬ причину: строку печатают документы арендаторов, БД держит её
+      // ссылками (PROTECT). Раньше сюда приходила 500 и общий тост «не удалось» — оператор
+      // повторял попытку, потому что не понимал, что делать вместо удаления.
+      toast.error(translateApiError(err));
+    }
+  };
+
+  const restore = async (item: AnyItem) => {
+    try {
+      await updateMut.mutateAsync({ kind, id: (item as { id: number }).id, data: { is_active: true } });
+      toast.success(t('adminMasterData.restored'));
+    } catch (err) {
+      toast.error(translateApiError(err));
     }
   };
 
@@ -110,6 +126,16 @@ function LookupEditor({
           className="max-w-xs"
           aria-label={t('adminMasterData.filterPlaceholder')}
         />
+        <div className="flex items-center gap-2">
+          <Switch
+            id={`show-inactive-${kind}`}
+            checked={showInactive}
+            onCheckedChange={onShowInactiveChange}
+          />
+          <Label htmlFor={`show-inactive-${kind}`} className="text-xs text-muted-foreground">
+            {t('adminMasterData.showInactive')}
+          </Label>
+        </div>
         <Button onClick={openNew} className="gap-2 ml-auto">
           <Plus className="h-4 w-4" />
           {t('adminMasterData.new')}
@@ -150,10 +176,26 @@ function LookupEditor({
                         {String(rec.sort_order ?? 0)}
                       </TableCell>
                       <TableCell className="text-xs">
-                        {rec.is_active ? t('adminMasterData.yes') : t('adminMasterData.no')}
+                        {rec.is_active ? (
+                          t('adminMasterData.yes')
+                        ) : (
+                          <Badge variant="secondary">{t('adminMasterData.inactiveBadge')}</Badge>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="flex justify-end gap-1">
+                          {rec.is_active ? null : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => restore(it)}
+                              disabled={updateMut.isPending}
+                              aria-label={t('adminMasterData.restore')}
+                              title={t('adminMasterData.restore')}
+                            >
+                              <RotateCcw className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                           <Button variant="ghost" size="sm" onClick={() => openEdit(it)}>
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
@@ -232,6 +274,7 @@ function LookupEditor({
             <AlertDialogTitle>{t('adminMasterData.confirmDelete')}</AlertDialogTitle>
             <AlertDialogDescription>
               {t('adminMasterData.confirmDeleteDesc', { code: String((deleteTarget as unknown as Record<string, unknown>)?.code ?? '') })}
+              <span className="mt-2 block">{t('adminMasterData.confirmDeleteHint')}</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -248,10 +291,14 @@ function LookupEditor({
 
 export function AdminMasterDataPage() {
   const { t } = useTranslation();
-  const countries = useCountries();
-  const currencies = useCurrencies();
-  const units = useUnits();
-  const deliveryBases = useDeliveryBases();
+  // Отключённая строка исчезала из списка НАВСЕГДА: гасил её оператор, а вернуть через
+  // интерфейс не мог — поверхности для просмотра неактивных не существовало. Эталон
+  // (Odoo Archive, Stripe Archived) держит их за фильтром, а не прячет.
+  const [showInactive, setShowInactive] = useState(false);
+  const countries = useCountries(showInactive);
+  const currencies = useCurrencies(showInactive);
+  const units = useUnits(showInactive);
+  const deliveryBases = useDeliveryBases(showInactive);
 
   const stats = useMemo(() => [
     { label: t('adminMasterData.stats.countries'), value: String(countries.data?.length ?? '—') },
@@ -277,6 +324,8 @@ export function AdminMasterDataPage() {
 
         <TabsContent value="countries" className="mt-4">
           <LookupEditor
+            showInactive={showInactive}
+            onShowInactiveChange={setShowInactive}
             kind="countries"
             items={countries.data}
             isLoading={countries.isLoading}
@@ -292,6 +341,8 @@ export function AdminMasterDataPage() {
 
         <TabsContent value="currencies" className="mt-4">
           <LookupEditor
+            showInactive={showInactive}
+            onShowInactiveChange={setShowInactive}
             kind="currencies"
             items={currencies.data}
             isLoading={currencies.isLoading}
@@ -302,11 +353,27 @@ export function AdminMasterDataPage() {
         </TabsContent>
 
         <TabsContent value="units" className="mt-4">
-          <LookupEditor kind="units" items={units.data} isLoading={units.isLoading} isError={units.isError} onRetry={() => units.refetch()} />
+          <LookupEditor
+            kind="units"
+            items={units.data}
+            isLoading={units.isLoading}
+            isError={units.isError}
+            onRetry={() => units.refetch()}
+            showInactive={showInactive}
+            onShowInactiveChange={setShowInactive}
+          />
         </TabsContent>
 
         <TabsContent value="delivery-basis" className="mt-4">
-          <LookupEditor kind="delivery-basis" items={deliveryBases.data} isLoading={deliveryBases.isLoading} isError={deliveryBases.isError} onRetry={() => deliveryBases.refetch()} />
+          <LookupEditor
+            kind="delivery-basis"
+            items={deliveryBases.data}
+            isLoading={deliveryBases.isLoading}
+            isError={deliveryBases.isError}
+            onRetry={() => deliveryBases.refetch()}
+            showInactive={showInactive}
+            onShowInactiveChange={setShowInactive}
+          />
         </TabsContent>
       </Tabs>
     </PageShell>

@@ -1,4 +1,5 @@
 from django.core.cache import cache
+from django.db.models import ProtectedError
 from django.utils.translation import get_language
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import permissions, status, viewsets
@@ -65,7 +66,10 @@ class _CachedLookupListMixin:
     def list(self, request, *args, **kwargs):
         # Язык — часть ключа: имена справочников переводятся, и ответ на `Accept-Language: en`
         # не должен подменять русский (раньше это делал `vary_on_headers`).
-        key = f"lookup:{self._model_label}:{self._version()}:{get_language()}"
+        # Признак выборки — часть ключа: иначе привилегированный ответ с отключёнными
+        # строками осел бы в общем кэше и уехал всем арендаторам, включая анонимных.
+        scope = "all" if getattr(self, "_wants_inactive", lambda: False)() else "active"
+        key = f"lookup:{self._model_label}:{self._version()}:{get_language()}:{scope}"
         payload = cache.get(key)
         if payload is None:
             payload = super().list(request, *args, **kwargs).data
@@ -85,6 +89,32 @@ class _CachedLookupListMixin:
         self._bump_version()
 
 
+class _GuardedDestroyMixin:
+    """Удаление строки, на которую ссылаются данные арендаторов, — внятный отказ, не 500.
+
+    Ссылки объявлены с `on_delete=PROTECT` (единица у товара, валюта у КП, страна у компании,
+    базис поставки у сделки), поэтому БД такое удаление и так не пропускала — терялась только
+    внятность: DRF отдавал `ProtectedError` наружу как 500 с HTML-страницей. Оператор видел
+    «Не удалось удалить» и повторял попытку, потому что причина не названа.
+
+    Эталон — Odoo Archive: запись, на которую ссылаются, удалить нельзя, из оборота её выводят
+    архивированием (у нас — `is_active=False`). Тот же приём уже применён в проекте к шаблонам
+    документов (`TEMPLATE_IN_USE`, волна F3) — здесь он один на все ЧЕТЫРЕ справочника, потому
+    что точечная починка одной вкладки оставила бы три таких же пятисотки.
+    """
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except ProtectedError as exc:
+            # Называем, ЧТО держит строку — модели, а не сами записи: перечислять чужие строки
+            # арендаторов оператору незачем. Код в голове ответа, машинный суффикс после
+            # двоеточия витрина отбрасывает при переводе (см. `frontend/src/lib/apiError.ts`).
+            holders = sorted({obj._meta.verbose_name.title() for obj in exc.protected_objects})
+            detail = "LOOKUP_IN_USE" + (":" + ",".join(holders) if holders else "")
+            return Response({"detail": detail}, status=status.HTTP_400_BAD_REQUEST)
+
+
 class _ActiveOnlyListMixin:
     """Selection dropdowns must show only ACTIVE lookups, so deactivating a row in
     admin hides it everywhere (consistent with how services query the справочник,
@@ -95,9 +125,24 @@ class _ActiveOnlyListMixin:
 
     def get_queryset(self):
         qs = super().get_queryset()
-        if getattr(self, "action", None) == "list":
+        if getattr(self, "action", None) == "list" and not self._wants_inactive():
             qs = qs.filter(is_active=True)
         return qs
+
+    def _wants_inactive(self) -> bool:
+        """`?include_inactive=1` — только для того, кто имеет право ПРАВИТЬ справочник.
+
+        Отключённая строка исчезала из списка навсегда: включить её обратно через интерфейс
+        было нельзя, хотя гасил её тот же оператор. Возвращать `objects.all()` всем НЕЛЬЗЯ —
+        на общем списке висят выпадающие списки всех арендаторов и общий кэш, поэтому
+        привилегированная выборка живёт под своим ключом кэша (см. `_CachedLookupListMixin`).
+        """
+        request = getattr(self, "request", None)
+        if request is None or str(request.query_params.get("include_inactive", "")) not in ("1", "true", "True"):
+            return False
+        from core.permissions import OperatorScoped
+
+        return OperatorScoped().has_permission(request, self)
 
 
 @extend_schema_view(
@@ -108,7 +153,7 @@ class _ActiveOnlyListMixin:
     partial_update=extend_schema(summary="Partially update country", tags=["Master Data"]),
     destroy=extend_schema(summary="Delete country", tags=["Master Data"]),
 )
-class CountryViewSet(_CachedLookupListMixin, _ActiveOnlyListMixin, viewsets.ModelViewSet):
+class CountryViewSet(_CachedLookupListMixin, _GuardedDestroyMixin, _ActiveOnlyListMixin, viewsets.ModelViewSet):
     """CRUD for countries (read: public; write: admin)."""
 
     queryset = Country.objects.all().order_by("sort_order", "name")
@@ -130,7 +175,7 @@ class CountryViewSet(_CachedLookupListMixin, _ActiveOnlyListMixin, viewsets.Mode
     partial_update=extend_schema(summary="Partially update currency", tags=["Master Data"]),
     destroy=extend_schema(summary="Delete currency", tags=["Master Data"]),
 )
-class CurrencyViewSet(_CachedLookupListMixin, _ActiveOnlyListMixin, viewsets.ModelViewSet):
+class CurrencyViewSet(_CachedLookupListMixin, _GuardedDestroyMixin, _ActiveOnlyListMixin, viewsets.ModelViewSet):
     """CRUD for currencies (read: public; write: admin)."""
 
     queryset = Currency.objects.all().order_by("sort_order", "code")
@@ -152,7 +197,7 @@ class CurrencyViewSet(_CachedLookupListMixin, _ActiveOnlyListMixin, viewsets.Mod
     partial_update=extend_schema(summary="Partially update unit", tags=["Master Data"]),
     destroy=extend_schema(summary="Delete unit", tags=["Master Data"]),
 )
-class UnitOfMeasureViewSet(_CachedLookupListMixin, _ActiveOnlyListMixin, viewsets.ModelViewSet):
+class UnitOfMeasureViewSet(_CachedLookupListMixin, _GuardedDestroyMixin, _ActiveOnlyListMixin, viewsets.ModelViewSet):
     """CRUD for units of measure (read: public; write: admin)."""
 
     queryset = UnitOfMeasure.objects.all().order_by("sort_order", "code")
@@ -174,7 +219,7 @@ class UnitOfMeasureViewSet(_CachedLookupListMixin, _ActiveOnlyListMixin, viewset
     partial_update=extend_schema(summary="Partially update delivery basis", tags=["Master Data"]),
     destroy=extend_schema(summary="Delete delivery basis", tags=["Master Data"]),
 )
-class DeliveryBasisViewSet(_CachedLookupListMixin, _ActiveOnlyListMixin, viewsets.ModelViewSet):
+class DeliveryBasisViewSet(_CachedLookupListMixin, _GuardedDestroyMixin, _ActiveOnlyListMixin, viewsets.ModelViewSet):
     """CRUD for delivery basis terms (Incoterms). Read: public; write: admin."""
 
     queryset = DeliveryBasis.objects.all().order_by("sort_order", "code")

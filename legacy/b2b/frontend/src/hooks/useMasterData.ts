@@ -1,30 +1,34 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { masterDataApi, MasterKind } from '../api/masterDataApi';
 
-export const useCurrencies = () => useQuery({
-  queryKey: ['master-data', 'currencies'],
-  queryFn: masterDataApi.getCurrencies,
+// `includeInactive` входит в ключ запроса: выборка с отключёнными строками — ДРУГИЕ данные,
+// и склеивать её с общим списком, на котором висят выпадающие списки всех экранов, нельзя.
+export const useCurrencies = (includeInactive = false) => useQuery({
+  queryKey: ['master-data', 'currencies', includeInactive],
+  queryFn: () => masterDataApi.getCurrencies(includeInactive),
   staleTime: 5 * 60_000,
 });
 
-export const useUnits = () => useQuery({
-  queryKey: ['master-data', 'units'],
-  queryFn: masterDataApi.getUnits,
+export const useUnits = (includeInactive = false) => useQuery({
+  queryKey: ['master-data', 'units', includeInactive],
+  queryFn: () => masterDataApi.getUnits(includeInactive),
   staleTime: 5 * 60_000,
 });
 
-export const useCountries = () => useQuery({
-  queryKey: ['master-data', 'countries'],
-  queryFn: masterDataApi.getCountries,
+export const useCountries = (includeInactive = false) => useQuery({
+  queryKey: ['master-data', 'countries', includeInactive],
+  queryFn: () => masterDataApi.getCountries(includeInactive),
   staleTime: 5 * 60_000,
 });
 
-export const useDeliveryBases = () => useQuery({
-  queryKey: ['master-data', 'delivery-bases'],
-  queryFn: masterDataApi.getDeliveryBases,
+export const useDeliveryBases = (includeInactive = false) => useQuery({
+  queryKey: ['master-data', 'delivery-bases', includeInactive],
+  queryFn: () => masterDataApi.getDeliveryBases(includeInactive),
   staleTime: 5 * 60_000,
 });
 
+// Префикс БЕЗ признака выборки: правка обязана сбрасывать и обычный список, и список с
+// отключёнными строками (react-query сверяет ключи по префиксу).
 const keyFor = (kind: MasterKind) => {
   switch (kind) {
     case 'countries': return ['master-data', 'countries'];

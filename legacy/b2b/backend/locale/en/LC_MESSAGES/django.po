@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-24 13:29+0500\n"
+"POT-Creation-Date: 2026-08-24 14:00+0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -959,7 +959,7 @@ msgid "Основное рабочее пространство пользова
 msgstr "The user's primary workspace"
 
 #: accounts/models/company/membership.py:127 catalog/models/offers.py:126
-#: catalog/models/taxonomy.py:223 crm/models/charges.py:225
+#: catalog/models/taxonomy.py:223 crm/models/charges.py:230
 #: crm/models/documents.py:65 master_data/models.py:30
 #: notifications/models.py:265
 msgid "Активен"
@@ -1664,7 +1664,7 @@ msgid "Валюта базовой цены"
 msgstr "Base price currency"
 
 #: catalog/models/offers.py:68 core/settings/apps.py:172
-#: crm/models/charges.py:193 master_data/models.py:152
+#: crm/models/charges.py:198 master_data/models.py:152
 msgid "Базис поставки"
 msgstr "Delivery basis"
 
@@ -2750,7 +2750,7 @@ msgid "Добавлен вручную"
 msgstr "Added manually"
 
 #: crm/models/approvals.py:52 crm/models/charges.py:99
-#: crm/models/charges.py:224 crm/models/documents.py:249
+#: crm/models/charges.py:229 crm/models/documents.py:249
 msgid "Порядок"
 msgstr "Order"
 
@@ -2966,7 +2966,7 @@ msgstr "Acts"
 msgid "Коммерческое предложение, к которому относится статья расхода"
 msgstr "Quote the charge belongs to"
 
-#: crm/models/charges.py:38 crm/models/charges.py:200 crm/models/lookups.py:80
+#: crm/models/charges.py:38 crm/models/charges.py:205 crm/models/lookups.py:80
 msgid "Статья расхода"
 msgstr "Charge"
 
@@ -3004,7 +3004,7 @@ msgstr ""
 "What the charge actually costs the seller. Empty = at cost (= the billed "
 "amount)."
 
-#: crm/models/charges.py:83 crm/models/charges.py:221
+#: crm/models/charges.py:83 crm/models/charges.py:226
 msgid "Скидка (вычет)"
 msgstr "Discount (allowance)"
 
@@ -3057,40 +3057,40 @@ msgstr "Quote charge items"
 msgid "Компания-владелец шаблона. Пусто = глобальный дефолт платформы."
 msgstr "Company that owns the template. Empty = platform-wide default."
 
-#: crm/models/charges.py:194
+#: crm/models/charges.py:199
 msgid "Incoterm, к которому привязан шаблон статей"
 msgstr "Incoterm the charge template is bound to"
 
-#: crm/models/charges.py:201
+#: crm/models/charges.py:206
 msgid "Статья, добавляемая в КП по умолчанию для этого базиса"
 msgstr "Charge added to a quote by default for this delivery basis"
 
-#: crm/models/charges.py:207
+#: crm/models/charges.py:212
 msgid "Сумма по умолчанию"
 msgstr "Default amount"
 
-#: crm/models/charges.py:208
+#: crm/models/charges.py:213
 msgid "Предзаполняемая сумма (если процент не задан)"
 msgstr "Prefilled amount (if the percent is not set)"
 
-#: crm/models/charges.py:216
+#: crm/models/charges.py:221
 msgid "Процент по умолчанию (%)"
 msgstr "Default percent (%)"
 
-#: crm/models/charges.py:217
+#: crm/models/charges.py:222
 msgid "Предзаполняемый процент от суммы позиций (приоритетнее суммы)"
 msgstr ""
 "Prefilled percent of the line items total (takes priority over the amount)"
 
-#: crm/models/charges.py:222
+#: crm/models/charges.py:227
 msgid "Шаблонная строка — скидка, а не расход"
 msgstr "The template row is a discount, not a charge"
 
-#: crm/models/charges.py:228
+#: crm/models/charges.py:233
 msgid "Шаблон статьи расхода"
 msgstr "Charge template"
 
-#: crm/models/charges.py:229
+#: crm/models/charges.py:234
 msgid "Справочник: Шаблоны статей расхода (по базисам)"
 msgstr "Reference: Charge templates (by delivery basis)"
 
