@@ -451,6 +451,14 @@ export interface Lead {
 	message?: string;
 	is_processed?: boolean;
 	created_at?: string;
+	/** Кому назначен лид. Пусто — он ещё в общей очереди платформы (Salesforce Lead Queue). */
+	owner_company?: number | null;
+	owner_company_name?: string;
+	assigned_at?: string | null;
+	/** Сделка, в которую компания превратила лид. До 24-08 связи не было вовсе — только текст в notes. */
+	converted_deal?: number | null;
+	converted_at?: string | null;
+	rejection_reason?: string;
 }
 
 // ─── CRM Phase B — counterparty relationship book («Книга контрагентов») ──

@@ -152,6 +152,9 @@ class OperatorPermission(models.TextChoices):
     # Moderation
     MODERATION_ROLE_APPLICATIONS = "moderation.role_applications", "Модерация заявок на роли"
     MODERATION_FORCE_OVERRIDE = "moderation.force_override", "Force-override (сделки/КП/контракты)"
+    # Leads (входящий поток с лендинга — очередь ПЛОЩАДКИ, паттерн Salesforce Lead Queue)
+    LEADS_VIEW = "leads.view", "Просматривать лиды"
+    LEADS_ROUTE = "leads.route", "Назначать лиды компаниям"
     # Platform
     PLATFORM_SETTINGS = "platform.settings", "Системные настройки и справочники"
     OPERATORS_MANAGE = "operators.manage", "Управлять ролями операторов"
@@ -164,6 +167,7 @@ OPERATOR_PERMISSION_GROUPS = {
     "kyc": [OperatorPermission.KYC_VIEW, OperatorPermission.KYC_VERIFY],
     "billing": [OperatorPermission.BILLING_VIEW, OperatorPermission.BILLING_MANAGE],
     "moderation": [OperatorPermission.MODERATION_ROLE_APPLICATIONS, OperatorPermission.MODERATION_FORCE_OVERRIDE],
+    "leads": [OperatorPermission.LEADS_VIEW, OperatorPermission.LEADS_ROUTE],
     "platform": [OperatorPermission.PLATFORM_SETTINGS, OperatorPermission.OPERATORS_MANAGE],
 }
 
@@ -185,9 +189,10 @@ OPERATOR_ROLE_TEMPLATES = {
             OperatorPermission.COMPANIES_VIEW.value,
             OperatorPermission.KYC_VIEW.value,
             OperatorPermission.BILLING_VIEW.value,
+            OperatorPermission.LEADS_VIEW.value,
         ],
         "is_system": False,
-        "description": "Только просмотр пользователей, компаний, KYC и биллинга для триажа обращений.",
+        "description": "Только просмотр пользователей, компаний, KYC, биллинга и лидов для триажа обращений.",
     },
     OperatorRoleCode.KYC_OFFICER.value: {
         "name": "Офицер KYC",
@@ -219,6 +224,10 @@ OPERATOR_ROLE_TEMPLATES = {
             OperatorPermission.KYC_VIEW.value,
             OperatorPermission.MODERATION_ROLE_APPLICATIONS.value,
             OperatorPermission.MODERATION_FORCE_OVERRIDE.value,
+            # Квалификация входящего лида — модерация, а не действие от лица арендатора:
+            # площадка назначает владельца, сделку создаёт принимающая сторона.
+            OperatorPermission.LEADS_VIEW.value,
+            OperatorPermission.LEADS_ROUTE.value,
         ],
         "is_system": False,
         "description": "Модерация заявок на роли и аварийные force-override действия (с указанием причины).",

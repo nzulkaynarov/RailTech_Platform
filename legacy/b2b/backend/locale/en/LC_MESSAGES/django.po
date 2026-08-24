@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-24 16:01+0500\n"
+"POT-Creation-Date: 2026-08-24 16:38+0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -35,7 +35,7 @@ msgid "Модель"
 msgstr "Model"
 
 #: accounts/admin.py:150 accounts/models/company/membership.py:91
-#: accounts/models/users.py:88 crm/models/deals.py:399
+#: accounts/models/users.py:88 crm/models/deals.py:434
 #: notifications/models.py:25 notifications/models.py:171
 msgid "Пользователь"
 msgstr "User"
@@ -445,7 +445,7 @@ msgid "Кем создан"
 msgstr "Created by"
 
 #: accounts/models/company/contacts.py:43
-#: accounts/models/company/contacts.py:80 crm/models/deals.py:474
+#: accounts/models/company/contacts.py:80 crm/models/deals.py:509
 #: crm/models/documents.py:119 crm/templates/crm/_document_base.html:326
 msgid "Контакт"
 msgstr "Contact"
@@ -1225,7 +1225,7 @@ msgid "Дата начала действия подписки"
 msgstr "Subscription start date"
 
 #: accounts/models/subscriptions.py:78 accounts/models/subscriptions.py:171
-#: catalog/models/offers.py:120 crm/models/deals.py:447
+#: catalog/models/offers.py:120 crm/models/deals.py:482
 #: crm/models/quotes.py:204
 msgid "Действует до"
 msgstr "Valid until"
@@ -1800,7 +1800,7 @@ msgstr "Manufacturer (DEPRECATED)"
 msgid "УСТАРЕЛО — заменено на owner_company (владелец) + brand (OEM)."
 msgstr "DEPRECATED — replaced by owner_company (owner) + brand (OEM)."
 
-#: catalog/models/products.py:110
+#: catalog/models/products.py:110 crm/models/deals.py:354
 msgid "Компания-владелец"
 msgstr "Owner company"
 
@@ -2374,9 +2374,9 @@ msgstr "Author"
 msgid "Компания автора (берётся из primary_company при создании)"
 msgstr "Author's company (taken from primary_company on creation)"
 
-#: core/models.py:202
+#: core/models.py:202 crm/models/deals.py:357
 msgid "Назначен"
-msgstr "Assigned to"
+msgstr "Assigned at"
 
 #: core/models.py:203
 msgid "Platform Admin, ведущий тикет"
@@ -2594,7 +2594,7 @@ msgstr "English"
 #: core/tests/test_i18n_activation.py:103 crm/admin/deals_admin.py:58
 #: crm/models/billing.py:32 crm/models/billing.py:244
 #: crm/models/contracts.py:30 crm/models/deals.py:135 crm/models/deals.py:177
-#: crm/models/deals.py:233 crm/models/deals.py:482 crm/models/documents.py:111
+#: crm/models/deals.py:233 crm/models/deals.py:517 crm/models/documents.py:111
 #: crm/models/fulfillment.py:18 crm/models/quotes.py:31
 #: notifications/models.py:97 sourcing/models.py:101 sourcing/models.py:215
 msgid "Сделка"
@@ -2644,7 +2644,7 @@ msgstr "Write error: %(err)s"
 msgid "%(count)d сообщений архивировано в %(files)d файл(ах)"
 msgstr "%(count)d messages archived into %(files)d file(s)"
 
-#: crm/admin/deals_admin.py:252 crm/models/deals.py:406
+#: crm/admin/deals_admin.py:252 crm/models/deals.py:441
 #: master_data/models.py:232
 msgid "Уровень"
 msgstr "Level"
@@ -2819,7 +2819,7 @@ msgstr "Auto"
 msgid "Создан правилом (нельзя удалить); False = добавлен вручную."
 msgstr "Created by a rule (cannot be deleted); False = added manually."
 
-#: crm/models/approvals.py:97 crm/models/deals.py:431
+#: crm/models/approvals.py:97 crm/models/deals.py:466
 msgid "Причина"
 msgstr "Reason"
 
@@ -2945,9 +2945,9 @@ msgstr "Accepted by (customer side)"
 msgid "Принят"
 msgstr "Accepted"
 
-#: crm/models/billing.py:304
+#: crm/models/billing.py:304 crm/models/deals.py:375
 msgid "Причина отклонения"
-msgstr "Rejection Reason"
+msgstr "Rejection reason"
 
 #: crm/models/billing.py:305
 msgid "Заполняется, когда заказчик отклоняет акт: основание попадает в аудит"
@@ -3272,7 +3272,7 @@ msgstr "Sender"
 msgid "Автор сообщения"
 msgstr "Message author"
 
-#: crm/models/deals.py:256 crm/models/deals.py:496
+#: crm/models/deals.py:256 crm/models/deals.py:531
 msgid "Продавец (lane)"
 msgstr "Seller (lane)"
 
@@ -3344,48 +3344,64 @@ msgstr "Processed"
 msgid "Менеджер обработал заявку"
 msgstr "The manager has processed the request"
 
-#: crm/models/deals.py:344
+#: crm/models/deals.py:355
+msgid "Пусто — лид в общей очереди платформы"
+msgstr "Empty — the lead is in the platform queue"
+
+#: crm/models/deals.py:364
+msgid "Кто назначил"
+msgstr "Assigned by"
+
+#: crm/models/deals.py:372
+msgid "Созданная сделка"
+msgstr "Created deal"
+
+#: crm/models/deals.py:374
+msgid "Взят в работу"
+msgstr "Claimed at"
+
+#: crm/models/deals.py:379
 msgid "Дата получения"
 msgstr "Received at"
 
-#: crm/models/deals.py:348
+#: crm/models/deals.py:383
 msgid "Лид"
 msgstr "Lead"
 
-#: crm/models/deals.py:349
+#: crm/models/deals.py:384
 msgid "Лиды"
 msgstr "Leads"
 
-#: crm/models/deals.py:360
+#: crm/models/deals.py:395
 msgid "Информация"
 msgstr "Info"
 
-#: crm/models/deals.py:361
+#: crm/models/deals.py:396
 msgid "Успех"
 msgstr "Success"
 
-#: crm/models/deals.py:362
+#: crm/models/deals.py:397
 msgid "Предупреждение"
 msgstr "Warning"
 
-#: crm/models/deals.py:363 notifications/admin.py:118
+#: crm/models/deals.py:398 notifications/admin.py:118
 #: notifications/models.py:136 notifications/models.py:191
 msgid "Ошибка"
 msgstr "Bug"
 
-#: crm/models/deals.py:368
+#: crm/models/deals.py:403
 msgid "Действие"
 msgstr "Action"
 
-#: crm/models/deals.py:369
+#: crm/models/deals.py:404
 msgid "Краткое описание совершённого действия"
 msgstr "Short description of the action performed"
 
-#: crm/models/deals.py:379 notifications/models.py:67
+#: crm/models/deals.py:414 notifications/models.py:67
 msgid "Код события"
 msgstr "Event code"
 
-#: crm/models/deals.py:380
+#: crm/models/deals.py:415
 msgid ""
 "Машинный код события для локализуемого таймлайна (deal.created, "
 "quote.sent, ...)"
@@ -3393,39 +3409,39 @@ msgstr ""
 "Machine-readable event code for the localizable timeline (deal.created, "
 "quote.sent, ...)"
 
-#: crm/models/deals.py:385 notifications/models.py:73
+#: crm/models/deals.py:420 notifications/models.py:73
 msgid "Параметры события"
 msgstr "Event parameters"
 
-#: crm/models/deals.py:386
+#: crm/models/deals.py:421
 msgid "Параметры интерполяции для перевода события на клиенте"
 msgstr "Interpolation parameters for translating the event on the client"
 
-#: crm/models/deals.py:390
+#: crm/models/deals.py:425
 msgid "Детали"
 msgstr "Details"
 
-#: crm/models/deals.py:391
+#: crm/models/deals.py:426
 msgid "Подробная информация о событии"
 msgstr "Detailed event information"
 
-#: crm/models/deals.py:400
+#: crm/models/deals.py:435
 msgid "Кто совершил действие"
 msgstr "Who performed the action"
 
-#: crm/models/deals.py:407
+#: crm/models/deals.py:442
 msgid "Уровень важности события"
 msgstr "Event severity level"
 
-#: crm/models/deals.py:412
+#: crm/models/deals.py:447
 msgid "Время события"
 msgstr "Event time"
 
-#: crm/models/deals.py:419
+#: crm/models/deals.py:454
 msgid "Тип сущности"
 msgstr "Entity type"
 
-#: crm/models/deals.py:420
+#: crm/models/deals.py:455
 msgid ""
 "Код сущности, к которой относится запись (company, user, deal, "
 "subscription, ...)"
@@ -3433,23 +3449,23 @@ msgstr ""
 "Code of the entity the record belongs to (company, user, deal, "
 "subscription, ...)"
 
-#: crm/models/deals.py:426
+#: crm/models/deals.py:461
 msgid "ID сущности"
 msgstr "Entity ID"
 
-#: crm/models/deals.py:432
+#: crm/models/deals.py:467
 msgid "Обязательная причина для override/force-действий"
 msgstr "Mandatory reason for override/force actions"
 
-#: crm/models/deals.py:437
+#: crm/models/deals.py:472
 msgid "Состояние до"
 msgstr "State before"
 
-#: crm/models/deals.py:442
+#: crm/models/deals.py:477
 msgid "Состояние после"
 msgstr "State after"
 
-#: crm/models/deals.py:449
+#: crm/models/deals.py:484
 msgid ""
 "Срок действия временно́го доступа (break-glass): до этого момента оператор "
 "вправе видеть приватные данные тенанта по указанной причине. Пусто для "
@@ -3459,19 +3475,19 @@ msgstr ""
 "view the tenant's private data for the stated reason. Empty for regular log "
 "records."
 
-#: crm/models/deals.py:465
+#: crm/models/deals.py:500
 msgid "Компания-контрагент"
 msgstr "Counterparty company"
 
-#: crm/models/deals.py:466
+#: crm/models/deals.py:501
 msgid "Организация, к которой относится событие (таймлайн контрагента)"
 msgstr "Organization the event belongs to (counterparty timeline)"
 
-#: crm/models/deals.py:500
+#: crm/models/deals.py:535
 msgid "Запись активности"
 msgstr "Activity record"
 
-#: crm/models/deals.py:501
+#: crm/models/deals.py:536
 msgid "Журнал активности"
 msgstr "Activity log"
 

@@ -57,6 +57,7 @@ from .generated_documents import (
     update_template,
 )
 from .invoice_lifecycle import cancel_invoice, issue_invoice, notify_seller_invoice_draft, update_invoice_draft
+from .leads import claim_lead, find_similar_leads, reject_lead, route_lead_to_company
 from .manual_invoice import create_manual_invoice
 from .messaging import archive_messages_sync, send_deal_message, user_can_access_deal_chat
 from .quotes import (
@@ -129,7 +130,11 @@ __all__ = [
     "export_quote",
     "force_cancel_contract",
     "force_transition_deal_stage",
+    "claim_lead",
+    "find_similar_leads",
     "generate_act",
+    "reject_lead",
+    "route_lead_to_company",
     "generate_contract_from_quote",
     "generate_invoice_from_contract",
     "issue_invoice",

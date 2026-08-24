@@ -1,12 +1,16 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Inbox, Mail, Phone, Building2, ArrowRightLeft } from 'lucide-react';
+import { Inbox, Mail, Phone, Building2, ArrowRightLeft, Ban } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
 } from '@/components/ui/sheet';
-import { useLeads, useConvertLead } from '@/hooks/useCRM';
+import { useLeads, useRouteLead, useRejectLead } from '@/hooks/useCRM';
+import { useCompanies } from '@/hooks/useAccounts';
+import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AdminDataTable } from '@/components/Admin/AdminDataTable';
 import { useAdminTableQueryState } from '@/components/Admin/useAdminTableQueryState';
 import { ErrorState, PageShell } from './shared/PageShell';
@@ -29,9 +33,15 @@ export default function AdminLeadsPage() {
   // Сбой загрузки раньше выглядел как «Лидов нет» — оператор читал недоступный API как
   // отсутствие работы (аудит UI, U2). Так же, как на остальных операторских списках.
   const { data: leads = [], isLoading, isError, refetch } = useLeads();
-  const convertLead = useConvertLead();
+  const routeLead = useRouteLead();
+  const rejectLead = useRejectLead();
+  // Компании для назначения: активные (архивная работу получать не должна — её сервер отобьёт).
+  const { data: companies = [] } = useCompanies({ is_active: 'true', fetchAll: true });
   const { tab } = useAdminTableQueryState(STORAGE_KEY);
   const [selected, setSelected] = useState<Lead | null>(null);
+  const [routeTarget, setRouteTarget] = useState<Lead | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<Lead | null>(null);
+  const [routeCompanyId, setRouteCompanyId] = useState<string>('');
 
   const filtered = useMemo(() => {
     if (tab === 'new') return leads.filter((lead) => !lead.is_processed);
@@ -41,17 +51,31 @@ export default function AdminLeadsPage() {
 
   const newCount = useMemo(() => leads.filter((lead) => !lead.is_processed).length, [leads]);
 
-  const handleConvert = async (lead: Lead) => {
-    if (lead.id == null) return;
-    try {
-      const result = await convertLead.mutateAsync({ leadId: lead.id });
-      toast.success(t('admin.leads.toast.converted', { id: result.deal_id }));
-    } catch (err) {
-      // The service returns LEAD_NO_CLIENT_COMPANY when the lead email matches no
-      // registered company yet — surface it so the operator knows the prospect
-      // must register (or be created as an offline client) first.
-      toast.error(translateApiError(err));
-    }
+  // Похожие лиды показываем ДО назначения: публичная форма открыта без аутентификации, и
+  // дубли ожидаемы по построению — иначе одна заявка уедет в две компании (Odoo «Similar Leads»).
+  const similarToRouteTarget = useMemo(() => {
+    if (!routeTarget) return [];
+    return leads.filter(
+      (lead) =>
+        lead.id !== routeTarget.id &&
+        ((routeTarget.email && lead.email === routeTarget.email) ||
+          (routeTarget.phone && lead.phone === routeTarget.phone)),
+    );
+  }, [leads, routeTarget]);
+
+  const handleRoute = async (reason: string) => {
+    if (routeTarget?.id == null || !routeCompanyId) return;
+    await routeLead.mutateAsync({ leadId: routeTarget.id, companyId: Number(routeCompanyId), reason });
+    toast.success(t('admin.leads.toast.routed'));
+    setRouteTarget(null);
+    setRouteCompanyId('');
+  };
+
+  const handleReject = async (reason: string) => {
+    if (rejectTarget?.id == null) return;
+    await rejectLead.mutateAsync({ leadId: rejectTarget.id, reason });
+    toast.success(t('admin.leads.toast.rejected'));
+    setRejectTarget(null);
   };
 
   return (
@@ -107,6 +131,16 @@ export default function AdminLeadsPage() {
             cell: (lead) => formatDate(lead.created_at),
           },
           {
+            id: 'owner',
+            header: t('admin.leads.col.owner'),
+            cell: (lead) =>
+              lead.owner_company_name ? (
+                <span>{lead.owner_company_name}</span>
+              ) : (
+                <span className="text-muted-foreground">{t('admin.leads.queue')}</span>
+              ),
+          },
+          {
             id: 'status',
             header: t('admin.leads.col.status'),
             cell: (lead) => (
@@ -118,14 +152,73 @@ export default function AdminLeadsPage() {
         ]}
         rowActions={[
           {
-            id: 'convert',
-            label: t('admin.leads.actions.convert'),
+            id: 'route',
+            label: t('admin.leads.actions.route'),
             icon: <ArrowRightLeft className="h-4 w-4" />,
-            onRun: handleConvert,
+            // Площадка НАЗНАЧАЕТ лид компании; сделку создаёт принимающая сторона своим
+            // действием «Взять в работу» (Salesforce Lead Queue + Take Ownership).
+            disabled: (lead) => Boolean(lead.is_processed),
+            onRun: (lead) => setRouteTarget(lead),
+          },
+          {
+            id: 'reject',
+            label: t('admin.leads.actions.reject'),
+            icon: <Ban className="h-4 w-4" />,
+            variant: 'destructive',
+            disabled: (lead) => Boolean(lead.is_processed),
+            onRun: (lead) => setRejectTarget(lead),
           },
         ]}
       />
       )}
+
+      <ConfirmActionDialog
+        open={routeTarget !== null}
+        onOpenChange={(open) => { if (!open) { setRouteTarget(null); setRouteCompanyId(''); } }}
+        title={t('admin.leads.route.title')}
+        description={
+          <>
+            {t('admin.leads.route.description', { name: routeTarget?.name ?? '' })}
+            {similarToRouteTarget.length > 0 && (
+              <span className="mt-2 block font-medium text-warning">
+                {t('admin.leads.route.similar', { count: similarToRouteTarget.length })}
+              </span>
+            )}
+            <span className="mt-3 block space-y-1">
+              <Label className="text-xs">{t('admin.leads.route.company')}</Label>
+              <Select value={routeCompanyId} onValueChange={setRouteCompanyId}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t('admin.leads.route.companyPlaceholder')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {companies.map((company) => (
+                    <SelectItem key={company.id} value={String(company.id)}>
+                      {company.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </span>
+          </>
+        }
+        requireReason
+        confirmLabel={t('admin.leads.route.confirm')}
+        variant="primary"
+        translateError={(code) => translateApiError(code)}
+        onConfirm={(payload) => handleRoute(payload.reason)}
+      />
+
+      <ConfirmActionDialog
+        open={rejectTarget !== null}
+        onOpenChange={(open) => !open && setRejectTarget(null)}
+        title={t('admin.leads.reject.title')}
+        description={t('admin.leads.reject.description', { name: rejectTarget?.name ?? '' })}
+        requireReason
+        confirmLabel={t('admin.leads.reject.confirm')}
+        variant="destructive"
+        translateError={(code) => translateApiError(code)}
+        onConfirm={(payload) => handleReject(payload.reason)}
+      />
 
       <Sheet open={selected !== null} onOpenChange={(open) => !open && setSelected(null)}>
         <SheetContent className="w-full sm:max-w-md">

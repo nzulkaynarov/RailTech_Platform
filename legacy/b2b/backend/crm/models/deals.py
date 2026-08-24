@@ -339,6 +339,41 @@ class Lead(models.Model):
         verbose_name=_("Обработан"),
         help_text=_("Менеджер обработал заявку"),
     )
+    # ── Маршрутизация лида (паттерн Salesforce Lead Queue + Take Ownership) ──────────────
+    # Лид приходит с лендинга НА ПЛОЩАДКУ и лежит в общей очереди (owner_company = NULL).
+    # Площадка его квалифицирует и НАЗНАЧАЕТ компании — это модерация, её работа. Сделку
+    # создаёт принимающая сторона, потому что владельцем бизнес-объекта не может стать
+    # оператор платформы (ADR-0002). До 24-08 связи «лид → сделка» не существовало вовсе:
+    # её приходилось восстанавливать разбором текста в `notes`.
+    owner_company = models.ForeignKey(
+        "accounts.Company",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="routed_leads",
+        verbose_name=_("Компания-владелец"),
+        help_text=_("Пусто — лид в общей очереди платформы"),
+    )
+    assigned_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Назначен"))
+    assigned_by = models.ForeignKey(
+        "accounts.CustomUser",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="routed_leads",
+        verbose_name=_("Кто назначил"),
+    )
+    converted_deal = models.ForeignKey(
+        "crm.Deal",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="source_leads",
+        verbose_name=_("Созданная сделка"),
+    )
+    converted_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Взят в работу"))
+    rejection_reason = models.TextField(blank=True, default="", verbose_name=_("Причина отклонения"))
+
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name=_("Дата получения"),

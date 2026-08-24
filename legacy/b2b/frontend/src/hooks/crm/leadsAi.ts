@@ -15,11 +15,30 @@ export const useLeads = () => useQuery({
   queryFn: crmApi.listLeads,
 });
 
-export const useConvertLead = () => {
+// Оператор НАЗНАЧАЕТ лид компании, компания БЕРЁТ его в работу — два разных действия двух
+// разных сторон (Salesforce Lead Queue + Take Ownership). Прежний `useConvertLead` совмещал
+// их в одном вызове, который у штатного оператора отказывал всегда.
+export const useRouteLead = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ leadId, companyId }: { leadId: number; companyId?: number }) =>
-      crmApi.convertLead(leadId, companyId),
+    mutationFn: ({ leadId, companyId, reason }: { leadId: number; companyId: number; reason: string }) =>
+      crmApi.routeLead(leadId, companyId, reason),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["leads"] }),
+  });
+};
+
+export const useRejectLead = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ leadId, reason }: { leadId: number; reason: string }) => crmApi.rejectLead(leadId, reason),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["leads"] }),
+  });
+};
+
+export const useClaimLead = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (leadId: number) => crmApi.claimLead(leadId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["leads"] });
       qc.invalidateQueries({ queryKey: ["deals"] });

@@ -40,7 +40,9 @@ import { useUserStore, selectIsSellerCapable } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { documentRoute } from '@/lib/documentRoute';
 import { documentStatusLabelKey } from '@/lib/codes';
-import { useDeals, useTimeToFirstQuote } from '@/hooks/useCRM';
+import { toast } from 'sonner';
+import { translateApiError } from '@/lib/apiError';
+import { useDeals, useTimeToFirstQuote, useLeads, useClaimLead } from '@/hooks/useCRM';
 import { useRecentDocuments } from '@/hooks/usePageStats';
 import { buyerStatus } from '@/lib/requestStatus';
 import { dashboardApi, type DashboardStats, type RecentDocument } from '@/api/dashboardApi';
@@ -226,6 +228,70 @@ function BuyerWelcome({ onNavigate }: { onNavigate: (page: string) => void }) {
 }
 
 // ─── BUYER Recent Requests ──────────────────────────────────────────────
+
+/** Входящие лиды, назначенные МОЕЙ компании (Salesforce Lead Queue → Take Ownership).
+ *
+ *  Площадка квалифицирует запрос с лендинга и передаёт его компании; сделку создаёт компания
+ *  сама, взяв лид в работу, — и владельцем становится она, а не оператор платформы (ADR-0002).
+ *  Карточка появляется только когда есть что брать: пустого блока на дашборде не будет.
+ */
+function IncomingLeadsCard() {
+  const { t } = useTranslation();
+  const { data: leads, isError, refetch } = useLeads();
+  const claimLead = useClaimLead();
+
+  if (isError) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center gap-3 py-8 text-center">
+          <AlertCircle className="h-6 w-6 text-destructive" aria-hidden="true" />
+          <p className="text-sm font-medium">{t('common.loadError')}</p>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            {t('common.retry')}
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const waiting = (leads ?? []).filter((lead) => !lead.is_processed && lead.owner_company);
+  if (waiting.length === 0) return null;
+
+  const claim = async (leadId: number) => {
+    try {
+      const result = await claimLead.mutateAsync(leadId);
+      toast.success(t('admin.leads.toast.claimed', { id: result.deal_id }));
+      window.location.hash = `request-detail/${result.deal_id}`;
+    } catch (err) {
+      toast.error(translateApiError(err));
+    }
+  };
+
+  return (
+    <Card className="py-0 gap-0">
+      <CardHeader className="px-4 py-3">
+        <CardTitle className="text-sm font-semibold">{t('dashboardPage.buyer.incomingLeads')}</CardTitle>
+      </CardHeader>
+      <div className="divide-y">
+        {waiting.map((lead) => (
+          <div key={lead.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium">{lead.name}</p>
+              <p className="truncate text-xs text-muted-foreground">{lead.message || lead.email}</p>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => lead.id != null && claim(lead.id)}
+              disabled={claimLead.isPending}
+            >
+              {t('dashboardPage.buyer.claimLead')}
+            </Button>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
 
 function RecentRequestsCard({ onNavigate }: { onNavigate: (page: string) => void }) {
   const { t } = useTranslation();
@@ -427,6 +493,8 @@ function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stat
       <BuyerAttentionStrip onNavigate={onNavigate} />
       {/* F3 — деньги и поставка: блок появляется сам, когда сделки доходят до счетов. */}
       <PostContractStrip side="buyer" onNavigate={onNavigate} />
+      {/* Лид, переданный площадкой: сделку создаёт принимающая сторона своим действием. */}
+      <IncomingLeadsCard />
       <RecentRequestsCard onNavigate={onNavigate} />
       <RecentDocumentsCard />
       <PipelineFunnel onNavigate={onNavigate} />

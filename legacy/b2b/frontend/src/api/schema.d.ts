@@ -4921,13 +4921,33 @@ export interface paths {
         };
         /**
          * List leads
-         * @description Manager/admin CRUD for leads + convert-to-deal.
+         * @description Очередь лидов площадки: оператор назначает, компания берёт в работу.
+         *
+         *     Эталон — Salesforce Lead Queue + Take Ownership: входящий лид лежит в очереди ПЛОЩАДКИ,
+         *     оператор его квалифицирует и назначает владельцу, а сделку создаёт принимающая сторона
+         *     (она же становится владельцем). Так квалификация остаётся модерацией, а бизнес-объект не
+         *     рождается от лица оператора (ADR-0002).
+         *
+         *     Права: до 24-08 класс стоял на голом `IsPlatformAdmin` — любой оператор, включая
+         *     «Поддержку» с одними `*.view`, мог править и УДАЛЯТЬ лиды. Это приведение к уже
+         *     заявленному («только просмотр»), а не новая блокировка. Сырое удаление снято совсем:
+         *     лид закрывают отклонением с причиной, как контакты (`ContactViewSet`).
          */
         get: operations["crm_leads_list"];
         put?: never;
         /**
          * Create lead
-         * @description Manager/admin CRUD for leads + convert-to-deal.
+         * @description Очередь лидов площадки: оператор назначает, компания берёт в работу.
+         *
+         *     Эталон — Salesforce Lead Queue + Take Ownership: входящий лид лежит в очереди ПЛОЩАДКИ,
+         *     оператор его квалифицирует и назначает владельцу, а сделку создаёт принимающая сторона
+         *     (она же становится владельцем). Так квалификация остаётся модерацией, а бизнес-объект не
+         *     рождается от лица оператора (ADR-0002).
+         *
+         *     Права: до 24-08 класс стоял на голом `IsPlatformAdmin` — любой оператор, включая
+         *     «Поддержку» с одними `*.view`, мог править и УДАЛЯТЬ лиды. Это приведение к уже
+         *     заявленному («только просмотр»), а не новая блокировка. Сырое удаление снято совсем:
+         *     лид закрывают отклонением с причиной, как контакты (`ContactViewSet`).
          */
         post: operations["crm_leads_create"];
         delete?: never;
@@ -4945,30 +4965,56 @@ export interface paths {
         };
         /**
          * Get lead details
-         * @description Manager/admin CRUD for leads + convert-to-deal.
+         * @description Очередь лидов площадки: оператор назначает, компания берёт в работу.
+         *
+         *     Эталон — Salesforce Lead Queue + Take Ownership: входящий лид лежит в очереди ПЛОЩАДКИ,
+         *     оператор его квалифицирует и назначает владельцу, а сделку создаёт принимающая сторона
+         *     (она же становится владельцем). Так квалификация остаётся модерацией, а бизнес-объект не
+         *     рождается от лица оператора (ADR-0002).
+         *
+         *     Права: до 24-08 класс стоял на голом `IsPlatformAdmin` — любой оператор, включая
+         *     «Поддержку» с одними `*.view`, мог править и УДАЛЯТЬ лиды. Это приведение к уже
+         *     заявленному («только просмотр»), а не новая блокировка. Сырое удаление снято совсем:
+         *     лид закрывают отклонением с причиной, как контакты (`ContactViewSet`).
          */
         get: operations["crm_leads_retrieve"];
         /**
          * Update lead
-         * @description Manager/admin CRUD for leads + convert-to-deal.
+         * @description Очередь лидов площадки: оператор назначает, компания берёт в работу.
+         *
+         *     Эталон — Salesforce Lead Queue + Take Ownership: входящий лид лежит в очереди ПЛОЩАДКИ,
+         *     оператор его квалифицирует и назначает владельцу, а сделку создаёт принимающая сторона
+         *     (она же становится владельцем). Так квалификация остаётся модерацией, а бизнес-объект не
+         *     рождается от лица оператора (ADR-0002).
+         *
+         *     Права: до 24-08 класс стоял на голом `IsPlatformAdmin` — любой оператор, включая
+         *     «Поддержку» с одними `*.view`, мог править и УДАЛЯТЬ лиды. Это приведение к уже
+         *     заявленному («только просмотр»), а не новая блокировка. Сырое удаление снято совсем:
+         *     лид закрывают отклонением с причиной, как контакты (`ContactViewSet`).
          */
         put: operations["crm_leads_update"];
         post?: never;
-        /**
-         * Delete lead
-         * @description Manager/admin CRUD for leads + convert-to-deal.
-         */
-        delete: operations["crm_leads_destroy"];
+        delete?: never;
         options?: never;
         head?: never;
         /**
          * Partially update lead
-         * @description Manager/admin CRUD for leads + convert-to-deal.
+         * @description Очередь лидов площадки: оператор назначает, компания берёт в работу.
+         *
+         *     Эталон — Salesforce Lead Queue + Take Ownership: входящий лид лежит в очереди ПЛОЩАДКИ,
+         *     оператор его квалифицирует и назначает владельцу, а сделку создаёт принимающая сторона
+         *     (она же становится владельцем). Так квалификация остаётся модерацией, а бизнес-объект не
+         *     рождается от лица оператора (ADR-0002).
+         *
+         *     Права: до 24-08 класс стоял на голом `IsPlatformAdmin` — любой оператор, включая
+         *     «Поддержку» с одними `*.view`, мог править и УДАЛЯТЬ лиды. Это приведение к уже
+         *     заявленному («только просмотр»), а не новая блокировка. Сырое удаление снято совсем:
+         *     лид закрывают отклонением с причиной, как контакты (`ContactViewSet`).
          */
         patch: operations["crm_leads_partial_update"];
         trace?: never;
     };
-    "/api/v1/crm/leads/{id}/convert/": {
+    "/api/v1/crm/leads/{id}/claim/": {
         parameters: {
             query?: never;
             header?: never;
@@ -4978,10 +5024,60 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Convert lead to deal
-         * @description Manager/admin CRUD for leads + convert-to-deal.
+         * Claim a routed lead — the receiving company creates the deal
+         * @description Компания берёт назначенный ей лид в работу. Сделка рождается здесь, и владелец у неё правильный — компания, а не оператор платформы (ADR-0002).
          */
-        post: operations["crm_leads_convert_create"];
+        post: operations["crm_leads_claim_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/leads/{id}/reject/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject a lead (spam / duplicate)
+         * @description Очередь лидов площадки: оператор назначает, компания берёт в работу.
+         *
+         *     Эталон — Salesforce Lead Queue + Take Ownership: входящий лид лежит в очереди ПЛОЩАДКИ,
+         *     оператор его квалифицирует и назначает владельцу, а сделку создаёт принимающая сторона
+         *     (она же становится владельцем). Так квалификация остаётся модерацией, а бизнес-объект не
+         *     рождается от лица оператора (ADR-0002).
+         *
+         *     Права: до 24-08 класс стоял на голом `IsPlatformAdmin` — любой оператор, включая
+         *     «Поддержку» с одними `*.view`, мог править и УДАЛЯТЬ лиды. Это приведение к уже
+         *     заявленному («только просмотр»), а не новая блокировка. Сырое удаление снято совсем:
+         *     лид закрывают отклонением с причиной, как контакты (`ContactViewSet`).
+         */
+        post: operations["crm_leads_reject_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/leads/{id}/route/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Route a lead to a company (Salesforce lead assignment)
+         * @description Оператор платформы назначает лид компании. Это маршрутизация, а не создание сделки: сделку создаёт принимающая сторона действием `claim`.
+         */
+        post: operations["crm_leads_route_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8496,9 +8592,6 @@ export interface components {
             valid_until?: string | null;
             notes?: string;
         };
-        ConvertLeadRequest: {
-            company_id?: number;
-        };
         Country: {
             readonly id: number;
             /**
@@ -9555,6 +9648,27 @@ export interface components {
              * Format: date-time
              */
             readonly created_at: string;
+            /**
+             * Компания-владелец
+             * @description Пусто — лид в общей очереди платформы
+             */
+            owner_company?: number | null;
+            /** @default  */
+            readonly owner_company_name: string;
+            /**
+             * Назначен
+             * Format: date-time
+             */
+            assigned_at?: string | null;
+            /** Созданная сделка */
+            converted_deal?: number | null;
+            /**
+             * Взят в работу
+             * Format: date-time
+             */
+            converted_at?: string | null;
+            /** Причина отклонения */
+            rejection_reason?: string;
         };
         LeadRequest: {
             /**
@@ -9583,6 +9697,25 @@ export interface components {
              * @description Текст заявки с лендинга
              */
             message?: string;
+            /**
+             * Компания-владелец
+             * @description Пусто — лид в общей очереди платформы
+             */
+            owner_company?: number | null;
+            /**
+             * Назначен
+             * Format: date-time
+             */
+            assigned_at?: string | null;
+            /** Созданная сделка */
+            converted_deal?: number | null;
+            /**
+             * Взят в работу
+             * Format: date-time
+             */
+            converted_at?: string | null;
+            /** Причина отклонения */
+            rejection_reason?: string;
         };
         /**
          * @description * `INFO` - Информация
@@ -11065,6 +11198,25 @@ export interface components {
              * @description Текст заявки с лендинга
              */
             message?: string;
+            /**
+             * Компания-владелец
+             * @description Пусто — лид в общей очереди платформы
+             */
+            owner_company?: number | null;
+            /**
+             * Назначен
+             * Format: date-time
+             */
+            assigned_at?: string | null;
+            /** Созданная сделка */
+            converted_deal?: number | null;
+            /**
+             * Взят в работу
+             * Format: date-time
+             */
+            converted_at?: string | null;
+            /** Причина отклонения */
+            rejection_reason?: string;
         };
         PatchedMessageRequest: {
             /**
@@ -13028,6 +13180,9 @@ export interface components {
         RejectActRequest: {
             reason: string;
         };
+        RejectLeadRequest: {
+            reason: string;
+        };
         RejectQuoteRequestRequest: {
             /** @default  */
             reason: string;
@@ -13119,6 +13274,10 @@ export interface components {
          * @enum {string}
          */
         ResetPeriodEnum: "never" | "yearly" | "monthly";
+        RouteLeadRequest: {
+            company_id: number;
+            reason: string;
+        };
         RouteRequestRequestRequest: {
             seller_company_ids: number[];
         };
@@ -21889,27 +22048,6 @@ export interface operations {
             };
         };
     };
-    crm_leads_destroy: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Лид. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No response body */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     crm_leads_partial_update: {
         parameters: {
             query?: never;
@@ -21938,7 +22076,7 @@ export interface operations {
             };
         };
     };
-    crm_leads_convert_create: {
+    crm_leads_claim_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -21948,11 +22086,39 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: {
+        requestBody?: never;
+        responses: {
+            /** @description {deal_id, stage} */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description LEAD_NOT_YOURS */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    crm_leads_reject_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Лид. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
             content: {
-                "application/json": components["schemas"]["ConvertLeadRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["ConvertLeadRequest"];
-                "multipart/form-data": components["schemas"]["ConvertLeadRequest"];
+                "application/json": components["schemas"]["RejectLeadRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["RejectLeadRequest"];
+                "multipart/form-data": components["schemas"]["RejectLeadRequest"];
             };
         };
         responses: {
@@ -21963,6 +22129,48 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Lead"];
                 };
+            };
+            /** @description REASON_REQUIRED */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    crm_leads_route_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Лид. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RouteLeadRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["RouteLeadRequest"];
+                "multipart/form-data": components["schemas"]["RouteLeadRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Lead"];
+                };
+            };
+            /** @description COMPANY_NOT_FOUND / REASON_REQUIRED */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

@@ -163,11 +163,22 @@ export const dealsApi = {
 	// имеет. Первая страница вместо всего списка означала, что 21-й лид не обработает никто и
 	// счётчик про него не скажет.
 	listLeads: async () => fetchAllPages<Lead>('crm/leads/'),
-	convertLead: async (leadId: number, companyId?: number) => {
-		const response = await apiClient.post<{ deal_id: number; stage: string }>(
-			`crm/leads/${leadId}/convert/`,
-			companyId ? { company_id: companyId } : {},
-		);
+	/** Оператор НАЗНАЧАЕТ лид компании (Salesforce lead assignment) — сделку он не создаёт. */
+	routeLead: async (leadId: number, companyId: number, reason: string) => {
+		const response = await apiClient.post<Lead>(`crm/leads/${leadId}/route/`, {
+			company_id: companyId,
+			reason,
+		});
+		return response.data;
+	},
+	/** Спам или дубль: лид закрывается площадкой с причиной, сделка не создаётся. */
+	rejectLead: async (leadId: number, reason: string) => {
+		const response = await apiClient.post<Lead>(`crm/leads/${leadId}/reject/`, { reason });
+		return response.data;
+	},
+	/** Компания берёт назначенный ей лид в работу — и становится владельцем сделки. */
+	claimLead: async (leadId: number) => {
+		const response = await apiClient.post<{ deal_id: number; stage: string }>(`crm/leads/${leadId}/claim/`);
 		return response.data;
 	},
 

@@ -46,6 +46,10 @@ class MessageSerializer(serializers.ModelSerializer):
 
 
 class LeadSerializer(serializers.ModelSerializer):
+    # Кому назначен и во что превратился — раньше связь «лид → сделка» существовала только
+    # текстом в `notes`, и восстановить её можно было лишь разбором строки.
+    owner_company_name = serializers.CharField(source="owner_company.name", read_only=True, default="")
+
     class Meta:
         model = Lead
         fields = [
@@ -57,6 +61,22 @@ class LeadSerializer(serializers.ModelSerializer):
             "message",
             "is_processed",
             "created_at",
+            "owner_company",
+            "owner_company_name",
+            "assigned_at",
+            "converted_deal",
+            "converted_at",
+            "rejection_reason",
+        ]
+        # Маршрутизация и приём — ДЕЙСТВИЯ со следом (`route` / `claim` / `reject`), а не
+        # поля формы: иначе назначение уходило бы без причины и без записи в журнале.
+        read_only_fields = [
+            "owner_company",
+            "assigned_at",
+            "converted_deal",
+            "converted_at",
+            "rejection_reason",
+            "is_processed",
         ]
         read_only_fields = ["created_at", "is_processed"]
 

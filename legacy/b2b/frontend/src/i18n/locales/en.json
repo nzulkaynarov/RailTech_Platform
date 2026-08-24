@@ -1145,6 +1145,7 @@
         "email": "Email",
         "phone": "Phone",
         "created": "Received",
+        "owner": "Owner company",
         "status": "Status"
       },
       "status": {
@@ -1152,14 +1153,31 @@
         "processed": "Processed"
       },
       "actions": {
-        "convert": "Convert to deal"
+        "route": "Assign to a company",
+        "reject": "Reject (spam/duplicate)"
       },
       "toast": {
-        "converted": "Lead converted to deal #{{id}}"
+        "routed": "The lead was assigned — the company will take it from here",
+        "rejected": "Lead rejected",
+        "claimed": "Lead taken — deal #{{id}} created"
       },
       "empty": {
         "title": "No leads yet",
         "description": "Inbound requests from the public landing page will show up here"
+      },
+      "queue": "Platform queue",
+      "route": {
+        "title": "Assign the lead to a company",
+        "description": "\u201c{{name}}\u201d will be handed to the selected company. It creates the deal itself by taking the lead — the platform does not act on its behalf.",
+        "company": "Company",
+        "companyPlaceholder": "Pick a company",
+        "similar": "\u26a0\ufe0f Similar leads: {{count}}. Make sure this is not a duplicate — otherwise one request goes to two companies.",
+        "confirm": "Assign"
+      },
+      "reject": {
+        "title": "Reject the lead?",
+        "description": "\u201c{{name}}\u201d will be closed without creating a deal. The reason is kept in the log.",
+        "confirm": "Reject"
       },
       "detail": {
         "title": "Lead",
@@ -1892,6 +1910,8 @@
     },
     "buyer": {
       "days": "days",
+      "incomingLeads": "Incoming requests",
+      "claimLead": "Take it",
       "recentRequests": "Recent Requests",
       "requestNumber": "#",
       "date": "Date",
@@ -3620,6 +3640,11 @@
     "ACT_ALREADY_EXISTS": "An act for this invoice already exists — a second closing document is not created",
     "ACT_AWAITING_REISSUE": "The act for this invoice came back with a remark — re-issue it instead of creating a second one",
     "ACT_REISSUE_NOT_ALLOWED": "Only an act returned by the customer can be re-issued",
+    "COMPANY_NOT_FOUND": "Company not found",
+    "LEAD_NOT_ROUTED": "The lead has not been assigned to a company yet — it cannot be taken",
+    "LEAD_NOT_YOURS": "The lead is assigned to another company",
+    "PLATFORM_OPERATOR_REQUIRED": "Only a platform operator can do this",
+    "COMPANY_ARCHIVED": "The company is out of circulation — work cannot be assigned to it",
     "COMPANY_HAS_HISTORY": "The company has history — it cannot be deleted. Remove it from circulation instead: the picker and directories forget it while documents stay",
     "COMPANY_IN_USE": "Data still references this company — it cannot be deleted; remove it from circulation instead",
     "COMPANY_ALREADY_ARCHIVED": "The company is already out of circulation",
@@ -3706,7 +3731,6 @@
     "SELLER_BANK_DETAILS_REQUIRED": "Fill in the company bank details — without an account number the client cannot pay this invoice. Settings → Company",
     "USER_HAS_HISTORY_DEACTIVATE_INSTEAD": "This user has work history and cannot be deleted. Deactivate instead — access is revoked while deals and correspondence stay intact.",
     "CANNOT_DELETE_SUPERUSER": "A superuser cannot be deleted from the panel — a platform engineer does that.",
-    "COMPANY_NOT_FOUND": "Company not found.",
     "ONLY_COMPANY_OWNER_CAN_APPLY": "Only a company administrator can file an application.",
     "PAYMENT_EXCEEDS_BALANCE_DUE": "The amount is larger than the balance due. Enter an amount within the balance — overpayment is not accepted.",
     "REQUEST_HAS_NO_ITEMS": "The request has no line items — there is nothing for the seller to quote. Add at least one and submit again."
@@ -4259,6 +4283,10 @@
       }
     },
     "lead": {
+      "claimed": {
+        "title": "Lead taken into work",
+        "detail": "Lead #{{lead_id}} → deal #{{deal_id}}"
+      },
       "converted": {
         "title": "Lead converted to deal",
         "detail": "Lead #{{lead_id}} → Deal #{{deal_id}}"
@@ -4431,6 +4459,16 @@
         "activated": {
           "title": "Subscription activated",
           "detail": "{{company_name}}"
+        }
+      },
+      "lead": {
+        "routed": {
+          "title": "Lead assigned to a company",
+          "detail": "Lead #{{lead_id}} → {{company_name}}"
+        },
+        "rejected": {
+          "title": "Lead rejected",
+          "detail": "Lead #{{lead_id}}"
         }
       },
       "company": {

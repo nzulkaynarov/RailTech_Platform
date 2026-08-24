@@ -136,7 +136,10 @@ def _auth_client(user):
 
 def test_super_operator_has_every_capability(make_operator):
     operator = make_operator(OperatorRoleCode.SUPER_OPERATOR.value)
-    assert len(ALL_OPERATOR_PERMISSIONS) == 12
+    # 12 → 14: добавлены `leads.view` и `leads.route` вместе с механикой «очередь лидов →
+    # назначение компании → приём» (Salesforce Lead Queue). Число здесь — не украшение: оно
+    # ловит право, добавленное в enum и забытое в пресетах ролей.
+    assert len(ALL_OPERATOR_PERMISSIONS) == 14
     for perm in ALL_OPERATOR_PERMISSIONS:
         assert operator_has_permission(operator, perm) is True, perm
 
