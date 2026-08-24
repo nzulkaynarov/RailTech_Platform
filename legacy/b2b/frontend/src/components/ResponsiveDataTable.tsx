@@ -106,10 +106,24 @@ export function ResponsiveDataTable<T>({
           return (
             <div
               key={getRowId(row)}
-              className={cn('flex flex-col gap-2 p-4', onRowClick && 'cursor-pointer', rowClassName?.(row))}
+              // Клавиатура работала только на десктопной половине: мобильная карточка была
+              // обычным div с onClick — без роли, без фокуса и без Enter/Space. Правило
+              // проекта «строки списка доступны с клавиатуры» распространяется на ОБЕ
+              // раскладки: мобильная — не декорация, а тот же список на узком экране.
+              role={onRowClick ? 'button' : undefined}
+              tabIndex={onRowClick ? 0 : undefined}
+              className={cn(
+                'flex flex-col gap-2 p-4',
+                onRowClick && 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
+                rowClassName?.(row),
+              )}
               // N4 (мобильный аудит «Номенклатуры»): тот же гард, что у десктопной строки, —
               // тап по чекбоксу или кнопке внутри карточки не должен заодно открывать строку.
               onClick={onRowClick ? (event) => { if (!clickOriginatesFromControl(event.target)) onRowClick(row); } : undefined}
+              onKeyDown={onRowClick ? (event) => {
+                if (event.target !== event.currentTarget) return;
+                if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onRowClick(row); }
+              } : undefined}
             >
               {visible.map((col) => {
                 if (col.mobileTitle) {

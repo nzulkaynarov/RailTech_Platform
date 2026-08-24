@@ -128,9 +128,19 @@ describe('evaluatePageGuard — cross-role / role bounces still hold after boots
   });
 
   it('bounces an unverified user off a non-KYC-floor page (KYC guard)', () => {
-    expect(evaluatePageGuard(input({ pageType: 'request-detail', kycStatus: 'pending' }))).toEqual({
+    // Раньше примером служила карточка заявки — она перестала им быть: свой ЧЕРНОВИК
+    // покупателю разрешён до верификации (KYC floor, ADR-0006), и гейт на его ЧТЕНИИ был
+    // тупиком. Порог остался на отправке, поэтому берём страницу, которая действительно за
+    // ним: договоры появляются только после согласованного КП.
+    expect(evaluatePageGuard(input({ pageType: 'contracts', kycStatus: 'pending' }))).toEqual({
       action: 'bounce',
       reason: 'kyc',
+    });
+  });
+
+  it('lets a pre-KYC buyer open its OWN draft request (KYC floor allows the draft)', () => {
+    expect(evaluatePageGuard(input({ pageType: 'request-detail', kycStatus: 'pending' }))).toEqual({
+      action: 'allow',
     });
   });
 

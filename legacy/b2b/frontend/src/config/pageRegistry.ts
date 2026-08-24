@@ -102,7 +102,14 @@ const SHARED_DOCUMENTS = [
   { id: 'my-subscription', buyer: true, seller: true, kycExempt: true, navigable: true },
   // Карточка сделки — одна страница для обеих сторон, родительская крошка контекстная.
   // Оператору открыта: на его страницах КП и договоров ссылка на сделку ведёт сюда.
-  { id: 'request-detail', buyer: true, seller: true, adminReachable: true },
+  //
+  // `kycExempt` — ровно по той же причине, что у `my-requests`: ниже KYC L2 покупателю
+  // разрешён ЧЕРНОВИК заявки (ADR-0006, KYC floor), список своих заявок ему уже открыт, и
+  // строка в нём кликабельна. Без этой пометки клик по собственному черновику отбрасывал
+  // новичка на дашборд: гейт стоял на ЧТЕНИИ своего документа, тогда как настоящий порог —
+  // ОТПРАВКА (сервер держит его кодом `KYC_REQUIRED_TO_SUBMIT`). Эталон тот же, что у
+  // Stripe и Odoo: незавершённую верификацию блокирует публикация, а не просмотр черновика.
+  { id: 'request-detail', buyer: true, seller: true, adminReachable: true, kycExempt: true },
 ] as const satisfies readonly PageDefinition[];
 
 const BUYER_ONLY = [

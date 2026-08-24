@@ -1,8 +1,8 @@
 import { useState } from 'react'; import { useTranslation } from 'react-i18next'; import { ShoppingCart, ChevronRight } from 'lucide-react'; import { useCurrencyStore } from '@/store/currencyStore'; import { formatDate } from '@/lib/formatLocale'; import { useDeals } from '@/hooks/useCRM'; import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell'; import { Toolbar, Pager } from '@/components/DataTable';
 import { useListParams, applyListParams } from '@/components/DataTable/listParams';
 import { CreateDealDialog } from '@/components/CRM/CreateDealDialog';
+import { ResponsiveDataTable } from '@/components/ResponsiveDataTable';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { DealStage } from '@/lib/codes';
 import { buyerStatus, buyerStatusKey, BUYER_STATUS_ORDER } from '@/lib/requestStatus';
@@ -85,52 +85,65 @@ export function MyRequestsPage() {
         );
         return (
           <>
+            {/* «Мои заявки» — первый экран покупателя, и на телефоне он был сырой таблицей
+                шириной 868 px: строки обрезались, а прокрутка не видна (оверлейный скроллбар).
+                `ResponsiveDataTable` разворачивает её в карточки ниже sm — тот же канон, что у
+                остальных реестров продукта. */}
             <div className="rounded-lg border border-border">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead>{t('pages.myRequests.colRequest')}</TableHead>
-                    <TableHead className="w-40">{t('pages.myRequests.colStatus')}</TableHead>
-                    <TableHead className="w-32">{t('pages.myRequests.colDate')}</TableHead>
-                    <TableHead className="w-32 text-right">{t('pages.myRequests.colTotal')}</TableHead>
-                    <TableHead className="w-10" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pageItems.map((deal: Deal) => {
-                    const status = buyerStatus(deal.stage_code, deal.execution_complete);
-                    return (
-                      <TableRow
-                        key={deal.id}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => openDeal(deal)}
-                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openDeal(deal); }}
-                        className="cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        <TableCell>
-                          <span className="font-medium">{deal.title ?? `${t('pages.myRequests.deal')} #${deal.id}`}</span>
-                          <span className="block text-xs text-muted-foreground">#{deal.id}</span>
-                        </TableCell>
-                        <TableCell>
-                          <StatusBadge label={t(status.labelKey)} variant={status.variant} />
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground tabular-nums">
-                          {formatDate(deal.created_at)}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {showTotal(deal)
-                            ? <span className="font-semibold text-primary">{formatCurrency(Number(deal.total_value))}</span>
-                            : <span className="text-muted-foreground">—</span>}
-                        </TableCell>
-                        <TableCell>
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+              <ResponsiveDataTable<Deal>
+                rows={pageItems}
+                getRowId={(deal) => deal.id}
+                onRowClick={openDeal}
+                columns={[
+                  {
+                    id: 'title',
+                    header: t('pages.myRequests.colRequest'),
+                    mobileTitle: true,
+                    cell: (deal) => (
+                      <>
+                        <span className="font-medium">{deal.title ?? `${t('pages.myRequests.deal')} #${deal.id}`}</span>
+                        <span className="block text-xs text-muted-foreground">#{deal.id}</span>
+                      </>
+                    ),
+                  },
+                  {
+                    id: 'status',
+                    header: t('pages.myRequests.colStatus'),
+                    className: 'w-40',
+                    cell: (deal) => {
+                      const status = buyerStatus(deal.stage_code, deal.execution_complete);
+                      return <StatusBadge label={t(status.labelKey)} variant={status.variant} />;
+                    },
+                  },
+                  {
+                    id: 'created',
+                    header: t('pages.myRequests.colDate'),
+                    className: 'w-32',
+                    cell: (deal) => (
+                      <span className="text-sm text-muted-foreground tabular-nums">{formatDate(deal.created_at)}</span>
+                    ),
+                  },
+                  {
+                    id: 'total',
+                    header: t('pages.myRequests.colTotal'),
+                    className: 'w-32 text-right',
+                    cell: (deal) =>
+                      showTotal(deal) ? (
+                        <span className="font-semibold text-primary">{formatCurrency(Number(deal.total_value))}</span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      ),
+                  },
+                  {
+                    id: 'open',
+                    header: '',
+                    className: 'w-10',
+                    // На телефоне строка кликабельна целиком — стрелка там лишний столбец.
+                    mobileHidden: true,
+                    cell: () => <ChevronRight className="h-4 w-4 text-muted-foreground" />,
+                  },
+                ]}
+              />
             </div>
             <Pager page={listParams.page} pageSize={listParams.pageSize} total={total} onPageChange={listParams.setPage} />
           </>
