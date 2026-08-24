@@ -47,11 +47,17 @@ def _fmt_age(created: datetime | None) -> str:
 
 
 def _queue_kyc() -> list[dict[str, Any]]:
+    from django.db.models import Count
+
     from accounts.models import Company
+    from accounts.services.kyc import kyc_evidence_gaps
 
     qs = (
         Company.objects.select_related("verification_status")
         .filter(verification_status__code="PROFILE_SUBMITTED")
+        # Пробелы в доказательствах считает ТОТ ЖЕ предикат, что и сервис верификации;
+        # счётчик документов аннотируем, чтобы список не превратился в N+1.
+        .annotate(kyc_document_count=Count("kyc_documents"))
         .order_by("created_at")
     )
     return [
@@ -61,6 +67,10 @@ def _queue_kyc() -> list[dict[str, Any]]:
             "entity_id": c.id,
             "title": c.name or f"Company #{c.id}",
             "subtitle": f"INN {c.inn}" if c.inn else "",
+            # Витрина рисует по этим кодам предупреждение и требует обоснование — ровно как
+            # реестр KYC. Без них очередь была ЕДИНСТВЕННЫМ путём, который отправлял
+            # подтверждение без причины и упирался в отказ сервера.
+            "evidence_gaps": kyc_evidence_gaps(c),
             "severity": "warning",
             "created_at": c.created_at.isoformat() if c.created_at else None,
             "age": _fmt_age(c.created_at),

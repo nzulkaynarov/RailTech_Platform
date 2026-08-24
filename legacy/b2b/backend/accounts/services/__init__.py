@@ -34,7 +34,7 @@ from .entitlements import (
     quote_export_entitled,
     quote_send_entitled,
 )
-from .kyc import bulk_verify_kyc, delete_kyc_document, upload_kyc_document, verify_company_kyc
+from .kyc import bulk_verify_kyc, delete_kyc_document, kyc_evidence_gaps, upload_kyc_document, verify_company_kyc
 from .members import (
     add_company_member,
     can_delete_user,
@@ -143,6 +143,7 @@ __all__ = [
     "toggle_user_active",
     "upload_kyc_document",
     "verify_and_setup_password",
+    "kyc_evidence_gaps",
     "verify_company_kyc",
     "accept_client_invite",
     "auto_populate_history",

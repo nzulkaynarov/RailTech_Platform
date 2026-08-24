@@ -240,6 +240,26 @@ class CompanyAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelAdmin):
     actions = ["verify_kyc"]
     warn_unsaved_form = True
 
+    # Уровень KYC — БИЗНЕС-действие с обязательным следом, а не поле формы. В инженерной
+    # админке оно правилось обычным «Сохранить»: суперпользователь ставил L2_VERIFIED мимо
+    # сервиса, без обоснования и без единой строки в журнале — при том что pre-save сигнал
+    # всё равно слал владельцам письмо о смене статуса, то есть уведомление приходило о
+    # выдаче, следа которой не существует. Поле закрыто ДЛЯ ВСЕХ, включая суперпользователя:
+    # выдаёт уровень панель оператора, а здесь остаётся аварийное действие `verify_kyc`,
+    # которое идёт через сервис (ADR-0001: Unfold — инженерам, бизнес-операции — в React
+    # Admin). Найдено скептиком при проверке волны «гейт обоснования», 24-08.
+    KYC_STATE_FIELDS = ("verification_status", "is_verified")
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly = list(super().get_readonly_fields(request, obj))
+        if obj is None:
+            # На создании поля ещё нет смысла: новая компания рождается неверифицированной.
+            return readonly
+        for field in self.KYC_STATE_FIELDS:
+            if field not in readonly:
+                readonly.append(field)
+        return readonly
+
     def get_queryset(self, request):
         # Prefetch M2M `types` so types_display() doesn't issue 1 query per row.
         return super().get_queryset(request).prefetch_related("types")
@@ -264,11 +284,23 @@ class CompanyAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelAdmin):
 
     @superuser_only_action(_("[Emergency] Подтвердить KYC (L2)"))
     def verify_kyc(self, request, queryset):
+        # Обоснования у аварийного действия быть не может — у действия Django нет формы, а
+        # подставить его от имени человека значит подделать след. Поэтому компании с неполными
+        # доказательствами сервис здесь ОТКЛОНИТ (`KYC_REASON_REQUIRED_WITHOUT_EVIDENCE`), а
+        # сообщение отправит оператора туда, где обоснование записывается, — в панель оператора
+        # (ADR-0001: Unfold — инженерам, бизнес-действия — в React Admin).
         approved, skipped = services.bulk_verify_kyc(queryset, request.user, level_code="L2_VERIFIED")
         if skipped:
+            # `skipped` — список СЛОВАРЕЙ {company_id, name, error}; строковый join по нему
+            # падал в TypeError, то есть аварийное действие ломалось ровно в тот момент, когда
+            # ему было что сказать оператору (найдено 24-08 при простановке гейта обоснования).
             self.message_user(
                 request,
-                _("Без KYC документов: %(names)s") % {"names": ", ".join(skipped)},
+                _(
+                    "Не подтверждено (%(names)s). Выдать уровень без документов можно из панели "
+                    "оператора — там записывается обоснование."
+                )
+                % {"names": ", ".join(f"{item['name']}: {item['error']}" for item in skipped)},
                 level="warning",
             )
         if approved:

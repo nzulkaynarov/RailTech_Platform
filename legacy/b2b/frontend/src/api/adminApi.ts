@@ -20,6 +20,10 @@ export interface AdminQueueItem {
   age: string;
   actions: string[];
   link: string;
+  /** Чего не хватает, чтобы считать KYC подтверждённым по доказательствам (`NO_DOCUMENTS`,
+   *  `NO_INN`). Коды приходят с сервера тем же предикатом, что применяет сам сервис
+   *  верификации — витрина по ним рисует предупреждение и требует обоснование. */
+  evidence_gaps?: string[];
 }
 
 export interface AdminQueueResponse {

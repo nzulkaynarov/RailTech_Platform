@@ -23,6 +23,7 @@ from formtools.wizard.views import SessionWizardView
 
 from master_data.models import Country
 
+from .constants import VerificationStatusCode
 from .models import Company, CompanyMember, CompanyType, CustomUser, VerificationStatus, WorkspaceRole
 
 logger = logging.getLogger(__name__)
@@ -122,11 +123,21 @@ class Step3RoleForm(forms.Form):
             "Производитель — OEM."
         ),
     )
+    # Мастер ЗАВОДИТ арендатора, а не верифицирует его: выдача L2+ — отдельное действие с
+    # обоснованием и следом в журнале (политика владельца 2026-06-03, сервис
+    # `verify_company_kyc`). Раньше здесь можно было выбрать любой уровень, включая
+    # L2_VERIFIED, и компания рождалась подтверждённой без документов, без причины и без
+    # единой строки аудита. Оставлены только уровни ДО верификации.
     verification_status = forms.ModelChoiceField(
-        queryset=VerificationStatus.objects.all(),
+        queryset=VerificationStatus.objects.filter(
+            code__in=[VerificationStatusCode.L1_UNVERIFIED, VerificationStatusCode.PROFILE_SUBMITTED]
+        ),
         label=_("Статус верификации"),
         required=False,
-        help_text=_("Начальный статус KYC. По умолчанию — не верифицирован."),
+        help_text=_(
+            "Начальный статус KYC. По умолчанию — не верифицирован. "
+            "Подтверждение уровня L2 и выше выдаётся в панели оператора: там записывается обоснование."
+        ),
     )
     kyc_notes = forms.CharField(
         widget=forms.Textarea(attrs={"rows": 3}),

@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 # KYC_VERIFIED_CODES moved to accounts.constants so the model layer can use it too
 # (models cannot import services without a cycle). Re-exported here because this was
 # its historical home and callers import it from this module.
-__all__ = ["KYC_VERIFIED_CODES"]
+__all__ = ["KYC_VERIFIED_CODES", "kyc_evidence_gaps"]
 
 
 def company_kyc_verified(company_id: int) -> bool:
@@ -24,6 +24,26 @@ def company_kyc_verified(company_id: int) -> bool:
     if company is None or not company.verification_status_id:
         return False
     return company.verification_status.code in KYC_VERIFIED_CODES
+
+
+def kyc_evidence_gaps(company: Company) -> List[str]:
+    """
+    Чего не хватает, чтобы считать KYC подтверждённым по доказательствам.
+
+    Возвращает КОДЫ пробелов (`NO_DOCUMENTS`, `NO_INN`), не текст: подпись подбирает витрина
+    (Rule 5). Признак живёт здесь, а не в диалоге, потому что по нему судят и сервер, и обе
+    панели — до 24-08 у него было две копии, и серверная просто отсутствовала.
+    """
+    gaps: List[str] = []
+    # Список компаний (очередь триажа) аннотирует `kyc_document_count` заранее — иначе на
+    # каждую строку уходил бы отдельный запрос. Предикат при этом остаётся ОДИН.
+    document_count = getattr(company, "kyc_document_count", None)
+    has_documents = company.kyc_documents.exists() if document_count is None else document_count > 0
+    if not has_documents:
+        gaps.append("NO_DOCUMENTS")
+    if not (company.inn or "").strip():
+        gaps.append("NO_INN")
+    return gaps
 
 
 def verify_company_kyc(
@@ -38,7 +58,8 @@ def verify_company_kyc(
 
     - level_code: target VerificationStatus.code
     - require_documents: when True, refuse to verify if no KYC documents uploaded
-    - reason: required when moving DOWN (e.g. revoking to L1_UNVERIFIED)
+    - reason: required when moving DOWN (e.g. revoking to L1_UNVERIFIED) and when granting
+      L2+ to a company whose evidence is incomplete (owner policy 2026-06-03)
     Returns: (company, error_message_or_None)
     """
     target_status = VerificationStatus.objects.filter(code=level_code).first()
@@ -59,8 +80,28 @@ def verify_company_kyc(
     if is_downgrade and not (reason or "").strip():
         return None, "REASON_REQUIRED"
 
+    # Уровень уже такой — выйти ДО любой записи. Иначе «Отозвать верификацию» на компании,
+    # которая и так в L1, писала в журнал зелёную запись об успехе (L1 → L1) и рассылала
+    # владельцам письмо о смене статуса: оператор видел подтверждение действия, которого не
+    # было. Сравнение `is_downgrade` строгое (`<`), и равенство проваливалось в ветку
+    # ПОВЫШЕНИЯ — менять знак на `<=` нельзя, тогда подтверждение L2 → L2 поехало бы как
+    # понижение. Нужен именно ранний выход (находка прогона 20-08, №13).
+    if level_code == current_code:
+        return None, "KYC_LEVEL_UNCHANGED"
+
     if require_documents and not is_downgrade and not company.kyc_documents.exists():
         return None, "KYC_DOCUMENTS_MISSING"
+
+    # Политика владельца 2026-06-03: выдать L2+ компании без загруженных документов МОЖНО, но
+    # это осознанное исключение — «предупреждение + обоснование». Обоснование до сих пор
+    # требовал ОДИН диалог из четырёх (карточка компании в панели оператора), а меню строки,
+    # массовое действие, аварийное действие Unfold и сырой POST по API проходили мимо: в
+    # журнале оставался пустой reason у выдачи уровня, который открывает подачу заявок и
+    # отправку/экспорт КП. Проверка стоит в сервисе, потому что четвёртый диалог обошёл бы и
+    # пятый (находки прогона 20-08, №11 и №12).
+    if not is_downgrade and LEVEL_RANK.get(level_code, 0) >= LEVEL_RANK[VerificationStatusCode.L2_VERIFIED]:
+        if kyc_evidence_gaps(company) and not (reason or "").strip():
+            return None, "KYC_REASON_REQUIRED_WITHOUT_EVIDENCE"
 
     before_code = current_code
     before_name = company.verification_status.name if company.verification_status_id else ""

@@ -75,6 +75,11 @@ export function useQueueActions(onNavigate: (target: string) => void) {
       await verifyCompany.mutateAsync({
         companyId: confirm.item.entity_id,
         status_code: 'L2_VERIFIED',
+        // Диалог собирал причину и ВЫБРАСЫВАЛ её здесь (соседняя ветка отзыва передавала).
+        // Пока обоснование было необязательным, потеря была невидимой; с политикой
+        // «без доказательств — только с обоснованием» этот путь упирался бы в отказ
+        // сервера при заполненной форме.
+        reason: payload.reason || undefined,
       });
       toast.success(t('adminQueue.kycApproved'));
       refreshAll();

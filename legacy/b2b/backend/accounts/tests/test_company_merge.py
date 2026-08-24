@@ -184,7 +184,11 @@ def test_verify_kyc_triggers_auto_populate(lookups):
     dup = _offline_placeholder(stated_inn="B999")
     Deal.objects.create(title="Old", company=dup, stage=DealStage.objects.get(code="DRAFT"))
 
-    result, err = verify_company_kyc(survivor, admin, level_code="L2_VERIFIED", require_documents=False)
+    # Обоснование обязательно: у компании нет KYC-документов, а политика владельца требует
+    # объяснить выдачу уровня без доказательств (тест не про гейт, а про склейку истории).
+    result, err = verify_company_kyc(
+        survivor, admin, level_code="L2_VERIFIED", require_documents=False, reason="сверено по реестру"
+    )
     assert err is None
     assert not Company.objects.filter(pk=dup.pk).exists()
     assert Deal.objects.filter(company=survivor, title="Old").exists()

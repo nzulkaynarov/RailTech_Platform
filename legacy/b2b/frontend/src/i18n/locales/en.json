@@ -1538,7 +1538,7 @@
     "confirmDeleteDocDesc": "The document will be permanently deleted — it's compliance evidence. This can't be undone.",
     "revokeHint": "Revoking sends the company back to L1 and removes supplier capabilities. This action is audit-logged.",
     "bulkApproveL2": "Approve L2 (bulk)",
-    "bulkApproveDesc": "KYC will be approved to L2 for {{count}} companies. Skipped items (missing documents, etc.) will be listed separately.",
+    "bulkApproveDesc": "L2 will be granted to {{count}} companies. Document presence is not checked — owner policy allows it.",
     "bulkApprovedResult": "Approved: {{approved}}, skipped: {{skipped}}",
     "accountAge": "Account age",
     "ageDays_one": "{{count}} day",
@@ -1584,7 +1584,8 @@
     "gapNoDocs": "uploaded documents",
     "gapNoInn": "a stated tax ID (TIN)",
     "approveWithoutEvidence": "⚠️ Verifying this company without: {{gaps}}. This is an exception to the standard check — a reason is required for the audit trail.",
-    "approveReasonRequired": "Reason (required — verifying without checked evidence)"
+    "approveReasonRequired": "Reason (required — verifying without checked evidence)",
+    "bulkWithoutEvidence": "⚠️ Without checked evidence: {{count}} of the selection ({{names}}). This is an exception — state a reason for the audit trail."
   },
   "breadcrumb": {
     "productDetail": "Product details",
@@ -3596,6 +3597,8 @@
     "SALES_MANAGER_ROLE_NOT_FOUND": "Sales manager role not found",
     "VERIFICATION_STATUS_NOT_FOUND": "Verification status not found",
     "KYC_DOCUMENTS_MISSING": "Company has no KYC documents uploaded",
+    "KYC_REASON_REQUIRED_WITHOUT_EVIDENCE": "Verifying without checked evidence requires a reason — it goes into the audit trail",
+    "KYC_LEVEL_UNCHANGED": "The company is already at this KYC level — nothing to change",
     "ROLE_APPLICATION_CANNOT_APPROVE": "Application cannot be approved in current status",
     "ROLE_APPLICATION_CANNOT_REJECT": "Application cannot be rejected in current status",
     "ROLE_APPLICATION_MISSING_CONTRACT_NDA": "Contract and NDA files are required for SUPPLIER",

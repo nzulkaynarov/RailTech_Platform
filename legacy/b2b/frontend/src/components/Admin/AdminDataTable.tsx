@@ -86,6 +86,13 @@ export interface AdminTableRowAction<T> {
   onRun: (row: T) => void;
   variant?: 'default' | 'destructive';
   icon?: ReactNode;
+  /**
+   * Действие бессмысленно для этой строки — пункт остаётся видимым, но не нажимается
+   * (эталон Odoo/Salesforce: недоступное действие показывают, а не прячут, иначе оператор
+   * ищет исчезнувший пункт). Массовые действия такой признак имели, строчные — нет, и
+   * «Отозвать верификацию» на компании, которая и так в L1, была активна.
+   */
+  disabled?: (row: T) => boolean;
 }
 
 export interface AdminDataTableProps<T> {
@@ -651,6 +658,7 @@ export function AdminDataTable<T>(props: AdminDataTableProps<T>): React.ReactNod
                             {rowActions.map((action) => (
                               <DropdownMenuItem
                                 key={action.id}
+                                disabled={action.disabled?.(row) ?? false}
                                 className={cn('text-xs', action.variant === 'destructive' && 'text-destructive')}
                                 onClick={(e) => {
                                   e.stopPropagation();

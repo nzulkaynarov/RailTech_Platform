@@ -118,10 +118,18 @@ def test_kyc_verification_syncs_is_verified(buyer):
     from accounts.services.kyc import verify_company_kyc
 
     user, company = buyer
+    # Компания приходит из фикстуры уже в L2 — вернуть её на L1 с рассинхроненным флагом,
+    # то есть в состояние ДО верификации. Раньше тест «лечил» дрейф повторной выдачей того же
+    # уровня, но выдача уровня, который уже стоит, теперь отклоняется как пустое действие
+    # (KYC_LEVEL_UNCHANGED) — флаг обязан сходиться на РЕАЛЬНОМ переходе L1 → L2.
+    company.verification_status = VerificationStatus.objects.get(code="L1_UNVERIFIED")
     company.is_verified = False  # simulate the drift the checkup found
-    company.save(update_fields=["is_verified"])
+    company.save(update_fields=["verification_status", "is_verified"])
 
-    verify_company_kyc(company, user, level_code="L2_VERIFIED", require_documents=False)
+    _company, error = verify_company_kyc(
+        company, user, level_code="L2_VERIFIED", require_documents=False, reason="документов нет — сверено вручную"
+    )
+    assert error is None
     company.refresh_from_db()
     assert company.is_verified is True
 

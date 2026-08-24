@@ -14,6 +14,7 @@ import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';
 import { PageShell, ErrorState } from '../shared/PageShell';
 import type { Company } from '@/api/accountsApi';
 import { STORAGE_KEY, STATUS_BADGE_MAP, getStatusCode } from './constants';
+import { EVIDENCE_GAP_LABEL, companiesMissingEvidence, evidenceGapsFor } from './evidence';
 import { DetailSheet } from './DetailSheet';
 
 // ───────────────────────────────────────────────────────────────────────
@@ -68,6 +69,18 @@ export function AdminKYCPage() {
     });
     return buckets;
   }, [allCompanies]);
+
+  // Пробелы в доказательствах — ВЫЧИСЛЕНИЕ по цели диалога, не состояние: политика владельца
+  // 2026-06-03 разрешает выдать уровень без документов, но требует «предупреждение +
+  // обоснование». До 24-08 это соблюдал только диалог карточки компании.
+  const rowGaps = useMemo(
+    () => (confirmRow?.kind === 'approve-l2' ? evidenceGapsFor(confirmRow.company) : []),
+    [confirmRow],
+  );
+  const bulkWithoutEvidence = useMemo(
+    () => (confirmBulk ? companiesMissingEvidence(confirmBulk.companies) : []),
+    [confirmBulk],
+  );
 
   async function runRowApprove(company: Company, reason: string) {
     await verifyMutation.mutateAsync({
@@ -195,6 +208,10 @@ export function AdminKYCPage() {
             label: t('kycManager.revokeL1'),
             icon: <XCircle className="h-3.5 w-3.5" />,
             variant: 'destructive',
+            // В карточке компании эта же кнопка давно гасится на L1 — в меню строки гарда не
+            // было, и отзыв у компании, которая и так в L1, доходил до сервера и писал в
+            // журнал зелёную запись об успехе (находка прогона 20-08 №13).
+            disabled: (c) => getStatusCode(c) === 'L1_UNVERIFIED',
             onRun: (c) => setConfirmRow({ kind: 'revoke-l1', company: c }),
           },
         ]}
@@ -218,9 +235,20 @@ export function AdminKYCPage() {
         onOpenChange={(v) => !v && setConfirmRow(null)}
         title={t('adminQueue.confirm.kycApproveTitle')}
         description={
-          confirmRow?.kind === 'approve-l2'
-            ? t('adminQueue.confirm.kycApproveDescription', { name: confirmRow.company.name })
-            : ''
+          confirmRow?.kind === 'approve-l2' ? (
+            <>
+              {t('adminQueue.confirm.kycApproveDescription', { name: confirmRow.company.name })}
+              {rowGaps.length ? (
+                <span className="mt-2 block font-medium text-warning">
+                  {t('kycManager.approveWithoutEvidence', {
+                    gaps: rowGaps.map((gap) => t(EVIDENCE_GAP_LABEL[gap])).join(', '),
+                  })}
+                </span>
+              ) : null}
+            </>
+          ) : (
+            ''
+          )
         }
         diff={
           confirmRow?.kind === 'approve-l2'
@@ -234,9 +262,10 @@ export function AdminKYCPage() {
             : undefined
         }
         showReason
-        reasonLabel={t('adminQueue.confirm.commentOptional')}
+        requireReason={rowGaps.length > 0}
+        reasonLabel={rowGaps.length ? t('kycManager.approveReasonRequired') : t('adminQueue.confirm.commentOptional')}
         confirmLabel={t('common.approve')}
-        variant="primary"
+        variant={rowGaps.length ? 'warning' : 'primary'}
         onConfirm={(p) =>
           confirmRow?.kind === 'approve-l2'
             ? runRowApprove(confirmRow.company, p.reason)
@@ -286,14 +315,31 @@ export function AdminKYCPage() {
         onOpenChange={(v) => !v && setConfirmBulk(null)}
         title={t('kycManager.bulkApproveL2')}
         description={
-          confirmBulk
-            ? t('kycManager.bulkApproveDesc', { count: confirmBulk.companies.length })
-            : ''
+          confirmBulk ? (
+            <>
+              {t('kycManager.bulkApproveDesc', { count: confirmBulk.companies.length })}
+              {bulkWithoutEvidence.length ? (
+                <span className="mt-2 block font-medium text-warning">
+                  {t('kycManager.bulkWithoutEvidence', {
+                    count: bulkWithoutEvidence.length,
+                    names: bulkWithoutEvidence.map((c) => c.name).join(', '),
+                  })}
+                </span>
+              ) : null}
+            </>
+          ) : (
+            ''
+          )
         }
         showReason
-        reasonLabel={t('adminQueue.confirm.commentOptional')}
+        requireReason={bulkWithoutEvidence.length > 0}
+        reasonLabel={
+          bulkWithoutEvidence.length
+            ? t('kycManager.approveReasonRequired')
+            : t('adminQueue.confirm.commentOptional')
+        }
         confirmLabel={t('common.approve')}
-        variant="primary"
+        variant={bulkWithoutEvidence.length ? 'warning' : 'primary'}
         onConfirm={(p) =>
           confirmBulk
             ? runBulkApprove(confirmBulk.companies, p.reason)

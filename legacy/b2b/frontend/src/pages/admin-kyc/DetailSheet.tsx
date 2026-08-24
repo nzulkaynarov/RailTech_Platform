@@ -25,6 +25,7 @@ import { DetailKPIGrid } from '@/components/Admin/DetailKPIGrid';
 import { kycDocTypeLabelKey } from '@/lib/codes';
 import type { Company } from '@/api/accountsApi';
 import { STATUS_BADGE_MAP, DOC_TYPE_OPTIONS, getStatusCode, type KYCCode } from './constants';
+import { EVIDENCE_GAP_LABEL, evidenceGapsFor } from './evidence';
 
 // ───────────────────────────────────────────────────────────────────────
 // Detail sheet (uses AdminDetailLayout internally)
@@ -67,12 +68,9 @@ export function DetailSheet({
   // (owner policy 2026-06-03) but must be a conscious, JUSTIFIED exception — the L2 dialog
   // turns into a warning and requires a reason, so the audit trail records WHY a company
   // was trusted without checked evidence instead of it being a silent one-click approval.
-  const docCount = company.kyc_documents?.length || 0;
-  const hasInn = !!(company.inn && String(company.inn).trim());
-  const evidenceGaps = [
-    ...(docCount === 0 ? [t('kycManager.gapNoDocs')] : []),
-    ...(!hasInn ? [t('kycManager.gapNoInn')] : []),
-  ];
+  // Признак — общий с меню строки и массовым действием (`./evidence`), чтобы у трёх диалогов
+  // одного экрана не было трёх разных представлений о «доказательствах».
+  const evidenceGaps = evidenceGapsFor(company).map((gap) => t(EVIDENCE_GAP_LABEL[gap]));
   const missingEvidence = evidenceGaps.length > 0;
 
   async function runVerify(target: string, reason: string) {
@@ -371,12 +369,24 @@ export function DetailSheet({
           open={confirmAction === 'upgrade-l3'}
           onOpenChange={(v) => !v && setConfirmAction(null)}
           title={t('kycManager.upgradeL3')}
-          description={company.name}
+          description={
+            missingEvidence ? (
+              <>
+                {company.name}
+                <span className="mt-2 block font-medium text-warning">
+                  {t('kycManager.approveWithoutEvidence', { gaps: evidenceGaps.join(', ') })}
+                </span>
+              </>
+            ) : (
+              company.name
+            )
+          }
           diff={[{ label: t('confirmDialog.kycLevel'), before: 'L2_VERIFIED', after: 'L3_CONTRACTED' }]}
           showReason
-          reasonLabel={t('adminQueue.confirm.commentOptional')}
+          requireReason={missingEvidence}
+          reasonLabel={missingEvidence ? t('kycManager.approveReasonRequired') : t('adminQueue.confirm.commentOptional')}
           confirmLabel={t('common.confirm')}
-          variant="primary"
+          variant={missingEvidence ? 'warning' : 'primary'}
           onConfirm={(p) => runVerify('L3_CONTRACTED', p.reason)}
           translateError={(code) => translateApiError(code)}
         />

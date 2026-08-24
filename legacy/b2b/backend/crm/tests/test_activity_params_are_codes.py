@@ -88,7 +88,11 @@ def test_kyc_verification_writes_level_codes(lookups):
     approver.save(update_fields=["is_superuser"])
 
     _company, error = verify_company_kyc(
-        company=company, approver=approver, level_code="L2_VERIFIED", require_documents=False
+        company=company,
+        approver=approver,
+        level_code="L2_VERIFIED",
+        require_documents=False,
+        reason="документов нет — проверено по реестру",
     )
 
     assert error is None

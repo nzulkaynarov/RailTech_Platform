@@ -110,7 +110,28 @@ describe('useQueueActions — runConfirm выполняет подтверждё
     await act(async () => {
       await result.current.runConfirm({ reason: '' });
     });
-    expect(verifyCompany).toHaveBeenCalledWith({ companyId: 7, status_code: 'L2_VERIFIED' });
+    expect(verifyCompany).toHaveBeenCalledWith({
+      companyId: 7,
+      status_code: 'L2_VERIFIED',
+      reason: undefined,
+    });
+  });
+
+  it('одобрение KYC ДОНОСИТ причину до сервера — диалог её собирает', async () => {
+    // Прежняя версия этого набора закрепляла дефект: ждала вызов БЕЗ причины, хотя диалог
+    // её спрашивал, а `runConfirm` молча выбрасывал. Пока обоснование было необязательным,
+    // потеря была невидимой; с политикой «без доказательств — только с обоснованием» этот
+    // путь упирался бы в отказ сервера при заполненной форме.
+    const { result } = renderHook(() => useQueueActions(vi.fn()), { wrapper });
+    act(() => result.current.handleApprove(item('kyc_pending', 7)));
+    await act(async () => {
+      await result.current.runConfirm({ reason: 'ИНН сверен по реестру ГНК' });
+    });
+    expect(verifyCompany).toHaveBeenCalledWith({
+      companyId: 7,
+      status_code: 'L2_VERIFIED',
+      reason: 'ИНН сверен по реестру ГНК',
+    });
   });
 
   it('отзыв KYC уходит с причиной — она попадает в аудит', async () => {
