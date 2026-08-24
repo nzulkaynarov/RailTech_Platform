@@ -7,6 +7,9 @@ import {
   useRef,
 } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import { downloadFile } from '@/lib/download';
+import { exportFilename } from '@/lib/exportFilename';
 import { useUrlState } from '@/hooks/useUrlState';
 import { useDraftState } from '@/hooks/useDraftState';
 import {
@@ -265,7 +268,7 @@ export function AdminDataTable<T>(props: AdminDataTableProps<T>): React.ReactNod
     updateParam(QP_KEYS.sort, next || null);
   }
 
-  function triggerExport(fmt: 'csv' | 'xlsx') {
+  async function triggerExport(fmt: 'csv' | 'xlsx') {
     if (!exportUrl) return;
     const url = new URL(exportUrl, window.location.origin);
     // propagate current filters: search, tab-params, sort
@@ -278,7 +281,22 @@ export function AdminDataTable<T>(props: AdminDataTableProps<T>): React.ReactNod
       });
     }
     url.searchParams.set('fmt', fmt);
-    window.open(url.toString(), '_blank', 'noopener');
+    // Скачивать НУЖНО авторизованным запросом, а не `window.open`.
+    //
+    // На `/api/v1/` чистый JWT, сессий нет (CLAUDE.md): новая вкладка уходит БЕЗ заголовка
+    // `Authorization`, получает 401 и показывает человеку пустую вкладку приложения вместо
+    // файла. Кнопка «Экспорт» была мертва на всех четырёх операторских реестрах, а обходного
+    // пути в интерфейсе нет — выгрузки у оператора не было вовсе (прогон 20-08).
+    //
+    // `downloadFile` — тот же помощник, которым уже скачиваются PDF документов: он делает
+    // запрос через `apiClient` (перехватчик подставляет токен и обновляет его при 401) и
+    // сохраняет тело как файл.
+    const path = `${url.pathname.replace(/^.*\/api\/v1\//, '')}${url.search}`;
+    try {
+      await downloadFile(path, exportFilename(url.pathname, fmt));
+    } catch {
+      toast.error(t('common.downloadFailed'));
+    }
   }
 
   // Visual density → cell padding

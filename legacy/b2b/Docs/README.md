@@ -21,7 +21,7 @@
 | `business/business-logic.md` | Бизнес-процессы (FSM сделок, KYC, landed cost) |
 | `business/ux-ui-brief.md` | Дизайн-концепция и требования к UI/UX |
 | `business/presentations/` | Презентации + смета проекта |
-| `business/mockups/` | Мокапы экранов (PNG) |
+| `old/mockups/` | Мокапы экранов (PNG) — АРХИВ: снимок 2026-07 с ценами в USD, устарел против UZS-canonical |
 
 ## `user/` — для пользователя
 

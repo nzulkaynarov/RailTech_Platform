@@ -69,7 +69,8 @@
     "period90d": "90 days",
     "members": "Members",
     "disable": "Disable",
-    "verify": "Verify"
+    "verify": "Verify",
+    "downloadFailed": "Could not download the file. Please try again."
   },
   "auth": {
     "loginTitle": "Sign in",
