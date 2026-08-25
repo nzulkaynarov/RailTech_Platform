@@ -89,6 +89,7 @@ export function AdminUsersPage() {
       description={t('pages.adminUsers.description')}
       icon={<Shield className="h-5 w-5" />}
       stats={stats}
+      statsError={isError}
     >
       {isError ? (
         <ErrorState onRetry={() => refetch()} />

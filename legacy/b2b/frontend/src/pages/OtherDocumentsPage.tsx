@@ -116,6 +116,7 @@ export function OtherDocumentsPage() {
       description={t('otherDocumentsPage.description')}
       icon={<FileSignature className="h-5 w-5" />}
       stats={stats}
+      statsError={isError}
       actions={[
         {
           label: t('documentsHub.create'),

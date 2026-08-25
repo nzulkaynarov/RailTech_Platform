@@ -12,6 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useAccessLog } from '@/hooks/useAdmin';
+import { countAccessLogBuckets } from '@/lib/accessLogBuckets';
 import { activityTitle } from '@/lib/activityText';
 import { PageShell, ErrorState } from './shared/PageShell';
 
@@ -31,13 +32,19 @@ export function AdminAccessLogPage() {
     // Три РАЗНЫХ счётчика: пока их было два, «Override-действия» считались как «всё, что не
     // break-glass» — и после расширения ленты в них попала рядовая деактивация аккаунта.
     // Счётчик, который считает «всё остальное», врёт при первом же новом виде события.
-    const activeBreakGlass = items.filter((entry) => entry.is_break_glass && entry.is_active).length;
-    const forceOverrides = items.filter((entry) => entry.is_force_override).length;
-    const adminActions = items.filter((entry) => !entry.is_break_glass && !entry.is_force_override).length;
+    //
+    // Вторая правка (20-08): аварийный доступ с ИСТЁКШИМ сроком не попадал НИ В ОДИН счётчик —
+    // в «активные» он не проходил по `is_active`, из «остальных административных» его
+    // вычёркивал `!is_break_glass`. Плитки показывали 0+1+17=18 при 20 строках в ленте, и
+    // ровно те две записи, ради которых журнал и читают постфактум, из сводки исчезали.
+    // Теперь корзины НЕ ПЕРЕСЕКАЮТСЯ и покрывают ленту целиком: сумма плиток = число строк
+    // (эталон Odoo O-AGGREGATE — по подписанным итогам можно судить о содержимом).
+    const buckets = countAccessLogBuckets(items);
     return [
-      { label: t('accessLogPage.stats.activeBreakGlass'), value: String(activeBreakGlass) },
-      { label: t('accessLogPage.stats.forceOverrides'), value: String(forceOverrides) },
-      { label: t('accessLogPage.stats.adminActions'), value: String(adminActions) },
+      { label: t('accessLogPage.stats.activeBreakGlass'), value: String(buckets.activeBreakGlass) },
+      { label: t('accessLogPage.stats.expiredBreakGlass'), value: String(buckets.expiredBreakGlass) },
+      { label: t('accessLogPage.stats.forceOverrides'), value: String(buckets.forceOverrides) },
+      { label: t('accessLogPage.stats.adminActions'), value: String(buckets.adminActions) },
     ];
   }, [items, t]);
 
@@ -50,6 +57,7 @@ export function AdminAccessLogPage() {
       description={t('accessLogPage.description')}
       icon={<ScrollText className="h-5 w-5" />}
       stats={stats}
+      statsError={isError}
     >
       {isError ? (
         <ErrorState onRetry={() => refetch()} />

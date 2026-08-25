@@ -68,6 +68,7 @@ export function AdminDealsPage() {
       description={t('adminDeals.description')}
       icon={<Handshake className="h-5 w-5" />}
       stats={stats}
+      statsError={isError}
     >
       <Toolbar
         searchValue={listParams.searchInput}

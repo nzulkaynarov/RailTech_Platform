@@ -127,6 +127,7 @@ export function FulfillmentsPage() {
       description={t('fulfillmentPage.description')}
       icon={<Truck className="h-5 w-5" />}
       stats={stats}
+      statsError={isError}
     >
       <Card>
         <CardContent className="flex flex-col gap-4 p-4">

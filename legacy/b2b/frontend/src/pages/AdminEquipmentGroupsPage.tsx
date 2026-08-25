@@ -141,6 +141,7 @@ export function AdminEquipmentGroupsPage() {
       description={t('adminEquipmentGroups.description')}
       icon={<Factory className="h-5 w-5" />}
       stats={stats}
+      statsError={isError}
     >
       <Toolbar
         searchValue={listParams.searchInput}

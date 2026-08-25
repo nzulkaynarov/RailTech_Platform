@@ -385,6 +385,7 @@ export function AdminEmailTemplatesPage() {
       description={t('admin.emailTemplates.description')}
       icon={<Mail className="h-5 w-5" />}
       stats={stats}
+      statsError={isError}
     >
       {isError ? (
         <ErrorState onRetry={() => refetch()} />

@@ -322,6 +322,7 @@ export function AdminRoleApplicationsPage() {
         { label: t('admin.roleApps.stats.approved'), value: String(counts.approved) },
         { label: t('admin.roleApps.stats.rejected'), value: String(counts.rejected) },
       ]}
+      statsError={isError}
     >
       {isError ? (
         <ErrorState onRetry={() => refetch()} />

@@ -20,10 +20,12 @@ export function translateApiError(err: unknown): string {
   if (!code) return i18n.t('apiErrors.UNKNOWN');
   const key = `apiErrors.${code}`;
   const translated = i18n.t(key);
-  // If i18next returns the key itself — fall back to raw code (helps debugging
-  // when a new backend code is not yet localised).
-  if (translated === key) return code;
-  return translated;
+  if (translated !== key) return translated;
+  // Перевода нет. Для кода БЭКЕНДА печатаем его как есть — это помогает и человеку («что-то
+  // с ролью»), и разбору, пока новый код не локализован. А внутренний код транспорта axios
+  // человеку не говорит ничего и вытесняет полезное сообщение — вместо него общий текст.
+  if (isTransportCode(code)) return i18n.t('apiErrors.UNKNOWN');
+  return code;
 }
 
 /**
@@ -33,6 +35,39 @@ export function translateApiError(err: unknown): string {
  */
 export function extractApiErrorCode(err: unknown): string | null {
   return extractCode(err);
+}
+
+/**
+ * Внутренние коды транспорта axios. Это НЕ коды бэкенда: они описывают, что случилось с
+ * запросом, а не что ответил сервер.
+ *
+ * Прогон глазами 25-08: при недоступном списке компаний оператор видел красный тост
+ * «ERR_NETWORK», а при отвергнутой загрузке файла — «ERR_BAD_REQUEST». `extractCode` брал
+ * `err.code`, тот подходил под UPPER_SNAKE, перевода для него нет — и наружу уходил
+ * внутренний код HTTP-клиента. Человеку он не говорит ничего, а полезное сообщение при этом
+ * терялось.
+ *
+ * Часть из них имеет человеческий смысл (связи нет, сервер не ответил) — их переводим.
+ * Остальные означают лишь «сервер ответил ошибкой, а кода в ответе не нашлось» — для них
+ * общий текст честнее, чем внутренности клиента.
+ */
+const AXIOS_TRANSPORT_CODES = new Set([
+  'ERR_NETWORK',
+  'ECONNABORTED',
+  'ETIMEDOUT',
+  'ERR_CANCELED',
+  'ERR_BAD_REQUEST',
+  'ERR_BAD_RESPONSE',
+  'ERR_FR_TOO_MANY_REDIRECTS',
+  'ERR_BAD_OPTION',
+  'ERR_BAD_OPTION_VALUE',
+  'ERR_INVALID_URL',
+  'ERR_DEPRECATED',
+  'ERR_NOT_SUPPORT',
+]);
+
+export function isTransportCode(code: string): boolean {
+  return AXIOS_TRANSPORT_CODES.has(code);
 }
 
 function extractCode(err: unknown): string | null {

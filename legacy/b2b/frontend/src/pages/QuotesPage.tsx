@@ -189,6 +189,7 @@ export function QuotesPage() {
       description={description}
       icon={<Calculator className="h-5 w-5" />}
       stats={stats}
+      statsError={isError}
       actions={
         isBuyer
           ? undefined

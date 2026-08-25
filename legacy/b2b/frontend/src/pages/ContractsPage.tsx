@@ -233,6 +233,7 @@ export function ContractsPage() {
       description={t('contractsPage.description')}
       icon={<FileSignature className="h-5 w-5" />}
       stats={stats}
+      statsError={isError}
     >
       <ManualModeBanner kind="esign" />
       <Toolbar

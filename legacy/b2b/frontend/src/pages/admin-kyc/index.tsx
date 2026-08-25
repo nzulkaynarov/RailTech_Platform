@@ -134,6 +134,7 @@ export function AdminKYCPage() {
         { label: t('kycManager.stats.verified'), value: String(counts.L2_VERIFIED) },
         { label: t('kycManager.stats.partner'), value: String(counts.L3_CONTRACTED) },
       ]}
+      statsError={isError}
     >
       {isError ? (
         <ErrorState onRetry={() => refetch()} />

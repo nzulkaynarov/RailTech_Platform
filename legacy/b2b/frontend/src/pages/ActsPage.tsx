@@ -211,6 +211,7 @@ export function ActsPage() {
       description={t('actsPage.description')}
       icon={<ScrollText className="h-5 w-5" />}
       stats={stats}
+      statsError={isError}
     >
       <ManualModeBanner kind="esign" />
       <Toolbar

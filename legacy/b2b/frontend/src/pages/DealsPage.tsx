@@ -177,6 +177,7 @@ export function DealsPage() {
       description={t('pages.deals.description')}
       icon={<FileText className="h-5 w-5" />}
       stats={stats}
+      statsError={isError}
     >
       <Toolbar
         searchValue={listParams.searchInput}

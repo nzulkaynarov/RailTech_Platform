@@ -142,9 +142,21 @@ function LookupEditor({
         </Button>
       </div>
 
+      {/* Строка-итог над списком: сколько строк показано из скольких. Единственным числом на
+          экране была плитка сверху, и она считала ВЕСЬ справочник — при фильтре «zzqx» человек
+          видел одновременно «Countries 249» и «Записей нет» (замер 20-08). Эталон один и тот же
+          у Odoo (O-PAGER) и Salesforce (SF-META-LINE): диапазон и общее число стоят НАД списком
+          и пересчитываются фильтром. Соседний экран того же продукта (#admin-support) так и
+          делает — расхождение было внутреннее. */}
+      {!isError && !isLoading && (
+        <p className="text-xs text-muted-foreground" role="status">
+          {t('adminMasterData.shownOf', { shown: visibleItems.length, total: (items ?? []).length })}
+        </p>
+      )}
+
       <Card>
         <CardContent className="p-0">
-          {isError ? <ErrorState onRetry={onRetry} /> : isLoading ? <LoadingRows rows={5} /> : !visibleItems.length ? (
+          {isError ? <ErrorState onRetry={onRetry} /> : isLoading ? <LoadingRows rows={5} /> : !(items ?? []).length ? (
             <EmptyState icon={<Database className="h-5 w-5" />} message={t('adminMasterData.empty')} />
           ) : (
             <Table>
@@ -161,6 +173,23 @@ function LookupEditor({
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {/* Пустой результат фильтра раньше сносил таблицу целиком вместе с шапкой
+                    «Code / Name / …» и печатал те же два слова, что и по-настоящему пустой
+                    справочник: отличить «ничего не найдено» от «данных нет» было нельзя, и
+                    оператор шёл проверять справочник руками. Эталон O-SAMPLE: пустой экран
+                    остаётся КАРКАСОМ — колонки на месте, названа причина и дан выход. */}
+                {!visibleItems.length && (
+                  <TableRow>
+                    <TableCell colSpan={extraFields.length + 5} className="py-10 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        {t('adminMasterData.nothingFound', { filter: filter.trim() })}
+                      </p>
+                      <Button variant="outline" size="sm" className="mt-3" onClick={() => setFilter('')}>
+                        {t('adminMasterData.clearFilter')}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                )}
                 {visibleItems.map((it) => {
                   const rec = it as unknown as Record<string, unknown>;
                   return (
@@ -313,6 +342,7 @@ export function AdminMasterDataPage() {
       description={t('adminMasterData.description')}
       icon={<Database className="h-5 w-5" />}
       stats={stats}
+      statsError={countries.isError || currencies.isError || units.isError || deliveryBases.isError}
     >
       <Tabs defaultValue="countries">
         <TabsList>

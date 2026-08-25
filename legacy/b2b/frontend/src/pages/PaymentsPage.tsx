@@ -29,6 +29,7 @@ export function PaymentsPage() {
       description={t('paymentsPage.description')}
       icon={<Wallet className="h-5 w-5" />}
       stats={stats}
+      statsError={isError}
       actions={isBuyer ? [{ label: t('recordPayment.cta'), onClick: () => setRecordOpen(true), disabled: isViewer }] : undefined}
     >
       <Toolbar

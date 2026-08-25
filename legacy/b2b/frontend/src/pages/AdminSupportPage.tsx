@@ -280,6 +280,7 @@ export function AdminSupportPage() {
             description={t('admin.support.description')}
             icon={<LifeBuoy className="h-5 w-5" />}
             stats={stats}
+            statsError={isError}
         >
             <Card>
                 <CardContent className="flex flex-col gap-3 p-4">

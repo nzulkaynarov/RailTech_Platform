@@ -116,6 +116,7 @@ export function CompanyFilesPage() {
       description={t('companyFilesPage.description')}
       icon={<FolderOpen className="h-5 w-5" />}
       stats={stats}
+      statsError={isError}
       actions={[{
         label: t('companyFilesPage.upload'),
         onClick: () => fileInputRef.current?.click(),

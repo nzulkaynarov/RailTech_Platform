@@ -49,6 +49,7 @@ export function MyRequestsPage() {
       description={t('pages.myRequests.description')}
       icon={<ShoppingCart className="h-5 w-5" />}
       stats={stats}
+      statsError={isError}
       actions={[{ label: t('pages.myRequests.newRequest'), onClick: () => setCreateOpen(true) }]}
     >
       {/* Status filter — buyer-facing statuses only (not the 9 internal stages). */}

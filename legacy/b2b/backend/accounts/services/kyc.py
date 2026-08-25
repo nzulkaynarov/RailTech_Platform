@@ -270,15 +270,28 @@ def upload_kyc_document(
     if file_obj.size > max_size:
         return None, "FILE_TOO_LARGE"
 
+    # Два разных отказа — два разных КОДА, а не один текст.
+    #
+    # Раньше обе проверки стояли под одним `except`, и наружу уходил `str(ValidationError)` —
+    # то есть строковое представление СПИСКА: `["KYC document: file content does not match its
+    # '.pdf' extension (possible spoofing)."]`. Это ломает форму ответа проекта
+    # (`{"detail": "<CODE>"}`), витрина такую строку не распознаёт и печатает оператору
+    # внутренний код своего HTTP-клиента — `ERR_BAD_REQUEST`. Единственная полезная
+    # информация — ПОЧЕМУ файл отвергнут — выбрасывалась, и оператор грузил тот же файл снова
+    # (замер 20-08). Эталон Salesforce SF-BLOCKER-NAMED: отказ называет конкретную причину.
     ext_validator = FileExtensionValidator(allowed_extensions)
     try:
         ext_validator(file_obj)
+    except DjangoValidationError:
+        return None, "FILE_EXTENSION_NOT_ALLOWED"
+
+    try:
         # SEC-08: the extension + client content_type are spoofable — verify the file
         # HEADER matches its extension too (a .pdf that is really an executable/HTML is
         # rejected). KYC keeps its own stricter allowlist above; this only adds anti-spoofing.
         assert_content_matches_extension(file_obj, "KYC document")
-    except DjangoValidationError as e:
-        return None, str(e)
+    except DjangoValidationError:
+        return None, "FILE_CONTENT_MISMATCH"
 
     d_type = KYCDocType.objects.filter(code=doc_type_code).first()
     doc = KYCDocument.objects.create(

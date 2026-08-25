@@ -12,11 +12,19 @@ interface PageShellProps {
   // filters, not a total — so a subset of statuses no longer reads as "the sum
   // doesn't add up"). `active` highlights the currently-applied filter.
   stats?: { label: string; value: string; onClick?: () => void; active?: boolean }[];
+  // Загрузка списка упала — плитки НЕ рисуют нули. «Не удалось загрузить» стояло в теле
+  // карточки, а сверху уверенно горело «Всего компаний 0 · Ожидание 0 · Верифицированы 0»:
+  // беглый взгляд на шапку — самый частый способ снять статус, и он давал ложное «очередь
+  // пуста» (замер 20-08 на #admin-kyc и #admin-companies). Отказ не равен нулю — эталон
+  // Odoo O-SAMPLE: сбой показывают сбоем, а не пустотой.
+  statsError?: boolean;
+  // То же самое до первого ответа: ноль на месте ещё не пришедшего числа читается как факт.
+  statsLoading?: boolean;
   actions?: { label: string; variant?: 'default' | 'outline'; onClick?: () => void; disabled?: boolean }[];
   children?: React.ReactNode;
 }
 
-export function PageShell({ title, description, icon, stats, actions, children }: PageShellProps) {
+export function PageShell({ title, description, icon, stats, statsError, statsLoading, actions, children }: PageShellProps) {
   const { t } = useTranslation();
   return (
     <div className="flex flex-col gap-6">
@@ -49,7 +57,15 @@ export function PageShell({ title, description, icon, stats, actions, children }
             >
               <CardContent className="px-4">
                 <p className="text-xs text-muted-foreground">{s.label}</p>
-                <p className="text-2xl font-bold tabular-nums">{s.value}</p>
+                {statsError ? (
+                  <p className="text-2xl font-bold text-muted-foreground" title={t('pages.common.statsUnavailable')}>
+                    —
+                  </p>
+                ) : statsLoading ? (
+                  <Skeleton className="h-8 w-12" />
+                ) : (
+                  <p className="text-2xl font-bold tabular-nums">{s.value}</p>
+                )}
               </CardContent>
             </Card>
           ))}

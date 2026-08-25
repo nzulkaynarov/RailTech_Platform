@@ -306,6 +306,7 @@ export function AdminOperatorRolesPage() {
       description={t('operatorRoles.description')}
       icon={<ShieldCheck className="h-5 w-5" />}
       stats={stats}
+      statsError={isError}
     >
       {isError ? (
         <ErrorState onRetry={() => refetch()} />

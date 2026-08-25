@@ -191,6 +191,7 @@ export function InvoicesPage() {
       description={t('invoicesPage.description')}
       icon={<Receipt className="h-5 w-5" />}
       stats={stats}
+      statsError={isError}
     >
       <ManualModeBanner kind="payment" />
       <Toolbar

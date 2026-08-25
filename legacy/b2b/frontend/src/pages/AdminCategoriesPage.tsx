@@ -159,6 +159,7 @@ export function AdminCategoriesPage() {
       description={t('adminCategories.description')}
       icon={<Layers className="h-5 w-5" />}
       stats={stats}
+      statsError={isError}
     >
       <Toolbar
         searchValue={listParams.searchInput}

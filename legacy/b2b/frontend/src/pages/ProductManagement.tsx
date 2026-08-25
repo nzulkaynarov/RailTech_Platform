@@ -268,6 +268,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
       description={activeStatus === 'BUYER' ? t('productManagement.subtitle.buyer') : t('productManagement.subtitle.seller')}
       icon={<Package className="h-5 w-5" />}
       stats={stats}
+      statsError={isError}
       actions={
         canSendRequest && selected.size > 0
           ? [{

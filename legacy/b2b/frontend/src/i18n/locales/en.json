@@ -1573,7 +1573,7 @@
     "ageDays_other": "{{count}} days",
     "uploadFailure": "Document upload failed",
     "status": {
-      "P_PENDING": "Pending",
+      "P_PENDING": "No application",
       "P_SUBMITTED": "Under review",
       "V_VERIFIED_L2": "KYC verified",
       "V_PARTNER_L3": "Partner"
@@ -1595,7 +1595,7 @@
     },
     "stats": {
       "total": "Total companies",
-      "pending": "Pending",
+      "pending": "Not verified",
       "verified": "Verified",
       "partner": "Partners"
     },
@@ -2174,6 +2174,7 @@
       "sectionInDevelopment": "Section under development",
       "comingSoon": "This feature will be available in the next update",
       "items": "items",
+      "statsUnavailable": "Data could not be loaded",
       "noData": "No data"
     },
     "sourcingRequests": {
@@ -2618,6 +2619,9 @@
     "description": "Reference data: countries, currencies, units of measure, delivery bases",
     "new": "New entry",
     "edit": "Edit",
+    "shownOf": "Showing {{shown}} of {{total}}",
+    "nothingFound": "Nothing found for “{{filter}}”",
+    "clearFilter": "Clear filter",
     "empty": "No entries",
     "save": "Save",
     "create": "Create",
@@ -3679,6 +3683,10 @@
     "CANNOT_DEACTIVATE_SOLE_COMPANY_ADMIN": "Cannot deactivate the sole Company Admin — assign another one first.",
     "ONLY_COMPANY_ADMIN_CAN_MANAGE_TEAM": "Only the Company Admin can manage the team.",
     "FILE_TOO_LARGE": "The file exceeds the allowed size",
+    "ERR_NETWORK": "No connection to the server. Check your network and try again",
+    "ECONNABORTED": "The server did not respond in time. Try again",
+    "ETIMEDOUT": "The server did not respond in time. Try again",
+    "FILE_EXTENSION_NOT_ALLOWED": "This file type is not accepted. Allowed: PDF, JPG, PNG, DOC, DOCX",
     "FILE_REQUIRED": "Choose a file to upload",
     "FILE_TYPE_UNSUPPORTED": "Unsupported file format. Upload an Excel, CSV, PDF or photo.",
     "IMPORT_NO_LINES": "No lines to add were found in the file",
@@ -4077,6 +4085,7 @@
     "empty": "No access events yet",
     "stats": {
       "activeBreakGlass": "Active break-glass",
+      "expiredBreakGlass": "Expired break-glass",
       "forceOverrides": "Force-overrides",
       "adminActions": "Administrative actions"
     },

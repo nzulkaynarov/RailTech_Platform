@@ -440,6 +440,7 @@ export function AdminCompaniesPage() {
       description={t('adminCompanies.description')}
       icon={<Building2 className="h-5 w-5" />}
       stats={stats}
+      statsError={isError}
     >
       {isError ? (
         <ErrorState onRetry={() => refetch()} />

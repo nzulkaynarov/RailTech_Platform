@@ -423,6 +423,7 @@ export function AdminSubscriptionsPage() {
       description={t('admin.subscriptions.description')}
       icon={<CreditCard className="h-5 w-5" />}
       stats={stats}
+      statsError={isError}
     >
       {isError ? (
         <ErrorState onRetry={() => refetch()} />
