@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-25 11:13+0500\n"
+"POT-Creation-Date: 2026-08-25 14:57+0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -64,7 +64,7 @@ msgstr "Types"
 msgid "[Emergency] Подтвердить KYC (L2)"
 msgstr "[Emergency] Approve KYC (L2)"
 
-#: accounts/admin.py:300
+#: accounts/admin.py:303
 #, python-format
 msgid ""
 "Не подтверждено (%(names)s). Выдать уровень без документов можно из панели "
@@ -73,24 +73,24 @@ msgstr ""
 "Not verified (%(names)s). Granting a level without documents is done in the "
 "operator panel — the justification is recorded there."
 
-#: accounts/admin.py:307
+#: accounts/admin.py:310
 #, python-format
 msgid "%(count)d компаний подтверждено."
 msgstr "%(count)d companies verified."
 
-#: accounts/admin.py:321 accounts/models/company/contacts.py:44
+#: accounts/admin.py:324 accounts/models/company/contacts.py:44
 msgid "Контакты"
 msgstr "Contacts"
 
-#: accounts/admin.py:333
+#: accounts/admin.py:336
 msgid "Банк"
 msgstr "Bank"
 
-#: accounts/admin.py:340
+#: accounts/admin.py:343
 msgid "KYC"
 msgstr "KYC"
 
-#: accounts/admin.py:394 accounts/admin.py:482
+#: accounts/admin.py:397 accounts/admin.py:485
 #: accounts/models/applications.py:55 accounts/models/subscriptions.py:48
 #: catalog/admin.py:198 catalog/models/products.py:67
 #: catalog/models/requests.py:91 core/models.py:176
@@ -104,66 +104,71 @@ msgstr "KYC"
 msgid "Статус"
 msgstr "Status"
 
-#: accounts/admin.py:417
+#: accounts/admin.py:420
 msgid "Документы"
 msgstr "Documents"
 
-#: accounts/admin.py:428
+#: accounts/admin.py:431
 msgid "Рассмотрение"
 msgstr "Review"
 
-#: accounts/admin.py:440
+#: accounts/admin.py:443
 msgid "[Emergency] Одобрить (с проверкой документов)"
 msgstr "[Emergency] Approve (with document check)"
 
-#: accounts/admin.py:446
+#: accounts/admin.py:449
 #, python-format
 msgid "%(count)d заявок одобрено."
 msgstr "%(count)d applications approved."
 
-#: accounts/admin.py:448
+#: accounts/admin.py:451
 msgid "[Emergency] Отклонить"
 msgstr "[Emergency] Reject"
 
-#: accounts/admin.py:453
+#: accounts/admin.py:456
 #, python-format
 msgid "%(count)d заявок отклонено."
 msgstr "%(count)d applications rejected."
 
-#: accounts/admin.py:475
+#: accounts/admin.py:478
 msgid "План"
 msgstr "Plan"
 
-#: accounts/admin.py:505
+#: accounts/admin.py:508
 msgid "Биллинг"
 msgstr "Billing"
 
-#: accounts/admin.py:516 accounts/models/subscriptions.py:96
+#: accounts/admin.py:519 accounts/models/subscriptions.py:96
 #: crm/admin/deals_admin.py:91 crm/models/deals.py:111
 msgid "Заметки"
 msgstr "Notes"
 
-#: accounts/admin.py:527
+#: accounts/admin.py:530
 msgid "[Emergency] Активировать"
 msgstr "[Emergency] Activate"
 
-#: accounts/admin.py:536
+#: accounts/admin.py:539
 #, python-format
 msgid ""
 "Пропущено просроченных: %(count)d — их возобновляет оплата, а не статус."
 msgstr ""
 "Skipped expired: %(count)d — a payment renews them, not a status change."
 
-#: accounts/admin.py:539
+#: accounts/admin.py:542
 #, python-format
 msgid "%(count)d активировано."
 msgstr "%(count)d activated."
 
-#: accounts/admin.py:541
+#: accounts/admin.py:544
 msgid "[Emergency] Приостановить"
 msgstr "[Emergency] Suspend"
 
-#: accounts/admin.py:544
+#: accounts/admin.py:564
+#, python-format
+msgid "Пропущено уже приостановленных: %(count)d."
+msgstr "Skipped, already suspended: %(count)d."
+
+#: accounts/admin.py:567
 #, python-format
 msgid "%(count)d приостановлено."
 msgstr "%(count)d suspended."
@@ -425,12 +430,12 @@ msgid "ФИО"
 msgstr "Full name"
 
 #: accounts/models/company/contacts.py:23 accounts/models/company/core.py:222
-#: accounts/models/users.py:21 accounts/wizard.py:93 crm/models/deals.py:328
+#: accounts/models/users.py:21 accounts/wizard.py:94 crm/models/deals.py:328
 msgid "Email"
 msgstr "Email"
 
 #: accounts/models/company/contacts.py:24 accounts/models/company/core.py:217
-#: accounts/models/users.py:27 accounts/wizard.py:89 crm/models/deals.py:324
+#: accounts/models/users.py:27 accounts/wizard.py:90 crm/models/deals.py:324
 msgid "Телефон"
 msgstr "Phone"
 
@@ -499,7 +504,7 @@ msgstr "Client invitations"
 msgid "Название"
 msgstr "Title"
 
-#: accounts/models/company/core.py:96 accounts/wizard.py:43
+#: accounts/models/company/core.py:96 accounts/wizard.py:44
 msgid "Полное наименование организации"
 msgstr "Full organization name"
 
@@ -508,7 +513,7 @@ msgid "Некорректный формат ИНН."
 msgstr "Invalid TIN format."
 
 #: accounts/models/company/core.py:109
-#: accounts/models/company/document_profile.py:42 accounts/wizard.py:47
+#: accounts/models/company/document_profile.py:42 accounts/wizard.py:48
 #: crm/templates/crm/_document_base.html:277
 #: crm/templates/crm/_document_base.html:309
 #: crm/templates/crm/_document_base.html:324
@@ -519,7 +524,7 @@ msgstr "Invalid TIN format."
 msgid "ИНН"
 msgstr "TIN"
 
-#: accounts/models/company/core.py:110 accounts/wizard.py:48
+#: accounts/models/company/core.py:110 accounts/wizard.py:49
 msgid "Идентификационный номер налогоплательщика"
 msgstr "Taxpayer identification number"
 
@@ -541,7 +546,7 @@ msgid "Роли компании: клиент, поставщик, произв
 msgstr "Company roles: client, supplier, manufacturer"
 
 #: accounts/models/company/core.py:136 accounts/models/lookups.py:70
-#: accounts/wizard.py:135
+#: accounts/wizard.py:136
 msgid "Статус верификации"
 msgstr "Verification Status"
 
@@ -578,12 +583,12 @@ msgstr "Supplier trust rating (0-100)"
 msgid "Страна"
 msgstr "Country"
 
-#: accounts/models/company/core.py:187 accounts/wizard.py:56
+#: accounts/models/company/core.py:187 accounts/wizard.py:57
 msgid "Страна регистрации юридического лица"
 msgstr "Country of incorporation of the legal entity"
 
 #: accounts/models/company/core.py:193
-#: accounts/models/company/document_profile.py:47 accounts/wizard.py:78
+#: accounts/models/company/document_profile.py:47 accounts/wizard.py:79
 msgid "Юридический адрес"
 msgstr "Legal address"
 
@@ -591,7 +596,7 @@ msgstr "Legal address"
 msgid "Полный юридический адрес организации"
 msgstr "Full legal address of the organization"
 
-#: accounts/models/company/core.py:199 accounts/wizard.py:103
+#: accounts/models/company/core.py:199 accounts/wizard.py:104
 msgid "Расчётный счёт"
 msgstr "Bank account"
 
@@ -599,7 +604,7 @@ msgstr "Bank account"
 msgid "Номер расчётного счёта в банке"
 msgstr "Bank account number"
 
-#: accounts/models/company/core.py:205 accounts/wizard.py:108
+#: accounts/models/company/core.py:205 accounts/wizard.py:109
 msgid "МФО"
 msgstr "MFO code"
 
@@ -607,7 +612,7 @@ msgstr "MFO code"
 msgid "Межфилиальный оборот (код банка)"
 msgstr "MFO — interbranch turnover (bank code)"
 
-#: accounts/models/company/core.py:211 accounts/wizard.py:83
+#: accounts/models/company/core.py:211 accounts/wizard.py:84
 #: crm/models/deals.py:51
 msgid "Контактное лицо"
 msgstr "Contact person"
@@ -624,7 +629,7 @@ msgstr "Company contact phone"
 msgid "Основной email компании для уведомлений"
 msgstr "Primary company email for notifications"
 
-#: accounts/models/company/core.py:228 accounts/wizard.py:98
+#: accounts/models/company/core.py:228 accounts/wizard.py:99
 msgid "Веб-сайт"
 msgstr "Website"
 
@@ -632,7 +637,7 @@ msgstr "Website"
 msgid "Адрес корпоративного сайта"
 msgstr "Corporate website URL"
 
-#: accounts/models/company/core.py:236 accounts/wizard.py:60
+#: accounts/models/company/core.py:236 accounts/wizard.py:61
 msgid "Логотип"
 msgstr "Logo"
 
@@ -640,7 +645,7 @@ msgstr "Logo"
 msgid "Логотип компании для отображения на платформе"
 msgstr "Company logo shown on the platform"
 
-#: accounts/models/company/core.py:241 accounts/wizard.py:145
+#: accounts/models/company/core.py:241 accounts/wizard.py:146
 msgid "Заметки по KYC"
 msgstr "KYC notes"
 
@@ -1403,7 +1408,7 @@ msgid "Роли (через ;)"
 msgstr "Roles (separated by ;)"
 
 #: accounts/templates/admin/accounts/company_wizard.html:4
-#: accounts/wizard.py:218
+#: accounts/wizard.py:219
 msgid "Создание компании"
 msgstr "Create company"
 
@@ -1464,39 +1469,39 @@ msgstr "Next"
 msgid "Password changed successfully"
 msgstr "Password changed successfully"
 
-#: accounts/wizard.py:42
+#: accounts/wizard.py:43
 msgid "Название компании"
 msgstr "Company name"
 
-#: accounts/wizard.py:52
+#: accounts/wizard.py:53
 msgid "Страна регистрации"
 msgstr "Country of registration"
 
-#: accounts/wizard.py:62
+#: accounts/wizard.py:63
 msgid "Логотип компании (PNG, JPG, SVG)"
 msgstr "Company logo (PNG, JPG, SVG)"
 
-#: accounts/wizard.py:68
+#: accounts/wizard.py:69
 msgid "Компания с таким ИНН уже существует."
 msgstr "A company with this TIN already exists."
 
-#: accounts/wizard.py:84
+#: accounts/wizard.py:85
 msgid "ФИО ответственного представителя"
 msgstr "Full name of the responsible representative"
 
-#: accounts/wizard.py:94
+#: accounts/wizard.py:95
 msgid "Для уведомлений и переписки"
 msgstr "For notifications and correspondence"
 
-#: accounts/wizard.py:109
+#: accounts/wizard.py:110
 msgid "Код банка"
 msgstr "Bank code"
 
-#: accounts/wizard.py:119
+#: accounts/wizard.py:120
 msgid "Роли компании"
 msgstr "Company Roles"
 
-#: accounts/wizard.py:121
+#: accounts/wizard.py:122
 msgid ""
 "Выберите одну или несколько ролей. Клиент — покупает товары. Поставщик — "
 "продаёт. Производитель — OEM."
@@ -1504,7 +1509,7 @@ msgstr ""
 "Select one or more roles. Client — buys products. Supplier — sells. "
 "Manufacturer — OEM."
 
-#: accounts/wizard.py:138
+#: accounts/wizard.py:139
 msgid ""
 "Начальный статус KYC. По умолчанию — не верифицирован. Подтверждение уровня "
 "L2 и выше выдаётся в панели оператора: там записывается обоснование."
@@ -1512,15 +1517,15 @@ msgstr ""
 "Initial KYC status. Not verified by default. Level L2 and above is granted "
 "in the operator panel: the justification is recorded there."
 
-#: accounts/wizard.py:146
+#: accounts/wizard.py:147
 msgid "Внутренние комментарии (не видны клиенту)"
 msgstr "Internal comments (not visible to the client)"
 
-#: accounts/wizard.py:154
+#: accounts/wizard.py:155
 msgid "Email владельца"
 msgstr "Owner email"
 
-#: accounts/wizard.py:156
+#: accounts/wizard.py:157
 msgid ""
 "Если пользователь с таким email уже есть — он будет привязан. Если нет — "
 "будет создан новый аккаунт."
@@ -1528,19 +1533,19 @@ msgstr ""
 "If a user with this email already exists, they will be linked. If not, a new "
 "account will be created."
 
-#: accounts/wizard.py:162
+#: accounts/wizard.py:163
 msgid "Имя"
 msgstr "First name"
 
-#: accounts/wizard.py:167
+#: accounts/wizard.py:168
 msgid "Фамилия"
 msgstr "Last name"
 
-#: accounts/wizard.py:172
+#: accounts/wizard.py:173
 msgid "Телефон владельца"
 msgstr "Owner phone"
 
-#: accounts/wizard.py:306
+#: accounts/wizard.py:317
 #, python-format
 msgid "Компания «%(name)s» успешно создана! Владелец: %(email)s"
 msgstr "Company «%(name)s» created successfully! Owner: %(email)s"
@@ -1563,7 +1568,7 @@ msgstr "Specifications"
 msgid "Оборудование"
 msgstr "Equipment"
 
-#: catalog/admin.py:235 core/admin.py:41 crm/admin/deals_admin.py:98
+#: catalog/admin.py:235 core/admin.py:43 crm/admin/deals_admin.py:98
 #: crm/admin/quotes_admin.py:96
 msgid "Системное"
 msgstr "System"
@@ -2197,19 +2202,19 @@ msgstr "Currency (code)"
 msgid "Базис поставки (код)"
 msgstr "Delivery basis (code)"
 
-#: core/admin.py:21
+#: core/admin.py:23
 msgid "Финансы"
 msgstr "Finance"
 
-#: core/admin.py:27 crm/templates/crm/_document_base.html:314
+#: core/admin.py:29 crm/templates/crm/_document_base.html:314
 msgid "Платформа"
 msgstr "Platform"
 
-#: core/admin.py:34
+#: core/admin.py:36
 msgid "Безопасность"
 msgstr "Security"
 
-#: core/admin_mixins.py:45
+#: core/admin_mixins.py:51
 msgid "Только суперпользователь может выполнить это действие."
 msgstr "Only a superuser can perform this action."
 
@@ -5479,6 +5484,33 @@ msgstr "AI job"
 msgid "AI-задачи"
 msgstr "AI jobs"
 
+#: templates/admin/emergency_action_confirmation.html:14
+msgid "Главная"
+msgstr "Home"
+
+#: templates/admin/emergency_action_confirmation.html:25
+#, python-format
+msgid "Действие затронет %(counter)s запись. Отменить его нельзя."
+msgid_plural "Действие затронет %(counter)s записи(-ей). Отменить его нельзя."
+msgstr[0] "The action will affect %(counter)s record. It cannot be undone."
+msgstr[1] "The action will affect %(counter)s records. It cannot be undone."
+
+#: templates/admin/emergency_action_confirmation.html:40
+msgid "Обоснование (записывается в журнал доступа)"
+msgstr "Justification (recorded in the access log)"
+
+#: templates/admin/emergency_action_confirmation.html:45
+msgid "Без обоснования действие не выполняется."
+msgstr "Without a justification the action does not run."
+
+#: templates/admin/emergency_action_confirmation.html:50
+msgid "Да, выполнить"
+msgstr "Yes, run it"
+
+#: templates/admin/emergency_action_confirmation.html:53
+msgid "Отмена"
+msgstr "Cancel"
+
 #: templates/admin/index.html:18
 msgid "Ключевые метрики"
 msgstr "Key metrics"
@@ -6737,8 +6769,8 @@ msgid ""
 "Подписка компании <strong>%(company_name)s</strong> приостановлена "
 "оператором платформы."
 msgstr ""
-"The subscription of <strong>%(company_name)s</strong> was suspended by a platform "
-"operator."
+"The subscription of <strong>%(company_name)s</strong> was suspended by a "
+"platform operator."
 
 #: templates/emails/subscription_suspended.html:14
 #: templates/emails/subscription_suspended.txt:3
@@ -6752,8 +6784,9 @@ msgid ""
 "функции продавца.\n"
 "    Работа с уже созданными документами сохраняется."
 msgstr ""
-"While the subscription is suspended, sending and exporting quotes and other seller "
-"features are unavailable. Work with already created documents is preserved."
+"While the subscription is suspended, sending and exporting quotes and other "
+"seller features are unavailable. Work with already created documents is "
+"preserved."
 
 #: templates/emails/subscription_suspended.html:23
 msgid "Открыть подписку"
@@ -6771,8 +6804,9 @@ msgid ""
 "Пока подписка приостановлена, недоступны отправка и экспорт КП и другие "
 "функции продавца. Работа с уже созданными документами сохраняется."
 msgstr ""
-"While the subscription is suspended, sending and exporting quotes and other seller "
-"features are unavailable. Work with already created documents is preserved."
+"While the subscription is suspended, sending and exporting quotes and other "
+"seller features are unavailable. Work with already created documents is "
+"preserved."
 
 #: templates/emails/subscription_suspended.txt:7
 #, python-format

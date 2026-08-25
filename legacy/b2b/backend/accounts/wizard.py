@@ -16,6 +16,7 @@ from django.contrib import messages
 from django.contrib.auth.tokens import default_token_generator
 from django.core.files.storage import default_storage
 from django.shortcuts import redirect
+from django.urls import reverse
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from django.utils.translation import gettext_lazy as _
@@ -248,9 +249,19 @@ class CompanyWizardView(SessionWizardView):
 
         # Create or get owner
         owner_email = data["owner_email"]
+        from accounts.constants import SystemRoleCode
         from accounts.models import SystemRole
 
-        client_role = SystemRole.objects.filter(code="CLIENT").first()
+        # `code="CLIENT"` НЕ СУЩЕСТВУЕТ: роли сведены к двум (ADMIN/USER), а CLIENT вычищен
+        # миграцией `accounts/0044_purge_retired_roles_after_core_seed`. `.first()` на пустой
+        # выборке молча отдавал None, и владелец компании, заведённый оператором через мастер,
+        # оставался БЕЗ системной роли — в отличие от точно такого же владельца, пришедшего
+        # через регистрацию (`accounts/services/auth.py` ставит USER). В реестре пользователей
+        # он не попадал ни под один фильтр по роли, а `/me` отдавал `role_data: null`.
+        #
+        # `.get()`, а не `.filter().first()` — по Rule 1: роль сеется миграцией, и её отсутствие
+        # означает неприменённую миграцию, о которой надо узнать сразу, а не получить None.
+        owner_role = SystemRole.objects.get(code=SystemRoleCode.USER)
 
         user, created = CustomUser.objects.get_or_create(
             email=owner_email,
@@ -259,7 +270,7 @@ class CompanyWizardView(SessionWizardView):
                 "first_name": data.get("owner_first_name", ""),
                 "last_name": data.get("owner_last_name", ""),
                 "phone": data.get("owner_phone", ""),
-                "role": client_role,
+                "role": owner_role,
                 "is_active": False,
             },
         )
@@ -310,4 +321,15 @@ class CompanyWizardView(SessionWizardView):
             },
         )
 
-        return redirect(f"/admin/accounts/company/{company.pk}/change/")
+        # Дверь в мастер открывает `accounts.add_company` (гейт в `dispatch`), а страница
+        # компании требует `view_company`/`change_company`. У актора ровно с правом «заводить»
+        # мастер отрабатывал до конца — и выбрасывал его на голый 403: компания создана,
+        # сообщение об успехе не показано, вернуться некуда.
+        #
+        # Приём самой Django (`ModelAdmin.response_post_save_add`): вести на страницу объекта,
+        # только если актор её откроет, иначе — на главную админки, где сообщение об успехе он
+        # увидит.
+        user = self.request.user
+        if user.has_perm("accounts.view_company") or user.has_perm("accounts.change_company"):
+            return redirect(f"/admin/accounts/company/{company.pk}/change/")
+        return redirect(reverse("admin:index"))

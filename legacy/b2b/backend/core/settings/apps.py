@@ -222,3 +222,41 @@ UNFOLD = {
         ],
     },
 }
+
+
+def _menu_item_permission(link):
+    """Пункт меню виден только тому, кто откроет то, куда он ведёт.
+
+    В боковом меню 38 прямых ссылок на страницы Unfold и НИ ОДНОГО ключа `permission`
+    (прогон 20-08). Дверь в админку открывает членство в группе `system_engineers`, а
+    страницы моделей требуют модельных прав — и группа заводится миграцией БЕЗ единого
+    права (`accounts/0006_system_engineers_group`). Инженер видел полное меню, где почти
+    каждый пункт вёл на голый 403.
+
+    Это тот же класс, что уже чинили в операторской плоскости, только зеркальный: там пункт
+    был спрятан, а дверь открыта; здесь пункт нарисован, а двери нет. Правило одно — меню и
+    дверь обязаны говорить одно и то же.
+
+    Право выводим ИЗ ССЫЛКИ, а не перечисляем руками: список из 38 строк, дописанных вручную,
+    разъедется с меню на первой же правке.
+    """
+    parts = [part for part in str(link).strip("/").split("/") if part]
+    if len(parts) < 3 or parts[0] != "admin":
+        return None
+    app_label, model_name = parts[1], parts[2]
+    # `/admin/accounts/company/wizard/` — не просмотр, а СОЗДАНИЕ арендатора: тем же правом,
+    # которое требует сам мастер (`accounts/wizard.py`), иначе меню опять разойдётся с дверью.
+    codename = "add" if parts[3:4] == ["wizard"] else "view"
+    required = f"{app_label}.{codename}_{model_name}"
+
+    def _has(request):
+        return request.user.has_perm(required)
+
+    return _has
+
+
+for _group in UNFOLD["SIDEBAR"]["navigation"]:
+    for _item in _group.get("items", []):
+        _check = _menu_item_permission(_item.get("link", ""))
+        if _check is not None:
+            _item["permission"] = _check

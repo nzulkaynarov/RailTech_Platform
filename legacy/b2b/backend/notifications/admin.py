@@ -157,9 +157,15 @@ class EmailLogAdmin(ReadOnlyInspectionMixin, ModelAdmin):
 
 
 @admin.register(EmailTemplate)
-class EmailTemplateAdmin(ModelAdmin):
+class EmailTemplateAdmin(ReadOnlyInspectionMixin, ModelAdmin):
     """DB-editable email templates. Primary editor is the React Platform-Operator
-    admin; this Unfold registration is an engineer-side fallback."""
+    admin; this Unfold registration is an engineer-side fallback.
+
+    Единственная админка этого файла, оставшаяся БЕЗ readonly-миксина (замер 25-08): активная
+    строка немедленно подменяет файловый шаблон для ВСЕХ получателей платформы, то есть текст
+    письма клиенту менялся правкой не-суперпользователя. Волна #599 закрыла эту дверь со
+    стороны API (`platform.settings`) — здесь закрывается вторая, со стороны Unfold.
+    """
 
     list_display = ("key", "subject", "is_active", "updated_by", "updated_at")
     list_filter = ("is_active",)

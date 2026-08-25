@@ -284,12 +284,15 @@ class CompanyAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelAdmin):
 
     @superuser_only_action(_("[Emergency] Подтвердить KYC (L2)"))
     def verify_kyc(self, request, queryset):
-        # Обоснования у аварийного действия быть не может — у действия Django нет формы, а
-        # подставить его от имени человека значит подделать след. Поэтому компании с неполными
-        # доказательствами сервис здесь ОТКЛОНИТ (`KYC_REASON_REQUIRED_WITHOUT_EVIDENCE`), а
-        # сообщение отправит оператора туда, где обоснование записывается, — в панель оператора
-        # (ADR-0001: Unfold — инженерам, бизнес-действия — в React Admin).
-        approved, skipped = services.bulk_verify_kyc(queryset, request.user, level_code="L2_VERIFIED")
+        # Обоснование теперь ЕСТЬ: у аварийного действия появился экран подтверждения, и поле
+        # причины на нём обязательное. Прежний комментарий здесь говорил обратное («у действия
+        # Django нет формы») и был верен ровно до появления этого экрана — политика владельца
+        # (уровень без документов разрешён с предупреждением и обоснованием) исполняется теперь
+        # и в аварийном люке, а не только в панели оператора.
+        from core.admin_mixins import EMERGENCY_REASON_FIELD
+
+        reason = (request.POST.get(EMERGENCY_REASON_FIELD) or "").strip()
+        approved, skipped = services.bulk_verify_kyc(queryset, request.user, level_code="L2_VERIFIED", reason=reason)
         if skipped:
             # `skipped` — список СЛОВАРЕЙ {company_id, name, error}; строковый join по нему
             # падал в TypeError, то есть аварийное действие ломалось ровно в тот момент, когда
@@ -540,5 +543,25 @@ class SupplierSubscriptionAdmin(ReadOnlyInspectionMixin, ModelAdmin):
 
     @superuser_only_action(_("[Emergency] Приостановить"))
     def suspend_subscription(self, request, queryset):
-        updated = services.change_subscription_status(queryset, "SUSPENDED")
-        self.message_user(request, _("%(count)d приостановлено.") % {"count": updated})
+        # Через сервис ПОШТУЧНО, а не `update()` пачкой: приостановка обязана дойти до
+        # арендатора письмом и уведомлением. Дверей было две — операторская панель звала сервис
+        # и оповещала, аварийный люк писал статус напрямую и молчал. Одна механика, а не две.
+        from core.admin_mixins import EMERGENCY_REASON_FIELD
+
+        reason = (request.POST.get(EMERGENCY_REASON_FIELD) or "").strip()
+        suspended, already = 0, 0
+        for subscription in queryset:
+            # НЕ `_, error = ...`: `_` здесь — gettext, и распаковка в него делает перевод
+            # невызываемым. Ловушка тихая: падает не присваивание, а первый же `_( )` ниже.
+            _row, error = services.suspend_subscription(subscription, actor=request.user, reason=reason)
+            if error:
+                already += 1
+            else:
+                suspended += 1
+        if already:
+            self.message_user(
+                request,
+                _("Пропущено уже приостановленных: %(count)d.") % {"count": already},
+                level="warning",
+            )
+        self.message_user(request, _("%(count)d приостановлено.") % {"count": suspended})

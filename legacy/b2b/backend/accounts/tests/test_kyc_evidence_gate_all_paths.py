@@ -143,25 +143,71 @@ def test_bulk_path_reports_instead_of_approving(operator, bare_company, levels):
 # ── Путь 3: аварийное действие Unfold ───────────────────────────────────────
 
 
-def test_unfold_emergency_action_reports_skipped_without_crashing(operator, bare_company, rf):
-    """`skipped` — список СЛОВАРЕЙ; строковый join по нему падал в TypeError, то есть
-    аварийное действие ломалось ровно тогда, когда ему было что сказать оператору."""
+def _unfold_verify(operator, rf, queryset, **post):
+    """Вызов аварийного действия так, как его вызывает Django: POST'ом со списком строк.
+
+    С 25-08 у действия есть экран подтверждения, и обработчик читает обоснование из POST —
+    голый `rf.post("/admin/...")` теперь возвращает этот экран, а не выполняет действие.
+    """
     from django.contrib.messages.storage.fallback import FallbackStorage
 
     from accounts.admin import CompanyAdmin
 
     admin_instance = CompanyAdmin(Company, __import__("django.contrib.admin", fromlist=["site"]).site)
-    request = rf.post("/admin/accounts/company/")
+    request = rf.post("/admin/accounts/company/", post)
     request.user = operator
     request.session = {}
     request._messages = FallbackStorage(request)
+    admin_instance.verify_kyc(request, queryset)
+    return [str(message) for message in request._messages]
 
-    admin_instance.verify_kyc(request, Company.objects.filter(pk=bare_company.pk))
 
-    texts = [str(m) for m in request._messages]
-    assert any("KYC_REASON_REQUIRED_WITHOUT_EVIDENCE" in text for text in texts)
-    assert any("Без доказательств" in text for text in texts)
+def test_unfold_emergency_action_needs_a_justification_before_it_runs(operator, bare_company, rf):
+    """Раньше действие било компанию без документов кодом `KYC_REASON_REQUIRED_WITHOUT_EVIDENCE`
+    и отправляло инженера в панель оператора: обоснование записать было НЕГДЕ — у действия
+    Django нет формы. Форма появилась (находка 63), и политика владельца («уровень без
+    документов разрешён с предупреждением и обоснованием») исполняется теперь и здесь."""
+    texts = _unfold_verify(operator, rf, Company.objects.filter(pk=bare_company.pk))
+
+    assert texts == [], "первый клик ничего не выполняет — он спрашивает"
     assert _status_of(bare_company) == "PROFILE_SUBMITTED"
+
+
+def test_unfold_emergency_action_approves_with_a_justification(operator, bare_company, rf):
+    texts = _unfold_verify(
+        operator,
+        rf,
+        Company.objects.filter(pk=bare_company.pk),
+        _emergency_confirmed="1",
+        _emergency_reason="Договор подписан офлайн, скан по почте",
+    )
+
+    assert _status_of(bare_company) == "L2_VERIFIED"
+    assert not any("KYC_REASON_REQUIRED_WITHOUT_EVIDENCE" in text for text in texts)
+
+
+def test_unfold_emergency_action_reports_skipped_without_crashing(operator, levels, rf):
+    """`skipped` — список СЛОВАРЕЙ; строковый join по нему падал в TypeError, то есть
+    аварийное действие ломалось ровно тогда, когда ему было что сказать оператору.
+
+    Причина пропуска теперь другая (обоснование обязательно и потому всегда есть), а сам
+    разбор пропущенных остался — берём равный уровень: он тоже возвращает словарь."""
+    already = Company.objects.create(
+        name="Уже подтверждена",
+        inn="907000042",
+        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
+    )
+
+    texts = _unfold_verify(
+        operator,
+        rf,
+        Company.objects.filter(pk=already.pk),
+        _emergency_confirmed="1",
+        _emergency_reason="повторная попытка",
+    )
+
+    assert any("Уже подтверждена" in text for text in texts), texts
+    assert _status_of(already) == "L2_VERIFIED"
 
 
 # ── Равный уровень: действия без изменения не выдают себя за успех ──────────

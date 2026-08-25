@@ -1,11 +1,23 @@
 from django.contrib import admin
 from unfold.admin import ModelAdmin
 
+from core.admin_mixins import ReadOnlyInspectionMixin
+
 from .models import Country, Currency, DeliveryBasis, ExchangeRate, HSCode, UnitOfMeasure
 
 
+class LookupAdminBase(ReadOnlyInspectionMixin, ModelAdmin):
+    """Справочники под тем же режимом инспекции, что и остальная инженерная админка.
+
+    Отдельного гарда на поле `code` здесь НЕ ставим: у не-суперпользователя readonly и так
+    накрывает все поля, а у суперпользователя правка кода — объявленное решение владельца
+    (2026-06-29, аварийное вмешательство). Настоящий зазор по коду был не тут, а в API —
+    он закрыт в `master_data/serializers.py`.
+    """
+
+
 @admin.register(Country)
-class CountryAdmin(ModelAdmin):
+class CountryAdmin(LookupAdminBase):
     list_display = ["name", "code", "alpha2", "vat_rate", "sort_order", "is_active"]
     list_filter = ["is_active"]
     search_fields = ["name", "code", "alpha2"]
@@ -13,7 +25,7 @@ class CountryAdmin(ModelAdmin):
 
 
 @admin.register(Currency)
-class CurrencyAdmin(ModelAdmin):
+class CurrencyAdmin(LookupAdminBase):
     list_display = ["name", "code", "symbol", "sort_order", "is_active"]
     list_filter = ["is_active"]
     search_fields = ["name", "code"]
@@ -21,7 +33,7 @@ class CurrencyAdmin(ModelAdmin):
 
 
 @admin.register(UnitOfMeasure)
-class UnitOfMeasureAdmin(ModelAdmin):
+class UnitOfMeasureAdmin(LookupAdminBase):
     list_display = ["name", "code", "sort_order", "is_active"]
     list_filter = ["is_active"]
     search_fields = ["name", "code"]
@@ -29,7 +41,7 @@ class UnitOfMeasureAdmin(ModelAdmin):
 
 
 @admin.register(DeliveryBasis)
-class DeliveryBasisAdmin(ModelAdmin):
+class DeliveryBasisAdmin(LookupAdminBase):
     list_display = ["name", "code", "sort_order", "is_active"]
     list_filter = ["is_active"]
     search_fields = ["name", "code"]
