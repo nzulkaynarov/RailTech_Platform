@@ -27,6 +27,23 @@ def _has_operational_subscription(company_id: int) -> bool:
     return bool(sub and sub.is_operational)
 
 
+def _row_decides(row: Optional[CompanyEntitlement]) -> bool:
+    """Решает ли эта строка судьбу функции — или надо смотреть на подписку.
+
+    Строка права — ИСКЛЮЧЕНИЕ из правила подписки, и у исключения есть срок. Раньше судьбу
+    решало само СУЩЕСТВОВАНИЕ строки: истёкшее промо или исчерпанный пакет кредитов навсегда
+    запирали функцию даже у компании с оплаченной подпиской — она теряла то, за что платит.
+
+    Явный ЗАПРЕТ (`DISABLED`) — другое дело: это решение платформы, и оно побеждает всегда,
+    иначе отключение права было бы бессмысленным. Так же устроен `sourcing/ai_spend_cap.py`.
+    """
+    if row is None:
+        return False
+    if row.access == "DISABLED":
+        return True
+    return row.is_currently_granted()
+
+
 def entitlement_state(company_id: int, feature_key) -> Optional[CompanyEntitlement]:
     """The company's CompanyEntitlement row for this feature (or None). Use when a caller needs the
     nuance — e.g. access == 'DEMO' (watermark/gate output) or the remaining credit balance."""
@@ -47,10 +64,10 @@ def has_entitlement(company_id: int, feature_key) -> bool:
     if not company_id:
         return False
     row = CompanyEntitlement.objects.filter(company_id=company_id, feature_key=key).first()
-    if row is not None:
-        return row.is_currently_granted()  # an explicit grant/revoke/demo ALWAYS wins
-    # No explicit row → an operational subscription grants the baseline feature set (so a paying
-    # seller is never locked out). Unsubscribed + no row → locked (build is free; send/export aren't).
+    if _row_decides(row):
+        return row.is_currently_granted()
+    # Строки нет — ЛИБО она уже недействительна: платная функция возвращается к правилу
+    # подписки, и платящий продавец получает то, за что заплатил.
     return key in SUBSCRIPTION_BASELINE_FEATURES and _has_operational_subscription(company_id)
 
 
@@ -70,9 +87,9 @@ def consume_credit(company_id: int, feature_key, amount: int = 1) -> bool:
     if key in FREE_FLOOR_FEATURES:
         return True
     row = CompanyEntitlement.objects.select_for_update().filter(company_id=company_id, feature_key=key).first()
-    if row is None:
-        # No explicit row → an operational subscription grants the baseline UNMETERED (mirrors
-        # has_entitlement so a subscribed seller isn't blocked just for lacking a credit row).
+    if not _row_decides(row):
+        # Строки нет либо она недействительна → базовый набор подписки, БЕЗ счётчика (зеркалит
+        # `has_entitlement`, иначе подписчик оказался бы заперт из-за исчерпанного промо-пакета).
         return key in SUBSCRIPTION_BASELINE_FEATURES and _has_operational_subscription(company_id)
     if not row.is_currently_granted():
         return False

@@ -187,12 +187,27 @@ class CompanyEntitlement(models.Model):
         """The feature is usable right now: not DISABLED, not expired, and (if credit-metered) has
         a positive balance. DEMO counts as usable — the watermark/send-gate is enforced at the
         feature's own call site via `entitlement_state`, not here."""
-        from django.utils import timezone
-
         if self.access == "DISABLED":
             return False
-        if self.expires_at is not None and self.expires_at < timezone.now():
+        if self.is_expired:
             return False
         if self.credits is not None and self.credits <= 0:
             return False
         return True
+
+    @property
+    def is_expired(self) -> bool:
+        """Срок права вышел.
+
+        Оператор задаёт срок ДАТОЙ (`<input type="date">`), и она приезжала полуночью: право
+        с подписью «Действует до 25.08» было мертво весь день 25.08 — последний день терялся
+        целиком. Замена сравнения на `<=` тут не помогает: это сдвиг на микросекунду, а не на
+        сутки. Правильно — считать по ДНЮ, ровно как соседний `SupplierSubscription`
+        (`valid_until < today`, последний день засчитывается). Так же поступают Stripe и Odoo:
+        период действует ПО указанную дату включительно.
+        """
+        from django.utils import timezone
+
+        if self.expires_at is None:
+            return False
+        return timezone.localtime(self.expires_at).date() < timezone.localdate()
