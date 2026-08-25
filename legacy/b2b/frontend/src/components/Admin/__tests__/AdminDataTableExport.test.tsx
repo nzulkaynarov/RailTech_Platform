@@ -102,4 +102,28 @@ describe('Выгрузка операторского реестра', () => {
       vi.useRealTimers();
     }
   });
+
+  it('переносит фильтр текущей выборки — иначе файл шире экрана', async () => {
+    // Фильтр вкладки жил ТОЛЬКО в запросе списка: на вкладке «Просрочено» с нулём строк на
+    // экране файл содержал все подписки платформы. Выгрузка обязана повторять выборку.
+    renderTable({ exportParams: { status: 'PAST_DUE', plan: 'PREMIUM' } });
+
+    await clickExport(/csv/i);
+
+    await waitFor(() => expect(downloadFile).toHaveBeenCalled());
+    const url = vi.mocked(downloadFile).mock.calls[0][0];
+    expect(url).toContain('status=PAST_DUE');
+    expect(url).toContain('plan=PREMIUM');
+  });
+
+  it('пустые значения фильтра в адрес не уходят', async () => {
+    renderTable({ exportParams: { status: '', plan: 'BASIC' } });
+
+    await clickExport(/csv/i);
+
+    await waitFor(() => expect(downloadFile).toHaveBeenCalled());
+    const url = vi.mocked(downloadFile).mock.calls[0][0];
+    expect(url).not.toContain('status=');
+    expect(url).toContain('plan=BASIC');
+  });
 });

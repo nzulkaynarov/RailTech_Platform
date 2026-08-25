@@ -86,6 +86,7 @@ from .subscriptions import (
     change_subscription_status,
     check_and_expire_subscriptions,
     ensure_trial_subscription,
+    expired_subscription_ids,
     record_subscription_payment,
 )
 
@@ -120,6 +121,7 @@ __all__ = [
     "delete_operator_role",
     "delete_kyc_document",
     "ensure_trial_subscription",
+    "expired_subscription_ids",
     "get_company_settings",
     "update_company_settings",
     "get_document_profile",

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useOperatorCan } from '@/hooks/useViewerMode';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { CreditCard, Play, Pause, Pencil, Trash2, Wallet } from 'lucide-react';
@@ -322,6 +323,10 @@ export function AdminSubscriptionsPage() {
     fetchAll: true,
   });
 
+  // Кнопки записи гасятся по ПРАВУ, а не показываются всем с отказом на сервере: оператор
+  // «только просмотр» видел полный набор действий, каждое из которых заканчивалось отказом.
+  const canManageBilling = useOperatorCan('billing.manage');
+
   const [editTarget, setEditTarget] = useState<Subscription | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Subscription | null>(null);
@@ -330,6 +335,10 @@ export function AdminSubscriptionsPage() {
   const [suspendTarget, setSuspendTarget] = useState<Subscription | null>(null);
 
   const filtered = subscriptions;
+
+  // Срок вышел — подписка не операционна независимо от статуса (сервер считает так же).
+  const isExpired = (sub: Subscription) =>
+    Boolean(sub.valid_until) && sub.valid_until! < new Date().toISOString().slice(0, 10);
 
   const counts = useMemo(() => ({
     all: allSubs.length,
@@ -381,11 +390,21 @@ export function AdminSubscriptionsPage() {
   }
 
   async function runBulkActivate(rows: Subscription[]) {
-    const res = await bulkStatus.mutateAsync({
-      ids: rows.map((r) => r.id),
-      status: 'ACTIVE',
-    });
-    toast.success(t('admin.subscriptions.bulkResult', { affected: res.affected }));
+    // Без try/catch отказ сервера не доходил до человека ВООБЩЕ: массовая активация молчала.
+    try {
+      const res = await bulkStatus.mutateAsync({
+        ids: rows.map((r) => r.id),
+        status: 'ACTIVE',
+      });
+      toast.success(t('admin.subscriptions.bulkResult', { affected: res.affected }));
+      // Просроченные статусом не воскрешают — оператор обязан узнать, кого пропустили,
+      // иначе «активировал пачку» и не понял, почему доступ не вернулся.
+      if (res.skipped_expired?.length) {
+        toast.warning(t('admin.subscriptions.bulkSkippedExpired', { count: res.skipped_expired.length }));
+      }
+    } catch (e) {
+      toast.error(translateApiError(e));
+    }
   }
 
   const openNew = () => { setEditTarget(null); setSheetOpen(true); };
@@ -416,6 +435,9 @@ export function AdminSubscriptionsPage() {
         onRowClick={openEdit}
         searchPlaceholder={t('admin.subscriptions.searchPlaceholder')}
         exportUrl={`${window.location.origin}/api/v1/accounts/subscriptions/export/`}
+        // Выгрузка обязана повторять то, что на экране: раньше фильтр вкладки жил только в
+        // запросе списка, и на вкладке с нулём строк файл содержал ВСЕ подписки платформы.
+        exportParams={queryParams}
         primaryAction={
           <Button size="sm" className="h-8 text-xs" onClick={openNew}>
             {t('admin.subscriptions.new')}
@@ -469,37 +491,39 @@ export function AdminSubscriptionsPage() {
           },
         ]}
         rowActions={[
+          // Пункты меню ГАСЯТСЯ, а не молчат. Раньше каждый начинался с `if (...) return;`:
+          // «Приостановить» на просроченной подписке, «Активировать» на активной и «Оплата»
+          // на аннулированной выглядели доступными и не делали НИЧЕГО — ни запроса, ни
+          // тоста. Эталон Odoo/Salesforce: недоступное действие показывают неактивным.
           {
             id: 'activate',
             label: t('admin.subscriptions.activated'),
             icon: <Play className="h-3.5 w-3.5 text-success" />,
-            onRun: (s) => {
-              if (s.status === 'ACTIVE') return;
-              handleActivate(s.id);
-            },
+            // Просроченную подписку статусом не воскрешают — её возобновляет оплата.
+            disabled: (s) => !canManageBilling || s.status === 'ACTIVE' || isExpired(s),
+            onRun: (s) => handleActivate(s.id),
           },
           {
             id: 'suspend',
             label: t('admin.subscriptions.suspended'),
             icon: <Pause className="h-3.5 w-3.5 text-warning" />,
-            onRun: (s) => {
-              if (s.status !== 'ACTIVE') return;
-              setSuspendTarget(s);
-            },
+            // Приостановить можно всё, что ещё работает: и ACTIVE, и TRIAL, и PAST_DUE —
+            // сервер принимает их все, а меню отсекало лишнее молчанием.
+            disabled: (s) => !canManageBilling || s.status === 'SUSPENDED' || s.status === 'CANCELLED',
+            onRun: (s) => setSuspendTarget(s),
           },
           {
             id: 'pay',
             label: t('subscriptionPay.title'),
             icon: <Wallet className="h-3.5 w-3.5 text-primary" />,
-            onRun: (s) => {
-              if (s.status === 'CANCELLED') return;
-              setPayTargetId(s.id);
-            },
+            disabled: (s) => !canManageBilling || s.status === 'CANCELLED',
+            onRun: (s) => setPayTargetId(s.id),
           },
           {
             id: 'edit',
             label: t('admin.subscriptions.edit'),
             icon: <Pencil className="h-3.5 w-3.5" />,
+            disabled: () => !canManageBilling,
             onRun: openEdit,
           },
           {
@@ -507,6 +531,7 @@ export function AdminSubscriptionsPage() {
             label: t('admin.subscriptions.delete'),
             icon: <Trash2 className="h-3.5 w-3.5" />,
             variant: 'destructive',
+            disabled: () => !canManageBilling,
             onRun: (s) => setDeleteTarget(s),
           },
         ]}
@@ -514,12 +539,14 @@ export function AdminSubscriptionsPage() {
           {
             id: 'bulk-activate',
             label: t('admin.subscriptions.bulkActivate'),
+            disabled: () => !canManageBilling,
             onRun: (rows) => runBulkActivate(rows),
           },
           {
             id: 'bulk-suspend',
             label: t('admin.subscriptions.bulkSuspend'),
             variant: 'destructive',
+            disabled: () => !canManageBilling,
             onRun: (rows) => setConfirmBulkSuspend(rows),
           },
         ]}

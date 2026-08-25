@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-24 16:38+0500\n"
+"POT-Creation-Date: 2026-08-25 10:28+0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -147,16 +147,23 @@ msgstr "Notes"
 msgid "[Emergency] Активировать"
 msgstr "[Emergency] Activate"
 
-#: accounts/admin.py:530
+#: accounts/admin.py:536
+#, python-format
+msgid ""
+"Пропущено просроченных: %(count)d — их возобновляет оплата, а не статус."
+msgstr ""
+"Skipped expired: %(count)d — a payment renews them, not a status change."
+
+#: accounts/admin.py:539
 #, python-format
 msgid "%(count)d активировано."
 msgstr "%(count)d activated."
 
-#: accounts/admin.py:532
+#: accounts/admin.py:541
 msgid "[Emergency] Приостановить"
 msgstr "[Emergency] Suspend"
 
-#: accounts/admin.py:535
+#: accounts/admin.py:544
 #, python-format
 msgid "%(count)d приостановлено."
 msgstr "%(count)d suspended."

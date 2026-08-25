@@ -106,9 +106,18 @@ class SupplierSubscriptionViewSet(viewsets.ModelViewSet):
     )
     @action(detail=True, methods=["post"], url_path="activate")
     def activate(self, request, pk=None):
-        """POST /api/v1/accounts/subscriptions/{id}/activate/"""
+        """POST /api/v1/accounts/subscriptions/{id}/activate/
+
+        Просроченную подписку одной сменой статуса не активируют: доступ считается по статусу
+        И дате сразу, поэтому такая «активация» рисовала ACTIVE, не возвращая ни одной платной
+        функции, а ночная задача через сутки откатывала статус. Возобновление — это новый
+        период (оплата), как у Stripe и Odoo.
+        """
         sub = self.get_object()
-        services.change_subscription_status(SupplierSubscription.objects.filter(pk=sub.pk), "ACTIVE")
+        queryset = SupplierSubscription.objects.filter(pk=sub.pk)
+        if services.expired_subscription_ids(queryset):
+            return Response({"detail": "SUBSCRIPTION_EXPIRED_EXTEND_FIRST"}, status=status.HTTP_400_BAD_REQUEST)
+        services.change_subscription_status(queryset, "ACTIVE")
         sub.refresh_from_db()
         self._log_status_change(request, sub, "ACTIVE")
         return Response(self.get_serializer(sub).data)
@@ -211,6 +220,11 @@ class SupplierSubscriptionViewSet(viewsets.ModelViewSet):
         if target == "SUSPENDED" and not reason:
             return Response({"detail": "REASON_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
         subs = SupplierSubscription.objects.filter(id__in=ids).select_related("company")
+        # Массовый путь — тот же, что одиночный: просроченные подписки в ACTIVE не переводим,
+        # иначе оператор «активирует» пачку, а доступ не вернётся ни у кого.
+        skipped_expired = services.expired_subscription_ids(subs) if target == "ACTIVE" else []
+        if skipped_expired:
+            subs = subs.exclude(id__in=skipped_expired)
         affected_rows = services.change_subscription_status(subs, target)
         from core.audit import log_admin_action
 
@@ -225,23 +239,30 @@ class SupplierSubscriptionViewSet(viewsets.ModelViewSet):
                 after={"status": target},
                 level="WARNING" if target == "SUSPENDED" else "SUCCESS",
             )
-        return Response({"affected": affected_rows, "target": target})
+        return Response({"affected": affected_rows, "target": target, "skipped_expired": skipped_expired})
 
     @extend_schema(summary="Record subscription payment -- extends validity and activates", tags=["Accounts"])
     @action(detail=True, methods=["post"], url_path="pay", permission_classes=[permissions.IsAuthenticated])
     def pay(self, request, pk=None):
         sub = self.get_object()
-        amount = request.data.get("amount", 0)
-        months = int(request.data.get("months", 1))
+        # `int(...)` на сыром вводе падал в 500 с HTML-страницей вместо `{"detail": "<CODE>"}` —
+        # разбор входа делает сервис, вью только передаёт как есть (ARCH-05).
         sub, error = services.record_subscription_payment(
             sub,
-            amount,
-            months=months,
+            request.data.get("amount", 0),
+            months=request.data.get("months", 1),
             actor=request.user,
             manual=True,
         )
         if error:
-            return Response({"detail": error}, status=status.HTTP_403_FORBIDDEN)
+            # Отказ по ПРАВУ — 403, отказ по ВВОДУ — 400: иначе витрина не отличит «нельзя
+            # вам» от «поправьте число».
+            http_status = (
+                status.HTTP_400_BAD_REQUEST
+                if error in ("INVALID_MONTHS", "INVALID_AMOUNT")
+                else status.HTTP_403_FORBIDDEN
+            )
+            return Response({"detail": error}, status=http_status)
         return Response(self.get_serializer(sub).data)
 
 

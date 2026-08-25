@@ -1,4 +1,5 @@
 import logging
+from decimal import Decimal, InvalidOperation
 from typing import Optional, Tuple
 
 from django.db.models import QuerySet
@@ -12,6 +13,11 @@ logger = logging.getLogger(__name__)
 # Single source of truth for the trial length — used both when granting the subscription and when
 # telling the applicant about it (the approval email), so the two can never disagree.
 TRIAL_SUBSCRIPTION_DAYS = 30
+
+#: Потолок на разовое продление. Без него опечатка в поле «месяцев» (99999) уводила срок на
+#: восемь тысяч лет вперёд, а Python падал на переполнении timedelta пятисоткой вместо
+#: внятного отказа. Пять лет — заведомо больше любого разумного платежа.
+MAX_PAYMENT_MONTHS = 60
 
 
 def ensure_trial_subscription(company: Company, trial_days: int = TRIAL_SUBSCRIPTION_DAYS) -> SupplierSubscription:
@@ -58,6 +64,23 @@ def record_subscription_payment(
 
     from crm.models import ActivityLog
 
+    # Срок продлевают ВПЕРЁД. `months=-2` уводил `valid_until` на 60 дней в прошлое: подписка
+    # мгновенно переставала быть операционной, статус оставался ACTIVE, а интерфейс печатал
+    # успех — продавец видел «активна» и упирался в закрытые гейты (замер 25-08). Ни Stripe,
+    # ни Odoo не дают продлить период назад: это не оплата, а порча срока.
+    try:
+        months_int = int(months)
+    except (TypeError, ValueError):
+        return None, "INVALID_MONTHS"
+    if months_int < 1 or months_int > MAX_PAYMENT_MONTHS:
+        return None, "INVALID_MONTHS"
+    try:
+        amount_value = Decimal(str(amount))
+    except (InvalidOperation, TypeError, ValueError):
+        return None, "INVALID_AMOUNT"
+    if amount_value < 0:
+        return None, "INVALID_AMOUNT"
+
     if actor is not None:
         if is_platform_admin_viewer(actor):
             return None, "ADMIN_VIEWER_CANNOT_ACT"
@@ -67,7 +90,7 @@ def record_subscription_payment(
             return None, "MEMBER_REQUIRED_FOR_ACTION"
     today = timezone.localdate()
     base = max(today, subscription.valid_until or today)
-    subscription.valid_until = base + timedelta(days=30 * months)
+    subscription.valid_until = base + timedelta(days=30 * months_int)
     subscription.last_payment_date = today
     subscription.next_payment_date = subscription.valid_until
     subscription.status = "ACTIVE"
@@ -122,6 +145,18 @@ def check_and_expire_subscriptions() -> dict:
     return {"past_due": past_due_count, "suspended": suspended_count}
 
 
+def expired_subscription_ids(subscriptions: QuerySet[SupplierSubscription]) -> list:
+    """Подписки, у которых срок уже вышел, — их нельзя «активировать» одной сменой статуса.
+
+    Доступ к платным путям считается по ДВУМ признакам сразу (`is_operational`: статус И
+    дата). Смена одного статуса рисовала ACTIVE, оставляя `valid_until` в прошлом: обе
+    витрины врали одновременно — реестр показывал «Активна», а `/me` отдавал
+    `subscription_active=False`, — и ночная задача через сутки откатывала статус обратно.
+    """
+    today = timezone.localdate()
+    return list(subscriptions.filter(valid_until__lt=today).values_list("id", flat=True))
+
+
 def change_subscription_status(
     subscriptions: QuerySet[SupplierSubscription],
     new_status: str,
@@ -129,8 +164,16 @@ def change_subscription_status(
     """
     Change subscription status (ACTIVE / SUSPENDED / CANCELLED / TRIAL).
     Returns: count of updated rows.
+
+    ВАЖНО: активацию просроченной подписки этот сервис НЕ выполняет — вызывающий обязан
+    сначала спросить `expired_subscription_ids` и отбить действие кодом
+    `SUBSCRIPTION_EXPIRED_EXTEND_FIRST`. Продлевает срок только оплата
+    (`record_subscription_payment`), как у Stripe и Odoo: возобновление подписки — это
+    новый период, а не переключатель статуса.
     """
     valid_statuses = {"ACTIVE", "SUSPENDED", "CANCELLED", "TRIAL", "PAST_DUE"}
     if new_status not in valid_statuses:
         raise ValueError(f"Invalid status '{new_status}'. Allowed: {valid_statuses}")
+    if new_status == "ACTIVE":
+        subscriptions = subscriptions.exclude(id__in=expired_subscription_ids(subscriptions))
     return subscriptions.update(status=new_status)

@@ -9,7 +9,11 @@ class IsPlatformAdmin(BasePermission):
     Регулирует всю платформу, не привязан ни к одной компании.
     """
 
-    message = "Access restricted to platform administrators."
+    # Отказ обязан приходить КОДОМ: витрина переводит его по словарю `apiErrors`, а
+    # человеческую фразу перевести нечем — `extractCode` (frontend/src/lib/apiError.ts)
+    # требует UPPER_SNAKE, не находит его и печатает на экране системный `ERR_BAD_REQUEST`
+    # от axios. Так выглядел ЛЮБОЙ отказ по правам во всей операторской плоскости.
+    message = "PLATFORM_ADMIN_REQUIRED"
 
     def has_permission(self, request, view):
         user = request.user
@@ -43,7 +47,7 @@ class OperatorScoped(BasePermission):
     everything (backward compatible).
     """
 
-    message = "Access restricted to platform operators with the required capability."
+    message = "OPERATOR_PERMISSION_REQUIRED"
 
     def has_permission(self, request, view):
         user = request.user
@@ -71,7 +75,7 @@ class IsSupplierWithActiveSubscription(BasePermission):
     Platform Admin обходит проверку. Чтение свободно.
     """
 
-    message = "Supplier subscription inactive or expired."
+    message = "SUBSCRIPTION_REQUIRED"
 
     def has_permission(self, request, view):
         user = request.user
@@ -102,7 +106,7 @@ class IsProductManagerOrAdmin(BasePermission):
         (OWNER → всё; иначе can_sell).
     """
 
-    message = "You can only manage products of your own company."
+    message = "PRODUCT_OF_ANOTHER_COMPANY"
 
     def has_permission(self, request, view):
         user = request.user
@@ -154,7 +158,7 @@ class IsOfferSupplierOrAdmin(BasePermission):
     A seller must never be able to read or mutate a competitor's offer.
     """
 
-    message = "You can only manage offers of your own company."
+    message = "OFFER_OF_ANOTHER_COMPANY"
 
     def has_object_permission(self, request, view, obj):
         user = request.user
@@ -173,7 +177,7 @@ class IsCompanyMemberOrPlatformAdmin(BasePermission):
     - Остальные: доступ только к объектам своей компании (через CompanyMember).
     """
 
-    message = "You do not have permission to access this resource."
+    message = "PERMISSION_DENIED"
 
     def has_object_permission(self, request, view, obj):
         user = request.user

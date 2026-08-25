@@ -378,7 +378,8 @@ export const adminApi = {
     status: 'ACTIVE' | 'SUSPENDED',
     reason = '',
   ) => {
-    const res = await apiClient.post<{ affected: number; target: string }>(
+    // `skipped_expired` — подписки, которые статусом не воскрешают: их возобновляет оплата.
+    const res = await apiClient.post<{ affected: number; target: string; skipped_expired?: number[] }>(
       'accounts/subscriptions/bulk-set-status/',
       { ids, status, reason },
     );

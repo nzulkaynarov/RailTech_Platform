@@ -68,7 +68,7 @@ export interface AdminTableTab {
   label: ReactNode;
   count?: number;
   /** Extra query params applied when this tab is active. */
-  params?: Record<string, string | undefined>;
+
 }
 
 export interface AdminTableBulkAction<T> {
@@ -120,6 +120,14 @@ export interface AdminDataTableProps<T> {
   primaryAction?: ReactNode;
   /** Export endpoint base URL — triggers CSV/XLSX download via browser. */
   exportUrl?: string;
+  /**
+   * Фильтры ТЕКУЩЕЙ выборки — ровно те, с которыми страница запрашивает список.
+   *
+   * Раньше выгрузка собирала фильтр из `AdminTableTab.params`, а это поле не заполняла НИ
+   * ОДНА страница: на вкладке с нулём строк файл содержал весь реестр платформы. Источник
+   * правды должен быть один — тот же объект, что уходит в запрос списка.
+   */
+  exportParams?: Record<string, string> | undefined;
   /** Pagination: total, pageSize, onPageChange if server-driven. */
   pagination?: {
     total: number;
@@ -157,6 +165,7 @@ export function AdminDataTable<T>(props: AdminDataTableProps<T>): React.ReactNod
     onRowClick,
     primaryAction,
     exportUrl,
+    exportParams,
     pagination,
   } = props;
 
@@ -281,12 +290,10 @@ export function AdminDataTable<T>(props: AdminDataTableProps<T>): React.ReactNod
     // propagate current filters: search, tab-params, sort
     if (currentSearch) url.searchParams.set('search', currentSearch);
     if (currentSort) url.searchParams.set('ordering', currentSort);
-    const activeTab = tabs?.find((t) => t.id === currentTab);
-    if (activeTab?.params) {
-      Object.entries(activeTab.params).forEach(([k, v]) => {
-        if (v != null) url.searchParams.set(k, String(v));
-      });
-    }
+    // Фильтры страницы (вкладка, статус, тип…) — как есть, одним объектом.
+    Object.entries(exportParams ?? {}).forEach(([key, value]) => {
+      if (value != null && value !== '') url.searchParams.set(key, String(value));
+    });
     url.searchParams.set('fmt', fmt);
     // Скачивать НУЖНО авторизованным запросом, а не `window.open`.
     //

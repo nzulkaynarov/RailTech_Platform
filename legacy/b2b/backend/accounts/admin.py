@@ -526,7 +526,16 @@ class SupplierSubscriptionAdmin(ReadOnlyInspectionMixin, ModelAdmin):
 
     @superuser_only_action(_("[Emergency] Активировать"))
     def activate_subscription(self, request, queryset):
+        # Просроченную подписку статусом не воскрешают — сервис их пропустит, а инженер
+        # должен узнать об этом, а не считать пропуск успехом.
+        expired = services.expired_subscription_ids(queryset)
         updated = services.change_subscription_status(queryset, "ACTIVE")
+        if expired:
+            self.message_user(
+                request,
+                _("Пропущено просроченных: %(count)d — их возобновляет оплата, а не статус.") % {"count": len(expired)},
+                level="warning",
+            )
         self.message_user(request, _("%(count)d активировано.") % {"count": updated})
 
     @superuser_only_action(_("[Emergency] Приостановить"))
