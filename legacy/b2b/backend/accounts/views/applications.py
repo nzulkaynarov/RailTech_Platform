@@ -130,10 +130,17 @@ class SupplierSubscriptionViewSet(viewsets.ModelViewSet):
     )
     @action(detail=True, methods=["post"], url_path="suspend")
     def suspend(self, request, pk=None):
-        """POST /api/v1/accounts/subscriptions/{id}/suspend/"""
-        sub = self.get_object()
-        services.change_subscription_status(SupplierSubscription.objects.filter(pk=sub.pk), "SUSPENDED")
-        sub.refresh_from_db()
+        """POST /api/v1/accounts/subscriptions/{id}/suspend/
+
+        Через сервис (Rule 8): приостановка обязана дойти до арендатора письмом и
+        уведомлением, а причина — попасть туда, где он её увидит. Голая смена статуса
+        отрезала платящего продавца молча.
+        """
+        sub, error = services.suspend_subscription(
+            self.get_object(), actor=request.user, reason=request.data.get("reason", "")
+        )
+        if error:
+            return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
         self._log_status_change(request, sub, "SUSPENDED")
         return Response(self.get_serializer(sub).data)
 
@@ -225,7 +232,16 @@ class SupplierSubscriptionViewSet(viewsets.ModelViewSet):
         skipped_expired = services.expired_subscription_ids(subs) if target == "ACTIVE" else []
         if skipped_expired:
             subs = subs.exclude(id__in=skipped_expired)
-        affected_rows = services.change_subscription_status(subs, target)
+        if target == "SUSPENDED":
+            # Массовый путь оповещает так же, как одиночный: молчаливое отключение пачки
+            # продавцов — тот же дефект, только шире.
+            affected_rows = 0
+            for subscription in list(subs):
+                _, suspend_error = services.suspend_subscription(subscription, actor=request.user, reason=reason)
+                if suspend_error is None:
+                    affected_rows += 1
+        else:
+            affected_rows = services.change_subscription_status(subs, target)
         from core.audit import log_admin_action
 
         for sub in subs:

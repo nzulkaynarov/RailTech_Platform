@@ -127,7 +127,12 @@ export function MySubscriptionContent() {
                   {t('mySubscription.alerts.suspendedTitle')}
                 </div>
                 <div className="text-muted-foreground">
-                  {t('mySubscription.alerts.suspendedHint')}
+                  {/* Причина приходит с сервера: раньше она жила только в журнале доступа за
+                      правом оператора, и отключённая сторона видела общий текст, не понимая,
+                      за что её отключили. Эталон Stripe: ограничение называет причину. */}
+                  {sub?.suspended_reason
+                    ? t('mySubscription.alerts.suspendedWithReason', { reason: sub.suspended_reason })
+                    : t('mySubscription.alerts.suspendedHint')}
                 </div>
               </div>
             </div>

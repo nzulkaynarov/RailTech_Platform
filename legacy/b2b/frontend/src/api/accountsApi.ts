@@ -759,6 +759,10 @@ export interface Subscription {
 	last_payment_date: string | null;
 	next_payment_date: string | null;
 	notes: string;
+	/** Почему подписку приостановили — текст, который видит САМ арендатор.
+	 *  Раньше причина жила только в журнале доступа за правом оператора. */
+	suspended_reason?: string;
+	suspended_at?: string | null;
 	created_at: string;
 	updated_at: string;
 }

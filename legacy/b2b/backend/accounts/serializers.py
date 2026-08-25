@@ -738,10 +738,24 @@ class SupplierSubscriptionSerializer(serializers.ModelSerializer):
             "last_payment_date",
             "next_payment_date",
             "notes",
+            # Причину приостановки видит САМ АРЕНДАТОР: раньше она жила только в журнале
+            # доступа за правом оператора, и отключённая сторона не знала, за что её отключили.
+            "suspended_reason",
+            "suspended_at",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "company_name", "company_inn", "created_at", "updated_at"]
+        # Приостановка — ДЕЙСТВИЕ со следом и оповещением (`suspend`), а не поле формы:
+        # иначе причина проставлялась бы молча, без письма адресату.
+        read_only_fields = [
+            "id",
+            "company_name",
+            "company_inn",
+            "created_at",
+            "updated_at",
+            "suspended_reason",
+            "suspended_at",
+        ]
 
 
 class CompanyEntitlementSerializer(serializers.ModelSerializer):

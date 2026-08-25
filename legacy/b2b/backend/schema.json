@@ -31994,6 +31994,18 @@
                         "title": "Заметки",
                         "description": "Внутренние заметки администратора"
                     },
+                    "suspended_reason": {
+                        "type": "string",
+                        "readOnly": true,
+                        "title": "Причина приостановки"
+                    },
+                    "suspended_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Приостановлена"
+                    },
                     "created_at": {
                         "type": "string",
                         "format": "date-time",
@@ -32016,6 +32028,8 @@
                     "id",
                     "plan_display",
                     "status_display",
+                    "suspended_at",
+                    "suspended_reason",
                     "updated_at"
                 ]
             },

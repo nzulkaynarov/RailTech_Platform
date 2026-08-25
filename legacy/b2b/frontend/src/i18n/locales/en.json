@@ -255,6 +255,7 @@
     },
     "alerts": {
       "suspendedTitle": "Subscription suspended",
+      "suspendedWithReason": "The subscription was suspended by a platform operator. Reason: {{reason}}",
       "suspendedHint": "While the subscription is suspended, seller features are unavailable. Clear the balance to resume.",
       "pastDueTitle": "Payment overdue",
       "pastDueHint": "Pay the next cycle to keep access to seller features.",
@@ -4818,6 +4819,10 @@
     "act.signed": {
       "title": "Act signed",
       "message": "Act {{number}} on deal #{{deal_id}} has been signed"
+    },
+    "subscription.suspended": {
+      "title": "Subscription suspended",
+      "message": "{{company_name}}: some seller features are unavailable. {{reason}}"
     },
     "act.rejected": {
       "title": "Act rejected by the customer",

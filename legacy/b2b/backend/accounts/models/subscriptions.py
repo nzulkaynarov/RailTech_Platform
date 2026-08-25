@@ -119,6 +119,14 @@ class SupplierSubscription(models.Model):
         today = timezone.localdate()
         return self.status == "ACTIVE" and self.valid_until and self.valid_until >= today
 
+    #: Почему подписку приостановили — ТО, ЧТО ВИДИТ АРЕНДАТОР.
+    #:
+    #: Причина писалась только в журнал доступа, а он закрыт правом оператора: отключённая
+    #: сторона не могла узнать, за что её отключили, и баннер печатал общий текст «нужна
+    #: подписка». Эталон Stripe: сообщение об ограничении называет причину адресату.
+    suspended_reason = models.TextField(blank=True, default="", verbose_name=_("Причина приостановки"))
+    suspended_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Приостановлена"))
+
     @property
     def is_operational(self) -> bool:
         """Subscription permits supplier operations (ACTIVE or TRIAL within validity)."""

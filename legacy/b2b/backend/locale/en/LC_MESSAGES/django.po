@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-25 10:28+0500\n"
+"POT-Creation-Date: 2026-08-25 11:13+0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -48,7 +48,7 @@ msgstr "Role"
 msgid "Профиль"
 msgstr "Profile"
 
-#: accounts/admin.py:184 accounts/models/subscriptions.py:164
+#: accounts/admin.py:184 accounts/models/subscriptions.py:172
 msgid "Доступ"
 msgstr "Access"
 
@@ -195,7 +195,7 @@ msgstr "Rejected"
 #: accounts/models/company/document_profile.py:22
 #: accounts/models/company/membership.py:41
 #: accounts/models/company/membership.py:98 accounts/models/kyc.py:18
-#: accounts/models/subscriptions.py:34 accounts/models/subscriptions.py:156
+#: accounts/models/subscriptions.py:34 accounts/models/subscriptions.py:164
 #: catalog/models/requests.py:46 core/models.py:193
 #: core/tests/test_i18n_activation.py:102
 #: core/tests/test_i18n_activation.py:106 crm/models/charges.py:186
@@ -1180,9 +1180,9 @@ msgstr "Active"
 msgid "Просрочена"
 msgstr "Past due"
 
-#: accounts/models/subscriptions.py:26
+#: accounts/models/subscriptions.py:26 accounts/models/subscriptions.py:128
 msgid "Приостановлена"
-msgstr "Suspended"
+msgstr "Suspended at"
 
 #: accounts/models/subscriptions.py:27
 msgid "Отменена"
@@ -1231,7 +1231,7 @@ msgstr "Valid from"
 msgid "Дата начала действия подписки"
 msgstr "Subscription start date"
 
-#: accounts/models/subscriptions.py:78 accounts/models/subscriptions.py:171
+#: accounts/models/subscriptions.py:78 accounts/models/subscriptions.py:179
 #: catalog/models/offers.py:120 crm/models/deals.py:482
 #: crm/models/quotes.py:204
 msgid "Действует до"
@@ -1279,52 +1279,56 @@ msgstr "Supplier subscription"
 msgid "Подписки поставщиков"
 msgstr "Supplier subscriptions"
 
-#: accounts/models/subscriptions.py:147
+#: accounts/models/subscriptions.py:127
+msgid "Причина приостановки"
+msgstr "Suspension reason"
+
+#: accounts/models/subscriptions.py:155
 msgid "Включено"
 msgstr "Enabled"
 
-#: accounts/models/subscriptions.py:148
+#: accounts/models/subscriptions.py:156
 msgid "Выключено"
 msgstr "Disabled"
 
-#: accounts/models/subscriptions.py:149
+#: accounts/models/subscriptions.py:157
 msgid "Демо"
 msgstr "Demo"
 
-#: accounts/models/subscriptions.py:161
+#: accounts/models/subscriptions.py:169
 msgid "Ключ функции"
 msgstr "Feature key"
 
-#: accounts/models/subscriptions.py:162
+#: accounts/models/subscriptions.py:170
 msgid ""
 "Стабильный код функции (accounts.constants.FeatureKey), напр. quote.send"
 msgstr "Stable feature code (accounts.constants.FeatureKey), e.g. quote.send"
 
-#: accounts/models/subscriptions.py:166
+#: accounts/models/subscriptions.py:174
 msgid "Лимит"
 msgstr "Limit"
 
-#: accounts/models/subscriptions.py:166
+#: accounts/models/subscriptions.py:174
 msgid "Потолок использования (пусто — без лимита)"
 msgstr "Usage cap (empty — no limit)"
 
-#: accounts/models/subscriptions.py:169
+#: accounts/models/subscriptions.py:177
 msgid "Кредиты"
 msgstr "Credits"
 
-#: accounts/models/subscriptions.py:169
+#: accounts/models/subscriptions.py:177
 msgid "Расходуемый баланс (пусто — неприменимо)"
 msgstr "Consumable balance (empty — not applicable)"
 
-#: accounts/models/subscriptions.py:172 crm/models/quotes.py:391
+#: accounts/models/subscriptions.py:180 crm/models/quotes.py:391
 msgid "Заметка"
 msgstr "Note"
 
-#: accounts/models/subscriptions.py:177
+#: accounts/models/subscriptions.py:185
 msgid "Право доступа компании"
 msgstr "Company entitlement"
 
-#: accounts/models/subscriptions.py:178
+#: accounts/models/subscriptions.py:186
 msgid "Права доступа компаний"
 msgstr "Company entitlements"
 
@@ -6713,6 +6717,67 @@ msgstr ""
 msgid ""
 "Если вы не регистрировались на платформе, просто проигнорируйте это письмо."
 msgstr "If you did not sign up for the platform, simply ignore this email."
+
+#: templates/emails/subscription_suspended.html:3
+#: templates/emails/subscription_suspended_subject.txt:1
+msgid "Подписка приостановлена — часть функций недоступна"
+msgstr "Subscription suspended — some features are unavailable"
+
+#: templates/emails/subscription_suspended.html:4
+msgid "Подписка"
+msgstr "Subscription"
+
+#: templates/emails/subscription_suspended.html:7
+msgid "Подписка приостановлена"
+msgstr "Subscription suspended"
+
+#: templates/emails/subscription_suspended.html:10
+#, python-format
+msgid ""
+"Подписка компании <strong>%(company_name)s</strong> приостановлена "
+"оператором платформы."
+msgstr ""
+"The subscription of <strong>%(company_name)s</strong> was suspended by a platform "
+"operator."
+
+#: templates/emails/subscription_suspended.html:14
+#: templates/emails/subscription_suspended.txt:3
+#, python-format
+msgid "Причина: %(reason)s"
+msgstr "Reason: %(reason)s"
+
+#: templates/emails/subscription_suspended.html:18
+msgid ""
+"Пока подписка приостановлена, недоступны отправка и экспорт КП и другие "
+"функции продавца.\n"
+"    Работа с уже созданными документами сохраняется."
+msgstr ""
+"While the subscription is suspended, sending and exporting quotes and other seller "
+"features are unavailable. Work with already created documents is preserved."
+
+#: templates/emails/subscription_suspended.html:23
+msgid "Открыть подписку"
+msgstr "Open the subscription"
+
+#: templates/emails/subscription_suspended.txt:1
+#, python-format
+msgid ""
+"Подписка компании «%(company_name)s» приостановлена оператором платформы."
+msgstr ""
+"The subscription of “%(company_name)s” was suspended by a platform operator."
+
+#: templates/emails/subscription_suspended.txt:5
+msgid ""
+"Пока подписка приостановлена, недоступны отправка и экспорт КП и другие "
+"функции продавца. Работа с уже созданными документами сохраняется."
+msgstr ""
+"While the subscription is suspended, sending and exporting quotes and other seller "
+"features are unavailable. Work with already created documents is preserved."
+
+#: templates/emails/subscription_suspended.txt:7
+#, python-format
+msgid "Открыть подписку: %(subscription_url)s"
+msgstr "Open the subscription: %(subscription_url)s"
 
 #, python-format
 #~ msgid "Без KYC документов: %(names)s"

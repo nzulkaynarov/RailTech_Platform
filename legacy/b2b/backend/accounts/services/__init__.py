@@ -88,6 +88,7 @@ from .subscriptions import (
     ensure_trial_subscription,
     expired_subscription_ids,
     record_subscription_payment,
+    suspend_subscription,
 )
 
 __all__ = [
@@ -140,6 +141,7 @@ __all__ = [
     "seller_sees_all_deals",
     "seller_visible_deal_ids",
     "record_subscription_payment",
+    "suspend_subscription",
     "reject_role_application",
     "remove_company_member",
     "reset_password",

@@ -13678,6 +13678,13 @@ export interface components {
              * @description Внутренние заметки администратора
              */
             notes?: string;
+            /** Причина приостановки */
+            readonly suspended_reason: string;
+            /**
+             * Приостановлена
+             * Format: date-time
+             */
+            readonly suspended_at: string | null;
             /**
              * Дата создания
              * Format: date-time

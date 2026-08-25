@@ -2,6 +2,7 @@ import logging
 from decimal import Decimal, InvalidOperation
 from typing import Optional, Tuple
 
+from django.db import transaction
 from django.db.models import QuerySet
 from django.utils import timezone
 
@@ -123,6 +124,99 @@ def record_subscription_payment(
         company=subscription.company,
     )
     return subscription, None
+
+
+@transaction.atomic
+def suspend_subscription(
+    subscription: SupplierSubscription,
+    actor: Optional[CustomUser] = None,
+    reason: str = "",
+) -> Tuple[Optional[SupplierSubscription], Optional[str]]:
+    """Приостановить подписку — и СКАЗАТЬ ОБ ЭТОМ арендатору.
+
+    Замер 25-08: приостановка не рождала ни письма, ни уведомления. Единственный след —
+    запись в журнале доступа, закрытом правом оператора: отключённая сторона узнавала о
+    случившемся, только упёршись в закрытую функцию, и видела там общий текст «нужна
+    подписка». Причина отключения ей была недоступна вовсе.
+
+    Эталон — Stripe: сообщение об ограничении адресовано тому, кого ограничили, и называет
+    причину. Механика писем и уведомлений копируется с KYC (`accounts/services/kyc.py`):
+    отправка отложена до `on_commit`, чтобы письмо не ушло при откате транзакции.
+    """
+    if subscription.status == "SUSPENDED":
+        return None, "SUBSCRIPTION_ALREADY_SUSPENDED"
+
+    subscription.status = "SUSPENDED"
+    subscription.suspended_reason = (reason or "").strip()
+    subscription.suspended_at = timezone.now()
+    subscription.save(update_fields=["status", "suspended_reason", "suspended_at"])
+
+    def _notify() -> None:
+        try:
+            _send_subscription_suspended_email(subscription)
+        except (OSError, RuntimeError, ValueError):
+            logger.exception("Failed to send suspension email for subscription %s", subscription.pk)
+        try:
+            _create_suspension_notification(subscription)
+        except (OSError, RuntimeError, ValueError):
+            logger.exception("Failed to create suspension notification for %s", subscription.pk)
+
+    transaction.on_commit(_notify)
+    return subscription, None
+
+
+def _subscription_owners(subscription: SupplierSubscription):
+    return list(
+        CustomUser.objects.filter(
+            memberships__company_id=subscription.company_id,
+            memberships__is_primary=True,
+            memberships__is_active=True,
+        ).distinct()
+    )
+
+
+def _send_subscription_suspended_email(subscription: SupplierSubscription) -> None:
+    from django.conf import settings
+
+    from notifications.emails import send_templated_email
+
+    owners = _subscription_owners(subscription)
+    if not owners:
+        return
+    frontend = getattr(settings, "FRONTEND_URL", "http://localhost:5173")
+    context = {
+        "company_name": subscription.company.name if subscription.company_id else "",
+        "reason": subscription.suspended_reason,
+        "subscription_url": f"{frontend}/#my-subscription",
+    }
+    for owner in owners:
+        send_templated_email(
+            "subscription_suspended",
+            context,
+            to=[owner.email],
+            channel="transactional",
+            user=owner,
+            fail_silently=True,
+        )
+
+
+def _create_suspension_notification(subscription: SupplierSubscription) -> None:
+    from notifications.models import Notification, NotificationType
+
+    notification_type = NotificationType.objects.filter(code="WARNING").first()
+    for owner in _subscription_owners(subscription):
+        Notification.objects.create(
+            user=owner,
+            type=notification_type,
+            title="Подписка приостановлена",
+            message=subscription.suspended_reason or "",
+            link="/#my-subscription",
+            event_code="subscription.suspended",
+            event_params={
+                "company_name": subscription.company.name if subscription.company_id else "",
+                "reason": subscription.suspended_reason,
+            },
+        )
 
 
 def check_and_expire_subscriptions() -> dict:
