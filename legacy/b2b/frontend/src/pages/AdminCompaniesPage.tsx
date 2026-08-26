@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Building2, Pencil, Trash2, UserPlus, GitMerge, Archive, ArchiveRestore } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { formatDate } from '@/lib/formatLocale';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,11 +40,19 @@ import { MergeDuplicatesDialog } from '@/components/Admin/MergeDuplicatesDialog'
 import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';
 import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import {
-  useCompanies, useCreateCompany, useUpdateCompany, useDeleteCompany,
-  useArchiveCompany, useUnarchiveCompany,
-  useCompanyTeam, useInviteMember,
-  useUploadCompanyLogo, useDeleteCompanyLogo,
-  useUploadDocument, useDeleteDocument,
+  useArchiveCompany,
+  useCompanies,
+  useCompanyTeam,
+  useCompanyTypes,
+  useCreateCompany,
+  useDeleteCompany,
+  useDeleteCompanyLogo,
+  useDeleteDocument,
+  useInviteMember,
+  useUnarchiveCompany,
+  useUpdateCompany,
+  useUploadCompanyLogo,
+  useUploadDocument,
 } from '@/hooks/useAccounts';
 import { accountsApi } from '@/api/accountsApi';
 import { useQuery } from '@tanstack/react-query';
@@ -205,6 +214,7 @@ function CompanyFormSheet({
   const { t } = useTranslation();
   const createMut = useCreateCompany();
   const updateMut = useUpdateCompany();
+  const { data: companyTypes } = useCompanyTypes();
   const [draft, setDraft] = useDraftState<Company | null, Draft>(target, (t) => (t ? { ...t } : emptyDraft()));
 
 
@@ -224,9 +234,14 @@ function CompanyFormSheet({
       bank_account: draft.bank_account ?? '',
       mfo: draft.mfo ?? '',
       contact_person: draft.contact_person ?? '',
-      contact_info: draft.contact_info ?? '',
+      // Поле модели называется `phone`. Форма слала `contact_info`, DRF молча выбрасывал
+      // незнакомый ключ, PATCH возвращал 200 — и тост печатал успех при нулевой записи.
+      phone: draft.phone ?? '',
       email: draft.email ?? '',
       website: draft.website ?? '',
+      // Экран фильтрует вкладками ИМЕННО по типу компании — и до 26-08 не давал его задать:
+      // заведённый оператором арендатор не попадал ни в одну вкладку того же экрана.
+      types: draft.company_types ?? [],
     };
     try {
       if (isEdit && target) {
@@ -317,13 +332,39 @@ function CompanyFormSheet({
                 <Label>{t('adminCompanies.fields.legalAddress')}</Label>
                 <Input value={draft.legal_address ?? ''} onChange={(e) => update({ legal_address: e.target.value })} />
               </div>
+              {/* Экран фильтрует вкладками ИМЕННО по типу компании — значит он обязан этим
+                  полем владеть. До 26-08 задать тип можно было только инженерным мастером
+                  Unfold, и арендатор, заведённый оператором, не попадал ни в одну вкладку. */}
+              <div className="space-y-2 sm:col-span-2">
+                <Label>{t('adminCompanies.fields.types')}</Label>
+                <div className="flex flex-wrap gap-4">
+                  {(companyTypes ?? []).map((companyType) => {
+                    const selected = (draft.company_types ?? []).includes(companyType.code);
+                    return (
+                      <label key={companyType.code} className="flex items-center gap-2 text-sm">
+                        <Checkbox
+                          checked={selected}
+                          onCheckedChange={(checked) =>
+                            update({
+                              company_types: checked
+                                ? [...(draft.company_types ?? []), companyType.code]
+                                : (draft.company_types ?? []).filter((code) => code !== companyType.code),
+                            })
+                          }
+                        />
+                        {companyType.name}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
               <div className="space-y-2">
                 <Label>{t('adminCompanies.fields.contactPerson')}</Label>
                 <Input value={draft.contact_person ?? ''} onChange={(e) => update({ contact_person: e.target.value })} />
               </div>
               <div className="space-y-2">
                 <Label>{t('adminCompanies.fields.contactInfo')}</Label>
-                <Input value={draft.contact_info ?? ''} onChange={(e) => update({ contact_info: e.target.value })} />
+                <Input value={draft.phone ?? ''} onChange={(e) => update({ phone: e.target.value })} />
               </div>
               <div className="space-y-2">
                 <Label>{t('adminCompanies.fields.email')}</Label>

@@ -125,7 +125,11 @@ export function UserDetailSheet({
     const roleId = value === NO_OPERATOR_ROLE ? null : Number(value);
     try {
       await assignOperatorMut.mutateAsync({ userId: user.id, roleId });
-      toast.success(t('operatorRoles.assignSuccess'));
+      // Снятие суб-роли — НЕ назначение: без неё оператор проходит любую проверку права
+      // (`accounts/services/permissions.py`: `op_role is None → True`). Прежний текст
+      // «Роль оператора назначена» печатался и в этом случае, то есть расширение прав до
+      // полного доступа сообщалось словами об ограничении.
+      toast.success(roleId === null ? t('operatorRoles.limitsRemoved') : t('operatorRoles.assignSuccess'));
     } catch (e) {
       const data = (e as { response?: { data?: { error?: string; detail?: string } } })?.response?.data;
       const code = data?.detail ?? data?.error;
@@ -296,7 +300,9 @@ export function UserDetailSheet({
                       <SelectValue placeholder={t('operatorRoles.noOperatorRole')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={NO_OPERATOR_ROLE}>{t('operatorRoles.noOperatorRole')}</SelectItem>
+                      {/* Пункт называется тем, чем является: он не «оставляет без роли», а
+                          СНИМАЕТ ограничения. Раньше подпись обещала обратное. */}
+                      <SelectItem value={NO_OPERATOR_ROLE}>{t('operatorRoles.fullAccessNoLimits')}</SelectItem>
                       {(operatorRoles ?? []).map((operatorRole) => (
                         <SelectItem key={operatorRole.id} value={String(operatorRole.id)}>
                           {operatorRole.name}

@@ -22409,6 +22409,17 @@
                         "nullable": true,
                         "title": "Логотип",
                         "description": "Логотип компании для отображения на платформе"
+                    },
+                    "types": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "title": "Код",
+                            "description": "Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')",
+                            "writeOnly": true
+                        },
+                        "writeOnly": true
                     }
                 },
                 "required": [
@@ -27308,6 +27319,17 @@
                         "nullable": true,
                         "title": "Логотип",
                         "description": "Логотип компании для отображения на платформе"
+                    },
+                    "types": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "title": "Код",
+                            "description": "Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')",
+                            "writeOnly": true
+                        },
+                        "writeOnly": true
                     }
                 }
             },

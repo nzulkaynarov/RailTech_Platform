@@ -14,6 +14,7 @@ from .models import (
     CompanyRole,
     CompanyRoleApplication,
     CompanySettings,
+    CompanyType,
     CustomUser,
     KYCDocument,
     OperatorRole,
@@ -228,6 +229,19 @@ class CompanySerializer(serializers.ModelSerializer):
     verification_status_name = serializers.CharField(source="verification_status.name", read_only=True)
     verification_status_code = serializers.CharField(source="verification_status.code", read_only=True)
     company_types = serializers.SerializerMethodField()
+    # Тип компании ЗАПИСЫВАЕТСЯ — по коду, а не по идентификатору справочника (Rule 2).
+    #
+    # До 26-08 типы были только на чтение, и операторская форма реестра не имела поля типа
+    # вовсе: заведённый оператором арендатор не попадал ни в одну вкладку ТОГО ЖЕ экрана,
+    # который фильтрует именно по типу. Задать тип можно было единственным способом — через
+    # инженерный мастер Unfold. Экран обязан владеть полем, по которому сам фильтрует.
+    types = serializers.SlugRelatedField(
+        slug_field="code",
+        many=True,
+        required=False,
+        queryset=CompanyType.objects.filter(is_active=True),
+        write_only=True,
+    )
     # Способность удалить объявляется ЗАРАНЕЕ (Salesforce `deletable`): кнопка, которая
     # гарантированно упрётся в отказ, — тупик. `delete_blocker` несёт причину с держателями.
     delete_blocker = serializers.SerializerMethodField()
@@ -258,6 +272,7 @@ class CompanySerializer(serializers.ModelSerializer):
             "kyc_documents",
             "user_count",
             "company_types",
+            "types",
             "is_active",
             "archived_at",
             "archived_reason",

@@ -2,6 +2,17 @@ import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Building2, Trash2, Plus, AlertTriangle } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -98,14 +109,37 @@ export function MembershipsPanel({ user }: { user: UserType }) {
                       : (m.role_name ?? m.role_code ?? '—')}
                   </p>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleRemove(m.id)}
-                  disabled={removeMut.isPending}
-                >
-                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                </Button>
+                {/* Исключение человека из компании — необратимое действие с последствием для
+                    ДРУГОГО человека: он теряет доступ к данным арендатора. Кнопка вызывала
+                    мутацию напрямую, с одного клика, и не имела доступного имени — только
+                    иконка. На соседних действиях того же экрана диалог уже стоял. */}
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-label={t('pages.adminUsers.memberships.remove')}
+                      title={t('pages.adminUsers.memberships.remove')}
+                      disabled={removeMut.isPending}
+                    >
+                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>{t('pages.adminUsers.memberships.removeConfirmTitle')}</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        {t('pages.adminUsers.memberships.removeConfirmDesc', { company: m.company_name })}
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => handleRemove(m.id)}>
+                        {t('pages.adminUsers.memberships.remove')}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             ))}
           </div>

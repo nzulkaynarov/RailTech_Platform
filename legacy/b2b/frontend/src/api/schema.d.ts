@@ -8264,6 +8264,7 @@ export interface components {
              * @description Логотип компании для отображения на платформе
              */
             logo?: string | null;
+            types?: string[];
         };
         /** @description A company-defined role with its permission set (the access matrix). */
         CompanyRole: {
@@ -10822,6 +10823,7 @@ export interface components {
              * @description Логотип компании для отображения на платформе
              */
             logo?: string | null;
+            types?: string[];
         };
         PatchedCompanyRoleApplicationRequest: {
             /**

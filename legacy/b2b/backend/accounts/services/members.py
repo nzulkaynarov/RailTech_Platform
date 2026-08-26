@@ -3,6 +3,7 @@ from typing import Optional, Tuple
 
 from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
+from django.db import transaction
 from django.db.models import Q
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
@@ -275,11 +276,24 @@ def add_company_member(
         allowed_codes = set(applicable.values_list("code", flat=True))
         if not (company_type_codes & allowed_codes):
             return None, "WORKSPACE_ROLE_NOT_APPLICABLE_TO_COMPANY_TYPE"
-    membership, _created = CompanyMember.objects.update_or_create(
-        user=user,
-        company=company,
-        defaults={"role": role, "is_primary": is_primary, "is_active": True},
-    )
+    # Основное членство у человека РОВНО ОДНО — это ограничение БД
+    # (`unique_primary_company_per_user`, миграция accounts/0007). Прежде сервис просто ставил
+    # флаг, и добавление второй компании с галкой «Сделать основным» било `IntegrityError`
+    # наружу: оператор видел 500 вместо результата, а членство не создавалось вовсе.
+    #
+    # Правильное поведение — ПЕРЕНАЗНАЧЕНИЕ, а не отказ: человек работает в нескольких
+    # компаниях, и смена основной — обычная операция (эталон Odoo: переключение компании у
+    # пользователя, а не запрет второй). Снимаем признак с прежней основной в той же
+    # транзакции, что и ставим новый, — иначе между двумя записями существует момент, когда
+    # основных два, и ограничение сработает на первой же параллельной попытке.
+    with transaction.atomic():
+        if is_primary:
+            CompanyMember.objects.filter(user=user, is_primary=True).exclude(company=company).update(is_primary=False)
+        membership, _created = CompanyMember.objects.update_or_create(
+            user=user,
+            company=company,
+            defaults={"role": role, "is_primary": is_primary, "is_active": True},
+        )
     # Seed the permission-engine CompanyRole exactly like invite_workspace_member /
     # submit_company_profile do, so this operator path stops minting permission-less
     # company_role=NULL members (which the G4 permission engine can only serve via the

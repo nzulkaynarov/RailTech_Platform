@@ -44,7 +44,10 @@ export interface Company {
 	mfo?: string;
 	legal_address?: string;
 	contact_person?: string;
-	contact_info?: string;
+	// `contact_info` здесь НЕ БЫЛО НИКОГДА — у модели поле называется `phone`. Пока фантомное
+	// поле стояло в типе, форма реестра компаний компилировалась и слала его в PATCH: DRF молча
+	// выбрасывал незнакомый ключ, ответ приходил 200, и оператор видел зелёный тост при нулевой
+	// записи. Убрано намеренно — теперь такое расхождение формы с моделью ловит `tsc`.
 	phone?: string;
 	country?: number | string | null;
 	website?: string;
@@ -54,6 +57,8 @@ export interface Company {
 	created_at?: string;
 	kyc_documents?: KYCDocument[];
 	company_types?: string[];
+	/** Запись типов компании — по КОДАМ (Rule 2). Читается через `company_types`. */
+	types?: string[];
 	user_count?: number;
 }
 
