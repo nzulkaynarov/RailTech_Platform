@@ -60,6 +60,72 @@ class SupplierSubscriptionViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return SupplierSubscription.objects.select_related("company", "currency").order_by("-created_at")
 
+    #: Статус подписки меняют ДЕЙСТВИЯ (`activate`/`suspend`/`bulk-set-status`), а не правка поля.
+    #: Через них проходят проверка просроченности, причина, письмо арендатору и запись в журнал —
+    #: обычный PATCH не делает ничего из этого (замер 26-08: тот же результат достигался правкой
+    #: карточки, и отключённый продавец не получал ни письма, ни причины).
+    #: Эталон — Stripe: подписку не «редактируют в статус», её приостанавливают операцией.
+    _STATUS_FIELD = "status"
+
+    def update(self, request, *args, **kwargs):
+        if self._STATUS_FIELD in request.data:
+            current = self.get_object().status
+            if str(request.data[self._STATUS_FIELD]) != current:
+                return Response(
+                    {"detail": "SUBSCRIPTION_STATUS_IS_AN_ACTION"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        return super().update(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        subscription = serializer.save()
+        self._log_lifecycle(subscription, "created", after=self._snapshot(subscription))
+
+    def perform_update(self, serializer):
+        before = self._snapshot(serializer.instance)
+        subscription = serializer.save()
+        self._log_lifecycle(subscription, "updated", before=before, after=self._snapshot(subscription))
+
+    def perform_destroy(self, instance):
+        # След пишем ДО удаления: после него ни pk, ни компании уже не спросишь. Тот же приём,
+        # что у прав компании (`CompanyEntitlementViewSet.perform_destroy`) — механика одна.
+        self._log_lifecycle(instance, "deleted", before=self._snapshot(instance))
+        instance.delete()
+
+    @staticmethod
+    def _snapshot(subscription) -> dict:
+        return {
+            "plan": subscription.plan,
+            "status": subscription.status,
+            "valid_until": str(subscription.valid_until) if subscription.valid_until else None,
+            "monthly_rate": str(subscription.monthly_rate) if subscription.monthly_rate is not None else None,
+        }
+
+    def _log_lifecycle(self, subscription, event: str, before=None, after=None) -> None:
+        """След жизненного цикла подписки в «Журнале доступа».
+
+        DELETE физически уносил запись вместе с историей оплат и сроком, и в журнале не
+        оставалось ни того, что было удалено, ни кем. CREATE — тем более: подписка это доступ
+        к платным функциям, и её появление у арендатора обязано быть объяснимо.
+        """
+        from core.audit import log_admin_action
+
+        company_name = subscription.company.name if subscription.company_id else str(subscription.pk)
+        log_admin_action(
+            entity_type="subscription",
+            entity_id=subscription.pk,
+            action=f"Подписка {event}",
+            detail=company_name,
+            actor=self.request.user,
+            reason=(self.request.data.get("reason") or "").strip(),
+            before=before,
+            after=after,
+            company_id=subscription.company_id,
+            level="WARNING" if event == "deleted" else "INFO",
+            event_code=f"admin.subscription.{event}",
+            event_params={"company_name": company_name},
+        )
+
     @extend_schema(
         summary="My subscription",
         description=(
@@ -253,7 +319,14 @@ class SupplierSubscriptionViewSet(viewsets.ModelViewSet):
                 actor=request.user,
                 reason=reason,
                 after={"status": target},
+                company_id=sub.company_id,
                 level="WARNING" if target == "SUSPENDED" else "SUCCESS",
+                # Без `event_code` запись НЕ ПОПАДАЛА в «Журнал доступа»: он отбирает ленту по
+                # машинному коду `admin.*` (`core/admin_api/break_glass.py`). Одиночная кнопка на
+                # той же странице код писала, массовая — нет, и отключение ПАЧКИ продавцов было
+                # видно хуже, чем отключение одного.
+                event_code="admin.subscription.suspended" if target == "SUSPENDED" else "admin.subscription.activated",
+                event_params={"company_name": sub.company.name if sub.company_id else str(sub.id)},
             )
         return Response({"affected": affected_rows, "target": target, "skipped_expired": skipped_expired})
 
@@ -316,8 +389,16 @@ class CompanyRoleApplicationViewSet(viewsets.ModelViewSet):
 
     _OWNER_ALLOWED_ACTIONS = {"list", "retrieve", "create", "partial_update", "update"}
     _ADMIN_ONLY_ACTIONS = {"approve", "reject", "destroy"}
-    # Operator sub-capability for the moderation actions (ADR-0004 G1).
+    # Operator sub-capability per action (ADR-0004 G1).
+    #
+    # `list`/`retrieve` тоже здесь, и это не формальность: выборка оператора платформы не
+    # скоупится ничем (`get_queryset` отдаёт ему ВЕСЬ реестр), поэтому любая суб-роль — включая
+    # «Поддержку» с пустым набором прав — читала заявки чужих компаний: название, ИНН, e-mail
+    # заявителя и приложенные договор с NDA (замер 26-08). Право на чтение чужих документов —
+    # такое же право, как право их одобрять.
     operator_permissions = {
+        "list": "moderation.role_applications",
+        "retrieve": "moderation.role_applications",
         "approve": "moderation.role_applications",
         "reject": "moderation.role_applications",
         "destroy": "moderation.role_applications",
@@ -325,6 +406,10 @@ class CompanyRoleApplicationViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in self._ADMIN_ONLY_ACTIONS:
+            return [permissions.IsAuthenticated(), OperatorScoped()]
+        # Чтение реестра арендатором остаётся открытым — его выборку сужает `get_queryset`.
+        # Гейт нужен ровно тем, кому выборка НЕ сужается, то есть оператору платформы.
+        if self.action in {"list", "retrieve"} and getattr(self.request.user, "is_platform_admin", False):
             return [permissions.IsAuthenticated(), OperatorScoped()]
         return [permissions.IsAuthenticated()]
 

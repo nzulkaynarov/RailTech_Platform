@@ -4,7 +4,7 @@ from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin
 from unfold.decorators import display
 
-from core.admin_mixins import ReadOnlyInspectionMixin
+from core.admin_mixins import ReadOnlyInspectionMixin, superuser_only_action
 
 from .models import EmailLog, EmailTemplate, Notification, NotificationType
 
@@ -52,8 +52,12 @@ class NotificationAdmin(ReadOnlyInspectionMixin, ModelAdmin):
         ),
     )
 
-    @admin.action(description=_("Пометить прочитанными"))
+    @superuser_only_action(_("Пометить прочитанными"))
     def mark_as_read(self, request, queryset):
+        # Действие правит ЧУЖИЕ уведомления: сервис снимает флаг по всей выборке, без всякой
+        # привязки к владельцу. Из девяти массовых действий админки это было единственное без
+        # `@superuser_only_action` — не-суперпользователь гасил колокольчик у арендаторов, и
+        # человек переставал видеть, что счёт выставлен или акт ждёт подтверждения.
         from . import services
 
         updated = services.mark_notifications_read(queryset)

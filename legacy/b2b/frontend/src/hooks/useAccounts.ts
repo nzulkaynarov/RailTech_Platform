@@ -387,7 +387,7 @@ export const useActivateSubscription = () => {
 export const useSuspendSubscription = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => accountsApi.suspendSubscription(id),
+    mutationFn: ({ id, reason }: { id: number; reason: string }) => accountsApi.suspendSubscription(id, reason),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['subscriptions'] }); },
   });
 };

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-25 14:57+0500\n"
+"POT-Creation-Date: 2026-08-26 10:40+0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -100,7 +100,7 @@ msgstr "KYC"
 #: crm/models/billing.py:49 crm/models/billing.py:267
 #: crm/models/contracts.py:49 crm/models/documents.py:132
 #: crm/models/fulfillment.py:33 crm/models/quotes.py:57
-#: notifications/admin.py:127 notifications/models.py:187
+#: notifications/admin.py:131 notifications/models.py:187
 msgid "Статус"
 msgstr "Status"
 
@@ -3400,10 +3400,10 @@ msgstr "Success"
 msgid "Предупреждение"
 msgstr "Warning"
 
-#: crm/models/deals.py:398 notifications/admin.py:118
+#: crm/models/deals.py:398 notifications/admin.py:122
 #: notifications/models.py:136 notifications/models.py:191
 msgid "Ошибка"
-msgstr "Bug"
+msgstr "Error"
 
 #: crm/models/deals.py:403
 msgid "Действие"
@@ -5103,28 +5103,28 @@ msgstr "Read"
 msgid "Пометить прочитанными"
 msgstr "Mark as read"
 
-#: notifications/admin.py:60
+#: notifications/admin.py:64
 #, python-format
 msgid "%(count)d прочитано."
 msgstr "%(count)d marked as read."
 
-#: notifications/admin.py:100
+#: notifications/admin.py:104
 msgid "Метаданные"
 msgstr "Metadata"
 
-#: notifications/admin.py:112
+#: notifications/admin.py:116
 msgid "Тело письма"
 msgstr "Email body"
 
-#: notifications/admin.py:136
+#: notifications/admin.py:140
 msgid "Кому"
 msgstr "Recipient"
 
-#: notifications/admin.py:144
+#: notifications/admin.py:148
 msgid "HTML-превью"
 msgstr "HTML preview"
 
-#: notifications/admin.py:147
+#: notifications/admin.py:151
 msgid "— (только plain-text)"
 msgstr "— (plain text only)"
 

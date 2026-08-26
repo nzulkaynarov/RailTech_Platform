@@ -36,6 +36,15 @@ def _lookup_write_permissions(view):
 LOOKUP_CACHE_TTL = 60 * 10  # 10 min — справочники меняются редко
 
 
+def _lookup_snapshot(instance) -> dict:
+    """Что записываем в след: только опорные поля справочника, без служебных."""
+    return {
+        field: str(getattr(instance, field))
+        for field in ("code", "name", "sort_order", "is_active")
+        if hasattr(instance, field)
+    }
+
+
 class _CachedLookupListMixin:
     """Кэш списка справочника, который СБРАСЫВАЕТСЯ правкой.
 
@@ -79,14 +88,44 @@ class _CachedLookupListMixin:
     def perform_create(self, serializer):
         super().perform_create(serializer)
         self._bump_version()
+        self._audit(serializer.instance, "created", after=_lookup_snapshot(serializer.instance))
 
     def perform_update(self, serializer):
+        before = _lookup_snapshot(self.get_object())
         super().perform_update(serializer)
         self._bump_version()
+        self._audit(serializer.instance, "updated", before=before, after=_lookup_snapshot(serializer.instance))
 
     def perform_destroy(self, instance):
+        # След ДО удаления: после него ни pk, ни кода уже не спросишь.
+        self._audit(instance, "deleted", before=_lookup_snapshot(instance))
         super().perform_destroy(instance)
         self._bump_version()
+
+    def _audit(self, instance, event: str, before=None, after=None) -> None:
+        """Правка справочника — платформенное действие, и след ему положен.
+
+        Строки этих справочников печатаются в документах ВСЕХ арендаторов: валюта в КП,
+        единица у позиции, базис поставки в договоре, страна в реквизитах. Правил их оператор
+        платформы, а в «Журнале доступа» не было ни одной записи (замер 26-08: `admin.lookup*`
+        — ноль строк). Разбирать, почему у всех арендаторов сменилось название валюты, было не
+        по чему.
+        """
+        from core.audit import log_admin_action
+
+        log_admin_action(
+            entity_type=instance._meta.label_lower,
+            entity_id=instance.pk,
+            action=f"Справочник {event}: {getattr(instance, 'code', instance.pk)}",
+            detail=str(instance),
+            actor=self.request.user,
+            reason=(self.request.data.get("reason") or "").strip(),
+            before=before,
+            after=after,
+            level="WARNING" if event == "deleted" else "INFO",
+            event_code=f"admin.lookup.{event}",
+            event_params={"model": instance._meta.label_lower, "code": str(getattr(instance, "code", ""))},
+        )
 
 
 class _GuardedDestroyMixin:

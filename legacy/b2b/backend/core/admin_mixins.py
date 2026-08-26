@@ -196,10 +196,36 @@ class ReadOnlyInspectionMixin:
                 existing.append(name)
         return existing
 
-    def get_actions(self, request):
-        """Hide business actions from non-superusers."""
-        actions = super().get_actions(request)
+    def get_changelist_instance(self, request):
+        """Правка прямо в списке — обход режима «только чтение».
+
+        `readonly_fields` управляет ФОРМОЙ записи, а `list_editable` рисует поля прямо в
+        реестре и сохраняет их своим POST'ом мимо неё. У справочников это `sort_order` и
+        `is_active`: не-суперпользователь гасил строку справочника из списка, ни разу не
+        открыв карточку. Django строит `ChangeList` из `self.list_editable` (общего на все
+        запросы), поэтому гасим на ЭКЗЕМПЛЯРЕ — мутировать атрибут класса небезопасно, он
+        общий для всех одновременных запросов.
+        """
+        changelist = super().get_changelist_instance(request)
         if not request.user.is_superuser:
-            # Keep only built-in actions (like select all)
-            actions = {k: v for k, v in actions.items() if not hasattr(v[0], "__wrapped__")}
-        return actions
+            changelist.list_editable = ()
+        return changelist
+
+    def get_actions(self, request):
+        """Массовые действия — инструмент суперпользователя, а не всякого, кто вошёл.
+
+        Прежний отбор оставлял не-суперпользователю всё, у чего нет `__wrapped__`, — то есть
+        всё, что НЕ обёрнуто `superuser_only_action`. Признак хрупкий: он говорит о наличии
+        `functools.wraps`, а не о намерении автора. Достаточно завести обычный
+        `@admin.action` — и он проходит насквозь (так и случилось с «Пометить прочитанными»,
+        правившим чужие уведомления, замер 26-08).
+
+        Считаем наоборот: не-суперпользователю остаётся только то, что зарегистрировано САМОЙ
+        Django (`delete_selected` и подобные из `admin.site._actions`), а всё, что объявил
+        разработчик на модели, — нет. Отсутствие обёртки больше не пропуск.
+        """
+        actions = super().get_actions(request)
+        if request.user.is_superuser:
+            return actions
+        site_actions = set(getattr(self.admin_site, "_actions", {}))
+        return {name: value for name, value in actions.items() if name in site_actions}

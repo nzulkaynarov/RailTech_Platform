@@ -547,8 +547,12 @@ export const accountsApi = {
 		const response = await apiClient.post<Subscription>(`accounts/subscriptions/${id}/activate/`);
 		return response.data;
 	},
-	suspendSubscription: async (id: number) => {
-		const response = await apiClient.post<Subscription>(`accounts/subscriptions/${id}/suspend/`);
+	// Причина уходит ТЕЛОМ запроса. Диалог помечен `requireReason`, собирал её и передавал в
+	// колбэк — а до сервера она не доезжала: вызов уходил без тела. С тех пор как сервер стал
+	// класть причину в письмо арендатору (#611), цена дефекта выросла: отключённый продавец
+	// получал письмо с пустым объяснением.
+	suspendSubscription: async (id: number, reason = '') => {
+		const response = await apiClient.post<Subscription>(`accounts/subscriptions/${id}/suspend/`, { reason });
 		return response.data;
 	},
 	paySubscription: async (id: number, amount: string, months = 1) => {

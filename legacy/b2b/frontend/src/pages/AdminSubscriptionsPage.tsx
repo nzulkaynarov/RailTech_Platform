@@ -120,7 +120,8 @@ function FormSheet({
     const payload: Partial<Subscription> = {
       company: Number(draft.company),
       plan: draft.plan,
-      status: draft.status,
+      // У существующей подписки статус в тело не кладём — его меняют действия (см. форму ниже).
+      ...(isEdit ? {} : { status: draft.status }),
       monthly_rate: String(draft.monthly_rate),
       currency: draft.currency ? Number(draft.currency) : null,
       valid_from: draft.valid_from || null,
@@ -228,16 +229,28 @@ function FormSheet({
                 </SelectContent>
               </Select>
             </div>
+            {/* Статус существующей подписки меняют ДЕЙСТВИЯ («Активировать» / «Приостановить»),
+                а не поле формы. Через них проходят проверка просроченности, обязательная
+                причина, письмо арендатору и запись в журнал — обычный PATCH не делал ничего из
+                этого, и тот же результат достигался молча (замер 26-08). Эталон — Stripe:
+                подписку не «редактируют в статус», её приостанавливают операцией. */}
             <div className="space-y-2">
               <Label>{t('admin.subscriptions.table.status')}</Label>
-              <Select value={draft.status ?? undefined} onValueChange={(v) => update({ status: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {STATUS_OPTIONS.map((statusCode) => (
-                    <SelectItem key={statusCode} value={statusCode}>{statusLabel(statusCode)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {isEdit ? (
+                <div className="flex h-9 items-center gap-2">
+                  <Badge variant={statusVariant(draft.status ?? '')}>{statusLabel(draft.status ?? '')}</Badge>
+                  <span className="text-xs text-muted-foreground">{t('admin.subscriptions.statusIsAnAction')}</span>
+                </div>
+              ) : (
+                <Select value={draft.status ?? undefined} onValueChange={(v) => update({ status: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {STATUS_OPTIONS.map((statusCode) => (
+                      <SelectItem key={statusCode} value={statusCode}>{statusLabel(statusCode)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -357,10 +370,10 @@ export function AdminSubscriptionsPage() {
     }
   }
 
-  async function runSuspend() {
+  async function runSuspend(reason: string) {
     if (!suspendTarget) return;
     try {
-      await suspendMutation.mutateAsync(suspendTarget.id);
+      await suspendMutation.mutateAsync({ id: suspendTarget.id, reason });
       toast.success(t('admin.subscriptions.suspended'));
       setSuspendTarget(null);
     } catch (e) {
@@ -608,7 +621,7 @@ export function AdminSubscriptionsPage() {
         ]}
         confirmLabel={t('admin.subscriptions.suspended')}
         variant="destructive"
-        onConfirm={() => runSuspend()}
+        onConfirm={({ reason }) => runSuspend(reason)}
         translateError={(code) => translateApiError(code)}
       />
 

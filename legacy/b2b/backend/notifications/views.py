@@ -116,9 +116,39 @@ class EmailTemplateViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(updated_by=self.request.user)
+        self._audit(serializer.instance, "created")
 
     def perform_update(self, serializer):
         serializer.save(updated_by=self.request.user)
+        self._audit(serializer.instance, "updated")
+
+    def perform_destroy(self, instance):
+        # След ДО удаления: после него не спросишь, какой ключ подменяли.
+        self._audit(instance, "deleted")
+        instance.delete()
+
+    def _audit(self, template, event: str) -> None:
+        """Правка шаблона письма — платформенное действие со следом.
+
+        Активная строка НЕМЕДЛЕННО подменяет файловый шаблон для ВСЕХ получателей платформы:
+        текст, который увидит каждый арендатор в письме о счёте или об акте. Поле `updated_by`
+        отвечает «кто последний», но не «что было раньше» и не попадает в «Журнал доступа» —
+        он отбирает ленту по машинному коду `admin.*`.
+        """
+        from core.audit import log_admin_action
+
+        log_admin_action(
+            entity_type="notifications.emailtemplate",
+            entity_id=template.pk,
+            action=f"Шаблон письма {event}: {template.key}",
+            detail=template.subject or template.key,
+            actor=self.request.user,
+            reason=(self.request.data.get("reason") or "").strip(),
+            after={"key": template.key, "is_active": template.is_active, "language": template.language},
+            level="WARNING" if event == "deleted" else "INFO",
+            event_code=f"admin.email_template.{event}",
+            event_params={"key": template.key},
+        )
 
     @extend_schema(
         summary="Preview email template",
