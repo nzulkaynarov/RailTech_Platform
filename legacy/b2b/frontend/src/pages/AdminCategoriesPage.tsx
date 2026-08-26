@@ -123,7 +123,7 @@ export function AdminCategoriesPage() {
   const { data: categories, isLoading, isError, refetch } = useCategories({ fetchAll: true });
   const deleteMut = useDeleteCategory();
 
-  const listParams = useListParams([], { defaultOrdering: 'sort_order' });
+  const listParams = useListParams([], { urlKey: 'admin-categories', defaultOrdering: 'sort_order' });
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Category | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);

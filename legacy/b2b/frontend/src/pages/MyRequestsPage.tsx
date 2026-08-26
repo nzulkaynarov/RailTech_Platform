@@ -16,7 +16,7 @@ export function MyRequestsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [statusTab, setStatusTab] = useState<string>('all');
 
-  const listParams = useListParams([] as const, { defaultOrdering: '-created_at', pageSize: 15 });
+  const listParams = useListParams([] as const, { urlKey: 'my-requests', defaultOrdering: '-created_at', pageSize: 15 });
   const myDeals = deals ?? [];
 
   const selectTab = (key: string) => { setStatusTab(key); listParams.setPage(1); };

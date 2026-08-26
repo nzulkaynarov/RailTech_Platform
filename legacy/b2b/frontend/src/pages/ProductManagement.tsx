@@ -36,7 +36,7 @@ export function ProductManagement({ onProductClick }: ProductManagementProps) {
   const showPrices = activeStatus === 'SELLER';
   const canManageCatalog = activeStatus === 'SELLER';
 
-  const listParams = useListParams(['domain', 'stock', 'brand', 'owner'] as const, { defaultOrdering: 'name' });
+  const listParams = useListParams(['domain', 'stock', 'brand', 'owner'] as const, { urlKey: 'product-management', defaultOrdering: 'name' });
 
   const apiParams = useMemo(() => {
     const params: ProductListParams = {

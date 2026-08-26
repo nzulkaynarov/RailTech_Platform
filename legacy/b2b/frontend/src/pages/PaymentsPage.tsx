@@ -17,7 +17,7 @@ export function PaymentsPage() {
   // покупает, и продаёт, кнопки не видел. Тот же образец, что в DocumentCreateWizard.
   const isBuyer = useUserStore((s) => s.capabilities.can_buy);
   const isViewer = useIsViewerMode();
-  const listParams = useListParams([] as const, { defaultOrdering: '-paid_at' });
+  const listParams = useListParams([] as const, { urlKey: 'payments', defaultOrdering: '-paid_at' });
 
   const stats = [
     { label: t('paymentsPage.stats.total'), value: String(payments?.length ?? 0) },

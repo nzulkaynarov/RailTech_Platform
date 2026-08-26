@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-26 13:11+0500\n"
+"POT-Creation-Date: 2026-08-26 14:12+0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1465,7 +1465,7 @@ msgstr "Create company"
 msgid "Далее"
 msgstr "Next"
 
-#: accounts/views/users.py:189
+#: accounts/views/users.py:193
 msgid "Password changed successfully"
 msgstr "Password changed successfully"
 
@@ -5993,13 +5993,17 @@ msgstr "Open the invoice:"
 msgid ""
 "Уровень доверия компании «%(company_name)s» (ИНН %(company_inn)s) снижен. "
 "Часть функций платформы стала недоступна."
-msgstr "The trust level of “%(company_name)s” (TIN %(company_inn)s) has been lowered. Some platform features are no longer available."
+msgstr ""
+"The trust level of “%(company_name)s” (TIN %(company_inn)s) has been "
+"lowered. Some platform features are no longer available."
 
 #: templates/emails/kyc_revoked.html:8 templates/emails/kyc_revoked.txt:7
 msgid ""
 "Что делать дальше: исправьте указанное и подайте документы на проверку снова "
 "— это делается в кабинете, в разделе «Компания»."
-msgstr "What to do next: fix what is listed and submit the documents for review again — this is done in your account, under “Company”."
+msgstr ""
+"What to do next: fix what is listed and submit the documents for review "
+"again — this is done in your account, under “Company”."
 
 #: templates/emails/kyc_revoked.html:10 templates/emails/kyc_revoked.txt:9
 #: templates/emails/kyc_verified.html:29 templates/emails/kyc_verified.txt:5

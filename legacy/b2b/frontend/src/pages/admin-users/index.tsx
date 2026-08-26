@@ -37,6 +37,7 @@ export function AdminUsersPage() {
     const tab = tableState.tab || 'all';
     if (tab === 'active') p.is_active = true;
     else if (tab === 'inactive') p.is_active = false;
+    else if (tab === 'role:none') p['role__isnull'] = true;
     else if (tab.startsWith('role:')) p['role__code'] = tab.slice(5);
     return Object.keys(p).length ? p : undefined;
   }, [tableState.search, tableState.tab]);
@@ -59,7 +60,22 @@ export function AdminUsersPage() {
     active: allUsers.filter((u) => u.is_active).length,
     inactive: allUsers.filter((u) => !u.is_active).length,
     admin: allUsers.filter((u) => u.role_data?.code === 'ADMIN').length,
+    // Учётки БЕЗ системной роли не попадали ни на одну вкладку: вкладки строились строго по
+    // строкам справочника, а `CustomUser.role` — nullable. Человек существовал в реестре и
+    // был невидим в любом срезе по роли. Причина, по которой такие учётки вообще есть,
+    // закрыта волной #612 (мастер выдавал несуществующий код `CLIENT` → `role=None`), но
+    // ранее заведённые остались — и вкладка нужна, чтобы их найти и починить.
+    noRole: allUsers.filter((u) => !u.role_data?.code).length,
   }), [allUsers]);
+
+  const roleCounts = useMemo(() => {
+    const buckets: Record<string, number> = {};
+    allUsers.forEach((u) => {
+      const code = u.role_data?.code;
+      if (code) buckets[code] = (buckets[code] ?? 0) + 1;
+    });
+    return buckets;
+  }, [allUsers]);
 
   const stats = [
     { label: t('pages.adminUsers.stats.total'), value: String(counts.all) },
@@ -114,7 +130,14 @@ export function AdminUsersPage() {
           ...(roles?.map((r) => ({
             id: `role:${r.code}`,
             label: t(systemRoleLabelKey(r.code)),
+            // Единственные вкладки экрана без числа — рядом с тремя, у которых оно есть.
+            count: roleCounts[r.code] ?? 0,
           })) ?? []),
+          // Срез «без роли» показывается ТОЛЬКО когда такие учётки есть: пустая вкладка,
+          // которая всегда на месте, — шум, а не подсказка.
+          ...(counts.noRole > 0
+            ? [{ id: 'role:none', label: t('pages.adminUsers.noSystemRole'), count: counts.noRole }]
+            : []),
         ]}
         columns={[
           {

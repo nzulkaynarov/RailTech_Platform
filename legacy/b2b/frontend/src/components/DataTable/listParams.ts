@@ -7,24 +7,49 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 
+import { useUrlState } from '@/hooks/useUrlState';
+
 interface UseListParamsOptions {
   defaultOrdering?: string;
   pageSize?: number;
   debounceMs?: number;
+  /** Пространство имён состояния списка в АДРЕСЕ.
+   *
+   *  Без него состояние живёт только в памяти компонента: F5 сбрасывает поиск, фильтры,
+   *  сортировку и страницу, а ссылка, посланная коллеге, открывает не тот экран, что видел
+   *  отправитель (замер 26-08, находка 81). Эталон один и тот же у Odoo (фильтры в hash) и
+   *  Salesforce (list view в URL): состояние списка адресуемо.
+   *
+   *  Ключ обязателен именно как ПРОСТРАНСТВО ИМЁН: на одном экране бывает несколько списков,
+   *  и без разделения они затирали бы состояние друг друга. */
+  urlKey?: string;
 }
 
 export function useListParams<F extends Record<string, string> = Record<string, string>>(
   filterKeys: readonly (keyof F & string)[] = [],
   options: UseListParamsOptions = {},
 ) {
-  const { defaultOrdering = '', pageSize = 20, debounceMs = 300 } = options;
-  const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
+  const { defaultOrdering = '', pageSize = 20, debounceMs = 300, urlKey } = options;
+  const { set: setUrl } = useUrlState();
+  // Читаем адрес ОДИН раз при монтировании: дальше состояние ведёт компонент, а адрес лишь
+  // отражает его. Иначе каждое нажатие клавиши в поиске перезапускало бы разбор URL.
+  const [initial] = useState(() => {
+    if (!urlKey) return null;
+    const read = (key: string) => new URLSearchParams(window.location.search).get(`${urlKey}.${key}`) ?? '';
+    return {
+      search: read('q'),
+      ordering: read('sort'),
+      page: Number(read('page') || '1') || 1,
+      filters: Object.fromEntries(filterKeys.map((k) => [k, read(`f_${k}`) || 'all'])),
+    };
+  });
+  const [searchInput, setSearchInput] = useState(initial?.search ?? '');
+  const [search, setSearch] = useState(initial?.search ?? '');
   const [filters, setFilters] = useState<Record<string, string>>(
-    () => Object.fromEntries(filterKeys.map((k) => [k, 'all'])),
+    () => initial?.filters ?? Object.fromEntries(filterKeys.map((k) => [k, 'all'])),
   );
-  const [ordering, setOrdering] = useState(defaultOrdering);
-  const [page, setPage] = useState(1);
+  const [ordering, setOrdering] = useState(initial?.ordering || defaultOrdering);
+  const [page, setPage] = useState(initial?.page ?? 1);
 
   useEffect(() => {
     const id = setTimeout(() => {
@@ -54,6 +79,24 @@ export function useListParams<F extends Record<string, string> = Record<string, 
     });
     setPage(1);
   }, []);
+
+  // Отражаем состояние в адрес. Отдельным эффектом, а не внутри сеттеров: сеттеров пять, и
+  // повторять запись в каждом — тот самый класс «одна механика в нескольких местах».
+  // `urlState.set` сам не трогает историю, если ничего не изменилось.
+  useEffect(() => {
+    if (!urlKey) return;
+    setUrl({
+      [`${urlKey}.q`]: search || null,
+      [`${urlKey}.sort`]: ordering && ordering !== defaultOrdering ? ordering : null,
+      [`${urlKey}.page`]: page > 1 ? String(page) : null,
+      ...Object.fromEntries(
+        Object.entries(filters).map(([key, value]) => [`${urlKey}.f_${key}`, value && value !== 'all' ? value : null]),
+      ),
+    });
+    // Зависим от СТАБИЛЬНОГО `set` (он обёрнут `useCallback`), а не от объекта `urlState`:
+    // объект новый на каждый рендер, и эффект просыпался бы вхолостую после каждой
+    // перерисовки.
+  }, [urlKey, setUrl, search, ordering, page, filters, defaultOrdering]);
 
   return {
     searchInput, setSearchInput,

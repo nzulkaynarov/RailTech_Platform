@@ -111,7 +111,7 @@ export function AdminEquipmentGroupsPage() {
   const { data: groups, isLoading, isError, refetch } = useEquipmentGroups(undefined, { fetchAll: true });
   const deleteMut = useDeleteEquipmentGroup();
 
-  const listParams = useListParams([], { defaultOrdering: 'path' });
+  const listParams = useListParams([], { urlKey: 'admin-equipment-groups', defaultOrdering: 'path' });
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<EquipmentGroup | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<EquipmentGroup | null>(null);

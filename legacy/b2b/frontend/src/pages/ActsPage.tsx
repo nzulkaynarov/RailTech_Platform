@@ -94,7 +94,7 @@ function ActTurnLine({ act }: { act: Act }) {
 
 export function ActsPage() {
   const { t } = useTranslation();
-  const listParams = useListParams(['status'] as const, { defaultOrdering: '-created_at' });
+  const listParams = useListParams(['status'] as const, { urlKey: 'acts', defaultOrdering: '-created_at' });
   const { data: acts, isLoading, isError, refetch } = useActs(undefined);
   const signAct = useSignAct();
   const rejectAct = useRejectAct();

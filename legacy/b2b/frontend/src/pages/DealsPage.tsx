@@ -57,7 +57,7 @@ export function DealsPage() {
     });
   };
 
-  const listParams = useListParams(['stage'] as const, { defaultOrdering: '-created_at' });
+  const listParams = useListParams(['stage'] as const, { urlKey: 'deals', defaultOrdering: '-created_at' });
   const [createOpen, setCreateOpen] = useState(false);
   const [view, setView] = useState<'list' | 'kanban'>(() => {
     try {

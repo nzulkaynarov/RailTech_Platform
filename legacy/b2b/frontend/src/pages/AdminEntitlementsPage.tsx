@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useUrlState } from '@/hooks/useUrlState';
 import { toast } from 'sonner';
 import { KeyRound, Pencil, Trash2, Check, X } from 'lucide-react';
 
@@ -192,11 +193,20 @@ function EntitlementForm({
   );
 }
 
+/** Ключ фильтра в адресе. Пространство имён экрана — чтобы не столкнуться с чужими. */
+const COMPANY_FILTER_KEY = 'entitlements.company';
+
 /* ─── Page ────────────────────────────────────────────────────────────────── */
 export function AdminEntitlementsPage() {
   const { t } = useTranslation();
   const accessLabel = useAccessLabel();
-  const [companyFilter, setCompanyFilter] = useState<string>(ALL);
+  // Фильтр живёт в АДРЕСЕ, а не в состоянии компонента: иначе F5 сбрасывает его на «все», а
+  // ссылка, посланная коллеге, открывает не тот экран, что видел отправитель. Соседний
+  // #admin-subscriptions так и делает — расхождение было внутреннее (замер 26-08, находка 108).
+  const urlState = useUrlState();
+  const companyFilter = urlState.get(COMPANY_FILTER_KEY) || ALL;
+  const setCompanyFilter = (value: string) =>
+    urlState.set({ [COMPANY_FILTER_KEY]: value === ALL ? null : value });
   const params = companyFilter !== ALL ? { company: Number(companyFilter) } : undefined;
   // Пока состояние загрузки не читалось, во время запроса страница утверждала «прав нет»
   // — оператор видел готовый ответ там, где ответа ещё не было (аудит UI, U2).

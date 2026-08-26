@@ -23,7 +23,7 @@ const STATUS_CODES: InvoiceStatus[] = ['DRAFT', 'ISSUED', 'PARTIAL', 'PAID', 'OV
 
 export function InvoicesPage() {
   const { t } = useTranslation();
-  const listParams = useListParams(['status'] as const, { defaultOrdering: '-created_at' });
+  const listParams = useListParams(['status'] as const, { urlKey: 'invoices', defaultOrdering: '-created_at' });
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [payOpen, setPayOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);

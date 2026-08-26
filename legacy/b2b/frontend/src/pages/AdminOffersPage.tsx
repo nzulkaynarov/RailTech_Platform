@@ -242,7 +242,7 @@ export function AdminOffersPage() {
   const { data: stockStatuses } = useStockStatuses();
   const deleteMut = useDeleteOffer();
 
-  const listParams = useListParams(['active'] as const, { defaultOrdering: '-created_at' });
+  const listParams = useListParams(['active'] as const, { urlKey: 'admin-offers', defaultOrdering: '-created_at' });
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<SupplierOffer | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SupplierOffer | null>(null);

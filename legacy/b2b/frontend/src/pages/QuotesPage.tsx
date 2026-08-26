@@ -13,7 +13,7 @@ export function QuotesPage() {
 
   const quotesList = quotes ?? [];
   const { data: statuses } = useQuoteStatuses();
-  const listParams = useListParams(['status'] as const, { defaultOrdering: '-created_at' });
+  const listParams = useListParams(['status'] as const, { urlKey: 'quotes', defaultOrdering: '-created_at' });
   const [forceApproveTarget, setForceApproveTarget] = useState<Quote | null>(null);
   const [forceApproveReason, setForceApproveReason] = useState('');
   // Unified send (wave B2): the registry opens the SAME composer the builder uses —

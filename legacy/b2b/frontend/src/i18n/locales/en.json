@@ -2421,6 +2421,7 @@
         "lastLogin": "Last login"
       },
       "searchPlaceholder": "Search by name or email...",
+      "noSystemRole": "No system role",
       "activated": "{{name}} activated",
       "deactivated": "{{name}} deactivated",
       "joinedHint": "Joined: {{date}}",
@@ -2528,6 +2529,7 @@
     "empty": "No entries",
     "selected": "Selected: {{count}}",
     "selectAll": "Select all",
+    "shownOf": "Showing {{shown}} of {{total}}",
     "selectRow": "Select row",
     "rowActions": "Actions",
     "paginationLabel": "{{from}}–{{to}} of {{total}}"

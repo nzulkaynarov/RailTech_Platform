@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { CreditCard, Play, Pause, Pencil, Trash2, Wallet } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { StatusBadge, type BadgeVariant } from '@/components/ui/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -38,12 +39,25 @@ import { SubscriptionPayDialog } from '@/components/Admin/SubscriptionPayDialog'
 import { subscriptionPlanLabelKey, subscriptionStatusLabelKey } from '@/lib/codes';
 import type { Subscription } from '@/api/accountsApi';
 
-const statusVariant = (status: string) => {
+/** Вид бейджа статуса подписки.
+ *
+ * `SUSPENDED`, `PAST_DUE` и `CANCELLED` красились ОДНИМ `destructive` — три разных решения
+ * выглядели одним. Оператор не мог отличить «мы отключили» от «клиент не заплатил» и от
+ * «клиент ушёл», хотя действия по ним разные: снять запрет, напомнить об оплате, ничего.
+ * Слипшийся предикат — та же ошибка, что «счётчик всего остального»: он врёт при первом же
+ * решении, которое в него попало по недосмотру.
+ *
+ * Разводим по СМЫСЛУ: приостановка платформой — предупреждение (обратимо нашим действием),
+ * просрочка — тоже предупреждение, но по вине оплаты, отмена — нейтральный конец истории.
+ * Эталон Stripe ST-SUB-STATUS: у каждого состояния подписки свой вид и свой следующий шаг. */
+const statusBadgeVariant = (status: string): BadgeVariant => {
   switch (status) {
-    case 'ACTIVE': return 'default';
-    case 'TRIAL': return 'secondary';
-    case 'SUSPENDED': case 'PAST_DUE': case 'CANCELLED': return 'destructive';
-    default: return 'outline';
+    case 'ACTIVE': return 'success';
+    case 'TRIAL': return 'info';
+    case 'SUSPENDED': return 'danger';
+    case 'PAST_DUE': return 'warning';
+    case 'CANCELLED': return 'neutral';
+    default: return 'neutral';
   }
 };
 
@@ -238,7 +252,7 @@ function FormSheet({
               <Label>{t('admin.subscriptions.table.status')}</Label>
               {isEdit ? (
                 <div className="flex h-9 items-center gap-2">
-                  <Badge variant={statusVariant(draft.status ?? '')}>{statusLabel(draft.status ?? '')}</Badge>
+                  <StatusBadge variant={statusBadgeVariant(draft.status ?? '')} label={statusLabel(draft.status ?? '')} />
                   <span className="text-xs text-muted-foreground">{t('admin.subscriptions.statusIsAnAction')}</span>
                 </div>
               ) : (
@@ -437,6 +451,7 @@ export function AdminSubscriptionsPage() {
       icon={<CreditCard className="h-5 w-5" />}
       stats={stats}
       statsError={isError}
+      statsLoading={isLoading}
     >
       {isError ? (
         <ErrorState onRetry={() => refetch()} />
@@ -487,7 +502,7 @@ export function AdminSubscriptionsPage() {
           {
             id: 'status',
             header: t('admin.subscriptions.table.status'),
-            cell: (s) => <Badge variant={statusVariant(s.status)}>{statusLabel(s.status, s.status_display)}</Badge>,
+            cell: (s) => <StatusBadge variant={statusBadgeVariant(s.status)} label={statusLabel(s.status, s.status_display)} />,
           },
           {
             id: 'rate',

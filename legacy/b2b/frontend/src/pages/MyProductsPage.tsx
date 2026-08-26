@@ -52,7 +52,7 @@ export function MyProductsPage({
     filters, setFilter,
     ordering, toggleOrdering,
     page, setPage, pageSize,
-  } = useListParams(['domain'] as const);
+  } = useListParams(['domain'] as const, { urlKey: 'my-products' });
   const { data: domainTypes = [] } = useDomainTypes();
   const domainFilter = filters.domain !== 'all' ? filters.domain : undefined;
   const isDraftLike = tab === 'CANDIDATES' || tab === 'DRAFTS';

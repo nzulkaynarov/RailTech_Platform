@@ -3469,6 +3469,13 @@
                         }
                     },
                     {
+                        "in": "query",
+                        "name": "role__isnull",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
                         "name": "search",
                         "required": false,
                         "in": "query",

@@ -2430,6 +2430,7 @@
         "lastLogin": "Последний вход"
       },
       "searchPlaceholder": "Поиск по имени или email...",
+      "noSystemRole": "Без системной роли",
       "activated": "{{name}} активирован",
       "deactivated": "{{name}} деактивирован",
       "joinedHint": "Зарегистрирован: {{date}}",
@@ -2537,6 +2538,7 @@
     "empty": "Записей нет",
     "selected": "Выбрано: {{count}}",
     "selectAll": "Выбрать все",
+    "shownOf": "Показано {{shown}} из {{total}}",
     "selectRow": "Выбрать строку",
     "rowActions": "Действия",
     "paginationLabel": "{{from}}–{{to}} из {{total}}"

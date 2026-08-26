@@ -13,7 +13,7 @@ import { CatalogTable } from './CatalogTable';
 
 export function AdminCatalogPage() {
   const { t } = useTranslation();
-  const listParams = useListParams(['domain', 'status'] as const, { defaultOrdering: 'name' });
+  const listParams = useListParams(['domain', 'status'] as const, { urlKey: 'admin-catalog', defaultOrdering: 'name' });
   const { data: products, isLoading, isError, refetch } = useProducts({
     search: listParams.search || undefined,
     domain_type: listParams.filters.domain === 'all' ? undefined : listParams.filters.domain,

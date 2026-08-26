@@ -72,7 +72,11 @@ class UserViewSet(viewsets.ModelViewSet):
         "remove_membership": "users.manage",
     }
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ["is_active", "role__code"]
+    # `role__isnull` — срез «без системной роли». Учётки с `role=None` не отбирались НИЧЕМ:
+    # вкладки реестра строятся по строкам справочника, а поле nullable. Человек существовал в
+    # реестре и был невидим в любом срезе по роли (замер 26-08, находка 127). Причина их
+    # появления закрыта волной #612, но ранее заведённые остались — их надо уметь найти.
+    filterset_fields = {"is_active": ["exact"], "role__code": ["exact"], "role": ["isnull"]}
     search_fields = ["email", "first_name", "last_name", "phone"]
 
     def get_serializer_class(self):

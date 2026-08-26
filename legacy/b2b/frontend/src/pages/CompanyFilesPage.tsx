@@ -19,7 +19,7 @@ const KIND_CODES: AttachmentKind[] = ['SOURCE', 'SUPPORTING'];
 
 export function CompanyFilesPage() {
   const { t } = useTranslation();
-  const listParams = useListParams(['kind'] as const, { defaultOrdering: '-uploaded_at' });
+  const listParams = useListParams(['kind'] as const, { urlKey: 'company-files', defaultOrdering: '-uploaded_at' });
   const { data: attachments, isLoading, isError, refetch } = useCompanyAttachments();
   const isViewer = useIsViewerMode();
   const companyId = useUserStore((s) => s.company.id);

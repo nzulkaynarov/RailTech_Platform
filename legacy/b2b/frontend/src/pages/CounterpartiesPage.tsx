@@ -98,7 +98,7 @@ export function CounterpartiesPage({ direction }: CounterpartiesPageProps) {
   const formatCurrency = useCurrencyStore((s) => s.format);
   const dateLocale = activeDateFnsLocale();
 
-  const listParams = useListParams([] as const, { defaultOrdering: '-last_interaction_at' });
+  const listParams = useListParams([] as const, { urlKey: 'counterparties', defaultOrdering: '-last_interaction_at' });
   const [selected, setSelected] = useState<Relationship | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 

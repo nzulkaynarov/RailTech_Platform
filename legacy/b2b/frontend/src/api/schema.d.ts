@@ -16209,6 +16209,7 @@ export interface operations {
                 /** @description Number of results to return per page. */
                 page_size?: number;
                 role__code?: string;
+                role__isnull?: boolean;
                 /** @description A search term. */
                 search?: string;
             };

@@ -19,7 +19,7 @@ const STATUS_CODES: GeneratedDocumentStatus[] = ['DRAFT', 'ISSUED', 'CANCELLED']
 
 export function OtherDocumentsPage() {
   const { t } = useTranslation();
-  const listParams = useListParams(['status'] as const, { defaultOrdering: '-created_at' });
+  const listParams = useListParams(['status'] as const, { urlKey: 'other-documents', defaultOrdering: '-created_at' });
   const { data: documents, isLoading, isError, refetch } = useGeneratedDocuments(undefined);
   const issueDocument = useIssueDocument();
   const cancelDocument = useCancelDocument();

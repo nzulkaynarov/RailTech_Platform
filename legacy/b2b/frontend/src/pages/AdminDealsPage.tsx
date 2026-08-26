@@ -22,7 +22,7 @@ export function AdminDealsPage() {
   const deleteMut = useDeleteDeal();
   const forceMut = useForceChangeDealStage();
 
-  const listParams = useListParams(['stage', 'company'] as const, { defaultOrdering: '-created_at' });
+  const listParams = useListParams(['stage', 'company'] as const, { urlKey: 'admin-deals', defaultOrdering: '-created_at' });
   const [forceTarget, setForceTarget] = useState<Deal | null>(null);
   const [targetStage, setTargetStage] = useState<string>('');
   const [deleteTarget, setDeleteTarget] = useState<Deal | null>(null);

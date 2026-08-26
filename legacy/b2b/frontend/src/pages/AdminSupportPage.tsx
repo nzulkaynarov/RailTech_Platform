@@ -241,7 +241,7 @@ export function AdminSupportPage() {
         filters, setFilter,
         ordering, toggleOrdering,
         page, setPage, pageSize,
-    } = useListParams(['status', 'priority', 'category'] as const, {
+    } = useListParams(['status', 'priority', 'category'] as const, { urlKey: 'admin-support',
         defaultOrdering: '-created_at',
     });
 

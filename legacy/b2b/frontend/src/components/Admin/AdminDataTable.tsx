@@ -99,6 +99,10 @@ export interface AdminDataTableProps<T> {
   /** Namespaced URL query param prefix, so multiple tables on one page don't collide. */
   storageKey: string;
   rows: T[];
+  /** Сколько строк в реестре ВСЕГО (без поиска и фильтров). Даёт строку-итог «показано N из M»:
+   *  без неё число под вкладкой и число строк под ним расходятся молча. Не задан — строка не
+   *  печатается, поведение прежнее. */
+  totalCount?: number;
   getRowId: (row: T) => string | number;
   columns: AdminTableColumn<T>[];
   tabs?: AdminTableTab[];
@@ -152,6 +156,7 @@ export function AdminDataTable<T>(props: AdminDataTableProps<T>): React.ReactNod
   const {
     storageKey,
     rows,
+    totalCount,
     getRowId,
     columns,
     tabs,
@@ -519,6 +524,17 @@ export function AdminDataTable<T>(props: AdminDataTableProps<T>): React.ReactNod
             </Button>
           </div>
         </div>
+      ) : null}
+
+      {/* Строка-итог: сколько строк показано из скольких. Счётчики вкладок и плитки считают
+          СВОИ выборки, и при активном поиске экран показывал «Всего 60» рядом с тремя
+          строками — число под подписью означало не то, что под ним нарисовано. Эталон один и
+          тот же у Odoo (O-PAGER) и Salesforce (SF-META-LINE): диапазон и общее число стоят НАД
+          списком. Печатается только когда есть с чем сравнивать — иначе это шум. */}
+      {totalCount != null && totalCount !== rows.length ? (
+        <p className="px-1 pb-2 text-xs text-muted-foreground" role="status">
+          {t('adminTable.shownOf', { shown: rows.length, total: totalCount })}
+        </p>
       ) : null}
 
       {/* Table */}

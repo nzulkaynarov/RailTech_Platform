@@ -46,7 +46,17 @@ export function AdminKYCPage() {
   // 42 на дев-стенде): реестр молча обрезался, а счётчики вкладок — «Всего», «На проверке»,
   // «Верифицированы» — считались по этим же 20 и показывали неправду. Соседние реестры
   // (AdminCompaniesPage, admin-users) давно ходят с `fetchAll`, здесь флаг просто забыли.
-  const { data: allCompanies = [] } = useCompanies({ fetchAll: true });
+  // Счётчики считают ТУ ЖЕ выборку, что и список, за вычетом самой вкладки: иначе под вкладкой
+  // «На проверке» стоит число из всего реестра, а внутри — три строки, нашедшиеся по поиску.
+  // Число под подписью обязано означать то, что под ним нарисовано (замер 26-08, находка 31).
+  const countsParams = useMemo(
+    () => (tableState.search ? { search: tableState.search, fetchAll: true } : { fetchAll: true }),
+    [tableState.search],
+  );
+  const { data: allCompanies = [] } = useCompanies(countsParams);
+  // Общий размер реестра — для строки-итога «показано N из M». Отдельный запрос без поиска:
+  // он и есть то «M», с которым сравнивают.
+  const { data: registryTotal = [] } = useCompanies({ fetchAll: true });
   const { data: companies = [], isLoading, isError, refetch } = useCompanies({ ...(queryParams ?? {}), fetchAll: true });
   const kept = companies;
 
@@ -142,6 +152,7 @@ export function AdminKYCPage() {
       <AdminDataTable<Company>
         storageKey={STORAGE_KEY}
         rows={kept}
+        totalCount={registryTotal.length}
         getRowId={(c) => c.id}
         isLoading={isLoading}
         onRowClick={(c) => setDetailTarget(c)}

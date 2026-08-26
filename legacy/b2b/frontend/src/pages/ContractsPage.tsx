@@ -28,7 +28,7 @@ const STATUS_CODES: ContractStatus[] = [
 
 export function ContractsPage() {
   const { t } = useTranslation();
-  const listParams = useListParams(['status'] as const, { defaultOrdering: '-created_at' });
+  const listParams = useListParams(['status'] as const, { urlKey: 'contracts', defaultOrdering: '-created_at' });
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [cancelTarget, setCancelTarget] = useState<Contract | null>(null);
 
