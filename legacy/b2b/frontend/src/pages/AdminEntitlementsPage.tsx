@@ -25,7 +25,7 @@ import {
 import { translateApiError } from '@/lib/apiError';
 import { PageShell, ErrorState } from './shared/PageShell';
 import { Skeleton } from '@/components/ui/skeleton';
-import { entitlementAccessLabelKey } from '@/lib/codes';
+import { entitlementAccessLabelKey, featureKeyLabelKey } from '@/lib/codes';
 import type { CompanyEntitlement, CompanyEntitlementDraft } from '@/api/adminApi';
 
 const ALL = '__all__';
@@ -141,7 +141,10 @@ function EntitlementForm({
               <SelectTrigger><SelectValue placeholder={t('adminEntitlements.featurePlaceholder')} /></SelectTrigger>
               <SelectContent>
                 {(choices?.feature_keys ?? []).map((f) => (
-                  <SelectItem key={f.value} value={f.value}>{f.label} <span className="text-muted-foreground">({f.value})</span></SelectItem>
+                  <SelectItem key={f.value} value={f.value}>
+                    {featureKeyLabelKey(f.value) ? t(featureKeyLabelKey(f.value)) : f.label}{' '}
+                    <span className="text-muted-foreground">({f.value})</span>
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>

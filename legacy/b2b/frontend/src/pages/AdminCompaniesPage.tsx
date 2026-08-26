@@ -285,7 +285,16 @@ function CompanyFormSheet({
                 items={[
                   {
                     label: t('adminCompanies.table.kyc'),
-                    value: target.verification_status_code ?? '—',
+                    // Код — для ЛОГИКИ (тон плитки ниже), подпись — переведённая. В плитку
+                    // клался сам код справочника («L1_UNVERIFIED»), хотя колонка таблицы на
+                    // ТОМ ЖЕ экране переводит его правильно через ту же карту.
+                    value: target.verification_status_code
+                      ? (KYC_BADGE[target.verification_status_code]
+                          ? t(KYC_BADGE[target.verification_status_code].labelKey)
+                          // Незнакомый код печатаем как есть: он подсказка о том, что справочник
+                          // пополнился, а выдуманное «неизвестно» это скрыло бы.
+                          : target.verification_status_code)
+                      : '—',
                     tone:
                       target.verification_status_code === 'L2_VERIFIED' ||
                       target.verification_status_code === 'L3_CONTRACTED'

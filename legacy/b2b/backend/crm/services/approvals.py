@@ -45,14 +45,39 @@ def _fallback_head(company_id: int) -> Optional[CompanyMember]:
     )
 
 
-def _notify_user(user_id: Optional[int], title: str, message: str, *, type_code: str = "INFO", link: str = "") -> None:
+def _notify_user(
+    user_id: Optional[int],
+    title: str,
+    message: str,
+    *,
+    type_code: str = "INFO",
+    link: str = "",
+    event_code: str = "",
+    event_params: Optional[dict] = None,
+) -> None:
+    """Уведомление участнику согласования — с МАШИННЫМ кодом события.
+
+    Русские `title`/`message` остаются полем-фолбэком: ленту собирает витрина по локали
+    ПОЛУЧАТЕЛЯ (`frontend/src/lib/activityText.ts`), и без кода она печатала русский текст в
+    английском интерфейсе. Тот же класс уже чинили в журнале и уведомлениях волной #523/#524,
+    но цепочка внутреннего согласования КП тогда осталась в стороне: `event_code` в этом файле
+    стоял у `_log()` (ActivityLog), а у `Notification` — нет (замер 26-08, находка 12).
+    """
     if not user_id:
         return
     from notifications.models import Notification, NotificationType
     from notifications.services import push_notification_ws
 
     ntype = NotificationType.objects.filter(code=type_code).first()
-    notif = Notification.objects.create(user_id=user_id, type=ntype, title=title, message=message, link=link)
+    notif = Notification.objects.create(
+        user_id=user_id,
+        type=ntype,
+        title=title,
+        message=message,
+        link=link,
+        event_code=event_code,
+        event_params=event_params or {},
+    )
     push_notification_ws(notif)
 
 
@@ -176,13 +201,23 @@ def _notify_order(quote: Quote, order: int) -> None:
                 f"КП #{quote.number or quote.id}: ваша очередь согласовать.",
                 type_code="WARNING",
                 link=_link(quote),
+                event_code="quote.approval_your_turn",
+                event_params={"number": quote.number or quote.id},
             )
 
 
-def _notify_informed(quote: Quote, message: str) -> None:
+def _notify_informed(quote: Quote, message: str, *, event_code: str = "", event_params: Optional[dict] = None) -> None:
     for step in quote.approval_steps.filter(participation=StepParticipation.INFORMED):
         if step.approver and step.approver.user_id:
-            _notify_user(step.approver.user_id, "КП — для информации", message, type_code="INFO", link=_link(quote))
+            _notify_user(
+                step.approver.user_id,
+                "КП — для информации",
+                message,
+                type_code="INFO",
+                link=_link(quote),
+                event_code=event_code,
+                event_params=event_params or {},
+            )
 
 
 # ── act / recall ─────────────────────────────────────────────────────────────
@@ -239,6 +274,8 @@ def act_on_step(step_id: int, actor, decision: str, comment: str = "") -> Tuple[
             f"КП #{quote.number or quote.id} отклонён на согласовании. {comment}".strip(),
             type_code="WARNING",
             link=_link(quote),
+            event_code="quote.approval_returned",
+            event_params={"number": quote.number or quote.id, "comment": comment},
         )
         return quote, None
 
@@ -285,8 +322,15 @@ def act_on_step(step_id: int, actor, decision: str, comment: str = "") -> Tuple[
             f"КП #{quote.number or quote.id} полностью согласован — можно отправлять клиенту.",
             type_code="SUCCESS",
             link=_link(quote),
+            event_code="quote.approval_complete",
+            event_params={"number": quote.number or quote.id},
         )
-        _notify_informed(quote, f"КП #{quote.number or quote.id} согласован.")
+        _notify_informed(
+            quote,
+            f"КП #{quote.number or quote.id} согласован.",
+            event_code="quote.approval_complete_informed",
+            event_params={"number": quote.number or quote.id},
+        )
     elif next_order != step.order:
         _notify_order(quote, next_order)  # the next stage's turn
     return quote, None

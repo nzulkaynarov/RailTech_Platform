@@ -1,4 +1,15 @@
 {
+  "featureKeys": {
+    "quoteSend": "Отправка КП клиенту",
+    "quoteExport": "Экспорт КП (PDF/Excel)",
+    "aiMatch": "ИИ-подбор каталога",
+    "aiDraft": "ИИ-черновик КП",
+    "aiPreflight": "ИИ-проверка заявки",
+    "aiEnrich": "ИИ-обогащение карточки товара",
+    "rolesCustom": "Свои роли компании",
+    "documentGenerate": "Генерация документов по шаблонам",
+    "aiDailyCap": "Суточный лимит ИИ (переопределение)"
+  },
   "dealStages": {
     "draft": "Черновик",
     "kycPending": "KYC проверка",
@@ -41,6 +52,7 @@
     "error": "Произошла ошибка",
     "save": "Сохранить",
     "cancel": "Отмена",
+    "toggleSidebar": "Свернуть или развернуть меню",
     "edit": "Редактировать",
     "delete": "Удалить",
     "search": "Поиск",
@@ -820,6 +832,8 @@
       "title": "Управление подписками",
       "description": "Подписки поставщиков на платформе",
       "activated": "Подписка активирована",
+      "activate": "Активировать",
+      "suspend": "Приостановить",
       "suspended": "Подписка приостановлена",
       "statusIsAnAction": "меняется действиями ниже",
       "new": "Новая подписка",
@@ -4278,6 +4292,9 @@
         "title": "КП отправлено клиенту",
         "detail": "КП v{{version}} ({{number}})"
       },
+      "approval_your_turn": { "title": "Требуется согласование КП", "detail": "КП #{{number}}: ваша очередь согласовать." },
+      "approval_returned": { "title": "КП возвращён на доработку", "detail": "КП #{{number}} отклонён на согласовании. {{comment}}" },
+      "approval_complete_informed": { "title": "КП согласован", "detail": "КП #{{number}} согласован." },
       "accepted": {
         "title": "КП принято клиентом",
         "detail": "КП v{{version}} ({{number}})"
@@ -4859,6 +4876,22 @@
     "payment.recorded": {
       "title": "Оплата получена",
       "message": "По счёту {{number}} записана оплата на сумму {{amount}}"
+    },
+    "quote.approval_your_turn": {
+      "title": "Требуется согласование КП",
+      "message": "КП #{{number}}: ваша очередь согласовать."
+    },
+    "quote.approval_returned": {
+      "title": "КП возвращён на доработку",
+      "message": "КП #{{number}} отклонён на согласовании. {{comment}}"
+    },
+    "quote.approval_complete": {
+      "title": "КП согласован",
+      "message": "КП #{{number}} полностью согласован — можно отправлять клиенту."
+    },
+    "quote.approval_complete_informed": {
+      "title": "КП согласован",
+      "message": "КП #{{number}} согласован."
     },
     "act.issued": {
       "title": "Акт выставлен",

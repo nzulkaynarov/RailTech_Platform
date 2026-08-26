@@ -265,6 +265,31 @@ export const ENTITLEMENT_ACCESS_LABEL_KEY: Record<string, string> = {
 export const entitlementAccessLabelKey = (code: string | undefined | null): string =>
   code && ENTITLEMENT_ACCESS_LABEL_KEY[code] ? ENTITLEMENT_ACCESS_LABEL_KEY[code] : '';
 
+/** `FeatureKey` CODEs (accounts.constants.FeatureKey).
+ *
+ *  Сервер отдаёт метки функций СТРОКАМИ, и они объявлены русскими литералами без
+ *  `gettext_lazy` — то есть не переводятся даже сменой языка Django. Английский интерфейс
+ *  печатал их по-русски (замер 26-08, находка 107). Соседний селект того же экрана давно
+ *  локализован по коду — расхождение было внутреннее.
+ *
+ *  Правило проекта: код — для логики, подпись — переведённая на витрине (Rule 2 + Rule 5).
+ *  Незнакомый код печатается как есть: он подсказка о пополнении каталога функций, а
+ *  выдуманное «неизвестно» это скрыло бы. */
+const FEATURE_KEY_LABEL_KEY: Record<string, string> = {
+  'quote.send': 'featureKeys.quoteSend',
+  'quote.export': 'featureKeys.quoteExport',
+  'ai.match': 'featureKeys.aiMatch',
+  'ai.draft': 'featureKeys.aiDraft',
+  'ai.preflight': 'featureKeys.aiPreflight',
+  'ai.enrich': 'featureKeys.aiEnrich',
+  'roles.custom': 'featureKeys.rolesCustom',
+  'document.generate': 'featureKeys.documentGenerate',
+  'ai.daily_cap': 'featureKeys.aiDailyCap',
+};
+
+export const featureKeyLabelKey = (code: string | undefined | null): string =>
+  (code && FEATURE_KEY_LABEL_KEY[code]) || '';
+
 /** `CompanyRoleApplication.status` CODEs (accounts.models.applications STATUS_CHOICES). */
 export const RoleApplicationStatus = {
   PENDING: 'PENDING',

@@ -526,7 +526,7 @@ export function AdminSubscriptionsPage() {
           // тоста. Эталон Odoo/Salesforce: недоступное действие показывают неактивным.
           {
             id: 'activate',
-            label: t('admin.subscriptions.activated'),
+            label: t('admin.subscriptions.activate'),
             icon: <Play className="h-3.5 w-3.5 text-success" />,
             // Просроченную подписку статусом не воскрешают — её возобновляет оплата.
             disabled: (s) => !canManageBilling || s.status === 'ACTIVE' || isExpired(s),
@@ -534,7 +534,7 @@ export function AdminSubscriptionsPage() {
           },
           {
             id: 'suspend',
-            label: t('admin.subscriptions.suspended'),
+            label: t('admin.subscriptions.suspend'),
             icon: <Pause className="h-3.5 w-3.5 text-warning" />,
             // Приостановить можно всё, что ещё работает: и ACTIVE, и TRIAL, и PAST_DUE —
             // сервер принимает их все, а меню отсекало лишнее молчанием.
@@ -611,7 +611,7 @@ export function AdminSubscriptionsPage() {
           t('admin.subscriptions.suspendTemplates.fraud'),
           t('admin.subscriptions.suspendTemplates.other'),
         ]}
-        confirmLabel={t('admin.subscriptions.suspended')}
+        confirmLabel={t('admin.subscriptions.suspend')}
         variant="destructive"
         onConfirm={(p) =>
           confirmBulkSuspend ? runBulkSuspend(confirmBulkSuspend, p.reason) : Promise.resolve()
@@ -634,7 +634,7 @@ export function AdminSubscriptionsPage() {
           t('admin.subscriptions.suspendTemplates.fraud'),
           t('admin.subscriptions.suspendTemplates.other'),
         ]}
-        confirmLabel={t('admin.subscriptions.suspended')}
+        confirmLabel={t('admin.subscriptions.suspend')}
         variant="destructive"
         onConfirm={({ reason }) => runSuspend(reason)}
         translateError={(code) => translateApiError(code)}

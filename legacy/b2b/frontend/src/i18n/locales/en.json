@@ -1,4 +1,15 @@
 {
+  "featureKeys": {
+    "quoteSend": "Sending quotes to clients",
+    "quoteExport": "Quote export (PDF/Excel)",
+    "aiMatch": "AI catalog matching",
+    "aiDraft": "AI quote draft",
+    "aiPreflight": "AI request check",
+    "aiEnrich": "AI product card enrichment",
+    "rolesCustom": "Custom company roles",
+    "documentGenerate": "Document generation from templates",
+    "aiDailyCap": "Daily AI limit (override)"
+  },
   "dealStages": {
     "draft": "Draft",
     "kycPending": "KYC Verification",
@@ -42,6 +53,7 @@
     "save": "Save",
     "edit": "Edit",
     "cancel": "Cancel",
+    "toggleSidebar": "Collapse or expand the menu",
     "delete": "Delete",
     "search": "Search",
     "close": "Close",
@@ -816,6 +828,8 @@
       "title": "Subscription Management",
       "description": "Supplier subscriptions on the platform",
       "activated": "Subscription activated",
+      "activate": "Activate",
+      "suspend": "Suspend",
       "suspended": "Subscription suspended",
       "statusIsAnAction": "changed by the actions below",
       "new": "New subscription",
@@ -4262,6 +4276,9 @@
         "title": "Quote sent to client",
         "detail": "Quote v{{version}} ({{number}})"
       },
+      "approval_your_turn": { "title": "Quote approval needed", "detail": "Quote #{{number}}: it is your turn to approve." },
+      "approval_returned": { "title": "Quote sent back for rework", "detail": "Quote #{{number}} was rejected in approval. {{comment}}" },
+      "approval_complete_informed": { "title": "Quote approved", "detail": "Quote #{{number}} approved." },
       "accepted": {
         "title": "Quote accepted by client",
         "detail": "Quote v{{version}} ({{number}})"
@@ -4835,6 +4852,22 @@
     "payment.recorded": {
       "title": "Payment received",
       "message": "Payment of {{amount}} recorded against invoice {{number}}"
+    },
+    "quote.approval_your_turn": {
+      "title": "Quote approval needed",
+      "message": "Quote #{{number}}: it is your turn to approve."
+    },
+    "quote.approval_returned": {
+      "title": "Quote sent back for rework",
+      "message": "Quote #{{number}} was rejected in approval. {{comment}}"
+    },
+    "quote.approval_complete": {
+      "title": "Quote approved",
+      "message": "Quote #{{number}} is fully approved — you can send it to the client."
+    },
+    "quote.approval_complete_informed": {
+      "title": "Quote approved",
+      "message": "Quote #{{number}} approved."
     },
     "act.issued": {
       "title": "Act issued",
