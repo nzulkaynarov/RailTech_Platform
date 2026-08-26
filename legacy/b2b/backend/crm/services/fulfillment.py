@@ -101,6 +101,12 @@ def update_fulfillment_status(
         authorized = True
     elif status_code in buyer_statuses:
         authorized = is_member_of(actor, obj.deal.company_id, capability="buy")
+        if not authorized:
+            # Отдельный код, а не общий «нужно членство»: приёмку и спор подтверждает
+            # ЗАКАЗЧИК, и продавцу надо сказать именно это. Прежний общий код витрина
+            # переводила как «действие доступно только членам компании» — продавцу, который
+            # членом СВОЕЙ компании является, это читается как поломка, а не как правило.
+            return None, "FULFILLMENT_ACCEPTANCE_IS_BUYER_STEP"
     else:
         # Seller status: bind to THIS deal's routing — not any seller (audit M1).
         authorized = seller_company_routed_to_deal(actor, obj.deal_id)

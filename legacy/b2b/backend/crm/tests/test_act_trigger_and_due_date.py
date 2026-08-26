@@ -256,9 +256,15 @@ def test_delivered_but_unpaid_still_asks_for_payment_first(won_deal):
     assert step["code"] == "PAY_INVOICE"
 
 
-def test_issued_act_outranks_everything_else(won_deal):
-    """Выставленный акт висит на второй стороне — он приоритетнее любого следующего действия."""
-    invoice = _issued_invoice(won_deal, "ISSUED")
+def _act_and_pending_shipment(won_deal, invoice_status="PAID"):
+    """Заготовка тупика: счёт ОПЛАЧЕН, отгрузки нет, акт уже выпущен кнопкой.
+
+    Именно при оплаченном счёте отгрузка остаётся единственным незакрытым делом — и именно
+    здесь прежняя подсказка навсегда замирала на «подпишите акт». При неоплаченном счёте
+    цепочка честно зовёт платить (счёт идёт раньше отгрузки: предоплата — обычное условие
+    поставки на этом рынке), и тупика нет.
+    """
+    invoice = _issued_invoice(won_deal, invoice_status)
     Act.objects.create(
         deal=won_deal["deal"],
         contract=won_deal["contract"],
@@ -271,6 +277,52 @@ def test_issued_act_outranks_everything_else(won_deal):
         deal=won_deal["deal"],
         contract=won_deal["contract"],
         status=FulfillmentStatus.objects.get(code="PENDING"),
+    )
+
+
+def test_issued_act_outranks_everything_else_for_the_side_that_must_answer(won_deal):
+    """Выставленный акт висит на второй стороне — он приоритетнее любого следующего действия.
+
+    Правило осталось прежним; уточнилось, КОМУ оно адресовано (см. соседний тест).
+    """
+    _act_and_pending_shipment(won_deal)
+
+    step = _hub(won_deal["deal"], won_deal["buyer_user"])["next_step"]
+
+    assert step["code"] == "SIGN_ACT"
+
+
+def test_the_seller_is_still_told_to_ship_while_the_shipment_is_open(won_deal):
+    """Акт можно выпустить кнопкой при нулевой отгрузке — и подсказка переставала звать
+    отгружать: шаг висел первым в цепочке и возвращался ОБЕИМ сторонам. Продавец получал
+    «подпишите акт» и больше ни одного упоминания поставки, хотя она осталась единственным
+    незакрытым делом (замер 26-08, находка 13).
+
+    Ничего не запрещено: акт остаётся выпущенным, кнопка подписи на месте. Изменилась только
+    ПОДСКАЗКА — она называет продавцу то дело, которое за ним.
+    """
+    _act_and_pending_shipment(won_deal)
+
+    step = _hub(won_deal["deal"], won_deal["seller_user"])["next_step"]
+
+    assert step["code"] == "SHIP"
+
+
+def test_a_delivered_shipment_returns_the_act_to_the_top_for_the_seller(won_deal):
+    """Обратная сторона: когда за продавцом дел не осталось, акт снова важнее всего."""
+    _issued_invoice(won_deal, "ISSUED")
+    Act.objects.create(
+        deal=won_deal["deal"],
+        contract=won_deal["contract"],
+        invoice=Invoice.objects.filter(deal=won_deal["deal"]).first(),
+        number="ACT-G1-DONE",
+        status=ActStatus.objects.get(code="ISSUED"),
+        total_amount=Decimal("112"),
+    )
+    Fulfillment.objects.create(
+        deal=won_deal["deal"],
+        contract=won_deal["contract"],
+        status=FulfillmentStatus.objects.get(code="DELIVERED"),
     )
 
     step = _hub(won_deal["deal"], won_deal["seller_user"])["next_step"]

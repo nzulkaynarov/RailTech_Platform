@@ -153,24 +153,32 @@ def verify_company_kyc(
     # transaction.on_commit so a "KYC verified" email is never sent if the
     # surrounding transaction rolls back. Runs immediately when no transaction
     # is active.
-    if not is_downgrade:
-        company_id = company.pk
+    # Исход доходит до арендатора В ОБЕ СТОРОНЫ. Раньше письмо и уведомление ставились
+    # ТОЛЬКО при повышении, и отзыв уровня проходил молча: арендатор видел на дашборде бейдж
+    # «На проверке» с подписью «обычно 1–2 рабочих дня» — то есть ждал вердикта, который уже
+    # вынесен. Причину сервер требует обязательно (`REASON_REQUIRED` выше), но она оставалась
+    # в журнале, закрытом от арендатора: человек не знал ни об отказе, ни о том, что исправить.
+    #
+    # Эталон — Stripe ST-CANCEL-REASON: ограничение адресовано тому, кого ограничили, и
+    # называет причину. Отправка отложена до `on_commit`, чтобы письмо не ушло при откате.
+    company_id = company.pk
+    downgrade_reason = (reason or "").strip()
 
-        def _notify_kyc_status() -> None:
-            try:
-                _send_kyc_status_email(company, level_code)
-            except (OSError, RuntimeError, ValueError):
-                logger.exception("Failed to send KYC status email for company %s", company_id)
-            try:
-                _create_kyc_notification(company, level_code)
-            except (OSError, RuntimeError, ValueError):
-                logger.exception("Failed to create KYC notification for company %s", company_id)
+    def _notify_kyc_status() -> None:
+        try:
+            _send_kyc_status_email(company, level_code, is_downgrade=is_downgrade, reason=downgrade_reason)
+        except (OSError, RuntimeError, ValueError):
+            logger.exception("Failed to send KYC status email for company %s", company_id)
+        try:
+            _create_kyc_notification(company, level_code, is_downgrade=is_downgrade, reason=downgrade_reason)
+        except (OSError, RuntimeError, ValueError):
+            logger.exception("Failed to create KYC notification for company %s", company_id)
 
-        transaction.on_commit(_notify_kyc_status)
+    transaction.on_commit(_notify_kyc_status)
     return company, None
 
 
-def _send_kyc_status_email(company: Company, level_code: str) -> None:
+def _send_kyc_status_email(company: Company, level_code: str, *, is_downgrade: bool = False, reason: str = "") -> None:
     owners = list(
         CustomUser.objects.filter(
             memberships__company=company,
@@ -184,12 +192,14 @@ def _send_kyc_status_email(company: Company, level_code: str) -> None:
         "company_name": company.name,
         "company_inn": company.inn,
         "level_code": level_code,
+        "reason": reason,
         "frontend_url": getattr(settings, "FRONTEND_URL", "http://localhost:5173"),
     }
+    template = "kyc_revoked" if is_downgrade else "kyc_verified"
     # Send one email per owner so each row in EmailLog is searchable by user.
     for owner in owners:
         send_templated_email(
-            "kyc_verified",
+            template,
             context,
             to=[owner.email],
             channel="transactional",
@@ -198,7 +208,9 @@ def _send_kyc_status_email(company: Company, level_code: str) -> None:
         )
 
 
-def _create_kyc_notification(company: Company, level_code: str) -> None:
+def _create_kyc_notification(
+    company: Company, level_code: str, *, is_downgrade: bool = False, reason: str = ""
+) -> None:
     from notifications.models import Notification, NotificationType
 
     owners = CustomUser.objects.filter(
@@ -206,7 +218,10 @@ def _create_kyc_notification(company: Company, level_code: str) -> None:
         memberships__is_primary=True,
         memberships__is_active=True,
     ).distinct()
-    nt = NotificationType.objects.filter(code="SUCCESS").first()
+    nt = NotificationType.objects.filter(code="WARNING" if is_downgrade else "SUCCESS").first()
+    # Событие несёт КОД, а не слова: ленту собирает витрина по локали получателя
+    # (`crm/tests/test_event_feeds`, урок волны #523).
+    event_code = "company.kyc_revoked" if is_downgrade else "company.kyc_verified"
     for u in owners:
         Notification.objects.create(
             user=u,
@@ -214,8 +229,8 @@ def _create_kyc_notification(company: Company, level_code: str) -> None:
             title="Статус KYC обновлён",
             message=f"KYC для {company.name} — {level_code}",
             link="/cabinet/profile",
-            event_code="company.kyc_verified",
-            event_params={"company": company.name, "level_code": level_code},
+            event_code=event_code,
+            event_params={"company": company.name, "level_code": level_code, "reason": reason},
         )
 
 

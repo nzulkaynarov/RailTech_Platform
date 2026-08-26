@@ -122,6 +122,20 @@ def grant_entitlement(
     return row
 
 
+def blocked_by_operator(company_id: int, feature_key) -> bool:
+    """Функция закрыта ЯВНЫМ запретом платформы, а не отсутствием подписки.
+
+    Разница видна только здесь, а нужна витрине: без неё платящему продавцу печатали
+    «требуется активная подписка» и вели в раздел подписки, где та же подписка написана
+    активной. Ложная причина плюс бесполезное действие (замер 26-08, находка 5).
+
+    Само правило не меняется: явный запрет побеждает подписку (ADR-0006) — иначе отключение
+    права было бы бессмысленным. Меняется лишь то, КАК о нём сообщают.
+    """
+    row = entitlement_state(company_id, feature_key)
+    return bool(row and row.access == "DISABLED")
+
+
 def quote_send_entitled(company_id: int) -> bool:
     """May this seller company SEND a КП (Quote) to the client? Requires all of:
       1. KYC-verified (L2+) — «без KYC только демо»: an unverified seller may build a КП and see a

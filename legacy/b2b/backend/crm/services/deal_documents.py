@@ -264,14 +264,31 @@ def _invoice_step(invoices: list, sides: dict) -> Optional[dict]:
     return None
 
 
-def _pending_act_step(acts: list) -> Optional[dict]:
+def _shipping_is_still_open(fulfillment_data: Optional[dict]) -> bool:
+    """Поставка ещё не доведена до приёмки — продавцу есть что делать."""
+    if fulfillment_data is None:
+        return False
+    return fulfillment_data["status"] not in (FulfillmentStatusCode.DELIVERED, FulfillmentStatusCode.ACCEPTED)
+
+
+def _pending_act_step(acts: list, fulfillment_data: Optional[dict], sides: dict) -> Optional[dict]:
     """Выставленный акт ждёт ответа второй стороны — это приоритетный шаг цепочки.
 
     Документ уже на руках у контрагента, поэтому подсказка про него важнее любого следующего
     действия: пока он висит, сделка не закрывается.
+
+    НО не для продавца, которому ещё предстоит отгрузить. Акт можно выпустить кнопкой при
+    нулевой отгрузке, и как только он появлялся, подсказка переставала звать отгружать: шаг
+    висел первым в цепочке и возвращался ОБЕИМ сторонам. Продавец получал «подпишите акт» и
+    больше ни одного упоминания поставки — тупик тем более неприятный, что отгрузка осталась
+    единственным незакрытым делом (замер 26-08, находка 13).
     """
     issued = next((act for act in acts if act["status"] == ActStatusCode.ISSUED), None)
     if issued is None:
+        return None
+    if sides["is_seller_side"] and not sides["is_buyer_side"] and _shipping_is_still_open(fulfillment_data):
+        # Ничего не запрещаем: акт остаётся выпущенным, кнопка подписи на месте. Меняется
+        # только ПОДСКАЗКА — она называет продавцу то дело, которое за ним.
         return None
     # Акт в модели несёт ОДНУ подпись, и `sign_act` не различает сторону — поэтому подсказка
     # адресована обеим. Двусторонняя модель — волна G2.
@@ -357,7 +374,7 @@ def _next_step(*, contract_data, invoices, acts, fulfillment_data, sides) -> Opt
     if not contract_data["is_fully_signed"]:
         return _contract_step(contract_data, sides)
     for step in (
-        _pending_act_step(acts),
+        _pending_act_step(acts, fulfillment_data, sides),
         _invoice_step(invoices, sides),
         _fulfillment_step(fulfillment_data, sides),
         _generate_act_step(acts, fulfillment_data, sides, invoices),

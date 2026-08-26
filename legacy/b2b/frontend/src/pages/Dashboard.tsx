@@ -12,6 +12,7 @@ import {
   AlertCircle,
   Loader2,
   Clock,
+  AlertTriangle,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -52,6 +53,11 @@ import { dashboardApi, type DashboardStats, type RecentDocument } from '@/api/da
 function KYCPendingBanner({ onNavigate }: { onNavigate?: (p: string) => void } = {}) {
   const { t } = useTranslation();
   const { profile, company } = useUserStore();
+  // Экран читает КОД состояния, а не «всё, кроме L2/L3 — на проверке». После ОТЗЫВА уровня
+  // арендатор видел бейдж «На проверке» и подпись «обычно 1–2 рабочих дня»: он ждал вердикта,
+  // который уже вынесен, и не знал ни об отказе, ни о причине (замер 26-08, находка 28).
+  const capabilities = useUserStore((state) => state.capabilities);
+  const isRejected = capabilities?.kyc_status_code === 'L1_UNVERIFIED' && Boolean(capabilities?.kyc_last_reason);
 
   const levels = [
     {
@@ -109,9 +115,9 @@ function KYCPendingBanner({ onNavigate }: { onNavigate?: (p: string) => void } =
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">{t('dashboardPage.kyc.status')}</span>
-              <Badge variant="secondary" className="gap-1">
-                <Clock className="h-3 w-3" />
-                {t('dashboardPage.kyc.pending')}
+              <Badge variant={isRejected ? 'destructive' : 'secondary'} className="gap-1">
+                {isRejected ? <AlertTriangle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+                {isRejected ? t('dashboardPage.kyc.rejected') : t('dashboardPage.kyc.pending')}
               </Badge>
             </div>
           </div>
@@ -166,7 +172,11 @@ function KYCPendingBanner({ onNavigate }: { onNavigate?: (p: string) => void } =
       {/* Actions */}
       <Card className="border-dashed">
         <CardContent className="p-5 text-center space-y-3">
-          <p className="text-sm text-muted-foreground">{t('dashboardPage.kyc.hint')}</p>
+          <p className="text-sm text-muted-foreground">
+            {isRejected
+              ? t('dashboardPage.kyc.rejectedHint', { reason: capabilities?.kyc_last_reason })
+              : t('dashboardPage.kyc.hint')}
+          </p>
           <div className="flex justify-center gap-3">
             <Button variant="outline" size="sm" onClick={() => onNavigate?.('profile')}>
               {t('dashboardPage.kyc.editProfile')}

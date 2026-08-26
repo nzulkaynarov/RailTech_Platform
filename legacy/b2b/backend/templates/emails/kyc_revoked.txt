@@ -1,0 +1,11 @@
+{% load i18n %}{% translate "Здравствуйте!" %}
+
+{% blocktranslate %}Уровень доверия компании «{{ company_name }}» (ИНН {{ company_inn }}) снижен. Часть функций платформы стала недоступна.{% endblocktranslate %}
+
+{% if reason %}{% translate "Причина" %}: {{ reason }}
+{% endif %}
+{% blocktranslate %}Что делать дальше: исправьте указанное и подайте документы на проверку снова — это делается в кабинете, в разделе «Компания».{% endblocktranslate %}
+
+{% translate "Открыть кабинет" %}: {{ frontend_url }}
+
+{% translate "— Команда RailTech B2B" %}

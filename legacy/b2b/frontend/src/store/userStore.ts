@@ -45,6 +45,18 @@ export interface Capabilities {
   /** WP-H: the seller holds quote.send in DEMO access — output is watermarked and send is gated.
    * Drives the distinct "DEMO watermark" builder message (vs a plain "subscription required"). */
   quote_send_is_demo: boolean;
+  /** Функция закрыта ЯВНЫМ запретом платформы, а не отсутствием подписки. Без этого признака
+   *  оба случая сваливались в баннер «нужна активная подписка» с кнопкой в раздел подписки —
+   *  где та же подписка написана активной. Платящему продавцу называли ложную причину и
+   *  предлагали бесполезное действие (находка 5). Само правило не менялось: явный запрет
+   *  побеждает подписку (ADR-0006). */
+  quote_send_blocked_by_operator?: boolean;
+  /** КОД состояния KYC, а не «всё, кроме L2/L3 — на проверке». После ОТЗЫВА уровня арендатор
+   *  видел «На проверке» и «обычно 1–2 рабочих дня» — ждал вердикта, который уже вынесен. */
+  kyc_status_code?: string | null;
+  /** Причина последнего вердикта по KYC. Сервер её ТРЕБУЕТ при понижении, но она оставалась
+   *  в журнале, закрытом от арендатора: человек не знал, что исправить (находка 28). */
+  kyc_last_reason?: string;
   permissions: string[];
   is_platform_admin: boolean;
   operator_permissions: string[] | null;

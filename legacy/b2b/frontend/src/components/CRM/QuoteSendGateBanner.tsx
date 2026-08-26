@@ -46,6 +46,14 @@ const REASON_META: Record<QuoteSendBlockReason, ReasonMeta> = {
     ctaKey: 'quote.sendGate.demoCta',
     target: 'my-subscription',
   },
+  // Запрет платформы. Вести в раздел подписки здесь БЕСПОЛЕЗНО: подписка там написана
+  // активной, и продавец ходит по кругу. Адресат вопроса — поддержка платформы.
+  disabled_by_operator: {
+    icon: ShieldAlert,
+    messageKey: 'quote.sendGate.disabledByOperator',
+    ctaKey: 'quote.sendGate.disabledByOperatorCta',
+    target: 'help',
+  },
 };
 
 /**

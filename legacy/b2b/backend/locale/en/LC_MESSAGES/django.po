@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-26 10:40+0500\n"
+"POT-Creation-Date: 2026-08-26 13:11+0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2836,6 +2836,7 @@ msgid "Создан правилом (нельзя удалить); False = до
 msgstr "Created by a rule (cannot be deleted); False = added manually."
 
 #: crm/models/approvals.py:97 crm/models/deals.py:466
+#: templates/emails/kyc_revoked.html:6 templates/emails/kyc_revoked.txt:5
 msgid "Причина"
 msgstr "Reason"
 
@@ -5661,7 +5662,8 @@ msgstr "The act is visible on the deal card, in the “Deal chain” block."
 #: templates/emails/generated_document.html:7
 #: templates/emails/generated_document.txt:1
 #: templates/emails/invite_client.txt:1 templates/emails/invite_member.txt:1
-#: templates/emails/invoice_issued.txt:1 templates/emails/kyc_verified.txt:1
+#: templates/emails/invoice_issued.txt:1 templates/emails/kyc_revoked.html:2
+#: templates/emails/kyc_revoked.txt:1 templates/emails/kyc_verified.txt:1
 #: templates/emails/new_rfq_seller.txt:1
 #: templates/emails/payment_received.txt:1
 #: templates/emails/payment_reminder.txt:1
@@ -5986,6 +5988,39 @@ msgstr "Payment is due by %(due_date)s."
 msgid "Открыть счёт:"
 msgstr "Open the invoice:"
 
+#: templates/emails/kyc_revoked.html:4 templates/emails/kyc_revoked.txt:3
+#, python-format
+msgid ""
+"Уровень доверия компании «%(company_name)s» (ИНН %(company_inn)s) снижен. "
+"Часть функций платформы стала недоступна."
+msgstr "The trust level of “%(company_name)s” (TIN %(company_inn)s) has been lowered. Some platform features are no longer available."
+
+#: templates/emails/kyc_revoked.html:8 templates/emails/kyc_revoked.txt:7
+msgid ""
+"Что делать дальше: исправьте указанное и подайте документы на проверку снова "
+"— это делается в кабинете, в разделе «Компания»."
+msgstr "What to do next: fix what is listed and submit the documents for review again — this is done in your account, under “Company”."
+
+#: templates/emails/kyc_revoked.html:10 templates/emails/kyc_revoked.txt:9
+#: templates/emails/kyc_verified.html:29 templates/emails/kyc_verified.txt:5
+#: templates/emails/role_application_approved.html:20
+#: templates/emails/role_application_approved.txt:6
+msgid "Открыть кабинет"
+msgstr "Open your account"
+
+#: templates/emails/kyc_revoked.html:12 templates/emails/kyc_revoked.txt:11
+#: templates/emails/kyc_verified.txt:7
+#: templates/emails/register_existing_account.txt:15
+#: templates/emails/role_application_approved.txt:8
+#: templates/emails/role_application_rejected.txt:11
+msgid "— Команда RailTech B2B"
+msgstr "— The RailTech B2B team"
+
+#: templates/emails/kyc_revoked_subject.txt:1
+#, python-format
+msgid "RailTech: проверка компании %(company_name)s не пройдена"
+msgstr "RailTech: verification of %(company_name)s did not pass"
+
 #: templates/emails/kyc_verified.html:3
 msgid "Контракт активирован"
 msgstr "Contract activated"
@@ -6027,12 +6062,6 @@ msgstr ""
 "      (TIN %(company_inn)s) has been confirmed.\n"
 "      You can now use the platform to its full extent."
 
-#: templates/emails/kyc_verified.html:29 templates/emails/kyc_verified.txt:5
-#: templates/emails/role_application_approved.html:20
-#: templates/emails/role_application_approved.txt:6
-msgid "Открыть кабинет"
-msgstr "Open your account"
-
 #: templates/emails/kyc_verified.html:34
 msgid "Уведомление также доступно в разделе «Колокольчик» в кабинете."
 msgstr ""
@@ -6055,13 +6084,6 @@ msgid ""
 msgstr ""
 "KYC level L2 for company “%(company_name)s” (TIN %(company_inn)s) has been "
 "successfully verified. You can now work on the platform without restrictions."
-
-#: templates/emails/kyc_verified.txt:7
-#: templates/emails/register_existing_account.txt:15
-#: templates/emails/role_application_approved.txt:8
-#: templates/emails/role_application_rejected.txt:11
-msgid "— Команда RailTech B2B"
-msgstr "— The RailTech B2B team"
 
 #: templates/emails/kyc_verified_subject.txt:1
 #, python-format

@@ -26,8 +26,18 @@ const invalidateDashboardSurfaces = (qc: QueryClient) => {
  * убирает этот класс ошибки.
  */
 const invalidateDealChain = (qc: QueryClient) => {
-  qc.invalidateQueries({ queryKey: ['deals'] });
-  qc.invalidateQueries({ queryKey: ['deal-documents'] });
+  // `refetchType: 'all'` — не украшение. По умолчанию `invalidateQueries` перезапрашивает
+  // только АКТИВНЫЕ запросы, а неактивные лишь помечает устаревшими. Действие совершается на
+  // реестре (#invoices / #acts / #fulfillments), карточка сделки в этот момент неактивна —
+  // её запрос помечался и не перезапрашивался. А глобальный `refetchOnMount: false`
+  // (`lib/queryClient.ts`) означает, что и при возврате на карточку перезапроса не будет:
+  // React Query видит данные в кэше и отдаёт их как есть. Пользователь совершал действие,
+  // возвращался на карточку и видел ПРЕЖНЮЮ цепочку; правду давал только F5.
+  //
+  // Глобальный `refetchOnMount: false` НЕ трогаем — он держит защиту от межарендаторской
+  // утечки кэша, описанную в шапке `queryClient.ts`. Чиним точечно, в самой инвалидации.
+  qc.invalidateQueries({ queryKey: ['deals'], refetchType: 'all' });
+  qc.invalidateQueries({ queryKey: ['deal-documents'], refetchType: 'all' });
   invalidateDashboardSurfaces(qc);
 };
 

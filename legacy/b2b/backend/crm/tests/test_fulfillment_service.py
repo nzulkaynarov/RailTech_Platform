@@ -165,11 +165,16 @@ def test_unknown_status_rejected(world):
 @pytest.mark.django_db
 @pytest.mark.parametrize("status_code", [FulfillmentStatusCode.ACCEPTED, FulfillmentStatusCode.DISPUTED])
 def test_buyer_status_by_non_buyer_rejected(world, status_code):
-    """A seller (not a member of the buyer company) cannot drive a buyer-side status."""
+    """A seller (not a member of the buyer company) cannot drive a buyer-side status.
+
+    Отказ называет ПРИЧИНУ, а не общее «нужно членство»: продавец членом своей компании
+    является, и общий код витрина переводила как «действие доступно только членам компании» —
+    он читался как поломка, а не как правило (замер 26-08, находка 17).
+    """
     crm_services.ensure_fulfillment(world["deal"])
     obj, err = crm_services.update_fulfillment_status(world["deal"].id, world["seller"], status_code)
     assert obj is None
-    assert err == "MEMBER_REQUIRED_FOR_ACTION"
+    assert err == "FULFILLMENT_ACCEPTANCE_IS_BUYER_STEP"
 
 
 @pytest.mark.django_db
