@@ -142,15 +142,13 @@ function LookupEditor({
         </Button>
       </div>
 
-      {/* Строка-итог над списком: сколько строк показано из скольких. Единственным числом на
-          экране была плитка сверху, и она считала ВЕСЬ справочник — при фильтре «zzqx» человек
-          видел одновременно «Countries 249» и «Записей нет» (замер 20-08). Эталон один и тот же
-          у Odoo (O-PAGER) и Salesforce (SF-META-LINE): диапазон и общее число стоят НАД списком
-          и пересчитываются фильтром. Соседний экран того же продукта (#admin-support) так и
-          делает — расхождение было внутреннее. */}
+      {/* Строка-итог над списком: сколько строк показано из скольких. Ключ и формулировка —
+          ОБЩИЕ с `AdminDataTable` (`adminTable.shownOf`): два побуквенно одинаковых ключа
+          означали бы четыре правки в JSON на одну смену формулировки, причём при зелёной
+          проверке симметрии. Эталон тот же — Odoo O-PAGER, Salesforce SF-META-LINE. */}
       {!isError && !isLoading && (
         <p className="text-xs text-muted-foreground" role="status">
-          {t('adminMasterData.shownOf', { shown: visibleItems.length, total: (items ?? []).length })}
+          {t('adminTable.shownOf', { shown: visibleItems.length, total: (items ?? []).length })}
         </p>
       )}
 

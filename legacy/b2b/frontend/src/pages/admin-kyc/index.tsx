@@ -50,13 +50,16 @@ export function AdminKYCPage() {
   // «На проверке» стоит число из всего реестра, а внутри — три строки, нашедшиеся по поиску.
   // Число под подписью обязано означать то, что под ним нарисовано (замер 26-08, находка 31).
   const countsParams = useMemo(
-    () => (tableState.search ? { search: tableState.search, fetchAll: true } : { fetchAll: true }),
+    () => ({ search: tableState.search || undefined, fetchAll: true }),
     [tableState.search],
   );
   const { data: allCompanies = [] } = useCompanies(countsParams);
-  // Общий размер реестра — для строки-итога «показано N из M». Отдельный запрос без поиска:
-  // он и есть то «M», с которым сравнивают.
-  const { data: registryTotal = [] } = useCompanies({ fetchAll: true });
+  // Общий размер реестра для строки-итога «показано N из M» берётся из ТОЙ ЖЕ выборки без
+  // поиска — отдельный третий обход всего реестра ради одного целого числа стоил до 200
+  // страниц с полным сериализатором на каждое открытие экрана.
+  const { data: registryTotal = [] } = useCompanies(
+    tableState.search ? { fetchAll: true } : countsParams,
+  );
   const { data: companies = [], isLoading, isError, refetch } = useCompanies({ ...(queryParams ?? {}), fetchAll: true });
   const kept = companies;
 

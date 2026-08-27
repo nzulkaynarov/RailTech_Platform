@@ -50,10 +50,10 @@ def _notify_user(
     title: str,
     message: str,
     *,
+    event_code: str,
+    event_params: dict,
     type_code: str = "INFO",
     link: str = "",
-    event_code: str = "",
-    event_params: Optional[dict] = None,
 ) -> None:
     """Уведомление участнику согласования — с МАШИННЫМ кодом события.
 
@@ -76,7 +76,7 @@ def _notify_user(
         message=message,
         link=link,
         event_code=event_code,
-        event_params=event_params or {},
+        event_params=event_params,
     )
     push_notification_ws(notif)
 
@@ -206,8 +206,9 @@ def _notify_order(quote: Quote, order: int) -> None:
             )
 
 
-def _notify_informed(quote: Quote, message: str, *, event_code: str = "", event_params: Optional[dict] = None) -> None:
-    for step in quote.approval_steps.filter(participation=StepParticipation.INFORMED):
+def _notify_informed(quote: Quote, message: str, *, event_code: str, event_params: dict) -> None:
+    # `select_related`: без него каждый шаг тянул своего участника отдельным запросом.
+    for step in quote.approval_steps.select_related("approver").filter(participation=StepParticipation.INFORMED):
         if step.approver and step.approver.user_id:
             _notify_user(
                 step.approver.user_id,
@@ -216,7 +217,7 @@ def _notify_informed(quote: Quote, message: str, *, event_code: str = "", event_
                 type_code="INFO",
                 link=_link(quote),
                 event_code=event_code,
-                event_params=event_params or {},
+                event_params=event_params,
             )
 
 

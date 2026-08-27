@@ -3,6 +3,7 @@ from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from core.audit import AuditedWriteMixin
 from core.permissions import OperatorScoped
 
 from . import services, services_email_templates
@@ -90,7 +91,7 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
     partial_update=extend_schema(summary="Patch email template", tags=["Admin"]),
     destroy=extend_schema(summary="Delete email template", tags=["Admin"]),
 )
-class EmailTemplateViewSet(viewsets.ModelViewSet):
+class EmailTemplateViewSet(AuditedWriteMixin, viewsets.ModelViewSet):
     """Platform-Operator CRUD for DB-editable email templates.
 
     An active row here overrides the file template of the same key when
@@ -114,41 +115,33 @@ class EmailTemplateViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated, OperatorScoped]
     operator_permission = "platform.settings"
 
+    #: Активная строка НЕМЕДЛЕННО подменяет файловый шаблон для ВСЕХ получателей платформы:
+    #: текст, который увидит каждый арендатор в письме о счёте или об акте. Поле `updated_by`
+    #: отвечает «кто последний», но не «что было раньше» и в «Журнал доступа» не попадает.
+    audit_event_prefix = "email_template"
+
+    def audit_action(self, instance, event: str) -> str:
+        return f"Шаблон письма {event}: {instance.key}"
+
+    def audit_snapshot(self, instance):
+        return {
+            "key": instance.key,
+            "subject": instance.subject,
+            "is_active": instance.is_active,
+            "language": instance.language,
+        }
+
+    def audit_event_params(self, instance) -> dict:
+        return {"key": instance.key}
+
     def perform_create(self, serializer):
         serializer.save(updated_by=self.request.user)
-        self._audit(serializer.instance, "created")
+        self._write_audit(serializer.instance, "created", after=self.audit_snapshot(serializer.instance))
 
     def perform_update(self, serializer):
+        before = self.audit_snapshot(serializer.instance)
         serializer.save(updated_by=self.request.user)
-        self._audit(serializer.instance, "updated")
-
-    def perform_destroy(self, instance):
-        # След ДО удаления: после него не спросишь, какой ключ подменяли.
-        self._audit(instance, "deleted")
-        instance.delete()
-
-    def _audit(self, template, event: str) -> None:
-        """Правка шаблона письма — платформенное действие со следом.
-
-        Активная строка НЕМЕДЛЕННО подменяет файловый шаблон для ВСЕХ получателей платформы:
-        текст, который увидит каждый арендатор в письме о счёте или об акте. Поле `updated_by`
-        отвечает «кто последний», но не «что было раньше» и не попадает в «Журнал доступа» —
-        он отбирает ленту по машинному коду `admin.*`.
-        """
-        from core.audit import log_admin_action
-
-        log_admin_action(
-            entity_type="notifications.emailtemplate",
-            entity_id=template.pk,
-            action=f"Шаблон письма {event}: {template.key}",
-            detail=template.subject or template.key,
-            actor=self.request.user,
-            reason=(self.request.data.get("reason") or "").strip(),
-            after={"key": template.key, "is_active": template.is_active, "language": template.language},
-            level="WARNING" if event == "deleted" else "INFO",
-            event_code=f"admin.email_template.{event}",
-            event_params={"key": template.key},
-        )
+        self._write_audit(serializer.instance, "updated", before=before, after=self.audit_snapshot(serializer.instance))
 
     @extend_schema(
         summary="Preview email template",

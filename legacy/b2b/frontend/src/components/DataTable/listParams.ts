@@ -35,7 +35,10 @@ export function useListParams<F extends Record<string, string> = Record<string, 
   // отражает его. Иначе каждое нажатие клавиши в поиске перезапускало бы разбор URL.
   const [initial] = useState(() => {
     if (!urlKey) return null;
-    const read = (key: string) => new URLSearchParams(window.location.search).get(`${urlKey}.${key}`) ?? '';
+    // Один разбор строки запроса на всё чтение: раньше `URLSearchParams` конструировался
+    // заново на КАЖДЫЙ ключ (3 + число фильтров).
+    const params = new URLSearchParams(window.location.search);
+    const read = (key: string) => params.get(`${urlKey}.${key}`) ?? '';
     return {
       search: read('q'),
       ordering: read('sort'),

@@ -211,27 +211,61 @@ def _send_kyc_status_email(company: Company, level_code: str, *, is_downgrade: b
 def _create_kyc_notification(
     company: Company, level_code: str, *, is_downgrade: bool = False, reason: str = ""
 ) -> None:
-    from notifications.models import Notification, NotificationType
+    from notifications.services import notify_user
 
     owners = CustomUser.objects.filter(
         memberships__company=company,
         memberships__is_primary=True,
         memberships__is_active=True,
     ).distinct()
-    nt = NotificationType.objects.filter(code="WARNING" if is_downgrade else "SUCCESS").first()
-    # Событие несёт КОД, а не слова: ленту собирает витрина по локали получателя
-    # (`crm/tests/test_event_feeds`, урок волны #523).
-    event_code = "company.kyc_revoked" if is_downgrade else "company.kyc_verified"
+    # Через общий `notify_user`, а не `Notification.objects.create` руками: он делает и WS-пуш,
+    # которого здесь не было — отзыв уровня доходил до арендатора только опросом раз в минуту,
+    # тогда как всё остальное прилетает мгновенно.
+    event_code = f"{KYC_EVENT_PREFIX}_revoked" if is_downgrade else f"{KYC_EVENT_PREFIX}_verified"
     for u in owners:
-        Notification.objects.create(
+        notify_user(
             user=u,
-            type=nt,
             title="Статус KYC обновлён",
             message=f"KYC для {company.name} — {level_code}",
             link="/cabinet/profile",
+            type_code="WARNING" if is_downgrade else "SUCCESS",
             event_code=event_code,
             event_params={"company": company.name, "level_code": level_code, "reason": reason},
         )
+
+
+#: Префикс машинных кодов событий KYC. Читатель причины и писатель события обязаны брать его
+#: ОТСЮДА: до 27-08 сериализатор `/me` искал по `kyc.`, а писалось `company.kyc_downgraded` —
+#: причина отказа не находилась никогда, и арендатор по-прежнему не знал, что исправить.
+KYC_EVENT_PREFIX = "company.kyc"
+
+
+def last_kyc_reason(company) -> str:
+    """Причина последнего вердикта по KYC — из журнала, где её и записывает сервис.
+
+    Сервер ТРЕБУЕТ причину при понижении уровня (`REASON_REQUIRED` выше), но она оставалась
+    только в `ActivityLog`, закрытом от арендатора: человек знал, что ему отказали, но не знал
+    почему, и подать заново было не с чего.
+
+    У ПОДТВЕРЖДЁННОЙ компании причина не нужна и не спрашивается: `ActivityLog` — самая
+    большая таблица проекта, а фильтры по коду события и непустой причине индексом не
+    покрыты, так что самый частый случай («отказа не было») давал бы худший план на КАЖДОМ
+    вызове `/me/` у всех пользователей ради поля, нужного единицам.
+    """
+    from crm.models import ActivityLog
+
+    status_code = getattr(getattr(company, "verification_status", None), "code", None)
+    if status_code in KYC_VERIFIED_CODES:
+        return ""
+
+    return (
+        ActivityLog.objects.filter(entity_type="company", entity_id=company.pk, event_code__startswith=KYC_EVENT_PREFIX)
+        .exclude(reason="")
+        .order_by("-timestamp")
+        .values_list("reason", flat=True)
+        .first()
+        or ""
+    )
 
 
 def bulk_verify_kyc(

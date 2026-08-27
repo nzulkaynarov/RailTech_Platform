@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-26 14:12+0500\n"
+"POT-Creation-Date: 2026-08-27 16:41+0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2836,7 +2836,7 @@ msgid "Создан правилом (нельзя удалить); False = до
 msgstr "Created by a rule (cannot be deleted); False = added manually."
 
 #: crm/models/approvals.py:97 crm/models/deals.py:466
-#: templates/emails/kyc_revoked.html:6 templates/emails/kyc_revoked.txt:5
+#: templates/emails/kyc_revoked.html:23 templates/emails/kyc_revoked.txt:5
 msgid "Причина"
 msgstr "Reason"
 
@@ -5662,9 +5662,8 @@ msgstr "The act is visible on the deal card, in the “Deal chain” block."
 #: templates/emails/generated_document.html:7
 #: templates/emails/generated_document.txt:1
 #: templates/emails/invite_client.txt:1 templates/emails/invite_member.txt:1
-#: templates/emails/invoice_issued.txt:1 templates/emails/kyc_revoked.html:2
-#: templates/emails/kyc_revoked.txt:1 templates/emails/kyc_verified.txt:1
-#: templates/emails/new_rfq_seller.txt:1
+#: templates/emails/invoice_issued.txt:1 templates/emails/kyc_revoked.txt:1
+#: templates/emails/kyc_verified.txt:1 templates/emails/new_rfq_seller.txt:1
 #: templates/emails/payment_received.txt:1
 #: templates/emails/payment_reminder.txt:1
 #: templates/emails/quote_acceptance_code.txt:1
@@ -5988,7 +5987,19 @@ msgstr "Payment is due by %(due_date)s."
 msgid "Открыть счёт:"
 msgstr "Open the invoice:"
 
-#: templates/emails/kyc_revoked.html:4 templates/emails/kyc_revoked.txt:3
+#: templates/emails/kyc_revoked.html:12
+msgid "Проверка компании не пройдена"
+msgstr "Company verification did not pass"
+
+#: templates/emails/kyc_revoked.html:13
+msgid "Уровень доверия снижен"
+msgstr "Trust level lowered"
+
+#: templates/emails/kyc_revoked.html:16
+msgid "Проверка не пройдена"
+msgstr "Verification did not pass"
+
+#: templates/emails/kyc_revoked.html:19 templates/emails/kyc_revoked.txt:3
 #, python-format
 msgid ""
 "Уровень доверия компании «%(company_name)s» (ИНН %(company_inn)s) снижен. "
@@ -5997,7 +6008,7 @@ msgstr ""
 "The trust level of “%(company_name)s” (TIN %(company_inn)s) has been "
 "lowered. Some platform features are no longer available."
 
-#: templates/emails/kyc_revoked.html:8 templates/emails/kyc_revoked.txt:7
+#: templates/emails/kyc_revoked.html:28 templates/emails/kyc_revoked.txt:7
 msgid ""
 "Что делать дальше: исправьте указанное и подайте документы на проверку снова "
 "— это делается в кабинете, в разделе «Компания»."
@@ -6005,15 +6016,14 @@ msgstr ""
 "What to do next: fix what is listed and submit the documents for review "
 "again — this is done in your account, under “Company”."
 
-#: templates/emails/kyc_revoked.html:10 templates/emails/kyc_revoked.txt:9
+#: templates/emails/kyc_revoked.html:32 templates/emails/kyc_revoked.txt:9
 #: templates/emails/kyc_verified.html:29 templates/emails/kyc_verified.txt:5
 #: templates/emails/role_application_approved.html:20
 #: templates/emails/role_application_approved.txt:6
 msgid "Открыть кабинет"
 msgstr "Open your account"
 
-#: templates/emails/kyc_revoked.html:12 templates/emails/kyc_revoked.txt:11
-#: templates/emails/kyc_verified.txt:7
+#: templates/emails/kyc_revoked.txt:11 templates/emails/kyc_verified.txt:7
 #: templates/emails/register_existing_account.txt:15
 #: templates/emails/role_application_approved.txt:8
 #: templates/emails/role_application_rejected.txt:11

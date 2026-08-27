@@ -2643,7 +2643,6 @@
     "description": "Reference data: countries, currencies, units of measure, delivery bases",
     "new": "New entry",
     "edit": "Edit",
-    "shownOf": "Showing {{shown}} of {{total}}",
     "nothingFound": "Nothing found for “{{filter}}”",
     "clearFilter": "Clear filter",
     "empty": "No entries",

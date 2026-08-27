@@ -44,7 +44,7 @@ const STATUS_CODES: FulfillmentStatus[] = [
   'PENDING', 'SHIPPED', 'IN_TRANSIT', 'DELIVERED', 'ACCEPTED', 'DISPUTED',
 ];
 /** Приёмку и спор подтверждает ЗАКАЗЧИК — сервер авторизует их по стороне покупателя. */
-const BUYER_STATUS_CODES: FulfillmentStatus[] = ['ACCEPTED', 'DISPUTED'];
+const BUYER_STATUS_CODES: FulfillmentStatus[] = [FStatusCode.ACCEPTED, FStatusCode.DISPUTED];
 
 export function FulfillmentsPage() {
   const { t } = useTranslation();

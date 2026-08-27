@@ -56,7 +56,7 @@ import {
 } from '@/hooks/useAccounts';
 import { accountsApi } from '@/api/accountsApi';
 import { useQuery } from '@tanstack/react-query';
-import { kycDocTypeLabelKey } from '@/lib/codes';
+import { companyTypeLabelKey, kycDocTypeLabelKey } from '@/lib/codes';
 import type { Company } from '@/api/accountsApi';
 import { ImageUpload } from '@/components/Shared/ImageUpload';
 import { FileUpload } from '@/components/Shared/FileUpload';
@@ -361,7 +361,9 @@ function CompanyFormSheet({
                             })
                           }
                         />
-                        {companyType.name}
+                        {companyTypeLabelKey(companyType.code)
+                          ? t(companyTypeLabelKey(companyType.code))
+                          : companyType.name}
                       </label>
                     );
                   })}

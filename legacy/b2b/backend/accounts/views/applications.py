@@ -14,6 +14,7 @@ from accounts.serializers import (
     SupplierSubscriptionSerializer,
 )
 from accounts.services import member_has_permission
+from core.audit import AuditedWriteMixin
 from core.permissions import OperatorScoped
 
 
@@ -31,7 +32,7 @@ from core.permissions import OperatorScoped
     partial_update=extend_schema(summary="Partially update subscription", tags=["Accounts"]),
     destroy=extend_schema(summary="Delete subscription", tags=["Accounts"]),
 )
-class SupplierSubscriptionViewSet(viewsets.ModelViewSet):
+class SupplierSubscriptionViewSet(AuditedWriteMixin, viewsets.ModelViewSet):
     """
     CRUD + status actions for supplier subscriptions.
     Admin/Manager only.
@@ -77,54 +78,29 @@ class SupplierSubscriptionViewSet(viewsets.ModelViewSet):
                 )
         return super().update(request, *args, **kwargs)
 
-    def perform_create(self, serializer):
-        subscription = serializer.save()
-        self._log_lifecycle(subscription, "created", after=self._snapshot(subscription))
+    #: DELETE физически уносил запись вместе с историей оплат и сроком, и в журнале не
+    #: оставалось ни того, что удалили, ни кем. CREATE — тем более: подписка это доступ к
+    #: платным функциям, и её появление у арендатора обязано быть объяснимо.
+    audit_event_prefix = "subscription"
 
-    def perform_update(self, serializer):
-        before = self._snapshot(serializer.instance)
-        subscription = serializer.save()
-        self._log_lifecycle(subscription, "updated", before=before, after=self._snapshot(subscription))
+    def audit_entity_type(self, instance) -> str:
+        # Короткое `subscription`, а не метка модели: так записаны уже существующие строки
+        # журнала, и смена значения оторвала бы новые от старых при разборе инцидента.
+        return "subscription"
 
-    def perform_destroy(self, instance):
-        # След пишем ДО удаления: после него ни pk, ни компании уже не спросишь. Тот же приём,
-        # что у прав компании (`CompanyEntitlementViewSet.perform_destroy`) — механика одна.
-        self._log_lifecycle(instance, "deleted", before=self._snapshot(instance))
-        instance.delete()
+    def audit_action(self, instance, event: str) -> str:
+        return f"Подписка {event}"
 
-    @staticmethod
-    def _snapshot(subscription) -> dict:
+    def audit_snapshot(self, instance) -> dict:
         return {
-            "plan": subscription.plan,
-            "status": subscription.status,
-            "valid_until": str(subscription.valid_until) if subscription.valid_until else None,
-            "monthly_rate": str(subscription.monthly_rate) if subscription.monthly_rate is not None else None,
+            "plan": instance.plan,
+            "status": instance.status,
+            "valid_until": str(instance.valid_until) if instance.valid_until else None,
+            "monthly_rate": str(instance.monthly_rate) if instance.monthly_rate is not None else None,
         }
 
-    def _log_lifecycle(self, subscription, event: str, before=None, after=None) -> None:
-        """След жизненного цикла подписки в «Журнале доступа».
-
-        DELETE физически уносил запись вместе с историей оплат и сроком, и в журнале не
-        оставалось ни того, что было удалено, ни кем. CREATE — тем более: подписка это доступ
-        к платным функциям, и её появление у арендатора обязано быть объяснимо.
-        """
-        from core.audit import log_admin_action
-
-        company_name = subscription.company.name if subscription.company_id else str(subscription.pk)
-        log_admin_action(
-            entity_type="subscription",
-            entity_id=subscription.pk,
-            action=f"Подписка {event}",
-            detail=company_name,
-            actor=self.request.user,
-            reason=(self.request.data.get("reason") or "").strip(),
-            before=before,
-            after=after,
-            company_id=subscription.company_id,
-            level="WARNING" if event == "deleted" else "INFO",
-            event_code=f"admin.subscription.{event}",
-            event_params={"company_name": company_name},
-        )
+    def audit_event_params(self, instance) -> dict:
+        return {"company_name": instance.company.name if instance.company_id else str(instance.pk)}
 
     @extend_schema(
         summary="My subscription",

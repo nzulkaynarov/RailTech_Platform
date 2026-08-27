@@ -87,3 +87,81 @@ def log_admin_action(
         deal_id=deal_id,
         seller_company_id=seller_company_id,
     )
+
+
+class AuditedWriteMixin:
+    """Операторский вьюсет, который пишет след на создание, правку и удаление.
+
+    До 27-08 этот блок был скопирован ЧЕТЫРЕЖДЫ — подписки, справочники, шаблоны писем и права
+    компании, — и копии успели разойтись ещё до того, как их сравнили: ключ причины `reason`
+    против `note`, `entity_type` то литералом, то из `_meta`, `company_id` передавали двое из
+    четырёх, снимок «до» был у трёх из четырёх. Пятый операторский реестр скопировал бы ту
+    копию, которую автор увидел первой.
+
+    Настройка — три точки:
+
+    * `audit_event_prefix` — хвост машинного кода `admin.<prefix>.<created|updated|deleted>`.
+      По нему «Журнал доступа» отбирает ленту (`core/admin_api/break_glass.py`), поэтому
+      префикс обязателен: запись без кода в журнал не попадает.
+    * `audit_action(instance, event)` — человеческая строка-фолбэк для тех, кто читает журнал
+      без витрины (Unfold).
+    * `audit_snapshot(instance)` — что попадает в `before`/`after`. По умолчанию снимка нет:
+      «что было раньше» имеет смысл не у всякой сущности, а выдуманный снимок хуже пустого.
+
+    Причина берётся из тела запроса ключом `reason` — тем же, что просит витрина у опасных
+    действий. Удаление пишется уровнем WARNING: это единственное необратимое из трёх.
+    """
+
+    #: Обязателен. Без него запись не попадёт в «Журнал доступа».
+    audit_event_prefix: str = ""
+
+    def audit_entity_type(self, instance) -> str:
+        """По умолчанию — метка модели. Переопределять ТОЛЬКО ради совместимости с уже
+        записанной историей: у подписок в журнале лежит короткое `subscription`, и смена
+        значения оторвала бы новые записи от старых при разборе инцидента."""
+        return instance._meta.label_lower
+
+    def audit_action(self, instance, event: str) -> str:
+        return f"{instance._meta.verbose_name} {event}: {instance.pk}"
+
+    def audit_snapshot(self, instance) -> Optional[dict]:
+        return None
+
+    def audit_event_params(self, instance) -> dict:
+        return {"model": instance._meta.label_lower}
+
+    def audit_company_id(self, instance) -> Optional[int]:
+        return getattr(instance, "company_id", None)
+
+    def _write_audit(self, instance, event: str, before=None, after=None) -> None:
+        assert self.audit_event_prefix, "audit_event_prefix обязателен — иначе след не виден в журнале"
+        log_admin_action(
+            entity_type=self.audit_entity_type(instance),
+            entity_id=instance.pk,
+            action=self.audit_action(instance, event),
+            detail=str(instance),
+            actor=self.request.user,
+            reason=(self.request.data.get("reason") or "").strip(),
+            before=before,
+            after=after,
+            company_id=self.audit_company_id(instance),
+            level="WARNING" if event == "deleted" else "INFO",
+            event_code=f"admin.{self.audit_event_prefix}.{event}",
+            event_params=self.audit_event_params(instance),
+        )
+
+    def perform_create(self, serializer):
+        super().perform_create(serializer)
+        self._write_audit(serializer.instance, "created", after=self.audit_snapshot(serializer.instance))
+
+    def perform_update(self, serializer):
+        # Снимок «до» — с УЖЕ ЗАГРУЖЕННОГО инстанса: `update()` его достал, и он ещё держит
+        # докоммитные значения. Второй `get_object()` был бы лишним SELECT-ом.
+        before = self.audit_snapshot(serializer.instance)
+        super().perform_update(serializer)
+        self._write_audit(serializer.instance, "updated", before=before, after=self.audit_snapshot(serializer.instance))
+
+    def perform_destroy(self, instance):
+        # След ДО удаления: после него ни pk, ни связей уже не спросишь.
+        self._write_audit(instance, "deleted", before=self.audit_snapshot(instance))
+        super().perform_destroy(instance)

@@ -616,11 +616,11 @@ class MeSerializer(serializers.ModelSerializer):
         effective CompanyRole permission codes — is_system role → ALL_PERMISSIONS (mirrors
         CompanyRole.has_perm's short-circuit, so a perm added later isn't wrongly missing for an
         existing company admin). Drives the unified nav's per-item `requires` gates."""
-        from accounts.services import is_demo, is_seller, primary_seller_company_id, quote_send_entitled
-        from accounts.services.entitlements import blocked_by_operator
+        from accounts.services import is_seller, primary_seller_company_id
+        from accounts.services.entitlements import quote_send_state
         from sourcing.ai_spend_cap import ai_daily_usage
 
-        from .constants import ALL_PERMISSIONS, FeatureKey
+        from .constants import ALL_PERMISSIONS
 
         membership = self._primary_membership(obj)
         permissions = []
@@ -634,6 +634,9 @@ class MeSerializer(serializers.ModelSerializer):
         # UI show the distinct "output watermarked" message. UI-gating only — send_to_client stays
         # authoritative. None seller company → both False (no seller context to gate).
         seller_company_id = primary_seller_company_id(obj)
+        # Строка права снимается ОДИН раз: три отдельных вопроса о ней («можно?», «это демо?»,
+        # «запрещено платформой?») читали её четырежды на каждый вызов `/me/`.
+        quote_send = quote_send_state(seller_company_id)
         ai_usage = ai_daily_usage(obj)
         # `can_sell` здесь — «пользователь на стороне ПРОДАВЦА», ровно как это понимает авторизация
         # (`is_seller`: активное членство с can_sell И компания типа SUPPLIER/MANUFACTURER).
@@ -645,8 +648,8 @@ class MeSerializer(serializers.ModelSerializer):
             "can_buy": self.get_can_buy(obj),
             "can_sell": is_seller(obj),
             "subscription_active": bool(self.get_seller_subscription_operational(obj)),
-            "can_send_quotes": bool(seller_company_id and quote_send_entitled(seller_company_id)),
-            "quote_send_is_demo": bool(seller_company_id and is_demo(seller_company_id, FeatureKey.QUOTE_SEND)),
+            "can_send_quotes": quote_send["allowed"],
+            "quote_send_is_demo": quote_send["is_demo"],
             # ПОЧЕМУ закрыто, а не только «закрыто». Витрина знала ровно два поля и сваливала
             # оба случая — «нет подписки» и «платформа отключила функцию» — в один баннер
             # «нужна активная подписка» с кнопкой в раздел подписки, где та же подписка
@@ -655,13 +658,10 @@ class MeSerializer(serializers.ModelSerializer):
             #
             # Явный запрет платформы — осознанное правило (ADR-0006: строка CompanyEntitlement
             # перебивает подписку), и мы его не трогаем. Мы называем его своим именем.
-            "quote_send_blocked_by_operator": bool(
-                seller_company_id and blocked_by_operator(seller_company_id, FeatureKey.QUOTE_SEND)
-            ),
-            # Код состояния KYC, а не «всё, кроме L2/L3 — на проверке». После ОТЗЫВА уровня
-            # арендатор видел бейдж «На проверке» и подпись «обычно 1–2 рабочих дня» — то есть
-            # ждал результата, который уже вынесен, и не знал ни об отказе, ни о причине.
-            "kyc_status_code": self._kyc_status_code(obj),
+            "quote_send_blocked_by_operator": quote_send["blocked_by_operator"],
+            # Причина последнего вердикта. Сам КОД состояния уже отдаётся полем `kyc_level`
+            # выше — второе имя для того же значения заставляло бы читателя выяснять разницу,
+            # которой нет.
             "kyc_last_reason": self._kyc_last_reason(obj),
             # Wave B: a "solo seller" is a seller company with exactly ONE active member who can
             # sell — for them the deal-claim button is pure noise (nobody else to claim against),
@@ -681,32 +681,11 @@ class MeSerializer(serializers.ModelSerializer):
         }
 
     @staticmethod
-    def _kyc_status_code(obj) -> str | None:
-        company = getattr(obj, "primary_company", None)
-        status = getattr(company, "verification_status", None) if company else None
-        return status.code if status else None
-
-    @staticmethod
     def _kyc_last_reason(obj) -> str:
-        """Причина последнего вердикта по KYC — из журнала, где её и записывает сервис.
+        from accounts.services.kyc import last_kyc_reason
 
-        Сервер ТРЕБУЕТ причину при понижении уровня (`kyc.py`: `REASON_REQUIRED`), но она
-        оставалась только в `ActivityLog`, закрытом от арендатора. Человек знал, что ему
-        отказали, но не знал почему, и подать заново было не с чего.
-        """
         company = getattr(obj, "primary_company", None)
-        if company is None:
-            return ""
-        from crm.models import ActivityLog
-
-        entry = (
-            ActivityLog.objects.filter(entity_type="company", entity_id=company.pk, event_code__startswith="kyc.")
-            .exclude(reason="")
-            .order_by("-timestamp")
-            .values_list("reason", flat=True)
-            .first()
-        )
-        return entry or ""
+        return last_kyc_reason(company) if company else ""
 
     @staticmethod
     def _is_solo_seller(seller_company_id) -> bool:

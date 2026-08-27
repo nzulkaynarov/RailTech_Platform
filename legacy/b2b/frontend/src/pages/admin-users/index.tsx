@@ -55,26 +55,20 @@ export function AdminUsersPage() {
 
   const filtered = users;
 
-  const counts = useMemo(() => ({
-    all: allUsers.length,
-    active: allUsers.filter((u) => u.is_active).length,
-    inactive: allUsers.filter((u) => !u.is_active).length,
-    admin: allUsers.filter((u) => u.role_data?.code === 'ADMIN').length,
-    // Учётки БЕЗ системной роли не попадали ни на одну вкладку: вкладки строились строго по
-    // строкам справочника, а `CustomUser.role` — nullable. Человек существовал в реестре и
-    // был невидим в любом срезе по роли. Причина, по которой такие учётки вообще есть,
-    // закрыта волной #612 (мастер выдавал несуществующий код `CLIENT` → `role=None`), но
-    // ранее заведённые остались — и вкладка нужна, чтобы их найти и починить.
-    noRole: allUsers.filter((u) => !u.role_data?.code).length,
-  }), [allUsers]);
-
-  const roleCounts = useMemo(() => {
-    const buckets: Record<string, number> = {};
+  // Один проход вместо пяти. Раньше «Персонал» и счётчик вкладки `role:ADMIN` считались
+  // РАЗНЫМИ предикатами по одному массиву и могли молча разойтись — ровно тот класс «число
+  // под подписью означает не то», который эта же волна чинила на соседних экранах.
+  const { counts, roleCounts } = useMemo(() => {
+    const buckets = { all: allUsers.length, active: 0, inactive: 0, noRole: 0 };
+    const byRole: Record<string, number> = {};
     allUsers.forEach((u) => {
+      if (u.is_active) buckets.active += 1;
+      else buckets.inactive += 1;
       const code = u.role_data?.code;
-      if (code) buckets[code] = (buckets[code] ?? 0) + 1;
+      if (code) byRole[code] = (byRole[code] ?? 0) + 1;
+      else buckets.noRole += 1;
     });
-    return buckets;
+    return { counts: { ...buckets, admin: byRole.ADMIN ?? 0 }, roleCounts: byRole };
   }, [allUsers]);
 
   const stats = [

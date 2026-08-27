@@ -36,8 +36,16 @@ const invalidateDealChain = (qc: QueryClient) => {
   //
   // Глобальный `refetchOnMount: false` НЕ трогаем — он держит защиту от межарендаторской
   // утечки кэша, описанную в шапке `queryClient.ts`. Чиним точечно, в самой инвалидации.
-  qc.invalidateQueries({ queryKey: ['deals'], refetchType: 'all' });
-  qc.invalidateQueries({ queryKey: ['deal-documents'], refetchType: 'all' });
+  // Активное — перезапросить, неактивное — ВЫБРОСИТЬ. `refetchType: 'all'` будил бы все
+  // ключи, осевшие в кэше за `gcTime` (10 мин): у человека, посмотревшего 15 сделок, одно
+  // действие в биллинге давало десятки фоновых запросов к недешёвой `deal-documents`
+  // (договор + счета + платежи + акты + отгрузка через `DealSideResolver`).
+  // Удаление бесплатно, а следующий монтаж всё равно сходит в сеть — данных нет, и
+  // глобальный `refetchOnMount: false` тут уже не мешает.
+  qc.invalidateQueries({ queryKey: ['deals'] });
+  qc.removeQueries({ queryKey: ['deals'], type: 'inactive' });
+  qc.invalidateQueries({ queryKey: ['deal-documents'] });
+  qc.removeQueries({ queryKey: ['deal-documents'], type: 'inactive' });
   invalidateDashboardSurfaces(qc);
 };
 

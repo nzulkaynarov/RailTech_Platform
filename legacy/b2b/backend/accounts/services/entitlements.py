@@ -122,6 +122,35 @@ def grant_entitlement(
     return row
 
 
+def quote_send_state(company_id: Optional[int]) -> dict:
+    """Три ответа о праве на отправку КП за ОДНО чтение строки.
+
+    Витрина спрашивает про одно и то же право трижды — «можно отправлять?», «это демо?»,
+    «запрещено ли платформой?» — и каждый вопрос ходил в базу отдельно: четыре SELECT одной
+    строки `CompanyEntitlement` на каждый вызов `/me/`, то есть на каждый бутстрап и каждую
+    смену контекста.
+    """
+    if not company_id:
+        return {"allowed": False, "is_demo": False, "blocked_by_operator": False}
+    from .kyc import company_kyc_verified
+
+    # ОДНО чтение строки — дальше все три ответа выводятся из неё. Логика ниже дословно
+    # повторяет `has_entitlement` + `is_demo` + `quote_send_entitled`; повторяется она потому,
+    # что те принимают company_id и читают строку сами, а здесь она уже на руках.
+    row = entitlement_state(company_id, FeatureKey.QUOTE_SEND)
+    demo = bool(row and row.access == "DEMO" and row.is_currently_granted())
+    disabled = bool(row and row.access == "DISABLED")
+    if _row_decides(row):
+        granted = row.is_currently_granted()
+    else:
+        granted = _has_operational_subscription(company_id)
+    return {
+        "allowed": bool(company_kyc_verified(company_id) and granted and not demo),
+        "is_demo": demo,
+        "blocked_by_operator": disabled,
+    }
+
+
 def blocked_by_operator(company_id: int, feature_key) -> bool:
     """Функция закрыта ЯВНЫМ запретом платформы, а не отсутствием подписки.
 

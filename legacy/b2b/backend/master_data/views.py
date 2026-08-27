@@ -6,6 +6,8 @@ from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
+from core.audit import AuditedWriteMixin
+
 from .models import Country, Currency, DeliveryBasis, HSCode, UnitOfMeasure
 from .serializers import CountrySerializer, CurrencySerializer, DeliveryBasisSerializer, UnitOfMeasureSerializer
 
@@ -38,14 +40,12 @@ LOOKUP_CACHE_TTL = 60 * 10  # 10 min — справочники меняются
 
 def _lookup_snapshot(instance) -> dict:
     """Что записываем в след: только опорные поля справочника, без служебных."""
-    return {
-        field: str(getattr(instance, field))
-        for field in ("code", "name", "sort_order", "is_active")
-        if hasattr(instance, field)
-    }
+    # Поля объявлены в `AbstractLookup`, миксин надет только на его наследников — защитный
+    # `hasattr` был всегда истинен и лишь маскировал бы ошибку «надели не на тот класс».
+    return {field: str(getattr(instance, field)) for field in ("code", "name", "sort_order", "is_active")}
 
 
-class _CachedLookupListMixin:
+class _CachedLookupListMixin(AuditedWriteMixin):
     """Кэш списка справочника, который СБРАСЫВАЕТСЯ правкой.
 
     До 20-08 здесь стоял `cache_page(600)` на `list` — и тот же вьюсет выполнял запись. Оператор
@@ -64,13 +64,11 @@ class _CachedLookupListMixin:
         return self.queryset.model._meta.label_lower
 
     def _version(self) -> int:
-        return cache.get(f"lookup-version:{self._model_label}", 1)
+        # Формат ключа задан в `master_data/signals.py` — здесь только ЧТЕНИЕ. Сброс держит
+        # сигнал на записи модели: он ловит и вьюсет, и админку, и management-команду, и шелл.
+        from .signals import lookup_version_key
 
-    def _bump_version(self) -> None:
-        key = f"lookup-version:{self._model_label}"
-        # Не `cache.incr`: он падает `ValueError`, если ключа ещё нет (частый случай — первая
-        # правка после рестарта Redis).
-        cache.set(key, self._version() + 1, None)
+        return cache.get(lookup_version_key(self.queryset.model), 1)
 
     def list(self, request, *args, **kwargs):
         # Язык — часть ключа: имена справочников переводятся, и ответ на `Accept-Language: en`
@@ -85,47 +83,19 @@ class _CachedLookupListMixin:
             cache.set(key, payload, LOOKUP_CACHE_TTL)
         return Response(payload)
 
-    def perform_create(self, serializer):
-        super().perform_create(serializer)
-        self._bump_version()
-        self._audit(serializer.instance, "created", after=_lookup_snapshot(serializer.instance))
+    #: Строки этих справочников печатаются в документах ВСЕХ арендаторов: валюта в КП, единица
+    #: у позиции, базис поставки в договоре, страна в реквизитах. Правил их оператор платформы,
+    #: а в «Журнале доступа» не было ни одной записи (замер 26-08: `admin.lookup*` — ноль строк).
+    audit_event_prefix = "lookup"
 
-    def perform_update(self, serializer):
-        before = _lookup_snapshot(self.get_object())
-        super().perform_update(serializer)
-        self._bump_version()
-        self._audit(serializer.instance, "updated", before=before, after=_lookup_snapshot(serializer.instance))
+    def audit_action(self, instance, event: str) -> str:
+        return f"Справочник {event}: {getattr(instance, 'code', instance.pk)}"
 
-    def perform_destroy(self, instance):
-        # След ДО удаления: после него ни pk, ни кода уже не спросишь.
-        self._audit(instance, "deleted", before=_lookup_snapshot(instance))
-        super().perform_destroy(instance)
-        self._bump_version()
+    def audit_snapshot(self, instance):
+        return _lookup_snapshot(instance)
 
-    def _audit(self, instance, event: str, before=None, after=None) -> None:
-        """Правка справочника — платформенное действие, и след ему положен.
-
-        Строки этих справочников печатаются в документах ВСЕХ арендаторов: валюта в КП,
-        единица у позиции, базис поставки в договоре, страна в реквизитах. Правил их оператор
-        платформы, а в «Журнале доступа» не было ни одной записи (замер 26-08: `admin.lookup*`
-        — ноль строк). Разбирать, почему у всех арендаторов сменилось название валюты, было не
-        по чему.
-        """
-        from core.audit import log_admin_action
-
-        log_admin_action(
-            entity_type=instance._meta.label_lower,
-            entity_id=instance.pk,
-            action=f"Справочник {event}: {getattr(instance, 'code', instance.pk)}",
-            detail=str(instance),
-            actor=self.request.user,
-            reason=(self.request.data.get("reason") or "").strip(),
-            before=before,
-            after=after,
-            level="WARNING" if event == "deleted" else "INFO",
-            event_code=f"admin.lookup.{event}",
-            event_params={"model": instance._meta.label_lower, "code": str(getattr(instance, "code", ""))},
-        )
+    def audit_event_params(self, instance) -> dict:
+        return {"model": instance._meta.label_lower, "code": str(getattr(instance, "code", ""))}
 
 
 class _GuardedDestroyMixin:

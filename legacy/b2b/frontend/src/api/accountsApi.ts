@@ -556,7 +556,7 @@ export const accountsApi = {
 	// колбэк — а до сервера она не доезжала: вызов уходил без тела. С тех пор как сервер стал
 	// класть причину в письмо арендатору (#611), цена дефекта выросла: отключённый продавец
 	// получал письмо с пустым объяснением.
-	suspendSubscription: async (id: number, reason = '') => {
+	suspendSubscription: async (id: number, reason: string) => {
 		const response = await apiClient.post<Subscription>(`accounts/subscriptions/${id}/suspend/`, { reason });
 		return response.data;
 	},

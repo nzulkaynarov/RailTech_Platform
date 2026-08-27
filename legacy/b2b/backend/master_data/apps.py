@@ -17,4 +17,6 @@ class MasterDataConfig(AppConfig):
         # Канон тот же, что уже записан в комментарии к самому кэшу: Odoo сбрасывает `ormcache`
         # НА ЗАПИСЬ, Rails строит ключ от `updated_at`. Сигнал ловит любого писателя — вьюсет,
         # админку, management-команду, шелл — и новый путь записи не потребует о нём помнить.
-        from . import signals  # noqa: F401  — подписка на post_save/post_delete
+        from .signals import connect
+
+        connect()
