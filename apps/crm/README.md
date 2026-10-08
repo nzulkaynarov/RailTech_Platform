@@ -43,7 +43,13 @@ make smoke-dev                # /health и /ready напрямую и через
 
 Повседневные команды: `make up`, `make down`, `make ps`, `make logs s=api`, `make migrate`. Список — `make help`. Проблемы — [`docs/runbooks/dev-stand.md`](docs/runbooks/dev-stand.md).
 
-Ключи моделей и токен Telegram-бота пока не нужны: они появятся в Фазах 1–2 (см. `.env.example`).
+### База знаний (Фаза 1)
+
+1. Впишите ключи моделей в `.env`: `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` (ADR-0004), затем `make up`.
+2. `make kb-demo` — загрузить демо-KB; `make kb-eval` — проверить поиск (гейт: top-3 ≥ 13/15).
+3. Свои документы: `make kb-ingest f=path/to/file.pdf lang=ru product=pos-integration`.
+
+Конвертацию файлов выполняет сервис `docling` (образ ~4.4 ГБ, первый `make up` дольше; ADR-0011).
 
 ## Разработка без Docker
 

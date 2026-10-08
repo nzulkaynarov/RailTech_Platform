@@ -1,6 +1,6 @@
 # RailTech CRM — техническое задание (SPEC)
 
-Версия 2.1 · 2026-10-08 (S3-хранилище: MinIO → RustFS, ADR-0009)
+Версия 2.2 · 2026-10-08 (RustFS — ADR-0009; модели — ADR-0004; docling-serve и MCP SDK — ADR-0011)
 
 Документ описывает, *как* устроена система: архитектура, ядро, данные, агенты, интерфейсы, безопасность, стенды, связи. Порядок реализации — в `PLAN.md`; зачем всё это — в `BUSINESS.md`; правила работы для Claude Code — в `CLAUDE.md`.
 
@@ -30,13 +30,13 @@
 | Web/API | FastAPI + Pydantic v2 + SQLAlchemy 2 (async) + Alembic | OpenAPI как контракт для фронта |
 | Telegram | aiogram 3 | Dev — long polling; prod — webhook с `secret_token` |
 | Оркестрация агентов | LangGraph | `PostgresSaver` для чекпоинтов |
-| Инструменты агентов | MCP-серверы на `FastMCP` (Python SDK), транспорт streamable HTTP; клиент — `langchain-mcp-adapters` | Три сервера: `kb-mcp`, `crm-mcp`, `docs-mcp` |
+| Инструменты агентов | MCP-серверы на официальном Python SDK `mcp` (`MCPServer`, бывший FastMCP), транспорт streamable HTTP (stateless, JSON); клиент — `mcp.Client` (ADR-0011) | Три сервера: `kb-mcp`, `crm-mcp`, `docs-mcp` |
 | Шлюз моделей | LiteLLM Proxy (self-hosted) | Алиасы: `dialog-model`, `qualifier-model`, `judge-model`, `embed-model`, `fallback-model` |
 | Модели | Внешние API. Рекомендация: диалог — Anthropic Sonnet-класс; квалификатор/judge — Anthropic Haiku-класс или Google Flash-класс; embeddings — Google Gemini Embedding (мультиязычный, узбекский) или Voyage multilingual | Конкретные идентификаторы фиксируются в `infra/litellm.config.yaml` на момент старта и в ADR-0004 |
 | БД | PostgreSQL 16 + pgvector | Одна база для домена, векторов, очереди, чекпоинтов |
 | Очередь и планировщик | Procrastinate | Задачи на Postgres: события квалификатора, таймеры SLA/снуз/unresponsive, ингест KB, ежедневные отчёты |
 | Файлы | RustFS (S3-совместимый, Apache-2.0; ADR-0009) | Документы клиентов, исходники KB, вложения из Telegram. Код работает только по протоколу S3 |
-| Ингест документов | docling | PDF/DOCX/PPTX/XLSX/MD/HTML → структурированный Markdown |
+| Ингест документов | docling: сервис `docling-serve` (CPU-образ) + `docling-core` HybridChunker в worker (ADR-0011) | PDF/DOCX/PPTX/XLSX/MD/HTML → DoclingDocument → чанки |
 | Frontend | React 18 + TypeScript + Vite + **Refine** + Ant Design | Refine даёт CRUD, dataProvider, authProvider, accessControlProvider |
 | Авторизация | JWT (access 15 мин + refresh 30 дней, httpOnly cookie), пароли argon2id | Провайдер заменяем на Keycloak (OIDC) без смены фронта — Refine authProvider |
 | RBAC | Casbin (`pycasbin`, модель RBAC с доменами на будущее) | Политики в БД, кэш в памяти, инвалидация по событию |
@@ -46,7 +46,7 @@
 | Инфра | Docker Compose (base + `dev` + `prod` overrides), Caddy (TLS/роутинг), GitHub Actions | |
 | Бэкапы | `pg_dump` ежедневно + зеркалирование S3-бакетов RustFS (инструмент выбирается в Фазе 8) → отдельный volume/бакет, ротация 14 дней | prod |
 
-Явно **не используем**: локальные модели (Ollama), Redis/RabbitMQ, отдельную векторную БД, готовые CRM как ядро (ADR-0002), Keycloak на старте (ADR-0005), ORM-магию в агентах (агенты ходят в данные только через MCP).
+Явно **не используем**: локальные модели (Ollama), Redis/RabbitMQ в приложении (Redis есть только внутри профиля Langfuse), отдельную векторную БД, готовые CRM как ядро (ADR-0002), Keycloak на старте (ADR-0005), ORM-магию в агентах (агенты ходят в данные только через MCP).
 
 ---
 
@@ -89,12 +89,13 @@
 | `postgres` | `pgvector/pgvector:pg16` | 5432 | Все данные |
 | `rustfs` (+ `s3-init` — создание бакетов) | `rustfs/rustfs` | 9000/9001 | Файлы (S3) |
 | `litellm` | `ghcr.io/berriai/litellm` | 4000 | Шлюз моделей, ключи провайдеров только здесь |
-| `langfuse` (+ зависимости по официальному compose) | `langfuse/langfuse` | 3000 | Трейсинг |
+| `langfuse` (+ ClickHouse, Redis — внутренние зависимости Langfuse по официальному compose) | `langfuse/langfuse` v4 | 3000 | Трейсинг; на prod — поддомен `langfuse.<домен>` с IP allow-list |
 | `api` | `./backend` | 8000 | FastAPI: бот, агент, REST, auth |
 | `worker` | `./backend` (entrypoint worker) | — | Procrastinate: квалификатор, таймеры, ингест |
+| `docling` | `docling-serve-cpu` | 5001 | Конвертация документов KB и клиентов (ADR-0011) |
 | `kb-mcp`, `crm-mcp`, `docs-mcp` | `./backend` (entrypoint mcp:<name>) | 8101/8102/8103 | Инструменты агентов |
 | `web` | `./frontend` → статика | — | Раздаётся Caddy |
-| `caddy` | `caddy:2` | 80/443 | TLS, роутинг `/api`, `/`, `/langfuse` (prod, по IP-allowlist) |
+| `caddy` | `caddy:2` | 80/443 | TLS, роутинг `/api`, `/`; поддомен Langfuse (prod, по IP-allowlist) |
 
 Наружу (prod) открыты только `caddy:443` (и 80 для ACME). MCP, Postgres, RustFS, LiteLLM — только во внутренней сети compose.
 
@@ -142,8 +143,8 @@ railtech-crm/
 │   │   ├── api/v1/           # роутеры REST: leads, clients, documents, kb, settings, users, dashboard, auth
 │   │   ├── bot/              # aiogram: handlers, middlewares (idempotency, consent, rate-limit)
 │   │   ├── agents/
-│   │   │   ├── dialog/       # graph.py, nodes.py, prompts/, tools.py (MCP client)
-│   │   │   └── qualifier/    # graph.py, schema.py, prompts/
+│   │   │   ├── dialog/       # graph.py, nodes.py, tools.py (MCP client)
+│   │   │   └── qualifier/    # graph.py, schema.py
 │   │   ├── domain/           # чистая логика: stage_machine.py, scoring.py, triggers.py, escalation.py, consent.py
 │   │   ├── services/         # use-cases над репозиториями: LeadService, ClientService, KbService, DocumentService, UserService, NotificationService
 │   │   ├── repositories/     # доступ к БД

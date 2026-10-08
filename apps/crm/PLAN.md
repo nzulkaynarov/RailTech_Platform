@@ -218,7 +218,7 @@
 
 **Задачи**
 1. `docker-compose.prod.yml`: собранные образы с тегами git sha, без volume-монтирования кода, restart policies, лимиты ресурсов, логи JSON с ротацией.
-2. `Caddyfile.prod`: TLS, HSTS, роутинг, IP allow-list для Langfuse и консоли RustFS; security headers.
+2. `Caddyfile.prod`: TLS, HSTS, роутинг, IP allow-list для поддомена Langfuse и консоли RustFS; security headers.
 3. Webhook Telegram с `secret_token`; `scripts/set_webhook.py`.
 4. `scripts/backup.sh` (pg_dump + зеркалирование S3-бакетов, ротация 14 дней, cron в контейнере `backup`), `scripts/restore.sh`; runbook проверки восстановления.
 5. `deploy-prod.yml`: по тегу `v*` — сборка образов → push в GHCR → ssh на VPS → `docker compose pull && up -d` → миграции → `scripts/smoke_prod.sh` → откат при провале.
