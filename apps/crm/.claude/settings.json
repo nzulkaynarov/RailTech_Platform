@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(make check)",
+      "Bash(make test)",
+      "Bash(make lint)",
+      "Bash(make typecheck)",
+      "Bash(make openapi)",
+      "Bash(make install)",
+      "Bash(make clean)",
+      "Bash(make help)",
+      "Bash(make migration *)",
+      "Bash(uv run *)",
+      "Bash(uv sync *)",
+      "Bash(uv add *)",
+      "Bash(uv lock *)",
+      "Bash(pnpm *)",
+      "Bash(git *)",
+      "Bash(gh pr *)"
+    ],
+    "deny": [
+      "Bash(git push*--force*main*)",
+      "Bash(git push*main*--force*)",
+      "Bash(git push*-f *main*)",
+      "Bash(git push*main*-f*)",
+      "Bash(git push*+main*)",
+      "Bash(git push*--force*HEAD:main*)",
+      "Bash(git reset --hard*origin/main*--force*)",
+      "Bash(rm -rf *)",
+      "Bash(rm -fr *)",
+      "Read(./.env)"
+    ]
+  }
+}
