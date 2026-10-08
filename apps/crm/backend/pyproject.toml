@@ -4,13 +4,20 @@ version = "0.1.0"
 description = "RailTech CRM backend: API, Telegram bot, agents, worker"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "aiobotocore>=3.9.2",
     "alembic>=1.20.0",
     "asgi-correlation-id>=5.0.1",
+    "docling-core[chunking-openai]>=2.101.0",
     "fastapi>=0.143.0",
     "httpx>=0.28.1",
+    "huggingface-hub>=2.1.1",
+    "mcp>=2.3.0",
+    "openai>=3.26.1",
+    "pgvector>=0.5.0",
     "procrastinate>=3.10.0",
     "psycopg[binary,pool]>=3.3.6",
     "pydantic-settings>=2.15.0",
+    "pyyaml>=6.0.3",
     "sqlalchemy[asyncio]>=2.1.4",
     "structlog>=26.1.0",
     "uvicorn[standard]>=0.54.0",
@@ -25,6 +32,7 @@ dev = [
     "pytest-cov>=7.1.0",
     "respx>=0.23.1",
     "ruff>=0.16.10",
+    "types-pyyaml>=6.0.12.20260906",
 ]
 
 [tool.pytest.ini_options]
@@ -53,10 +61,10 @@ extend-exclude = ["alembic/sql"]
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "B", "UP", "SIM", "S", "BLE", "C4", "PT", "RUF", "ASYNC", "T20", "N"]
-ignore = ["RUF001", "RUF002", "RUF003"]
+ignore = ["RUF001", "RUF002", "RUF003", "SIM905"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101", "S105", "S106"]
+"tests/**" = ["S101", "S105", "S106", "N817"]
 "alembic/versions/**" = ["S608"]
 
 [tool.ruff.lint.isort]
@@ -78,3 +86,12 @@ exclude = ["^alembic/sql/"]
 [[tool.mypy.overrides]]
 module = ["app.domain.*", "app.security.*", "app.schemas.*"]
 strict = true
+
+[[tool.mypy.overrides]]
+module = ["aiobotocore.*", "procrastinate.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# docling-core реэкспортирует типы из __init__ без __all__.
+module = ["docling_core.*"]
+implicit_reexport = true

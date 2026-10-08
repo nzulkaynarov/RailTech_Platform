@@ -31,7 +31,25 @@ class Settings(BaseSettings):
     postgres_password: SecretStr = SecretStr("")
 
     s3_endpoint: AnyHttpUrl = AnyHttpUrl("http://rustfs:9000")
+    s3_access_key: SecretStr = SecretStr("")
+    s3_secret_key: SecretStr = SecretStr("")
+    s3_region: str = "us-east-1"
+    s3_bucket_kb: str = "kb-sources"
+    s3_bucket_documents: str = "client-documents"
+    s3_bucket_attachments: str = "tg-attachments"
+
     litellm_base_url: AnyHttpUrl = AnyHttpUrl("http://litellm:4000")
+    litellm_api_key: SecretStr = SecretStr("")
+    llm_timeout_s: float = Field(default=20.0, gt=0)
+
+    docling_url: AnyHttpUrl = AnyHttpUrl("http://docling:5001")
+    docling_api_key: SecretStr = SecretStr("")
+    docling_timeout_s: float = Field(default=300.0, gt=0)
+
+    agent_context_key: SecretStr = SecretStr("")
+    kb_mcp_url: AnyHttpUrl = AnyHttpUrl("http://kb-mcp:8101/mcp")
+    crm_mcp_url: AnyHttpUrl = AnyHttpUrl("http://crm-mcp:8102/mcp")
+    docs_mcp_url: AnyHttpUrl = AnyHttpUrl("http://docs-mcp:8103/mcp")
 
     ready_check_timeout_s: float = Field(default=2.0, gt=0, le=10)
 
@@ -42,6 +60,10 @@ class Settings(BaseSettings):
             f"{scheme}://{user}:{password}@{self.postgres_host}:"
             f"{self.postgres_port}/{self.postgres_db}"
         )
+
+    @property
+    def agent_context_key_bytes(self) -> bytes:
+        return self.agent_context_key.get_secret_value().encode("utf-8")
 
     @property
     def sqlalchemy_url(self) -> str:

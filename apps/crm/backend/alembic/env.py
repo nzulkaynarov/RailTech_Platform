@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.config import get_settings
 from app.log import configure_logging
-from app.models.base import Base
+from app.models import Base
 
 settings = get_settings()
 configure_logging(settings)
