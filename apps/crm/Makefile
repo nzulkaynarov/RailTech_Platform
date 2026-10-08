@@ -98,6 +98,20 @@ ps: ## Статус контейнеров dev-стенда
 migrate: ## Применить миграции Alembic на dev-стенде
 	$(COMPOSE) run --rm migrate
 
+.PHONY: kb-demo
+kb-demo: ## Загрузить демо-базу знаний (нужны ключи моделей в .env)
+	$(COMPOSE) run --rm worker python -m app kb-demo
+
+.PHONY: kb-eval
+kb-eval: ## Проверить поиск на демо-KB: top-3 ≥ 13/15, uz ≥ 3/4 (гейт Фазы 1)
+	$(COMPOSE) run --rm worker python -m app kb-eval
+
+.PHONY: kb-ingest
+kb-ingest: ## Загрузить файл в KB: make kb-ingest f=path/to/file.pdf lang=ru product=pos-integration
+	@test -n "$(f)" || (echo 'Укажите файл: make kb-ingest f=...'; exit 1)
+	$(COMPOSE) run --rm -v "$(abspath $(f)):/import/$(notdir $(f)):ro" worker \
+		python -m app kb-ingest "/import/$(notdir $(f))" --language $(or $(lang),ru) $(if $(product),--product $(product)) --sync
+
 .PHONY: seed
 seed: ## Демо-данные (Фаза 2+)
 	@echo "scripts/seed_demo.py появится в Фазе 2 (PLAN.md)"; exit 1
