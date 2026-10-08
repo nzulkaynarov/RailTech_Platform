@@ -15,7 +15,8 @@ test("login → inbox → lead card → take → reply", async ({ page }) => {
   await page.getByRole("button", { name: "Войти" }).click();
 
   await expect(page.getByText("Эскалации").first()).toBeVisible();
-  await page.getByRole("link", { name: /Азиз/ }).first().click();
+  const item = page.locator(".ant-list-item", { hasText: "Интеграция 3 касс АТОЛ с 1С" }).first();
+  await item.getByRole("link", { name: /Азиз/ }).click();
   await expect(page.getByText("Почему система так решила")).toBeVisible();
   await expect(page.getByText("Ок, пусть позвонят, лучше после 15:00")).toBeVisible();
 

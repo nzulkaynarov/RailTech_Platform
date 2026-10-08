@@ -8,10 +8,7 @@ from app.tasks.queue import queue
 
 
 def build_ingest_service() -> KbIngestService:
-    c = get_container()
-    return KbIngestService(
-        c.session_factory, c.storage, c.docling, c.embedder, c.settings.s3_bucket_kb
-    )
+    return get_container().kb_ingest
 
 
 @queue.task(

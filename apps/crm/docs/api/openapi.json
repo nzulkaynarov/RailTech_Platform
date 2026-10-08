@@ -24,6 +24,176 @@
         "title": "ActionResult",
         "type": "object"
       },
+      "AuditItem": {
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "actor_type": {
+            "title": "Actor Type",
+            "type": "string"
+          },
+          "actor_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor User Id"
+          },
+          "after": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After"
+          },
+          "before": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "entity_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity Id"
+          },
+          "entity_type": {
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "ip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ip"
+          }
+        },
+        "required": [
+          "id",
+          "actor_user_id",
+          "actor_type",
+          "action",
+          "entity_type",
+          "entity_id",
+          "before",
+          "after",
+          "ip",
+          "created_at"
+        ],
+        "title": "AuditItem",
+        "type": "object"
+      },
+      "AuditPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AuditItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "AuditPage",
+        "type": "object"
+      },
+      "Body_upload_kb_document": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "gap_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gap Id"
+          },
+          "language": {
+            "enum": [
+              "ru",
+              "uz",
+              "en"
+            ],
+            "title": "Language",
+            "type": "string"
+          },
+          "product_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Key"
+          },
+          "title": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file",
+          "title",
+          "language"
+        ],
+        "title": "Body_upload_kb_document",
+        "type": "object"
+      },
       "ChangePasswordRequest": {
         "properties": {
           "current_password": {
@@ -62,6 +232,161 @@
           }
         },
         "title": "Close",
+        "type": "object"
+      },
+      "Created": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "Created",
+        "type": "object"
+      },
+      "DailyStat": {
+        "properties": {
+          "avg_take_minutes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Take Minutes"
+          },
+          "bot_answers": {
+            "title": "Bot Answers",
+            "type": "integer"
+          },
+          "cost_usd": {
+            "title": "Cost Usd",
+            "type": "number"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "escalations": {
+            "title": "Escalations",
+            "type": "integer"
+          },
+          "fallbacks": {
+            "title": "Fallbacks",
+            "type": "integer"
+          },
+          "leads_created": {
+            "title": "Leads Created",
+            "type": "integer"
+          },
+          "lost": {
+            "title": "Lost",
+            "type": "integer"
+          },
+          "taken": {
+            "title": "Taken",
+            "type": "integer"
+          },
+          "won": {
+            "title": "Won",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "day",
+          "leads_created",
+          "escalations",
+          "taken",
+          "won",
+          "lost",
+          "bot_answers",
+          "fallbacks",
+          "avg_take_minutes",
+          "cost_usd"
+        ],
+        "title": "DailyStat",
+        "type": "object"
+      },
+      "Dashboard": {
+        "properties": {
+          "daily": {
+            "items": {
+              "$ref": "#/components/schemas/DailyStat"
+            },
+            "title": "Daily",
+            "type": "array"
+          },
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "escalation_reasons": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Escalation Reasons",
+            "type": "object"
+          },
+          "fallback_share": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fallback Share"
+          },
+          "funnel": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Funnel",
+            "type": "object"
+          },
+          "open_escalations": {
+            "title": "Open Escalations",
+            "type": "integer"
+          },
+          "open_gaps": {
+            "title": "Open Gaps",
+            "type": "integer"
+          },
+          "refreshed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refreshed At"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/DailyStat"
+          }
+        },
+        "required": [
+          "days",
+          "funnel",
+          "totals",
+          "daily",
+          "escalation_reasons",
+          "fallback_share",
+          "open_gaps",
+          "open_escalations",
+          "refreshed_at"
+        ],
+        "title": "Dashboard",
         "type": "object"
       },
       "DecisionsResponse": {
@@ -105,6 +430,93 @@
           "items"
         ],
         "title": "DecisionsResponse",
+        "type": "object"
+      },
+      "DryRunResponse": {
+        "properties": {
+          "by_code_candidate": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "By Code Candidate",
+            "type": "object"
+          },
+          "by_code_current": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "By Code Current",
+            "type": "object"
+          },
+          "changed": {
+            "items": {
+              "$ref": "#/components/schemas/DryRunRowOut"
+            },
+            "title": "Changed",
+            "type": "array"
+          },
+          "dialogs": {
+            "title": "Dialogs",
+            "type": "integer"
+          },
+          "escalated_candidate": {
+            "title": "Escalated Candidate",
+            "type": "integer"
+          },
+          "escalated_current": {
+            "title": "Escalated Current",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "dialogs",
+          "escalated_current",
+          "escalated_candidate",
+          "by_code_current",
+          "by_code_candidate",
+          "changed"
+        ],
+        "title": "DryRunResponse",
+        "type": "object"
+      },
+      "DryRunRowOut": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "candidate": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Candidate",
+            "type": "array"
+          },
+          "current": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Current",
+            "type": "array"
+          },
+          "lead_id": {
+            "title": "Lead Id",
+            "type": "integer"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "run_id",
+          "lead_id",
+          "at",
+          "current",
+          "candidate"
+        ],
+        "title": "DryRunRowOut",
         "type": "object"
       },
       "EscalationOut": {
@@ -219,6 +631,65 @@
         "title": "EscalationOut",
         "type": "object"
       },
+      "EscalationSettings": {
+        "additionalProperties": false,
+        "properties": {
+          "disabled_triggers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Disabled Triggers",
+            "type": "array"
+          },
+          "high_score_threshold": {
+            "default": 70,
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "High Score Threshold",
+            "type": "integer"
+          },
+          "human_request_terms": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Human Request Terms",
+            "type": "array"
+          },
+          "kb_gap_streak": {
+            "default": 2,
+            "minimum": 1.0,
+            "title": "Kb Gap Streak",
+            "type": "integer"
+          },
+          "no_progress_turns": {
+            "default": 4,
+            "minimum": 1.0,
+            "title": "No Progress Turns",
+            "type": "integer"
+          },
+          "qualifier_min_confidence": {
+            "default": 0.7,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Qualifier Min Confidence",
+            "type": "number"
+          },
+          "reminder_minutes": {
+            "default": 60,
+            "minimum": 1.0,
+            "title": "Reminder Minutes",
+            "type": "integer"
+          },
+          "sla_minutes": {
+            "default": 15,
+            "minimum": 1.0,
+            "title": "Sla Minutes",
+            "type": "integer"
+          }
+        },
+        "title": "EscalationSettings",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -274,6 +745,290 @@
           "unassigned"
         ],
         "title": "InboxResponse",
+        "type": "object"
+      },
+      "KbChunkOut": {
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "heading_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heading Path"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "token_count": {
+            "title": "Token Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "position",
+          "heading_path",
+          "content",
+          "token_count"
+        ],
+        "title": "KbChunkOut",
+        "type": "object"
+      },
+      "KbDocumentOut": {
+        "properties": {
+          "chunk_count": {
+            "title": "Chunk Count",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "ingest_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingest Error"
+          },
+          "ingest_status": {
+            "title": "Ingest Status",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "language": {
+            "title": "Language",
+            "type": "string"
+          },
+          "mime": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mime"
+          },
+          "product_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Key"
+          },
+          "source_type": {
+            "title": "Source Type",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "product_key",
+          "language",
+          "source_type",
+          "mime",
+          "version",
+          "is_active",
+          "ingest_status",
+          "ingest_error",
+          "chunk_count",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "KbDocumentOut",
+        "type": "object"
+      },
+      "KbDocumentPatch": {
+        "properties": {
+          "clear_product": {
+            "default": false,
+            "title": "Clear Product",
+            "type": "boolean"
+          },
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active"
+          },
+          "product_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Key"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "KbDocumentPatch",
+        "type": "object"
+      },
+      "KbGapOut": {
+        "properties": {
+          "best_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Best Score"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "language": {
+            "title": "Language",
+            "type": "string"
+          },
+          "lead_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Id"
+          },
+          "occurrences": {
+            "title": "Occurrences",
+            "type": "integer"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "resolved_document_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved Document Id"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "lead_id",
+          "question",
+          "language",
+          "best_score",
+          "occurrences",
+          "status",
+          "resolved_document_id",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "KbGapOut",
+        "type": "object"
+      },
+      "KbGapPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/KbGapOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "KbGapPage",
         "type": "object"
       },
       "LeadDetail": {
@@ -566,6 +1321,60 @@
         "title": "LoginRequest",
         "type": "object"
       },
+      "ManualDocument": {
+        "properties": {
+          "gap_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gap Id"
+          },
+          "language": {
+            "enum": [
+              "ru",
+              "uz",
+              "en"
+            ],
+            "title": "Language",
+            "type": "string"
+          },
+          "markdown": {
+            "maxLength": 200000,
+            "minLength": 1,
+            "title": "Markdown",
+            "type": "string"
+          },
+          "product_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Key"
+          },
+          "title": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "markdown",
+          "language"
+        ],
+        "title": "ManualDocument",
+        "type": "object"
+      },
       "MePatch": {
         "properties": {
           "ui_mode": {
@@ -738,6 +1547,73 @@
           "permissions"
         ],
         "title": "PermissionsResponse",
+        "type": "object"
+      },
+      "ProductIn": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "is_active": {
+            "default": true,
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "ProductIn",
+        "type": "object"
+      },
+      "ProductOut": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "name",
+          "description",
+          "is_active"
+        ],
+        "title": "ProductOut",
         "type": "object"
       },
       "QualifierRunItem": {
@@ -952,6 +1828,19 @@
         "title": "Reply",
         "type": "object"
       },
+      "ResolveGap": {
+        "properties": {
+          "document_id": {
+            "title": "Document Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "document_id"
+        ],
+        "title": "ResolveGap",
+        "type": "object"
+      },
       "ReturnToBot": {
         "properties": {
           "note": {
@@ -968,6 +1857,181 @@
           }
         },
         "title": "ReturnToBot",
+        "type": "object"
+      },
+      "SearchHitOut": {
+        "properties": {
+          "chunk_id": {
+            "title": "Chunk Id",
+            "type": "integer"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "document_id": {
+            "title": "Document Id",
+            "type": "integer"
+          },
+          "document_title": {
+            "title": "Document Title",
+            "type": "string"
+          },
+          "heading_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heading Path"
+          },
+          "rrf_score": {
+            "title": "Rrf Score",
+            "type": "number"
+          },
+          "similarity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Similarity"
+          }
+        },
+        "required": [
+          "chunk_id",
+          "document_id",
+          "document_title",
+          "heading_path",
+          "content",
+          "similarity",
+          "rrf_score"
+        ],
+        "title": "SearchHitOut",
+        "type": "object"
+      },
+      "SearchRequest": {
+        "properties": {
+          "language": {
+            "anyOf": [
+              {
+                "enum": [
+                  "ru",
+                  "uz",
+                  "en"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "product_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Key"
+          },
+          "query": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          },
+          "top_k": {
+            "default": 6,
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "SearchRequest",
+        "type": "object"
+      },
+      "SearchResponse": {
+        "properties": {
+          "best_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Best Score"
+          },
+          "confident": {
+            "title": "Confident",
+            "type": "boolean"
+          },
+          "hits": {
+            "items": {
+              "$ref": "#/components/schemas/SearchHitOut"
+            },
+            "title": "Hits",
+            "type": "array"
+          },
+          "language": {
+            "title": "Language",
+            "type": "string"
+          },
+          "min_score": {
+            "title": "Min Score",
+            "type": "number"
+          }
+        },
+        "required": [
+          "hits",
+          "best_score",
+          "min_score",
+          "confident",
+          "language"
+        ],
+        "title": "SearchResponse",
+        "type": "object"
+      },
+      "SettingsResponse": {
+        "properties": {
+          "schemas": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Schemas",
+            "type": "object"
+          },
+          "values": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Values",
+            "type": "object"
+          }
+        },
+        "required": [
+          "values",
+          "schemas"
+        ],
+        "title": "SettingsResponse",
         "type": "object"
       },
       "Snooze": {
@@ -1303,6 +2367,168 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/audit": {
+      "get": {
+        "operationId": "list_audit",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "actor_user_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Actor User Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "action",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Action"
+            }
+          },
+          {
+            "in": "query",
+            "name": "entity_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "entity_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "created_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Created From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "created_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Created To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Audit",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/auth/change-password": {
       "post": {
         "operationId": "change_password",
@@ -1474,6 +2700,82 @@
         ]
       }
     },
+    "/api/v1/dashboard": {
+      "get": {
+        "operationId": "get_dashboard",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 180,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dashboard"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Dashboard",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/dashboard/refresh": {
+      "post": {
+        "operationId": "refresh_dashboard",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Refresh Dashboard",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/inbox": {
       "get": {
         "operationId": "inbox",
@@ -1497,6 +2799,737 @@
         "summary": "Inbox",
         "tags": [
           "leads"
+        ]
+      }
+    },
+    "/api/v1/kb/documents": {
+      "get": {
+        "operationId": "list_kb_documents",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "active",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Active"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/KbDocumentOut"
+                  },
+                  "title": "Response List Kb Documents",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Kb Documents",
+        "tags": [
+          "kb"
+        ]
+      },
+      "post": {
+        "operationId": "upload_kb_document",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_kb_document"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Upload Kb Document",
+        "tags": [
+          "kb"
+        ]
+      }
+    },
+    "/api/v1/kb/documents/manual": {
+      "post": {
+        "operationId": "create_manual_document",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualDocument"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Manual Document",
+        "tags": [
+          "kb"
+        ]
+      }
+    },
+    "/api/v1/kb/documents/{document_id}": {
+      "get": {
+        "operationId": "get_kb_document",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KbDocumentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Kb Document",
+        "tags": [
+          "kb"
+        ]
+      },
+      "patch": {
+        "operationId": "update_kb_document",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KbDocumentPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Kb Document",
+        "tags": [
+          "kb"
+        ]
+      }
+    },
+    "/api/v1/kb/documents/{document_id}/chunks": {
+      "get": {
+        "operationId": "list_kb_chunks",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/KbChunkOut"
+                  },
+                  "title": "Response List Kb Chunks",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Kb Chunks",
+        "tags": [
+          "kb"
+        ]
+      }
+    },
+    "/api/v1/kb/documents/{document_id}/reingest": {
+      "post": {
+        "operationId": "reingest_kb_document",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reingest Kb Document",
+        "tags": [
+          "kb"
+        ]
+      }
+    },
+    "/api/v1/kb/gaps": {
+      "get": {
+        "operationId": "list_kb_gaps",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": "open",
+              "enum": [
+                "open",
+                "resolved",
+                "ignored"
+              ],
+              "title": "Status",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "language",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "ru",
+                    "uz",
+                    "en"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Language"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KbGapPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Kb Gaps",
+        "tags": [
+          "kb"
+        ]
+      }
+    },
+    "/api/v1/kb/gaps/{gap_id}/ignore": {
+      "post": {
+        "operationId": "ignore_gap",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gap_id",
+            "required": true,
+            "schema": {
+              "title": "Gap Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Ignore Gap",
+        "tags": [
+          "kb"
+        ]
+      }
+    },
+    "/api/v1/kb/gaps/{gap_id}/reopen": {
+      "post": {
+        "operationId": "reopen_gap",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gap_id",
+            "required": true,
+            "schema": {
+              "title": "Gap Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reopen Gap",
+        "tags": [
+          "kb"
+        ]
+      }
+    },
+    "/api/v1/kb/gaps/{gap_id}/resolve": {
+      "post": {
+        "operationId": "resolve_gap",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gap_id",
+            "required": true,
+            "schema": {
+              "title": "Gap Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveGap"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Resolve Gap",
+        "tags": [
+          "kb"
+        ]
+      }
+    },
+    "/api/v1/kb/products": {
+      "get": {
+        "operationId": "list_products",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProductOut"
+                  },
+                  "title": "Response List Products",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Products",
+        "tags": [
+          "kb"
+        ]
+      }
+    },
+    "/api/v1/kb/products/{key}": {
+      "put": {
+        "operationId": "upsert_product",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9][a-z0-9-]{0,63}$",
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Upsert Product",
+        "tags": [
+          "kb"
+        ]
+      }
+    },
+    "/api/v1/kb/search": {
+      "post": {
+        "description": "«Что найдёт бот на этот вопрос»: тот же поиск и порог, что у диалогового агента.",
+        "operationId": "kb_test_search",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Kb Test Search",
+        "tags": [
+          "kb"
         ]
       }
     },
@@ -2408,6 +4441,138 @@
         "summary": "Permissions",
         "tags": [
           "me"
+        ]
+      }
+    },
+    "/api/v1/settings": {
+      "get": {
+        "operationId": "get_settings",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Settings",
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/api/v1/settings/escalation/dry-run": {
+      "post": {
+        "operationId": "escalation_dry_run",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EscalationSettings"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DryRunResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Escalation Dry Run",
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/api/v1/settings/{key}": {
+      "put": {
+        "operationId": "put_setting",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "maxLength": 32,
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Setting",
+        "tags": [
+          "settings"
         ]
       }
     },

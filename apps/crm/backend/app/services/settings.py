@@ -17,6 +17,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.models.leads import Setting
 from app.schemas.settings import SETTINGS_MODELS, AppSettings
+from app.security import audit
+from app.security.audit import Actor
 
 logger = structlog.get_logger(__name__)
 
@@ -52,12 +54,16 @@ class SettingsService:
         current = await self.get()
         return {key: getattr(current, key).model_dump(mode="json") for key in SETTINGS_MODELS}
 
-    async def update(self, key: str, value: dict[str, Any], user_id: int | None) -> BaseModel:
+    async def update(
+        self, key: str, value: dict[str, Any], user_id: int | None, actor: Actor | None = None
+    ) -> BaseModel:
+        """Сохранить ключ целиком (валидация схемой). С `actor` — запись в audit_log."""
         model = SETTINGS_MODELS.get(key)
         if model is None:
             raise UnknownSettingError(key)
         validated = model.model_validate(value)
         payload = validated.model_dump(mode="json")
+        before = (await self.raw()).get(key) if actor is not None else None
         async with self._sessions() as session, session.begin():
             stmt = insert(Setting).values(key=key, value=payload, updated_by=user_id)
             await session.execute(
@@ -70,6 +76,10 @@ class SettingsService:
                     },
                 )
             )
+            if actor is not None:
+                await audit.record(
+                    session, actor, "settings.update", "settings", key, before=before, after=payload
+                )
         self.invalidate()
         return validated
 

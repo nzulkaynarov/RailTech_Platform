@@ -133,15 +133,17 @@ class DialogNodes:
         tools = TOOLS if state["mode"] == "prospect" else TOOLS[:1]
         first = await self._model.complete(messages, tools=tools, name="dialog.answer")
         callback = False
+        cost = first.cost_usd or 0.0
         if first.tool_calls:
             callback = await self._run_tools(state, first)
             followup = [*messages, *_tool_messages(first)]
             final = await self._model.complete(followup, name="dialog.answer.final")
+            cost += final.cost_usd or 0.0
         else:
             final = first
         return {
             "reply": final.text or None,
-            "llm": _llm_meta(final),
+            "llm": {**_llm_meta(final), "cost_usd": cost or None},
             "callback_requested": callback,
         }
 

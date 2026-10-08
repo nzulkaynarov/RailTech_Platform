@@ -14,10 +14,15 @@ import { keys } from "../../api/queries";
 const RESOURCE_MAP: Record<string, [string, string]> = {
   inbox: ["leads", "read"],
   leads: ["leads", "read"],
+  dashboard: ["dashboard", "read"],
+  kb: ["kb", "read"],
+  gaps: ["kb", "read"],
+  settings: ["settings", "read"],
+  audit: ["audit", "read"],
   users: ["users", "read"],
   profile: ["self", "read"],
 };
-const ADMIN_SECTIONS = new Set(["users"]);
+const ADMIN_SECTIONS = new Set(["kb", "gaps", "settings", "audit", "users"]);
 
 export function accessControlProvider(client: QueryClient): AccessControlProvider {
   return {

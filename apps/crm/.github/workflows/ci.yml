@@ -157,7 +157,7 @@ jobs:
         run: uv run pytest -m integration -v
 
   e2e:
-    name: E2E (Playwright, handoff)
+    name: E2E (Playwright)
     needs: [lint, unit]
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -184,6 +184,8 @@ jobs:
       TELEGRAM_DRY_RUN: "true"
       E2E_MANAGER_EMAIL: manager@demo.local
       E2E_MANAGER_PASSWORD: ci-e2e-demo-42
+      E2E_ADMIN_EMAIL: admin@demo.local
+      E2E_ADMIN_PASSWORD: ci-e2e-boss-42
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
@@ -208,6 +210,7 @@ jobs:
           export JWT_SECRET="$(openssl rand -hex 32)"
           uv run alembic upgrade head
           uv run python -m app seed-demo --manager-password "$E2E_MANAGER_PASSWORD"
+          uv run python -m app create-admin --email "$E2E_ADMIN_EMAIL" --password "$E2E_ADMIN_PASSWORD"
           nohup uv run python -m app api --port 8000 > ../api.log 2>&1 &
           for i in $(seq 1 30); do curl -fsS http://localhost:8000/health && break; sleep 1; done
       - name: Frontend — сборка и preview

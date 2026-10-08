@@ -1,5 +1,10 @@
 import {
+  AuditOutlined,
+  BookOutlined,
+  DashboardOutlined,
   InboxOutlined,
+  QuestionCircleOutlined,
+  SettingOutlined,
   TeamOutlined,
   UnorderedListOutlined,
   UserOutlined,
@@ -18,7 +23,12 @@ import ruRU from "antd/locale/ru_RU";
 import "dayjs/locale/ru";
 import { BrowserRouter, Outlet, Route, Routes } from "react-router";
 
+import { AuditPage } from "../pages/audit/AuditPage";
+import { DashboardPage } from "../pages/dashboard/DashboardPage";
+import { GapsPage } from "../pages/gaps/GapsPage";
 import { InboxPage } from "../pages/inbox/InboxPage";
+import { KbPage } from "../pages/kb/KbPage";
+import { SettingsPage } from "../pages/settings/SettingsPage";
 import { LeadDetailPage } from "../pages/lead-detail/LeadDetailPage";
 import { LeadsPage } from "../pages/leads/LeadsPage";
 import { ChangePasswordPage } from "../pages/login/ChangePasswordPage";
@@ -44,6 +54,19 @@ const resources = [
     show: "/leads/:id",
     meta: { label: t.nav.leads, icon: <UnorderedListOutlined /> },
   },
+  {
+    name: "dashboard",
+    list: "/dashboard",
+    meta: { label: t.nav.dashboard, icon: <DashboardOutlined /> },
+  },
+  { name: "kb", list: "/kb", meta: { label: t.nav.kb, icon: <BookOutlined /> } },
+  { name: "gaps", list: "/gaps", meta: { label: t.nav.gaps, icon: <QuestionCircleOutlined /> } },
+  {
+    name: "settings",
+    list: "/settings",
+    meta: { label: t.nav.settings, icon: <SettingOutlined /> },
+  },
+  { name: "audit", list: "/audit", meta: { label: t.nav.audit, icon: <AuditOutlined /> } },
   { name: "users", list: "/users", meta: { label: t.nav.users, icon: <TeamOutlined /> } },
   { name: "profile", list: "/profile", meta: { label: t.nav.profile, icon: <UserOutlined /> } },
 ];
@@ -86,6 +109,11 @@ export function App() {
                 <Route path="/inbox" element={<InboxPage />} />
                 <Route path="/leads" element={<LeadsPage />} />
                 <Route path="/leads/:id" element={<LeadDetailPage />} />
+                <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/kb" element={<KbPage />} />
+                <Route path="/gaps" element={<GapsPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/audit" element={<AuditPage />} />
                 <Route path="/users" element={<UsersPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="*" element={<ErrorComponent />} />

@@ -21,6 +21,9 @@ from app.services.settings import SettingsService
 
 if TYPE_CHECKING:
     from app.services.auth import AuthService
+    from app.services.kb.admin import KbAdminService
+    from app.services.kb.ingest import KbIngestService
+    from app.services.kb.search import KbSearchService
     from app.services.lead_messenger import LeadMessenger
     from app.services.leads import LeadService
     from app.services.users import UserService
@@ -90,6 +93,30 @@ class Container:
         )
 
     @cached_property
+    def kb_ingest(self) -> "KbIngestService":
+        from app.services.kb.ingest import KbIngestService
+
+        return KbIngestService(
+            self.session_factory,
+            self.storage,
+            self.docling,
+            self.embedder,
+            self.settings.s3_bucket_kb,
+        )
+
+    @cached_property
+    def kb_search(self) -> "KbSearchService":
+        from app.services.kb.search import KbSearchService
+
+        return KbSearchService(self.session_factory, self.embedder)
+
+    @cached_property
+    def kb_admin(self) -> "KbAdminService":
+        from app.services.kb.admin import KbAdminService
+
+        return KbAdminService(self.session_factory, self.kb_ingest, _enqueue_ingest)
+
+    @cached_property
     def telegram_bot(self) -> Bot | None:
         """Клиент Bot API для исходящих сообщений (воркер); None без токена."""
         token = self.settings.telegram_bot_token.get_secret_value()
@@ -100,6 +127,12 @@ class Container:
             await self.telegram_bot.session.close()
         if "engine" in self.__dict__:
             await self.engine.dispose()
+
+
+async def _enqueue_ingest(document_id: int) -> object:
+    from app.tasks.ingest import enqueue_ingest
+
+    return await enqueue_ingest(document_id, force=True)
 
 
 async def _escalation_changed(escalation_id: int) -> None:

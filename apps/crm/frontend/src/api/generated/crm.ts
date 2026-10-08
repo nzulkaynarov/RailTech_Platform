@@ -6,27 +6,49 @@
  */
 import type {
   ActionResult,
+  AuditPage,
+  BodyUploadKbDocument,
   ChangePasswordRequest,
   Close,
+  Created,
+  Dashboard,
   DecisionsResponse,
+  DryRunResponse,
+  EscalationSettings,
+  GetDashboardParams,
   HTTPValidationError,
   HealthResponse,
   InboxResponse,
+  KbChunkOut,
+  KbDocumentOut,
+  KbDocumentPatch,
+  KbGapPage,
   LeadDecisionsParams,
   LeadDetail,
   LeadMessagesParams,
   LeadPage,
+  ListAuditParams,
+  ListKbDocumentsParams,
+  ListKbGapsParams,
   ListLeadsParams,
   LoginRequest,
+  ManualDocument,
   MePatch,
   MessageOut,
   NoteCreate,
   NoteOut,
   PasswordReset,
   PermissionsResponse,
+  ProductIn,
+  ProductOut,
+  PutSettingBody,
   ReadyResponse,
   Reply,
+  ResolveGap,
   ReturnToBot,
+  SearchRequest,
+  SearchResponse,
+  SettingsResponse,
   Snooze,
   TokenResponse,
   UserCreate,
@@ -36,6 +58,52 @@ import type {
 } from "./model";
 
 import { http } from "../http";
+
+export type listAuditResponse200 = {
+  data: AuditPage;
+  status: 200;
+};
+
+export type listAuditResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type listAuditResponseSuccess = listAuditResponse200 & {
+  headers: Headers;
+};
+export type listAuditResponseError = listAuditResponse422 & {
+  headers: Headers;
+};
+
+export type listAuditResponse = listAuditResponseSuccess | listAuditResponseError;
+
+export const getListAuditUrl = (params?: ListAuditParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/audit?${stringifiedParams}` : `/api/v1/audit`;
+};
+
+/**
+ * @summary List Audit
+ */
+export const listAudit = async (
+  params?: ListAuditParams,
+  options?: Parameters<typeof http>[1],
+): Promise<listAuditResponse> => {
+  return http<listAuditResponse>(getListAuditUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
 
 export type changePasswordResponse204 = {
   data: void;
@@ -217,6 +285,80 @@ export const refresh = async (options?: Parameters<typeof http>[1]): Promise<ref
   });
 };
 
+export type getDashboardResponse200 = {
+  data: Dashboard;
+  status: 200;
+};
+
+export type getDashboardResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type getDashboardResponseSuccess = getDashboardResponse200 & {
+  headers: Headers;
+};
+export type getDashboardResponseError = getDashboardResponse422 & {
+  headers: Headers;
+};
+
+export type getDashboardResponse = getDashboardResponseSuccess | getDashboardResponseError;
+
+export const getGetDashboardUrl = (params?: GetDashboardParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/dashboard?${stringifiedParams}`
+    : `/api/v1/dashboard`;
+};
+
+/**
+ * @summary Get Dashboard
+ */
+export const getDashboard = async (
+  params?: GetDashboardParams,
+  options?: Parameters<typeof http>[1],
+): Promise<getDashboardResponse> => {
+  return http<getDashboardResponse>(getGetDashboardUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type refreshDashboardResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type refreshDashboardResponseSuccess = refreshDashboardResponse200 & {
+  headers: Headers;
+};
+export type refreshDashboardResponse = refreshDashboardResponseSuccess;
+
+export const getRefreshDashboardUrl = () => {
+  return `/api/v1/dashboard/refresh`;
+};
+
+/**
+ * @summary Refresh Dashboard
+ */
+export const refreshDashboard = async (
+  options?: Parameters<typeof http>[1],
+): Promise<refreshDashboardResponse> => {
+  return http<refreshDashboardResponse>(getRefreshDashboardUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
 export type inboxResponse200 = {
   data: InboxResponse;
   status: 200;
@@ -238,6 +380,647 @@ export const inbox = async (options?: Parameters<typeof http>[1]): Promise<inbox
   return http<inboxResponse>(getInboxUrl(), {
     ...options,
     method: "GET",
+  });
+};
+
+export type listKbDocumentsResponse200 = {
+  data: KbDocumentOut[];
+  status: 200;
+};
+
+export type listKbDocumentsResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type listKbDocumentsResponseSuccess = listKbDocumentsResponse200 & {
+  headers: Headers;
+};
+export type listKbDocumentsResponseError = listKbDocumentsResponse422 & {
+  headers: Headers;
+};
+
+export type listKbDocumentsResponse = listKbDocumentsResponseSuccess | listKbDocumentsResponseError;
+
+export const getListKbDocumentsUrl = (params?: ListKbDocumentsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/kb/documents?${stringifiedParams}`
+    : `/api/v1/kb/documents`;
+};
+
+/**
+ * @summary List Kb Documents
+ */
+export const listKbDocuments = async (
+  params?: ListKbDocumentsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<listKbDocumentsResponse> => {
+  return http<listKbDocumentsResponse>(getListKbDocumentsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type uploadKbDocumentResponse201 = {
+  data: Created;
+  status: 201;
+};
+
+export type uploadKbDocumentResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type uploadKbDocumentResponseSuccess = uploadKbDocumentResponse201 & {
+  headers: Headers;
+};
+export type uploadKbDocumentResponseError = uploadKbDocumentResponse422 & {
+  headers: Headers;
+};
+
+export type uploadKbDocumentResponse =
+  uploadKbDocumentResponseSuccess | uploadKbDocumentResponseError;
+
+export const getUploadKbDocumentUrl = () => {
+  return `/api/v1/kb/documents`;
+};
+
+/**
+ * @summary Upload Kb Document
+ */
+export const uploadKbDocument = async (
+  bodyUploadKbDocument: BodyUploadKbDocument,
+  options?: Parameters<typeof http>[1],
+): Promise<uploadKbDocumentResponse> => {
+  const formData = new FormData();
+  formData.append(`file`, bodyUploadKbDocument.file);
+  if (bodyUploadKbDocument.gap_id !== undefined && bodyUploadKbDocument.gap_id !== null) {
+    formData.append(`gap_id`, bodyUploadKbDocument.gap_id.toString());
+  }
+  formData.append(`language`, bodyUploadKbDocument.language);
+  if (bodyUploadKbDocument.product_key !== undefined && bodyUploadKbDocument.product_key !== null) {
+    formData.append(`product_key`, bodyUploadKbDocument.product_key);
+  }
+  formData.append(`title`, bodyUploadKbDocument.title);
+
+  return http<uploadKbDocumentResponse>(getUploadKbDocumentUrl(), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export type createManualDocumentResponse201 = {
+  data: Created;
+  status: 201;
+};
+
+export type createManualDocumentResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type createManualDocumentResponseSuccess = createManualDocumentResponse201 & {
+  headers: Headers;
+};
+export type createManualDocumentResponseError = createManualDocumentResponse422 & {
+  headers: Headers;
+};
+
+export type createManualDocumentResponse =
+  createManualDocumentResponseSuccess | createManualDocumentResponseError;
+
+export const getCreateManualDocumentUrl = () => {
+  return `/api/v1/kb/documents/manual`;
+};
+
+/**
+ * @summary Create Manual Document
+ */
+export const createManualDocument = async (
+  manualDocument: ManualDocument,
+  options?: Parameters<typeof http>[1],
+): Promise<createManualDocumentResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<createManualDocumentResponse>(getCreateManualDocumentUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(manualDocument),
+  });
+};
+
+export type getKbDocumentResponse200 = {
+  data: KbDocumentOut;
+  status: 200;
+};
+
+export type getKbDocumentResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type getKbDocumentResponseSuccess = getKbDocumentResponse200 & {
+  headers: Headers;
+};
+export type getKbDocumentResponseError = getKbDocumentResponse422 & {
+  headers: Headers;
+};
+
+export type getKbDocumentResponse = getKbDocumentResponseSuccess | getKbDocumentResponseError;
+
+export const getGetKbDocumentUrl = (documentId: number) => {
+  return `/api/v1/kb/documents/${documentId}`;
+};
+
+/**
+ * @summary Get Kb Document
+ */
+export const getKbDocument = async (
+  documentId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<getKbDocumentResponse> => {
+  return http<getKbDocumentResponse>(getGetKbDocumentUrl(documentId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type updateKbDocumentResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type updateKbDocumentResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type updateKbDocumentResponseSuccess = updateKbDocumentResponse200 & {
+  headers: Headers;
+};
+export type updateKbDocumentResponseError = updateKbDocumentResponse422 & {
+  headers: Headers;
+};
+
+export type updateKbDocumentResponse =
+  updateKbDocumentResponseSuccess | updateKbDocumentResponseError;
+
+export const getUpdateKbDocumentUrl = (documentId: number) => {
+  return `/api/v1/kb/documents/${documentId}`;
+};
+
+/**
+ * @summary Update Kb Document
+ */
+export const updateKbDocument = async (
+  documentId: number,
+  kbDocumentPatch: KbDocumentPatch,
+  options?: Parameters<typeof http>[1],
+): Promise<updateKbDocumentResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<updateKbDocumentResponse>(getUpdateKbDocumentUrl(documentId), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(kbDocumentPatch),
+  });
+};
+
+export type listKbChunksResponse200 = {
+  data: KbChunkOut[];
+  status: 200;
+};
+
+export type listKbChunksResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type listKbChunksResponseSuccess = listKbChunksResponse200 & {
+  headers: Headers;
+};
+export type listKbChunksResponseError = listKbChunksResponse422 & {
+  headers: Headers;
+};
+
+export type listKbChunksResponse = listKbChunksResponseSuccess | listKbChunksResponseError;
+
+export const getListKbChunksUrl = (documentId: number) => {
+  return `/api/v1/kb/documents/${documentId}/chunks`;
+};
+
+/**
+ * @summary List Kb Chunks
+ */
+export const listKbChunks = async (
+  documentId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<listKbChunksResponse> => {
+  return http<listKbChunksResponse>(getListKbChunksUrl(documentId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type reingestKbDocumentResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type reingestKbDocumentResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type reingestKbDocumentResponseSuccess = reingestKbDocumentResponse200 & {
+  headers: Headers;
+};
+export type reingestKbDocumentResponseError = reingestKbDocumentResponse422 & {
+  headers: Headers;
+};
+
+export type reingestKbDocumentResponse =
+  reingestKbDocumentResponseSuccess | reingestKbDocumentResponseError;
+
+export const getReingestKbDocumentUrl = (documentId: number) => {
+  return `/api/v1/kb/documents/${documentId}/reingest`;
+};
+
+/**
+ * @summary Reingest Kb Document
+ */
+export const reingestKbDocument = async (
+  documentId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<reingestKbDocumentResponse> => {
+  return http<reingestKbDocumentResponse>(getReingestKbDocumentUrl(documentId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export type listKbGapsResponse200 = {
+  data: KbGapPage;
+  status: 200;
+};
+
+export type listKbGapsResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type listKbGapsResponseSuccess = listKbGapsResponse200 & {
+  headers: Headers;
+};
+export type listKbGapsResponseError = listKbGapsResponse422 & {
+  headers: Headers;
+};
+
+export type listKbGapsResponse = listKbGapsResponseSuccess | listKbGapsResponseError;
+
+export const getListKbGapsUrl = (params?: ListKbGapsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/kb/gaps?${stringifiedParams}` : `/api/v1/kb/gaps`;
+};
+
+/**
+ * @summary List Kb Gaps
+ */
+export const listKbGaps = async (
+  params?: ListKbGapsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<listKbGapsResponse> => {
+  return http<listKbGapsResponse>(getListKbGapsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type ignoreGapResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type ignoreGapResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type ignoreGapResponseSuccess = ignoreGapResponse200 & {
+  headers: Headers;
+};
+export type ignoreGapResponseError = ignoreGapResponse422 & {
+  headers: Headers;
+};
+
+export type ignoreGapResponse = ignoreGapResponseSuccess | ignoreGapResponseError;
+
+export const getIgnoreGapUrl = (gapId: number) => {
+  return `/api/v1/kb/gaps/${gapId}/ignore`;
+};
+
+/**
+ * @summary Ignore Gap
+ */
+export const ignoreGap = async (
+  gapId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<ignoreGapResponse> => {
+  return http<ignoreGapResponse>(getIgnoreGapUrl(gapId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export type reopenGapResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type reopenGapResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type reopenGapResponseSuccess = reopenGapResponse200 & {
+  headers: Headers;
+};
+export type reopenGapResponseError = reopenGapResponse422 & {
+  headers: Headers;
+};
+
+export type reopenGapResponse = reopenGapResponseSuccess | reopenGapResponseError;
+
+export const getReopenGapUrl = (gapId: number) => {
+  return `/api/v1/kb/gaps/${gapId}/reopen`;
+};
+
+/**
+ * @summary Reopen Gap
+ */
+export const reopenGap = async (
+  gapId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<reopenGapResponse> => {
+  return http<reopenGapResponse>(getReopenGapUrl(gapId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export type resolveGapResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type resolveGapResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type resolveGapResponseSuccess = resolveGapResponse200 & {
+  headers: Headers;
+};
+export type resolveGapResponseError = resolveGapResponse422 & {
+  headers: Headers;
+};
+
+export type resolveGapResponse = resolveGapResponseSuccess | resolveGapResponseError;
+
+export const getResolveGapUrl = (gapId: number) => {
+  return `/api/v1/kb/gaps/${gapId}/resolve`;
+};
+
+/**
+ * @summary Resolve Gap
+ */
+export const resolveGap = async (
+  gapId: number,
+  resolveGapBody: ResolveGap,
+  options?: Parameters<typeof http>[1],
+): Promise<resolveGapResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<resolveGapResponse>(getResolveGapUrl(gapId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(resolveGapBody),
+  });
+};
+
+export type listProductsResponse200 = {
+  data: ProductOut[];
+  status: 200;
+};
+
+export type listProductsResponseSuccess = listProductsResponse200 & {
+  headers: Headers;
+};
+export type listProductsResponse = listProductsResponseSuccess;
+
+export const getListProductsUrl = () => {
+  return `/api/v1/kb/products`;
+};
+
+/**
+ * @summary List Products
+ */
+export const listProducts = async (
+  options?: Parameters<typeof http>[1],
+): Promise<listProductsResponse> => {
+  return http<listProductsResponse>(getListProductsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type upsertProductResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type upsertProductResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type upsertProductResponseSuccess = upsertProductResponse200 & {
+  headers: Headers;
+};
+export type upsertProductResponseError = upsertProductResponse422 & {
+  headers: Headers;
+};
+
+export type upsertProductResponse = upsertProductResponseSuccess | upsertProductResponseError;
+
+export const getUpsertProductUrl = (key: string) => {
+  return `/api/v1/kb/products/${key}`;
+};
+
+/**
+ * @summary Upsert Product
+ */
+export const upsertProduct = async (
+  key: string,
+  productIn: ProductIn,
+  options?: Parameters<typeof http>[1],
+): Promise<upsertProductResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<upsertProductResponse>(getUpsertProductUrl(key), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(productIn),
+  });
+};
+
+export type kbTestSearchResponse200 = {
+  data: SearchResponse;
+  status: 200;
+};
+
+export type kbTestSearchResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type kbTestSearchResponseSuccess = kbTestSearchResponse200 & {
+  headers: Headers;
+};
+export type kbTestSearchResponseError = kbTestSearchResponse422 & {
+  headers: Headers;
+};
+
+export type kbTestSearchResponse = kbTestSearchResponseSuccess | kbTestSearchResponseError;
+
+export const getKbTestSearchUrl = () => {
+  return `/api/v1/kb/search`;
+};
+
+/**
+ * «Что найдёт бот на этот вопрос»: тот же поиск и порог, что у диалогового агента.
+ * @summary Kb Test Search
+ */
+export const kbTestSearch = async (
+  searchRequest: SearchRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<kbTestSearchResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<kbTestSearchResponse>(getKbTestSearchUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(searchRequest),
   });
 };
 
@@ -946,6 +1729,148 @@ export const permissions = async (
   return http<permissionsResponse>(getPermissionsUrl(), {
     ...options,
     method: "GET",
+  });
+};
+
+export type getSettingsResponse200 = {
+  data: SettingsResponse;
+  status: 200;
+};
+
+export type getSettingsResponseSuccess = getSettingsResponse200 & {
+  headers: Headers;
+};
+export type getSettingsResponse = getSettingsResponseSuccess;
+
+export const getGetSettingsUrl = () => {
+  return `/api/v1/settings`;
+};
+
+/**
+ * @summary Get Settings
+ */
+export const getSettings = async (
+  options?: Parameters<typeof http>[1],
+): Promise<getSettingsResponse> => {
+  return http<getSettingsResponse>(getGetSettingsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type escalationDryRunResponse200 = {
+  data: DryRunResponse;
+  status: 200;
+};
+
+export type escalationDryRunResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type escalationDryRunResponseSuccess = escalationDryRunResponse200 & {
+  headers: Headers;
+};
+export type escalationDryRunResponseError = escalationDryRunResponse422 & {
+  headers: Headers;
+};
+
+export type escalationDryRunResponse =
+  escalationDryRunResponseSuccess | escalationDryRunResponseError;
+
+export const getEscalationDryRunUrl = () => {
+  return `/api/v1/settings/escalation/dry-run`;
+};
+
+/**
+ * @summary Escalation Dry Run
+ */
+export const escalationDryRun = async (
+  escalationSettings: EscalationSettings,
+  options?: Parameters<typeof http>[1],
+): Promise<escalationDryRunResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<escalationDryRunResponse>(getEscalationDryRunUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(escalationSettings),
+  });
+};
+
+export type putSettingResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type putSettingResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type putSettingResponseSuccess = putSettingResponse200 & {
+  headers: Headers;
+};
+export type putSettingResponseError = putSettingResponse422 & {
+  headers: Headers;
+};
+
+export type putSettingResponse = putSettingResponseSuccess | putSettingResponseError;
+
+export const getPutSettingUrl = (key: string) => {
+  return `/api/v1/settings/${key}`;
+};
+
+/**
+ * @summary Put Setting
+ */
+export const putSetting = async (
+  key: string,
+  putSettingBody: PutSettingBody,
+  options?: Parameters<typeof http>[1],
+): Promise<putSettingResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<putSettingResponse>(getPutSettingUrl(key), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(putSettingBody),
   });
 };
 

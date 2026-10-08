@@ -13,6 +13,7 @@ TASK_MODULES = (
     "app.tasks.qualify",
     "app.tasks.timers",
     "app.tasks.notify",
+    "app.tasks.reports",
 )
 
 queue = procrastinate.App(
