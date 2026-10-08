@@ -7,7 +7,7 @@ from evals.golden import load_cases
 
 def test_golden_cases_are_valid_and_unique() -> None:
     cases = load_cases()
-    assert len(cases) >= 15
+    assert len(cases) >= 40
     counts = Counter(c.id for c in cases)
     assert [i for i, n in counts.items() if n > 1] == []
 

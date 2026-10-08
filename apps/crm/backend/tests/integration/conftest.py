@@ -40,6 +40,8 @@ TABLES = (
     "documents",
     "document_access_log",
     "service_requests",
+    "system_alerts",
+    "procrastinate_jobs",
 )
 FAKE_KEY = "x" * 40  # фиктивный ключ только для тестов
 

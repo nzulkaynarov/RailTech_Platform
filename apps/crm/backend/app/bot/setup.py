@@ -14,6 +14,7 @@ from app.agents.mcp_client import McpToolClient
 from app.bot.runtime import BotRuntime, build_dispatcher
 from app.container import Container
 from app.security.rbac import Rbac
+from app.services.budget import BudgetedModel, BudgetGuard
 from app.services.conversation import ActivityHook, ConversationService, EscalationHook
 
 logger = structlog.get_logger(__name__)
@@ -50,7 +51,12 @@ async def bot_lifespan(
         yield None
         return
     async with checkpointer(container) as saver:
-        agent = DialogAgent(McpToolClient(config), ChatModel(container.llm, "dialog-model"), saver)
+        model = BudgetedModel(
+            ChatModel(container.llm, "dialog-model"),
+            ChatModel(container.llm, "fallback-model"),
+            BudgetGuard(container.session_factory, container.settings_service),
+        )
+        agent = DialogAgent(McpToolClient(config), model, saver)
         conversation = ConversationService(
             container.session_factory,
             container.settings_service,

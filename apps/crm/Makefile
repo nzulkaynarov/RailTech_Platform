@@ -36,7 +36,7 @@ lint: ## ruff + eslint + prettier --check
 
 .PHONY: typecheck
 typecheck: ## mypy + tsc
-	cd $(BACKEND) && uv run mypy app tests evals alembic
+	cd $(BACKEND) && uv run mypy app tests evals promptfoo alembic
 	cd $(FRONTEND) && pnpm typecheck
 
 .PHONY: test
@@ -60,8 +60,12 @@ eval: ## Evals агента на golden (dev-стенд: ключи моделе
 	$(COMPOSE) run --rm worker pytest -m eval evals -p no:cacheprovider -s
 
 .PHONY: promptfoo
-promptfoo: ## Матрица промпт × модель (Фаза 7)
-	@echo "promptfoo появится в Фазе 7 (PLAN.md)"; exit 1
+PROMPTFOO_VERSION := 0.124.1
+promptfoo: ## Матрица промпт × модель через LiteLLM dev-стенда (LITELLM_API_KEY = LITELLM_MASTER_KEY)
+	@test -n "$$LITELLM_API_KEY" || { echo "Задайте LITELLM_API_KEY (значение LITELLM_MASTER_KEY из .env)"; exit 1; }
+	cd $(BACKEND) && PYTHONPATH=. PROMPTFOO_PYTHON="$$(uv run python -c 'import sys; print(sys.executable)')" \
+		PROMPTFOO_LITELLM_URL="$${PROMPTFOO_LITELLM_URL:-http://localhost:4000/v1}" \
+		npx -y promptfoo@$(PROMPTFOO_VERSION) eval -c promptfoo/promptfooconfig.yaml --no-cache
 
 .PHONY: openapi
 openapi: ## Экспорт OpenAPI → docs/api/openapi.json и генерация клиента orval (frontend/src/api/generated)

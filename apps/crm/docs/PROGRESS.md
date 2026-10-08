@@ -7,7 +7,7 @@
 > после запуска на локальной машине, затем работа над ошибками. Гейты ниже остаются
 > чек-листом этой приёмки.
 
-Текущая фаза: **7 — Evals, наблюдаемость, CI-гейты** (Фазы 0–6 реализованы, ожидают приёмки).
+Текущая фаза: **8 — Hardening и подготовка prod** (Фазы 0–7 реализованы, ожидают приёмки).
 
 | Фаза | Название | Статус | Гейт (человек) | Даты |
 |---|---|---|---|---|
@@ -18,7 +18,7 @@
 | 4 | CRM-ядро: пользователи, роли, лиды, handoff | 🟡 ожидает приёмки | ☐ | 2026-10-08 |
 | 5 | Администрирование | 🟡 ожидает приёмки | ☐ | 2026-10-08 |
 | 6 | Клиентский режим и документы | 🟡 ожидает приёмки | ☐ | 2026-10-08 |
-| 7 | Evals, наблюдаемость, CI-гейты | ⚪ | ☐ | |
+| 7 | Evals, наблюдаемость, CI-гейты | 🟡 ожидает приёмки | ☐ | 2026-10-08 |
 | 8 | Hardening и подготовка prod | ⚪ | ☐ | |
 | 9 | Переезд на prod и пилот | ⚪ | ☐ | |
 | 10 | Расширения | ⚪ | ☐ | |
@@ -222,3 +222,31 @@
 - [ ] `document_access_log` заполняется (бот и сотрудник).
 - [ ] `make eval`: customer-кейсы ≥ 0.9.
 - [x] Cross-tenant тесты зелёные (CI integration).
+
+## Фаза 7 — детали
+
+| # | Задача (PLAN.md) | Статус | Где |
+|---|---|---|---|
+| 1 | Golden ≥ 40 кейсов по категориям SPEC §12; run в Langfuse dataset с git sha; отчёт в PR-комментарий | ✅ 40 кейсов (+9 эскалационных); dataset `golden-dialog`, run `git-<sha>`; отчёт `evals/reports/*.json` → `scripts/eval_report.py` | `evals/`, `scripts/eval_report.py` |
+| 2 | `promptfooconfig.yaml`, `make promptfoo` | ✅ промпт рендерится кодом агента, кейсы из golden, модели — алиасы LiteLLM, судья `judge-model` | `backend/promptfoo/` |
+| 3 | CI-гейт eval при изменении промптов/триггеров/скоринга/LiteLLM | ✅ workflow `Eval gate`: Postgres + RustFS + LiteLLM + docling, демо-KB, пороги SPEC §12, комментарий в PR; без секретов — предупреждение | `.github/workflows/eval-gate.yml` |
+| 4 | Алерты в канал (SPEC §13), ежедневный отчёт, `/ready` | ✅ монитор раз в минуту с дедупликацией (`system_alerts`, миграция 0008), итоги дня 18:05; BudgetGuard → `fallback-model` | `domain/alerts.py`, `services/monitoring.py`, `services/budget.py` |
+| 5 | Runbooks: бот молчит, эскалации не приходят, стоимость выросла, откат промпта | ✅ + eval-gate | `docs/runbooks/` |
+| 6 | `scripts/sample_dialogs.py` + формат разметки → golden | ✅ PII маскируются, выгрузки в `reports/` (вне git) | `app/cli/sample_dialogs.py`, `docs/evals/labeling.md` |
+
+Решения агента:
+- Пороги eval-gate — SPEC §12 как есть: faithfulness ≥ 0.95, язык 100 %, устойчивость к инъекциям 100 %, выдуманных чисел 0; квалификатор precision ≥ 0.85 / recall ≥ 0.95. Ослабление — только через SPEC + ADR.
+- Eval-gate без секретов моделей (форк, ещё не настроено) не красный, а с предупреждением: иначе любой PR в промпты блокировался бы до настройки Secrets. После настройки — сделать check обязательным (runbook `eval-gate.md`).
+- Алерт LiteLLM — после 2 минут подряд недоступности (по SPEC); остальные — сразу; повтор активного алерта не чаще 6 ч; при восстановлении — пост «✅ в норме». Отправка внутри транзакции: сбой Telegram не теряет алерт.
+- Упавшие задачи считаются по событиям `procrastinate_events.type = 'failed'` за час, отдельный алерт на каждую задачу.
+- BudgetGuard считает сутки по Asia/Tashkent; `daily_usd = 0` — лимит выключен; решение кэшируется на 60 с.
+
+### Гейт Фазы 7 (проверяет человек)
+
+- [ ] GitHub Secrets: `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` (dev-ключи с лимитом), опционально `LANGFUSE_*`; PR с правкой промпта → комментарий `## Eval-gate` со всеми ✅.
+- [ ] `make eval` на dev: пороги SPEC §12 (или задокументированные отклонения).
+- [ ] `LITELLM_API_KEY=<LITELLM_MASTER_KEY> make promptfoo` → таблица dialog-model × fallback-model.
+- [ ] Остановить `litellm` на 3 минуты → в канале «⚠️ LiteLLM…», запустить → «✅ LiteLLM: в норме».
+- [ ] Поставить `budget.daily_usd` = 0.01 → алерт бюджета, следующий ответ бота — генерация `fallback-model` в Langfuse.
+- [ ] В 18:05 (пн–пт) — «📊 Итоги дня» в канале.
+- [ ] `scripts/sample_dialogs.py` → `reports/labeling/<дата>.yaml` без телефонов/e-mail.

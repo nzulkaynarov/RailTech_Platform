@@ -20,6 +20,7 @@ from app.domain.stages import Stage
 from app.domain.triggers import evaluate
 from app.integrations.litellm import make_client
 from app.schemas.settings import AppSettings, TermsSettings
+from evals import report
 from evals.qualifier_cases import QualifierCase, load_products, load_qualifier_cases, turn_signals
 
 pytestmark = pytest.mark.eval
@@ -27,7 +28,8 @@ pytestmark = pytest.mark.eval
 CASES = load_qualifier_cases()
 PRODUCTS = load_products()
 CFG = AppSettings(competitors=TermsSettings(terms=["Glonass-Track", "Wialon"]))
-GATES = {"precision": 0.8, "recall": 0.9, "stage_accuracy": 0.85}
+# Пороги релиза SPEC §12 (eval-gate в CI, Фаза 7).
+GATES = {"precision": 0.85, "recall": 0.95, "stage_accuracy": 0.85}
 
 
 @dataclass
@@ -102,6 +104,8 @@ def test_zz_qualifier_summary_gate() -> None:
         "recall": tp / (tp + fn) if tp + fn else 0.0,
         "stage_accuracy": sum(r.stage_ok for r in RESULTS) / len(RESULTS) if RESULTS else 0.0,
     }
+    failed = [r.case_id for r in RESULTS if r.escalated != r.expected_escalate or not r.stage_ok]
+    report.write("qualifier", {"metrics": metrics, "gates": GATES, "failed": failed})
     print(json.dumps(metrics))
     assert RESULTS, "нет результатов"
     for name, gate in GATES.items():

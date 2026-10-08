@@ -279,6 +279,7 @@ settings(key PK, value JSONB, schema_version INT, updated_by, updated_at)
 
 - Таблицы Procrastinate (`procrastinate_*`) — создаются его миграциями.
 - Таблицы LangGraph `PostgresSaver` (`checkpoints`, `checkpoint_writes`, ...).
+- `system_alerts(key PK, active, detail, first_seen_at, sent_at, resolved_at, updated_at)` — дедупликация системных алертов монитора (§13).
 
 ---
 
@@ -506,8 +507,9 @@ Refine с кастомным `dataProvider` (REST `/api/v1`), `authProvider` (co
 - Трейсы: каждый ход диалога и каждый запуск квалификатора — Langfuse trace с `lead_id`, `mode`, `stage`; стоимость агрегируется.
 - Логи: structlog JSON, `request_id`, `lead_id`; уровни по env.
 - Метрики здоровья: `GET /health` (liveness), `GET /ready` (БД, S3/RustFS, LiteLLM); ежедневный отчёт в канал (General-пост): новых лидов, эскалаций, открытых пробелов KB, стоимость.
-- Алерты (в канал, префикс ⚠️): задача в `failed` после 3 ретраев; LiteLLM недоступен > 2 мин; очередь > 100 задач; бюджет > 80 %.
-- Runbooks: деплой, откат, бэкап/восстановление, ротация ключей, «бот молчит», «эскалации не приходят», «переезд dev → prod».
+- Алерты (в канал, префикс ⚠️): задача в `failed` после 3 ретраев; LiteLLM недоступен > 2 мин; очередь > 100 задач; бюджет > 80 %. Монитор — периодическая задача `system_monitor` (раз в минуту, `domain/alerts.py`); дедупликация в таблице `system_alerts(key PK, active, detail, first_seen_at, sent_at, resolved_at, updated_at)`: пост на переходе в проблему, повтор не чаще 6 ч, снятие постом «✅ … в норме». Итоги дня — `daily_report` в 18:05 Asia/Tashkent (пн–пт).
+- BudgetGuard: расход за сутки (Asia/Tashkent) = `messages.meta.cost_usd` + `qualifier_runs.cost_usd`; при ≥ 100 % `budget.daily_usd` и `fallback_model_enabled` диалог идёт на `fallback-model` (кэш решения 60 с), квалификатор продолжает; `daily_usd = 0` — без лимита.
+- Runbooks: деплой, откат, бэкап/восстановление, ротация ключей, «бот молчит», «эскалации не приходят», «стоимость выросла», «откат промпта», eval-gate, «переезд dev → prod».
 
 ---
 

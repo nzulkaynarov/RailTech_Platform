@@ -1,0 +1,27 @@
+# promptfoo: матрица «промпт × модель» (PLAN Фаза 7, SPEC §12). Запуск: make promptfoo.
+# Модели — только алиасы LiteLLM (infra/litellm.config.yaml); ключ — LITELLM_API_KEY.
+# Кейсы — из golden (evals/golden/*.yaml) через promptfoo/cases.py.
+description: RailTech — диалоговый промпт × модели
+
+prompts:
+  - id: file://cases.py:dialog_prompt
+    label: dialog_prospect
+
+providers:
+  - id: openai:chat:dialog-model
+    label: dialog-model
+    config: &litellm
+      apiBaseUrl: "{{ env.PROMPTFOO_LITELLM_URL }}"
+      apiKeyEnvar: LITELLM_API_KEY
+      omitDefaults: true
+  - id: openai:chat:fallback-model
+    label: fallback-model
+    config: *litellm
+
+defaultTest:
+  options:
+    provider:
+      id: openai:chat:judge-model
+      config: *litellm
+
+tests: file://cases.py:create_tests

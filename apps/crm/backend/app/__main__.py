@@ -4,6 +4,7 @@
 - `worker` — воркер Procrastinate (квалификатор, таймеры, ингест);
 - `mcp kb|crm|docs` — MCP-серверы инструментов агентов;
 - `kb-ingest FILE...`, `kb-demo`, `kb-eval` — база знаний (CLI для человека);
+- `sample-dialogs` — выгрузка диалогов для еженедельной разметки (YAML в stdout);
 - `create-admin --email ...` — первый администратор CRM.
 """
 
@@ -82,6 +83,10 @@ def _parser() -> argparse.ArgumentParser:
 
     commands.add_parser("kb-demo", help="загрузить демо-базу знаний (evals/fixtures/kb)")
     commands.add_parser("kb-eval", help="проверить поиск на демо-KB (гейт Фазы 1)")
+    sample = commands.add_parser("sample-dialogs", help="случайные диалоги для разметки (YAML)")
+    sample.add_argument("--days", type=int, default=7, help="за сколько дней (по умолчанию 7)")
+    sample.add_argument("--count", type=int, default=20, help="сколько диалогов (20)")
+    sample.add_argument("--seed", type=int, default=None, help="seed для воспроизводимости")
     return parser
 
 
@@ -115,6 +120,10 @@ async def _run_cli(args: argparse.Namespace) -> int:
         from app.cli import kb_demo
 
         return await kb_demo.run()
+    if args.command == "sample-dialogs":
+        from app.cli import sample_dialogs
+
+        return await sample_dialogs.run(args)
     if args.command == "kb-eval":
         from app.cli import kb_eval
 
