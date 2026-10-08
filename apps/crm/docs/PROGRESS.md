@@ -1,0 +1,53 @@
+# Прогресс
+
+Обновляется агентом в каждом PR; гейт фазы отмечает **человек** (CLAUDE.md §2.1).
+Текущая фаза: **0 — Фундамент** (реализация готова, ожидает приёмки).
+
+| Фаза | Название | Статус | Гейт (человек) | Даты |
+|---|---|---|---|---|
+| 0 | Фундамент репозитория и окружения | 🟡 ожидает приёмки | ☐ | старт 2026-10-08 |
+| 1 | База знаний и поиск | ⚪ не начата | ☐ | |
+| 2 | Диалоговый агент и клиентский бот (prospect) | ⚪ | ☐ | |
+| 3 | Квалификатор, стадии, триггеры | ⚪ | ☐ | |
+| 4 | CRM-ядро: пользователи, роли, лиды, handoff | ⚪ | ☐ | |
+| 5 | Администрирование | ⚪ | ☐ | |
+| 6 | Клиентский режим и документы | ⚪ | ☐ | |
+| 7 | Evals, наблюдаемость, CI-гейты | ⚪ | ☐ | |
+| 8 | Hardening и подготовка prod | ⚪ | ☐ | |
+| 9 | Переезд на prod и пилот | ⚪ | ☐ | |
+| 10 | Расширения | ⚪ | ☐ | |
+
+Легенда: ⚪ не начата · 🔵 в работе · 🟡 ожидает приёмки · 🟢 гейт пройден.
+
+## Фаза 0 — детали
+
+| # | Задача (PLAN.md) | Статус | Где |
+|---|---|---|---|
+| 1 | Структура по SPEC §4, `pyproject.toml`, `package.json`, `Makefile` | ✅ | `backend/`, `frontend/`, `Makefile` |
+| 2 | Docker Compose base/dev/prod, healthchecks, профиль `observability` | ✅ (проверка запуска — человек) | `infra/` |
+| 3 | `config.py` (pydantic-settings), `.env.example` с комментариями | ✅ | `backend/app/config.py`, `.env.example` |
+| 4 | App factory, `/health`, `/ready`, structlog JSON, `request_id` | ✅ | `backend/app/main.py`, `log.py`, `api/health.py` |
+| 5 | Alembic, первая миграция (`vector`), схема Procrastinate | ✅ | `backend/alembic/` |
+| 6 | ruff, mypy (strict: domain/security/schemas), pre-commit, ESLint/Prettier/tsc | ✅ | `pyproject.toml`, `.pre-commit-config.yaml`, `frontend/` |
+| 7 | CI: lint → unit → integration → build; Dependabot; PR-шаблон | ✅ (зелёный CI — проверяется) | `.github/` |
+| 8 | ADR-шаблон + 0001, 0002, 0003, 0005, 0006 | ✅ proposed → ждут принятия | `docs/adr/` |
+| 9 | `.claude/settings.json`, 9 скиллов | ✅ | `.claude/` |
+| 10 | README «dev за 15 минут», карта документов | ✅ | `README.md` |
+| 11 | `scripts/bootstrap_dev.sh` | ✅ | `scripts/` |
+
+Дополнительно: ADR-0009 (замена MinIO — **нужен выбор**), ADR-0010 (psycopg 3), runbook `dev-stand.md`, `scripts/smoke_dev.sh`.
+
+### Гейт Фазы 0 (PLAN.md)
+
+- [ ] `scripts/bootstrap_dev.sh` на чистой машине → `make up` → `/ready` 200 (без Langfuse) — **человек**
+- [ ] CI зелёный (lint, unit, integration, build)
+- [ ] 5 ADR (0001, 0002, 0003, 0005, 0006) приняты — **человек**
+
+### Отложено (осознанно, по плану)
+
+- Refine + Ant Design, orval-генерация клиента — Фаза 4.
+- `infra/litellm.config.yaml` с моделями и алиасами — Фаза 1 (ADR-0004); сейчас `model_list: []`.
+- `infra/casbin/model.conf`, `policy.seed.csv` — Фаза 4.
+- MCP-сервисы в compose — Фазы 1, 2, 6.
+- `seed`, `backup`, `restore`, `smoke-prod`, `promptfoo` — цели-заглушки с указанием фазы.
+- `pip-audit`/`npm audit` в CI — Фаза 8.
