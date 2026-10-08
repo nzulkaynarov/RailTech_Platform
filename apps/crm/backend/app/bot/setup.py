@@ -13,7 +13,7 @@ from app.agents.llm import ChatModel
 from app.agents.mcp_client import McpToolClient
 from app.bot.runtime import BotRuntime, build_dispatcher
 from app.container import Container
-from app.services.conversation import ConversationService, Hook
+from app.services.conversation import ActivityHook, ConversationService, EscalationHook
 
 logger = structlog.get_logger(__name__)
 
@@ -39,7 +39,9 @@ async def checkpointer(container: Container) -> AsyncIterator[AsyncPostgresSaver
 
 @asynccontextmanager
 async def bot_lifespan(
-    container: Container, on_activity: Hook | None = None, on_handoff: Hook | None = None
+    container: Container,
+    on_activity: ActivityHook | None = None,
+    on_escalation: EscalationHook | None = None,
 ) -> AsyncIterator[BotRuntime | None]:
     config = container.settings
     if config.telegram_mode == "disabled" or not config.telegram_bot_token.get_secret_value():
@@ -54,7 +56,7 @@ async def bot_lifespan(
             agent,
             config.agent_context_key_bytes,
             on_activity=on_activity,
-            on_handoff=on_handoff,
+            on_escalation=on_escalation,
         )
         dispatcher = build_dispatcher(
             container.session_factory,

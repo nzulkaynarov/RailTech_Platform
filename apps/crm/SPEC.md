@@ -270,7 +270,7 @@ document_access_log(id, document_id, accessed_by_type 'bot'|'user', accessed_by_
 settings(key PK, value JSONB, schema_version INT, updated_by, updated_at)
 ```
 Ключи и JSON-схемы валидируются Pydantic-моделями в `app/schemas/settings.py`:
-`company`, `business_hours`, `texts` (greeting/consent/handoff/off_hours × ru/uz/en), `escalation` (триггеры, пороги, SLA), `kb` (`min_score`, `top_k`), `bot` (persona, `max_words`, `max_turns_without_progress`), `competitors`, `stop_words`, `notifications` (`channel_id`, `duty_user_ids`), `budget` (`daily_usd`, `fallback_model_enabled`).
+`company`, `business_hours`, `texts` (greeting/consent/handoff/off_hours × ru/uz/en), `escalation` (триггеры, пороги, `no_progress_turns`, SLA), `kb` (`min_score`, `top_k`), `bot` (persona, `max_words`, `history_messages`, `rate_limit_per_minute`, `unresponsive_days`), `competitors`, `stop_words`, `notifications` (`channel_id`, `duty_user_ids`), `budget` (`daily_usd`, `fallback_model_enabled`).
 
 ### 5.8. Техническое
 

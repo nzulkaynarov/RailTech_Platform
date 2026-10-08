@@ -1,6 +1,62 @@
 {
   "components": {
     "schemas": {
+      "DecisionsResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/QualifierRunItem"
+                },
+                {
+                  "$ref": "#/components/schemas/TransitionItem"
+                }
+              ]
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "lead_id": {
+            "title": "Lead Id",
+            "type": "integer"
+          },
+          "owner_mode": {
+            "title": "Owner Mode",
+            "type": "string"
+          },
+          "score": {
+            "title": "Score",
+            "type": "integer"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          }
+        },
+        "required": [
+          "lead_id",
+          "stage",
+          "score",
+          "owner_mode",
+          "items"
+        ],
+        "title": "DecisionsResponse",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
       "HealthResponse": {
         "properties": {
           "status": {
@@ -11,6 +67,174 @@
           }
         },
         "title": "HealthResponse",
+        "type": "object"
+      },
+      "QualifierRunItem": {
+        "properties": {
+          "applied_stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applied Stage"
+          },
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Usd"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "escalated": {
+            "title": "Escalated",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "intent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intent"
+          },
+          "kind": {
+            "const": "qualifier",
+            "default": "qualifier",
+            "title": "Kind",
+            "type": "string"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "next_best_action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Best Action"
+          },
+          "proposed_stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed Stage"
+          },
+          "rejected_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rejected Reason"
+          },
+          "score_after": {
+            "title": "Score After",
+            "type": "integer"
+          },
+          "score_before": {
+            "title": "Score Before",
+            "type": "integer"
+          },
+          "sentiment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sentiment"
+          },
+          "trace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Id"
+          },
+          "triggers_fired": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Triggers Fired",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "at",
+          "intent",
+          "sentiment",
+          "proposed_stage",
+          "applied_stage",
+          "rejected_reason",
+          "score_before",
+          "score_after",
+          "triggers_fired",
+          "escalated",
+          "next_best_action",
+          "error",
+          "model",
+          "cost_usd",
+          "trace_id"
+        ],
+        "title": "QualifierRunItem",
         "type": "object"
       },
       "ReadyResponse": {
@@ -41,6 +265,103 @@
         ],
         "title": "ReadyResponse",
         "type": "object"
+      },
+      "TransitionItem": {
+        "properties": {
+          "actor_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor User Id"
+          },
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "from_stage": {
+            "title": "From Stage",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kind": {
+            "const": "transition",
+            "default": "transition",
+            "title": "Kind",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "to_stage": {
+            "title": "To Stage",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "at",
+          "from_stage",
+          "to_stage",
+          "source",
+          "actor_user_id",
+          "reason"
+        ],
+        "title": "TransitionItem",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
       }
     }
   },
@@ -50,6 +371,60 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/leads/{lead_id}/decisions": {
+      "get": {
+        "operationId": "lead_decisions_api_v1_leads__lead_id__decisions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lead_id",
+            "required": true,
+            "schema": {
+              "title": "Lead Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecisionsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lead Decisions",
+        "tags": [
+          "leads"
+        ]
+      }
+    },
     "/health": {
       "get": {
         "operationId": "health_health_get",

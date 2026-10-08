@@ -18,7 +18,7 @@ from app.mcp import crm_server, kb_server
 from app.mcp.common import build_app
 from app.models.kb import KbGap
 from app.models.leads import Lead, Message
-from app.models.qualification import StageTransition
+from app.models.qualification import Escalation, StageTransition
 from app.repositories.leads import ERASED_TEXT
 from app.services.conversation import ConversationService, Incoming
 from app.services.settings import SettingsService
@@ -37,7 +37,7 @@ class Stack:
     service: ConversationService
     model: ReplayModel
     sessions: async_sessionmaker[AsyncSession]
-    hooks: list[tuple[str, int, list[str]]] = field(default_factory=list)
+    hooks: list[tuple[str, int]] = field(default_factory=list)
 
 
 @pytest.fixture
@@ -60,11 +60,11 @@ async def stack(
         model = ReplayModel()
         result = Stack(service=None, model=model, sessions=sessions)  # type: ignore[arg-type]
 
-        async def on_activity(lead_id: int, codes: list[str]) -> None:
-            result.hooks.append(("activity", lead_id, codes))
+        async def on_activity(lead_id: int) -> None:
+            result.hooks.append(("activity", lead_id))
 
-        async def on_handoff(lead_id: int, codes: list[str]) -> None:
-            result.hooks.append(("handoff", lead_id, codes))
+        async def on_escalation(lead_id: int, escalation_id: int) -> None:
+            result.hooks.append(("escalation", lead_id))
 
         result.service = ConversationService(
             sessions,
@@ -72,7 +72,7 @@ async def stack(
             DialogAgent(McpToolClient(config), model),
             config.agent_context_key_bytes,
             on_activity=on_activity,
-            on_handoff=on_handoff,
+            on_escalation=on_escalation,
         )
         yield result
 
@@ -84,6 +84,11 @@ def msg(text: str, **extra: object) -> Incoming:
 async def lead_row(sessions: async_sessionmaker[AsyncSession]) -> Lead:
     async with sessions() as session:
         return (await session.scalars(select(Lead))).one()
+
+
+async def only_escalation(sessions: async_sessionmaker[AsyncSession]) -> Escalation:
+    async with sessions() as session:
+        return (await session.scalars(select(Escalation))).one()
 
 
 async def consented(stack: Stack) -> None:
@@ -122,8 +127,30 @@ async def test_out_of_kb_question_falls_back_and_registers_gap(stack: Stack) -> 
     assert out[-1].text
     lead = await lead_row(stack.sessions)
     assert lead.consecutive_fallbacks == 1
+    assert ("activity", lead.id) in stack.hooks
     async with stack.sessions() as session:
         assert await session.scalar(select(func.count()).select_from(KbGap)) == 1
+        assert await session.scalar(select(func.count()).select_from(Escalation)) == 0
+
+
+async def test_second_fallback_in_a_row_escalates(stack: Stack) -> None:
+    await consented(stack)
+    await stack.service.handle_message(msg("Какая завтра погода в Париже?"))
+    out = await stack.service.handle_message(msg("А курс доллара на завтра?"))
+    escalation = await only_escalation(stack.sessions)
+    assert (escalation.reason_codes, escalation.priority) == (["kb_gap_streak"], "warm")
+    assert len(out) == 2
+    lead = await lead_row(stack.sessions)
+    assert (lead.stage, lead.owner_mode) == ("handoff", "paused")
+
+
+async def test_attachment_without_text_escalates_with_info_priority(stack: Stack) -> None:
+    await consented(stack)
+    file = {"kind": "file", "name": "tz.pdf", "mime": "application/pdf", "size": 10}
+    out = await stack.service.handle_message(msg("", attachments=[file]))
+    assert len(out) == 1
+    escalation = await only_escalation(stack.sessions)
+    assert escalation.priority == "info"
 
 
 async def test_human_request_hands_off_and_pauses_bot(stack: Stack) -> None:
@@ -131,7 +158,9 @@ async def test_human_request_hands_off_and_pauses_bot(stack: Stack) -> None:
     await stack.service.handle_message(msg("/human", human_requested=True))
     lead = await lead_row(stack.sessions)
     assert (lead.owner_mode, lead.stage) == ("paused", "handoff")
-    assert ("handoff", lead.id, ["human_requested"]) in stack.hooks
+    assert ("escalation", lead.id) in stack.hooks
+    escalation = await only_escalation(stack.sessions)
+    assert (escalation.reason_codes, escalation.priority) == (["human_requested"], "hot")
     async with stack.sessions() as session:
         transition = (await session.scalars(select(StageTransition))).one()
     assert transition.to_stage == "handoff"
@@ -148,11 +177,14 @@ async def test_callback_tool_records_signal(stack: Stack) -> None:
     # Фейковые векторы дают низкое сходство для смешанной фразы — снижаем порог.
     await SettingsService(stack.sessions).update("kb", {"min_score": 0.3, "top_k": 6}, None)
     out = await stack.service.handle_message(msg("Тариф Старт для кассы RT-POS, позвоните завтра"))
-    assert out[-1].text.startswith("Хорошо")
+    assert out[0].text.startswith("Хорошо")
     lead = await lead_row(stack.sessions)
     assert lead.qualification["signals"]["requested_contact"] is True
     assert lead.qualification["callback"]["preferred_time"] == "завтра 10:00"
-    assert ("handoff", lead.id, ["callback_requested"]) in stack.hooks
+    escalation = await only_escalation(stack.sessions)
+    assert escalation.reason_codes == ["callback_requested"]
+    assert lead.owner_mode == "paused"
+    assert len(out) == 2  # ответ модели + уведомление о передаче менеджеру
 
 
 async def test_delete_erases_messages_and_unlinks_identity(stack: Stack) -> None:

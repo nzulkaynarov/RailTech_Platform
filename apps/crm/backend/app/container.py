@@ -7,6 +7,7 @@
 from dataclasses import dataclass
 from functools import cached_property, lru_cache
 
+from aiogram import Bot
 from openai import AsyncOpenAI
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
@@ -49,6 +50,18 @@ class Container:
     @cached_property
     def docling(self) -> DoclingClient:
         return DoclingClient(self.settings)
+
+    @cached_property
+    def telegram_bot(self) -> Bot | None:
+        """Клиент Bot API для исходящих сообщений (воркер); None без токена."""
+        token = self.settings.telegram_bot_token.get_secret_value()
+        return Bot(token) if token else None
+
+    async def aclose(self) -> None:
+        if "telegram_bot" in self.__dict__ and self.telegram_bot is not None:
+            await self.telegram_bot.session.close()
+        if "engine" in self.__dict__:
+            await self.engine.dispose()
 
 
 @lru_cache

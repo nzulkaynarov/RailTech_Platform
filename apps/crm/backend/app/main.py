@@ -9,12 +9,20 @@ from fastapi import FastAPI
 
 from app import db
 from app.api import health, telegram
+from app.api.v1 import leads
 from app.bot.setup import bot_lifespan
 from app.config import Settings, get_settings
 from app.container import Container
 from app.integrations import litellm, s3
 from app.log import configure_logging
 from app.services.readiness import ReadinessService
+from app.tasks.lifespan import queue_lifespan
+
+
+async def _qualify(lead_id: int) -> None:
+    from app.tasks.qualify import enqueue_qualify
+
+    await enqueue_qualify(lead_id)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -27,7 +35,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         engine = container.engine
         async with (
             httpx.AsyncClient(timeout=settings.ready_check_timeout_s) as http,
-            bot_lifespan(container) as bot,
+            queue_lifespan(settings),
+            bot_lifespan(container, on_activity=_qualify) as bot,
         ):
             app.state.container = container
             app.state.bot = bot
@@ -52,4 +61,5 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(CorrelationIdMiddleware, header_name="X-Request-ID")
     app.include_router(health.router)
     app.include_router(telegram.router)
+    app.include_router(leads.router)
     return app

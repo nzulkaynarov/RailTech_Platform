@@ -10,7 +10,7 @@ from app.agents import prompts
 from app.agents.dialog.state import DialogState
 from app.agents.llm import ChatCompleter, ChatResult
 from app.agents.mcp_client import ToolCaller
-from app.domain.business_hours import BusinessHours, is_business_time
+from app.domain.business_hours import is_business_time
 from app.domain.dialog_policy import Action, DecisionInput, decide
 from app.domain.keywords import find_terms
 from app.domain.stages import OwnerMode, Stage
@@ -124,7 +124,7 @@ class DialogNodes:
 
     def handoff(self, state: DialogState) -> dict[str, Any]:
         texts = self._settings.texts
-        hours = business_hours(self._settings)
+        hours = self._settings.business_hours.domain()
         text = texts.handoff if is_business_time(datetime.now(UTC), hours) else texts.off_hours
         return {"reply": text.get(_lang(state))}
 
@@ -190,17 +190,6 @@ class DialogNodes:
         )
         user = f"<user_message>{prompts.xml_escape(state['text'])}</user_message>"
         return [{"role": "system", "content": system}, {"role": "user", "content": user}]
-
-
-def business_hours(settings: AppSettings) -> BusinessHours:
-    bh = settings.business_hours
-    return BusinessHours(
-        timezone=bh.timezone,
-        start=bh.start,
-        end=bh.end,
-        weekdays=frozenset(bh.weekdays),
-        holidays=frozenset(bh.holidays),
-    )
 
 
 def _lang(state: DialogState) -> Language:

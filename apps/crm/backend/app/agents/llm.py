@@ -19,6 +19,8 @@ from app.integrations.litellm import Alias
 logger = structlog.get_logger(__name__)
 
 FALLBACK: Alias = "fallback-model"
+# Стоимость вызова, которую LiteLLM Proxy возвращает заголовком ответа.
+COST_HEADER = "x-litellm-response-cost"
 
 
 class LlmUnavailableError(Exception):
@@ -41,6 +43,7 @@ class ChatResult:
     latency_ms: int
     tool_calls: list[ToolCall] = field(default_factory=list)
     used_fallback: bool = False
+    cost_usd: float | None = None
 
 
 class ChatCompleter(Protocol):
@@ -94,15 +97,30 @@ class ChatModel:
             kwargs["response_format"] = response_format
         started = time.monotonic()
         with lf.generation(name=name, model=alias, input=messages) as span:
-            response = await self._client.chat.completions.create(**kwargs)
-            result = _to_result(response, alias, started, used_fallback=alias == FALLBACK)
+            raw = await self._client.chat.completions.with_raw_response.create(**kwargs)
+            result = _to_result(
+                raw.parse(),
+                alias,
+                started,
+                used_fallback=alias == FALLBACK,
+                cost_usd=_cost(raw.headers.get(COST_HEADER)),
+            )
             lf.finish_generation(
                 span, result.text, result.model, result.tokens_in, result.tokens_out
             )
         return result
 
 
-def _to_result(response: Any, alias: Alias, started: float, *, used_fallback: bool) -> ChatResult:
+def _cost(raw: str | None) -> float | None:
+    try:
+        return float(raw) if raw else None
+    except ValueError:
+        return None
+
+
+def _to_result(
+    response: Any, alias: Alias, started: float, *, used_fallback: bool, cost_usd: float | None
+) -> ChatResult:
     choice = response.choices[0]
     message = choice.message
     calls = [
@@ -118,6 +136,7 @@ def _to_result(response: Any, alias: Alias, started: float, *, used_fallback: bo
         latency_ms=int((time.monotonic() - started) * 1000),
         tool_calls=calls,
         used_fallback=used_fallback,
+        cost_usd=cost_usd,
     )
 
 

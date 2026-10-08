@@ -29,10 +29,14 @@ def _run_api(args: argparse.Namespace) -> None:
 
 
 async def _run_worker() -> None:
+    from app.container import get_container
     from app.tasks.queue import queue
 
-    async with queue.open_async():
-        await queue.run_worker_async()
+    try:
+        async with queue.open_async():
+            await queue.run_worker_async()
+    finally:
+        await get_container().aclose()
 
 
 def _run_mcp(args: argparse.Namespace) -> None:

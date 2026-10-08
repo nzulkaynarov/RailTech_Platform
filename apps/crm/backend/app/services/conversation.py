@@ -1,8 +1,10 @@
 """Обработка входящего сообщения лида (SPEC §3.3, §6.4, §7.1).
 
 Порядок: лид и идентичность → сохранить сообщение → согласие → язык →
-owner_mode → агент (вне транзакции) → сохранить ответ, счётчики, пробел KB,
-handoff → хуки (квалификация, эскалация). Один ход на лида одновременно.
+owner_mode → агент (вне транзакции) → сохранить ответ, счётчики, пробел KB →
+триггеры хода (человек, стоп-слова, звонок, серия fallback, вложение) →
+эскалация (SPEC §8.2) → хуки (квалификатор, уведомления). Один ход на лида
+одновременно.
 """
 
 import asyncio
@@ -19,19 +21,21 @@ from app.agents.dialog.state import DialogResult
 from app.domain.consent import consent_required
 from app.domain.dialog_policy import Action
 from app.domain.language import Language, detect_language, next_language
-from app.domain.stages import OwnerMode, Stage, TransitionSource
+from app.domain.stages import Stage, TransitionSource
+from app.domain.triggers import TriggerSignals, evaluate
 from app.models.leads import Conversation, Lead
 from app.repositories import leads as repo
 from app.schemas.settings import AppSettings
 from app.security.agent_context import issue
-from app.services import stages
+from app.services import escalation, stages
 from app.services.kb.gaps import register_gap
 from app.services.settings import SettingsService
 
 logger = structlog.get_logger(__name__)
 
 Keyboard = Literal["consent", "language"]
-Hook = Callable[[int, list[str]], Awaitable[None]]
+ActivityHook = Callable[[int], Awaitable[None]]
+EscalationHook = Callable[[int, int], Awaitable[None]]
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,6 +57,7 @@ class Outgoing:
     keyboard: Keyboard | None = None
     message_id: int | None = None
     language: Language = "ru"
+    lead_id: int | None = None
 
 
 @dataclass
@@ -63,6 +68,7 @@ class _Turn:
     owner_mode: str
     text: str
     human: bool
+    attachment: bool = False
 
 
 class ConversationService:
@@ -72,27 +78,29 @@ class ConversationService:
         settings: SettingsService,
         agent: DialogAgent,
         agent_key: bytes,
-        on_activity: Hook | None = None,
-        on_handoff: Hook | None = None,
+        on_activity: ActivityHook | None = None,
+        on_escalation: EscalationHook | None = None,
     ) -> None:
         self._sessions = sessions
         self._settings = settings
         self._agent = agent
         self._agent_key = agent_key
         self._on_activity = on_activity
-        self._on_handoff = on_handoff
+        self._on_escalation = on_escalation
         self._locks: dict[int, asyncio.Lock] = {}
 
     async def handle_message(self, inc: Incoming) -> list[Outgoing]:
         cfg = await self._settings.get()
-        early, turn = await self._receive(inc, cfg)
+        early, turn, escalation = await self._receive(inc, cfg)
         if turn is None:
+            if early:
+                await self._fire(_lead_of(early), escalation)
             return early
         lock = self._locks.setdefault(turn.lead_id, asyncio.Lock())
         async with lock:
             result = await self._run_agent(turn, cfg)
-            outgoing = await self._persist(turn, result, cfg)
-        await self._fire(turn, result)
+            outgoing, escalation = await self._persist(turn, result, cfg)
+        await self._fire(turn.lead_id, escalation)
         return early + outgoing
 
     async def start(self, inc: Incoming) -> list[Outgoing]:
@@ -157,7 +165,7 @@ class ConversationService:
 
     async def _receive(
         self, inc: Incoming, cfg: AppSettings
-    ) -> tuple[list[Outgoing], _Turn | None]:
+    ) -> tuple[list[Outgoing], _Turn | None, int | None]:
         async with self._sessions() as session, session.begin():
             lead, conversation, is_new = await self._ensure_lead(session, inc)
             now = datetime.now(UTC)
@@ -178,17 +186,26 @@ class ConversationService:
             if consent_required(
                 lead.consent_given_at, lead.consent_version, cfg.texts.consent_version
             ):
-                return await _consent_prompt(session, conversation, lead, cfg, is_new), None
+                return await _consent_prompt(session, conversation, lead, cfg, is_new), None, None
             if inc.attachments and not inc.text.strip():
                 text = cfg.texts.attachment_received.get(_lang(lead))
-                await repo.add_message(
+                message = await repo.add_message(
                     session, conversation_id=conversation.id, role="bot", text=text
                 )
-                return [Outgoing(text)], None
+                hits = evaluate(TriggerSignals(attachment_received=True), cfg.escalation.triggers())
+                applied = await escalation.apply(session, lead, hits, cfg, now)
+                out = [Outgoing(text, message_id=message.id, lead_id=lead.id)]
+                return out, None, applied.escalation_id if applied else None
             turn = _Turn(
-                lead.id, _lang(lead), lead.stage, lead.owner_mode, inc.text, inc.human_requested
+                lead.id,
+                _lang(lead),
+                lead.stage,
+                lead.owner_mode,
+                inc.text,
+                inc.human_requested,
+                bool(inc.attachments),
             )
-        return [], turn
+        return [], turn, None
 
     async def _ensure_lead(
         self, session: AsyncSession, inc: Incoming
@@ -239,12 +256,12 @@ class ConversationService:
 
     async def _persist(
         self, turn: _Turn, result: DialogResult | None, cfg: AppSettings
-    ) -> list[Outgoing]:
+    ) -> tuple[list[Outgoing], int | None]:
         async with self._sessions() as session, session.begin():
             lead = await repo.get_lead(session, turn.lead_id, for_update=True)
             conversation = await repo.open_conversation(session, turn.lead_id)
             if lead is None or conversation is None:
-                return []
+                return [], None
             if result is None:
                 text = cfg.texts.service_unavailable.get(turn.language)
                 await repo.add_message(
@@ -254,63 +271,73 @@ class ConversationService:
                     text=text,
                     meta={"error": "agent_unavailable"},
                 )
-                return [Outgoing(text)]
-            await _apply_result(session, lead, turn, result)
-            if result.reply is None:
-                return []
-            message = await repo.add_message(
-                session,
-                conversation_id=conversation.id,
-                role="bot",
-                text=result.reply,
-                meta=_meta(result),
+                return [Outgoing(text)], None
+            _apply_counters(lead, result)
+            if result.action == Action.FALLBACK:
+                await register_gap(
+                    session,
+                    question=turn.text,
+                    language=turn.language,
+                    best_score=result.best_score,
+                    lead_id=lead.id,
+                )
+            now = datetime.now(UTC)
+            replies = [result.reply] if result.reply else []
+            hits = evaluate(_turn_signals(turn, result, lead), cfg.escalation.triggers())
+            applied = await escalation.apply(
+                session, lead, hits, cfg, now, reason_text=f"dialog: {result.reason}"
             )
-            lead.last_bot_msg_at = datetime.now(UTC)
-        return [Outgoing(result.reply, message_id=message.id)]
+            notice = applied.plan.lead_text if applied else None
+            if notice is not None and result.action != Action.HANDOFF:
+                notice_text = getattr(cfg.texts, notice).get(turn.language)
+                replies.append(notice_text)
+            outgoing: list[Outgoing] = []
+            for index, text in enumerate(replies):
+                message = await repo.add_message(
+                    session,
+                    conversation_id=conversation.id,
+                    role="bot",
+                    text=text,
+                    meta=_meta(result) if index == 0 else {"notice": notice},
+                )
+                outgoing.append(Outgoing(text, message_id=message.id))
+            if replies:
+                lead.last_bot_msg_at = now
+        return outgoing, applied.escalation_id if applied else None
 
-    async def _fire(self, turn: _Turn, result: DialogResult | None) -> None:
-        codes: list[str] = []
-        if result is not None and result.action == Action.HANDOFF:
-            codes.append(
-                "human_requested"
-                if turn.human or "human" in result.reason
-                else "negative_sentiment"
-            )
-        if result is not None and result.callback_requested:
-            codes.append("callback_requested")
+    async def _fire(self, lead_id: int | None, escalation_id: int | None) -> None:
+        if lead_id is None:
+            return
         try:
-            if codes and self._on_handoff is not None:
-                await self._on_handoff(turn.lead_id, codes)
+            if escalation_id is not None and self._on_escalation is not None:
+                await self._on_escalation(lead_id, escalation_id)
             if self._on_activity is not None:
-                await self._on_activity(turn.lead_id, codes)
+                await self._on_activity(lead_id)
         except Exception:
-            logger.exception("conversation_hooks_failed", lead_id=turn.lead_id)
+            logger.exception("conversation_hooks_failed", lead_id=lead_id)
 
 
-async def _apply_result(
-    session: AsyncSession, lead: Lead, turn: _Turn, result: DialogResult
-) -> None:
+def _apply_counters(lead: Lead, result: DialogResult) -> None:
     if result.action == Action.FALLBACK:
         lead.consecutive_fallbacks += 1
-        await register_gap(
-            session,
-            question=turn.text,
-            language=turn.language,
-            best_score=result.best_score,
-            lead_id=lead.id,
-        )
     elif result.action == Action.ANSWER:
         lead.consecutive_fallbacks = 0
-    if result.action == Action.HANDOFF:
-        lead.owner_mode = OwnerMode.PAUSED.value
-        lead.handoff_notice_sent_at = datetime.now(UTC)
-        await stages.transition(
-            session,
-            lead,
-            Stage.HANDOFF,
-            TransitionSource.TRIGGER,
-            reason=f"dialog: {result.reason}",
-        )
+
+
+def _turn_signals(turn: _Turn, result: DialogResult, lead: Lead) -> TriggerSignals:
+    """Триггеры, которые код видит сразу в ходе; остальные — квалификатор."""
+    handoff = result.action == Action.HANDOFF
+    return TriggerSignals(
+        human_requested=handoff and result.reason == "human_requested",
+        stop_word_hit=handoff and result.reason == "stop_word",
+        callback_requested=result.callback_requested,
+        consecutive_fallbacks=lead.consecutive_fallbacks if result.action == Action.FALLBACK else 0,
+        attachment_received=turn.attachment,
+    )
+
+
+def _lead_of(outgoing: list[Outgoing]) -> int | None:
+    return next((o.lead_id for o in outgoing if o.lead_id is not None), None)
 
 
 async def _consent_prompt(

@@ -8,7 +8,7 @@ import procrastinate
 
 from app.config import get_settings
 
-TASK_MODULES = ("app.tasks.ingest",)
+TASK_MODULES = ("app.tasks.ingest", "app.tasks.qualify", "app.tasks.timers")
 
 queue = procrastinate.App(
     connector=procrastinate.PsycopgConnector(conninfo=get_settings().libpq_dsn),

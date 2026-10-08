@@ -18,3 +18,12 @@ def test_phase2_categories_and_languages_are_covered() -> None:
     assert {"kb_answer", "not_in_kb", "injection", "smalltalk"} <= categories
     kb_languages = {c.language for c in cases if c.category == "kb_answer"}
     assert kb_languages == {"ru", "uz", "en"}
+
+
+def test_qualifier_cases_are_valid() -> None:
+    from evals.qualifier_cases import load_qualifier_cases
+
+    cases = load_qualifier_cases()
+    assert len(cases) >= 30
+    assert len({c.id for c in cases}) == len(cases)
+    assert sum(c.expect.escalate for c in cases) >= 10

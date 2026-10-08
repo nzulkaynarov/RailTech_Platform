@@ -61,6 +61,21 @@ def decide(current: Stage, target: Stage, source: TransitionSource) -> Transitio
     return TransitionDecision(current, target, allowed=True, changed=True)
 
 
+def qualifier_path(current: Stage, proposed: Stage) -> tuple[tuple[Stage, ...], str | None]:
+    """Стадии, через которые проходит лид по предложению квалификатора.
+
+    `new → qualified` проходит через `engaged` (оба ребра разрешены квалификатору):
+    первое же сообщение может содержать всё для квалификации. Возвращает путь и
+    причину отказа (путь пуст, если переход не нужен или отклонён).
+    """
+    if current == S.NEW and proposed == S.QUALIFIED:
+        return (S.ENGAGED, S.QUALIFIED), None
+    decision = decide(current, proposed, Src.QUALIFIER)
+    if not decision.allowed:
+        return (), decision.reason
+    return ((proposed,) if decision.changed else ()), None
+
+
 def stage_before_handoff(history: Sequence[tuple[Stage, Stage]]) -> Stage:
     """Стадия для «Вернуть боту»: из чего лид пришёл в handoff (engaged по умолчанию)."""
     for from_stage, to_stage in reversed(history):

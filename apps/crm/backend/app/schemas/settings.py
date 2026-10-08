@@ -9,6 +9,9 @@ from typing import Final, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.domain.business_hours import BusinessHours
+from app.domain.triggers import TriggerCode, TriggerSettings
+
 Language = Literal["ru", "uz", "en"]
 
 
@@ -41,6 +44,15 @@ class BusinessHoursSettings(_Strict):
     end: time = time(18, 0)
     weekdays: list[int] = Field(default_factory=lambda: [0, 1, 2, 3, 4])
     holidays: list[date] = Field(default_factory=list)
+
+    def domain(self) -> BusinessHours:
+        return BusinessHours(
+            timezone=self.timezone,
+            start=self.start,
+            end=self.end,
+            weekdays=frozenset(self.weekdays),
+            holidays=frozenset(self.holidays),
+        )
 
 
 class TextsSettings(_Strict):
@@ -144,6 +156,16 @@ class EscalationSettings(_Strict):
         ]
     )
 
+    def triggers(self) -> TriggerSettings:
+        known = {c.value for c in TriggerCode}
+        return TriggerSettings(
+            high_score_threshold=self.high_score_threshold,
+            no_progress_turns=self.no_progress_turns,
+            kb_gap_streak=self.kb_gap_streak,
+            qualifier_min_confidence=self.qualifier_min_confidence,
+            disabled=frozenset(TriggerCode(c) for c in self.disabled_triggers if c in known),
+        )
+
 
 class KbSettings(_Strict):
     min_score: float = Field(default=0.55, ge=0, le=1)
@@ -155,6 +177,7 @@ class BotSettings(_Strict):
     max_words: int = Field(default=120, ge=20, le=400)
     history_messages: int = Field(default=20, ge=2, le=50)
     rate_limit_per_minute: int = Field(default=20, ge=1)
+    unresponsive_days: int = Field(default=3, ge=1, le=90)
 
 
 class TermsSettings(_Strict):
