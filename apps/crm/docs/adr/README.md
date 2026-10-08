@@ -17,3 +17,5 @@
 | [0010](0010-psycopg3-single-driver.md) | psycopg 3 — единственный драйвер PostgreSQL | accepted | 0 |
 | [0011](0011-docling-serve-and-mcp-sdk.md) | docling-serve как сервис; MCP на официальном SDK (`MCPServer`) | accepted | 1 |
 | [0012](0012-crm-take-and-live-events.md) | «Забрать» из любой активной стадии; live-события через PostgreSQL NOTIFY | accepted | 4 |
+| [0013](0013-backup-pgdump-s3-mirror.md) | Бэкап: pg_dump 16 + копия бакетов кодом приложения, контейнер backup | proposed | 8 |
+| [0014](0014-model-budget-levels.md) | Бюджет моделей в три уровня; нагрузочный smoke в процессе | proposed | 8 |

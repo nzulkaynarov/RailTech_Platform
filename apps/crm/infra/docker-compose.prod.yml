@@ -1,34 +1,93 @@
-# prod-стенд (SPEC §14). Базовая версия Фазы 0; образы из GHCR с тегом git sha,
-# лимиты ресурсов и ротация логов — Фаза 8 (PLAN.md).
+# prod-стенд (SPEC §14, PLAN Фаза 8): собранные образы из GHCR с тегом git sha,
+# без сборки и монтирования кода на сервере, restart policies, лимиты ресурсов
+# (VPS 4 vCPU / 8 GB), JSON-логи с ротацией. Запуск: make up-prod (deploy-prod.yml).
 
-x-restart: &restart
+x-ops: &ops
   restart: unless-stopped
   logging:
     driver: json-file
     options: { max-size: "20m", max-file: "5" }
 
+# `build: !reset null` — в каждом сервисе явно: при слиянии нескольких якорей теги теряются.
+x-backend-image: &backend-image
+  <<: *ops
+  image: ${IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/railtech-backend:${IMAGE_TAG:?IMAGE_TAG (git sha) не задан}
+
+x-limits:
+  small: &small { deploy: { resources: { limits: { cpus: "0.50", memory: 256M } } } }
+  medium: &medium { deploy: { resources: { limits: { cpus: "1.00", memory: 768M } } } }
+
 services:
-  postgres: *restart
-  rustfs: *restart
-  litellm: *restart
+  postgres:
+    <<: *ops
+    deploy: { resources: { limits: { cpus: "1.50", memory: 1536M } } }
+  rustfs:
+    <<: *ops
+    environment:
+      RUSTFS_CONSOLE_ENABLE: "true"  # наружу только через Caddy + IP allow-list
+    deploy: { resources: { limits: { cpus: "0.50", memory: 512M } } }
+  s3-init:
+    logging: { driver: json-file, options: { max-size: "5m", max-file: "2" } }
+  litellm:
+    <<: [*ops, *medium]
+  migrate:
+    <<: *backend-image
+    build: !reset null
+    restart: "no"
+    environment: { APP_ENV: prod }
   api:
-    <<: *restart
+    <<: [*backend-image, *medium]
+    build: !reset null
+    environment:
+      APP_ENV: prod
+      TELEGRAM_MODE: webhook
   worker:
-    <<: *restart
-  docling: *restart
-  kb-mcp: *restart
-  crm-mcp: *restart
-  docs-mcp: *restart
-  web: *restart
+    <<: *backend-image
+    build: !reset null
+    environment:
+      APP_ENV: prod
+    deploy: { resources: { limits: { cpus: "1.00", memory: 1G } } }
+  docling:
+    <<: *ops
+    deploy: { resources: { limits: { cpus: "2.00", memory: 2560M } } }
+  kb-mcp:
+    <<: [*backend-image, *small]
+    build: !reset null
+    environment: { APP_ENV: prod }
+  crm-mcp:
+    <<: [*backend-image, *small]
+    build: !reset null
+    environment: { APP_ENV: prod }
+  docs-mcp:
+    <<: [*backend-image, *small]
+    build: !reset null
+    environment: { APP_ENV: prod }
+  web:
+    <<: [*ops, *small]
+    image: ${IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/railtech-frontend:${IMAGE_TAG:?IMAGE_TAG (git sha) не задан}
+    build: !reset null
+  backup:
+    <<: [*ops, *small]
+    image: ${IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/railtech-backup:${IMAGE_TAG:?IMAGE_TAG (git sha) не задан}
+    build: !reset null
+    environment: { APP_ENV: prod }
   caddy:
-    <<: *restart
+    <<: [*ops, *small]
     environment:
       DOMAIN: ${DOMAIN:?set in .env}
       ACME_EMAIL: ${ACME_EMAIL:?set in .env}
+      LANGFUSE_DOMAIN: ${LANGFUSE_DOMAIN:-langfuse.${DOMAIN}}
+      S3_CONSOLE_DOMAIN: ${S3_CONSOLE_DOMAIN:-s3.${DOMAIN}}
+      ADMIN_ALLOW_CIDRS: ${ADMIN_ALLOW_CIDRS:?IP allow-list для Langfuse и консоли RustFS}
     volumes:
       - ./Caddyfile.prod:/etc/caddy/Caddyfile:ro
-    ports: ["80:80", "443:443"]
-  clickhouse: *restart
-  redis: *restart
-  langfuse-worker: *restart
-  langfuse-web: *restart
+    ports: ["80:80", "443:443", "443:443/udp"]
+  clickhouse:
+    <<: *ops
+    deploy: { resources: { limits: { cpus: "1.00", memory: 1536M } } }
+  redis:
+    <<: [*ops, *small]
+  langfuse-worker:
+    <<: [*ops, *medium]
+  langfuse-web:
+    <<: [*ops, *medium]

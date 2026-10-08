@@ -23,7 +23,7 @@ def main() -> None:
         json.dumps(schema, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
-    print(f"OpenAPI → {args.output}")
+    print(f"OpenAPI → {args.output}")  # noqa: T201 — CLI-вывод
 
 
 if __name__ == "__main__":

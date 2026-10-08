@@ -103,6 +103,10 @@ ps: ## Статус контейнеров dev-стенда
 migrate: ## Применить миграции Alembic на dev-стенде
 	$(COMPOSE) run --rm migrate
 
+.PHONY: load-test
+load-test: ## Нагрузочный smoke: 50 параллельных диалогов, p95 ≤ 6 с (реальные модели, ADR-0014)
+	$(COMPOSE) run --rm worker python -m app load-test --yes $(args)
+
 .PHONY: kb-demo
 kb-demo: ## Загрузить демо-базу знаний (нужны ключи моделей в .env)
 	$(COMPOSE) run --rm worker python -m app kb-demo
@@ -142,17 +146,18 @@ smoke-dev: ## Smoke-проверка dev-стенда (/health, /ready)
 # --- prod (Фаза 8) ------------------------------------------------------------------
 
 .PHONY: up-prod
-up-prod: ## Поднять prod-стенд (на VPS)
-	$(COMPOSE_PROD) up -d
+up-prod: ## Поднять prod-стенд из образов GHCR (IMAGE_TAG в .env; на VPS)
+	$(COMPOSE_PROD) --profile backup pull
+	$(COMPOSE_PROD) --profile backup up -d --remove-orphans
 
 .PHONY: smoke-prod
-smoke-prod: ## Smoke-проверка prod (Фаза 8)
-	@echo "scripts/smoke_prod.sh появится в Фазе 8 (PLAN.md)"; exit 1
+smoke-prod: ## Smoke-проверка prod: TLS, /ready, заголовки, закрытый API (DOMAIN из .env)
+	./scripts/smoke_prod.sh
 
 .PHONY: backup
-backup: ## Бэкап Postgres + S3/RustFS (Фаза 8)
-	@echo "scripts/backup.sh появится в Фазе 8 (PLAN.md)"; exit 1
+backup: ## Внеочередной бэкап dev (prod: scripts/backup.sh --prod)
+	./scripts/backup.sh
 
 .PHONY: restore
-restore: ## Восстановление из бэкапа (Фаза 8)
-	@echo "scripts/restore.sh появится в Фазе 8 (PLAN.md)"; exit 1
+restore: ## Восстановить dev из бэкапа: make restore b=latest (prod: scripts/restore.sh --prod)
+	./scripts/restore.sh $(or $(b),latest)

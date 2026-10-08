@@ -4,6 +4,9 @@
 - `worker` — воркер Procrastinate (квалификатор, таймеры, ингест);
 - `mcp kb|crm|docs` — MCP-серверы инструментов агентов;
 - `kb-ingest FILE...`, `kb-demo`, `kb-eval` — база знаний (CLI для человека);
+- `load-test` — нагрузочный smoke диалогов (Фаза 8);
+- `telegram-webhook info|set|delete` — диагностика webhook prod-бота;
+- `s3-mirror --dest|--restore DIR` — копия бакетов для бэкапа;
 - `sample-dialogs` — выгрузка диалогов для еженедельной разметки (YAML в stdout);
 - `create-admin --email ...` — первый администратор CRM.
 """
@@ -83,6 +86,18 @@ def _parser() -> argparse.ArgumentParser:
 
     commands.add_parser("kb-demo", help="загрузить демо-базу знаний (evals/fixtures/kb)")
     commands.add_parser("kb-eval", help="проверить поиск на демо-KB (гейт Фазы 1)")
+    load = commands.add_parser("load-test", help="нагрузочный smoke: N параллельных диалогов")
+    load.add_argument("--dialogs", type=int, default=50, help="параллельных диалогов (50)")
+    load.add_argument("--turns", type=int, default=3, help="вопросов в диалоге (3)")
+    load.add_argument("--settle", type=int, default=60, help="пауза перед замером очереди, с")
+    load.add_argument("--keep", action="store_true", help="не удалять синтетических лидов")
+    load.add_argument("--yes", action="store_true", help="подтвердить расход на модели")
+    hook = commands.add_parser("telegram-webhook", help="webhook бота: info | set | delete")
+    hook.add_argument("action", choices=["info", "set", "delete"], nargs="?", default="info")
+    mirror = commands.add_parser("s3-mirror", help="копия бакетов S3 в каталог / восстановление")
+    target = mirror.add_mutually_exclusive_group(required=True)
+    target.add_argument("--dest", help="каталог для выгрузки")
+    target.add_argument("--restore", help="каталог копии для загрузки обратно")
     sample = commands.add_parser("sample-dialogs", help="случайные диалоги для разметки (YAML)")
     sample.add_argument("--days", type=int, default=7, help="за сколько дней (по умолчанию 7)")
     sample.add_argument("--count", type=int, default=20, help="сколько диалогов (20)")
@@ -120,6 +135,18 @@ async def _run_cli(args: argparse.Namespace) -> int:
         from app.cli import kb_demo
 
         return await kb_demo.run()
+    if args.command == "load-test":
+        from app.cli import load_test
+
+        return await load_test.run(args)
+    if args.command == "telegram-webhook":
+        from app.cli import webhook
+
+        return await webhook.run(args)
+    if args.command == "s3-mirror":
+        from app.cli import s3_mirror
+
+        return await s3_mirror.run(args)
     if args.command == "sample-dialogs":
         from app.cli import sample_dialogs
 

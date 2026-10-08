@@ -39,6 +39,29 @@ async def checkpointer(container: Container) -> AsyncIterator[AsyncPostgresSaver
         await pool.close()
 
 
+def build_conversation(
+    container: Container,
+    saver: AsyncPostgresSaver,
+    on_activity: ActivityHook | None = None,
+    on_escalation: EscalationHook | None = None,
+) -> ConversationService:
+    """Диалоговый контур бота: BudgetGuard → модель, MCP-инструменты, чекпоинтер."""
+    model = BudgetedModel(
+        ChatModel(container.llm, "dialog-model"),
+        ChatModel(container.llm, "fallback-model"),
+        BudgetGuard(container.session_factory, container.settings_service),
+    )
+    agent = DialogAgent(McpToolClient(container.settings), model, saver)
+    return ConversationService(
+        container.session_factory,
+        container.settings_service,
+        agent,
+        container.settings.agent_context_key_bytes,
+        on_activity=on_activity,
+        on_escalation=on_escalation,
+    )
+
+
 @asynccontextmanager
 async def bot_lifespan(
     container: Container,
@@ -51,20 +74,7 @@ async def bot_lifespan(
         yield None
         return
     async with checkpointer(container) as saver:
-        model = BudgetedModel(
-            ChatModel(container.llm, "dialog-model"),
-            ChatModel(container.llm, "fallback-model"),
-            BudgetGuard(container.session_factory, container.settings_service),
-        )
-        agent = DialogAgent(McpToolClient(config), model, saver)
-        conversation = ConversationService(
-            container.session_factory,
-            container.settings_service,
-            agent,
-            config.agent_context_key_bytes,
-            on_activity=on_activity,
-            on_escalation=on_escalation,
-        )
+        conversation = build_conversation(container, saver, on_activity, on_escalation)
         rbac = await Rbac.create(container.engine, config.casbin_dir)
         dispatcher = build_dispatcher(
             container.session_factory,

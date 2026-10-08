@@ -44,7 +44,7 @@
 | Evals | pytest (`-m eval`) + Langfuse datasets + promptfoo | §12 |
 | Качество кода | ruff (lint+format), mypy (strict на домене), pre-commit, pytest, ESLint + Prettier, Vitest + Playwright (smoke) | |
 | Инфра | Docker Compose (base + `dev` + `prod` overrides), Caddy (TLS/роутинг), GitHub Actions | |
-| Бэкапы | `pg_dump` ежедневно + зеркалирование S3-бакетов RustFS (инструмент выбирается в Фазе 8) → отдельный volume/бакет, ротация 14 дней | prod |
+| Бэкапы | `pg_dump` 16 ежедневно + копия S3-бакетов RustFS (`python -m app s3-mirror`, ADR-0013) в контейнере `backup` → том `backups`, ротация 14 дней | prod |
 
 Явно **не используем**: локальные модели (Ollama), Redis/RabbitMQ в приложении (Redis есть только внутри профиля Langfuse), отдельную векторную БД, готовые CRM как ядро (ADR-0002), Keycloak на старте (ADR-0005), ORM-магию в агентах (агенты ходят в данные только через MCP).
 
@@ -489,7 +489,7 @@ Refine с кастомным `dataProvider` (REST `/api/v1`), `authProvider` (co
 | Транспорт | TLS на Caddy (ACME), HSTS; Langfuse и консоль RustFS на prod — только с IP allow-list |
 | Зависимости | `uv lock`, `pnpm lock`, Dependabot, `pip-audit`/`npm audit` в CI |
 | Бэкапы | Ежедневно, проверка восстановления раз в месяц по runbook |
-| Бюджет моделей | LiteLLM budgets по ключам; `settings.budget.daily_usd`; при превышении диалог → `fallback-model`, квалификатор продолжает |
+| Бюджет моделей | Три уровня (ADR-0014): `settings.budget.daily_usd` — при превышении диалог → `fallback-model`, квалификатор продолжает; LiteLLM `provider_budget_config` — жёсткий суточный потолок по провайдеру; лимиты в консолях провайдеров |
 
 ---
 

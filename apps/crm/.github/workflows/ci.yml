@@ -51,6 +51,8 @@ jobs:
         run: |
           uv run ruff check .
           uv run ruff format --check .
+          uv run ruff check --config pyproject.toml ../scripts
+          uv run ruff format --config pyproject.toml --check ../scripts
           uv run mypy app tests evals promptfoo alembic
       - name: Frontend — eslint, prettier, tsc
         working-directory: frontend
@@ -65,10 +67,10 @@ jobs:
             || (echo "::error::OpenAPI или клиент orval устарели — выполните make openapi"; exit 1)
       - name: Compose-файлы валидны
         run: |
-          sed 's/CHANGE_ME/ci/' .env.example > .env
+          sed 's/CHANGE_ME/ci/; s/^IMAGE_TAG=$/IMAGE_TAG=ci/' .env.example > .env
           for override in dev prod; do
             docker compose -f infra/docker-compose.yml -f infra/docker-compose.$override.yml \
-              --env-file .env --profile observability config -q
+              --env-file .env --profile observability --profile backup config -q
           done
       - name: gitleaks
         run: |
@@ -129,6 +131,8 @@ jobs:
       POSTGRES_USER: railtech
       POSTGRES_PASSWORD: ci-only-password
       S3_ENDPOINT: http://localhost:9000
+      S3_ACCESS_KEY: railtech
+      S3_SECRET_KEY: ci-only-password
     steps:
       - uses: actions/checkout@v7
       # Тот же образ, что в infra/docker-compose.yml (ADR-0009).
@@ -235,6 +239,31 @@ jobs:
           path: frontend/playwright-report
           retention-days: 7
 
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: pip-audit (backend, prod-зависимости)
+        working-directory: backend
+        run: |
+          uv export --frozen --no-dev --no-emit-project --format requirements-txt -o /tmp/requirements.txt
+          uvx pip-audit@2.10.1 -r /tmp/requirements.txt --no-deps --disable-pip --progress-spinner off
+      - name: pnpm audit (frontend, prod, high+)
+        working-directory: frontend
+        run: pnpm audit --prod --audit-level high
+
   build:
     name: Build images
     needs: [lint, unit]
@@ -245,17 +274,29 @@ jobs:
         include:
           - name: backend
             context: backend
+            target: prod
           - name: frontend
             context: frontend
+            target: prod
+          - name: backup
+            context: backend
+            target: backup
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
-      - name: Build ${{ matrix.name }} (prod target)
+      - name: Build ${{ matrix.name }} (${{ matrix.target }} target)
         uses: docker/build-push-action@v7
         with:
           context: ${{ matrix.context }}
-          target: prod
+          target: ${{ matrix.target }}
           push: false
+          load: ${{ matrix.name == 'backup' }}
           tags: railtech-${{ matrix.name }}:ci
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+      - name: Образ backup — pg_dump 16 и скрипты на месте
+        if: matrix.name == 'backup'
+        run: |
+          docker run --rm railtech-backup:ci /usr/lib/postgresql/16/bin/pg_dump --version | grep -q "pg_dump (PostgreSQL) 16"
+          docker run --rm railtech-backup:ci /app/ops/backup.sh --help
+          docker run --rm railtech-backup:ci python -m app s3-mirror --help

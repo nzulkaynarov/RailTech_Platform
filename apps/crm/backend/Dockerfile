@@ -38,3 +38,19 @@ EXPOSE 8000
 HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=5 \
     CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)"]
 CMD ["python", "-m", "app", "api"]
+
+# backup: prod + pg_dump/pg_restore 16 из официального репозитория PGDG (ADR-0013);
+# S3 копируется кодом приложения (`python -m app s3-mirror`).
+FROM prod AS backup
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates postgresql-common \
+    && /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y \
+    && apt-get install -y --no-install-recommends postgresql-client-16 \
+    && rm -rf /var/lib/apt/lists/* \
+    && install -d -o app -g app /backups
+COPY --chown=app:app ops ./ops
+USER app
+HEALTHCHECK --interval=1h --timeout=10s --start-period=30s --retries=1 \
+    CMD ["sh", "-c", "test ! -f /backups/last_success || [ $(( $(date +%s) - $(cat /backups/last_success) )) -lt 93600 ]"]
+CMD ["/app/ops/backup.sh", "--daemon"]

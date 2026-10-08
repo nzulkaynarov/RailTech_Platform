@@ -10,8 +10,11 @@
 | [cost-spike.md](cost-spike.md) | Алерт бюджета, рост стоимости моделей |
 | [prompt-rollback.md](prompt-rollback.md) | Откат изменения промпта |
 | [eval-gate.md](eval-gate.md) | Настройка и разбор CI eval-gate |
+| [deploy.md](deploy.md) | Первичная настройка VPS, выкладка по тегу, откат |
+| [backup-restore.md](backup-restore.md) | Бэкапы, восстановление, проверка на dev |
+| [key-rotation.md](key-rotation.md) | Ротация ключей и секретов |
 
-Запланированы (SPEC §13, PLAN): деплой и откат (Фаза 8), бэкап/восстановление (8), ротация ключей (8), `promote-to-prod.md` (9).
+Запланированы (SPEC §13, PLAN): `promote-to-prod.md` (Фаза 9).
 
 ## Шаблон
 

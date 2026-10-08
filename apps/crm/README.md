@@ -79,6 +79,25 @@ E2E (Playwright) против стенда: `make test-e2e-local` с `E2E_MANAGE
 
 Конвертацию файлов выполняет сервис `docling` (образ ~4.4 ГБ, первый `make up` дольше; ADR-0011).
 
+### Качество и эксплуатация (Фаза 7)
+
+- `make eval` — golden-набор на реальных моделях (пороги SPEC §12); в PR при изменении промптов/агентов — job **Eval gate** с комментарием-отчётом (нужны GitHub Secrets, `docs/runbooks/eval-gate.md`).
+- `LITELLM_API_KEY=<LITELLM_MASTER_KEY> make promptfoo` — матрица «промпт × модель».
+- В канал команды: алерты ⚠️ (упавшие задачи, LiteLLM, очередь, бюджет) и «📊 Итоги дня» в 18:05.
+- `scripts/sample_dialogs.py` — 20 случайных диалогов для еженедельной разметки (`docs/evals/labeling.md`).
+
+## prod (Фаза 8)
+
+Выкладка — тегом `v*` (workflow **Deploy prod**: образы в GHCR → VPS → бэкап → миграции → smoke → откат при провале). Первичная настройка VPS и откат — `docs/runbooks/deploy.md`.
+
+```bash
+make up-prod            # на VPS: pull образов IMAGE_TAG + up (с сервисом backup)
+make smoke-prod         # TLS, /ready, заголовки безопасности, закрытый API
+scripts/backup.sh --prod / scripts/restore.sh --prod <штамп>   # ADR-0013, runbook backup-restore
+scripts/set_webhook.py  # состояние webhook prod-бота
+make load-test          # 50 параллельных диалогов на dev: p95 ≤ 6 с (реальные модели)
+```
+
 ## Разработка без Docker
 
 ```bash

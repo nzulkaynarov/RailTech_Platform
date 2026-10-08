@@ -60,3 +60,11 @@ class ObjectStorage:
     async def delete(self, bucket: str, key: str) -> None:
         async with self._client() as client:
             await client.delete_object(Bucket=bucket, Key=key)
+
+    async def list_keys(self, bucket: str) -> list[str]:
+        async with self._client() as client:
+            keys: list[str] = []
+            paginator = client.get_paginator("list_objects_v2")
+            async for page in paginator.paginate(Bucket=bucket):
+                keys += [item["Key"] for item in page.get("Contents", [])]
+            return keys

@@ -7,7 +7,7 @@
 > после запуска на локальной машине, затем работа над ошибками. Гейты ниже остаются
 > чек-листом этой приёмки.
 
-Текущая фаза: **8 — Hardening и подготовка prod** (Фазы 0–7 реализованы, ожидают приёмки).
+Текущая фаза: **9 — Переезд на prod и пилот** (Фазы 0–8 реализованы, ожидают приёмки; Фаза 9 — действия человека).
 
 | Фаза | Название | Статус | Гейт (человек) | Даты |
 |---|---|---|---|---|
@@ -19,7 +19,7 @@
 | 5 | Администрирование | 🟡 ожидает приёмки | ☐ | 2026-10-08 |
 | 6 | Клиентский режим и документы | 🟡 ожидает приёмки | ☐ | 2026-10-08 |
 | 7 | Evals, наблюдаемость, CI-гейты | 🟡 ожидает приёмки | ☐ | 2026-10-08 |
-| 8 | Hardening и подготовка prod | ⚪ | ☐ | |
+| 8 | Hardening и подготовка prod | 🟡 ожидает приёмки | ☐ | 2026-10-08 |
 | 9 | Переезд на prod и пилот | ⚪ | ☐ | |
 | 10 | Расширения | ⚪ | ☐ | |
 
@@ -250,3 +250,32 @@
 - [ ] Поставить `budget.daily_usd` = 0.01 → алерт бюджета, следующий ответ бота — генерация `fallback-model` в Langfuse.
 - [ ] В 18:05 (пн–пт) — «📊 Итоги дня» в канале.
 - [ ] `scripts/sample_dialogs.py` → `reports/labeling/<дата>.yaml` без телефонов/e-mail.
+
+## Фаза 8 — детали
+
+| # | Задача (PLAN.md) | Статус | Где |
+|---|---|---|---|
+| 1 | prod compose: образы с тегом git sha, без монтирования кода, restart, лимиты, JSON-логи с ротацией | ✅ `build: !reset null`, лимиты под 4 vCPU / 8 GB | `infra/docker-compose.prod.yml` |
+| 2 | Caddyfile.prod: TLS, HSTS, роутинг, IP allow-list Langfuse и консоли RustFS, security headers | ✅ CSP, nosniff, DENY; поддомены `langfuse.`/`s3.` за `ADMIN_ALLOW_CIDRS`; проверено `caddy adapt` | `infra/Caddyfile.prod` |
+| 3 | Webhook с `secret_token`; `scripts/set_webhook.py` | ✅ API ставит webhook сам; CLI `telegram-webhook info/set/delete` | `app/cli/webhook.py` |
+| 4 | backup.sh / restore.sh, ротация 14 дней, контейнер backup; runbook проверки восстановления | ✅ ADR-0013; проверено вживую на Postgres 16 + RustFS (повторное восстановление поверх данных) | `backend/ops/`, `scripts/` |
+| 5 | deploy-prod.yml: тег → GHCR → ssh → pull/up → миграции → smoke → откат | ✅ логика отката проверена на стабах | `.github/workflows/deploy-prod.yml`, `scripts/deploy.sh` |
+| 6 | Ротация ключей (runbook), lockout, аудит входов, pip-audit / pnpm audit, Dependabot | ✅ job `audit`; исправлен high в `path-to-regexp` (override 8.4.2); lockout и аудит — с Фазы 4 | `ci.yml`, `key-rotation.md` |
+| 7 | Нагрузочный smoke: 50 диалогов, p95 ≤ 6 с, очередь не растёт | ✅ CLI `load-test` (ADR-0014: в процессе, не locust) | `app/cli/load_test.py` |
+| 8 | Бюджеты LiteLLM; `settings.budget`; деградация на fallback-model | ✅ `provider_budget_config` + BudgetGuard (ADR-0014) | `infra/litellm.config.yaml` |
+
+Решения агента:
+- Найдено и исправлено: за Caddy uvicorn видел IP прокси (доверял `X-Forwarded-For` только с 127.0.0.1) — аудит входов и lockout писали бы адрес Caddy. `FORWARDED_ALLOW_IPS=*` только для api (порт не публикуется на prod).
+- Бюджеты LiteLLM «по ключам» без БД LiteLLM не применяются (проверено по исходникам 1.104.2) — вместо них потолок по провайдеру и лимиты в консолях (ADR-0014).
+- Нагрузочный smoke меряет ход через `ConversationService` (как бот), а не HTTP webhook, который отвечает 200 до обработки (ADR-0014).
+- Перед каждой выкладкой — бэкап; миграции не откатываются автоматически, правило expand → contract (runbook `deploy.md`).
+- `scripts/` теперь проверяется ruff в CI.
+
+### Гейт Фазы 8 (проверяет человек)
+
+- [ ] VPS по `docs/runbooks/deploy.md`; secrets environment `production`; тег `v0.1.0` → Deploy prod зелёный, `make smoke-prod` OK.
+- [ ] `https://langfuse.<домен>` с IP вне allow-list → 403; из офиса — открывается.
+- [ ] `scripts/set_webhook.py` — url верный, `last_error` пусто; бот отвечает.
+- [ ] `scripts/backup.sh --prod` → восстановление на dev (`backup-restore.md`) → данные prod видны в CRM.
+- [ ] `make load-test` на dev → PASS (p95 ≤ 6 с, очередь вернулась).
+- [ ] Лимиты расходов в консолях Anthropic/Google на prod-ключах.

@@ -13,7 +13,7 @@
 import argparse
 import subprocess
 import sys
-from datetime import date
+from datetime import UTC, datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -42,17 +42,20 @@ def main() -> int:
     ]
     if args.seed is not None:
         command += ["--seed", str(args.seed)]
-    out = args.out or ROOT / "reports" / "labeling" / f"{date.today():%Y-%m-%d}.yaml"
-    result = subprocess.run(command, cwd=ROOT, check=False, capture_output=True, text=True)  # noqa: S603
+    out = args.out or ROOT / "reports" / "labeling" / f"{datetime.now(UTC):%Y-%m-%d}.yaml"
+    result = subprocess.run(  # noqa: S603 — аргументы фиксированы
+        command, cwd=ROOT, check=False, capture_output=True, text=True
+    )
     if result.returncode != 0:
         sys.stderr.write(result.stderr[-2000:])
         sys.stderr.write("\nВыгрузка не удалась: проверьте `make ps` и логи worker (make logs).\n")
         return result.returncode
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(result.stdout, encoding="utf-8")
-    print(f"Готово: {out}")  # noqa: T201
-    print("Дальше: раздайте файл менеджерам, заполните `label`, кейсы с golden: true")  # noqa: T201
-    print("перенесите в backend/evals/golden/ (docs/evals/labeling.md).")  # noqa: T201
+    sys.stdout.write(
+        f"Готово: {out}\nДальше: раздайте файл менеджерам, заполните `label`; кейсы с\n"
+        "golden: true перенесите в backend/evals/golden/ (docs/evals/labeling.md).\n"
+    )
     return 0
 
 
