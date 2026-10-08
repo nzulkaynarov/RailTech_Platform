@@ -1,0 +1,36 @@
+# Обновления зависимостей (SPEC §11). Мажорные версии — отдельными PR,
+# минорные/патчи сгруппированы, чтобы не засорять очередь.
+version: 2
+updates:
+  - package-ecosystem: uv
+    directory: /backend
+    schedule: { interval: weekly, day: monday, timezone: Asia/Tashkent }
+    groups:
+      python-minor:
+        update-types: [minor, patch]
+    # Procrastinate обновляется вручную вместе с миграцией схемы (ADR-0006).
+    ignore:
+      - dependency-name: procrastinate
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule: { interval: weekly, day: monday, timezone: Asia/Tashkent }
+    groups:
+      npm-minor:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly, day: monday, timezone: Asia/Tashkent }
+
+  - package-ecosystem: docker
+    directories: [/backend, /frontend]
+    schedule: { interval: weekly, day: monday, timezone: Asia/Tashkent }
+
+  - package-ecosystem: docker-compose
+    directory: /infra
+    schedule: { interval: weekly, day: monday, timezone: Asia/Tashkent }
+
+  - package-ecosystem: pre-commit
+    directory: /
+    schedule: { interval: monthly, timezone: Asia/Tashkent }

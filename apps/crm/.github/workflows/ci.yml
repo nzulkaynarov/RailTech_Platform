@@ -1,0 +1,181 @@
+# CI (PLAN Фаза 0, задача 7): lint → unit → integration → build.
+# Интеграционные тесты — с реальными Postgres+pgvector и MinIO.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  UV_VERSION: "0.12.23"
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "22"
+
+jobs:
+  lint:
+    name: Lint & typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install
+        run: make install
+      - name: Backend — ruff, mypy
+        working-directory: backend
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+          uv run mypy app tests alembic
+      - name: Frontend — eslint, prettier, tsc
+        working-directory: frontend
+        run: |
+          pnpm lint
+          pnpm format:check
+          pnpm typecheck
+      - name: OpenAPI актуален
+        run: |
+          make openapi
+          git diff --exit-code -- docs/api/openapi.json \
+            || (echo "::error::docs/api/openapi.json устарел — выполните make openapi"; exit 1)
+      - name: Compose-файлы валидны
+        run: |
+          sed 's/CHANGE_ME/ci/' .env.example > .env
+          for override in dev prod; do
+            docker compose -f infra/docker-compose.yml -f infra/docker-compose.$override.yml \
+              --env-file .env --profile observability config -q
+          done
+      - name: gitleaks
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz \
+            | tar -xz -C /usr/local/bin gitleaks
+          gitleaks git --redact --verbose .
+
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install
+        run: make install
+      - name: Backend unit (pytest)
+        working-directory: backend
+        run: uv run pytest --cov --cov-report=term-missing
+      - name: Frontend unit (vitest)
+        working-directory: frontend
+        run: pnpm test
+
+  integration:
+    name: Integration tests
+    needs: [lint, unit]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.7-pg16
+        env:
+          POSTGRES_DB: railtech_test
+          POSTGRES_USER: railtech
+          POSTGRES_PASSWORD: ci-only-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U railtech -d railtech_test"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      APP_ENV: test
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: railtech_test
+      POSTGRES_USER: railtech
+      POSTGRES_PASSWORD: ci-only-password
+      MINIO_ENDPOINT: http://localhost:9000
+    steps:
+      - uses: actions/checkout@v7
+      # service containers не принимают аргументы команды, MinIO стартуем вручную.
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio -p 9000:9000 \
+            -e MINIO_ROOT_USER=railtech -e MINIO_ROOT_PASSWORD=ci-only-password \
+            quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z server /data
+          for i in $(seq 1 30); do
+            curl -fsS http://localhost:9000/minio/health/live && exit 0
+            sleep 2
+          done
+          docker logs minio; exit 1
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - name: Install
+        working-directory: backend
+        run: uv sync --frozen
+      - name: Integration (pytest -m integration)
+        working-directory: backend
+        run: uv run pytest -m integration -v
+
+  build:
+    name: Build images
+    needs: [lint, unit]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        include:
+          - name: backend
+            context: backend
+          - name: frontend
+            context: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - name: Build ${{ matrix.name }} (prod target)
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.context }}
+          target: prod
+          push: false
+          tags: railtech-${{ matrix.name }}:ci
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
