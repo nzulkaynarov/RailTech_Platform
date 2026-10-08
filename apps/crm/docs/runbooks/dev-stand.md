@@ -26,6 +26,8 @@ make smoke-dev
 | `make logs s=s3-init` | `bucket ready: langfuse` |
 | `make logs s=migrate` | `Running upgrade -> 0001_init` или пусто (уже применено) |
 | `make logs s=worker` | `Starting worker on all queues` |
+| `make logs s=api \| grep bot_` | `bot_started` с `mode: polling` (или `bot_disabled`, если токен пуст) |
+| `make ps kb-mcp crm-mcp` | оба `healthy` |
 
 ## Действие
 
@@ -34,6 +36,8 @@ make smoke-dev
 3. **`litellm: fail`**: `make logs s=litellm`. Частые причины: `LITELLM_MASTER_KEY` не начинается с `sk-`; синтаксическая ошибка в `infra/litellm.config.yaml`.
 4. **`migrate` упал** → api/worker не стартуют: `make logs s=migrate`, исправьте причину, затем `make migrate` и `make up`.
 5. **Порт 80 занят** (Caddy не стартует): задайте `HTTP_PORT=8080` в `.env`, `make up`, CRM — `http://localhost:8080`.
+7. **Бот молчит**: `make logs s=api`. `bot_disabled` — пуст `TELEGRAM_BOT_TOKEN`; `TelegramUnauthorizedError` — неверный токен; `TelegramConflictError` — тот же токен уже опрашивает другой процесс (второй стенд, старый webhook); `dialog_agent_failed` / `service_unavailable` в ответе — недоступны `kb-mcp`/`crm-mcp` или LiteLLM (`make ps`, `make logs s=crm-mcp`). Бот не отвечает на вопросы до нажатия «Согласен» — это норма.
+8. **Ответ «уточню у коллег» на вопрос по KB**: пробел KB (запись в `kb_gaps`) — проверьте `make kb-demo` и порог `kb.min_score` в настройках.
 6. **Порт 5432/9000/4000/8000 занят** локальным сервисом: остановите его или уберите проброс порта в `infra/docker-compose.dev.yml` (локально, без коммита).
 
 ## Проверка

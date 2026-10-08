@@ -15,6 +15,7 @@ from app.config import Settings, get_settings
 from app.integrations.docling import DoclingClient
 from app.integrations.litellm import Embedder, make_client
 from app.integrations.s3 import ObjectStorage
+from app.services.settings import SettingsService
 
 
 @dataclass
@@ -40,6 +41,10 @@ class Container:
     @cached_property
     def storage(self) -> ObjectStorage:
         return ObjectStorage(self.settings)
+
+    @cached_property
+    def settings_service(self) -> SettingsService:
+        return SettingsService(self.session_factory)
 
     @cached_property
     def docling(self) -> DoclingClient:

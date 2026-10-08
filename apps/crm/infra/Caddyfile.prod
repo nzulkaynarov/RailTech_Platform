@@ -11,6 +11,9 @@
 	handle /api/* {
 		reverse_proxy api:8000
 	}
+	handle /telegram/webhook {
+		reverse_proxy api:8000
+	}
 	handle /health {
 		reverse_proxy api:8000
 	}

@@ -1,12 +1,9 @@
 """kb-mcp по HTTP: инструменты доступны только с валидным подписанным контекстом."""
 
-import asyncio
-import socket
 from collections.abc import AsyncIterator
 
 import httpx2
 import pytest
-import uvicorn
 from mcp import Client
 from mcp.client.streamable_http import streamable_http_client
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -18,12 +15,7 @@ from app.mcp.kb_server import create_server
 from app.security.agent_context import HEADER_NAME, issue
 from tests.fakes import FakeEmbedder
 from tests.integration.kb_seed import seed_kb
-
-
-def free_port() -> int:
-    with socket.socket() as sock:
-        sock.bind(("127.0.0.1", 0))
-        return int(sock.getsockname()[1])
+from tests.integration.servers import free_port, running
 
 
 @pytest.fixture
@@ -34,14 +26,8 @@ async def kb_url(
     container.__dict__["session_factory"] = sessions
     container.__dict__["embedder"] = FakeEmbedder()
     port = free_port()
-    app = build_app(create_server(container), "kb-mcp", port)
-    server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_config=None))
-    task = asyncio.create_task(server.serve())
-    while not server.started:  # noqa: ASYNC110 — uvicorn не даёт события старта
-        await asyncio.sleep(0.05)
-    yield f"http://127.0.0.1:{port}/mcp"
-    server.should_exit = True
-    await task
+    async with running(build_app(create_server(container), "kb-mcp", port), port) as url:
+        yield url
 
 
 async def call(url: str, headers: dict[str, str], tool: str, args: dict[str, object]) -> object:

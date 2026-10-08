@@ -69,3 +69,18 @@ def _uzbek_score(text: str) -> float:
 
 def _english_score(text: str) -> float:
     return 2.0 * sum(1 for w in _WORDS.findall(text) if w.casefold() in _EN_WORDS)
+
+
+def next_language(
+    current: Language, confirmed: bool, candidate: Language | None, detected: Language
+) -> tuple[Language, bool, Language | None]:
+    """Язык ответа и состояние фиксации (SPEC §7.1).
+
+    Язык фиксируется после двух подряд сообщений на одном языке; зафиксированный
+    язык меняет только команда /lang. Возвращает (язык, зафиксирован, кандидат).
+    """
+    if confirmed:
+        return current, True, None
+    if candidate == detected:
+        return detected, True, None
+    return detected, False, detected

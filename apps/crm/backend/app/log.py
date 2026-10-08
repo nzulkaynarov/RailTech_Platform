@@ -2,7 +2,8 @@
 
 Логи стандартного `logging` (uvicorn, alembic, procrastinate) проходят через
 те же процессоры, поэтому формат единый. `request_id` добавляется из
-контекста `asgi-correlation-id`. Логировать только kwargs, без f-строк.
+контекста `asgi-correlation-id`; персональные данные маскируются
+(SPEC §11). Логировать только kwargs, без f-строк.
 """
 
 import logging
@@ -13,6 +14,7 @@ from asgi_correlation_id import correlation_id
 from structlog.types import EventDict, Processor, WrappedLogger
 
 from app.config import Settings
+from app.security.pii import structlog_processor as mask_pii
 
 _HANDLER_NAME = "structlog-stdout"
 
@@ -30,6 +32,7 @@ def _shared_processors() -> list[Processor]:
         structlog.stdlib.add_log_level,
         structlog.stdlib.add_logger_name,
         add_request_id,
+        mask_pii,
         structlog.processors.TimeStamper(fmt="iso", utc=True),
         structlog.processors.StackInfoRenderer(),
     ]

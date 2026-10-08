@@ -5,7 +5,7 @@ description: Добавить golden-кейс оценки качества ИИ
 
 # Golden-кейс
 
-Категории и метрики — `SPEC §12`. Набор живёт в `backend/evals/golden/`, фикстуры KB — `backend/evals/fixtures/kb/`. Формат YAML и pydantic-схема кейса появляются в Фазе 2 вместе с `test_eval.py`.
+Категории и метрики — `SPEC §12`. Набор живёт в `backend/evals/golden/`, фикстуры KB — `backend/evals/fixtures/kb/`. Схема кейса — `backend/evals/golden.py` (`GoldenCase`: `id`, `category`, `language`, `message`, `history`, `stage`, `need_summary`, `expect.{actions, reply_language, kb_document, must_include_any, must_not_include, max_words}`); прогон — `backend/evals/test_eval.py`.
 
 ## Шаги
 

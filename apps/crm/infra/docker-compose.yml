@@ -29,6 +29,13 @@ x-backend: &backend
     DOCLING_URL: http://docling:5001
     DOCLING_API_KEY: ${DOCLING_API_KEY}
     AGENT_CONTEXT_KEY: ${AGENT_CONTEXT_KEY}
+    TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+    TELEGRAM_MODE: ${TELEGRAM_MODE:-polling}
+    TELEGRAM_WEBHOOK_URL: ${TELEGRAM_WEBHOOK_URL:-}
+    TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
+    LANGFUSE_HOST: http://langfuse-web:3000
+    LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+    LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
 
 services:
   postgres:
@@ -187,6 +194,20 @@ services:
         - python
         - -c
         - import socket; socket.create_connection(('localhost', 8101), timeout=2)
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  crm-mcp:
+    <<: *backend
+    command: ["python", "-m", "app", "mcp", "crm"]
+    depends_on: *backend-deps
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import socket; socket.create_connection(('localhost', 8102), timeout=2)
       interval: 15s
       timeout: 5s
       retries: 10

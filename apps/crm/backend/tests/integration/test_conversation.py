@@ -1,0 +1,168 @@
+"""Ход диалога целиком: Postgres, kb-mcp и crm-mcp по HTTP, модель — записанные ответы."""
+
+from collections.abc import AsyncIterator
+from contextlib import AsyncExitStack
+from dataclasses import dataclass, field
+
+import pytest
+from pydantic import AnyHttpUrl
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+from app.agents.dialog.graph import DialogAgent
+from app.agents.llm import ToolCall
+from app.agents.mcp_client import McpToolClient
+from app.config import Settings
+from app.container import Container
+from app.mcp import crm_server, kb_server
+from app.mcp.common import build_app
+from app.models.kb import KbGap
+from app.models.leads import Lead, Message
+from app.models.qualification import StageTransition
+from app.repositories.leads import ERASED_TEXT
+from app.services.conversation import ConversationService, Incoming
+from app.services.settings import SettingsService
+from tests.fakes import FakeEmbedder
+from tests.integration.kb_seed import seed_kb
+from tests.integration.servers import free_port, running
+from tests.unit.agents.fakes import ReplayModel, reply
+
+pytestmark = pytest.mark.integration
+
+USER = 7001
+
+
+@dataclass
+class Stack:
+    service: ConversationService
+    model: ReplayModel
+    sessions: async_sessionmaker[AsyncSession]
+    hooks: list[tuple[str, int, list[str]]] = field(default_factory=list)
+
+
+@pytest.fixture
+async def stack(
+    sessions: async_sessionmaker[AsyncSession], live_settings: Settings
+) -> AsyncIterator[Stack]:
+    await seed_kb(sessions)
+    container = Container(live_settings)
+    container.__dict__["session_factory"] = sessions
+    container.__dict__["embedder"] = FakeEmbedder()
+    async with AsyncExitStack() as stack:
+        urls = {}
+        for name, module in (("kb", kb_server), ("crm", crm_server)):
+            port = free_port()
+            app = build_app(module.create_server(container), f"{name}-mcp", port)
+            urls[name] = await stack.enter_async_context(running(app, port))
+        config = live_settings.model_copy(
+            update={"kb_mcp_url": AnyHttpUrl(urls["kb"]), "crm_mcp_url": AnyHttpUrl(urls["crm"])}
+        )
+        model = ReplayModel()
+        result = Stack(service=None, model=model, sessions=sessions)  # type: ignore[arg-type]
+
+        async def on_activity(lead_id: int, codes: list[str]) -> None:
+            result.hooks.append(("activity", lead_id, codes))
+
+        async def on_handoff(lead_id: int, codes: list[str]) -> None:
+            result.hooks.append(("handoff", lead_id, codes))
+
+        result.service = ConversationService(
+            sessions,
+            SettingsService(sessions, ttl_s=0),
+            DialogAgent(McpToolClient(config), model),
+            config.agent_context_key_bytes,
+            on_activity=on_activity,
+            on_handoff=on_handoff,
+        )
+        yield result
+
+
+def msg(text: str, **extra: object) -> Incoming:
+    return Incoming(tg_user_id=USER, chat_id=USER, text=text, first_name="Азиз", **extra)  # type: ignore[arg-type]
+
+
+async def lead_row(sessions: async_sessionmaker[AsyncSession]) -> Lead:
+    async with sessions() as session:
+        return (await session.scalars(select(Lead))).one()
+
+
+async def consented(stack: Stack) -> None:
+    await stack.service.start(msg("/start", language_code="ru"))
+    await stack.service.accept_consent(USER)
+
+
+async def test_first_message_asks_consent_and_does_not_answer(stack: Stack) -> None:
+    out = await stack.service.handle_message(msg("Сколько стоит касса?", language_code="ru"))
+    assert [o.keyboard for o in out] == [None, "consent"]
+    assert stack.model.requests == []
+    async with stack.sessions() as session:
+        roles = (await session.scalars(select(Message.role).order_by(Message.id))).all()
+    assert roles == ["lead", "bot", "bot"]
+
+
+async def test_answers_from_kb_after_consent(stack: Stack) -> None:
+    await consented(stack)
+    stack.model.responses.append(reply("Тариф Старт включает одну кассу и облачный учёт."))
+    out = await stack.service.handle_message(msg("Что входит в тариф Старт для кассы RT-POS?"))
+    assert out[-1].text.startswith("Тариф Старт")
+    system = stack.model.requests[0][0]["content"]
+    assert "Тариф Старт" in system
+    assert "<fragment" in system
+    async with stack.sessions() as session:
+        bot = (await session.scalars(select(Message).order_by(Message.id.desc()))).first()
+    assert bot is not None
+    assert bot.meta["action"] == "answer"
+    assert bot.meta["kb_hits"]
+
+
+async def test_out_of_kb_question_falls_back_and_registers_gap(stack: Stack) -> None:
+    await consented(stack)
+    out = await stack.service.handle_message(msg("Какая завтра погода в Париже?"))
+    assert stack.model.requests == []
+    assert out[-1].text
+    lead = await lead_row(stack.sessions)
+    assert lead.consecutive_fallbacks == 1
+    async with stack.sessions() as session:
+        assert await session.scalar(select(func.count()).select_from(KbGap)) == 1
+
+
+async def test_human_request_hands_off_and_pauses_bot(stack: Stack) -> None:
+    await consented(stack)
+    await stack.service.handle_message(msg("/human", human_requested=True))
+    lead = await lead_row(stack.sessions)
+    assert (lead.owner_mode, lead.stage) == ("paused", "handoff")
+    assert ("handoff", lead.id, ["human_requested"]) in stack.hooks
+    async with stack.sessions() as session:
+        transition = (await session.scalars(select(StageTransition))).one()
+    assert transition.to_stage == "handoff"
+
+    out = await stack.service.handle_message(msg("Ау, есть кто?"))
+    assert out == []
+    assert stack.model.requests == []
+
+
+async def test_callback_tool_records_signal(stack: Stack) -> None:
+    await consented(stack)
+    call = ToolCall(id="c1", name="request_callback", arguments={"preferred_time": "завтра 10:00"})
+    stack.model.responses += [reply("", call), reply("Хорошо, менеджер свяжется с вами завтра.")]
+    # Фейковые векторы дают низкое сходство для смешанной фразы — снижаем порог.
+    await SettingsService(stack.sessions).update("kb", {"min_score": 0.3, "top_k": 6}, None)
+    out = await stack.service.handle_message(msg("Тариф Старт для кассы RT-POS, позвоните завтра"))
+    assert out[-1].text.startswith("Хорошо")
+    lead = await lead_row(stack.sessions)
+    assert lead.qualification["signals"]["requested_contact"] is True
+    assert lead.qualification["callback"]["preferred_time"] == "завтра 10:00"
+    assert ("handoff", lead.id, ["callback_requested"]) in stack.hooks
+
+
+async def test_delete_erases_messages_and_unlinks_identity(stack: Stack) -> None:
+    await consented(stack)
+    await stack.service.erase(USER)
+    lead = await lead_row(stack.sessions)
+    assert lead.erased_at is not None
+    assert lead.display_name == ""
+    async with stack.sessions() as session:
+        texts = set((await session.scalars(select(Message.text))).all())
+    assert texts == {ERASED_TEXT}
+    out = await stack.service.handle_message(msg("Снова здравствуйте"))
+    assert out[-1].keyboard == "consent"

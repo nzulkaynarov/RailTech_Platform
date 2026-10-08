@@ -17,6 +17,7 @@ services:
     <<: *restart
   docling: *restart
   kb-mcp: *restart
+  crm-mcp: *restart
   web: *restart
   caddy:
     <<: *restart

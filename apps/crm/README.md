@@ -49,6 +49,15 @@ make smoke-dev                # /health и /ready напрямую и через
 2. `make kb-demo` — загрузить демо-KB; `make kb-eval` — проверить поиск (гейт: top-3 ≥ 13/15).
 3. Свои документы: `make kb-ingest f=path/to/file.pdf lang=ru product=pos-integration`.
 
+### Бот и диалоговый агент (Фаза 2)
+
+1. Создайте dev-бота у @BotFather, впишите `TELEGRAM_BOT_TOKEN` в `.env` (`TELEGRAM_MODE=polling`), затем `make up`.
+2. Напишите боту `/start` → приветствие и согласие; после «Согласен» вопросы по демо-KB получают ответ.
+3. Трейсы ходов: `make up-obs`, создайте проект и API-ключи в Langfuse, впишите `LANGFUSE_PUBLIC_KEY`/`LANGFUSE_SECRET_KEY`.
+4. `make eval` — golden-кейсы агента с judge (нужны ключи моделей и `make kb-demo`; гейт: faithfulness ≥ 0.9, выдуманных чисел 0).
+
+Команды бота: `/start`, `/lang`, `/help`, `/human` (передать менеджеру), `/delete` (обезличить переписку).
+
 Конвертацию файлов выполняет сервис `docling` (образ ~4.4 ГБ, первый `make up` дольше; ADR-0011).
 
 ## Разработка без Docker

@@ -110,7 +110,7 @@ class KbGap(TimestampMixin, Base):
     )
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
-    lead_id: Mapped[int | None] = mapped_column(BigInteger)
+    lead_id: Mapped[int | None] = mapped_column(ForeignKey("leads.id", ondelete="SET NULL"))
     question: Mapped[str] = mapped_column(Text)
     question_normalized: Mapped[str] = mapped_column(Text, unique=True)
     language: Mapped[str] = mapped_column(String(2))

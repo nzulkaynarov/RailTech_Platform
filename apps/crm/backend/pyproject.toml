@@ -5,12 +5,16 @@ description = "RailTech CRM backend: API, Telegram bot, agents, worker"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "aiobotocore>=3.9.2",
+    "aiogram>=3.31.0",
     "alembic>=1.20.0",
     "asgi-correlation-id>=5.0.1",
     "docling-core[chunking-openai]>=2.101.0",
     "fastapi>=0.143.0",
     "httpx>=0.28.1",
     "huggingface-hub>=2.1.1",
+    "langfuse>=4.17.0",
+    "langgraph>=1.2.14",
+    "langgraph-checkpoint-postgres>=3.1.2",
     "mcp>=2.3.0",
     "openai>=3.26.1",
     "pgvector>=0.5.0",
@@ -65,7 +69,9 @@ ignore = ["RUF001", "RUF002", "RUF003", "SIM905"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S105", "S106", "N817"]
+"evals/test_*.py" = ["S101", "S106", "T201"]
 "alembic/versions/**" = ["S608"]
+"app/schemas/settings.py" = ["E501"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app", "tests"]

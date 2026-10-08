@@ -36,7 +36,7 @@ lint: ## ruff + eslint + prettier --check
 
 .PHONY: typecheck
 typecheck: ## mypy + tsc
-	cd $(BACKEND) && uv run mypy app tests alembic
+	cd $(BACKEND) && uv run mypy app tests evals alembic
 	cd $(FRONTEND) && pnpm typecheck
 
 .PHONY: test
@@ -56,8 +56,8 @@ test-e2e: ## E2E-тесты (появляются с Фазы 4)
 	cd $(BACKEND) && uv run pytest -m e2e
 
 .PHONY: eval
-eval: ## Evals качества ИИ (нужны ключи моделей; с Фазы 2)
-	cd $(BACKEND) && uv run pytest -m eval
+eval: ## Evals агента на golden (dev-стенд: ключи моделей + make kb-demo)
+	$(COMPOSE) run --rm worker pytest -m eval evals -p no:cacheprovider -s
 
 .PHONY: promptfoo
 promptfoo: ## Матрица промпт × модель (Фаза 7)

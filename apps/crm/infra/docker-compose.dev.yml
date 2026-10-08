@@ -20,6 +20,7 @@ services:
       - ../backend/alembic.ini:/app/alembic.ini:ro
       - ../backend/prompts:/app/prompts:ro
       - ../backend/evals:/app/evals:ro
+      - ../backend/tests:/app/tests:ro
 
   api:
     build: { target: dev }
@@ -33,6 +34,10 @@ services:
     restart: unless-stopped
 
   kb-mcp:
+    build: { target: dev }
+    volumes: *backend-src
+
+  crm-mcp:
     build: { target: dev }
     volumes: *backend-src
 

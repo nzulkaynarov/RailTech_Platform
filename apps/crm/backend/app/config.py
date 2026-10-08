@@ -46,6 +46,15 @@ class Settings(BaseSettings):
     docling_api_key: SecretStr = SecretStr("")
     docling_timeout_s: float = Field(default=300.0, gt=0)
 
+    telegram_bot_token: SecretStr = SecretStr("")
+    telegram_mode: Literal["polling", "webhook", "disabled"] = "polling"
+    telegram_webhook_url: str = ""
+    telegram_webhook_secret: SecretStr = SecretStr("")
+
+    langfuse_public_key: str = ""
+    langfuse_secret_key: SecretStr = SecretStr("")
+    langfuse_host: AnyHttpUrl = AnyHttpUrl("http://langfuse-web:3000")
+
     agent_context_key: SecretStr = SecretStr("")
     kb_mcp_url: AnyHttpUrl = AnyHttpUrl("http://kb-mcp:8101/mcp")
     crm_mcp_url: AnyHttpUrl = AnyHttpUrl("http://crm-mcp:8102/mcp")

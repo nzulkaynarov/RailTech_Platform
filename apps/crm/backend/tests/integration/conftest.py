@@ -18,6 +18,22 @@ from app.config import Settings
 
 ALEMBIC_INI = Path(__file__).parents[2] / "alembic.ini"
 AGENT_KEY = "integration-agent-context-key-0123456789"
+TABLES = (
+    "kb_chunks",
+    "kb_documents",
+    "kb_gaps",
+    "products",
+    "leads",
+    "telegram_identities",
+    "conversations",
+    "messages",
+    "tg_updates",
+    "lead_notes",
+    "settings",
+    "qualifier_runs",
+    "escalations",
+    "stage_transitions",
+)
 
 
 @pytest.fixture(scope="session")
@@ -42,8 +58,6 @@ async def sessions(
     engine = db.create_engine(live_settings)
     factory = db.create_session_factory(engine)
     async with factory() as session, session.begin():
-        await session.execute(
-            text("TRUNCATE kb_chunks, kb_documents, kb_gaps, products RESTART IDENTITY CASCADE")
-        )
+        await session.execute(text(f"TRUNCATE {', '.join(TABLES)} RESTART IDENTITY CASCADE"))
     yield factory
     await engine.dispose()
