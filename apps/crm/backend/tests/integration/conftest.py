@@ -1,4 +1,4 @@
-"""Integration-тесты: реальные Postgres (+pgvector) и MinIO.
+"""Integration-тесты: реальные Postgres (+pgvector) и RustFS (S3).
 
 В CI это service containers (`.github/workflows/ci.yml`); параметры подключения
 передаются через те же переменные окружения, что и в приложении.

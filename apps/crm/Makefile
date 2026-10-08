@@ -48,7 +48,7 @@ test: ## Unit-тесты backend (pytest) и frontend (vitest)
 check: lint typecheck test ## Всё вышеперечисленное — обязательно перед коммитом
 
 .PHONY: test-int
-test-int: ## Integration-тесты (нужны Postgres+pgvector и MinIO; см. CI)
+test-int: ## Integration-тесты (нужны Postgres+pgvector и RustFS; см. CI)
 	cd $(BACKEND) && uv run pytest -m integration
 
 .PHONY: test-e2e
@@ -117,7 +117,7 @@ smoke-prod: ## Smoke-проверка prod (Фаза 8)
 	@echo "scripts/smoke_prod.sh появится в Фазе 8 (PLAN.md)"; exit 1
 
 .PHONY: backup
-backup: ## Бэкап Postgres + MinIO (Фаза 8)
+backup: ## Бэкап Postgres + S3/RustFS (Фаза 8)
 	@echo "scripts/backup.sh появится в Фазе 8 (PLAN.md)"; exit 1
 
 .PHONY: restore

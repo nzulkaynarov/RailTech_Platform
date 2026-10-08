@@ -9,7 +9,7 @@ x-restart: &restart
 
 services:
   postgres: *restart
-  minio: *restart
+  rustfs: *restart
   litellm: *restart
   api:
     <<: *restart

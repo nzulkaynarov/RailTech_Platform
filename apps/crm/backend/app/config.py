@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     postgres_user: str = "railtech"
     postgres_password: SecretStr = SecretStr("")
 
-    minio_endpoint: AnyHttpUrl = AnyHttpUrl("http://minio:9000")
+    s3_endpoint: AnyHttpUrl = AnyHttpUrl("http://rustfs:9000")
     litellm_base_url: AnyHttpUrl = AnyHttpUrl("http://litellm:4000")
 
     ready_check_timeout_s: float = Field(default=2.0, gt=0, le=10)

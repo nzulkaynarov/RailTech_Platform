@@ -37,7 +37,7 @@ make smoke-dev                # /health и /ready напрямую и через
 | CRM (заглушка Фазы 0) | http://localhost |
 | API + Swagger | http://localhost:8000/docs |
 | Готовность | http://localhost:8000/ready |
-| MinIO console | http://localhost:9001 (`MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` из `.env`) |
+| RustFS console (S3) | http://localhost:9001 (`S3_ACCESS_KEY` / `S3_SECRET_KEY` из `.env`) |
 | LiteLLM | http://localhost:4000 |
 | Langfuse (`make up-obs`) | http://localhost:3000 |
 
@@ -54,7 +54,7 @@ make openapi    # экспорт docs/api/openapi.json (CI проверяет а
 uv tool install pre-commit && pre-commit install   # хуки: ruff, gitleaks, prettier, eslint
 ```
 
-Integration-тесты (`make test-int`) требуют Postgres 16 + pgvector и MinIO — их запускает CI; локально — с переменными `POSTGRES_*`, `MINIO_ENDPOINT`.
+Integration-тесты (`make test-int`) требуют Postgres 16 + pgvector и RustFS — их запускает CI; локально — с переменными `POSTGRES_*`, `S3_ENDPOINT`.
 
 ## Структура
 

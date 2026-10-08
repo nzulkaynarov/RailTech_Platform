@@ -1,5 +1,5 @@
 # CI (PLAN Фаза 0, задача 7): lint → unit → integration → build.
-# Интеграционные тесты — с реальными Postgres+pgvector и MinIO.
+# Интеграционные тесты — с реальными Postgres+pgvector и RustFS (S3).
 
 name: CI
 
@@ -128,21 +128,21 @@ jobs:
       POSTGRES_DB: railtech_test
       POSTGRES_USER: railtech
       POSTGRES_PASSWORD: ci-only-password
-      MINIO_ENDPOINT: http://localhost:9000
+      S3_ENDPOINT: http://localhost:9000
     steps:
       - uses: actions/checkout@v7
-      # service containers не принимают аргументы команды, MinIO стартуем вручную.
-      - name: Start MinIO
+      # Тот же образ, что в infra/docker-compose.yml (ADR-0009).
+      - name: Start RustFS
         run: |
-          # Тот же образ, что по умолчанию в infra/docker-compose.yml (ADR-0009).
-          docker run -d --name minio -p 9000:9000 \
-            -e MINIO_ROOT_USER=railtech -e MINIO_ROOT_PASSWORD=ci-only-password \
-            --entrypoint minio cgr.dev/chainguard/minio:latest server /data
+          docker run -d --name rustfs -p 9000:9000 \
+            -e RUSTFS_ACCESS_KEY=railtech -e RUSTFS_SECRET_KEY=ci-only-password \
+            -e RUSTFS_ADDRESS=0.0.0.0:9000 \
+            rustfs/rustfs:1.0.1
           for i in $(seq 1 30); do
-            curl -fsS http://localhost:9000/minio/health/live && exit 0
+            curl -fsS http://localhost:9000/health && exit 0
             sleep 2
           done
-          docker logs minio; exit 1
+          docker logs rustfs; exit 1
       - uses: astral-sh/setup-uv@v7
         with:
           version: ${{ env.UV_VERSION }}

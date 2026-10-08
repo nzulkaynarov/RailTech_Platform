@@ -1,4 +1,4 @@
-# prod: TLS через ACME, HSTS. IP allow-list для Langfuse/MinIO console и
+# prod: TLS через ACME, HSTS. IP allow-list для Langfuse/консоли RustFS и
 # security headers — Фаза 8 (PLAN.md).
 {
 	email {$ACME_EMAIL}

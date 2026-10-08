@@ -26,7 +26,7 @@ def settings() -> Settings:
         app_env="test",
         postgres_host="db.invalid",
         postgres_password="test-password",
-        minio_endpoint="http://minio.invalid:9000",
+        s3_endpoint="http://s3.invalid:9000",
         litellm_base_url="http://litellm.invalid:4000",
         ready_check_timeout_s=0.5,
     )

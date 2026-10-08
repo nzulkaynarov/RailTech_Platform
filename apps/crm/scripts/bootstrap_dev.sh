@@ -106,7 +106,7 @@ next_steps() {
 Дальше:
   • CRM (заглушка Фазы 0):  http://localhost:\${HTTP_PORT:-80}/
   • API:                    http://localhost:8000/docs
-  • MinIO console:          http://localhost:9001  (MINIO_ROOT_USER / MINIO_ROOT_PASSWORD из .env)
+  • RustFS console (S3):    http://localhost:9001  (S3_ACCESS_KEY / S3_SECRET_KEY из .env)
   • Langfuse (если --observability): http://localhost:3000
   • Проверка:               make smoke-dev
   • Логи / статус:          make logs s=api   |   make ps

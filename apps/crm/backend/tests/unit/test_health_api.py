@@ -32,16 +32,16 @@ def test_health_is_always_ok(client: TestClient) -> None:
 
 
 @pytest.mark.parametrize(
-    ("minio_probe", "status_code", "body"),
+    ("s3_probe", "status_code", "body"),
     [
-        (ok, 200, {"status": "ok", "checks": {"database": "ok", "minio": "ok"}}),
-        (boom, 503, {"status": "fail", "checks": {"database": "ok", "minio": "fail"}}),
+        (ok, 200, {"status": "ok", "checks": {"database": "ok", "s3": "ok"}}),
+        (boom, 503, {"status": "fail", "checks": {"database": "ok", "s3": "fail"}}),
     ],
 )
 def test_ready_reflects_probes(
-    client: TestClient, minio_probe: object, status_code: int, body: dict[str, object]
+    client: TestClient, s3_probe: object, status_code: int, body: dict[str, object]
 ) -> None:
-    service = ReadinessService({"database": ok, "minio": minio_probe}, timeout_s=0.5)  # type: ignore[dict-item]
+    service = ReadinessService({"database": ok, "s3": s3_probe}, timeout_s=0.5)  # type: ignore[dict-item]
     client.app.dependency_overrides[get_readiness] = lambda: service  # type: ignore[attr-defined]
     response = client.get("/ready")
     assert response.status_code == status_code
@@ -50,11 +50,11 @@ def test_ready_reflects_probes(
 
 @respx.mock
 def test_ready_wires_real_probes(client: TestClient) -> None:
-    respx.get("http://minio.invalid:9000/minio/health/live").mock(httpx.Response(200))
+    respx.get("http://s3.invalid:9000/health").mock(httpx.Response(200))
     respx.get("http://litellm.invalid:4000/health/liveliness").mock(httpx.Response(500))
     response = client.get("/ready")
     assert response.status_code == 503
-    assert response.json()["checks"] == {"database": "fail", "minio": "ok", "litellm": "fail"}
+    assert response.json()["checks"] == {"database": "fail", "s3": "ok", "litellm": "fail"}
 
 
 def test_request_id_is_echoed(client: TestClient) -> None:

@@ -11,7 +11,7 @@ def make(**overrides: object) -> Settings:
 def test_defaults_point_to_compose_services() -> None:
     settings = make()
     assert settings.postgres_host == "postgres"
-    assert str(settings.minio_endpoint) == "http://minio:9000/"
+    assert str(settings.s3_endpoint) == "http://rustfs:9000/"
     assert str(settings.litellm_base_url) == "http://litellm:4000/"
     assert settings.log_format == "json"
 
@@ -44,7 +44,7 @@ def test_reads_environment(monkeypatch: pytest.MonkeyPatch) -> None:
         ("app_env", "staging"),
         ("log_format", "xml"),
         ("ready_check_timeout_s", 0),
-        ("minio_endpoint", "not-a-url"),
+        ("s3_endpoint", "not-a-url"),
     ],
 )
 def test_rejects_invalid_values(field: str, value: object) -> None:

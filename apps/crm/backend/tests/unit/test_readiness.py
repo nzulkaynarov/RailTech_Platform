@@ -20,9 +20,9 @@ async def hang() -> None:
 @pytest.mark.parametrize(
     ("probes", "expected_checks", "expected_ok"),
     [
-        ({"database": ok, "minio": ok}, {"database": True, "minio": True}, True),
-        ({"database": ok, "minio": boom}, {"database": True, "minio": False}, False),
-        ({"database": hang, "minio": ok}, {"database": False, "minio": True}, False),
+        ({"database": ok, "s3": ok}, {"database": True, "s3": True}, True),
+        ({"database": ok, "s3": boom}, {"database": True, "s3": False}, False),
+        ({"database": hang, "s3": ok}, {"database": False, "s3": True}, False),
         ({}, {}, True),
     ],
     ids=["all-ok", "one-fails", "one-times-out", "no-probes"],

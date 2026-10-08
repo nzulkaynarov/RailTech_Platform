@@ -35,7 +35,7 @@ asyncio_default_fixture_loop_scope = "function"
 addopts = ["-ra", "--strict-markers", "-m", "not (integration or e2e or live or eval)"]
 markers = [
     "unit: без внешних сервисов (по умолчанию)",
-    "integration: Postgres/MinIO (CI services)",
+    "integration: Postgres/RustFS (CI services)",
     "e2e: сценарии через эмуляцию Telegram + REST",
     "live: реальные модели; CI не запускает",
     "eval: оценка качества ИИ (SPEC §12)",

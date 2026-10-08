@@ -1,6 +1,6 @@
 # RailTech CRM — техническое задание (SPEC)
 
-Версия 2.0 · 2026-10-08
+Версия 2.1 · 2026-10-08 (S3-хранилище: MinIO → RustFS, ADR-0009)
 
 Документ описывает, *как* устроена система: архитектура, ядро, данные, агенты, интерфейсы, безопасность, стенды, связи. Порядок реализации — в `PLAN.md`; зачем всё это — в `BUSINESS.md`; правила работы для Claude Code — в `CLAUDE.md`.
 
@@ -35,7 +35,7 @@
 | Модели | Внешние API. Рекомендация: диалог — Anthropic Sonnet-класс; квалификатор/judge — Anthropic Haiku-класс или Google Flash-класс; embeddings — Google Gemini Embedding (мультиязычный, узбекский) или Voyage multilingual | Конкретные идентификаторы фиксируются в `infra/litellm.config.yaml` на момент старта и в ADR-0004 |
 | БД | PostgreSQL 16 + pgvector | Одна база для домена, векторов, очереди, чекпоинтов |
 | Очередь и планировщик | Procrastinate | Задачи на Postgres: события квалификатора, таймеры SLA/снуз/unresponsive, ингест KB, ежедневные отчёты |
-| Файлы | MinIO (S3-совместимый) | Документы клиентов, исходники KB, вложения из Telegram |
+| Файлы | RustFS (S3-совместимый, Apache-2.0; ADR-0009) | Документы клиентов, исходники KB, вложения из Telegram. Код работает только по протоколу S3 |
 | Ингест документов | docling | PDF/DOCX/PPTX/XLSX/MD/HTML → структурированный Markdown |
 | Frontend | React 18 + TypeScript + Vite + **Refine** + Ant Design | Refine даёт CRUD, dataProvider, authProvider, accessControlProvider |
 | Авторизация | JWT (access 15 мин + refresh 30 дней, httpOnly cookie), пароли argon2id | Провайдер заменяем на Keycloak (OIDC) без смены фронта — Refine authProvider |
@@ -44,7 +44,7 @@
 | Evals | pytest (`-m eval`) + Langfuse datasets + promptfoo | §12 |
 | Качество кода | ruff (lint+format), mypy (strict на домене), pre-commit, pytest, ESLint + Prettier, Vitest + Playwright (smoke) | |
 | Инфра | Docker Compose (base + `dev` + `prod` overrides), Caddy (TLS/роутинг), GitHub Actions | |
-| Бэкапы | `pg_dump` ежедневно + `mc mirror` MinIO → отдельный volume/бакет, ротация 14 дней | prod |
+| Бэкапы | `pg_dump` ежедневно + зеркалирование S3-бакетов RustFS (инструмент выбирается в Фазе 8) → отдельный volume/бакет, ротация 14 дней | prod |
 
 Явно **не используем**: локальные модели (Ollama), Redis/RabbitMQ, отдельную векторную БД, готовые CRM как ядро (ADR-0002), Keycloak на старте (ADR-0005), ORM-магию в агентах (агенты ходят в данные только через MCP).
 
@@ -71,7 +71,7 @@
 └─────────────┘           └──────┘         │          │           │
                                            ▼          ▼           ▼
 ┌──────────┐  задачи   ┌─────────────────────────────────────────────────┐   ┌───────┐
-│ worker   │◄─────────►│ PostgreSQL 16 + pgvector                        │   │ MinIO │
+│ worker   │◄─────────►│ PostgreSQL 16 + pgvector                        │   │RustFS │
 │Procrast. │           │ домен · векторы · очередь · чекпоинты · casbin  │   └───────┘
 │ +qualif. │           └─────────────────────────────────────────────────┘
 └──────────┘
@@ -87,7 +87,7 @@
 | Сервис | Образ/код | Порты (внутр.) | Назначение |
 |---|---|---|---|
 | `postgres` | `pgvector/pgvector:pg16` | 5432 | Все данные |
-| `minio` | `minio/minio` | 9000/9001 | Файлы |
+| `rustfs` (+ `s3-init` — создание бакетов) | `rustfs/rustfs` | 9000/9001 | Файлы (S3) |
 | `litellm` | `ghcr.io/berriai/litellm` | 4000 | Шлюз моделей, ключи провайдеров только здесь |
 | `langfuse` (+ зависимости по официальному compose) | `langfuse/langfuse` | 3000 | Трейсинг |
 | `api` | `./backend` | 8000 | FastAPI: бот, агент, REST, auth |
@@ -96,7 +96,7 @@
 | `web` | `./frontend` → статика | — | Раздаётся Caddy |
 | `caddy` | `caddy:2` | 80/443 | TLS, роутинг `/api`, `/`, `/langfuse` (prod, по IP-allowlist) |
 
-Наружу (prod) открыты только `caddy:443` (и 80 для ACME). MCP, Postgres, MinIO, LiteLLM — только во внутренней сети compose.
+Наружу (prod) открыты только `caddy:443` (и 80 для ACME). MCP, Postgres, RustFS, LiteLLM — только во внутренней сети compose.
 
 ### 3.3. Потоки
 
@@ -150,13 +150,13 @@ railtech-crm/
 │   │   ├── models/           # SQLAlchemy
 │   │   ├── schemas/          # Pydantic DTO
 │   │   ├── security/         # auth.py (JWT), rbac.py (casbin), audit.py, pii.py (маскирование)
-│   │   ├── integrations/     # telegram.py, litellm.py, langfuse.py, minio.py
+│   │   ├── integrations/     # telegram.py, litellm.py, langfuse.py, s3.py
 │   │   ├── tasks/            # Procrastinate: qualify.py, timers.py, ingest.py, reports.py
 │   │   └── mcp/              # kb_server.py, crm_server.py, docs_server.py (FastMCP)
 │   ├── prompts/              # dialog_prospect.md, dialog_customer.md, qualifier.md, judge_faithfulness.md
 │   ├── tests/
 │   │   ├── unit/             # домен, схемы, промпт-шаблоны — без внешних сервисов
-│   │   ├── integration/      # с Postgres/MinIO (testcontainers или CI services), помечены @integration
+│   │   ├── integration/      # с Postgres/RustFS (testcontainers или CI services), помечены @integration
 │   │   └── e2e/              # сценарии через Telegram-эмуляцию + REST, помечены @e2e
 │   └── evals/
 │       ├── golden/*.yaml  fixtures/kb/*  test_eval.py  promptfooconfig.yaml
@@ -328,7 +328,7 @@ load_context → detect_language → guard_consent → select_mode(prospect|cust
 - `decide` (код): `owner_mode != bot` → стоп; hard-триггер по стоп-словам/`/human` → `handoff`; документ найден однозначно → `deliver_document`; `best_score < min_score` и вопрос по продукту → `fallback`; потребность не ясна и стадия ≤ engaged → `answer` с флагом «один уточняющий вопрос»; иначе `answer`.
 - `answer/clarify`: `dialog-model`, промпт `dialog_prospect.md` / `dialog_customer.md`, в контексте только найденные фрагменты. ≤ 120 слов, без списков, максимум один вопрос.
 - `fallback`: честный отказ + `kb_gaps` (upsert по нормализованному вопросу, `occurrences++`).
-- `deliver_document`: отправка файла из MinIO через Telegram + `document_access_log`.
+- `deliver_document`: отправка файла из S3 (RustFS) через Telegram + `document_access_log`.
 - Таймаут вызова модели 20 с, один ретрай, затем `fallback-model`; при недоступности — служебное сообщение лиду, событие сохраняется.
 
 Инструменты по режимам:
@@ -436,7 +436,7 @@ class QualifierOutput(BaseModel):
 
 ### 9.2. Клиентский бот
 
-Команды: `/start`, `/lang`, `/human`, `/delete`, `/help`. Middleware: идемпотентность, rate-limit (20 сообщений/мин на пользователя, при превышении — вежливое сообщение), маскирование PII в логах, проверка согласия. Вложения лида (фото/документы) сохраняются в MinIO и показываются в CRM; бот в v2 на вложения отвечает «передам коллеге» + триггер `info`.
+Команды: `/start`, `/lang`, `/human`, `/delete`, `/help`. Middleware: идемпотентность, rate-limit (20 сообщений/мин на пользователя, при превышении — вежливое сообщение), маскирование PII в логах, проверка согласия. Вложения лида (фото/документы) сохраняются в S3 (RustFS) и показываются в CRM; бот в v2 на вложения отвечает «передам коллеге» + триггер `info`.
 
 ---
 
@@ -480,7 +480,7 @@ Refine с кастомным `dataProvider` (REST `/api/v1`), `authProvider` (co
 | PII | Маскирование телефонов/email/ИНН в логах и Langfuse (`security/pii.py` как processor structlog и Langfuse mask-функция) |
 | Инъекции в промпт | Пользовательский текст и фрагменты KB — в отдельных XML-блоках; системные правила запрещают раскрытие инструкций; eval-кейсы на injection; инструменты не принимают идентификаторов от модели |
 | Аудит | Все мутации через REST и кнопку в канале — `audit_log` (before/after) |
-| Транспорт | TLS на Caddy (ACME), HSTS; `/langfuse` и `/minio-console` на prod — только с IP allow-list |
+| Транспорт | TLS на Caddy (ACME), HSTS; Langfuse и консоль RustFS на prod — только с IP allow-list |
 | Зависимости | `uv lock`, `pnpm lock`, Dependabot, `pip-audit`/`npm audit` в CI |
 | Бэкапы | Ежедневно, проверка восстановления раз в месяц по runbook |
 | Бюджет моделей | LiteLLM budgets по ключам; `settings.budget.daily_usd`; при превышении диалог → `fallback-model`, квалификатор продолжает |
@@ -500,7 +500,7 @@ Refine с кастомным `dataProvider` (REST `/api/v1`), `authProvider` (co
 
 - Трейсы: каждый ход диалога и каждый запуск квалификатора — Langfuse trace с `lead_id`, `mode`, `stage`; стоимость агрегируется.
 - Логи: structlog JSON, `request_id`, `lead_id`; уровни по env.
-- Метрики здоровья: `GET /health` (liveness), `GET /ready` (БД, MinIO, LiteLLM); ежедневный отчёт в канал (General-пост): новых лидов, эскалаций, открытых пробелов KB, стоимость.
+- Метрики здоровья: `GET /health` (liveness), `GET /ready` (БД, S3/RustFS, LiteLLM); ежедневный отчёт в канал (General-пост): новых лидов, эскалаций, открытых пробелов KB, стоимость.
 - Алерты (в канал, префикс ⚠️): задача в `failed` после 3 ретраев; LiteLLM недоступен > 2 мин; очередь > 100 задач; бюджет > 80 %.
 - Runbooks: деплой, откат, бэкап/восстановление, ротация ключей, «бот молчит», «эскалации не приходят», «переезд dev → prod».
 
@@ -518,7 +518,7 @@ Refine с кастомным `dataProvider` (REST `/api/v1`), `authProvider` (co
 | Данные | `scripts/seed_demo.py` (демо-KB, демо-лиды, тестовые пользователи) | пусто + `create_admin.py` |
 | Хот-релоад | да (uvicorn `--reload`, vite dev) | нет, собранные образы |
 | Бэкапы | нет | ежедневно |
-| Доступ к Langfuse/MinIO console | открыт | IP allow-list |
+| Доступ к Langfuse/консоли RustFS | открыт | IP allow-list |
 
 Переезд dev → prod — `docs/runbooks/promote-to-prod.md`: чек-лист из `PLAN.md` фазы 9.
 
@@ -547,3 +547,5 @@ Refine с кастомным `dataProvider` (REST `/api/v1`), `authProvider` (co
 | 0006 | Procrastinate как очередь и планировщик на Postgres | 0 |
 | 0007 | Гибридный поиск RRF и пороги | 1 |
 | 0008 | HMAC-контекст для MCP вместо передачи идентификаторов моделью | 2 |
+| 0009 | S3-хранилище: RustFS вместо MinIO (community-сборки MinIO прекращены) | 0 |
+| 0010 | psycopg 3 — единственный драйвер PostgreSQL | 0 |

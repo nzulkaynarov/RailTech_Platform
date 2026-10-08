@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from app import db
 from app.api import health
 from app.config import Settings, get_settings
-from app.integrations import litellm, minio
+from app.integrations import litellm, s3
 from app.log import configure_logging
 from app.services.readiness import ReadinessService
 
@@ -28,7 +28,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             app.state.readiness = ReadinessService(
                 probes={
                     "database": lambda: db.ping(engine),
-                    "minio": lambda: minio.ping(http, settings.minio_endpoint),
+                    "s3": lambda: s3.ping(http, settings.s3_endpoint),
                     "litellm": lambda: litellm.ping(http, settings.litellm_base_url),
                 },
                 timeout_s=settings.ready_check_timeout_s,

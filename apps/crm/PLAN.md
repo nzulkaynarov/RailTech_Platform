@@ -38,7 +38,7 @@
 4. FastAPI app factory, `/health`, `/ready`, structlog JSON, `request_id` middleware.
 5. Alembic инициализирован; первая миграция — пустая база с расширением `vector`; Procrastinate schema apply.
 6. Качество: ruff, mypy (strict для `domain/`, `security/`), pre-commit (ruff, gitleaks, prettier, eslint), ESLint/Prettier/tsc для фронта.
-7. CI `ci.yml`: lint → unit → integration (Postgres+MinIO services) → build images → frontend build. Dependabot. `PULL_REQUEST_TEMPLATE.md`.
+7. CI `ci.yml`: lint → unit → integration (Postgres+RustFS services) → build images → frontend build. Dependabot. `PULL_REQUEST_TEMPLATE.md`.
 8. `docs/adr/0000-template.md` (MADR) + ADR 0001, 0002, 0003, 0005, 0006 (`SPEC §16`).
 9. `.claude/settings.json`, `.claude/skills/*` по `CLAUDE.md`.
 10. `README.md`: запуск dev за 15 минут, карта документов.
@@ -60,7 +60,7 @@
 **Задачи**
 1. Миграция: `products`, `kb_documents`, `kb_chunks`, `kb_gaps` (`SPEC §5.5`). ADR-0004 (модели, размерность embedding), ADR-0007 (гибридный поиск).
 2. `infra/litellm.config.yaml` с алиасами; `integrations/litellm.py` (OpenAI-совместимый клиент, таймауты, ретраи, учёт стоимости из заголовков).
-3. Ингест (`tasks/ingest.py`): файл из MinIO → docling → Markdown → чанки по заголовкам 300–600 токенов, overlap 50 → embeddings батчами → `kb_chunks`; статус в `kb_documents.ingest_status`; ретраи, идемпотентность по версии.
+3. Ингест (`tasks/ingest.py`): файл из S3 (RustFS) → docling → Markdown → чанки по заголовкам 300–600 токенов, overlap 50 → embeddings батчами → `kb_chunks`; статус в `kb_documents.ingest_status`; ретраи, идемпотентность по версии.
 4. `kb-mcp` (`mcp/kb_server.py`): `search_kb`, `list_products`; гибридный поиск (vector + BM25 → RRF) с фильтром `product_key`, порог `kb.min_score`.
 5. `scripts/kb_ingest.py` CLI и REST `POST /api/v1/kb/documents` (пока без UI, с временным admin-токеном).
 6. Демо-KB: 3 документа (`evals/fixtures/kb/`) на русском о выдуманных продуктах RailTech (чтобы evals были осмысленны до появления реальных материалов) + 1 на узбекском.
@@ -164,7 +164,7 @@
 **Цель:** команда эксплуатирует систему без разработчика.
 
 **Задачи**
-1. REST + UI «База знаний»: загрузка файлов (MinIO, presigned upload), ингест в фоне с прогрессом, активация/деактивация, просмотр чанков, «тестовый поиск».
+1. REST + UI «База знаний»: загрузка файлов (S3/RustFS, presigned upload), ингест в фоне с прогрессом, активация/деактивация, просмотр чанков, «тестовый поиск».
 2. REST + UI «Пробелы KB»: список, частота, язык, примеры; действия «Создать документ» (ручной Markdown-документ с предзаполнением), «Привязать к документу», «Игнорировать».
 3. REST + UI «Настройки»: формы по Pydantic-схемам `settings`, предпросмотр текстов на 3 языках, редактор правил эскалации с валидацией и «сухим прогоном» правила на последних 50 диалогах.
 4. UI «Дашборд» (`SPEC §10.1`), агрегаты в материализованных представлениях + стоимость из Langfuse API.
@@ -184,7 +184,7 @@
 **Задачи**
 1. Миграции: `clients`, `documents`, `document_access_log`, расширение `telegram_identities` (`SPEC §5.2, 5.6`); переход `won → customer`.
 2. REST + UI «Клиенты» (карточка, привязка Telegram с подтверждением, связанные лиды), «Документы» (загрузка, тип/номер/дата, видимость клиенту, журнал доступа); извлечение текста docling → `documents.extracted_text`.
-3. `docs-mcp`: `search_documents`, `get_document_link` — `client_id` только из HMAC-контекста; SQL-фильтр обязателен; presigned-ссылки MinIO с TTL 10 мин или отправка файла ботом.
+3. `docs-mcp`: `search_documents`, `get_document_link` — `client_id` только из HMAC-контекста; SQL-фильтр обязателен; presigned-ссылки S3 (RustFS) с TTL 10 мин или отправка файла ботом.
 4. Диалоговый агент: `select_mode`, промпт `dialog_customer.md`, узлы `deliver_document`, `create_service_request`; триггеры `document_not_found`, `service_request`.
 5. Опциональная проверка телефона через `request_contact`.
 6. Тесты: **обязательные негативные** — попытка получить чужой `document_id`, запрос без верифицированной идентичности, подделка HMAC-контекста; integration на поиск по дате/типу.
@@ -218,9 +218,9 @@
 
 **Задачи**
 1. `docker-compose.prod.yml`: собранные образы с тегами git sha, без volume-монтирования кода, restart policies, лимиты ресурсов, логи JSON с ротацией.
-2. `Caddyfile.prod`: TLS, HSTS, роутинг, IP allow-list для `/langfuse` и MinIO console; security headers.
+2. `Caddyfile.prod`: TLS, HSTS, роутинг, IP allow-list для Langfuse и консоли RustFS; security headers.
 3. Webhook Telegram с `secret_token`; `scripts/set_webhook.py`.
-4. `scripts/backup.sh` (pg_dump + mc mirror, ротация 14 дней, cron в контейнере `backup`), `scripts/restore.sh`; runbook проверки восстановления.
+4. `scripts/backup.sh` (pg_dump + зеркалирование S3-бакетов, ротация 14 дней, cron в контейнере `backup`), `scripts/restore.sh`; runbook проверки восстановления.
 5. `deploy-prod.yml`: по тегу `v*` — сборка образов → push в GHCR → ssh на VPS → `docker compose pull && up -d` → миграции → `scripts/smoke_prod.sh` → откат при провале.
 6. Ротация ключей (runbook), lockout, аудит входов, `pip-audit`/`npm audit` в CI, Dependabot авто-PR.
 7. Нагрузочный smoke: 50 параллельных диалогов (locust) — p95 ≤ 6 с, очередь не растёт.

@@ -21,7 +21,7 @@ x-backend: &backend
     POSTGRES_DB: ${POSTGRES_DB}
     POSTGRES_USER: ${POSTGRES_USER}
     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    MINIO_ENDPOINT: http://minio:9000
+    S3_ENDPOINT: http://rustfs:9000
     LITELLM_BASE_URL: http://litellm:4000
 
 services:
@@ -41,24 +41,47 @@ services:
       timeout: 3s
       retries: 20
 
-  # Community-образы MinIO недоступны (Docker Hub, quay.io); временно — сборка
-  # MinIO от Chainguard (её же использует официальный compose Langfuse).
-  # Постоянная замена — ADR-0009 / docs/QUESTIONS.md Q-002.
-  minio:
-    image: ${MINIO_IMAGE:-cgr.dev/chainguard/minio:latest}
-    entrypoint: ["sh", "-c"]
-    command:
-      - mkdir -p /data/langfuse && exec minio server /data --address :9000 --console-address :9001
+  # S3-хранилище файлов — RustFS (ADR-0009). Один том /data (single-drive).
+  rustfs:
+    image: rustfs/rustfs:1.0.1
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?set in .env}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?set in .env}
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY:?set in .env}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY:?set in .env}
+      RUSTFS_ADDRESS: 0.0.0.0:9000
+      RUSTFS_CONSOLE_ENABLE: "false"
+      RUSTFS_CONSOLE_ADDRESS: 0.0.0.0:9001
     volumes:
-      - minio_data:/data
+      - s3_data:/data
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/health"]
       interval: 5s
       timeout: 5s
       retries: 20
+      start_period: 10s
+
+  # Создаёт бакеты (идемпотентно: повторный PUT существующего бакета → 200).
+  # Бакеты приложения добавляются в S3_BUCKETS с Фазы 1.
+  s3-init:
+    image: rustfs/rustfs:1.0.1
+    restart: "no"
+    entrypoint: ["sh", "-ec"]
+    command:
+      - >-
+        credentials="$${S3_ACCESS_KEY}:$${S3_SECRET_KEY}";
+        for bucket in $${S3_BUCKETS}; do
+        curl -fsS -o /dev/null --aws-sigv4 "aws:amz:us-east-1:s3"
+        --user "$${credentials}" -X PUT "http://rustfs:9000/$${bucket}";
+        echo "bucket ready: $${bucket}";
+        done
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      S3_BUCKETS: langfuse
+    healthcheck:
+      disable: true
+    depends_on:
+      rustfs:
+        condition: service_healthy
 
   litellm:
     image: ghcr.io/berriai/litellm:v1.104.2
@@ -97,8 +120,8 @@ services:
         condition: service_completed_successfully
       postgres:
         condition: service_healthy
-      minio:
-        condition: service_healthy
+      s3-init:
+        condition: service_completed_successfully
       litellm:
         condition: service_healthy
     healthcheck:
@@ -210,8 +233,8 @@ services:
     depends_on: &langfuse-deps
       langfuse-db-init:
         condition: service_completed_successfully
-      minio:
-        condition: service_healthy
+      s3-init:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       clickhouse:
@@ -229,16 +252,16 @@ services:
       CLICKHOUSE_CLUSTER_ENABLED: "false"
       LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
       LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
-      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
-      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
-      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: ${S3_ACCESS_KEY}
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${S3_SECRET_KEY}
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://rustfs:9000
       LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
       LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
       LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse
       LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
-      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
-      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
-      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: ${S3_ACCESS_KEY}
+      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${S3_SECRET_KEY}
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://rustfs:9000
       LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
       LANGFUSE_S3_MEDIA_UPLOAD_PREFIX: media/
       LANGFUSE_S3_BATCH_EXPORT_ENABLED: "false"
@@ -264,7 +287,7 @@ services:
       <<: *langfuse-env
       NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:?set in .env}
       LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: ${LANGFUSE_S3_PUBLIC_ENDPOINT:-http://localhost:9000}
-      LANGFUSE_S3_MEDIA_UPLOAD_INTERNAL_ENDPOINT: http://minio:9000
+      LANGFUSE_S3_MEDIA_UPLOAD_INTERNAL_ENDPOINT: http://rustfs:9000
     healthcheck:
       test:
         - CMD
@@ -278,7 +301,7 @@ services:
 
 volumes:
   postgres_data:
-  minio_data:
+  s3_data:
   caddy_data:
   caddy_config:
   clickhouse_data:
