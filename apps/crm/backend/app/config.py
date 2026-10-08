@@ -1,0 +1,59 @@
+"""Настройки приложения — единственное место чтения переменных окружения.
+
+Значения приходят из env (в контейнерах — из `.env` через compose). Описание
+каждой переменной — в `.env.example`. Остальной код получает настройки только
+через `get_settings()`.
+"""
+
+from functools import lru_cache
+from typing import Literal
+from urllib.parse import quote
+
+from pydantic import AnyHttpUrl, Field, SecretStr
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=(".env", "../.env"),
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    app_env: Literal["dev", "prod", "test"] = "dev"
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    log_format: Literal["json", "console"] = "json"
+
+    postgres_host: str = "postgres"
+    postgres_port: int = 5432
+    postgres_db: str = "railtech"
+    postgres_user: str = "railtech"
+    postgres_password: SecretStr = SecretStr("")
+
+    minio_endpoint: AnyHttpUrl = AnyHttpUrl("http://minio:9000")
+    litellm_base_url: AnyHttpUrl = AnyHttpUrl("http://litellm:4000")
+
+    ready_check_timeout_s: float = Field(default=2.0, gt=0, le=10)
+
+    def _postgres_dsn(self, scheme: str) -> str:
+        user = quote(self.postgres_user, safe="")
+        password = quote(self.postgres_password.get_secret_value(), safe="")
+        return (
+            f"{scheme}://{user}:{password}@{self.postgres_host}:"
+            f"{self.postgres_port}/{self.postgres_db}"
+        )
+
+    @property
+    def sqlalchemy_url(self) -> str:
+        """DSN для SQLAlchemy (async, драйвер psycopg 3)."""
+        return self._postgres_dsn("postgresql+psycopg")
+
+    @property
+    def libpq_dsn(self) -> str:
+        """DSN в формате libpq — для Procrastinate и psql."""
+        return self._postgres_dsn("postgresql")
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
