@@ -1,6 +1,6 @@
 # 0010. psycopg 3 — единственный драйвер PostgreSQL
 
-- Статус: proposed
+- Статус: accepted (2026-10-08, решение владельца продукта в обсуждении Фазы 0)
 - Дата: 2026-10-08
 - Связано: SPEC §2 (SQLAlchemy 2 async, Procrastinate, LangGraph PostgresSaver); ADR-0006
 

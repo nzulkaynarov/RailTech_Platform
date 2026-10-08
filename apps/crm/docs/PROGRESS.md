@@ -29,19 +29,19 @@
 | 4 | App factory, `/health`, `/ready`, structlog JSON, `request_id` | ✅ | `backend/app/main.py`, `log.py`, `api/health.py` |
 | 5 | Alembic, первая миграция (`vector`), схема Procrastinate | ✅ | `backend/alembic/` |
 | 6 | ruff, mypy (strict: domain/security/schemas), pre-commit, ESLint/Prettier/tsc | ✅ | `pyproject.toml`, `.pre-commit-config.yaml`, `frontend/` |
-| 7 | CI: lint → unit → integration → build; Dependabot; PR-шаблон | ✅ (зелёный CI — проверяется) | `.github/` |
-| 8 | ADR-шаблон + 0001, 0002, 0003, 0005, 0006 | ✅ proposed → ждут принятия | `docs/adr/` |
+| 7 | CI: lint → unit → integration → build; Dependabot; PR-шаблон | ✅ | `.github/` |
+| 8 | ADR-шаблон + 0001, 0002, 0003, 0005, 0006 | ✅ accepted 2026-10-08 | `docs/adr/` |
 | 9 | `.claude/settings.json`, 9 скиллов | ✅ | `.claude/` |
 | 10 | README «dev за 15 минут», карта документов | ✅ | `README.md` |
 | 11 | `scripts/bootstrap_dev.sh` | ✅ | `scripts/` |
 
-Дополнительно: ADR-0009 (замена MinIO — **нужен выбор**), ADR-0010 (psycopg 3), runbook `dev-stand.md`, `scripts/smoke_dev.sh`.
+Дополнительно: ADR-0009 (S3-хранилище RustFS вместо MinIO, SPEC v2.1), ADR-0010 (psycopg 3), runbook `dev-stand.md`, `scripts/smoke_dev.sh`.
 
 ### Гейт Фазы 0 (PLAN.md)
 
 - [ ] `scripts/bootstrap_dev.sh` на чистой машине → `make up` → `/ready` 200 (без Langfuse) — **человек**
-- [ ] CI зелёный (lint, unit, integration, build)
-- [ ] 5 ADR (0001, 0002, 0003, 0005, 0006) приняты — **человек**
+- [x] CI зелёный (lint, unit, integration, build) — PR #1
+- [x] 5 ADR (0001, 0002, 0003, 0005, 0006) приняты — 2026-10-08
 
 ### Отложено (осознанно, по плану)
 

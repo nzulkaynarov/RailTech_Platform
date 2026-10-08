@@ -11,12 +11,6 @@
 Варианты: (а) оставить PR из назначенной ветки — нарушение только в имени; (б) разрешить агенту пушить в `phase/N-*` (явно в сообщении).
 Рекомендация: (б) для следующих фаз; Фаза 0 — из назначенной ветки.
 
-### Q-002. Замена MinIO (ADR-0009) — **блокирует Фазу 1**
-
-Контекст: образы `minio/minio` удалены с Docker Hub (2026-09), на quay.io pull тоже отклоняется (`unauthorized`, проверено в CI), репозиторий не поддерживается. Сейчас стоит MinIO в сборке Chainguard `cgr.dev/chainguard/minio:latest` (переопределяется `MINIO_IMAGE`) — тег `latest`, невоспроизводимо.
-Варианты: RustFS (Apache-2.0) · SeaweedFS (Apache-2.0, зрелый) · Garage (AGPL-3.0) · остаться на сборке Chainguard (зависимость от их тега `latest`).
-Рекомендация: разрешить spike RustFS vs SeaweedFS в начале Фазы 1 (S3 put/get/presigned + Langfuse), затем обновить SPEC §2/§3.2.
-
 ### Q-003. Langfuse v4: Redis и ClickHouse, путь `/langfuse`
 
 Контекст: актуальный self-hosted Langfuse — v4 (v3 получает патчи безопасности до января 2027). Ему нужны ClickHouse и Redis (+ S3). SPEC §2 говорит «не используем Redis»; SPEC §3.2 допускает «зависимости по официальному compose». Кроме того, Langfuse не поддерживает работу под путём `/langfuse` без собственной сборки образа (SPEC §3.2, §11 предполагают `/langfuse` за Caddy).
@@ -29,16 +23,26 @@
 Контекст: SPEC §4 показывает и `backend/prompts/`, и `app/agents/{dialog,qualifier}/prompts/`; CLAUDE.md §4 — «промпты только в `backend/prompts/*.md`».
 Рекомендация: убрать `prompts/` из `agents/*` в SPEC §4. Сейчас создан только `backend/prompts/`.
 
+## Закрытые
+
+### Q-002. Замена MinIO (ADR-0009)
+
+Контекст: образы `minio/minio` удалены с Docker Hub (2026-09), на quay.io pull тоже отклоняется (`unauthorized`, проверено в CI), репозиторий не поддерживается. Сейчас стоит MinIO в сборке Chainguard `cgr.dev/chainguard/minio:latest` (переопределяется `MINIO_IMAGE`) — тег `latest`, невоспроизводимо.
+Варианты: RustFS (Apache-2.0) · SeaweedFS (Apache-2.0, зрелый) · Garage (AGPL-3.0) · остаться на сборке Chainguard (зависимость от их тега `latest`).
+Рекомендация: разрешить spike RustFS vs SeaweedFS в начале Фазы 1 (S3 put/get/presigned + Langfuse), затем обновить SPEC §2/§3.2.
+
+**Ответ (2026-10-08):** выбираем RustFS. Сделано: `rustfs/rustfs:1.0.1`, ADR-0009 accepted, SPEC v2.1 обновлён.
+
 ### Q-005. Принятие ADR 0001, 0002, 0003, 0005, 0006 (гейт Фазы 0)
 
 Тексты — `docs/adr/`. Также ADR-0010 (psycopg 3 как единственный драйвер) — новое решение, не из SPEC §16.
 Нужно: «принято» / замечания по каждому.
+
+**Ответ (2026-10-08):** «ADR приняты» — 0001, 0002, 0003, 0005, 0006 и 0010 переведены в accepted.
 
 ### Q-006. Схема Procrastinate через Alembic
 
 Контекст: Procrastinate не даёт рецепта для Alembic. Сделано (ADR-0006): первая ревизия применяет снимок `schema.sql` 3.10.0, обновления — отдельными ревизиями из `procrastinate/sql/migrations`, версия зафиксирована (тест + Dependabot ignore).
 Нужно: подтвердить подход (альтернатива — `procrastinate schema --apply` вне Alembic, неидемпотентно).
 
-## Закрытые
-
-_Пока нет._
+**Ответ (2026-10-08):** подход закреплён принятым ADR-0006.
