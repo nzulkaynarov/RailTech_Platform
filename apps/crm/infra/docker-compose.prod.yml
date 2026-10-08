@@ -1,0 +1,30 @@
+# prod-стенд (SPEC §14). Базовая версия Фазы 0; образы из GHCR с тегом git sha,
+# лимиты ресурсов и ротация логов — Фаза 8 (PLAN.md).
+
+x-restart: &restart
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: { max-size: "20m", max-file: "5" }
+
+services:
+  postgres: *restart
+  minio: *restart
+  litellm: *restart
+  api:
+    <<: *restart
+  worker:
+    <<: *restart
+  web: *restart
+  caddy:
+    <<: *restart
+    environment:
+      DOMAIN: ${DOMAIN:?set in .env}
+      ACME_EMAIL: ${ACME_EMAIL:?set in .env}
+    volumes:
+      - ./Caddyfile.prod:/etc/caddy/Caddyfile:ro
+    ports: ["80:80", "443:443"]
+  clickhouse: *restart
+  redis: *restart
+  langfuse-worker: *restart
+  langfuse-web: *restart

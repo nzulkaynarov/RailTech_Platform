@@ -1,0 +1,13 @@
+# LiteLLM Proxy — единственный шлюз к моделям (SPEC §1.6, §2).
+# Код знает только алиасы: dialog-model, qualifier-model, judge-model,
+# embed-model, fallback-model. Конкретные модели и ключи провайдеров
+# задаются здесь в Фазе 1 (ADR-0004). До этого список моделей пуст —
+# прокси стартует и отвечает на /health/liveliness.
+
+model_list: []
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+
+litellm_settings:
+  drop_params: true
