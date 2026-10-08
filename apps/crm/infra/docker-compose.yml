@@ -41,11 +41,12 @@ services:
       timeout: 3s
       retries: 20
 
-  # Образы minio/minio удалены с Docker Hub (2026-09); временно — последний
-  # опубликованный community-образ. Выбор замены — ADR-0009 / docs/QUESTIONS.md.
+  # Community-образы MinIO недоступны (Docker Hub, quay.io); временно — сборка
+  # MinIO от Chainguard (её же использует официальный compose Langfuse).
+  # Постоянная замена — ADR-0009 / docs/QUESTIONS.md Q-002.
   minio:
-    image: ${MINIO_IMAGE:-quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z}
-    entrypoint: ["/bin/sh", "-c"]
+    image: ${MINIO_IMAGE:-cgr.dev/chainguard/minio:latest}
+    entrypoint: ["sh", "-c"]
     command:
       - mkdir -p /data/langfuse && exec minio server /data --address :9000 --console-address :9001
     environment:

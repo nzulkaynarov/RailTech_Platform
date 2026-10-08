@@ -134,9 +134,10 @@ jobs:
       # service containers не принимают аргументы команды, MinIO стартуем вручную.
       - name: Start MinIO
         run: |
+          # Тот же образ, что по умолчанию в infra/docker-compose.yml (ADR-0009).
           docker run -d --name minio -p 9000:9000 \
             -e MINIO_ROOT_USER=railtech -e MINIO_ROOT_PASSWORD=ci-only-password \
-            quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z server /data
+            --entrypoint minio cgr.dev/chainguard/minio:latest server /data
           for i in $(seq 1 30); do
             curl -fsS http://localhost:9000/minio/health/live && exit 0
             sleep 2

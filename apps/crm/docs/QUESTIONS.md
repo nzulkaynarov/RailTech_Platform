@@ -13,8 +13,8 @@
 
 ### Q-002. Замена MinIO (ADR-0009) — **блокирует Фазу 1**
 
-Контекст: образы `minio/minio` удалены с Docker Hub (2026-09), репозиторий не поддерживается. Сейчас стоит замороженный `quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z` (переопределяется `MINIO_IMAGE`).
-Варианты: RustFS (Apache-2.0) · SeaweedFS (Apache-2.0, зрелый) · Garage (AGPL-3.0) · оставить замороженный MinIO (не для prod).
+Контекст: образы `minio/minio` удалены с Docker Hub (2026-09), на quay.io pull тоже отклоняется (`unauthorized`, проверено в CI), репозиторий не поддерживается. Сейчас стоит MinIO в сборке Chainguard `cgr.dev/chainguard/minio:latest` (переопределяется `MINIO_IMAGE`) — тег `latest`, невоспроизводимо.
+Варианты: RustFS (Apache-2.0) · SeaweedFS (Apache-2.0, зрелый) · Garage (AGPL-3.0) · остаться на сборке Chainguard (зависимость от их тега `latest`).
 Рекомендация: разрешить spike RustFS vs SeaweedFS в начале Фазы 1 (S3 put/get/presigned + Langfuse), затем обновить SPEC §2/§3.2.
 
 ### Q-003. Langfuse v4: Redis и ClickHouse, путь `/langfuse`

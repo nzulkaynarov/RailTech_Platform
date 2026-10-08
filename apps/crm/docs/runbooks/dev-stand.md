@@ -29,7 +29,7 @@ make smoke-dev
 ## Действие
 
 1. **`/ready` → `database: fail`**: `make logs s=postgres`. Если пароль в `.env` менялся после первого запуска — Postgres хранит старый. ⚠️ Сброс данных: `docker compose -f infra/docker-compose.yml -f infra/docker-compose.dev.yml --env-file .env down -v` (удаляет все volumes), затем `make up`.
-2. **`minio: fail`**: `make logs s=minio`. Ошибка pull образа — образ MinIO снят с Docker Hub (ADR-0009); проверьте `MINIO_IMAGE` в `.env` (пусто = значение по умолчанию из compose).
+2. **`minio: fail`**: `make logs s=minio`. Ошибка pull образа — community-образы MinIO недоступны (ADR-0009); по умолчанию используется `cgr.dev/chainguard/minio:latest`. Проверьте `MINIO_IMAGE` в `.env` (пусто = значение по умолчанию из compose) и доступ к `cgr.dev`.
 3. **`litellm: fail`**: `make logs s=litellm`. Частые причины: `LITELLM_MASTER_KEY` не начинается с `sk-`; синтаксическая ошибка в `infra/litellm.config.yaml`.
 4. **`migrate` упал** → api/worker не стартуют: `make logs s=migrate`, исправьте причину, затем `make migrate` и `make up`.
 5. **Порт 80 занят** (Caddy не стартует): задайте `HTTP_PORT=8080` в `.env`, `make up`, CRM — `http://localhost:8080`.
