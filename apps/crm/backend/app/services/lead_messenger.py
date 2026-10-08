@@ -52,3 +52,15 @@ class LeadMessenger:
                 tg_message_id=getattr(sent, "message_id", None),
             )
             return message.id
+
+
+class DryRunSender:
+    """Отправка без Telegram (e2e, демо): сообщение только логируется."""
+
+    def __init__(self) -> None:
+        self._counter = 0
+
+    async def send_message(self, chat_id: int, text: str) -> Any:
+        self._counter += 1
+        logger.info("telegram_dry_run", chat_id=chat_id, length=len(text))
+        return type("Sent", (), {"message_id": self._counter})()

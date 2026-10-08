@@ -241,6 +241,7 @@ async def lead_decisions(
         moves = await repo.transitions(session, lead_id, limit)
     items: list[QualifierRunItem | TransitionItem] = [
         QualifierRunItem(
+            kind="qualifier",
             id=r.id,
             at=r.created_at,
             proposed_stage=r.proposed_stage,
@@ -260,6 +261,7 @@ async def lead_decisions(
     ]
     items += [
         TransitionItem(
+            kind="transition",
             id=t.id,
             at=t.created_at,
             from_stage=t.from_stage,

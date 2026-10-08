@@ -72,8 +72,10 @@ class Container:
 
     @cached_property
     def lead_messenger(self) -> "LeadMessenger":
-        from app.services.lead_messenger import LeadMessenger
+        from app.services.lead_messenger import DryRunSender, LeadMessenger
 
+        if self.settings.telegram_dry_run:
+            return LeadMessenger(self.session_factory, DryRunSender())
         return LeadMessenger(self.session_factory, self.telegram_bot)
 
     @cached_property

@@ -801,7 +801,6 @@
           },
           "kind": {
             "const": "qualifier",
-            "default": "qualifier",
             "title": "Kind",
             "type": "string"
           },
@@ -888,6 +887,7 @@
           }
         },
         "required": [
+          "kind",
           "id",
           "at",
           "intent",
@@ -1041,7 +1041,6 @@
           },
           "kind": {
             "const": "transition",
-            "default": "transition",
             "title": "Kind",
             "type": "string"
           },
@@ -1059,6 +1058,7 @@
           }
         },
         "required": [
+          "kind",
           "id",
           "at",
           "from_stage",
@@ -1305,7 +1305,7 @@
   "paths": {
     "/api/v1/auth/change-password": {
       "post": {
-        "operationId": "change_password_api_v1_auth_change_password_post",
+        "operationId": "change_password",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1344,7 +1344,7 @@
     },
     "/api/v1/auth/login": {
       "post": {
-        "operationId": "login_api_v1_auth_login_post",
+        "operationId": "login",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1385,7 +1385,7 @@
     },
     "/api/v1/auth/logout": {
       "post": {
-        "operationId": "logout_api_v1_auth_logout_post",
+        "operationId": "logout",
         "parameters": [
           {
             "in": "cookie",
@@ -1427,7 +1427,7 @@
     },
     "/api/v1/auth/refresh": {
       "post": {
-        "operationId": "refresh_api_v1_auth_refresh_post",
+        "operationId": "refresh",
         "parameters": [
           {
             "in": "cookie",
@@ -1476,7 +1476,7 @@
     },
     "/api/v1/inbox": {
       "get": {
-        "operationId": "inbox_api_v1_inbox_get",
+        "operationId": "inbox",
         "responses": {
           "200": {
             "content": {
@@ -1502,7 +1502,7 @@
     },
     "/api/v1/leads": {
       "get": {
-        "operationId": "list_leads_api_v1_leads_get",
+        "operationId": "list_leads",
         "parameters": [
           {
             "in": "query",
@@ -1693,7 +1693,7 @@
     },
     "/api/v1/leads/{lead_id}": {
       "get": {
-        "operationId": "get_lead_api_v1_leads__lead_id__get",
+        "operationId": "get_lead",
         "parameters": [
           {
             "in": "path",
@@ -1740,7 +1740,7 @@
     },
     "/api/v1/leads/{lead_id}/actions/close_lost": {
       "post": {
-        "operationId": "close_lost_api_v1_leads__lead_id__actions_close_lost_post",
+        "operationId": "close_lost",
         "parameters": [
           {
             "in": "path",
@@ -1797,7 +1797,7 @@
     },
     "/api/v1/leads/{lead_id}/actions/close_won": {
       "post": {
-        "operationId": "close_won_api_v1_leads__lead_id__actions_close_won_post",
+        "operationId": "close_won",
         "parameters": [
           {
             "in": "path",
@@ -1854,7 +1854,7 @@
     },
     "/api/v1/leads/{lead_id}/actions/note": {
       "post": {
-        "operationId": "note_api_v1_leads__lead_id__actions_note_post",
+        "operationId": "note",
         "parameters": [
           {
             "in": "path",
@@ -1911,7 +1911,7 @@
     },
     "/api/v1/leads/{lead_id}/actions/return_to_bot": {
       "post": {
-        "operationId": "return_to_bot_api_v1_leads__lead_id__actions_return_to_bot_post",
+        "operationId": "return_to_bot",
         "parameters": [
           {
             "in": "path",
@@ -1968,7 +1968,7 @@
     },
     "/api/v1/leads/{lead_id}/actions/snooze": {
       "post": {
-        "operationId": "snooze_api_v1_leads__lead_id__actions_snooze_post",
+        "operationId": "snooze",
         "parameters": [
           {
             "in": "path",
@@ -2025,7 +2025,7 @@
     },
     "/api/v1/leads/{lead_id}/actions/take": {
       "post": {
-        "operationId": "take_api_v1_leads__lead_id__actions_take_post",
+        "operationId": "take",
         "parameters": [
           {
             "in": "path",
@@ -2072,7 +2072,7 @@
     },
     "/api/v1/leads/{lead_id}/decisions": {
       "get": {
-        "operationId": "lead_decisions_api_v1_leads__lead_id__decisions_get",
+        "operationId": "lead_decisions",
         "parameters": [
           {
             "in": "path",
@@ -2131,7 +2131,7 @@
     },
     "/api/v1/leads/{lead_id}/messages": {
       "get": {
-        "operationId": "lead_messages_api_v1_leads__lead_id__messages_get",
+        "operationId": "lead_messages",
         "parameters": [
           {
             "in": "path",
@@ -2179,7 +2179,7 @@
                   "items": {
                     "$ref": "#/components/schemas/MessageOut"
                   },
-                  "title": "Response Lead Messages Api V1 Leads  Lead Id  Messages Get",
+                  "title": "Response Lead Messages",
                   "type": "array"
                 }
               }
@@ -2208,7 +2208,7 @@
         ]
       },
       "post": {
-        "operationId": "reply_api_v1_leads__lead_id__messages_post",
+        "operationId": "reply",
         "parameters": [
           {
             "in": "path",
@@ -2265,7 +2265,7 @@
     },
     "/api/v1/leads/{lead_id}/notes": {
       "get": {
-        "operationId": "lead_notes_api_v1_leads__lead_id__notes_get",
+        "operationId": "lead_notes",
         "parameters": [
           {
             "in": "path",
@@ -2285,7 +2285,7 @@
                   "items": {
                     "$ref": "#/components/schemas/NoteOut"
                   },
-                  "title": "Response Lead Notes Api V1 Leads  Lead Id  Notes Get",
+                  "title": "Response Lead Notes",
                   "type": "array"
                 }
               }
@@ -2316,7 +2316,7 @@
     },
     "/api/v1/me": {
       "get": {
-        "operationId": "me_api_v1_me_get",
+        "operationId": "me",
         "responses": {
           "200": {
             "content": {
@@ -2340,7 +2340,7 @@
         ]
       },
       "patch": {
-        "operationId": "update_me_api_v1_me_patch",
+        "operationId": "update_me",
         "requestBody": {
           "content": {
             "application/json": {
@@ -2387,7 +2387,7 @@
     "/api/v1/me/permissions": {
       "get": {
         "description": "Только для скрытия UI; истина — проверки на каждом эндпоинте.",
-        "operationId": "permissions_api_v1_me_permissions_get",
+        "operationId": "permissions",
         "responses": {
           "200": {
             "content": {
@@ -2413,7 +2413,7 @@
     },
     "/api/v1/stream": {
       "get": {
-        "operationId": "stream_api_v1_stream_get",
+        "operationId": "stream",
         "responses": {
           "200": {
             "description": "Successful Response"
@@ -2432,7 +2432,7 @@
     },
     "/api/v1/users": {
       "get": {
-        "operationId": "list_users_api_v1_users_get",
+        "operationId": "list_users",
         "responses": {
           "200": {
             "content": {
@@ -2441,7 +2441,7 @@
                   "items": {
                     "$ref": "#/components/schemas/UserOut"
                   },
-                  "title": "Response List Users Api V1 Users Get",
+                  "title": "Response List Users",
                   "type": "array"
                 }
               }
@@ -2460,7 +2460,7 @@
         ]
       },
       "post": {
-        "operationId": "create_user_api_v1_users_post",
+        "operationId": "create_user",
         "requestBody": {
           "content": {
             "application/json": {
@@ -2506,7 +2506,7 @@
     },
     "/api/v1/users/{user_id}": {
       "get": {
-        "operationId": "get_user_api_v1_users__user_id__get",
+        "operationId": "get_user",
         "parameters": [
           {
             "in": "path",
@@ -2551,7 +2551,7 @@
         ]
       },
       "patch": {
-        "operationId": "update_user_api_v1_users__user_id__patch",
+        "operationId": "update_user",
         "parameters": [
           {
             "in": "path",
@@ -2608,7 +2608,7 @@
     },
     "/api/v1/users/{user_id}/reset-password": {
       "post": {
-        "operationId": "reset_password_api_v1_users__user_id__reset_password_post",
+        "operationId": "reset_password",
         "parameters": [
           {
             "in": "path",
@@ -2655,7 +2655,7 @@
     },
     "/health": {
       "get": {
-        "operationId": "health_health_get",
+        "operationId": "health",
         "responses": {
           "200": {
             "content": {
@@ -2676,7 +2676,7 @@
     },
     "/ready": {
       "get": {
-        "operationId": "ready_ready_get",
+        "operationId": "ready",
         "responses": {
           "200": {
             "content": {

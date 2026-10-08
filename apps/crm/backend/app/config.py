@@ -57,6 +57,8 @@ class Settings(BaseSettings):
     telegram_mode: Literal["polling", "webhook", "disabled"] = "polling"
     telegram_webhook_url: str = ""
     telegram_webhook_secret: SecretStr = SecretStr("")
+    # Только e2e/демо без Telegram: исходящие сообщения лиду пишутся в лог, а не отправляются.
+    telegram_dry_run: bool = False
 
     langfuse_public_key: str = ""
     langfuse_secret_key: SecretStr = SecretStr("")

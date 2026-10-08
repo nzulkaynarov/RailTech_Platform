@@ -1,0 +1,47 @@
+.chat-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+}
+.chat-list {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 60vh;
+  padding: 8px;
+  background: #fafafa;
+  border-radius: 8px;
+}
+.chat-row {
+  display: flex;
+  margin: 6px 0;
+}
+.chat-own {
+  justify-content: flex-end;
+}
+.chat-bubble {
+  max-width: 80%;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+.chat-bot {
+  background: #e6f4ff;
+}
+.chat-manager {
+  background: #f6ffed;
+}
+.chat-system {
+  background: #fff7e6;
+}
+.chat-meta {
+  font-size: 12px;
+}
+.chat-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.chat-reply {
+  width: 100%;
+}

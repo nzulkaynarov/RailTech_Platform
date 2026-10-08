@@ -61,8 +61,8 @@ jobs:
       - name: OpenAPI актуален
         run: |
           make openapi
-          git diff --exit-code -- docs/api/openapi.json \
-            || (echo "::error::docs/api/openapi.json устарел — выполните make openapi"; exit 1)
+          git diff --exit-code -- docs/api/openapi.json frontend/src/api/generated \
+            || (echo "::error::OpenAPI или клиент orval устарели — выполните make openapi"; exit 1)
       - name: Compose-файлы валидны
         run: |
           sed 's/CHANGE_ME/ci/' .env.example > .env
@@ -155,6 +155,82 @@ jobs:
       - name: Integration (pytest -m integration)
         working-directory: backend
         run: uv run pytest -m integration -v
+
+  e2e:
+    name: E2E (Playwright, handoff)
+    needs: [lint, unit]
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.7-pg16
+        env:
+          POSTGRES_DB: railtech_e2e
+          POSTGRES_USER: railtech
+          POSTGRES_PASSWORD: ci-only-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U railtech -d railtech_e2e"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      APP_ENV: test
+      LOG_FORMAT: console
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: railtech_e2e
+      POSTGRES_USER: railtech
+      POSTGRES_PASSWORD: ci-only-password
+      TELEGRAM_MODE: disabled
+      TELEGRAM_DRY_RUN: "true"
+      E2E_MANAGER_EMAIL: manager@demo.local
+      E2E_MANAGER_PASSWORD: ci-e2e-demo-42
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install
+        run: make install
+      - name: Backend — миграции, демо-данные, API
+        working-directory: backend
+        run: |
+          export JWT_SECRET="$(openssl rand -hex 32)"
+          uv run alembic upgrade head
+          uv run python -m app seed-demo --manager-password "$E2E_MANAGER_PASSWORD"
+          nohup uv run python -m app api --port 8000 > ../api.log 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://localhost:8000/health && break; sleep 1; done
+      - name: Frontend — сборка и preview
+        working-directory: frontend
+        run: |
+          pnpm build
+          nohup pnpm preview --port 4173 --strictPort > ../preview.log 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://localhost:4173/ > /dev/null && break; sleep 1; done
+      - name: Playwright
+        working-directory: frontend
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          pnpm e2e
+      - name: Логи и отчёт
+        if: failure()
+        run: |
+          tail -n 200 api.log preview.log || true
+      - uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: playwright-report
+          path: frontend/playwright-report
+          retention-days: 7
 
   build:
     name: Build images

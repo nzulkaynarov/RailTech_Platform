@@ -37,6 +37,9 @@ make smoke-dev
 4. **`migrate` упал** → api/worker не стартуют: `make logs s=migrate`, исправьте причину, затем `make migrate` и `make up`.
 5. **Порт 80 занят** (Caddy не стартует): задайте `HTTP_PORT=8080` в `.env`, `make up`, CRM — `http://localhost:8080`.
 7. **Бот молчит**: `make logs s=api`. `bot_disabled` — пуст `TELEGRAM_BOT_TOKEN`; `TelegramUnauthorizedError` — неверный токен; `TelegramConflictError` — тот же токен уже опрашивает другой процесс (второй стенд, старый webhook); `dialog_agent_failed` / `service_unavailable` в ответе — недоступны `kb-mcp`/`crm-mcp` или LiteLLM (`make ps`, `make logs s=crm-mcp`). Бот не отвечает на вопросы до нажатия «Согласен» — это норма.
+9. **Карточки не приходят в канал**: `make settings key=notifications` — задан ли `channel_id`; бот должен быть администратором канала; `make logs s=worker | grep -E "channel_not_configured|sync_escalation_post"`.
+10. **«Привяжите Telegram в профиле CRM» на кнопке «Забрать»**: у пользователя не заполнен Telegram ID (раздел «Пользователи»).
+11. **Не войти: «Слишком много попыток»**: блокировка на 15 минут после 10 ошибок; админ может сбросить пароль в «Пользователи» (сбрасывает и блокировку). Потерян пароль последнего админа: `make create-admin email=<его email>`.
 8. **Ответ «уточню у коллег» на вопрос по KB**: пробел KB (запись в `kb_gaps`) — проверьте `make kb-demo` и порог `kb.min_score` в настройках.
 6. **Порт 5432/9000/4000/8000 занят** локальным сервисом: остановите его или уберите проброс порта в `infra/docker-compose.dev.yml` (локально, без коммита).
 

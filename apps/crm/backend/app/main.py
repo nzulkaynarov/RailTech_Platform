@@ -66,6 +66,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         title="RailTech CRM API",
         version="0.1.0",
         lifespan=lifespan,
+        # operationId = имя функции роута → читаемые имена в клиенте orval.
+        generate_unique_id_function=lambda route: route.name,
     )
     app.add_middleware(CorrelationIdMiddleware, header_name="X-Request-ID")
     app.include_router(health.router)

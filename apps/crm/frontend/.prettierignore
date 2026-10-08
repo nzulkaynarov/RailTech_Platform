@@ -1,4 +1,5 @@
 dist
 coverage
 pnpm-lock.yaml
-src/api/generated
+test-results
+playwright-report

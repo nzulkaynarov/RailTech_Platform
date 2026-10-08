@@ -6,20 +6,12 @@ import { App } from "./App";
 describe("App", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    window.history.pushState({}, "", "/");
   });
 
-  it.each([
-    { ok: true, expected: "ok" },
-    { ok: false, expected: "unavailable" },
-  ])("shows API health = $expected", async ({ ok, expected }) => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok }));
+  it("redirects anonymous users to the login page", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 401 })));
     render(<App />);
-    expect(await screen.findByText(expected)).toBeInTheDocument();
-  });
-
-  it("shows unavailable when the request fails", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network")));
-    render(<App />);
-    expect(await screen.findByText("unavailable")).toBeInTheDocument();
+    expect(await screen.findByText("Вход в CRM")).toBeInTheDocument();
   });
 });

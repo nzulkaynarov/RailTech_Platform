@@ -21,5 +21,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
+    // Refine импортирует react-router как CJS; инлайн убирает двойную копию контекста роутера.
+    server: { deps: { inline: [/@refinedev/, /antd/, /@ant-design/] } },
   },
 });

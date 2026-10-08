@@ -34,7 +34,7 @@ make smoke-dev                # /health и /ready напрямую и через
 
 | Что | Адрес |
 |---|---|
-| CRM (заглушка Фазы 0) | http://localhost |
+| CRM | http://localhost |
 | API + Swagger | http://localhost:8000/docs |
 | Готовность | http://localhost:8000/ready |
 | RustFS console (S3) | http://localhost:9001 (`S3_ACCESS_KEY` / `S3_SECRET_KEY` из `.env`) |
@@ -58,6 +58,16 @@ make smoke-dev                # /health и /ready напрямую и через
 5. Лента решений по лиду (квалификатор, стадии): `curl -s localhost:8000/api/v1/leads/<id>/decisions` (только dev).
 
 Команды бота: `/start`, `/lang`, `/help`, `/human` (передать менеджеру), `/delete` (обезличить переписку).
+
+### CRM и канал команды (Фаза 4)
+
+1. `make create-admin email=you@company.uz name="Имя"` — первый администратор; временный пароль выводится один раз, при входе система попросит сменить его.
+2. Откройте http://localhost, войдите. Менеджеров создаёт админ в разделе «Пользователи» (временный пароль, обязательная смена при первом входе).
+3. Канал команды: создайте приватный канал, добавьте бота администратором, узнайте `channel_id` (например, переслав пост боту @getidsbot) и выполните `make settings key=notifications value='{"channel_id": -100…}'`.
+4. Привяжите свой Telegram: админ вписывает ваш Telegram ID в карточке пользователя — тогда кнопка «Забрать» в канале работает от вашего имени.
+5. Демо-лиды без Telegram: `make seed pass=<пароль демо-менеджера>` (менеджер `manager@demo.local`).
+
+E2E (Playwright) против стенда: `make test-e2e-local` с `E2E_MANAGER_PASSWORD=<пароль>`; в CI — job `e2e`.
 
 Конвертацию файлов выполняет сервис `docling` (образ ~4.4 ГБ, первый `make up` дольше; ADR-0011).
 

@@ -64,8 +64,9 @@ promptfoo: ## Матрица промпт × модель (Фаза 7)
 	@echo "promptfoo появится в Фазе 7 (PLAN.md)"; exit 1
 
 .PHONY: openapi
-openapi: ## Экспорт OpenAPI → docs/api/openapi.json (генерация клиента orval — Фаза 4)
+openapi: ## Экспорт OpenAPI → docs/api/openapi.json и генерация клиента orval (frontend/src/api/generated)
 	cd $(BACKEND) && PYTHONPATH=. uv run python ../scripts/export_openapi.py ../docs/api/openapi.json
+	cd $(FRONTEND) && pnpm api:generate
 
 .PHONY: migration
 migration: ## Создать миграцию: make migration m="add leads"
@@ -113,8 +114,22 @@ kb-ingest: ## Загрузить файл в KB: make kb-ingest f=path/to/file.p
 		python -m app kb-ingest "/import/$(notdir $(f))" --language $(or $(lang),ru) $(if $(product),--product $(product)) --sync
 
 .PHONY: seed
-seed: ## Демо-данные (Фаза 2+)
-	@echo "scripts/seed_demo.py появится в Фазе 2 (PLAN.md)"; exit 1
+seed: ## Демо-лиды и менеджер manager@demo.local: make seed pass=<пароль ≥10, буквы+цифры>
+	@test -n "$(pass)" || (echo "Укажите пароль демо-менеджера: make seed pass=..."; exit 1)
+	$(COMPOSE) run --rm api python -m app seed-demo --manager-password '$(pass)'
+
+.PHONY: create-admin
+create-admin: ## Первый администратор: make create-admin email=admin@railtech.uz name="Имя"
+	@test -n "$(email)" || (echo "Укажите email: make create-admin email=..."; exit 1)
+	$(COMPOSE) run --rm api python -m app create-admin --email '$(email)' --name '$(or $(name),Администратор)'
+
+.PHONY: settings
+settings: ## Настройки: make settings key=notifications [value='{"channel_id": -100123}']
+	$(COMPOSE) run --rm --no-deps api python -m app settings '$(or $(key),all)' $(if $(value),'$(value)',)
+
+.PHONY: test-e2e-local
+test-e2e-local: ## E2E Playwright против запущенного стенда (BASE_URL=http://localhost)
+	cd $(FRONTEND) && BASE_URL=$(or $(BASE_URL),http://localhost) pnpm e2e
 
 .PHONY: smoke-dev
 smoke-dev: ## Smoke-проверка dev-стенда (/health, /ready)

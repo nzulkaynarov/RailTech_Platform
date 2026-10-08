@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 
 class QualifierRunItem(BaseModel):
-    kind: Literal["qualifier"] = "qualifier"
+    kind: Literal["qualifier"]
     id: int
     at: datetime
     intent: str | None
@@ -27,7 +27,7 @@ class QualifierRunItem(BaseModel):
 
 
 class TransitionItem(BaseModel):
-    kind: Literal["transition"] = "transition"
+    kind: Literal["transition"]
     id: int
     at: datetime
     from_stage: str

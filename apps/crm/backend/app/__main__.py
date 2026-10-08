@@ -72,6 +72,14 @@ def _parser() -> argparse.ArgumentParser:
     admin.add_argument("--name", default="Администратор")
     admin.add_argument("--password", help="пароль (по умолчанию — временный, со сменой при входе)")
 
+    seed = commands.add_parser("seed-demo", help="демо-лиды и менеджер (dev, e2e)")
+    seed.add_argument("--manager-email", default="manager@demo.local")
+    seed.add_argument("--manager-password", required=True, help="пароль демо-менеджера")
+
+    setting = commands.add_parser("settings", help="показать/изменить настройки (ключ settings)")
+    setting.add_argument("key", help="ключ (company, notifications, escalation, ...) или all")
+    setting.add_argument("value", nargs="?", help="JSON с полями для изменения")
+
     commands.add_parser("kb-demo", help="загрузить демо-базу знаний (evals/fixtures/kb)")
     commands.add_parser("kb-eval", help="проверить поиск на демо-KB (гейт Фазы 1)")
     return parser
@@ -91,6 +99,14 @@ def main() -> None:
 
 
 async def _run_cli(args: argparse.Namespace) -> int:
+    if args.command == "settings":
+        from app.cli import settings_cli
+
+        return await settings_cli.run(args)
+    if args.command == "seed-demo":
+        from app.cli import seed_demo
+
+        return await seed_demo.run(args)
     if args.command == "create-admin":
         from app.cli import create_admin
 
