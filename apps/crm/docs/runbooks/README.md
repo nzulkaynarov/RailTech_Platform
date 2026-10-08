@@ -13,8 +13,8 @@
 | [deploy.md](deploy.md) | Первичная настройка VPS, выкладка по тегу, откат |
 | [backup-restore.md](backup-restore.md) | Бэкапы, восстановление, проверка на dev |
 | [key-rotation.md](key-rotation.md) | Ротация ключей и секретов |
+| [promote-to-prod.md](promote-to-prod.md) | Чек-лист переезда на prod и пилот |
 
-Запланированы (SPEC §13, PLAN): `promote-to-prod.md` (Фаза 9).
 
 ## Шаблон
 

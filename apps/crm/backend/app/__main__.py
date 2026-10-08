@@ -4,6 +4,7 @@
 - `worker` — воркер Procrastinate (квалификатор, таймеры, ингест);
 - `mcp kb|crm|docs` — MCP-серверы инструментов агентов;
 - `kb-ingest FILE...`, `kb-demo`, `kb-eval` — база знаний (CLI для человека);
+- `test-alert` — тестовый пост в канал (чек-лист переезда);
 - `load-test` — нагрузочный smoke диалогов (Фаза 8);
 - `telegram-webhook info|set|delete` — диагностика webhook prod-бота;
 - `s3-mirror --dest|--restore DIR` — копия бакетов для бэкапа;
@@ -86,6 +87,7 @@ def _parser() -> argparse.ArgumentParser:
 
     commands.add_parser("kb-demo", help="загрузить демо-базу знаний (evals/fixtures/kb)")
     commands.add_parser("kb-eval", help="проверить поиск на демо-KB (гейт Фазы 1)")
+    commands.add_parser("test-alert", help="тестовый пост в канал команды")
     load = commands.add_parser("load-test", help="нагрузочный smoke: N параллельных диалогов")
     load.add_argument("--dialogs", type=int, default=50, help="параллельных диалогов (50)")
     load.add_argument("--turns", type=int, default=3, help="вопросов в диалоге (3)")
@@ -135,6 +137,10 @@ async def _run_cli(args: argparse.Namespace) -> int:
         from app.cli import kb_demo
 
         return await kb_demo.run()
+    if args.command == "test-alert":
+        from app.cli import test_alert
+
+        return await test_alert.run(args)
     if args.command == "load-test":
         from app.cli import load_test
 
