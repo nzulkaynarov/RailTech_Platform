@@ -6,11 +6,18 @@
 """
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 from urllib.parse import quote
 
 from pydantic import AnyHttpUrl, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def _default_casbin_dir() -> Path:
+    """В контейнере — `/app/casbin` (volume из `infra/casbin`), локально — из репозитория."""
+    repo = Path(__file__).resolve().parents[2] / "infra" / "casbin"
+    return repo if repo.is_dir() else Path("/app/casbin")
 
 
 class Settings(BaseSettings):
@@ -62,6 +69,13 @@ class Settings(BaseSettings):
 
     ready_check_timeout_s: float = Field(default=2.0, gt=0, le=10)
 
+    jwt_secret: SecretStr = SecretStr("")
+    access_token_ttl_s: int = Field(default=900, ge=60)
+    refresh_token_ttl_days: int = Field(default=30, ge=1)
+    login_max_failures: int = Field(default=10, ge=3)
+    login_lockout_minutes: int = Field(default=15, ge=1)
+    casbin_dir: Path = Field(default_factory=_default_casbin_dir)
+
     def _postgres_dsn(self, scheme: str) -> str:
         user = quote(self.postgres_user, safe="")
         password = quote(self.postgres_password.get_secret_value(), safe="")
@@ -69,6 +83,10 @@ class Settings(BaseSettings):
             f"{scheme}://{user}:{password}@{self.postgres_host}:"
             f"{self.postgres_port}/{self.postgres_db}"
         )
+
+    @property
+    def cookie_secure(self) -> bool:
+        return self.app_env == "prod"
 
     @property
     def agent_context_key_bytes(self) -> bytes:

@@ -29,6 +29,7 @@ x-backend: &backend
     DOCLING_URL: http://docling:5001
     DOCLING_API_KEY: ${DOCLING_API_KEY}
     AGENT_CONTEXT_KEY: ${AGENT_CONTEXT_KEY}
+    JWT_SECRET: ${JWT_SECRET}
     TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
     TELEGRAM_MODE: ${TELEGRAM_MODE:-polling}
     TELEGRAM_WEBHOOK_URL: ${TELEGRAM_WEBHOOK_URL:-}
@@ -130,6 +131,8 @@ services:
   api:
     <<: *backend
     command: ["python", "-m", "app", "api"]
+    volumes:
+      - ./casbin:/app/casbin:ro
     depends_on: &backend-deps
       migrate:
         condition: service_completed_successfully

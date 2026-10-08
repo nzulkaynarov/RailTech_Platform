@@ -8,8 +8,8 @@ from app.config import Settings
 
 @asynccontextmanager
 async def queue_lifespan(settings: Settings) -> AsyncIterator[None]:
-    """Без бота задачи из API не ставятся — пул соединений не открываем."""
-    if settings.telegram_mode == "disabled" or not settings.telegram_bot_token.get_secret_value():
+    """В тестах (`APP_ENV=test`) пул очереди не открывается: постановка задач логируется."""
+    if settings.app_env == "test":
         yield
         return
     from app.tasks.queue import queue

@@ -21,20 +21,34 @@ class LeadMessenger:
         self._sessions = sessions
         self._sender = sender
 
-    async def send(self, lead_id: int, text: str, meta: dict[str, Any] | None = None) -> bool:
-        """Отправить в открытый чат лида и сохранить в истории. False — не отправлено."""
+    async def send(
+        self,
+        lead_id: int,
+        text: str,
+        meta: dict[str, Any] | None = None,
+        *,
+        role: str = "bot",
+        sent_by_user_id: int | None = None,
+    ) -> int | None:
+        """Отправить в открытый чат лида и сохранить в истории. None — не отправлено."""
         async with self._sessions() as session:
             conversation = await repo.open_conversation(session, lead_id)
         if conversation is None or self._sender is None:
             logger.warning("lead_message_skipped", lead_id=lead_id, has_sender=bool(self._sender))
-            return False
+            return None
         try:
-            await self._sender.send_message(conversation.tg_chat_id, text)
+            sent = await self._sender.send_message(conversation.tg_chat_id, text)
         except Exception:
             logger.exception("lead_message_failed", lead_id=lead_id)
-            return False
+            return None
         async with self._sessions() as session, session.begin():
-            await repo.add_message(
-                session, conversation_id=conversation.id, role="bot", text=text, meta=meta or {}
+            message = await repo.add_message(
+                session,
+                conversation_id=conversation.id,
+                role=role,
+                text=text,
+                meta=meta or {},
+                sent_by_user_id=sent_by_user_id,
+                tg_message_id=getattr(sent, "message_id", None),
             )
-        return True
+            return message.id

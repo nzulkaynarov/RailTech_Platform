@@ -113,6 +113,11 @@ class TextsSettings(_Strict):
         "Yozishmangiz o'chirildi. Davom etmoqchi bo'lsangiz, shunchaki qayta yozing.",
         "Your conversation has been deleted. If you want to continue, just write again.",
     )
+    manager_joined: LocalizedText = _t(
+        "Здравствуйте! Вашим вопросом занимается {manager}, ответ придёт в этот чат.",
+        "Assalomu alaykum! Savolingiz bilan {manager} shug'ullanmoqda, javob shu chatga keladi.",
+        "Hello! {manager} is now handling your request and will reply in this chat.",
+    )
     attachment_received: LocalizedText = _t(
         "Спасибо, файл получен. Передам его коллеге.",
         "Rahmat, fayl qabul qilindi. Uni hamkasbimga topshiraman.",

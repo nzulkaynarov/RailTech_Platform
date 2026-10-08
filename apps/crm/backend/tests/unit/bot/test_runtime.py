@@ -33,7 +33,7 @@ def test_secret_matches(mode: str, expected: str, received: str | None, ok: bool
 
 
 def test_webhook_is_hidden_when_bot_disabled() -> None:
-    app = create_app(Settings(_env_file=None, telegram_mode="disabled"))
+    app = create_app(Settings(_env_file=None, app_env="test", telegram_mode="disabled"))
     with TestClient(app) as client:
         response = client.post(
             "/telegram/webhook",
@@ -44,7 +44,7 @@ def test_webhook_is_hidden_when_bot_disabled() -> None:
 
 
 def test_webhook_feeds_update_in_background(monkeypatch: pytest.MonkeyPatch) -> None:
-    app = create_app(Settings(_env_file=None, telegram_mode="disabled"))
+    app = create_app(Settings(_env_file=None, app_env="test", telegram_mode="disabled"))
     fed: list[dict[str, Any]] = []
     rt = runtime("webhook", "s3cr3t-value")
     monkeypatch.setattr(rt, "feed", fed.append)

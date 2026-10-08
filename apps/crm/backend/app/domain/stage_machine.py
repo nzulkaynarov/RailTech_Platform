@@ -18,6 +18,11 @@ _ALLOWED: Final[dict[tuple[Stage, Stage], frozenset[TransitionSource]]] = {
         for s in (S.NEW, S.ENGAGED, S.QUALIFIED, S.UNRESPONSIVE)
     },
     (S.HANDOFF, S.IN_PROGRESS): frozenset({Src.USER}),
+    # «Забрать» из CRM без эскалации (ADR-0012).
+    **{
+        (s, S.IN_PROGRESS): frozenset({Src.USER})
+        for s in (S.NEW, S.ENGAGED, S.QUALIFIED, S.UNRESPONSIVE)
+    },
     (S.HANDOFF, S.ENGAGED): frozenset({Src.USER}),
     (S.HANDOFF, S.QUALIFIED): frozenset({Src.USER}),
     (S.IN_PROGRESS, S.WON): frozenset({Src.USER}),
@@ -77,9 +82,9 @@ def qualifier_path(current: Stage, proposed: Stage) -> tuple[tuple[Stage, ...], 
 
 
 def stage_before_handoff(history: Sequence[tuple[Stage, Stage]]) -> Stage:
-    """Стадия для «Вернуть боту»: из чего лид пришёл в handoff (engaged по умолчанию)."""
+    """Стадия для «Вернуть боту»: откуда лид пришёл в handoff/in_progress (иначе engaged)."""
     for from_stage, to_stage in reversed(history):
-        if to_stage == S.HANDOFF and from_stage in RETURN_TO_BOT_STAGES:
+        if to_stage in (S.HANDOFF, S.IN_PROGRESS) and from_stage in RETURN_TO_BOT_STAGES:
             return from_stage
     return S.ENGAGED
 

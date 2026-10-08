@@ -70,7 +70,9 @@ class Escalation(TimestampMixin, Base):
     recommendation: Mapped[str | None] = mapped_column(Text)
     priority: Mapped[str] = mapped_column(String(8))
     status: Mapped[str] = mapped_column(String(16), server_default=sql("'open'"))
-    taken_by_user_id: Mapped[int | None] = mapped_column(BigInteger)
+    taken_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
     taken_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     channel_message_id: Mapped[int | None] = mapped_column(BigInteger)
     sla_due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -96,5 +98,5 @@ class StageTransition(TimestampMixin, Base):
     from_stage: Mapped[str] = mapped_column(String(16))
     to_stage: Mapped[str] = mapped_column(String(16))
     source: Mapped[str] = mapped_column(String(16))
-    actor_user_id: Mapped[int | None] = mapped_column(BigInteger)
+    actor_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     reason: Mapped[str] = mapped_column(Text)

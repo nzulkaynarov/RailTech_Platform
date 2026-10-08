@@ -9,6 +9,7 @@ from app.domain.stage_machine import TransitionDecision, decide
 from app.domain.stages import Stage, TransitionSource
 from app.models.leads import Lead
 from app.models.qualification import StageTransition
+from app.repositories import events
 
 logger = structlog.get_logger(__name__)
 
@@ -32,6 +33,7 @@ async def transition(
         if target == Stage.UNRESPONSIVE:
             lead.unresponsive_since = datetime.now(UTC)
         await _journal(session, lead.id, decision, source, reason, actor_user_id)
+        await events.publish(session, "lead.updated", lead_id=lead.id, stage=target.value)
     return decision
 
 

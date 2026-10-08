@@ -3,7 +3,8 @@
 - `api` — FastAPI (бот, REST, auth) под uvicorn;
 - `worker` — воркер Procrastinate (квалификатор, таймеры, ингест);
 - `mcp kb|crm|docs` — MCP-серверы инструментов агентов;
-- `kb-ingest FILE...`, `kb-demo`, `kb-eval` — база знаний (CLI для человека).
+- `kb-ingest FILE...`, `kb-demo`, `kb-eval` — база знаний (CLI для человека);
+- `create-admin --email ...` — первый администратор CRM.
 """
 
 import argparse
@@ -66,6 +67,11 @@ def _parser() -> argparse.ArgumentParser:
     ingest.add_argument("--title", help="заголовок (по умолчанию — имя файла)")
     ingest.add_argument("--sync", action="store_true", help="индексировать сразу, без очереди")
 
+    admin = commands.add_parser("create-admin", help="создать/восстановить администратора CRM")
+    admin.add_argument("--email", required=True)
+    admin.add_argument("--name", default="Администратор")
+    admin.add_argument("--password", help="пароль (по умолчанию — временный, со сменой при входе)")
+
     commands.add_parser("kb-demo", help="загрузить демо-базу знаний (evals/fixtures/kb)")
     commands.add_parser("kb-eval", help="проверить поиск на демо-KB (гейт Фазы 1)")
     return parser
@@ -85,6 +91,10 @@ def main() -> None:
 
 
 async def _run_cli(args: argparse.Namespace) -> int:
+    if args.command == "create-admin":
+        from app.cli import create_admin
+
+        return await create_admin.run(args)
     if args.command == "kb-demo":
         from app.cli import kb_demo
 

@@ -8,6 +8,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.leads import Conversation, Lead, LeadNote, Message, TelegramIdentity
+from app.repositories import events
 
 ERASED_TEXT = "[удалено по запросу]"
 
@@ -80,6 +81,7 @@ async def add_message(
     )
     session.add(message)
     await session.flush()
+    await events.publish_message(session, conversation_id, message.id, role)
     return message
 
 

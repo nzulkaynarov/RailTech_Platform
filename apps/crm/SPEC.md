@@ -293,6 +293,7 @@ ALLOWED = {
   ("engaged","qualified"):{"qualifier"},
   ("*","handoff"):        {"trigger"},            # из new|engaged|qualified|unresponsive
   ("handoff","in_progress"): {"user"},            # Забрать
+  ("new"|"engaged"|"qualified"|"unresponsive","in_progress"): {"user"},  # Забрать из CRM без эскалации (ADR-0012)
   ("handoff","engaged"|"qualified"): {"user"},    # Вернуть боту → в стадию до handoff
   ("in_progress","won"|"lost"): {"user"},
   ("in_progress","engaged"|"qualified"): {"user"},# Вернуть боту из работы

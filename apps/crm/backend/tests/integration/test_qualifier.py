@@ -20,6 +20,7 @@ from app.services.lead_messenger import LeadMessenger
 from app.services.qualifier import QualifierService
 from app.services.settings import SettingsService
 from app.services.timers import mark_unresponsive
+from tests.integration.crm_helpers import login, make_user
 from tests.unit.agents.fakes import ReplayModel, reply
 
 pytestmark = pytest.mark.integration
@@ -238,9 +239,12 @@ async def test_decisions_feed(
     lead_id = await make_lead(sessions)
     svc, _ = service(sessions, output(proposed_stage="engaged"))
     await svc.run(lead_id)
+    viewer, password = await make_user(sessions, "viewer@railtech.uz", ["viewer"])
     with TestClient(create_app(live_settings)) as client:
-        body = client.get(f"/api/v1/leads/{lead_id}/decisions").json()
-        missing = client.get("/api/v1/leads/999999/decisions")
+        assert client.get(f"/api/v1/leads/{lead_id}/decisions").status_code == 401
+        headers = login(client, viewer.email, password)
+        body = client.get(f"/api/v1/leads/{lead_id}/decisions", headers=headers).json()
+        missing = client.get("/api/v1/leads/999999/decisions", headers=headers)
     assert missing.status_code == 404
     assert body["stage"] == "engaged"
     assert {i["kind"] for i in body["items"]} == {"qualifier", "transition"}

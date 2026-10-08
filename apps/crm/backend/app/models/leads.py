@@ -46,7 +46,9 @@ class Lead(TimestampMixin, Base):
     stage: Mapped[str] = mapped_column(String(16), server_default=sql("'new'"))
     score: Mapped[int] = mapped_column(Integer, server_default=sql("0"))
     owner_mode: Mapped[str] = mapped_column(String(8), server_default=sql("'bot'"))
-    assigned_user_id: Mapped[int | None] = mapped_column(BigInteger)
+    assigned_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
     client_id: Mapped[int | None] = mapped_column(BigInteger)
     consent_given_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     consent_version: Mapped[str | None] = mapped_column(String(32))
@@ -80,7 +82,9 @@ class TelegramIdentity(TimestampMixin, Base):
     lead_id: Mapped[int | None] = mapped_column(ForeignKey("leads.id", ondelete="SET NULL"))
     client_id: Mapped[int | None] = mapped_column(BigInteger)
     phone_e164: Mapped[str | None] = mapped_column(String(20))
-    verified_by_user_id: Mapped[int | None] = mapped_column(BigInteger)
+    verified_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     is_blocked: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
 
@@ -113,7 +117,7 @@ class Message(TimestampMixin, Base):
         JSONB, server_default=sql("'[]'::jsonb")
     )
     tg_message_id: Mapped[int | None] = mapped_column(BigInteger)
-    sent_by_user_id: Mapped[int | None] = mapped_column(BigInteger)
+    sent_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     meta: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=sql("'{}'::jsonb"))
 
 
@@ -132,7 +136,7 @@ class LeadNote(TimestampMixin, Base):
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
     lead_id: Mapped[int] = mapped_column(ForeignKey("leads.id", ondelete="CASCADE"))
-    user_id: Mapped[int | None] = mapped_column(BigInteger)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     text: Mapped[str] = mapped_column(Text)
     visible_to_bot: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
 
@@ -143,5 +147,5 @@ class Setting(Base):
     key: Mapped[str] = mapped_column(String(64), primary_key=True)
     value: Mapped[dict[str, Any]] = mapped_column(JSONB)
     schema_version: Mapped[int] = mapped_column(Integer, server_default=sql("1"))
-    updated_by: Mapped[int | None] = mapped_column(BigInteger)
+    updated_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

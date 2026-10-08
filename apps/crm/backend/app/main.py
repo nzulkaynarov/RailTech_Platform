@@ -8,8 +8,8 @@ from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI
 
 from app import db
-from app.api import health, telegram
-from app.api.v1 import leads
+from app.api import errors, health, telegram
+from app.api.v1 import auth, leads, me, stream, users
 from app.bot.setup import bot_lifespan
 from app.config import Settings, get_settings
 from app.container import Container
@@ -25,6 +25,12 @@ async def _qualify(lead_id: int) -> None:
     await enqueue_qualify(lead_id)
 
 
+async def _escalated(lead_id: int, escalation_id: int) -> None:
+    from app.tasks.notify import enqueue_escalation
+
+    await enqueue_escalation(escalation_id)
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     configure_logging(settings)
@@ -36,7 +42,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         async with (
             httpx.AsyncClient(timeout=settings.ready_check_timeout_s) as http,
             queue_lifespan(settings),
-            bot_lifespan(container, on_activity=_qualify) as bot,
+            bot_lifespan(container, on_activity=_qualify, on_escalation=_escalated) as bot,
         ):
             app.state.container = container
             app.state.bot = bot
@@ -51,7 +57,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 timeout_s=settings.ready_check_timeout_s,
             )
             yield
-        await engine.dispose()
+            broker = getattr(app.state, "broker", None)
+            if broker is not None:
+                await broker.stop()
+        await container.aclose()
 
     app = FastAPI(
         title="RailTech CRM API",
@@ -61,5 +70,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(CorrelationIdMiddleware, header_name="X-Request-ID")
     app.include_router(health.router)
     app.include_router(telegram.router)
-    app.include_router(leads.router)
+    errors.install(app)
+    for router in (auth.router, me.router, users.router, leads.router, stream.router):
+        app.include_router(router)
     return app

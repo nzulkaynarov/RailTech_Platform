@@ -13,6 +13,7 @@ from app.agents.llm import ChatModel
 from app.agents.mcp_client import McpToolClient
 from app.bot.runtime import BotRuntime, build_dispatcher
 from app.container import Container
+from app.security.rbac import Rbac
 from app.services.conversation import ActivityHook, ConversationService, EscalationHook
 
 logger = structlog.get_logger(__name__)
@@ -58,12 +59,15 @@ async def bot_lifespan(
             on_activity=on_activity,
             on_escalation=on_escalation,
         )
+        rbac = await Rbac.create(container.engine, config.casbin_dir)
         dispatcher = build_dispatcher(
             container.session_factory,
             conversation,
             container.settings_service,
             container.storage,
             config.s3_bucket_attachments,
+            leads=container.lead_service,
+            rbac=rbac,
         )
         runtime = BotRuntime.create(config, dispatcher)
         await runtime.start()

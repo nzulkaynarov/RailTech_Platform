@@ -33,12 +33,18 @@ TABLES = (
     "qualifier_runs",
     "escalations",
     "stage_transitions",
+    "users",
+    "audit_log",
+    "refresh_tokens",
 )
+FAKE_KEY = "x" * 40  # фиктивный ключ только для тестов
 
 
 @pytest.fixture(scope="session")
 def live_settings() -> Settings:
-    return Settings(_env_file=None, app_env="test", agent_context_key=AGENT_KEY)
+    return Settings(
+        _env_file=None, app_env="test", agent_context_key=AGENT_KEY, jwt_secret=FAKE_KEY
+    )
 
 
 @pytest.fixture

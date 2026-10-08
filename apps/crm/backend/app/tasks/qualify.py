@@ -24,7 +24,14 @@ def build_qualifier_service(c: Container) -> QualifierService:
         c.settings_service,
         QualifierAgent(ChatModel(c.llm, "qualifier-model")),
         LeadMessenger(c.session_factory, c.telegram_bot),
+        on_escalation=_escalated,
     )
+
+
+async def _escalated(lead_id: int, escalation_id: int) -> None:
+    from app.tasks.notify import enqueue_escalation
+
+    await enqueue_escalation(escalation_id)
 
 
 @queue.task(

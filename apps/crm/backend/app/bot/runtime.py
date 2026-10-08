@@ -14,11 +14,13 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.bot import handlers
+from app.bot import channel, handlers
 from app.bot.middlewares import IdempotencyMiddleware, RateLimitMiddleware
 from app.config import Settings
 from app.integrations.s3 import ObjectStorage
+from app.security.rbac import Rbac
 from app.services.conversation import ConversationService
+from app.services.leads import LeadService
 from app.services.settings import SettingsService
 
 logger = structlog.get_logger(__name__)
@@ -30,15 +32,22 @@ def build_dispatcher(
     settings: SettingsService,
     storage: ObjectStorage,
     attachments_bucket: str,
+    leads: LeadService | None = None,
+    rbac: Rbac | None = None,
 ) -> Dispatcher:
     dispatcher = Dispatcher(
         conversation=conversation,
         settings=settings,
         object_storage=storage,
         attachments_bucket=attachments_bucket,
+        sessions=sessions,
+        leads=leads,
+        rbac=rbac,
     )
     dispatcher.update.outer_middleware(IdempotencyMiddleware(sessions))
     dispatcher.message.outer_middleware(RateLimitMiddleware(settings.get))
+    if leads is not None and rbac is not None:
+        dispatcher.include_router(channel.router)
     dispatcher.include_router(handlers.router)
     return dispatcher
 

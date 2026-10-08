@@ -7,7 +7,9 @@ dependencies = [
     "aiobotocore>=3.9.2",
     "aiogram>=3.31.0",
     "alembic>=1.20.0",
+    "argon2-cffi>=25.1.0",
     "asgi-correlation-id>=5.0.1",
+    "casbin-async-sqlalchemy-adapter>=1.17.0",
     "docling-core[chunking-openai]>=2.101.0",
     "fastapi>=0.143.0",
     "httpx>=0.28.1",
@@ -20,7 +22,9 @@ dependencies = [
     "pgvector>=0.5.0",
     "procrastinate>=3.10.0",
     "psycopg[binary,pool]>=3.3.6",
+    "pycasbin>=2.8.0",
     "pydantic-settings>=2.15.0",
+    "pyjwt>=2.15.1",
     "pyyaml>=6.0.3",
     "sqlalchemy[asyncio]>=2.1.4",
     "structlog>=26.1.0",
@@ -94,7 +98,7 @@ module = ["app.domain.*", "app.security.*", "app.schemas.*"]
 strict = true
 
 [[tool.mypy.overrides]]
-module = ["aiobotocore.*", "procrastinate.*"]
+module = ["aiobotocore.*", "procrastinate.*", "casbin.*", "casbin_async_sqlalchemy_adapter.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

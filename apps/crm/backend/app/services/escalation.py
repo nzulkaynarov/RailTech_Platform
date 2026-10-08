@@ -19,6 +19,7 @@ from app.domain.stages import OwnerMode, Stage, TransitionSource
 from app.domain.triggers import Priority, TriggerCode, TriggerHit
 from app.models.leads import Lead
 from app.models.qualification import Escalation
+from app.repositories import events
 from app.schemas.settings import AppSettings
 from app.services import stages
 
@@ -90,6 +91,13 @@ async def apply(
     if escalation_plan.lead_text is not None:
         lead.handoff_notice_sent_at = now
     await session.flush()
+    await events.publish(
+        session,
+        "escalation.updated",
+        lead_id=lead.id,
+        escalation_id=current.id,
+        priority=escalation_plan.priority.value,
+    )
     logger.info(
         "escalation_applied",
         lead_id=lead.id,
