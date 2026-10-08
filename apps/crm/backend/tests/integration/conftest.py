@@ -36,6 +36,10 @@ TABLES = (
     "users",
     "audit_log",
     "refresh_tokens",
+    "clients",
+    "documents",
+    "document_access_log",
+    "service_requests",
 )
 FAKE_KEY = "x" * 40  # фиктивный ключ только для тестов
 

@@ -2,7 +2,11 @@
 import { useQuery } from "@tanstack/react-query";
 
 import {
+  documentAccess,
+  getClient,
   getDashboard,
+  listClients,
+  listDocuments,
   getSettings,
   listAudit,
   listKbChunks,
@@ -11,7 +15,7 @@ import {
   listProducts,
 } from "./generated/crm";
 import type { ListAuditParams, ListKbGapsParams } from "./generated/model";
-import { unwrap } from "./http";
+import { compact, unwrap } from "./http";
 
 export const adminKeys = {
   documents: ["kb", "documents"] as const,
@@ -21,6 +25,10 @@ export const adminKeys = {
   settings: ["settings"] as const,
   dashboard: (days: number) => ["dashboard", days] as const,
   audit: (params: ListAuditParams) => ["audit", params] as const,
+  clients: (q: string) => ["clients", q] as const,
+  client: (id: number) => ["client", id] as const,
+  clientDocuments: (id: number) => ["client", id, "documents"] as const,
+  access: (id: number) => ["document", id, "access"] as const,
 };
 
 export const useKbDocuments = () =>
@@ -47,7 +55,7 @@ export const useProducts = () =>
 export const useKbGaps = (params: ListKbGapsParams) =>
   useQuery({
     queryKey: adminKeys.gaps(params),
-    queryFn: async () => unwrap(await listKbGaps(params)),
+    queryFn: async () => unwrap(await listKbGaps(compact(params))),
   });
 
 export const useSettings = () =>
@@ -62,5 +70,29 @@ export const useDashboard = (days: number) =>
 export const useAudit = (params: ListAuditParams) =>
   useQuery({
     queryKey: adminKeys.audit(params),
-    queryFn: async () => unwrap(await listAudit(params)),
+    queryFn: async () => unwrap(await listAudit(compact(params))),
+  });
+
+export const useClients = (q: string) =>
+  useQuery({
+    queryKey: adminKeys.clients(q),
+    queryFn: async () => unwrap(await listClients(compact({ q }))),
+  });
+
+export const useClient = (id: number) =>
+  useQuery({ queryKey: adminKeys.client(id), queryFn: async () => unwrap(await getClient(id)) });
+
+export const useClientDocuments = (id: number) =>
+  useQuery({
+    queryKey: adminKeys.clientDocuments(id),
+    queryFn: async () => unwrap(await listDocuments({ client_id: id })),
+    refetchInterval: (query) =>
+      query.state.data?.some((d) => d.extract_status === "pending") ? 3000 : false,
+  });
+
+export const useDocumentAccess = (id: number | null) =>
+  useQuery({
+    queryKey: adminKeys.access(id ?? 0),
+    queryFn: async () => unwrap(await documentAccess(id ?? 0)),
+    enabled: id !== null,
   });

@@ -41,6 +41,10 @@ services:
     build: { target: dev }
     volumes: *backend-src
 
+  docs-mcp:
+    build: { target: dev }
+    volumes: *backend-src
+
   web:
     build: { target: dev }
     environment:

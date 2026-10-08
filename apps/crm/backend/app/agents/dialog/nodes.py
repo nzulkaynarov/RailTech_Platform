@@ -7,6 +7,7 @@ from typing import Any, Final
 import structlog
 
 from app.agents import prompts
+from app.agents.dialog import customer
 from app.agents.dialog.state import DialogState
 from app.agents.llm import ChatCompleter, ChatResult
 from app.agents.mcp_client import ToolCaller
@@ -18,7 +19,13 @@ from app.schemas.settings import AppSettings, Language
 
 logger = structlog.get_logger(__name__)
 
-PROMPT: Final = "dialog_prospect"
+PROMPTS: Final = {"prospect": "dialog_prospect", "customer": "dialog_customer"}
+
+
+def prompt_for(mode: str) -> str:
+    return PROMPTS.get(mode, PROMPTS["prospect"])
+
+
 ROLE_TAGS: Final = {"lead": "client", "bot": "assistant", "manager": "manager", "system": "system"}
 
 TOOLS: Final[list[dict[str, Any]]] = [
@@ -82,7 +89,12 @@ class DialogNodes:
     async def retrieve(self, state: DialogState) -> dict[str, Any]:
         args = {"query": state["text"], "top_k": self._settings.kb.top_k}
         kb = await self._tools.call("kb", "search_kb", args, state["context_token"])
-        return {"kb": kb}
+        docs = None
+        if state["mode"] == "customer":
+            docs = await customer.search(
+                self._tools, state["text"], state["context_token"], self._settings
+            )
+        return {"kb": kb, "docs": docs}
 
     def decide(self, state: DialogState) -> dict[str, Any]:
         lead = state["lead"] or {}
@@ -101,6 +113,10 @@ class DialogNodes:
                 best_score=kb.get("best_score"),
                 min_score=self._settings.kb.min_score,
                 need_known=bool(lead.get("need_summary")),
+                document_match=customer.is_match(state["docs"]),
+                document_requested=state["docs"] is not None,
+                documents_found=len(state["docs"] or []),
+                customer=state["mode"] == "customer",
             )
         )
         return {
@@ -128,14 +144,23 @@ class DialogNodes:
         text = texts.handoff if is_business_time(datetime.now(UTC), hours) else texts.off_hours
         return {"reply": text.get(_lang(state))}
 
+    async def deliver_document(self, state: DialogState) -> dict[str, Any]:
+        """Ровно один документ клиента: ссылка из docs-mcp, отправку файла делает бот."""
+        doc = (state["docs"] or [{}])[0]
+        link = await self._tools.call(
+            "docs", "get_document_link", {"document_id": doc["document_id"]}, state["context_token"]
+        )
+        text = self._settings.texts.document_sent.get(_lang(state), title=str(link["title"]))
+        return {"reply": text, "document": link}
+
     async def answer(self, state: DialogState) -> dict[str, Any]:
         messages = self._messages(state)
-        tools = TOOLS if state["mode"] == "prospect" else TOOLS[:1]
+        tools = TOOLS if state["mode"] == "prospect" else [TOOLS[0], *customer.CUSTOMER_TOOLS]
         first = await self._model.complete(messages, tools=tools, name="dialog.answer")
-        callback = False
+        callback = service = False
         cost = first.cost_usd or 0.0
         if first.tool_calls:
-            callback = await self._run_tools(state, first)
+            callback, service = await self._run_tools(state, first, tools)
             followup = [*messages, *_tool_messages(first)]
             final = await self._model.complete(followup, name="dialog.answer.final")
             cost += final.cost_usd or 0.0
@@ -145,12 +170,16 @@ class DialogNodes:
             "reply": final.text or None,
             "llm": {**_llm_meta(final), "cost_usd": cost or None},
             "callback_requested": callback,
+            "service_request": service,
         }
 
-    async def _run_tools(self, state: DialogState, result: ChatResult) -> bool:
-        callback = False
+    async def _run_tools(
+        self, state: DialogState, result: ChatResult, tools: list[dict[str, Any]]
+    ) -> tuple[bool, bool]:
+        callback = service = False
+        allowed = {t["function"]["name"] for t in tools}
         for call in result.tool_calls:
-            if call.name not in {t["function"]["name"] for t in TOOLS}:
+            if call.name not in allowed:
                 continue
             try:
                 await self._tools.call("crm", call.name, call.arguments, state["context_token"])
@@ -158,19 +187,25 @@ class DialogNodes:
                 logger.warning("dialog_tool_failed", tool=call.name, lead_id=state["lead_id"])
                 continue
             callback = callback or call.name == "request_callback"
-        return callback
+            service = service or call.name == "create_service_request"
+        return callback, service
 
     def _messages(self, state: DialogState) -> list[dict[str, Any]]:
         lead = state["lead"] or {}
         kb = state["kb"] or {}
         bot = self._settings.bot
+        extra = (
+            {"documents": customer.documents_block(state["docs"])}
+            if state["mode"] == "customer"
+            else {"clarify_instruction": _clarify(state["clarify"])}
+        )
         system = prompts.render(
-            PROMPT,
+            prompt_for(state["mode"]),
+            **extra,
             company=self._settings.company.name,
             persona=bot.persona,
             language_name=prompts.LANGUAGE_NAMES[_lang(state)],
             max_words=str(bot.max_words),
-            clarify_instruction=_clarify(state["clarify"]),
             notes=prompts.xml_items("note", [({}, n) for n in lead.get("notes", [])]),
             kb=prompts.xml_items(
                 "fragment",

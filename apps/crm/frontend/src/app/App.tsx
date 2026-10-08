@@ -5,6 +5,7 @@ import {
   InboxOutlined,
   QuestionCircleOutlined,
   SettingOutlined,
+  ShopOutlined,
   TeamOutlined,
   UnorderedListOutlined,
   UserOutlined,
@@ -19,11 +20,13 @@ import {
 import routerProvider, { CatchAllNavigate, NavigateToResource } from "@refinedev/react-router";
 import { QueryClient } from "@tanstack/react-query";
 import { App as AntApp, ConfigProvider } from "antd";
-import ruRU from "antd/locale/ru_RU";
+import ruRU from "antd/es/locale/ru_RU";
 import "dayjs/locale/ru";
 import { BrowserRouter, Outlet, Route, Routes } from "react-router";
 
 import { AuditPage } from "../pages/audit/AuditPage";
+import { ClientDetailPage } from "../pages/clients/ClientDetailPage";
+import { ClientsPage } from "../pages/clients/ClientsPage";
 import { DashboardPage } from "../pages/dashboard/DashboardPage";
 import { GapsPage } from "../pages/gaps/GapsPage";
 import { InboxPage } from "../pages/inbox/InboxPage";
@@ -53,6 +56,12 @@ const resources = [
     list: "/leads",
     show: "/leads/:id",
     meta: { label: t.nav.leads, icon: <UnorderedListOutlined /> },
+  },
+  {
+    name: "clients",
+    list: "/clients",
+    show: "/clients/:id",
+    meta: { label: t.nav.clients, icon: <ShopOutlined /> },
   },
   {
     name: "dashboard",
@@ -109,6 +118,8 @@ export function App() {
                 <Route path="/inbox" element={<InboxPage />} />
                 <Route path="/leads" element={<LeadsPage />} />
                 <Route path="/leads/:id" element={<LeadDetailPage />} />
+                <Route path="/clients" element={<ClientsPage />} />
+                <Route path="/clients/:id" element={<ClientDetailPage />} />
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/kb" element={<KbPage />} />
                 <Route path="/gaps" element={<GapsPage />} />

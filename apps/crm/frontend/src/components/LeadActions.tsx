@@ -7,6 +7,7 @@ import { ApiError } from "../api/http";
 import { type LeadAction, useLeadAction } from "../api/queries";
 import { errorText, t } from "../i18n/ru";
 import { type ActionRights, availableActions } from "./leadActionRules";
+import { MakeCustomer } from "./MakeCustomer";
 
 type Dialog = "return" | "snooze" | "lost" | "won" | "note" | null;
 
@@ -89,6 +90,7 @@ export function LeadActions({ lead, rights }: { lead: LeadDetail; rights: Action
             {t.actions.lost}
           </Button>
         ) : null}
+        {show.makeCustomer ? <MakeCustomer leadId={lead.id} /> : null}
         {show.note ? (
           <Button
             onClick={() => {

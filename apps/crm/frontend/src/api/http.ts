@@ -111,3 +111,25 @@ type Success<R> = R extends { status: 200 | 201 | 204; data: infer D } ? D : nev
 export function unwrap<R extends { status: number; data: unknown }>(response: R): Success<R> {
   return response.data as Success<R>;
 }
+
+/** Скачать файл с авторизацией (ответ API — бинарный, не JSON). */
+export async function downloadFile(url: string, filename: string): Promise<void> {
+  const response = await rawFetch(url);
+  if (!response.ok)
+    throw new ApiError(response.status, "http_error", `HTTP ${String(response.status)}`);
+  const blob = await response.blob();
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+/** Убрать пустые фильтры: клиент orval сериализует `null` как строку "null". */
+export function compact<T extends object>(params: T): T {
+  return Object.fromEntries(
+    Object.entries(params).filter(
+      ([, value]) => value !== null && value !== undefined && value !== "",
+    ),
+  ) as T;
+}

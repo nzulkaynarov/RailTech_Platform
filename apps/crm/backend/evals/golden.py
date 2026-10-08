@@ -40,6 +40,15 @@ class Expect(_Strict):
     must_include_any: list[str] = Field(default_factory=list)
     must_not_include: list[str] = Field(default_factory=list)
     max_words: int = 120
+    tool_calls_any: list[str] = Field(default_factory=list, description="хотя бы один вызов")
+
+
+class EvalDocument(_Strict):
+    document_id: int
+    title: str
+    type: Literal["contract", "proposal", "letter", "invoice", "act", "other"]
+    number: str | None = None
+    doc_date: str | None = None
 
 
 class GoldenCase(_Strict):
@@ -50,6 +59,8 @@ class GoldenCase(_Strict):
     history: list[Turn] = Field(default_factory=list)
     stage: str = "engaged"
     need_summary: str | None = None
+    mode: Literal["prospect", "customer"] = "prospect"
+    documents: list[EvalDocument] = Field(default_factory=list, description="документы клиента")
     expect: Expect
 
 

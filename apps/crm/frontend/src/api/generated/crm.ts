@@ -5,14 +5,22 @@
  * OpenAPI spec version: 0.1.0
  */
 import type {
+  AccessOut,
   ActionResult,
   AuditPage,
+  BodyUploadDocument,
   BodyUploadKbDocument,
   ChangePasswordRequest,
+  ClientCreate,
+  ClientDetail,
+  ClientOut,
+  ClientUpdate,
   Close,
   Created,
   Dashboard,
   DecisionsResponse,
+  DocumentOut,
+  DocumentUpdate,
   DryRunResponse,
   EscalationSettings,
   GetDashboardParams,
@@ -27,11 +35,15 @@ import type {
   LeadDetail,
   LeadMessagesParams,
   LeadPage,
+  LinkTelegram,
   ListAuditParams,
+  ListClientsParams,
+  ListDocumentsParams,
   ListKbDocumentsParams,
   ListKbGapsParams,
   ListLeadsParams,
   LoginRequest,
+  MakeCustomer,
   ManualDocument,
   MePatch,
   MessageOut,
@@ -285,6 +297,298 @@ export const refresh = async (options?: Parameters<typeof http>[1]): Promise<ref
   });
 };
 
+export type listClientsResponse200 = {
+  data: ClientOut[];
+  status: 200;
+};
+
+export type listClientsResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type listClientsResponseSuccess = listClientsResponse200 & {
+  headers: Headers;
+};
+export type listClientsResponseError = listClientsResponse422 & {
+  headers: Headers;
+};
+
+export type listClientsResponse = listClientsResponseSuccess | listClientsResponseError;
+
+export const getListClientsUrl = (params?: ListClientsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/clients?${stringifiedParams}` : `/api/v1/clients`;
+};
+
+/**
+ * @summary List Clients
+ */
+export const listClients = async (
+  params?: ListClientsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<listClientsResponse> => {
+  return http<listClientsResponse>(getListClientsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type createClientResponse201 = {
+  data: Created;
+  status: 201;
+};
+
+export type createClientResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type createClientResponseSuccess = createClientResponse201 & {
+  headers: Headers;
+};
+export type createClientResponseError = createClientResponse422 & {
+  headers: Headers;
+};
+
+export type createClientResponse = createClientResponseSuccess | createClientResponseError;
+
+export const getCreateClientUrl = () => {
+  return `/api/v1/clients`;
+};
+
+/**
+ * @summary Create Client
+ */
+export const createClient = async (
+  clientCreate: ClientCreate,
+  options?: Parameters<typeof http>[1],
+): Promise<createClientResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<createClientResponse>(getCreateClientUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(clientCreate),
+  });
+};
+
+export type getClientResponse200 = {
+  data: ClientDetail;
+  status: 200;
+};
+
+export type getClientResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type getClientResponseSuccess = getClientResponse200 & {
+  headers: Headers;
+};
+export type getClientResponseError = getClientResponse422 & {
+  headers: Headers;
+};
+
+export type getClientResponse = getClientResponseSuccess | getClientResponseError;
+
+export const getGetClientUrl = (clientId: number) => {
+  return `/api/v1/clients/${clientId}`;
+};
+
+/**
+ * @summary Get Client
+ */
+export const getClient = async (
+  clientId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<getClientResponse> => {
+  return http<getClientResponse>(getGetClientUrl(clientId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type updateClientResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type updateClientResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type updateClientResponseSuccess = updateClientResponse200 & {
+  headers: Headers;
+};
+export type updateClientResponseError = updateClientResponse422 & {
+  headers: Headers;
+};
+
+export type updateClientResponse = updateClientResponseSuccess | updateClientResponseError;
+
+export const getUpdateClientUrl = (clientId: number) => {
+  return `/api/v1/clients/${clientId}`;
+};
+
+/**
+ * @summary Update Client
+ */
+export const updateClient = async (
+  clientId: number,
+  clientUpdate: ClientUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<updateClientResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<updateClientResponse>(getUpdateClientUrl(clientId), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(clientUpdate),
+  });
+};
+
+export type linkTelegramResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type linkTelegramResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type linkTelegramResponseSuccess = linkTelegramResponse200 & {
+  headers: Headers;
+};
+export type linkTelegramResponseError = linkTelegramResponse422 & {
+  headers: Headers;
+};
+
+export type linkTelegramResponse = linkTelegramResponseSuccess | linkTelegramResponseError;
+
+export const getLinkTelegramUrl = (clientId: number) => {
+  return `/api/v1/clients/${clientId}/telegram`;
+};
+
+/**
+ * @summary Link Telegram
+ */
+export const linkTelegram = async (
+  clientId: number,
+  linkTelegramBody: LinkTelegram,
+  options?: Parameters<typeof http>[1],
+): Promise<linkTelegramResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<linkTelegramResponse>(getLinkTelegramUrl(clientId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(linkTelegramBody),
+  });
+};
+
+export type unlinkTelegramResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type unlinkTelegramResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type unlinkTelegramResponseSuccess = unlinkTelegramResponse200 & {
+  headers: Headers;
+};
+export type unlinkTelegramResponseError = unlinkTelegramResponse422 & {
+  headers: Headers;
+};
+
+export type unlinkTelegramResponse = unlinkTelegramResponseSuccess | unlinkTelegramResponseError;
+
+export const getUnlinkTelegramUrl = (clientId: number, tgUserId: number) => {
+  return `/api/v1/clients/${clientId}/telegram/${tgUserId}`;
+};
+
+/**
+ * @summary Unlink Telegram
+ */
+export const unlinkTelegram = async (
+  clientId: number,
+  tgUserId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<unlinkTelegramResponse> => {
+  return http<unlinkTelegramResponse>(getUnlinkTelegramUrl(clientId, tgUserId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
 export type getDashboardResponse200 = {
   data: Dashboard;
   status: 200;
@@ -356,6 +660,237 @@ export const refreshDashboard = async (
   return http<refreshDashboardResponse>(getRefreshDashboardUrl(), {
     ...options,
     method: "POST",
+  });
+};
+
+export type listDocumentsResponse200 = {
+  data: DocumentOut[];
+  status: 200;
+};
+
+export type listDocumentsResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type listDocumentsResponseSuccess = listDocumentsResponse200 & {
+  headers: Headers;
+};
+export type listDocumentsResponseError = listDocumentsResponse422 & {
+  headers: Headers;
+};
+
+export type listDocumentsResponse = listDocumentsResponseSuccess | listDocumentsResponseError;
+
+export const getListDocumentsUrl = (params?: ListDocumentsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/documents?${stringifiedParams}`
+    : `/api/v1/documents`;
+};
+
+/**
+ * @summary List Documents
+ */
+export const listDocuments = async (
+  params?: ListDocumentsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<listDocumentsResponse> => {
+  return http<listDocumentsResponse>(getListDocumentsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type uploadDocumentResponse201 = {
+  data: Created;
+  status: 201;
+};
+
+export type uploadDocumentResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type uploadDocumentResponseSuccess = uploadDocumentResponse201 & {
+  headers: Headers;
+};
+export type uploadDocumentResponseError = uploadDocumentResponse422 & {
+  headers: Headers;
+};
+
+export type uploadDocumentResponse = uploadDocumentResponseSuccess | uploadDocumentResponseError;
+
+export const getUploadDocumentUrl = () => {
+  return `/api/v1/documents`;
+};
+
+/**
+ * @summary Upload Document
+ */
+export const uploadDocument = async (
+  bodyUploadDocument: BodyUploadDocument,
+  options?: Parameters<typeof http>[1],
+): Promise<uploadDocumentResponse> => {
+  const formData = new FormData();
+  formData.append(`client_id`, bodyUploadDocument.client_id.toString());
+  if (bodyUploadDocument.doc_date !== undefined && bodyUploadDocument.doc_date !== null) {
+    formData.append(`doc_date`, bodyUploadDocument.doc_date);
+  }
+  formData.append(`file`, bodyUploadDocument.file);
+  if (bodyUploadDocument.number !== undefined && bodyUploadDocument.number !== null) {
+    formData.append(`number`, bodyUploadDocument.number);
+  }
+  formData.append(`title`, bodyUploadDocument.title);
+  formData.append(`type`, bodyUploadDocument.type);
+  if (bodyUploadDocument.visible !== undefined) {
+    formData.append(`visible`, bodyUploadDocument.visible.toString());
+  }
+
+  return http<uploadDocumentResponse>(getUploadDocumentUrl(), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export type updateDocumentResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type updateDocumentResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type updateDocumentResponseSuccess = updateDocumentResponse200 & {
+  headers: Headers;
+};
+export type updateDocumentResponseError = updateDocumentResponse422 & {
+  headers: Headers;
+};
+
+export type updateDocumentResponse = updateDocumentResponseSuccess | updateDocumentResponseError;
+
+export const getUpdateDocumentUrl = (documentId: number) => {
+  return `/api/v1/documents/${documentId}`;
+};
+
+/**
+ * @summary Update Document
+ */
+export const updateDocument = async (
+  documentId: number,
+  documentUpdate: DocumentUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<updateDocumentResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<updateDocumentResponse>(getUpdateDocumentUrl(documentId), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(documentUpdate),
+  });
+};
+
+export type documentAccessResponse200 = {
+  data: AccessOut[];
+  status: 200;
+};
+
+export type documentAccessResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type documentAccessResponseSuccess = documentAccessResponse200 & {
+  headers: Headers;
+};
+export type documentAccessResponseError = documentAccessResponse422 & {
+  headers: Headers;
+};
+
+export type documentAccessResponse = documentAccessResponseSuccess | documentAccessResponseError;
+
+export const getDocumentAccessUrl = (documentId: number) => {
+  return `/api/v1/documents/${documentId}/access`;
+};
+
+/**
+ * @summary Document Access
+ */
+export const documentAccess = async (
+  documentId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<documentAccessResponse> => {
+  return http<documentAccessResponse>(getDocumentAccessUrl(documentId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type downloadDocumentResponse200 = {
+  data: unknown;
+  status: 200;
+};
+
+export type downloadDocumentResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type downloadDocumentResponseSuccess = downloadDocumentResponse200 & {
+  headers: Headers;
+};
+export type downloadDocumentResponseError = downloadDocumentResponse422 & {
+  headers: Headers;
+};
+
+export type downloadDocumentResponse =
+  downloadDocumentResponseSuccess | downloadDocumentResponseError;
+
+export const getDownloadDocumentUrl = (documentId: number) => {
+  return `/api/v1/documents/${documentId}/download`;
+};
+
+/**
+ * @summary Download Document
+ */
+export const downloadDocument = async (
+  documentId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<downloadDocumentResponse> => {
+  return http<downloadDocumentResponse>(getDownloadDocumentUrl(documentId), {
+    ...options,
+    method: "GET",
   });
 };
 
@@ -1222,6 +1757,64 @@ export const closeWon = async (
   });
 };
 
+export type makeCustomerResponse201 = {
+  data: Created;
+  status: 201;
+};
+
+export type makeCustomerResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type makeCustomerResponseSuccess = makeCustomerResponse201 & {
+  headers: Headers;
+};
+export type makeCustomerResponseError = makeCustomerResponse422 & {
+  headers: Headers;
+};
+
+export type makeCustomerResponse = makeCustomerResponseSuccess | makeCustomerResponseError;
+
+export const getMakeCustomerUrl = (leadId: number) => {
+  return `/api/v1/leads/${leadId}/actions/make_customer`;
+};
+
+/**
+ * @summary Make Customer
+ */
+export const makeCustomer = async (
+  leadId: number,
+  makeCustomerBody: MakeCustomer,
+  options?: Parameters<typeof http>[1],
+): Promise<makeCustomerResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<makeCustomerResponse>(getMakeCustomerUrl(leadId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(makeCustomerBody),
+  });
+};
+
 export type noteResponse200 = {
   data: ActionResult;
   status: 200;
@@ -1729,6 +2322,43 @@ export const permissions = async (
   return http<permissionsResponse>(getPermissionsUrl(), {
     ...options,
     method: "GET",
+  });
+};
+
+export type closeServiceRequestResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type closeServiceRequestResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type closeServiceRequestResponseSuccess = closeServiceRequestResponse200 & {
+  headers: Headers;
+};
+export type closeServiceRequestResponseError = closeServiceRequestResponse422 & {
+  headers: Headers;
+};
+
+export type closeServiceRequestResponse =
+  closeServiceRequestResponseSuccess | closeServiceRequestResponseError;
+
+export const getCloseServiceRequestUrl = (requestId: number) => {
+  return `/api/v1/service-requests/${requestId}/close`;
+};
+
+/**
+ * @summary Close Service Request
+ */
+export const closeServiceRequest = async (
+  requestId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<closeServiceRequestResponse> => {
+  return http<closeServiceRequestResponse>(getCloseServiceRequestUrl(requestId), {
+    ...options,
+    method: "POST",
   });
 };
 

@@ -61,3 +61,50 @@ def test_decide(overrides: dict[str, object], action: Action, clarify: bool) -> 
 )
 def test_is_smalltalk(text: str, expected: bool) -> None:
     assert is_smalltalk(text) is expected
+
+
+@pytest.mark.parametrize(
+    ("match", "requested", "found", "expected", "reason"),
+    [
+        (True, True, 1, Action.DELIVER_DOCUMENT, "document_match"),
+        (False, True, 0, Action.HANDOFF, "document_not_found"),
+        (False, True, 3, Action.ANSWER, "documents_ambiguous"),
+        (False, False, 0, Action.ANSWER, "kb"),
+    ],
+)
+def test_customer_documents(
+    match: bool, requested: bool, found: int, expected: Action, reason: str
+) -> None:
+    decision = decide(
+        DecisionInput(
+            owner_mode=OwnerMode.BOT,
+            stage=Stage.CUSTOMER,
+            text="Пришлите договор за июль",
+            human_requested=False,
+            stop_word_hit=False,
+            best_score=0.9,
+            min_score=0.55,
+            need_known=True,
+            document_match=match,
+            document_requested=requested,
+            documents_found=found,
+        )
+    )
+    assert (decision.action, decision.reason) == (expected, reason)
+
+
+def test_customer_without_kb_answer_is_not_a_kb_gap() -> None:
+    decision = decide(
+        DecisionInput(
+            owner_mode=OwnerMode.BOT,
+            stage=Stage.CUSTOMER,
+            text="Касса не печатает чеки, помогите",
+            human_requested=False,
+            stop_word_hit=False,
+            best_score=0.2,
+            min_score=0.55,
+            need_known=True,
+            customer=True,
+        )
+    )
+    assert (decision.action, decision.reason) == (Action.ANSWER, "customer_service")

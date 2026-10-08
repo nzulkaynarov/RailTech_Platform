@@ -1,0 +1,191 @@
+"""Клиенты (SPEC §5.2, §7.3): карточка, привязка Telegram с подтверждением, «Сделать клиентом».
+
+Привязка идентичности к клиенту — только действием менеджера (verified_by/at).
+Без неё бот работает в режиме prospect и документов клиента не видит.
+"""
+
+from dataclasses import dataclass
+from datetime import UTC, datetime
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+from app.domain.errors import (
+    ConflictError,
+    InvalidTransitionError,
+    NotFoundError,
+    ValidationFailedError,
+)
+from app.domain.stages import Stage, TransitionSource
+from app.models.clients import Client, ServiceRequest
+from app.models.leads import Lead, TelegramIdentity
+from app.repositories import events
+from app.security import audit
+from app.security.principal import Principal
+from app.services import stages
+
+
+@dataclass(frozen=True, slots=True)
+class ClientPatch:
+    name: str | None = None
+    inn: str | None = None
+    segment: str | None = None
+    notes: str | None = None
+    is_active: bool | None = None
+    owner_user_id: int | None = None
+
+
+class ClientService:
+    def __init__(self, sessions: async_sessionmaker[AsyncSession]) -> None:
+        self._sessions = sessions
+
+    async def create(self, who: Principal, name: str, inn: str | None, segment: str | None) -> int:
+        async with self._sessions() as session, session.begin():
+            client = Client(name=name.strip(), inn=inn, segment=segment, owner_user_id=who.user_id)
+            session.add(client)
+            await session.flush()
+            await audit.record(
+                session, who.actor, "client.create", "client", client.id, after={"name": name}
+            )
+            return client.id
+
+    async def update(self, who: Principal, client_id: int, patch: ClientPatch) -> None:
+        async with self._sessions() as session, session.begin():
+            client = await _client(session, client_id)
+            before = {"name": client.name, "is_active": client.is_active}
+            for field in ("name", "inn", "segment", "notes", "is_active", "owner_user_id"):
+                value = getattr(patch, field)
+                if value is not None:
+                    setattr(client, field, value)
+            await audit.record(
+                session,
+                who.actor,
+                "client.update",
+                "client",
+                client_id,
+                before=before,
+                after={"name": client.name, "is_active": client.is_active},
+            )
+
+    async def link_identity(self, who: Principal, client_id: int, tg_user_id: int) -> None:
+        """Подтверждение менеджером: этот Telegram-аккаунт принадлежит клиенту."""
+        async with self._sessions() as session, session.begin():
+            await _client(session, client_id)
+            identity = await _identity(session, tg_user_id)
+            if identity.client_id not in (None, client_id):
+                raise ConflictError("telegram account is linked to another client")
+            identity.client_id = client_id
+            identity.verified_by_user_id = who.user_id
+            identity.verified_at = datetime.now(UTC)
+            if identity.lead_id is not None:
+                lead = await session.get(Lead, identity.lead_id, with_for_update=True)
+                if lead is not None and lead.client_id is None:
+                    lead.client_id = client_id
+            await audit.record(
+                session,
+                who.actor,
+                "client.link_telegram",
+                "client",
+                client_id,
+                after={"tg_user_id": tg_user_id},
+            )
+
+    async def unlink_identity(self, who: Principal, client_id: int, tg_user_id: int) -> None:
+        async with self._sessions() as session, session.begin():
+            identity = await _identity(session, tg_user_id)
+            if identity.client_id != client_id:
+                raise NotFoundError("identity is not linked to this client")
+            identity.client_id, identity.verified_at, identity.verified_by_user_id = (
+                None,
+                None,
+                None,
+            )
+            await audit.record(
+                session,
+                who.actor,
+                "client.unlink_telegram",
+                "client",
+                client_id,
+                after={"tg_user_id": tg_user_id},
+            )
+
+    async def make_customer(
+        self, who: Principal, lead_id: int, client_id: int | None, new_name: str | None
+    ) -> int:
+        """Лид после сделки → клиент: привязка лида и его Telegram, стадия won → customer."""
+        if client_id is None and not (new_name and new_name.strip()):
+            raise ValidationFailedError(
+                "choose a client or enter a new client name", field="client_id"
+            )
+        async with self._sessions() as session, session.begin():
+            lead = await session.get(Lead, lead_id, with_for_update=True)
+            if lead is None or lead.erased_at is not None:
+                raise NotFoundError("lead not found")
+            if lead.stage not in (Stage.WON, Stage.CUSTOMER):
+                raise InvalidTransitionError("close the deal (won) first")
+            if client_id is None:
+                client = Client(name=(new_name or "").strip(), owner_user_id=who.user_id)
+                session.add(client)
+                await session.flush()
+                client_id = client.id
+            else:
+                await _client(session, client_id)
+            lead.client_id = client_id
+            identities = (
+                await session.scalars(
+                    select(TelegramIdentity)
+                    .where(TelegramIdentity.lead_id == lead_id)
+                    .with_for_update()
+                )
+            ).all()
+            for identity in identities:
+                identity.client_id = client_id
+                identity.verified_by_user_id, identity.verified_at = who.user_id, datetime.now(UTC)
+            await stages.transition(
+                session,
+                lead,
+                Stage.CUSTOMER,
+                TransitionSource.USER,
+                reason="linked to client",
+                actor_user_id=who.user_id,
+            )
+            await audit.record(
+                session,
+                who.actor,
+                "lead.make_customer",
+                "lead",
+                lead_id,
+                after={"client_id": client_id},
+            )
+            await events.publish(session, "lead.updated", lead_id=lead_id)
+            return client_id
+
+    async def close_service_request(self, who: Principal, request_id: int) -> None:
+        async with self._sessions() as session, session.begin():
+            row = await session.get(ServiceRequest, request_id, with_for_update=True)
+            if row is None:
+                raise NotFoundError("service request not found")
+            row.status, row.closed_by = "closed", who.user_id
+            await audit.record(
+                session, who.actor, "client.close_request", "service_request", request_id
+            )
+
+
+async def _client(session: AsyncSession, client_id: int) -> Client:
+    client = await session.get(Client, client_id)
+    if client is None:
+        raise NotFoundError("client not found")
+    return client
+
+
+async def _identity(session: AsyncSession, tg_user_id: int) -> TelegramIdentity:
+    identity = (
+        await session.scalars(
+            select(TelegramIdentity)
+            .where(TelegramIdentity.tg_user_id == tg_user_id)
+            .with_for_update()
+        )
+    ).first()
+    if identity is None:
+        raise NotFoundError("telegram account has never written to the bot")
+    return identity

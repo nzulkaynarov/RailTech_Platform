@@ -15,6 +15,7 @@ const RESOURCE_MAP: Record<string, [string, string]> = {
   inbox: ["leads", "read"],
   leads: ["leads", "read"],
   dashboard: ["dashboard", "read"],
+  clients: ["clients", "read"],
   kb: ["kb", "read"],
   gaps: ["kb", "read"],
   settings: ["settings", "read"],

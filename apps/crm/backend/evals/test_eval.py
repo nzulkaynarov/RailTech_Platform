@@ -97,8 +97,44 @@ class EvalTools:
                 "best_score": result.best_score,
             }
             return self.kb_payload
+        if tool == "search_documents":
+            return _filter_documents(self._case, args)
+        if tool == "get_document_link":
+            doc = next(d for d in self._case.documents if d.document_id == args["document_id"])
+            return {
+                "document_id": doc.document_id,
+                "title": doc.title,
+                "filename": "doc.pdf",
+                "mime": "application/pdf",
+                "url": "http://eval/doc.pdf",
+                "expires_in_s": 600,
+            }
         self.tool_calls.append(tool)
         return {"ok": True}
+
+
+def _filter_documents(case: GoldenCase, args: dict[str, Any]) -> list[dict[str, Any]]:
+    """Поведение docs-mcp на документах кейса (фильтры как в repositories/documents.py)."""
+    found = []
+    for d in case.documents:
+        if args.get("type") and d.type != args["type"]:
+            continue
+        if args.get("number") and (d.number or "").lower() != str(args["number"]).lower():
+            continue
+        if args.get("date_from") and (d.doc_date or "") < args["date_from"]:
+            continue
+        if args.get("date_to") and (d.doc_date or "9999") >= args["date_to"]:
+            continue
+        found.append(
+            {
+                "document_id": d.document_id,
+                "title": d.title,
+                "type": d.type,
+                "number": d.number,
+                "doc_date": d.doc_date,
+            }
+        )
+    return found
 
 
 @pytest.fixture(scope="module")
@@ -122,6 +158,7 @@ async def test_golden_case(case: GoldenCase, container: Container) -> None:
         context_token="eval",
         settings=AppSettings(),
         stage=case.stage,
+        mode=case.mode,
     )
     expect = case.expect
     assert result.action.value in expect.actions, result.reason
@@ -133,13 +170,16 @@ async def test_golden_case(case: GoldenCase, container: Container) -> None:
     assert not [s for s in expect.must_not_include if s.lower() in lowered]
     if expect.must_include_any:
         assert any(s.lower() in lowered for s in expect.must_include_any), reply
+    if expect.tool_calls_any:
+        assert set(expect.tool_calls_any) & set(tools.tool_calls), tools.tool_calls
     fragments = [h["content"] for h in tools.kb_payload.get("hits", [])]
     if expect.kb_document:
         titles = {h["document_title"] for h in tools.kb_payload.get("hits", [])}
         assert expect.kb_document in titles
-    invented = sorted(unsupported_numbers(reply, [*fragments, case.message]))
+    doc_facts = [f"{d.title} {d.number or ''} {d.doc_date or ''}" for d in case.documents]
+    invented = sorted(unsupported_numbers(reply, [*fragments, *doc_facts, case.message]))
     score = None
-    if result.action.value == "answer" and case.category != "smalltalk":
+    if result.action.value == "answer" and case.category not in ("smalltalk", "customer_document"):
         score = await _judge(container, fragments, case.message, reply)
     RESULTS.append(Outcome(case.id, score, invented))
     assert invented == [], f"числа не из KB: {invented}"

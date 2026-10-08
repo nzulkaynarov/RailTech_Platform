@@ -11,7 +11,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.types import Checkpointer
 
 from app.agents import prompts
-from app.agents.dialog.nodes import PROMPT, DialogNodes
+from app.agents.dialog.nodes import DialogNodes, prompt_for
 from app.agents.dialog.state import DialogResult, DialogState
 from app.agents.llm import ChatCompleter
 from app.agents.mcp_client import ToolCaller
@@ -30,6 +30,7 @@ def build_graph(nodes: DialogNodes, checkpointer: Checkpointer = None) -> Any:
     graph.add_node("answer", nodes.answer)
     graph.add_node("fallback", nodes.fallback)
     graph.add_node("handoff", nodes.handoff)
+    graph.add_node("deliver_document", nodes.deliver_document)
     graph.add_edge(START, "load_context")
     graph.add_conditional_edges("load_context", nodes.route_after_context, ["retrieve", "silent"])
     graph.add_edge("retrieve", "decide")
@@ -41,10 +42,10 @@ def build_graph(nodes: DialogNodes, checkpointer: Checkpointer = None) -> Any:
             Action.FALLBACK.value: "fallback",
             Action.HANDOFF.value: "handoff",
             Action.SILENT.value: "silent",
-            Action.DELIVER_DOCUMENT.value: "fallback",
+            Action.DELIVER_DOCUMENT.value: "deliver_document",
         },
     )
-    for name in ("silent", "answer", "fallback", "handoff"):
+    for name in ("silent", "answer", "fallback", "handoff", "deliver_document"):
         graph.add_edge(name, END)
     return graph.compile(checkpointer=checkpointer)
 
@@ -67,13 +68,14 @@ class DialogAgent:
         settings: AppSettings,
         human_requested: bool = False,
         stage: str = "new",
+        mode: str = "prospect",
     ) -> DialogResult:
         graph = build_graph(DialogNodes(self._tools, self._model, settings), self._checkpointer)
         initial: DialogState = {
             "lead_id": lead_id,
             "text": text,
             "language": language,
-            "mode": "prospect",
+            "mode": mode,
             "context_token": context_token,
             "human_requested": human_requested,
             "lead": None,
@@ -84,9 +86,12 @@ class DialogAgent:
             "reply": None,
             "llm": None,
             "callback_requested": False,
+            "docs": None,
+            "document": None,
+            "service_request": False,
         }
         config = {"configurable": {"thread_id": f"lead-{lead_id}"}}
-        with lf.trace("dialog.turn", lead_id=lead_id, mode="prospect", stage=stage, input=text):
+        with lf.trace("dialog.turn", lead_id=lead_id, mode=mode, stage=stage, input=text):
             state = await graph.ainvoke(initial, config=config)
             trace_id = lf.current_trace_id()
         return _result(state, trace_id)
@@ -104,5 +109,8 @@ def _result(state: dict[str, Any], trace_id: str | None) -> DialogResult:
         llm=state.get("llm"),
         callback_requested=bool(state.get("callback_requested")),
         trace_id=trace_id,
-        prompt_version=prompts.version(PROMPT),
+        prompt_version=prompts.version(prompt_for(state.get("mode", "prospect"))),
+        document=state.get("document"),
+        service_request=bool(state.get("service_request")),
+        mode=state.get("mode", "prospect"),
     )

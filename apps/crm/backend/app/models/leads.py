@@ -49,7 +49,7 @@ class Lead(TimestampMixin, Base):
     assigned_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")
     )
-    client_id: Mapped[int | None] = mapped_column(BigInteger)
+    client_id: Mapped[int | None] = mapped_column(ForeignKey("clients.id", ondelete="SET NULL"))
     consent_given_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     consent_version: Mapped[str | None] = mapped_column(String(32))
     need_summary: Mapped[str | None] = mapped_column(Text)
@@ -80,7 +80,7 @@ class TelegramIdentity(TimestampMixin, Base):
     tg_username: Mapped[str | None] = mapped_column(String(64))
     tg_first_name: Mapped[str | None] = mapped_column(String(255))
     lead_id: Mapped[int | None] = mapped_column(ForeignKey("leads.id", ondelete="SET NULL"))
-    client_id: Mapped[int | None] = mapped_column(BigInteger)
+    client_id: Mapped[int | None] = mapped_column(ForeignKey("clients.id", ondelete="SET NULL"))
     phone_e164: Mapped[str | None] = mapped_column(String(20))
     verified_by_user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")

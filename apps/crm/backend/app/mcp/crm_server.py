@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 from app.container import Container, get_container
 from app.domain.qualification import Qualification, merge_qualification
 from app.mcp.common import build_app, require_context, serve
+from app.models.clients import ServiceRequest
 from app.repositories import leads as repo
 
 SERVICE: Final = "crm-mcp"
@@ -121,6 +122,21 @@ def create_server(container: Container | None = None) -> MCPServer[Any]:
             }
             lead.qualification = qualification
         return {"ok": True, "callback_requested": True}
+
+    @server.tool(
+        description="Клиент сообщил о проблеме или спросил статус работ: создать сервисный запрос."
+    )
+    async def create_service_request(summary: str, ctx: Context[Any, Any]) -> dict[str, Any]:
+        agent = require_context(ctx, c.settings)
+        if agent.mode != "customer" or agent.client_id is None:
+            raise ToolError("not available in this mode")
+        async with c.session_factory() as session, session.begin():
+            row = ServiceRequest(
+                client_id=agent.client_id, lead_id=agent.lead_id, summary=summary.strip()[:2000]
+            )
+            session.add(row)
+            await session.flush()
+            return {"ok": True, "service_request_id": row.id}
 
     return server
 

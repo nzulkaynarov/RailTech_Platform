@@ -53,3 +53,12 @@ describe("http", () => {
     expect(tokenStore.get()).toBe("fresh-login");
   });
 });
+
+describe("compact", () => {
+  it("drops empty filters so they are not sent as the string 'null'", async () => {
+    const { compact } = await import("./http");
+    expect(compact({ q: null, stage: "won", owner: undefined, language: "" })).toEqual({
+      stage: "won",
+    });
+  });
+});

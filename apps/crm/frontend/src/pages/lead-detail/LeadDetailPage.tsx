@@ -116,6 +116,7 @@ export function LeadDetailPage() {
     take: allowed(perms.data, "leads", "take"),
     work: allowed(perms.data, "leads", "work"),
     note: allowed(perms.data, "leads", "note"),
+    clients: allowed(perms.data, "clients", "write"),
     userId: me.data.id,
     isAdmin: me.data.roles.includes("admin"),
   };

@@ -215,6 +215,20 @@ services:
       timeout: 5s
       retries: 10
 
+  docs-mcp:
+    <<: *backend
+    command: ["python", "-m", "app", "mcp", "docs"]
+    depends_on: *backend-deps
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import socket; socket.create_connection(('localhost', 8103), timeout=2)
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
   web:
     build:
       context: ../frontend

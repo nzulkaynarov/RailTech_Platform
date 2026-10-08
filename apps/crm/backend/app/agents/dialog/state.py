@@ -21,6 +21,9 @@ class DialogState(TypedDict):
     reply: str | None
     llm: dict[str, Any] | None
     callback_requested: bool
+    docs: list[dict[str, Any]] | None
+    document: dict[str, Any] | None
+    service_request: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,3 +37,6 @@ class DialogResult:
     callback_requested: bool = False
     trace_id: str | None = None
     prompt_version: str | None = None
+    document: dict[str, Any] | None = None
+    service_request: bool = False
+    mode: str = "prospect"

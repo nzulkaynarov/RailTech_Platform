@@ -7,10 +7,11 @@
 import io
 from typing import Any
 
+import httpx
 import structlog
 from aiogram import Bot, F, Router
 from aiogram.filters import Command, CommandStart
-from aiogram.types import CallbackQuery, Message, User
+from aiogram.types import BufferedInputFile, CallbackQuery, Message, User
 
 from app.bot import keyboards
 from app.integrations.s3 import ObjectStorage
@@ -51,6 +52,8 @@ async def send(bot: Bot, chat_id: int, outgoing: list[Outgoing], settings: Setti
         return
     cfg = await settings.get()
     for item in outgoing:
+        if item.document is not None and await _send_document(bot, chat_id, item):
+            continue
         markup = None
         if item.keyboard == "consent":
             markup = keyboards.consent(cfg, item.language)
@@ -138,6 +141,21 @@ async def on_language(
     if language is not None and query.message is not None:
         out = await conversation.set_language(query.from_user.id, language)
         await send(bot, query.message.chat.id, out, settings)
+
+
+async def _send_document(bot: Bot, chat_id: int, item: Outgoing) -> bool:
+    """Файл документа клиента по ссылке docs-mcp (внутренняя сеть, TTL 10 мин)."""
+    doc = item.document or {}
+    try:
+        async with httpx.AsyncClient(timeout=30) as http:
+            response = await http.get(str(doc["url"]))
+            response.raise_for_status()
+        file = BufferedInputFile(response.content, filename=str(doc.get("filename") or "document"))
+        await bot.send_document(chat_id, file, caption=item.text[:1000])
+    except Exception:
+        logger.exception("document_send_failed", document_id=doc.get("document_id"))
+        return False
+    return True
 
 
 async def _store_attachment(

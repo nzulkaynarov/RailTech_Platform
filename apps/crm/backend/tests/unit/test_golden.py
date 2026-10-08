@@ -27,3 +27,9 @@ def test_qualifier_cases_are_valid() -> None:
     assert len(cases) >= 30
     assert len({c.id for c in cases}) == len(cases)
     assert sum(c.expect.escalate for c in cases) >= 10
+
+
+def test_customer_cases_present() -> None:
+    cases = [c for c in load_cases() if c.mode == "customer"]
+    assert len(cases) >= 10
+    assert {"deliver_document", "handoff", "answer"} <= {a for c in cases for a in c.expect.actions}

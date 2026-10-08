@@ -262,7 +262,10 @@ products(key PK, name, description, is_active)
 documents(id, client_id, type 'contract'|'proposal'|'letter'|'invoice'|'act'|'other', title, number TEXT NULL, doc_date DATE NULL,
           storage_key, mime, size_bytes, extracted_text TEXT, tsv GENERATED, uploaded_by, is_visible_to_client BOOL DEFAULT true)
 document_access_log(id, document_id, accessed_by_type 'bot'|'user', accessed_by_id, tg_user_id NULL, created_at)
+service_requests(id, client_id, lead_id NULL, summary, status 'open'|'closed', closed_by NULL)   -- инструмент create_service_request
 ```
+
+Документы скачиваются сотрудником через API (`GET /documents/{id}/download`, запись в журнал), клиентом — файлом от бота; RustFS наружу не публикуется.
 
 ### 5.7. Настройки
 

@@ -225,8 +225,12 @@ class LeadService:
         if changed.escalation_id is not None and self._on_escalation_changed is not None:
             try:
                 await self._on_escalation_changed(changed.escalation_id)
-            except Exception:
-                logger.exception("escalation_notify_failed", escalation_id=changed.escalation_id)
+            except Exception as exc:  # noqa: BLE001 — очередь недоступна; пост обновит следующий sync
+                logger.warning(
+                    "escalation_notify_failed",
+                    escalation_id=changed.escalation_id,
+                    error=type(exc).__name__,
+                )
 
 
 async def _lead(session: AsyncSession, lead_id: int) -> Lead:

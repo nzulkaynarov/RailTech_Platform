@@ -36,6 +36,14 @@ test("admin sections render and greeting can be changed", async ({ page }) => {
   await page.getByRole("tabpanel").getByRole("button", { name: "Сохранить" }).click();
   await expect(page.getByText("Сохранено").first()).toBeVisible();
 
+  await page.goto("/clients");
+  await page.getByRole("button", { name: "Новый клиент" }).click();
+  const clientName = `E2E Клиент ${String(Date.now())}`;
+  await page.getByLabel("Название").fill(clientName);
+  await page.getByRole("button", { name: "Сохранить" }).click();
+  await expect(page.getByRole("heading", { name: clientName })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Загрузить документ" })).toBeVisible();
+
   await page.goto("/audit");
   await expect(page.getByText("settings.update").first()).toBeVisible();
 });

@@ -21,6 +21,8 @@ from app.services.settings import SettingsService
 
 if TYPE_CHECKING:
     from app.services.auth import AuthService
+    from app.services.clients import ClientService
+    from app.services.documents import DocumentService
     from app.services.kb.admin import KbAdminService
     from app.services.kb.ingest import KbIngestService
     from app.services.kb.search import KbSearchService
@@ -117,6 +119,24 @@ class Container:
         return KbAdminService(self.session_factory, self.kb_ingest, _enqueue_ingest)
 
     @cached_property
+    def client_service(self) -> "ClientService":
+        from app.services.clients import ClientService
+
+        return ClientService(self.session_factory)
+
+    @cached_property
+    def document_service(self) -> "DocumentService":
+        from app.services.documents import DocumentService
+
+        return DocumentService(
+            self.session_factory,
+            self.storage,
+            self.docling,
+            self.settings.s3_bucket_documents,
+            _enqueue_extraction,
+        )
+
+    @cached_property
     def telegram_bot(self) -> Bot | None:
         """Клиент Bot API для исходящих сообщений (воркер); None без токена."""
         token = self.settings.telegram_bot_token.get_secret_value()
@@ -133,6 +153,12 @@ async def _enqueue_ingest(document_id: int) -> object:
     from app.tasks.ingest import enqueue_ingest
 
     return await enqueue_ingest(document_id, force=True)
+
+
+async def _enqueue_extraction(document_id: int) -> object:
+    from app.tasks.documents import extract_document_text
+
+    return await extract_document_text.defer_async(document_id=document_id)
 
 
 async def _escalation_changed(escalation_id: int) -> None:

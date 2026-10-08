@@ -71,6 +71,9 @@ class DecisionInput:
     min_score: float
     need_known: bool
     document_match: bool = False
+    document_requested: bool = False
+    documents_found: int = 0
+    customer: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,8 +97,17 @@ def decide(inp: DecisionInput) -> Decision:
         )
     if inp.document_match:
         return Decision(Action.DELIVER_DOCUMENT, reason="document_match")
+    if inp.document_requested and inp.documents_found == 0:
+        # Клиент просит документ, а у него такого нет — честно и сразу к менеджеру (C5).
+        return Decision(Action.HANDOFF, reason="document_not_found")
+    if inp.document_requested:
+        # Несколько кандидатов: модель перечислит их и спросит, какой нужен.
+        return Decision(Action.ANSWER, reason="documents_ambiguous")
     smalltalk = is_smalltalk(inp.text)
     confident = inp.best_score is not None and inp.best_score >= inp.min_score
+    if not confident and not smalltalk and inp.customer:
+        # Клиенту отвечает сервисный промпт: без фактов из KB он оформляет запрос менеджеру.
+        return Decision(Action.ANSWER, reason="customer_service")
     if not confident and not smalltalk:
         return Decision(Action.FALLBACK, reason=f"best_score={inp.best_score} < {inp.min_score}")
     clarify = not inp.need_known and inp.stage in EARLY_STAGES and not smalltalk

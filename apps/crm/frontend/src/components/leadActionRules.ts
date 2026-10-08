@@ -4,6 +4,7 @@ export type ActionRights = {
   take: boolean;
   work: boolean;
   note: boolean;
+  clients?: boolean;
   userId: number;
   isAdmin: boolean;
 };
@@ -19,5 +20,6 @@ export function availableActions(lead: LeadDetail, rights: ActionRights) {
     snooze: rights.work && lead.escalation?.status === "open",
     close: rights.work && lead.stage === "in_progress" && owner,
     note: rights.note,
+    makeCustomer: Boolean(rights.clients) && lead.stage === "won",
   };
 }

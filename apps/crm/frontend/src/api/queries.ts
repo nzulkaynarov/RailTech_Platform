@@ -4,7 +4,7 @@
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { unwrap } from "./http";
+import { compact, unwrap } from "./http";
 import {
   closeLost,
   closeWon,
@@ -46,7 +46,10 @@ export const useInbox = () =>
   useQuery({ queryKey: keys.inbox, queryFn: async () => unwrap(await inbox()) });
 
 export const useLeads = (params: ListLeadsParams) =>
-  useQuery({ queryKey: keys.leads(params), queryFn: async () => unwrap(await listLeads(params)) });
+  useQuery({
+    queryKey: keys.leads(params),
+    queryFn: async () => unwrap(await listLeads(compact(params))),
+  });
 
 export const useLead = (id: number) =>
   useQuery({ queryKey: keys.lead(id), queryFn: async () => unwrap(await getLead(id)) });

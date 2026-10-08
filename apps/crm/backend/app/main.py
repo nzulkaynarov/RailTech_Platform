@@ -9,7 +9,7 @@ from fastapi import FastAPI
 
 from app import db
 from app.api import errors, health, telegram
-from app.api.v1 import admin, auth, kb, leads, me, stream, users
+from app.api.v1 import admin, auth, clients, kb, leads, me, stream, users
 from app.api.v1 import settings as settings_api
 from app.bot.setup import bot_lifespan
 from app.config import Settings, get_settings
@@ -74,7 +74,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health.router)
     app.include_router(telegram.router)
     errors.install(app)
-    routers = (auth, me, users, leads, stream, kb, settings_api, admin)
+    routers = (auth, me, users, leads, stream, kb, settings_api, admin, clients)
     for module in routers:
         router = module.router
         app.include_router(router)

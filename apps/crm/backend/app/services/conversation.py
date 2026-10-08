@@ -58,6 +58,7 @@ class Outgoing:
     message_id: int | None = None
     language: Language = "ru"
     lead_id: int | None = None
+    document: dict[str, Any] | None = None
 
 
 @dataclass
@@ -69,6 +70,11 @@ class _Turn:
     text: str
     human: bool
     attachment: bool = False
+    client_id: int | None = None
+
+    @property
+    def mode(self) -> Literal["prospect", "customer"]:
+        return "customer" if self.client_id is not None else "prospect"
 
 
 class ConversationService:
@@ -100,7 +106,10 @@ class ConversationService:
         async with lock:
             result = await self._run_agent(turn, cfg)
             outgoing, escalation = await self._persist(turn, result, cfg)
-        await self._fire(turn.lead_id, escalation)
+        # Квалификатор — только для потенциальных клиентов (у клиента стадия customer).
+        await self._fire(
+            turn.lead_id if turn.mode == "prospect" else None, escalation, turn.lead_id
+        )
         return early + outgoing
 
     async def start(self, inc: Incoming) -> list[Outgoing]:
@@ -204,6 +213,7 @@ class ConversationService:
                 inc.text,
                 inc.human_requested,
                 bool(inc.attachments),
+                await _verified_client(session, inc.tg_user_id),
             )
         return [], turn, None
 
@@ -238,7 +248,11 @@ class ConversationService:
 
     async def _run_agent(self, turn: _Turn, cfg: AppSettings) -> DialogResult | None:
         token = issue(
-            self._agent_key, lead_id=turn.lead_id, mode="prospect", language=turn.language
+            self._agent_key,
+            lead_id=turn.lead_id,
+            mode=turn.mode,
+            language=turn.language,
+            client_id=turn.client_id,
         )
         try:
             return await self._agent.run(
@@ -249,6 +263,7 @@ class ConversationService:
                 settings=cfg,
                 human_requested=turn.human,
                 stage=turn.stage,
+                mode=turn.mode,
             )
         except Exception:
             logger.exception("dialog_agent_failed", lead_id=turn.lead_id)
@@ -300,18 +315,20 @@ class ConversationService:
                     text=text,
                     meta=_meta(result) if index == 0 else {"notice": notice},
                 )
-                outgoing.append(Outgoing(text, message_id=message.id))
+                document = result.document if index == 0 else None
+                outgoing.append(Outgoing(text, message_id=message.id, document=document))
             if replies:
                 lead.last_bot_msg_at = now
         return outgoing, applied.escalation_id if applied else None
 
-    async def _fire(self, lead_id: int | None, escalation_id: int | None) -> None:
-        if lead_id is None:
-            return
+    async def _fire(
+        self, lead_id: int | None, escalation_id: int | None, escalated_lead: int | None = None
+    ) -> None:
+        target = escalated_lead or lead_id
         try:
-            if escalation_id is not None and self._on_escalation is not None:
-                await self._on_escalation(lead_id, escalation_id)
-            if self._on_activity is not None:
+            if escalation_id is not None and target is not None and self._on_escalation is not None:
+                await self._on_escalation(target, escalation_id)
+            if lead_id is not None and self._on_activity is not None:
                 await self._on_activity(lead_id)
         except Exception:
             logger.exception("conversation_hooks_failed", lead_id=lead_id)
@@ -333,7 +350,18 @@ def _turn_signals(turn: _Turn, result: DialogResult, lead: Lead) -> TriggerSigna
         callback_requested=result.callback_requested,
         consecutive_fallbacks=lead.consecutive_fallbacks if result.action == Action.FALLBACK else 0,
         attachment_received=turn.attachment,
+        customer_mode=turn.mode == "customer",
+        document_not_found=result.reason == "document_not_found",
+        intent="service" if result.service_request else None,
     )
+
+
+async def _verified_client(session: AsyncSession, tg_user_id: int) -> int | None:
+    """Клиент, к которому менеджер подтвердил привязку этого Telegram (SPEC §5.2)."""
+    identity = await repo.get_identity(session, tg_user_id)
+    if identity is None or identity.client_id is None or identity.verified_at is None:
+        return None
+    return identity.client_id
 
 
 def _lead_of(outgoing: list[Outgoing]) -> int | None:
@@ -402,7 +430,7 @@ def _meta(result: DialogResult) -> dict[str, Any]:
         "best_score": result.best_score,
         "trace_id": result.trace_id,
         "prompt_version": result.prompt_version,
-        "mode": "prospect",
+        "mode": result.mode,
     }
     if result.llm:
         meta.update(result.llm)
