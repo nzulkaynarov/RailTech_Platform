@@ -3,10 +3,12 @@
 from datetime import UTC, datetime
 
 import httpx
+from openai import APIError, APIStatusError
 
 from app.container import Container, get_container
+from app.domain.alerts import provider_problem
 from app.integrations import litellm
-from app.services.monitoring import MonitorService
+from app.services.monitoring import ModelProbe, MonitorService
 from app.tasks.queue import queue
 
 
@@ -19,7 +21,37 @@ def build_monitor(c: Container) -> MonitorService:
             return False
         return True
 
-    return MonitorService(c.session_factory, c.settings_service, c.telegram_bot, litellm_ok)
+    return MonitorService(
+        c.session_factory, c.settings_service, c.telegram_bot, litellm_ok, _model_probe(c)
+    )
+
+
+PROBED_ALIASES = ("dialog-model", "qualifier-model", "fallback-model")
+
+
+def _model_probe(c: Container) -> ModelProbe:
+    """Запрос в 1 токен к каждой модели без запасного перехода LiteLLM (`disable_fallbacks`):
+    иначе сбой Claude маскируется ответом Gemini. Ловим «нет кредитов/квоты» и отклонённый ключ.
+    """
+
+    async def probe() -> dict[str, str | None]:
+        result: dict[str, str | None] = {}
+        for alias in PROBED_ALIASES:
+            try:
+                await c.llm.chat.completions.create(
+                    model=alias,
+                    messages=[{"role": "user", "content": "ping"}],
+                    max_tokens=1,
+                    extra_body={"disable_fallbacks": True},
+                )
+                result[alias] = None
+            except APIStatusError as exc:
+                result[alias] = provider_problem(exc.status_code, str(exc.message))
+            except APIError:
+                continue  # таймаут/сеть — неизвестно; алерт не меняем
+        return result
+
+    return probe
 
 
 @queue.periodic(cron="* * * * *", periodic_id="system_monitor")

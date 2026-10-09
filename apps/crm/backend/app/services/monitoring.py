@@ -12,7 +12,16 @@ import structlog
 from aiogram import Bot
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.domain.alerts import AlertState, Check, Decision, HealthSnapshot, checks, decide, message
+from app.domain.alerts import (
+    AlertState,
+    Check,
+    Decision,
+    HealthSnapshot,
+    checks,
+    decide,
+    message,
+    model_probe_due,
+)
 from app.domain.budget import day_start
 from app.models.system import SystemAlert
 from app.repositories import monitoring as repo
@@ -21,6 +30,8 @@ from app.services.settings import SettingsService
 logger = structlog.get_logger(__name__)
 FAILED_WINDOW = timedelta(hours=1)
 Probe = Callable[[], Awaitable[bool]]
+# Проверка моделей у провайдеров: алиас → проблема (кредиты, ключ) или None.
+ModelProbe = Callable[[], Awaitable[dict[str, str | None]]]
 
 
 class MonitorService:
@@ -30,17 +41,24 @@ class MonitorService:
         settings: SettingsService,
         bot: Bot | None,
         litellm_probe: Probe,
+        model_probe: ModelProbe | None = None,
     ) -> None:
         self._sessions = sessions
         self._settings = settings
         self._bot = bot
         self._probe = litellm_probe
+        self._model_probe = model_probe
 
     async def check(self, now: datetime) -> list[str]:
         """Один проход монитора; возвращает отправленные в канал сообщения."""
         cfg = await self._settings.get()
         channel = cfg.notifications.channel_id
         litellm_ok = await self._probe()
+        models = (
+            await self._model_probe()
+            if self._model_probe is not None and litellm_ok and model_probe_due(now)
+            else None
+        )
         sent: list[str] = []
         async with self._sessions() as session, session.begin():
             snapshot = HealthSnapshot(
@@ -51,6 +69,7 @@ class MonitorService:
                     session, day_start(now, cfg.business_hours.timezone)
                 ),
                 daily_budget_usd=cfg.budget.daily_usd,
+                models=models,
             )
             states = await repo.alert_states(session)
             known = {

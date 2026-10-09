@@ -14,6 +14,16 @@ QUEUE_LIMIT: Final = 100
 BUDGET_WARN_SHARE: Final = 0.8
 LITELLM_GRACE: Final = timedelta(minutes=2)
 REPEAT_AFTER: Final = timedelta(hours=6)
+MODEL_PROBE_EVERY_MIN: Final = 15
+_BILLING: Final = (
+    "credit balance",
+    "insufficient",
+    "quota",
+    "billing",
+    "payment",
+    "exceeded your current",
+)
+_AUTH: Final = ("api key", "api_key", "x-api-key", "authentication", "unauthorized", "permission")
 
 
 @dataclass(frozen=True)
@@ -25,6 +35,8 @@ class HealthSnapshot:
     litellm_ok: bool = True
     spent_usd: float = 0.0
     daily_budget_usd: float = 0.0  # 0 — без лимита
+    # Проверка моделей у провайдеров: алиас → проблема или None; None целиком — не проверяли.
+    models: dict[str, str | None] | None = None
 
 
 @dataclass(frozen=True)
@@ -78,6 +90,10 @@ def checks(snapshot: HealthSnapshot, known_failed: Set[str] = frozenset()) -> li
             f"${snapshot.spent_usd:.2f} из ${budget:.2f} за сегодня ({share:.0%})",
         )
     )
+    for alias, problem in sorted((snapshot.models or {}).items()):
+        result.append(
+            Check(f"model:{alias}", problem is not None, f"Модель {alias}", problem or "")
+        )
     for task in sorted(set(snapshot.failed_tasks) | set(known_failed)):
         count = snapshot.failed_tasks.get(task, 0)
         result.append(
@@ -112,3 +128,21 @@ def message(check: Check, decision: Decision) -> str:
         return f"✅ {check.title}: в норме"
     suffix = "" if decision is Decision.FIRE else " (всё ещё)"
     return f"⚠️ {check.title}: {check.detail}{suffix}"
+
+
+def model_probe_due(now: datetime) -> bool:
+    """Модели проверяются запросом раз в 15 минут (монитор работает каждую минуту)."""
+    return now.minute % MODEL_PROBE_EVERY_MIN == 0
+
+
+def provider_problem(status: int | None, text: str) -> str | None:
+    """Ответ провайдера, о котором должна знать команда: кредиты/квота или отклонённый ключ.
+
+    Временные сбои (перегрузка 529, таймаут) — не здесь: их покрывают ретраи и `litellm_down`.
+    """
+    lowered = text.lower()
+    if any(word in lowered for word in _BILLING):
+        return "закончились кредиты или квота у провайдера — пополните баланс; бот не отвечает"
+    if status in (401, 403) or any(word in lowered for word in _AUTH):
+        return "провайдер отклонил ключ — проверьте ключ API; бот не отвечает"
+    return None

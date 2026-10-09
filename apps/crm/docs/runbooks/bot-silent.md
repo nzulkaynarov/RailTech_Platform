@@ -10,22 +10,27 @@
 2. `make ps` — `api`, `worker`, `litellm`, `*-mcp` в состоянии healthy.
 3. `make logs` и фильтр по событиям:
    - `bot_disabled` — нет токена или `TELEGRAM_MODE=disabled`;
-   - `llm_call_failed` / `LlmUnavailableError` — модели недоступны (ответ «передам коллеге» — норма деградации);
+   - `llm_call_failed` / `LlmUnavailableError` — модели недоступны (ответ «передам коллеге» — норма деградации); поле `detail` — текст провайдера: «credit balance is too low» / «exceeded your current quota» — кончились кредиты/квота, «x-api-key» — неверный ключ;
    - `tg_rate_limited` — клиент упёрся в лимит `bot.rate_limit_per_minute`;
    - `dialog_tool_failed` — недоступен MCP-сервер.
 4. Режим лида в CRM: `owner_mode = manager/paused` → бот молчит **намеренно**
    (лид у менеджера; кнопка «Вернуть боту»).
 5. prod (webhook): `python scripts/set_webhook.py --info` — `pending_update_count`,
    `last_error_message`.
-6. Канал ⚠️: алерты «LiteLLM» или «Очередь задач» указывают на причину.
+6. Канал ⚠️: алерты «LiteLLM», «Модель <алиас>» (кредиты/квота/ключ, проба раз в 15 мин) или «Очередь задач» указывают на причину.
+7. Проверить модель без запасного перехода LiteLLM:
+   `curl -s localhost:4000/v1/chat/completions -H "Authorization: Bearer $LITELLM_MASTER_KEY" -H 'Content-Type: application/json' -d '{"model":"dialog-model","max_tokens":1,"disable_fallbacks":true,"messages":[{"role":"user","content":"ping"}]}'`
 
 ## Действие
 1. Лид у менеджера — штатно, ничего не делать.
 2. LiteLLM недоступен: `make logs s=litellm`; проверить ключи провайдеров и лимиты
    в их консолях; `docker compose restart litellm`.
-3. MCP-сервер упал: `docker compose restart kb-mcp crm-mcp docs-mcp`.
-4. Webhook: `python scripts/set_webhook.py` (переустановить с secret_token).
-5. dev/polling: `docker compose restart api` (одновременно может быть только один polling-процесс
+3. «Модель …: закончились кредиты или квота» — пополнить баланс (Anthropic: Plans & Billing;
+   Google AI Studio: billing/quota). Алерт снимется сам после следующей успешной пробы (≤ 15 мин).
+   Ключи CI (GitHub Secrets) держите отдельными с лимитом — прогоны eval-gate расходуют сотни вызовов.
+4. MCP-сервер упал: `docker compose restart kb-mcp crm-mcp docs-mcp`.
+5. Webhook: `python scripts/set_webhook.py` (переустановить с secret_token).
+6. dev/polling: `docker compose restart api` (одновременно может быть только один polling-процесс
    на токен — проверьте, что бот не запущен ещё где-то).
 
 ## Проверка
