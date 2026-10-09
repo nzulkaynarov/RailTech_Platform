@@ -116,7 +116,13 @@ class QualifierService:
             escalation_id: int | None = None
             if result is not None:
                 facts = await self._facts(session, lead, cfg, new_lead_texts)
-                decision = qd.decide(_state(lead), result.output, facts, cfg.escalation.triggers())
+                decision = qd.decide(
+                    _state(lead),
+                    result.output,
+                    facts,
+                    cfg.escalation.triggers(),
+                    cfg.qualification.criteria(),
+                )
                 await _apply_decision(session, lead, decision, result)
                 applied = await escalation.apply(
                     session,
@@ -150,8 +156,7 @@ class QualifierService:
         products = await kb_repo.list_products(session)
         text = "\n".join(new_lead_texts)
         return qd.TurnFacts(
-            kb_best_score=await _last_kb_score(session, lead.id),
-            min_score=cfg.kb.min_score,
+            price_quoted=await _last_price_quoted(session, lead.id),
             competitor_mentioned=bool(find_terms(text, cfg.competitors.terms)),
             known_products={p.key for p in products},
         )
@@ -236,14 +241,13 @@ async def _last_trigger_id(session: AsyncSession, lead_id: int) -> int | None:
     return value
 
 
-async def _last_kb_score(session: AsyncSession, lead_id: int) -> float | None:
-    """`best_score` поиска из последнего ответа бота (meta сообщения)."""
+async def _last_price_quoted(session: AsyncSession, lead_id: int) -> bool:
+    """Назвал ли бот цену из базы в последнем ответе агента (meta сообщения, ADR-0016)."""
     messages: Sequence[Message] = await repo.recent_messages(session, lead_id, 10)
     for message in reversed(messages):
-        if message.role == "bot" and "best_score" in (message.meta or {}):
-            score = message.meta["best_score"]
-            return float(score) if score is not None else None
-    return None
+        if message.role == "bot" and "action" in (message.meta or {}):
+            return bool(message.meta.get("price_quoted"))
+    return False
 
 
 _LANGUAGES: dict[str, Language] = {"ru": "ru", "uz": "uz", "en": "en"}

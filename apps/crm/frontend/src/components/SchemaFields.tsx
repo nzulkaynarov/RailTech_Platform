@@ -12,6 +12,13 @@ type Props = {
   company: string;
 };
 
+function enumOptions(values: unknown[] | undefined) {
+  return (values ?? []).map((v) => ({
+    value: String(v),
+    label: t.settings.options[String(v)] ?? String(v),
+  }));
+}
+
 function label(key: string, schema: JsonSchema): string {
   return t.settings.fields[key] ?? schema.title ?? key;
 }
@@ -81,9 +88,9 @@ export function SchemaField({ name, schema, root, label: title, company }: Props
       case "number-tags":
         return <Select mode="tags" tokenSeparators={[","]} />;
       case "enum":
-        return (
-          <Select options={(s.enum ?? []).map((v) => ({ value: String(v), label: String(v) }))} />
-        );
+        return <Select options={enumOptions(s.enum)} />;
+      case "multi-enum":
+        return <Select mode="multiple" options={enumOptions(s.items?.enum)} />;
       default:
         return s.description && s.description.length > 80 ? <Input.TextArea autoSize /> : <Input />;
     }

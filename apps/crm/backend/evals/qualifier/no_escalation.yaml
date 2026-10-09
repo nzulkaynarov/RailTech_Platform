@@ -50,7 +50,8 @@
   transcript:
     - [lead, "Я собираю информацию для руководителя по интеграции касс с 1С, решение будут принимать в следующем году."]
     - [bot, "Внедрение для одного магазина занимает 3–5 рабочих дней."]
-  expect: {escalate: false, stage: engaged}
+  # Потребность + продукт + срок → «Квалифицирован» по правилам по умолчанию (ADR-0016).
+  expect: {escalate: false, stage: qualified}
 
 - id: qualified-without-escalation
   category: stage
@@ -111,7 +112,6 @@
   category: info
   language: ru
   stage: engaged
-  kb_best_score: 0.78
   transcript:
     - [lead, "Как у вас оплата — можно переводом?"]
     - [bot, "Оплата — банковским переводом в сумах по счёту; для крупных проектов возможна поэтапная оплата."]

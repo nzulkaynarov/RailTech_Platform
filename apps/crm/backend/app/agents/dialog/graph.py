@@ -17,6 +17,7 @@ from app.agents.dialog.state import DialogResult, DialogState
 from app.agents.llm import ChatCompleter
 from app.agents.mcp_client import ToolCaller
 from app.domain.dialog_policy import Action
+from app.domain.pricing import price_quoted
 from app.integrations import langfuse as lf
 from app.schemas.settings import AppSettings
 
@@ -123,4 +124,7 @@ def _result(state: dict[str, Any], trace_id: str | None) -> DialogResult:
         document=state.get("document"),
         service_request=bool(state.get("service_request")),
         mode=state.get("mode", "prospect"),
+        price_quoted=price_quoted(
+            state.get("reply") or "", [h.get("content", "") for h in kb.get("hits", [])]
+        ),
     )

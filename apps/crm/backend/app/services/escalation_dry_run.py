@@ -54,7 +54,7 @@ def codes_for(run: QualifierRun, output: QualifierOutput, cfg: TriggerSettings) 
     signals = TriggerSignals(
         intent=output.intent,
         sentiment=output.sentiment,
-        kb_best_score=1.0,  # цена без ответа в KB — повторяется по факту срабатывания ниже
+        price_quoted=True,  # «цена не названа» — повторяется по факту срабатывания ниже
         score=run.score_after if crossed else 0,
         recommend_escalation=output.recommend_escalation,
         confidence=output.confidence,

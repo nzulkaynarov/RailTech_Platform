@@ -24,6 +24,9 @@ describe("schemaForm", () => {
     const channel = resolve(props["channel_id"] ?? {}, root);
     expect([kindOf(channel.schema), channel.nullable]).toEqual(["integer", true]);
     expect(kindOf(props["duty_user_ids"] ?? {})).toBe("number-tags");
+    expect(kindOf({ type: "array", items: { type: "string", enum: ["need", "product"] } })).toBe(
+      "multi-enum",
+    );
     expect(kindOf(props["terms"] ?? {})).toBe("tags");
   });
 

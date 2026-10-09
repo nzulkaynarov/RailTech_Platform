@@ -123,6 +123,7 @@ def turn_meta(result: DialogResult) -> dict[str, Any]:
         "trace_id": result.trace_id,
         "prompt_version": result.prompt_version,
         "mode": result.mode,
+        "price_quoted": result.price_quoted,
     }
     if result.llm:
         meta.update(result.llm)

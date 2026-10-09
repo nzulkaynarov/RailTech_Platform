@@ -77,12 +77,13 @@ async def test_qualifier_case(case: QualifierCase, agent: QualifierAgent) -> Non
     )
     last_lead = next(t for r, t in reversed(case.transcript) if r == "lead")
     facts = qd.TurnFacts(
-        kb_best_score=case.kb_best_score,
-        min_score=CFG.kb.min_score,
+        price_quoted=case.price_quoted,
         competitor_mentioned=bool(_terms(last_lead)),
         known_products={k for k, _ in PRODUCTS},
     )
-    decision = qd.decide(state, result.output, facts, CFG.escalation.triggers())
+    decision = qd.decide(
+        state, result.output, facts, CFG.escalation.triggers(), CFG.qualification.criteria()
+    )
     turn_hits = evaluate(turn_signals(case, CFG), CFG.escalation.triggers())
     codes = [h.code.value for h in (*turn_hits, *decision.hits)]
     stage = (decision.final_stage or Stage(case.stage)).value

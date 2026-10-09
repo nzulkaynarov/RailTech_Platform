@@ -61,6 +61,8 @@ class TriggerSettings:
     no_progress_turns: int = 4
     kb_gap_streak: int = 2
     qualifier_min_confidence: float = 0.7
+    # Любой вопрос о цене — менеджеру, даже если бот назвал цену из прайса.
+    price_always_to_manager: bool = False
     disabled: frozenset[TriggerCode] = field(default_factory=frozenset)
 
 
@@ -71,8 +73,8 @@ class TriggerSignals:
     human_requested: bool = False
     callback_requested: bool = False
     stop_word_hit: bool = False
-    kb_best_score: float | None = None
-    min_score: float = 0.55
+    # Бот назвал цену из базы знаний (domain/pricing.py); иначе он пообещал расчёт менеджера.
+    price_quoted: bool = False
     consecutive_fallbacks: int = 0
     bot_turns_without_progress: int = 0
     competitor_mentioned: bool = False
@@ -110,9 +112,9 @@ def _fires(code: TriggerCode, s: TriggerSignals, cfg: TriggerSettings) -> bool:
         case TriggerCode.CALLBACK_REQUESTED:
             return s.callback_requested or s.intent == "request_contact"
         case TriggerCode.PRICE_OR_CONTRACT_ASKED:
-            # Бот называет цену только дословно из базы, иначе обещает расчёт менеджера —
-            # обещание выполняет код, а не модель (eval-gate 2026-10-09, решение владельца).
-            return s.intent == "pricing"
+            # Цену не назвали из базы — бот пообещал расчёт менеджера, обещание выполняет код
+            # (ADR-0016). Флаг в настройках передаёт менеджеру любой ценовой вопрос.
+            return s.intent == "pricing" and (cfg.price_always_to_manager or not s.price_quoted)
         case TriggerCode.NEGATIVE_SENTIMENT:
             return s.sentiment == "negative" or s.stop_word_hit
         case TriggerCode.COMPLAINT:

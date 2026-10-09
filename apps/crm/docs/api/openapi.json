@@ -1260,6 +1260,11 @@
             "title": "No Progress Turns",
             "type": "integer"
           },
+          "price_always_to_manager": {
+            "default": false,
+            "title": "Price Always To Manager",
+            "type": "boolean"
+          },
           "qualifier_min_confidence": {
             "default": 0.7,
             "maximum": 1.0,

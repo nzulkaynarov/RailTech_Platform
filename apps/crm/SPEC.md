@@ -1,6 +1,6 @@
 # RailTech CRM — техническое задание (SPEC)
 
-Версия 2.3 · 2026-10-09 (RustFS — ADR-0009; модели — ADR-0004; docling-serve и MCP SDK — ADR-0011; жизненный цикл без тупиков — ADR-0015)
+Версия 2.3 · 2026-10-09 (RustFS — ADR-0009; модели — ADR-0004; docling-serve и MCP SDK — ADR-0011; жизненный цикл без тупиков — ADR-0015; квалификация и цена по правилам — ADR-0016)
 
 Документ описывает, *как* устроена система: архитектура, ядро, данные, агенты, интерфейсы, безопасность, стенды, связи. Порядок реализации — в `PLAN.md`; зачем всё это — в `BUSINESS.md`; правила работы для Claude Code — в `CLAUDE.md`.
 
@@ -274,7 +274,7 @@ service_requests(id, client_id, lead_id NULL, summary, status 'open'|'closed', c
 settings(key PK, value JSONB, schema_version INT, updated_by, updated_at)
 ```
 Ключи и JSON-схемы валидируются Pydantic-моделями в `app/schemas/settings.py`:
-`company`, `business_hours`, `texts` (greeting/consent/handoff/off_hours × ru/uz/en), `escalation` (триггеры, пороги, `no_progress_turns`, SLA), `kb` (`min_score`, `top_k`), `bot` (persona, `max_words`, `history_messages`, `rate_limit_per_minute`, `unresponsive_days`), `competitors`, `stop_words`, `notifications` (`channel_id`, `duty_user_ids`), `budget` (`daily_usd`, `fallback_model_enabled`).
+`company`, `business_hours`, `texts` (greeting/consent/handoff/off_hours × ru/uz/en), `escalation` (триггеры, пороги, `no_progress_turns`, SLA, `price_always_to_manager`), `qualification` (критерии «Квалифицирован»: обязательные и дополнительные факты, горизонт срока, роли — ADR-0016), `kb` (`min_score`, `top_k`), `bot` (persona, `max_words`, `history_messages`, `rate_limit_per_minute`, `unresponsive_days`), `competitors`, `stop_words`, `notifications` (`channel_id`, `duty_user_ids`), `budget` (`daily_usd`, `fallback_model_enabled`).
 
 ### 5.8. Техническое
 
@@ -379,7 +379,7 @@ class QualifierOutput(BaseModel):
     next_best_action: str
 ```
 
-Пост-обработка в коде: state machine → score → триггеры → `qualifier_runs` → при эскалации §8.2. Запись `cost_usd` из ответа LiteLLM.
+Пост-обработка в коде: стадия `qualified` — по критериям `settings.qualification` из извлечённых фактов (`domain/qualification_rules.py`, ADR-0016; модель предлагает только `new`/`engaged`) → state machine → score → триггеры → `qualifier_runs` → при эскалации §8.2. Запись `cost_usd` из ответа LiteLLM.
 
 ### 7.3. Клиентский режим
 
@@ -401,7 +401,7 @@ class QualifierOutput(BaseModel):
 |---|---|---|
 | `human_requested` | Интент/команда «человек, оператор, менеджер» | hot |
 | `callback_requested` | Интент `request_contact` или вызов `request_callback` | hot |
-| `price_or_contract_asked` | Интент `pricing` (бот называет цену только дословно из базы, иначе обещает расчёт менеджера — обещание выполняет код; решение 2026-10-09, Q-014) | hot |
+| `price_or_contract_asked` | Интент `pricing` и цена не названа из базы (`price_quoted`, `domain/pricing.py`) — бот обещал расчёт менеджера; флаг `escalation.price_always_to_manager` — любой ценовой вопрос (ADR-0016) | hot |
 | `negative_sentiment` | `sentiment=negative` или стоп-слова | hot |
 | `complaint` | Интент `complaint` | hot |
 | `kb_gap_streak` | 2 подряд fallback | warm |

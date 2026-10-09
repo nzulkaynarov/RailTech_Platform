@@ -10,6 +10,8 @@ from typing import Final, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.domain.business_hours import BusinessHours
+from app.domain.qualification import DecisionRole, Timeline
+from app.domain.qualification_rules import Fact, QualificationCriteria
 from app.domain.triggers import TriggerCode, TriggerSettings
 
 Language = Literal["ru", "uz", "en"]
@@ -234,6 +236,8 @@ class EscalationSettings(_Strict):
     sla_minutes: int = Field(default=15, ge=1)
     reminder_minutes: int = Field(default=60, ge=1)
     disabled_triggers: list[str] = Field(default_factory=list)
+    # Любой вопрос о цене — менеджеру, даже если бот назвал цену из прайса (ADR-0016).
+    price_always_to_manager: bool = False
     human_request_terms: list[str] = Field(
         default_factory=lambda: [
             "оператор",
@@ -258,6 +262,7 @@ class EscalationSettings(_Strict):
             no_progress_turns=self.no_progress_turns,
             kb_gap_streak=self.kb_gap_streak,
             qualifier_min_confidence=self.qualifier_min_confidence,
+            price_always_to_manager=self.price_always_to_manager,
             disabled=frozenset(TriggerCode(c) for c in self.disabled_triggers if c in known),
         )
 
@@ -284,6 +289,30 @@ class NotificationsSettings(_Strict):
     duty_user_ids: list[int] = Field(default_factory=list)
 
 
+_REQUIRED_FACTS: Final[tuple[Fact, ...]] = ("need", "product")
+_ANY_OF_FACTS: Final[tuple[Fact, ...]] = ("timeline", "decision_role", "budget")
+_ROLES: Final[tuple[DecisionRole, ...]] = ("decision_maker", "influencer", "researcher")
+
+
+class QualificationSettings(_Strict):
+    """Когда лид «Квалифицирован» (ADR-0016). По умолчанию — BUSINESS §5."""
+
+    required_facts: list[Fact] = Field(default_factory=lambda: list(_REQUIRED_FACTS))
+    any_of_facts: list[Fact] = Field(default_factory=lambda: list(_ANY_OF_FACTS))
+    min_any_of: int = Field(default=1, ge=0, le=6)
+    timeline_max: Timeline = ">12m"
+    decision_roles: list[DecisionRole] = Field(default_factory=lambda: list(_ROLES))
+
+    def criteria(self) -> QualificationCriteria:
+        return QualificationCriteria(
+            required=frozenset(self.required_facts),
+            any_of=frozenset(self.any_of_facts),
+            min_any_of=self.min_any_of,
+            timeline_max=self.timeline_max,
+            decision_roles=frozenset(self.decision_roles),
+        )
+
+
 class BudgetSettings(_Strict):
     daily_usd: float = Field(default=10.0, ge=0)
     fallback_model_enabled: bool = True
@@ -294,6 +323,7 @@ SETTINGS_MODELS: Final[dict[str, type[BaseModel]]] = {
     "business_hours": BusinessHoursSettings,
     "texts": TextsSettings,
     "escalation": EscalationSettings,
+    "qualification": QualificationSettings,
     "kb": KbSettings,
     "bot": BotSettings,
     "competitors": TermsSettings,
@@ -308,6 +338,7 @@ class AppSettings(_Strict):
     business_hours: BusinessHoursSettings = Field(default_factory=BusinessHoursSettings)
     texts: TextsSettings = Field(default_factory=TextsSettings)
     escalation: EscalationSettings = Field(default_factory=EscalationSettings)
+    qualification: QualificationSettings = Field(default_factory=QualificationSettings)
     kb: KbSettings = Field(default_factory=KbSettings)
     bot: BotSettings = Field(default_factory=BotSettings)
     competitors: TermsSettings = Field(default_factory=TermsSettings)

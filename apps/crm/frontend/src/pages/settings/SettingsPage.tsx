@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { App as AntApp, Button, Card, Form, Space, Tabs } from "antd";
+import { Alert, App as AntApp, Button, Card, Form, Space, Tabs } from "antd";
 import { useState } from "react";
 
 import { adminKeys, useSettings } from "../../api/adminQueries";
@@ -59,6 +59,14 @@ function KeyForm({
           save.mutate(body());
         }}
       >
+        {settingKey === "qualification" ? (
+          <Alert
+            type="info"
+            showIcon
+            message={t.settings.qualificationHint}
+            className="auth-alert"
+          />
+        ) : null}
         <SchemaField name={[]} schema={schema} root={schema} label="" company={company} />
         <Space wrap>
           <Button type="primary" htmlType="submit" loading={save.isPending}>
