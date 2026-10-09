@@ -2,7 +2,7 @@
 # Один образ для api, worker и MCP-серверов: процесс выбирается командой
 # (`python -m app api|worker`, см. app/__main__.py).
 
-FROM ghcr.io/astral-sh/uv:0.12.23 AS uv
+FROM ghcr.io/astral-sh/uv:0.12.24 AS uv
 
 FROM python:3.12-slim-trixie AS base
 ENV PYTHONDONTWRITEBYTECODE=1 \
