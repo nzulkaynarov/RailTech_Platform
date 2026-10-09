@@ -36,3 +36,6 @@ backend/evals/reports/
 
 # Выгрузки диалогов для разметки (рабочие данные, не в git)
 reports/
+
+# Рабочие копии агентов Claude Code
+.claude/worktrees/
