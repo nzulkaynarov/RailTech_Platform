@@ -32,7 +32,6 @@ from app.schemas.kb_admin import Created
 from app.schemas.leads import ActionResult
 from app.security import audit
 from app.security.principal import Principal
-from app.services.clients import ClientPatch
 from app.services.documents import MAX_BYTES, NewDocument
 
 router = APIRouter(prefix="/api/v1", tags=["clients"])
@@ -103,7 +102,7 @@ async def _identities(session: AsyncSession, *conditions: object) -> list[Identi
 async def update_client(
     client_id: int, body: ClientUpdate, who: ClientWriter, container: ContainerDep
 ) -> ActionResult:
-    await container.client_service.update(who, client_id, ClientPatch(**body.model_dump()))
+    await container.client_service.update(who, client_id, body.model_dump(exclude_unset=True))
     return ActionResult()
 
 

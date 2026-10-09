@@ -4,8 +4,8 @@
 Без неё бот работает в режиме prospect и документов клиента не видит.
 """
 
-from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -18,6 +18,7 @@ from app.domain.errors import (
     ValidationFailedError,
 )
 from app.domain.stages import OwnerMode, Stage, TransitionSource
+from app.models.auth import User
 from app.models.clients import Client, ServiceRequest
 from app.models.leads import Lead, TelegramIdentity
 from app.models.qualification import Escalation
@@ -30,15 +31,8 @@ from app.services.lead_messenger import LeadMessenger
 from app.services.leads import LANGUAGES
 from app.services.settings import SettingsService
 
-
-@dataclass(frozen=True, slots=True)
-class ClientPatch:
-    name: str | None = None
-    inn: str | None = None
-    segment: str | None = None
-    notes: str | None = None
-    is_active: bool | None = None
-    owner_user_id: int | None = None
+CLEARABLE = frozenset({"inn", "segment", "notes", "owner_user_id"})
+EDITABLE = CLEARABLE | {"name", "is_active"}
 
 
 class ClientService:
@@ -62,23 +56,35 @@ class ClientService:
             )
             return client.id
 
-    async def update(self, who: Principal, client_id: int, patch: ClientPatch) -> None:
+    async def update(self, who: Principal, client_id: int, changes: dict[str, Any]) -> None:
+        """Изменить поля клиента; `None` очищает необязательное поле (ИНН, сегмент, владелец)."""
+        unknown = set(changes) - EDITABLE
+        if unknown:
+            raise ValidationFailedError("unknown client fields", field=sorted(unknown)[0])
         async with self._sessions() as session, session.begin():
             client = await _client(session, client_id)
-            before = {"name": client.name, "is_active": client.is_active}
-            for field in ("name", "inn", "segment", "notes", "is_active", "owner_user_id"):
-                value = getattr(patch, field)
-                if value is not None:
+            owner = changes.get("owner_user_id")
+            if owner is not None:
+                user = await session.get(User, owner)
+                if user is None or not user.is_active:
+                    raise ValidationFailedError("choose an active user", field="owner_user_id")
+            before, after = {}, {}
+            for field, value in changes.items():
+                if value is None and field not in CLEARABLE:
+                    continue
+                if getattr(client, field) != value:
+                    before[field], after[field] = getattr(client, field), value
                     setattr(client, field, value)
-            await audit.record(
-                session,
-                who.actor,
-                "client.update",
-                "client",
-                client_id,
-                before=before,
-                after={"name": client.name, "is_active": client.is_active},
-            )
+            if after:
+                await audit.record(
+                    session,
+                    who.actor,
+                    "client.update",
+                    "client",
+                    client_id,
+                    before=before,
+                    after=after,
+                )
 
     async def link_identity(self, who: Principal, client_id: int, tg_user_id: int) -> None:
         """Подтверждение менеджером: этот Telegram-аккаунт принадлежит клиенту."""

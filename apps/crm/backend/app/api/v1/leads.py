@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import ContainerDep, require
 from app.models.leads import Lead, Message
@@ -85,6 +86,14 @@ def lead_out(
         created_at=lead.created_at,
         escalation=escalation_out(escalation),
     )
+
+
+async def _existing_lead(session: AsyncSession, lead_id: int) -> Lead:
+    """404 для несуществующего или обезличенного лида, а не пустой список."""
+    lead = await leads_repo.get_lead(session, lead_id)
+    if lead is None or lead.erased_at is not None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "lead not found")
+    return lead
 
 
 def _unread(lead: Lead) -> bool:
@@ -178,6 +187,7 @@ async def lead_messages(
     before_id: int | None = None,
 ) -> list[MessageOut]:
     async with container.session_factory() as session:
+        await _existing_lead(session, lead_id)
         rows = await crm.messages(session, lead_id, limit, before_id)
     return [message_out(m) for m in rows]
 
@@ -190,6 +200,7 @@ async def reply(lead_id: int, body: Reply, who: Replier, container: ContainerDep
 @router.get("/leads/{lead_id}/notes", response_model=list[NoteOut])
 async def lead_notes(lead_id: int, _: Reader, container: ContainerDep) -> list[NoteOut]:
     async with container.session_factory() as session:
+        await _existing_lead(session, lead_id)
         rows = await crm.notes(session, lead_id)
     return [
         NoteOut(
@@ -278,9 +289,7 @@ async def lead_decisions(
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
 ) -> DecisionsResponse:
     async with container.session_factory() as session:
-        lead = await leads_repo.get_lead(session, lead_id)
-        if lead is None:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, "lead not found")
+        lead = await _existing_lead(session, lead_id)
         runs = await repo.qualifier_runs(session, lead_id, limit)
         moves = await repo.transitions(session, lead_id, limit)
     items: list[QualifierRunItem | TransitionItem] = [

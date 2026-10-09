@@ -128,3 +128,19 @@ async def test_my_leads_show_unread_when_the_lead_writes_after_the_manager(
         assert lead is not None
         lead.last_lead_msg_at = datetime.now(UTC)
     assert client.get("/api/v1/inbox", headers=me).json()["mine"][0]["unread"] is True
+
+
+async def test_client_fields_can_be_cleared_and_bad_owner_is_rejected(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    owner, password = await make_user(sessions, "dilshod@railtech.uz", ["manager"])
+    me = login(client, owner.email, password)
+    created = client.post(
+        "/api/v1/clients", json={"name": "Альфа", "inn": "123456789"}, headers=me
+    ).json()
+    url = f"/api/v1/clients/{created['id']}"
+
+    assert client.patch(url, json={"inn": None}, headers=me).status_code == 200
+    assert client.get(url, headers=me).json()["inn"] is None
+    assert client.patch(url, json={"owner_user_id": 999999}, headers=me).status_code == 422
+    assert client.get("/api/v1/leads/999999/messages", headers=me).status_code == 404
