@@ -7,6 +7,7 @@
 import type {
   AccessOut,
   ActionResult,
+  Assign,
   AuditPage,
   BodyUploadDocument,
   BodyUploadKbDocument,
@@ -60,8 +61,10 @@ import type {
   ReturnToBot,
   SearchRequest,
   SearchResponse,
+  ServiceRequestClose,
   SettingsResponse,
   Snooze,
+  TeamMember,
   TokenResponse,
   UserCreate,
   UserCreated,
@@ -909,6 +912,7 @@ export const getInboxUrl = () => {
 };
 
 /**
+ * Очередь работы — менеджеру и админу; наблюдатель смотрит «Лиды» (SPEC §10.1).
  * @summary Inbox
  */
 export const inbox = async (options?: Parameters<typeof http>[1]): Promise<inboxResponse> => {
@@ -1641,6 +1645,64 @@ export const getLead = async (
   });
 };
 
+export type assignResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type assignResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type assignResponseSuccess = assignResponse200 & {
+  headers: Headers;
+};
+export type assignResponseError = assignResponse422 & {
+  headers: Headers;
+};
+
+export type assignResponse = assignResponseSuccess | assignResponseError;
+
+export const getAssignUrl = (leadId: number) => {
+  return `/api/v1/leads/${leadId}/actions/assign`;
+};
+
+/**
+ * @summary Assign
+ */
+export const assign = async (
+  leadId: number,
+  assignBody: Assign,
+  options?: Parameters<typeof http>[1],
+): Promise<assignResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<assignResponse>(getAssignUrl(leadId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(assignBody),
+  });
+};
+
 export type closeLostResponse200 = {
   data: ActionResult;
   status: 200;
@@ -1812,6 +1874,42 @@ export const makeCustomer = async (
     method: "POST",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
     body: JSON.stringify(makeCustomerBody),
+  });
+};
+
+export type newDealResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type newDealResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type newDealResponseSuccess = newDealResponse200 & {
+  headers: Headers;
+};
+export type newDealResponseError = newDealResponse422 & {
+  headers: Headers;
+};
+
+export type newDealResponse = newDealResponseSuccess | newDealResponseError;
+
+export const getNewDealUrl = (leadId: number) => {
+  return `/api/v1/leads/${leadId}/actions/new_deal`;
+};
+
+/**
+ * @summary New Deal
+ */
+export const newDeal = async (
+  leadId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<newDealResponse> => {
+  return http<newDealResponse>(getNewDealUrl(leadId), {
+    ...options,
+    method: "POST",
   });
 };
 
@@ -2354,11 +2452,33 @@ export const getCloseServiceRequestUrl = (requestId: number) => {
  */
 export const closeServiceRequest = async (
   requestId: number,
+  serviceRequestClose: ServiceRequestClose,
   options?: Parameters<typeof http>[1],
 ): Promise<closeServiceRequestResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
   return http<closeServiceRequestResponse>(getCloseServiceRequestUrl(requestId), {
     ...options,
     method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(serviceRequestClose),
   });
 };
 
@@ -2523,6 +2643,31 @@ export const getStreamUrl = () => {
  */
 export const stream = async (options?: Parameters<typeof http>[1]): Promise<streamResponse> => {
   return http<streamResponse>(getStreamUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type teamResponse200 = {
+  data: TeamMember[];
+  status: 200;
+};
+
+export type teamResponseSuccess = teamResponse200 & {
+  headers: Headers;
+};
+export type teamResponse = teamResponseSuccess;
+
+export const getTeamUrl = () => {
+  return `/api/v1/team`;
+};
+
+/**
+ * Активные менеджеры и админы: кому передать лида, чьё имя показать (без email и ролей).
+ * @summary Team
+ */
+export const team = async (options?: Parameters<typeof http>[1]): Promise<teamResponse> => {
+  return http<teamResponse>(getTeamUrl(), {
     ...options,
     method: "GET",
   });

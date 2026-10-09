@@ -122,7 +122,7 @@ class Container:
     def client_service(self) -> "ClientService":
         from app.services.clients import ClientService
 
-        return ClientService(self.session_factory)
+        return ClientService(self.session_factory, self.settings_service, self.lead_messenger)
 
     @cached_property
     def document_service(self) -> "DocumentService":

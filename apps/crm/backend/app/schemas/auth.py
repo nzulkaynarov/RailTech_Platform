@@ -62,6 +62,8 @@ class UserUpdate(BaseModel):
     is_active: bool | None = None
     tg_user_id: int | None = Field(default=None, gt=0)
     clear_tg_user_id: bool = False
+    # При деактивации: кому передать лидов, которых ведёт пользователь (ADR-0015).
+    transfer_to_user_id: int | None = Field(default=None, gt=0)
 
 
 class PasswordReset(BaseModel):

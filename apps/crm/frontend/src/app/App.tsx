@@ -17,7 +17,7 @@ import {
   ThemedTitle,
   useNotificationProvider,
 } from "@refinedev/antd";
-import routerProvider, { CatchAllNavigate, NavigateToResource } from "@refinedev/react-router";
+import routerProvider, { CatchAllNavigate } from "@refinedev/react-router";
 import { QueryClient } from "@tanstack/react-query";
 import { App as AntApp, ConfigProvider } from "antd";
 import ruRU from "antd/es/locale/ru_RU";
@@ -30,6 +30,7 @@ import { ClientsPage } from "../pages/clients/ClientsPage";
 import { DashboardPage } from "../pages/dashboard/DashboardPage";
 import { GapsPage } from "../pages/gaps/GapsPage";
 import { InboxPage } from "../pages/inbox/InboxPage";
+import { HomeRedirect } from "./HomeRedirect";
 import { KbPage } from "../pages/kb/KbPage";
 import { SettingsPage } from "../pages/settings/SettingsPage";
 import { LeadDetailPage } from "../pages/lead-detail/LeadDetailPage";
@@ -114,7 +115,7 @@ export function App() {
           >
             <Routes>
               <Route element={<Shell />}>
-                <Route index element={<NavigateToResource resource="inbox" />} />
+                <Route index element={<HomeRedirect />} />
                 <Route path="/inbox" element={<InboxPage />} />
                 <Route path="/leads" element={<LeadsPage />} />
                 <Route path="/leads/:id" element={<LeadDetailPage />} />

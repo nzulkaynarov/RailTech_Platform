@@ -7,17 +7,20 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from sqlalchemy import update
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.errors import (
+    ActiveLeadsError,
     ConflictError,
     LastAdminError,
     NotFoundError,
     ValidationFailedError,
 )
 from app.models.auth import ROLES, RefreshToken, User
+from app.models.clients import Client
+from app.models.leads import Lead
 from app.repositories import users as repo
 from app.security import audit
 from app.security.audit import Actor
@@ -49,6 +52,7 @@ class UserPatch:
     is_active: bool | None = None
     tg_user_id: int | None = None
     clear_tg_user_id: bool = False
+    transfer_to_user_id: int | None = None
 
 
 class UserService:
@@ -114,6 +118,7 @@ class UserService:
                 if "admin" not in roles:
                     user.ui_mode = "manager"
             if patch.is_active is False:
+                await _hand_over_work(session, actor, user_id, patch.transfer_to_user_id)
                 await _revoke_tokens(session, user_id)
             try:
                 await session.flush()
@@ -208,6 +213,47 @@ def _apply(user: User, patch: UserPatch) -> None:
         user.tg_user_id = None
     elif patch.tg_user_id is not None:
         user.tg_user_id = patch.tg_user_id
+
+
+async def _hand_over_work(
+    session: AsyncSession, actor: Actor, user_id: int, to_user_id: int | None
+) -> None:
+    """Лиды в работе и клиенты уходящего менеджера — коллеге; без коллеги деактивация запрещена."""
+    leads = list(
+        await session.scalars(
+            select(Lead.id).where(
+                Lead.assigned_user_id == user_id,
+                Lead.owner_mode == "human",
+                Lead.erased_at.is_(None),
+            )
+        )
+    )
+    if to_user_id is None:
+        if leads:
+            raise ActiveLeadsError("hand over the leads first", count=len(leads))
+        return
+    target = await repo.get(session, to_user_id)
+    roles = await repo.roles_of(session, to_user_id) if target else []
+    if target is None or to_user_id == user_id or not target.is_active:
+        raise ValidationFailedError("choose an active colleague", field="transfer_to_user_id")
+    if not {"manager", "admin"} & set(roles):
+        raise ValidationFailedError("choose an active colleague", field="transfer_to_user_id")
+    await session.execute(
+        update(Lead)
+        .where(Lead.assigned_user_id == user_id, Lead.erased_at.is_(None))
+        .values(assigned_user_id=to_user_id)
+    )
+    await session.execute(
+        update(Client).where(Client.owner_user_id == user_id).values(owner_user_id=to_user_id)
+    )
+    await audit.record(
+        session,
+        actor,
+        "user.hand_over",
+        "user",
+        user_id,
+        after={"to_user_id": to_user_id, "active_leads": leads},
+    )
 
 
 async def _revoke_tokens(session: AsyncSession, user_id: int) -> None:

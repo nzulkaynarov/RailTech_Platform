@@ -54,12 +54,17 @@ def plan(
     assert priority is not None  # noqa: S101 — hits не пуст
     is_new = open_escalation is None
     changed = open_escalation is None or codes != previous or priority != open_escalation.priority
+    # info — сведения для команды: бот продолжает отвечать (ADR-0015). Передача человеку —
+    # когда эскалация впервые становится срочной (новая warm/hot или повышение с info).
+    urgent = priority != Priority.INFO
+    was_urgent = open_escalation is not None and open_escalation.priority != Priority.INFO
+    hand_over = urgent and not was_urgent
     return EscalationPlan(
         reason_codes=codes,
         priority=priority,
         is_new=is_new,
-        move_to_handoff=stage in HANDOFF_FROM,
-        pause_bot=owner_mode == OwnerMode.BOT,
-        lead_text=("handoff" if business_time else "off_hours") if is_new else None,
+        move_to_handoff=urgent and stage in HANDOFF_FROM,
+        pause_bot=urgent and owner_mode == OwnerMode.BOT,
+        lead_text=("handoff" if business_time else "off_hours") if hand_over else None,
         channel_action="post" if is_new else ("edit" if changed else "none"),
     )

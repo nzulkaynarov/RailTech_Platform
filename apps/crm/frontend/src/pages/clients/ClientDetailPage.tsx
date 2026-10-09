@@ -16,7 +16,7 @@ import { useState } from "react";
 import { Link, useParams } from "react-router";
 
 import { adminKeys, useClient } from "../../api/adminQueries";
-import { closeServiceRequest, linkTelegram, unlinkTelegram } from "../../api/generated/crm";
+import { linkTelegram, unlinkTelegram } from "../../api/generated/crm";
 import type { IdentityOut } from "../../api/generated/model";
 import { type ApiError, unwrap } from "../../api/http";
 import { usePermissionsQuery } from "../../api/queries";
@@ -24,8 +24,9 @@ import { allowed } from "../../app/providers/access";
 import { StageBadge } from "../../components/StageBadge";
 import { errorText, t } from "../../i18n/ru";
 import { ClientDocuments } from "./ClientDocuments";
+import { ServiceRequests } from "./ServiceRequests";
 
-type Action = { kind: "link" | "unlink"; tgUserId: number } | { kind: "close"; requestId: number };
+type Action = { kind: "link" | "unlink"; tgUserId: number };
 
 function identityLabel(i: IdentityOut): string {
   const name = i.tg_username ? `@${i.tg_username}` : (i.tg_first_name ?? "");
@@ -44,7 +45,6 @@ export function ClientDetailPage() {
   const { message } = AntApp.useApp();
   const act = useMutation({
     mutationFn: async (a: Action) => {
-      if (a.kind === "close") return unwrap(await closeServiceRequest(a.requestId));
       if (a.kind === "link") return unwrap(await linkTelegram(id, { tg_user_id: a.tgUserId }));
       return unwrap(await unlinkTelegram(id, a.tgUserId));
     },
@@ -174,36 +174,7 @@ export function ClientDetailPage() {
         </Card>
       ) : null}
       <Card size="small" title={t.clients.requests}>
-        <List
-          size="small"
-          dataSource={data.service_requests}
-          renderItem={(r) => (
-            <List.Item
-              actions={
-                canWrite && r.status === "open"
-                  ? [
-                      <Button
-                        key="c"
-                        size="small"
-                        onClick={() => {
-                          act.mutate({ kind: "close", requestId: r.id });
-                        }}
-                      >
-                        {t.clients.close}
-                      </Button>,
-                    ]
-                  : []
-              }
-            >
-              <Space direction="vertical" size={0}>
-                <Typography.Text>{r.summary}</Typography.Text>
-                <Typography.Text type="secondary">
-                  {dayjs(r.created_at).format("DD.MM HH:mm")} · {r.status}
-                </Typography.Text>
-              </Space>
-            </List.Item>
-          )}
-        />
+        <ServiceRequests clientId={id} requests={data.service_requests} canWrite={canWrite} />
       </Card>
     </Space>
   );

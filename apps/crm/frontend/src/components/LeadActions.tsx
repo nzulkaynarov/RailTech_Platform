@@ -1,4 +1,4 @@
-import { App as AntApp, Button, Checkbox, DatePicker, Input, Modal, Space } from "antd";
+import { App as AntApp, Button, Checkbox, DatePicker, Input, Modal, Space, Typography } from "antd";
 import dayjs, { type Dayjs } from "dayjs";
 import { useState } from "react";
 
@@ -6,13 +6,14 @@ import type { LeadDetail } from "../api/generated/model";
 import { ApiError } from "../api/http";
 import { type LeadAction, useLeadAction } from "../api/queries";
 import { errorText, t } from "../i18n/ru";
+import { AssignLead } from "./AssignLead";
 import { type ActionRights, availableActions } from "./leadActionRules";
 import { MakeCustomer } from "./MakeCustomer";
 
 type Dialog = "return" | "snooze" | "lost" | "won" | "note" | null;
 
 export function LeadActions({ lead, rights }: { lead: LeadDetail; rights: ActionRights }) {
-  const { message } = AntApp.useApp();
+  const { message, modal } = AntApp.useApp();
   const mutation = useLeadAction(lead.id);
   const [dialog, setDialog] = useState<Dialog>(null);
   const [text, setText] = useState("");
@@ -91,6 +92,22 @@ export function LeadActions({ lead, rights }: { lead: LeadDetail; rights: Action
           </Button>
         ) : null}
         {show.makeCustomer ? <MakeCustomer leadId={lead.id} /> : null}
+        {show.newDeal ? (
+          <Button
+            onClick={() => {
+              void modal.confirm({
+                title: t.actions.newDeal,
+                content: t.actions.newDealConfirm,
+                okText: t.actions.newDeal,
+                cancelText: t.actions.cancel,
+                onOk: () => run({ kind: "newDeal" }),
+              });
+            }}
+          >
+            {t.actions.newDeal}
+          </Button>
+        ) : null}
+        {show.assign ? <AssignLead lead={lead} run={run} busy={mutation.isPending} /> : null}
         {show.note ? (
           <Button
             onClick={() => {
@@ -104,7 +121,8 @@ export function LeadActions({ lead, rights }: { lead: LeadDetail; rights: Action
       <Modal
         open={dialog !== null}
         title={dialogTitle(dialog)}
-        okText={t.actions.confirm}
+        okText={dialog === "lost" ? t.actions.lost : t.actions.confirm}
+        okButtonProps={{ danger: dialog === "lost" }}
         cancelText={t.actions.cancel}
         confirmLoading={mutation.isPending}
         onOk={() => void confirm()}
@@ -113,13 +131,22 @@ export function LeadActions({ lead, rights }: { lead: LeadDetail; rights: Action
         }}
         destroyOnHidden
       >
+        {dialog === "won" ? (
+          <Typography.Paragraph type="secondary">{t.actions.wonNote}</Typography.Paragraph>
+        ) : null}
         {dialog === "snooze" ? (
-          <DatePicker showTime value={until} onChange={setUntil} style={{ width: "100%" }} />
+          <DatePicker
+            showTime
+            value={until}
+            onChange={setUntil}
+            disabledDate={(d) => d.isBefore(dayjs(), "day") || d.isAfter(dayjs().add(7, "day"))}
+            style={{ width: "100%" }}
+          />
         ) : (
           <Input.TextArea
             rows={4}
             value={text}
-            placeholder={dialogTitle(dialog)}
+            placeholder={dialog === "won" ? t.actions.wonNote : dialogTitle(dialog)}
             onChange={(e) => {
               setText(e.target.value);
             }}
@@ -149,7 +176,7 @@ function dialogTitle(dialog: Dialog): string {
     case "lost":
       return t.actions.lostReason;
     case "won":
-      return t.actions.won;
+      return t.actions.wonTitle;
     case "note":
       return t.actions.noteText;
     default:

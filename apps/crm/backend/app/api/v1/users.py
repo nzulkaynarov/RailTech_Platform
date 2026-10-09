@@ -56,6 +56,7 @@ async def update_user(
         is_active=body.is_active,
         tg_user_id=body.tg_user_id,
         clear_tg_user_id=body.clear_tg_user_id,
+        transfer_to_user_id=body.transfer_to_user_id,
     )
     return to_out(await container.user_service.update(who.actor, user_id, patch))
 

@@ -25,6 +25,7 @@ from app.schemas.clients import (
     LeadBrief,
     LinkTelegram,
     MakeCustomer,
+    ServiceRequestClose,
     ServiceRequestOut,
 )
 from app.schemas.kb_admin import Created
@@ -138,9 +139,9 @@ async def make_customer(
 
 @router.post("/service-requests/{request_id}/close", response_model=ActionResult)
 async def close_service_request(
-    request_id: int, who: ClientWriter, container: ContainerDep
+    request_id: int, body: ServiceRequestClose, who: ClientWriter, container: ContainerDep
 ) -> ActionResult:
-    await container.client_service.close_service_request(who, request_id)
+    await container.client_service.close_service_request(who, request_id, body.resolution)
     return ActionResult()
 
 

@@ -43,6 +43,23 @@ describe("availableActions", () => {
     expect(availableActions(theirs, manager)).toMatchObject({ returnToBot: false, close: false });
   });
 
+  it("lets a returning lost lead be taken again (ADR-0015)", () => {
+    const lost = lead({ stage: "lost", owner_mode: "bot", assigned_user_id: 3 });
+    expect(availableActions(lost, manager)).toMatchObject({ take: true, close: false });
+  });
+
+  it("offers a new deal for a customer the bot is serving", () => {
+    const customer = lead({ stage: "customer", owner_mode: "bot", assigned_user_id: 7 });
+    expect(availableActions(customer, manager)).toMatchObject({ newDeal: true, assign: false });
+  });
+
+  it("lets the owner hand the lead over to a colleague", () => {
+    const mine = lead({ stage: "in_progress", owner_mode: "human", assigned_user_id: 7 });
+    const theirs = lead({ stage: "in_progress", owner_mode: "human", assigned_user_id: 3 });
+    expect(availableActions(mine, manager).assign).toBe(true);
+    expect(availableActions(theirs, manager).assign).toBe(false);
+  });
+
   it("shows nothing to a viewer", () => {
     expect(Object.values(availableActions(lead({}), viewer)).some(Boolean)).toBe(false);
   });

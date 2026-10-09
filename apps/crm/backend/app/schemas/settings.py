@@ -138,6 +138,16 @@ class TextsSettings(_Strict):
         "Assalomu alaykum! Savolingiz bilan {manager} shug'ullanmoqda, javob shu chatga keladi.",
         "Hello! {manager} is now handling your request and will reply in this chat.",
     )
+    service_request_closed: LocalizedText = _t(
+        "По вашему запросу «{summary}»: {resolution}",
+        "«{summary}» so'rovingiz bo'yicha: {resolution}",
+        "Regarding your request “{summary}”: {resolution}",
+    )
+    returned_to_bot: LocalizedText = _t(
+        "Снова на связи ассистент {company}. Если понадобится коллега, напишите /human.",
+        "Yana {company} yordamchisi aloqada. Hamkasb kerak bo'lsa, /human deb yozing.",
+        "The {company} assistant is back. If you need a colleague, type /human.",
+    )
     attachment_received: LocalizedText = _t(
         "Спасибо, файл получен. Передам его коллеге.",
         "Rahmat, fayl qabul qilindi. Uni hamkasbimga topshiraman.",

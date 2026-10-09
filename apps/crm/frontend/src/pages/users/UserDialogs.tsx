@@ -1,6 +1,7 @@
 import { Alert, Form, Input, InputNumber, Modal, Select, Switch, Typography } from "antd";
 
 import type { UserCreate, UserOut, UserUpdate } from "../../api/generated/model";
+import { useTeam } from "../../api/queries";
 import { t } from "../../i18n/ru";
 
 const ROLE_OPTIONS = ["admin", "manager", "viewer"].map((value) => ({
@@ -59,6 +60,11 @@ type EditProps = {
 
 export function EditUserDialog({ user, saving, onCancel, onSubmit }: EditProps) {
   const [form] = Form.useForm<UserUpdate>();
+  const active = Form.useWatch("is_active", form);
+  const team = useTeam();
+  const colleagues = (team.data ?? [])
+    .filter((m) => m.id !== user?.id)
+    .map((m) => ({ value: m.id, label: m.full_name }));
   return (
     <Modal
       open={user !== null}
@@ -98,6 +104,15 @@ export function EditUserDialog({ user, saving, onCancel, onSubmit }: EditProps) 
           <Form.Item name="is_active" label={t.users.active} valuePropName="checked">
             <Switch />
           </Form.Item>
+          {user.is_active && active === false ? (
+            <Form.Item
+              name="transfer_to_user_id"
+              label={t.users.transferTo}
+              extra={t.users.transferHint}
+            >
+              <Select allowClear showSearch optionFilterProp="label" options={colleagues} />
+            </Form.Item>
+          ) : null}
         </Form>
       ) : null}
     </Modal>

@@ -26,6 +26,12 @@ class LastAdminError(ConflictError):
     code = "last_admin"
 
 
+class ActiveLeadsError(ConflictError):
+    """Деактивация менеджера, который ведёт лидов, без передачи их коллеге (ADR-0015)."""
+
+    code = "user_has_active_leads"
+
+
 class InvalidTransitionError(ConflictError):
     code = "invalid_transition"
 

@@ -30,11 +30,14 @@ _ALLOWED: Final[dict[tuple[Stage, Stage], frozenset[TransitionSource]]] = {
     (S.IN_PROGRESS, S.ENGAGED): frozenset({Src.USER}),
     (S.IN_PROGRESS, S.QUALIFIED): frozenset({Src.USER}),
     (S.WON, S.CUSTOMER): frozenset({Src.USER, Src.SYSTEM}),
-    **{
-        (s, S.UNRESPONSIVE): frozenset({Src.TIMER})
-        for s in (S.NEW, S.ENGAGED, S.QUALIFIED, S.HANDOFF)
-    },
+    # В handoff ждёт лид, а не мы: таймер «Не отвечает» его не трогает (ADR-0015).
+    **{(s, S.UNRESPONSIVE): frozenset({Src.TIMER}) for s in (S.NEW, S.ENGAGED, S.QUALIFIED)},
     (S.UNRESPONSIVE, S.ENGAGED): frozenset({Src.SYSTEM}),
+    # Выход из «Отказа» и повторная сделка клиента (ADR-0015).
+    (S.LOST, S.ENGAGED): frozenset({Src.SYSTEM}),
+    (S.LOST, S.IN_PROGRESS): frozenset({Src.USER}),
+    (S.CUSTOMER, S.IN_PROGRESS): frozenset({Src.USER}),
+    (S.LOST, S.CUSTOMER): frozenset({Src.SYSTEM}),
 }
 
 QUALIFIER_PROPOSABLE: Final = frozenset({S.ENGAGED, S.QUALIFIED})

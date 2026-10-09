@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { compact, unwrap } from "./http";
 import {
+  assign,
   closeLost,
   closeWon,
   getLead,
@@ -16,12 +17,14 @@ import {
   listLeads,
   listUsers,
   me,
+  newDeal,
   note,
   permissions,
   reply,
   returnToBot,
   snooze,
   take,
+  team,
 } from "./generated/crm";
 import type { ListLeadsParams } from "./generated/model";
 
@@ -35,6 +38,7 @@ export const keys = {
   notes: (id: number) => ["lead", id, "notes"] as const,
   decisions: (id: number) => ["lead", id, "decisions"] as const,
   users: ["users"] as const,
+  team: ["team"] as const,
 };
 
 export const useMe = () => useQuery({ queryKey: keys.me, queryFn: async () => unwrap(await me()) });
@@ -66,8 +70,14 @@ export const useDecisions = (id: number) =>
 export const useUsers = () =>
   useQuery({ queryKey: keys.users, queryFn: async () => unwrap(await listUsers()) });
 
+/** Активные менеджеры и админы — кому передать лида (без email и ролей). */
+export const useTeam = () =>
+  useQuery({ queryKey: keys.team, queryFn: async () => unwrap(await team()), staleTime: 60_000 });
+
 export type LeadAction =
   | { kind: "take" }
+  | { kind: "newDeal" }
+  | { kind: "assign"; userId: number }
   | { kind: "return"; note: string | null }
   | { kind: "snooze"; until: string }
   | { kind: "won"; reason: string | null }
@@ -79,6 +89,12 @@ async function runAction(id: number, action: LeadAction): Promise<void> {
   switch (action.kind) {
     case "take":
       await take(id);
+      return;
+    case "newDeal":
+      await newDeal(id);
+      return;
+    case "assign":
+      await assign(id, { user_id: action.userId });
       return;
     case "return":
       await returnToBot(id, { note: action.note });

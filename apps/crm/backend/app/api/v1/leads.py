@@ -11,6 +11,7 @@ from app.models.qualification import Escalation
 from app.repositories import crm
 from app.repositories import decisions as repo
 from app.repositories import leads as leads_repo
+from app.repositories import users as users_repo
 from app.schemas.decisions import (
     DecisionsResponse,
     QualifierRunItem,
@@ -19,6 +20,7 @@ from app.schemas.decisions import (
 )
 from app.schemas.leads import (
     ActionResult,
+    Assign,
     Close,
     EscalationOut,
     InboxResponse,
@@ -31,6 +33,7 @@ from app.schemas.leads import (
     Reply,
     ReturnToBot,
     Snooze,
+    TeamMember,
 )
 from app.security.principal import Principal
 
@@ -119,7 +122,8 @@ async def list_leads(
 
 
 @router.get("/inbox", response_model=InboxResponse)
-async def inbox(who: Reader, container: ContainerDep) -> InboxResponse:
+async def inbox(who: Taker, container: ContainerDep) -> InboxResponse:
+    """Очередь работы — менеджеру и админу; наблюдатель смотрит «Лиды» (SPEC §10.1)."""
     async with container.session_factory() as session:
         escalated, mine, unassigned = await crm.inbox(session, who.user_id)
         ids = [lead.id for lead in (*escalated, *mine, *unassigned)]
@@ -226,6 +230,31 @@ async def close_lost(
 ) -> ActionResult:
     await container.lead_service.close(who, lead_id, "lost", body.reason)
     return ActionResult()
+
+
+@router.post("/leads/{lead_id}/actions/new_deal", response_model=ActionResult)
+async def new_deal(lead_id: int, who: Worker, container: ContainerDep) -> ActionResult:
+    await container.lead_service.new_deal(who, lead_id)
+    return ActionResult()
+
+
+@router.post("/leads/{lead_id}/actions/assign", response_model=ActionResult)
+async def assign(lead_id: int, body: Assign, who: Worker, container: ContainerDep) -> ActionResult:
+    await container.lead_service.assign(who, lead_id, body.user_id)
+    return ActionResult()
+
+
+@router.get("/team", response_model=list[TeamMember])
+async def team(_: Reader, container: ContainerDep) -> list[TeamMember]:
+    """Активные менеджеры и админы: кому передать лида, чьё имя показать (без email и ролей)."""
+    async with container.session_factory() as session:
+        users = await users_repo.list_users(session)
+        roles = await users_repo.roles_by_user(session)
+    return [
+        TeamMember(id=u.id, full_name=u.full_name)
+        for u in users
+        if u.is_active and {"manager", "admin"} & set(roles.get(u.id, []))
+    ]
 
 
 @router.post("/leads/{lead_id}/actions/note", response_model=ActionResult)

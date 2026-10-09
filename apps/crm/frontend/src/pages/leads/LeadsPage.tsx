@@ -6,6 +6,7 @@ import { Link } from "react-router";
 import type { LeadOut, ListLeadsParams } from "../../api/generated/model";
 import { useLeads } from "../../api/queries";
 import { PriorityTag } from "../../components/EscalationReason";
+import { Owner } from "../../components/Owner";
 import { StageBadge } from "../../components/StageBadge";
 import { t } from "../../i18n/ru";
 import "../pages.css";
@@ -98,7 +99,7 @@ export function LeadsPage() {
             title: t.leads.owner,
             render: (_, lead) => (
               <Space>
-                {t.owner[lead.owner_mode] ?? lead.owner_mode}
+                <Owner lead={lead} />
                 {lead.escalation ? <PriorityTag priority={lead.escalation.priority} /> : null}
               </Space>
             ),

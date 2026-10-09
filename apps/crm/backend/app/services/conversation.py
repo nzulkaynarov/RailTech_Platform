@@ -21,7 +21,7 @@ from app.agents.dialog.state import DialogResult
 from app.domain.consent import consent_required
 from app.domain.dialog_policy import Action
 from app.domain.language import Language, detect_language, next_language
-from app.domain.stages import Stage, TransitionSource
+from app.domain.stages import OwnerMode, Stage, TransitionSource
 from app.domain.triggers import TriggerSignals, evaluate
 from app.models.clients import Client
 from app.models.leads import Conversation, Lead
@@ -31,6 +31,7 @@ from app.security.agent_context import issue
 from app.services import escalation, stages
 from app.services.kb.gaps import register_gap
 from app.services.settings import SettingsService
+from app.services.waiting import while_waiting
 
 logger = structlog.get_logger(__name__)
 
@@ -101,10 +102,12 @@ class ConversationService:
 
     async def handle_message(self, inc: Incoming) -> list[Outgoing]:
         cfg = await self._settings.get()
-        early, turn, escalation = await self._receive(inc, cfg)
+        early, turn, escalated = await self._receive(inc, cfg)
         if turn is None:
-            if early:
-                await self._fire(_lead_of(early), escalation)
+            if escalated is not None:
+                await self._fire(*escalated)
+            elif early:
+                await self._fire(_lead_of(early), None)
             return early
         lock = self._locks.setdefault(turn.lead_id, asyncio.Lock())
         async with lock:
@@ -214,7 +217,8 @@ class ConversationService:
 
     async def _receive(
         self, inc: Incoming, cfg: AppSettings
-    ) -> tuple[list[Outgoing], _Turn | None, int | None]:
+    ) -> tuple[list[Outgoing], _Turn | None, tuple[int, int] | None]:
+        """Сообщение лида до хода агента: (ответ без модели, ход агента, (лид, эскалация))."""
         async with self._sessions() as session, session.begin():
             lead, conversation, is_new = await self._ensure_lead(session, inc)
             now = datetime.now(UTC)
@@ -227,7 +231,7 @@ class ConversationService:
                 attachments=inc.attachments,
             )
             lead.last_lead_msg_at = now
-            if lead.stage == Stage.UNRESPONSIVE:
+            if lead.stage in (Stage.UNRESPONSIVE, Stage.LOST):
                 await stages.transition(
                     session, lead, Stage.ENGAGED, TransitionSource.SYSTEM, reason="lead wrote again"
                 )
@@ -236,6 +240,23 @@ class ConversationService:
                 lead.consent_given_at, lead.consent_version, cfg.texts.consent_version
             ):
                 return await _consent_prompt(session, conversation, lead, cfg, is_new), None, None
+            if lead.owner_mode == OwnerMode.PAUSED:
+                waiting = await while_waiting(
+                    session,
+                    conversation,
+                    lead,
+                    text=inc.text,
+                    human_requested=inc.human_requested,
+                    language=_lang(lead),
+                    cfg=cfg,
+                    now=now,
+                )
+                out = (
+                    [Outgoing(waiting.text, message_id=waiting.message_id, lead_id=lead.id)]
+                    if waiting.text
+                    else []
+                )
+                return out, None, _escalated(lead.id, waiting.escalation_id)
             if inc.attachments and not inc.text.strip():
                 text = cfg.texts.attachment_received.get(_lang(lead))
                 message = await repo.add_message(
@@ -244,7 +265,7 @@ class ConversationService:
                 hits = evaluate(TriggerSignals(attachment_received=True), cfg.escalation.triggers())
                 applied = await escalation.apply(session, lead, hits, cfg, now)
                 out = [Outgoing(text, message_id=message.id, lead_id=lead.id)]
-                return out, None, applied.escalation_id if applied else None
+                return out, None, _escalated(lead.id, applied.escalation_id if applied else None)
             turn = _Turn(
                 lead.id,
                 _lang(lead),
@@ -408,6 +429,10 @@ async def _verified_client(session: AsyncSession, tg_user_id: int) -> int | None
         return None
     client = await session.get(Client, identity.client_id)
     return client.id if client is not None and client.is_active else None
+
+
+def _escalated(lead_id: int, escalation_id: int | None) -> tuple[int, int] | None:
+    return (lead_id, escalation_id) if escalation_id is not None else None
 
 
 def _lead_of(outgoing: list[Outgoing]) -> int | None:

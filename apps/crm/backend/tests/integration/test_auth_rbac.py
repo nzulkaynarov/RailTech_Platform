@@ -37,7 +37,8 @@ async def tokens(
 # (метод, путь, тело) → роли, которым разрешено. «Разрешено» = не 401/403.
 MATRIX = [
     ("GET", "/api/v1/leads", None, {"admin", "manager", "viewer"}),
-    ("GET", "/api/v1/inbox", None, {"admin", "manager", "viewer"}),
+    ("GET", "/api/v1/inbox", None, {"admin", "manager"}),  # SPEC §10.1: не наблюдателю
+    ("GET", "/api/v1/team", None, {"admin", "manager", "viewer"}),
     ("GET", "/api/v1/leads/{lead}", None, {"admin", "manager", "viewer"}),
     ("GET", "/api/v1/leads/{lead}/messages", None, {"admin", "manager", "viewer"}),
     ("GET", "/api/v1/leads/{lead}/notes", None, {"admin", "manager", "viewer"}),
@@ -54,6 +55,8 @@ MATRIX = [
     ("POST", "/api/v1/leads/{lead}/actions/return_to_bot", {}, {"admin", "manager"}),
     ("POST", "/api/v1/leads/{lead}/messages", {"text": "Здравствуйте"}, {"admin", "manager"}),
     ("POST", "/api/v1/leads/{lead}/actions/take", None, {"admin", "manager"}),
+    ("POST", "/api/v1/leads/{lead}/actions/new_deal", None, {"admin", "manager"}),
+    ("POST", "/api/v1/leads/{lead}/actions/assign", {"user_id": 1}, {"admin", "manager"}),
     ("GET", "/api/v1/users", None, {"admin"}),
     ("GET", "/api/v1/users/{admin}", None, {"admin"}),
     (

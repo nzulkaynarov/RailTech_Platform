@@ -82,6 +82,15 @@ class Snooze(BaseModel):
     until: datetime
 
 
+class Assign(BaseModel):
+    user_id: int
+
+
+class TeamMember(BaseModel):
+    id: int
+    full_name: str
+
+
 class Close(BaseModel):
     reason: str | None = Field(default=None, max_length=1000)
 

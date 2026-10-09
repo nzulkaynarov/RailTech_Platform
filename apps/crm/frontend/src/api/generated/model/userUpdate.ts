@@ -11,4 +11,5 @@ export interface UserUpdate {
   is_active?: boolean | null;
   roles?: ("admin" | "manager" | "viewer")[] | null;
   tg_user_id?: number | null;
+  transfer_to_user_id?: number | null;
 }

@@ -1,6 +1,6 @@
 import { App as AntApp, Card, Descriptions, List, Space, Tag, Typography } from "antd";
 import dayjs from "dayjs";
-import { useParams } from "react-router";
+import { Link, useParams } from "react-router";
 
 import type { LeadDetail } from "../../api/generated/model";
 import type { ApiError } from "../../api/http";
@@ -19,6 +19,7 @@ import { DecisionsPanel } from "../../components/DecisionsPanel";
 import { EscalationReason } from "../../components/EscalationReason";
 import { LeadActions } from "../../components/LeadActions";
 import type { ActionRights } from "../../components/leadActionRules";
+import { Owner } from "../../components/Owner";
 import { StageBadge } from "../../components/StageBadge";
 import { errorText, t } from "../../i18n/ru";
 import "../pages.css";
@@ -34,8 +35,13 @@ function Summary({ lead }: { lead: LeadDetail }) {
         </Descriptions.Item>
         <Descriptions.Item label={t.leads.score}>{lead.score}</Descriptions.Item>
         <Descriptions.Item label={t.leads.owner}>
-          {t.owner[lead.owner_mode] ?? lead.owner_mode}
+          <Owner lead={lead} />
         </Descriptions.Item>
+        {lead.client_id ? (
+          <Descriptions.Item label={t.lead.client}>
+            <Link to={`/clients/${String(lead.client_id)}`}>{t.lead.openClient}</Link>
+          </Descriptions.Item>
+        ) : null}
         <Descriptions.Item label={t.leads.language}>
           {lead.language.toUpperCase()}
         </Descriptions.Item>

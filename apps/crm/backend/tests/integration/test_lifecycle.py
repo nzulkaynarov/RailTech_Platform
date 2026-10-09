@@ -18,7 +18,7 @@ from app.services.leads import LeadService
 from app.services.settings import SettingsService
 from tests.integration.crm_helpers import FakeSender, make_user
 from tests.integration.test_customer import USER, msg, service
-from tests.unit.agents.fakes import ReplayModel
+from tests.unit.agents.fakes import ReplayModel, reply
 
 pytestmark = pytest.mark.integration
 __all__ = ["service"]
@@ -128,3 +128,67 @@ async def test_make_customer_does_not_silently_move_telegram_to_another_client(
         assert identity.client_id == first
         assert identity.verified_at is not None
         assert identity.verified_at <= datetime.now(UTC)
+
+
+async def test_waiting_lead_is_acknowledged_without_model_once_per_interval(
+    service: tuple[ConversationService, ReplayModel, list[str]],
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    svc, model, _ = service
+    lead_id = await escalated_prospect(sessions, svc)
+    async with sessions() as session, session.begin():
+        lead = await session.get(Lead, lead_id)
+        assert lead is not None
+        lead.last_bot_msg_at = None  # передача была давно
+
+    first = await svc.handle_message(msg("Ау, есть кто?"))
+    second = await svc.handle_message(msg("Жду ответа"))
+
+    assert [o.text for o in first] == ["Ваше сообщение передано коллеге, он скоро ответит."]
+    assert second == []
+    assert model.requests == []
+
+
+async def test_human_request_while_waiting_raises_priority(
+    service: tuple[ConversationService, ReplayModel, list[str]],
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    svc, _, _ = service
+    lead_id = await escalated_prospect(sessions, svc)
+    async with sessions() as session, session.begin():
+        escalation = (await session.scalars(select(Escalation))).one()
+        escalation.priority, escalation.reason_codes = "info", ["attachment_received"]
+
+    await svc.handle_message(
+        Incoming(tg_user_id=USER, chat_id=USER, text="/human", human_requested=True)
+    )
+
+    async with sessions() as session:
+        escalation = (await session.scalars(select(Escalation))).one()
+        lead = await session.get(Lead, lead_id)
+    assert escalation.priority == "hot"
+    assert "human_requested" in escalation.reason_codes
+    assert lead is not None
+    assert lead.owner_mode == "paused"
+
+
+async def test_lost_lead_who_returns_can_be_taken_again(
+    service: tuple[ConversationService, ReplayModel, list[str]],
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    svc, model, _ = service
+    lead_id = await escalated_prospect(sessions, svc)
+    who, leads = await manager(sessions)
+    await leads.take(who, lead_id)
+    await leads.close(who, lead_id, "lost", "дорого")
+    model.responses.append(reply("Здравствуйте! Чем помочь?"))
+
+    await svc.handle_message(msg("Мы передумали, давайте обсудим"))
+    async with sessions() as session:
+        lead = await session.get(Lead, lead_id)
+        assert lead is not None
+        assert (lead.stage, lead.owner_mode) == ("engaged", "bot")
+
+    await leads.take(who, lead_id)
+    stage, owner_mode, _ = await state(sessions, lead_id)
+    assert (stage, owner_mode) == ("in_progress", "human")

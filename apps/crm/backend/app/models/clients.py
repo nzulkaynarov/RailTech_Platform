@@ -100,3 +100,5 @@ class ServiceRequest(TimestampMixin, Base):
     summary: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(8), server_default=sql("'open'"))
     closed_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    resolution: Mapped[str | None] = mapped_column(Text)
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

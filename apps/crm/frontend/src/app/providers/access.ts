@@ -12,7 +12,7 @@ import { keys } from "../../api/queries";
  */
 // Ресурс Refine → (ресурс, действие) матрицы прав бэкенда.
 const RESOURCE_MAP: Record<string, [string, string]> = {
-  inbox: ["leads", "read"],
+  inbox: ["leads", "take"], // очередь работы — не наблюдателю (SPEC §10.1)
   leads: ["leads", "read"],
   dashboard: ["dashboard", "read"],
   clients: ["clients", "read"],

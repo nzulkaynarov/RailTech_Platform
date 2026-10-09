@@ -20,10 +20,15 @@ from app.domain.errors import (
 from app.domain.stages import OwnerMode, Stage, TransitionSource
 from app.models.clients import Client, ServiceRequest
 from app.models.leads import Lead, TelegramIdentity
+from app.models.qualification import Escalation
 from app.repositories import events
 from app.security import audit
 from app.security.principal import Principal
 from app.services import stages
+from app.services.escalation import OPEN_STATUSES
+from app.services.lead_messenger import LeadMessenger
+from app.services.leads import LANGUAGES
+from app.services.settings import SettingsService
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,8 +42,15 @@ class ClientPatch:
 
 
 class ClientService:
-    def __init__(self, sessions: async_sessionmaker[AsyncSession]) -> None:
+    def __init__(
+        self,
+        sessions: async_sessionmaker[AsyncSession],
+        settings: SettingsService | None = None,
+        messenger: LeadMessenger | None = None,
+    ) -> None:
         self._sessions = sessions
+        self._settings = settings
+        self._messenger = messenger
 
     async def create(self, who: Principal, name: str, inn: str | None, segment: str | None) -> int:
         async with self._sessions() as session, session.begin():
@@ -157,15 +169,54 @@ class ClientService:
             await events.publish(session, "lead.updated", lead_id=lead_id)
             return client_id
 
-    async def close_service_request(self, who: Principal, request_id: int) -> None:
+    async def close_service_request(self, who: Principal, request_id: int, resolution: str) -> None:
+        """Закрыть запрос клиента с итогом: клиент получает ответ в боте (ADR-0015)."""
+        now = datetime.now(UTC)
         async with self._sessions() as session, session.begin():
             row = await session.get(ServiceRequest, request_id, with_for_update=True)
             if row is None:
                 raise NotFoundError("service request not found")
+            if row.status != "open":
+                raise ConflictError("service request is already closed")
             row.status, row.closed_by = "closed", who.user_id
+            row.resolution, row.closed_at = resolution.strip(), now
+            lead = await session.get(Lead, row.lead_id) if row.lead_id else None
+            if lead is not None:
+                await _resolve_info_escalation(session, lead.id, now)
             await audit.record(
-                session, who.actor, "client.close_request", "service_request", request_id
+                session,
+                who.actor,
+                "client.close_request",
+                "service_request",
+                request_id,
+                after={"resolution": row.resolution},
             )
+            summary, language = row.summary, lead.language if lead else "ru"
+        if lead is not None and self._settings is not None and self._messenger is not None:
+            cfg = await self._settings.get()
+            text = cfg.texts.service_request_closed.get(
+                LANGUAGES.get(language, "ru"), summary=summary[:200], resolution=resolution.strip()
+            )
+            await self._messenger.send(lead.id, text, {"notice": "service_request_closed"})
+
+
+async def _resolve_info_escalation(session: AsyncSession, lead_id: int, now: datetime) -> None:
+    """Информационная эскалация о запросе закрывается вместе с ним; срочные — нет."""
+    escalation = (
+        await session.scalars(
+            select(Escalation).where(
+                Escalation.lead_id == lead_id,
+                Escalation.status.in_(OPEN_STATUSES),
+                Escalation.priority == "info",
+            )
+        )
+    ).first()
+    if escalation is not None:
+        escalation.status, escalation.resolved_at = "closed", now
+        escalation.outcome = "service_request_closed"
+        await events.publish(
+            session, "escalation.updated", lead_id=lead_id, escalation_id=escalation.id
+        )
 
 
 async def _bind_identities(
