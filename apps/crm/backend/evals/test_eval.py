@@ -153,6 +153,7 @@ async def container() -> AsyncIterator[Container]:
         pytest.fail("LITELLM_API_KEY не задан: evals нужны реальные модели (make eval)")
     c = Container(settings)
     yield c
+    await c.llm.close()  # иначе незакрытые сокеты к LiteLLM роняют pytest (filterwarnings=error)
     await c.engine.dispose()
 
 

@@ -6,9 +6,11 @@
 """
 
 import json
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 
 import pytest
+import pytest_asyncio
 
 from app.agents.llm import ChatModel
 from app.agents.qualifier.graph import QualifierAgent, QualifierInput
@@ -47,12 +49,14 @@ class Outcome:
 RESULTS: list[Outcome] = []
 
 
-@pytest.fixture(scope="module")
-def agent() -> QualifierAgent:
+@pytest_asyncio.fixture(scope="module", loop_scope="module")
+async def agent() -> AsyncIterator[QualifierAgent]:
     settings = Settings()
     if not settings.litellm_api_key.get_secret_value():
         pytest.fail("LITELLM_API_KEY не задан: evals нужны реальные модели (make eval)")
-    return QualifierAgent(ChatModel(make_client(settings), "qualifier-model"))
+    client = make_client(settings)
+    yield QualifierAgent(ChatModel(client, "qualifier-model"))
+    await client.close()  # иначе незакрытые сокеты к LiteLLM роняют pytest (filterwarnings=error)
 
 
 @MODULE_LOOP
