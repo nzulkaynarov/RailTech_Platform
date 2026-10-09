@@ -71,6 +71,7 @@ export const ru = {
     emptyEscalations: "Открытых эскалаций нет — бот справляется",
     emptyMine: "У вас нет лидов в работе",
     emptyUnassigned: "Все передачи разобраны",
+    unread: "Ждёт ответа",
   },
   leads: {
     name: "Лид",
@@ -264,6 +265,7 @@ export const ru = {
     statuses: labelsRu.gap,
   },
   settings: {
+    hoursSample: "пн–пт с 9:00 до 18:00 по Ташкенту (из «Рабочих часов»)",
     dryRun: "Сухой прогон на последних 50 диалогах",
     dialogs: "Диалогов",
     escalatedNow: "Эскалаций сейчас",
@@ -365,6 +367,11 @@ export const ru = {
     requestStatus: labelsRu.serviceRequest,
     fromLead: "из диалога",
     makeCustomer: "Сделать клиентом",
+    edit: "Изменить",
+    owner: "Ответственный",
+    notes: "Заметки",
+    deactivateHint:
+      "Неактивный клиент не получает документы в боте — бот будет говорить с ним как с лидом.",
     existing: "Существующий клиент",
     newName: "или новый клиент",
     types: {

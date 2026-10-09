@@ -23,6 +23,7 @@ import { allowed } from "../../app/providers/access";
 import { StageBadge } from "../../components/StageBadge";
 import { errorText, t } from "../../i18n/ru";
 import { ClientDocuments } from "./ClientDocuments";
+import { EditClient } from "./EditClient";
 import { ServiceRequests } from "./ServiceRequests";
 import { formatDate } from "../../lib/time";
 import { PageHeader } from "../../components/PageHeader";
@@ -69,7 +70,11 @@ export function ClientDetailPage() {
 
   return (
     <Space direction="vertical" size={16} style={{ width: "100%" }}>
-      <PageHeader back="/clients" title={data.name} />
+      <PageHeader
+        back="/clients"
+        title={data.name}
+        extra={canWrite ? <EditClient client={data} /> : null}
+      />
       <Descriptions size="small" column={{ xs: 1, md: 3 }}>
         <Descriptions.Item label={t.clients.inn}>{data.inn ?? t.common.none}</Descriptions.Item>
         <Descriptions.Item label={t.clients.segment}>

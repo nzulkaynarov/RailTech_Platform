@@ -33,7 +33,9 @@ function Localized({ name, label: title, company }: Omit<Props, "schema" | "root
                 {({ getFieldValue }) => (
                   <Typography.Paragraph type="secondary" style={{ whiteSpace: "pre-wrap" }}>
                     {t.settings.preview}:{" "}
-                    {String(getFieldValue([...name, lang]) ?? "").replaceAll("{company}", company)}
+                    {String(getFieldValue([...name, lang]) ?? "")
+                      .replaceAll("{company}", company)
+                      .replaceAll("{hours}", t.settings.hoursSample)}
                   </Typography.Paragraph>
                 )}
               </Form.Item>

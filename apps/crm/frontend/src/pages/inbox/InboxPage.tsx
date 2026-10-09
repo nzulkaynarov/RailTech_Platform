@@ -1,4 +1,15 @@
-import { App as AntApp, Badge, Button, Card, Empty, List, Space, Tooltip, Typography } from "antd";
+import {
+  App as AntApp,
+  Badge,
+  Button,
+  Card,
+  Empty,
+  List,
+  Space,
+  Tag,
+  Tooltip,
+  Typography,
+} from "antd";
 import { Link } from "react-router";
 
 import type { LeadOut } from "../../api/generated/model";
@@ -45,6 +56,7 @@ function LeadItem({ lead, canTake }: { lead: LeadOut; canTake: boolean }) {
               #{lead.id} · {lead.display_name || t.common.none}
             </Link>
             {lead.escalation ? <PriorityTag priority={lead.escalation.priority} /> : null}
+            {lead.unread ? <Tag color="orange">{t.inbox.unread}</Tag> : null}
             <StageBadge stage={lead.stage} />
           </Space>
         }
