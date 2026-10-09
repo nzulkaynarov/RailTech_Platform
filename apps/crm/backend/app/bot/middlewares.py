@@ -11,6 +11,7 @@ from aiogram.types import Message, TelegramObject, Update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.domain.language import Language
 from app.models.leads import TgUpdate
 from app.schemas.settings import AppSettings
 
@@ -67,10 +68,20 @@ class RateLimitMiddleware(BaseMiddleware):
         if len(hits) >= cfg.bot.rate_limit_per_minute:
             if now - self._warned.get(user_id, -120.0) > 60:
                 self._warned[user_id] = now
-                code = (event.from_user.language_code or "ru")[:2]
-                language = code if code in ("ru", "uz", "en") else "ru"
-                await event.answer(cfg.texts.rate_limited.get(language))  # type: ignore[arg-type]
+                await event.answer(cfg.texts.rate_limited.get(await _language(event, data)))
             logger.info("tg_rate_limited", tg_user_id=user_id)
             return None
         hits.append(now)
         return await handler(event, data)
+
+
+async def _language(event: Message, data: dict[str, Any]) -> Language:
+    """Язык лида из CRM (а не настроек Telegram), если сервис диалога доступен."""
+    conversation = data.get("conversation")
+    user = event.from_user
+    if conversation is not None and user is not None:
+        language: Language = await conversation.language_of(user.id)
+        return language
+    code = ((user.language_code if user else None) or "ru")[:2]
+    languages: dict[str, Language] = {"uz": "uz", "en": "en"}
+    return languages.get(code, "ru")

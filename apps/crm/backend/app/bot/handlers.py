@@ -12,6 +12,7 @@ import structlog
 from aiogram import Bot, F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.types import BufferedInputFile, CallbackQuery, Message, User
+from aiogram.utils.chat_action import ChatActionSender
 
 from app.bot import keyboards
 from app.integrations.s3 import ObjectStorage
@@ -118,12 +119,22 @@ async def on_human(
     await send(bot, message.chat.id, await conversation.handle_message(inc), settings)
 
 
+@router.message(F.text.startswith("/"), F.from_user)
+async def on_unknown_command(
+    message: Message, bot: Bot, conversation: ConversationService, settings: SettingsService
+) -> None:
+    """Неизвестная команда — подсказка, а не вопрос модели."""
+    await send(bot, message.chat.id, await conversation.help(_user(message).id), settings)
+
+
 @router.message(F.text, F.from_user)
 async def on_text(
     message: Message, bot: Bot, conversation: ConversationService, settings: SettingsService
 ) -> None:
     inc = _incoming(message, message.text or "")
-    out = await conversation.handle_message(inc)
+    # Ответ модели может идти десятки секунд — показываем «печатает…».
+    async with ChatActionSender.typing(chat_id=message.chat.id, bot=bot):
+        out = await conversation.handle_message(inc)
     await send(bot, message.chat.id, out, settings, conversation)
 
 

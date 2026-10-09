@@ -349,7 +349,7 @@ class ConversationService(ErasureMixin):
             replies = [result.reply] if result.reply and not (fallback and notice) else []
             offer: Keyboard | None = "handoff_offer" if fallback and not notice else None
             if notice is not None and result.action != Action.HANDOFF:
-                notice_text = getattr(cfg.texts, notice).get(turn.language)
+                notice_text = cfg.lead_notice(notice, turn.language)
                 replies.append(notice_text)
             outgoing: list[Outgoing] = []
             for index, text in enumerate(replies):

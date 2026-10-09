@@ -33,6 +33,31 @@ def _t(ru: str, uz: str, en: str) -> LocalizedText:
     return LocalizedText(ru=ru, uz=uz, en=en)
 
 
+_DAYS: dict[str, tuple[str, ...]] = {
+    "ru": ("пн", "вт", "ср", "чт", "пт", "сб", "вс"),
+    "uz": ("dushanba", "seshanba", "chorshanba", "payshanba", "juma", "shanba", "yakshanba"),
+    "en": ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"),
+}
+_ZONES: dict[str, dict[str, str]] = {
+    "Asia/Tashkent": {"ru": "по Ташкенту", "uz": "Toshkent vaqti bilan", "en": "Tashkent time"},
+}
+
+
+def _day_ranges(days: list[int], names: tuple[str, ...]) -> str:
+    """[0,1,2,3,4] → «пн–пт»; [0,2,4] → «пн, ср, пт»."""
+    groups: list[list[int]] = []
+    for day in days:
+        if groups and day == groups[-1][-1] + 1:
+            groups[-1].append(day)
+        else:
+            groups.append([day])
+    parts = [
+        f"{names[g[0]]}–{names[g[-1]]}" if len(g) > 2 else ", ".join(names[d] for d in g)
+        for g in groups
+    ]
+    return ", ".join(parts)
+
+
 class CompanySettings(_Strict):
     name: str = "RailTech"
     crm_base_url: str = "http://localhost"
@@ -44,6 +69,17 @@ class BusinessHoursSettings(_Strict):
     end: time = time(18, 0)
     weekdays: list[int] = Field(default_factory=lambda: [0, 1, 2, 3, 4])
     holidays: list[date] = Field(default_factory=list)
+
+    def describe(self, language: Language) -> str:
+        """«пн–пт с 9:00 до 18:00 по Ташкенту» на языке лида — для текстов бота."""
+        days = _day_ranges(sorted(set(self.weekdays)), _DAYS[language])
+        start, end = f"{self.start:%H:%M}".lstrip("0"), f"{self.end:%H:%M}".lstrip("0")
+        place = _ZONES.get(self.timezone, {}).get(language, self.timezone)
+        if language == "uz":
+            return f"{days}, {place} {start} dan {end} gacha"
+        if language == "en":
+            return f"{days}, {start}–{end} {place}"
+        return f"{days} с {start} до {end} {place}"
 
     def domain(self) -> BusinessHours:
         return BusinessHours(
@@ -97,10 +133,11 @@ class TextsSettings(_Strict):
         "Savolingizni hamkasbimga topshiraman — u tez orada shu yerda siz bilan bog'lanadi.",
         "I'm passing your question to a colleague who will reply here shortly.",
     )
+    # {hours} подставляет код из «Рабочих часов» — текст не расходится с настройкой.
     off_hours: LocalizedText = _t(
-        "Передаю ваш вопрос коллеге. Сейчас нерабочее время: мы работаем пн–пт с 9:00 до 18:00 по Ташкенту и ответим в ближайшее рабочее время.",
-        "Savolingizni hamkasbimga topshiraman. Hozir ish vaqti emas: biz dushanba–juma, Toshkent vaqti bilan 9:00 dan 18:00 gacha ishlaymiz va eng yaqin ish vaqtida javob beramiz.",
-        "I'm passing your question to a colleague. It's outside working hours now: we work Mon–Fri, 9:00–18:00 Tashkent time, and will reply during the next working hours.",
+        "Передаю ваш вопрос коллеге. Сейчас нерабочее время: мы работаем {hours} и ответим в ближайшее рабочее время.",
+        "Savolingizni hamkasbimga topshiraman. Hozir ish vaqti emas: biz {hours} ishlaymiz va eng yaqin ish vaqtida javob beramiz.",
+        "I'm passing your question to a colleague. It's outside working hours now: we work {hours} and will reply during the next working hours.",
     )
     waiting_for_manager: LocalizedText = _t(
         "Ваше сообщение передано коллеге, он скоро ответит.",
@@ -291,3 +328,8 @@ class AppSettings(_Strict):
     )
     notifications: NotificationsSettings = Field(default_factory=NotificationsSettings)
     budget: BudgetSettings = Field(default_factory=BudgetSettings)
+
+    def lead_notice(self, key: Literal["handoff", "off_hours"], language: Language) -> str:
+        """Текст лиду при передаче менеджеру; рабочие часы — из настроек."""
+        text: LocalizedText = getattr(self.texts, key)
+        return text.get(language, hours=self.business_hours.describe(language))

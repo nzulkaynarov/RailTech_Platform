@@ -14,7 +14,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.bot import channel, handlers
+from app.bot import channel, commands, handlers
 from app.bot.middlewares import IdempotencyMiddleware, RateLimitMiddleware
 from app.config import Settings
 from app.integrations.s3 import ObjectStorage
@@ -70,6 +70,7 @@ class BotRuntime:
 
     async def start(self) -> None:
         allowed = self.dispatcher.resolve_used_update_types()
+        await commands.publish(self.bot)
         if self._config.telegram_mode == "polling":
             await self.bot.delete_webhook(drop_pending_updates=False)
             self._polling = asyncio.create_task(
