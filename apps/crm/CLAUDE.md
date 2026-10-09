@@ -37,14 +37,14 @@
 ```
 backend/   Python 3.12 · uv · FastAPI · SQLAlchemy 2 async · Alembic · aiogram 3 · LangGraph · FastMCP · Procrastinate · pycasbin · structlog
 frontend/  React 18 · TypeScript · Vite · Refine · Ant Design · orval (клиент из OpenAPI) · Vitest · Playwright
-infra/     Docker Compose (base/dev/prod) · Caddy · LiteLLM · Langfuse · MinIO · PostgreSQL 16 + pgvector
+infra/     Docker Compose (base/dev/prod) · Caddy · LiteLLM · Langfuse · RustFS (S3) · PostgreSQL 16 + pgvector
 ```
 
 | Команда | Что делает | Где можно |
 |---|---|---|
 | `make check` | ruff + mypy + eslint + tsc + unit-тесты | у тебя |
 | `make test` | unit | у тебя |
-| `make test-int` | integration (нужны Postgres/MinIO) | CI, стенд |
+| `make test-int` | integration (нужны Postgres/RustFS) | CI, стенд |
 | `make test-e2e` | e2e | CI, стенд |
 | `make eval` / `make promptfoo` | evals (нужны ключи моделей) | CI (`eval-gate`), стенд |
 | `make openapi` | экспорт OpenAPI + генерация клиента | у тебя |
@@ -85,8 +85,8 @@ infra/     Docker Compose (base/dev/prod) · Caddy · LiteLLM · Langfuse · Min
 
 Ты не можешь поднять Docker. Поэтому:
 
-1. **Разделяй тесты маркерами:** `unit` (по умолчанию, без внешних сервисов), `integration` (Postgres/MinIO через CI services или testcontainers), `e2e`, `live` (реальные модели; CI не запускает), `eval`.
-2. **Мокай границы, не середину:** LiteLLM — через записанные ответы (`tests/fixtures/llm/*.json`, фикстура `llm_replay`); Telegram — через фейковый `Bot` aiogram; MinIO — через `moto`-подобный стаб или integration.
+1. **Разделяй тесты маркерами:** `unit` (по умолчанию, без внешних сервисов), `integration` (Postgres/RustFS через CI services или testcontainers), `e2e`, `live` (реальные модели; CI не запускает), `eval`.
+2. **Мокай границы, не середину:** LiteLLM — через записанные ответы (`tests/fixtures/llm/*.json`, фикстура `llm_replay`); Telegram — через фейковый `Bot` aiogram; S3 (RustFS) — через `moto`-подобный стаб или integration.
 3. **Для каждой задачи, которую может проверить только человек**, добавляй шаг в чек-лист приёмки в PR (раздел «Проверить на dev») с точными действиями и ожидаемым результатом.
 4. **CI — твои руки на стенде.** Пуш → смотри результат job'ов → чини. Не проси человека запускать то, что может запустить CI.
 5. **Скрипты для человека** (`scripts/*.sh|py`) должны быть идемпотентными, с `--help`, понятными сообщениями об ошибках и шагом «что делать дальше».

@@ -1,6 +1,6 @@
 # RailTech CRM — техническое задание (SPEC)
 
-Версия 2.0 · 2026-10-08
+Версия 2.2 · 2026-10-08 (RustFS — ADR-0009; модели — ADR-0004; docling-serve и MCP SDK — ADR-0011)
 
 Документ описывает, *как* устроена система: архитектура, ядро, данные, агенты, интерфейсы, безопасность, стенды, связи. Порядок реализации — в `PLAN.md`; зачем всё это — в `BUSINESS.md`; правила работы для Claude Code — в `CLAUDE.md`.
 
@@ -30,13 +30,13 @@
 | Web/API | FastAPI + Pydantic v2 + SQLAlchemy 2 (async) + Alembic | OpenAPI как контракт для фронта |
 | Telegram | aiogram 3 | Dev — long polling; prod — webhook с `secret_token` |
 | Оркестрация агентов | LangGraph | `PostgresSaver` для чекпоинтов |
-| Инструменты агентов | MCP-серверы на `FastMCP` (Python SDK), транспорт streamable HTTP; клиент — `langchain-mcp-adapters` | Три сервера: `kb-mcp`, `crm-mcp`, `docs-mcp` |
+| Инструменты агентов | MCP-серверы на официальном Python SDK `mcp` (`MCPServer`, бывший FastMCP), транспорт streamable HTTP (stateless, JSON); клиент — `mcp.Client` (ADR-0011) | Три сервера: `kb-mcp`, `crm-mcp`, `docs-mcp` |
 | Шлюз моделей | LiteLLM Proxy (self-hosted) | Алиасы: `dialog-model`, `qualifier-model`, `judge-model`, `embed-model`, `fallback-model` |
 | Модели | Внешние API. Рекомендация: диалог — Anthropic Sonnet-класс; квалификатор/judge — Anthropic Haiku-класс или Google Flash-класс; embeddings — Google Gemini Embedding (мультиязычный, узбекский) или Voyage multilingual | Конкретные идентификаторы фиксируются в `infra/litellm.config.yaml` на момент старта и в ADR-0004 |
 | БД | PostgreSQL 16 + pgvector | Одна база для домена, векторов, очереди, чекпоинтов |
 | Очередь и планировщик | Procrastinate | Задачи на Postgres: события квалификатора, таймеры SLA/снуз/unresponsive, ингест KB, ежедневные отчёты |
-| Файлы | MinIO (S3-совместимый) | Документы клиентов, исходники KB, вложения из Telegram |
-| Ингест документов | docling | PDF/DOCX/PPTX/XLSX/MD/HTML → структурированный Markdown |
+| Файлы | RustFS (S3-совместимый, Apache-2.0; ADR-0009) | Документы клиентов, исходники KB, вложения из Telegram. Код работает только по протоколу S3 |
+| Ингест документов | docling: сервис `docling-serve` (CPU-образ) + `docling-core` HybridChunker в worker (ADR-0011) | PDF/DOCX/PPTX/XLSX/MD/HTML → DoclingDocument → чанки |
 | Frontend | React 18 + TypeScript + Vite + **Refine** + Ant Design | Refine даёт CRUD, dataProvider, authProvider, accessControlProvider |
 | Авторизация | JWT (access 15 мин + refresh 30 дней, httpOnly cookie), пароли argon2id | Провайдер заменяем на Keycloak (OIDC) без смены фронта — Refine authProvider |
 | RBAC | Casbin (`pycasbin`, модель RBAC с доменами на будущее) | Политики в БД, кэш в памяти, инвалидация по событию |
@@ -44,9 +44,9 @@
 | Evals | pytest (`-m eval`) + Langfuse datasets + promptfoo | §12 |
 | Качество кода | ruff (lint+format), mypy (strict на домене), pre-commit, pytest, ESLint + Prettier, Vitest + Playwright (smoke) | |
 | Инфра | Docker Compose (base + `dev` + `prod` overrides), Caddy (TLS/роутинг), GitHub Actions | |
-| Бэкапы | `pg_dump` ежедневно + `mc mirror` MinIO → отдельный volume/бакет, ротация 14 дней | prod |
+| Бэкапы | `pg_dump` 16 ежедневно + копия S3-бакетов RustFS (`python -m app s3-mirror`, ADR-0013) в контейнере `backup` → том `backups`, ротация 14 дней | prod |
 
-Явно **не используем**: локальные модели (Ollama), Redis/RabbitMQ, отдельную векторную БД, готовые CRM как ядро (ADR-0002), Keycloak на старте (ADR-0005), ORM-магию в агентах (агенты ходят в данные только через MCP).
+Явно **не используем**: локальные модели (Ollama), Redis/RabbitMQ в приложении (Redis есть только внутри профиля Langfuse), отдельную векторную БД, готовые CRM как ядро (ADR-0002), Keycloak на старте (ADR-0005), ORM-магию в агентах (агенты ходят в данные только через MCP).
 
 ---
 
@@ -71,7 +71,7 @@
 └─────────────┘           └──────┘         │          │           │
                                            ▼          ▼           ▼
 ┌──────────┐  задачи   ┌─────────────────────────────────────────────────┐   ┌───────┐
-│ worker   │◄─────────►│ PostgreSQL 16 + pgvector                        │   │ MinIO │
+│ worker   │◄─────────►│ PostgreSQL 16 + pgvector                        │   │RustFS │
 │Procrast. │           │ домен · векторы · очередь · чекпоинты · casbin  │   └───────┘
 │ +qualif. │           └─────────────────────────────────────────────────┘
 └──────────┘
@@ -87,16 +87,17 @@
 | Сервис | Образ/код | Порты (внутр.) | Назначение |
 |---|---|---|---|
 | `postgres` | `pgvector/pgvector:pg16` | 5432 | Все данные |
-| `minio` | `minio/minio` | 9000/9001 | Файлы |
+| `rustfs` (+ `s3-init` — создание бакетов) | `rustfs/rustfs` | 9000/9001 | Файлы (S3) |
 | `litellm` | `ghcr.io/berriai/litellm` | 4000 | Шлюз моделей, ключи провайдеров только здесь |
-| `langfuse` (+ зависимости по официальному compose) | `langfuse/langfuse` | 3000 | Трейсинг |
+| `langfuse` (+ ClickHouse, Redis — внутренние зависимости Langfuse по официальному compose) | `langfuse/langfuse` v4 | 3000 | Трейсинг; на prod — поддомен `langfuse.<домен>` с IP allow-list |
 | `api` | `./backend` | 8000 | FastAPI: бот, агент, REST, auth |
 | `worker` | `./backend` (entrypoint worker) | — | Procrastinate: квалификатор, таймеры, ингест |
+| `docling` | `docling-serve-cpu` | 5001 | Конвертация документов KB и клиентов (ADR-0011) |
 | `kb-mcp`, `crm-mcp`, `docs-mcp` | `./backend` (entrypoint mcp:<name>) | 8101/8102/8103 | Инструменты агентов |
 | `web` | `./frontend` → статика | — | Раздаётся Caddy |
-| `caddy` | `caddy:2` | 80/443 | TLS, роутинг `/api`, `/`, `/langfuse` (prod, по IP-allowlist) |
+| `caddy` | `caddy:2` | 80/443 | TLS, роутинг `/api`, `/`; поддомен Langfuse (prod, по IP-allowlist) |
 
-Наружу (prod) открыты только `caddy:443` (и 80 для ACME). MCP, Postgres, MinIO, LiteLLM — только во внутренней сети compose.
+Наружу (prod) открыты только `caddy:443` (и 80 для ACME). MCP, Postgres, RustFS, LiteLLM — только во внутренней сети compose.
 
 ### 3.3. Потоки
 
@@ -142,21 +143,21 @@ railtech-crm/
 │   │   ├── api/v1/           # роутеры REST: leads, clients, documents, kb, settings, users, dashboard, auth
 │   │   ├── bot/              # aiogram: handlers, middlewares (idempotency, consent, rate-limit)
 │   │   ├── agents/
-│   │   │   ├── dialog/       # graph.py, nodes.py, prompts/, tools.py (MCP client)
-│   │   │   └── qualifier/    # graph.py, schema.py, prompts/
+│   │   │   ├── dialog/       # graph.py, nodes.py, tools.py (MCP client)
+│   │   │   └── qualifier/    # graph.py, schema.py
 │   │   ├── domain/           # чистая логика: stage_machine.py, scoring.py, triggers.py, escalation.py, consent.py
 │   │   ├── services/         # use-cases над репозиториями: LeadService, ClientService, KbService, DocumentService, UserService, NotificationService
 │   │   ├── repositories/     # доступ к БД
 │   │   ├── models/           # SQLAlchemy
 │   │   ├── schemas/          # Pydantic DTO
 │   │   ├── security/         # auth.py (JWT), rbac.py (casbin), audit.py, pii.py (маскирование)
-│   │   ├── integrations/     # telegram.py, litellm.py, langfuse.py, minio.py
+│   │   ├── integrations/     # telegram.py, litellm.py, langfuse.py, s3.py
 │   │   ├── tasks/            # Procrastinate: qualify.py, timers.py, ingest.py, reports.py
 │   │   └── mcp/              # kb_server.py, crm_server.py, docs_server.py (FastMCP)
 │   ├── prompts/              # dialog_prospect.md, dialog_customer.md, qualifier.md, judge_faithfulness.md
 │   ├── tests/
 │   │   ├── unit/             # домен, схемы, промпт-шаблоны — без внешних сервисов
-│   │   ├── integration/      # с Postgres/MinIO (testcontainers или CI services), помечены @integration
+│   │   ├── integration/      # с Postgres/RustFS (testcontainers или CI services), помечены @integration
 │   │   └── e2e/              # сценарии через Telegram-эмуляцию + REST, помечены @e2e
 │   └── evals/
 │       ├── golden/*.yaml  fixtures/kb/*  test_eval.py  promptfooconfig.yaml
@@ -261,7 +262,10 @@ products(key PK, name, description, is_active)
 documents(id, client_id, type 'contract'|'proposal'|'letter'|'invoice'|'act'|'other', title, number TEXT NULL, doc_date DATE NULL,
           storage_key, mime, size_bytes, extracted_text TEXT, tsv GENERATED, uploaded_by, is_visible_to_client BOOL DEFAULT true)
 document_access_log(id, document_id, accessed_by_type 'bot'|'user', accessed_by_id, tg_user_id NULL, created_at)
+service_requests(id, client_id, lead_id NULL, summary, status 'open'|'closed', closed_by NULL)   -- инструмент create_service_request
 ```
+
+Документы скачиваются сотрудником через API (`GET /documents/{id}/download`, запись в журнал), клиентом — файлом от бота; RustFS наружу не публикуется.
 
 ### 5.7. Настройки
 
@@ -269,12 +273,13 @@ document_access_log(id, document_id, accessed_by_type 'bot'|'user', accessed_by_
 settings(key PK, value JSONB, schema_version INT, updated_by, updated_at)
 ```
 Ключи и JSON-схемы валидируются Pydantic-моделями в `app/schemas/settings.py`:
-`company`, `business_hours`, `texts` (greeting/consent/handoff/off_hours × ru/uz/en), `escalation` (триггеры, пороги, SLA), `kb` (`min_score`, `top_k`), `bot` (persona, `max_words`, `max_turns_without_progress`), `competitors`, `stop_words`, `notifications` (`channel_id`, `duty_user_ids`), `budget` (`daily_usd`, `fallback_model_enabled`).
+`company`, `business_hours`, `texts` (greeting/consent/handoff/off_hours × ru/uz/en), `escalation` (триггеры, пороги, `no_progress_turns`, SLA), `kb` (`min_score`, `top_k`), `bot` (persona, `max_words`, `history_messages`, `rate_limit_per_minute`, `unresponsive_days`), `competitors`, `stop_words`, `notifications` (`channel_id`, `duty_user_ids`), `budget` (`daily_usd`, `fallback_model_enabled`).
 
 ### 5.8. Техническое
 
 - Таблицы Procrastinate (`procrastinate_*`) — создаются его миграциями.
 - Таблицы LangGraph `PostgresSaver` (`checkpoints`, `checkpoint_writes`, ...).
+- `system_alerts(key PK, active, detail, first_seen_at, sent_at, resolved_at, updated_at)` — дедупликация системных алертов монитора (§13).
 
 ---
 
@@ -292,6 +297,7 @@ ALLOWED = {
   ("engaged","qualified"):{"qualifier"},
   ("*","handoff"):        {"trigger"},            # из new|engaged|qualified|unresponsive
   ("handoff","in_progress"): {"user"},            # Забрать
+  ("new"|"engaged"|"qualified"|"unresponsive","in_progress"): {"user"},  # Забрать из CRM без эскалации (ADR-0012)
   ("handoff","engaged"|"qualified"): {"user"},    # Вернуть боту → в стадию до handoff
   ("in_progress","won"|"lost"): {"user"},
   ("in_progress","engaged"|"qualified"): {"user"},# Вернуть боту из работы
@@ -328,7 +334,7 @@ load_context → detect_language → guard_consent → select_mode(prospect|cust
 - `decide` (код): `owner_mode != bot` → стоп; hard-триггер по стоп-словам/`/human` → `handoff`; документ найден однозначно → `deliver_document`; `best_score < min_score` и вопрос по продукту → `fallback`; потребность не ясна и стадия ≤ engaged → `answer` с флагом «один уточняющий вопрос»; иначе `answer`.
 - `answer/clarify`: `dialog-model`, промпт `dialog_prospect.md` / `dialog_customer.md`, в контексте только найденные фрагменты. ≤ 120 слов, без списков, максимум один вопрос.
 - `fallback`: честный отказ + `kb_gaps` (upsert по нормализованному вопросу, `occurrences++`).
-- `deliver_document`: отправка файла из MinIO через Telegram + `document_access_log`.
+- `deliver_document`: отправка файла из S3 (RustFS) через Telegram + `document_access_log`.
 - Таймаут вызова модели 20 с, один ретрай, затем `fallback-model`; при недоступности — служебное сообщение лиду, событие сохраняется.
 
 Инструменты по режимам:
@@ -436,7 +442,7 @@ class QualifierOutput(BaseModel):
 
 ### 9.2. Клиентский бот
 
-Команды: `/start`, `/lang`, `/human`, `/delete`, `/help`. Middleware: идемпотентность, rate-limit (20 сообщений/мин на пользователя, при превышении — вежливое сообщение), маскирование PII в логах, проверка согласия. Вложения лида (фото/документы) сохраняются в MinIO и показываются в CRM; бот в v2 на вложения отвечает «передам коллеге» + триггер `info`.
+Команды: `/start`, `/lang`, `/human`, `/delete`, `/help`. Middleware: идемпотентность, rate-limit (20 сообщений/мин на пользователя, при превышении — вежливое сообщение), маскирование PII в логах, проверка согласия. Вложения лида (фото/документы) сохраняются в S3 (RustFS) и показываются в CRM; бот в v2 на вложения отвечает «передам коллеге» + триггер `info`.
 
 ---
 
@@ -480,10 +486,10 @@ Refine с кастомным `dataProvider` (REST `/api/v1`), `authProvider` (co
 | PII | Маскирование телефонов/email/ИНН в логах и Langfuse (`security/pii.py` как processor structlog и Langfuse mask-функция) |
 | Инъекции в промпт | Пользовательский текст и фрагменты KB — в отдельных XML-блоках; системные правила запрещают раскрытие инструкций; eval-кейсы на injection; инструменты не принимают идентификаторов от модели |
 | Аудит | Все мутации через REST и кнопку в канале — `audit_log` (before/after) |
-| Транспорт | TLS на Caddy (ACME), HSTS; `/langfuse` и `/minio-console` на prod — только с IP allow-list |
+| Транспорт | TLS на Caddy (ACME), HSTS; Langfuse и консоль RustFS на prod — только с IP allow-list |
 | Зависимости | `uv lock`, `pnpm lock`, Dependabot, `pip-audit`/`npm audit` в CI |
 | Бэкапы | Ежедневно, проверка восстановления раз в месяц по runbook |
-| Бюджет моделей | LiteLLM budgets по ключам; `settings.budget.daily_usd`; при превышении диалог → `fallback-model`, квалификатор продолжает |
+| Бюджет моделей | Три уровня (ADR-0014): `settings.budget.daily_usd` — при превышении диалог → `fallback-model`, квалификатор продолжает; LiteLLM `provider_budget_config` — жёсткий суточный потолок по провайдеру; лимиты в консолях провайдеров |
 
 ---
 
@@ -500,9 +506,10 @@ Refine с кастомным `dataProvider` (REST `/api/v1`), `authProvider` (co
 
 - Трейсы: каждый ход диалога и каждый запуск квалификатора — Langfuse trace с `lead_id`, `mode`, `stage`; стоимость агрегируется.
 - Логи: structlog JSON, `request_id`, `lead_id`; уровни по env.
-- Метрики здоровья: `GET /health` (liveness), `GET /ready` (БД, MinIO, LiteLLM); ежедневный отчёт в канал (General-пост): новых лидов, эскалаций, открытых пробелов KB, стоимость.
-- Алерты (в канал, префикс ⚠️): задача в `failed` после 3 ретраев; LiteLLM недоступен > 2 мин; очередь > 100 задач; бюджет > 80 %.
-- Runbooks: деплой, откат, бэкап/восстановление, ротация ключей, «бот молчит», «эскалации не приходят», «переезд dev → prod».
+- Метрики здоровья: `GET /health` (liveness), `GET /ready` (БД, S3/RustFS, LiteLLM); ежедневный отчёт в канал (General-пост): новых лидов, эскалаций, открытых пробелов KB, стоимость.
+- Алерты (в канал, префикс ⚠️): задача в `failed` после 3 ретраев; LiteLLM недоступен > 2 мин; очередь > 100 задач; бюджет > 80 %. Монитор — периодическая задача `system_monitor` (раз в минуту, `domain/alerts.py`); дедупликация в таблице `system_alerts(key PK, active, detail, first_seen_at, sent_at, resolved_at, updated_at)`: пост на переходе в проблему, повтор не чаще 6 ч, снятие постом «✅ … в норме». Итоги дня — `daily_report` в 18:05 Asia/Tashkent (пн–пт).
+- BudgetGuard: расход за сутки (Asia/Tashkent) = `messages.meta.cost_usd` + `qualifier_runs.cost_usd`; при ≥ 100 % `budget.daily_usd` и `fallback_model_enabled` диалог идёт на `fallback-model` (кэш решения 60 с), квалификатор продолжает; `daily_usd = 0` — без лимита.
+- Runbooks: деплой, откат, бэкап/восстановление, ротация ключей, «бот молчит», «эскалации не приходят», «стоимость выросла», «откат промпта», eval-gate, «переезд dev → prod».
 
 ---
 
@@ -518,7 +525,7 @@ Refine с кастомным `dataProvider` (REST `/api/v1`), `authProvider` (co
 | Данные | `scripts/seed_demo.py` (демо-KB, демо-лиды, тестовые пользователи) | пусто + `create_admin.py` |
 | Хот-релоад | да (uvicorn `--reload`, vite dev) | нет, собранные образы |
 | Бэкапы | нет | ежедневно |
-| Доступ к Langfuse/MinIO console | открыт | IP allow-list |
+| Доступ к Langfuse/консоли RustFS | открыт | IP allow-list |
 
 Переезд dev → prod — `docs/runbooks/promote-to-prod.md`: чек-лист из `PLAN.md` фазы 9.
 
@@ -547,3 +554,5 @@ Refine с кастомным `dataProvider` (REST `/api/v1`), `authProvider` (co
 | 0006 | Procrastinate как очередь и планировщик на Postgres | 0 |
 | 0007 | Гибридный поиск RRF и пороги | 1 |
 | 0008 | HMAC-контекст для MCP вместо передачи идентификаторов моделью | 2 |
+| 0009 | S3-хранилище: RustFS вместо MinIO (community-сборки MinIO прекращены) | 0 |
+| 0010 | psycopg 3 — единственный драйвер PostgreSQL | 0 |

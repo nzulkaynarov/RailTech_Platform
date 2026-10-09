@@ -1,0 +1,60 @@
+# prod (SPEC §11, §14; PLAN Фаза 8): TLS через ACME, HSTS, security headers.
+# Langfuse и консоль RustFS — на отдельных поддоменах, только с IP из ADMIN_ALLOW_CIDRS
+# (через пробел: "203.0.113.10/32 198.51.100.0/24").
+{
+	email {$ACME_EMAIL}
+}
+
+(security_headers) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+}
+
+(admin_only) {
+	@outside not remote_ip {$ADMIN_ALLOW_CIDRS}
+	respond @outside "Forbidden" 403
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+	import security_headers
+	# antd (CSS-in-JS) вставляет <style> — 'unsafe-inline' только для стилей.
+	header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+
+	handle /api/* {
+		reverse_proxy api:8000 {
+			# SSE (/api/v1/stream): без буферизации ответа
+			flush_interval -1
+		}
+	}
+	handle /telegram/webhook {
+		reverse_proxy api:8000
+	}
+	handle /health {
+		reverse_proxy api:8000
+	}
+	handle /ready {
+		reverse_proxy api:8000
+	}
+	handle {
+		reverse_proxy web:8080
+	}
+}
+
+{$LANGFUSE_DOMAIN} {
+	import admin_only
+	import security_headers
+	reverse_proxy langfuse-web:3000
+}
+
+{$S3_CONSOLE_DOMAIN} {
+	import admin_only
+	import security_headers
+	reverse_proxy rustfs:9001
+}

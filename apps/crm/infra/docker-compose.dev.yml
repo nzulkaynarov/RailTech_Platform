@@ -1,0 +1,71 @@
+# dev-стенд (SPEC §14): hot reload, порты наружу только на 127.0.0.1, без TLS.
+
+services:
+  postgres:
+    ports: ["127.0.0.1:5432:5432"]
+
+  rustfs:
+    environment:
+      RUSTFS_CONSOLE_ENABLE: "true"
+    ports: ["127.0.0.1:9000:9000", "127.0.0.1:9001:9001"]
+
+  litellm:
+    ports: ["127.0.0.1:4000:4000"]
+
+  migrate:
+    build: { target: dev }
+    volumes: &backend-src
+      - ../backend/app:/app/app:ro
+      - ../backend/alembic:/app/alembic:ro
+      - ../backend/alembic.ini:/app/alembic.ini:ro
+      - ../backend/prompts:/app/prompts:ro
+      - ../backend/evals:/app/evals:ro
+      - ../backend/tests:/app/tests:ro
+
+  api:
+    build: { target: dev }
+    command: ["python", "-m", "app", "api", "--reload"]
+    volumes: *backend-src
+    ports: ["127.0.0.1:8000:8000"]
+
+  worker:
+    build: { target: dev }
+    volumes: *backend-src
+    restart: unless-stopped
+
+  kb-mcp:
+    build: { target: dev }
+    volumes: *backend-src
+
+  crm-mcp:
+    build: { target: dev }
+    volumes: *backend-src
+
+  docs-mcp:
+    build: { target: dev }
+    volumes: *backend-src
+
+  web:
+    build: { target: dev }
+    environment:
+      VITE_API_PROXY_TARGET: http://api:8000
+    volumes:
+      - ../frontend:/web
+      - /web/node_modules
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:5173/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+
+  caddy:
+    volumes:
+      - ./Caddyfile.dev:/etc/caddy/Caddyfile:ro
+    ports: ["${HTTP_PORT:-80}:80"]
+
+  clickhouse:
+    ports: ["127.0.0.1:8123:8123"]
+
+  langfuse-web:
+    ports: ["127.0.0.1:3000:3000"]

@@ -1,0 +1,90 @@
+# LiteLLM Proxy — единственный шлюз к моделям (SPEC §1.6, §2; ADR-0004).
+# Код знает только алиасы. Ключи провайдеров — только у сервиса litellm (env).
+#
+# model_info задан явно: встроенная карта моделей LiteLLM v1.104.2 не знает
+# claude-sonnet-5-5 / claude-haiku-5-5, а от флага supports_adaptive_thinking
+# зависит перевод reasoning_effort в output_config.effort (ADR-0004).
+
+model_list:
+  - model_name: dialog-model
+    litellm_params:
+      model: anthropic/claude-sonnet-5-5
+      api_key: os.environ/ANTHROPIC_API_KEY
+      reasoning_effort: low
+      timeout: 20
+      stream_timeout: 10
+    model_info:
+      supports_adaptive_thinking: true
+      supports_output_config: true
+      supports_response_schema: true
+      supports_sampling_params: false
+      input_cost_per_token: 0.000002
+      output_cost_per_token: 0.00001
+
+  - model_name: qualifier-model
+    litellm_params:
+      model: anthropic/claude-haiku-5-5
+      api_key: os.environ/ANTHROPIC_API_KEY
+      reasoning_effort: low
+      timeout: 30
+    model_info:
+      supports_adaptive_thinking: true
+      supports_output_config: true
+      supports_response_schema: true
+      supports_sampling_params: false
+      input_cost_per_token: 0.0000001
+      output_cost_per_token: 0.0000005
+
+  - model_name: judge-model
+    litellm_params:
+      model: anthropic/claude-sonnet-5-5
+      api_key: os.environ/ANTHROPIC_API_KEY
+      reasoning_effort: medium
+      timeout: 60
+    model_info:
+      supports_adaptive_thinking: true
+      supports_output_config: true
+      supports_response_schema: true
+      supports_sampling_params: false
+      input_cost_per_token: 0.000002
+      output_cost_per_token: 0.00001
+
+  - model_name: fallback-model
+    litellm_params:
+      model: gemini/gemini-3.8-flash
+      api_key: os.environ/GEMINI_API_KEY
+      timeout: 20
+
+  - model_name: embed-model
+    litellm_params:
+      model: gemini/gemini-embedding-2
+      api_key: os.environ/GEMINI_API_KEY
+      timeout: 30
+
+router_settings:
+  # Жёсткий потолок расходов по провайдеру (ADR-0014): счётчик в памяти прокси, без БД
+  # (глобальный max_budget LiteLLM без БД не применяется). Мягкий порог — settings.budget
+  # (BudgetGuard → fallback-model) и алерт > 80 %. Превышение → запросы к провайдеру
+  # отклоняются → бот честно передаёт диалог человеку. Значения в USD за сутки.
+  provider_budget_config:
+    anthropic:
+      budget_limit: 25
+      time_period: 1d
+    gemini:
+      budget_limit: 15
+      time_period: 1d
+  fallbacks:
+    - dialog-model: [fallback-model]
+    - qualifier-model: [fallback-model]
+  content_policy_fallbacks:
+    - dialog-model: [fallback-model]
+
+litellm_settings:
+  drop_params: true
+  num_retries: 1
+  request_timeout: 30
+  allowed_fails: 3
+  cooldown_time: 30
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY

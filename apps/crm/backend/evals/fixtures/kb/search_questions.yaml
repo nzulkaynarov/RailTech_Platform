@@ -1,0 +1,24 @@
+# Контрольные вопросы поиска (PLAN Фаза 1, гейт: top-3 ≥ 13/15, uz ≥ 3/4).
+# expected — заголовок документа, чанк которого должен быть в top-3.
+# out_of_kb — вопросы без ответа в KB: для калибровки порога kb.min_score.
+questions:
+  - {q: "Можно ли подключить кассу АТОЛ к 1С:Розница?", lang: ru, expected: "RT-POS Интеграция — интеграция касс с 1С"}
+  - {q: "Сколько времени займёт внедрение для сети из 5 магазинов?", lang: ru, expected: "RT-POS Интеграция — интеграция касс с 1С"}
+  - {q: "Работает ли поддержка ночью, если касса сломалась?", lang: ru, expected: "RT-POS Интеграция — интеграция касс с 1С"}
+  - {q: "Как часто обновляется местоположение вагона?", lang: ru, expected: "RT-Track — мониторинг вагонов и контейнеров"}
+  - {q: "Есть ли датчики температуры для рефрижераторов?", lang: ru, expected: "RT-Track — мониторинг вагонов и контейнеров"}
+  - {q: "В каких странах работает мониторинг вагонов?", lang: ru, expected: "RT-Track — мониторинг вагонов и контейнеров"}
+  - {q: "Как у вас оплачивать, можно частями?", lang: ru, expected: "RailTech — как мы работаем"}
+  - {q: "Какая гарантия на внедрение?", lang: ru, expected: "RailTech — как мы работаем"}
+  - {q: "Vagon joylashuvi qancha vaqtda yangilanadi?", lang: uz, expected: "RT-Track — vagon va konteynerlarni kuzatish"}
+  - {q: "Trekerni o'rnatish qancha vaqt oladi?", lang: uz, expected: "RT-Track — vagon va konteynerlarni kuzatish"}
+  - {q: "Kassani 1C ga ulash mumkinmi?", lang: uz, expected: "RT-POS Интеграция — интеграция касс с 1С"}
+  - {q: "Ish vaqtingiz qanday?", lang: uz, expected: "RailTech — как мы работаем"}
+  - {q: "Do you support Zebra barcode scanners?", lang: en, expected: "RT-POS Интеграция — интеграция касс с 1С"}
+  - {q: "Can I get Telegram alerts when a container door is opened?", lang: en, expected: "RT-Track — мониторинг вагонов и контейнеров"}
+  - {q: "What are your office hours?", lang: en, expected: "RailTech — как мы работаем"}
+out_of_kb:
+  - {q: "Продаёте ли вы ноутбуки?", lang: ru}
+  - {q: "Какая погода в Самарканде?", lang: ru}
+  - {q: "Do you build mobile games?", lang: en}
+  - {q: "Avtomobil ijarasi bormi?", lang: uz}

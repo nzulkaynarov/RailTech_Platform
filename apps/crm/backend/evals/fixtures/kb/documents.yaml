@@ -1,0 +1,17 @@
+# Документы демо-KB: файл → заголовок, язык, продукт.
+- file: pos-integration.md
+  title: RT-POS Интеграция — интеграция касс с 1С
+  language: ru
+  product: pos-integration
+- file: rail-tracking.md
+  title: RT-Track — мониторинг вагонов и контейнеров
+  language: ru
+  product: rail-tracking
+- file: company-faq.md
+  title: RailTech — как мы работаем
+  language: ru
+  product: company
+- file: rail-tracking-uz.md
+  title: RT-Track — vagon va konteynerlarni kuzatish
+  language: uz
+  product: rail-tracking

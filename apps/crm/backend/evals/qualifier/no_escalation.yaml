@@ -1,0 +1,136 @@
+# Случаи без эскалации: стадия должна определяться без лишних передач менеджеру.
+- id: info-question-kb
+  category: info
+  language: ru
+  stage: new
+  transcript:
+    - [lead, "Какие сканеры штрихкодов поддерживаются?"]
+    - [bot, "Поддерживаются сканеры Honeywell, Zebra и Mertech с подключением по USB."]
+  expect: {escalate: false, stage: engaged}
+
+- id: smalltalk-hello
+  category: smalltalk
+  language: ru
+  stage: new
+  transcript:
+    - [lead, "Здравствуйте!"]
+    - [bot, "Здравствуйте! Чем могу помочь?"]
+  expect: {escalate: false, stage: new}
+
+- id: smalltalk-thanks-uz
+  category: smalltalk
+  language: uz
+  stage: engaged
+  transcript:
+    - [lead, "Rahmat, tushunarli."]
+  expect: {escalate: false, stage: engaged}
+
+- id: info-geography
+  category: info
+  language: ru
+  stage: new
+  transcript:
+    - [lead, "Вы работаете по Казахстану?"]
+    - [bot, "Да, сервис работает на железных дорогах Узбекистана, Казахстана, Кыргызстана и Туркменистана."]
+  expect: {escalate: false, stage: engaged}
+
+- id: info-uz-install
+  category: info
+  language: uz
+  stage: new
+  transcript:
+    - [lead, "Treker qancha vaqtda o'rnatiladi?"]
+    - [bot, "Treker payvandlashsiz 30 daqiqada o'rnatiladi."]
+  expect: {escalate: false, stage: engaged}
+
+- id: researcher-early
+  category: stage
+  language: ru
+  stage: engaged
+  transcript:
+    - [lead, "Я собираю информацию для руководителя по интеграции касс с 1С, решение будут принимать в следующем году."]
+    - [bot, "Внедрение для одного магазина занимает 3–5 рабочих дней."]
+  expect: {escalate: false, stage: engaged}
+
+- id: qualified-without-escalation
+  category: stage
+  language: ru
+  stage: engaged
+  score: 25
+  transcript:
+    - [lead, "Нам нужна интеграция двух касс Эвотор с 1С:Розница для кафе, планируем в течение полугода."]
+    - [bot, "Для одного магазина с одной-двумя кассами внедрение занимает 3–5 рабочих дней."]
+  expect: {escalate: false, stage: qualified}
+
+- id: en-info-sensors
+  category: info
+  language: en
+  stage: new
+  transcript:
+    - [lead, "Do you have door sensors for containers?"]
+    - [bot, "Yes, the Security package includes a door sensor, geofences and alarms."]
+  expect: {escalate: false, stage: engaged}
+
+- id: engaged-support-hours
+  category: info
+  language: ru
+  stage: engaged
+  transcript:
+    - [lead, "А поддержка работает по выходным?"]
+    - [bot, "Техподдержка работает пн–пт с 09:00 до 18:00, критические сбои касс принимаются круглосуточно."]
+  expect: {escalate: false, stage: engaged}
+
+- id: neutral-follow-up
+  category: info
+  language: ru
+  stage: engaged
+  bot_turns_without_progress: 1
+  transcript:
+    - [lead, "А выгрузка чеков в 1С как часто идёт?"]
+    - [bot, "Чеки, возвраты и смены выгружаются в учётную систему каждые 5 минут."]
+  expect: {escalate: false, stage: engaged}
+
+- id: positive-feedback
+  category: smalltalk
+  language: ru
+  stage: engaged
+  transcript:
+    - [lead, "Спасибо, очень понятно объяснили!"]
+  expect: {escalate: false, stage: engaged}
+
+- id: warranty-question
+  category: info
+  language: ru
+  stage: new
+  transcript:
+    - [lead, "Есть ли гарантия на внедрение?"]
+    - [bot, "На работы по внедрению действует гарантия 6 месяцев."]
+  expect: {escalate: false, stage: engaged}
+
+- id: payment-method-kb
+  category: info
+  language: ru
+  stage: engaged
+  kb_best_score: 0.78
+  transcript:
+    - [lead, "Как у вас оплата — можно переводом?"]
+    - [bot, "Оплата — банковским переводом в сумах по счёту; для крупных проектов возможна поэтапная оплата."]
+  expect: {escalate: false, stage: engaged}
+
+- id: language-question-en
+  category: info
+  language: en
+  stage: new
+  transcript:
+    - [lead, "Do you speak English?"]
+    - [bot, "Yes, we communicate in Russian, Uzbek and English."]
+  expect: {escalate: false, stage: new}
+
+- id: uz-geography
+  category: info
+  language: uz
+  stage: new
+  transcript:
+    - [lead, "Qozog'iston bo'ylab ham ishlaysizmi?"]
+    - [bot, "Ha, xizmat O'zbekiston, Qozog'iston, Qirg'iziston va Turkmaniston temir yo'llarida ishlaydi."]
+  expect: {escalate: false, stage: engaged}
