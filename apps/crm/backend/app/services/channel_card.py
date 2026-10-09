@@ -22,6 +22,8 @@ REASONS: Final = {
     "document_not_found": "документ не найден",
     "service_request": "сервисный запрос",
     "attachment_received": "прислал файл",
+    "agent_unavailable": "сбой ИИ-ассистента — ответ не отправлен",
+    "delivery_failed": "не удалось отправить файл клиенту",
 }
 TIMELINES: Final = {"<1m": "<1 мес", "<3m": "<3 мес", "<12m": "<12 мес", ">12m": ">12 мес"}
 ROLES: Final = {"decision_maker": "ЛПР", "influencer": "влияет", "researcher": "изучает"}

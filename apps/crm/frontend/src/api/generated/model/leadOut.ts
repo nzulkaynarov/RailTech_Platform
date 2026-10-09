@@ -21,4 +21,5 @@ export interface LeadOut {
   product_interest: string[];
   score: number;
   stage: string;
+  unread?: boolean;
 }

@@ -39,6 +39,8 @@ CFG = TriggerSettings()
         (TriggerSignals(intent="service"), []),
         (TriggerSignals(intent="service", customer_mode=True), [T.SERVICE_REQUEST]),
         (TriggerSignals(attachment_received=True), [T.ATTACHMENT_RECEIVED]),
+        (TriggerSignals(agent_unavailable=True), [T.AGENT_UNAVAILABLE]),
+        (TriggerSignals(delivery_failed=True), [T.DELIVERY_FAILED]),
     ],
 )
 def test_each_trigger(signals: TriggerSignals, expected: list[TriggerCode]) -> None:

@@ -49,15 +49,23 @@ def _incoming(message: Message, text: str, **extra: Any) -> Incoming:
     )
 
 
-async def send(bot: Bot, chat_id: int, outgoing: list[Outgoing], settings: SettingsService) -> None:
+async def send(
+    bot: Bot,
+    chat_id: int,
+    outgoing: list[Outgoing],
+    settings: SettingsService,
+    conversation: ConversationService | None = None,
+) -> None:
     if not outgoing:
         return
     cfg = await settings.get()
     for item in outgoing:
         if item.document is not None:
             if not await _send_document(bot, chat_id, item):
-                # Не пишем «Отправляю документ» без файла.
+                # Не пишем «Отправляю документ» без файла; команда узнаёт о сбое.
                 await bot.send_message(chat_id, cfg.texts.document_failed.get(item.language))
+                if conversation is not None and item.lead_id is not None:
+                    await conversation.report_delivery_failure(item.lead_id)
             continue
         markup = None
         if item.keyboard == "consent":
@@ -66,6 +74,8 @@ async def send(bot: Bot, chat_id: int, outgoing: list[Outgoing], settings: Setti
             markup = keyboards.languages()
         elif item.keyboard == "erase_confirm":
             markup = keyboards.erase_confirm(cfg, item.language)
+        elif item.keyboard == "handoff_offer":
+            markup = keyboards.handoff_offer(cfg, item.language)
         await bot.send_message(chat_id, item.text, reply_markup=markup)
 
 
@@ -113,7 +123,8 @@ async def on_text(
     message: Message, bot: Bot, conversation: ConversationService, settings: SettingsService
 ) -> None:
     inc = _incoming(message, message.text or "")
-    await send(bot, message.chat.id, await conversation.handle_message(inc), settings)
+    out = await conversation.handle_message(inc)
+    await send(bot, message.chat.id, out, settings, conversation)
 
 
 MEDIA = F.document | F.photo | F.voice | F.audio | F.video | F.video_note | F.animation
@@ -150,14 +161,23 @@ async def on_unsupported(
     await send(bot, message.chat.id, await conversation.unsupported(_user(message).id), settings)
 
 
-@router.callback_query(F.data == keyboards.CONSENT_ACCEPT)
+@router.callback_query(F.data.in_({keyboards.CONSENT_ACCEPT, keyboards.CONSENT_DECLINE}))
 async def on_consent(
     query: CallbackQuery, bot: Bot, conversation: ConversationService, settings: SettingsService
 ) -> None:
     await query.answer()
-    if query.message is not None:
-        out = await conversation.accept_consent(query.from_user.id)
-        await send(bot, query.message.chat.id, out, settings)
+    message = query.message
+    if message is None:
+        return
+    if query.data == keyboards.CONSENT_DECLINE:
+        await send(
+            bot, message.chat.id, await conversation.decline_consent(query.from_user.id), settings
+        )
+        return
+    if isinstance(message, Message):
+        await message.edit_reply_markup(reply_markup=None)
+    out = await conversation.accept_consent(query.from_user.id)
+    await send(bot, message.chat.id, out, settings)
 
 
 @router.callback_query(F.data.in_({keyboards.ERASE_CONFIRM, keyboards.ERASE_CANCEL}))
@@ -175,6 +195,28 @@ async def on_erase(
     else:
         out = await conversation.erase_cancelled(user_id)
     await send(bot, query.message.chat.id, out, settings)
+
+
+@router.callback_query(F.data.in_({keyboards.OFFER_HUMAN, keyboards.OFFER_NO}))
+async def on_handoff_offer(
+    query: CallbackQuery, bot: Bot, conversation: ConversationService, settings: SettingsService
+) -> None:
+    await query.answer()
+    message = query.message
+    if not isinstance(message, Message):
+        return
+    await message.edit_reply_markup(reply_markup=None)
+    if query.data != keyboards.OFFER_HUMAN:
+        return
+    cfg = await settings.get()
+    language = await conversation.language_of(query.from_user.id)
+    inc = Incoming(
+        tg_user_id=query.from_user.id,
+        chat_id=message.chat.id,
+        text=cfg.texts.handoff_offer_yes.get(language),
+        human_requested=True,
+    )
+    await send(bot, message.chat.id, await conversation.handle_message(inc), settings)
 
 
 @router.callback_query(F.data.startswith(keyboards.LANGUAGE_PREFIX))

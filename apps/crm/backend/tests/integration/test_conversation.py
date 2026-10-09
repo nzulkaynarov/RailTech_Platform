@@ -110,6 +110,26 @@ async def test_first_message_asks_consent_and_does_not_answer(stack: Stack) -> N
     assert roles == ["lead", "bot", "bot"]
 
 
+async def test_question_asked_before_consent_is_answered_right_after(stack: Stack) -> None:
+    await stack.service.handle_message(
+        msg("Что входит в тариф Старт для кассы RT-POS?", language_code="ru")
+    )
+    stack.model.responses.append(reply("Тариф Старт включает одну кассу и облачный учёт."))
+    out = await stack.service.accept_consent(USER)
+    assert [o.text for o in out] == [
+        "Спасибо! Отвечаю на ваш вопрос.",
+        "Тариф Старт включает одну кассу и облачный учёт.",
+    ]
+
+
+async def test_declined_consent_is_explained_and_nothing_is_answered(stack: Stack) -> None:
+    await stack.service.handle_message(msg("Сколько стоит касса?", language_code="ru"))
+    out = await stack.service.decline_consent(USER)
+    assert "/start" in out[0].text
+    assert stack.model.requests == []
+    assert (await lead_row(stack.sessions)).consent_given_at is None
+
+
 async def test_answers_from_kb_after_consent(stack: Stack) -> None:
     await consented(stack)
     stack.model.responses.append(reply("Тариф Старт включает одну кассу и облачный учёт."))
@@ -130,6 +150,7 @@ async def test_out_of_kb_question_falls_back_and_registers_gap(stack: Stack) -> 
     out = await stack.service.handle_message(msg("Какая завтра погода в Париже?"))
     assert stack.model.requests == []
     assert out[-1].text
+    assert out[-1].keyboard == "handoff_offer"  # передачу решает лид кнопкой (аудит P-09)
     lead = await lead_row(stack.sessions)
     assert lead.consecutive_fallbacks == 1
     assert ("activity", lead.id) in stack.hooks
@@ -144,7 +165,9 @@ async def test_second_fallback_in_a_row_escalates(stack: Stack) -> None:
     out = await stack.service.handle_message(msg("А курс доллара на завтра?"))
     escalation = await only_escalation(stack.sessions)
     assert (escalation.reason_codes, escalation.priority) == (["kb_gap_streak"], "warm")
-    assert len(out) == 2
+    # Без «могу передать, если хотите» перед «Передаю…» и без кнопок.
+    assert len(out) == 1
+    assert out[0].keyboard is None
     lead = await lead_row(stack.sessions)
     assert (lead.stage, lead.owner_mode) == ("handoff", "paused")
 
@@ -219,3 +242,16 @@ async def test_delete_erases_messages_and_unlinks_identity(stack: Stack) -> None
     assert texts == {ERASED_TEXT}
     out = await stack.service.handle_message(msg("Снова здравствуйте"))
     assert out[-1].keyboard == "consent"
+
+
+async def test_agent_failure_is_reported_to_the_team_without_silencing_the_bot(
+    stack: Stack,
+) -> None:
+    await consented(stack)
+    # Модель «упала»: записанных ответов нет.
+    out = await stack.service.handle_message(msg("Что входит в тариф Старт для кассы RT-POS?"))
+    assert "коллеги его увидят" in out[-1].text
+    escalation = await only_escalation(stack.sessions)
+    assert (escalation.reason_codes, escalation.priority) == (["agent_unavailable"], "info")
+    assert (await lead_row(stack.sessions)).owner_mode == "bot"
+    assert ("escalation", escalation.lead_id) in stack.hooks

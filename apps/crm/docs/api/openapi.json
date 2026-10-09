@@ -1874,6 +1874,11 @@
               }
             ],
             "title": "Tg Username"
+          },
+          "unread": {
+            "default": false,
+            "title": "Unread",
+            "type": "boolean"
           }
         },
         "required": [
@@ -2000,6 +2005,11 @@
           "stage": {
             "title": "Stage",
             "type": "string"
+          },
+          "unread": {
+            "default": false,
+            "title": "Unread",
+            "type": "boolean"
           }
         },
         "required": [

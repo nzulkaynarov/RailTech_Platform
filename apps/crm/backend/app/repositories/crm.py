@@ -13,6 +13,9 @@ from app.models.leads import Conversation, Lead, LeadNote, Message, TelegramIden
 from app.models.qualification import Escalation
 
 ACTIVE = ("open", "snoozed", "taken")
+_waits_for_reply = func.coalesce(
+    Lead.last_lead_msg_at > func.coalesce(Lead.last_human_msg_at, Lead.created_at), False
+)
 PRIORITY_RANK = {"hot": 0, "warm": 1, "info": 2}
 
 
@@ -104,7 +107,8 @@ async def inbox(session: AsyncSession, me: int) -> tuple[list[Lead], list[Lead],
             .where(
                 Lead.assigned_user_id == me, Lead.owner_mode == "human", Lead.erased_at.is_(None)
             )
-            .order_by(Lead.last_lead_msg_at.desc().nulls_last())
+            # Сначала те, кто ждёт ответа: лид написал после последнего ответа менеджера.
+            .order_by(_waits_for_reply.desc(), Lead.last_lead_msg_at.desc().nulls_last())
             .limit(100)
         )
     ).all()

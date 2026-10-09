@@ -78,12 +78,19 @@ def lead_out(
         assigned_user_id=owner,
         assigned_user_name=(names or {}).get(owner) if owner is not None else None,
         client_id=lead.client_id,
+        unread=_unread(lead),
         need_summary=lead.need_summary,
         product_interest=list(lead.product_interest or []),
         last_lead_msg_at=lead.last_lead_msg_at,
         created_at=lead.created_at,
         escalation=escalation_out(escalation),
     )
+
+
+def _unread(lead: Lead) -> bool:
+    if lead.owner_mode != "human" or lead.last_lead_msg_at is None:
+        return False
+    return lead.last_human_msg_at is None or lead.last_lead_msg_at > lead.last_human_msg_at
 
 
 def message_out(m: Message) -> MessageOut:

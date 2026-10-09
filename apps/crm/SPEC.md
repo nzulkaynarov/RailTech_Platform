@@ -411,6 +411,8 @@ class QualifierOutput(BaseModel):
 | `qualifier_recommend` | `recommend_escalation ∧ confidence ≥ 0.7` | warm |
 | `document_not_found` (customer) | Запрос документа без результата | warm |
 | `service_request` (customer) | Интент `service` | info |
+| `agent_unavailable` | Сбой диалогового агента (лиду — `texts.service_unavailable`) | info |
+| `delivery_failed` | Бот не смог отправить файл документа | info |
 
 Триггер → эскалация всегда. Одна открытая эскалация на лида: новые триггеры дописываются, приоритет повышается, в канале редактируется существующий пост.
 

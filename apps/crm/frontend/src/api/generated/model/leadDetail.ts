@@ -27,4 +27,5 @@ export interface LeadDetail {
   snoozed_until: string | null;
   stage: string;
   tg_username: string | null;
+  unread?: boolean;
 }

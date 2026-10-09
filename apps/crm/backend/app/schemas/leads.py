@@ -30,6 +30,8 @@ class LeadOut(BaseModel):
     assigned_user_id: int | None
     assigned_user_name: str | None = None
     client_id: int | None = None
+    # Лид написал после последнего ответа менеджера (аудит P-23).
+    unread: bool = False
     need_summary: str | None
     product_interest: list[str]
     last_lead_msg_at: datetime | None

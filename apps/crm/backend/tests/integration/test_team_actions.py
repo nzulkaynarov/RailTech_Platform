@@ -1,5 +1,6 @@
 """Передача лида коллеге, деактивация с переносом, повторная сделка клиента (ADR-0015)."""
 
+from datetime import UTC, datetime
 from typing import Any
 
 import pytest
@@ -110,3 +111,20 @@ async def test_customer_new_deal_goes_through_funnel_and_back_to_customer(
     assert (lead.stage, lead.owner_mode) == ("customer", "bot")
     async with sessions() as session:
         assert (await session.scalars(select(Client))).one().id == lead.client_id
+
+
+async def test_my_leads_show_unread_when_the_lead_writes_after_the_manager(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    lead_id = await escalated_lead(sessions)
+    owner, password = await make_user(sessions, "dilshod@railtech.uz", ["manager"])
+    me = login(client, owner.email, password)
+    act(client, lead_id, "take", me)
+    client.post(f"/api/v1/leads/{lead_id}/messages", json={"text": "Добрый день!"}, headers=me)
+    assert client.get("/api/v1/inbox", headers=me).json()["mine"][0]["unread"] is False
+
+    async with sessions() as session, session.begin():
+        lead = await session.get(Lead, lead_id)
+        assert lead is not None
+        lead.last_lead_msg_at = datetime.now(UTC)
+    assert client.get("/api/v1/inbox", headers=me).json()["mine"][0]["unread"] is True

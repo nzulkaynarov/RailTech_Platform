@@ -73,6 +73,20 @@ class TextsSettings(_Strict):
         "Rahmat! Savolingizni yozing.",
         "Thank you! Please ask your question.",
     )
+    consent_accepted_pending: LocalizedText = _t(
+        "Спасибо! Отвечаю на ваш вопрос.",
+        "Rahmat! Savolingizga javob beraman.",
+        "Thank you! Answering your question.",
+    )
+    consent_decline_button: LocalizedText = _t("Не согласен", "Rozi emasman", "I don't agree")
+    consent_declined: LocalizedText = _t(
+        "Понимаю. Без согласия я не могу отвечать на вопросы. Если передумаете — нажмите «Согласен»"
+        " выше или напишите /start. Удалить уже отправленные сообщения — /delete.",
+        "Tushunarli. Roziliksiz savollarga javob bera olmayman. Fikringiz o'zgarsa — yuqoridagi"
+        " «Roziman» tugmasini bosing yoki /start yozing. Yuborilgan xabarlarni o'chirish — /delete.",
+        "Understood. Without consent I can't answer questions. If you change your mind, press"
+        " «I agree» above or type /start. To delete messages already sent, use /delete.",
+    )
     consent_required: LocalizedText = _t(
         "Пожалуйста, сначала подтвердите согласие кнопкой ниже.",
         "Iltimos, avval quyidagi tugma orqali roziligingizni tasdiqlang.",
@@ -98,6 +112,10 @@ class TextsSettings(_Strict):
         "Bu savolga aniq javobim yo'q — hamkasblarimdan aniqlayman. Xohlasangiz, savolni menejerga topshirishim mumkin.",
         "I don't have an exact answer to that — I'll check with my colleagues. If you like, I can pass your question to a manager.",
     )
+    handoff_offer_yes: LocalizedText = _t(
+        "Передать менеджеру", "Menejerga topshirish", "Pass to a manager"
+    )
+    handoff_offer_no: LocalizedText = _t("Не нужно", "Kerak emas", "No, thanks")
     help: LocalizedText = _t(
         "Я отвечаю на вопросы о продуктах {company}. Команды: /lang — сменить язык, /human — позвать сотрудника, /delete — удалить переписку.",
         "Men {company} mahsulotlari haqidagi savollarga javob beraman. Buyruqlar: /lang — tilni o'zgartirish, /human — xodimni chaqirish, /delete — yozishmani o'chirish.",

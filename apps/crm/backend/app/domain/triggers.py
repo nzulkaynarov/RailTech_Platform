@@ -31,6 +31,9 @@ class TriggerCode(StrEnum):
     DOCUMENT_NOT_FOUND = "document_not_found"
     SERVICE_REQUEST = "service_request"
     ATTACHMENT_RECEIVED = "attachment_received"
+    # Сбои, о которых лиду сказали «коллеги увидят», — команда должна увидеть (аудит P-11, P-12).
+    AGENT_UNAVAILABLE = "agent_unavailable"
+    DELIVERY_FAILED = "delivery_failed"
 
 
 PRIORITY: Final[dict[TriggerCode, Priority]] = {
@@ -47,6 +50,8 @@ PRIORITY: Final[dict[TriggerCode, Priority]] = {
     TriggerCode.DOCUMENT_NOT_FOUND: Priority.WARM,
     TriggerCode.SERVICE_REQUEST: Priority.INFO,
     TriggerCode.ATTACHMENT_RECEIVED: Priority.INFO,
+    TriggerCode.AGENT_UNAVAILABLE: Priority.INFO,
+    TriggerCode.DELIVERY_FAILED: Priority.INFO,
 }
 
 
@@ -77,6 +82,8 @@ class TriggerSignals:
     customer_mode: bool = False
     document_not_found: bool = False
     attachment_received: bool = False
+    agent_unavailable: bool = False
+    delivery_failed: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -126,3 +133,7 @@ def _fires(code: TriggerCode, s: TriggerSignals, cfg: TriggerSettings) -> bool:
             return s.customer_mode and s.intent == "service"
         case TriggerCode.ATTACHMENT_RECEIVED:
             return s.attachment_received
+        case TriggerCode.AGENT_UNAVAILABLE:
+            return s.agent_unavailable
+        case TriggerCode.DELIVERY_FAILED:
+            return s.delivery_failed
