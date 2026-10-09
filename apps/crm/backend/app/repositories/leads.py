@@ -8,6 +8,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.leads import Conversation, Lead, LeadNote, Message, TelegramIdentity
+from app.models.qualification import Escalation
 from app.repositories import events
 
 ERASED_TEXT = "[удалено по запросу]"
@@ -104,6 +105,31 @@ async def bot_notes(session: AsyncSession, lead_id: int, limit: int = 10) -> Seq
         .limit(limit)
     )
     return list(reversed((await session.scalars(stmt)).all()))
+
+
+async def attachment_keys(session: AsyncSession, lead_id: int) -> list[str]:
+    """Ключи вложений лида в S3 — удаляются вместе с перепиской по /delete."""
+    conversation_ids = select(Conversation.id).where(Conversation.lead_id == lead_id)
+    rows = await session.scalars(
+        select(Message.attachments).where(Message.conversation_id.in_(conversation_ids))
+    )
+    return [
+        str(item["storage_key"])
+        for attachments in rows
+        for item in attachments or []
+        if isinstance(item, dict) and item.get("storage_key")
+    ]
+
+
+async def close_escalations(session: AsyncSession, lead_id: int, now: datetime) -> list[int]:
+    """Открытые и взятые эскалации лида закрываются: напоминать о них больше некому."""
+    result = await session.scalars(
+        update(Escalation)
+        .where(Escalation.lead_id == lead_id, Escalation.status.in_(("open", "snoozed", "taken")))
+        .values(status="closed", resolved_at=now, outcome="erased")
+        .returning(Escalation.id)
+    )
+    return list(result.all())
 
 
 async def erase_lead(session: AsyncSession, lead: Lead, now: datetime) -> int:

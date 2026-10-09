@@ -114,7 +114,7 @@
 | 1 | Миграции `qualifier_runs`, `escalations`, `stage_transitions` | ✅ (в Фазе 2) | `alembic/versions/*_1506_*` |
 | 2 | `stage_machine`, `scoring`, `triggers`, `escalation` + постобработка квалификатора — чистые функции, таблицы тестов | ✅ | `domain/`, `domain/qualifier_decision.py` |
 | 3 | Квалификатор (LangGraph, structured output, один повтор), задача `qualify_lead` (`queueing_lock`, старт через 5 с), worker | ✅ | `agents/qualifier/`, `services/qualifier.py`, `tasks/qualify.py` |
-| 4 | Таймер `unresponsive` и возврат в `engaged` | ✅ ежечасно, порог `bot.unresponsive_days` = 3 | `services/timers.py`, `tasks/timers.py` |
+| 4 | Таймер `unresponsive` и возврат в `engaged` | ✅ ежечасно, порог `bot.unresponsive_days` = 7 (BUSINESS §5; было 3 — исправлено аудитом 2026-10-09) | `services/timers.py`, `tasks/timers.py` |
 | 5 | Агент молчит при `paused/human`; при эскалации — `texts.handoff`/`off_hours` | ✅ в ходе диалога и из воркера (`LeadMessenger`) | `services/conversation.py`, `services/escalation.py` |
 | 6 | `GET /api/v1/leads/{id}/decisions` | ✅ временно, отключён в prod до RBAC (Фаза 4) | `api/v1/leads.py` |
 | 7 | Evals: 30 кейсов эскалации и стадий, precision/recall/stage accuracy | ✅ (прогон — человек с ключами) | `evals/qualifier/`, `evals/test_qualifier_eval.py` |

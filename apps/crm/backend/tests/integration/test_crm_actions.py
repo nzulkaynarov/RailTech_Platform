@@ -67,6 +67,8 @@ async def test_take_reply_return_with_note(
     )
     assert (escalation.status, escalation.taken_by_user_id) == ("taken", manager.id)
     assert "dilshod" in sender.sent[-1][1]
+    card = client.get(f"/api/v1/leads/{lead_id}", headers=them).json()
+    assert card["assigned_user_name"] == "dilshod"  # «кто ведёт» виден и не-админу
 
     assert client.post(f"/api/v1/leads/{lead_id}/actions/take", headers=them).status_code == 409
     foreign = client.post(f"/api/v1/leads/{lead_id}/messages", json={"text": "x"}, headers=them)

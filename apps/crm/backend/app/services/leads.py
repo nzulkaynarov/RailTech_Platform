@@ -150,6 +150,12 @@ class LeadService:
             before = _snapshot(lead)
             target = Stage.WON if outcome == "won" else Stage.LOST
             await _move(session, lead, target, who, reason or outcome)
+            # Итог зафиксирован — диалог снова ведёт бот, иначе лид пишет в тишину.
+            # Владелец остаётся: он ответственный за клиента после сделки.
+            lead.owner_mode = OwnerMode.BOT.value
+            lead.snoozed_until = None
+            lead.consecutive_fallbacks = 0
+            lead.bot_turns_without_progress = 0
             escalation = await _active_escalation(session, lead_id)
             if escalation is not None:
                 escalation.status, escalation.resolved_at = "closed", datetime.now(UTC)

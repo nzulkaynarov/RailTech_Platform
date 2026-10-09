@@ -61,7 +61,10 @@ def escalation_out(e: Escalation | None) -> EscalationOut | None:
     )
 
 
-def lead_out(lead: Lead, escalation: Escalation | None) -> LeadOut:
+def lead_out(
+    lead: Lead, escalation: Escalation | None, names: dict[int, str] | None = None
+) -> LeadOut:
+    owner = lead.assigned_user_id
     return LeadOut(
         id=lead.id,
         display_name=lead.display_name,
@@ -69,7 +72,9 @@ def lead_out(lead: Lead, escalation: Escalation | None) -> LeadOut:
         stage=lead.stage,
         score=lead.score,
         owner_mode=lead.owner_mode,
-        assigned_user_id=lead.assigned_user_id,
+        assigned_user_id=owner,
+        assigned_user_name=(names or {}).get(owner) if owner is not None else None,
+        client_id=lead.client_id,
         need_summary=lead.need_summary,
         product_interest=list(lead.product_interest or []),
         last_lead_msg_at=lead.last_lead_msg_at,
@@ -109,7 +114,8 @@ async def list_leads(
     async with container.session_factory() as session:
         rows, total = await crm.list_leads(session, flt, who.user_id, limit, offset, sort)
         escalations = await crm.active_escalations(session, [r.id for r in rows])
-    return LeadPage(items=[lead_out(r, escalations.get(r.id)) for r in rows], total=total)
+        names = await crm.user_names(session, rows)
+    return LeadPage(items=[lead_out(r, escalations.get(r.id), names) for r in rows], total=total)
 
 
 @router.get("/inbox", response_model=InboxResponse)
@@ -118,9 +124,10 @@ async def inbox(who: Reader, container: ContainerDep) -> InboxResponse:
         escalated, mine, unassigned = await crm.inbox(session, who.user_id)
         ids = [lead.id for lead in (*escalated, *mine, *unassigned)]
         escalations = await crm.active_escalations(session, ids)
+        names = await crm.user_names(session, [*escalated, *mine, *unassigned])
 
     def out(rows: list[Lead]) -> list[LeadOut]:
-        return [lead_out(r, escalations.get(r.id)) for r in rows]
+        return [lead_out(r, escalations.get(r.id), names) for r in rows]
 
     ranked = sorted(
         escalated,
@@ -139,7 +146,8 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
             raise HTTPException(status.HTTP_404_NOT_FOUND, "lead not found")
         escalation = (await crm.active_escalations(session, [lead_id])).get(lead_id)
         username = await crm.tg_username(session, lead_id)
-    base = lead_out(lead, escalation)
+        names = await crm.user_names(session, [lead])
+    base = lead_out(lead, escalation, names)
     return LeadDetail(
         **base.model_dump(),
         qualification=dict(lead.qualification or {}),

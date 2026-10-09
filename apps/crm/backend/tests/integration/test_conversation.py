@@ -38,6 +38,7 @@ class Stack:
     model: ReplayModel
     sessions: async_sessionmaker[AsyncSession]
     hooks: list[tuple[str, int]] = field(default_factory=list)
+    erased_keys: list[str] = field(default_factory=list)
 
 
 @pytest.fixture
@@ -66,6 +67,9 @@ async def stack(
         async def on_escalation(lead_id: int, escalation_id: int) -> None:
             result.hooks.append(("escalation", lead_id))
 
+        async def erase_attachments(keys: list[str]) -> None:
+            result.erased_keys.extend(keys)
+
         result.service = ConversationService(
             sessions,
             SettingsService(sessions, ttl_s=0),
@@ -73,6 +77,7 @@ async def stack(
             config.agent_context_key_bytes,
             on_activity=on_activity,
             on_escalation=on_escalation,
+            erase_attachments=erase_attachments,
         )
         yield result
 
@@ -187,9 +192,25 @@ async def test_callback_tool_records_signal(stack: Stack) -> None:
     assert len(out) == 2  # ответ модели + уведомление о передаче менеджеру
 
 
+async def test_delete_asks_for_confirmation_first(stack: Stack) -> None:
+    await consented(stack)
+    out = await stack.service.erase_prompt(USER)
+    assert [o.keyboard for o in out] == ["erase_confirm"]
+    assert (await lead_row(stack.sessions)).erased_at is None
+
+
 async def test_delete_erases_messages_and_unlinks_identity(stack: Stack) -> None:
     await consented(stack)
+    await stack.service.handle_message(
+        msg("", attachments=[{"kind": "file", "storage_key": "tg/1/2/voice.ogg", "stored": True}])
+    )
+    stack.hooks.clear()
     await stack.service.erase(USER)
+    async with stack.sessions() as session:
+        escalation = (await session.scalars(select(Escalation))).one()
+    assert (escalation.status, escalation.outcome) == ("closed", "erased")
+    assert stack.erased_keys == ["tg/1/2/voice.ogg"]
+    assert ("escalation", escalation.lead_id) in stack.hooks
     lead = await lead_row(stack.sessions)
     assert lead.erased_at is not None
     assert lead.display_name == ""

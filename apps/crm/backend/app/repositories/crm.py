@@ -8,6 +8,7 @@ from typing import Any
 from sqlalchemy import ColumnElement, Select, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.auth import User
 from app.models.leads import Conversation, Lead, LeadNote, Message, TelegramIdentity
 from app.models.qualification import Escalation
 
@@ -77,6 +78,15 @@ async def active_escalations(
         .order_by(Escalation.id)
     )
     return {e.lead_id: e for e in (await session.scalars(stmt)).all()}
+
+
+async def user_names(session: AsyncSession, leads: Sequence[Lead]) -> dict[int, str]:
+    """Имена владельцев лидов: менеджеру и наблюдателю `/users` недоступен, а «кто ведёт» нужен."""
+    ids = {lead.assigned_user_id for lead in leads if lead.assigned_user_id is not None}
+    if not ids:
+        return {}
+    rows = await session.execute(select(User.id, User.full_name).where(User.id.in_(ids)))
+    return {user_id: name for user_id, name in rows}  # noqa: C416 — Row, не кортеж
 
 
 async def inbox(session: AsyncSession, me: int) -> tuple[list[Lead], list[Lead], list[Lead]]:

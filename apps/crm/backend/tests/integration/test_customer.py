@@ -256,3 +256,20 @@ async def test_document_upload_extracts_text_and_download_is_logged(
         doc = await session.get(Document, document_id)
     assert doc is not None
     assert "трекеров" in (doc.extracted_text or "")
+
+
+async def test_deactivated_client_gets_no_documents(
+    service: tuple[ConversationService, ReplayModel, list[str]],
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    svc, model, _ = service
+    client_id = await customer(sessions, svc)
+    async with sessions() as session, session.begin():
+        client = await session.get(Client, client_id)
+        assert client is not None
+        client.is_active = False
+    model.responses.append(reply("Уточню у коллег."))
+    out = await svc.handle_message(msg("Пришлите договор, который мы заключали в июле"))
+    assert all(o.document is None for o in out)
+    async with sessions() as session:
+        assert (await session.scalars(select(DocumentAccessLog))).all() == []

@@ -108,6 +108,16 @@ class TextsSettings(_Strict):
         "Siz xabarlarni juda tez yuboryapsiz. Iltimos, bir daqiqa kuting.",
         "You're sending messages too quickly. Please wait a minute.",
     )
+    erase_confirm: LocalizedText = _t(
+        "Удалить всю переписку с нами? Это действие нельзя отменить.",
+        "Biz bilan barcha yozishmalarni o'chiraymi? Bu amalni qaytarib bo'lmaydi.",
+        "Delete your whole conversation with us? This cannot be undone.",
+    )
+    erase_button: LocalizedText = _t("Удалить", "O'chirish", "Delete")
+    cancel_button: LocalizedText = _t("Отмена", "Bekor qilish", "Cancel")
+    erase_cancelled: LocalizedText = _t(
+        "Хорошо, ничего не удаляю.", "Yaxshi, hech narsa o'chirilmadi.", "OK, nothing was deleted."
+    )
     erased: LocalizedText = _t(
         "Ваша переписка удалена. Если захотите продолжить, просто напишите снова.",
         "Yozishmangiz o'chirildi. Davom etmoqchi bo'lsangiz, shunchaki qayta yozing.",
@@ -118,6 +128,11 @@ class TextsSettings(_Strict):
         "Hujjatni yuboraman: {title}.",
         "Sending the document: {title}.",
     )
+    document_failed: LocalizedText = _t(
+        "Не получилось отправить файл. Попробуйте запросить его ещё раз чуть позже.",
+        "Faylni yuborib bo'lmadi. Birozdan keyin qayta so'rab ko'ring.",
+        "I couldn't send the file. Please ask for it again a bit later.",
+    )
     manager_joined: LocalizedText = _t(
         "Здравствуйте! Вашим вопросом занимается {manager}, ответ придёт в этот чат.",
         "Assalomu alaykum! Savolingiz bilan {manager} shug'ullanmoqda, javob shu chatga keladi.",
@@ -127,6 +142,11 @@ class TextsSettings(_Strict):
         "Спасибо, файл получен. Передам его коллеге.",
         "Rahmat, fayl qabul qilindi. Uni hamkasbimga topshiraman.",
         "Thanks, file received. I'll pass it to a colleague.",
+    )
+    unsupported_message: LocalizedText = _t(
+        "Пока я понимаю только текст, файлы и голосовые. Напишите, пожалуйста, ваш вопрос.",
+        "Hozircha faqat matn, fayl va ovozli xabarlarni tushunaman. Savolingizni yozing, iltimos.",
+        "For now I understand text, files and voice messages only. Please type your question.",
     )
     service_unavailable: LocalizedText = _t(
         "Извините, сейчас не получается ответить. Ваше сообщение сохранено, коллеги его увидят.",
@@ -187,7 +207,7 @@ class BotSettings(_Strict):
     max_words: int = Field(default=120, ge=20, le=400)
     history_messages: int = Field(default=20, ge=2, le=50)
     rate_limit_per_minute: int = Field(default=20, ge=1)
-    unresponsive_days: int = Field(default=3, ge=1, le=90)
+    unresponsive_days: int = Field(default=7, ge=1, le=90)  # BUSINESS §5: 7 дней
 
 
 class TermsSettings(_Strict):

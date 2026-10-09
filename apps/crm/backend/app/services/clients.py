@@ -12,11 +12,12 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.errors import (
     ConflictError,
+    ForbiddenError,
     InvalidTransitionError,
     NotFoundError,
     ValidationFailedError,
 )
-from app.domain.stages import Stage, TransitionSource
+from app.domain.stages import OwnerMode, Stage, TransitionSource
 from app.models.clients import Client, ServiceRequest
 from app.models.leads import Lead, TelegramIdentity
 from app.repositories import events
@@ -123,6 +124,8 @@ class ClientService:
                 raise NotFoundError("lead not found")
             if lead.stage not in (Stage.WON, Stage.CUSTOMER):
                 raise InvalidTransitionError("close the deal (won) first")
+            if lead.assigned_user_id not in (None, who.user_id) and not who.is_admin:
+                raise ForbiddenError("only the lead owner or an admin can do this")
             if client_id is None:
                 client = Client(name=(new_name or "").strip(), owner_user_id=who.user_id)
                 session.add(client)
@@ -131,16 +134,10 @@ class ClientService:
             else:
                 await _client(session, client_id)
             lead.client_id = client_id
-            identities = (
-                await session.scalars(
-                    select(TelegramIdentity)
-                    .where(TelegramIdentity.lead_id == lead_id)
-                    .with_for_update()
-                )
-            ).all()
-            for identity in identities:
-                identity.client_id = client_id
-                identity.verified_by_user_id, identity.verified_at = who.user_id, datetime.now(UTC)
+            await _bind_identities(session, lead_id, client_id, who)
+            # Сервисный режим ведёт бот (BUSINESS §5): документы и вопросы клиента — без менеджера.
+            lead.owner_mode = OwnerMode.BOT.value
+            lead.snoozed_until = None
             await stages.transition(
                 session,
                 lead,
@@ -169,6 +166,25 @@ class ClientService:
             await audit.record(
                 session, who.actor, "client.close_request", "service_request", request_id
             )
+
+
+async def _bind_identities(
+    session: AsyncSession, lead_id: int, client_id: int, who: Principal
+) -> None:
+    """Telegram лида → клиент с подтверждением; чужая привязка не перезаписывается молча."""
+    identities = (
+        await session.scalars(
+            select(TelegramIdentity).where(TelegramIdentity.lead_id == lead_id).with_for_update()
+        )
+    ).all()
+    for identity in identities:
+        if identity.client_id is not None and identity.client_id != client_id:
+            raise ConflictError(
+                "telegram account is linked to another client", client_id=identity.client_id
+            )
+    for identity in identities:
+        identity.client_id = client_id
+        identity.verified_by_user_id, identity.verified_at = who.user_id, datetime.now(UTC)
 
 
 async def _client(session: AsyncSession, client_id: int) -> Client:

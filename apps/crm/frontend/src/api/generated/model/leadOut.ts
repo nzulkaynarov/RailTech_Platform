@@ -8,6 +8,8 @@ import type { EscalationOut } from "./escalationOut";
 
 export interface LeadOut {
   assigned_user_id: number | null;
+  assigned_user_name?: string | null;
+  client_id?: number | null;
   created_at: string;
   display_name: string;
   escalation?: EscalationOut | null;

@@ -7,6 +7,7 @@ load_context → (owner_mode=bot?) → retrieve → decide → answer | fallback
 
 from typing import Any
 
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Checkpointer
 
@@ -58,6 +59,11 @@ class DialogAgent:
         self._model = model
         self._checkpointer = checkpointer
 
+    async def forget(self, lead_id: int) -> None:
+        """Стереть состояние графа лида (чекпоинты хранят тексты сообщений) — /delete."""
+        if isinstance(self._checkpointer, BaseCheckpointSaver):
+            await self._checkpointer.adelete_thread(_thread_id(lead_id))
+
     async def run(
         self,
         *,
@@ -90,11 +96,15 @@ class DialogAgent:
             "document": None,
             "service_request": False,
         }
-        config = {"configurable": {"thread_id": f"lead-{lead_id}"}}
+        config = {"configurable": {"thread_id": _thread_id(lead_id)}}
         with lf.trace("dialog.turn", lead_id=lead_id, mode=mode, stage=stage, input=text):
             state = await graph.ainvoke(initial, config=config)
             trace_id = lf.current_trace_id()
         return _result(state, trace_id)
+
+
+def _thread_id(lead_id: int) -> str:
+    return f"lead-{lead_id}"
 
 
 def _result(state: dict[str, Any], trace_id: str | None) -> DialogResult:
