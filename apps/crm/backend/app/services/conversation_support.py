@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.dialog.state import DialogResult
-from app.domain.dialog_policy import Action
+from app.domain.dialog_policy import Action, is_smalltalk
 from app.domain.language import Language, detect_language, next_language
 from app.domain.triggers import TriggerSignals, evaluate
 from app.models.clients import Client
@@ -138,7 +138,8 @@ async def pending_question(session: AsyncSession, conversation_id: int) -> str |
         .order_by(Message.id.desc())
         .limit(1)
     )
-    if not text or not text.strip() or text.strip().startswith("/"):
+    # Приветствие и «спасибо» — не вопрос: иначе «Отвечаю на ваш вопрос» на «Hi».
+    if not text or not text.strip() or text.strip().startswith("/") or is_smalltalk(text):
         return None
     return text.strip()
 
