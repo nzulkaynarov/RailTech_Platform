@@ -1,5 +1,5 @@
 /** Куда ведёт объект аудита/ссылки: у лида и клиента есть карточки, у остального — раздел. */
-export function entityPath(type: string, id: number | null | undefined): string | null {
+export function entityPath(type: string, id: number | string | null | undefined): string | null {
   switch (type) {
     case "lead":
       return id ? `/leads/${String(id)}` : "/leads";

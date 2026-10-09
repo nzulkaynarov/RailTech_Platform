@@ -11,28 +11,25 @@ import {
   Table,
   Typography,
 } from "antd";
-import dayjs from "dayjs";
 import { useState } from "react";
+import { Link } from "react-router";
 
 import { useDashboard } from "../../api/adminQueries";
 import { refreshDashboard } from "../../api/generated/crm";
-import type { DailyStat } from "../../api/generated/model";
-import { useMe } from "../../api/queries";
+import type { DailyStat, Dashboard } from "../../api/generated/model";
+import { usePermissionsQuery } from "../../api/queries";
+import { allowed } from "../../app/providers/access";
+import { PageHeader } from "../../components/PageHeader";
+import { PageState } from "../../components/PageState";
 import { StageBadge } from "../../components/StageBadge";
+import { reasonLabel, STAGE_ORDER } from "../../domain/labels";
+import { leadFiltersToSearch } from "../../hooks/leadFilters";
 import { t } from "../../i18n/ru";
-import { reasonLabel } from "../../domain/labels";
+import { formatDate, formatDateTime, tashkent } from "../../lib/time";
 
-const STAGE_ORDER = [
-  "new",
-  "engaged",
-  "qualified",
-  "handoff",
-  "in_progress",
-  "won",
-  "customer",
-  "lost",
-  "unresponsive",
-];
+/** Ссылка на список лидов с фильтром (drill-down с дашборда, аудит UI U-06). */
+const leadsLink = (filters: { stage?: string; from?: string; to?: string }) =>
+  `/leads?${leadFiltersToSearch({ ...filters, page: 1 }).toString()}`;
 
 function Bars({ data }: { data: Record<string, number> }) {
   const max = Math.max(1, ...Object.values(data));
@@ -48,114 +45,151 @@ function Bars({ data }: { data: Record<string, number> }) {
   );
 }
 
-/** Дашборд (SPEC §10.1): воронка, эскалации, время до «Забрать», fallback, стоимость, пробелы. */
+type Tile = [string, string | number, string | null];
+
+function tiles(data: Dashboard, days: number): Tile[] {
+  const totals = data.totals;
+  const now = tashkent(new Date());
+  const period = {
+    from: now.subtract(days - 1, "day").format("YYYY-MM-DD"),
+    to: now.format("YYYY-MM-DD"),
+  };
+  const share = data.fallback_share;
+  return [
+    [t.dashboard.leads, totals.leads_created, leadsLink(period)],
+    [t.dashboard.escalations, totals.escalations, null],
+    [t.dashboard.taken, totals.taken, null],
+    [t.dashboard.won, totals.won, leadsLink({ stage: "won" })],
+    [t.dashboard.takeTime, totals.avg_take_minutes ?? t.common.none, null],
+    [
+      t.dashboard.fallback,
+      share === null ? t.common.none : `${String(Math.round(share * 100))}%`,
+      null,
+    ],
+    [t.dashboard.cost, totals.cost_usd.toFixed(2), null],
+    [t.dashboard.gaps, data.open_gaps, "/gaps"],
+    [t.dashboard.openEscalations, data.open_escalations, "/inbox"],
+  ];
+}
+
+function Tiles({ data, days }: { data: Dashboard; days: number }) {
+  return (
+    <Row gutter={[16, 16]}>
+      {tiles(data, days).map(([title, value, link]) => (
+        <Col key={title} xs={12} md={8} xl={6}>
+          <Card size="small" hoverable={Boolean(link)}>
+            {link ? (
+              <Link to={link}>
+                <Statistic title={title} value={value} />
+              </Link>
+            ) : (
+              <Statistic title={title} value={value} />
+            )}
+          </Card>
+        </Col>
+      ))}
+    </Row>
+  );
+}
+
+function Funnel({ funnel }: { funnel: Record<string, number> }) {
+  const rows = STAGE_ORDER.filter((s) => funnel[s]).map((stage) => ({ stage, n: funnel[stage] }));
+  return (
+    <Table
+      size="small"
+      pagination={false}
+      showHeader={false}
+      rowKey="stage"
+      dataSource={rows}
+      columns={[
+        {
+          render: (_, r) => (
+            <Link to={leadsLink({ stage: r.stage })}>
+              <StageBadge stage={r.stage} />
+            </Link>
+          ),
+        },
+        { dataIndex: "n", align: "right" },
+      ]}
+    />
+  );
+}
+
+const DAILY_COLUMNS = [
+  { title: t.dashboard.day, dataIndex: "day", render: (v: string) => formatDate(v) },
+  { title: t.dashboard.leads, dataIndex: "leads_created" },
+  { title: t.dashboard.escalations, dataIndex: "escalations" },
+  { title: t.dashboard.taken, dataIndex: "taken" },
+  { title: t.dashboard.won, dataIndex: "won" },
+  { title: t.dashboard.lost, dataIndex: "lost" },
+  { title: t.dashboard.cost, dataIndex: "cost_usd", render: (v: number) => v.toFixed(2) },
+];
+
+/** Дашборд (SPEC §10.1): цифры кликабельны — ведут на отфильтрованный список. */
 export function DashboardPage() {
   const [days, setDays] = useState(30);
-  const { data, isLoading } = useDashboard(days);
-  const me = useMe();
+  const query = useDashboard(days);
+  const perms = usePermissionsQuery();
   const client = useQueryClient();
   const refresh = useMutation({
     mutationFn: refreshDashboard,
     onSuccess: () => client.invalidateQueries({ queryKey: ["dashboard"] }),
   });
-  if (isLoading || !data) return <Card loading />;
-  const totals = data.totals;
-  const stats: [string, string | number][] = [
-    [t.dashboard.leads, totals.leads_created],
-    [t.dashboard.escalations, totals.escalations],
-    [t.dashboard.taken, totals.taken],
-    [t.dashboard.won, totals.won],
-    [t.dashboard.takeTime, totals.avg_take_minutes ?? "—"],
-    [
-      t.dashboard.fallback,
-      data.fallback_share === null ? "—" : `${String(Math.round(data.fallback_share * 100))}%`,
-    ],
-    [t.dashboard.cost, totals.cost_usd.toFixed(2)],
-    [t.dashboard.gaps, data.open_gaps],
-    [t.dashboard.openEscalations, data.open_escalations],
-  ];
-  const funnel = STAGE_ORDER.filter((s) => data.funnel[s]).map((stage) => ({
-    stage,
-    n: data.funnel[stage] ?? 0,
-  }));
-
-  return (
-    <Space direction="vertical" size={16} style={{ width: "100%" }}>
-      <Space wrap>
-        <Typography.Text>{t.dashboard.period}</Typography.Text>
-        <Segmented
-          value={days}
-          options={[7, 30, 90]}
-          onChange={(v) => {
-            setDays(v);
-          }}
-        />
-        {data.refreshed_at ? (
-          <Typography.Text type="secondary">
-            {t.dashboard.refreshed}: {dayjs(data.refreshed_at).format("DD.MM HH:mm")}
-          </Typography.Text>
-        ) : null}
-        {me.data?.roles.includes("admin") ? (
-          <Button
-            size="small"
-            loading={refresh.isPending}
-            onClick={() => {
-              refresh.mutate();
-            }}
-          >
-            {t.dashboard.refresh}
-          </Button>
-        ) : null}
-      </Space>
-      <Row gutter={[16, 16]}>
-        {stats.map(([title, value]) => (
-          <Col key={title} xs={12} md={8} xl={6}>
-            <Card size="small">
-              <Statistic title={title} value={value} />
-            </Card>
-          </Col>
-        ))}
-      </Row>
-      <Row gutter={[16, 16]}>
-        <Col xs={24} lg={12}>
-          <Card size="small" title={t.dashboard.funnel}>
-            <Table
-              size="small"
-              pagination={false}
-              showHeader={false}
-              rowKey="stage"
-              dataSource={funnel}
-              columns={[
-                { render: (_, r) => <StageBadge stage={r.stage} /> },
-                { dataIndex: "n", align: "right" },
-              ]}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} lg={12}>
-          <Card size="small" title={t.dashboard.reasons}>
-            <Bars data={data.escalation_reasons} />
-          </Card>
-        </Col>
-      </Row>
-      <Card size="small">
-        <Table<DailyStat>
+  const data = query.data;
+  const controls = (
+    <Space wrap>
+      <Typography.Text>{t.dashboard.period}</Typography.Text>
+      <Segmented value={days} options={[7, 30, 90]} onChange={setDays} />
+      {data?.refreshed_at ? (
+        <Typography.Text type="secondary">
+          {t.dashboard.refreshed}: {formatDateTime(data.refreshed_at)}
+        </Typography.Text>
+      ) : null}
+      {allowed(perms.data, "settings", "write") ? (
+        <Button
           size="small"
-          rowKey="day"
-          scroll={{ x: 700 }}
-          pagination={{ pageSize: 10 }}
-          dataSource={[...data.daily].reverse()}
-          columns={[
-            { title: "", dataIndex: "day", render: (v: string) => dayjs(v).format("DD.MM") },
-            { title: t.dashboard.leads, dataIndex: "leads_created" },
-            { title: t.dashboard.escalations, dataIndex: "escalations" },
-            { title: t.dashboard.taken, dataIndex: "taken" },
-            { title: t.dashboard.won, dataIndex: "won" },
-            { title: t.dashboard.lost, dataIndex: "lost" },
-            { title: t.dashboard.cost, dataIndex: "cost_usd" },
-          ]}
-        />
-      </Card>
+          loading={refresh.isPending}
+          onClick={() => {
+            refresh.mutate();
+          }}
+        >
+          {t.dashboard.refresh}
+        </Button>
+      ) : null}
     </Space>
+  );
+  return (
+    <>
+      <PageHeader title={t.page.dashboard} extra={controls} />
+      <PageState query={query} ready={Boolean(data)}>
+        {data ? (
+          <Space direction="vertical" size={16} style={{ width: "100%" }}>
+            <Tiles data={data} days={days} />
+            <Row gutter={[16, 16]}>
+              <Col xs={24} lg={12}>
+                <Card size="small" title={t.dashboard.funnel}>
+                  <Funnel funnel={data.funnel} />
+                </Card>
+              </Col>
+              <Col xs={24} lg={12}>
+                <Card size="small" title={t.dashboard.reasons}>
+                  <Bars data={data.escalation_reasons} />
+                </Card>
+              </Col>
+            </Row>
+            <Card size="small">
+              <Table<DailyStat>
+                size="small"
+                rowKey="day"
+                scroll={{ x: 700 }}
+                pagination={{ pageSize: 10 }}
+                dataSource={[...data.daily].reverse()}
+                columns={DAILY_COLUMNS}
+              />
+            </Card>
+          </Space>
+        ) : null}
+      </PageState>
+    </>
   );
 }

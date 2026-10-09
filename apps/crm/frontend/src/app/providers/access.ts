@@ -50,6 +50,11 @@ export function accessControlProvider(client: QueryClient): AccessControlProvide
   };
 }
 
+/** (ресурс, действие) матрицы прав для раздела Refine — без учёта режима «Менеджер». */
+export function sectionPermission(resource: string): [string, string] | null {
+  return RESOURCE_MAP[resource] ?? null;
+}
+
 export function allowed(
   matrix: PermissionsResponse | undefined,
   resource: string,

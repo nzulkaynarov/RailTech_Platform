@@ -25,6 +25,8 @@ import { errorText, t } from "../../i18n/ru";
 import { ClientDocuments } from "./ClientDocuments";
 import { ServiceRequests } from "./ServiceRequests";
 import { formatDate } from "../../lib/time";
+import { PageHeader } from "../../components/PageHeader";
+import { PageState } from "../../components/PageState";
 
 type Action = { kind: "link" | "unlink"; tgUserId: number };
 
@@ -36,7 +38,8 @@ function identityLabel(i: IdentityOut): string {
 /** Карточка клиента (SPEC §10.1, §7.3): Telegram с подтверждением, лиды, документы, запросы. */
 export function ClientDetailPage() {
   const id = Number(useParams()["id"]);
-  const { data } = useClient(id);
+  const query = useClient(id);
+  const data = query.data;
   const perms = usePermissionsQuery();
   const canWrite = allowed(perms.data, "clients", "write");
   const canDocs = allowed(perms.data, "documents", "read");
@@ -56,13 +59,17 @@ export function ClientDetailPage() {
       void message.error(errorText((e as ApiError).code, e.message));
     },
   });
-  if (!data) return <Card loading />;
+  if (!data) {
+    return (
+      <PageState query={query} ready={false}>
+        {null}
+      </PageState>
+    );
+  }
 
   return (
     <Space direction="vertical" size={16} style={{ width: "100%" }}>
-      <Typography.Title level={4} style={{ margin: 0 }}>
-        {data.name}
-      </Typography.Title>
+      <PageHeader back="/clients" title={data.name} />
       <Descriptions size="small" column={{ xs: 1, md: 3 }}>
         <Descriptions.Item label={t.clients.inn}>{data.inn ?? t.common.none}</Descriptions.Item>
         <Descriptions.Item label={t.clients.segment}>

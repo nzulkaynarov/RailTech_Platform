@@ -26,6 +26,7 @@ import { errorText, t } from "../../i18n/ru";
 import { IngestTag } from "../../components/StageBadge";
 import { actorLabel } from "../../domain/labels";
 import { formatDate, formatDateTime } from "../../lib/time";
+import { useConfirmDanger } from "../../hooks/useConfirmDanger";
 
 type UploadValues = {
   type: BodyUploadDocumentType;
@@ -47,6 +48,7 @@ export function ClientDocuments({ clientId, canWrite }: { clientId: number; canW
   const [form] = Form.useForm<UploadValues>();
   const client = useQueryClient();
   const { message } = AntApp.useApp();
+  const confirmDanger = useConfirmDanger();
   const onError = (e: unknown) => {
     void message.error(errorText((e as ApiError).code, (e as Error).message));
   };
@@ -121,7 +123,16 @@ export function ClientDocuments({ clientId, canWrite }: { clientId: number; canW
                 disabled={!canWrite}
                 checked={d.is_visible_to_client}
                 onChange={() => {
-                  toggle.mutate(d);
+                  if (d.is_visible_to_client) {
+                    toggle.mutate(d);
+                    return;
+                  }
+                  confirmDanger({
+                    title: t.confirm.showToClient,
+                    content: t.confirm.showToClientHint,
+                    okText: t.confirm.show,
+                    onOk: () => toggle.mutateAsync(d),
+                  });
                 }}
               />
             ),

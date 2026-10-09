@@ -9,12 +9,17 @@ import { keys, useUsers } from "../../api/queries";
 import { errorText, t } from "../../i18n/ru";
 import { CreateUserDialog, EditUserDialog, TemporaryPassword } from "./UserDialogs";
 import { roleLabel } from "../../domain/labels";
+import { useConfirmDanger } from "../../hooks/useConfirmDanger";
+import { PageHeader } from "../../components/PageHeader";
+import { PageState } from "../../components/PageState";
 
 /** Пользователи (admin, SPEC §10.1): создание с временным паролем, роли, деактивация, сброс. */
 export function UsersPage() {
-  const { data, isLoading } = useUsers();
+  const query = useUsers();
+  const { data, isLoading } = query;
   const client = useQueryClient();
   const { message } = AntApp.useApp();
+  const confirmDanger = useConfirmDanger();
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<UserOut | null>(null);
   const [password, setPassword] = useState<string | null>(null);
@@ -52,54 +57,69 @@ export function UsersPage() {
 
   return (
     <>
-      <Button
-        type="primary"
-        className="filters"
-        onClick={() => {
-          setCreating(true);
-        }}
-      >
-        {t.users.create}
-      </Button>
-      <Table<UserOut>
-        rowKey="id"
-        loading={isLoading}
-        dataSource={data ?? []}
-        scroll={{ x: 640 }}
-        pagination={false}
-        columns={[
-          { title: t.users.email, dataIndex: "email" },
-          { title: t.users.fullName, dataIndex: "full_name" },
-          {
-            title: t.users.roles,
-            render: (_, u) => u.roles.map((r) => <Tag key={r}>{roleLabel(r)}</Tag>),
-          },
-          { title: t.users.active, render: (_, u) => (u.is_active ? t.common.yes : t.common.no) },
-          { title: t.users.telegram, render: (_, u) => u.tg_user_id ?? t.common.none },
-          {
-            render: (_, u) => (
-              <Space>
-                <Button
-                  size="small"
-                  onClick={() => {
-                    setEditing(u);
-                  }}
-                >
-                  {t.users.edit}
-                </Button>
-                <Button
-                  size="small"
-                  onClick={() => {
-                    reset.mutate(u.id);
-                  }}
-                >
-                  {t.users.resetPassword}
-                </Button>
-              </Space>
-            ),
-          },
-        ]}
+      <PageHeader
+        title={t.page.users}
+        extra={
+          <Button
+            type="primary"
+            onClick={() => {
+              setCreating(true);
+            }}
+          >
+            {t.users.create}
+          </Button>
+        }
       />
+      <PageState query={query} inline>
+        <Table<UserOut>
+          rowKey="id"
+          loading={isLoading}
+          dataSource={data ?? []}
+          scroll={{ x: 640 }}
+          pagination={false}
+          columns={[
+            { title: t.users.email, dataIndex: "email" },
+            { title: t.users.fullName, dataIndex: "full_name" },
+            {
+              title: t.users.roles,
+              render: (_, u) => u.roles.map((r) => <Tag key={r}>{roleLabel(r)}</Tag>),
+            },
+            {
+              title: t.users.active,
+              render: (_, u) =>
+                u.is_active ? <Tag color="green">{t.common.yes}</Tag> : <Tag>{t.common.no}</Tag>,
+            },
+            { title: t.users.telegram, render: (_, u) => u.tg_user_id ?? t.common.none },
+            {
+              render: (_, u) => (
+                <Space>
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      setEditing(u);
+                    }}
+                  >
+                    {t.users.edit}
+                  </Button>
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      confirmDanger({
+                        title: t.confirm.resetPassword.replace("{name}", u.full_name),
+                        content: t.confirm.resetPasswordHint,
+                        okText: t.confirm.reset,
+                        onOk: () => reset.mutateAsync(u.id),
+                      });
+                    }}
+                  >
+                    {t.users.resetPassword}
+                  </Button>
+                </Space>
+              ),
+            },
+          ]}
+        />
+      </PageState>
       <CreateUserDialog
         open={creating}
         saving={create.isPending}

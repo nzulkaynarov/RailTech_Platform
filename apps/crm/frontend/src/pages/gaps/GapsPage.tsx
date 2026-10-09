@@ -10,6 +10,9 @@ import { type ApiError, unwrap } from "../../api/http";
 import { errorText, t } from "../../i18n/ru";
 import { type ManualValues, ManualDialog } from "../kb/KbDialogs";
 import { LangTag } from "../../components/StageBadge";
+import { useConfirmDanger } from "../../hooks/useConfirmDanger";
+import { PageHeader } from "../../components/PageHeader";
+import { PageState } from "../../components/PageState";
 
 type Action =
   | { kind: "ignore" | "reopen"; gap: KbGapOut }
@@ -18,10 +21,12 @@ type Action =
 /** Пробелы KB (сценарий C4): вопросы без ответа → документ, привязка или игнор. */
 export function GapsPage() {
   const [status, setStatus] = useState<ListKbGapsStatus>("open");
-  const { data, isLoading } = useKbGaps({ status, limit: 200 });
+  const query = useKbGaps({ status, limit: 200 });
+  const { data, isLoading } = query;
   const docs = useKbDocuments();
   const client = useQueryClient();
   const { message } = AntApp.useApp();
+  const confirmDanger = useConfirmDanger();
   const [creating, setCreating] = useState<KbGapOut | null>(null);
   const [linking, setLinking] = useState<KbGapOut | null>(null);
   const [documentId, setDocumentId] = useState<number | null>(null);
@@ -66,6 +71,7 @@ export function GapsPage() {
 
   return (
     <Space direction="vertical" size={16} style={{ width: "100%" }}>
+      <PageHeader title={t.page.gaps} />
       <Segmented
         value={status}
         onChange={(v) => {
@@ -76,86 +82,93 @@ export function GapsPage() {
           label: t.gaps.statuses[v],
         }))}
       />
-      <Table<KbGapOut>
-        rowKey="id"
-        loading={isLoading}
-        dataSource={data?.items ?? []}
-        scroll={{ x: 760 }}
-        pagination={{ pageSize: 50 }}
-        columns={[
-          { title: t.gaps.question, dataIndex: "question" },
-          {
-            title: t.gaps.occurrences,
-            dataIndex: "occurrences",
-            width: 70,
-            sorter: (a, b) => a.occurrences - b.occurrences,
-          },
-          {
-            title: t.gaps.language,
-            dataIndex: "language",
-            width: 70,
-            render: (v: string) => <LangTag language={v} />,
-          },
-          {
-            title: t.gaps.score,
-            render: (_, g) => g.best_score?.toFixed(2) ?? t.common.none,
-            width: 110,
-          },
-          {
-            title: t.gaps.lead,
-            render: (_, g) =>
-              g.lead_id ? (
-                <Link to={`/leads/${String(g.lead_id)}`}>#{g.lead_id}</Link>
-              ) : (
-                t.common.none
-              ),
-            width: 70,
-          },
-          {
-            title: "",
-            render: (_, g) =>
-              g.status === "open" ? (
-                <Space wrap>
+      <PageState query={query} inline>
+        <Table<KbGapOut>
+          rowKey="id"
+          loading={isLoading}
+          dataSource={data?.items ?? []}
+          scroll={{ x: 760 }}
+          pagination={{ pageSize: 50 }}
+          columns={[
+            { title: t.gaps.question, dataIndex: "question" },
+            {
+              title: t.gaps.occurrences,
+              dataIndex: "occurrences",
+              width: 70,
+              sorter: (a, b) => a.occurrences - b.occurrences,
+            },
+            {
+              title: t.gaps.language,
+              dataIndex: "language",
+              width: 70,
+              render: (v: string) => <LangTag language={v} />,
+            },
+            {
+              title: t.gaps.score,
+              render: (_, g) => g.best_score?.toFixed(2) ?? t.common.none,
+              width: 110,
+            },
+            {
+              title: t.gaps.lead,
+              render: (_, g) =>
+                g.lead_id ? (
+                  <Link to={`/leads/${String(g.lead_id)}`}>#{g.lead_id}</Link>
+                ) : (
+                  t.common.none
+                ),
+              width: 70,
+            },
+            {
+              title: "",
+              render: (_, g) =>
+                g.status === "open" ? (
+                  <Space wrap>
+                    <Button
+                      size="small"
+                      type="primary"
+                      onClick={() => {
+                        setCreating(g);
+                      }}
+                    >
+                      {t.gaps.create}
+                    </Button>
+                    <Button
+                      size="small"
+                      onClick={() => {
+                        setLinking(g);
+                        setDocumentId(null);
+                      }}
+                    >
+                      {t.gaps.link}
+                    </Button>
+                    <Button
+                      size="small"
+                      onClick={() => {
+                        confirmDanger({
+                          title: t.confirm.ignoreGap,
+                          content: t.confirm.ignoreGapHint,
+                          okText: t.gaps.ignore,
+                          onOk: () => act.mutateAsync({ kind: "ignore", gap: g }),
+                        });
+                      }}
+                    >
+                      {t.gaps.ignore}
+                    </Button>
+                  </Space>
+                ) : (
                   <Button
                     size="small"
-                    type="primary"
                     onClick={() => {
-                      setCreating(g);
+                      act.mutate({ kind: "reopen", gap: g });
                     }}
                   >
-                    {t.gaps.create}
+                    {t.gaps.reopen}
                   </Button>
-                  <Button
-                    size="small"
-                    onClick={() => {
-                      setLinking(g);
-                      setDocumentId(null);
-                    }}
-                  >
-                    {t.gaps.link}
-                  </Button>
-                  <Button
-                    size="small"
-                    onClick={() => {
-                      act.mutate({ kind: "ignore", gap: g });
-                    }}
-                  >
-                    {t.gaps.ignore}
-                  </Button>
-                </Space>
-              ) : (
-                <Button
-                  size="small"
-                  onClick={() => {
-                    act.mutate({ kind: "reopen", gap: g });
-                  }}
-                >
-                  {t.gaps.reopen}
-                </Button>
-              ),
-          },
-        ]}
-      />
+                ),
+            },
+          ]}
+        />
+      </PageState>
       <ManualDialog
         open={creating !== null}
         saving={create.isPending}

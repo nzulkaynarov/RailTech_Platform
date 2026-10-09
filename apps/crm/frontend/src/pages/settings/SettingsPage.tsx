@@ -10,6 +10,8 @@ import { SchemaField } from "../../components/SchemaFields";
 import { type JsonSchema, normalize } from "../../components/schemaForm";
 import { errorText, t } from "../../i18n/ru";
 import { DryRunPanel } from "./DryRunPanel";
+import { PageHeader } from "../../components/PageHeader";
+import { PageState } from "../../components/PageState";
 
 type Values = Record<string, unknown>;
 
@@ -81,25 +83,35 @@ function KeyForm({
 
 /** Настройки (admin, PLAN Фаза 5): формы по Pydantic-схемам, предпросмотр текстов, сухой прогон. */
 export function SettingsPage() {
-  const { data, isLoading } = useSettings();
-  if (isLoading || !data) return <Card loading />;
+  const query = useSettings();
+  const data = query.data;
+  if (!data) {
+    return (
+      <PageState query={query} ready={false}>
+        {null}
+      </PageState>
+    );
+  }
   const name = data.values["company"]?.["name"];
   const company = typeof name === "string" ? name : "";
   return (
-    <Tabs
-      tabPosition="top"
-      items={Object.keys(data.schemas).map((key) => ({
-        key,
-        label: t.settings.keys[key] ?? key,
-        children: (
-          <KeyForm
-            settingKey={key}
-            schema={data.schemas[key] as JsonSchema}
-            values={data.values[key] ?? {}}
-            company={company}
-          />
-        ),
-      }))}
-    />
+    <>
+      <PageHeader title={t.page.settings} />
+      <Tabs
+        tabPosition="top"
+        items={Object.keys(data.schemas).map((key) => ({
+          key,
+          label: t.settings.keys[key] ?? key,
+          children: (
+            <KeyForm
+              settingKey={key}
+              schema={data.schemas[key] as JsonSchema}
+              values={data.values[key] ?? {}}
+              company={company}
+            />
+          ),
+        }))}
+      />
+    </>
   );
 }
