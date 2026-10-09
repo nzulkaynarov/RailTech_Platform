@@ -32,3 +32,10 @@
 .filters {
   margin-bottom: 16px;
 }
+.page-header {
+  margin-bottom: 16px;
+}
+.page-back {
+  display: inline-block;
+  margin-bottom: 8px;
+}

@@ -1,6 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { App as AntApp, Button, Form, Input, List, Modal, Space, Tag, Typography } from "antd";
-import dayjs from "dayjs";
+import { App as AntApp, Button, Form, Input, List, Modal, Space, Typography } from "antd";
 import { useState } from "react";
 import { Link } from "react-router";
 
@@ -9,6 +8,8 @@ import { closeServiceRequest } from "../../api/generated/crm";
 import type { ServiceRequestOut } from "../../api/generated/model";
 import { type ApiError, unwrap } from "../../api/http";
 import { errorText, t } from "../../i18n/ru";
+import { RequestStatusTag } from "../../components/StageBadge";
+import { formatDateTime } from "../../lib/time";
 
 type Props = { clientId: number; requests: ServiceRequestOut[]; canWrite: boolean };
 
@@ -55,13 +56,11 @@ export function ServiceRequests({ clientId, requests, canWrite }: Props) {
           >
             <Space direction="vertical" size={0}>
               <Space size={8} wrap>
-                <Tag color={r.status === "open" ? "orange" : "default"}>
-                  {t.clients.requestStatus[r.status] ?? r.status}
-                </Tag>
+                <RequestStatusTag status={r.status} />
                 <Typography.Text>{r.summary}</Typography.Text>
               </Space>
               <Typography.Text type="secondary">
-                {dayjs(r.created_at).format("DD.MM.YYYY HH:mm")}
+                {formatDateTime(r.created_at)}
                 {r.lead_id ? (
                   <>
                     {" · "}

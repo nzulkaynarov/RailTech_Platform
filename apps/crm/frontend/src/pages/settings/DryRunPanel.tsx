@@ -3,9 +3,10 @@ import { Link } from "react-router";
 
 import type { DryRunResponse } from "../../api/generated/model";
 import { t } from "../../i18n/ru";
+import { reasonLabel } from "../../domain/labels";
 
 const tags = (codes: string[]) =>
-  codes.length ? codes.map((c) => <Tag key={c}>{t.reasons[c] ?? c}</Tag>) : t.common.none;
+  codes.length ? codes.map((c) => <Tag key={c}>{reasonLabel(c)}</Tag>) : t.common.none;
 
 export function DryRunPanel({ report }: { report: DryRunResponse }) {
   return (

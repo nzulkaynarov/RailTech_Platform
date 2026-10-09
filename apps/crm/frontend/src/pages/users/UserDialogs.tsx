@@ -3,10 +3,11 @@ import { Alert, Form, Input, InputNumber, Modal, Select, Switch, Typography } fr
 import type { UserCreate, UserOut, UserUpdate } from "../../api/generated/model";
 import { useTeam } from "../../api/queries";
 import { t } from "../../i18n/ru";
+import { roleLabel } from "../../domain/labels";
 
 const ROLE_OPTIONS = ["admin", "manager", "viewer"].map((value) => ({
   value,
-  label: t.roles[value] ?? value,
+  label: roleLabel(value),
 }));
 
 type CreateProps = {

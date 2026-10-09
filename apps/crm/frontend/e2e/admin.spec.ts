@@ -45,5 +45,5 @@ test("admin sections render and greeting can be changed", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Загрузить документ" })).toBeVisible();
 
   await page.goto("/audit");
-  await expect(page.getByText("settings.update").first()).toBeVisible();
+  await expect(page.getByText("Изменил настройки").first()).toBeVisible();
 });

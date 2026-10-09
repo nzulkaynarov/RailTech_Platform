@@ -3,6 +3,7 @@ import { Card, Descriptions, Tag, Typography } from "antd";
 import { useMe } from "../../api/queries";
 import { ModeSwitch } from "../../components/ModeSwitch";
 import { t } from "../../i18n/ru";
+import { roleLabel } from "../../domain/labels";
 
 export function ProfilePage() {
   const { data } = useMe();
@@ -14,7 +15,7 @@ export function ProfilePage() {
         <Descriptions.Item label={t.users.email}>{data.email}</Descriptions.Item>
         <Descriptions.Item label={t.users.roles}>
           {data.roles.map((r) => (
-            <Tag key={r}>{t.roles[r] ?? r}</Tag>
+            <Tag key={r}>{roleLabel(r)}</Tag>
           ))}
         </Descriptions.Item>
         <Descriptions.Item label={t.users.telegram}>

@@ -1,185 +1,133 @@
-import { App as AntApp, Button, Checkbox, DatePicker, Input, Modal, Space, Typography } from "antd";
-import dayjs, { type Dayjs } from "dayjs";
+import { App as AntApp, Button, Space, Tooltip } from "antd";
+import type { ReactNode } from "react";
 import { useState } from "react";
 
 import type { LeadDetail } from "../api/generated/model";
-import { ApiError } from "../api/http";
+import type { ApiError } from "../api/http";
 import { type LeadAction, useLeadAction } from "../api/queries";
+import { ownerModeLabel } from "../domain/labels";
+import { useConfirmDanger } from "../hooks/useConfirmDanger";
 import { errorText, t } from "../i18n/ru";
 import { AssignLead } from "./AssignLead";
-import { type ActionRights, availableActions } from "./leadActionRules";
+import { type Dialog, LeadActionDialog } from "./LeadActionDialog";
+import {
+  type ActionRights,
+  type ActionState,
+  isTakeover,
+  leadActionStates,
+} from "./leadActionRules";
 import { MakeCustomer } from "./MakeCustomer";
 
-type Dialog = "return" | "snooze" | "lost" | "won" | "note" | null;
+type ButtonProps = {
+  state: ActionState;
+  onClick: () => void;
+  children: ReactNode;
+  primary?: boolean;
+  danger?: boolean;
+  loading?: boolean;
+};
+
+/** Кнопка действия: недоступное показывается неактивным с причиной во всплывающей подсказке. */
+function ActionButton({ state, onClick, children, primary, danger, loading }: ButtonProps) {
+  if (!state.visible) return null;
+  const button = (
+    <Button
+      type={primary ? "primary" : "default"}
+      danger={danger ?? false}
+      loading={loading ?? false}
+      disabled={Boolean(state.reason)}
+      onClick={onClick}
+    >
+      {children}
+    </Button>
+  );
+  return state.reason ? <Tooltip title={state.reason}>{button}</Tooltip> : button;
+}
 
 export function LeadActions({ lead, rights }: { lead: LeadDetail; rights: ActionRights }) {
   const { message, modal } = AntApp.useApp();
+  const confirmDanger = useConfirmDanger();
   const mutation = useLeadAction(lead.id);
-  const [dialog, setDialog] = useState<Dialog>(null);
-  const [text, setText] = useState("");
-  const [forBot, setForBot] = useState(true);
-  const [until, setUntil] = useState<Dayjs | null>(dayjs().add(2, "hour"));
-  const show = availableActions(lead, rights);
+  const [dialog, setDialog] = useState<Dialog | null>(null);
+  const s = leadActionStates(lead, rights);
 
-  const run = async (action: LeadAction) => {
+  const run = async (action: LeadAction): Promise<boolean> => {
     try {
       await mutation.mutateAsync(action);
       void message.success(t.actions.done);
       setDialog(null);
-      setText("");
+      return true;
     } catch (error) {
       void message.error(errorText((error as ApiError).code, (error as Error).message));
+      return false;
     }
   };
-
-  const confirm = () => {
-    const value = text.trim() || null;
-    if (dialog === "return") return run({ kind: "return", note: value });
-    if (dialog === "lost") return run({ kind: "lost", reason: value });
-    if (dialog === "won") return run({ kind: "won", reason: value });
-    if (dialog === "note") return run({ kind: "note", text: text.trim(), visibleToBot: forBot });
-    if (dialog === "snooze" && until) return run({ kind: "snooze", until: until.toISOString() });
-    return undefined;
+  const take = () => {
+    const name = lead.assigned_user_name ?? ownerModeLabel("human");
+    if (!isTakeover(lead, rights)) return void run({ kind: "take" });
+    confirmDanger({
+      title: t.confirm.takeOver.replace("{name}", name),
+      content: t.confirm.takeOverHint.replace(/\{name\}/g, name),
+      okText: t.actions.take,
+      onOk: () => run({ kind: "take" }),
+    });
+  };
+  const newDeal = () => {
+    void modal.confirm({
+      title: t.actions.newDeal,
+      content: t.actions.newDealConfirm,
+      okText: t.actions.newDeal,
+      cancelText: t.actions.cancel,
+      onOk: () => run({ kind: "newDeal" }),
+    });
+  };
+  const open = (d: Dialog) => () => {
+    setDialog(d);
   };
 
   return (
     <>
       <Space wrap>
-        {show.take ? (
-          <Button
-            type="primary"
-            loading={mutation.isPending}
-            onClick={() => void run({ kind: "take" })}
-          >
-            {t.actions.take}
-          </Button>
-        ) : null}
-        {show.returnToBot ? (
-          <Button
-            onClick={() => {
-              setDialog("return");
+        <ActionButton state={s.take} primary loading={mutation.isPending} onClick={take}>
+          {t.actions.take}
+        </ActionButton>
+        <ActionButton state={s.returnToBot} onClick={open("return")}>
+          {t.actions.returnToBot}
+        </ActionButton>
+        <ActionButton state={s.snooze} onClick={open("snooze")}>
+          {t.actions.snooze}
+        </ActionButton>
+        <ActionButton state={s.close} onClick={open("won")}>
+          {t.actions.won}
+        </ActionButton>
+        <ActionButton state={s.close} danger onClick={open("lost")}>
+          {t.actions.lost}
+        </ActionButton>
+        {s.makeCustomer.visible ? <MakeCustomer leadId={lead.id} /> : null}
+        <ActionButton state={s.newDeal} onClick={newDeal}>
+          {t.actions.newDeal}
+        </ActionButton>
+        {s.assign.visible && !s.assign.reason ? (
+          <AssignLead
+            lead={lead}
+            run={async (a) => {
+              await run(a);
             }}
-          >
-            {t.actions.returnToBot}
-          </Button>
+            busy={mutation.isPending}
+          />
         ) : null}
-        {show.snooze ? (
-          <Button
-            onClick={() => {
-              setDialog("snooze");
-            }}
-          >
-            {t.actions.snooze}
-          </Button>
-        ) : null}
-        {show.close ? (
-          <Button
-            onClick={() => {
-              setDialog("won");
-            }}
-          >
-            {t.actions.won}
-          </Button>
-        ) : null}
-        {show.close ? (
-          <Button
-            danger
-            onClick={() => {
-              setDialog("lost");
-            }}
-          >
-            {t.actions.lost}
-          </Button>
-        ) : null}
-        {show.makeCustomer ? <MakeCustomer leadId={lead.id} /> : null}
-        {show.newDeal ? (
-          <Button
-            onClick={() => {
-              void modal.confirm({
-                title: t.actions.newDeal,
-                content: t.actions.newDealConfirm,
-                okText: t.actions.newDeal,
-                cancelText: t.actions.cancel,
-                onOk: () => run({ kind: "newDeal" }),
-              });
-            }}
-          >
-            {t.actions.newDeal}
-          </Button>
-        ) : null}
-        {show.assign ? <AssignLead lead={lead} run={run} busy={mutation.isPending} /> : null}
-        {show.note ? (
-          <Button
-            onClick={() => {
-              setDialog("note");
-            }}
-          >
-            {t.actions.note}
-          </Button>
-        ) : null}
+        <ActionButton state={s.note} onClick={open("note")}>
+          {t.actions.note}
+        </ActionButton>
       </Space>
-      <Modal
-        open={dialog !== null}
-        title={dialogTitle(dialog)}
-        okText={dialog === "lost" ? t.actions.lost : t.actions.confirm}
-        okButtonProps={{ danger: dialog === "lost" }}
-        cancelText={t.actions.cancel}
-        confirmLoading={mutation.isPending}
-        onOk={() => void confirm()}
-        onCancel={() => {
+      <LeadActionDialog
+        dialog={dialog}
+        busy={mutation.isPending}
+        onRun={run}
+        onClose={() => {
           setDialog(null);
         }}
-        destroyOnHidden
-      >
-        {dialog === "won" ? (
-          <Typography.Paragraph type="secondary">{t.actions.wonNote}</Typography.Paragraph>
-        ) : null}
-        {dialog === "snooze" ? (
-          <DatePicker
-            showTime
-            value={until}
-            onChange={setUntil}
-            disabledDate={(d) => d.isBefore(dayjs(), "day") || d.isAfter(dayjs().add(7, "day"))}
-            style={{ width: "100%" }}
-          />
-        ) : (
-          <Input.TextArea
-            rows={4}
-            value={text}
-            placeholder={dialog === "won" ? t.actions.wonNote : dialogTitle(dialog)}
-            onChange={(e) => {
-              setText(e.target.value);
-            }}
-          />
-        )}
-        {dialog === "note" ? (
-          <Checkbox
-            checked={forBot}
-            onChange={(e) => {
-              setForBot(e.target.checked);
-            }}
-          >
-            {t.actions.noteForBot}
-          </Checkbox>
-        ) : null}
-      </Modal>
+      />
     </>
   );
-}
-
-function dialogTitle(dialog: Dialog): string {
-  switch (dialog) {
-    case "return":
-      return t.actions.returnNote;
-    case "snooze":
-      return t.actions.snoozeUntil;
-    case "lost":
-      return t.actions.lostReason;
-    case "won":
-      return t.actions.wonTitle;
-    case "note":
-      return t.actions.noteText;
-    default:
-      return "";
-  }
 }
