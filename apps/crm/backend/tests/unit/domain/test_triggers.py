@@ -21,7 +21,7 @@ CFG = TriggerSettings()
         (TriggerSignals(intent="request_contact"), [T.CALLBACK_REQUESTED]),
         (TriggerSignals(intent="pricing", kb_best_score=0.3), [T.PRICE_OR_CONTRACT_ASKED]),
         (TriggerSignals(intent="pricing", kb_best_score=None), [T.PRICE_OR_CONTRACT_ASKED]),
-        (TriggerSignals(intent="pricing", kb_best_score=0.8), []),
+        (TriggerSignals(intent="pricing", kb_best_score=0.8), [T.PRICE_OR_CONTRACT_ASKED]),
         (TriggerSignals(sentiment="negative"), [T.NEGATIVE_SENTIMENT]),
         (TriggerSignals(stop_word_hit=True), [T.NEGATIVE_SENTIMENT]),
         (TriggerSignals(intent="complaint"), [T.COMPLAINT]),

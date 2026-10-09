@@ -131,7 +131,8 @@ def test_no_progress_counter(
             replace(FACTS, kb_best_score=0.3),
             {TriggerCode.PRICE_OR_CONTRACT_ASKED},
         ),
-        (BASE, output(intent="pricing"), FACTS, set()),
+        # Цена из базы не снимает передачу: бот обещал расчёт менеджера (Q-014).
+        (BASE, output(intent="pricing"), FACTS, {TriggerCode.PRICE_OR_CONTRACT_ASKED}),
         (BASE, output(sentiment="negative"), FACTS, {TriggerCode.NEGATIVE_SENTIMENT}),
         (BASE, output(intent="complaint"), FACTS, {TriggerCode.COMPLAINT}),
         (

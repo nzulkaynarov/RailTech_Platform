@@ -110,9 +110,9 @@ def _fires(code: TriggerCode, s: TriggerSignals, cfg: TriggerSettings) -> bool:
         case TriggerCode.CALLBACK_REQUESTED:
             return s.callback_requested or s.intent == "request_contact"
         case TriggerCode.PRICE_OR_CONTRACT_ASKED:
-            return s.intent == "pricing" and (
-                s.kb_best_score is None or s.kb_best_score < s.min_score
-            )
+            # Бот называет цену только дословно из базы, иначе обещает расчёт менеджера —
+            # обещание выполняет код, а не модель (eval-gate 2026-10-09, решение владельца).
+            return s.intent == "pricing"
         case TriggerCode.NEGATIVE_SENTIMENT:
             return s.sentiment == "negative" or s.stop_word_hit
         case TriggerCode.COMPLAINT:

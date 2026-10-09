@@ -26,7 +26,8 @@
   transcript:
     - [lead, "А сколько стоит RT-Track?"]
     - [bot, "Цена зависит от пакета, количества трекеров и срока договора; расчёт делает менеджер."]
-  expect: {escalate: false, stage: engaged}
+  # Бот пообещал расчёт менеджера — передача обязательна (BUSINESS C2, решение владельца 2026-10-09).
+  expect: {escalate: true, triggers: [price_or_contract_asked], stage: engaged}
 
 - id: callback-request-ru
   category: callback

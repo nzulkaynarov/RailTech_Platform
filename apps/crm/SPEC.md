@@ -401,7 +401,7 @@ class QualifierOutput(BaseModel):
 |---|---|---|
 | `human_requested` | Интент/команда «человек, оператор, менеджер» | hot |
 | `callback_requested` | Интент `request_contact` или вызов `request_callback` | hot |
-| `price_or_contract_asked` | Интент `pricing` и `kb_best_score < min_score` | hot |
+| `price_or_contract_asked` | Интент `pricing` (бот называет цену только дословно из базы, иначе обещает расчёт менеджера — обещание выполняет код; решение 2026-10-09, Q-014) | hot |
 | `negative_sentiment` | `sentiment=negative` или стоп-слова | hot |
 | `complaint` | Интент `complaint` | hot |
 | `kb_gap_streak` | 2 подряд fallback | warm |
