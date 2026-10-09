@@ -64,7 +64,9 @@ async def test_handoff(text: str, human: bool) -> None:
     tools, model = FakeTools(lead(), kb()), ReplayModel()
     result = await run(tools, model, text, human=human)
     assert result.action == Action.HANDOFF  # type: ignore[attr-defined]
-    assert result.reply in {SETTINGS.texts.handoff.ru, SETTINGS.texts.off_hours.ru}  # type: ignore[attr-defined]
+    # Текст зависит от времени запуска: в рабочие часы — handoff, иначе off_hours с часами.
+    expected = {SETTINGS.lead_notice("handoff", "ru"), SETTINGS.lead_notice("off_hours", "ru")}
+    assert result.reply in expected  # type: ignore[attr-defined]
 
 
 async def test_callback_tool_is_executed_via_mcp() -> None:
