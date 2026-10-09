@@ -9,6 +9,7 @@ import { formatWhen } from "../lib/time";
 type Props = {
   messages: MessageOut[];
   canReply: boolean;
+  hint?: string;
   sending: boolean;
   onSend: (text: string) => Promise<void>;
 };
@@ -32,7 +33,7 @@ function Bubble({ message }: { message: MessageOut }) {
 }
 
 /** Переписка с лидом и поле ответа (только владелец лида в режиме human). */
-export function ChatThread({ messages, canReply, sending, onSend }: Props) {
+export function ChatThread({ messages, canReply, hint, sending, onSend }: Props) {
   const [draft, setDraft] = useState("");
   const bottom = useRef<HTMLDivElement>(null);
 
@@ -74,7 +75,7 @@ export function ChatThread({ messages, canReply, sending, onSend }: Props) {
           </Button>
         </Space.Compact>
       ) : (
-        <Typography.Text type="secondary">{t.lead.replyHint}</Typography.Text>
+        <Typography.Text type="secondary">{hint ?? t.lead.replyHint}</Typography.Text>
       )}
     </div>
   );
