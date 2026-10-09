@@ -1,5 +1,5 @@
 import { useGetIdentity } from "@refinedev/core";
-import { Badge, Layout, Space, Typography } from "antd";
+import { Badge, Layout, Space, theme, Typography } from "antd";
 
 import { ModeSwitch } from "../components/ModeSwitch";
 import { useEventStream } from "../hooks/useEventStream";
@@ -8,6 +8,7 @@ import { t } from "../i18n/ru";
 export function Header() {
   const { data: identity } = useGetIdentity<{ name: string }>();
   const live = useEventStream(Boolean(identity));
+  const { token } = theme.useToken();
   return (
     <Layout.Header
       style={{
@@ -15,7 +16,7 @@ export function Header() {
         justifyContent: "flex-end",
         alignItems: "center",
         padding: "0 16px",
-        background: "#fff",
+        background: token.colorBgContainer,
       }}
     >
       <Space wrap>
