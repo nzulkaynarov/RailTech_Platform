@@ -38,6 +38,12 @@ def test_consent_required(
         ("операторы связи", ["оператор"], []),
         ("Operator kerak", ["operator"], ["operator"]),
         ("", ["x"], []),
+        # Основа со звёздочкой — любая словоформа (аудит eval: «firibgarsiz» не ловилось).
+        ("Siz firibgarsiz, pulimni qaytaring", ["firibgar*"], ["firibgar*"]),
+        ("Это мошенничество!", ["мошенни*"], ["мошенни*"]),
+        ("Судя по всему, всё ок", ["суд"], []),
+        ("Подам в суд", ["суд"], ["суд"]),
+        ("сфирибгар", ["firibgar*"], []),
     ],
 )
 def test_find_terms(text: str, terms: list[str], expected: list[str]) -> None:

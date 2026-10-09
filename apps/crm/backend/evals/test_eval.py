@@ -171,9 +171,10 @@ async def test_golden_case(case: GoldenCase, container: Container) -> None:
     )
     reply = result.reply or ""
     fragments = [h["content"] for h in tools.kb_payload.get("hits", [])]
-    doc_facts = [f"{d.title} {d.number or ''} {d.doc_date or ''}" for d in case.documents]
+    doc_facts = [_doc_fact(d.title, d.number, d.doc_date) for d in case.documents]
     failures = _check(case, result.action.value, reply, tools)
-    invented = sorted(unsupported_numbers(reply, [*fragments, *doc_facts, case.message]))
+    sources = [*fragments, *doc_facts, case.message, *_system_texts(case.language)]
+    invented = sorted(unsupported_numbers(reply, sources))
     faithfulness = None
     if result.action.value == "answer" and case.category not in ("smalltalk", "customer_document"):
         faithfulness = await _judge(container, fragments, case.message, reply)
@@ -183,6 +184,22 @@ async def test_golden_case(case: GoldenCase, container: Container) -> None:
     RESULTS.append(Outcome(case.id, case.category, faithfulness, invented, failures))
     assert failures == [], f"{failures}; reply={reply!r}; reason={result.reason}"
     assert invented == [], f"числа не из KB: {invented}"
+
+
+def _doc_fact(title: str, number: str | None, doc_date: Any) -> str:
+    """Факты документа так, как их пишет модель: «20.07», «20.07.2026», ISO."""
+    when = str(doc_date or "")
+    if len(when) == 10 and when[4] == "-":
+        year, month, day = when.split("-")
+        when = f"{when} {day}.{month}.{year} {day}.{month}"
+    return f"{title} {number or ''} {when}"
+
+
+def _system_texts(language: str) -> list[str]:
+    """Фиксированные тексты бота (не модель): часы работы в «нерабочее время» и т. п."""
+    cfg = AppSettings()
+    lang = language if language in ("ru", "uz", "en") else "ru"
+    return [cfg.lead_notice("handoff", lang), cfg.lead_notice("off_hours", lang)]  # type: ignore[arg-type]
 
 
 def _check(case: GoldenCase, action: str, reply: str, tools: "EvalTools") -> list[str]:

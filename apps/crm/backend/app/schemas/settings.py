@@ -313,16 +313,17 @@ class AppSettings(_Strict):
     competitors: TermsSettings = Field(default_factory=TermsSettings)
     stop_words: TermsSettings = Field(
         default_factory=lambda: TermsSettings(
+            # «основа*» — любая словоформа (узбекский и русский агглютинируют/склоняют).
             terms=[
-                "обман",
-                "мошенники",
-                "жалоба",
+                "обман*",
+                "мошенни*",
+                "жалоб*",
                 "суд",
-                "aldov",
-                "firibgar",
-                "scam",
-                "fraud",
-                "lawyer",
+                "aldov*",
+                "firibgar*",
+                "scam*",
+                "fraud*",
+                "lawyer*",
             ]
         )
     )

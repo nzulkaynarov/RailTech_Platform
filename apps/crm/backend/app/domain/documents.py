@@ -60,6 +60,12 @@ _REQUEST: Final = re.compile(
     r"|hujjat\w*|yuboring|nusxa\w*|documents?|send me|copy of|files?)(?![\w-])",
     re.IGNORECASE,
 )
+_CHANGE: Final = re.compile(
+    r"(?<![\w-])(?:сниз\w*|сниж\w*|измен\w*|продл\w*|расторг\w*|пересмотр\w*|скидк\w*"
+    r"|услови\w*|o'zgartir\w*|uzaytir\w*|bekor\s+qil\w*|chegirma\w*"
+    r"|change\w*|extend\w*|terminat\w*|renegotiat\w*|discount\w*|lower\w*)(?![\w-])",
+    re.IGNORECASE,
+)
 MONTHS: Final[dict[str, int]] = {
     **{
         m: i
@@ -145,7 +151,10 @@ def parse(text: str, today: date) -> DocQuery:
     # Номер («№ 15/2026») не должен читаться как год периода.
     without_number = _NUMBER.sub(" ", lowered)
     date_from, date_to = _period(without_number, today)
-    is_request = doc_type is not None or _REQUEST.search(lowered) is not None
+    explicit = _REQUEST.search(lowered) is not None
+    # «Снизить цену по договору» — про условия, а не про файл: без явной просьбы прислать
+    # это не запрос документа (уходит в сервисный запрос / менеджеру).
+    is_request = explicit or (doc_type is not None and _CHANGE.search(lowered) is None)
     return DocQuery(
         doc_type=doc_type,
         date_from=date_from,

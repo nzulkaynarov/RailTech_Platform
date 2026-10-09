@@ -80,3 +80,20 @@ def test_document_word_forms(text: str, doc_type: str) -> None:
     parsed = parse(text, TODAY)
     assert parsed.doc_type == doc_type
     assert parsed.is_request is True
+
+
+@pytest.mark.parametrize(
+    ("text", "is_request"),
+    [
+        # Изменение условий — менеджеру, а не поиск документа (golden customer-change-terms).
+        ("Хотим снизить цену по договору и продлить его на год без доплаты", False),
+        ("Можно изменить условия контракта?", False),
+        ("Shartnomani uzaytirmoqchimiz", False),
+        ("We want to renegotiate the contract", False),
+        # Явная просьба прислать документ остаётся запросом, даже рядом с изменениями.
+        ("Пришлите договор, хотим его продлить", True),
+        ("Нужен счёт за июль", True),
+    ],
+)
+def test_change_of_terms_is_not_a_document_request(text: str, is_request: bool) -> None:
+    assert parse(text, TODAY).is_request is is_request
