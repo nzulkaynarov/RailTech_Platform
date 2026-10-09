@@ -27,8 +27,12 @@ ALLOWED = [
     (S.NEW, S.UNRESPONSIVE, Src.TIMER),
     (S.ENGAGED, S.UNRESPONSIVE, Src.TIMER),
     (S.QUALIFIED, S.UNRESPONSIVE, Src.TIMER),
-    (S.HANDOFF, S.UNRESPONSIVE, Src.TIMER),
     (S.UNRESPONSIVE, S.ENGAGED, Src.SYSTEM),
+    # ADR-0015: из «Отказа» и «Клиента» есть выход.
+    (S.LOST, S.ENGAGED, Src.SYSTEM),
+    (S.LOST, S.IN_PROGRESS, Src.USER),
+    (S.CUSTOMER, S.IN_PROGRESS, Src.USER),
+    (S.LOST, S.CUSTOMER, Src.SYSTEM),
 ]
 
 REJECTED = [
@@ -53,8 +57,11 @@ REJECTED = [
     (S.LOST, S.ENGAGED, Src.USER),
     (S.ENGAGED, S.IN_PROGRESS, Src.TRIGGER),
     (S.WON, S.IN_PROGRESS, Src.USER),
-    (S.LOST, S.IN_PROGRESS, Src.USER),
     (S.CUSTOMER, S.ENGAGED, Src.SYSTEM),
+    # ADR-0015: в handoff ждёт лид, а не мы — «молчуном» не считается.
+    (S.HANDOFF, S.UNRESPONSIVE, Src.TIMER),
+    (S.CUSTOMER, S.IN_PROGRESS, Src.TRIGGER),
+    (S.LOST, S.CUSTOMER, Src.USER),
 ]
 
 

@@ -139,10 +139,13 @@ class DialogNodes:
         return {"reply": self._settings.texts.fallback.get(_lang(state))}
 
     def handoff(self, state: DialogState) -> dict[str, Any]:
-        texts = self._settings.texts
         hours = self._settings.business_hours.domain()
-        text = texts.handoff if is_business_time(datetime.now(UTC), hours) else texts.off_hours
-        return {"reply": text.get(_lang(state))}
+        business = is_business_time(datetime.now(UTC), hours)
+        return {
+            "reply": self._settings.lead_notice(
+                "handoff" if business else "off_hours", _lang(state)
+            )
+        }
 
     async def deliver_document(self, state: DialogState) -> dict[str, Any]:
         """Ровно один документ клиента: ссылка из docs-mcp, отправку файла делает бот."""

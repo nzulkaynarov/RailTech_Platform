@@ -15,17 +15,21 @@ from app.agents.llm import ToolCall
 from app.agents.mcp_client import McpToolClient
 from app.config import Settings
 from app.container import Container
+from app.domain.errors import ConflictError
 from app.main import create_app
 from app.mcp import crm_server, docs_server, kb_server
 from app.mcp.common import build_app
 from app.models.clients import Client, Document, DocumentAccessLog, ServiceRequest
 from app.models.leads import Lead, TelegramIdentity
 from app.models.qualification import Escalation
+from app.security.principal import Principal
+from app.services.clients import ClientService
 from app.services.conversation import ConversationService, Incoming
 from app.services.documents import DocumentService
+from app.services.lead_messenger import LeadMessenger
 from app.services.settings import SettingsService
 from tests.fakes import FakeEmbedder
-from tests.integration.crm_helpers import escalated_lead, login, make_user
+from tests.integration.crm_helpers import FakeSender, escalated_lead, login, make_user
 from tests.integration.servers import free_port, running
 from tests.integration.test_docs_mcp import FakeStorage
 from tests.integration.test_kb_ingest import FakeConverter, MemoryStorage
@@ -147,8 +151,26 @@ async def test_service_request_via_tool(
     async with sessions() as session:
         request = (await session.scalars(select(ServiceRequest))).one()
         escalation = (await session.scalars(select(Escalation))).one()
+        lead = (await session.scalars(select(Lead))).one()
     assert (request.client_id, request.summary) == (client_id, "Касса не печатает чеки")
     assert (escalation.reason_codes, escalation.priority) == (["service_request"], "info")
+    assert lead.owner_mode == "bot"  # info не глушит бота (ADR-0015)
+
+    sender = FakeSender()
+    clients = ClientService(
+        sessions, SettingsService(sessions, ttl_s=0), LeadMessenger(sessions, sender)
+    )
+    admin, _ = await make_user(sessions, "boss@railtech.uz", ["admin"])
+    who = Principal(admin.id, "Босс", ("admin",))
+    await clients.close_service_request(who, request.id, "Инженер приедет завтра в 10:00")
+    assert sender.sent[-1][1] == (
+        "По вашему запросу «Касса не печатает чеки»: Инженер приедет завтра в 10:00"
+    )
+    async with sessions() as session:
+        escalation = (await session.scalars(select(Escalation))).one()
+    assert (escalation.status, escalation.outcome) == ("closed", "service_request_closed")
+    with pytest.raises(ConflictError):
+        await clients.close_service_request(who, request.id, "ещё раз")
 
 
 async def test_unverified_identity_stays_prospect(
@@ -256,3 +278,20 @@ async def test_document_upload_extracts_text_and_download_is_logged(
         doc = await session.get(Document, document_id)
     assert doc is not None
     assert "трекеров" in (doc.extracted_text or "")
+
+
+async def test_deactivated_client_gets_no_documents(
+    service: tuple[ConversationService, ReplayModel, list[str]],
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    svc, model, _ = service
+    client_id = await customer(sessions, svc)
+    async with sessions() as session, session.begin():
+        client = await session.get(Client, client_id)
+        assert client is not None
+        client.is_active = False
+    model.responses.append(reply("Уточню у коллег."))
+    out = await svc.handle_message(msg("Пришлите договор, который мы заключали в июле"))
+    assert all(o.document is None for o in out)
+    async with sessions() as session:
+        assert (await session.scalars(select(DocumentAccessLog))).all() == []

@@ -24,6 +24,9 @@ from evals import report
 from evals.qualifier_cases import QualifierCase, load_products, load_qualifier_cases, turn_signals
 
 pytestmark = pytest.mark.eval
+# Один цикл событий на модуль: клиенты LiteLLM и пул БД живут весь модуль,
+# иначе pytest-asyncio 1.x даёт ScopeMismatch / «Event loop is closed».
+MODULE_LOOP = pytest.mark.asyncio(loop_scope="module")
 
 CASES = load_qualifier_cases()
 PRODUCTS = load_products()
@@ -52,6 +55,7 @@ def agent() -> QualifierAgent:
     return QualifierAgent(ChatModel(make_client(settings), "qualifier-model"))
 
 
+@MODULE_LOOP
 @pytest.mark.parametrize("case", CASES, ids=[c.id for c in CASES])
 async def test_qualifier_case(case: QualifierCase, agent: QualifierAgent) -> None:
     data = QualifierInput(

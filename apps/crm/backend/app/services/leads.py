@@ -28,6 +28,7 @@ from app.models.leads import Lead, LeadNote
 from app.models.qualification import Escalation, StageTransition
 from app.repositories import events
 from app.repositories import leads as repo
+from app.repositories import users as users_repo
 from app.schemas.settings import Language
 from app.security import audit
 from app.security.principal import Principal
@@ -80,8 +81,7 @@ class LeadService:
             ):
                 raise ConflictError("lead is already taken", assigned_user_id=lead.assigned_user_id)
             before = _snapshot(lead)
-            if lead.stage == Stage.LOST:
-                raise InvalidTransitionError("lost lead cannot be taken")
+            # Из «Отказа» — снова в работу (ADR-0015); клиента и «Сделку» берут без смены стадии.
             if lead.stage not in (Stage.IN_PROGRESS, Stage.WON, Stage.CUSTOMER):
                 await _move(session, lead, Stage.IN_PROGRESS, who, "taken by manager")
             lead.owner_mode = OwnerMode.HUMAN.value
@@ -122,6 +122,44 @@ class LeadService:
             changed = await self._finish(
                 session, who, lead, "lead.return_to_bot", before, escalation
             )
+            language = LANGUAGES.get(lead.language, "ru")
+        cfg = await self._settings.get()
+        text = cfg.texts.returned_to_bot.get(language, company=cfg.company.name)
+        await self._messenger.send(lead_id, text, {"notice": "returned_to_bot"})
+        await self._notify(changed)
+
+    async def new_deal(self, who: Principal, lead_id: int) -> None:
+        """Повторная продажа клиенту: customer → in_progress, ведёт тот, кто открыл (ADR-0015)."""
+        async with self._sessions() as session, session.begin():
+            lead = await _lead(session, lead_id)
+            if lead.stage != Stage.CUSTOMER:
+                raise InvalidTransitionError("new deal is opened for a customer only")
+            before = _snapshot(lead)
+            await _move(session, lead, Stage.IN_PROGRESS, who, "new deal")
+            lead.owner_mode = OwnerMode.HUMAN.value
+            lead.assigned_user_id = who.user_id
+            changed = await self._finish(session, who, lead, "lead.new_deal", before, None)
+        await self._notify(changed)
+
+    async def assign(self, who: Principal, lead_id: int, user_id: int) -> None:
+        """Передать лида коллеге: стадия не меняется, лид узнаёт имя нового менеджера."""
+        cfg = await self._settings.get()
+        async with self._sessions() as session, session.begin():
+            lead = await _lead(session, lead_id)
+            if lead.owner_mode != OwnerMode.HUMAN:
+                raise ConflictError("take the lead before handing it over")
+            _require_owner(lead, who)
+            target = await users_repo.get(session, user_id)
+            roles = await users_repo.roles_of(session, user_id) if target else []
+            if target is None or not target.is_active or not {"manager", "admin"} & set(roles):
+                raise ValidationFailedError("choose an active manager", field="user_id")
+            before = _snapshot(lead)
+            lead.assigned_user_id = user_id
+            changed = await self._finish(session, who, lead, "lead.assign", before, None)
+            language = LANGUAGES.get(lead.language, "ru")
+            name = target.full_name.split()[0] if target.full_name.strip() else target.full_name
+        text = cfg.texts.manager_joined.get(language, manager=name)
+        await self._messenger.send(lead_id, text, {"notice": "manager_joined"})
         await self._notify(changed)
 
     async def snooze(self, who: Principal, lead_id: int, until: datetime) -> None:
@@ -150,12 +188,23 @@ class LeadService:
             before = _snapshot(lead)
             target = Stage.WON if outcome == "won" else Stage.LOST
             await _move(session, lead, target, who, reason or outcome)
+            # Итог зафиксирован — диалог снова ведёт бот, иначе лид пишет в тишину.
+            # Владелец остаётся: он ответственный за клиента после сделки.
+            lead.owner_mode = OwnerMode.BOT.value
+            lead.snoozed_until = None
+            lead.consecutive_fallbacks = 0
+            lead.bot_turns_without_progress = 0
+            if lead.client_id is not None:
+                # Повторная сделка клиента: итог записан, лид снова клиент (ADR-0015).
+                await stages.transition(
+                    session, lead, Stage.CUSTOMER, TransitionSource.SYSTEM, reason="repeat deal"
+                )
             escalation = await _active_escalation(session, lead_id)
             if escalation is not None:
                 escalation.status, escalation.resolved_at = "closed", datetime.now(UTC)
                 escalation.outcome = outcome
             if reason and reason.strip():
-                _add_note(session, lead, who, f"{outcome}: {reason}", visible_to_bot=False)
+                _add_note(session, lead, who, reason, visible_to_bot=False)
             changed = await self._finish(
                 session, who, lead, f"lead.close_{outcome}", before, escalation
             )

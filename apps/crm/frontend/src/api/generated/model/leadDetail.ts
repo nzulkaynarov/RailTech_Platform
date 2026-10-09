@@ -9,6 +9,8 @@ import type { LeadDetailQualification } from "./leadDetailQualification";
 
 export interface LeadDetail {
   assigned_user_id: number | null;
+  assigned_user_name?: string | null;
+  client_id?: number | null;
   consent_given_at: string | null;
   created_at: string;
   display_name: string;
@@ -25,4 +27,5 @@ export interface LeadDetail {
   snoozed_until: string | null;
   stage: string;
   tg_username: string | null;
+  unread?: boolean;
 }

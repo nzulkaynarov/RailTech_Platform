@@ -38,3 +38,45 @@ TODAY = date(2026, 10, 8)
 )
 def test_parse(text: str, expected: DocQuery) -> None:
     assert parse(text, TODAY) == expected
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Какая актуальная цена на RT-Track?",
+        "Активный тариф можно поменять?",
+        "Xatolik chiqdi, nima qilish kerak?",
+        "Как работает billing у вас?",
+        "Счётчик вагонов показывает ноль",
+        "Договоримся о встрече на завтра?",
+        "Где посмотреть профиль компании?",
+        "Писал вам вчера, ответа нет",
+    ],
+)
+def test_ordinary_questions_are_not_document_requests(text: str) -> None:
+    parsed = parse(text, TODAY)
+    assert parsed.is_request is False
+    assert parsed.doc_type is None
+
+
+@pytest.mark.parametrize(
+    ("text", "doc_type"),
+    [
+        ("Нужна копия акта сверки", "act"),
+        ("Пришлите акты за квартал", "act"),
+        ("Договора за этот год", "contract"),
+        ("По контракту № 7", "contract"),
+        ("Счета за март", "invoice"),
+        ("Hisob-faktura kerak", "invoice"),
+        ("Need the bills for May", "invoice"),
+        ("Dalolatnomani yuboring", "act"),
+        ("Xatni yuboring", "letter"),
+        ("Пришлите письмо от банка", "letter"),
+        ("Коммерческое предложение от июля", "proposal"),
+        ("Taklifni yuboring", "proposal"),
+    ],
+)
+def test_document_word_forms(text: str, doc_type: str) -> None:
+    parsed = parse(text, TODAY)
+    assert parsed.doc_type == doc_type
+    assert parsed.is_request is True

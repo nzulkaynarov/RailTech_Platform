@@ -8,10 +8,14 @@ from typing import Any
 from sqlalchemy import ColumnElement, Select, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.auth import User
 from app.models.leads import Conversation, Lead, LeadNote, Message, TelegramIdentity
 from app.models.qualification import Escalation
 
 ACTIVE = ("open", "snoozed", "taken")
+_waits_for_reply = func.coalesce(
+    Lead.last_lead_msg_at > func.coalesce(Lead.last_human_msg_at, Lead.created_at), False
+)
 PRIORITY_RANK = {"hot": 0, "warm": 1, "info": 2}
 
 
@@ -79,6 +83,15 @@ async def active_escalations(
     return {e.lead_id: e for e in (await session.scalars(stmt)).all()}
 
 
+async def user_names(session: AsyncSession, leads: Sequence[Lead]) -> dict[int, str]:
+    """Имена владельцев лидов: менеджеру и наблюдателю `/users` недоступен, а «кто ведёт» нужен."""
+    ids = {lead.assigned_user_id for lead in leads if lead.assigned_user_id is not None}
+    if not ids:
+        return {}
+    rows = await session.execute(select(User.id, User.full_name).where(User.id.in_(ids)))
+    return {user_id: name for user_id, name in rows}  # noqa: C416 — Row, не кортеж
+
+
 async def inbox(session: AsyncSession, me: int) -> tuple[list[Lead], list[Lead], list[Lead]]:
     escalated = (
         await session.scalars(
@@ -94,7 +107,8 @@ async def inbox(session: AsyncSession, me: int) -> tuple[list[Lead], list[Lead],
             .where(
                 Lead.assigned_user_id == me, Lead.owner_mode == "human", Lead.erased_at.is_(None)
             )
-            .order_by(Lead.last_lead_msg_at.desc().nulls_last())
+            # Сначала те, кто ждёт ответа: лид написал после последнего ответа менеджера.
+            .order_by(_waits_for_reply.desc(), Lead.last_lead_msg_at.desc().nulls_last())
             .limit(100)
         )
     ).all()

@@ -12,7 +12,7 @@ import { keys } from "../../api/queries";
  */
 // Ресурс Refine → (ресурс, действие) матрицы прав бэкенда.
 const RESOURCE_MAP: Record<string, [string, string]> = {
-  inbox: ["leads", "read"],
+  inbox: ["leads", "take"], // очередь работы — не наблюдателю (SPEC §10.1)
   leads: ["leads", "read"],
   dashboard: ["dashboard", "read"],
   clients: ["clients", "read"],
@@ -48,6 +48,11 @@ export function accessControlProvider(client: QueryClient): AccessControlProvide
     },
     options: { buttons: { enableAccessControl: true, hideIfUnauthorized: true } },
   };
+}
+
+/** (ресурс, действие) матрицы прав для раздела Refine — без учёта режима «Менеджер». */
+export function sectionPermission(resource: string): [string, string] | null {
+  return RESOURCE_MAP[resource] ?? null;
 }
 
 export function allowed(

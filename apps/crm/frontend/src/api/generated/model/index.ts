@@ -7,6 +7,7 @@
 
 export * from "./accessOut";
 export * from "./actionResult";
+export * from "./assign";
 export * from "./auditItem";
 export * from "./auditItemAfter";
 export * from "./auditItemBefore";
@@ -91,11 +92,13 @@ export * from "./searchHitOut";
 export * from "./searchRequest";
 export * from "./searchRequestLanguage";
 export * from "./searchResponse";
+export * from "./serviceRequestClose";
 export * from "./serviceRequestOut";
 export * from "./settingsResponse";
 export * from "./settingsResponseSchemas";
 export * from "./settingsResponseValues";
 export * from "./snooze";
+export * from "./teamMember";
 export * from "./tokenResponse";
 export * from "./transitionItem";
 export * from "./userCreate";

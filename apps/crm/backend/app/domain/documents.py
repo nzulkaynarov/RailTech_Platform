@@ -12,29 +12,53 @@ from typing import Final, Literal
 
 DocType = Literal["contract", "proposal", "letter", "invoice", "act", "other"]
 
-TYPE_WORDS: Final[dict[DocType, tuple[str, ...]]] = {
-    "contract": ("договор", "контракт", "shartnoma", "contract", "agreement"),
-    "proposal": ("коммерческое предложение", "кп", "предложени", "taklif", "proposal", "quote"),
-    "invoice": ("счёт", "счет", "счета", "hisob-faktura", "hisob", "invoice", "bill"),
-    "act": ("акт", "dalolatnoma", "act of acceptance", "certificate of completion"),
-    "letter": ("письмо", "xat", "letter"),
+_RU_NOUN: Final = r"(?:а|у|ом|е|ы|ов|ам|ами|ах)?"
+_UZ_NOUN: Final = r"(?:i|ni|si|ning|ga|da|dan|lar|lari|larni|larning)?"
+# Полные словоформы, а не начало слова: «акт» ≠ «актуальная», «счёт» ≠ «счётчик», «xat» ≠ «xatolik».
+_TYPE_FORMS: Final[dict[DocType, tuple[str, ...]]] = {
+    "contract": (
+        rf"договор{_RU_NOUN}",
+        rf"контракт{_RU_NOUN}",
+        rf"shartnoma{_UZ_NOUN}",
+        r"contracts?",
+        r"agreements?",
+    ),
+    "proposal": (
+        r"коммерческ\w*\s+предложени\w*",
+        r"кп",
+        r"предложени(?:е|я|ю|ем|и|й|ями|ях)",
+        rf"taklif{_UZ_NOUN}",
+        r"proposals?",
+        r"quotes?",
+    ),
+    "invoice": (
+        rf"сч[её]т{_RU_NOUN}",
+        rf"hisob-faktura{_UZ_NOUN}",
+        rf"hisob{_UZ_NOUN}",
+        r"invoices?",
+        r"bills?",
+    ),
+    "act": (
+        rf"акт{_RU_NOUN}",
+        rf"dalolatnoma{_UZ_NOUN}",
+        r"act of acceptance",
+        r"certificate of completion",
+    ),
+    "letter": (
+        r"письм(?:о|а|у|ом|е|ами|ах)",
+        r"пис[её]м",
+        rf"xat{_UZ_NOUN}",
+        r"letters?",
+    ),
 }
-REQUEST_WORDS: Final = (
-    "документ",
-    "пришлите",
-    "пришли",
-    "отправьте",
-    "скиньте",
-    "копию",
-    "файл",
-    "pdf",
-    "hujjat",
-    "yuboring",
-    "nusxa",
-    "document",
-    "send me",
-    "copy of",
-    "file",
+TYPE_PATTERNS: Final[dict[DocType, re.Pattern[str]]] = {
+    doc_type: re.compile(rf"(?<![\w-])(?:{'|'.join(forms)})(?![\w-])", re.IGNORECASE)
+    for doc_type, forms in _TYPE_FORMS.items()
+}
+_REQUEST: Final = re.compile(
+    r"(?<![\w-])(?:документ\w*|пришлите|пришли|отправьте|скиньте|копи[юия]|файл\w*|pdf"
+    r"|hujjat\w*|yuboring|nusxa\w*|documents?|send me|copy of|files?)(?![\w-])",
+    re.IGNORECASE,
 )
 MONTHS: Final[dict[str, int]] = {
     **{
@@ -121,7 +145,7 @@ def parse(text: str, today: date) -> DocQuery:
     # Номер («№ 15/2026») не должен читаться как год периода.
     without_number = _NUMBER.sub(" ", lowered)
     date_from, date_to = _period(without_number, today)
-    is_request = doc_type is not None or any(w in lowered for w in REQUEST_WORDS)
+    is_request = doc_type is not None or _REQUEST.search(lowered) is not None
     return DocQuery(
         doc_type=doc_type,
         date_from=date_from,
@@ -132,11 +156,9 @@ def parse(text: str, today: date) -> DocQuery:
 
 
 def _doc_type(lowered: str) -> DocType | None:
-    words = set(_WORD.findall(lowered))
-    for doc_type, variants in TYPE_WORDS.items():
-        for variant in variants:
-            if (" " in variant and variant in lowered) or any(w.startswith(variant) for w in words):
-                return doc_type
+    for doc_type, pattern in TYPE_PATTERNS.items():
+        if pattern.search(lowered):
+            return doc_type
     return None
 
 

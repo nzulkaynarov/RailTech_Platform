@@ -1,17 +1,54 @@
-import { Badge, Card, Empty, List, Space, Typography } from "antd";
-import dayjs from "dayjs";
+import {
+  App as AntApp,
+  Badge,
+  Button,
+  Card,
+  Empty,
+  List,
+  Space,
+  Tag,
+  Tooltip,
+  Typography,
+} from "antd";
 import { Link } from "react-router";
 
 import type { LeadOut } from "../../api/generated/model";
-import { useInbox } from "../../api/queries";
-import { PriorityTag } from "../../components/EscalationReason";
-import { StageBadge } from "../../components/StageBadge";
-import { t } from "../../i18n/ru";
+import type { ApiError } from "../../api/http";
+import { useInbox, useLeadAction, useMe, usePermissionsQuery } from "../../api/queries";
+import { allowed } from "../../app/providers/access";
+import { PageHeader } from "../../components/PageHeader";
+import { PageState } from "../../components/PageState";
+import { PriorityTag, StageBadge } from "../../components/StageBadge";
+import { reasonLabel } from "../../domain/labels";
+import { errorText, t } from "../../i18n/ru";
+import { formatDateTime, fromNow } from "../../lib/time";
 import "../pages.css";
 
-function LeadItem({ lead }: { lead: LeadOut }) {
+/** «Забрать» прямо из очереди — как в Intercom/HubSpot (аудит UI U-06). */
+function QuickTake({ lead }: { lead: LeadOut }) {
+  const { message } = AntApp.useApp();
+  const take = useLeadAction(lead.id);
   return (
-    <List.Item>
+    <Button
+      size="small"
+      type="primary"
+      loading={take.isPending}
+      onClick={() => {
+        take.mutateAsync({ kind: "take" }).then(
+          () => void message.success(t.actions.done),
+          (e: unknown) => void message.error(errorText((e as ApiError).code)),
+        );
+      }}
+    >
+      {t.actions.take}
+    </Button>
+  );
+}
+
+function LeadItem({ lead, canTake }: { lead: LeadOut; canTake: boolean }) {
+  const free = lead.owner_mode !== "human";
+  return (
+    <List.Item actions={canTake && free ? [<QuickTake key="take" lead={lead} />] : []}>
       <List.Item.Meta
         title={
           <Space wrap>
@@ -19,6 +56,7 @@ function LeadItem({ lead }: { lead: LeadOut }) {
               #{lead.id} · {lead.display_name || t.common.none}
             </Link>
             {lead.escalation ? <PriorityTag priority={lead.escalation.priority} /> : null}
+            {lead.unread ? <Tag color="orange">{t.inbox.unread}</Tag> : null}
             <StageBadge stage={lead.stage} />
           </Space>
         }
@@ -27,13 +65,13 @@ function LeadItem({ lead }: { lead: LeadOut }) {
             {lead.need_summary ? <Typography.Text>{lead.need_summary}</Typography.Text> : null}
             {lead.escalation ? (
               <Typography.Text type="secondary">
-                {lead.escalation.reason_codes.map((c) => t.reasons[c] ?? c).join(", ")}
+                {lead.escalation.reason_codes.map(reasonLabel).join(", ")}
               </Typography.Text>
             ) : null}
             {lead.last_lead_msg_at ? (
-              <Typography.Text type="secondary">
-                {dayjs(lead.last_lead_msg_at).format("DD.MM HH:mm")}
-              </Typography.Text>
+              <Tooltip title={formatDateTime(lead.last_lead_msg_at)}>
+                <Typography.Text type="secondary">{fromNow(lead.last_lead_msg_at)}</Typography.Text>
+              </Tooltip>
             ) : null}
           </Space>
         }
@@ -42,7 +80,9 @@ function LeadItem({ lead }: { lead: LeadOut }) {
   );
 }
 
-function Column({ title, leads }: { title: string; leads: LeadOut[] }) {
+type ColumnProps = { title: string; empty: string; leads: LeadOut[]; canTake: boolean };
+
+function Column({ title, empty, leads, canTake }: ColumnProps) {
   return (
     <Card
       title={
@@ -53,9 +93,12 @@ function Column({ title, leads }: { title: string; leads: LeadOut[] }) {
       size="small"
     >
       {leads.length ? (
-        <List dataSource={leads} renderItem={(lead) => <LeadItem lead={lead} />} />
+        <List
+          dataSource={leads}
+          renderItem={(lead) => <LeadItem lead={lead} canTake={canTake} />}
+        />
       ) : (
-        <Empty description={t.inbox.empty} />
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={empty} />
       )}
     </Card>
   );
@@ -63,13 +106,38 @@ function Column({ title, leads }: { title: string; leads: LeadOut[] }) {
 
 /** Входящие (SPEC §10.1): открытые эскалации (hot первыми), мои лиды, без владельца. */
 export function InboxPage() {
-  const { data, isLoading } = useInbox();
-  if (isLoading || !data) return <Card loading />;
+  const query = useInbox();
+  const me = useMe();
+  const perms = usePermissionsQuery();
+  const canTake = allowed(perms.data, "leads", "take") && Boolean(me.data);
+  const data = query.data;
   return (
-    <div className="inbox-grid">
-      <Column title={t.inbox.escalations} leads={data.escalations} />
-      <Column title={t.inbox.mine} leads={data.mine} />
-      <Column title={t.inbox.unassigned} leads={data.unassigned} />
-    </div>
+    <>
+      <PageHeader title={t.page.inbox} />
+      <PageState query={query} ready={Boolean(data)}>
+        {data ? (
+          <div className="inbox-grid">
+            <Column
+              title={t.inbox.escalations}
+              empty={t.inbox.emptyEscalations}
+              leads={data.escalations}
+              canTake={canTake}
+            />
+            <Column
+              title={t.inbox.mine}
+              empty={t.inbox.emptyMine}
+              leads={data.mine}
+              canTake={false}
+            />
+            <Column
+              title={t.inbox.unassigned}
+              empty={t.inbox.emptyUnassigned}
+              leads={data.unassigned}
+              canTake={canTake}
+            />
+          </div>
+        ) : null}
+      </PageState>
+    </>
   );
 }

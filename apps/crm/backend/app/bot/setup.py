@@ -1,6 +1,6 @@
 """Сборка диалогового контура в процессе API: чекпоинтер, агент, сервис, бот."""
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 
 import structlog
@@ -59,7 +59,16 @@ def build_conversation(
         container.settings.agent_context_key_bytes,
         on_activity=on_activity,
         on_escalation=on_escalation,
+        erase_attachments=_attachments_eraser(container),
     )
+
+
+def _attachments_eraser(container: Container) -> Callable[[list[str]], Awaitable[None]]:
+    async def erase(keys: list[str]) -> None:
+        for key in keys:
+            await container.storage.delete(container.settings.s3_bucket_attachments, key)
+
+    return erase
 
 
 @asynccontextmanager

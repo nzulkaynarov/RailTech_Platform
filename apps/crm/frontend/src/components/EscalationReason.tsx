@@ -1,15 +1,11 @@
 import { Space, Tag, Typography } from "antd";
 
 import type { EscalationOut } from "../api/generated/model";
+import { reasonLabel } from "../domain/labels";
 import { t } from "../i18n/ru";
+import { PriorityTag } from "./StageBadge";
 
-const PRIORITY_COLOR: Record<string, string> = { hot: "red", warm: "orange", info: "blue" };
-
-export function PriorityTag({ priority }: { priority: string }) {
-  return (
-    <Tag color={PRIORITY_COLOR[priority] ?? "default"}>{t.priority[priority] ?? priority}</Tag>
-  );
-}
+export { PriorityTag };
 
 export function EscalationReason({ escalation }: { escalation: EscalationOut }) {
   return (
@@ -17,7 +13,7 @@ export function EscalationReason({ escalation }: { escalation: EscalationOut }) 
       <Space wrap size={4}>
         <PriorityTag priority={escalation.priority} />
         {escalation.reason_codes.map((code) => (
-          <Tag key={code}>{t.reasons[code] ?? code}</Tag>
+          <Tag key={code}>{reasonLabel(code)}</Tag>
         ))}
       </Space>
       {escalation.reason_text ? <Typography.Text>{escalation.reason_text}</Typography.Text> : null}

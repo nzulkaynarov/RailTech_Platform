@@ -1,6 +1,6 @@
 # RailTech CRM — техническое задание (SPEC)
 
-Версия 2.2 · 2026-10-08 (RustFS — ADR-0009; модели — ADR-0004; docling-serve и MCP SDK — ADR-0011)
+Версия 2.3 · 2026-10-09 (RustFS — ADR-0009; модели — ADR-0004; docling-serve и MCP SDK — ADR-0011; жизненный цикл без тупиков — ADR-0015)
 
 Документ описывает, *как* устроена система: архитектура, ядро, данные, агенты, интерфейсы, безопасность, стенды, связи. Порядок реализации — в `PLAN.md`; зачем всё это — в `BUSINESS.md`; правила работы для Claude Code — в `CLAUDE.md`.
 
@@ -106,13 +106,13 @@
 2. `api` сохраняет `messages(role=lead)`, обновляет `leads.last_lead_msg_at`.
 3. Если `leads.owner_mode = bot` → запуск диалогового агента (§7.1) → ответ лиду → `messages(role=bot)`.
    Если `owner_mode = human` → сообщение попадает в CRM в реальном времени (SSE), бот молчит.
-   Если `owner_mode = paused` → бот молчит (ждёт менеджера), лиду один раз отправлено «передаю коллеге».
+   Если `owner_mode = paused` → модель не вызывается (ждёт менеджера); код отвечает `texts.waiting_for_manager` не чаще раза в 30 мин, `/human` и стоп-слова поднимают приоритет открытой эскалации до `hot` (ADR-0015).
 4. `api` ставит задачу Procrastinate `qualify_lead(lead_id)` с дедупликацией (`queueing_lock = lead_id`, если уже в очереди — не дублируется).
 
 **Квалификация**
 1. `worker` берёт задачу, загружает контекст, запускает квалификатор (§7.2).
 2. Применяет state machine (§6.2), пересчитывает score (§6.3), прогоняет триггеры (§8.1).
-3. Пишет `qualifier_runs`. При эскалации → `escalations` + уведомление в канал (§9) + `leads.owner_mode = paused`.
+3. Пишет `qualifier_runs`. При эскалации → `escalations` + уведомление в канал (§9) + `leads.owner_mode = paused` (кроме `info`, ADR-0015).
 
 **Действие менеджера в CRM** (Забрать / Ответить / Вернуть боту / Закрыть)
 1. REST `POST /api/v1/leads/{id}/actions/{action}` → RBAC → доменный сервис → `audit_log`.
@@ -262,7 +262,8 @@ products(key PK, name, description, is_active)
 documents(id, client_id, type 'contract'|'proposal'|'letter'|'invoice'|'act'|'other', title, number TEXT NULL, doc_date DATE NULL,
           storage_key, mime, size_bytes, extracted_text TEXT, tsv GENERATED, uploaded_by, is_visible_to_client BOOL DEFAULT true)
 document_access_log(id, document_id, accessed_by_type 'bot'|'user', accessed_by_id, tg_user_id NULL, created_at)
-service_requests(id, client_id, lead_id NULL, summary, status 'open'|'closed', closed_by NULL)   -- инструмент create_service_request
+service_requests(id, client_id, lead_id NULL, summary, status 'open'|'closed', closed_by NULL,
+                 resolution TEXT NULL, closed_at NULL)   -- создаёт инструмент create_service_request; закрытие — с ответом клиенту (ADR-0015)
 ```
 
 Документы скачиваются сотрудником через API (`GET /documents/{id}/download`, запись в журнал), клиентом — файлом от бота; RustFS наружу не публикуется.
@@ -287,7 +288,7 @@ settings(key PK, value JSONB, schema_version INT, updated_by, updated_at)
 
 ### 6.1. Жизненный цикл
 
-`new → engaged → qualified → handoff → in_progress → won → customer`; терминальные боковые: `lost`; временная: `unresponsive`.
+`new → engaged → qualified → handoff → in_progress → won → customer`; боковая: `lost` (выход — новое сообщение лида или «Забрать»); временная: `unresponsive`. Клиент может открыть новую сделку: `customer → in_progress → won|lost → customer` (ADR-0015).
 
 ### 6.2. State machine (`domain/stage_machine.py`)
 
@@ -301,9 +302,12 @@ ALLOWED = {
   ("handoff","engaged"|"qualified"): {"user"},    # Вернуть боту → в стадию до handoff
   ("in_progress","won"|"lost"): {"user"},
   ("in_progress","engaged"|"qualified"): {"user"},# Вернуть боту из работы
-  ("won","customer"):     {"user","system"},      # при привязке к client
-  ("*","unresponsive"):   {"timer"},              # кроме in_progress, won, customer, lost
-  ("unresponsive","engaged"): {"system"},         # новое сообщение лида
+  ("won","customer"):     {"user","system"},      # при привязке к client; system — итог повторной сделки
+  ("lost","customer"):    {"system"},             # отказ по повторной сделке клиента (ADR-0015)
+  ("*","unresponsive"):   {"timer"},              # из new|engaged|qualified; не handoff — там ждёт лид (ADR-0015)
+  ("unresponsive"|"lost","engaged"): {"system"},  # новое сообщение лида
+  ("lost","in_progress"): {"user"},               # Забрать вернувшегося (ADR-0015)
+  ("customer","in_progress"): {"user"},           # Новая сделка с клиентом (ADR-0015)
 }
 ```
 Квалификатор может предлагать только `engaged`, `qualified`. Всё остальное отклоняется с записью `rejected_reason`.
@@ -407,12 +411,14 @@ class QualifierOutput(BaseModel):
 | `qualifier_recommend` | `recommend_escalation ∧ confidence ≥ 0.7` | warm |
 | `document_not_found` (customer) | Запрос документа без результата | warm |
 | `service_request` (customer) | Интент `service` | info |
+| `agent_unavailable` | Сбой диалогового агента (лиду — `texts.service_unavailable`) | info |
+| `delivery_failed` | Бот не смог отправить файл документа | info |
 
 Триггер → эскалация всегда. Одна открытая эскалация на лида: новые триггеры дописываются, приоритет повышается, в канале редактируется существующий пост.
 
 ### 8.2. Процедура
 
-1. `stage=handoff` (если применимо), `owner_mode=paused`, лиду — текст `texts.handoff` (вне рабочих часов — `texts.off_hours`).
+1. Для `hot`/`warm`: `stage=handoff` (если применимо), `owner_mode=paused`, лиду — текст `texts.handoff` (вне рабочих часов — `texts.off_hours`). Эскалация `info` — только сведения для команды (пост в канал), бот продолжает отвечать; при повышении до `warm`/`hot` выполняется этот пункт (ADR-0015).
 2. Пост в канал (§9.1). `escalations.channel_message_id`.
 3. Таймер SLA (Procrastinate, `escalation.sla_minutes`, по умолчанию 15, только в рабочие часы): если `status=open` — редактировать пост с пометкой ⏰ и упомянуть `duty_user_ids`.
 4. Таймер повторного напоминания через 60 мин, затем ежедневно в 09:05 сводка открытых.
@@ -454,13 +460,13 @@ class QualifierOutput(BaseModel):
 |---|---|---|
 | **Входящие** | manager, admin | Открытые эскалации (hot первыми), мои лиды, лиды без владельца; счётчики в сайдбаре; live через SSE `/api/v1/stream` |
 | **Лиды** | manager, admin, viewer(ro) | Таблица с фильтрами (стадия, владелец, score, период, язык), сохранённые фильтры |
-| **Карточка лида** | manager, admin, viewer(ro) | Слева: шапка (стадия, score, владелец, язык, согласие), резюме, квалификация, причина эскалации, заметки. Центр: `ChatThread` — переписка с ролями, поле ответа (только `owner_mode=human` и владелец/админ), кнопки: Забрать · Вернуть боту (с заметкой) · Снуз · Сделка · Отказ · Привязать к клиенту. Справа: «Почему система так решила» — последние `qualifier_runs` и `stage_transitions` в человекочитаемом виде |
+| **Карточка лида** | manager, admin, viewer(ro) | Слева: шапка (стадия, score, владелец, язык, согласие), резюме, квалификация, причина эскалации, заметки. Центр: `ChatThread` — переписка с ролями, поле ответа (только `owner_mode=human` и владелец/админ), кнопки: Забрать · Вернуть боту (с заметкой, лид получает `texts.returned_to_bot`) · Отложить · Сделка заключена · Закрыть отказом · Сделать клиентом · Передать коллеге (`actions/assign`) · Новая сделка (для клиента, `actions/new_deal`) — ADR-0015. Владелец показывается по имени (`assigned_user_name`; справочник команды `GET /team` — всем ролям). Справа: «Почему система так решила» — последние `qualifier_runs` и `stage_transitions` в человекочитаемом виде |
 | **Клиенты** | manager, admin, viewer(ro) | Карточка клиента: контакты, привязанные Telegram-идентичности (с подтверждением), документы, связанные лиды/диалоги, сервисные запросы |
 | **Документы** | manager, admin | Загрузка документов клиенту (тип, номер, дата), видимость клиенту, журнал доступа |
 | **База знаний** | admin | Документы KB, ингест, активность, просмотр чанков, тестовый поиск («что найдёт бот на этот вопрос») |
 | **Пробелы KB** | admin | Вопросы без ответа: частота, язык, примеры диалогов, действия: «Создать документ», «Привязать к документу», «Игнорировать» |
 | **Настройки** | admin | Формы по ключам `settings` с валидацией; предпросмотр текстов на 3 языках; редактор правил эскалации |
-| **Пользователи** | admin | Список, роли, создание с временным паролем (обязательная смена при первом входе, `users.must_change_password`), сброс пароля админом, деактивация, привязка Telegram; защита «последний админ». Email-приглашения — в расширениях (§15) |
+| **Пользователи** | admin | Список, роли, создание с временным паролем (обязательная смена при первом входе, `users.must_change_password`), сброс пароля админом, деактивация (с передачей лидов в работе и клиентов коллеге — иначе 409 `user_has_active_leads`, ADR-0015), привязка Telegram; защита «последний админ». Email-приглашения — в расширениях (§15) |
 | **Дашборд** | все | Воронка, эскалации по причинам, время до «Забрать», доля fallback, стоимость моделей (из Langfuse API), пробелы KB |
 | **Аудит** | admin | `audit_log` с фильтрами |
 

@@ -18,7 +18,7 @@ from app.services.settings import SettingsService
 
 logger = structlog.get_logger(__name__)
 
-TIMER_STAGES = (Stage.NEW, Stage.ENGAGED, Stage.QUALIFIED, Stage.HANDOFF)
+TIMER_STAGES = (Stage.NEW, Stage.ENGAGED, Stage.QUALIFIED)  # не handoff (ADR-0015)
 BATCH = 500
 
 

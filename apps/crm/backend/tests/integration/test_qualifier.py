@@ -220,12 +220,18 @@ async def test_timer_marks_silent_leads_unresponsive(
 ) -> None:
     lead_id = await make_lead(sessions, stage="engaged")
     now = datetime.now(UTC)
-    async with sessions() as session, session.begin():
-        lead = await repo.get_lead(session, lead_id, for_update=True)
-        assert lead is not None
-        lead.last_lead_msg_at = now - timedelta(days=4)
-        lead.last_bot_msg_at = now - timedelta(days=4) + timedelta(minutes=1)
+
+    async def silent_for(days: int) -> None:
+        async with sessions() as session, session.begin():
+            lead = await repo.get_lead(session, lead_id, for_update=True)
+            assert lead is not None
+            lead.last_lead_msg_at = now - timedelta(days=days)
+            lead.last_bot_msg_at = now - timedelta(days=days) + timedelta(minutes=1)
+
     settings = SettingsService(sessions, ttl_s=0)
+    await silent_for(4)  # BUSINESS §5: «Не отвечает» — 7 дней тишины
+    assert await mark_unresponsive(sessions, settings, now) == 0
+    await silent_for(8)
     assert await mark_unresponsive(sessions, settings, now) == 1
     assert await mark_unresponsive(sessions, settings, now) == 0
     lead = await load(sessions, lead_id)

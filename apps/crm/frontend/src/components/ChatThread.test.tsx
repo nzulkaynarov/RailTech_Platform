@@ -28,7 +28,7 @@ describe("ChatThread", () => {
       />,
     );
     expect(screen.getByText("Сколько стоит?")).toBeInTheDocument();
-    expect(screen.getByText(/Клиент ·/)).toBeInTheDocument();
+    expect(screen.getByText(/Лид ·/)).toBeInTheDocument();
     expect(screen.queryByRole("textbox")).toBeNull();
   });
 });

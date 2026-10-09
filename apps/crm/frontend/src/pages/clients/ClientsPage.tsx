@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { App as AntApp, Button, Form, Input, Modal, Space, Table, Tag } from "antd";
 import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 
 import { useClients } from "../../api/adminQueries";
 import { createClient } from "../../api/generated/crm";
@@ -11,11 +11,15 @@ import { usePermissionsQuery } from "../../api/queries";
 import { allowed } from "../../app/providers/access";
 import { errorText, t } from "../../i18n/ru";
 import "../pages.css";
+import { PageHeader } from "../../components/PageHeader";
+import { PageState } from "../../components/PageState";
 
 /** Клиенты (SPEC §10.1): список, поиск, создание. */
 export function ClientsPage() {
-  const [q, setQ] = useState("");
-  const { data, isLoading } = useClients(q);
+  const [search, setSearch] = useSearchParams();
+  const q = search.get("q") ?? "";
+  const query = useClients(q);
+  const { data, isLoading } = query;
   const perms = usePermissionsQuery();
   const [open, setOpen] = useState(false);
   const [form] = Form.useForm<ClientCreate>();
@@ -36,51 +40,61 @@ export function ClientsPage() {
 
   return (
     <>
+      <PageHeader
+        title={t.page.clients}
+        extra={
+          allowed(perms.data, "clients", "write") ? (
+            <Button
+              type="primary"
+              onClick={() => {
+                setOpen(true);
+              }}
+            >
+              {t.clients.create}
+            </Button>
+          ) : null
+        }
+      />
       <Space wrap className="filters">
         <Input.Search
           allowClear
+          defaultValue={q}
           placeholder={t.clients.search}
           style={{ width: 260 }}
-          onSearch={setQ}
+          onSearch={(v) => {
+            setSearch(v ? { q: v } : {}, { replace: true });
+          }}
         />
-        {allowed(perms.data, "clients", "write") ? (
-          <Button
-            type="primary"
-            onClick={() => {
-              setOpen(true);
-            }}
-          >
-            {t.clients.create}
-          </Button>
-        ) : null}
       </Space>
-      <Table<ClientOut>
-        rowKey="id"
-        loading={isLoading}
-        dataSource={data ?? []}
-        scroll={{ x: 560 }}
-        columns={[
-          {
-            title: t.clients.name,
-            render: (_, c) => <Link to={`/clients/${String(c.id)}`}>{c.name}</Link>,
-          },
-          {
-            title: t.clients.inn,
-            dataIndex: "inn",
-            render: (v: string | null) => v ?? t.common.none,
-          },
-          {
-            title: t.clients.segment,
-            dataIndex: "segment",
-            render: (v: string | null) => v ?? t.common.none,
-          },
-          {
-            title: t.clients.active,
-            render: (_, c) =>
-              c.is_active ? <Tag color="green">{t.common.yes}</Tag> : <Tag>{t.common.no}</Tag>,
-          },
-        ]}
-      />
+      <PageState query={query} inline>
+        <Table<ClientOut>
+          rowKey="id"
+          loading={isLoading}
+          dataSource={data ?? []}
+          scroll={{ x: 560 }}
+          columns={[
+            {
+              title: t.clients.name,
+              render: (_, c) => <Link to={`/clients/${String(c.id)}`}>{c.name}</Link>,
+            },
+            {
+              title: t.clients.inn,
+              dataIndex: "inn",
+              render: (v: string | null) => v ?? t.common.none,
+            },
+            {
+              title: t.clients.segment,
+              dataIndex: "segment",
+              render: (v: string | null) => v ?? t.common.none,
+            },
+            {
+              title: t.clients.active,
+              render: (_, c) =>
+                c.is_active ? <Tag color="green">{t.common.yes}</Tag> : <Tag>{t.common.no}</Tag>,
+            },
+          ]}
+        />
+      </PageState>
       <Modal
         open={open}
         title={t.clients.create}

@@ -33,6 +33,31 @@ def _t(ru: str, uz: str, en: str) -> LocalizedText:
     return LocalizedText(ru=ru, uz=uz, en=en)
 
 
+_DAYS: dict[str, tuple[str, ...]] = {
+    "ru": ("пн", "вт", "ср", "чт", "пт", "сб", "вс"),
+    "uz": ("dushanba", "seshanba", "chorshanba", "payshanba", "juma", "shanba", "yakshanba"),
+    "en": ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"),
+}
+_ZONES: dict[str, dict[str, str]] = {
+    "Asia/Tashkent": {"ru": "по Ташкенту", "uz": "Toshkent vaqti bilan", "en": "Tashkent time"},
+}
+
+
+def _day_ranges(days: list[int], names: tuple[str, ...]) -> str:
+    """[0,1,2,3,4] → «пн–пт»; [0,2,4] → «пн, ср, пт»."""
+    groups: list[list[int]] = []
+    for day in days:
+        if groups and day == groups[-1][-1] + 1:
+            groups[-1].append(day)
+        else:
+            groups.append([day])
+    parts = [
+        f"{names[g[0]]}–{names[g[-1]]}" if len(g) > 2 else ", ".join(names[d] for d in g)
+        for g in groups
+    ]
+    return ", ".join(parts)
+
+
 class CompanySettings(_Strict):
     name: str = "RailTech"
     crm_base_url: str = "http://localhost"
@@ -44,6 +69,17 @@ class BusinessHoursSettings(_Strict):
     end: time = time(18, 0)
     weekdays: list[int] = Field(default_factory=lambda: [0, 1, 2, 3, 4])
     holidays: list[date] = Field(default_factory=list)
+
+    def describe(self, language: Language) -> str:
+        """«пн–пт с 9:00 до 18:00 по Ташкенту» на языке лида — для текстов бота."""
+        days = _day_ranges(sorted(set(self.weekdays)), _DAYS[language])
+        start, end = f"{self.start:%H:%M}".lstrip("0"), f"{self.end:%H:%M}".lstrip("0")
+        place = _ZONES.get(self.timezone, {}).get(language, self.timezone)
+        if language == "uz":
+            return f"{days}, {place} {start} dan {end} gacha"
+        if language == "en":
+            return f"{days}, {start}–{end} {place}"
+        return f"{days} с {start} до {end} {place}"
 
     def domain(self) -> BusinessHours:
         return BusinessHours(
@@ -73,6 +109,20 @@ class TextsSettings(_Strict):
         "Rahmat! Savolingizni yozing.",
         "Thank you! Please ask your question.",
     )
+    consent_accepted_pending: LocalizedText = _t(
+        "Спасибо! Отвечаю на ваш вопрос.",
+        "Rahmat! Savolingizga javob beraman.",
+        "Thank you! Answering your question.",
+    )
+    consent_decline_button: LocalizedText = _t("Не согласен", "Rozi emasman", "I don't agree")
+    consent_declined: LocalizedText = _t(
+        "Понимаю. Без согласия я не могу отвечать на вопросы. Если передумаете — нажмите «Согласен»"
+        " выше или напишите /start. Удалить уже отправленные сообщения — /delete.",
+        "Tushunarli. Roziliksiz savollarga javob bera olmayman. Fikringiz o'zgarsa — yuqoridagi"
+        " «Roziman» tugmasini bosing yoki /start yozing. Yuborilgan xabarlarni o'chirish — /delete.",
+        "Understood. Without consent I can't answer questions. If you change your mind, press"
+        " «I agree» above or type /start. To delete messages already sent, use /delete.",
+    )
     consent_required: LocalizedText = _t(
         "Пожалуйста, сначала подтвердите согласие кнопкой ниже.",
         "Iltimos, avval quyidagi tugma orqali roziligingizni tasdiqlang.",
@@ -83,10 +133,11 @@ class TextsSettings(_Strict):
         "Savolingizni hamkasbimga topshiraman — u tez orada shu yerda siz bilan bog'lanadi.",
         "I'm passing your question to a colleague who will reply here shortly.",
     )
+    # {hours} подставляет код из «Рабочих часов» — текст не расходится с настройкой.
     off_hours: LocalizedText = _t(
-        "Передаю ваш вопрос коллеге. Сейчас нерабочее время: мы работаем пн–пт с 9:00 до 18:00 по Ташкенту и ответим в ближайшее рабочее время.",
-        "Savolingizni hamkasbimga topshiraman. Hozir ish vaqti emas: biz dushanba–juma, Toshkent vaqti bilan 9:00 dan 18:00 gacha ishlaymiz va eng yaqin ish vaqtida javob beramiz.",
-        "I'm passing your question to a colleague. It's outside working hours now: we work Mon–Fri, 9:00–18:00 Tashkent time, and will reply during the next working hours.",
+        "Передаю ваш вопрос коллеге. Сейчас нерабочее время: мы работаем {hours} и ответим в ближайшее рабочее время.",
+        "Savolingizni hamkasbimga topshiraman. Hozir ish vaqti emas: biz {hours} ishlaymiz va eng yaqin ish vaqtida javob beramiz.",
+        "I'm passing your question to a colleague. It's outside working hours now: we work {hours} and will reply during the next working hours.",
     )
     waiting_for_manager: LocalizedText = _t(
         "Ваше сообщение передано коллеге, он скоро ответит.",
@@ -98,6 +149,10 @@ class TextsSettings(_Strict):
         "Bu savolga aniq javobim yo'q — hamkasblarimdan aniqlayman. Xohlasangiz, savolni menejerga topshirishim mumkin.",
         "I don't have an exact answer to that — I'll check with my colleagues. If you like, I can pass your question to a manager.",
     )
+    handoff_offer_yes: LocalizedText = _t(
+        "Передать менеджеру", "Menejerga topshirish", "Pass to a manager"
+    )
+    handoff_offer_no: LocalizedText = _t("Не нужно", "Kerak emas", "No, thanks")
     help: LocalizedText = _t(
         "Я отвечаю на вопросы о продуктах {company}. Команды: /lang — сменить язык, /human — позвать сотрудника, /delete — удалить переписку.",
         "Men {company} mahsulotlari haqidagi savollarga javob beraman. Buyruqlar: /lang — tilni o'zgartirish, /human — xodimni chaqirish, /delete — yozishmani o'chirish.",
@@ -107,6 +162,16 @@ class TextsSettings(_Strict):
         "Вы отправляете сообщения слишком часто. Пожалуйста, подождите минуту.",
         "Siz xabarlarni juda tez yuboryapsiz. Iltimos, bir daqiqa kuting.",
         "You're sending messages too quickly. Please wait a minute.",
+    )
+    erase_confirm: LocalizedText = _t(
+        "Удалить всю переписку с нами? Это действие нельзя отменить.",
+        "Biz bilan barcha yozishmalarni o'chiraymi? Bu amalni qaytarib bo'lmaydi.",
+        "Delete your whole conversation with us? This cannot be undone.",
+    )
+    erase_button: LocalizedText = _t("Удалить", "O'chirish", "Delete")
+    cancel_button: LocalizedText = _t("Отмена", "Bekor qilish", "Cancel")
+    erase_cancelled: LocalizedText = _t(
+        "Хорошо, ничего не удаляю.", "Yaxshi, hech narsa o'chirilmadi.", "OK, nothing was deleted."
     )
     erased: LocalizedText = _t(
         "Ваша переписка удалена. Если захотите продолжить, просто напишите снова.",
@@ -118,15 +183,35 @@ class TextsSettings(_Strict):
         "Hujjatni yuboraman: {title}.",
         "Sending the document: {title}.",
     )
+    document_failed: LocalizedText = _t(
+        "Не получилось отправить файл. Попробуйте запросить его ещё раз чуть позже.",
+        "Faylni yuborib bo'lmadi. Birozdan keyin qayta so'rab ko'ring.",
+        "I couldn't send the file. Please ask for it again a bit later.",
+    )
     manager_joined: LocalizedText = _t(
         "Здравствуйте! Вашим вопросом занимается {manager}, ответ придёт в этот чат.",
         "Assalomu alaykum! Savolingiz bilan {manager} shug'ullanmoqda, javob shu chatga keladi.",
         "Hello! {manager} is now handling your request and will reply in this chat.",
     )
+    service_request_closed: LocalizedText = _t(
+        "По вашему запросу «{summary}»: {resolution}",
+        "«{summary}» so'rovingiz bo'yicha: {resolution}",
+        "Regarding your request “{summary}”: {resolution}",
+    )
+    returned_to_bot: LocalizedText = _t(
+        "Снова на связи ассистент {company}. Если понадобится коллега, напишите /human.",
+        "Yana {company} yordamchisi aloqada. Hamkasb kerak bo'lsa, /human deb yozing.",
+        "The {company} assistant is back. If you need a colleague, type /human.",
+    )
     attachment_received: LocalizedText = _t(
         "Спасибо, файл получен. Передам его коллеге.",
         "Rahmat, fayl qabul qilindi. Uni hamkasbimga topshiraman.",
         "Thanks, file received. I'll pass it to a colleague.",
+    )
+    unsupported_message: LocalizedText = _t(
+        "Пока я понимаю только текст, файлы и голосовые. Напишите, пожалуйста, ваш вопрос.",
+        "Hozircha faqat matn, fayl va ovozli xabarlarni tushunaman. Savolingizni yozing, iltimos.",
+        "For now I understand text, files and voice messages only. Please type your question.",
     )
     service_unavailable: LocalizedText = _t(
         "Извините, сейчас не получается ответить. Ваше сообщение сохранено, коллеги его увидят.",
@@ -187,7 +272,7 @@ class BotSettings(_Strict):
     max_words: int = Field(default=120, ge=20, le=400)
     history_messages: int = Field(default=20, ge=2, le=50)
     rate_limit_per_minute: int = Field(default=20, ge=1)
-    unresponsive_days: int = Field(default=3, ge=1, le=90)
+    unresponsive_days: int = Field(default=7, ge=1, le=90)  # BUSINESS §5: 7 дней
 
 
 class TermsSettings(_Strict):
@@ -243,3 +328,8 @@ class AppSettings(_Strict):
     )
     notifications: NotificationsSettings = Field(default_factory=NotificationsSettings)
     budget: BudgetSettings = Field(default_factory=BudgetSettings)
+
+    def lead_notice(self, key: Literal["handoff", "off_hours"], language: Language) -> str:
+        """Текст лиду при передаче менеджеру; рабочие часы — из настроек."""
+        text: LocalizedText = getattr(self.texts, key)
+        return text.get(language, hours=self.business_hours.describe(language))

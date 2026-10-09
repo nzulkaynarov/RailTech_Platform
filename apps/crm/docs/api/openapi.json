@@ -77,6 +77,19 @@
         "title": "ActionResult",
         "type": "object"
       },
+      "Assign": {
+        "properties": {
+          "user_id": {
+            "title": "User Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "user_id"
+        ],
+        "title": "Assign",
+        "type": "object"
+      },
       "AuditItem": {
         "properties": {
           "action": {
@@ -1727,6 +1740,28 @@
             ],
             "title": "Assigned User Id"
           },
+          "assigned_user_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned User Name"
+          },
+          "client_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
           "consent_given_at": {
             "anyOf": [
               {
@@ -1839,6 +1874,11 @@
               }
             ],
             "title": "Tg Username"
+          },
+          "unread": {
+            "default": false,
+            "title": "Unread",
+            "type": "boolean"
           }
         },
         "required": [
@@ -1874,6 +1914,28 @@
               }
             ],
             "title": "Assigned User Id"
+          },
+          "assigned_user_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned User Name"
+          },
+          "client_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
           },
           "created_at": {
             "format": "date-time",
@@ -1943,6 +2005,11 @@
           "stage": {
             "title": "Stage",
             "type": "string"
+          },
+          "unread": {
+            "default": false,
+            "title": "Unread",
+            "type": "boolean"
           }
         },
         "required": [
@@ -2734,8 +2801,35 @@
         "title": "SearchResponse",
         "type": "object"
       },
+      "ServiceRequestClose": {
+        "properties": {
+          "resolution": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Resolution",
+            "type": "string"
+          }
+        },
+        "required": [
+          "resolution"
+        ],
+        "title": "ServiceRequestClose",
+        "type": "object"
+      },
       "ServiceRequestOut": {
         "properties": {
+          "closed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -2755,6 +2849,17 @@
               }
             ],
             "title": "Lead Id"
+          },
+          "resolution": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution"
           },
           "status": {
             "title": "Status",
@@ -2813,6 +2918,24 @@
           "until"
         ],
         "title": "Snooze",
+        "type": "object"
+      },
+      "TeamMember": {
+        "properties": {
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "full_name"
+        ],
+        "title": "TeamMember",
         "type": "object"
       },
       "TokenResponse": {
@@ -3075,6 +3198,18 @@
               }
             ],
             "title": "Tg User Id"
+          },
+          "transfer_to_user_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transfer To User Id"
           }
         },
         "title": "UserUpdate",
@@ -4142,6 +4277,7 @@
     },
     "/api/v1/inbox": {
       "get": {
+        "description": "Очередь работы — менеджеру и админу; наблюдатель смотрит «Лиды» (SPEC §10.1).",
         "operationId": "inbox",
         "responses": {
           "200": {
@@ -5135,6 +5271,63 @@
         ]
       }
     },
+    "/api/v1/leads/{lead_id}/actions/assign": {
+      "post": {
+        "operationId": "assign",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lead_id",
+            "required": true,
+            "schema": {
+              "title": "Lead Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Assign"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Assign",
+        "tags": [
+          "leads"
+        ]
+      }
+    },
     "/api/v1/leads/{lead_id}/actions/close_lost": {
       "post": {
         "operationId": "close_lost",
@@ -5303,6 +5496,53 @@
         "summary": "Make Customer",
         "tags": [
           "clients"
+        ]
+      }
+    },
+    "/api/v1/leads/{lead_id}/actions/new_deal": {
+      "post": {
+        "operationId": "new_deal",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lead_id",
+            "required": true,
+            "schema": {
+              "title": "Lead Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "New Deal",
+        "tags": [
+          "leads"
         ]
       }
     },
@@ -5879,6 +6119,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceRequestClose"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {
@@ -6060,6 +6310,37 @@
         "summary": "Stream",
         "tags": [
           "stream"
+        ]
+      }
+    },
+    "/api/v1/team": {
+      "get": {
+        "description": "Активные менеджеры и админы: кому передать лида, чьё имя показать (без email и ролей).",
+        "operationId": "team",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TeamMember"
+                  },
+                  "title": "Response Team",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Team",
+        "tags": [
+          "leads"
         ]
       }
     },

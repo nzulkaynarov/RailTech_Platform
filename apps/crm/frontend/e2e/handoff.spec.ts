@@ -17,11 +17,14 @@ test("login → inbox → lead card → take → reply", async ({ page }) => {
   await expect(page.getByText("Эскалации").first()).toBeVisible();
   const item = page.locator(".ant-list-item", { hasText: "Интеграция 3 касс АТОЛ с 1С" }).first();
   await item.getByRole("link", { name: /Азиз/ }).click();
-  await expect(page.getByText("Почему система так решила")).toBeVisible();
+  // Десктоп — колонка «Почему система так решила», телефон — вкладка «Почему».
+  await expect(
+    page.getByText("Почему система так решила").or(page.getByRole("tab", { name: "Почему" })),
+  ).toBeVisible();
   await expect(page.getByText("Ок, пусть позвонят, лучше после 15:00")).toBeVisible();
 
   const take = page.getByRole("button", { name: "Забрать" });
-  const reply = page.getByPlaceholder("Ответ клиенту…");
+  const reply = page.getByPlaceholder("Ответ лиду…");
   await expect(take.or(reply)).toBeVisible();
   if (await take.isVisible()) await take.click();
   await expect(reply).toBeVisible();

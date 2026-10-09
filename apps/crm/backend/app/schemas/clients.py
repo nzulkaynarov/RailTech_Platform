@@ -84,7 +84,13 @@ class ServiceRequestOut(BaseModel):
     lead_id: int | None
     summary: str
     status: str
+    resolution: str | None = None
+    closed_at: datetime | None = None
     created_at: datetime
+
+
+class ServiceRequestClose(BaseModel):
+    resolution: str = Field(min_length=1, max_length=2000)
 
 
 class LeadBrief(BaseModel):

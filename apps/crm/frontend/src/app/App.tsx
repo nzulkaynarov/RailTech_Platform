@@ -11,13 +11,8 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import { Authenticated, Refine } from "@refinedev/core";
-import {
-  ErrorComponent,
-  ThemedLayout,
-  ThemedTitle,
-  useNotificationProvider,
-} from "@refinedev/antd";
-import routerProvider, { CatchAllNavigate, NavigateToResource } from "@refinedev/react-router";
+import { ThemedLayout, ThemedTitle, useNotificationProvider } from "@refinedev/antd";
+import routerProvider, { CatchAllNavigate } from "@refinedev/react-router";
 import { QueryClient } from "@tanstack/react-query";
 import { App as AntApp, ConfigProvider } from "antd";
 import ruRU from "antd/es/locale/ru_RU";
@@ -30,6 +25,7 @@ import { ClientsPage } from "../pages/clients/ClientsPage";
 import { DashboardPage } from "../pages/dashboard/DashboardPage";
 import { GapsPage } from "../pages/gaps/GapsPage";
 import { InboxPage } from "../pages/inbox/InboxPage";
+import { HomeRedirect } from "./HomeRedirect";
 import { KbPage } from "../pages/kb/KbPage";
 import { SettingsPage } from "../pages/settings/SettingsPage";
 import { LeadDetailPage } from "../pages/lead-detail/LeadDetailPage";
@@ -40,6 +36,7 @@ import { ProfilePage } from "../pages/profile/ProfilePage";
 import { UsersPage } from "../pages/users/UsersPage";
 import { t } from "../i18n/ru";
 import { Header } from "./Header";
+import { NotFound, RouteGuard } from "./RouteGuard";
 import { accessControlProvider } from "./providers/access";
 import { authProvider } from "./providers/auth";
 import { dataProvider } from "./providers/data";
@@ -114,20 +111,69 @@ export function App() {
           >
             <Routes>
               <Route element={<Shell />}>
-                <Route index element={<NavigateToResource resource="inbox" />} />
-                <Route path="/inbox" element={<InboxPage />} />
+                <Route index element={<HomeRedirect />} />
+                <Route
+                  path="/inbox"
+                  element={
+                    <RouteGuard resource="inbox">
+                      <InboxPage />
+                    </RouteGuard>
+                  }
+                />
                 <Route path="/leads" element={<LeadsPage />} />
                 <Route path="/leads/:id" element={<LeadDetailPage />} />
                 <Route path="/clients" element={<ClientsPage />} />
                 <Route path="/clients/:id" element={<ClientDetailPage />} />
-                <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/kb" element={<KbPage />} />
-                <Route path="/gaps" element={<GapsPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="/audit" element={<AuditPage />} />
-                <Route path="/users" element={<UsersPage />} />
+                <Route
+                  path="/dashboard"
+                  element={
+                    <RouteGuard resource="dashboard">
+                      <DashboardPage />
+                    </RouteGuard>
+                  }
+                />
+                <Route
+                  path="/kb"
+                  element={
+                    <RouteGuard resource="kb">
+                      <KbPage />
+                    </RouteGuard>
+                  }
+                />
+                <Route
+                  path="/gaps"
+                  element={
+                    <RouteGuard resource="gaps">
+                      <GapsPage />
+                    </RouteGuard>
+                  }
+                />
+                <Route
+                  path="/settings"
+                  element={
+                    <RouteGuard resource="settings">
+                      <SettingsPage />
+                    </RouteGuard>
+                  }
+                />
+                <Route
+                  path="/audit"
+                  element={
+                    <RouteGuard resource="audit">
+                      <AuditPage />
+                    </RouteGuard>
+                  }
+                />
+                <Route
+                  path="/users"
+                  element={
+                    <RouteGuard resource="users">
+                      <UsersPage />
+                    </RouteGuard>
+                  }
+                />
                 <Route path="/profile" element={<ProfilePage />} />
-                <Route path="*" element={<ErrorComponent />} />
+                <Route path="*" element={<NotFound />} />
               </Route>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/change-password" element={<ChangePasswordPage />} />

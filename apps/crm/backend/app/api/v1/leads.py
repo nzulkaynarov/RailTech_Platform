@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import ContainerDep, require
 from app.models.leads import Lead, Message
@@ -11,6 +12,7 @@ from app.models.qualification import Escalation
 from app.repositories import crm
 from app.repositories import decisions as repo
 from app.repositories import leads as leads_repo
+from app.repositories import users as users_repo
 from app.schemas.decisions import (
     DecisionsResponse,
     QualifierRunItem,
@@ -19,6 +21,7 @@ from app.schemas.decisions import (
 )
 from app.schemas.leads import (
     ActionResult,
+    Assign,
     Close,
     EscalationOut,
     InboxResponse,
@@ -31,6 +34,7 @@ from app.schemas.leads import (
     Reply,
     ReturnToBot,
     Snooze,
+    TeamMember,
 )
 from app.security.principal import Principal
 
@@ -61,7 +65,10 @@ def escalation_out(e: Escalation | None) -> EscalationOut | None:
     )
 
 
-def lead_out(lead: Lead, escalation: Escalation | None) -> LeadOut:
+def lead_out(
+    lead: Lead, escalation: Escalation | None, names: dict[int, str] | None = None
+) -> LeadOut:
+    owner = lead.assigned_user_id
     return LeadOut(
         id=lead.id,
         display_name=lead.display_name,
@@ -69,13 +76,30 @@ def lead_out(lead: Lead, escalation: Escalation | None) -> LeadOut:
         stage=lead.stage,
         score=lead.score,
         owner_mode=lead.owner_mode,
-        assigned_user_id=lead.assigned_user_id,
+        assigned_user_id=owner,
+        assigned_user_name=(names or {}).get(owner) if owner is not None else None,
+        client_id=lead.client_id,
+        unread=_unread(lead),
         need_summary=lead.need_summary,
         product_interest=list(lead.product_interest or []),
         last_lead_msg_at=lead.last_lead_msg_at,
         created_at=lead.created_at,
         escalation=escalation_out(escalation),
     )
+
+
+async def _existing_lead(session: AsyncSession, lead_id: int) -> Lead:
+    """404 для несуществующего или обезличенного лида, а не пустой список."""
+    lead = await leads_repo.get_lead(session, lead_id)
+    if lead is None or lead.erased_at is not None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "lead not found")
+    return lead
+
+
+def _unread(lead: Lead) -> bool:
+    if lead.owner_mode != "human" or lead.last_lead_msg_at is None:
+        return False
+    return lead.last_human_msg_at is None or lead.last_lead_msg_at > lead.last_human_msg_at
 
 
 def message_out(m: Message) -> MessageOut:
@@ -109,18 +133,21 @@ async def list_leads(
     async with container.session_factory() as session:
         rows, total = await crm.list_leads(session, flt, who.user_id, limit, offset, sort)
         escalations = await crm.active_escalations(session, [r.id for r in rows])
-    return LeadPage(items=[lead_out(r, escalations.get(r.id)) for r in rows], total=total)
+        names = await crm.user_names(session, rows)
+    return LeadPage(items=[lead_out(r, escalations.get(r.id), names) for r in rows], total=total)
 
 
 @router.get("/inbox", response_model=InboxResponse)
-async def inbox(who: Reader, container: ContainerDep) -> InboxResponse:
+async def inbox(who: Taker, container: ContainerDep) -> InboxResponse:
+    """Очередь работы — менеджеру и админу; наблюдатель смотрит «Лиды» (SPEC §10.1)."""
     async with container.session_factory() as session:
         escalated, mine, unassigned = await crm.inbox(session, who.user_id)
         ids = [lead.id for lead in (*escalated, *mine, *unassigned)]
         escalations = await crm.active_escalations(session, ids)
+        names = await crm.user_names(session, [*escalated, *mine, *unassigned])
 
     def out(rows: list[Lead]) -> list[LeadOut]:
-        return [lead_out(r, escalations.get(r.id)) for r in rows]
+        return [lead_out(r, escalations.get(r.id), names) for r in rows]
 
     ranked = sorted(
         escalated,
@@ -139,7 +166,8 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
             raise HTTPException(status.HTTP_404_NOT_FOUND, "lead not found")
         escalation = (await crm.active_escalations(session, [lead_id])).get(lead_id)
         username = await crm.tg_username(session, lead_id)
-    base = lead_out(lead, escalation)
+        names = await crm.user_names(session, [lead])
+    base = lead_out(lead, escalation, names)
     return LeadDetail(
         **base.model_dump(),
         qualification=dict(lead.qualification or {}),
@@ -159,6 +187,7 @@ async def lead_messages(
     before_id: int | None = None,
 ) -> list[MessageOut]:
     async with container.session_factory() as session:
+        await _existing_lead(session, lead_id)
         rows = await crm.messages(session, lead_id, limit, before_id)
     return [message_out(m) for m in rows]
 
@@ -171,6 +200,7 @@ async def reply(lead_id: int, body: Reply, who: Replier, container: ContainerDep
 @router.get("/leads/{lead_id}/notes", response_model=list[NoteOut])
 async def lead_notes(lead_id: int, _: Reader, container: ContainerDep) -> list[NoteOut]:
     async with container.session_factory() as session:
+        await _existing_lead(session, lead_id)
         rows = await crm.notes(session, lead_id)
     return [
         NoteOut(
@@ -220,6 +250,31 @@ async def close_lost(
     return ActionResult()
 
 
+@router.post("/leads/{lead_id}/actions/new_deal", response_model=ActionResult)
+async def new_deal(lead_id: int, who: Worker, container: ContainerDep) -> ActionResult:
+    await container.lead_service.new_deal(who, lead_id)
+    return ActionResult()
+
+
+@router.post("/leads/{lead_id}/actions/assign", response_model=ActionResult)
+async def assign(lead_id: int, body: Assign, who: Worker, container: ContainerDep) -> ActionResult:
+    await container.lead_service.assign(who, lead_id, body.user_id)
+    return ActionResult()
+
+
+@router.get("/team", response_model=list[TeamMember])
+async def team(_: Reader, container: ContainerDep) -> list[TeamMember]:
+    """Активные менеджеры и админы: кому передать лида, чьё имя показать (без email и ролей)."""
+    async with container.session_factory() as session:
+        users = await users_repo.list_users(session)
+        roles = await users_repo.roles_by_user(session)
+    return [
+        TeamMember(id=u.id, full_name=u.full_name)
+        for u in users
+        if u.is_active and {"manager", "admin"} & set(roles.get(u.id, []))
+    ]
+
+
 @router.post("/leads/{lead_id}/actions/note", response_model=ActionResult)
 async def note(lead_id: int, body: NoteCreate, who: Noter, container: ContainerDep) -> ActionResult:
     note_id = await container.lead_service.add_note(who, lead_id, body.text, body.visible_to_bot)
@@ -234,9 +289,7 @@ async def lead_decisions(
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
 ) -> DecisionsResponse:
     async with container.session_factory() as session:
-        lead = await leads_repo.get_lead(session, lead_id)
-        if lead is None:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, "lead not found")
+        lead = await _existing_lead(session, lead_id)
         runs = await repo.qualifier_runs(session, lead_id, limit)
         moves = await repo.transitions(session, lead_id, limit)
     items: list[QualifierRunItem | TransitionItem] = [

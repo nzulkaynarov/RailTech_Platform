@@ -11,12 +11,11 @@ import {
   Tag,
   Typography,
 } from "antd";
-import dayjs from "dayjs";
 import { useState } from "react";
 import { Link, useParams } from "react-router";
 
 import { adminKeys, useClient } from "../../api/adminQueries";
-import { closeServiceRequest, linkTelegram, unlinkTelegram } from "../../api/generated/crm";
+import { linkTelegram, unlinkTelegram } from "../../api/generated/crm";
 import type { IdentityOut } from "../../api/generated/model";
 import { type ApiError, unwrap } from "../../api/http";
 import { usePermissionsQuery } from "../../api/queries";
@@ -24,8 +23,13 @@ import { allowed } from "../../app/providers/access";
 import { StageBadge } from "../../components/StageBadge";
 import { errorText, t } from "../../i18n/ru";
 import { ClientDocuments } from "./ClientDocuments";
+import { EditClient } from "./EditClient";
+import { ServiceRequests } from "./ServiceRequests";
+import { formatDate } from "../../lib/time";
+import { PageHeader } from "../../components/PageHeader";
+import { PageState } from "../../components/PageState";
 
-type Action = { kind: "link" | "unlink"; tgUserId: number } | { kind: "close"; requestId: number };
+type Action = { kind: "link" | "unlink"; tgUserId: number };
 
 function identityLabel(i: IdentityOut): string {
   const name = i.tg_username ? `@${i.tg_username}` : (i.tg_first_name ?? "");
@@ -35,7 +39,8 @@ function identityLabel(i: IdentityOut): string {
 /** Карточка клиента (SPEC §10.1, §7.3): Telegram с подтверждением, лиды, документы, запросы. */
 export function ClientDetailPage() {
   const id = Number(useParams()["id"]);
-  const { data } = useClient(id);
+  const query = useClient(id);
+  const data = query.data;
   const perms = usePermissionsQuery();
   const canWrite = allowed(perms.data, "clients", "write");
   const canDocs = allowed(perms.data, "documents", "read");
@@ -44,7 +49,6 @@ export function ClientDetailPage() {
   const { message } = AntApp.useApp();
   const act = useMutation({
     mutationFn: async (a: Action) => {
-      if (a.kind === "close") return unwrap(await closeServiceRequest(a.requestId));
       if (a.kind === "link") return unwrap(await linkTelegram(id, { tg_user_id: a.tgUserId }));
       return unwrap(await unlinkTelegram(id, a.tgUserId));
     },
@@ -56,13 +60,21 @@ export function ClientDetailPage() {
       void message.error(errorText((e as ApiError).code, e.message));
     },
   });
-  if (!data) return <Card loading />;
+  if (!data) {
+    return (
+      <PageState query={query} ready={false}>
+        {null}
+      </PageState>
+    );
+  }
 
   return (
     <Space direction="vertical" size={16} style={{ width: "100%" }}>
-      <Typography.Title level={4} style={{ margin: 0 }}>
-        {data.name}
-      </Typography.Title>
+      <PageHeader
+        back="/clients"
+        title={data.name}
+        extra={canWrite ? <EditClient client={data} /> : null}
+      />
       <Descriptions size="small" column={{ xs: 1, md: 3 }}>
         <Descriptions.Item label={t.clients.inn}>{data.inn ?? t.common.none}</Descriptions.Item>
         <Descriptions.Item label={t.clients.segment}>
@@ -103,7 +115,7 @@ export function ClientDetailPage() {
               {identityLabel(i)}{" "}
               {i.verified_at ? (
                 <Tag color="green">
-                  {t.clients.verified} {dayjs(i.verified_at).format("DD.MM.YY")}
+                  {t.clients.verified} {formatDate(i.verified_at)}
                 </Tag>
               ) : null}
             </List.Item>
@@ -174,36 +186,7 @@ export function ClientDetailPage() {
         </Card>
       ) : null}
       <Card size="small" title={t.clients.requests}>
-        <List
-          size="small"
-          dataSource={data.service_requests}
-          renderItem={(r) => (
-            <List.Item
-              actions={
-                canWrite && r.status === "open"
-                  ? [
-                      <Button
-                        key="c"
-                        size="small"
-                        onClick={() => {
-                          act.mutate({ kind: "close", requestId: r.id });
-                        }}
-                      >
-                        {t.clients.close}
-                      </Button>,
-                    ]
-                  : []
-              }
-            >
-              <Space direction="vertical" size={0}>
-                <Typography.Text>{r.summary}</Typography.Text>
-                <Typography.Text type="secondary">
-                  {dayjs(r.created_at).format("DD.MM HH:mm")} · {r.status}
-                </Typography.Text>
-              </Space>
-            </List.Item>
-          )}
-        />
+        <ServiceRequests clientId={id} requests={data.service_requests} canWrite={canWrite} />
       </Card>
     </Space>
   );

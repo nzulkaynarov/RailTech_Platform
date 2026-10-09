@@ -25,6 +25,17 @@
 
 Легенда: ⚪ не начата · 🔵 в работе · 🟡 ожидает приёмки · 🟢 гейт пройден.
 
+## Продуктовый аудит 2026-10-09 (ветка `phase/9-product-audit`)
+
+По поручению владельца: независимый аудит путей всех ролей и интерфейса — `docs/audit/2026-10-09-product-audit.md`.
+
+| Волна | Что | Статус |
+|---|---|---|
+| 1 | Тупики без отклонений от SPEC: бот после сделки/клиента (P-01), ложные запросы документов (P-02), 7 дней «Не отвечает» (P-07), голосовые и прочие типы сообщений (P-08), `/delete` с подтверждением и чисткой (P-10), имя владельца (P-20), неактивный клиент (P-27), перепривязка Telegram (P-15), override pnpm | ✅ |
+| 2 | ADR-0015: выход из «Отказа», повторная сделка клиента, бот не молчит в ожидании, `info` не глушит бота, передача коллеге, деактивация с переносом, закрытие сервисного запроса с ответом клиенту (миграция `0009`), «Входящие» не для наблюдателя | ✅ |
+| 3 | Фундамент интерфейса: единые метки (`domain/labels.ts`) и время по Ташкенту (`lib/time.ts`), PageHeader/PageState/RouteGuard (403/404/ошибка), причины недоступных действий и ответа, подтверждения опасных действий, фильтры/период/сортировка лидов в URL, быстрое «Забрать», drill-down дашборда, аудит словами со ссылками, карточка лида на телефоне вкладками | ✅ (U-01…U-13, кроме U-14 — ждёт Q-012) |
+| 4 | По ответам на Q-010…Q-013 | ⚪ |
+
 ## Фаза 0 — детали
 
 | # | Задача (PLAN.md) | Статус | Где |
@@ -114,7 +125,7 @@
 | 1 | Миграции `qualifier_runs`, `escalations`, `stage_transitions` | ✅ (в Фазе 2) | `alembic/versions/*_1506_*` |
 | 2 | `stage_machine`, `scoring`, `triggers`, `escalation` + постобработка квалификатора — чистые функции, таблицы тестов | ✅ | `domain/`, `domain/qualifier_decision.py` |
 | 3 | Квалификатор (LangGraph, structured output, один повтор), задача `qualify_lead` (`queueing_lock`, старт через 5 с), worker | ✅ | `agents/qualifier/`, `services/qualifier.py`, `tasks/qualify.py` |
-| 4 | Таймер `unresponsive` и возврат в `engaged` | ✅ ежечасно, порог `bot.unresponsive_days` = 3 | `services/timers.py`, `tasks/timers.py` |
+| 4 | Таймер `unresponsive` и возврат в `engaged` | ✅ ежечасно, порог `bot.unresponsive_days` = 7 (BUSINESS §5; было 3 — исправлено аудитом 2026-10-09) | `services/timers.py`, `tasks/timers.py` |
 | 5 | Агент молчит при `paused/human`; при эскалации — `texts.handoff`/`off_hours` | ✅ в ходе диалога и из воркера (`LeadMessenger`) | `services/conversation.py`, `services/escalation.py` |
 | 6 | `GET /api/v1/leads/{id}/decisions` | ✅ временно, отключён в prod до RBAC (Фаза 4) | `api/v1/leads.py` |
 | 7 | Evals: 30 кейсов эскалации и стадий, precision/recall/stage accuracy | ✅ (прогон — человек с ключами) | `evals/qualifier/`, `evals/test_qualifier_eval.py` |

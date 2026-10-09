@@ -1,6 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { App as AntApp, Button, Drawer, List, Space, Switch, Table, Tag, Typography } from "antd";
-import dayjs from "dayjs";
+import { App as AntApp, Button, Drawer, List, Space, Switch, Table, Typography } from "antd";
 import { useState } from "react";
 
 import { useKbChunks, useKbDocuments } from "../../api/adminQueries";
@@ -15,13 +14,11 @@ import { type ApiError, unwrap } from "../../api/http";
 import { errorText, t } from "../../i18n/ru";
 import { type ManualValues, ManualDialog, type UploadValues, UploadDialog } from "./KbDialogs";
 import { TestSearch } from "./TestSearch";
-
-const STATUS_COLOR: Record<string, string> = {
-  pending: "default",
-  processing: "processing",
-  done: "success",
-  failed: "error",
-};
+import { IngestTag, LangTag } from "../../components/StageBadge";
+import { formatDateTime } from "../../lib/time";
+import { useConfirmDanger } from "../../hooks/useConfirmDanger";
+import { PageHeader } from "../../components/PageHeader";
+import { PageState } from "../../components/PageState";
 
 function useKbMutations(onDone: () => void) {
   const client = useQueryClient();
@@ -74,16 +71,31 @@ function useKbMutations(onDone: () => void) {
 
 /** База знаний (admin, PLAN Фаза 5): документы, загрузка, индексация, фрагменты, тест поиска. */
 export function KbPage() {
-  const { data, isLoading } = useKbDocuments();
+  const query = useKbDocuments();
+  const { data, isLoading } = query;
   const [dialog, setDialog] = useState<"upload" | "manual" | null>(null);
   const [chunksOf, setChunksOf] = useState<KbDocumentOut | null>(null);
   const chunks = useKbChunks(chunksOf?.id ?? null);
   const m = useKbMutations(() => {
     setDialog(null);
   });
+  const confirmDanger = useConfirmDanger();
+  const toggle = (d: KbDocumentOut) => {
+    if (!d.is_active) {
+      m.toggle.mutate(d);
+      return;
+    }
+    confirmDanger({
+      title: t.confirm.deactivateKb,
+      content: t.confirm.deactivateKbHint,
+      okText: t.confirm.deactivate,
+      onOk: () => m.toggle.mutateAsync(d),
+    });
+  };
 
   return (
     <Space direction="vertical" size={16} style={{ width: "100%" }}>
+      <PageHeader title={t.page.kb} />
       <Space wrap>
         <Button
           type="primary"
@@ -101,78 +113,85 @@ export function KbPage() {
           {t.kb.manual}
         </Button>
       </Space>
-      <Table<KbDocumentOut>
-        rowKey="id"
-        loading={isLoading}
-        dataSource={data ?? []}
-        scroll={{ x: 800 }}
-        pagination={{ pageSize: 20 }}
-        columns={[
-          {
-            title: t.kb.title,
-            render: (_, d) => (
-              <a
-                onClick={() => {
-                  setChunksOf(d);
-                }}
-              >
-                {d.title}
-              </a>
-            ),
-          },
-          { title: t.kb.language, dataIndex: "language", width: 70 },
-          {
-            title: t.kb.product,
-            dataIndex: "product_key",
-            render: (v: string | null) => v ?? t.common.none,
-          },
-          {
-            title: t.kb.status,
-            render: (_, d) => (
-              <Space direction="vertical" size={0}>
-                <Tag color={STATUS_COLOR[d.ingest_status] ?? "default"}>
-                  {t.kb.statuses[d.ingest_status] ?? d.ingest_status}
-                </Tag>
-                {d.ingest_error ? (
-                  <Typography.Text type="danger" ellipsis style={{ maxWidth: 200 }}>
-                    {d.ingest_error}
-                  </Typography.Text>
-                ) : null}
-              </Space>
-            ),
-          },
-          { title: t.kb.chunks, dataIndex: "chunk_count", width: 90 },
-          {
-            title: t.kb.active,
-            render: (_, d) => (
-              <Switch
-                checked={d.is_active}
-                onChange={() => {
-                  m.toggle.mutate(d);
-                }}
-              />
-            ),
-          },
-          {
-            title: "",
-            render: (_, d) => (
-              <Button
-                size="small"
-                onClick={() => {
-                  m.reingest.mutate(d.id);
-                }}
-              >
-                {t.kb.reingest}
-              </Button>
-            ),
-          },
-          {
-            title: "",
-            dataIndex: "updated_at",
-            render: (v: string) => dayjs(v).format("DD.MM HH:mm"),
-          },
-        ]}
-      />
+      <PageState query={query} inline>
+        <Table<KbDocumentOut>
+          rowKey="id"
+          loading={isLoading}
+          dataSource={data ?? []}
+          scroll={{ x: 800 }}
+          pagination={{ pageSize: 20 }}
+          columns={[
+            {
+              title: t.kb.title,
+              render: (_, d) => (
+                <Button
+                  type="link"
+                  style={{ padding: 0, height: "auto", whiteSpace: "normal", textAlign: "left" }}
+                  onClick={() => {
+                    setChunksOf(d);
+                  }}
+                >
+                  {d.title}
+                </Button>
+              ),
+            },
+            {
+              title: t.kb.language,
+              dataIndex: "language",
+              width: 70,
+              render: (v: string) => <LangTag language={v} />,
+            },
+            {
+              title: t.kb.product,
+              dataIndex: "product_key",
+              render: (v: string | null) => v ?? t.common.none,
+            },
+            {
+              title: t.kb.status,
+              render: (_, d) => (
+                <Space direction="vertical" size={0}>
+                  <IngestTag status={d.ingest_status} />
+                  {d.ingest_error ? (
+                    <Typography.Text type="danger" ellipsis style={{ maxWidth: 200 }}>
+                      {d.ingest_error}
+                    </Typography.Text>
+                  ) : null}
+                </Space>
+              ),
+            },
+            { title: t.kb.chunks, dataIndex: "chunk_count", width: 90 },
+            {
+              title: t.kb.active,
+              render: (_, d) => (
+                <Switch
+                  checked={d.is_active}
+                  onChange={() => {
+                    toggle(d);
+                  }}
+                />
+              ),
+            },
+            {
+              title: "",
+              render: (_, d) => (
+                <Button
+                  size="small"
+                  onClick={() => {
+                    m.reingest.mutate(d.id);
+                  }}
+                >
+                  {t.kb.reingest}
+                </Button>
+              ),
+            },
+            {
+              title: t.kb.updated,
+              dataIndex: "updated_at",
+              render: (v: string) => formatDateTime(v),
+            },
+          ]}
+        />
+      </PageState>
       <TestSearch />
       <UploadDialog
         open={dialog === "upload"}
@@ -197,7 +216,7 @@ export function KbPage() {
       <Drawer
         open={chunksOf !== null}
         title={chunksOf?.title}
-        width={640}
+        width="min(640px, 100vw)"
         onClose={() => {
           setChunksOf(null);
         }}
@@ -209,7 +228,7 @@ export function KbPage() {
             <List.Item>
               <Space direction="vertical" size={0}>
                 <Typography.Text type="secondary">
-                  #{c.position} · {c.heading_path ?? ""} · {c.token_count} tok
+                  #{c.position} · {c.heading_path ?? ""} · {c.token_count} {t.kb.tokens}
                 </Typography.Text>
                 <Typography.Paragraph style={{ whiteSpace: "pre-wrap", margin: 0 }}>
                   {c.content}

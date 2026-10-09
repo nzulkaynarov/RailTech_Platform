@@ -25,13 +25,13 @@ from app.schemas.clients import (
     LeadBrief,
     LinkTelegram,
     MakeCustomer,
+    ServiceRequestClose,
     ServiceRequestOut,
 )
 from app.schemas.kb_admin import Created
 from app.schemas.leads import ActionResult
 from app.security import audit
 from app.security.principal import Principal
-from app.services.clients import ClientPatch
 from app.services.documents import MAX_BYTES, NewDocument
 
 router = APIRouter(prefix="/api/v1", tags=["clients"])
@@ -102,7 +102,7 @@ async def _identities(session: AsyncSession, *conditions: object) -> list[Identi
 async def update_client(
     client_id: int, body: ClientUpdate, who: ClientWriter, container: ContainerDep
 ) -> ActionResult:
-    await container.client_service.update(who, client_id, ClientPatch(**body.model_dump()))
+    await container.client_service.update(who, client_id, body.model_dump(exclude_unset=True))
     return ActionResult()
 
 
@@ -138,9 +138,9 @@ async def make_customer(
 
 @router.post("/service-requests/{request_id}/close", response_model=ActionResult)
 async def close_service_request(
-    request_id: int, who: ClientWriter, container: ContainerDep
+    request_id: int, body: ServiceRequestClose, who: ClientWriter, container: ContainerDep
 ) -> ActionResult:
-    await container.client_service.close_service_request(who, request_id)
+    await container.client_service.close_service_request(who, request_id, body.resolution)
     return ActionResult()
 
 

@@ -131,7 +131,7 @@ class QualifierService:
                 if applied is not None:
                     escalation_id = applied.escalation_id
                     if applied.plan.lead_text is not None:
-                        notice = getattr(cfg.texts, applied.plan.lead_text).get(_lang(lead))
+                        notice = cfg.lead_notice(applied.plan.lead_text, _lang(lead))
             session.add(run)
             await session.flush()
             logger.info(

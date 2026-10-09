@@ -12,6 +12,7 @@ import structlog
 from aiogram import Bot, F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.types import BufferedInputFile, CallbackQuery, Message, User
+from aiogram.utils.chat_action import ChatActionSender
 
 from app.bot import keyboards
 from app.integrations.s3 import ObjectStorage
@@ -21,6 +22,8 @@ from app.services.settings import SettingsService
 
 logger = structlog.get_logger(__name__)
 router = Router(name="client-bot")
+# Лиды — только личные чаты: сообщения групп, куда добавили бота, не становятся лидами.
+router.message.filter(F.chat.type == "private")
 
 MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024
 MAX_TEXT_CHARS = 4000
@@ -47,18 +50,33 @@ def _incoming(message: Message, text: str, **extra: Any) -> Incoming:
     )
 
 
-async def send(bot: Bot, chat_id: int, outgoing: list[Outgoing], settings: SettingsService) -> None:
+async def send(
+    bot: Bot,
+    chat_id: int,
+    outgoing: list[Outgoing],
+    settings: SettingsService,
+    conversation: ConversationService | None = None,
+) -> None:
     if not outgoing:
         return
     cfg = await settings.get()
     for item in outgoing:
-        if item.document is not None and await _send_document(bot, chat_id, item):
+        if item.document is not None:
+            if not await _send_document(bot, chat_id, item):
+                # Не пишем «Отправляю документ» без файла; команда узнаёт о сбое.
+                await bot.send_message(chat_id, cfg.texts.document_failed.get(item.language))
+                if conversation is not None and item.lead_id is not None:
+                    await conversation.report_delivery_failure(item.lead_id)
             continue
         markup = None
         if item.keyboard == "consent":
             markup = keyboards.consent(cfg, item.language)
         elif item.keyboard == "language":
             markup = keyboards.languages()
+        elif item.keyboard == "erase_confirm":
+            markup = keyboards.erase_confirm(cfg, item.language)
+        elif item.keyboard == "handoff_offer":
+            markup = keyboards.handoff_offer(cfg, item.language)
         await bot.send_message(chat_id, item.text, reply_markup=markup)
 
 
@@ -89,7 +107,8 @@ async def on_lang(
 async def on_delete(
     message: Message, bot: Bot, conversation: ConversationService, settings: SettingsService
 ) -> None:
-    await send(bot, message.chat.id, await conversation.erase(_user(message).id), settings)
+    out = await conversation.erase_prompt(_user(message).id)
+    await send(bot, message.chat.id, out, settings)
 
 
 @router.message(Command("human"), F.from_user)
@@ -100,15 +119,29 @@ async def on_human(
     await send(bot, message.chat.id, await conversation.handle_message(inc), settings)
 
 
+@router.message(F.text.startswith("/"), F.from_user)
+async def on_unknown_command(
+    message: Message, bot: Bot, conversation: ConversationService, settings: SettingsService
+) -> None:
+    """Неизвестная команда — подсказка, а не вопрос модели."""
+    await send(bot, message.chat.id, await conversation.help(_user(message).id), settings)
+
+
 @router.message(F.text, F.from_user)
 async def on_text(
     message: Message, bot: Bot, conversation: ConversationService, settings: SettingsService
 ) -> None:
     inc = _incoming(message, message.text or "")
-    await send(bot, message.chat.id, await conversation.handle_message(inc), settings)
+    # Ответ модели может идти десятки секунд — показываем «печатает…».
+    async with ChatActionSender.typing(chat_id=message.chat.id, bot=bot):
+        out = await conversation.handle_message(inc)
+    await send(bot, message.chat.id, out, settings, conversation)
 
 
-@router.message(F.document | F.photo, F.from_user)
+MEDIA = F.document | F.photo | F.voice | F.audio | F.video | F.video_note | F.animation
+
+
+@router.message(MEDIA, F.from_user)
 async def on_attachment(
     message: Message,
     bot: Bot,
@@ -122,14 +155,79 @@ async def on_attachment(
     await send(bot, message.chat.id, await conversation.handle_message(inc), settings)
 
 
-@router.callback_query(F.data == keyboards.CONSENT_ACCEPT)
+@router.message(F.contact | F.location, F.from_user)
+async def on_contact_or_location(
+    message: Message, bot: Bot, conversation: ConversationService, settings: SettingsService
+) -> None:
+    """Контакт и геопозиция — в переписку текстом: менеджер увидит их в CRM."""
+    inc = _incoming(message, _shared_text(message))
+    await send(bot, message.chat.id, await conversation.handle_message(inc), settings)
+
+
+@router.message(F.from_user)
+async def on_unsupported(
+    message: Message, bot: Bot, conversation: ConversationService, settings: SettingsService
+) -> None:
+    """Стикеры, опросы и прочее не теряются молча: просим написать текстом."""
+    await send(bot, message.chat.id, await conversation.unsupported(_user(message).id), settings)
+
+
+@router.callback_query(F.data.in_({keyboards.CONSENT_ACCEPT, keyboards.CONSENT_DECLINE}))
 async def on_consent(
     query: CallbackQuery, bot: Bot, conversation: ConversationService, settings: SettingsService
 ) -> None:
     await query.answer()
-    if query.message is not None:
-        out = await conversation.accept_consent(query.from_user.id)
-        await send(bot, query.message.chat.id, out, settings)
+    message = query.message
+    if message is None:
+        return
+    if query.data == keyboards.CONSENT_DECLINE:
+        await send(
+            bot, message.chat.id, await conversation.decline_consent(query.from_user.id), settings
+        )
+        return
+    if isinstance(message, Message):
+        await message.edit_reply_markup(reply_markup=None)
+    out = await conversation.accept_consent(query.from_user.id)
+    await send(bot, message.chat.id, out, settings)
+
+
+@router.callback_query(F.data.in_({keyboards.ERASE_CONFIRM, keyboards.ERASE_CANCEL}))
+async def on_erase(
+    query: CallbackQuery, bot: Bot, conversation: ConversationService, settings: SettingsService
+) -> None:
+    await query.answer()
+    if query.message is None:
+        return
+    if isinstance(query.message, Message):
+        await query.message.edit_reply_markup(reply_markup=None)
+    user_id = query.from_user.id
+    if query.data == keyboards.ERASE_CONFIRM:
+        out = await conversation.erase(user_id)
+    else:
+        out = await conversation.erase_cancelled(user_id)
+    await send(bot, query.message.chat.id, out, settings)
+
+
+@router.callback_query(F.data.in_({keyboards.OFFER_HUMAN, keyboards.OFFER_NO}))
+async def on_handoff_offer(
+    query: CallbackQuery, bot: Bot, conversation: ConversationService, settings: SettingsService
+) -> None:
+    await query.answer()
+    message = query.message
+    if not isinstance(message, Message):
+        return
+    await message.edit_reply_markup(reply_markup=None)
+    if query.data != keyboards.OFFER_HUMAN:
+        return
+    cfg = await settings.get()
+    language = await conversation.language_of(query.from_user.id)
+    inc = Incoming(
+        tg_user_id=query.from_user.id,
+        chat_id=message.chat.id,
+        text=cfg.texts.handoff_offer_yes.get(language),
+        human_requested=True,
+    )
+    await send(bot, message.chat.id, await conversation.handle_message(inc), settings)
 
 
 @router.callback_query(F.data.startswith(keyboards.LANGUAGE_PREFIX))
@@ -158,18 +256,45 @@ async def _send_document(bot: Bot, chat_id: int, item: Outgoing) -> bool:
     return True
 
 
+def _shared_text(message: Message) -> str:
+    if message.contact is not None:
+        contact = message.contact
+        name = " ".join(filter(None, (contact.first_name, contact.last_name)))
+        return f"📇 {name}: {contact.phone_number}".strip()
+    if message.location is not None:
+        return f"📍 {message.location.latitude:.5f}, {message.location.longitude:.5f}"
+    return ""
+
+
+def _media(message: Message) -> tuple[str, str, str, int] | None:
+    """file_id, имя, mime, размер вложения Telegram любого поддерживаемого вида."""
+    if message.photo:
+        photo = message.photo[-1]
+        return photo.file_id, "photo.jpg", "image/jpeg", photo.file_size or 0
+    named = message.document or message.audio or message.video or message.animation
+    if named is not None:
+        return (
+            named.file_id,
+            named.file_name or "file",
+            named.mime_type or "application/octet-stream",
+            named.file_size or 0,
+        )
+    if message.voice is not None:
+        voice = message.voice
+        return voice.file_id, "voice.ogg", voice.mime_type or "audio/ogg", voice.file_size or 0
+    if message.video_note is not None:
+        note = message.video_note
+        return note.file_id, "video_note.mp4", "video/mp4", note.file_size or 0
+    return None
+
+
 async def _store_attachment(
     message: Message, bot: Bot, storage: ObjectStorage, bucket: str
 ) -> dict[str, Any] | None:
-    if message.document is not None:
-        doc = message.document
-        file_id, name = doc.file_id, doc.file_name or "document"
-        mime, size = doc.mime_type or "application/octet-stream", doc.file_size or 0
-    elif message.photo:
-        photo = message.photo[-1]
-        file_id, name, mime, size = photo.file_id, "photo.jpg", "image/jpeg", photo.file_size or 0
-    else:
+    media = _media(message)
+    if media is None:
         return None
+    file_id, name, mime, size = media
     meta: dict[str, Any] = {"kind": "file", "name": name, "mime": mime, "size": size}
     if size > MAX_ATTACHMENT_BYTES:
         return {**meta, "stored": False}

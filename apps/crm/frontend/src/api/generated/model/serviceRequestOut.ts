@@ -6,9 +6,11 @@
  */
 
 export interface ServiceRequestOut {
+  closed_at?: string | null;
   created_at: string;
   id: number;
   lead_id: number | null;
+  resolution?: string | null;
   status: string;
   summary: string;
 }

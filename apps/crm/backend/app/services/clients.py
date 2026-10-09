@@ -4,40 +4,47 @@
 Без неё бот работает в режиме prospect и документов клиента не видит.
 """
 
-from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.errors import (
     ConflictError,
+    ForbiddenError,
     InvalidTransitionError,
     NotFoundError,
     ValidationFailedError,
 )
-from app.domain.stages import Stage, TransitionSource
+from app.domain.stages import OwnerMode, Stage, TransitionSource
+from app.models.auth import User
 from app.models.clients import Client, ServiceRequest
 from app.models.leads import Lead, TelegramIdentity
+from app.models.qualification import Escalation
 from app.repositories import events
 from app.security import audit
 from app.security.principal import Principal
 from app.services import stages
+from app.services.escalation import OPEN_STATUSES
+from app.services.lead_messenger import LeadMessenger
+from app.services.leads import LANGUAGES
+from app.services.settings import SettingsService
 
-
-@dataclass(frozen=True, slots=True)
-class ClientPatch:
-    name: str | None = None
-    inn: str | None = None
-    segment: str | None = None
-    notes: str | None = None
-    is_active: bool | None = None
-    owner_user_id: int | None = None
+CLEARABLE = frozenset({"inn", "segment", "notes", "owner_user_id"})
+EDITABLE = CLEARABLE | {"name", "is_active"}
 
 
 class ClientService:
-    def __init__(self, sessions: async_sessionmaker[AsyncSession]) -> None:
+    def __init__(
+        self,
+        sessions: async_sessionmaker[AsyncSession],
+        settings: SettingsService | None = None,
+        messenger: LeadMessenger | None = None,
+    ) -> None:
         self._sessions = sessions
+        self._settings = settings
+        self._messenger = messenger
 
     async def create(self, who: Principal, name: str, inn: str | None, segment: str | None) -> int:
         async with self._sessions() as session, session.begin():
@@ -49,23 +56,35 @@ class ClientService:
             )
             return client.id
 
-    async def update(self, who: Principal, client_id: int, patch: ClientPatch) -> None:
+    async def update(self, who: Principal, client_id: int, changes: dict[str, Any]) -> None:
+        """Изменить поля клиента; `None` очищает необязательное поле (ИНН, сегмент, владелец)."""
+        unknown = set(changes) - EDITABLE
+        if unknown:
+            raise ValidationFailedError("unknown client fields", field=sorted(unknown)[0])
         async with self._sessions() as session, session.begin():
             client = await _client(session, client_id)
-            before = {"name": client.name, "is_active": client.is_active}
-            for field in ("name", "inn", "segment", "notes", "is_active", "owner_user_id"):
-                value = getattr(patch, field)
-                if value is not None:
+            owner = changes.get("owner_user_id")
+            if owner is not None:
+                user = await session.get(User, owner)
+                if user is None or not user.is_active:
+                    raise ValidationFailedError("choose an active user", field="owner_user_id")
+            before, after = {}, {}
+            for field, value in changes.items():
+                if value is None and field not in CLEARABLE:
+                    continue
+                if getattr(client, field) != value:
+                    before[field], after[field] = getattr(client, field), value
                     setattr(client, field, value)
-            await audit.record(
-                session,
-                who.actor,
-                "client.update",
-                "client",
-                client_id,
-                before=before,
-                after={"name": client.name, "is_active": client.is_active},
-            )
+            if after:
+                await audit.record(
+                    session,
+                    who.actor,
+                    "client.update",
+                    "client",
+                    client_id,
+                    before=before,
+                    after=after,
+                )
 
     async def link_identity(self, who: Principal, client_id: int, tg_user_id: int) -> None:
         """Подтверждение менеджером: этот Telegram-аккаунт принадлежит клиенту."""
@@ -123,6 +142,8 @@ class ClientService:
                 raise NotFoundError("lead not found")
             if lead.stage not in (Stage.WON, Stage.CUSTOMER):
                 raise InvalidTransitionError("close the deal (won) first")
+            if lead.assigned_user_id not in (None, who.user_id) and not who.is_admin:
+                raise ForbiddenError("only the lead owner or an admin can do this")
             if client_id is None:
                 client = Client(name=(new_name or "").strip(), owner_user_id=who.user_id)
                 session.add(client)
@@ -131,16 +152,10 @@ class ClientService:
             else:
                 await _client(session, client_id)
             lead.client_id = client_id
-            identities = (
-                await session.scalars(
-                    select(TelegramIdentity)
-                    .where(TelegramIdentity.lead_id == lead_id)
-                    .with_for_update()
-                )
-            ).all()
-            for identity in identities:
-                identity.client_id = client_id
-                identity.verified_by_user_id, identity.verified_at = who.user_id, datetime.now(UTC)
+            await _bind_identities(session, lead_id, client_id, who)
+            # Сервисный режим ведёт бот (BUSINESS §5): документы и вопросы клиента — без менеджера.
+            lead.owner_mode = OwnerMode.BOT.value
+            lead.snoozed_until = None
             await stages.transition(
                 session,
                 lead,
@@ -160,15 +175,73 @@ class ClientService:
             await events.publish(session, "lead.updated", lead_id=lead_id)
             return client_id
 
-    async def close_service_request(self, who: Principal, request_id: int) -> None:
+    async def close_service_request(self, who: Principal, request_id: int, resolution: str) -> None:
+        """Закрыть запрос клиента с итогом: клиент получает ответ в боте (ADR-0015)."""
+        now = datetime.now(UTC)
         async with self._sessions() as session, session.begin():
             row = await session.get(ServiceRequest, request_id, with_for_update=True)
             if row is None:
                 raise NotFoundError("service request not found")
+            if row.status != "open":
+                raise ConflictError("service request is already closed")
             row.status, row.closed_by = "closed", who.user_id
+            row.resolution, row.closed_at = resolution.strip(), now
+            lead = await session.get(Lead, row.lead_id) if row.lead_id else None
+            if lead is not None:
+                await _resolve_info_escalation(session, lead.id, now)
             await audit.record(
-                session, who.actor, "client.close_request", "service_request", request_id
+                session,
+                who.actor,
+                "client.close_request",
+                "service_request",
+                request_id,
+                after={"resolution": row.resolution},
             )
+            summary, language = row.summary, lead.language if lead else "ru"
+        if lead is not None and self._settings is not None and self._messenger is not None:
+            cfg = await self._settings.get()
+            text = cfg.texts.service_request_closed.get(
+                LANGUAGES.get(language, "ru"), summary=summary[:200], resolution=resolution.strip()
+            )
+            await self._messenger.send(lead.id, text, {"notice": "service_request_closed"})
+
+
+async def _resolve_info_escalation(session: AsyncSession, lead_id: int, now: datetime) -> None:
+    """Информационная эскалация о запросе закрывается вместе с ним; срочные — нет."""
+    escalation = (
+        await session.scalars(
+            select(Escalation).where(
+                Escalation.lead_id == lead_id,
+                Escalation.status.in_(OPEN_STATUSES),
+                Escalation.priority == "info",
+            )
+        )
+    ).first()
+    if escalation is not None:
+        escalation.status, escalation.resolved_at = "closed", now
+        escalation.outcome = "service_request_closed"
+        await events.publish(
+            session, "escalation.updated", lead_id=lead_id, escalation_id=escalation.id
+        )
+
+
+async def _bind_identities(
+    session: AsyncSession, lead_id: int, client_id: int, who: Principal
+) -> None:
+    """Telegram лида → клиент с подтверждением; чужая привязка не перезаписывается молча."""
+    identities = (
+        await session.scalars(
+            select(TelegramIdentity).where(TelegramIdentity.lead_id == lead_id).with_for_update()
+        )
+    ).all()
+    for identity in identities:
+        if identity.client_id is not None and identity.client_id != client_id:
+            raise ConflictError(
+                "telegram account is linked to another client", client_id=identity.client_id
+            )
+    for identity in identities:
+        identity.client_id = client_id
+        identity.verified_by_user_id, identity.verified_at = who.user_id, datetime.now(UTC)
 
 
 async def _client(session: AsyncSession, client_id: int) -> Client:

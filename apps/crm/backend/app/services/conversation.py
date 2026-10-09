@@ -8,10 +8,7 @@ owner_mode → агент (вне транзакции) → сохранить �
 """
 
 import asyncio
-from collections.abc import Awaitable, Callable
-from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any, Literal
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -20,64 +17,55 @@ from app.agents.dialog.graph import DialogAgent
 from app.agents.dialog.state import DialogResult
 from app.domain.consent import consent_required
 from app.domain.dialog_policy import Action
-from app.domain.language import Language, detect_language, next_language
-from app.domain.stages import Stage, TransitionSource
+from app.domain.language import Language, detect_language
+from app.domain.stages import OwnerMode, Stage, TransitionSource
 from app.domain.triggers import TriggerSignals, evaluate
 from app.models.leads import Conversation, Lead
 from app.repositories import leads as repo
 from app.schemas.settings import AppSettings
 from app.security.agent_context import issue
 from app.services import escalation, stages
+from app.services.conversation_erasure import ErasureMixin
+from app.services.conversation_support import (
+    apply_counters,
+    consent_prompt,
+    current_lead,
+    escalated,
+    lang_of,
+    lead_of,
+    pending_question,
+    report_failure,
+    turn_meta,
+    turn_signals,
+    update_language,
+    verified_client,
+)
+from app.services.conversation_types import (
+    ActivityHook,
+    AttachmentsEraser,
+    EscalationHook,
+    Incoming,
+    Keyboard,
+    Outgoing,
+    Turn,
+)
 from app.services.kb.gaps import register_gap
 from app.services.settings import SettingsService
+from app.services.waiting import while_waiting
+
+__all__ = [
+    "ActivityHook",
+    "ConversationService",
+    "EscalationHook",
+    "Incoming",
+    "Keyboard",
+    "Outgoing",
+]
 
 logger = structlog.get_logger(__name__)
 
-Keyboard = Literal["consent", "language"]
-ActivityHook = Callable[[int], Awaitable[None]]
-EscalationHook = Callable[[int, int], Awaitable[None]]
 
-
-@dataclass(frozen=True, slots=True)
-class Incoming:
-    tg_user_id: int
-    chat_id: int
-    text: str
-    username: str | None = None
-    first_name: str | None = None
-    language_code: str | None = None
-    message_id: int | None = None
-    attachments: list[dict[str, Any]] = field(default_factory=list)
-    human_requested: bool = False
-
-
-@dataclass(frozen=True, slots=True)
-class Outgoing:
-    text: str
-    keyboard: Keyboard | None = None
-    message_id: int | None = None
-    language: Language = "ru"
-    lead_id: int | None = None
-    document: dict[str, Any] | None = None
-
-
-@dataclass
-class _Turn:
-    lead_id: int
-    language: Language
-    stage: str
-    owner_mode: str
-    text: str
-    human: bool
-    attachment: bool = False
-    client_id: int | None = None
-
-    @property
-    def mode(self) -> Literal["prospect", "customer"]:
-        return "customer" if self.client_id is not None else "prospect"
-
-
-class ConversationService:
+class ConversationService(ErasureMixin):
     def __init__(
         self,
         sessions: async_sessionmaker[AsyncSession],
@@ -86,6 +74,7 @@ class ConversationService:
         agent_key: bytes,
         on_activity: ActivityHook | None = None,
         on_escalation: EscalationHook | None = None,
+        erase_attachments: AttachmentsEraser | None = None,
     ) -> None:
         self._sessions = sessions
         self._settings = settings
@@ -93,15 +82,21 @@ class ConversationService:
         self._agent_key = agent_key
         self._on_activity = on_activity
         self._on_escalation = on_escalation
+        self._erase_attachments = erase_attachments
         self._locks: dict[int, asyncio.Lock] = {}
 
     async def handle_message(self, inc: Incoming) -> list[Outgoing]:
         cfg = await self._settings.get()
-        early, turn, escalation = await self._receive(inc, cfg)
+        early, turn, escalated = await self._receive(inc, cfg)
         if turn is None:
-            if early:
-                await self._fire(_lead_of(early), escalation)
+            if escalated is not None:
+                await self._fire(*escalated)
+            elif early:
+                await self._fire(lead_of(early), None)
             return early
+        return early + await self._answer(turn, cfg)
+
+    async def _answer(self, turn: Turn, cfg: AppSettings) -> list[Outgoing]:
         lock = self._locks.setdefault(turn.lead_id, asyncio.Lock())
         async with lock:
             result = await self._run_agent(turn, cfg)
@@ -110,7 +105,7 @@ class ConversationService:
         await self._fire(
             turn.lead_id if turn.mode == "prospect" else None, escalation, turn.lead_id
         )
-        return early + outgoing
+        return outgoing
 
     async def start(self, inc: Incoming) -> list[Outgoing]:
         """/start: приветствие; до согласия — ещё и текст согласия с кнопкой."""
@@ -120,61 +115,88 @@ class ConversationService:
             if consent_required(
                 lead.consent_given_at, lead.consent_version, cfg.texts.consent_version
             ):
-                return await _consent_prompt(session, conversation, lead, cfg, is_new=True)
-            text = cfg.texts.greeting.get(_lang(lead), company=cfg.company.name)
+                return await consent_prompt(session, conversation, lead, cfg, is_new=True)
+            text = cfg.texts.greeting.get(lang_of(lead), company=cfg.company.name)
             await repo.add_message(session, conversation_id=conversation.id, role="bot", text=text)
         return [Outgoing(text)]
 
     async def help(self, tg_user_id: int) -> list[Outgoing]:
         cfg = await self._settings.get()
-        async with self._sessions() as session:
-            lead, _ = await _current_lead(session, tg_user_id)
-        language = _lang(lead) if lead else "ru"
+        language = await self.language_of(tg_user_id)
         return [Outgoing(cfg.texts.help.get(language, company=cfg.company.name))]
+
+    async def unsupported(self, tg_user_id: int) -> list[Outgoing]:
+        """Стикер, опрос и т. п.: состояние не меняется, просим написать текстом."""
+        cfg = await self._settings.get()
+        return [Outgoing(cfg.texts.unsupported_message.get(await self.language_of(tg_user_id)))]
+
+    async def language_of(self, tg_user_id: int) -> Language:
+        async with self._sessions() as session:
+            lead, _ = await current_lead(session, tg_user_id)
+        return lang_of(lead) if lead else "ru"
 
     async def language_prompt(self, tg_user_id: int) -> list[Outgoing]:
         cfg = await self._settings.get()
-        async with self._sessions() as session:
-            lead, _ = await _current_lead(session, tg_user_id)
-        language = _lang(lead) if lead else "ru"
+        language = await self.language_of(tg_user_id)
         return [Outgoing(cfg.texts.language_prompt.get(language), keyboard="language")]
 
     async def accept_consent(self, tg_user_id: int) -> list[Outgoing]:
+        """Согласие получено; вопрос, заданный до согласия, получает ответ сразу (аудит P-13)."""
         cfg = await self._settings.get()
         async with self._sessions() as session, session.begin():
-            lead, conversation = await _current_lead(session, tg_user_id)
+            lead, conversation = await current_lead(session, tg_user_id)
             if lead is None or conversation is None:
                 return []
             lead.consent_given_at = datetime.now(UTC)
             lead.consent_version = cfg.texts.consent_version
-            text = cfg.texts.consent_accepted.get(_lang(lead))
+            question = await pending_question(session, conversation.id)
+            texts = cfg.texts
+            text = (texts.consent_accepted_pending if question else texts.consent_accepted).get(
+                lang_of(lead)
+            )
             message = await repo.add_message(
                 session, conversation_id=conversation.id, role="bot", text=text
             )
-        return [Outgoing(text, message_id=message.id)]
+            turn = None
+            if question and lead.owner_mode == OwnerMode.BOT:
+                client_id = await verified_client(session, tg_user_id)
+                turn = Turn(
+                    lead.id,
+                    lang_of(lead),
+                    lead.stage,
+                    lead.owner_mode,
+                    question,
+                    False,
+                    client_id=client_id,
+                )
+        accepted = [Outgoing(text, message_id=message.id)]
+        return accepted + (await self._answer(turn, cfg) if turn else [])
+
+    async def decline_consent(self, tg_user_id: int) -> list[Outgoing]:
+        cfg = await self._settings.get()
+        async with self._sessions() as session, session.begin():
+            lead, conversation = await current_lead(session, tg_user_id)
+            language = lang_of(lead) if lead else "ru"
+            text = cfg.texts.consent_declined.get(language)
+            if conversation is not None:
+                await repo.add_message(
+                    session, conversation_id=conversation.id, role="bot", text=text
+                )
+        return [Outgoing(text)]
 
     async def set_language(self, tg_user_id: int, language: Language) -> list[Outgoing]:
         cfg = await self._settings.get()
         async with self._sessions() as session, session.begin():
-            lead, _ = await _current_lead(session, tg_user_id)
+            lead, _ = await current_lead(session, tg_user_id)
             if lead is None:
                 return [Outgoing(cfg.texts.language_set.get(language))]
             lead.language, lead.language_confirmed, lead.language_candidate = language, True, None
         return [Outgoing(cfg.texts.language_set.get(language))]
 
-    async def erase(self, tg_user_id: int) -> list[Outgoing]:
-        cfg = await self._settings.get()
-        async with self._sessions() as session, session.begin():
-            lead, _ = await _current_lead(session, tg_user_id)
-            language = _lang(lead) if lead else "ru"
-            if lead is not None:
-                count = await repo.erase_lead(session, lead, datetime.now(UTC))
-                logger.info("lead_erased", lead_id=lead.id, messages=count)
-        return [Outgoing(cfg.texts.erased.get(language))]
-
     async def _receive(
         self, inc: Incoming, cfg: AppSettings
-    ) -> tuple[list[Outgoing], _Turn | None, int | None]:
+    ) -> tuple[list[Outgoing], Turn | None, tuple[int, int] | None]:
+        """Сообщение лида до хода агента: (ответ без модели, ход агента, (лид, эскалация))."""
         async with self._sessions() as session, session.begin():
             lead, conversation, is_new = await self._ensure_lead(session, inc)
             now = datetime.now(UTC)
@@ -187,33 +209,50 @@ class ConversationService:
                 attachments=inc.attachments,
             )
             lead.last_lead_msg_at = now
-            if lead.stage == Stage.UNRESPONSIVE:
+            if lead.stage in (Stage.UNRESPONSIVE, Stage.LOST):
                 await stages.transition(
                     session, lead, Stage.ENGAGED, TransitionSource.SYSTEM, reason="lead wrote again"
                 )
-            _update_language(lead, inc.text)
+            update_language(lead, inc.text)
             if consent_required(
                 lead.consent_given_at, lead.consent_version, cfg.texts.consent_version
             ):
-                return await _consent_prompt(session, conversation, lead, cfg, is_new), None, None
+                return await consent_prompt(session, conversation, lead, cfg, is_new), None, None
+            if lead.owner_mode == OwnerMode.PAUSED:
+                waiting = await while_waiting(
+                    session,
+                    conversation,
+                    lead,
+                    text=inc.text,
+                    human_requested=inc.human_requested,
+                    language=lang_of(lead),
+                    cfg=cfg,
+                    now=now,
+                )
+                out = (
+                    [Outgoing(waiting.text, message_id=waiting.message_id, lead_id=lead.id)]
+                    if waiting.text
+                    else []
+                )
+                return out, None, escalated(lead.id, waiting.escalation_id)
             if inc.attachments and not inc.text.strip():
-                text = cfg.texts.attachment_received.get(_lang(lead))
+                text = cfg.texts.attachment_received.get(lang_of(lead))
                 message = await repo.add_message(
                     session, conversation_id=conversation.id, role="bot", text=text
                 )
                 hits = evaluate(TriggerSignals(attachment_received=True), cfg.escalation.triggers())
                 applied = await escalation.apply(session, lead, hits, cfg, now)
                 out = [Outgoing(text, message_id=message.id, lead_id=lead.id)]
-                return out, None, applied.escalation_id if applied else None
-            turn = _Turn(
+                return out, None, escalated(lead.id, applied.escalation_id if applied else None)
+            turn = Turn(
                 lead.id,
-                _lang(lead),
+                lang_of(lead),
                 lead.stage,
                 lead.owner_mode,
                 inc.text,
                 inc.human_requested,
                 bool(inc.attachments),
-                await _verified_client(session, inc.tg_user_id),
+                await verified_client(session, inc.tg_user_id),
             )
         return [], turn, None
 
@@ -246,7 +285,7 @@ class ConversationService:
         logger.info("lead_created", lead_id=lead.id)
         return lead, conversation, True
 
-    async def _run_agent(self, turn: _Turn, cfg: AppSettings) -> DialogResult | None:
+    async def _run_agent(self, turn: Turn, cfg: AppSettings) -> DialogResult | None:
         token = issue(
             self._agent_key,
             lead_id=turn.lead_id,
@@ -270,7 +309,7 @@ class ConversationService:
             return None
 
     async def _persist(
-        self, turn: _Turn, result: DialogResult | None, cfg: AppSettings
+        self, turn: Turn, result: DialogResult | None, cfg: AppSettings
     ) -> tuple[list[Outgoing], int | None]:
         async with self._sessions() as session, session.begin():
             lead = await repo.get_lead(session, turn.lead_id, for_update=True)
@@ -286,8 +325,11 @@ class ConversationService:
                     text=text,
                     meta={"error": "agent_unavailable"},
                 )
-                return [Outgoing(text)], None
-            _apply_counters(lead, result)
+                failure = await report_failure(
+                    session, lead, cfg, TriggerSignals(agent_unavailable=True)
+                )
+                return [Outgoing(text)], failure
+            apply_counters(lead, result)
             if result.action == Action.FALLBACK:
                 await register_gap(
                     session,
@@ -297,14 +339,17 @@ class ConversationService:
                     lead_id=lead.id,
                 )
             now = datetime.now(UTC)
-            replies = [result.reply] if result.reply else []
-            hits = evaluate(_turn_signals(turn, result, lead), cfg.escalation.triggers())
+            hits = evaluate(turn_signals(turn, result, lead), cfg.escalation.triggers())
             applied = await escalation.apply(
                 session, lead, hits, cfg, now, reason_text=f"dialog: {result.reason}"
             )
             notice = applied.plan.lead_text if applied else None
+            fallback = result.action == Action.FALLBACK
+            # «Могу передать, если хотите» и сразу «Передаю…» — противоречие: оставляем второе.
+            replies = [result.reply] if result.reply and not (fallback and notice) else []
+            offer: Keyboard | None = "handoff_offer" if fallback and not notice else None
             if notice is not None and result.action != Action.HANDOFF:
-                notice_text = getattr(cfg.texts, notice).get(turn.language)
+                notice_text = cfg.lead_notice(notice, turn.language)
                 replies.append(notice_text)
             outgoing: list[Outgoing] = []
             for index, text in enumerate(replies):
@@ -313,13 +358,31 @@ class ConversationService:
                     conversation_id=conversation.id,
                     role="bot",
                     text=text,
-                    meta=_meta(result) if index == 0 else {"notice": notice},
+                    meta=turn_meta(result) if index == 0 else {"notice": notice},
                 )
                 document = result.document if index == 0 else None
-                outgoing.append(Outgoing(text, message_id=message.id, document=document))
+                outgoing.append(
+                    Outgoing(
+                        text,
+                        keyboard=offer if index == 0 else None,
+                        message_id=message.id,
+                        document=document,
+                        language=turn.language,
+                        lead_id=turn.lead_id,
+                    )
+                )
             if replies:
                 lead.last_bot_msg_at = now
         return outgoing, applied.escalation_id if applied else None
+
+    async def report_delivery_failure(self, lead_id: int) -> None:
+        """Бот не смог отправить файл клиенту — команда узнаёт через info-эскалацию."""
+        cfg = await self._settings.get()
+        async with self._sessions() as session, session.begin():
+            lead = await repo.get_lead(session, lead_id, for_update=True)
+            signals = TriggerSignals(delivery_failed=True)
+            escalation_id = await report_failure(session, lead, cfg, signals) if lead else None
+        await self._fire(None, escalation_id, lead_id)
 
     async def _fire(
         self, lead_id: int | None, escalation_id: int | None, escalated_lead: int | None = None
@@ -332,106 +395,3 @@ class ConversationService:
                 await self._on_activity(lead_id)
         except Exception:
             logger.exception("conversation_hooks_failed", lead_id=lead_id)
-
-
-def _apply_counters(lead: Lead, result: DialogResult) -> None:
-    if result.action == Action.FALLBACK:
-        lead.consecutive_fallbacks += 1
-    elif result.action == Action.ANSWER:
-        lead.consecutive_fallbacks = 0
-
-
-def _turn_signals(turn: _Turn, result: DialogResult, lead: Lead) -> TriggerSignals:
-    """Триггеры, которые код видит сразу в ходе; остальные — квалификатор."""
-    handoff = result.action == Action.HANDOFF
-    return TriggerSignals(
-        human_requested=handoff and result.reason == "human_requested",
-        stop_word_hit=handoff and result.reason == "stop_word",
-        callback_requested=result.callback_requested,
-        consecutive_fallbacks=lead.consecutive_fallbacks if result.action == Action.FALLBACK else 0,
-        attachment_received=turn.attachment,
-        customer_mode=turn.mode == "customer",
-        document_not_found=result.reason == "document_not_found",
-        intent="service" if result.service_request else None,
-    )
-
-
-async def _verified_client(session: AsyncSession, tg_user_id: int) -> int | None:
-    """Клиент, к которому менеджер подтвердил привязку этого Telegram (SPEC §5.2)."""
-    identity = await repo.get_identity(session, tg_user_id)
-    if identity is None or identity.client_id is None or identity.verified_at is None:
-        return None
-    return identity.client_id
-
-
-def _lead_of(outgoing: list[Outgoing]) -> int | None:
-    return next((o.lead_id for o in outgoing if o.lead_id is not None), None)
-
-
-async def _consent_prompt(
-    session: AsyncSession, conversation: Conversation, lead: Lead, cfg: AppSettings, is_new: bool
-) -> list[Outgoing]:
-    language = _lang(lead)
-    texts = cfg.texts
-    out: list[Outgoing] = []
-    if is_new:
-        out.append(Outgoing(texts.greeting.get(language, company=cfg.company.name)))
-        out.append(Outgoing(texts.consent.get(language), keyboard="consent", language=language))
-    else:
-        out.append(
-            Outgoing(texts.consent_required.get(language), keyboard="consent", language=language)
-        )
-    for item in out:
-        await repo.add_message(session, conversation_id=conversation.id, role="bot", text=item.text)
-    return out
-
-
-async def _current_lead(
-    session: AsyncSession, tg_user_id: int
-) -> tuple[Lead | None, Conversation | None]:
-    identity = await repo.get_identity(session, tg_user_id)
-    if identity is None or identity.lead_id is None:
-        return None, None
-    lead = await repo.get_lead(session, identity.lead_id, for_update=True)
-    conversation = await repo.open_conversation(session, identity.lead_id) if lead else None
-    return lead, conversation
-
-
-def _update_language(lead: Lead, text: str) -> None:
-    if not text.strip():
-        return
-    detected = detect_language(text, default=_lang(lead))
-    language, confirmed, new_candidate = next_language(
-        _lang(lead), lead.language_confirmed, _as_language(lead.language_candidate), detected
-    )
-    lead.language, lead.language_confirmed, lead.language_candidate = (
-        language,
-        confirmed,
-        new_candidate,
-    )
-
-
-_LANGUAGES: dict[str, Language] = {"ru": "ru", "uz": "uz", "en": "en"}
-
-
-def _as_language(value: str | None) -> Language | None:
-    return _LANGUAGES.get(value or "")
-
-
-def _lang(lead: Lead) -> Language:
-    return _as_language(lead.language) or "ru"
-
-
-def _meta(result: DialogResult) -> dict[str, Any]:
-    meta: dict[str, Any] = {
-        "action": result.action.value,
-        "reason": result.reason,
-        "kb_hits": result.kb_hits,
-        "best_score": result.best_score,
-        "trace_id": result.trace_id,
-        "prompt_version": result.prompt_version,
-        "mode": result.mode,
-    }
-    if result.llm:
-        meta.update(result.llm)
-    return meta

@@ -94,3 +94,37 @@ def test_merge_without_changes_does_nothing_visible() -> None:
     )
     assert result is not None
     assert result.channel_action == "none"
+
+
+INFO = TriggerHit(TriggerCode.SERVICE_REQUEST, Priority.INFO)
+
+
+@pytest.mark.parametrize("stage", [Stage.ENGAGED, Stage.CUSTOMER])
+def test_info_escalation_keeps_bot_talking(stage: Stage) -> None:
+    """ADR-0015: info — сведения для команды; бот не замолкает, лиду не пишем «передаю»."""
+    result = plan(
+        [INFO], stage=stage, owner_mode=OwnerMode.BOT, open_escalation=None, business_time=True
+    )
+    assert result is not None
+    assert result.channel_action == "post"
+    assert not result.pause_bot
+    assert not result.move_to_handoff
+    assert result.lead_text is None
+
+
+def test_info_upgraded_to_hot_starts_full_handoff() -> None:
+    existing = OpenEscalation(reason_codes=(TriggerCode.SERVICE_REQUEST,), priority=Priority.INFO)
+    result = plan(
+        [HOT],
+        stage=Stage.ENGAGED,
+        owner_mode=OwnerMode.BOT,
+        open_escalation=existing,
+        business_time=True,
+    )
+    assert result is not None
+    assert not result.is_new
+    assert result.priority == Priority.HOT
+    assert result.pause_bot
+    assert result.move_to_handoff
+    assert result.lead_text == "handoff"
+    assert result.channel_action == "edit"
