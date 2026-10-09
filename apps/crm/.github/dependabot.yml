@@ -26,10 +26,20 @@ updates:
   - package-ecosystem: docker
     directories: [/backend, /frontend]
     schedule: { interval: weekly, day: monday, timezone: Asia/Tashkent }
+    # Node — только LTS; переход на следующую LTS делаем вручную.
+    ignore:
+      - dependency-name: node
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: docker-compose
     directory: /infra
     schedule: { interval: weekly, day: monday, timezone: Asia/Tashkent }
+    # Redis и ClickHouse нужны только Langfuse: версии — как в его официальном compose,
+    # обновляем вместе с Langfuse (redis:7, clickhouse 25.x на 2026-10-09).
+    ignore:
+      - dependency-name: redis
+        update-types: [version-update:semver-major]
+      - dependency-name: clickhouse/clickhouse-server
 
   - package-ecosystem: pre-commit
     directory: /
