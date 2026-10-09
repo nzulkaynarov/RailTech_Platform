@@ -57,7 +57,8 @@ test-e2e: ## E2E-тесты (появляются с Фазы 4)
 
 .PHONY: eval
 eval: ## Evals агента на golden (dev-стенд: ключи моделей + make kb-demo)
-	$(COMPOSE) run --rm worker pytest -m eval evals -p no:cacheprovider -s
+	mkdir -p backend/evals/reports
+	$(COMPOSE) run --rm -v "$(CURDIR)/backend/evals/reports:/app/evals/reports" worker pytest -m eval evals -p no:cacheprovider -s
 
 .PHONY: promptfoo
 PROMPTFOO_VERSION := 0.124.1

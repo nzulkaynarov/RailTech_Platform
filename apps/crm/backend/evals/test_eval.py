@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import pytest
+import pytest_asyncio
 
 from app.agents import prompts
 from app.agents.dialog.graph import DialogAgent
@@ -27,6 +28,9 @@ from evals import report
 from evals.golden import GoldenCase, load_cases
 
 pytestmark = pytest.mark.eval
+# Один цикл событий на модуль: клиенты LiteLLM и пул БД живут весь модуль,
+# иначе pytest-asyncio 1.x даёт ScopeMismatch / «Event loop is closed».
+MODULE_LOOP = pytest.mark.asyncio(loop_scope="module")
 
 CASES = load_cases()
 # Пороги релиза SPEC §12 (eval-gate в CI, Фаза 7).
@@ -141,7 +145,7 @@ def _filter_documents(case: GoldenCase, args: dict[str, Any]) -> list[dict[str, 
     return found
 
 
-@pytest.fixture(scope="module")
+@pytest_asyncio.fixture(scope="module", loop_scope="module")
 async def container() -> AsyncIterator[Container]:
     settings = Settings()
     if not settings.litellm_api_key.get_secret_value():
@@ -151,6 +155,7 @@ async def container() -> AsyncIterator[Container]:
     await c.engine.dispose()
 
 
+@MODULE_LOOP
 @pytest.mark.parametrize("case", CASES, ids=[c.id for c in CASES])
 async def test_golden_case(case: GoldenCase, container: Container) -> None:
     tools = EvalTools(case, KbSearchService(container.session_factory, container.embedder))
