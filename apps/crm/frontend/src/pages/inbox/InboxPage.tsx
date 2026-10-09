@@ -8,6 +8,7 @@ import { PriorityTag } from "../../components/EscalationReason";
 import { StageBadge } from "../../components/StageBadge";
 import { t } from "../../i18n/ru";
 import "../pages.css";
+import { reasonLabel } from "../../domain/labels";
 
 function LeadItem({ lead }: { lead: LeadOut }) {
   return (
@@ -27,7 +28,7 @@ function LeadItem({ lead }: { lead: LeadOut }) {
             {lead.need_summary ? <Typography.Text>{lead.need_summary}</Typography.Text> : null}
             {lead.escalation ? (
               <Typography.Text type="secondary">
-                {lead.escalation.reason_codes.map((c) => t.reasons[c] ?? c).join(", ")}
+                {lead.escalation.reason_codes.map(reasonLabel).join(", ")}
               </Typography.Text>
             ) : null}
             {lead.last_lead_msg_at ? (

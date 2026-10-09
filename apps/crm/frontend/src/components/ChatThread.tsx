@@ -1,10 +1,10 @@
 import { Button, Empty, Input, Space, Typography } from "antd";
-import dayjs from "dayjs";
 import { useEffect, useRef, useState } from "react";
 
 import type { MessageOut } from "../api/generated/model";
 import { t } from "../i18n/ru";
 import "./ChatThread.css";
+import { formatWhen } from "../lib/time";
 
 type Props = {
   messages: MessageOut[];
@@ -22,8 +22,7 @@ function Bubble({ message }: { message: MessageOut }) {
     <div className={own ? "chat-row chat-own" : "chat-row"}>
       <div className={`chat-bubble chat-${message.role}`}>
         <Typography.Text type="secondary" className="chat-meta">
-          {t.roleNames[message.role] ?? message.role} ·{" "}
-          {dayjs(message.created_at).format("DD.MM HH:mm")}
+          {t.roleNames[message.role] ?? message.role} · {formatWhen(message.created_at)}
         </Typography.Text>
         <div className="chat-text">{message.text}</div>
         {attachments.length ? <div className="chat-meta">📎 {attachments.join(", ")}</div> : null}

@@ -8,6 +8,7 @@ import { type ApiError, unwrap } from "../../api/http";
 import { keys, useUsers } from "../../api/queries";
 import { errorText, t } from "../../i18n/ru";
 import { CreateUserDialog, EditUserDialog, TemporaryPassword } from "./UserDialogs";
+import { roleLabel } from "../../domain/labels";
 
 /** Пользователи (admin, SPEC §10.1): создание с временным паролем, роли, деактивация, сброс. */
 export function UsersPage() {
@@ -71,7 +72,7 @@ export function UsersPage() {
           { title: t.users.fullName, dataIndex: "full_name" },
           {
             title: t.users.roles,
-            render: (_, u) => u.roles.map((r) => <Tag key={r}>{t.roles[r] ?? r}</Tag>),
+            render: (_, u) => u.roles.map((r) => <Tag key={r}>{roleLabel(r)}</Tag>),
           },
           { title: t.users.active, render: (_, u) => (u.is_active ? t.common.yes : t.common.no) },
           { title: t.users.telegram, render: (_, u) => u.tg_user_id ?? t.common.none },

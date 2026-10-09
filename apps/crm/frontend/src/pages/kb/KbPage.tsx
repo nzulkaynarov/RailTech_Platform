@@ -1,6 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { App as AntApp, Button, Drawer, List, Space, Switch, Table, Tag, Typography } from "antd";
-import dayjs from "dayjs";
+import { App as AntApp, Button, Drawer, List, Space, Switch, Table, Typography } from "antd";
 import { useState } from "react";
 
 import { useKbChunks, useKbDocuments } from "../../api/adminQueries";
@@ -15,13 +14,8 @@ import { type ApiError, unwrap } from "../../api/http";
 import { errorText, t } from "../../i18n/ru";
 import { type ManualValues, ManualDialog, type UploadValues, UploadDialog } from "./KbDialogs";
 import { TestSearch } from "./TestSearch";
-
-const STATUS_COLOR: Record<string, string> = {
-  pending: "default",
-  processing: "processing",
-  done: "success",
-  failed: "error",
-};
+import { IngestTag, LangTag } from "../../components/StageBadge";
+import { formatDateTime } from "../../lib/time";
 
 function useKbMutations(onDone: () => void) {
   const client = useQueryClient();
@@ -120,7 +114,12 @@ export function KbPage() {
               </a>
             ),
           },
-          { title: t.kb.language, dataIndex: "language", width: 70 },
+          {
+            title: t.kb.language,
+            dataIndex: "language",
+            width: 70,
+            render: (v: string) => <LangTag language={v} />,
+          },
           {
             title: t.kb.product,
             dataIndex: "product_key",
@@ -130,9 +129,7 @@ export function KbPage() {
             title: t.kb.status,
             render: (_, d) => (
               <Space direction="vertical" size={0}>
-                <Tag color={STATUS_COLOR[d.ingest_status] ?? "default"}>
-                  {t.kb.statuses[d.ingest_status] ?? d.ingest_status}
-                </Tag>
+                <IngestTag status={d.ingest_status} />
                 {d.ingest_error ? (
                   <Typography.Text type="danger" ellipsis style={{ maxWidth: 200 }}>
                     {d.ingest_error}
@@ -167,9 +164,9 @@ export function KbPage() {
             ),
           },
           {
-            title: "",
+            title: t.kb.updated,
             dataIndex: "updated_at",
-            render: (v: string) => dayjs(v).format("DD.MM HH:mm"),
+            render: (v: string) => formatDateTime(v),
           },
         ]}
       />
@@ -197,7 +194,7 @@ export function KbPage() {
       <Drawer
         open={chunksOf !== null}
         title={chunksOf?.title}
-        width={640}
+        width="min(640px, 100vw)"
         onClose={() => {
           setChunksOf(null);
         }}
@@ -209,7 +206,7 @@ export function KbPage() {
             <List.Item>
               <Space direction="vertical" size={0}>
                 <Typography.Text type="secondary">
-                  #{c.position} · {c.heading_path ?? ""} · {c.token_count} tok
+                  #{c.position} · {c.heading_path ?? ""} · {c.token_count} {t.kb.tokens}
                 </Typography.Text>
                 <Typography.Paragraph style={{ whiteSpace: "pre-wrap", margin: 0 }}>
                   {c.content}

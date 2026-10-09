@@ -20,6 +20,7 @@ import type { DailyStat } from "../../api/generated/model";
 import { useMe } from "../../api/queries";
 import { StageBadge } from "../../components/StageBadge";
 import { t } from "../../i18n/ru";
+import { reasonLabel } from "../../domain/labels";
 
 const STAGE_ORDER = [
   "new",
@@ -39,7 +40,7 @@ function Bars({ data }: { data: Record<string, number> }) {
     <Space direction="vertical" style={{ width: "100%" }}>
       {Object.entries(data).map(([key, value]) => (
         <div key={key}>
-          <Typography.Text>{t.reasons[key] ?? key}</Typography.Text>
+          <Typography.Text>{reasonLabel(key)}</Typography.Text>
           <Progress percent={Math.round((value / max) * 100)} format={() => value} />
         </div>
       ))}

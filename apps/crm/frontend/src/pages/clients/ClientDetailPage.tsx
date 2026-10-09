@@ -11,7 +11,6 @@ import {
   Tag,
   Typography,
 } from "antd";
-import dayjs from "dayjs";
 import { useState } from "react";
 import { Link, useParams } from "react-router";
 
@@ -25,6 +24,7 @@ import { StageBadge } from "../../components/StageBadge";
 import { errorText, t } from "../../i18n/ru";
 import { ClientDocuments } from "./ClientDocuments";
 import { ServiceRequests } from "./ServiceRequests";
+import { formatDate } from "../../lib/time";
 
 type Action = { kind: "link" | "unlink"; tgUserId: number };
 
@@ -103,7 +103,7 @@ export function ClientDetailPage() {
               {identityLabel(i)}{" "}
               {i.verified_at ? (
                 <Tag color="green">
-                  {t.clients.verified} {dayjs(i.verified_at).format("DD.MM.YY")}
+                  {t.clients.verified} {formatDate(i.verified_at)}
                 </Tag>
               ) : null}
             </List.Item>

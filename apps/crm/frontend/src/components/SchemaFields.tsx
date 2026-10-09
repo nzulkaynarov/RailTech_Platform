@@ -2,6 +2,7 @@ import { Card, Form, Input, InputNumber, Select, Switch, Tabs, Typography } from
 
 import { t } from "../i18n/ru";
 import { bounds, type JsonSchema, kindOf, resolve } from "./schemaForm";
+import { languageLabel } from "../domain/labels";
 
 type Props = {
   name: (string | number)[];
@@ -22,7 +23,7 @@ function Localized({ name, label: title, company }: Omit<Props, "schema" | "root
         size="small"
         items={(["ru", "uz", "en"] as const).map((lang) => ({
           key: lang,
-          label: lang.toUpperCase(),
+          label: languageLabel(lang),
           children: (
             <>
               <Form.Item name={[...name, lang]} rules={[{ required: true }]}>

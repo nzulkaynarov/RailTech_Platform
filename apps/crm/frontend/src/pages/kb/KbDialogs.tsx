@@ -3,6 +3,7 @@ import type { UploadFile } from "antd";
 
 import { useProducts } from "../../api/adminQueries";
 import { t } from "../../i18n/ru";
+import { languageOptions } from "../../domain/labels";
 
 export type UploadValues = {
   title: string;
@@ -17,7 +18,7 @@ export type ManualValues = {
   markdown: string;
 };
 
-const LANGUAGES = ["ru", "uz", "en"].map((value) => ({ value, label: value.toUpperCase() }));
+const LANGUAGES = languageOptions();
 
 function ProductSelect() {
   const { data } = useProducts();

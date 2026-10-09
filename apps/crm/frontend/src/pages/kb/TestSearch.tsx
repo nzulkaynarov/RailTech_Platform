@@ -5,6 +5,7 @@ import { useState } from "react";
 import { kbTestSearch } from "../../api/generated/crm";
 import { unwrap } from "../../api/http";
 import { t } from "../../i18n/ru";
+import { languageOptions } from "../../domain/labels";
 
 /** «Что найдёт бот на этот вопрос» — тот же поиск и порог, что у диалогового агента. */
 export function TestSearch() {
@@ -22,7 +23,7 @@ export function TestSearch() {
           placeholder={t.kb.language}
           style={{ width: 90 }}
           value={language}
-          options={["ru", "uz", "en"].map((v) => ({ value: v, label: v.toUpperCase() }))}
+          options={languageOptions()}
           onChange={(v?: "ru" | "uz" | "en") => {
             setLanguage(v);
           }}

@@ -21,7 +21,7 @@ test("login → inbox → lead card → take → reply", async ({ page }) => {
   await expect(page.getByText("Ок, пусть позвонят, лучше после 15:00")).toBeVisible();
 
   const take = page.getByRole("button", { name: "Забрать" });
-  const reply = page.getByPlaceholder("Ответ клиенту…");
+  const reply = page.getByPlaceholder("Ответ лиду…");
   await expect(take.or(reply)).toBeVisible();
   if (await take.isVisible()) await take.click();
   await expect(reply).toBeVisible();

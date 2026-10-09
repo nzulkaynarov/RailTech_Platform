@@ -12,12 +12,10 @@ import {
   Space,
   Switch,
   Table,
-  Tag,
   Upload,
 } from "antd";
 import type { UploadFile } from "antd";
 import type { Dayjs } from "dayjs";
-import dayjs from "dayjs";
 import { useState } from "react";
 
 import { adminKeys, useClientDocuments, useDocumentAccess } from "../../api/adminQueries";
@@ -25,6 +23,9 @@ import { updateDocument, uploadDocument } from "../../api/generated/crm";
 import type { DocumentOut, BodyUploadDocumentType } from "../../api/generated/model";
 import { type ApiError, downloadFile, unwrap } from "../../api/http";
 import { errorText, t } from "../../i18n/ru";
+import { IngestTag } from "../../components/StageBadge";
+import { actorLabel } from "../../domain/labels";
+import { formatDate, formatDateTime } from "../../lib/time";
 
 type UploadValues = {
   type: BodyUploadDocumentType;
@@ -110,7 +111,7 @@ export function ClientDocuments({ clientId, canWrite }: { clientId: number; canW
           {
             title: t.clients.date,
             dataIndex: "doc_date",
-            render: (v: string | null) => (v ? dayjs(v).format("DD.MM.YYYY") : t.common.none),
+            render: (v: string | null) => (v ? formatDate(v) : t.common.none),
           },
           {
             title: t.clients.visible,
@@ -127,7 +128,7 @@ export function ClientDocuments({ clientId, canWrite }: { clientId: number; canW
           },
           {
             title: t.clients.extract,
-            render: (_, d) => <Tag>{t.kb.statuses[d.extract_status] ?? d.extract_status}</Tag>,
+            render: (_, d) => <IngestTag status={d.extract_status} />,
           },
           {
             title: "",
@@ -218,9 +219,8 @@ export function ClientDocuments({ clientId, canWrite }: { clientId: number; canW
           dataSource={access.data ?? []}
           renderItem={(a) => (
             <List.Item>
-              {dayjs(a.created_at).format("DD.MM.YY HH:mm")} ·{" "}
-              {t.clients.accessBy[a.accessed_by_type] ?? a.accessed_by_type}
-              {a.tg_user_id ? ` · tg ${String(a.tg_user_id)}` : ""}
+              {formatDateTime(a.created_at)} · {actorLabel(a.accessed_by_type)}
+              {a.tg_user_id ? ` · ${t.clients.accessTg} ${String(a.tg_user_id)}` : ""}
             </List.Item>
           )}
         />

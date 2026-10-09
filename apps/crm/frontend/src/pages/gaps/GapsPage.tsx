@@ -9,6 +9,7 @@ import type { KbGapOut, ListKbGapsStatus } from "../../api/generated/model";
 import { type ApiError, unwrap } from "../../api/http";
 import { errorText, t } from "../../i18n/ru";
 import { type ManualValues, ManualDialog } from "../kb/KbDialogs";
+import { LangTag } from "../../components/StageBadge";
 
 type Action =
   | { kind: "ignore" | "reopen"; gap: KbGapOut }
@@ -89,7 +90,12 @@ export function GapsPage() {
             width: 70,
             sorter: (a, b) => a.occurrences - b.occurrences,
           },
-          { title: t.gaps.language, dataIndex: "language", width: 70 },
+          {
+            title: t.gaps.language,
+            dataIndex: "language",
+            width: 70,
+            render: (v: string) => <LangTag language={v} />,
+          },
           {
             title: t.gaps.score,
             render: (_, g) => g.best_score?.toFixed(2) ?? t.common.none,
