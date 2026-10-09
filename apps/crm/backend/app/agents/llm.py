@@ -75,7 +75,15 @@ class ChatModel:
             try:
                 return await self._call(alias, messages, tools, response_format, name)
             except APIError as exc:
-                logger.warning("llm_call_failed", alias=alias, error=type(exc).__name__)
+                # Код и текст ответа провайдера («credit balance is too low», квота) — без них
+                # сбой ключей не отличить от сбоя кода; текст короткий, PII маскирует логгер.
+                logger.warning(
+                    "llm_call_failed",
+                    alias=alias,
+                    error=type(exc).__name__,
+                    status=getattr(exc, "status_code", None),
+                    detail=str(exc.message)[:200],
+                )
         raise LlmUnavailableError(self._alias)
 
     async def _call(
