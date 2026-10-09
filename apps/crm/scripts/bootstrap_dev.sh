@@ -5,7 +5,6 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="$ROOT/.env"
-READY_URL_DEFAULT="http://localhost:8000/ready"
 WITH_OBS=0
 TIMEOUT_S=300
 
@@ -29,6 +28,12 @@ USAGE
 }
 
 die() { echo "✖ $*" >&2; exit 1; }
+# Значение переменной из .env без исполнения файла: env_get KEY DEFAULT.
+env_get() {
+  local v
+  v="$(grep -E "^$1=" "$ENV_FILE" 2>/dev/null | tail -1 | cut -d= -f2- || true)"
+  echo "${v:-$2}"
+}
 info() { echo "▸ $*"; }
 
 while [[ $# -gt 0 ]]; do
@@ -85,7 +90,8 @@ start_stack() {
 }
 
 wait_ready() {
-  local url="${READY_URL:-$READY_URL_DEFAULT}" deadline=$((SECONDS + TIMEOUT_S))
+  local url="${READY_URL:-http://localhost:$(env_get DEV_API_PORT 8000)/ready}"
+  local deadline=$((SECONDS + TIMEOUT_S))
   info "Жду ${url} (до ${TIMEOUT_S} с)…"
   until curl -fsS "$url" >/dev/null 2>&1; do
     if (( SECONDS >= deadline )); then
@@ -99,15 +105,18 @@ wait_ready() {
 }
 
 next_steps() {
+  local http_port api_port
+  http_port="$(env_get HTTP_PORT 80)"
+  api_port="$(env_get DEV_API_PORT 8000)"
   cat <<NEXT
 
 ✔ dev-стенд работает.
 
 Дальше:
-  • CRM (заглушка Фазы 0):  http://localhost:\${HTTP_PORT:-80}/
-  • API:                    http://localhost:8000/docs
-  • RustFS console (S3):    http://localhost:9001  (S3_ACCESS_KEY / S3_SECRET_KEY из .env)
-  • Langfuse (если --observability): http://localhost:3000
+  • CRM:                    http://localhost:${http_port}/
+  • API:                    http://localhost:${api_port}/docs
+  • RustFS console (S3):    http://localhost:$(env_get DEV_S3_CONSOLE_PORT 9001)  (S3_ACCESS_KEY / S3_SECRET_KEY из .env)
+  • Langfuse (если --observability): http://localhost:$(env_get DEV_LANGFUSE_PORT 3000)
   • Проверка:               make smoke-dev
   • Логи / статус:          make logs s=api   |   make ps
   • Остановить:             make down

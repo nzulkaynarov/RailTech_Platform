@@ -41,6 +41,8 @@ make smoke-dev                # /health и /ready напрямую и через
 | LiteLLM | http://localhost:4000 |
 | Langfuse (`make up-obs`) | http://localhost:3000 |
 
+Порты выше — по умолчанию; если какой-то занят другим проектом, переопределите его в `.env` (`DEV_API_PORT`, `DEV_POSTGRES_PORT`, `HTTP_PORT` и др., см. `.env.example`).
+
 Повседневные команды: `make up`, `make down`, `make ps`, `make logs s=api`, `make migrate`. Список — `make help`. Проблемы — [`docs/runbooks/dev-stand.md`](docs/runbooks/dev-stand.md).
 
 ### База знаний (Фаза 1)

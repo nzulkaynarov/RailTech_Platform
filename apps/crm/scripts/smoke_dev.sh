@@ -2,8 +2,15 @@
 # Smoke-проверка dev-стенда: /health и /ready напрямую в api и через Caddy.
 set -euo pipefail
 
-API_URL="${API_URL:-http://localhost:8000}"
-EDGE_URL="${EDGE_URL:-http://localhost:${HTTP_PORT:-80}}"
+ENV_FILE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/.env"
+# Значение переменной: окружение, затем .env (без исполнения файла), затем по умолчанию.
+env_get() {
+  local v="${!1:-}"
+  [[ -n "$v" ]] || v="$(grep -E "^$1=" "$ENV_FILE" 2>/dev/null | tail -1 | cut -d= -f2- || true)"
+  echo "${v:-$2}"
+}
+API_URL="${API_URL:-http://localhost:$(env_get DEV_API_PORT 8000)}"
+EDGE_URL="${EDGE_URL:-http://localhost:$(env_get HTTP_PORT 80)}"
 
 usage() {
   cat <<USAGE
@@ -12,7 +19,7 @@ usage() {
 Проверяет, что dev-стенд отвечает:
   GET \$API_URL/health, \$API_URL/ready   (по умолчанию ${API_URL})
   GET \$EDGE_URL/ready, \$EDGE_URL/        (по умолчанию ${EDGE_URL}, через Caddy)
-Переменные API_URL, EDGE_URL переопределяют адреса.
+Порты берутся из .env (DEV_API_PORT, HTTP_PORT); API_URL, EDGE_URL переопределяют адреса.
 USAGE
 }
 
