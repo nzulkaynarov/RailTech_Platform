@@ -11,7 +11,7 @@ from typing import Any
 
 import structlog
 from pydantic import BaseModel, ValidationError
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -82,6 +82,18 @@ class SettingsService:
                 )
         self.invalidate()
         return validated
+
+    async def reset(self, key: str) -> bool:
+        """Удалить сохранённое значение ключа — снова действуют значения по умолчанию из схемы.
+
+        Нужно, когда новые тексты по умолчанию не видны: строка таблицы перекрывает ключ целиком.
+        """
+        if key not in SETTINGS_MODELS:
+            raise UnknownSettingError(key)
+        async with self._sessions() as session, session.begin():
+            result = await session.execute(delete(Setting).where(Setting.key == key))
+        self.invalidate()
+        return bool(getattr(result, "rowcount", 0))
 
     def invalidate(self) -> None:
         self._cached = None

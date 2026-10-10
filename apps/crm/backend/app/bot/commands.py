@@ -9,21 +9,21 @@ logger = structlog.get_logger(__name__)
 COMMANDS: dict[str, list[tuple[str, str]]] = {
     "ru": [
         ("start", "Начать"),
-        ("human", "Позвать сотрудника"),
+        ("human", "Связаться с менеджером"),
         ("lang", "Сменить язык"),
         ("help", "Что умеет бот"),
         ("delete", "Удалить переписку"),
     ],
     "uz": [
         ("start", "Boshlash"),
-        ("human", "Xodimni chaqirish"),
-        ("lang", "Tilni o'zgartirish"),
+        ("human", "Menejer bilan bogʻlanish"),
+        ("lang", "Tilni oʻzgartirish"),
         ("help", "Bot nimalar qila oladi"),
-        ("delete", "Yozishmani o'chirish"),
+        ("delete", "Yozishmani oʻchirish"),
     ],
     "en": [
         ("start", "Start"),
-        ("human", "Talk to a person"),
+        ("human", "Talk to a manager"),
         ("lang", "Change language"),
         ("help", "What the bot can do"),
         ("delete", "Delete the conversation"),

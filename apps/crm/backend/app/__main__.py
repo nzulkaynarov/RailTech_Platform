@@ -84,6 +84,11 @@ def _parser() -> argparse.ArgumentParser:
     setting = commands.add_parser("settings", help="показать/изменить настройки (ключ settings)")
     setting.add_argument("key", help="ключ (company, notifications, escalation, ...) или all")
     setting.add_argument("value", nargs="?", help="JSON с полями для изменения")
+    setting.add_argument(
+        "--reset",
+        action="store_true",
+        help="удалить сохранённое значение ключа — вернуть значения по умолчанию",
+    )
 
     commands.add_parser("kb-demo", help="загрузить демо-базу знаний (evals/fixtures/kb)")
     commands.add_parser("kb-eval", help="проверить поиск на демо-KB (гейт Фазы 1)")

@@ -14,6 +14,11 @@ async def run(args: argparse.Namespace) -> int:
     container = get_container()
     service = container.settings_service
     try:
+        if args.reset:
+            removed = await service.reset(args.key)
+            note = "сброшено к значениям по умолчанию" if removed else "уже по умолчанию"
+            sys.stdout.write(f"{args.key}: {note}\n")
+            return 0
         if args.value is None:
             everything = await service.raw()
             payload: object = everything if args.key == "all" else everything.get(args.key)

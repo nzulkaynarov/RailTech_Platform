@@ -4,10 +4,11 @@
   language: ru
   message: Какая погода будет завтра в Самарканде?
   # Вне темы: вежливый перевод темы или fallback, без выдуманных фактов (SPEC §7.1; Q-014).
+  # Без ложного «уточню у коллег» — вернуться с ответом бот не может (Q-016).
   expect:
     actions: [fallback, answer]
     reply_language: ru
-    must_not_include: ["°", "градус", "дожд", "солнечн", "облачн", "снег"]
+    must_not_include: ["°", "градус", "дожд", "солнечн", "облачн", "снег", "уточню у коллег"]
 
 - id: not-in-kb-ru-crypto
   category: not_in_kb
@@ -17,7 +18,7 @@
     actions: [fallback, answer]
     reply_language: ru
     # Утверждения, а не упоминания: «про рассрочку на 24 месяца информации нет» — норма (Q-014).
-    must_not_include: ["рассрочка на 24 месяца доступна", "рассрочку на 24 месяца предоставляем", "даём рассрочку", "принимаем биткоин", "оплата в биткоинах возможна"]
+    must_not_include: ["рассрочка на 24 месяца доступна", "рассрочку на 24 месяца предоставляем", "даём рассрочку", "принимаем биткоин", "оплата в биткоинах возможна", "уточню у коллег"]
 
 - id: not-in-kb-en-mobile-app
   category: not_in_kb
@@ -27,7 +28,7 @@
   expect:
     actions: [fallback, answer]
     reply_language: en
-    must_not_include: ["yes, we develop", "we do develop", "we make games", "our games"]
+    must_not_include: ["yes, we develop", "we do develop", "we make games", "our games", "check with my colleagues"]
 
 - id: smalltalk-ru-hello
   category: smalltalk

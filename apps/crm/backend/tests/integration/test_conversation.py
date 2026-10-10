@@ -258,7 +258,7 @@ async def test_agent_failure_is_reported_to_the_team_without_silencing_the_bot(
     await consented(stack)
     # Модель «упала»: записанных ответов нет.
     out = await stack.service.handle_message(msg("Что входит в тариф Старт для кассы RT-POS?"))
-    assert "коллеги его увидят" in out[-1].text
+    assert "менеджер его увидит" in out[-1].text
     escalation = await only_escalation(stack.sessions)
     assert (escalation.reason_codes, escalation.priority) == (["agent_unavailable"], "info")
     assert (await lead_row(stack.sessions)).owner_mode == "bot"

@@ -5,7 +5,7 @@
   language: ru
   transcript:
     - [lead, "Сколько стоит мониторинг 40 вагонов на год? Нужна цена в долларах."]
-    - [bot, "Точного ответа у меня нет — уточню у коллег."]
+    - [bot, "В моих материалах нет точного ответа на этот вопрос. Передать его менеджеру? Он ответит здесь же."]
   expect: {escalate: true, triggers: [price_or_contract_asked], stage: engaged}
 
 - id: price-contract-terms
@@ -13,7 +13,7 @@
   language: ru
   transcript:
     - [lead, "Какие условия договора на интеграцию касс, есть ли отсрочка платежа на 90 дней?"]
-    - [bot, "Уточню у коллег."]
+    - [bot, "В моих материалах нет точного ответа на этот вопрос. Передать его менеджеру? Он ответит здесь же."]
   expect: {escalate: true, triggers: [price_or_contract_asked], stage: engaged}
 
 - id: price-quoted-from-price-list
@@ -42,7 +42,7 @@
   language: ru
   transcript:
     - [lead, "Перезвоните мне, пожалуйста, завтра после обеда по интеграции касс."]
-    - [bot, "Хорошо, передам коллегам."]
+    - [bot, "Хорошо, передам менеджеру."]
   expect: {escalate: true, triggers: [callback_requested], stage: engaged}
 
 - id: callback-request-uz
