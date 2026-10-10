@@ -10,7 +10,7 @@ import { PageHeader } from "../../components/PageHeader";
 import { PageState } from "../../components/PageState";
 import { PriorityTag, StageBadge } from "../../components/StageBadge";
 import { reasonLabel, slaColor, unreadLabel } from "../../domain/labels";
-import { formatWait, isWaiting, slaState, sortHandoffs } from "../../domain/sla";
+import { HOUR, formatWait, isWaiting, slaState, sortHandoffs } from "../../domain/sla";
 import { useNow } from "../../hooks/useNow";
 import { useTakeAndOpen } from "../../hooks/useLeadActionRunner";
 import { t } from "../../i18n/ru";
@@ -44,7 +44,12 @@ function SlaTimer({ escalation, now }: { escalation: EscalationOut; now: Date })
   const text =
     sla.level === "snoozed" && sla.snoozedUntil
       ? t.inbox.snoozedUntil.replace("{time}", formatWhen(sla.snoozedUntil, now))
-      : (sla.level === "overdue" ? t.inbox.overdue : t.inbox.waiting).replace("{time}", wait);
+      : (sla.level === "overdue"
+          ? t.inbox.overdue
+          : sla.dueAt.getTime() - now.getTime() > HOUR
+            ? t.inbox.waitingDue.replace("{due}", formatWhen(sla.dueAt, now))
+            : t.inbox.waiting
+        ).replace("{time}", wait);
   const title = t.inbox.slaTooltip
     .replace("{from}", formatDateTime(sla.since))
     .replace("{due}", formatDateTime(sla.dueAt));

@@ -45,6 +45,7 @@ export const core = {
     human: "Менеджер",
     paused: "Бот на паузе",
     responsible: "ответственный",
+    botLeads: "Ведёт бот",
   } as Record<string, string>,
   priority: { hot: "Горячий", warm: "Тёплый", info: "Инфо" } as Record<string, string>,
   reasons: {
@@ -162,7 +163,7 @@ export const core = {
     lead: "Лид #{id}",
     client: "Клиент #{id}",
     notFound: "Страница не найдена",
-  },
+  } as Record<string, string>,
   state: {
     forbidden: "Нет доступа к этому разделу",
     forbiddenHint: "Раздел доступен другой роли. Если доступ нужен — обратитесь к администратору.",
@@ -184,6 +185,7 @@ export const core = {
     replyViewer: "Наблюдатель не отвечает лидам.",
     replyOther: "Лида ведёт {name}. Ответить может он или администратор.",
     replyTake: "Чтобы ответить, нажмите «Забрать».",
+    replyBot: "Переписку ведёт бот. Чтобы написать клиенту, откройте новую сделку.",
   },
   confirm: {
     takeOver: "Перехватить лида у {name}?",

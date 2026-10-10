@@ -9,12 +9,15 @@ type TitleOptions = {
 
 /** Страницы вне ресурсов Refine. */
 const STATIC_PAGES: Record<string, string> = {
-  "/login": t.page.login,
-  "/change-password": t.page.changePassword,
+  "/login": t.page["login"] ?? "",
+  "/change-password": t.page["changePassword"] ?? "",
 };
 
 /** Карточки: «Лид #11», «Клиент #4». */
-const SHOW_PAGES: Record<string, string> = { leads: t.page.lead, clients: t.page.client };
+const SHOW_PAGES: Record<string, string> = {
+  leads: t.page["lead"] ?? "",
+  clients: t.page["client"] ?? "",
+};
 
 function sectionTitle({ resource, action, params, pathname }: TitleOptions): string | null {
   if (pathname && pathname in STATIC_PAGES) return STATIC_PAGES[pathname] ?? null;
@@ -23,9 +26,10 @@ function sectionTitle({ resource, action, params, pathname }: TitleOptions): str
   if (action === "show" && show && (typeof id === "string" || typeof id === "number")) {
     return show.replace("{id}", String(id));
   }
-  if (resource?.meta?.label) return resource.meta.label;
+  const page = resource?.name ? t.page[resource.name] : undefined;
+  if (page) return page;
   if (!pathname || pathname === "/") return null;
-  return t.page.notFound;
+  return t.page["notFound"] ?? null;
 }
 
 /**

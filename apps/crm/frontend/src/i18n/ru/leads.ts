@@ -18,6 +18,7 @@ export const leads = {
     /** Счётчик в меню и у колонки (скринридер). */
     navCount: "Открытых передач: {count}",
     waiting: "ждёт {time}",
+    waitingDue: "ждёт {time} · ответить до {due}",
     overdue: "ждёт {time} · срок реакции истёк",
     snoozedUntil: "отложено до {time}",
     slaTooltip: "Передача с {from}; ответить до {due}",

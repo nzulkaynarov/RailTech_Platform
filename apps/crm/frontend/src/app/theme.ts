@@ -4,7 +4,7 @@ import type { ThemeConfig } from "antd";
  * Тема CRM: токены, проходящие WCAG 2.1 AA 4.5:1 (дизайн-аудит 2026-10-11, отчёт 4,
  * таблица контраста). `cssVar` даёт переменные `--ant-*` для собственных CSS-файлов.
  * Явные `*Bg/*Border` обязательны: из тёмного сид-цвета antd генерирует серый фон,
- * и контраст падает (green7/cyan7/orange7 — текст preset-тегов `Tag color="green"` и т. п.).
+ * и контраст падает (green6/cyan6/orange6 — текст preset-тегов (antd берёт `<цвет>6`) `Tag color="green"` и т. п.).
  */
 const reduceMotion =
   typeof window !== "undefined" &&
@@ -38,9 +38,11 @@ export const appTheme: ThemeConfig = {
     colorWarning: "#874d00",
     colorWarningBg: "#fffbe6",
     colorWarningBorder: "#ffe58f",
-    green7: "#237804",
-    cyan7: "#006d75",
-    orange7: "#ad4e00",
+    green6: "#237804",
+    cyan6: "#006d75",
+    orange6: "#ad4e00",
+    red6: "#cf1322",
+    blue6: "#0958d9",
     motion: !reduceMotion,
   },
 };

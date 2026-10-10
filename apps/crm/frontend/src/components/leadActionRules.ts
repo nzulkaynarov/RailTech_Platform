@@ -132,6 +132,9 @@ export function replyState(lead: LeadDetail, rights: ActionRights): { can: boole
   if (foreign(lead, rights)) {
     return { can: false, hint: t.why.replyOther.replace("{name}", ownerName(lead)) };
   }
-  if (lead.owner_mode !== "human") return { can: false, hint: t.why.replyTake };
+  if (lead.owner_mode !== "human") {
+    const can = availableActions(lead, rights);
+    return { can: false, hint: can.take ? t.why.replyTake : t.why.replyBot };
+  }
   return { can: true, hint: "" };
 }
