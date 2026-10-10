@@ -2,7 +2,12 @@ import { labelsRu } from "../labels.ru";
 
 /** Навигация, вход, роли, общие тексты, ошибки, подтверждения. */
 export const core = {
-  app: { title: "RailTech CRM" },
+  app: {
+    title: "RailTech CRM",
+    short: "RT",
+    /** Заголовок вкладки браузера (WCAG 2.4.2): «<Раздел> — RailTech CRM». */
+    documentTitle: "{page} — RailTech CRM",
+  },
   nav: {
     inbox: "Входящие",
     leads: "Лиды",
@@ -84,6 +89,8 @@ export const core = {
   profile: {
     title: "Профиль",
     telegramHint: "Привязка Telegram нужна для кнопки «Забрать» в канале. Её делает администратор.",
+    changePassword: "Сменить пароль",
+    mode: "Режим навигации",
   },
   errors: {
     generic: "Что-то пошло не так",
@@ -105,6 +112,11 @@ export const core = {
     no: "Нет",
     none: "—",
     live: "Онлайн",
+    offline: "Нет связи",
+    liveHint: "Обновления в реальном времени",
+    offlineHint: "Нет связи с сервером — данные могут устареть, переподключаемся",
+    openMenu: "Открыть меню",
+    actions: "Действия",
     save: "Сохранить",
     saved: "Сохранено",
     back: "Назад",
@@ -119,12 +131,20 @@ export const core = {
     audit: "Аудит",
     users: "Пользователи",
     inbox: "Входящие",
+    profile: "Профиль",
+    login: "Вход",
+    changePassword: "Смена пароля",
+    lead: "Лид #{id}",
+    client: "Клиент #{id}",
+    notFound: "Страница не найдена",
   },
   state: {
     forbidden: "Нет доступа к этому разделу",
     forbiddenHint: "Раздел доступен другой роли. Если доступ нужен — обратитесь к администратору.",
     notFound: "Не найдено",
     notFoundHint: "Запись удалена или ссылка устарела.",
+    pageNotFound: "Страница не найдена",
+    pageNotFoundHint: "Такого адреса в CRM нет. Проверьте ссылку или откройте раздел из меню.",
     error: "Не удалось загрузить данные",
     retry: "Повторить",
     home: "На главную",

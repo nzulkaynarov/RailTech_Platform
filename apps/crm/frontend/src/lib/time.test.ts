@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { formatDate, formatDateTime, formatWhen, fromNow } from "./time";
+import dayjs from "dayjs";
+
+import {
+  DATE_FORMAT,
+  DATETIME_FORMAT,
+  formatDate,
+  formatDateTime,
+  formatWhen,
+  fromNow,
+} from "./time";
 
 describe("time in Asia/Tashkent", () => {
   it("shows Tashkent time regardless of the browser zone", () => {
@@ -25,5 +34,12 @@ describe("time in Asia/Tashkent", () => {
 
   it("speaks Russian for relative time", () => {
     expect(fromNow("2026-10-09T08:00:00Z", "2026-10-09T09:00:00Z")).toBe("час назад");
+  });
+});
+
+describe("date format constants", () => {
+  it("match the formatters used for display", () => {
+    expect(formatDate("2026-07-14")).toBe(dayjs("2026-07-14").format(DATE_FORMAT));
+    expect(DATETIME_FORMAT.startsWith(DATE_FORMAT)).toBe(true);
   });
 });

@@ -1,0 +1,30 @@
+/* Глобальные правила доступности (WCAG 2.1 AA; дизайн-аудит 2026-10-11, отчёт 4). */
+:focus-visible {
+  outline: 2px solid var(--ant-color-primary, #0958d9);
+  outline-offset: 2px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+/* Плавающая кнопка меню Refine (position: fixed) перекрывала заголовок страницы на мобильных;
+   меню открывается кнопкой в шапке (app/Header.tsx). */
+.app-shell > .ant-layout > .ant-btn {
+  display: none;
+}

@@ -39,12 +39,21 @@ export function keysFor(event: CrmEvent): readonly (readonly unknown[])[] {
   return lead === undefined ? common : [...common, ["lead", lead]];
 }
 
-async function consume(signal: AbortSignal, onEvent: (event: CrmEvent) => void): Promise<void> {
+/**
+ * Читает поток до обрыва. `onOpen` — только после успешного ответа сервера: до этого
+ * соединения нет, и индикатор в шапке не должен показывать «Онлайн».
+ */
+export async function consume(
+  signal: AbortSignal,
+  onEvent: (event: CrmEvent) => void,
+  onOpen: () => void = () => undefined,
+): Promise<void> {
   const response = await rawFetch("/api/v1/stream", {
     signal,
     headers: { Accept: "text/event-stream" },
   });
   if (!response.ok || !response.body) throw new Error(`stream ${String(response.status)}`);
+  onOpen();
   const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
   let buffer = "";
   for (;;) {
@@ -70,9 +79,11 @@ export function useEventStream(enabled: boolean): boolean {
     const loop = async () => {
       while (!controller.signal.aborted) {
         try {
-          setLive(true);
-          await client.invalidateQueries();
-          await consume(controller.signal, onEvent);
+          await consume(controller.signal, onEvent, () => {
+            setLive(true);
+            // пока связи не было, события могли пропасть — перечитываем всё
+            void client.invalidateQueries();
+          });
         } catch {
           // сеть/401 — повтор после паузы
         }
