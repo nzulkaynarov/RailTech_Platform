@@ -12,6 +12,8 @@ from app.api.deps import ContainerDep, require
 from app.domain.errors import NotFoundError
 from app.models.clients import Client, Document, DocumentAccessLog, ServiceRequest
 from app.models.leads import Lead, TelegramIdentity
+from app.repositories import service_requests
+from app.repositories.service_requests import RequestStatus
 from app.schemas.clients import (
     AccessOut,
     ClientCreate,
@@ -26,6 +28,7 @@ from app.schemas.clients import (
     LinkTelegram,
     MakeCustomer,
     ServiceRequestClose,
+    ServiceRequestItem,
     ServiceRequestOut,
 )
 from app.schemas.kb_admin import Created
@@ -134,6 +137,32 @@ async def make_customer(
         who, lead_id, body.client_id, body.new_client_name
     )
     return Created(id=client_id)
+
+
+@router.get("/service-requests", response_model=list[ServiceRequestItem])
+async def list_service_requests(
+    _: ClientReader,
+    container: ContainerDep,
+    status_: Annotated[RequestStatus, Query(alias="status")] = "open",
+    limit: Annotated[int, Query(ge=1, le=500)] = 200,
+) -> list[ServiceRequestItem]:
+    """Запросы клиентов (Q-017): открытые — во «Входящих», кто ждёт дольше, первыми."""
+    async with container.session_factory() as session:
+        rows = await service_requests.list_with_clients(session, status_, limit)
+    return [
+        ServiceRequestItem(
+            id=r.id,
+            client_id=r.client_id,
+            client_name=name,
+            lead_id=r.lead_id,
+            summary=r.summary,
+            status=r.status,
+            resolution=r.resolution,
+            closed_at=r.closed_at,
+            created_at=r.created_at,
+        )
+        for r, name in rows
+    ]
 
 
 @router.post("/service-requests/{request_id}/close", response_model=ActionResult)

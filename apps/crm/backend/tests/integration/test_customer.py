@@ -297,3 +297,37 @@ async def test_deactivated_client_gets_no_documents(
     assert all(o.document is None for o in out)
     async with sessions() as session:
         assert (await session.scalars(select(DocumentAccessLog))).all() == []
+
+
+async def test_service_requests_list_and_lead_link(
+    sessions: async_sessionmaker[AsyncSession], live_settings: Settings
+) -> None:
+    """Q-017: открытые запросы клиентов — общим списком и ссылкой из карточки лида."""
+    lead_id = await escalated_lead(sessions, tg_user_id=4343)
+    manager, password = await make_user(sessions, "sr@railtech.uz", ["manager"])
+    async with sessions() as session, session.begin():
+        client = Client(name="ООО Ромашка")
+        session.add(client)
+        await session.flush()
+        lead = await session.get(Lead, lead_id)
+        assert lead is not None
+        lead.client_id = client.id
+        first = ServiceRequest(client_id=client.id, lead_id=lead_id, summary="Касса не печатает")
+        second = ServiceRequest(client_id=client.id, lead_id=None, summary="Нужен акт сверки")
+        closed = ServiceRequest(client_id=client.id, summary="Старый вопрос", status="closed")
+        session.add_all([first, second, closed])
+        await session.flush()
+        ids = (first.id, second.id, closed.id)
+    with TestClient(create_app(live_settings)) as http:
+        headers = login(http, manager.email, password)
+        items = http.get("/api/v1/service-requests", headers=headers).json()
+        assert [i["id"] for i in items] == [ids[0], ids[1]]  # кто ждёт дольше — первым
+        assert items[0]["client_name"] == "ООО Ромашка"
+        assert (items[0]["lead_id"], items[1]["lead_id"]) == (lead_id, None)
+        done = http.get("/api/v1/service-requests?status=closed", headers=headers).json()
+        assert [i["id"] for i in done] == [ids[2]]
+        bad = http.get("/api/v1/service-requests?status=any", headers=headers)
+        assert bad.status_code == 422
+        assert bad.json()["details"]["field"] == "status"
+        card = http.get(f"/api/v1/leads/{lead_id}", headers=headers).json()
+        assert card["open_service_request_id"] == ids[1]  # последний открытый запрос клиента

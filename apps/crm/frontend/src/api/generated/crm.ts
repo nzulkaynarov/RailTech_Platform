@@ -23,9 +23,9 @@ import type {
   DocumentOut,
   DocumentUpdate,
   DryRunResponse,
+  ErrorOut,
   EscalationSettings,
   GetDashboardParams,
-  HTTPValidationError,
   HealthResponse,
   InboxResponse,
   KbChunkOut,
@@ -43,6 +43,7 @@ import type {
   ListKbDocumentsParams,
   ListKbGapsParams,
   ListLeadsParams,
+  ListServiceRequestsParams,
   LoginRequest,
   MakeCustomer,
   ManualDocument,
@@ -62,6 +63,7 @@ import type {
   SearchRequest,
   SearchResponse,
   ServiceRequestClose,
+  ServiceRequestItem,
   SettingsResponse,
   Snooze,
   TeamMember,
@@ -80,7 +82,7 @@ export type listAuditResponse200 = {
 };
 
 export type listAuditResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -126,7 +128,7 @@ export type changePasswordResponse204 = {
 };
 
 export type changePasswordResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -183,7 +185,7 @@ export type loginResponse200 = {
 };
 
 export type loginResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -240,7 +242,7 @@ export type logoutResponse204 = {
 };
 
 export type logoutResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -273,7 +275,7 @@ export type refreshResponse200 = {
 };
 
 export type refreshResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -306,7 +308,7 @@ export type listClientsResponse200 = {
 };
 
 export type listClientsResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -352,7 +354,7 @@ export type createClientResponse201 = {
 };
 
 export type createClientResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -409,7 +411,7 @@ export type getClientResponse200 = {
 };
 
 export type getClientResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -445,7 +447,7 @@ export type updateClientResponse200 = {
 };
 
 export type updateClientResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -503,7 +505,7 @@ export type linkTelegramResponse200 = {
 };
 
 export type linkTelegramResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -561,7 +563,7 @@ export type unlinkTelegramResponse200 = {
 };
 
 export type unlinkTelegramResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -598,7 +600,7 @@ export type getDashboardResponse200 = {
 };
 
 export type getDashboardResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -645,10 +647,20 @@ export type refreshDashboardResponse200 = {
   status: 200;
 };
 
+export type refreshDashboardResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
 export type refreshDashboardResponseSuccess = refreshDashboardResponse200 & {
   headers: Headers;
 };
-export type refreshDashboardResponse = refreshDashboardResponseSuccess;
+export type refreshDashboardResponseError = refreshDashboardResponse422 & {
+  headers: Headers;
+};
+
+export type refreshDashboardResponse =
+  refreshDashboardResponseSuccess | refreshDashboardResponseError;
 
 export const getRefreshDashboardUrl = () => {
   return `/api/v1/dashboard/refresh`;
@@ -672,7 +684,7 @@ export type listDocumentsResponse200 = {
 };
 
 export type listDocumentsResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -720,7 +732,7 @@ export type uploadDocumentResponse201 = {
 };
 
 export type uploadDocumentResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -772,7 +784,7 @@ export type updateDocumentResponse200 = {
 };
 
 export type updateDocumentResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -830,7 +842,7 @@ export type documentAccessResponse200 = {
 };
 
 export type documentAccessResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -866,7 +878,7 @@ export type downloadDocumentResponse200 = {
 };
 
 export type downloadDocumentResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -902,10 +914,19 @@ export type inboxResponse200 = {
   status: 200;
 };
 
+export type inboxResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
 export type inboxResponseSuccess = inboxResponse200 & {
   headers: Headers;
 };
-export type inboxResponse = inboxResponseSuccess;
+export type inboxResponseError = inboxResponse422 & {
+  headers: Headers;
+};
+
+export type inboxResponse = inboxResponseSuccess | inboxResponseError;
 
 export const getInboxUrl = () => {
   return `/api/v1/inbox`;
@@ -928,7 +949,7 @@ export type listKbDocumentsResponse200 = {
 };
 
 export type listKbDocumentsResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -976,7 +997,7 @@ export type uploadKbDocumentResponse201 = {
 };
 
 export type uploadKbDocumentResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -1025,7 +1046,7 @@ export type createManualDocumentResponse201 = {
 };
 
 export type createManualDocumentResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -1083,7 +1104,7 @@ export type getKbDocumentResponse200 = {
 };
 
 export type getKbDocumentResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -1119,7 +1140,7 @@ export type updateKbDocumentResponse200 = {
 };
 
 export type updateKbDocumentResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -1178,7 +1199,7 @@ export type listKbChunksResponse200 = {
 };
 
 export type listKbChunksResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -1214,7 +1235,7 @@ export type reingestKbDocumentResponse200 = {
 };
 
 export type reingestKbDocumentResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -1251,7 +1272,7 @@ export type listKbGapsResponse200 = {
 };
 
 export type listKbGapsResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -1297,7 +1318,7 @@ export type ignoreGapResponse200 = {
 };
 
 export type ignoreGapResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -1333,7 +1354,7 @@ export type reopenGapResponse200 = {
 };
 
 export type reopenGapResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -1369,7 +1390,7 @@ export type resolveGapResponse200 = {
 };
 
 export type resolveGapResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -1426,10 +1447,19 @@ export type listProductsResponse200 = {
   status: 200;
 };
 
+export type listProductsResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
 export type listProductsResponseSuccess = listProductsResponse200 & {
   headers: Headers;
 };
-export type listProductsResponse = listProductsResponseSuccess;
+export type listProductsResponseError = listProductsResponse422 & {
+  headers: Headers;
+};
+
+export type listProductsResponse = listProductsResponseSuccess | listProductsResponseError;
 
 export const getListProductsUrl = () => {
   return `/api/v1/kb/products`;
@@ -1453,7 +1483,7 @@ export type upsertProductResponse200 = {
 };
 
 export type upsertProductResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -1511,7 +1541,7 @@ export type kbTestSearchResponse200 = {
 };
 
 export type kbTestSearchResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -1569,7 +1599,7 @@ export type listLeadsResponse200 = {
 };
 
 export type listLeadsResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -1615,7 +1645,7 @@ export type getLeadResponse200 = {
 };
 
 export type getLeadResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -1651,7 +1681,7 @@ export type assignResponse200 = {
 };
 
 export type assignResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -1709,7 +1739,7 @@ export type closeLostResponse200 = {
 };
 
 export type closeLostResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -1767,7 +1797,7 @@ export type closeWonResponse200 = {
 };
 
 export type closeWonResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -1825,7 +1855,7 @@ export type makeCustomerResponse201 = {
 };
 
 export type makeCustomerResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -1883,7 +1913,7 @@ export type newDealResponse200 = {
 };
 
 export type newDealResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -1919,7 +1949,7 @@ export type noteResponse200 = {
 };
 
 export type noteResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -1977,7 +2007,7 @@ export type returnToBotResponse200 = {
 };
 
 export type returnToBotResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -2035,7 +2065,7 @@ export type snoozeResponse200 = {
 };
 
 export type snoozeResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -2093,7 +2123,7 @@ export type takeResponse200 = {
 };
 
 export type takeResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -2129,7 +2159,7 @@ export type leadDecisionsResponse200 = {
 };
 
 export type leadDecisionsResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -2178,7 +2208,7 @@ export type leadMessagesResponse200 = {
 };
 
 export type leadMessagesResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -2227,7 +2257,7 @@ export type replyResponse200 = {
 };
 
 export type replyResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -2285,7 +2315,7 @@ export type leadNotesResponse200 = {
 };
 
 export type leadNotesResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -2320,10 +2350,19 @@ export type meResponse200 = {
   status: 200;
 };
 
+export type meResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
 export type meResponseSuccess = meResponse200 & {
   headers: Headers;
 };
-export type meResponse = meResponseSuccess;
+export type meResponseError = meResponse422 & {
+  headers: Headers;
+};
+
+export type meResponse = meResponseSuccess | meResponseError;
 
 export const getMeUrl = () => {
   return `/api/v1/me`;
@@ -2345,7 +2384,7 @@ export type updateMeResponse200 = {
 };
 
 export type updateMeResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -2401,10 +2440,19 @@ export type permissionsResponse200 = {
   status: 200;
 };
 
+export type permissionsResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
 export type permissionsResponseSuccess = permissionsResponse200 & {
   headers: Headers;
 };
-export type permissionsResponse = permissionsResponseSuccess;
+export type permissionsResponseError = permissionsResponse422 & {
+  headers: Headers;
+};
+
+export type permissionsResponse = permissionsResponseSuccess | permissionsResponseError;
 
 export const getPermissionsUrl = () => {
   return `/api/v1/me/permissions`;
@@ -2423,13 +2471,63 @@ export const permissions = async (
   });
 };
 
+export type listServiceRequestsResponse200 = {
+  data: ServiceRequestItem[];
+  status: 200;
+};
+
+export type listServiceRequestsResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type listServiceRequestsResponseSuccess = listServiceRequestsResponse200 & {
+  headers: Headers;
+};
+export type listServiceRequestsResponseError = listServiceRequestsResponse422 & {
+  headers: Headers;
+};
+
+export type listServiceRequestsResponse =
+  listServiceRequestsResponseSuccess | listServiceRequestsResponseError;
+
+export const getListServiceRequestsUrl = (params?: ListServiceRequestsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/service-requests?${stringifiedParams}`
+    : `/api/v1/service-requests`;
+};
+
+/**
+ * Запросы клиентов (Q-017): открытые — во «Входящих», кто ждёт дольше, первыми.
+ * @summary List Service Requests
+ */
+export const listServiceRequests = async (
+  params?: ListServiceRequestsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<listServiceRequestsResponse> => {
+  return http<listServiceRequestsResponse>(getListServiceRequestsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
 export type closeServiceRequestResponse200 = {
   data: ActionResult;
   status: 200;
 };
 
 export type closeServiceRequestResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -2487,10 +2585,19 @@ export type getSettingsResponse200 = {
   status: 200;
 };
 
+export type getSettingsResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
 export type getSettingsResponseSuccess = getSettingsResponse200 & {
   headers: Headers;
 };
-export type getSettingsResponse = getSettingsResponseSuccess;
+export type getSettingsResponseError = getSettingsResponse422 & {
+  headers: Headers;
+};
+
+export type getSettingsResponse = getSettingsResponseSuccess | getSettingsResponseError;
 
 export const getGetSettingsUrl = () => {
   return `/api/v1/settings`;
@@ -2514,7 +2621,7 @@ export type escalationDryRunResponse200 = {
 };
 
 export type escalationDryRunResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -2572,7 +2679,7 @@ export type putSettingResponse200 = {
 };
 
 export type putSettingResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -2629,10 +2736,19 @@ export type streamResponse200 = {
   status: 200;
 };
 
+export type streamResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
 export type streamResponseSuccess = streamResponse200 & {
   headers: Headers;
 };
-export type streamResponse = streamResponseSuccess;
+export type streamResponseError = streamResponse422 & {
+  headers: Headers;
+};
+
+export type streamResponse = streamResponseSuccess | streamResponseError;
 
 export const getStreamUrl = () => {
   return `/api/v1/stream`;
@@ -2653,10 +2769,19 @@ export type teamResponse200 = {
   status: 200;
 };
 
+export type teamResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
 export type teamResponseSuccess = teamResponse200 & {
   headers: Headers;
 };
-export type teamResponse = teamResponseSuccess;
+export type teamResponseError = teamResponse422 & {
+  headers: Headers;
+};
+
+export type teamResponse = teamResponseSuccess | teamResponseError;
 
 export const getTeamUrl = () => {
   return `/api/v1/team`;
@@ -2678,10 +2803,19 @@ export type listUsersResponse200 = {
   status: 200;
 };
 
+export type listUsersResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
 export type listUsersResponseSuccess = listUsersResponse200 & {
   headers: Headers;
 };
-export type listUsersResponse = listUsersResponseSuccess;
+export type listUsersResponseError = listUsersResponse422 & {
+  headers: Headers;
+};
+
+export type listUsersResponse = listUsersResponseSuccess | listUsersResponseError;
 
 export const getListUsersUrl = () => {
   return `/api/v1/users`;
@@ -2705,7 +2839,7 @@ export type createUserResponse201 = {
 };
 
 export type createUserResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -2762,7 +2896,7 @@ export type getUserResponse200 = {
 };
 
 export type getUserResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -2798,7 +2932,7 @@ export type updateUserResponse200 = {
 };
 
 export type updateUserResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -2856,7 +2990,7 @@ export type resetPasswordResponse200 = {
 };
 
 export type resetPasswordResponse422 = {
-  data: HTTPValidationError;
+  data: ErrorOut;
   status: 422;
 };
 
@@ -2891,10 +3025,19 @@ export type healthResponse200 = {
   status: 200;
 };
 
+export type healthResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
 export type healthResponseSuccess = healthResponse200 & {
   headers: Headers;
 };
-export type healthResponse = healthResponseSuccess;
+export type healthResponseError = healthResponse422 & {
+  headers: Headers;
+};
+
+export type healthResponse = healthResponseSuccess | healthResponseError;
 
 export const getHealthUrl = () => {
   return `/health`;
@@ -2915,6 +3058,11 @@ export type readyResponse200 = {
   status: 200;
 };
 
+export type readyResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
 export type readyResponse503 = {
   data: ReadyResponse;
   status: 503;
@@ -2923,7 +3071,7 @@ export type readyResponse503 = {
 export type readyResponseSuccess = readyResponse200 & {
   headers: Headers;
 };
-export type readyResponseError = readyResponse503 & {
+export type readyResponseError = (readyResponse422 | readyResponse503) & {
   headers: Headers;
 };
 

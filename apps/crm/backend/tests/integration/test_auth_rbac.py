@@ -67,6 +67,8 @@ MATRIX = [
     ),
     ("PATCH", "/api/v1/users/{viewer}", {"full_name": "Viewer"}, {"admin"}),
     ("POST", "/api/v1/users/{viewer}/reset-password", None, {"admin"}),
+    ("GET", "/api/v1/service-requests", None, {"admin", "manager", "viewer"}),
+    ("GET", "/api/v1/service-requests?status=closed", None, {"admin", "manager", "viewer"}),
     ("GET", "/api/v1/me", None, {"admin", "manager", "viewer"}),
     ("GET", "/api/v1/me/permissions", None, {"admin", "manager", "viewer"}),
 ]

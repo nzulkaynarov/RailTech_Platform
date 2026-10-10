@@ -89,6 +89,13 @@ class ServiceRequestOut(BaseModel):
     created_at: datetime
 
 
+class ServiceRequestItem(ServiceRequestOut):
+    """Строка общего списка запросов (Q-017): с клиентом, чтобы открыть карточку."""
+
+    client_id: int
+    client_name: str
+
+
 class ServiceRequestClose(BaseModel):
     resolution: str = Field(min_length=1, max_length=2000)
 

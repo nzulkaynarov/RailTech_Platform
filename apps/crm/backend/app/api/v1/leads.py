@@ -10,7 +10,7 @@ from app.api.deps import ContainerDep, require
 from app.domain.errors import NotFoundError
 from app.models.leads import Lead, Message
 from app.models.qualification import Escalation
-from app.repositories import crm
+from app.repositories import crm, service_requests
 from app.repositories import decisions as repo
 from app.repositories import leads as leads_repo
 from app.repositories import users as users_repo
@@ -168,6 +168,7 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
         escalation = (await crm.active_escalations(session, [lead_id])).get(lead_id)
         username = await crm.tg_username(session, lead_id)
         names = await crm.user_names(session, [lead])
+        request_id = await service_requests.open_request_id(session, lead)
     base = lead_out(lead, escalation, names)
     return LeadDetail(
         **base.model_dump(),
@@ -176,6 +177,7 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
         tg_username=username,
         notes_count=lead.notes_count,
         snoozed_until=lead.snoozed_until,
+        open_service_request_id=request_id,
     )
 
 
