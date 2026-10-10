@@ -43,8 +43,8 @@ export const core = {
   owner: {
     bot: "Бот",
     human: "Менеджер",
-    paused: "Ждёт менеджера",
-    responsible: "отв.",
+    paused: "Бот на паузе",
+    responsible: "ответственный",
   } as Record<string, string>,
   priority: { hot: "Горячий", warm: "Тёплый", info: "Инфо" } as Record<string, string>,
   reasons: {
@@ -155,13 +155,13 @@ export const core = {
     takeFirst: "Сначала нажмите «Забрать»",
     notInWork: "Доступно, когда лид в работе",
     withBot: "Лид уже у бота",
-    noEscalation: "Нет открытой эскалации",
+    noEscalation: "Нет открытой передачи",
     replyViewer: "Наблюдатель не отвечает лидам.",
     replyOther: "Лида ведёт {name}. Ответить может он или администратор.",
     replyTake: "Чтобы ответить, нажмите «Забрать».",
   },
   confirm: {
-    takeOver: "Забрать лида у {name}?",
+    takeOver: "Перехватить лида у {name}?",
     takeOverHint: "Лид перейдёт к вам, {name} перестанет его вести.",
     resetPassword: "Сбросить пароль пользователя {name}?",
     resetPasswordHint: "Текущий пароль перестанет работать, все сессии будут завершены.",

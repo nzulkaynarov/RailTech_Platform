@@ -1,7 +1,8 @@
-import { Empty, Tag, Timeline, Typography } from "antd";
+import { Tag, Timeline, Typography } from "antd";
 
 import type { DecisionsResponse } from "../api/generated/model";
 import {
+  decisionColor,
   reasonLabel,
   rejectedReason,
   sourceLabel,
@@ -10,8 +11,16 @@ import {
 } from "../domain/labels";
 import { t } from "../i18n/ru";
 import { formatWhen } from "../lib/time";
+import { PageState } from "./PageState";
 
 type Item = DecisionsResponse["items"][number];
+type Query = {
+  data: DecisionsResponse | undefined;
+  isLoading: boolean;
+  isError: boolean;
+  error: unknown;
+  refetch: () => unknown;
+};
 
 const stage = (code: string | null | undefined): string =>
   code ? stageLabel(code).label : t.common.none;
@@ -23,7 +32,7 @@ function describeDecision(item: Item): string {
     const head = `${stage(item.from_stage)} → ${stage(item.to_stage)} (${sourceLabel(item.source)})`;
     return why ? `${head}: ${why}` : head;
   }
-  if (item.error) return `⚠️ ${item.error}`;
+  if (item.error) return `${t.lead.decisionFailed}: ${item.error}`;
   const parts = [
     `${t.lead.proposed}: ${stage(item.proposed_stage)}`,
     item.applied_stage ? `${t.lead.applied}: ${stage(item.applied_stage)}` : "",
@@ -53,16 +62,25 @@ function DecisionBody({ item }: { item: Item }) {
   );
 }
 
-/** «Почему система так решила»: прогоны квалификатора и переходы стадий (SPEC §10.1). */
-export function DecisionsPanel({ decisions }: { decisions: DecisionsResponse | undefined }) {
-  if (!decisions?.items.length) return <Empty description={t.lead.noDecisions} />;
+/**
+ * «Почему система так решила»: прогоны квалификатора и переходы стадий (SPEC §10.1).
+ * Ошибка запроса — `SectionError` с «Повторить», а не «решений нет».
+ */
+export function DecisionsPanel({ query }: { query: Query }) {
+  const items = query.data?.items ?? [];
   return (
-    <Timeline
-      items={decisions.items.map((item) => ({
-        key: `${item.kind}-${String(item.id)}`,
-        color: item.kind === "transition" ? "blue" : item.escalated ? "red" : "gray",
-        children: <DecisionBody item={item} />,
-      }))}
-    />
+    <PageState
+      query={query}
+      variant="section"
+      empty={!items.length && { title: t.lead.noDecisions, hint: t.lead.noDecisionsHint }}
+    >
+      <Timeline
+        items={items.map((item) => ({
+          key: `${item.kind}-${String(item.id)}`,
+          color: decisionColor(item.kind, item.kind === "qualifier" && item.escalated),
+          children: <DecisionBody item={item} />,
+        }))}
+      />
+    </PageState>
   );
 }

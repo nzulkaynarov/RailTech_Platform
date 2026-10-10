@@ -1,10 +1,11 @@
-import { Button, DatePicker, Input, InputNumber, Select, Space, Table } from "antd";
+import { Button, DatePicker, Grid, Input, InputNumber, Select, Space, Table } from "antd";
 import dayjs from "dayjs";
-import { Link } from "react-router";
 
 import type { LeadOut } from "../../api/generated/model";
 import { useLeads } from "../../api/queries";
+import { LeadLink } from "../../components/EntityLink";
 import { Owner } from "../../components/Owner";
+import { PageBody } from "../../components/PageBody";
 import { PageHeader } from "../../components/PageHeader";
 import { PageState } from "../../components/PageState";
 import { LangTag, PriorityTag, StageBadge } from "../../components/StageBadge";
@@ -12,17 +13,22 @@ import { languageOptions, stageOptions } from "../../domain/labels";
 import { LEAD_SORTS, LEADS_PAGE, type LeadFilters, toListParams } from "../../hooks/leadFilters";
 import { useLeadFilters } from "../../hooks/useLeadFilters";
 import { t } from "../../i18n/ru";
-import { formatWhen } from "../../lib/time";
+import { DATE_FORMAT, formatWhen } from "../../lib/time";
+import "../../styles/workspace.css";
 import "../pages.css";
+import { LeadCards } from "./LeadCards";
 
 type Update = (patch: Partial<LeadFilters>) => void;
+type FilterProps = { filters: LeadFilters; update: Update };
 
-function Filters({ filters, update }: { filters: LeadFilters; update: Update }) {
+/** Поиск, стадия, ответственный. У каждого поля — доступное имя (axe `label`, WCAG 3.3.2). */
+function MainFilters({ filters, update }: FilterProps) {
   return (
-    <Space wrap className="filters">
+    <>
       <Input.Search
         allowClear
         key={filters.q ?? ""}
+        aria-label={t.leads.search}
         defaultValue={filters.q}
         placeholder={t.leads.search}
         onSearch={(q) => {
@@ -32,6 +38,7 @@ function Filters({ filters, update }: { filters: LeadFilters; update: Update }) 
       />
       <Select
         allowClear
+        aria-label={t.leads.stage}
         placeholder={t.leads.stage}
         style={{ width: 180 }}
         value={filters.stage}
@@ -42,8 +49,9 @@ function Filters({ filters, update }: { filters: LeadFilters; update: Update }) 
       />
       <Select
         allowClear
+        aria-label={t.leads.owner}
         placeholder={t.leads.owner}
-        style={{ width: 160 }}
+        style={{ width: 176 }}
         value={filters.owner}
         options={[
           { value: "me", label: t.leads.ownerMe },
@@ -53,10 +61,19 @@ function Filters({ filters, update }: { filters: LeadFilters; update: Update }) 
           update({ owner });
         }}
       />
+    </>
+  );
+}
+
+/** Язык, оценка, период и сортировка. */
+function MoreFilters({ filters, update }: FilterProps) {
+  return (
+    <>
       <Select
         allowClear
+        aria-label={t.leads.language}
         placeholder={t.leads.language}
-        style={{ width: 170 }}
+        style={{ width: 176 }}
         value={filters.language}
         options={languageOptions()}
         onChange={(language?: string) => {
@@ -66,22 +83,16 @@ function Filters({ filters, update }: { filters: LeadFilters; update: Update }) 
       <InputNumber
         min={0}
         max={100}
-        placeholder={t.leads.score}
+        aria-label={t.leads.minScore}
+        placeholder={t.leads.minScore}
         value={filters.min_score ?? null}
         onChange={(value) => {
           update({ min_score: value ?? undefined });
         }}
       />
-      <PeriodAndSort filters={filters} update={update} />
-    </Space>
-  );
-}
-
-function PeriodAndSort({ filters, update }: { filters: LeadFilters; update: Update }) {
-  return (
-    <>
       <DatePicker.RangePicker
-        format="DD.MM.YYYY"
+        format={DATE_FORMAT}
+        aria-label={t.leads.periodLabel}
         placeholder={t.leads.period}
         value={filters.from && filters.to ? [dayjs(filters.from), dayjs(filters.to)] : null}
         onChange={(range) => {
@@ -89,7 +100,8 @@ function PeriodAndSort({ filters, update }: { filters: LeadFilters; update: Upda
         }}
       />
       <Select
-        style={{ width: 220 }}
+        aria-label={t.leads.sort}
+        style={{ width: 224 }}
         value={filters.sort ?? "last_message"}
         options={LEAD_SORTS.map((v) => ({ value: v, label: t.leads.sorts[v] ?? v }))}
         onChange={(sort: string) => {
@@ -100,14 +112,19 @@ function PeriodAndSort({ filters, update }: { filters: LeadFilters; update: Upda
   );
 }
 
+function Filters(props: FilterProps) {
+  return (
+    <Space wrap role="search" aria-label={t.leads.filters}>
+      <MainFilters {...props} />
+      <MoreFilters {...props} />
+    </Space>
+  );
+}
+
 const COLUMNS = [
   {
     title: t.leads.name,
-    render: (_: unknown, lead: LeadOut) => (
-      <Link to={`/leads/${String(lead.id)}`}>
-        #{lead.id} · {lead.display_name || t.common.none}
-      </Link>
-    ),
+    render: (_: unknown, lead: LeadOut) => <LeadLink id={lead.id} name={lead.display_name} />,
   },
   { title: t.leads.stage, render: (_: unknown, l: LeadOut) => <StageBadge stage={l.stage} /> },
   { title: t.leads.score, dataIndex: "score", width: 90 },
@@ -133,39 +150,39 @@ const COLUMNS = [
   },
 ];
 
-/** Таблица лидов (SPEC §10.1): фильтры, период и сортировка — в URL. */
+/** Таблица лидов (SPEC §10.1): фильтры, период и сортировка — в URL; на телефоне — карточки. */
 export function LeadsPage() {
   const { filters, update, reset } = useLeadFilters();
   const query = useLeads(toListParams(filters));
+  const phone = Grid.useBreakpoint().sm === false;
+  const pagination = {
+    current: filters.page,
+    pageSize: LEADS_PAGE,
+    total: query.data?.total ?? 0,
+    showSizeChanger: false,
+    onChange: (page: number) => {
+      update({ page });
+    },
+  };
+  const items = query.data?.items ?? [];
   return (
-    <>
-      <PageHeader
-        title={t.page.leads}
-        extra={
-          <Button size="small" onClick={reset}>
-            {t.leads.reset}
-          </Button>
-        }
-      />
+    <PageBody>
+      <PageHeader title={t.page.leads} extra={<Button onClick={reset}>{t.leads.reset}</Button>} />
       <Filters filters={filters} update={update} />
       <PageState query={query} inline>
-        <Table<LeadOut>
-          rowKey="id"
-          loading={query.isLoading}
-          dataSource={query.data?.items ?? []}
-          scroll={{ x: 720 }}
-          pagination={{
-            current: filters.page,
-            pageSize: LEADS_PAGE,
-            total: query.data?.total ?? 0,
-            showSizeChanger: false,
-            onChange: (page) => {
-              update({ page });
-            },
-          }}
-          columns={COLUMNS}
-        />
+        {phone ? (
+          <LeadCards items={items} loading={query.isLoading} pagination={pagination} />
+        ) : (
+          <Table<LeadOut>
+            rowKey="id"
+            loading={query.isLoading}
+            dataSource={items}
+            scroll={{ x: 720 }}
+            pagination={pagination}
+            columns={COLUMNS}
+          />
+        )}
       </PageState>
-    </>
+    </PageBody>
   );
 }

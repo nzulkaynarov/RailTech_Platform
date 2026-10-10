@@ -1,9 +1,8 @@
-import { App as AntApp, Card, Grid, Space, Tabs } from "antd";
+import { Card, Grid, Space, Tabs } from "antd";
 import type { ReactNode } from "react";
 import { useParams } from "react-router";
 
 import type { LeadDetail } from "../../api/generated/model";
-import type { ApiError } from "../../api/http";
 import {
   useDecisions,
   useLead,
@@ -15,11 +14,17 @@ import {
 import { allowed } from "../../app/providers/access";
 import { ChatThread } from "../../components/ChatThread";
 import { DecisionsPanel } from "../../components/DecisionsPanel";
-import { LeadActions } from "../../components/LeadActions";
-import { type ActionRights, replyState } from "../../components/leadActionRules";
+import { LeadActions, OwnerBanner } from "../../components/LeadActions";
+import { type ActionRights, leadActionPlan, replyState } from "../../components/leadActionRules";
+import { Owner } from "../../components/Owner";
+import { PageBody } from "../../components/PageBody";
 import { PageHeader } from "../../components/PageHeader";
 import { PageState } from "../../components/PageState";
-import { errorText, t } from "../../i18n/ru";
+import { StageBadge } from "../../components/StageBadge";
+import { leadLinkText } from "../../domain/entities";
+import { useApiErrorToast } from "../../hooks/useApiErrorToast";
+import { t } from "../../i18n/ru";
+import "../../styles/workspace.css";
 import { LeadNotes, LeadSummary } from "./LeadSummary";
 import "../pages.css";
 
@@ -39,26 +44,29 @@ function useRights(): ActionRights | null {
 }
 
 function Chat({ lead, rights }: { lead: LeadDetail; rights: ActionRights }) {
-  const { message } = AntApp.useApp();
   const messages = useMessages(lead.id);
   const action = useLeadAction(lead.id);
+  const onError = useApiErrorToast();
   const reply = replyState(lead, rights);
   const send = async (text: string) => {
     try {
       await action.mutateAsync({ kind: "reply", text });
     } catch (error) {
-      void message.error(errorText((error as ApiError).code));
+      onError(error);
       throw error;
     }
   };
   return (
-    <ChatThread
-      messages={messages.data ?? []}
-      canReply={reply.can}
-      hint={reply.hint}
-      sending={action.isPending}
-      onSend={send}
-    />
+    <PageState query={messages} variant="section">
+      <ChatThread
+        messages={messages.data ?? []}
+        canReply={reply.can}
+        hint={reply.hint}
+        sending={action.isPending}
+        language={lead.language}
+        onSend={send}
+      />
+    </PageState>
   );
 }
 
@@ -89,6 +97,30 @@ function Layout({ chat, details, why }: { chat: ReactNode; details: ReactNode; w
   );
 }
 
+/** Шапка: имя, стадия и ответственный (видны и на телефоне), действия и баннер «Лида ведёт …». */
+function LeadHeader({ lead, rights }: { lead: LeadDetail; rights: ActionRights }) {
+  const plan = leadActionPlan(lead, rights);
+  return (
+    <PageHeader
+      back="/leads"
+      title={leadLinkText(lead.id, lead.display_name)}
+      extra={<LeadActions lead={lead} rights={rights} />}
+    >
+      <div className="lead-meta">
+        <StageBadge stage={lead.stage} />
+        <span>
+          {t.leads.owner}: <Owner lead={lead} />
+        </span>
+      </div>
+      {plan.ownerBanner ? (
+        <div className="lead-banner">
+          <OwnerBanner banner={plan.ownerBanner} />
+        </div>
+      ) : null}
+    </PageHeader>
+  );
+}
+
 /** Карточка лида (SPEC §10.1): резюме · переписка · «Почему система так решила». */
 export function LeadDetailPage() {
   const id = Number(useParams()["id"]);
@@ -98,12 +130,8 @@ export function LeadDetailPage() {
   return (
     <PageState query={lead} ready={Boolean(lead.data && rights)}>
       {lead.data && rights ? (
-        <Space direction="vertical" size={16} style={{ width: "100%" }}>
-          <PageHeader
-            back="/leads"
-            title={`#${String(lead.data.id)} · ${lead.data.display_name || t.common.none}`}
-            extra={<LeadActions lead={lead.data} rights={rights} />}
-          />
+        <PageBody>
+          <LeadHeader lead={lead.data} rights={rights} />
           <Layout
             chat={<Chat lead={lead.data} rights={rights} />}
             details={
@@ -112,9 +140,9 @@ export function LeadDetailPage() {
                 <LeadNotes leadId={id} />
               </Space>
             }
-            why={<DecisionsPanel decisions={decisions.data} />}
+            why={<DecisionsPanel query={decisions} />}
           />
-        </Space>
+        </PageBody>
       ) : null}
     </PageState>
   );

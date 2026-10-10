@@ -1,22 +1,26 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { App as AntApp, Button, Input, Modal, Select, Space } from "antd";
+import { App as AntApp, Input, Modal, Select, Space } from "antd";
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { Link } from "react-router";
 
 import { useClients } from "../api/adminQueries";
 import { makeCustomer } from "../api/generated/crm";
-import { type ApiError, unwrap } from "../api/http";
-import { errorText, t } from "../i18n/ru";
+import { unwrap } from "../api/http";
+import { useApiErrorToast } from "../hooks/useApiErrorToast";
+import { t } from "../i18n/ru";
 
-/** «Сделать клиентом» (Фаза 6): лид после сделки → клиент, Telegram подтверждён менеджером. */
-export function MakeCustomer({ leadId }: { leadId: number }) {
-  const [open, setOpen] = useState(false);
+type Props = { leadId: number; open: boolean; onClose: () => void };
+
+/**
+ * «Сделать клиентом» (Фаза 6): лид после сделки → клиент, Telegram подтверждён менеджером.
+ * Карточку лида не покидаем: уведомление со ссылкой «Открыть карточку клиента».
+ */
+export function MakeCustomer({ leadId, open, onClose }: Props) {
   const [clientId, setClientId] = useState<number | null>(null);
   const [name, setName] = useState("");
   const clients = useClients("");
   const query = useQueryClient();
-  const navigate = useNavigate();
-  const { message } = AntApp.useApp();
+  const { notification } = AntApp.useApp();
   const mutation = useMutation({
     mutationFn: async () =>
       unwrap(
@@ -26,58 +30,52 @@ export function MakeCustomer({ leadId }: { leadId: number }) {
         }),
       ),
     onSuccess: (created) => {
-      setOpen(false);
+      onClose();
       void query.invalidateQueries({ queryKey: ["lead", leadId] });
-      void navigate(`/clients/${String(created.id)}`);
+      notification.success({
+        message: t.lead.clientCreated,
+        description: <Link to={`/clients/${String(created.id)}`}>{t.lead.openClient}</Link>,
+      });
     },
-    onError: (e) => {
-      void message.error(errorText((e as ApiError).code, e.message));
-    },
+    onError: useApiErrorToast(),
   });
   return (
-    <>
-      <Button
-        onClick={() => {
-          setOpen(true);
-        }}
-      >
-        {t.clients.makeCustomer}
-      </Button>
-      <Modal
-        open={open}
-        title={t.clients.makeCustomer}
-        confirmLoading={mutation.isPending}
-        okButtonProps={{ disabled: clientId === null && !name.trim() }}
-        onOk={() => {
-          mutation.mutate();
-        }}
-        onCancel={() => {
-          setOpen(false);
-        }}
-      >
-        <Space direction="vertical" style={{ width: "100%" }}>
-          <Select
-            allowClear
-            showSearch
-            optionFilterProp="label"
-            placeholder={t.clients.existing}
-            style={{ width: "100%" }}
-            value={clientId}
-            onChange={(v?: number) => {
-              setClientId(v ?? null);
-            }}
-            options={(clients.data ?? []).map((c) => ({ value: c.id, label: c.name }))}
-          />
-          <Input
-            placeholder={t.clients.newName}
-            disabled={clientId !== null}
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-            }}
-          />
-        </Space>
-      </Modal>
-    </>
+    <Modal
+      open={open}
+      title={t.clients.makeCustomer}
+      okText={t.clients.makeCustomer}
+      cancelText={t.actions.cancel}
+      confirmLoading={mutation.isPending}
+      okButtonProps={{ disabled: clientId === null && !name.trim() }}
+      onOk={() => {
+        mutation.mutate();
+      }}
+      onCancel={onClose}
+    >
+      <Space direction="vertical" style={{ width: "100%" }}>
+        <Select
+          allowClear
+          showSearch
+          optionFilterProp="label"
+          aria-label={t.clients.existing}
+          placeholder={t.clients.existing}
+          style={{ width: "100%" }}
+          value={clientId}
+          onChange={(v?: number) => {
+            setClientId(v ?? null);
+          }}
+          options={(clients.data ?? []).map((c) => ({ value: c.id, label: c.name }))}
+        />
+        <Input
+          aria-label={t.clients.newName}
+          placeholder={t.clients.newName}
+          disabled={clientId !== null}
+          value={name}
+          onChange={(e) => {
+            setName(e.target.value);
+          }}
+        />
+      </Space>
+    </Modal>
   );
 }

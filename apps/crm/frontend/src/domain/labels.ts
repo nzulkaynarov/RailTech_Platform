@@ -40,6 +40,7 @@ const INGEST_COLOR: Record<string, string> = {
   failed: "error",
 };
 const REQUEST_COLOR: Record<string, string> = { open: "orange", closed: "default" };
+const OWNER_COLOR: Record<string, string> = { paused: "orange" };
 
 const pick = (dict: Record<string, string>, code: string): string => dict[code] ?? code;
 
@@ -54,6 +55,25 @@ export const priorityLabel = (code: string): Label => ({
 });
 export const reasonLabel = (code: string): string => pick(t.reasons, code);
 export const ownerModeLabel = (code: string): string => pick(t.owner, code);
+export const ownerModeTag = (code: string): Label => ({
+  label: ownerModeLabel(code),
+  color: OWNER_COLOR[code] ?? "default",
+});
+/** Флаг «Новое сообщение» во «Входящих». */
+export const unreadLabel = (): Label => ({ label: t.inbox.unread, color: "orange" });
+/** Цвет таймера ожидания передачи по уровню срока реакции (`domain/sla.ts`). */
+const SLA_COLOR: Record<string, string> = {
+  ok: "green",
+  warning: "orange",
+  overdue: "red",
+  snoozed: "default",
+};
+export const slaColor = (level: string): string => SLA_COLOR[level] ?? "default";
+/** Цвет точки на ленте «Почему система так решила»: переход, передача, обычный прогон. */
+export const decisionColor = (kind: string, escalated: boolean): string =>
+  kind === "transition" ? "blue" : escalated ? "red" : "gray";
+/** Продукт, которым интересуется лид (ключ каталога KB). */
+export const productLabel = (key: string): Label => ({ label: key, color: "blue" });
 export const ingestLabel = (code: string): Label => ({
   label: pick(L.ingest, code),
   color: INGEST_COLOR[code] ?? "default",
@@ -90,7 +110,20 @@ export const qualificationText = (key: string, value: unknown): string =>
 
 export const sourceLabel = (code: string): string => pick(L.source, code);
 
-/** Причина перехода стадии — бэкенд пишет её по-английски или текстом сотрудника. */
+/** Похоже на служебный код (`price_or_contract_asked`), а не на текст для человека. */
+export const looksLikeCode = (text: string): boolean => /^[a-z][a-z0-9]*(_[a-z0-9]+)+$/.test(text);
+
+const isReasonCode = (part: string): boolean => part in t.reasons || looksLikeCode(part);
+
+/** Список кодов причин передачи через запятую («price_or_contract_asked, high_score»). */
+function reasonCodes(reason: string): string | null {
+  const codes = reason.split(",").map((part) => part.trim());
+  if (!codes.every(isReasonCode)) return null;
+  const unknown = L.transition["unknownCode"] ?? "";
+  return codes.map((code) => (code in t.reasons ? reasonLabel(code) : unknown)).join("; ");
+}
+
+/** Причина перехода стадии — бэкенд пишет её по-английски, кодами триггеров или текстом сотрудника. */
 export function transitionReason(reason: string | null | undefined): string {
   if (!reason) return "";
   const known = L.transition[reason];
@@ -98,9 +131,11 @@ export function transitionReason(reason: string | null | undefined): string {
   const days = /^no reply for (\d+) days$/.exec(reason);
   if (days) return (L.transition["noReply"] ?? "").replace("{days}", days[1] ?? "");
   if (reason.startsWith("qualifier: ")) {
-    return (L.transition["qualifier"] ?? "").replace("{text}", reason.slice("qualifier: ".length));
+    const text = reason.slice("qualifier: ".length).trim();
+    if (!text || looksLikeCode(text)) return L.transition["qualifierOnly"] ?? "";
+    return (L.transition["qualifier"] ?? "").replace("{text}", text);
   }
-  return reason;
+  return reasonCodes(reason) ?? reason;
 }
 
 /** Отказ квалификатору (служебный текст бэкенда) — человеку достаточно сути. */

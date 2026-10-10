@@ -1,9 +1,11 @@
 import { Checkbox, DatePicker, Input, Modal, Typography } from "antd";
-import dayjs, { type Dayjs } from "dayjs";
+import type { Dayjs } from "dayjs";
 import { useState } from "react";
 
 import type { LeadAction } from "../api/queries";
+import { defaultSnooze, fromTashkentWall, snoozeDayDisabled } from "../domain/snooze";
 import { t } from "../i18n/ru";
+import { DATETIME_FORMAT } from "../lib/time";
 
 export type Dialog = "return" | "snooze" | "lost" | "won" | "note";
 
@@ -12,14 +14,21 @@ const TITLES: Record<Dialog, string> = {
   snooze: t.actions.snoozeUntil,
   lost: t.actions.lostReason,
   won: t.actions.wonTitle,
-  note: t.actions.noteText,
+  note: t.actions.note,
 };
 const OK: Record<Dialog, string> = {
   return: t.actions.returnToBot,
   snooze: t.actions.snooze,
   lost: t.actions.lost,
   won: t.actions.won,
-  note: t.common.save,
+  note: t.actions.note,
+};
+
+/** Подпись поля ввода (она же placeholder). */
+const FIELD: Record<Dialog, string> = {
+  ...TITLES,
+  won: t.actions.wonNote,
+  note: t.actions.noteText,
 };
 
 function toAction(dialog: Dialog, text: string, forBot: boolean, until: Dayjs | null) {
@@ -29,7 +38,7 @@ function toAction(dialog: Dialog, text: string, forBot: boolean, until: Dayjs | 
     lost: { kind: "lost", reason: value },
     won: { kind: "won", reason: value },
     note: { kind: "note", text: text.trim(), visibleToBot: forBot },
-    snooze: until ? { kind: "snooze", until: until.toISOString() } : null,
+    snooze: until ? { kind: "snooze", until: fromTashkentWall(until) } : null,
   };
   return actions[dialog];
 }
@@ -41,11 +50,15 @@ type Props = {
   onRun: (action: LeadAction) => Promise<boolean>;
 };
 
-/** Диалог действия с текстом/датой: заголовок и кнопка — глаголом конкретного действия. */
+/**
+ * Диалог действия с текстом/датой: заголовок и кнопка — глаголом конкретного действия.
+ * Монтируется заново при каждом открытии (`key`), поэтому «Отложить до» считается от
+ * момента открытия, а не загрузки страницы.
+ */
 export function LeadActionDialog({ dialog, busy, onClose, onRun }: Props) {
   const [text, setText] = useState("");
   const [forBot, setForBot] = useState(true);
-  const [until, setUntil] = useState<Dayjs | null>(dayjs().add(2, "hour"));
+  const [until, setUntil] = useState<Dayjs | null>(() => defaultSnooze(new Date()));
   const submit = async () => {
     const action = dialog ? toAction(dialog, text, forBot, until) : null;
     if (action && (await onRun(action))) setText("");
@@ -68,17 +81,19 @@ export function LeadActionDialog({ dialog, busy, onClose, onRun }: Props) {
       {dialog === "snooze" ? (
         <DatePicker
           showTime
-          format="DD.MM.YYYY HH:mm"
+          format={DATETIME_FORMAT}
+          aria-label={t.actions.snoozeUntil}
           value={until}
           onChange={setUntil}
-          disabledDate={(d) => d.isBefore(dayjs(), "day") || d.isAfter(dayjs().add(7, "day"))}
+          disabledDate={(d) => snoozeDayDisabled(d, new Date())}
           style={{ width: "100%" }}
         />
       ) : (
         <Input.TextArea
           rows={4}
+          aria-label={dialog ? FIELD[dialog] : undefined}
           value={text}
-          placeholder={dialog === "won" ? t.actions.wonNote : dialog ? TITLES[dialog] : ""}
+          placeholder={dialog ? FIELD[dialog] : ""}
           onChange={(e) => {
             setText(e.target.value);
           }}

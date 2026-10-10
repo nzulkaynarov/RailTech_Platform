@@ -44,5 +44,27 @@
   word-break: break-word;
 }
 .chat-reply {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ant-margin-xxs);
   width: 100%;
+}
+.chat-reply-row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--ant-margin-xs);
+}
+/* Телефон: без вложенной прокрутки — лента растёт со страницей, поле ответа закреплено внизу. */
+@media (max-width: 767px) {
+  .chat-list {
+    max-height: none;
+    overflow-y: visible;
+  }
+  .chat-reply {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    padding: var(--ant-padding-xs) 0;
+    background: var(--ant-color-bg-layout);
+  }
 }

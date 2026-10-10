@@ -1,11 +1,15 @@
 import { Space, Tag, Typography } from "antd";
 
 import type { LeadOut } from "../api/generated/model";
+import { ownerModeTag } from "../domain/labels";
 import { t } from "../i18n/ru";
 
-/** Кто ведёт лида: бот, очередь к менеджеру или конкретный человек (имя, а не режим). */
+/** Кто ведёт лида: бот, бот на паузе (ждёт менеджера) или конкретный человек (имя, а не режим). */
 export function Owner({ lead }: { lead: Pick<LeadOut, "owner_mode" | "assigned_user_name"> }) {
-  if (lead.owner_mode === "paused") return <Tag color="orange">{t.owner.paused}</Tag>;
+  if (lead.owner_mode === "paused") {
+    const tag = ownerModeTag("paused");
+    return <Tag color={tag.color}>{tag.label}</Tag>;
+  }
   if (lead.owner_mode === "human") {
     return <Typography.Text>{lead.assigned_user_name ?? t.owner.human}</Typography.Text>;
   }

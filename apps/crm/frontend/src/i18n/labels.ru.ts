@@ -6,7 +6,7 @@ export const labelsRu = {
     new: "Новый",
     engaged: "Вовлечён",
     qualified: "Квалифицирован",
-    handoff: "Ждёт менеджера",
+    handoff: "Передан",
     in_progress: "В работе",
     won: "Сделка",
     customer: "Клиент",
@@ -42,6 +42,8 @@ export const labelsRu = {
     noReply: "нет ответа {days} дн.",
     qualifier: "квалификатор: {text}",
     ruleRejected: "переход не разрешён правилами",
+    qualifierOnly: "решение квалификатора",
+    unknownCode: "служебная причина",
   } as Dict,
   qualification: {
     company: "Компания",

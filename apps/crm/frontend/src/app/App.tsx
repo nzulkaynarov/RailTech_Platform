@@ -2,7 +2,6 @@ import {
   AuditOutlined,
   BookOutlined,
   DashboardOutlined,
-  InboxOutlined,
   QuestionCircleOutlined,
   SettingOutlined,
   ShopOutlined,
@@ -24,6 +23,7 @@ import { ClientDetailPage } from "../pages/clients/ClientDetailPage";
 import { ClientsPage } from "../pages/clients/ClientsPage";
 import { DashboardPage } from "../pages/dashboard/DashboardPage";
 import { GapsPage } from "../pages/gaps/GapsPage";
+import { InboxNavIcon } from "../components/InboxNavIcon";
 import { InboxPage } from "../pages/inbox/InboxPage";
 import { HomeRedirect } from "./HomeRedirect";
 import { KbPage } from "../pages/kb/KbPage";
@@ -51,7 +51,7 @@ const queryClient = new QueryClient({
 });
 
 const resources = [
-  { name: "inbox", list: "/inbox", meta: { label: t.nav.inbox, icon: <InboxOutlined /> } },
+  { name: "inbox", list: "/inbox", meta: { label: t.nav.inbox, icon: <InboxNavIcon /> } },
   {
     name: "leads",
     list: "/leads",
