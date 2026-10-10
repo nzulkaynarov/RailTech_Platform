@@ -16,6 +16,7 @@ import { useTakeAndOpen } from "../../hooks/useLeadActionRunner";
 import { t } from "../../i18n/ru";
 import { formatDateTime, formatWhen, fromNow } from "../../lib/time";
 import "../../styles/workspace.css";
+import { ServiceRequestsColumn } from "./ServiceRequestsColumn";
 import "../pages.css";
 
 /** «Забрать» прямо из очереди и сразу в карточку лида (как Intercom «Assign to me»). */
@@ -135,6 +136,7 @@ export function InboxPage() {
   const perms = usePermissionsQuery();
   const now = useNow();
   const canTake = allowed(perms.data, "leads", "take") && Boolean(me.data);
+  const canSeeClients = allowed(perms.data, "clients", "read");
   const data = query.data;
   return (
     <PageBody>
@@ -163,6 +165,7 @@ export function InboxPage() {
               canTake={canTake}
               now={now}
             />
+            {canSeeClients ? <ServiceRequestsColumn now={now} /> : null}
           </div>
         ) : null}
       </PageState>

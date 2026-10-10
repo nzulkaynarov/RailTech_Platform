@@ -15,6 +15,7 @@ import {
   leadMessages,
   leadNotes,
   listLeads,
+  listServiceRequests,
   listUsers,
   me,
   newDeal,
@@ -39,6 +40,7 @@ export const keys = {
   decisions: (id: number) => ["lead", id, "decisions"] as const,
   users: ["users"] as const,
   team: ["team"] as const,
+  serviceRequests: ["service-requests", "open"] as const,
 };
 
 export const useMe = () => useQuery({ queryKey: keys.me, queryFn: async () => unwrap(await me()) });
@@ -48,6 +50,13 @@ export const usePermissionsQuery = () =>
 
 export const useInbox = () =>
   useQuery({ queryKey: keys.inbox, queryFn: async () => unwrap(await inbox()) });
+
+/** Открытые запросы клиентов (Q-017): самый старый первым, как в API. */
+export const useOpenServiceRequests = () =>
+  useQuery({
+    queryKey: keys.serviceRequests,
+    queryFn: async () => unwrap(await listServiceRequests({ status: "open" })),
+  });
 
 export const useLeads = (params: ListLeadsParams) =>
   useQuery({
@@ -125,6 +134,7 @@ export function useLeadAction(id: number) {
       Promise.all([
         client.invalidateQueries({ queryKey: ["lead", id] }),
         client.invalidateQueries({ queryKey: keys.inbox }),
+        client.invalidateQueries({ queryKey: keys.serviceRequests }),
         client.invalidateQueries({ queryKey: ["leads"] }),
       ]),
   });

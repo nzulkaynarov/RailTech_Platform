@@ -20,6 +20,7 @@ describe("keysFor", () => {
   it("invalidates the lead and lists", () => {
     expect(keysFor({ type: "message.created", lead_id: 7 })).toEqual([
       ["inbox"],
+      ["service-requests", "open"],
       ["leads"],
       ["lead", 7],
     ]);

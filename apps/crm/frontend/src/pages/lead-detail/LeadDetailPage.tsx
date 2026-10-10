@@ -1,6 +1,6 @@
-import { Card, Grid, Space, Tabs } from "antd";
+import { Alert, Card, Grid, Space, Tabs } from "antd";
 import type { ReactNode } from "react";
-import { useParams } from "react-router";
+import { Link, useParams } from "react-router";
 
 import type { LeadDetail } from "../../api/generated/model";
 import {
@@ -115,6 +115,17 @@ function LeadHeader({ lead, rights }: { lead: LeadDetail; rights: ActionRights }
       {plan.ownerBanner ? (
         <div className="lead-banner">
           <OwnerBanner banner={plan.ownerBanner} />
+        </div>
+      ) : null}
+      {lead.open_service_request_id && lead.client_id ? (
+        <div className="lead-banner">
+          <Alert
+            type="info"
+            showIcon
+            message={t.lead.openRequest}
+            description={t.lead.openRequestHint}
+            action={<Link to={`/clients/${String(lead.client_id)}`}>{t.inbox.openClient}</Link>}
+          />
         </div>
       ) : null}
     </PageHeader>

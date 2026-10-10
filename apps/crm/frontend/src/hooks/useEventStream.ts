@@ -35,7 +35,7 @@ export function parseSse(buffer: string): { events: CrmEvent[]; rest: string } {
 /** Какие запросы перечитать по событию. */
 export function keysFor(event: CrmEvent): readonly (readonly unknown[])[] {
   const lead = event.lead_id ?? undefined;
-  const common = [keys.inbox, ["leads"]] as const;
+  const common = [keys.inbox, keys.serviceRequests, ["leads"]] as const;
   return lead === undefined ? common : [...common, ["lead", lead]];
 }
 
