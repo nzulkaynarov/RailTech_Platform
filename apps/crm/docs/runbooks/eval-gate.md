@@ -2,7 +2,11 @@
 
 ## Когда применять
 PR меняет `backend/prompts/`, `app/agents/`, `domain/triggers.py|scoring.py|qualifier_decision.py`,
-`evals/` или `infra/litellm.config.yaml` — запускается workflow `Eval gate`.
+`evals/` или `infra/litellm.config.yaml`. **Evals платные** (~150 вызовов моделей на полный
+прогон): на пуш workflow `Eval gate` только напоминает, прогон — вручную меткой `run-evals`
+на PR (снимается после прогона) или кнопкой Run workflow. Потолок расходов — `EVAL_MAX_USD`
+(CI: $2, локально `make eval`: $1, `make eval-quick`: $0.3); дошли до потолка — остальные
+кейсы пропускаются, итог красный «прогон неполный».
 
 ## Диагностика
 - Комментарий `## Eval-gate` в PR: метрики против порогов SPEC §12 и список проваленных кейсов.
@@ -16,11 +20,13 @@ PR меняет `backend/prompts/`, `app/agents/`, `domain/triggers.py|scoring.p
    `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` — **отдельные dev-ключи с лимитом бюджета** у провайдера;
    опционально `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_HOST`.
 2. Сделать job обязательным: Settings → Branches → правило для `main` → required check `Eval gate (golden)`.
-3. Провален кейс: воспроизвести локально `make eval` (dev-стенд) или матрицу `make promptfoo`;
+3. Провален кейс: сначала `make eval-quick CONFIRM=yes` или один кейс
+   `EVAL_CASES=<id> make eval CONFIRM=yes`; полный `make eval CONFIRM=yes` — перед мержем, один раз;
    чинить промпт/триггеры, а не ослаблять кейс. Изменение порогов — только через SPEC §12 + ADR.
 
 ## Проверка
-Повторный push → комментарий обновлён, все строки ✅.
+Поставить метку `run-evals` → комментарий обновлён, все строки ✅. Не ставьте метку на каждый
+пуш: один прогон перед мержем.
 
 ## Эскалация
 Разработчику: ссылка на run, артефакт `eval-reports`.

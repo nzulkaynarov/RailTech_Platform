@@ -6,9 +6,11 @@
 """
 
 import json
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 
 import pytest
+import pytest_asyncio
 
 from app.agents.llm import ChatModel
 from app.agents.qualifier.graph import QualifierAgent, QualifierInput
@@ -20,7 +22,7 @@ from app.domain.stages import Stage
 from app.domain.triggers import evaluate
 from app.integrations.litellm import make_client
 from app.schemas.settings import AppSettings, TermsSettings
-from evals import report
+from evals import budget, report
 from evals.qualifier_cases import QualifierCase, load_products, load_qualifier_cases, turn_signals
 
 pytestmark = pytest.mark.eval
@@ -28,7 +30,7 @@ pytestmark = pytest.mark.eval
 # иначе pytest-asyncio 1.x даёт ScopeMismatch / «Event loop is closed».
 MODULE_LOOP = pytest.mark.asyncio(loop_scope="module")
 
-CASES = load_qualifier_cases()
+CASES = budget.selected(load_qualifier_cases())
 PRODUCTS = load_products()
 CFG = AppSettings(competitors=TermsSettings(terms=["Glonass-Track", "Wialon"]))
 # Пороги релиза SPEC §12 (eval-gate в CI, Фаза 7).
@@ -47,12 +49,14 @@ class Outcome:
 RESULTS: list[Outcome] = []
 
 
-@pytest.fixture(scope="module")
-def agent() -> QualifierAgent:
+@pytest_asyncio.fixture(scope="module", loop_scope="module")
+async def agent() -> AsyncIterator[QualifierAgent]:
     settings = Settings()
     if not settings.litellm_api_key.get_secret_value():
         pytest.fail("LITELLM_API_KEY не задан: evals нужны реальные модели (make eval)")
-    return QualifierAgent(ChatModel(make_client(settings), "qualifier-model"))
+    client = make_client(settings)
+    yield QualifierAgent(ChatModel(client, "qualifier-model"))
+    await client.close()  # иначе незакрытые сокеты к LiteLLM роняют pytest (filterwarnings=error)
 
 
 @MODULE_LOOP
@@ -65,7 +69,9 @@ async def test_qualifier_case(case: QualifierCase, agent: QualifierAgent) -> Non
         card={"stage": case.stage, "score": case.score},
         transcript=list(case.transcript),
     )
+    budget.guard()
     result = await agent.run(data)
+    budget.add(result.cost_usd)
     state = qd.LeadState(
         stage=Stage(case.stage),
         score=case.score,
@@ -77,12 +83,13 @@ async def test_qualifier_case(case: QualifierCase, agent: QualifierAgent) -> Non
     )
     last_lead = next(t for r, t in reversed(case.transcript) if r == "lead")
     facts = qd.TurnFacts(
-        kb_best_score=case.kb_best_score,
-        min_score=CFG.kb.min_score,
+        price_quoted=case.price_quoted,
         competitor_mentioned=bool(_terms(last_lead)),
         known_products={k for k, _ in PRODUCTS},
     )
-    decision = qd.decide(state, result.output, facts, CFG.escalation.triggers())
+    decision = qd.decide(
+        state, result.output, facts, CFG.escalation.triggers(), CFG.qualification.criteria()
+    )
     turn_hits = evaluate(turn_signals(case, CFG), CFG.escalation.triggers())
     codes = [h.code.value for h in (*turn_hits, *decision.hits)]
     stage = (decision.final_stage or Stage(case.stage)).value
@@ -99,6 +106,7 @@ def _terms(text: str) -> list[str]:
 
 
 def test_zz_qualifier_summary_gate() -> None:
+    assert not budget.exhausted(), "лимит расходов исчерпан — прогон неполный (EVAL_MAX_USD)"
     tp = sum(r.escalated and r.expected_escalate for r in RESULTS)
     fp = sum(r.escalated and not r.expected_escalate for r in RESULTS)
     fn = sum(not r.escalated and r.expected_escalate for r in RESULTS)

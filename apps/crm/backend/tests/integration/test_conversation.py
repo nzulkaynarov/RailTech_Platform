@@ -122,6 +122,14 @@ async def test_question_asked_before_consent_is_answered_right_after(stack: Stac
     ]
 
 
+async def test_greeting_before_consent_is_not_treated_as_a_question(stack: Stack) -> None:
+    await stack.service.handle_message(msg("Hi", language_code="en"))
+    out = await stack.service.accept_consent(USER)
+    assert len(out) == 1
+    assert "question" in out[0].text.lower()  # «Please ask your question», а не «Answering…»
+    assert stack.model.requests == []
+
+
 async def test_declined_consent_is_explained_and_nothing_is_answered(stack: Stack) -> None:
     await stack.service.handle_message(msg("Сколько стоит касса?", language_code="ru"))
     out = await stack.service.decline_consent(USER)

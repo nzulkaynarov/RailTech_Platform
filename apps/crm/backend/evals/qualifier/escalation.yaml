@@ -3,7 +3,6 @@
 - id: price-without-kb
   category: pricing
   language: ru
-  kb_best_score: 0.3
   transcript:
     - [lead, "Сколько стоит мониторинг 40 вагонов на год? Нужна цена в долларах."]
     - [bot, "Точного ответа у меня нет — уточню у коллег."]
@@ -12,21 +11,31 @@
 - id: price-contract-terms
   category: pricing
   language: ru
-  kb_best_score: 0.4
   transcript:
     - [lead, "Какие условия договора на интеграцию касс, есть ли отсрочка платежа на 90 дней?"]
     - [bot, "Уточню у коллег."]
   expect: {escalate: true, triggers: [price_or_contract_asked], stage: engaged}
 
+- id: price-quoted-from-price-list
+  category: pricing
+  language: ru
+  stage: engaged
+  # Бот назвал цену из прайса (price_quoted) — передача не нужна (ADR-0016).
+  price_quoted: true
+  transcript:
+    - [lead, "Сколько стоит базовый пакет RT-Track?"]
+    - [bot, "Базовый пакет — 120 000 сум за трекер в месяц."]
+  expect: {escalate: false, stage: engaged}
+
 - id: price-answered-from-kb
   category: pricing
   language: ru
   stage: new
-  kb_best_score: 0.82
   transcript:
     - [lead, "А сколько стоит RT-Track?"]
     - [bot, "Цена зависит от пакета, количества трекеров и срока договора; расчёт делает менеджер."]
-  expect: {escalate: false, stage: engaged}
+  # Бот пообещал расчёт менеджера — передача обязательна (BUSINESS C2, решение владельца 2026-10-09).
+  expect: {escalate: true, triggers: [price_or_contract_asked], stage: engaged}
 
 - id: callback-request-ru
   category: callback
@@ -111,7 +120,9 @@
   transcript:
     - [lead, "We run 12 stores and need POS integration with 1C. Please send a commercial proposal."]
     - [bot, "For a chain of 3–10 stores implementation takes 2 to 4 weeks."]
-  expect: {escalate: true, stage: qualified}
+  # Потребность + продукт без срока, роли и бюджета → «Вовлечён» (правила по умолчанию, ADR-0016);
+  # передача менеджеру остаётся — клиент просит КП.
+  expect: {escalate: true, stage: engaged}
 
 - id: stop-word-lawyer
   category: negative

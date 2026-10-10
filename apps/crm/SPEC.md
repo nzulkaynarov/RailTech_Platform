@@ -1,6 +1,6 @@
 # RailTech CRM — техническое задание (SPEC)
 
-Версия 2.3 · 2026-10-09 (RustFS — ADR-0009; модели — ADR-0004; docling-serve и MCP SDK — ADR-0011; жизненный цикл без тупиков — ADR-0015)
+Версия 2.3 · 2026-10-09 (RustFS — ADR-0009; модели — ADR-0004; docling-serve и MCP SDK — ADR-0011; жизненный цикл без тупиков — ADR-0015; квалификация и цена по правилам — ADR-0016)
 
 Документ описывает, *как* устроена система: архитектура, ядро, данные, агенты, интерфейсы, безопасность, стенды, связи. Порядок реализации — в `PLAN.md`; зачем всё это — в `BUSINESS.md`; правила работы для Claude Code — в `CLAUDE.md`.
 
@@ -274,7 +274,7 @@ service_requests(id, client_id, lead_id NULL, summary, status 'open'|'closed', c
 settings(key PK, value JSONB, schema_version INT, updated_by, updated_at)
 ```
 Ключи и JSON-схемы валидируются Pydantic-моделями в `app/schemas/settings.py`:
-`company`, `business_hours`, `texts` (greeting/consent/handoff/off_hours × ru/uz/en), `escalation` (триггеры, пороги, `no_progress_turns`, SLA), `kb` (`min_score`, `top_k`), `bot` (persona, `max_words`, `history_messages`, `rate_limit_per_minute`, `unresponsive_days`), `competitors`, `stop_words`, `notifications` (`channel_id`, `duty_user_ids`), `budget` (`daily_usd`, `fallback_model_enabled`).
+`company`, `business_hours`, `texts` (greeting/consent/handoff/off_hours × ru/uz/en), `escalation` (триггеры, пороги, `no_progress_turns`, SLA, `price_always_to_manager`), `qualification` (критерии «Квалифицирован»: обязательные и дополнительные факты, горизонт срока, роли — ADR-0016), `kb` (`min_score`, `top_k`), `bot` (persona, `max_words`, `history_messages`, `rate_limit_per_minute`, `unresponsive_days`), `competitors`, `stop_words`, `notifications` (`channel_id`, `duty_user_ids`), `budget` (`daily_usd`, `fallback_model_enabled`).
 
 ### 5.8. Техническое
 
@@ -379,7 +379,7 @@ class QualifierOutput(BaseModel):
     next_best_action: str
 ```
 
-Пост-обработка в коде: state machine → score → триггеры → `qualifier_runs` → при эскалации §8.2. Запись `cost_usd` из ответа LiteLLM.
+Пост-обработка в коде: стадия `qualified` — по критериям `settings.qualification` из извлечённых фактов (`domain/qualification_rules.py`, ADR-0016; модель предлагает только `new`/`engaged`) → state machine → score → триггеры → `qualifier_runs` → при эскалации §8.2. Запись `cost_usd` из ответа LiteLLM.
 
 ### 7.3. Клиентский режим
 
@@ -401,7 +401,7 @@ class QualifierOutput(BaseModel):
 |---|---|---|
 | `human_requested` | Интент/команда «человек, оператор, менеджер» | hot |
 | `callback_requested` | Интент `request_contact` или вызов `request_callback` | hot |
-| `price_or_contract_asked` | Интент `pricing` и `kb_best_score < min_score` | hot |
+| `price_or_contract_asked` | Интент `pricing` и цена не названа из базы (`price_quoted`, `domain/pricing.py`) — бот обещал расчёт менеджера; флаг `escalation.price_always_to_manager` — любой ценовой вопрос (ADR-0016) | hot |
 | `negative_sentiment` | `sentiment=negative` или стоп-слова | hot |
 | `complaint` | Интент `complaint` | hot |
 | `kb_gap_streak` | 2 подряд fallback | warm |
@@ -513,7 +513,7 @@ Refine с кастомным `dataProvider` (REST `/api/v1`), `authProvider` (co
 - Трейсы: каждый ход диалога и каждый запуск квалификатора — Langfuse trace с `lead_id`, `mode`, `stage`; стоимость агрегируется.
 - Логи: structlog JSON, `request_id`, `lead_id`; уровни по env.
 - Метрики здоровья: `GET /health` (liveness), `GET /ready` (БД, S3/RustFS, LiteLLM); ежедневный отчёт в канал (General-пост): новых лидов, эскалаций, открытых пробелов KB, стоимость.
-- Алерты (в канал, префикс ⚠️): задача в `failed` после 3 ретраев; LiteLLM недоступен > 2 мин; очередь > 100 задач; бюджет > 80 %. Монитор — периодическая задача `system_monitor` (раз в минуту, `domain/alerts.py`); дедупликация в таблице `system_alerts(key PK, active, detail, first_seen_at, sent_at, resolved_at, updated_at)`: пост на переходе в проблему, повтор не чаще 6 ч, снятие постом «✅ … в норме». Итоги дня — `daily_report` в 18:05 Asia/Tashkent (пн–пт).
+- Алерты (в канал, префикс ⚠️): задача в `failed` после 3 ретраев; LiteLLM недоступен > 2 мин; очередь > 100 задач; бюджет > 80 %; у провайдера модели закончились кредиты/квота или отклонён ключ — проба раз в час запросом в 1 токен к `dialog-model` (Anthropic) и `fallback-model` (Gemini) с `disable_fallbacks` (иначе сбой Claude скрыт ответом Gemini), ключ алерта `model:<alias>`, снятие — только по успешной пробе. Монитор — периодическая задача `system_monitor` (раз в минуту, `domain/alerts.py`); дедупликация в таблице `system_alerts(key PK, active, detail, first_seen_at, sent_at, resolved_at, updated_at)`: пост на переходе в проблему, повтор не чаще 6 ч, снятие постом «✅ … в норме». Итоги дня — `daily_report` в 18:05 Asia/Tashkent (пн–пт).
 - BudgetGuard: расход за сутки (Asia/Tashkent) = `messages.meta.cost_usd` + `qualifier_runs.cost_usd`; при ≥ 100 % `budget.daily_usd` и `fallback_model_enabled` диалог идёт на `fallback-model` (кэш решения 60 с), квалификатор продолжает; `daily_usd = 0` — без лимита.
 - Runbooks: деплой, откат, бэкап/восстановление, ротация ключей, «бот молчит», «эскалации не приходят», «стоимость выросла», «откат промпта», eval-gate, «переезд dev → prod».
 

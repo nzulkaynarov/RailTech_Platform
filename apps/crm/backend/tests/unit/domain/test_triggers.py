@@ -19,9 +19,8 @@ CFG = TriggerSettings()
         (TriggerSignals(human_requested=True), [T.HUMAN_REQUESTED]),
         (TriggerSignals(callback_requested=True), [T.CALLBACK_REQUESTED]),
         (TriggerSignals(intent="request_contact"), [T.CALLBACK_REQUESTED]),
-        (TriggerSignals(intent="pricing", kb_best_score=0.3), [T.PRICE_OR_CONTRACT_ASKED]),
-        (TriggerSignals(intent="pricing", kb_best_score=None), [T.PRICE_OR_CONTRACT_ASKED]),
-        (TriggerSignals(intent="pricing", kb_best_score=0.8), []),
+        (TriggerSignals(intent="pricing"), [T.PRICE_OR_CONTRACT_ASKED]),
+        (TriggerSignals(intent="pricing", price_quoted=True), []),
         (TriggerSignals(sentiment="negative"), [T.NEGATIVE_SENTIMENT]),
         (TriggerSignals(stop_word_hit=True), [T.NEGATIVE_SENTIMENT]),
         (TriggerSignals(intent="complaint"), [T.COMPLAINT]),
@@ -70,3 +69,9 @@ def test_thresholds_are_configurable() -> None:
         )
     }
     assert codes == {T.HIGH_SCORE, T.NO_PROGRESS}
+
+
+def test_price_always_to_manager_setting() -> None:
+    cfg = TriggerSettings(price_always_to_manager=True)
+    hits = evaluate(TriggerSignals(intent="pricing", price_quoted=True), cfg)
+    assert [h.code for h in hits] == [T.PRICE_OR_CONTRACT_ASKED]

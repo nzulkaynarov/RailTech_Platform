@@ -1,11 +1,13 @@
 # Eval-gate (SPEC §12, PLAN Фаза 7): golden-набор диалога + квалификатора на реальных
-# моделях через LiteLLM. Запускается, только если менялось то, что влияет на ответы ИИ.
-# Без секретов моделей (форк, не настроено) job завершается с предупреждением — не красный.
+# моделях через LiteLLM. ПЛАТНО (~150 вызовов): запускается только вручную — меткой
+# `run-evals` на PR (снимается после прогона) или кнопкой Run workflow. На обычный пуш
+# в PR с изменениями ИИ — только напоминание, без вызовов моделей. Потолок — EVAL_MAX_USD.
 
 name: Eval gate
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
     paths:
       - backend/prompts/**
       - backend/app/agents/**
@@ -19,7 +21,8 @@ on:
 
 concurrency:
   group: eval-gate-${{ github.ref }}
-  cancel-in-progress: true
+  # Не обрывать платный прогон на середине: деньги потрачены, отчёта нет.
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -58,16 +61,22 @@ jobs:
       LITELLM_BASE_URL: http://localhost:4000
       DOCLING_URL: http://localhost:5001
       EVAL_REPORT_DIR: ${{ github.workspace }}/eval-reports
+      EVAL_MAX_USD: "2"
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
       LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
       LANGFUSE_HOST: ${{ secrets.LANGFUSE_HOST || 'http://localhost:3000' }}
     steps:
-      - name: Секреты моделей заданы?
+      - name: Секреты моделей заданы и запуск разрешён?
         id: secrets
+        env:
+          REQUESTED: ${{ github.event_name == 'workflow_dispatch' || (github.event.action == 'labeled' && github.event.label.name == 'run-evals') }}
         run: |
-          if [ -z "$ANTHROPIC_API_KEY" ] || [ -z "$GEMINI_API_KEY" ]; then
+          if [ "$REQUESTED" != "true" ]; then
+            echo "::notice::Evals платные и не запускались. Нужен прогон — добавьте PR метку run-evals (docs/runbooks/eval-gate.md)."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          elif [ -z "$ANTHROPIC_API_KEY" ] || [ -z "$GEMINI_API_KEY" ]; then
             echo "::warning::ANTHROPIC_API_KEY/GEMINI_API_KEY не заданы — eval-gate пропущен (docs/runbooks/eval-gate.md)"
             echo "ready=false" >> "$GITHUB_OUTPUT"
           else
@@ -145,6 +154,14 @@ jobs:
             } else {
               await github.rest.issues.createComment({ owner, repo, issue_number, body });
             }
+      - name: Снять метку run-evals (повторный прогон — снова поставить метку)
+        if: always() && github.event.action == 'labeled' && github.event.label.name == 'run-evals'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            await github.rest.issues.removeLabel({
+              ...context.repo, issue_number: context.issue.number, name: "run-evals",
+            }).catch(() => {});
       - uses: actions/upload-artifact@v6
         if: always() && steps.secrets.outputs.ready == 'true'
         with:

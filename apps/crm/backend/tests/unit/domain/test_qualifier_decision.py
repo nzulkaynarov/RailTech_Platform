@@ -22,9 +22,7 @@ BASE = LeadState(
     product_interest=(),
     bot_turns_without_progress=0,
 )
-FACTS = TurnFacts(
-    kb_best_score=0.8, min_score=0.55, competitor_mentioned=False, known_products={"pos", "track"}
-)
+FACTS = TurnFacts(price_quoted=False, competitor_mentioned=False, known_products={"pos", "track"})
 
 
 def output(**overrides: Any) -> QualifierOutput:
@@ -108,7 +106,8 @@ def test_sticky_signals_survive_next_run() -> None:
     ("state_turns", "score_before", "out", "expected_turns"),
     [
         (2, 25, output(), 3),
-        (2, 25, output(proposed_stage="qualified"), 0),
+        # Модель «квалифицировала» без фактов — стадия не меняется, прогресса нет (ADR-0016).
+        (2, 25, output(proposed_stage="qualified"), 3),
         (2, 25, output(product_interest=["pos"]), 0),
         (0, 25, output(), 1),
     ],
@@ -125,13 +124,9 @@ def test_no_progress_counter(
     [
         (BASE, output(), FACTS, set()),
         (BASE, output(intent="request_contact"), FACTS, {TriggerCode.CALLBACK_REQUESTED}),
-        (
-            BASE,
-            output(intent="pricing"),
-            replace(FACTS, kb_best_score=0.3),
-            {TriggerCode.PRICE_OR_CONTRACT_ASKED},
-        ),
-        (BASE, output(intent="pricing"), FACTS, set()),
+        # Цену не назвали из базы — бот пообещал расчёт менеджера (ADR-0016).
+        (BASE, output(intent="pricing"), FACTS, {TriggerCode.PRICE_OR_CONTRACT_ASKED}),
+        (BASE, output(intent="pricing"), replace(FACTS, price_quoted=True), set()),
         (BASE, output(sentiment="negative"), FACTS, {TriggerCode.NEGATIVE_SENTIMENT}),
         (BASE, output(intent="complaint"), FACTS, {TriggerCode.COMPLAINT}),
         (
@@ -153,8 +148,8 @@ def test_no_progress_counter(
     ids=[
         "none",
         "contact",
-        "price-no-kb",
-        "price-in-kb",
+        "price-not-quoted",
+        "price-quoted",
         "negative",
         "complaint",
         "competitor",
@@ -178,3 +173,21 @@ def test_high_score_fires_only_on_crossing() -> None:
     )
     assert TriggerCode.HIGH_SCORE in codes(BASE, hot)
     assert TriggerCode.HIGH_SCORE not in codes(replace(BASE, score=80), hot)
+
+
+def test_model_cannot_qualify_without_facts_and_code_qualifies_by_facts() -> None:
+    """ADR-0016: «Квалифицирован» — по критериям, а не по предложению модели."""
+    bare = decide(replace(BASE, stage=S.NEW), output(proposed_stage="qualified"), FACTS, CFG)
+    assert bare.final_stage == Stage.ENGAGED
+    rich = decide(
+        BASE,
+        output(
+            proposed_stage="engaged",
+            need_summary="Интеграция касс",
+            product_interest=["pos"],
+            qualification={"timeline": "<3m"},
+        ),
+        FACTS,
+        CFG,
+    )
+    assert rich.final_stage == Stage.QUALIFIED

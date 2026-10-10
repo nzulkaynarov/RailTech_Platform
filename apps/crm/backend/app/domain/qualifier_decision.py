@@ -17,6 +17,12 @@ from app.domain.qualification import (
     merge_qualification,
     update_signals,
 )
+from app.domain.qualification_rules import (
+    LeadFacts,
+    QualificationCriteria,
+    is_qualified,
+    stage_for,
+)
 from app.domain.scoring import ScoreInputs, compute_score
 from app.domain.stage_machine import qualifier_path
 from app.domain.stages import Stage
@@ -38,8 +44,7 @@ class LeadState:
 
 @dataclass(frozen=True, slots=True)
 class TurnFacts:
-    kb_best_score: float | None
-    min_score: float
+    price_quoted: bool
     competitor_mentioned: bool
     known_products: Collection[str]
 
@@ -62,13 +67,30 @@ class QualifierDecision:
 
 
 def decide(
-    state: LeadState, output: QualifierOutput, facts: TurnFacts, cfg: TriggerSettings
+    state: LeadState,
+    output: QualifierOutput,
+    facts: TurnFacts,
+    cfg: TriggerSettings,
+    criteria: QualificationCriteria = QualificationCriteria(),  # noqa: B008 — frozen
 ) -> QualifierDecision:
     qualification = merge_qualification(state.qualification, output.qualification)
     signals = update_signals(state.signals, output, callback_requested=False)
     need = (output.need_summary or "").strip() or state.need_summary
     products = _products(state.product_interest, output.product_interest, facts.known_products)
-    path, rejected = qualifier_path(state.stage, Stage(output.proposed_stage))
+    # «Квалифицирован» — по критериям из настроек, а не по мнению модели (ADR-0016).
+    qualified = is_qualified(
+        LeadFacts(
+            need=bool(need),
+            product=bool(products),
+            timeline=qualification.timeline,
+            decision_role=qualification.decision_role,
+            budget=bool(qualification.budget_hint),
+            company=bool(qualification.company),
+        ),
+        criteria,
+    )
+    target = stage_for(Stage(output.proposed_stage), qualified)
+    path, rejected = qualifier_path(state.stage, target)
     score = compute_score(
         ScoreInputs(
             has_need=bool(need),
@@ -87,8 +109,7 @@ def decide(
         TriggerSignals(
             intent=output.intent,
             sentiment=output.sentiment,
-            kb_best_score=facts.kb_best_score,
-            min_score=facts.min_score,
+            price_quoted=facts.price_quoted,
             bot_turns_without_progress=turns if turns == cfg.no_progress_turns else 0,
             competitor_mentioned=facts.competitor_mentioned,
             score=score if crossed else 0,

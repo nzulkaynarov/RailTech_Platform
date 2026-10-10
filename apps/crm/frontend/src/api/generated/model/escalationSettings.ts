@@ -17,6 +17,7 @@ export interface EscalationSettings {
   kb_gap_streak?: number;
   /** @minimum 1 */
   no_progress_turns?: number;
+  price_always_to_manager?: boolean;
   /**
    * @minimum 0
    * @maximum 1

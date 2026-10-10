@@ -33,7 +33,8 @@ class QualifierCase(_Strict):
     stage: Stage = "engaged"
     score: int = 0
     bot_turns_without_progress: int = 0
-    kb_best_score: float | None = 0.8
+    # Бот назвал цену из базы в последнем ответе (domain/pricing.py, ADR-0016).
+    price_quoted: bool = False
     transcript: list[tuple[Literal["lead", "bot"], str]] = Field(min_length=1)
     expect: QExpect
 

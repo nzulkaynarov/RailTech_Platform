@@ -132,3 +132,31 @@ async def test_sample_dialogs_masks_pii(sessions: async_sessionmaker[AsyncSessio
     assert [t["role"] for t in item["dialog"]] == ["bot", "lead"]
     assert item["dialog"][1]["text"] == "Мой [number]"
     assert item["label"]["golden"] is False
+
+
+async def test_model_without_credits_alerts_and_resolves_only_on_probe(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    await configure(sessions, daily_usd=0.0)
+    problems: dict[str, str | None] = {
+        "dialog-model": "закончились кредиты",
+        "fallback-model": None,
+    }
+
+    async def litellm_ok() -> bool:
+        return True
+
+    async def models() -> dict[str, str | None]:
+        return dict(problems)
+
+    bot = FakeSender()
+    svc = MonitorService(
+        sessions, SettingsService(sessions, ttl_s=0), cast(Bot, bot), litellm_ok, models
+    )
+    hour = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
+
+    assert await svc.check(hour) == ["⚠️ Модель dialog-model: закончились кредиты"]
+    assert await svc.check(hour + timedelta(minutes=1)) == []  # не время пробы — без изменений
+    problems["dialog-model"] = None
+    assert await svc.check(hour + timedelta(minutes=15)) == []  # «в норме» только после пробы
+    assert await svc.check(hour + timedelta(minutes=60)) == ["✅ Модель dialog-model: в норме"]

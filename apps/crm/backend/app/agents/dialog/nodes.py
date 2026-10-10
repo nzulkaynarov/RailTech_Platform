@@ -15,6 +15,7 @@ from app.domain.business_hours import is_business_time
 from app.domain.dialog_policy import Action, DecisionInput, decide
 from app.domain.keywords import find_terms
 from app.domain.stages import OwnerMode, Stage
+from app.domain.text import limit_words
 from app.schemas.settings import AppSettings, Language
 
 logger = structlog.get_logger(__name__)
@@ -169,8 +170,10 @@ class DialogNodes:
             cost += final.cost_usd or 0.0
         else:
             final = first
+        # Лимит длины — гарантия кода, промпт лишь просит (модель иногда превышает).
+        reply = limit_words(final.text, self._settings.bot.max_words) if final.text else None
         return {
-            "reply": final.text or None,
+            "reply": reply,
             "llm": {**_llm_meta(final), "cost_usd": cost or None},
             "callback_requested": callback,
             "service_request": service,

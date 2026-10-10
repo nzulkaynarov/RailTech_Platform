@@ -40,3 +40,4 @@ class DialogResult:
     document: dict[str, Any] | None = None
     service_request: bool = False
     mode: str = "prospect"
+    price_quoted: bool = False

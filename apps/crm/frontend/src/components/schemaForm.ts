@@ -28,6 +28,7 @@ export type FieldKind =
   | "tags"
   | "number-tags"
   | "enum"
+  | "multi-enum"
   | "unknown";
 
 /** Подставить `$ref` и снять обёртку `anyOf: [X, null]`. */
@@ -55,6 +56,7 @@ export function kindOf(schema: JsonSchema): FieldKind {
   if (props) return "object";
   if (schema.enum) return "enum";
   if (schema.type === "array") {
+    if (schema.items?.enum) return "multi-enum";
     const item = schema.items?.type;
     return item === "integer" || item === "number" ? "number-tags" : "tags";
   }
