@@ -168,9 +168,8 @@ async def test_snooze_with_owner_is_for_owner_or_admin(
     assert refused.status_code == 403
     assert refused.json()["details"]["reason"] == "not_lead_owner"
     assert snooze(owner.email).status_code == 200
-    again = snooze(admin.email)  # уже отложено — открытой передачи нет
-    assert again.status_code == 409
-    assert again.json()["details"]["reason"] == "no_open_handoff"
+    assert snooze(admin.email).status_code == 200  # админ переносит срок отложенной передачи
+    assert snooze(other.email).status_code == 403
 
 
 async def test_lead_list_filters(
@@ -225,7 +224,7 @@ async def test_channel_post_then_edit_after_take(
     )
     assert await service.sync(escalation.id)
     edit = bot.edits[-1]
-    assert "✅ Взял: ch" in edit["text"]
+    assert "✅ Забрал: ch" in edit["text"]
     assert edit["reply_markup"] is None
 
 
