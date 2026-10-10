@@ -150,8 +150,7 @@ class ClientService:
                 raise NotFoundError("lead not found")
             if lead.stage not in (Stage.WON, Stage.CUSTOMER):
                 raise InvalidTransitionError(
-                    "close the deal (won) first",
-                    reason=Reason.TAKE_FIRST,
+                    "close the deal (won) first", reason=Reason.DEAL_NOT_CLOSED
                 )
             if lead.assigned_user_id not in (None, who.user_id) and not who.is_admin:
                 raise ForbiddenError(

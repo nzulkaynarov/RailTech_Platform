@@ -22,6 +22,7 @@ class Reason(StrEnum):
     INACTIVE_COLLEAGUE = "inactive_colleague"
     LEAD_TAKEN = "lead_taken"
     TAKE_FIRST = "take_first"
+    DEAL_NOT_CLOSED = "deal_not_closed"
     NOT_LEAD_OWNER = "not_lead_owner"
     ALREADY_WITH_BOT = "already_with_bot"
     NO_OPEN_HANDOFF = "no_open_handoff"

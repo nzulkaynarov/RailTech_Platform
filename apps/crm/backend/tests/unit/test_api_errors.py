@@ -146,6 +146,7 @@ def test_reason_values_are_a_stable_contract() -> None:
         "inactive_colleague",
         "lead_taken",
         "take_first",
+        "deal_not_closed",
         "not_lead_owner",
         "already_with_bot",
         "no_open_handoff",

@@ -40,7 +40,9 @@ async def test_hand_over_to_colleague_keeps_stage_and_tells_the_lead(
     me = login(client, owner.email, password)
     assert act(client, lead_id, "take", me).status_code == 200
 
-    assert act(client, lead_id, "assign", me, user_id=viewer.id).status_code == 422
+    refused = act(client, lead_id, "assign", me, user_id=viewer.id)
+    assert refused.status_code == 422
+    assert refused.json()["details"] == {"reason": "inactive_colleague", "field": "user_id"}
     assert act(client, lead_id, "assign", me, user_id=colleague.id).status_code == 200
 
     lead = await lead_row(sessions, lead_id)
@@ -143,4 +145,6 @@ async def test_client_fields_can_be_cleared_and_bad_owner_is_rejected(
     assert client.patch(url, json={"inn": None}, headers=me).status_code == 200
     assert client.get(url, headers=me).json()["inn"] is None
     assert client.patch(url, json={"owner_user_id": 999999}, headers=me).status_code == 422
-    assert client.get("/api/v1/leads/999999/messages", headers=me).status_code == 404
+    missing = client.get("/api/v1/leads/999999/messages", headers=me)
+    assert missing.status_code == 404
+    assert missing.json()["code"] == "not_found"  # единый формат, не «HTTP 404»

@@ -23,6 +23,7 @@ from app.domain.errors import (
     Reason,
     ValidationFailedError,
 )
+from app.domain.lead_access import may_snooze
 from app.domain.stage_machine import stage_before_handoff
 from app.domain.stages import OwnerMode, Stage, TransitionSource
 from app.models.leads import Lead, LeadNote
@@ -184,6 +185,12 @@ class LeadService:
             )
         async with self._sessions() as session, session.begin():
             lead = await _lead(session, lead_id)
+            if not may_snooze(
+                assigned_user_id=lead.assigned_user_id, user_id=who.user_id, is_admin=who.is_admin
+            ):
+                raise ForbiddenError(
+                    "only the lead owner or an admin can snooze", reason=Reason.NOT_LEAD_OWNER
+                )
             escalation = await _active_escalation(session, lead_id)
             if escalation is None or escalation.status not in OPEN_STATUSES:
                 raise ConflictError(

@@ -169,8 +169,9 @@ async def test_service_request_via_tool(
     async with sessions() as session:
         escalation = (await session.scalars(select(Escalation))).one()
     assert (escalation.status, escalation.outcome) == ("closed", "service_request_closed")
-    with pytest.raises(ConflictError):
+    with pytest.raises(ConflictError) as closed:
         await clients.close_service_request(who, request.id, "ещё раз")
+    assert closed.value.details["reason"] == "service_request_closed"
 
 
 async def test_unverified_identity_stays_prospect(
@@ -205,6 +206,7 @@ async def test_crm_link_telegram_and_make_customer(
             headers=headers,
         )
         assert early.status_code == 409
+        assert early.json()["details"]["reason"] == "deal_not_closed"
         client.post(f"/api/v1/leads/{lead_id}/actions/close_won", json={}, headers=headers)
         made = client.post(
             f"/api/v1/leads/{lead_id}/actions/make_customer",
