@@ -120,3 +120,18 @@ h2.section-title.ant-typography {
   flex: 1 1 200px;
   min-width: 0;
 }
+.cell-error {
+  max-width: 200px;
+}
+.search-language {
+  width: 200px;
+  max-width: 100%;
+}
+.m-0 {
+  margin: 0;
+}
+.row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ant-margin-xs);
+}
