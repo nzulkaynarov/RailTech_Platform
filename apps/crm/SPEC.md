@@ -476,7 +476,7 @@ class QualifierOutput(BaseModel):
 
 ### 10.3. Технические требования к фронту
 
-Refine с кастомным `dataProvider` (REST `/api/v1`), `authProvider` (cookie JWT), `accessControlProvider` (матрица прав приходит с бэка `GET /api/v1/me/permissions`, фронт только скрывает/блокирует; истина — на бэке). Клиент API генерируется из OpenAPI (orval) в CI; ручные типы запрещены. Адаптивная вёрстка до 390 px (менеджер с телефона может читать и отвечать).
+Refine с кастомным `dataProvider` (REST `/api/v1`), `authProvider` (cookie JWT), `accessControlProvider` (матрица прав приходит с бэка `GET /api/v1/me/permissions`, фронт только скрывает/блокирует; истина — на бэке). Клиент API генерируется из OpenAPI (orval) в CI; ручные типы запрещены. Ошибки API — единое тело `ErrorOut {code, message, details}` для доменных ошибок, валидации запроса и 404: `code` — класс ошибки, `details.reason` — стабильный подкод случая (`Reason`, ADR-0017), `details.field` — поле формы; текст пользователю фронт берёт из i18n по `details.reason ?? code`, `message` — только для логов. Адаптивная вёрстка до 390 px (менеджер с телефона может читать и отвечать).
 
 ---
 

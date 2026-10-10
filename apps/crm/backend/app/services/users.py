@@ -16,6 +16,7 @@ from app.domain.errors import (
     ConflictError,
     LastAdminError,
     NotFoundError,
+    Reason,
     ValidationFailedError,
 )
 from app.models.auth import ROLES, RefreshToken, User
@@ -90,7 +91,9 @@ class UserService:
             try:
                 await session.flush()
             except IntegrityError as exc:
-                raise ConflictError("email already registered", field="email") from exc
+                raise ConflictError(
+                    "email already registered", reason=Reason.EMAIL_TAKEN, field="email"
+                ) from exc
             await repo.set_roles(session, user.id, roles, actor.user_id)
             view = _view(user, sorted(roles))
             await audit.record(session, actor, "user.create", "user", user.id, after=_audit(view))
@@ -123,7 +126,9 @@ class UserService:
             try:
                 await session.flush()
             except IntegrityError as exc:
-                raise ConflictError("telegram already linked", field="tg_user_id") from exc
+                raise ConflictError(
+                    "telegram already linked", reason=Reason.TELEGRAM_TAKEN, field="tg_user_id"
+                ) from exc
             after = _view(user, roles)
             await audit.record(
                 session,
@@ -156,13 +161,23 @@ class UserService:
             if user is None:
                 raise NotFoundError("user not found")
             if not verify_password(user.password_hash, current):
-                raise ValidationFailedError("current password is wrong", field="current_password")
+                raise ValidationFailedError(
+                    "current password is wrong",
+                    reason=Reason.WRONG_PASSWORD,
+                    field="current_password",
+                )
             if verify_password(user.password_hash, new):
-                raise ValidationFailedError("new password must differ", field="new_password")
+                raise ValidationFailedError(
+                    "new password must differ",
+                    reason=Reason.SAME_PASSWORD,
+                    field="new_password",
+                )
             try:
                 validate_new_password(new, email=user.email)
             except WeakPasswordError as exc:
-                raise ValidationFailedError(str(exc), field="new_password") from exc
+                raise ValidationFailedError(
+                    str(exc), reason=Reason.WEAK_PASSWORD, field="new_password"
+                ) from exc
             user.password_hash = hash_password(new)
             user.must_change_password = False
             await audit.record(session, actor, "user.change_password", "user", user_id)
@@ -186,7 +201,9 @@ class UserService:
             try:
                 validate_new_password(password, email=email)
             except WeakPasswordError as exc:
-                raise ValidationFailedError(str(exc), field="password") from exc
+                raise ValidationFailedError(
+                    str(exc), reason=Reason.WEAK_PASSWORD, field="password"
+                ) from exc
         async with self._sessions() as session, session.begin():
             user = await repo.by_email(session, email, for_update=True)
             if user is None:
@@ -234,10 +251,13 @@ async def _hand_over_work(
         return
     target = await repo.get(session, to_user_id)
     roles = await repo.roles_of(session, to_user_id) if target else []
-    if target is None or to_user_id == user_id or not target.is_active:
-        raise ValidationFailedError("choose an active colleague", field="transfer_to_user_id")
-    if not {"manager", "admin"} & set(roles):
-        raise ValidationFailedError("choose an active colleague", field="transfer_to_user_id")
+    inactive = target is None or to_user_id == user_id or not target.is_active
+    if inactive or not {"manager", "admin"} & set(roles):
+        raise ValidationFailedError(
+            "choose an active colleague",
+            reason=Reason.INACTIVE_COLLEAGUE,
+            field="transfer_to_user_id",
+        )
     await session.execute(
         update(Lead)
         .where(Lead.assigned_user_id == user_id, Lead.erased_at.is_(None))
@@ -273,7 +293,7 @@ def _check_roles(roles: Sequence[str]) -> None:
 def _email(email: str) -> str:
     value = email.strip().lower()
     if "@" not in value or len(value) > 255:
-        raise ValidationFailedError("invalid email", field="email")
+        raise ValidationFailedError("invalid email", reason=Reason.INVALID_EMAIL, field="email")
     return value
 
 

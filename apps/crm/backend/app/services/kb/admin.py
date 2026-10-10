@@ -10,8 +10,9 @@ from dataclasses import dataclass
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.domain.errors import ConflictError, NotFoundError, ValidationFailedError
+from app.domain.errors import ConflictError, NotFoundError, Reason, ValidationFailedError
 from app.domain.language import Language
+from app.domain.uploads import check_file_size
 from app.models.kb import KbChunk, KbDocument, KbGap, Product
 from app.repositories import kb as repo
 from app.security import audit
@@ -117,7 +118,7 @@ class KbAdminService:
         async with self._sessions() as session, session.begin():
             document = await _document(session, document_id)
             if document.ingest_status == "processing":
-                raise ConflictError("document is being indexed")
+                raise ConflictError("document is being indexed", reason=Reason.DOCUMENT_INDEXING)
             document.ingest_status, document.ingest_error = "pending", None
             await audit.record(session, actor, "kb.reingest", "kb_document", document_id)
         await self._enqueue(document_id)
@@ -215,9 +216,8 @@ async def _gap(session: AsyncSession, gap_id: int) -> KbGap:
 
 def _check_file(filename: str, size: int) -> None:
     if not filename.lower().endswith(ALLOWED_SUFFIXES):
-        raise ValidationFailedError("unsupported file type", field="file")
-    if size == 0 or size > MAX_UPLOAD_BYTES:
-        raise ValidationFailedError("file must be 1 byte .. 25 MB", field="file")
+        raise ValidationFailedError("unsupported file type", reason=Reason.FILE_TYPE, field="file")
+    check_file_size(size, MAX_UPLOAD_BYTES)
 
 
 def _doc_audit(document: KbDocument) -> dict[str, object]:

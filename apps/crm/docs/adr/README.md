@@ -21,3 +21,4 @@
 | [0014](0014-model-budget-levels.md) | Бюджет моделей в три уровня; нагрузочный smoke в процессе | proposed | 8 |
 | [0015](0015-lifecycle-without-dead-ends.md) | Жизненный цикл без тупиков: возврат из «Отказа», повторная сделка, бот не молчит в ожидании | accepted | 9 |
 | [0016](0016-configurable-qualification-and-price-handoff.md) | Квалификацию и передачу по цене решает код по настраиваемым правилам | accepted | 9 |
+| [0017](0017-api-error-reasons.md) | Подкод `details.reason` и поле `details.field` в ошибках API; единый формат для всех ошибок | proposed | 9 |

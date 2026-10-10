@@ -11,6 +11,7 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.errors import NotFoundError, ValidationFailedError
+from app.domain.uploads import check_file_size
 from app.models.clients import Client, Document
 from app.repositories import documents as repo
 from app.security import audit
@@ -61,8 +62,7 @@ class DocumentService:
     async def upload(self, who: Principal, doc: NewDocument) -> int:
         if doc.type not in TYPES:
             raise ValidationFailedError("unknown document type", field="type")
-        if not doc.content or len(doc.content) > MAX_BYTES:
-            raise ValidationFailedError("file must be 1 byte .. 25 MB", field="file")
+        check_file_size(len(doc.content), MAX_BYTES)
         mime = doc.mime or mimetypes.guess_type(doc.filename)[0] or "application/octet-stream"
         name = _safe_name(doc.filename)
         async with self._sessions() as session, session.begin():

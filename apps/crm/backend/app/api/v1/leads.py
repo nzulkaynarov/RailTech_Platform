@@ -3,10 +3,11 @@
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import ContainerDep, require
+from app.domain.errors import NotFoundError
 from app.models.leads import Lead, Message
 from app.models.qualification import Escalation
 from app.repositories import crm
@@ -92,7 +93,7 @@ async def _existing_lead(session: AsyncSession, lead_id: int) -> Lead:
     """404 для несуществующего или обезличенного лида, а не пустой список."""
     lead = await leads_repo.get_lead(session, lead_id)
     if lead is None or lead.erased_at is not None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "lead not found")
+        raise NotFoundError("lead not found")
     return lead
 
 
@@ -163,7 +164,7 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
     async with container.session_factory() as session:
         lead = await leads_repo.get_lead(session, lead_id)
         if lead is None or lead.erased_at is not None:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, "lead not found")
+            raise NotFoundError("lead not found")
         escalation = (await crm.active_escalations(session, [lead_id])).get(lead_id)
         username = await crm.tg_username(session, lead_id)
         names = await crm.user_names(session, [lead])
