@@ -14,7 +14,7 @@ QUEUE_LIMIT: Final = 100
 BUDGET_WARN_SHARE: Final = 0.8
 LITELLM_GRACE: Final = timedelta(minutes=2)
 REPEAT_AFTER: Final = timedelta(hours=6)
-MODEL_PROBE_EVERY_MIN: Final = 15
+MODEL_PROBE_MINUTE: Final = 0  # раз в час: каждая проба — платный запрос
 _BILLING: Final = (
     "credit balance",
     "insufficient",
@@ -131,8 +131,8 @@ def message(check: Check, decision: Decision) -> str:
 
 
 def model_probe_due(now: datetime) -> bool:
-    """Модели проверяются запросом раз в 15 минут (монитор работает каждую минуту)."""
-    return now.minute % MODEL_PROBE_EVERY_MIN == 0
+    """Модели проверяются запросом раз в час (монитор работает каждую минуту)."""
+    return now.minute == MODEL_PROBE_MINUTE
 
 
 def provider_problem(status: int | None, text: str) -> str | None:

@@ -158,5 +158,5 @@ async def test_model_without_credits_alerts_and_resolves_only_on_probe(
     assert await svc.check(hour) == ["⚠️ Модель dialog-model: закончились кредиты"]
     assert await svc.check(hour + timedelta(minutes=1)) == []  # не время пробы — без изменений
     problems["dialog-model"] = None
-    assert await svc.check(hour + timedelta(minutes=7)) == []  # «в норме» только после пробы
-    assert await svc.check(hour + timedelta(minutes=15)) == ["✅ Модель dialog-model: в норме"]
+    assert await svc.check(hour + timedelta(minutes=15)) == []  # «в норме» только после пробы
+    assert await svc.check(hour + timedelta(minutes=60)) == ["✅ Модель dialog-model: в норме"]

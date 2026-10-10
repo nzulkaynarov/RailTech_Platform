@@ -149,7 +149,7 @@ def test_provider_problem(status: int | None, text: str, kind: str | None) -> No
         assert kind in problem
 
 
-def test_model_probe_due_every_15_minutes() -> None:
+def test_model_probe_due_hourly() -> None:
     assert model_probe_due(NOW)  # 10:00
-    assert not model_probe_due(NOW + MIN)
-    assert model_probe_due(NOW + 15 * MIN)
+    assert not model_probe_due(NOW + 15 * MIN)
+    assert model_probe_due(NOW + 60 * MIN)

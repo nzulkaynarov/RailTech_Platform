@@ -56,13 +56,27 @@ test-e2e: ## E2E-тесты (появляются с Фазы 4)
 	cd $(BACKEND) && uv run pytest -m e2e
 
 .PHONY: eval
-eval: ## Evals агента на golden (dev-стенд: ключи моделей + make kb-demo)
+eval: ## ПЛАТНО (реальные модели, ~150 вызовов): полный golden. make eval CONFIRM=yes [EVAL_MAX_USD=1]
+	@$(MAKE) --no-print-directory _paid-check
 	mkdir -p backend/evals/reports
-	$(COMPOSE) run --rm -v "$(CURDIR)/backend/evals/reports:/app/evals/reports" worker pytest -m eval evals -p no:cacheprovider -s
+	$(COMPOSE) run --rm -e EVAL_MAX_USD=$(or $(EVAL_MAX_USD),1) -v "$(CURDIR)/backend/evals/reports:/app/evals/reports" worker pytest -m eval evals -p no:cacheprovider -s
+
+.PHONY: eval-quick
+eval-quick: ## ПЛАТНО, ~20 вызовов: 12 ключевых кейсов. make eval-quick CONFIRM=yes [EVAL_MAX_USD=0.3]
+	@$(MAKE) --no-print-directory _paid-check
+	mkdir -p backend/evals/reports
+	$(COMPOSE) run --rm -e EVAL_MAX_USD=$(or $(EVAL_MAX_USD),0.3) -e EVAL_CASES=$(QUICK_CASES) -v "$(CURDIR)/backend/evals/reports:/app/evals/reports" worker pytest -m eval evals -p no:cacheprovider -s
+
+QUICK_CASES := kb-ru-pos-timeline,kb-uz-track-install,kb-en-track-packages,not-in-kb-ru-weather,injection-ru-inside-kb-question,human-ru-operator,customer-contract-july-ru,customer-change-terms,price-without-kb,price-quoted-from-price-list,researcher-early,info-geography
+
+.PHONY: _paid-check
+_paid-check:
+	@test "$(CONFIRM)" = "yes" || { echo "⚠️  Цель вызывает ПЛАТНЫЕ модели (ключи из .env). Подтвердите: CONFIRM=yes. Потолок расходов — EVAL_MAX_USD."; exit 1; }
 
 .PHONY: promptfoo
 PROMPTFOO_VERSION := 0.124.1
-promptfoo: ## Матрица промпт × модель через LiteLLM dev-стенда (LITELLM_API_KEY = LITELLM_MASTER_KEY)
+promptfoo: ## ПЛАТНО: матрица промпт × модель через LiteLLM dev-стенда. CONFIRM=yes, LITELLM_API_KEY = LITELLM_MASTER_KEY
+	@$(MAKE) --no-print-directory _paid-check
 	@test -n "$$LITELLM_API_KEY" || { echo "Задайте LITELLM_API_KEY (значение LITELLM_MASTER_KEY из .env)"; exit 1; }
 	cd $(BACKEND) && PYTHONPATH=. PROMPTFOO_PYTHON="$$(uv run python -c 'import sys; print(sys.executable)')" \
 		PROMPTFOO_LITELLM_URL="$${PROMPTFOO_LITELLM_URL:-http://localhost:4000/v1}" \

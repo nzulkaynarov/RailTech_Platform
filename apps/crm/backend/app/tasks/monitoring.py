@@ -26,7 +26,8 @@ def build_monitor(c: Container) -> MonitorService:
     )
 
 
-PROBED_ALIASES = ("dialog-model", "qualifier-model", "fallback-model")
+# По одной модели на провайдера: кредиты/ключ — общие для всех моделей провайдера.
+PROBED_ALIASES = ("dialog-model", "fallback-model")
 
 
 def _model_probe(c: Container) -> ModelProbe:

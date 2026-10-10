@@ -22,7 +22,7 @@ from app.domain.stages import Stage
 from app.domain.triggers import evaluate
 from app.integrations.litellm import make_client
 from app.schemas.settings import AppSettings, TermsSettings
-from evals import report
+from evals import budget, report
 from evals.qualifier_cases import QualifierCase, load_products, load_qualifier_cases, turn_signals
 
 pytestmark = pytest.mark.eval
@@ -30,7 +30,7 @@ pytestmark = pytest.mark.eval
 # иначе pytest-asyncio 1.x даёт ScopeMismatch / «Event loop is closed».
 MODULE_LOOP = pytest.mark.asyncio(loop_scope="module")
 
-CASES = load_qualifier_cases()
+CASES = budget.selected(load_qualifier_cases())
 PRODUCTS = load_products()
 CFG = AppSettings(competitors=TermsSettings(terms=["Glonass-Track", "Wialon"]))
 # Пороги релиза SPEC §12 (eval-gate в CI, Фаза 7).
@@ -69,7 +69,9 @@ async def test_qualifier_case(case: QualifierCase, agent: QualifierAgent) -> Non
         card={"stage": case.stage, "score": case.score},
         transcript=list(case.transcript),
     )
+    budget.guard()
     result = await agent.run(data)
+    budget.add(result.cost_usd)
     state = qd.LeadState(
         stage=Stage(case.stage),
         score=case.score,
@@ -104,6 +106,7 @@ def _terms(text: str) -> list[str]:
 
 
 def test_zz_qualifier_summary_gate() -> None:
+    assert not budget.exhausted(), "лимит расходов исчерпан — прогон неполный (EVAL_MAX_USD)"
     tp = sum(r.escalated and r.expected_escalate for r in RESULTS)
     fp = sum(r.escalated and not r.expected_escalate for r in RESULTS)
     fn = sum(not r.escalated and r.expected_escalate for r in RESULTS)
