@@ -4,6 +4,7 @@ import { labelsRu } from "../labels.ru";
 export const clients = {
   clients: {
     create: "Новый клиент",
+    createConfirm: "Создать клиента",
     created: "Клиент «{name}» создан",
     name: "Название",
     inn: "ИНН",

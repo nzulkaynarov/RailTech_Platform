@@ -62,7 +62,7 @@ function CreateClientDialog({ open, onClose }: { open: boolean; onClose: () => v
       onOk={() => {
         form.submit();
       }}
-      okText={t.clients.create}
+      okText={t.clients.createConfirm}
       cancelText={t.actions.cancel}
     >
       <Form
