@@ -31,12 +31,13 @@
 
 /* Текст preset-тегов: antd в режиме cssVar не даёт переопределить палитру (green7 и т. п.),
    значения — из app/theme.ts (TAG_TEXT), контраст ≥ 4.5:1 (WCAG 1.4.3). */
-.ant-tag-green {
+/* Специфичность 0,2,0: стили antd (cssinjs) подключаются позже этого файла. */
+.ant-tag.ant-tag-green {
   color: var(--crm-tag-green);
 }
-.ant-tag-cyan {
+.ant-tag.ant-tag-cyan {
   color: var(--crm-tag-cyan);
 }
-.ant-tag-orange {
+.ant-tag.ant-tag-orange {
   color: var(--crm-tag-orange);
 }
