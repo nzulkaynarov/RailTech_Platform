@@ -1,7 +1,7 @@
 import { theme } from "antd";
 import { describe, expect, it } from "vitest";
 
-import { appTheme } from "./theme";
+import { TAG_TEXT, appTheme } from "./theme";
 
 /** WCAG 2.1: относительная яркость и контраст; полупрозрачный цвет смешивается с фоном. */
 type Rgb = [number, number, number];
@@ -78,14 +78,14 @@ const pairs: [string, string, string][] = [
   ["warning on warningBg", tk.colorWarningText, tk.colorWarningBg],
   ["warning on container", tk.colorWarning, tk.colorBgContainer],
   ["info on infoBg", tk.colorInfoText, tk.colorInfoBg],
-  // Текст preset-тега — токен `<цвет>6` (antd 5, presetCmp), фон — `<цвет>1`.
-  ["tag green", tk.green6, tk.green1],
-  ["tag cyan", tk.cyan6, tk.cyan1],
-  ["tag orange", tk.orange6, tk.orange1],
-  ["tag red", tk.red6, tk.red1],
-  ["tag blue", tk.blue6, tk.blue1],
-  ["tag geekblue", tk.geekblue6, tk.geekblue1],
-  ["tag purple", tk.purple6, tk.purple1],
+  // Текст preset-тега — `<цвет>7` (antd genPresetColor), фон — `<цвет>1`; green/cyan/orange — из TAG_TEXT.
+  ["tag green", TAG_TEXT["green"] ?? "", tk.green1],
+  ["tag cyan", TAG_TEXT["cyan"] ?? "", tk.cyan1],
+  ["tag orange", TAG_TEXT["orange"] ?? "", tk.orange1],
+  ["tag red", tk.red7, tk.red1],
+  ["tag blue", tk.blue7, tk.blue1],
+  ["tag geekblue", tk.geekblue7, tk.geekblue1],
+  ["tag purple", tk.purple7, tk.purple1],
   ["default tag", tk.colorText, opaque(tk.colorFillQuaternary)],
 ];
 

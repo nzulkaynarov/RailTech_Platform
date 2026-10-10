@@ -4,7 +4,8 @@ import type { ThemeConfig } from "antd";
  * Тема CRM: токены, проходящие WCAG 2.1 AA 4.5:1 (дизайн-аудит 2026-10-11, отчёт 4,
  * таблица контраста). `cssVar` даёт переменные `--ant-*` для собственных CSS-файлов.
  * Явные `*Bg/*Border` обязательны: из тёмного сид-цвета antd генерирует серый фон,
- * и контраст падает (green6/cyan6/orange6 — текст preset-тегов (antd берёт `<цвет>6`) `Tag color="green"` и т. п.).
+ * и контраст падает. Палитры (`green7`, `cyan7`…) в режиме `cssVar` antd 5 не переопределяет —
+ * текст preset-тегов задаётся через `TAG_TEXT` (CSS-переменные `--crm-tag-*`, см. `applyTagColors`).
  */
 const reduceMotion =
   typeof window !== "undefined" &&
@@ -38,11 +39,23 @@ export const appTheme: ThemeConfig = {
     colorWarning: "#874d00",
     colorWarningBg: "#fffbe6",
     colorWarningBorder: "#ffe58f",
-    green6: "#237804",
-    cyan6: "#006d75",
-    orange6: "#ad4e00",
-    red6: "#cf1322",
-    blue6: "#0958d9",
     motion: !reduceMotion,
   },
 };
+
+/**
+ * Текст preset-тегов `Tag color="green|cyan|orange"` (antd: `<цвет>7`) — по умолчанию 3.4:1 на
+ * фоне `<цвет>1`. Значения с контрастом ≥ 4.5:1; остальные preset-цвета проходят и так.
+ */
+export const TAG_TEXT: Record<string, string> = {
+  green: "#237804",
+  cyan: "#006d75",
+  orange: "#874d00",
+};
+
+/** Выставляет `--crm-tag-<цвет>` на `<html>`; читает их `styles/a11y.css`. */
+export function applyTagColors(root: HTMLElement = document.documentElement): void {
+  for (const [color, value] of Object.entries(TAG_TEXT)) {
+    root.style.setProperty(`--crm-tag-${color}`, value);
+  }
+}

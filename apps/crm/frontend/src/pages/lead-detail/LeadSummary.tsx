@@ -7,10 +7,12 @@ import { EscalationReason } from "../../components/EscalationReason";
 import { SectionError } from "../../components/PageState";
 import { LangTag } from "../../components/StageBadge";
 import { productLabel, QUALIFICATION_KEYS, qualificationText } from "../../domain/labels";
+import { useProductNames } from "../../hooks/useProductNames";
 import { t } from "../../i18n/ru";
 import { formatDate, formatWhen } from "../../lib/time";
 
 function Qualification({ lead }: { lead: LeadDetail }) {
+  const productName = useProductNames();
   const q = lead.qualification as Record<string, unknown>;
   const keys = QUALIFICATION_KEYS.filter((k) => q[k]);
   if (!keys.length && !lead.product_interest.length) return null;
@@ -23,7 +25,7 @@ function Qualification({ lead }: { lead: LeadDetail }) {
         ))}
         {lead.product_interest.map((p) => (
           <Tag color={productLabel(p).color} key={p}>
-            {productLabel(p).label}
+            {productName(p)}
           </Tag>
         ))}
       </div>

@@ -8,10 +8,12 @@ import { useEventStream } from "../hooks/useEventStream";
 import { t } from "../i18n/ru";
 
 /** Состояние SSE-соединения текстом, а не только цветом точки (WCAG 1.4.1, 4.1.3). */
-export function ConnectionStatus({ live }: { live: boolean }) {
+export function ConnectionStatus({ live, compact = false }: { live: boolean; compact?: boolean }) {
+  const text = live ? t.common.live : t.common.offline;
   return (
     <span role="status" title={live ? t.common.liveHint : t.common.offlineHint}>
-      <Badge status={live ? "success" : "warning"} text={live ? t.common.live : t.common.offline} />
+      <Badge status={live ? "success" : "warning"} text={compact ? null : text} />
+      {compact ? <span className="sr-only">{text}</span> : null}
     </span>
   );
 }
@@ -28,6 +30,8 @@ export function Header() {
   const { setMobileSiderOpen } = useThemedLayoutContext();
   // Та же граница, что у ThemedSider: меню-панель, пока брейкпоинт `lg` не достигнут.
   const drawerMenu = screens.lg === false;
+  // На телефоне в шапке только самое нужное: статус точкой, переключатель режима; имя — в профиле.
+  const phone = screens.sm === false;
   return (
     <Layout.Header
       style={{
@@ -51,10 +55,10 @@ export function Header() {
       ) : (
         <span />
       )}
-      <Space wrap>
-        <ConnectionStatus live={live} />
+      <Space size="small">
+        <ConnectionStatus live={live} compact={phone} />
         <ModeSwitch />
-        <Typography.Text>{identity?.name}</Typography.Text>
+        {phone ? null : <Typography.Text>{identity?.name}</Typography.Text>}
       </Space>
     </Layout.Header>
   );

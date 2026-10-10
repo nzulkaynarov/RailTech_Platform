@@ -152,7 +152,7 @@ export const core = {
     clients: "Клиенты",
     dashboard: "Дашборд",
     kb: "База знаний",
-    gaps: "Пробелы базы знаний",
+    gaps: "Пробелы знаний",
     settings: "Настройки",
     audit: "Аудит",
     users: "Пользователи",
