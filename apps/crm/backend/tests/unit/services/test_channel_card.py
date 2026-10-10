@@ -29,10 +29,10 @@ CARD = CardData(
 def test_render_matches_spec_layout() -> None:
     text = render(CARD)
     assert text.splitlines()[0].startswith(
-        "🔥 <b>Лид #124</b> · Азиз &lt;script&gt; · RU · Score 75"
+        "🔥 <b>Лид #124</b> · Азиз &lt;script&gt; · RU · Оценка 75 · Квалифицирован"
     )
-    assert "Интерес: pos-integration · Срок: &lt;3 мес · Роль: ЛПР" in text
-    assert "Почему: спросил цену/условия — нет в базе; просит звонок" in text
+    assert "Интерес: pos-integration · Срок: до 3 мес. · Роль: ЛПР" in text
+    assert "Почему: Цена/условия — нет в базе; Просит звонок" in text
     assert "Рекомендация: позвонить сегодня" in text
     assert "Последнее: 👤 «Ок, пусть позвонят, лучше после 15:00»" in text
     assert "CRM:" not in text
@@ -43,12 +43,21 @@ def test_taken_card_shows_manager_and_local_time() -> None:
     taken = replace(
         CARD, status="taken", taken_by="Дилшод", taken_at=datetime(2026, 10, 8, 9, 32, tzinfo=UTC)
     )
-    assert "✅ Взял: Дилшод · 14:32" in render(taken)
+    assert "✅ Забрал: Дилшод · 14:32" in render(taken)
     assert not can_take(taken)
 
 
 def test_overdue_and_http_link() -> None:
     card = replace(CARD, sla_overdue=True, crm_url="http://localhost/leads/124")
     text = render(card)
-    assert "⏰ <b>SLA просрочен</b>" in text
+    assert "⏰ <b>Срок реакции просрочен</b>" in text
     assert "CRM: http://localhost/leads/124" in text
+
+
+def test_stage_in_words_and_kb_gap_threshold_from_settings() -> None:
+    card = replace(CARD, stage="handoff", reason_codes=["kb_gap_streak"], kb_gap_streak=3)
+    text = render(card)
+    assert text.splitlines()[0].endswith("Оценка 75 · Передан")
+    assert "Почему: Бот не нашёл ответ 3 раза подряд" in text
+    assert "handoff" not in text
+    assert "Score" not in text

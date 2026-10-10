@@ -20,6 +20,7 @@ export interface LeadDetail {
   last_lead_msg_at: string | null;
   need_summary: string | null;
   notes_count: number;
+  open_service_request_id?: number | null;
   owner_mode: string;
   product_interest: string[];
   qualification: LeadDetailQualification;

@@ -11,7 +11,7 @@ ERASE_CONFIRM = "erase:confirm"
 ERASE_CANCEL = "erase:cancel"
 OFFER_HUMAN = "offer:human"
 OFFER_NO = "offer:no"
-LANGUAGE_LABELS: dict[Language, str] = {"ru": "Русский", "uz": "O'zbekcha", "en": "English"}
+LANGUAGE_LABELS: dict[Language, str] = {"ru": "Русский", "uz": "Oʻzbekcha", "en": "English"}
 
 
 def consent(settings: AppSettings, language: Language) -> InlineKeyboardMarkup:
@@ -43,7 +43,7 @@ def erase_confirm(settings: AppSettings, language: Language) -> InlineKeyboardMa
 
 
 def handoff_offer(settings: AppSettings, language: Language) -> InlineKeyboardMarkup:
-    """Под ответом «уточню у коллег»: передачу решает лид кнопкой, а не модель по тексту."""
+    """Под fallback «позвать менеджера?»: передачу решает лид кнопкой, а не модель по тексту."""
     texts = settings.texts
     row = [
         InlineKeyboardButton(text=texts.handoff_offer_yes.get(language), callback_data=OFFER_HUMAN),

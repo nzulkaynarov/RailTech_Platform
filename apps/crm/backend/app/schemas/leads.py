@@ -45,6 +45,8 @@ class LeadDetail(LeadOut):
     tg_username: str | None
     notes_count: int
     snoozed_until: datetime | None
+    # Открытый сервисный запрос лида или его клиента — ссылка из карточки (Q-017).
+    open_service_request_id: int | None = None
 
 
 class LeadPage(BaseModel):

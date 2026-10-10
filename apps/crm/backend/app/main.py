@@ -16,6 +16,7 @@ from app.config import Settings, get_settings
 from app.container import Container
 from app.integrations import litellm, s3
 from app.log import configure_logging
+from app.schemas.errors import ErrorOut
 from app.services.readiness import ReadinessService
 from app.tasks.lifespan import queue_lifespan
 
@@ -69,6 +70,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=lifespan,
         # operationId = имя функции роута → читаемые имена в клиенте orval.
         generate_unique_id_function=lambda route: route.name,
+        # Ошибки — единый формат `ErrorOut` (app/api/errors.py) вместо HTTPValidationError.
+        responses={422: {"model": ErrorOut, "description": "Ошибка валидации"}},
     )
     app.add_middleware(CorrelationIdMiddleware, header_name="X-Request-ID")
     app.include_router(health.router)
