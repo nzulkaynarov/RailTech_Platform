@@ -5,19 +5,15 @@ import { useState } from "react";
 import { adminKeys } from "../../api/adminQueries";
 import { updateClient } from "../../api/generated/crm";
 import type { ClientOut, ClientUpdate } from "../../api/generated/model";
-import { type ApiError, unwrap } from "../../api/http";
+import { unwrap } from "../../api/http";
 import { useTeam } from "../../api/queries";
-import { errorText, t } from "../../i18n/ru";
+import { useApiErrorToast } from "../../hooks/useApiErrorToast";
+import { t } from "../../i18n/ru";
 
-/** Карточка клиента: правка полей; пустое поле очищает значение (ИНН, сегмент, ответственный). */
-export function EditClient({ client }: { client: ClientOut }) {
-  const [open, setOpen] = useState(false);
-  const [form] = Form.useForm<ClientUpdate>();
-  const active = Form.useWatch("is_active", form);
-  const team = useTeam();
+function useSaveClient(client: ClientOut, onSaved: () => void) {
   const query = useQueryClient();
   const { message } = AntApp.useApp();
-  const save = useMutation({
+  return useMutation({
     mutationFn: async (values: ClientUpdate) =>
       unwrap(
         await updateClient(client.id, {
@@ -28,15 +24,24 @@ export function EditClient({ client }: { client: ClientOut }) {
           owner_user_id: values.owner_user_id ?? null,
         }),
       ),
-    onSuccess: () => {
-      setOpen(false);
-      void message.success(t.common.saved);
+    onSuccess: (_, values) => {
+      onSaved();
+      void message.success(t.clients.saved.replace("{name}", values.name ?? client.name));
       void query.invalidateQueries({ queryKey: adminKeys.client(client.id) });
       void query.invalidateQueries({ queryKey: ["clients"] });
     },
-    onError: (e) => {
-      void message.error(errorText((e as ApiError).code, e.message));
-    },
+    onError: useApiErrorToast(),
+  });
+}
+
+/** Карточка клиента: правка полей; пустое поле очищает значение (ИНН, сегмент, ответственный). */
+export function EditClient({ client }: { client: ClientOut }) {
+  const [open, setOpen] = useState(false);
+  const [form] = Form.useForm<ClientUpdate>();
+  const active = Form.useWatch("is_active", form);
+  const team = useTeam();
+  const save = useSaveClient(client, () => {
+    setOpen(false);
   });
   return (
     <>

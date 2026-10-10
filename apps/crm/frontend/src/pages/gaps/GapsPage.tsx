@@ -66,6 +66,41 @@ const draftOf = (gap: KbGapOut | null): Partial<ManualValues> =>
       }
     : {};
 
+type GapDialogsProps = {
+  creating: KbGapOut | null;
+  linking: KbGapOut | null;
+  m: ReturnType<typeof useGapActions>;
+  close: () => void;
+};
+
+function GapDialogs({ creating, linking, m, close }: GapDialogsProps) {
+  return (
+    <>
+      <ManualDialog
+        open={creating !== null}
+        saving={m.create.isPending}
+        initial={draftOf(creating)}
+        onCancel={() => {
+          close();
+        }}
+        onSubmit={(v) => {
+          if (creating) m.create.mutate({ ...v, gapId: creating.id });
+        }}
+      />
+      <LinkGapDialog
+        gap={linking}
+        saving={m.act.isPending}
+        onCancel={() => {
+          close();
+        }}
+        onLink={(gap, documentId) => {
+          m.act.mutate({ kind: "link", gap, documentId });
+        }}
+      />
+    </>
+  );
+}
+
 /** Пробелы KB (сценарий C4): вопросы без ответа → документ, привязка или «скрыть». */
 export function GapsPage() {
   const [status, setStatus] = useState<ListKbGapsStatus>("open");
@@ -73,7 +108,7 @@ export function GapsPage() {
   const confirmDanger = useConfirmDanger();
   const [creating, setCreating] = useState<KbGapOut | null>(null);
   const [linking, setLinking] = useState<KbGapOut | null>(null);
-  const { act, create } = useGapActions(() => {
+  const m = useGapActions(() => {
     setCreating(null);
     setLinking(null);
   });
@@ -83,7 +118,7 @@ export function GapsPage() {
       title: t.gaps.ignoreTitle,
       content: t.gaps.ignoreHint,
       okText: t.gaps.ignore,
-      onOk: () => act.mutateAsync({ kind: "ignore", gap }),
+      onOk: () => m.act.mutateAsync({ kind: "ignore", gap }),
     });
   };
 
@@ -110,29 +145,17 @@ export function GapsPage() {
           onLink={setLinking}
           onIgnore={ignore}
           onReopen={(gap) => {
-            act.mutate({ kind: "reopen", gap });
+            m.act.mutate({ kind: "reopen", gap });
           }}
         />
       </PageState>
-      <ManualDialog
-        open={creating !== null}
-        saving={create.isPending}
-        initial={draftOf(creating)}
-        onCancel={() => {
+      <GapDialogs
+        creating={creating}
+        linking={linking}
+        m={m}
+        close={() => {
           setCreating(null);
-        }}
-        onSubmit={(v) => {
-          if (creating) create.mutate({ ...v, gapId: creating.id });
-        }}
-      />
-      <LinkGapDialog
-        gap={linking}
-        saving={act.isPending}
-        onCancel={() => {
           setLinking(null);
-        }}
-        onLink={(gap, documentId) => {
-          act.mutate({ kind: "link", gap, documentId });
         }}
       />
     </PageBody>

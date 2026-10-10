@@ -40,6 +40,31 @@ function CreateButtons({ onOpen }: { onOpen: (dialog: Dialog) => void }) {
   );
 }
 
+type Mutations = ReturnType<typeof useKbMutations>;
+
+function CreateDialogs({ dialog, m, close }: { dialog: Dialog; m: Mutations; close: () => void }) {
+  return (
+    <>
+      <UploadDialog
+        open={dialog === "upload"}
+        saving={m.upload.isPending}
+        onCancel={close}
+        onSubmit={(v) => {
+          m.upload.mutate(v);
+        }}
+      />
+      <ManualDialog
+        open={dialog === "manual"}
+        saving={m.manual.isPending}
+        onCancel={close}
+        onSubmit={(v) => {
+          m.manual.mutate(v);
+        }}
+      />
+    </>
+  );
+}
+
 /** База знаний (admin, PLAN Фаза 5): документы, загрузка, индексация, фрагменты, тест поиска. */
 export function KbPage() {
   const query = useKbDocuments();
@@ -85,22 +110,7 @@ export function KbPage() {
           }}
         />
       </PageState>
-      <UploadDialog
-        open={dialog === "upload"}
-        saving={m.upload.isPending}
-        onCancel={close}
-        onSubmit={(v) => {
-          m.upload.mutate(v);
-        }}
-      />
-      <ManualDialog
-        open={dialog === "manual"}
-        saving={m.manual.isPending}
-        onCancel={close}
-        onSubmit={(v) => {
-          m.manual.mutate(v);
-        }}
-      />
+      <CreateDialogs dialog={dialog} m={m} close={close} />
       <KbChunksDrawer
         doc={chunksOf}
         onClose={() => {

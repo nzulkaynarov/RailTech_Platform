@@ -147,3 +147,9 @@ h2.section-title.ant-typography {
   width: 300px;
   max-width: 100%;
 }
+.self-start {
+  align-self: flex-start;
+}
+.link-by-id {
+  max-width: 420px;
+}
