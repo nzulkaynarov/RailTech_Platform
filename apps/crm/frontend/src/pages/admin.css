@@ -1,0 +1,108 @@
+/* Админские экраны: настройки, дашборд, таблицы-справочники. Токены — `--ant-*` (app/theme.ts). */
+.mb-16 {
+  margin-bottom: var(--ant-margin);
+}
+h2.section-title.ant-typography {
+  margin: 0 0 var(--ant-margin-xs);
+  font-size: var(--ant-font-size-heading-5);
+  line-height: var(--ant-line-height-heading-5);
+}
+
+/* Настройки: разделы слева, форма справа; на мобильном — одна колонка. */
+.settings-layout {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: var(--ant-margin);
+  align-items: start;
+}
+.settings-nav {
+  position: sticky;
+  top: var(--ant-margin);
+  background: var(--ant-color-bg-container);
+  border-radius: var(--ant-border-radius-lg);
+  overflow: hidden;
+}
+.settings-nav .ant-menu-inline {
+  border-inline-end: none;
+}
+.settings-nav-select {
+  width: 100%;
+}
+@media (max-width: 767px) {
+  .settings-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.settings-form {
+  max-width: 720px;
+}
+.settings-number {
+  width: 220px;
+  max-width: 100%;
+}
+.settings-dates {
+  width: 100%;
+}
+.settings-text {
+  margin-bottom: var(--ant-margin-sm);
+}
+.settings-preview {
+  white-space: pre-wrap;
+}
+/* Липкая панель «Сохранить» — всегда видна внизу экрана, пока форма на экране. */
+.settings-savebar {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  margin: var(--ant-margin) calc(-1 * var(--ant-padding-sm)) calc(-1 * var(--ant-padding-sm));
+  padding: var(--ant-padding-sm);
+  background: var(--ant-color-bg-container);
+  border-top: 1px solid var(--ant-color-border-secondary);
+}
+
+/* Дашборд: плитки и полосы причин. */
+.metric-card .ant-statistic-title {
+  color: var(--ant-color-text);
+}
+.metric-card--primary .ant-statistic-content {
+  font-size: var(--ant-font-size-heading-2);
+}
+.metric-card--link {
+  display: block;
+  height: 100%;
+  color: inherit;
+}
+.metric-card--link:hover .ant-card,
+.metric-card--link:focus-visible .ant-card {
+  border-color: var(--ant-color-primary);
+}
+.metric-arrow {
+  color: var(--ant-color-primary);
+}
+.bar-row {
+  width: 100%;
+}
+
+/* Таблицы: колонка действий узкая, даты в одну строку. */
+.col-actions {
+  width: 56px;
+}
+.nowrap {
+  white-space: nowrap;
+}
+.row-muted {
+  color: var(--ant-color-text-secondary);
+}
+.link-button.ant-btn {
+  padding: 0;
+  height: auto;
+  white-space: normal;
+  text-align: start;
+}
+.full-width {
+  width: 100%;
+}
+.compact-input {
+  flex: 1 1 200px;
+  min-width: 0;
+}
