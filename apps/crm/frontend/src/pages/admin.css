@@ -64,8 +64,22 @@ h2.section-title.ant-typography {
 .metric-card .ant-statistic-title {
   color: var(--ant-color-text);
 }
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--ant-margin);
+}
+.metric-grid--primary {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+.metric-card {
+  height: 100%;
+}
+.metric-card .ant-statistic-content {
+  font-size: var(--ant-font-size-heading-4);
+}
 .metric-card--primary .ant-statistic-content {
-  font-size: var(--ant-font-size-heading-2);
+  font-size: var(--ant-font-size-heading-1);
 }
 .metric-card--link {
   display: block;

@@ -91,7 +91,6 @@ export const admin = {
     refreshDone: "Дашборд пересчитан",
     daily: "По дням",
     secondary: "Работа бота и расходы",
-    open: "Открыть: {title}",
   },
   /** Экран «Пользователи» (общие подписи — `users` в core). */
   userAdmin: {
