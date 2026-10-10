@@ -1,125 +1,71 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Alert, App as AntApp, Button, Card, Form, Space, Tabs } from "antd";
-import { useState } from "react";
+import { Typography } from "antd";
+import { useSearchParams } from "react-router";
 
-import { adminKeys, useSettings } from "../../api/adminQueries";
-import { escalationDryRun, putSetting } from "../../api/generated/crm";
-import type { DryRunResponse, EscalationSettings } from "../../api/generated/model";
-import { type ApiError, unwrap } from "../../api/http";
-import { SchemaField } from "../../components/SchemaFields";
-import { type JsonSchema, normalize } from "../../components/schemaForm";
-import { errorText, t } from "../../i18n/ru";
-import { DryRunPanel } from "./DryRunPanel";
+import { useSettings } from "../../api/adminQueries";
+import type { SettingsResponse } from "../../api/generated/model";
+import { PageBody } from "../../components/PageBody";
 import { PageHeader } from "../../components/PageHeader";
 import { PageState } from "../../components/PageState";
+import type { JsonSchema } from "../../domain/schemaForm";
+import { resolveSection } from "../../domain/settingsLayout";
+import { t } from "../../i18n/ru";
+import { SettingsForm } from "./SettingsForm";
+import { SettingsNav } from "./SettingsNav";
+import "../admin.css";
 
-type Values = Record<string, unknown>;
-
-function KeyForm({
-  settingKey,
-  schema,
-  values,
-  company,
-}: {
-  settingKey: string;
-  schema: JsonSchema;
-  values: Values;
-  company: string;
-}) {
-  const [form] = Form.useForm<Values>();
-  const client = useQueryClient();
-  const { message } = AntApp.useApp();
-  const [report, setReport] = useState<DryRunResponse | null>(null);
-  const onError = (e: unknown) => {
-    void message.error(errorText((e as ApiError).code, (e as Error).message));
+/** Примеры для предпросмотра текстов: название компании — из настроек. */
+function previewSamples(data: SettingsResponse): Record<string, string> {
+  const name = data.values["company"]?.["name"];
+  return {
+    ...t.settings.samples,
+    company: typeof name === "string" ? name : "",
+    hours: t.settings.hoursSample,
   };
-  const save = useMutation({
-    mutationFn: async (body: Values) => unwrap(await putSetting(settingKey, body)),
-    onSuccess: () => {
-      void message.success(t.common.saved);
-      void client.invalidateQueries({ queryKey: adminKeys.settings });
-    },
-    onError,
-  });
-  const dryRun = useMutation({
-    mutationFn: async (body: Values) =>
-      unwrap(await escalationDryRun(body as unknown as EscalationSettings)),
-    onSuccess: setReport,
-    onError,
-  });
-  const body = () => normalize(form.getFieldsValue(true), schema, schema) as Values;
-
-  return (
-    <Card size="small">
-      <Form
-        form={form}
-        layout="vertical"
-        initialValues={values}
-        onFinish={() => {
-          save.mutate(body());
-        }}
-      >
-        {settingKey === "qualification" ? (
-          <Alert
-            type="info"
-            showIcon
-            message={t.settings.qualificationHint}
-            className="auth-alert"
-          />
-        ) : null}
-        <SchemaField name={[]} schema={schema} root={schema} label="" company={company} />
-        <Space wrap>
-          <Button type="primary" htmlType="submit" loading={save.isPending}>
-            {t.common.save}
-          </Button>
-          {settingKey === "escalation" ? (
-            <Button
-              loading={dryRun.isPending}
-              onClick={() => {
-                dryRun.mutate(body());
-              }}
-            >
-              {t.settings.dryRun}
-            </Button>
-          ) : null}
-        </Space>
-      </Form>
-      {report ? <DryRunPanel report={report} /> : null}
-    </Card>
-  );
 }
 
-/** Настройки (admin, PLAN Фаза 5): формы по Pydantic-схемам, предпросмотр текстов, сухой прогон. */
+/**
+ * Настройки (admin, PLAN Фаза 5): разделы слева с группами, раздел — в `?section=`
+ * (ссылку можно отправить коллеге), формы по Pydantic-схемам, сухой прогон правил передачи.
+ */
 export function SettingsPage() {
   const query = useSettings();
+  const [search, setSearch] = useSearchParams();
   const data = query.data;
-  if (!data) {
-    return (
-      <PageState query={query} ready={false}>
-        {null}
-      </PageState>
-    );
-  }
-  const name = data.values["company"]?.["name"];
-  const company = typeof name === "string" ? name : "";
+  const sections = data ? Object.keys(data.schemas) : [];
+  const section = resolveSection(search.get("section"), sections);
   return (
-    <>
+    <PageBody>
       <PageHeader title={t.page.settings} />
-      <Tabs
-        tabPosition="top"
-        items={Object.keys(data.schemas).map((key) => ({
-          key,
-          label: t.settings.keys[key] ?? key,
-          children: (
-            <KeyForm
-              settingKey={key}
-              schema={data.schemas[key] as JsonSchema}
-              values={data.values[key] ?? {}}
-              company={company}
+      <PageState query={query} ready={Boolean(data && section)}>
+        {data && section ? (
+          <div className="settings-layout">
+            <SettingsNav
+              sections={sections}
+              current={section}
+              onSelect={(next) => {
+                setSearch({ section: next });
+              }}
             />
-          ),
-        }))}
-      />
-    </>
+            <section aria-labelledby="settings-section-title" className="settings-content">
+              <Typography.Title level={2} id="settings-section-title" className="section-title">
+                {t.settings.keys[section] ?? section}
+              </Typography.Title>
+              {t.settings.sectionHints[section] ? (
+                <Typography.Paragraph type="secondary">
+                  {t.settings.sectionHints[section]}
+                </Typography.Paragraph>
+              ) : null}
+              <SettingsForm
+                key={section}
+                settingKey={section}
+                schema={data.schemas[section] as JsonSchema}
+                values={data.values[section] ?? {}}
+                samples={previewSamples(data)}
+              />
+            </section>
+          </div>
+        ) : null}
+      </PageState>
+    </PageBody>
   );
 }

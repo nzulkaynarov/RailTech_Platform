@@ -14,7 +14,7 @@ export const core = {
     dashboard: "Дашборд",
     clients: "Клиенты",
     kb: "База знаний",
-    gaps: "Пробелы базы знаний",
+    gaps: "Пробелы знаний",
     settings: "Настройки",
     audit: "Аудит",
     users: "Пользователи",

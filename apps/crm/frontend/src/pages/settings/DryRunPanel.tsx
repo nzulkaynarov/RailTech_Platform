@@ -1,7 +1,7 @@
-import { Alert, Descriptions, List, Tag } from "antd";
-import { Link } from "react-router";
+import { Alert, Descriptions, Flex, List, Tag } from "antd";
 
 import type { DryRunResponse } from "../../api/generated/model";
+import { LeadLink } from "../../components/EntityLink";
 import { t } from "../../i18n/ru";
 import { reasonLabel } from "../../domain/labels";
 
@@ -10,8 +10,8 @@ const tags = (codes: string[]) =>
 
 export function DryRunPanel({ report }: { report: DryRunResponse }) {
   return (
-    <>
-      <Descriptions size="small" column={{ xs: 1, md: 3 }} bordered style={{ margin: "12px 0" }}>
+    <Flex vertical gap="small" className="full-width">
+      <Descriptions size="small" column={{ xs: 1, md: 3 }} bordered>
         <Descriptions.Item label={t.settings.dialogs}>{report.dialogs}</Descriptions.Item>
         <Descriptions.Item label={t.settings.escalatedNow}>
           {report.escalated_current}
@@ -27,7 +27,7 @@ export function DryRunPanel({ report }: { report: DryRunResponse }) {
           dataSource={report.changed}
           renderItem={(row) => (
             <List.Item>
-              <Link to={`/leads/${String(row.lead_id)}`}>#{row.lead_id}</Link>
+              <LeadLink id={row.lead_id} />
               <span>{tags(row.current)}</span>→<span>{tags(row.candidate)}</span>
             </List.Item>
           )}
@@ -35,6 +35,6 @@ export function DryRunPanel({ report }: { report: DryRunResponse }) {
       ) : (
         <Alert type="info" showIcon message={`${t.settings.changed}: 0`} />
       )}
-    </>
+    </Flex>
   );
 }
