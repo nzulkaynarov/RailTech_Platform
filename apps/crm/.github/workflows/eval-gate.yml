@@ -162,7 +162,7 @@ jobs:
             await github.rest.issues.removeLabel({
               ...context.repo, issue_number: context.issue.number, name: "run-evals",
             }).catch(() => {});
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: always() && steps.secrets.outputs.ready == 'true'
         with:
           name: eval-reports
