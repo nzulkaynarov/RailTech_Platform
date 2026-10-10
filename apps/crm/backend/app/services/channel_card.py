@@ -1,4 +1,7 @@
-"""Текст и кнопки карточки лида в канале команды (SPEC §9.1). Чистые функции."""
+"""Текст и кнопки карточки лида в канале команды (SPEC §9.1). Чистые функции.
+
+Формулировки — из словаря `channel_texts` (те же метки, что в CRM).
+"""
 
 from dataclasses import dataclass
 from datetime import datetime
@@ -6,27 +9,9 @@ from html import escape
 from typing import Final
 from zoneinfo import ZoneInfo
 
+from app.services import channel_texts as tx
+
 TAKE_PREFIX: Final = "take:"
-PRIORITY_ICON: Final = {"hot": "🔥", "warm": "🟠", "info": "ℹ️"}
-REASONS: Final = {
-    "human_requested": "просит человека",
-    "callback_requested": "просит звонок",
-    "price_or_contract_asked": "спросил цену/условия — нет в базе",
-    "negative_sentiment": "негатив",
-    "complaint": "жалоба",
-    "kb_gap_streak": "бот дважды не нашёл ответ",
-    "no_progress": "диалог без прогресса",
-    "competitor_mentioned": "упомянул конкурента",
-    "high_score": "высокий score",
-    "qualifier_recommend": "квалификатор рекомендует",
-    "document_not_found": "документ не найден",
-    "service_request": "сервисный запрос",
-    "attachment_received": "прислал файл",
-    "agent_unavailable": "сбой ИИ-ассистента — ответ не отправлен",
-    "delivery_failed": "не удалось отправить файл клиенту",
-}
-TIMELINES: Final = {"<1m": "<1 мес", "<3m": "<3 мес", "<12m": "<12 мес", ">12m": ">12 мес"}
-ROLES: Final = {"decision_maker": "ЛПР", "influencer": "влияет", "researcher": "изучает"}
 LAST_MAX: Final = 200
 
 
@@ -52,49 +37,58 @@ class CardData:
     last_lead_message: str | None
     crm_url: str
     timezone: str = "Asia/Tashkent"
+    kb_gap_streak: int = 2  # порог из настроек `escalation.kb_gap_streak`
 
 
 def render(card: CardData) -> str:
-    icon = PRIORITY_ICON.get(card.priority, "")
-    name = escape(card.display_name or "без имени")
+    icon = tx.PRIORITY_ICON.get(card.priority, "")
+    name = escape(card.display_name or tx.NO_NAME)
+    title = tx.LEAD_TITLE.format(lead_id=card.lead_id)
     lines = [
-        f"{icon} <b>Лид #{card.lead_id}</b> · {name} · {card.language.upper()} · "
-        f"Score {card.score} · {card.stage}",
+        f"{icon} <b>{title}</b> · {name} · {card.language.upper()} · "
+        f"{tx.SCORE.format(score=card.score)} · {tx.stage(card.stage)}",
     ]
     if card.need_summary:
-        lines.append(f"Потребность: {escape(card.need_summary)}")
-    details = [
-        f"Интерес: {escape(', '.join(card.product_interest))}" if card.product_interest else "",
-        f"Срок: {escape(TIMELINES.get(card.timeline or '', ''))}" if card.timeline else "",
-        f"Роль: {ROLES.get(card.decision_role or '', '')}" if card.decision_role else "",
-    ]
-    if any(details):
-        lines.append(" · ".join(d for d in details if d))
-    why = "; ".join(REASONS.get(code, code) for code in card.reason_codes)
+        lines.append(tx.NEED.format(text=escape(card.need_summary)))
+    lines.append(" · ".join(_details(card)))
+    why = "; ".join(tx.reason(code, card.kb_gap_streak) for code in card.reason_codes)
     if card.reason_text:
         why = f"{why}; {card.reason_text}" if why else card.reason_text
-    lines.append(f"Почему: {escape(why)}")
+    lines.append(tx.WHY.format(text=escape(why)))
     if card.recommendation:
-        lines.append(f"Рекомендация: {escape(card.recommendation)}")
+        lines.append(tx.RECOMMENDATION.format(text=escape(card.recommendation)))
     if card.last_lead_message:
         last = card.last_lead_message.strip().replace("\n", " ")[:LAST_MAX]
-        lines.append(f"Последнее: 👤 «{escape(last)}»")
+        lines.append(tx.LAST_MESSAGE.format(text=escape(last)))
     if not card.crm_url.startswith("https://"):
-        lines.append(f"CRM: {escape(card.crm_url)}")
+        lines.append(tx.CRM_LINK.format(url=escape(card.crm_url)))
     lines.append(_status_line(card))
     return "\n".join(line for line in lines if line)
+
+
+def _details(card: CardData) -> list[str]:
+    details = []
+    if card.product_interest:
+        details.append(tx.INTEREST.format(text=escape(", ".join(card.product_interest))))
+    if card.timeline:
+        timeline = tx.TIMELINES.get(card.timeline, card.timeline)
+        details.append(tx.TIMELINE.format(text=escape(timeline)))
+    if card.decision_role:
+        role = tx.ROLES.get(card.decision_role, card.decision_role)
+        details.append(tx.ROLE.format(text=escape(role)))
+    return details
 
 
 def _status_line(card: CardData) -> str:
     local = ZoneInfo(card.timezone)
     if card.status == "taken" and card.taken_by:
         at = card.taken_at.astimezone(local).strftime("%H:%M") if card.taken_at else ""
-        return f"✅ Взял: {escape(card.taken_by)} · {at}"
+        return tx.TAKEN_BY.format(name=escape(card.taken_by), at=at)
     if card.status == "snoozed":
-        return "💤 Отложено"
+        return tx.SNOOZED
     if card.status in ("returned", "closed"):
-        return "☑️ Закрыто" if card.status == "closed" else "🤖 Возвращён боту"
-    return "⏰ <b>SLA просрочен</b>" if card.sla_overdue else ""
+        return tx.CLOSED if card.status == "closed" else tx.RETURNED
+    return tx.SLA_OVERDUE if card.sla_overdue else ""
 
 
 def can_take(card: CardData) -> bool:
