@@ -1466,6 +1466,8 @@ export const getListProductsUrl = () => {
 };
 
 /**
+ * Справочник продуктов (ключ → название) нужен всем, кто видит лидов: названия в карточке
+ * и списках вместо ключей. Правка справочника — по-прежнему `kb:write`.
  * @summary List Products
  */
 export const listProducts = async (
