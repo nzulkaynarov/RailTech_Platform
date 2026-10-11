@@ -171,8 +171,13 @@ async def reopen_gap(gap_id: int, who: Writer, container: ContainerDep) -> Actio
     return ActionResult()
 
 
+LeadReader = Annotated[Principal, Depends(require("leads", "read"))]
+
+
 @router.get("/products", response_model=list[ProductOut])
-async def list_products(_: Reader, container: ContainerDep) -> list[ProductOut]:
+async def list_products(_: LeadReader, container: ContainerDep) -> list[ProductOut]:
+    """Справочник продуктов (ключ → название) нужен всем, кто видит лидов: названия в карточке
+    и списках вместо ключей. Правка справочника — по-прежнему `kb:write`."""
     async with container.session_factory() as session:
         rows = (await session.scalars(select(Product).order_by(Product.key))).all()
     return [ProductOut.model_validate(p, from_attributes=True) for p in rows]

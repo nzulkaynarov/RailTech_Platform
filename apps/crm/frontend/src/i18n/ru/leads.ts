@@ -1,5 +1,12 @@
 /** Входящие, лиды, карточка лида, действия. Термины — Q-015: «Передача», «Ответственный». */
 export const leads = {
+  queue: {
+    label: "Очередь входящих",
+    prev: "Предыдущий лид",
+    next: "Следующий лид",
+    position: "{n} из {total} во входящих",
+    keys: "K — предыдущий, J — следующий",
+  },
   inbox: {
     escalations: "Передачи",
     mine: "Мои лиды",
@@ -78,6 +85,8 @@ export const leads = {
     rejected: "отклонено",
     triggers: "причины передачи",
     decisionFailed: "Ошибка квалификатора",
+    modelUnavailable: "ИИ-ассистент был недоступен — оценка не обновлена",
+    decisionFailedHint: "Подробности — в логах и Langfuse",
     openRequest: "Открытый запрос клиента",
     openRequestHint: "Закрыть его с ответом можно в карточке клиента",
     ownerBanner: "Лида ведёт {name}",

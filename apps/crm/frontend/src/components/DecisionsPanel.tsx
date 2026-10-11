@@ -3,6 +3,7 @@ import { Tag, Timeline, Typography } from "antd";
 import type { DecisionsResponse } from "../api/generated/model";
 import {
   decisionColor,
+  decisionErrorLabel,
   reasonLabel,
   rejectedReason,
   sourceLabel,
@@ -32,7 +33,7 @@ function describeDecision(item: Item): string {
     const head = `${stage(item.from_stage)} → ${stage(item.to_stage)} (${sourceLabel(item.source)})`;
     return why ? `${head}: ${why}` : head;
   }
-  if (item.error) return `${t.lead.decisionFailed}: ${item.error}`;
+  if (item.error) return decisionErrorLabel(item.error);
   const parts = [
     `${t.lead.proposed}: ${stage(item.proposed_stage)}`,
     item.applied_stage ? `${t.lead.applied}: ${stage(item.applied_stage)}` : "",
@@ -46,7 +47,15 @@ function DecisionBody({ item }: { item: Item }) {
   return (
     <div>
       <Typography.Text type="secondary">{formatWhen(item.at)}</Typography.Text>
-      <div>{describeDecision(item)}</div>
+      <div
+        title={
+          item.kind === "qualifier" && item.error
+            ? `${t.lead.decisionFailedHint}: ${item.error}`
+            : undefined
+        }
+      >
+        {describeDecision(item)}
+      </div>
       {item.kind === "qualifier" && item.triggers_fired.length ? (
         <div>
           {t.lead.triggers}:{" "}

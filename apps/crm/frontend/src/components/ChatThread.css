@@ -54,11 +54,11 @@
   align-items: flex-end;
   gap: var(--ant-margin-xs);
 }
-/* Телефон: без вложенной прокрутки — лента растёт со страницей, поле ответа закреплено внизу. */
+/* Телефон: лента прокручивается внутри, как в мессенджерах, — имя лида, «Забрать» и вкладки
+   остаются на экране; поле ответа закреплено внизу. */
 @media (max-width: 767px) {
   .chat-list {
-    max-height: none;
-    overflow-y: visible;
+    max-height: 55vh;
   }
   .chat-reply {
     position: sticky;
