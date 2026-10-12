@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.cli.sample_dialogs import sample
 from app.models.leads import Conversation, Lead, Message
-from app.models.system import SystemAlert
+from app.models.system import LlmUsage, SystemAlert
 from app.services.budget import BudgetGuard
 from app.services.monitoring import MonitorService
 from app.services.settings import SettingsService
@@ -41,6 +41,19 @@ async def spend(sessions: async_sessionmaker[AsyncSession], usd: float) -> None:
                 role="bot",
                 text="ok",
                 meta={"action": "answer", "cost_usd": usd},
+            )
+        )
+        session.add(
+            LlmUsage(
+                purpose="dialog",
+                alias="dialog-model",
+                provider="anthropic",
+                model="anthropic/test",
+                input_tokens=1,
+                output_tokens=1,
+                cost_usd=usd,
+                lead_id=lead.id,
+                kind="work",
             )
         )
 

@@ -16,12 +16,14 @@ from app import db
 from app.config import Settings, get_settings
 from app.integrations.docling import DoclingClient
 from app.integrations.litellm import Embedder, make_client
+from app.integrations.litellm_catalog import ModelCatalog
 from app.integrations.s3 import ObjectStorage
 from app.services.settings import SettingsService
 
 if TYPE_CHECKING:
     from app.services.auth import AuthService
     from app.services.backups import BackupService
+    from app.services.budget import BudgetGuard
     from app.services.clients import ClientService
     from app.services.documents import DocumentService
     from app.services.kb.admin import KbAdminService
@@ -29,6 +31,7 @@ if TYPE_CHECKING:
     from app.services.kb.search import KbSearchService
     from app.services.lead_messenger import LeadMessenger
     from app.services.leads import LeadService
+    from app.services.llm_usage import DbUsageRecorder
     from app.services.setup import SetupService
     from app.services.users import UserService
 
@@ -50,8 +53,26 @@ class Container:
         return make_client(self.settings)
 
     @cached_property
+    def model_catalog(self) -> ModelCatalog:
+        return ModelCatalog(self.settings.litellm_base_url, self.settings.litellm_api_key)
+
+    @cached_property
+    def usage_recorder(self) -> "DbUsageRecorder":
+        from app.services.llm_usage import DbUsageRecorder
+
+        return DbUsageRecorder(
+            self.session_factory, self.model_catalog, self.settings.llm_usage_kind
+        )
+
+    @cached_property
+    def budget_guard(self) -> "BudgetGuard":
+        from app.services.budget import BudgetGuard
+
+        return BudgetGuard(self.session_factory, self.settings_service, self.model_catalog)
+
+    @cached_property
     def embedder(self) -> Embedder:
-        return Embedder(self.llm)
+        return Embedder(self.llm, usage=self.usage_recorder)
 
     @cached_property
     def storage(self) -> ObjectStorage:

@@ -15,6 +15,7 @@ from openai import APIError, AsyncOpenAI
 
 from app.integrations import langfuse as lf
 from app.integrations.litellm import Alias
+from app.integrations.llm_usage import Purpose, UsageEvent, UsageSink, parse_cost
 
 logger = structlog.get_logger(__name__)
 
@@ -57,11 +58,33 @@ class ChatCompleter(Protocol):
     ) -> "ChatResult": ...
 
 
+PURPOSE_BY_ALIAS: dict[str, Purpose] = {
+    "dialog-model": "dialog",
+    "qualifier-model": "qualifier",
+    "judge-model": "judge",
+    "fallback-model": "fallback",
+}
+
+
 class ChatModel:
-    def __init__(self, client: AsyncOpenAI, alias: Alias, max_tokens: int = 1024) -> None:
+    def __init__(
+        self,
+        client: AsyncOpenAI,
+        alias: Alias,
+        max_tokens: int = 1024,
+        *,
+        usage: UsageSink | None = None,
+        purpose: Purpose | None = None,
+    ) -> None:
         self._client = client
         self._alias = alias
         self._max_tokens = max_tokens
+        self._usage = usage
+        self._purpose: Purpose = purpose or PURPOSE_BY_ALIAS.get(alias, "dialog")
+
+    @property
+    def alias(self) -> Alias:
+        return self._alias
 
     async def complete(
         self,
@@ -111,19 +134,23 @@ class ChatModel:
                 alias,
                 started,
                 used_fallback=alias == FALLBACK,
-                cost_usd=_cost(raw.headers.get(COST_HEADER)),
+                cost_usd=parse_cost(raw.headers.get(COST_HEADER)),
             )
             lf.finish_generation(
                 span, result.text, result.model, result.tokens_in, result.tokens_out
             )
+        if self._usage is not None:
+            await self._usage.record(
+                UsageEvent(
+                    purpose=self._purpose,
+                    alias=alias,
+                    model=result.model,
+                    input_tokens=result.tokens_in,
+                    output_tokens=result.tokens_out,
+                    cost_usd=result.cost_usd,
+                )
+            )
         return result
-
-
-def _cost(raw: str | None) -> float | None:
-    try:
-        return float(raw) if raw else None
-    except ValueError:
-        return None
 
 
 def _to_result(

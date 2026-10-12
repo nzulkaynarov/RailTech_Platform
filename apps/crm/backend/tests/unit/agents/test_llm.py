@@ -8,6 +8,7 @@ import pytest
 from openai import APIConnectionError
 
 from app.agents.llm import ChatModel, LlmUnavailableError
+from app.integrations.llm_usage import UsageEvent, current_lead_id, lead_scope
 
 
 def response(text: str, model: str) -> Any:
@@ -62,3 +63,41 @@ async def test_raises_when_both_fail() -> None:
     client = FakeClient({"dialog-model", "fallback-model"})
     with pytest.raises(LlmUnavailableError):
         await ChatModel(client, "dialog-model").complete([])  # type: ignore[arg-type]
+
+
+class Sink:
+    def __init__(self) -> None:
+        self.events: list[UsageEvent] = []
+
+    async def record(self, event: UsageEvent) -> None:
+        self.events.append(event)
+
+
+async def test_every_call_is_recorded_with_purpose_and_lead() -> None:
+    sink = Sink()
+    client = FakeClient({"dialog-model"})
+    model = ChatModel(client, "dialog-model", usage=sink)  # type: ignore[arg-type]
+    with lead_scope(42):
+        assert current_lead_id() == 42
+        await model.complete([])
+    (event,) = sink.events
+    assert (event.purpose, event.alias) == ("dialog", "fallback-model")
+    assert event.model == "fallback-model-served"
+    assert (event.input_tokens, event.output_tokens) == (10, 5)
+    assert event.cost_usd == pytest.approx(0.0012)
+    assert current_lead_id() is None
+
+
+@pytest.mark.parametrize(
+    ("alias", "purpose"),
+    [
+        ("dialog-model", "dialog"),
+        ("qualifier-model", "qualifier"),
+        ("judge-model", "judge"),
+        ("fallback-model", "fallback"),
+    ],
+)
+async def test_purpose_follows_alias(alias: Any, purpose: str) -> None:
+    sink = Sink()
+    await ChatModel(FakeClient(set()), alias, usage=sink).complete([])  # type: ignore[arg-type]
+    assert sink.events[0].purpose == purpose

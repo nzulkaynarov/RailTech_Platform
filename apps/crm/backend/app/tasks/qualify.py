@@ -11,6 +11,7 @@ from procrastinate.exceptions import AlreadyEnqueued
 from app.agents.llm import ChatModel
 from app.agents.qualifier.graph import QualifierAgent
 from app.container import Container, get_container
+from app.services.budget import BudgetedModel
 from app.services.lead_messenger import LeadMessenger
 from app.services.qualifier import QualifierService
 from app.tasks.queue import queue
@@ -22,7 +23,14 @@ def build_qualifier_service(c: Container) -> QualifierService:
     return QualifierService(
         c.session_factory,
         c.settings_service,
-        QualifierAgent(ChatModel(c.llm, "qualifier-model")),
+        QualifierAgent(
+            BudgetedModel(
+                ChatModel(c.llm, "qualifier-model", usage=c.usage_recorder),
+                None,
+                c.budget_guard,
+                alias="qualifier-model",
+            )
+        ),
         LeadMessenger(c.session_factory, c.telegram_bot),
         on_escalation=_escalated,
     )

@@ -98,6 +98,7 @@ export const labelsRu = {
     "kb.gap_ignore": "Игнорировал пробел",
     "kb.gap_reopen": "Вернул пробел в работу",
     "settings.update": "Изменил настройки",
+    "model.test": "Проверил модель ИИ",
   } as Dict,
   entity: {
     lead: "Лид",
@@ -110,6 +111,7 @@ export const labelsRu = {
     product: "Продукт",
     service_request: "Сервисный запрос",
     system: "Система",
+    model: "Модель ИИ",
   } as Dict,
   actor: { system: "Система", bot: "Бот", user: "Сотрудник" } as Dict,
 };
