@@ -8,6 +8,7 @@ from app.models import (  # noqa: F401
     kb,
     leads,
     qualification,
+    reply_templates,
     system,
 )
 from app.models.base import Base

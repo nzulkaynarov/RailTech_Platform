@@ -18,6 +18,7 @@ export type NavKey =
   | "gaps"
   | "sandbox"
   | "settings"
+  | "templates"
   | "users"
   | "integrations"
   | "models"
@@ -30,7 +31,7 @@ export type NavGroup = { key: string; title: string; items: NavKey[] };
 export const NAV_GROUPS: NavGroup[] = [
   { key: "work", title: t.navGroup.work, items: ["inbox", "leads", "clients", "deals"] },
   { key: "analytics", title: t.navGroup.analytics, items: ["dashboard", "spend"] },
-  { key: "bot", title: t.navGroup.bot, items: ["kb", "gaps", "sandbox", "settings"] },
+  { key: "bot", title: t.navGroup.bot, items: ["kb", "gaps", "sandbox", "templates", "settings"] },
   {
     key: "admin",
     title: t.navGroup.admin,

@@ -91,6 +91,21 @@ MATRIX = [
     # «Проверить бота»: пустой текст → 422 до хода агента; «Начать заново» без диалога — no-op
     ("POST", "/api/v1/sandbox/messages", {"text": "", "language": "ru"}, {"admin"}),
     ("POST", "/api/v1/sandbox/reset", None, {"admin"}),
+    # Аудит админки §3 п. 1, §5: профиль бота, шаблоны ответов, экспорт CSV.
+    ("GET", "/api/v1/integrations/telegram/profile", None, {"admin"}),
+    ("PUT", "/api/v1/integrations/telegram/profile", {"name": {"ru": "x" * 65}}, {"admin"}),
+    ("GET", "/api/v1/reply-templates", None, {"admin", "manager"}),
+    (
+        "POST",
+        "/api/v1/reply-templates",
+        {"title": "Матрица", "text": {"ru": "Здравствуйте, {name}!", "uz": "", "en": ""}},
+        {"admin"},
+    ),
+    ("PUT", "/api/v1/reply-templates/999999", {"title": "x", "text": {}}, {"admin"}),
+    ("DELETE", "/api/v1/reply-templates/999999", None, {"admin"}),
+    ("GET", "/api/v1/export/leads.csv?stage=new", None, {"admin"}),
+    ("GET", "/api/v1/export/clients.csv", None, {"admin"}),
+    ("GET", "/api/v1/export/deals.csv?stage=won", None, {"admin"}),
 ]
 
 
@@ -265,3 +280,36 @@ async def test_mutations_are_audited(
         )
     assert {"user.create", "auth.login"} <= actions
     assert logins == 3
+
+
+async def test_templates_crud_and_csv_export_are_audited(
+    client: TestClient,
+    tokens: dict[str, dict[str, str]],
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    admin = tokens["admin"]
+    body = {"title": "КП", "text": {"ru": "Пришлю КП, {name}", "uz": "", "en": ""}}
+    created = client.post("/api/v1/reply-templates", json=body, headers=admin)
+    assert created.status_code == 201
+    template_id = created.json()["id"]
+    body["title"] = "КП сегодня"
+    assert client.put(f"/api/v1/reply-templates/{template_id}", json=body, headers=admin).is_success
+    listed = client.get("/api/v1/reply-templates", headers=tokens["manager"]).json()
+    assert [t["title"] for t in listed] == ["КП сегодня"]
+    assert client.delete(f"/api/v1/reply-templates/{template_id}", headers=admin).is_success
+
+    await escalated_lead(sessions)
+    csv = client.get("/api/v1/export/leads.csv", headers=admin)
+    assert csv.status_code == 200
+    assert csv.headers["content-type"].startswith("text/csv")
+    text = csv.content.decode("utf-8")
+    assert text.startswith("\ufeffID;Имя;Язык;Стадия")
+    assert len(text.strip().splitlines()) >= 2
+    async with sessions() as session:
+        actions = set((await session.scalars(select(AuditLog.action))).all())
+    assert {
+        "reply_template.create",
+        "reply_template.update",
+        "reply_template.delete",
+        "export.leads",
+    } <= actions

@@ -24,6 +24,7 @@ MANAGER = {
     ("deals", "read"),
     ("deals", "write"),
     ("kb", "read"),  # база знаний — только просмотр (аудит 2026-10-12)
+    ("reply_templates", "read"),  # шаблоны ответов правит админ
 }
 VIEWER = {
     ("leads", "read"),

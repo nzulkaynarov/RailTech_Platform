@@ -14,6 +14,7 @@ from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.bot.profile import ProfilePublish, publish_profile
 from app.domain.errors import (
     ConflictError,
     NotFoundError,
@@ -30,6 +31,7 @@ from app.integrations.telegram import (
 )
 from app.repositories import telegram_chats
 from app.repositories import users as users_repo
+from app.schemas.settings_profile import BotProfileSettings
 from app.security import audit, reauth
 from app.security.principal import Principal
 from app.security.secrets_store import TELEGRAM_BOT_TOKEN, SecretsStore, last4
@@ -52,6 +54,9 @@ class BotControl(Protocol):
     def username(self) -> str | None: ...
     @property
     def last_error(self) -> str | None: ...
+
+    profile: ProfilePublish | None
+
     async def restart(self) -> None: ...
 
 
@@ -168,6 +173,27 @@ class TelegramIntegrationService:
             raise UpstreamUnavailableError(
                 "telegram is unavailable", reason=Reason.TELEGRAM_UNAVAILABLE
             ) from exc
+
+    async def profile(self) -> tuple[BotProfileSettings, ProfilePublish | None]:
+        """Профиль бота из настроек и итог последней публикации в Telegram."""
+        current = (await self._settings.get()).bot_profile
+        return current, self._bot.profile if self._bot is not None else None
+
+    async def save_profile(
+        self, who: Principal, profile: BotProfileSettings
+    ) -> tuple[BotProfileSettings, ProfilePublish | None]:
+        """Сохранить (аудит `settings.update`) и сразу опубликовать отличия в Telegram."""
+        await self._settings.update(
+            "bot_profile", profile.model_dump(mode="json"), who.user_id, who.actor
+        )
+        bot = await self._current_bot()
+        if bot is None:
+            result = ProfilePublish(False, datetime.now(UTC), error="bot_not_running")
+        else:
+            result = await publish_profile(bot, profile)
+        if self._bot is not None:
+            self._bot.profile = result
+        return profile, result
 
     async def candidates(self) -> list[ChatCandidate]:
         async with self._sessions() as session:

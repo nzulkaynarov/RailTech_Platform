@@ -19,6 +19,7 @@ import { DealsPage } from "../pages/deals/DealsPage";
 import { GapsPage } from "../pages/gaps/GapsPage";
 import { InboxPage } from "../pages/inbox/InboxPage";
 import { IntegrationsPage } from "../pages/integrations/IntegrationsPage";
+import { ReplyTemplatesPage } from "../pages/templates/ReplyTemplatesPage";
 import { HomeRedirect } from "./HomeRedirect";
 import { KbPage } from "../pages/kb/KbPage";
 import { SettingsPage } from "../pages/settings/SettingsPage";
@@ -59,6 +60,7 @@ const resources = [
   { name: "gaps", list: "/gaps", meta: { label: t.nav.gaps } },
   { name: "sandbox", list: "/sandbox", meta: { label: t.nav.sandbox } },
   { name: "settings", list: "/settings", meta: { label: t.nav.settings } },
+  { name: "templates", list: "/templates", meta: { label: t.nav.templates } },
   { name: "users", list: "/users", meta: { label: t.nav.users } },
   { name: "integrations", list: "/integrations", meta: { label: t.nav.integrations } },
   { name: "models", list: "/models", meta: { label: t.nav.models } },
@@ -203,6 +205,14 @@ export function App() {
                   element={
                     <RouteGuard resource="backups">
                       <BackupsPage />
+                    </RouteGuard>
+                  }
+                />
+                <Route
+                  path="/templates"
+                  element={
+                    <RouteGuard resource="templates">
+                      <ReplyTemplatesPage />
                     </RouteGuard>
                   }
                 />

@@ -39,6 +39,8 @@ CATALOG: Final[dict[str, tuple[str, ...]]] = {
     "integrations": ("read", "write"),
     "system": ("read",),
     "sandbox": ("use",),
+    "reply_templates": ("read", "write"),
+    "export": ("read",),
 }
 
 
