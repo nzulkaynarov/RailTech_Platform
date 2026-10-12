@@ -1,4 +1,4 @@
-import { Alert, Card, Grid, Space, Tabs } from "antd";
+import { Alert, Card, Descriptions, Grid, Space, Tabs, Tag, Typography } from "antd";
 import type { ReactNode } from "react";
 import { Link, useParams } from "react-router";
 
@@ -22,12 +22,14 @@ import { PageBody } from "../../components/PageBody";
 import { PageHeader } from "../../components/PageHeader";
 import { PageState } from "../../components/PageState";
 import { QueueNav } from "../../components/QueueNav";
-import { StageBadge } from "../../components/StageBadge";
+import { LangTag, PriorityTag, StageBadge } from "../../components/StageBadge";
 import { leadLinkText } from "../../domain/entities";
+import { reasonLabel } from "../../domain/labels";
 import { useApiErrorToast } from "../../hooks/useApiErrorToast";
 import { useReplyAssist } from "../../hooks/useReplyAssist";
 import { t } from "../../i18n/ru";
 import "../../styles/workspace.css";
+import { LeadDeals } from "./LeadDeals";
 import { LeadNotes, LeadSummary } from "./LeadSummary";
 import "../pages.css";
 
@@ -91,34 +93,104 @@ function Chat({ lead, rights }: { lead: LeadDetail; rights: ActionRights }) {
   );
 }
 
-/** Три колонки на десктопе; на телефоне — вкладки, переписка первой (U-12). */
-function Layout({ chat, details, why }: { chat: ReactNode; details: ReactNode; why: ReactNode }) {
+type Panes = {
+  chat: ReactNode;
+  summary: ReactNode;
+  why: ReactNode;
+  notes: ReactNode;
+  deals: ReactNode;
+};
+
+/**
+ * Десктоп: переписка — основная ширина, справа вкладки «Резюме · Почему · Заметки · Сделки»
+ * (UX волна 2). Телефон: вкладки, переписка первой (U-12); сделки — во вкладке «Детали».
+ */
+function Layout({ chat, summary, why, notes, deals }: Panes) {
   const screens = Grid.useBreakpoint();
   if (screens.md === false) {
+    const details = (
+      <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+        {summary}
+        {deals ? (
+          <div>
+            <Typography.Text strong>{t.lead.tabs.deals}</Typography.Text>
+            {deals}
+          </div>
+        ) : null}
+      </Space>
+    );
     return (
       <Tabs
         items={[
           { key: "chat", label: t.lead.tabs.chat, children: chat },
           { key: "details", label: t.lead.tabs.details, children: details },
           { key: "why", label: t.lead.tabs.why, children: why },
+          { key: "notes", label: t.lead.tabs.notes, children: notes },
         ]}
       />
     );
   }
+  const side = [
+    { key: "summary", label: t.lead.tabs.summary, children: summary },
+    { key: "why", label: t.lead.tabs.why, children: why },
+    { key: "notes", label: t.lead.tabs.notes, children: notes },
+    ...(deals ? [{ key: "deals", label: t.lead.tabs.deals, children: deals }] : []),
+  ];
   return (
     <div className="lead-grid">
-      {details}
       <Card size="small" title={t.lead.chat}>
         {chat}
       </Card>
-      <Card size="small" title={t.lead.why}>
-        {why}
+      <Card size="small" className="lead-side">
+        <Tabs size="small" items={side} />
       </Card>
     </div>
   );
 }
 
-/** Шапка: имя, стадия и ответственный (видны и на телефоне), действия и баннер «Лида ведёт …». */
+/** Сводка в шапке: стадия, кто ведёт, телефон, язык, оценка — одной строкой на десктопе. */
+function LeadFacts({ lead }: { lead: LeadDetail }) {
+  return (
+    <Descriptions
+      size="small"
+      className="lead-facts"
+      column={{ xs: 1, sm: 2, md: 3, lg: 5, xl: 5, xxl: 5 }}
+      items={[
+        { key: "stage", label: t.leads.stage, children: <StageBadge stage={lead.stage} /> },
+        { key: "owner", label: t.leads.whoLeads, children: <Owner lead={lead} /> },
+        {
+          key: "phone",
+          label: t.lead.phone,
+          children: lead.phone_e164 ? (
+            <a className="nowrap" href={`tel:${lead.phone_e164}`}>
+              {lead.phone_e164}
+            </a>
+          ) : (
+            t.common.none
+          ),
+        },
+        { key: "lang", label: t.leads.language, children: <LangTag language={lead.language} /> },
+        { key: "score", label: t.leads.score, children: lead.score },
+      ]}
+    />
+  );
+}
+
+/** Причины передачи тегами в шапке; текст причины и рекомендация — во вкладке «Резюме». */
+function HandoffTags({ lead }: { lead: LeadDetail }) {
+  const e = lead.escalation;
+  if (!e) return null;
+  return (
+    <Space wrap size={4} aria-label={t.lead.escalation} role="group">
+      <PriorityTag priority={e.priority} />
+      {e.reason_codes.map((code) => (
+        <Tag key={code}>{reasonLabel(code)}</Tag>
+      ))}
+    </Space>
+  );
+}
+
+/** Шапка: имя, сводка `Descriptions`, причины передачи, действия и баннер «Лида ведёт …». */
 function LeadHeader({ lead, rights }: { lead: LeadDetail; rights: ActionRights }) {
   const plan = leadActionPlan(lead, rights);
   return (
@@ -129,10 +201,8 @@ function LeadHeader({ lead, rights }: { lead: LeadDetail; rights: ActionRights }
       extra={<LeadActions lead={lead} rights={rights} />}
     >
       <div className="lead-meta">
-        <StageBadge stage={lead.stage} />
-        <span>
-          {t.leads.whoLeads}: <Owner lead={lead} />
-        </span>
+        <LeadFacts lead={lead} />
+        <HandoffTags lead={lead} />
       </div>
       {plan.ownerBanner ? (
         <div className="lead-banner">
@@ -154,12 +224,13 @@ function LeadHeader({ lead, rights }: { lead: LeadDetail; rights: ActionRights }
   );
 }
 
-/** Карточка лида (SPEC §10.1): резюме · переписка · «Почему система так решила». */
+/** Карточка лида (SPEC §10.1): шапка-сводка · переписка · вкладки «Резюме · Почему · Заметки · Сделки». */
 export function LeadDetailPage() {
   const id = Number(useParams()["id"]);
   const lead = useLead(id);
   const decisions = useDecisions(id);
   const rights = useRights();
+  const canDeals = allowed(useRightsMatrix(), "deals", "read");
   return (
     <PageState query={lead} ready={Boolean(lead.data && rights)}>
       {lead.data && rights ? (
@@ -167,13 +238,10 @@ export function LeadDetailPage() {
           <LeadHeader lead={lead.data} rights={rights} />
           <Layout
             chat={<Chat lead={lead.data} rights={rights} />}
-            details={
-              <Space direction="vertical" size={16} style={{ width: "100%" }}>
-                <LeadSummary lead={lead.data} />
-                <LeadNotes leadId={id} />
-              </Space>
-            }
+            summary={<LeadSummary lead={lead.data} />}
             why={<DecisionsPanel query={decisions} isAdmin={rights.isAdmin} />}
+            notes={<LeadNotes leadId={id} canNote={rights.note} />}
+            deals={canDeals ? <LeadDeals lead={lead.data} /> : null}
           />
         </PageBody>
       ) : null}

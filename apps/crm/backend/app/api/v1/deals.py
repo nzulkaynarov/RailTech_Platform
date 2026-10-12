@@ -45,9 +45,12 @@ def filtered(
     client_id: int | None,
     closed_from: date | None,
     closed_to: date | None,
+    lead_id: int | None = None,
 ) -> Select[Deal, str, str]:
     """Фильтры списка сделок — общие для экрана и экспорта CSV."""
     stmt = _joined().order_by(Deal.id.desc())
+    if lead_id is not None:
+        stmt = stmt.where(Deal.lead_id == lead_id)
     if stage:
         stmt = stmt.where(Deal.stage == stage)
     if owner_user_id is not None:
@@ -81,9 +84,10 @@ async def list_deals(
     client_id: int | None = None,
     closed_from: date | None = None,
     closed_to: date | None = None,
+    lead_id: int | None = None,
 ) -> list[DealOut]:
     """Сделки, новые сверху (до 500). Период закрытия — включительно, по дате UTC."""
-    stmt = filtered(stage, owner_user_id, client_id, closed_from, closed_to).limit(500)
+    stmt = filtered(stage, owner_user_id, client_id, closed_from, closed_to, lead_id).limit(500)
     async with container.session_factory() as session:
         return await deal_rows(session, stmt)
 

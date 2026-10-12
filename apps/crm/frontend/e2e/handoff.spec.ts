@@ -14,7 +14,9 @@ test("login → inbox → lead card → take → reply", async ({ page }) => {
   await page.getByLabel("Пароль").fill(password);
   await page.getByRole("button", { name: "Войти" }).click();
 
-  await expect(page.getByText("Передачи").first()).toBeVisible();
+  // Входящие открываются на первом непустом разделе: «Передачи», а если лида уже забрали
+  // в прогоне другого проекта Playwright — «Мои». Лид виден в любом из них.
+  await expect(page.getByRole("heading", { name: "Входящие", level: 1 })).toBeVisible();
   const item = page.locator(".ant-list-item", { hasText: "Интеграция 3 касс АТОЛ с 1С" }).first();
   await item.getByRole("link", { name: /Азиз/ }).click();
   // Десктоп — колонка «Почему система так решила», телефон — вкладка «Почему».

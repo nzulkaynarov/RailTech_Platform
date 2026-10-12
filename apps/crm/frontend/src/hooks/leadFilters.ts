@@ -96,3 +96,9 @@ export function activeFilterCount(f: LeadFilters): number {
   const flags = [f.q, f.stage, f.owner, f.language, f.min_score, f.from ?? f.to];
   return flags.filter((v) => v !== undefined && v !== "").length;
 }
+
+/** Фильтры за кнопкой «Ещё фильтры»: язык, оценка, период — для счётчика на кнопке. */
+export function hiddenFilterCount(f: LeadFilters): number {
+  const flags = [f.language, f.min_score, f.from ?? f.to];
+  return flags.filter((v) => v !== undefined && v !== "").length;
+}

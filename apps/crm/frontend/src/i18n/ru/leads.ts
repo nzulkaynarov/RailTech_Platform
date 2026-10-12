@@ -31,6 +31,20 @@ export const leads = {
     slaTooltip: "Передача с {from}; ответить до {due}",
     duration: { lessMinute: "< 1 мин", minutes: "{m} мин", hours: "{h} ч", days: "{d} д" },
     lastMessage: "Последнее сообщение",
+    /** Вкладки одного списка «Входящих» (UX волна 2). */
+    tabsLabel: "Разделы входящих",
+    tabs: {
+      handoffs: "Передачи",
+      mine: "Мои",
+      unassigned: "Без ответственного",
+      requests: "Запросы клиентов",
+    } as Record<string, string>,
+  },
+  /** Краткая сводка лида в боковой панели (Входящие, Лиды). */
+  leadPreview: {
+    openCard: "Открыть карточку",
+    lastMessages: "Последние сообщения",
+    noMessages: "Сообщений пока нет",
   },
   leads: {
     name: "Лид",
@@ -58,6 +72,9 @@ export const leads = {
     filtersCount: "Фильтры ({n})",
     showResults: "Показать",
     filters: "Фильтры лидов",
+    moreFilters: "Ещё фильтры",
+    moreFiltersCount: "Ещё фильтры: включено {n}",
+    priority: "Приоритет",
   },
   lead: {
     summary: "Резюме",
@@ -97,7 +114,17 @@ export const leads = {
       newNumbers: "ИИ добавил бы новые числа — оставлен ваш текст без изменений",
       ready: "Текст в поле ответа — проверьте и отправьте сами",
     },
-    tabs: { chat: "Переписка", details: "Детали", why: "Почему" },
+    tabs: {
+      chat: "Переписка",
+      details: "Детали",
+      why: "Почему",
+      summary: "Резюме",
+      notes: "Заметки",
+      deals: "Сделки",
+    },
+    notesEmpty: "Заметок нет",
+    dealsEmpty: "Сделок по лиду нет",
+    dealsAll: "Все сделки",
     back: "К списку",
     why: "Почему система так решила",
     noDecisions: "Решений пока нет",

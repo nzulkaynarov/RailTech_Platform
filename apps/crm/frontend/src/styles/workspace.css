@@ -18,6 +18,10 @@
   margin-top: var(--ant-margin-xs);
 }
 
+/* Сводка лида в шапке (UX волна 2): `Descriptions` на всю ширину, причины передачи — ниже. */
+.lead-meta .lead-facts {
+  flex: 1 1 100%;
+}
 .lead-banner {
   margin-top: var(--ant-margin-sm);
 }
@@ -32,6 +36,17 @@
 .inbox-hot {
   border-inline-start: 3px solid var(--ant-color-error);
   padding-inline-start: var(--ant-padding-xs);
+}
+/* Строка списка открывает краткую сводку лида справа (UX волна 2). */
+.inbox-row,
+.lead-row {
+  cursor: pointer;
+}
+.inbox-row:hover {
+  background: var(--ant-color-fill-quaternary);
+}
+.inbox-need.ant-typography {
+  margin-bottom: 0;
 }
 
 /* Список лидов карточками на телефоне. */

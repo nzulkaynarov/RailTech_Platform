@@ -7,6 +7,7 @@ import pytest
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.api.v1.deals import deal_rows, filtered
 from app.domain.errors import ConflictError
 from app.models.deals import Deal
 from app.models.leads import Lead
@@ -46,6 +47,11 @@ async def test_won_lead_creates_won_deal_with_amount(
         "UZS",
     )
     assert deal.closed_at is not None
+    async with sessions() as session:
+        mine = await deal_rows(session, filtered(None, None, None, None, None, lead_id))
+        other = await deal_rows(session, filtered(None, None, None, None, None, lead_id + 1))
+    assert [d.id for d in mine] == [deal.id]
+    assert other == []
 
 
 async def test_lost_lead_marks_open_deal_lost_with_reason(

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   activeFilterCount,
+  hiddenFilterCount,
   leadFiltersToSearch,
   parseLeadFilters,
   toListParams,
@@ -48,5 +49,19 @@ describe("activeFilterCount", () => {
     [{ page: 1, min_score: 0, from: "2026-10-01", to: "2026-10-12" }, 2],
   ])("%j → %i", (f, n) => {
     expect(activeFilterCount(f)).toBe(n);
+  });
+});
+
+describe("hiddenFilterCount («Ещё фильтры»)", () => {
+  it.each([
+    [{ page: 1 }, 0],
+    [{ page: 1, q: "x", stage: "won", owner: "me" }, 0],
+    [{ page: 1, sort: "score" }, 0],
+    [{ page: 1, language: "uz" }, 1],
+    [{ page: 1, min_score: 0 }, 1],
+    [{ page: 1, from: "2026-10-01", to: "2026-10-12" }, 1],
+    [{ page: 1, stage: "new", language: "en", min_score: 40, from: "2026-10-01" }, 3],
+  ])("%j → %i", (f, n) => {
+    expect(hiddenFilterCount(f)).toBe(n);
   });
 });

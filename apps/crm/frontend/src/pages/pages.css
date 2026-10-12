@@ -16,7 +16,7 @@
 }
 .lead-grid {
   display: grid;
-  grid-template-columns: minmax(240px, 1fr) minmax(320px, 2fr) minmax(240px, 1fr);
+  grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
   gap: var(--ant-margin);
   align-items: start;
 }
@@ -146,4 +146,8 @@ h1.page-title.auth-title {
 }
 .drawer-filters > * {
   width: 100% !important;
+}
+/* Лиды: форма «Ещё фильтры» в Popover (UX волна 2). */
+.more-filters {
+  width: 300px;
 }
