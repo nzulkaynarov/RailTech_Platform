@@ -77,6 +77,8 @@ class Settings(BaseSettings):
     login_max_failures: int = Field(default=10, ge=3)
     login_lockout_minutes: int = Field(default=15, ge=1)
     casbin_dir: Path = Field(default_factory=_default_casbin_dir)
+    # Том бэкапов (ADR-0013), api смонтирован в него: список копий и запрос «сделать сейчас».
+    backup_dir: Path = Path("/backups")
 
     def _postgres_dsn(self, scheme: str) -> str:
         user = quote(self.postgres_user, safe="")

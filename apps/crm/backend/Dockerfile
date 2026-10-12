@@ -15,7 +15,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONPATH=/app
 COPY --from=uv /uv /usr/local/bin/uv
 WORKDIR /app
-RUN groupadd --system app && useradd --system --gid app --home-dir /app app
+RUN groupadd --system app && useradd --system --gid app --home-dir /app app \
+    && install -d -o app -g app /backups
 
 FROM base AS deps
 COPY pyproject.toml uv.lock ./

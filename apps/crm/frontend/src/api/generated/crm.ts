@@ -9,6 +9,7 @@ import type {
   ActionResult,
   Assign,
   AuditPage,
+  BackupsOut,
   BodyUploadDocument,
   BodyUploadKbDocument,
   ChangePasswordRequest,
@@ -65,6 +66,9 @@ import type {
   ServiceRequestClose,
   ServiceRequestItem,
   SettingsResponse,
+  SetupAdminRequest,
+  SetupChecklist,
+  SetupState,
   Snooze,
   TeamMember,
   TokenResponse,
@@ -2733,6 +2737,141 @@ export const putSetting = async (
   });
 };
 
+export type createFirstAdminResponse200 = {
+  data: TokenResponse;
+  status: 200;
+};
+
+export type createFirstAdminResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type createFirstAdminResponseSuccess = createFirstAdminResponse200 & {
+  headers: Headers;
+};
+export type createFirstAdminResponseError = createFirstAdminResponse422 & {
+  headers: Headers;
+};
+
+export type createFirstAdminResponse =
+  createFirstAdminResponseSuccess | createFirstAdminResponseError;
+
+export const getCreateFirstAdminUrl = () => {
+  return `/api/v1/setup/admin`;
+};
+
+/**
+ * Публично, один раз: код из логов api (`setup_code_issued`) → первый админ и вход.
+ *
+ * Неверный код — 422 `setup_code_invalid`, истёкший — `setup_code_expired`, перебор —
+ * `setup_locked` (15 мин); админ уже есть — 409 `setup_done`. Ответ — как у `/auth/login`.
+ * @summary Create First Admin
+ */
+export const createFirstAdmin = async (
+  setupAdminRequest: SetupAdminRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<createFirstAdminResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<createFirstAdminResponse>(getCreateFirstAdminUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(setupAdminRequest),
+  });
+};
+
+export type getSetupChecklistResponse200 = {
+  data: SetupChecklist;
+  status: 200;
+};
+
+export type getSetupChecklistResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type getSetupChecklistResponseSuccess = getSetupChecklistResponse200 & {
+  headers: Headers;
+};
+export type getSetupChecklistResponseError = getSetupChecklistResponse422 & {
+  headers: Headers;
+};
+
+export type getSetupChecklistResponse =
+  getSetupChecklistResponseSuccess | getSetupChecklistResponseError;
+
+export const getGetSetupChecklistUrl = () => {
+  return `/api/v1/setup/checklist`;
+};
+
+/**
+ * Чек-лист настройки для админа: что сделано и куда идти. Без платных вызовов моделей.
+ * @summary Get Setup Checklist
+ */
+export const getSetupChecklist = async (
+  options?: Parameters<typeof http>[1],
+): Promise<getSetupChecklistResponse> => {
+  return http<getSetupChecklistResponse>(getGetSetupChecklistUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type getSetupStateResponse200 = {
+  data: SetupState;
+  status: 200;
+};
+
+export type getSetupStateResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type getSetupStateResponseSuccess = getSetupStateResponse200 & {
+  headers: Headers;
+};
+export type getSetupStateResponseError = getSetupStateResponse422 & {
+  headers: Headers;
+};
+
+export type getSetupStateResponse = getSetupStateResponseSuccess | getSetupStateResponseError;
+
+export const getGetSetupStateUrl = () => {
+  return `/api/v1/setup/state`;
+};
+
+/**
+ * Публично: нужен ли мастер первого запуска (в CRM ещё нет активного администратора).
+ * @summary Get Setup State
+ */
+export const getSetupState = async (
+  options?: Parameters<typeof http>[1],
+): Promise<getSetupStateResponse> => {
+  return http<getSetupStateResponse>(getGetSetupStateUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
 export type streamResponse200 = {
   data: void;
   status: 200;
@@ -2763,6 +2902,80 @@ export const stream = async (options?: Parameters<typeof http>[1]): Promise<stre
   return http<streamResponse>(getStreamUrl(), {
     ...options,
     method: "GET",
+  });
+};
+
+export type listBackupsResponse200 = {
+  data: BackupsOut;
+  status: 200;
+};
+
+export type listBackupsResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type listBackupsResponseSuccess = listBackupsResponse200 & {
+  headers: Headers;
+};
+export type listBackupsResponseError = listBackupsResponse422 & {
+  headers: Headers;
+};
+
+export type listBackupsResponse = listBackupsResponseSuccess | listBackupsResponseError;
+
+export const getListBackupsUrl = () => {
+  return `/api/v1/system/backups`;
+};
+
+/**
+ * Последние бэкапы из тома `backups` (каталоги `<UTC-штамп>`), время последнего успеха.
+ * @summary List Backups
+ */
+export const listBackups = async (
+  options?: Parameters<typeof http>[1],
+): Promise<listBackupsResponse> => {
+  return http<listBackupsResponse>(getListBackupsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type requestBackupResponse202 = {
+  data: BackupsOut;
+  status: 202;
+};
+
+export type requestBackupResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type requestBackupResponseSuccess = requestBackupResponse202 & {
+  headers: Headers;
+};
+export type requestBackupResponseError = requestBackupResponse422 & {
+  headers: Headers;
+};
+
+export type requestBackupResponse = requestBackupResponseSuccess | requestBackupResponseError;
+
+export const getRequestBackupUrl = () => {
+  return `/api/v1/system/backups`;
+};
+
+/**
+ * Запросить бэкап вне расписания: контейнер `backup` начнёт его в течение ~30 с.
+ *
+ * 409, если том бэкапов не смонтирован в api. Повторный запрос до начала — без изменений.
+ * @summary Request Backup
+ */
+export const requestBackup = async (
+  options?: Parameters<typeof http>[1],
+): Promise<requestBackupResponse> => {
+  return http<requestBackupResponse>(getRequestBackupUrl(), {
+    ...options,
+    method: "POST",
   });
 };
 

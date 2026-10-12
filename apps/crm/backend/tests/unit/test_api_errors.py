@@ -136,6 +136,10 @@ def test_reason_values_are_a_stable_contract() -> None:
     """Фронт показывает текст по `details.reason`: переименование — ломающее изменение."""
     assert {r.value for r in e.Reason} == {
         "email_taken",
+        "setup_done",
+        "setup_code_invalid",
+        "setup_code_expired",
+        "setup_locked",
         "invalid_email",
         "telegram_taken",
         "telegram_linked_elsewhere",

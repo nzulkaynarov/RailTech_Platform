@@ -80,6 +80,8 @@ export const labelsRu = {
     "user.reset_password": "Сбросил пароль",
     "user.change_password": "Сменил пароль",
     "user.bootstrap_admin": "Первый администратор",
+    "setup.admin_created": "Первый администратор (мастер настройки)",
+    "system.backup_requested": "Запросил резервную копию",
     "user.hand_over": "Передал лидов и клиентов",
     "client.create": "Создал клиента",
     "client.update": "Изменил клиента",
@@ -107,6 +109,7 @@ export const labelsRu = {
     settings: "Настройки",
     product: "Продукт",
     service_request: "Сервисный запрос",
+    system: "Система",
   } as Dict,
   actor: { system: "Система", bot: "Бот", user: "Сотрудник" } as Dict,
 };

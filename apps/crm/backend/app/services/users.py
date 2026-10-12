@@ -198,27 +198,59 @@ class UserService:
         actor = Actor.system()
         secret = password or temporary_password()
         if password:
-            try:
-                validate_new_password(password, email=email)
-            except WeakPasswordError as exc:
-                raise ValidationFailedError(
-                    str(exc), reason=Reason.WEAK_PASSWORD, field="password"
-                ) from exc
+            _check_password(password, email)
         async with self._sessions() as session, session.begin():
-            user = await repo.by_email(session, email, for_update=True)
-            if user is None:
-                user = User(email=_email(email), full_name=full_name, password_hash="")
-                session.add(user)
-                await session.flush()
-            user.password_hash = hash_password(secret)
-            user.must_change_password = password is None
-            user.is_active = True
-            user.ui_mode = "admin"
-            user.failed_logins, user.locked_until = 0, None
-            roles = set(await repo.roles_of(session, user.id)) | {"admin"}
-            await repo.set_roles(session, user.id, sorted(roles), None)
-            await audit.record(session, actor, "user.bootstrap_admin", "user", user.id)
+            user_id = await _upsert_admin(session, email, full_name, secret, password is None)
+            await audit.record(session, actor, "user.bootstrap_admin", "user", user_id)
         return secret
+
+    async def create_first_admin(
+        self, email: str, full_name: str, password: str, actor: Actor
+    ) -> int:
+        """Админ из мастера первого запуска: только пока нет ни одного активного админа.
+
+        Блокировка роли admin сериализует параллельные попытки; вторая получит 409.
+        """
+        _check_password(password, email)
+        async with self._sessions() as session, session.begin():
+            await repo.lock_admin_set(session)
+            if await repo.count_active_admins(session) > 0:
+                raise ConflictError("admin already exists", reason=Reason.SETUP_DONE)
+            try:
+                user_id = await _upsert_admin(session, email, full_name.strip(), password, False)
+            except IntegrityError as exc:
+                raise ConflictError("admin already exists", reason=Reason.SETUP_DONE) from exc
+            await audit.record(
+                session, actor, "setup.admin_created", "user", user_id, after={"email": email}
+            )
+        return user_id
+
+
+def _check_password(password: str, email: str) -> None:
+    try:
+        validate_new_password(password, email=email)
+    except WeakPasswordError as exc:
+        raise ValidationFailedError(
+            str(exc), reason=Reason.WEAK_PASSWORD, field="password"
+        ) from exc
+
+
+async def _upsert_admin(
+    session: AsyncSession, email: str, full_name: str, secret: str, temporary: bool
+) -> int:
+    user = await repo.by_email(session, email, for_update=True)
+    if user is None:
+        user = User(email=_email(email), full_name=full_name, password_hash="")
+        session.add(user)
+        await session.flush()
+    user.password_hash = hash_password(secret)
+    user.must_change_password = temporary
+    user.is_active = True
+    user.ui_mode = "admin"
+    user.failed_logins, user.locked_until = 0, None
+    roles = set(await repo.roles_of(session, user.id)) | {"admin"}
+    await repo.set_roles(session, user.id, sorted(roles), None)
+    return user.id
 
 
 def _apply(user: User, patch: UserPatch) -> None:

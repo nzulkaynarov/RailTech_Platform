@@ -138,6 +138,8 @@ services:
       FORWARDED_ALLOW_IPS: "*"
     volumes:
       - ./casbin:/app/casbin:ro
+      # Статус бэкапов и флаг «сделать сейчас» (ADR-0013); pg_dump — только в контейнере backup.
+      - backups:/backups
     depends_on: &backend-deps
       migrate:
         condition: service_completed_successfully

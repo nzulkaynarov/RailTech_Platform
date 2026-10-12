@@ -20,7 +20,7 @@ def _client(request: Request) -> ClientInfo:
     return ClientInfo(ip=client_ip(request), user_agent=request.headers.get("user-agent"))
 
 
-def _respond(response: Response, session: Session, settings: Settings) -> TokenResponse:
+def respond_with_session(response: Response, session: Session, settings: Settings) -> TokenResponse:
     response.set_cookie(
         REFRESH_COOKIE,
         session.refresh_token,
@@ -42,7 +42,7 @@ async def login(
     body: LoginRequest, request: Request, response: Response, container: ContainerDep
 ) -> TokenResponse:
     session = await container.auth_service.login(body.email, body.password, _client(request))
-    return _respond(response, session, container.settings)
+    return respond_with_session(response, session, container.settings)
 
 
 @router.post("/refresh", response_model=TokenResponse)
@@ -55,7 +55,7 @@ async def refresh(
     if not rt_refresh:
         raise AuthError("missing refresh cookie")
     session = await container.auth_service.refresh(rt_refresh, _client(request))
-    return _respond(response, session, container.settings)
+    return respond_with_session(response, session, container.settings)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)

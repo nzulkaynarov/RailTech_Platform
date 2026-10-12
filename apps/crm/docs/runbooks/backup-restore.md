@@ -7,6 +7,11 @@
 Сервис `backup` ежедневно в 03:00 Asia/Tashkent: `pg_dump` (custom) + копия бакетов
 `kb-sources`, `client-documents`, `tg-attachments` → том `railtech_backups`,
 каталог `<UTC-штамп>/` с `SHA256SUMS`; хранится 14 дней (`BACKUP_KEEP_DAYS`).
+Том смонтирован и в api: экран CRM «Резервные копии» (`/backups`, админ) показывает список,
+возраст последней копии (предупреждение > 26 ч) и кнопку «Сделать сейчас» — она кладёт в том
+файл-флаг `request_now`, демон `backup` проверяет его раз в 30 с и запускает тот же `backup_once`.
+pg_dump есть только в образе `backup`, поэтому api сам бэкап не делает. На dev демон не запущен
+(профиль `backup`) — запрос будет ждать; там используйте `make backup`.
 
 ## Диагностика
 - `scripts/backup.sh --prod --list` — список бэкапов; последний — не старше суток.
@@ -15,7 +20,10 @@
 - Каталоги `*.partial` — незавершённые попытки (удаляются автоматически через 6 ч).
 
 ## Действие
-**Внеочередной бэкап:** `scripts/backup.sh --prod`.
+**Внеочередной бэкап:** CRM → «Резервные копии» → «Сделать сейчас» (через ~30 с `make logs s=backup`
+покажет `backup_requested` → `backup_done`), или с сервера `scripts/backup.sh --prod`.
+Запрос «завис» (контейнер backup остановлен): запустите его или удалите флаг —
+`docker compose ... exec api rm /backups/request_now`.
 
 **Копия вне VPS (раз в неделю, человек):**
 `docker run --rm -v railtech_backups:/b -v "$PWD":/out alpine tar -czf /out/backups.tgz -C /b .`

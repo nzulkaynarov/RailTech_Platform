@@ -1,6 +1,7 @@
 import {
   AuditOutlined,
   BookOutlined,
+  CloudServerOutlined,
   DashboardOutlined,
   QuestionCircleOutlined,
   SettingOutlined,
@@ -19,6 +20,7 @@ import "dayjs/locale/ru";
 import { BrowserRouter, Outlet, Route, Routes } from "react-router";
 
 import { AuditPage } from "../pages/audit/AuditPage";
+import { BackupsPage } from "../pages/backups/BackupsPage";
 import { ClientDetailPage } from "../pages/clients/ClientDetailPage";
 import { ClientsPage } from "../pages/clients/ClientsPage";
 import { DashboardPage } from "../pages/dashboard/DashboardPage";
@@ -33,6 +35,7 @@ import { LeadsPage } from "../pages/leads/LeadsPage";
 import { ChangePasswordPage } from "../pages/login/ChangePasswordPage";
 import { LoginPage } from "../pages/login/LoginPage";
 import { ProfilePage } from "../pages/profile/ProfilePage";
+import { SetupPage } from "../pages/setup/SetupPage";
 import { UsersPage } from "../pages/users/UsersPage";
 import { t } from "../i18n/ru";
 import { AppTitle } from "./AppTitle";
@@ -78,6 +81,11 @@ const resources = [
   },
   { name: "audit", list: "/audit", meta: { label: t.nav.audit, icon: <AuditOutlined /> } },
   { name: "users", list: "/users", meta: { label: t.nav.users, icon: <TeamOutlined /> } },
+  {
+    name: "backups",
+    list: "/backups",
+    meta: { label: t.nav.backups, icon: <CloudServerOutlined /> },
+  },
   { name: "profile", list: "/profile", meta: { label: t.nav.profile, icon: <UserOutlined /> } },
 ];
 
@@ -179,10 +187,19 @@ export function App() {
                     </RouteGuard>
                   }
                 />
+                <Route
+                  path="/backups"
+                  element={
+                    <RouteGuard resource="backups">
+                      <BackupsPage />
+                    </RouteGuard>
+                  }
+                />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="*" element={<NotFound />} />
               </Route>
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/setup" element={<SetupPage />} />
               <Route path="/change-password" element={<ChangePasswordPage />} />
             </Routes>
           </Refine>

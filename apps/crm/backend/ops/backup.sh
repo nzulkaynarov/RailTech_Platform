@@ -4,6 +4,7 @@
 #
 #   backup.sh --once     один бэкап (make backup)
 #   backup.sh --daemon   ежедневно в $BACKUP_AT_UTC (по умолчанию 22:00 UTC = 03:00 Ташкент)
+#                        и по запросу из CRM (файл $BACKUP_DIR/request_now, проверка раз в 30 с)
 set -euo pipefail
 
 BACKUP_DIR="${BACKUP_DIR:-/backups}"
@@ -41,11 +42,20 @@ seconds_until() {
 case "${1:---once}" in
   --once) backup_once ;;
   --daemon)
+    # Плановый бэкап по расписанию или раньше — по флагу request_now от CRM («Сделать сейчас»).
     while true; do
-      sleep "$(seconds_until)"
+      due=$(( $(date -u +%s) + $(seconds_until) ))
+      while (( $(date -u +%s) < due )); do
+        if [[ -f "$BACKUP_DIR/request_now" ]]; then
+          rm -f "$BACKUP_DIR/request_now"
+          log "backup_requested"
+          break
+        fi
+        sleep 30
+      done
       backup_once || log "backup_failed"
     done
     ;;
-  -h|--help) sed -n '2,7p' "$0" ;;
+  -h|--help) sed -n '2,8p' "$0" ;;
   *) echo "usage: backup.sh [--once|--daemon]" >&2; exit 2 ;;
 esac

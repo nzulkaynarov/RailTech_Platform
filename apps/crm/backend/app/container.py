@@ -21,6 +21,7 @@ from app.services.settings import SettingsService
 
 if TYPE_CHECKING:
     from app.services.auth import AuthService
+    from app.services.backups import BackupService
     from app.services.clients import ClientService
     from app.services.documents import DocumentService
     from app.services.kb.admin import KbAdminService
@@ -28,6 +29,7 @@ if TYPE_CHECKING:
     from app.services.kb.search import KbSearchService
     from app.services.lead_messenger import LeadMessenger
     from app.services.leads import LeadService
+    from app.services.setup import SetupService
     from app.services.users import UserService
 
 
@@ -74,6 +76,23 @@ class Container:
         from app.services.users import UserService
 
         return UserService(self.session_factory)
+
+    @cached_property
+    def setup_service(self) -> "SetupService":
+        from app.repositories import users as users_repo
+        from app.services.setup import SetupService
+
+        async def count_admins() -> int:
+            async with self.session_factory() as session:
+                return await users_repo.count_active_admins(session)
+
+        return SetupService(count_admins, self.user_service.create_first_admin)
+
+    @cached_property
+    def backup_service(self) -> "BackupService":
+        from app.services.backups import BackupService
+
+        return BackupService(self.settings.backup_dir)
 
     @cached_property
     def lead_messenger(self) -> "LeadMessenger":

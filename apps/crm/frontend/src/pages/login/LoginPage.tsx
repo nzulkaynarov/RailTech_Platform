@@ -1,7 +1,9 @@
 import { useInvalidateAuthStore } from "@refinedev/core";
 import { Alert, Button, Card, Form, Input, Typography } from "antd";
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { Navigate, useNavigate } from "react-router";
+
+import { useSetupState } from "../../api/systemQueries";
 
 import { authProvider } from "../../app/providers/auth";
 import { t } from "../../i18n/ru";
@@ -18,6 +20,7 @@ export function LoginPage() {
   const invalidateAuth = useInvalidateAuthStore();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const setup = useSetupState();
 
   const submit = async (values: Values) => {
     setPending(true);
@@ -33,6 +36,8 @@ export function LoginPage() {
     void navigate(result.redirectTo ?? "/");
   };
 
+  // Первый запуск: администратора ещё нет — вместо входа мастер настройки.
+  if (setup.data?.needs_setup) return <Navigate to="/setup" replace />;
   return (
     <main className="page-center">
       <Card className="auth-card">

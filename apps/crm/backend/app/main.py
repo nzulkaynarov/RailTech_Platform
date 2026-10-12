@@ -4,12 +4,13 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 import httpx
+import structlog
 from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI
 
 from app import db
 from app.api import errors, health, telegram
-from app.api.v1 import admin, auth, clients, kb, leads, me, stream, users
+from app.api.v1 import admin, auth, clients, kb, leads, me, setup, stream, system, users
 from app.api.v1 import settings as settings_api
 from app.bot.setup import bot_lifespan
 from app.config import Settings, get_settings
@@ -33,6 +34,14 @@ async def _escalated(lead_id: int, escalation_id: int) -> None:
     await enqueue_escalation(escalation_id)
 
 
+async def _issue_setup_code(container: Container) -> None:
+    """Первый запуск: код мастера в лог один раз; БД недоступна — код выдаст `/setup/state`."""
+    try:
+        await container.setup_service.ensure_code()
+    except Exception as exc:  # noqa: BLE001 — старт api не должен падать из-за мастера
+        structlog.get_logger(__name__).warning("setup_code_deferred", error=repr(exc))
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     configure_logging(settings)
@@ -47,6 +56,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             bot_lifespan(container, on_activity=_qualify, on_escalation=_escalated) as bot,
         ):
             app.state.container = container
+            await _issue_setup_code(container)
             app.state.bot = bot
             app.state.engine = engine
             app.state.http = http
@@ -77,7 +87,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health.router)
     app.include_router(telegram.router)
     errors.install(app)
-    routers = (auth, me, users, leads, stream, kb, settings_api, admin, clients)
+    routers = (auth, me, users, leads, stream, kb, settings_api, admin, clients, setup, system)
     for module in routers:
         router = module.router
         app.include_router(router)
