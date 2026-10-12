@@ -192,7 +192,7 @@ railtech-crm/
 ### 5.1. Пользователи и доступ
 
 ```sql
-users(id, email UNIQUE, password_hash, full_name, tg_user_id UNIQUE NULL, is_active, must_change_password BOOL DEFAULT true, ui_mode 'admin'|'manager', last_login_at)
+users(id, email UNIQUE, password_hash, full_name, tg_user_id UNIQUE NULL, is_active, must_change_password BOOL DEFAULT true, ui_mode 'admin'|'manager', last_login_at, notify_system BOOL DEFAULT true, notify_leads BOOL DEFAULT true)  -- подписки на личные сообщения от бота (Q-010)
 roles(id, name UNIQUE)                     -- admin | manager | viewer (seed)
 user_roles(user_id, role_id, granted_by, granted_at)   -- PK (user_id, role_id)
 casbin_rule(...)                           -- таблица адаптера Casbin
@@ -211,6 +211,7 @@ leads(
   consent_given_at NULL, consent_version TEXT,
   need_summary TEXT, product_interest TEXT[], qualification JSONB,
   last_lead_msg_at, last_bot_msg_at, last_human_msg_at, snoozed_until, unresponsive_since,
+  manager_notified_at NULL,                         -- троттлинг личных уведомлений менеджеру (Q-010)
   source 'telegram', notes_count INT
 )
 clients(id, name, inn TEXT NULL, segment TEXT, owner_user_id, is_active)
@@ -528,7 +529,9 @@ Refine с кастомным `dataProvider` (REST `/api/v1`), `authProvider` (co
 - Трейсы: каждый ход диалога и каждый запуск квалификатора — Langfuse trace с `lead_id`, `mode`, `stage`; стоимость агрегируется.
 - Логи: structlog JSON, `request_id`, `lead_id`; уровни по env.
 - Метрики здоровья: `GET /health` (liveness), `GET /ready` (БД, S3/RustFS, LiteLLM); ежедневный отчёт в канал (General-пост): новых лидов, эскалаций, открытых пробелов KB, стоимость.
-- Алерты (в канал, префикс ⚠️): задача в `failed` после 3 ретраев; LiteLLM недоступен > 2 мин; очередь > 100 задач; бюджет > 80 %; у провайдера модели закончились кредиты/квота или отклонён ключ — проба раз в час запросом в 1 токен к `dialog-model` (Anthropic) и `fallback-model` (Gemini) с `disable_fallbacks` (иначе сбой Claude скрыт ответом Gemini), ключ алерта `model:<alias>`, снятие — только по успешной пробе. Монитор — периодическая задача `system_monitor` (раз в минуту, `domain/alerts.py`); дедупликация в таблице `system_alerts(key PK, active, detail, first_seen_at, sent_at, resolved_at, updated_at)`: пост на переходе в проблему, повтор не чаще 6 ч, снятие постом «✅ … в норме». Итоги дня — `daily_report` в 18:05 Asia/Tashkent (пн–пт).
+- Алерты (личным сообщением от бота активным админам с `notify_system` и привязанным Telegram; если никому не доставлено — в канал; префикс ⚠️): задача в `failed` после 3 ретраев; LiteLLM недоступен > 2 мин; очередь > 100 задач; бюджет > 80 %; у провайдера модели закончились кредиты/квота или отклонён ключ — проба раз в час запросом в 1 токен к `dialog-model` (Anthropic) и `fallback-model` (Gemini) с `disable_fallbacks` (иначе сбой Claude скрыт ответом Gemini), ключ алерта `model:<alias>`, снятие — только по успешной пробе. Монитор — периодическая задача `system_monitor` (раз в минуту, `domain/alerts.py`); дедупликация в таблице `system_alerts(key PK, active, detail, first_seen_at, sent_at, resolved_at, updated_at)`: пост на переходе в проблему, повтор не чаще 6 ч, снятие постом «✅ … в норме». Итоги дня — `daily_report` в 18:05 Asia/Tashkent (пн–пт).
+- Экран «Состояние системы» (`/system`, admin; `GET /api/v1/system/status`): БД, S3, LiteLLM (проверки `/ready`), модели — по последней пробе монитора (`system_alerts` `model:*`, без вызовов моделей), бюджет, очередь (ожидание, зависшие > 15 мин, упавшие за час), канал, бот, бэкап (`unknown`: бэкапы в томе сервера), наличие обязательных секретов (только имена). Статусы `ok|warn|fail|unknown` с причиной и временем проверки.
+- Личные уведомления (Q-010): сообщение лида в режиме `human` → задача `notify_lead_message` → личка ответственному менеджеру (`notify_leads`, без кнопок, ссылка на карточку `company.crm_base_url`/leads/{id}), не чаще `notifications.manager_dm_throttle_minutes`. В CRM — звук и уведомление браузера по SSE `message.created` (`assigned_user_id` = текущий пользователь), включается в профиле.
 - BudgetGuard: расход за сутки (Asia/Tashkent) = сумма `llm_usage.cost_usd` (работа и тесты; кэш 60 с). Мягкий бюджет: при ≥ 100 % `budget.daily_usd` и `fallback_model_enabled` диалог идёт на `fallback-model`, квалификатор продолжает; `daily_usd = 0` — без лимита. Лимит провайдера `budget.providers` (проверка до вызова): провайдер за лимитом → диалог на `fallback-model`, если провайдер резерва в лимите, иначе `LlmUnavailableError` (бот честно передаёт человеку); квалификатор — отказ. Провайдер алиаса — из LiteLLM `GET /model/info` (`model_info.litellm_provider` или префикс `litellm_params.model`), кэш 5 мин; неизвестен → лимит провайдера не применяется. Потолок `provider_budget_config` LiteLLM — аварийный, выше настроек.
 - Runbooks: деплой, откат, бэкап/восстановление, ротация ключей, «бот молчит», «эскалации не приходят», «стоимость выросла», «откат промпта», eval-gate, «переезд dev → prod».
 

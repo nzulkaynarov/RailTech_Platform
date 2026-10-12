@@ -3,19 +3,23 @@
 from datetime import UTC, datetime
 from typing import Any
 
+import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.dialog.state import DialogResult
 from app.domain.dialog_policy import Action, is_smalltalk
 from app.domain.language import Language, detect_language, next_language
+from app.domain.stages import OwnerMode
 from app.domain.triggers import TriggerSignals, evaluate
 from app.models.clients import Client
 from app.models.leads import Conversation, Lead, Message
 from app.repositories import leads as repo
 from app.schemas.settings import AppSettings
 from app.services import escalation
-from app.services.conversation_types import Outgoing, Turn
+from app.services.conversation_types import ActivityHook, Outgoing, Turn
+
+logger = structlog.get_logger(__name__)
 
 
 def apply_counters(lead: Lead, result: DialogResult) -> None:
@@ -58,6 +62,25 @@ def escalated(lead_id: int, escalation_id: int | None) -> tuple[int, int] | None
 
 def lead_of(outgoing: list[Outgoing]) -> int | None:
     return next((o.lead_id for o in outgoing if o.lead_id is not None), None)
+
+
+def owner_notice_target(early: list[Outgoing], turn: Turn | None) -> int | None:
+    """Лид, о сообщении которого, возможно, надо написать менеджеру: ход в режиме «человек»
+    или ответ без модели (вложение и т. п.); окончательно решает задача по данным лида."""
+    if turn is None:
+        return lead_of(early)
+    return turn.lead_id if turn.owner_mode == OwnerMode.HUMAN else None
+
+
+async def notify_owner(hook: ActivityHook | None, early: list[Outgoing], turn: Turn | None) -> None:
+    """Хук «сообщение лида» после коммита (Q-010); ошибка очереди не ломает ответ клиенту."""
+    lead_id = owner_notice_target(early, turn)
+    if hook is None or lead_id is None:
+        return
+    try:
+        await hook(lead_id)
+    except Exception:
+        logger.exception("conversation_hook_failed", lead_id=lead_id)
 
 
 async def consent_prompt(

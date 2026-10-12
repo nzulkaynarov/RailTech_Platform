@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { rawFetch } from "../api/http";
 import { keys } from "../api/queries";
@@ -7,6 +7,9 @@ import { keys } from "../api/queries";
 export type CrmEvent = {
   type: "message.created" | "lead.updated" | "escalation.updated";
   lead_id?: number | null;
+  /** Только `message.created`: кто написал и чей лид — для звука у менеджера (Q-010). */
+  role?: string;
+  assigned_user_id?: number | null;
 };
 
 const RETRY_MS = 3000;
@@ -66,15 +69,24 @@ export async function consume(
 }
 
 /** Подписка на `GET /api/v1/stream`; при обрыве — переподключение и перечитывание данных. */
-export function useEventStream(enabled: boolean): boolean {
+export function useEventStream(
+  enabled: boolean,
+  onExtra: (event: CrmEvent) => void = () => undefined,
+): boolean {
   const client = useQueryClient();
   const [live, setLive] = useState(false);
+  // Обработчик меняется при каждом рендере — держим последний в ref, не переподключаясь.
+  const extra = useRef(onExtra);
+  useEffect(() => {
+    extra.current = onExtra;
+  }, [onExtra]);
 
   useEffect(() => {
     if (!enabled) return;
     const controller = new AbortController();
     const onEvent = (event: CrmEvent) => {
       for (const queryKey of keysFor(event)) void client.invalidateQueries({ queryKey });
+      extra.current(event);
     };
     const loop = async () => {
       while (!controller.signal.aborted) {

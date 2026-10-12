@@ -34,10 +34,16 @@ class UserOut(BaseModel):
     tg_user_id: int | None
     must_change_password: bool
     ui_mode: str
+    notify_system: bool
+    notify_leads: bool
 
 
 class MePatch(BaseModel):
-    ui_mode: UiMode
+    """Своё: режим навигации и подписки на личные уведомления от бота (Q-010)."""
+
+    ui_mode: UiMode | None = None
+    notify_system: bool | None = None
+    notify_leads: bool | None = None
 
 
 class PermissionsResponse(BaseModel):

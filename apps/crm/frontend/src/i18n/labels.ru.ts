@@ -79,6 +79,7 @@ export const labelsRu = {
     "user.update": "Изменил пользователя",
     "user.reset_password": "Сбросил пароль",
     "user.change_password": "Сменил пароль",
+    "user.notify": "Изменил уведомления",
     "user.bootstrap_admin": "Первый администратор",
     "setup.admin_created": "Первый администратор (мастер настройки)",
     "system.backup_requested": "Запросил резервную копию",

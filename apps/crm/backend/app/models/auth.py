@@ -40,6 +40,9 @@ class User(TimestampMixin, Base):
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     failed_logins: Mapped[int] = mapped_column(Integer, server_default=sql("0"))
     locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Личные уведомления от бота (Q-010): системные алерты (админы) и сообщения своих лидов.
+    notify_system: Mapped[bool] = mapped_column(Boolean, server_default=sql("true"))
+    notify_leads: Mapped[bool] = mapped_column(Boolean, server_default=sql("true"))
 
 
 class Role(Base):

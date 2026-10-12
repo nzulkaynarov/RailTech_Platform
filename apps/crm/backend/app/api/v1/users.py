@@ -25,6 +25,8 @@ def to_out(view: UserView) -> UserOut:
         tg_user_id=view.tg_user_id,
         must_change_password=view.must_change_password,
         ui_mode=view.ui_mode,
+        notify_system=view.notify_system,
+        notify_leads=view.notify_leads,
     )
 
 

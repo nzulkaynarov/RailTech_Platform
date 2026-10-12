@@ -281,6 +281,12 @@ class TermsSettings(StrictModel):
 class NotificationsSettings(StrictModel):
     channel_id: int | None = None
     duty_user_ids: list[int] = Field(default_factory=list)
+    manager_dm_throttle_minutes: int = Field(
+        default=5,
+        ge=1,
+        le=1440,
+        description="Не чаще одного личного сообщения менеджеру по лиду за это число минут",
+    )
 
 
 _REQUIRED_FACTS: Final[tuple[Fact, ...]] = ("need", "product")

@@ -6,6 +6,7 @@ import {
   DashboardOutlined,
   DollarOutlined,
   ExperimentOutlined,
+  HeartOutlined,
   QuestionCircleOutlined,
   SettingOutlined,
   ShopOutlined,
@@ -36,6 +37,7 @@ import { IntegrationsPage } from "../pages/integrations/IntegrationsPage";
 import { HomeRedirect } from "./HomeRedirect";
 import { KbPage } from "../pages/kb/KbPage";
 import { SettingsPage } from "../pages/settings/SettingsPage";
+import { SystemPage } from "../pages/system/SystemPage";
 import { LeadDetailPage } from "../pages/lead-detail/LeadDetailPage";
 import { LeadsPage } from "../pages/leads/LeadsPage";
 import { ChangePasswordPage } from "../pages/login/ChangePasswordPage";
@@ -103,6 +105,7 @@ const resources = [
     list: "/integrations",
     meta: { label: t.nav.integrations, icon: <ApiOutlined /> },
   },
+  { name: "system", list: "/system", meta: { label: t.nav.system, icon: <HeartOutlined /> } },
   { name: "profile", list: "/profile", meta: { label: t.nav.profile, icon: <UserOutlined /> } },
 ];
 
@@ -233,6 +236,14 @@ export function App() {
                   element={
                     <RouteGuard resource="integrations">
                       <IntegrationsPage />
+                    </RouteGuard>
+                  }
+                />
+                <Route
+                  path="/system"
+                  element={
+                    <RouteGuard resource="system">
+                      <SystemPage />
                     </RouteGuard>
                   }
                 />

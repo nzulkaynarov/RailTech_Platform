@@ -34,6 +34,7 @@ from app.services.conversation_support import (
     escalated,
     lang_of,
     lead_of,
+    notify_owner,
     pending_question,
     report_failure,
     turn_meta,
@@ -59,7 +60,6 @@ __all__ = [
     "ConversationService",
     "EscalationHook",
     "Incoming",
-    "Keyboard",
     "Outgoing",
 ]
 
@@ -76,6 +76,7 @@ class ConversationService(ErasureMixin):
         on_activity: ActivityHook | None = None,
         on_escalation: EscalationHook | None = None,
         erase_attachments: AttachmentsEraser | None = None,
+        on_lead_message: ActivityHook | None = None,
     ) -> None:
         self._sessions = sessions
         self._settings = settings
@@ -84,11 +85,13 @@ class ConversationService(ErasureMixin):
         self._on_activity = on_activity
         self._on_escalation = on_escalation
         self._erase_attachments = erase_attachments
+        self._on_lead_message = on_lead_message
         self._locks: dict[int, asyncio.Lock] = {}
 
     async def handle_message(self, inc: Incoming) -> list[Outgoing]:
         cfg = await self._settings.get()
         early, turn, escalated = await self._receive(inc, cfg)
+        await notify_owner(self._on_lead_message, early, turn)  # Q-010: личка менеджеру
         if turn is None:
             if escalated is not None:
                 await self._fire(*escalated)

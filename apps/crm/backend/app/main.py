@@ -22,6 +22,7 @@ from app.api.v1 import (
     spend,
     stream,
     system,
+    system_status,
     users,
 )
 from app.api.v1 import settings as settings_api
@@ -55,6 +56,12 @@ async def _issue_setup_code(container: Container) -> None:
         structlog.get_logger(__name__).warning("setup_code_deferred", error=repr(exc))
 
 
+async def _lead_message(lead_id: int) -> None:
+    from app.tasks.notify import enqueue_lead_message
+
+    await enqueue_lead_message(lead_id)
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     configure_logging(settings)
@@ -66,7 +73,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         async with (
             httpx.AsyncClient(timeout=settings.ready_check_timeout_s) as http,
             queue_lifespan(settings),
-            bot_lifespan(container, on_activity=_qualify, on_escalation=_escalated) as bot,
+            bot_lifespan(
+                container,
+                on_activity=_qualify,
+                on_escalation=_escalated,
+                on_lead_message=_lead_message,
+            ) as bot,
         ):
             app.state.container = container
             await _issue_setup_code(container)
@@ -114,6 +126,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         system,
         spend,
         integrations,
+        system_status,
     )
     for module in routers:
         router = module.router

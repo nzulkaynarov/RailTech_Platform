@@ -5,7 +5,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type MePatchUiMode = (typeof MePatchUiMode)[keyof typeof MePatchUiMode];
+export type MePatchUiMode = (typeof MePatchUiMode)[keyof typeof MePatchUiMode] | null;
 
 export const MePatchUiMode = {
   admin: "admin",

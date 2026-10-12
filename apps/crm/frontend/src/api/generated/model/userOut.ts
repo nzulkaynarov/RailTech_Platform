@@ -11,6 +11,8 @@ export interface UserOut {
   id: number;
   is_active: boolean;
   must_change_password: boolean;
+  notify_leads: boolean;
+  notify_system: boolean;
   roles: string[];
   tg_user_id: number | null;
   ui_mode: string;

@@ -48,6 +48,7 @@ def build_conversation(
     saver: AsyncPostgresSaver,
     on_activity: ActivityHook | None = None,
     on_escalation: EscalationHook | None = None,
+    on_lead_message: ActivityHook | None = None,
 ) -> ConversationService:
     """Диалоговый контур бота: BudgetGuard → модель, MCP-инструменты, чекпоинтер."""
     usage = container.usage_recorder
@@ -65,6 +66,7 @@ def build_conversation(
         on_activity=on_activity,
         on_escalation=on_escalation,
         erase_attachments=_attachments_eraser(container),
+        on_lead_message=on_lead_message,
     )
 
 
@@ -95,6 +97,7 @@ async def bot_lifespan(
     container: Container,
     on_activity: ActivityHook | None = None,
     on_escalation: EscalationHook | None = None,
+    on_lead_message: ActivityHook | None = None,
 ) -> AsyncIterator[BotSupervisor | None]:
     """Супервизор бота: токен — из «Подключений» (БД) или env; смена токена — без рестарта API."""
     config = container.settings
@@ -106,7 +109,9 @@ async def bot_lifespan(
 
         async def make_dispatcher() -> Dispatcher:
             saver = await stack.enter_async_context(checkpointer(container))
-            conversation = build_conversation(container, saver, on_activity, on_escalation)
+            conversation = build_conversation(
+                container, saver, on_activity, on_escalation, on_lead_message
+            )
             rbac = await Rbac.create(container.engine, config.casbin_dir)
             return build_dispatcher(
                 container.session_factory,

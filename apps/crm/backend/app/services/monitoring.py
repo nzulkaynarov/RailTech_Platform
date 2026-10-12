@@ -1,4 +1,7 @@
-"""Монитор эксплуатации (SPEC §13): алерты ⚠️ в канал и ежедневный отчёт.
+"""Монитор эксплуатации (SPEC §13): алерты ⚠️ и ежедневный отчёт.
+
+Алерт — в личку админам, подписанным на системные уведомления (Q-010, аудит 2026-10-12 §3 п. 8);
+никому не доставлено → в канал команды (запасной путь). Итоги дня — в канал.
 
 Алерт уходит на переходе «норма → проблема», повторяется не чаще 6 ч и снимается
 постом «✅ в норме». Состояние — `system_alerts` (переживает рестарты воркера).
@@ -26,6 +29,7 @@ from app.domain.budget import day_start
 from app.models.system import SystemAlert
 from app.repositories import monitoring as repo
 from app.services.settings import SettingsService
+from app.services.staff_notifier import StaffNotifier
 
 logger = structlog.get_logger(__name__)
 FAILED_WINDOW = timedelta(hours=1)
@@ -48,6 +52,7 @@ class MonitorService:
         self._bot = bot
         self._probe = litellm_probe
         self._model_probe = model_probe
+        self._staff = StaffNotifier(sessions, bot)
 
     async def check(self, now: datetime) -> list[str]:
         """Один проход монитора; возвращает отправленные в канал сообщения."""
@@ -84,7 +89,7 @@ class MonitorService:
                 delivered = False
                 if decision is not Decision.NONE:
                     text = message(item, decision)
-                    delivered = await self._send(channel, text, item.key)
+                    delivered = await self._alert(channel, text, item.key)
                     if delivered:
                         sent.append(text)
                 _apply(session, row, item, decision, delivered, now)
@@ -110,6 +115,12 @@ class MonitorService:
         )
         channel = cfg.notifications.channel_id
         return text if await self._send(channel, text, "daily_report") else None
+
+    async def _alert(self, channel: int | None, text: str, key: str) -> bool:
+        """Сначала личные сообщения админам; не доставлено никому — канал команды."""
+        if await self._staff.alert_admins(text, key) > 0:
+            return True
+        return await self._send(channel, text, key)
 
     async def _send(self, channel: int | None, text: str, key: str) -> bool:
         if self._bot is None or channel is None:

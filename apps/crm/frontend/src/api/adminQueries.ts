@@ -13,6 +13,7 @@ import {
   listKbDocuments,
   listKbGaps,
   listProducts,
+  systemStatus,
 } from "./generated/crm";
 import type { ListAuditParams, ListKbGapsParams } from "./generated/model";
 import { compact, unwrap } from "./http";
@@ -29,7 +30,16 @@ export const adminKeys = {
   client: (id: number) => ["client", id] as const,
   clientDocuments: (id: number) => ["client", id, "documents"] as const,
   access: (id: number) => ["document", id, "access"] as const,
+  system: ["system", "status"] as const,
 };
+
+/** «Состояние системы»: только чтение, моделей не вызывает; авто-обновление раз в минуту. */
+export const useSystemStatus = () =>
+  useQuery({
+    queryKey: adminKeys.system,
+    queryFn: async () => unwrap(await systemStatus()),
+    refetchInterval: 60_000,
+  });
 
 export const useKbDocuments = () =>
   useQuery({

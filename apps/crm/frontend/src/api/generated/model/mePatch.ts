@@ -6,6 +6,11 @@
  */
 import type { MePatchUiMode } from "./mePatchUiMode";
 
+/**
+ * Своё: режим навигации и подписки на личные уведомления от бота (Q-010).
+ */
 export interface MePatch {
-  ui_mode: MePatchUiMode;
+  notify_leads?: boolean | null;
+  notify_system?: boolean | null;
+  ui_mode?: MePatchUiMode;
 }
