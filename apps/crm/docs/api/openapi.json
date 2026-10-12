@@ -429,6 +429,35 @@
         "title": "ChangePasswordRequest",
         "type": "object"
       },
+      "ChatCandidateOut": {
+        "properties": {
+          "chat_id": {
+            "title": "Chat Id",
+            "type": "integer"
+          },
+          "chat_type": {
+            "title": "Chat Type",
+            "type": "string"
+          },
+          "detected_at": {
+            "format": "date-time",
+            "title": "Detected At",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "chat_id",
+          "title",
+          "chat_type",
+          "detected_at"
+        ],
+        "title": "ChatCandidateOut",
+        "type": "object"
+      },
       "ChecklistItem": {
         "properties": {
           "done": {
@@ -3000,7 +3029,13 @@
           "setup_done",
           "setup_code_invalid",
           "setup_code_expired",
-          "setup_locked"
+          "setup_locked",
+          "invalid_bot_token",
+          "telegram_unavailable",
+          "secrets_key_missing",
+          "bot_not_running",
+          "channel_not_configured",
+          "channel_send_failed"
         ],
         "title": "Reason",
         "type": "string"
@@ -3610,6 +3645,145 @@
           "full_name"
         ],
         "title": "TeamMember",
+        "type": "object"
+      },
+      "TelegramStatusOut": {
+        "description": "Значение токена сюда не попадает никогда — только `configured` и `last4`.",
+        "properties": {
+          "channel_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channel Id"
+          },
+          "channel_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channel Title"
+          },
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "last4": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last4"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "mode": {
+            "title": "Mode",
+            "type": "string"
+          },
+          "running": {
+            "title": "Running",
+            "type": "boolean"
+          },
+          "secrets_enabled": {
+            "title": "Secrets Enabled",
+            "type": "boolean"
+          },
+          "source": {
+            "enum": [
+              "db",
+              "env",
+              "none"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          }
+        },
+        "required": [
+          "configured",
+          "source",
+          "last4",
+          "updated_at",
+          "username",
+          "mode",
+          "running",
+          "last_error",
+          "secrets_enabled",
+          "channel_id",
+          "channel_title"
+        ],
+        "title": "TelegramStatusOut",
+        "type": "object"
+      },
+      "TelegramTokenIn": {
+        "additionalProperties": false,
+        "properties": {
+          "password": {
+            "format": "password",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "token": {
+            "format": "password",
+            "maxLength": 128,
+            "minLength": 20,
+            "title": "Token",
+            "type": "string",
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "token",
+          "password"
+        ],
+        "title": "TelegramTokenIn",
         "type": "object"
       },
       "TokenResponse": {
@@ -4953,6 +5127,212 @@
         "summary": "Inbox",
         "tags": [
           "leads"
+        ]
+      }
+    },
+    "/api/v1/integrations/telegram": {
+      "get": {
+        "operationId": "get_telegram_status",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelegramStatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Telegram Status",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/api/v1/integrations/telegram/channel/test": {
+      "post": {
+        "operationId": "send_telegram_channel_test",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Send Telegram Channel Test",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/api/v1/integrations/telegram/channels": {
+      "get": {
+        "operationId": "list_telegram_channels",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ChatCandidateOut"
+                  },
+                  "title": "Response List Telegram Channels",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Telegram Channels",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/api/v1/integrations/telegram/channels/{chat_id}/connect": {
+      "post": {
+        "operationId": "connect_telegram_channel",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chat_id",
+            "required": true,
+            "schema": {
+              "title": "Chat Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Connect Telegram Channel",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/api/v1/integrations/telegram/token": {
+      "put": {
+        "description": "Проверить токен в Telegram (`getMe`), сохранить зашифрованным, перезапустить бота.",
+        "operationId": "put_telegram_token",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TelegramTokenIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelegramStatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Telegram Token",
+        "tags": [
+          "integrations"
         ]
       }
     },

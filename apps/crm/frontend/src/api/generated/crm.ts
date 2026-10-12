@@ -13,6 +13,7 @@ import type {
   BodyUploadDocument,
   BodyUploadKbDocument,
   ChangePasswordRequest,
+  ChatCandidateOut,
   ClientCreate,
   ClientDetail,
   ClientOut,
@@ -75,6 +76,8 @@ import type {
   Snooze,
   SpendReport,
   TeamMember,
+  TelegramStatusOut,
+  TelegramTokenIn,
   TokenResponse,
   UserCreate,
   UserCreated,
@@ -948,6 +951,210 @@ export const inbox = async (options?: Parameters<typeof http>[1]): Promise<inbox
   return http<inboxResponse>(getInboxUrl(), {
     ...options,
     method: "GET",
+  });
+};
+
+export type getTelegramStatusResponse200 = {
+  data: TelegramStatusOut;
+  status: 200;
+};
+
+export type getTelegramStatusResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type getTelegramStatusResponseSuccess = getTelegramStatusResponse200 & {
+  headers: Headers;
+};
+export type getTelegramStatusResponseError = getTelegramStatusResponse422 & {
+  headers: Headers;
+};
+
+export type getTelegramStatusResponse =
+  getTelegramStatusResponseSuccess | getTelegramStatusResponseError;
+
+export const getGetTelegramStatusUrl = () => {
+  return `/api/v1/integrations/telegram`;
+};
+
+/**
+ * @summary Get Telegram Status
+ */
+export const getTelegramStatus = async (
+  options?: Parameters<typeof http>[1],
+): Promise<getTelegramStatusResponse> => {
+  return http<getTelegramStatusResponse>(getGetTelegramStatusUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type sendTelegramChannelTestResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type sendTelegramChannelTestResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type sendTelegramChannelTestResponseSuccess = sendTelegramChannelTestResponse200 & {
+  headers: Headers;
+};
+export type sendTelegramChannelTestResponseError = sendTelegramChannelTestResponse422 & {
+  headers: Headers;
+};
+
+export type sendTelegramChannelTestResponse =
+  sendTelegramChannelTestResponseSuccess | sendTelegramChannelTestResponseError;
+
+export const getSendTelegramChannelTestUrl = () => {
+  return `/api/v1/integrations/telegram/channel/test`;
+};
+
+/**
+ * @summary Send Telegram Channel Test
+ */
+export const sendTelegramChannelTest = async (
+  options?: Parameters<typeof http>[1],
+): Promise<sendTelegramChannelTestResponse> => {
+  return http<sendTelegramChannelTestResponse>(getSendTelegramChannelTestUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export type listTelegramChannelsResponse200 = {
+  data: ChatCandidateOut[];
+  status: 200;
+};
+
+export type listTelegramChannelsResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type listTelegramChannelsResponseSuccess = listTelegramChannelsResponse200 & {
+  headers: Headers;
+};
+export type listTelegramChannelsResponseError = listTelegramChannelsResponse422 & {
+  headers: Headers;
+};
+
+export type listTelegramChannelsResponse =
+  listTelegramChannelsResponseSuccess | listTelegramChannelsResponseError;
+
+export const getListTelegramChannelsUrl = () => {
+  return `/api/v1/integrations/telegram/channels`;
+};
+
+/**
+ * @summary List Telegram Channels
+ */
+export const listTelegramChannels = async (
+  options?: Parameters<typeof http>[1],
+): Promise<listTelegramChannelsResponse> => {
+  return http<listTelegramChannelsResponse>(getListTelegramChannelsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type connectTelegramChannelResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type connectTelegramChannelResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type connectTelegramChannelResponseSuccess = connectTelegramChannelResponse200 & {
+  headers: Headers;
+};
+export type connectTelegramChannelResponseError = connectTelegramChannelResponse422 & {
+  headers: Headers;
+};
+
+export type connectTelegramChannelResponse =
+  connectTelegramChannelResponseSuccess | connectTelegramChannelResponseError;
+
+export const getConnectTelegramChannelUrl = (chatId: number) => {
+  return `/api/v1/integrations/telegram/channels/${chatId}/connect`;
+};
+
+/**
+ * @summary Connect Telegram Channel
+ */
+export const connectTelegramChannel = async (
+  chatId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<connectTelegramChannelResponse> => {
+  return http<connectTelegramChannelResponse>(getConnectTelegramChannelUrl(chatId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export type putTelegramTokenResponse200 = {
+  data: TelegramStatusOut;
+  status: 200;
+};
+
+export type putTelegramTokenResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type putTelegramTokenResponseSuccess = putTelegramTokenResponse200 & {
+  headers: Headers;
+};
+export type putTelegramTokenResponseError = putTelegramTokenResponse422 & {
+  headers: Headers;
+};
+
+export type putTelegramTokenResponse =
+  putTelegramTokenResponseSuccess | putTelegramTokenResponseError;
+
+export const getPutTelegramTokenUrl = () => {
+  return `/api/v1/integrations/telegram/token`;
+};
+
+/**
+ * Проверить токен в Telegram (`getMe`), сохранить зашифрованным, перезапустить бота.
+ * @summary Put Telegram Token
+ */
+export const putTelegramToken = async (
+  telegramTokenIn: TelegramTokenIn,
+  options?: Parameters<typeof http>[1],
+): Promise<putTelegramTokenResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<putTelegramTokenResponse>(getPutTelegramTokenUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(telegramTokenIn),
   });
 };
 

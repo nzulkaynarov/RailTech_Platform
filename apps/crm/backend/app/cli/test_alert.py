@@ -11,7 +11,7 @@ from app.container import get_container
 async def run(_: argparse.Namespace) -> int:
     c = get_container()
     cfg = await c.settings_service.get()
-    channel, bot = cfg.notifications.channel_id, c.telegram_bot
+    channel, bot = cfg.notifications.channel_id, await c.telegram_bot()
     if bot is None or channel is None:
         print("Не настроено: TELEGRAM_BOT_TOKEN и/или Настройки → notifications.channel_id")  # noqa: T201
         return 1

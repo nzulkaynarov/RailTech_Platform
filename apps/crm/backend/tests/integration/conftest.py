@@ -41,6 +41,8 @@ TABLES = (
     "document_access_log",
     "service_requests",
     "system_alerts",
+    "integration_secrets",
+    "telegram_chat_candidates",
     "procrastinate_jobs",
 )
 FAKE_KEY = "x" * 40  # фиктивный ключ только для тестов

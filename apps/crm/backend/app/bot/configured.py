@@ -1,11 +1,12 @@
-"""Настроен ли клиентский Telegram-бот — единственная точка проверки.
+"""Настроен ли клиентский Telegram-бот — единственная точка проверки (чек-лист настройки и др.).
 
-Сейчас токен берётся из конфигурации (`.env`). Когда токен переедет в хранилище секретов
-в БД, меняется только эта функция — чек-лист настройки и другие потребители не трогаются.
+Токен — из хранилища секретов в БД, иначе из `.env` (ADR-0018, `resolve_token`).
 """
 
 from app.container import Container
+from app.integrations.telegram import resolve_token
 
 
 async def bot_configured(container: Container) -> bool:
-    return bool(container.settings.telegram_bot_token.get_secret_value())
+    token, _source = await resolve_token(container.secrets_store, container.settings)
+    return bool(token)

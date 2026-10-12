@@ -1,0 +1,53 @@
+/** «Подключения» (аудит 2026-10-12, шаг 2): Telegram-бот и канал команды. */
+export const integrations = {
+  integrations: {
+    botTitle: "Telegram-бот",
+    botStatus: "Состояние",
+    botUsername: "Бот",
+    botMode: "Режим",
+    botSource: "Откуда токен",
+    tokenLabel: "Токен бота",
+    tokenSaved: "Сохранён: ••••{last4}",
+    tokenPlaceholder: "Вставьте токен из @BotFather",
+    tokenHint: "Токен виден только при вводе. После сохранения показываются последние 4 символа.",
+    checkAndSave: "Проверить и сохранить",
+    confirmTitle: "Подтвердите паролем",
+    confirmHint: "Смена токена перезапустит бота. Введите свой пароль от CRM.",
+    password: "Ваш пароль",
+    confirm: "Сохранить",
+    cancel: "Отмена",
+    saved: "Токен проверен и сохранён — бот @{username} перезапущен",
+    secretsDisabled:
+      "На сервере не задан SECRETS_KEY: токен можно задать только в .env (TELEGRAM_BOT_TOKEN).",
+    channelTitle: "Канал команды",
+    channelHowTo:
+      "Добавьте бота администратором в канал или группу команды — канал появится здесь сам. Бот ничего не напишет в канал, пока вы не нажмёте «Подключить».",
+    channelCurrent: "Подключён",
+    channelNone: "Канал не подключён",
+    channelUnknownTitle: "канал {id}",
+    detected: "Найденные каналы",
+    detectedEmpty: "Каналов пока нет",
+    detectedEmptyHint: "Добавьте бота администратором в канал и обновите страницу.",
+    connect: "Подключить",
+    connected: "Канал подключён",
+    sendTest: "Отправить тестовое сообщение",
+    testSent: "Тестовое сообщение отправлено — проверьте канал",
+    refresh: "Обновить",
+  },
+  botState: {
+    running: "Работает",
+    stopped: "Остановлен",
+    notConfigured: "Токен не задан",
+    failed: "Ошибка запуска",
+  },
+  botMode: {
+    polling: "Опрос (dev)",
+    webhook: "Webhook (prod)",
+    disabled: "Выключен",
+  } as Record<string, string>,
+  tokenSource: {
+    db: "Подключения",
+    env: "Файл .env",
+    none: "Не задан",
+  } as Record<string, string>,
+};

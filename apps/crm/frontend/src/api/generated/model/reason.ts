@@ -36,4 +36,10 @@ export const Reason = {
   setup_code_invalid: "setup_code_invalid",
   setup_code_expired: "setup_code_expired",
   setup_locked: "setup_locked",
+  invalid_bot_token: "invalid_bot_token",
+  telegram_unavailable: "telegram_unavailable",
+  secrets_key_missing: "secrets_key_missing",
+  bot_not_running: "bot_not_running",
+  channel_not_configured: "channel_not_configured",
+  channel_send_failed: "channel_send_failed",
 } as const;

@@ -73,6 +73,9 @@ class Settings(BaseSettings):
 
     ready_check_timeout_s: float = Field(default=2.0, gt=0, le=10)
 
+    # Ключ Fernet для секретов интеграций в БД (токен бота из «Подключений»). Без него — только env.
+    secrets_key: SecretStr = SecretStr("")
+
     jwt_secret: SecretStr = SecretStr("")
     access_token_ttl_s: int = Field(default=900, ge=60)
     refresh_token_ttl_days: int = Field(default=30, ge=1)

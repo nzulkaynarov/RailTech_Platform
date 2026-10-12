@@ -19,7 +19,7 @@ from app.tasks.queue import queue
 DELAY_S = 5
 
 
-def build_qualifier_service(c: Container) -> QualifierService:
+async def build_qualifier_service(c: Container) -> QualifierService:
     return QualifierService(
         c.session_factory,
         c.settings_service,
@@ -31,7 +31,7 @@ def build_qualifier_service(c: Container) -> QualifierService:
                 alias="qualifier-model",
             )
         ),
-        LeadMessenger(c.session_factory, c.telegram_bot),
+        LeadMessenger(c.session_factory, await c.telegram_bot()),
         on_escalation=_escalated,
     )
 
@@ -48,7 +48,7 @@ async def _escalated(lead_id: int, escalation_id: int) -> None:
     retry=RetryStrategy(max_attempts=2, wait=10),
 )
 async def qualify_lead(lead_id: int) -> int | None:
-    return await build_qualifier_service(get_container()).run(lead_id)
+    return await (await build_qualifier_service(get_container())).run(lead_id)
 
 
 async def enqueue_qualify(lead_id: int) -> bool:

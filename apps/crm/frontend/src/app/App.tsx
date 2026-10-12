@@ -1,4 +1,5 @@
 import {
+  ApiOutlined,
   AuditOutlined,
   BookOutlined,
   CloudServerOutlined,
@@ -31,6 +32,7 @@ import { DashboardPage } from "../pages/dashboard/DashboardPage";
 import { GapsPage } from "../pages/gaps/GapsPage";
 import { InboxNavIcon } from "../components/InboxNavIcon";
 import { InboxPage } from "../pages/inbox/InboxPage";
+import { IntegrationsPage } from "../pages/integrations/IntegrationsPage";
 import { HomeRedirect } from "./HomeRedirect";
 import { KbPage } from "../pages/kb/KbPage";
 import { SettingsPage } from "../pages/settings/SettingsPage";
@@ -95,6 +97,11 @@ const resources = [
     name: "backups",
     list: "/backups",
     meta: { label: t.nav.backups, icon: <CloudServerOutlined /> },
+  },
+  {
+    name: "integrations",
+    list: "/integrations",
+    meta: { label: t.nav.integrations, icon: <ApiOutlined /> },
   },
   { name: "profile", list: "/profile", meta: { label: t.nav.profile, icon: <UserOutlined /> } },
 ];
@@ -218,6 +225,14 @@ export function App() {
                   element={
                     <RouteGuard resource="backups">
                       <BackupsPage />
+                    </RouteGuard>
+                  }
+                />
+                <Route
+                  path="/integrations"
+                  element={
+                    <RouteGuard resource="integrations">
+                      <IntegrationsPage />
                     </RouteGuard>
                   }
                 />

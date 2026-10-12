@@ -1,9 +1,10 @@
 """Сборка диалогового контура в процессе API: чекпоинтер, агент, сервис, бот."""
 
 from collections.abc import AsyncIterator, Awaitable, Callable
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 
 import structlog
+from aiogram import Dispatcher
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
@@ -11,8 +12,10 @@ from psycopg_pool import AsyncConnectionPool
 from app.agents.dialog.graph import DialogAgent
 from app.agents.llm import ChatModel
 from app.agents.mcp_client import McpToolClient
-from app.bot.runtime import BotRuntime, build_dispatcher
+from app.bot.runtime import build_dispatcher
+from app.bot.supervisor import BotSupervisor
 from app.container import Container
+from app.integrations.telegram import TokenSource, resolve_token
 from app.security.rbac import Rbac
 from app.services.budget import BudgetedModel
 from app.services.client_bot import ClientBotService
@@ -92,28 +95,36 @@ async def bot_lifespan(
     container: Container,
     on_activity: ActivityHook | None = None,
     on_escalation: EscalationHook | None = None,
-) -> AsyncIterator[BotRuntime | None]:
+) -> AsyncIterator[BotSupervisor | None]:
+    """Супервизор бота: токен — из «Подключений» (БД) или env; смена токена — без рестарта API."""
     config = container.settings
-    if config.telegram_mode == "disabled" or not config.telegram_bot_token.get_secret_value():
+    if config.telegram_mode == "disabled":
         logger.warning("bot_disabled", mode=config.telegram_mode)
         yield None
         return
-    async with checkpointer(container) as saver:
-        conversation = build_conversation(container, saver, on_activity, on_escalation)
-        rbac = await Rbac.create(container.engine, config.casbin_dir)
-        dispatcher = build_dispatcher(
-            container.session_factory,
-            conversation,
-            container.settings_service,
-            container.storage,
-            config.s3_bucket_attachments,
-            leads=container.lead_service,
-            rbac=rbac,
-            client_bot=build_client_bot(container, on_escalation),
-        )
-        runtime = BotRuntime.create(config, dispatcher)
-        await runtime.start()
+    async with AsyncExitStack() as stack:
+
+        async def make_dispatcher() -> Dispatcher:
+            saver = await stack.enter_async_context(checkpointer(container))
+            conversation = build_conversation(container, saver, on_activity, on_escalation)
+            rbac = await Rbac.create(container.engine, config.casbin_dir)
+            return build_dispatcher(
+                container.session_factory,
+                conversation,
+                container.settings_service,
+                container.storage,
+                config.s3_bucket_attachments,
+                leads=container.lead_service,
+                rbac=rbac,
+                client_bot=build_client_bot(container, on_escalation),
+            )
+
+        async def resolve() -> tuple[str, TokenSource]:
+            return await resolve_token(container.secrets_store, config)
+
+        supervisor = BotSupervisor(config, resolve, make_dispatcher)
+        await supervisor.start()
         try:
-            yield runtime
+            yield supervisor
         finally:
-            await runtime.stop()
+            await supervisor.stop()
