@@ -162,7 +162,7 @@ async def test_own_contact_is_saved_recorded_and_keyboard_removed() -> None:
     await fsm.set_state(client_handlers.PhoneForm.pending)
     contact = {"phone_number": "998901234567", "first_name": "Азиз", "user_id": USER}
     event = message(bot, contact=contact)
-    await client_handlers.on_own_contact(event, client, conv, FakeSettings(), fsm)  # type: ignore[arg-type]
+    await client_handlers.on_own_contact(event, client, conv, FakeSettings(), fsm)
     assert client.phones == ["+998901234567"]
     reply = sent(bot)[0]
     assert reply.text == CFG.texts.phone_saved.ru
