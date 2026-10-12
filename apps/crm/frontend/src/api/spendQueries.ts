@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { adminKeys } from "./adminQueries";
 import {
   changeModel,
+  getGetSetupChecklistQueryKey,
   getListModelsQueryKey,
   resetModel,
   testModel,
@@ -11,7 +12,6 @@ import {
   useListModels,
 } from "./generated/crm";
 import type { ModelChangeIn } from "./generated/model";
-import { systemKeys } from "./systemQueries";
 
 export const useSpend = (days: number) => useGetSpend({ days });
 
@@ -24,8 +24,8 @@ export function useTestModel() {
     // Результат проверки пишется в состояние монитора — обновляем и «Состояние системы».
     onSettled: () =>
       Promise.all(
-        [getListModelsQueryKey(), adminKeys.system, systemKeys.checklist].map((queryKey) =>
-          client.invalidateQueries({ queryKey }),
+        [getListModelsQueryKey(), adminKeys.system, getGetSetupChecklistQueryKey()].map(
+          (queryKey) => client.invalidateQueries({ queryKey }),
         ),
       ),
   });
