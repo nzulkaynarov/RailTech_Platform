@@ -148,10 +148,20 @@ def bot(facts: BotFacts | None, mode: str, now: datetime) -> Component:
         reason = "Токен бота не задан — «Подключения» → «Telegram-бот»"
         return Component("bot", title, "fail", reason, now)
     if not facts.running:
-        why = f" ({facts.last_error})" if facts.last_error else ""
-        reason = f"Бот не принимает сообщения{why} — проверьте токен в «Подключениях»"
-        return Component("bot", title, "fail", reason, now)
+        return Component("bot", title, "fail", _bot_failure(facts.last_error), now)
     return Component("bot", title, "ok", "принимает сообщения", now)
+
+
+def _bot_failure(error: str | None) -> str:
+    """Причина остановки бота словами: класс исключения aiogram админу ничего не говорит."""
+    text = (error or "").lower()
+    if "network" in text or "timeout" in text:
+        return "Нет связи с Telegram — проверьте интернет на сервере; бот переподключится сам"
+    if "unauthorized" in text:
+        return "Telegram не принимает токен бота — введите новый в «Подключениях»"
+    if "conflict" in text:
+        return "Этот токен уже использует другой сервер — остановите второй стенд или смените токен"
+    return "Бот не принимает сообщения — проверьте токен в «Подключениях»"
 
 
 def crm_url_problem(url: str) -> str | None:

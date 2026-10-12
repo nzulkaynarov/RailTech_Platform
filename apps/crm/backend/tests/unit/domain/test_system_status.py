@@ -64,7 +64,12 @@ def test_queue(facts: QueueFacts, status: str) -> None:
     [
         (None, "polling", "fail", "Токен"),
         (BotFacts(False, "none", None), "polling", "fail", "Токен"),
-        (BotFacts(False, "db", "TelegramUnauthorizedError"), "polling", "fail", "Unauthorized"),
+        (
+            BotFacts(False, "db", "TelegramUnauthorizedError"),
+            "polling",
+            "fail",
+            "не принимает токен",
+        ),
         (BotFacts(True, "env", None), "polling", "ok", ""),
         (BotFacts(True, "env", None), "disabled", "fail", "выключен"),
     ],
@@ -159,3 +164,17 @@ def test_backup_daemon_never_seen_is_warn(alive: bool, seen: bool, expected: str
         facts = BackupFacts(True, alive, None, None, seen)
         reason = rules.backup(NOW, facts).reason
         assert reason == "Резервное копирование не запущено на этом сервере"
+
+
+@pytest.mark.parametrize(
+    ("error", "expected"),
+    [
+        ("TelegramNetworkError", "Нет связи с Telegram"),
+        ("TelegramUnauthorizedError", "не принимает токен"),
+        ("TelegramConflictError", "другой сервер"),
+        (None, "Бот не принимает сообщения"),
+    ],
+)
+def test_bot_failure_in_words(error: str | None, expected: str) -> None:
+    assert expected in rules._bot_failure(error)
+    assert "Error" not in rules._bot_failure(error)
