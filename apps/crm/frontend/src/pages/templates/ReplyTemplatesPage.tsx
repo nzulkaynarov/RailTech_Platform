@@ -138,7 +138,7 @@ export function ReplyTemplatesPage() {
       <Typography.Paragraph type="secondary">{tt.intro}</Typography.Paragraph>
       <PageState query={list}>
         {list.data?.length ? (
-          <Table rowKey="id" columns={columns} dataSource={list.data} pagination={false} />
+          <Table rowKey="id" sticky columns={columns} dataSource={list.data} pagination={false} />
         ) : (
           <EmptyState
             title={tt.empty}

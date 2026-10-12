@@ -6,7 +6,7 @@ import { useState } from "react";
 import { adminKeys, useClientDocuments } from "../../api/adminQueries";
 import { updateDocument, uploadDocument } from "../../api/generated/crm";
 import type { DocumentOut } from "../../api/generated/model";
-import { downloadFile, unwrap } from "../../api/http";
+import { downloadFile } from "../../api/http";
 import { PageState } from "../../components/PageState";
 import { ActionsTitle, RowActions } from "../../components/RowActions";
 import { IngestTag } from "../../components/StageBadge";
@@ -29,9 +29,7 @@ function useDocumentMutations(clientId: number, onUploaded: () => void) {
       if (!file) throw new Error(t.kb.file);
       const date = v.doc_date ? v.doc_date.format("YYYY-MM-DD") : null;
       const meta = { client_id: clientId, type: v.type, title: v.title, visible: v.visible };
-      return unwrap(
-        await uploadDocument({ file, ...meta, number: v.number ?? null, doc_date: date }),
-      );
+      return await uploadDocument({ file, ...meta, number: v.number ?? null, doc_date: date });
     },
     onSuccess: (_, v) => {
       onUploaded();
@@ -42,7 +40,7 @@ function useDocumentMutations(clientId: number, onUploaded: () => void) {
   });
   const toggle = useMutation({
     mutationFn: async (d: DocumentOut) =>
-      unwrap(await updateDocument(d.id, { is_visible_to_client: !d.is_visible_to_client })),
+      await updateDocument(d.id, { is_visible_to_client: !d.is_visible_to_client }),
     onSuccess: (_, d) => {
       void message.success(named(d.is_visible_to_client ? t.clients.hidden : t.clients.shown, d));
       void refresh();

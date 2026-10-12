@@ -95,8 +95,8 @@ function columns(showClient: boolean, onEdit: Props["onEdit"]): ColumnsType<Deal
 export function DealsTable({ deals, loading, showClient = true, onEdit }: Props) {
   return (
     <Table<DealOut>
+      sticky
       rowKey="id"
-      size="small"
       loading={loading ?? false}
       dataSource={deals}
       columns={columns(showClient, onEdit)}

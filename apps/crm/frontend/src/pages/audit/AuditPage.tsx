@@ -14,6 +14,7 @@ import { type AuditContext, auditChanges, entityText } from "../../domain/audit"
 import { actorLabel, auditActionLabel, ENTITY_TYPES, entityLabel } from "../../domain/labels";
 import { useProductNames } from "../../hooks/useProductNames";
 import { t } from "../../i18n/ru";
+import { rangePresets } from "../../lib/datePresets";
 import { DATE_FORMAT, formatDateTime, TIMEZONE } from "../../lib/time";
 import "../admin.css";
 
@@ -91,6 +92,7 @@ function Filters({ update, users }: { update: Update; users: Option[] }) {
         className="filter-range"
         aria-label={t.audit.period}
         format={DATE_FORMAT}
+        presets={rangePresets()}
         onChange={(range) => {
           update(periodPatch(range));
         }}
@@ -172,7 +174,6 @@ export function AuditPage() {
       <PageState query={query} inline>
         <Table<AuditItem>
           rowKey="id"
-          size="small"
           loading={query.isLoading}
           dataSource={query.data?.items ?? []}
           sticky

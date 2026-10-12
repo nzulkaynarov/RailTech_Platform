@@ -4,6 +4,22 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
+const QUERY_KEY_METHODS = [
+  "invalidateQueries",
+  "refetchQueries",
+  "cancelQueries",
+  "removeQueries",
+  "resetQueries",
+  "setQueriesData",
+  "getQueriesData",
+  "fetchQuery",
+  "prefetchQuery",
+  "ensureQueryData",
+  "query",
+].join("|");
+const LITERAL_KEY_MESSAGE =
+  "Ключ кэша — сгенерированный orval (get…QueryKey) или группа из src/api/queryKeys.ts, не массив-литерал (ADR-0021).";
+
 export default tseslint.config(
   { ignores: ["dist", "coverage", "src/api/generated"] },
   {
@@ -24,6 +40,23 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
+      // ADR-0021: ключи кэша — только сгенерированные orval (`get…QueryKey`) или группы из
+      // `src/api/queryKeys.ts`. Ручной массив молча не совпадёт с URL-ключом orval.
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: `CallExpression[callee.property.name=/^(${QUERY_KEY_METHODS})$/] > ObjectExpression > Property[key.name="queryKey"] > ArrayExpression.value`,
+          message: LITERAL_KEY_MESSAGE,
+        },
+        {
+          selector: `CallExpression[callee.name=/^(useQuery|useSuspenseQuery|useInfiniteQuery)$/] > ObjectExpression > Property[key.name="queryKey"] > ArrayExpression.value`,
+          message: LITERAL_KEY_MESSAGE,
+        },
+        {
+          selector: `CallExpression[callee.property.name=/^(setQueryData|getQueryData|getQueryState)$/][arguments.0.type="ArrayExpression"]`,
+          message: LITERAL_KEY_MESSAGE,
+        },
+      ],
     },
   },
   {

@@ -1,5 +1,5 @@
 import { Grid, Table } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import type { ColumnsType, TableProps } from "antd/es/table";
 import { useState } from "react";
 
 import type { LeadOut } from "../../api/generated/model";
@@ -13,7 +13,14 @@ import { PageBody } from "../../components/PageBody";
 import { PageHeader } from "../../components/PageHeader";
 import { PageState } from "../../components/PageState";
 import { LangTag, PriorityTag, StageBadge } from "../../components/StageBadge";
-import { exportParams, LEADS_PAGE, toListParams } from "../../hooks/leadFilters";
+import {
+  exportParams,
+  type LeadFilters,
+  LEADS_PAGE,
+  sortFromHeader,
+  sortOrderOf,
+  toListParams,
+} from "../../hooks/leadFilters";
 import { useLeadFilters } from "../../hooks/useLeadFilters";
 import { t } from "../../i18n/ru";
 import { isRowClick } from "../../lib/rowClick";
@@ -23,8 +30,12 @@ import "../pages.css";
 import { LeadCards } from "./LeadCards";
 import { Filters, PhoneFilters } from "./LeadFilters";
 
-/** Колонки с шириной: приоритет — отдельной узкой колонкой, а не тегом в «Кто ведёт». */
-const COLUMNS: ColumnsType<LeadOut> = [
+/**
+ * Колонки с шириной: приоритет — отдельной узкой колонкой, а не тегом в «Кто ведёт».
+ * «Оценка» и «Последнее сообщение» сортируются кликом по заголовку — на сервере (`sort` в URL),
+ * только по убыванию, как умеет API; «по дате создания» — в «Ещё фильтры».
+ */
+const columns = (sort: LeadFilters["sort"]): ColumnsType<LeadOut> => [
   {
     title: t.leads.name,
     width: 180,
@@ -42,7 +53,16 @@ const COLUMNS: ColumnsType<LeadOut> = [
     render: (_: unknown, l) =>
       l.escalation ? <PriorityTag priority={l.escalation.priority} /> : null,
   },
-  { title: t.leads.score, dataIndex: "score", width: 72, align: "right" },
+  {
+    title: t.leads.score,
+    key: "score",
+    dataIndex: "score",
+    width: 88,
+    align: "right",
+    sorter: true,
+    sortDirections: ["descend"],
+    sortOrder: sortOrderOf("score", sort),
+  },
   {
     title: t.leads.whoLeads,
     width: 190,
@@ -57,7 +77,11 @@ const COLUMNS: ColumnsType<LeadOut> = [
   { title: t.leads.need, dataIndex: "need_summary", ellipsis: true },
   {
     title: t.leads.lastMessage,
-    width: 140,
+    key: "last_message",
+    width: 184,
+    sorter: true,
+    sortDirections: ["descend"],
+    sortOrder: sortOrderOf("last_message", sort),
     render: (_: unknown, l) =>
       l.last_lead_msg_at ? formatWhen(l.last_lead_msg_at) : t.common.none,
   },
@@ -84,6 +108,9 @@ export function LeadsPage() {
     },
   };
   const items = query.data?.items ?? [];
+  const onChange: TableProps<LeadOut>["onChange"] = (_page, _filters, sorter, extra) => {
+    if (extra.action === "sort" && !Array.isArray(sorter)) update({ sort: sortFromHeader(sorter) });
+  };
   return (
     <PageBody>
       <PageHeader
@@ -101,14 +128,14 @@ export function LeadsPage() {
         ) : (
           <Table<LeadOut>
             rowKey="id"
-            size="small"
             sticky
             tableLayout="fixed"
             loading={query.isLoading}
             dataSource={items}
             scroll={{ x: 1040 }}
             pagination={pagination}
-            columns={COLUMNS}
+            columns={columns(filters.sort)}
+            onChange={onChange}
             rowClassName="lead-row"
             onRow={(lead) => ({
               onClick: (event) => {

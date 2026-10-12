@@ -7,10 +7,11 @@ import { Navigate, useNavigate } from "react-router";
 import { useSettings } from "../../api/adminQueries";
 import { createFirstAdmin } from "../../api/generated/crm";
 import type { SetupAdminRequest } from "../../api/generated/model";
-import { tokenStore, unwrap } from "../../api/http";
+import { tokenStore } from "../../api/http";
 import { systemKeys, useSetupState } from "../../api/systemQueries";
 import { passwordChange } from "../../app/providers/auth";
 import { apiErrorField, apiErrorMessage } from "../../hooks/useApiErrorToast";
+import { useDirtyForms } from "../../hooks/useDirtyForms";
 import type { JsonSchema } from "../../domain/schemaForm";
 import { t } from "../../i18n/ru";
 import { SettingsForm } from "../settings/SettingsForm";
@@ -23,7 +24,7 @@ function AdminStep({ onDone }: { onDone: () => void }) {
   const [form] = Form.useForm<SetupAdminRequest>();
   const [error, setError] = useState<string | null>(null);
   const create = useMutation({
-    mutationFn: async (body: SetupAdminRequest) => unwrap(await createFirstAdmin(body)),
+    mutationFn: async (body: SetupAdminRequest) => await createFirstAdmin(body),
     onSuccess: (data) => {
       tokenStore.set(data.access_token);
       passwordChange.required = data.must_change_password;
@@ -75,6 +76,7 @@ function AdminStep({ onDone }: { onDone: () => void }) {
 
 function CompanyStep({ onDone }: { onDone: () => void }) {
   const query = useSettings();
+  const onDirtyChange = useDirtyForms();
   const data = query.data;
   if (!data) return <Skeleton active />;
   return (
@@ -90,6 +92,7 @@ function CompanyStep({ onDone }: { onDone: () => void }) {
             schema={data.schemas[key] as JsonSchema}
             values={data.values[key] ?? {}}
             samples={t.settings.samples}
+            onDirtyChange={onDirtyChange}
           />
         </section>
       ))}

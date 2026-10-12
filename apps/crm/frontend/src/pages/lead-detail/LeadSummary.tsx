@@ -57,13 +57,23 @@ export function LeadSummary({ lead }: { lead: LeadDetail }) {
           {lead.consent_given_at ? formatDate(lead.consent_given_at) : t.lead.consentNo}
         </Descriptions.Item>
         <Descriptions.Item label={t.clients.accessTg}>
-          {lead.tg_username ? `@${lead.tg_username}` : t.common.none}
+          {lead.tg_username ? (
+            <Typography.Text copyable={{ tooltips: [t.copy.telegram, t.copy.copied] }}>
+              {`@${lead.tg_username}`}
+            </Typography.Text>
+          ) : (
+            t.common.none
+          )}
         </Descriptions.Item>
         {lead.client_phone_e164 ? (
           <Descriptions.Item label={t.lead.clientPhone}>
-            <a className="nowrap" href={`tel:${lead.client_phone_e164}`}>
-              {lead.client_phone_e164}
-            </a>
+            <Typography.Text
+              copyable={{ text: lead.client_phone_e164, tooltips: [t.copy.phone, t.copy.copied] }}
+            >
+              <a className="nowrap" href={`tel:${lead.client_phone_e164}`}>
+                {lead.client_phone_e164}
+              </a>
+            </Typography.Text>
           </Descriptions.Item>
         ) : null}
       </Descriptions>

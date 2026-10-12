@@ -5,6 +5,8 @@ import {
   hiddenFilterCount,
   leadFiltersToSearch,
   parseLeadFilters,
+  sortFromHeader,
+  sortOrderOf,
   toListParams,
 } from "./leadFilters";
 
@@ -63,5 +65,29 @@ describe("hiddenFilterCount («Ещё фильтры»)", () => {
     [{ page: 1, stage: "new", language: "en", min_score: 40, from: "2026-10-01" }, 3],
   ])("%j → %i", (f, n) => {
     expect(hiddenFilterCount(f)).toBe(n);
+  });
+});
+
+describe("sort by column header", () => {
+  it.each([
+    [{ columnKey: "score", order: "descend" as const }, "score"],
+    [{ columnKey: "score", order: undefined }, undefined],
+    [{ columnKey: "score", order: null }, undefined],
+    [{ columnKey: "last_message", order: "descend" as const }, undefined],
+    [{ columnKey: "need", order: "descend" as const }, undefined],
+    [{ columnKey: undefined, order: "descend" as const }, undefined],
+  ])("%j → sort=%s", (sorter, sort) => {
+    expect(sortFromHeader(sorter)).toBe(sort);
+  });
+
+  it.each([
+    ["score", undefined, null],
+    ["last_message", undefined, "descend"],
+    ["score", "score", "descend"],
+    ["last_message", "score", null],
+    ["score", "created", null],
+    ["last_message", "created", null],
+  ])("column %s with sort=%s shows %s", (column, sort, order) => {
+    expect(sortOrderOf(column, sort)).toBe(order);
   });
 });

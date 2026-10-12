@@ -3,7 +3,6 @@ import { useCallback } from "react";
 
 import { assist } from "../api/generated/crm";
 import type { AssistOut } from "../api/generated/model";
-import { unwrap } from "../api/http";
 import type { AssistMode } from "../domain/replyAssist";
 import { useApiErrorToast } from "./useApiErrorToast";
 
@@ -19,7 +18,7 @@ export function useReplyAssist(leadId: number): AssistRunner {
   const onError = useApiErrorToast();
   const mutation = useMutation({
     mutationFn: async ({ mode, text }: { mode: AssistMode; text: string }) =>
-      unwrap(await assist(leadId, mode === "improve" ? { mode, text } : { mode })),
+      await assist(leadId, mode === "improve" ? { mode, text } : { mode }),
   });
   const { mutateAsync } = mutation;
   const run = useCallback(

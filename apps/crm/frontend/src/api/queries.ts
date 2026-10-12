@@ -1,90 +1,73 @@
 /**
- * Запросы и мутации CRM поверх сгенерированного клиента orval (react-query).
- * Ключи запросов централизованы: SSE-события инвалидируют их точечно.
+ * Запросы и мутации CRM поверх сгенерированных хуков orval (ADR-0021).
+ * Ключи кэша — сгенерированные (`get…QueryKey`); группы для инвалидации — `queryKeys`.
  */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { compact, unwrap } from "./http";
+import { compact } from "./http";
 import {
   assign,
   closeLost,
   closeWon,
-  getLead,
-  inbox,
-  leadDecisions,
-  leadMessages,
-  leadNotes,
-  listLeads,
-  listServiceRequests,
-  listUsers,
-  me,
+  getListUsersQueryKey,
+  getMeQueryKey,
+  getPermissionsQueryKey,
   acknowledge,
   newDeal,
   note,
-  permissions,
   reply,
   returnToBot,
   snooze,
   take,
   unsnooze,
-  team,
+  useGetLead,
+  useInbox as useInboxQuery,
+  useLeadDecisions,
+  useLeadMessages,
+  useLeadNotes,
+  useListLeads,
+  useListServiceRequests,
+  useListUsers,
+  useMe as useMeQuery,
+  usePermissions,
+  useTeam as useTeamQuery,
 } from "./generated/crm";
 import type { ListLeadsParams } from "./generated/model";
+import { invalidateKeys, queryKeys } from "./queryKeys";
 
+/** Сгенерированные ключи, которые страницы и провайдеры читают/кладут в кэш сами. */
 export const keys = {
-  me: ["me"] as const,
-  permissions: ["permissions"] as const,
-  inbox: ["inbox"] as const,
-  leads: (params: ListLeadsParams) => ["leads", params] as const,
-  lead: (id: number) => ["lead", id] as const,
-  messages: (id: number) => ["lead", id, "messages"] as const,
-  notes: (id: number) => ["lead", id, "notes"] as const,
-  decisions: (id: number) => ["lead", id, "decisions"] as const,
-  users: ["users"] as const,
-  team: ["team"] as const,
-  serviceRequests: ["service-requests", "open"] as const,
+  me: getMeQueryKey(),
+  permissions: getPermissionsQueryKey(),
+  users: getListUsersQueryKey(),
 };
 
-export const useMe = () => useQuery({ queryKey: keys.me, queryFn: async () => unwrap(await me()) });
+export const useMe = () => useMeQuery();
 
-export const usePermissionsQuery = () =>
-  useQuery({ queryKey: keys.permissions, queryFn: async () => unwrap(await permissions()) });
+export const usePermissionsQuery = () => usePermissions();
 
-export const useInbox = () =>
-  useQuery({ queryKey: keys.inbox, queryFn: async () => unwrap(await inbox()) });
+export const useInbox = () => useInboxQuery();
 
 /** Открытые запросы клиентов (Q-017): самый старый первым, как в API. */
 export const useOpenServiceRequests = (enabled = true) =>
-  useQuery({
-    queryKey: keys.serviceRequests,
-    enabled,
-    queryFn: async () => unwrap(await listServiceRequests({ status: "open" })),
-  });
+  useListServiceRequests({ status: "open" }, { query: { enabled } });
 
+/** Таблица не пустеет при смене страницы/фильтра: прошлая страница видна до ответа. */
 export const useLeads = (params: ListLeadsParams) =>
-  useQuery({
-    queryKey: keys.leads(params),
-    queryFn: async () => unwrap(await listLeads(compact(params))),
-  });
+  useListLeads(compact(params), { query: { placeholderData: keepPreviousData } });
 
-export const useLead = (id: number) =>
-  useQuery({ queryKey: keys.lead(id), queryFn: async () => unwrap(await getLead(id)) });
+export const useLead = (id: number) => useGetLead(id);
 
-export const useMessages = (id: number) =>
-  useQuery({ queryKey: keys.messages(id), queryFn: async () => unwrap(await leadMessages(id)) });
+export const useMessages = (id: number) => useLeadMessages(id);
 
-export const useNotes = (id: number) =>
-  useQuery({ queryKey: keys.notes(id), queryFn: async () => unwrap(await leadNotes(id)) });
+export const useNotes = (id: number) => useLeadNotes(id);
 
-export const useDecisions = (id: number) =>
-  useQuery({ queryKey: keys.decisions(id), queryFn: async () => unwrap(await leadDecisions(id)) });
+export const useDecisions = (id: number) => useLeadDecisions(id);
 
-export const useUsers = () =>
-  useQuery({ queryKey: keys.users, queryFn: async () => unwrap(await listUsers()) });
+export const useUsers = () => useListUsers();
 
 /** Активные менеджеры и админы — кому передать лида (без email и ролей). */
-export const useTeam = () =>
-  useQuery({ queryKey: keys.team, queryFn: async () => unwrap(await team()), staleTime: 60_000 });
+export const useTeam = () => useTeamQuery({ query: { staleTime: 60_000 } });
 
 export type LeadAction =
   | { kind: "take" }
@@ -141,12 +124,6 @@ export function useLeadAction(id: number) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (action: LeadAction) => runAction(id, action),
-    onSettled: () =>
-      Promise.all([
-        client.invalidateQueries({ queryKey: ["lead", id] }),
-        client.invalidateQueries({ queryKey: keys.inbox }),
-        client.invalidateQueries({ queryKey: keys.serviceRequests }),
-        client.invalidateQueries({ queryKey: ["leads"] }),
-      ]),
+    onSettled: () => invalidateKeys(client, [...queryKeys.lead(id), ...queryKeys.leadLists()]),
   });
 }

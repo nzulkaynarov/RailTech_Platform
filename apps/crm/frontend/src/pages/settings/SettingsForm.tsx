@@ -1,17 +1,17 @@
+import { useWarnAboutChange } from "@refinedev/core";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Affix, Alert, App as AntApp, Button, Card, Flex, Form, Tag, Typography } from "antd";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
 
 import { adminKeys } from "../../api/adminQueries";
 import { escalationDryRun, putSetting } from "../../api/generated/crm";
 import type { DryRunResponse, EscalationSettings } from "../../api/generated/model";
-import { ApiError, unwrap } from "../../api/http";
+import { ApiError } from "../../api/http";
 import { SchemaField } from "../../components/SchemaFields";
 import { type JsonSchema, normalize, withoutFields } from "../../domain/schemaForm";
 import { errorPaths } from "../../domain/settingsLayout";
 import { useApiErrorToast } from "../../hooks/useApiErrorToast";
-import { useUnsavedChangesPrompt } from "../../hooks/useUnsavedChangesPrompt";
 import { t } from "../../i18n/ru";
 import { DryRunPanel } from "./DryRunPanel";
 import { TextsSection } from "./TextsSection";
@@ -28,7 +28,32 @@ type Props = {
   schema: JsonSchema;
   values: Values;
   samples: Record<string, string>;
+  /** Несколько форм на странице сообщают о несохранённых изменениях сюда (`useDirtyForms`). */
+  onDirtyChange?: ((key: string, dirty: boolean) => void) | undefined;
 };
+
+/** Несохранённые изменения → предупреждение Refine при уходе со страницы (`UnsavedChangesNotifier`). */
+function useWarnWhenDirty(
+  settingKey: string,
+  dirty: boolean,
+  onDirtyChange: Props["onDirtyChange"],
+): void {
+  const { setWarnWhen } = useWarnAboutChange();
+  const report = useCallback(
+    (value: boolean) => {
+      if (onDirtyChange) onDirtyChange(settingKey, value);
+      else setWarnWhen(value);
+    },
+    [onDirtyChange, setWarnWhen, settingKey],
+  );
+  useEffect(() => {
+    if (!dirty) return;
+    report(true);
+    return () => {
+      report(false);
+    };
+  }, [dirty, report]);
+}
 
 function useSettingMutations(
   settingKey: string,
@@ -40,7 +65,7 @@ function useSettingMutations(
   const onError = useApiErrorToast();
   const [report, setReport] = useState<DryRunResponse | null>(null);
   const save = useMutation({
-    mutationFn: async (body: Values) => unwrap(await putSetting(settingKey, body)),
+    mutationFn: async (body: Values) => await putSetting(settingKey, body),
     onSuccess: () => {
       onSaved();
       const section = t.settings.keys[settingKey] ?? settingKey;
@@ -54,7 +79,7 @@ function useSettingMutations(
   });
   const dryRun = useMutation({
     mutationFn: async (body: Values) =>
-      unwrap(await escalationDryRun(body as unknown as EscalationSettings)),
+      await escalationDryRun(body as unknown as EscalationSettings),
     onSuccess: setReport,
     onError,
   });
@@ -113,6 +138,7 @@ export function SettingsForm({
   schema,
   values,
   samples,
+  onDirtyChange,
 }: Props) {
   const [form] = Form.useForm<Values>();
   const [dirty, setDirty] = useState(false);
@@ -128,7 +154,7 @@ export function SettingsForm({
       form.setFields(paths.map((name) => ({ name, errors: [t.settingsUi.invalidField] })));
     },
   );
-  useUnsavedChangesPrompt(t.settings.leaveConfirm, dirty);
+  useWarnWhenDirty(settingKey, dirty, onDirtyChange);
   const body = () => normalize(form.getFieldsValue(true), schema, schema) as Values;
 
   const discard = () => {

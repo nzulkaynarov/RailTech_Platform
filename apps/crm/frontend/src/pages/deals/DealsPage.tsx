@@ -14,6 +14,7 @@ import { PageHeader } from "../../components/PageHeader";
 import { PageState } from "../../components/PageState";
 import { stageFromSearch, stageLabel } from "../../domain/deals";
 import { t } from "../../i18n/ru";
+import { rangePresets } from "../../lib/datePresets";
 import { DATE_FORMAT } from "../../lib/time";
 import { DealDialog } from "./DealDialog";
 import { DealsTable } from "./DealsTable";
@@ -100,6 +101,7 @@ export function DealsPage() {
           format={DATE_FORMAT}
           aria-label={t.deals.closedPeriodLabel}
           placeholder={t.deals.closedPeriod}
+          presets={rangePresets()}
           value={closedFrom && closedTo ? [dayjs(closedFrom), dayjs(closedTo)] : null}
           onChange={(range) => {
             setParams({

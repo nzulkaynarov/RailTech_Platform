@@ -1,6 +1,10 @@
 import { Authenticated, Refine } from "@refinedev/core";
 import { ThemedLayout, useNotificationProvider } from "@refinedev/antd";
-import routerProvider, { CatchAllNavigate, DocumentTitleHandler } from "@refinedev/react-router";
+import routerProvider, {
+  CatchAllNavigate,
+  DocumentTitleHandler,
+  UnsavedChangesNotifier,
+} from "@refinedev/react-router";
 import { QueryClient } from "@tanstack/react-query";
 import { App as AntApp, ConfigProvider } from "antd";
 import ruRU from "antd/es/locale/ru_RU";
@@ -40,7 +44,6 @@ import { ensureLiveRegion } from "./liveRegion";
 import { NotFound, RouteGuard } from "./RouteGuard";
 import { accessControlProvider } from "./providers/access";
 import { authProvider } from "./providers/auth";
-import { dataProvider } from "./providers/data";
 import { i18nProvider } from "./providers/i18n";
 import { appTheme } from "./theme";
 
@@ -92,7 +95,6 @@ export function App() {
         <AntApp message={messageConfig}>
           <Refine
             routerProvider={routerProvider}
-            dataProvider={dataProvider}
             i18nProvider={i18nProvider}
             authProvider={authProvider}
             accessControlProvider={accessControlProvider(queryClient)}
@@ -102,9 +104,12 @@ export function App() {
               reactQuery: { clientConfig: queryClient },
               disableTelemetry: true,
               syncWithLocation: false,
+              warnWhenUnsavedChanges: true,
             }}
           >
             <DocumentTitleHandler handler={documentTitle} />
+            {/* Несохранённые формы сообщают о себе через `useWarnAboutChange().setWarnWhen`. */}
+            <UnsavedChangesNotifier />
             <Routes>
               <Route element={<Shell />}>
                 <Route index element={<HomeRedirect />} />

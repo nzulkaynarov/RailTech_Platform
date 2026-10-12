@@ -97,20 +97,23 @@ export async function rawFetch(url: string, options: RequestInit = {}): Promise<
   return response;
 }
 
-/** Мутатор orval: возвращает `{ data, status, headers }`, при ошибке бросает `ApiError`. */
+/**
+ * Мутатор orval: возвращает тело успешного ответа (`override.fetch.includeHttpResponseReturnType:
+ * false`), при ошибке бросает `ApiError`. Кэш TanStack Query хранит DTO как есть.
+ */
 export const http = async <T>(url: string, options: RequestInit): Promise<T> => {
   const response = await rawFetch(url, options);
   const data = await parse(response);
   if (!response.ok) throw toError(response.status, data);
-  return { data, status: response.status, headers: response.headers } as T;
+  return data as T;
 };
 
-type Success<R> = R extends { status: 200 | 201 | 204; data: infer D } ? D : never;
-
-/** Данные успешного ответа: ошибки `http` уже бросил как `ApiError`. */
-export function unwrap<R extends { status: number; data: unknown }>(response: R): Success<R> {
-  return response.data as Success<R>;
-}
+/**
+ * Тип ошибки сгенерированных хуков: orval ищет `ErrorType<Body>` рядом с мутатором и подставляет
+ * его вместо `ErrorOut`. Тело ошибки уже разобрано `http` в поля `ApiError`.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- сигнатуру задаёт orval
+export type ErrorType<_Body> = ApiError;
 
 /** Скачать файл с авторизацией (ответ API — бинарный, не JSON). */
 export async function downloadFile(url: string, filename: string): Promise<void> {

@@ -1,6 +1,6 @@
 import type { AuthProvider } from "@refinedev/core";
 
-import { ApiError, refreshAccess, tokenStore, unwrap } from "../../api/http";
+import { ApiError, refreshAccess, tokenStore } from "../../api/http";
 import { login, logout, me } from "../../api/generated/crm";
 import { errorText, t } from "../../i18n/ru";
 
@@ -10,7 +10,7 @@ export const passwordChange = { required: false };
 export const authProvider: AuthProvider = {
   async login({ email, password }: { email: string; password: string }) {
     try {
-      const data = unwrap(await login({ email, password }));
+      const data = await login({ email, password });
       tokenStore.set(data.access_token);
       passwordChange.required = data.must_change_password;
       return { success: true, redirectTo: data.must_change_password ? "/change-password" : "/" };
@@ -34,7 +34,7 @@ export const authProvider: AuthProvider = {
   },
   async getIdentity() {
     try {
-      const data = unwrap(await me());
+      const data = await me();
       passwordChange.required = data.must_change_password;
       return { ...data, name: data.full_name };
     } catch {

@@ -4,7 +4,7 @@ import { lazy, Suspense, useState } from "react";
 
 import { useDashboard } from "../../api/adminQueries";
 import { useDealsSummary } from "../../api/dealQueries";
-import { refreshDashboard } from "../../api/generated/crm";
+import { getGetDashboardQueryKey, refreshDashboard } from "../../api/generated/crm";
 import { usePermissionsQuery } from "../../api/queries";
 import { allowed } from "../../app/providers/access";
 import { PageBody } from "../../components/PageBody";
@@ -32,7 +32,7 @@ function useRefresh() {
   return useMutation({
     mutationFn: refreshDashboard,
     onSuccess: async () => {
-      await client.invalidateQueries({ queryKey: ["dashboard"] });
+      await client.invalidateQueries({ queryKey: getGetDashboardQueryKey() });
       void message.success(t.dashboard.refreshDone);
     },
     onError: useApiErrorToast(),
