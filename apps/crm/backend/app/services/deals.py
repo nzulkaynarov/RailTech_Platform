@@ -4,9 +4,10 @@
 открытую сессию: закрытие лида и его сделки — одна транзакция (данные согласованы).
 """
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from pydantic import ValidationError
 from sqlalchemy import func, literal_column, select
@@ -26,7 +27,14 @@ from app.models.clients import Client
 from app.models.deals import Deal
 from app.models.kb import Product
 from app.models.leads import Lead, Setting
-from app.schemas.deals import CurrencySum, DealCreate, DealsSummary, DealUpdate, ReasonCount
+from app.schemas.deals import (
+    CurrencySum,
+    DealCreate,
+    DealDay,
+    DealsSummary,
+    DealUpdate,
+    ReasonCount,
+)
 from app.schemas.settings_deals import DealsSettings
 from app.security import audit
 from app.security.principal import Principal
@@ -224,7 +232,9 @@ async def _check_owner(session: AsyncSession, user_id: int | None) -> None:
         )
 
 
-async def summary(session: AsyncSession, days: int, now: datetime) -> DealsSummary:
+async def summary(
+    session: AsyncSession, days: int, now: datetime, tz: str = "Asia/Tashkent"
+) -> DealsSummary:
     since = now - timedelta(days=days)
     closed = (Deal.closed_at >= since,)
     won = await session.execute(
@@ -262,4 +272,34 @@ async def summary(session: AsyncSession, days: int, now: datetime) -> DealsSumma
             ReasonCount(reason=r[0], count=int(r[1]), amount=Decimal(r[2] or 0)) for r in lost_rows
         ],
         open_count=int(open_count or 0),
+        daily=await _daily(session, since, now, tz),
     )
+
+
+async def _daily(session: AsyncSession, since: datetime, now: datetime, tz: str) -> list[DealDay]:
+    day = func.date(func.timezone(tz, Deal.closed_at)).label("day")
+    rows = await session.execute(
+        select(day, Deal.stage, func.count())
+        .where(Deal.stage.in_((DealStage.WON.value, DealStage.LOST.value)), Deal.closed_at >= since)
+        .group_by(day, Deal.stage)
+    )
+    counts = {(r[0], r[1]): int(r[2]) for r in rows.all()}
+    return fill_days(
+        counts, since.astimezone(ZoneInfo(tz)).date(), now.astimezone(ZoneInfo(tz)).date()
+    )
+
+
+def fill_days(counts: dict[tuple[date, str], int], first: date, last: date) -> list[DealDay]:
+    """Ряд по дням без пропусков (график не должен «склеивать» дни без сделок)."""
+    out = []
+    day = first
+    while day <= last:
+        out.append(
+            DealDay(
+                day=day,
+                won=counts.get((day, DealStage.WON.value), 0),
+                lost=counts.get((day, DealStage.LOST.value), 0),
+            )
+        )
+        day += timedelta(days=1)
+    return out

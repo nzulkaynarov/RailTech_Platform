@@ -172,6 +172,7 @@ async def test_settings_apply_without_restart_and_are_audited(
         "/api/v1/settings/kb", headers=admin, json={"min_score": 7, "top_k": 6}
     )
     assert invalid.status_code == 422
+    assert "min_score" in invalid.json()["details"]["paths"]
     async with sessions() as session:
         entry = (
             await session.scalars(select(AuditLog).where(AuditLog.action == "settings.update"))

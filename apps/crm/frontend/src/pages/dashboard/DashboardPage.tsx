@@ -1,8 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { App as AntApp, Button, Segmented, Space, Typography } from "antd";
-import { useState } from "react";
+import { App as AntApp, Button, Col, Row, Segmented, Skeleton, Space, Typography } from "antd";
+import { lazy, Suspense, useState } from "react";
 
 import { useDashboard } from "../../api/adminQueries";
+import { useDealsSummary } from "../../api/dealQueries";
 import { refreshDashboard } from "../../api/generated/crm";
 import { usePermissionsQuery } from "../../api/queries";
 import { allowed } from "../../app/providers/access";
@@ -14,9 +15,11 @@ import { dashboardTiles } from "../../domain/dashboard";
 import { useApiErrorToast } from "../../hooks/useApiErrorToast";
 import { t } from "../../i18n/ru";
 import { formatDateTime, tashkent } from "../../lib/time";
-import { Daily, Panels, Tiles } from "./DashboardParts";
-import { DealsPanel } from "./DealsPanel";
+import { Daily, ManagersCard, Tiles } from "./DashboardParts";
 import "../admin.css";
+
+/** Графики — отдельным чанком: `@ant-design/plots` не попадает в другие страницы. */
+const DashboardCharts = lazy(() => import("./DashboardCharts"));
 
 const PERIODS = [7, 30, 90].map((n) => ({
   value: n,
@@ -41,14 +44,20 @@ function periodOf(days: number) {
   return { from: now.subtract(days - 1, "day").format("YYYY-MM-DD"), to: now.format("YYYY-MM-DD") };
 }
 
-/** Дашборд (SPEC §10.1): 4 ключевые метрики крупно, операционные — мельче; клик — к списку. */
+/**
+ * Дашборд (SPEC §10.1, UX волна 4): KPI с трендом к прошлому периоду, графики
+ * (`@ant-design/plots`), менеджеры и SLA; таблица по дням — свёрнута. Клик по KPI — к списку.
+ */
 export function DashboardPage() {
   const [days, setDays] = useState(30);
   const query = useDashboard(days);
   const perms = usePermissionsQuery();
+  const withDeals = allowed(perms.data, "deals", "read");
+  const deals = useDealsSummary(days, withDeals);
   const refresh = useRefresh();
   const data = query.data;
-  const tiles = data ? dashboardTiles(data, periodOf(days)) : null;
+  const dealsData = withDeals ? deals.data : undefined;
+  const tiles = data ? dashboardTiles(data, periodOf(days), dealsData) : null;
   const controls = (
     <Space wrap>
       <Segmented
@@ -83,13 +92,16 @@ export function DashboardPage() {
         {data && tiles ? (
           <>
             <Tiles tiles={tiles.primary} perms={perms.data} primary />
-            {allowed(perms.data, "deals", "read") ? <DealsPanel days={days} /> : null}
-            <Typography.Title level={2} className="section-title">
-              {t.dashboard.secondary}
-            </Typography.Title>
             <Tiles tiles={tiles.secondary} perms={perms.data} primary={false} />
-            <Panels funnel={data.funnel} reasons={data.escalation_reasons} />
-            <Daily daily={data.daily} />
+            <Suspense fallback={<Skeleton active aria-label={t.charts.loading} />}>
+              <DashboardCharts data={data} deals={dealsData} />
+            </Suspense>
+            <Row gutter={[16, 16]}>
+              <Col xs={24}>
+                <ManagersCard managers={data.managers ?? []} sla={data.sla} />
+              </Col>
+            </Row>
+            <Daily daily={data.daily} withCost={allowed(perms.data, "spend", "read")} />
           </>
         ) : null}
       </PageState>

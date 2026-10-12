@@ -7,6 +7,8 @@
 import type { DailyStat } from "./dailyStat";
 import type { DashboardEscalationReasons } from "./dashboardEscalationReasons";
 import type { DashboardFunnel } from "./dashboardFunnel";
+import type { ManagerStat } from "./managerStat";
+import type { SlaStat } from "./slaStat";
 
 export interface Dashboard {
   daily: DailyStat[];
@@ -14,8 +16,12 @@ export interface Dashboard {
   escalation_reasons: DashboardEscalationReasons;
   fallback_share: number | null;
   funnel: DashboardFunnel;
+  managers?: ManagerStat[];
   open_escalations: number;
   open_gaps: number;
+  /** Итоги прошлого периода той же длины (для тренда KPI) */
+  previous?: DailyStat | null;
   refreshed_at: string | null;
+  sla?: SlaStat | null;
   totals: DailyStat;
 }

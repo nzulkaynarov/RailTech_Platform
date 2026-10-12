@@ -97,8 +97,9 @@ async def deals_summary(
     _: DealReader, container: ContainerDep, days: Annotated[int, Query(ge=1, le=365)] = 30
 ) -> DealsSummary:
     """Выигрыш (число и суммы по валютам) и отказы по причинам за последние `days` дней."""
+    tz = (await container.settings_service.get()).business_hours.timezone
     async with container.session_factory() as session:
-        return await deals.summary(session, days, datetime.now(UTC))
+        return await deals.summary(session, days, datetime.now(UTC), tz)
 
 
 @router.get("/deals/options", response_model=DealOptions)

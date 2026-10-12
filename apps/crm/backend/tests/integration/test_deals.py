@@ -75,6 +75,10 @@ async def test_lost_lead_marks_open_deal_lost_with_reason(
         report = await deals.summary(session, 30, datetime.now(UTC))
     assert report.lost_count == 1
     assert [r.reason for r in report.lost_by_reason] == ["Дорого"]
+    # ряд по дням без пропусков: отказ — в последнем дне (сегодня по Ташкенту)
+    assert len(report.daily) in (30, 31)
+    assert (report.daily[-1].won, report.daily[-1].lost) == (0, 1)
+    assert sum(d.lost for d in report.daily) == 1
 
 
 async def test_won_deal_is_final_for_manager_but_not_admin(

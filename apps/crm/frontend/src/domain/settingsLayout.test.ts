@@ -2,8 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   emptyLanguages,
+  errorPaths,
   fillPlaceholders,
   hasPlaceholders,
+  isShortField,
+  matchesText,
+  oneLine,
   pickerToTime,
   resolveSection,
   sectionGroups,
@@ -11,6 +15,7 @@ import {
   timeToPicker,
   widgetFor,
 } from "./settingsLayout";
+import type { JsonSchema } from "./schemaForm";
 
 const ALL = [
   "company",
@@ -114,5 +119,52 @@ describe("textGroups advanced", () => {
     const groups = textGroups(["greeting", "consent_version", "brand_new"]);
     expect(groups.map((g) => g.key)).toEqual(["welcome", "other", "advanced"]);
     expect(groups.at(-1)?.fields).toEqual(["consent_version"]);
+  });
+});
+
+describe("isShortField (два столбца на широком экране)", () => {
+  it.each([
+    ["sla_minutes", { type: "integer" }, true],
+    ["threshold", { type: "number" }, true],
+    ["enabled", { type: "boolean" }, true],
+    ["currency", { type: "string", enum: ["UZS", "USD"] }, true],
+    ["name", { type: "string" }, true],
+    ["start", { type: "string", format: "time" }, true],
+    ["timezone", { type: "string" }, true],
+    ["about", { type: "string", description: "x".repeat(81) }, false],
+    ["words", { type: "array", items: { type: "string" } }, false],
+    ["weekdays", { type: "array", items: { type: "integer" } }, false],
+    ["holidays", { type: "array", items: { type: "string", format: "date" } }, false],
+    ["duty_user_ids", { type: "array", items: { type: "integer" } }, false],
+    ["disabled_triggers", { type: "array", items: { type: "string", enum: ["a"] } }, false],
+    ["nested", { type: "object", properties: { a: { type: "integer" } } }, false],
+  ] as [string, JsonSchema, boolean][])("%s short=%s", (key, schema, expected) => {
+    expect(isShortField(key, schema)).toBe(expected);
+  });
+});
+
+describe("matchesText (поиск по текстам бота)", () => {
+  it.each([
+    ["greeting", "", true],
+    ["greeting", "привет", true],
+    ["greeting", "ПРИВЕТ", true],
+    ["greeting", "/start", true],
+    ["greeting", "greet", true],
+    ["greeting", "сделка", false],
+  ])("%s ~ «%s» = %s", (key, query, expected) => {
+    expect(matchesText(key, query)).toBe(expected);
+  });
+
+  it.each([
+    [{ paths: ["greeting.uz", "min_score"] }, [["greeting", "uz"], ["min_score"]]],
+    [{ paths: ["", 3] }, []],
+    [{ field: "texts" }, []],
+  ])("errorPaths %j", (details, expected) => {
+    expect(errorPaths(details)).toEqual(expected);
+  });
+
+  it("oneLine collapses whitespace and ignores non-strings", () => {
+    expect(oneLine("а\n\n б ")).toBe("а б");
+    expect(oneLine(undefined)).toBe("");
   });
 });

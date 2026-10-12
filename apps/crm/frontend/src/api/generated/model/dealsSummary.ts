@@ -5,9 +5,12 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { CurrencySum } from "./currencySum";
+import type { DealDay } from "./dealDay";
 import type { ReasonCount } from "./reasonCount";
 
 export interface DealsSummary {
+  /** Выиграно/проиграно по дням периода, без пропусков */
+  daily?: DealDay[];
   days: number;
   lost_by_reason: ReasonCount[];
   lost_count: number;
