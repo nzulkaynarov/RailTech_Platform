@@ -8,6 +8,7 @@ import { usePermissionsQuery } from "../../api/queries";
 import { allowed } from "../../app/providers/access";
 import { PageBody } from "../../components/PageBody";
 import { PageHeader } from "../../components/PageHeader";
+import { SetupChecklistCard } from "../../components/SetupChecklistCard";
 import { PageState } from "../../components/PageState";
 import { dashboardTiles } from "../../domain/dashboard";
 import { useApiErrorToast } from "../../hooks/useApiErrorToast";
@@ -76,6 +77,7 @@ export function DashboardPage() {
   return (
     <PageBody>
       <PageHeader title={t.page.dashboard} extra={controls} />
+      <SetupChecklistCard />
       <PageState query={query} ready={Boolean(data)}>
         {data && tiles ? (
           <>

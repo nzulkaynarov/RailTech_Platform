@@ -7,6 +7,7 @@ import { EmptyState, type EmptyStateProps } from "../../components/EmptyState";
 import { LeadLink } from "../../components/EntityLink";
 import { PageBody } from "../../components/PageBody";
 import { PageHeader } from "../../components/PageHeader";
+import { SetupChecklistCard } from "../../components/SetupChecklistCard";
 import { PageState } from "../../components/PageState";
 import { PriorityTag, StageBadge } from "../../components/StageBadge";
 import { reasonLabel, slaColor, unreadLabel } from "../../domain/labels";
@@ -146,6 +147,7 @@ export function InboxPage() {
   return (
     <PageBody>
       <PageHeader title={t.page.inbox} />
+      <SetupChecklistCard />
       <PageState query={query} ready={Boolean(data)}>
         {data ? (
           <div className="inbox-grid">

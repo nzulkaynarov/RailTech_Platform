@@ -32,6 +32,10 @@ class Reason(StrEnum):
     FILE_EMPTY = "file_empty"
     FILE_TYPE = "file_type"
     DOCUMENT_INDEXING = "document_indexing"
+    SETUP_DONE = "setup_done"
+    SETUP_CODE_INVALID = "setup_code_invalid"
+    SETUP_CODE_EXPIRED = "setup_code_expired"
+    SETUP_LOCKED = "setup_locked"
 
 
 class DomainError(Exception):

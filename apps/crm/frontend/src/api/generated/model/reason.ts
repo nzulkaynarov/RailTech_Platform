@@ -32,4 +32,8 @@ export const Reason = {
   file_empty: "file_empty",
   file_type: "file_type",
   document_indexing: "document_indexing",
+  setup_done: "setup_done",
+  setup_code_invalid: "setup_code_invalid",
+  setup_code_expired: "setup_code_expired",
+  setup_locked: "setup_locked",
 } as const;

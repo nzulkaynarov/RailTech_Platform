@@ -11,6 +11,7 @@ type TitleOptions = {
 const STATIC_PAGES: Record<string, string> = {
   "/login": t.page["login"] ?? "",
   "/change-password": t.page["changePassword"] ?? "",
+  "/setup": t.page["setup"] ?? "",
 };
 
 /** Карточки: «Лид #11», «Клиент #4». */

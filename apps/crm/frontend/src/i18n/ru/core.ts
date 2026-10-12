@@ -18,6 +18,7 @@ export const core = {
     settings: "Настройки",
     audit: "Аудит",
     users: "Пользователи",
+    backups: "Резервные копии",
     profile: "Профиль",
     logout: "Выйти",
   },
@@ -131,6 +132,10 @@ export const core = {
     file_empty: "Файл пустой",
     file_type: "Такой тип файла не поддерживается — нужен PDF, DOCX, XLSX, PPTX, TXT или MD",
     document_indexing: "Документ ещё индексируется — подождите и повторите",
+    setup_done: "Администратор уже создан — войдите в CRM",
+    setup_code_invalid: "Код не подходит — скопируйте его из логов сервера (setup_code_issued)",
+    setup_code_expired: "Код истёк — перезапустите api, в логах появится новый код",
+    setup_locked: "Слишком много неверных кодов — подождите 15 минут",
   } as Record<string, string>,
   common: {
     colleague: "коллега",
@@ -163,6 +168,8 @@ export const core = {
     lead: "Лид #{id}",
     client: "Клиент #{id}",
     notFound: "Страница не найдена",
+    setup: "Первый запуск",
+    backups: "Резервные копии",
   } as Record<string, string>,
   state: {
     forbidden: "Нет доступа к этому разделу",

@@ -207,6 +207,85 @@
         "title": "AuditPage",
         "type": "object"
       },
+      "BackupItem": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "at",
+          "size_bytes"
+        ],
+        "title": "BackupItem",
+        "type": "object"
+      },
+      "BackupsOut": {
+        "properties": {
+          "available": {
+            "description": "Том бэкапов смонтирован в api",
+            "title": "Available",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BackupItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "last_success_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success At"
+          },
+          "requested_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "«Сделать сейчас» ждёт контейнер backup",
+            "title": "Requested At"
+          },
+          "stale": {
+            "description": "Последний успешный бэкап старше 26 ч или его нет",
+            "title": "Stale",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "available",
+          "last_success_at",
+          "stale",
+          "requested_at",
+          "items"
+        ],
+        "title": "BackupsOut",
+        "type": "object"
+      },
       "Body_upload_document": {
         "properties": {
           "client_id": {
@@ -348,6 +427,39 @@
           "new_password"
         ],
         "title": "ChangePasswordRequest",
+        "type": "object"
+      },
+      "ChecklistItem": {
+        "properties": {
+          "done": {
+            "title": "Done",
+            "type": "boolean"
+          },
+          "key": {
+            "enum": [
+              "company",
+              "business_hours",
+              "models",
+              "bot",
+              "channel",
+              "kb",
+              "team",
+              "test_dialog"
+            ],
+            "title": "Key",
+            "type": "string"
+          },
+          "link": {
+            "title": "Link",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "done",
+          "link"
+        ],
+        "title": "ChecklistItem",
         "type": "object"
       },
       "ClientCreate": {
@@ -2703,7 +2815,11 @@
           "file_too_large",
           "file_empty",
           "file_type",
-          "document_indexing"
+          "document_indexing",
+          "setup_done",
+          "setup_code_invalid",
+          "setup_code_expired",
+          "setup_locked"
         ],
         "title": "Reason",
         "type": "string"
@@ -3081,6 +3197,81 @@
           "schemas"
         ],
         "title": "SettingsResponse",
+        "type": "object"
+      },
+      "SetupAdminRequest": {
+        "properties": {
+          "code": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "email": {
+            "maxLength": 255,
+            "minLength": 3,
+            "title": "Email",
+            "type": "string"
+          },
+          "full_name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Full Name",
+            "type": "string"
+          },
+          "password": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "email",
+          "full_name",
+          "password"
+        ],
+        "title": "SetupAdminRequest",
+        "type": "object"
+      },
+      "SetupChecklist": {
+        "properties": {
+          "done": {
+            "title": "Done",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ChecklistItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "done",
+          "total"
+        ],
+        "title": "SetupChecklist",
+        "type": "object"
+      },
+      "SetupState": {
+        "properties": {
+          "needs_setup": {
+            "title": "Needs Setup",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "needs_setup"
+        ],
+        "title": "SetupState",
         "type": "object"
       },
       "Snooze": {
@@ -6561,6 +6752,117 @@
         ]
       }
     },
+    "/api/v1/setup/admin": {
+      "post": {
+        "description": "Публично, один раз: код из логов api (`setup_code_issued`) → первый админ и вход.\n\nНеверный код — 422 `setup_code_invalid`, истёкший — `setup_code_expired`, перебор —\n`setup_locked` (15 мин); админ уже есть — 409 `setup_done`. Ответ — как у `/auth/login`.",
+        "operationId": "create_first_admin",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetupAdminRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "summary": "Create First Admin",
+        "tags": [
+          "setup"
+        ]
+      }
+    },
+    "/api/v1/setup/checklist": {
+      "get": {
+        "description": "Чек-лист настройки для админа: что сделано и куда идти. Без платных вызовов моделей.",
+        "operationId": "get_setup_checklist",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupChecklist"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Setup Checklist",
+        "tags": [
+          "setup"
+        ]
+      }
+    },
+    "/api/v1/setup/state": {
+      "get": {
+        "description": "Публично: нужен ли мастер первого запуска (в CRM ещё нет активного администратора).",
+        "operationId": "get_setup_state",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupState"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "summary": "Get Setup State",
+        "tags": [
+          "setup"
+        ]
+      }
+    },
     "/api/v1/stream": {
       "get": {
         "operationId": "stream",
@@ -6587,6 +6889,78 @@
         "summary": "Stream",
         "tags": [
           "stream"
+        ]
+      }
+    },
+    "/api/v1/system/backups": {
+      "get": {
+        "description": "Последние бэкапы из тома `backups` (каталоги `<UTC-штамп>`), время последнего успеха.",
+        "operationId": "list_backups",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Backups",
+        "tags": [
+          "system"
+        ]
+      },
+      "post": {
+        "description": "Запросить бэкап вне расписания: контейнер `backup` начнёт его в течение ~30 с.\n\n409, если том бэкапов не смонтирован в api. Повторный запрос до начала — без изменений.",
+        "operationId": "request_backup",
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Request Backup",
+        "tags": [
+          "system"
         ]
       }
     },

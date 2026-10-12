@@ -71,6 +71,8 @@ MATRIX = [
     ("GET", "/api/v1/service-requests?status=closed", None, {"admin", "manager", "viewer"}),
     ("GET", "/api/v1/me", None, {"admin", "manager", "viewer"}),
     ("GET", "/api/v1/me/permissions", None, {"admin", "manager", "viewer"}),
+    ("GET", "/api/v1/setup/checklist", None, {"admin"}),
+    ("GET", "/api/v1/system/backups", None, {"admin"}),
 ]
 
 
