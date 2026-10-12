@@ -185,7 +185,7 @@ async def test_lead_with_bot_requires_take_first() -> None:
 
 async def test_missing_lead_is_not_found() -> None:
     svc, _, _ = service()
-    svc._store = Store(None)  # type: ignore[assignment]
+    svc._store = Store(None)
     with pytest.raises(NotFoundError):
         await svc.assist(OWNER, 1, "improve", "текст")
 

@@ -12,6 +12,8 @@ export type ActionRights = {
   work: boolean;
   note: boolean;
   reply?: boolean;
+  /** ИИ-помощь при ответе (Q-019), право `leads:assist`. */
+  assist?: boolean;
   clients?: boolean;
   userId: number;
   isAdmin: boolean;
