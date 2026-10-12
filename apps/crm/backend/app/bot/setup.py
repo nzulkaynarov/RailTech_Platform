@@ -1,5 +1,7 @@
 """Сборка диалогового контура в процессе API: чекпоинтер, агент, сервис, бот."""
 
+import asyncio
+import contextlib
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import AsyncExitStack, asynccontextmanager
 
@@ -128,8 +130,13 @@ async def bot_lifespan(
             return await resolve_token(container.secrets_store, config)
 
         supervisor = BotSupervisor(config, resolve, make_dispatcher)
-        await supervisor.start()
+        # Бот стартует в фоне: недоступный Telegram не должен держать старт CRM (иначе сбой
+        # Telegram = недоступная CRM); причина видна в «Подключениях» и «Состоянии».
+        starting = asyncio.create_task(supervisor.start(), name="bot_supervisor_start")
         try:
             yield supervisor
         finally:
+            starting.cancel()
+            with contextlib.suppress(asyncio.CancelledError, Exception):
+                await starting
             await supervisor.stop()
