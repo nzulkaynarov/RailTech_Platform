@@ -30,12 +30,15 @@ test("admin sections render and greeting can be changed", async ({ page }) => {
   // Настройки: разделы слева (на телефоне — список), раздел в URL (дизайн-аудит 2026-10-11).
   await page.goto("/settings?section=texts");
   await expect(page.getByRole("heading", { name: "Тексты бота" })).toBeVisible();
-  const greeting = page.getByRole("main").locator("textarea").first();
+  // Тексты — таблицей по группам, правка — в боковой панели (UX волна 3).
+  await page.getByRole("button", { name: "Изменить: Приветствие" }).click();
+  const drawer = page.getByRole("dialog", { name: "Приветствие" });
+  const greeting = drawer.getByRole("textbox", { name: /^Приветствие · / }).first();
   const text = `Здравствуйте! Это {company} (${String(Date.now())}).`;
   await greeting.fill(text);
-  await expect(page.getByText(/Предпросмотр: Здравствуйте! Это RailTech/).first()).toBeVisible();
+  await expect(drawer.getByText(/Предпросмотр: Здравствуйте! Это RailTech/).first()).toBeVisible();
   await expect(page.getByText("Есть несохранённые изменения")).toBeVisible();
-  await page.getByRole("button", { name: "Сохранить" }).click();
+  await drawer.getByRole("button", { name: "Сохранить" }).click();
   await expect(page.getByText(/«Тексты бота» сохранены/).first()).toBeVisible();
 
   await page.goto("/clients");

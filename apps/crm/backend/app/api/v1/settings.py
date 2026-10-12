@@ -3,6 +3,7 @@
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Path
+from pydantic import ValidationError
 
 from app.api.deps import ContainerDep, require
 from app.domain.errors import NotFoundError, ValidationFailedError
@@ -39,7 +40,11 @@ async def put_setting(
         raise NotFoundError("unknown settings key")
     try:
         await container.settings_service.update(key, body, who.user_id, who.actor)
-    except ValueError as exc:  # pydantic.ValidationError — подкласс ValueError
+    except ValidationError as exc:
+        # Пути полей («greeting.uz») — чтобы форма подсветила поле и открыла нужный текст.
+        paths = [".".join(str(p) for p in err["loc"]) for err in exc.errors()][:20]
+        raise ValidationFailedError(str(exc)[:1000], field=key, paths=paths) from exc
+    except ValueError as exc:
         raise ValidationFailedError(str(exc)[:1000], field=key) from exc
     return ActionResult()
 

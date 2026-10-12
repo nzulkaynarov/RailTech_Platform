@@ -1,4 +1,5 @@
 import { admin } from "./ru/admin";
+import { charts } from "./ru/charts";
 import { clients } from "./ru/clients";
 import { deals } from "./ru/deals";
 import { core } from "./ru/core";
@@ -22,6 +23,7 @@ export const ru = {
   ...deals,
   ...sandbox,
   ...templates,
+  ...charts,
 };
 
 export type Dictionary = typeof ru;

@@ -3,7 +3,7 @@
  * Чистые функции — без React и сети (дизайн-аудит 2026-10-11, отчёт 1: «Настройки»).
  */
 import { t } from "../i18n/ru";
-import type { JsonSchema } from "./schemaForm";
+import { type JsonSchema, kindOf } from "./schemaForm";
 
 export type SectionGroup = { key: string; sections: string[] };
 
@@ -168,3 +168,35 @@ export function emptyLanguages(value: unknown): string[] {
 export function fieldLabel(key: string, schema: JsonSchema): string {
   return t.settings.fields[key] ?? t.settings.botTexts[key]?.label ?? schema.title ?? key;
 }
+
+/** Короткое поле (число, переключатель, выбор из списка, время) — половина ширины на широком
+ * экране; длинные (списки, тексты, вложенные группы, спец-виджеты) — во всю ширину. */
+export function isShortField(key: string, schema: JsonSchema): boolean {
+  const format = schema.type === "array" ? schema.items?.format : schema.format;
+  const widget = widgetFor(key, format ? { format } : {});
+  if (widget) return widget === "time" || widget === "timezone";
+  const kind = kindOf(schema);
+  if (kind === "string") return !(schema.description && schema.description.length > 80);
+  return ["integer", "number", "boolean", "enum"].includes(kind);
+}
+
+/** Поиск по названиям текстов бота: без учёта регистра, по подписи, «когда» и ключу. */
+export function matchesText(key: string, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  const label = t.settings.botTexts[key];
+  return [key, label?.label ?? "", label?.when ?? ""].some((s) => s.toLowerCase().includes(q));
+}
+
+/** Пути невалидных полей из ответа PUT (`details.paths`: «greeting.uz») → имена полей формы. */
+export function errorPaths(details: Record<string, unknown>): string[][] {
+  const paths = details["paths"];
+  if (!Array.isArray(paths)) return [];
+  return paths
+    .filter((p): p is string => typeof p === "string" && p !== "")
+    .map((p) => p.split("."));
+}
+
+/** Обрезка текста для ячейки таблицы: одна строка, без переводов строк. */
+export const oneLine = (text: unknown): string =>
+  typeof text === "string" ? text.replace(/\s+/g, " ").trim() : "";

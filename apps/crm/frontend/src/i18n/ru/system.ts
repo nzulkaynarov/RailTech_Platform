@@ -185,5 +185,14 @@ export const system = {
   settingsUi: {
     channelMoved: "Канал команды подключается в «Подключениях» — здесь только дежурные.",
     openIntegrations: "Открыть «Подключения»",
+    textName: "Название",
+    textActions: "Действия",
+    textEmpty: "пусто",
+    textEdit: "Изменить",
+    textClose: "Готово",
+    textSearch: "Поиск по названию текста",
+    textNotFound: "Ничего не найдено — измените запрос.",
+    textInvalid: "ошибка",
+    invalidField: "Проверьте значение — сервер его не принял",
   },
 };

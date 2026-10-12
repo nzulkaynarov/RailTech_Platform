@@ -41,10 +41,34 @@ class DailyStat(BaseModel):
     cost_usd: float
 
 
+class ManagerStat(BaseModel):
+    """Строка таблицы «Менеджеры» за период (SPEC §10.1)."""
+
+    user_id: int
+    name: str
+    taken: int = Field(description="Забрал передач за период")
+    median_take_minutes: float | None = Field(description="Медиана времени до «Забрать», мин")
+    won: int = Field(description="Выиграл сделок за период")
+    active_leads: int = Field(description="Ведёт лидов сейчас (кроме выигранных и потерянных)")
+
+
+class SlaStat(BaseModel):
+    """Передачи периода, забранные до `sla_due_at`; ещё не истёкшие открытые не считаются."""
+
+    due: int
+    met: int
+    share: float | None
+
+
 class Dashboard(BaseModel):
     days: int
     funnel: dict[str, int]
     totals: DailyStat
+    previous: DailyStat | None = Field(
+        default=None, description="Итоги прошлого периода той же длины (для тренда KPI)"
+    )
+    managers: list[ManagerStat] = Field(default_factory=list)
+    sla: SlaStat | None = None
     daily: list[DailyStat]
     escalation_reasons: dict[str, int]
     fallback_share: float | None

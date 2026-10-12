@@ -82,11 +82,11 @@ function CompanyStep({ onDone }: { onDone: () => void }) {
       <Typography.Paragraph>{t.setup.companyIntro}</Typography.Paragraph>
       {COMPANY_SECTIONS.map((key) => (
         <section key={key} aria-labelledby={`setup-${key}`} className="setup-section">
-          <Typography.Title level={2} id={`setup-${key}`} className="section-title">
-            {t.settings.keys[key] ?? key}
-          </Typography.Title>
           <SettingsForm
             settingKey={key}
+            title={t.settings.keys[key] ?? key}
+            headingId={`setup-${key}`}
+            sticky={false}
             schema={data.schemas[key] as JsonSchema}
             values={data.values[key] ?? {}}
             samples={t.settings.samples}

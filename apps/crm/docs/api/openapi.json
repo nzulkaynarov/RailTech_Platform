@@ -1412,6 +1412,13 @@
             "title": "Funnel",
             "type": "object"
           },
+          "managers": {
+            "items": {
+              "$ref": "#/components/schemas/ManagerStat"
+            },
+            "title": "Managers",
+            "type": "array"
+          },
           "open_escalations": {
             "title": "Open Escalations",
             "type": "integer"
@@ -1419,6 +1426,17 @@
           "open_gaps": {
             "title": "Open Gaps",
             "type": "integer"
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DailyStat"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Итоги прошлого периода той же длины (для тренда KPI)"
           },
           "refreshed_at": {
             "anyOf": [
@@ -1431,6 +1449,16 @@
               }
             ],
             "title": "Refreshed At"
+          },
+          "sla": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SlaStat"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "totals": {
             "$ref": "#/components/schemas/DailyStat"
@@ -1548,6 +1576,31 @@
           "title"
         ],
         "title": "DealCreate",
+        "type": "object"
+      },
+      "DealDay": {
+        "description": "Сделок закрыто за день (по часовому поясу команды): выиграно и проиграно.",
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "lost": {
+            "title": "Lost",
+            "type": "integer"
+          },
+          "won": {
+            "title": "Won",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "day",
+          "won",
+          "lost"
+        ],
+        "title": "DealDay",
         "type": "object"
       },
       "DealOptions": {
@@ -1845,6 +1898,14 @@
       },
       "DealsSummary": {
         "properties": {
+          "daily": {
+            "description": "Выиграно/проиграно по дням периода, без пропусков",
+            "items": {
+              "$ref": "#/components/schemas/DealDay"
+            },
+            "title": "Daily",
+            "type": "array"
+          },
           "days": {
             "title": "Days",
             "type": "integer"
@@ -3339,6 +3400,56 @@
           }
         },
         "title": "MakeCustomer",
+        "type": "object"
+      },
+      "ManagerStat": {
+        "description": "Строка таблицы «Менеджеры» за период (SPEC §10.1).",
+        "properties": {
+          "active_leads": {
+            "description": "Ведёт лидов сейчас (кроме выигранных и потерянных)",
+            "title": "Active Leads",
+            "type": "integer"
+          },
+          "median_take_minutes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Медиана времени до «Забрать», мин",
+            "title": "Median Take Minutes"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "taken": {
+            "description": "Забрал передач за период",
+            "title": "Taken",
+            "type": "integer"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "integer"
+          },
+          "won": {
+            "description": "Выиграл сделок за период",
+            "title": "Won",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "user_id",
+          "name",
+          "taken",
+          "median_take_minutes",
+          "won",
+          "active_leads"
+        ],
+        "title": "ManagerStat",
         "type": "object"
       },
       "ManualDocument": {
@@ -4891,6 +5002,37 @@
           "needs_setup"
         ],
         "title": "SetupState",
+        "type": "object"
+      },
+      "SlaStat": {
+        "description": "Передачи периода, забранные до `sla_due_at`; ещё не истёкшие открытые не считаются.",
+        "properties": {
+          "due": {
+            "title": "Due",
+            "type": "integer"
+          },
+          "met": {
+            "title": "Met",
+            "type": "integer"
+          },
+          "share": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Share"
+          }
+        },
+        "required": [
+          "due",
+          "met",
+          "share"
+        ],
+        "title": "SlaStat",
         "type": "object"
       },
       "Snooze": {
