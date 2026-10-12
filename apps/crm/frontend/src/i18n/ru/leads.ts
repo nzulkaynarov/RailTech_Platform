@@ -45,6 +45,7 @@ export const leads = {
     openCard: "Открыть карточку",
     lastMessages: "Последние сообщения",
     noMessages: "Сообщений пока нет",
+    pick: "Выберите лида слева",
   },
   leads: {
     name: "Лид",
@@ -81,6 +82,8 @@ export const leads = {
     client: "Клиент",
     openClient: "Открыть карточку клиента",
     phone: "Телефон (из Telegram)",
+    copy: "Скопировать",
+    copied: "Скопировано",
     clientPhone: "Телефон (основной контакт клиента)",
     clientCreated: "Клиент создан",
     qualification: "Квалификация",

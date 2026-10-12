@@ -14,16 +14,19 @@
 .auth-alert {
   margin-bottom: var(--ant-margin);
 }
+/* Карточка лида на планшете (md–lg): переписка и вкладки друг под другом.
+   От lg — antd `Splitter` (`.lead-split`), см. LeadDetailPage. */
 .lead-grid {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--ant-margin);
-  align-items: start;
 }
-@media (max-width: 1100px) {
-  .lead-grid {
-    grid-template-columns: 1fr;
-  }
+/* Панели antd `Splitter` (карточка лида, Входящие): зазор между карточкой и разделителем. */
+.split-start {
+  padding-inline-end: var(--ant-margin-xs);
+}
+.split-end {
+  padding-inline-start: var(--ant-margin-xs);
 }
 .inbox-grid {
   display: grid;

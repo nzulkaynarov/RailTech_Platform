@@ -1,4 +1,4 @@
-import { Alert, Card, Descriptions, Grid, Space, Tabs, Tag, Typography } from "antd";
+import { Alert, Card, Descriptions, Grid, Space, Splitter, Tabs, Tag, Typography } from "antd";
 import type { ReactNode } from "react";
 import { Link, useParams } from "react-router";
 
@@ -28,6 +28,7 @@ import { reasonLabel } from "../../domain/labels";
 import { useApiErrorToast } from "../../hooks/useApiErrorToast";
 import { useReplyAssist } from "../../hooks/useReplyAssist";
 import { t } from "../../i18n/ru";
+import { readSplit, saveSplit } from "../../lib/splitSize";
 import "../../styles/workspace.css";
 import { LeadDeals } from "./LeadDeals";
 import { LeadNotes, LeadSummary } from "./LeadSummary";
@@ -101,49 +102,88 @@ type Panes = {
   deals: ReactNode;
 };
 
+/** Телефон: вкладки, переписка первой (U-12); сделки — во вкладке «Детали». */
+function PhoneTabs({ chat, summary, why, notes, deals }: Panes) {
+  const details = (
+    <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+      {summary}
+      {deals ? (
+        <div>
+          <Typography.Text strong>{t.lead.tabs.deals}</Typography.Text>
+          {deals}
+        </div>
+      ) : null}
+    </Space>
+  );
+  return (
+    <Tabs
+      items={[
+        { key: "chat", label: t.lead.tabs.chat, children: chat },
+        { key: "details", label: t.lead.tabs.details, children: details },
+        { key: "why", label: t.lead.tabs.why, children: why },
+        { key: "notes", label: t.lead.tabs.notes, children: notes },
+      ]}
+    />
+  );
+}
+
+/** Доля переписки по умолчанию и пределы перетаскивания (вкладки справа не уже ≈ 300 px). */
+const CHAT_SPLIT = { fallback: 65, min: 40, max: 75 };
+const SPLIT_KEY = "lead";
+
 /**
- * Десктоп: переписка — основная ширина, справа вкладки «Резюме · Почему · Заметки · Сделки»
- * (UX волна 2). Телефон: вкладки, переписка первой (U-12); сделки — во вкладке «Детали».
+ * Переписка | вкладки в antd `Splitter`: ширину меняют перетаскиванием разделителя,
+ * доля запоминается в браузере (Refine/antd P2, п. 7).
  */
-function Layout({ chat, summary, why, notes, deals }: Panes) {
+function SplitPanes({ start, end }: { start: ReactNode; end: ReactNode }) {
+  return (
+    <Splitter
+      onResizeEnd={(sizes) => {
+        saveSplit(SPLIT_KEY, sizes);
+      }}
+    >
+      <Splitter.Panel
+        className="split-start"
+        defaultSize={readSplit(SPLIT_KEY, CHAT_SPLIT)}
+        min={`${String(CHAT_SPLIT.min)}%`}
+        max={`${String(CHAT_SPLIT.max)}%`}
+      >
+        {start}
+      </Splitter.Panel>
+      <Splitter.Panel className="split-end">{end}</Splitter.Panel>
+    </Splitter>
+  );
+}
+
+/**
+ * Десктоп (≥ lg): переписка — основная ширина, справа вкладки «Резюме · Почему · Заметки · Сделки»
+ * (UX волна 2), между ними перетаскиваемый разделитель. Планшет — те же карточки друг под другом.
+ */
+function Layout(panes: Panes) {
   const screens = Grid.useBreakpoint();
-  if (screens.md === false) {
-    const details = (
-      <Space direction="vertical" size="middle" style={{ width: "100%" }}>
-        {summary}
-        {deals ? (
-          <div>
-            <Typography.Text strong>{t.lead.tabs.deals}</Typography.Text>
-            {deals}
-          </div>
-        ) : null}
-      </Space>
-    );
-    return (
-      <Tabs
-        items={[
-          { key: "chat", label: t.lead.tabs.chat, children: chat },
-          { key: "details", label: t.lead.tabs.details, children: details },
-          { key: "why", label: t.lead.tabs.why, children: why },
-          { key: "notes", label: t.lead.tabs.notes, children: notes },
-        ]}
-      />
-    );
-  }
+  if (screens.md === false) return <PhoneTabs {...panes} />;
+  const { chat, summary, why, notes, deals } = panes;
   const side = [
     { key: "summary", label: t.lead.tabs.summary, children: summary },
     { key: "why", label: t.lead.tabs.why, children: why },
     { key: "notes", label: t.lead.tabs.notes, children: notes },
     ...(deals ? [{ key: "deals", label: t.lead.tabs.deals, children: deals }] : []),
   ];
+  const chatCard = (
+    <Card size="small" title={t.lead.chat}>
+      {chat}
+    </Card>
+  );
+  const sideCard = (
+    <Card size="small" className="lead-side">
+      <Tabs size="small" items={side} />
+    </Card>
+  );
+  if (screens.lg === true) return <SplitPanes start={chatCard} end={sideCard} />;
   return (
     <div className="lead-grid">
-      <Card size="small" title={t.lead.chat}>
-        {chat}
-      </Card>
-      <Card size="small" className="lead-side">
-        <Tabs size="small" items={side} />
-      </Card>
+      {chatCard}
+      {sideCard}
     </div>
   );
 }
@@ -168,9 +208,12 @@ function LeadFacts({ lead }: { lead: LeadDetail }) {
           key: "phone",
           label: t.lead.phone,
           children: lead.phone_e164 ? (
-            <a className="nowrap" href={`tel:${lead.phone_e164}`}>
-              {lead.phone_e164}
-            </a>
+            <Typography.Text
+              className="nowrap"
+              copyable={{ text: lead.phone_e164, tooltips: [t.lead.copy, t.lead.copied] }}
+            >
+              <a href={`tel:${lead.phone_e164}`}>{lead.phone_e164}</a>
+            </Typography.Text>
           ) : (
             t.common.none
           ),

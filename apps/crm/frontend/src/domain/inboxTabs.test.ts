@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { type InboxTab, pickInboxTab } from "./inboxTabs";
+import { type InboxTab, pickInboxTab, pickPreviewLead } from "./inboxTabs";
 
 const ALL: InboxTab[] = ["handoffs", "mine", "unassigned", "requests"];
 const NO_REQUESTS: InboxTab[] = ["handoffs", "mine", "unassigned"];
@@ -19,5 +19,20 @@ describe("inbox tab selection", () => {
     [null, { requests: 2 }, NO_REQUESTS, "handoffs"],
   ])("tab=%s counts=%j → %s", (param, counts, available, expected) => {
     expect(pickInboxTab(param, counts, available)).toBe(expected);
+  });
+});
+
+describe("preview lead from ?lead=", () => {
+  it.each<[string | null, number | null]>([
+    [null, null],
+    ["12", 12],
+    ["0", null],
+    ["-3", null],
+    ["1.5", null],
+    ["12abc", null],
+    ["", null],
+    ["99999999999999999999", null],
+  ])("lead=%s → %s", (param, expected) => {
+    expect(pickPreviewLead(param)).toBe(expected);
   });
 });
