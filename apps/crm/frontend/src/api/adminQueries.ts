@@ -5,6 +5,7 @@ import {
   documentAccess,
   getClient,
   getDashboard,
+  listClientContacts,
   listClients,
   listDocuments,
   getSettings,
@@ -29,6 +30,7 @@ export const adminKeys = {
   clients: (q: string) => ["clients", q] as const,
   client: (id: number) => ["client", id] as const,
   clientDocuments: (id: number) => ["client", id, "documents"] as const,
+  clientContacts: (id: number) => ["client", id, "contacts"] as const,
   access: (id: number) => ["document", id, "access"] as const,
   system: ["system", "status"] as const,
 };
@@ -91,6 +93,12 @@ export const useClients = (q: string) =>
 
 export const useClient = (id: number) =>
   useQuery({ queryKey: adminKeys.client(id), queryFn: async () => unwrap(await getClient(id)) });
+
+export const useClientContacts = (id: number) =>
+  useQuery({
+    queryKey: adminKeys.clientContacts(id),
+    queryFn: async () => unwrap(await listClientContacts(id)),
+  });
 
 export const useClientDocuments = (id: number) =>
   useQuery({

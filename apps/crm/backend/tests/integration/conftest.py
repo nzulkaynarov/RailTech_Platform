@@ -37,6 +37,7 @@ TABLES = (
     "audit_log",
     "refresh_tokens",
     "clients",
+    "client_contacts",
     "documents",
     "document_access_log",
     "service_requests",

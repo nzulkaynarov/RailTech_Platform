@@ -13,6 +13,7 @@ import { PageState } from "../../components/PageState";
 import { StageBadge } from "../../components/StageBadge";
 import { t } from "../../i18n/ru";
 import { formatDate } from "../../lib/time";
+import { ClientContacts } from "./ClientContacts";
 import { ClientDocuments } from "./ClientDocuments";
 import { ClientTelegram } from "./ClientTelegram";
 import { EditClient } from "./EditClient";
@@ -81,6 +82,7 @@ export function ClientDetailPage() {
         extra={canWrite ? <EditClient client={data} /> : null}
       />
       <Details data={data} />
+      <ClientContacts clientId={id} canWrite={canWrite} />
       <ClientTelegram data={data} canWrite={canWrite} />
       <Leads data={data} />
       {allowed(perms.data, "documents", "read") ? (
