@@ -26,8 +26,18 @@ function ContactLine({ c }: { c: ContactOut }) {
         {c.telegram_identity_id ? <Tag>{t.contacts.telegram}</Tag> : null}
       </Space>
       <Space wrap size="middle">
-        {c.phone_e164 ? <a href={`tel:${c.phone_e164}`}>{c.phone_e164}</a> : null}
-        {c.email ? <a href={`mailto:${c.email}`}>{c.email}</a> : null}
+        {c.phone_e164 ? (
+          <Typography.Text
+            copyable={{ text: c.phone_e164, tooltips: [t.copy.phone, t.copy.copied] }}
+          >
+            <a href={`tel:${c.phone_e164}`}>{c.phone_e164}</a>
+          </Typography.Text>
+        ) : null}
+        {c.email ? (
+          <Typography.Text copyable={{ text: c.email, tooltips: [t.copy.email, t.copy.copied] }}>
+            <a href={`mailto:${c.email}`}>{c.email}</a>
+          </Typography.Text>
+        ) : null}
       </Space>
       {c.note ? <Typography.Text type="secondary">{c.note}</Typography.Text> : null}
     </Flex>

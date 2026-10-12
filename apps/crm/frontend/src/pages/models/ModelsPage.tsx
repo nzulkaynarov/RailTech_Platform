@@ -157,7 +157,6 @@ export function ModelsPage() {
       <PageState query={query}>
         <Table
           rowKey="alias"
-          size="small"
           pagination={false}
           scroll={{ x: 720 }}
           dataSource={query.data ?? []}

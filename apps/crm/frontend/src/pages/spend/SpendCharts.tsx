@@ -132,7 +132,6 @@ function Daily({ report, withTests }: { report: SpendReport; withTests: boolean 
         C.dailyTable,
         <Table
           rowKey="day"
-          size="small"
           pagination={{ pageSize: 10, hideOnSinglePage: true }}
           dataSource={[...report.series].reverse()}
           columns={dayColumns(withTests)}
@@ -169,7 +168,6 @@ function Purposes({ report }: { report: SpendReport }) {
         C.purposeTable,
         <Table
           rowKey="key"
-          size="small"
           pagination={false}
           dataSource={report.by_purpose}
           columns={sliceColumns(purposeLabel, t.spend.purpose)}
@@ -210,7 +208,6 @@ export default function SpendCharts({ report }: { report: SpendReport }) {
             <Card title={t.spend.byKind} size="small">
               <Table
                 rowKey="key"
-                size="small"
                 pagination={false}
                 dataSource={report.by_kind}
                 columns={sliceColumns(kindLabel, t.spend.purpose)}
@@ -229,7 +226,6 @@ export default function SpendCharts({ report }: { report: SpendReport }) {
             </Typography.Title>
             <Table
               rowKey="lead_id"
-              size="small"
               pagination={false}
               dataSource={report.top_leads}
               columns={leadColumns}

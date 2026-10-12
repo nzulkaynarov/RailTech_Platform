@@ -23,7 +23,7 @@
 
 ## Решение
 
-Вариант 2. Refine даёт `dataProvider`, `authProvider`, `accessControlProvider`, CRUD-страницы; Ant Design — компоненты. Свой код — только доменные экраны (ChatThread, «Почему система так решила»). Клиент API генерируется из OpenAPI (orval).
+Вариант 2. Refine даёт `authProvider`, `accessControlProvider`, раскладку и уведомления; Ant Design — компоненты. Слой данных — хуки TanStack Query, которые генерирует orval (уточнено ADR-0021, 2026-10-12: `dataProvider` и CRUD-страницы Refine не используются). Свой код — только доменные экраны (ChatThread, «Почему система так решила»). Клиент API генерируется из OpenAPI (orval).
 
 ### Последствия
 

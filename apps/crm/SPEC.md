@@ -37,7 +37,7 @@
 | Очередь и планировщик | Procrastinate | Задачи на Postgres: события квалификатора, таймеры SLA/снуз/unresponsive, ингест KB, ежедневные отчёты |
 | Файлы | RustFS (S3-совместимый, Apache-2.0; ADR-0009) | Документы клиентов, исходники KB, вложения из Telegram. Код работает только по протоколу S3 |
 | Ингест документов | docling: сервис `docling-serve` (CPU-образ) + `docling-core` HybridChunker в worker (ADR-0011) | PDF/DOCX/PPTX/XLSX/MD/HTML → DoclingDocument → чанки |
-| Frontend | React 18 + TypeScript + Vite + **Refine** + Ant Design | Refine даёт CRUD, dataProvider, authProvider, accessControlProvider |
+| Frontend | React 18 + TypeScript + Vite + **Refine** + Ant Design + TanStack Query | Refine — оболочка: authProvider, accessControlProvider, раскладка, уведомления; данные — хуки TanStack Query из orval (ADR-0021) |
 | Авторизация | JWT (access 15 мин + refresh 30 дней, httpOnly cookie), пароли argon2id | Провайдер заменяем на Keycloak (OIDC) без смены фронта — Refine authProvider |
 | RBAC | Casbin (`pycasbin`, модель RBAC с доменами на будущее) | Политики в БД, кэш в памяти, инвалидация по событию |
 | Observability | Langfuse (self-hosted) — трейсы LLM, стоимость, датасеты, judge | Логи приложений — structlog JSON → stdout → `docker logs`/Loki (опционально) |
@@ -541,7 +541,7 @@ Middleware: идемпотентность, rate-limit (20 сообщений/м
 
 ### 10.3. Технические требования к фронту
 
-Refine с кастомным `dataProvider` (REST `/api/v1`), `authProvider` (cookie JWT), `accessControlProvider` (матрица прав приходит с бэка `GET /api/v1/me/permissions`, фронт только скрывает/блокирует; истина — на бэке). Клиент API генерируется из OpenAPI (orval) в CI; ручные типы запрещены. Ошибки API — единое тело `ErrorOut {code, message, details}` для доменных ошибок, валидации запроса и 404: `code` — класс ошибки, `details.reason` — стабильный подкод случая (`Reason`, ADR-0017), `details.field` — поле формы; текст пользователю фронт берёт из i18n по `details.reason ?? code`, `message` — только для логов. Адаптивная вёрстка до 390 px (менеджер с телефона может читать и отвечать).
+Refine — оболочка: `authProvider` (cookie JWT), `accessControlProvider` (матрица прав приходит с бэка `GET /api/v1/me/permissions`, фронт только скрывает/блокирует; истина — на бэке), раскладка, уведомления, предупреждение о несохранённых изменениях. Данные — хуки TanStack Query, которые orval генерирует из OpenAPI (ADR-0021); SSE обновляет экраны сбросом их ключей кэша; ручные типы и хуки-дубли запрещены. Ошибки API — единое тело `ErrorOut {code, message, details}` для доменных ошибок, валидации запроса и 404: `code` — класс ошибки, `details.reason` — стабильный подкод случая (`Reason`, ADR-0017), `details.field` — поле формы; текст пользователю фронт берёт из i18n по `details.reason ?? code`, `message` — только для логов. Адаптивная вёрстка до 390 px (менеджер с телефона может читать и отвечать).
 
 ---
 

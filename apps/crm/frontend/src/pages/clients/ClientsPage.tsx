@@ -145,6 +145,7 @@ export function ClientsPage() {
       />
       <PageState query={query} inline>
         <Table<ClientListItem>
+          sticky
           rowKey="id"
           loading={query.isLoading}
           dataSource={query.data ?? []}

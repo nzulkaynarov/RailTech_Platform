@@ -128,7 +128,6 @@ export function ManagersCard({
         </div>
         {managers.length ? (
           <Table<ManagerStat>
-            size="small"
             rowKey="user_id"
             pagination={false}
             dataSource={managers}
@@ -162,7 +161,6 @@ export function Daily({ daily, withCost }: { daily: DailyStat[]; withCost: boole
           label: t.dashboard.daily,
           children: (
             <Table<DailyStat>
-              size="small"
               rowKey="day"
               scroll={{ x: 700 }}
               pagination={{ pageSize: 10 }}

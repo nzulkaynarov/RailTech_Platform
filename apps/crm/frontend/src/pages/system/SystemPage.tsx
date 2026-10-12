@@ -103,7 +103,6 @@ export function SystemPage() {
             <Typography.Paragraph type="secondary">{t.system.hint}</Typography.Paragraph>
             <Table<ComponentStatusOut>
               rowKey="key"
-              size="small"
               pagination={false}
               scroll={{ x: 640 }}
               dataSource={bySeverity(query.data.components)}

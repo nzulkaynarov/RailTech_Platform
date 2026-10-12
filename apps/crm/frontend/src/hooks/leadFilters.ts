@@ -61,6 +61,20 @@ function nextDay(day: string): string {
   return date.toISOString().slice(0, 10);
 }
 
+type HeaderSorter = { columnKey?: unknown; order?: "ascend" | "descend" | null | undefined };
+
+/** Стрелка в заголовке колонки: API сортирует только по убыванию; без `sort` — по последнему сообщению. */
+export function sortOrderOf(column: string, sort: string | undefined): "descend" | null {
+  return (sort ?? "last_message") === column ? "descend" : null;
+}
+
+/** Клик по заголовку (antd `Table onChange`) → `sort` в URL; сброс стрелки — сортировка по умолчанию. */
+export function sortFromHeader(sorter: HeaderSorter): string | undefined {
+  const key = typeof sorter.columnKey === "string" ? sorter.columnKey : undefined;
+  if (!sorter.order || !key || !(LEAD_SORTS as readonly string[]).includes(key)) return undefined;
+  return key === "last_message" ? undefined : key;
+}
+
 /** Параметры API по фильтрам из URL. */
 export function toListParams(filters: LeadFilters): ListLeadsParams {
   return {
