@@ -87,6 +87,7 @@ export function UsersTable({
 }: Handlers & { data: UserOut[]; loading: boolean }) {
   return (
     <Table<UserOut>
+      sticky
       rowKey="id"
       loading={loading}
       dataSource={data}

@@ -65,7 +65,6 @@ function TextsTable({ rows, onEdit }: { rows: Row[]; onEdit: (key: string) => vo
   const phone = Grid.useBreakpoint().md === false;
   return (
     <Table<Row>
-      size="small"
       rowKey="key"
       pagination={false}
       dataSource={rows}

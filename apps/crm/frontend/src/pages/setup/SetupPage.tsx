@@ -11,6 +11,7 @@ import { tokenStore, unwrap } from "../../api/http";
 import { systemKeys, useSetupState } from "../../api/systemQueries";
 import { passwordChange } from "../../app/providers/auth";
 import { apiErrorField, apiErrorMessage } from "../../hooks/useApiErrorToast";
+import { useDirtyForms } from "../../hooks/useDirtyForms";
 import type { JsonSchema } from "../../domain/schemaForm";
 import { t } from "../../i18n/ru";
 import { SettingsForm } from "../settings/SettingsForm";
@@ -75,6 +76,7 @@ function AdminStep({ onDone }: { onDone: () => void }) {
 
 function CompanyStep({ onDone }: { onDone: () => void }) {
   const query = useSettings();
+  const onDirtyChange = useDirtyForms();
   const data = query.data;
   if (!data) return <Skeleton active />;
   return (
@@ -90,6 +92,7 @@ function CompanyStep({ onDone }: { onDone: () => void }) {
             schema={data.schemas[key] as JsonSchema}
             values={data.values[key] ?? {}}
             samples={t.settings.samples}
+            onDirtyChange={onDirtyChange}
           />
         </section>
       ))}

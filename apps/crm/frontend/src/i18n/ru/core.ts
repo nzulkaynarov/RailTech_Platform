@@ -292,4 +292,24 @@ export const core = {
     deactivateKbHint: "Бот перестанет отвечать по этому документу.",
     deactivate: "Выключить",
   },
+  /** Refine `UnsavedChangesNotifier` (ключ `warnWhenUnsavedChanges`): уход с несохранённой формы. */
+  unsaved: {
+    leave: "Есть несохранённые изменения. Уйти без сохранения?",
+  },
+  /** Подсказки кнопки копирования (`Typography.Text copyable`); вторая — после нажатия. */
+  copy: {
+    phone: "Копировать телефон",
+    email: "Копировать email",
+    telegram: "Копировать имя в Telegram",
+    copied: "Скопировано",
+  },
+  /** Быстрый выбор периода в `RangePicker` (`lib/datePresets.ts`). */
+  datePresets: {
+    today: "Сегодня",
+    yesterday: "Вчера",
+    last7: "7 дней",
+    last30: "30 дней",
+    thisMonth: "Этот месяц",
+    lastMonth: "Прошлый месяц",
+  },
 };
