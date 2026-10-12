@@ -7,6 +7,14 @@ h2.section-title.ant-typography {
   font-size: var(--ant-font-size-heading-5);
   line-height: var(--ant-line-height-heading-5);
 }
+/* Подзаголовок внутри карточки: меньше заголовка карточки, как подпись раздела. */
+h3.section-label.ant-typography {
+  margin: var(--ant-margin) 0 var(--ant-margin-xs);
+  font-size: var(--ant-font-size-sm);
+  font-weight: var(--ant-font-weight-strong, 600);
+  line-height: var(--ant-line-height-sm, 1.67);
+  color: var(--ant-color-text-secondary);
+}
 
 /* Настройки: разделы слева, форма справа; на мобильном — одна колонка. */
 .settings-layout {
@@ -58,6 +66,7 @@ h2.section-title.ant-typography {
   padding: var(--ant-padding-sm);
   background: var(--ant-color-bg-container);
   border-top: 1px solid var(--ant-color-border-secondary);
+  border-radius: 0 0 var(--ant-border-radius-lg) var(--ant-border-radius-lg);
 }
 
 /* Дашборд: плитки и полосы причин. */

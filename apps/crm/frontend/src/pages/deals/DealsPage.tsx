@@ -1,5 +1,6 @@
 import { PlusOutlined } from "@ant-design/icons";
-import { Button, Card, Select, Space } from "antd";
+import { Button, Card, DatePicker, Select, Space } from "antd";
+import dayjs from "dayjs";
 import { useState } from "react";
 import { useSearchParams } from "react-router";
 
@@ -12,6 +13,7 @@ import { PageHeader } from "../../components/PageHeader";
 import { PageState } from "../../components/PageState";
 import { stageFromSearch, stageLabel } from "../../domain/deals";
 import { t } from "../../i18n/ru";
+import { DATE_FORMAT } from "../../lib/time";
 import { DealDialog } from "./DealDialog";
 import { DealsTable } from "./DealsTable";
 import "../pages.css";
@@ -23,20 +25,29 @@ export function DealsPage() {
   const [search, setSearch] = useSearchParams();
   const stage = stageFromSearch(search.get("stage"));
   const owner = Number(search.get("owner")) || undefined;
+  const closedFrom = search.get("closed_from") ?? undefined;
+  const closedTo = search.get("closed_to") ?? undefined;
   const query = useDeals({
     ...(stage ? { stage } : {}),
     ...(owner ? { owner_user_id: owner } : {}),
+    ...(closedFrom ? { closed_from: closedFrom } : {}),
+    ...(closedTo ? { closed_to: closedTo } : {}),
   });
   const team = useTeam();
   const perms = usePermissionsQuery();
   const canWrite = allowed(perms.data, "deals", "write");
   const [editing, setEditing] = useState<DealOut | null>(null);
   const [open, setOpen] = useState(false);
-  const setParam = (key: string, value: string | number | undefined) => {
+  const setParams = (patch: Record<string, string | number | undefined>) => {
     const next = new URLSearchParams(search);
-    if (value === undefined) next.delete(key);
-    else next.set(key, String(value));
+    for (const [key, value] of Object.entries(patch)) {
+      if (value === undefined) next.delete(key);
+      else next.set(key, String(value));
+    }
     setSearch(next, { replace: true });
+  };
+  const setParam = (key: string, value: string | number | undefined) => {
+    setParams({ [key]: value });
   };
   const items = query.data ?? [];
   const create = () => {
@@ -80,6 +91,18 @@ export function DealsPage() {
           }}
           options={(team.data ?? []).map((m) => ({ value: m.id, label: m.full_name }))}
         />
+        <DatePicker.RangePicker
+          format={DATE_FORMAT}
+          aria-label={t.deals.closedPeriodLabel}
+          placeholder={t.deals.closedPeriod}
+          value={closedFrom && closedTo ? [dayjs(closedFrom), dayjs(closedTo)] : null}
+          onChange={(range) => {
+            setParams({
+              closed_from: range?.[0]?.format("YYYY-MM-DD"),
+              closed_to: range?.[1]?.format("YYYY-MM-DD"),
+            });
+          }}
+        />
       </Space>
       <PageState
         query={query}
@@ -87,7 +110,7 @@ export function DealsPage() {
           !items.length && {
             title: t.deals.empty,
             hint: t.deals.emptyHint,
-            ...(canWrite && !stage && !owner
+            ...(canWrite && !stage && !owner && !closedFrom
               ? { action: { label: t.deals.create, onClick: create } }
               : {}),
           }

@@ -1,6 +1,8 @@
 /** «Сделки» (Q-013, ADR-0019): список, карточка клиента, дашборд. */
 export const deals = {
   deals: {
+    closedPeriod: ["Закрыта с", "по"] as [string, string],
+    closedPeriodLabel: "Период закрытия",
     title: "Название",
     client: "Клиент",
     amount: "Сумма",

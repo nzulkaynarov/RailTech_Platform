@@ -172,6 +172,7 @@ export const settings = {
     phone: "Номер телефона",
     erase: "Удаление переписки",
     other: "Другие тексты",
+    advanced: "Дополнительно",
   } as Dict,
   botTexts,
   fields: {

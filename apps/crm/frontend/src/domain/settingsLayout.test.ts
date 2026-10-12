@@ -108,3 +108,11 @@ describe("text preview", () => {
     expect(emptyLanguages({ ru: "a", uz: " ", en: undefined })).toEqual(["uz", "en"]);
   });
 });
+
+describe("textGroups advanced", () => {
+  it("puts consent_version into the last «advanced» group", () => {
+    const groups = textGroups(["greeting", "consent_version", "brand_new"]);
+    expect(groups.map((g) => g.key)).toEqual(["welcome", "other", "advanced"]);
+    expect(groups.at(-1)?.fields).toEqual(["consent_version"]);
+  });
+});
