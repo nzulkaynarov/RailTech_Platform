@@ -62,6 +62,11 @@ export function LeadSummary({ lead }: { lead: LeadDetail }) {
             t.common.none
           )}
         </Descriptions.Item>
+        {lead.client_phone_e164 ? (
+          <Descriptions.Item label={t.lead.clientPhone}>
+            <a href={`tel:${lead.client_phone_e164}`}>{lead.client_phone_e164}</a>
+          </Descriptions.Item>
+        ) : null}
       </Descriptions>
       <Qualification lead={lead} />
       {lead.escalation ? (

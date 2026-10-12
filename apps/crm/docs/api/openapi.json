@@ -491,6 +491,30 @@
         "title": "ChecklistItem",
         "type": "object"
       },
+      "ClientContacts": {
+        "properties": {
+          "contacts": {
+            "items": {
+              "$ref": "#/components/schemas/ContactOut"
+            },
+            "title": "Contacts",
+            "type": "array"
+          },
+          "suggestions": {
+            "items": {
+              "$ref": "#/components/schemas/ContactSuggestion"
+            },
+            "title": "Suggestions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "contacts",
+          "suggestions"
+        ],
+        "title": "ClientContacts",
+        "type": "object"
+      },
       "ClientCreate": {
         "properties": {
           "inn": {
@@ -856,6 +880,217 @@
           "checked_at"
         ],
         "title": "ComponentStatusOut",
+        "type": "object"
+      },
+      "ContactIn": {
+        "description": "Телефон — в любом виде с кодом страны, сервер приводит к E.164; пустая строка — нет.",
+        "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "full_name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Full Name",
+            "type": "string"
+          },
+          "is_primary": {
+            "default": false,
+            "title": "Is Primary",
+            "type": "boolean"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          },
+          "telegram_identity_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Telegram Identity Id"
+          }
+        },
+        "required": [
+          "full_name"
+        ],
+        "title": "ContactIn",
+        "type": "object"
+      },
+      "ContactOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_primary": {
+            "title": "Is Primary",
+            "type": "boolean"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "phone_e164": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone E164"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          },
+          "telegram_identity_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Telegram Identity Id"
+          }
+        },
+        "required": [
+          "id",
+          "full_name",
+          "position",
+          "phone_e164",
+          "email",
+          "telegram_identity_id",
+          "is_primary",
+          "note",
+          "created_at"
+        ],
+        "title": "ContactOut",
+        "type": "object"
+      },
+      "ContactSuggestion": {
+        "description": "Подтверждённый Telegram-аккаунт клиента с номером, которого ещё нет среди контактов.",
+        "properties": {
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "phone_e164": {
+            "title": "Phone E164",
+            "type": "string"
+          },
+          "telegram_identity_id": {
+            "title": "Telegram Identity Id",
+            "type": "integer"
+          },
+          "tg_user_id": {
+            "title": "Tg User Id",
+            "type": "integer"
+          },
+          "tg_username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tg Username"
+          }
+        },
+        "required": [
+          "telegram_identity_id",
+          "tg_user_id",
+          "tg_username",
+          "full_name",
+          "phone_e164"
+        ],
+        "title": "ContactSuggestion",
         "type": "object"
       },
       "Created": {
@@ -2013,6 +2248,17 @@
             ],
             "title": "Client Id"
           },
+          "client_phone_e164": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Phone E164"
+          },
           "consent_given_at": {
             "anyOf": [
               {
@@ -3081,6 +3327,7 @@
         "enum": [
           "email_taken",
           "invalid_email",
+          "invalid_phone",
           "telegram_taken",
           "telegram_linked_elsewhere",
           "telegram_unknown",
@@ -4730,6 +4977,229 @@
           }
         ],
         "summary": "Update Client",
+        "tags": [
+          "clients"
+        ]
+      }
+    },
+    "/api/v1/clients/{client_id}/contacts": {
+      "get": {
+        "description": "Контакты (основной первым) и подтверждённые Telegram-аккаунты с номером для «Добавить».",
+        "operationId": "list_client_contacts",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContacts"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Client Contacts",
+        "tags": [
+          "clients"
+        ]
+      },
+      "post": {
+        "operationId": "create_client_contact",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Client Contact",
+        "tags": [
+          "clients"
+        ]
+      }
+    },
+    "/api/v1/clients/{client_id}/contacts/{contact_id}": {
+      "delete": {
+        "operationId": "delete_client_contact",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "title": "Contact Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Client Contact",
+        "tags": [
+          "clients"
+        ]
+      },
+      "put": {
+        "operationId": "update_client_contact",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "title": "Contact Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Client Contact",
         "tags": [
           "clients"
         ]

@@ -135,6 +135,7 @@ export const core = {
   apiReasons: {
     email_taken: "Пользователь с таким email уже есть",
     invalid_email: "Проверьте email — в нём ошибка",
+    invalid_phone: "Укажите телефон с кодом страны, например +998 90 123-45-67",
     telegram_taken: "Этот Telegram ID уже привязан к другому пользователю",
     telegram_linked_elsewhere: "Этот Telegram уже привязан к другому клиенту",
     telegram_unknown: "Этот Telegram ещё не писал боту — привязать нельзя",

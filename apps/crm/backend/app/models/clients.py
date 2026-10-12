@@ -102,3 +102,30 @@ class ServiceRequest(TimestampMixin, Base):
     closed_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     resolution: Mapped[str | None] = mapped_column(Text)
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class ClientContact(TimestampMixin, Base):
+    """Контактное лицо клиента (Q-011); основной — не более одного на клиента."""
+
+    __tablename__ = "client_contacts"
+    __table_args__ = (
+        Index("ix_client_contacts_client_id", "client_id"),
+        Index(
+            "uq_client_contacts_primary",
+            "client_id",
+            unique=True,
+            postgresql_where=sql("is_primary"),
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    client_id: Mapped[int] = mapped_column(ForeignKey("clients.id", ondelete="CASCADE"))
+    full_name: Mapped[str] = mapped_column(String(255))
+    position: Mapped[str | None] = mapped_column(String(255))
+    phone_e164: Mapped[str | None] = mapped_column(String(20))
+    email: Mapped[str | None] = mapped_column(String(255))
+    telegram_identity_id: Mapped[int | None] = mapped_column(
+        ForeignKey("telegram_identities.id", ondelete="SET NULL")
+    )
+    is_primary: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
+    note: Mapped[str | None] = mapped_column(Text)

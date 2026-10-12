@@ -13,6 +13,7 @@ from app.api import errors, health, telegram
 from app.api.v1 import (
     admin,
     auth,
+    client_contacts,
     clients,
     integrations,
     kb,
@@ -122,6 +123,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         settings_api,
         admin,
         clients,
+        client_contacts,
         setup,
         system,
         spend,

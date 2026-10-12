@@ -13,6 +13,7 @@ class Reason(StrEnum):
 
     EMAIL_TAKEN = "email_taken"
     INVALID_EMAIL = "invalid_email"
+    INVALID_PHONE = "invalid_phone"
     TELEGRAM_TAKEN = "telegram_taken"
     TELEGRAM_LINKED_ELSEWHERE = "telegram_linked_elsewhere"
     TELEGRAM_UNKNOWN = "telegram_unknown"

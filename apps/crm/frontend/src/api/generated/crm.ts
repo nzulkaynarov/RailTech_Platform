@@ -14,11 +14,13 @@ import type {
   BodyUploadKbDocument,
   ChangePasswordRequest,
   ChatCandidateOut,
+  ClientContacts,
   ClientCreate,
   ClientDetail,
   ClientOut,
   ClientUpdate,
   Close,
+  ContactIn,
   Created,
   Dashboard,
   DecisionsResponse,
@@ -508,6 +510,201 @@ export const updateClient = async (
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
     body: JSON.stringify(clientUpdate),
+  });
+};
+
+export type listClientContactsResponse200 = {
+  data: ClientContacts;
+  status: 200;
+};
+
+export type listClientContactsResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type listClientContactsResponseSuccess = listClientContactsResponse200 & {
+  headers: Headers;
+};
+export type listClientContactsResponseError = listClientContactsResponse422 & {
+  headers: Headers;
+};
+
+export type listClientContactsResponse =
+  listClientContactsResponseSuccess | listClientContactsResponseError;
+
+export const getListClientContactsUrl = (clientId: number) => {
+  return `/api/v1/clients/${clientId}/contacts`;
+};
+
+/**
+ * Контакты (основной первым) и подтверждённые Telegram-аккаунты с номером для «Добавить».
+ * @summary List Client Contacts
+ */
+export const listClientContacts = async (
+  clientId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<listClientContactsResponse> => {
+  return http<listClientContactsResponse>(getListClientContactsUrl(clientId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type createClientContactResponse201 = {
+  data: Created;
+  status: 201;
+};
+
+export type createClientContactResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type createClientContactResponseSuccess = createClientContactResponse201 & {
+  headers: Headers;
+};
+export type createClientContactResponseError = createClientContactResponse422 & {
+  headers: Headers;
+};
+
+export type createClientContactResponse =
+  createClientContactResponseSuccess | createClientContactResponseError;
+
+export const getCreateClientContactUrl = (clientId: number) => {
+  return `/api/v1/clients/${clientId}/contacts`;
+};
+
+/**
+ * @summary Create Client Contact
+ */
+export const createClientContact = async (
+  clientId: number,
+  contactIn: ContactIn,
+  options?: Parameters<typeof http>[1],
+): Promise<createClientContactResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<createClientContactResponse>(getCreateClientContactUrl(clientId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(contactIn),
+  });
+};
+
+export type deleteClientContactResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type deleteClientContactResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type deleteClientContactResponseSuccess = deleteClientContactResponse200 & {
+  headers: Headers;
+};
+export type deleteClientContactResponseError = deleteClientContactResponse422 & {
+  headers: Headers;
+};
+
+export type deleteClientContactResponse =
+  deleteClientContactResponseSuccess | deleteClientContactResponseError;
+
+export const getDeleteClientContactUrl = (clientId: number, contactId: number) => {
+  return `/api/v1/clients/${clientId}/contacts/${contactId}`;
+};
+
+/**
+ * @summary Delete Client Contact
+ */
+export const deleteClientContact = async (
+  clientId: number,
+  contactId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<deleteClientContactResponse> => {
+  return http<deleteClientContactResponse>(getDeleteClientContactUrl(clientId, contactId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export type updateClientContactResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type updateClientContactResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type updateClientContactResponseSuccess = updateClientContactResponse200 & {
+  headers: Headers;
+};
+export type updateClientContactResponseError = updateClientContactResponse422 & {
+  headers: Headers;
+};
+
+export type updateClientContactResponse =
+  updateClientContactResponseSuccess | updateClientContactResponseError;
+
+export const getUpdateClientContactUrl = (clientId: number, contactId: number) => {
+  return `/api/v1/clients/${clientId}/contacts/${contactId}`;
+};
+
+/**
+ * @summary Update Client Contact
+ */
+export const updateClientContact = async (
+  clientId: number,
+  contactId: number,
+  contactIn: ContactIn,
+  options?: Parameters<typeof http>[1],
+): Promise<updateClientContactResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<updateClientContactResponse>(getUpdateClientContactUrl(clientId, contactId), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(contactIn),
   });
 };
 

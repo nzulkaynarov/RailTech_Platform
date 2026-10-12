@@ -45,6 +45,8 @@ class LeadDetail(LeadOut):
     tg_username: str | None
     # Номер из кнопки «Поделиться номером» в боте (Q-020), E.164; удаляется по /delete.
     phone_e164: str | None = None
+    # Телефон основного контакта клиента, если лид привязан к клиенту (Q-011).
+    client_phone_e164: str | None = None
     notes_count: int
     snoozed_until: datetime | None
     # Открытый сервисный запрос лида или его клиента — ссылка из карточки (Q-017).

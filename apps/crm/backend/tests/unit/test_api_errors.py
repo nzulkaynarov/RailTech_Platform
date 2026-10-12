@@ -141,6 +141,7 @@ def test_reason_values_are_a_stable_contract() -> None:
         "setup_code_expired",
         "setup_locked",
         "invalid_email",
+        "invalid_phone",
         "telegram_taken",
         "telegram_linked_elsewhere",
         "telegram_unknown",

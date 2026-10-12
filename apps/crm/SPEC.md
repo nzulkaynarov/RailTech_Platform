@@ -219,9 +219,22 @@ telegram_identities(
   id, tg_user_id UNIQUE, tg_username, tg_first_name, lead_id NULL, client_id NULL,
   phone_e164 NULL, verified_by_user_id NULL, verified_at NULL, is_blocked BOOL
 )
+client_contacts(                                    -- контактные лица клиента (Q-011)
+  id, client_id → clients ON DELETE CASCADE, full_name, position NULL,
+  phone_e164 NULL,                                  -- тот же нормализатор E.164, что и номер из бота
+  email NULL,                                       -- нижний регистр, проверка формата
+  telegram_identity_id NULL → telegram_identities ON DELETE SET NULL,
+  is_primary BOOL,                                  -- частичный UNIQUE (client_id) WHERE is_primary
+  note NULL, created_at, updated_at
+)
 ```
 
 Правило: доступ к данным клиента из бота возможен только если `telegram_identities.client_id IS NOT NULL AND verified_at IS NOT NULL`.
+
+Контакты клиента: «Добавить из Telegram» предлагает подтверждённые идентичности клиента с `phone_e164`,
+которых ещё нет среди контактов (по `telegram_identity_id` или номеру); связать контакт можно только с
+подтверждённой идентичностью этого же клиента. Телефон основного контакта показывается в карточке лида
+этого клиента (`LeadDetail.client_phone_e164`).
 
 ### 5.3. Диалог
 

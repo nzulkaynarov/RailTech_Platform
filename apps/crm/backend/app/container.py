@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from app.services.auth import AuthService
     from app.services.backups import BackupService
     from app.services.budget import BudgetGuard
+    from app.services.client_contacts import ClientContactService
     from app.services.clients import ClientService
     from app.services.documents import DocumentService
     from app.services.kb.admin import KbAdminService
@@ -164,6 +165,12 @@ class Container:
         from app.services.clients import ClientService
 
         return ClientService(self.session_factory, self.settings_service, self.lead_messenger)
+
+    @cached_property
+    def contact_service(self) -> "ClientContactService":
+        from app.services.client_contacts import ClientContactService
+
+        return ClientContactService(self.session_factory)
 
     @cached_property
     def document_service(self) -> "DocumentService":

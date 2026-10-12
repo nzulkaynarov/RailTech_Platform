@@ -153,3 +153,8 @@ h2.section-title.ant-typography {
 .link-by-id {
   max-width: 420px;
 }
+/* Контакт клиента: длинные email и имена переносятся на 390 px, не растягивают карточку. */
+.contact-line {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
