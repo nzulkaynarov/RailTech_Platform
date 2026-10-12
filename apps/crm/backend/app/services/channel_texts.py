@@ -87,6 +87,10 @@ TEMPORARY_CREDENTIALS_HINT: Final = "Сначала войдите в CRM и с�
 TAKEN: Final = "Лид ваш. Откройте карточку в CRM."
 TAKEN_BY_OTHER: Final = "Лида уже забрал {name}."
 TAKE_FAILED: Final = "Не получилось забрать лида. Откройте карточку в CRM."
+CHANNEL_TEST: Final = (
+    "✅ Тестовое сообщение RailTech CRM: канал команды подключён, "
+    "сюда будут приходить передачи лидов."
+)
 REJECTED: Final[dict[str, str]] = {
     "conflict": "Лида уже забрал другой менеджер.",
     "forbidden": NO_RIGHTS,

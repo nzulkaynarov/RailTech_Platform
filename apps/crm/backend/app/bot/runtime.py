@@ -14,7 +14,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.bot import channel, commands, handlers
+from app.bot import channel, chat_member, commands, handlers
 from app.bot.middlewares import IdempotencyMiddleware, RateLimitMiddleware
 from app.config import Settings
 from app.integrations.s3 import ObjectStorage
@@ -48,6 +48,7 @@ def build_dispatcher(
     dispatcher.message.outer_middleware(RateLimitMiddleware(settings.get))
     if leads is not None and rbac is not None:
         dispatcher.include_router(channel.router)
+    dispatcher.include_router(chat_member.router)
     dispatcher.include_router(handlers.router)
     return dispatcher
 
@@ -61,11 +62,9 @@ class BotRuntime:
         self._background: set[asyncio.Task[Any]] = set()
 
     @classmethod
-    def create(cls, config: Settings, dispatcher: Dispatcher) -> "BotRuntime":
-        bot = Bot(
-            config.telegram_bot_token.get_secret_value(),
-            default=DefaultBotProperties(link_preview_is_disabled=True),
-        )
+    def create(cls, config: Settings, dispatcher: Dispatcher, token: str) -> "BotRuntime":
+        """`token` — действующий токен (БД «Подключения» или env, `integrations/telegram.py`)."""
+        bot = Bot(token, default=DefaultBotProperties(link_preview_is_disabled=True))
         return cls(config, bot, dispatcher)
 
     async def start(self) -> None:
@@ -86,12 +85,19 @@ class BotRuntime:
             )
         logger.info("bot_started", mode=self._config.telegram_mode, updates=allowed)
 
-    async def stop(self) -> None:
+    async def stop(self, *, release_webhook: bool = False) -> None:
+        """`release_webhook` — при смене токена: старый бот больше не шлёт апдейты на наш URL."""
         if self._polling is not None:
             await self.dispatcher.stop_polling()
             await asyncio.gather(self._polling, return_exceptions=True)
+            self._polling = None
         if self._background:
             await asyncio.wait(self._background, timeout=10)
+        if release_webhook and self._config.telegram_mode == "webhook":
+            try:
+                await self.bot.delete_webhook(drop_pending_updates=False)
+            except Exception:
+                logger.warning("bot_webhook_release_failed", exc_info=True)
         await self.bot.session.close()
 
     def secret_matches(self, received: str | None) -> bool:

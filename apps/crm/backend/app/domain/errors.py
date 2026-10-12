@@ -32,6 +32,12 @@ class Reason(StrEnum):
     FILE_EMPTY = "file_empty"
     FILE_TYPE = "file_type"
     DOCUMENT_INDEXING = "document_indexing"
+    INVALID_BOT_TOKEN = "invalid_bot_token"  # noqa: S105 — подкод ошибки, не секрет
+    TELEGRAM_UNAVAILABLE = "telegram_unavailable"
+    SECRETS_KEY_MISSING = "secrets_key_missing"
+    BOT_NOT_RUNNING = "bot_not_running"
+    CHANNEL_NOT_CONFIGURED = "channel_not_configured"
+    CHANNEL_SEND_FAILED = "channel_send_failed"
 
 
 class DomainError(Exception):
@@ -93,3 +99,9 @@ class PasswordChangeRequiredError(DomainError):
 
 class ValidationFailedError(DomainError):
     code = "validation_failed"
+
+
+class UpstreamUnavailableError(DomainError):
+    """Внешний сервис (Telegram) не ответил или отказал (502)."""
+
+    code = "upstream_unavailable"

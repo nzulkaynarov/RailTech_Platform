@@ -17,19 +17,19 @@ from app.tasks.queue import queue
 RETRY = RetryStrategy(max_attempts=5, exponential_wait=3)
 
 
-def build_notifications(c: Container) -> NotificationService:
-    return NotificationService(c.session_factory, c.settings_service, c.telegram_bot)
+async def build_notifications(c: Container) -> NotificationService:
+    return NotificationService(c.session_factory, c.settings_service, await c.telegram_bot())
 
 
 @queue.task(name="sync_escalation_post", queue="notify", retry=RETRY)
 async def sync_escalation_post(escalation_id: int) -> bool:
-    return await build_notifications(get_container()).sync(escalation_id)
+    return await (await build_notifications(get_container())).sync(escalation_id)
 
 
 @queue.task(name="escalation_sla_check", queue="notify", retry=RETRY)
 async def escalation_sla_check(escalation_id: int) -> bool:
     c = get_container()
-    marked = await build_notifications(c).mark_sla_overdue(escalation_id)
+    marked = await (await build_notifications(c)).mark_sla_overdue(escalation_id)
     if marked:
         cfg = await c.settings_service.get()
         due = add_business_minutes(
@@ -41,13 +41,13 @@ async def escalation_sla_check(escalation_id: int) -> bool:
 
 @queue.task(name="escalation_reminder", queue="notify", retry=RETRY)
 async def escalation_reminder(escalation_id: int) -> bool:
-    return await build_notifications(get_container()).remind(escalation_id)
+    return await (await build_notifications(get_container())).remind(escalation_id)
 
 
 @queue.periodic(cron="5 4 * * 1-5", periodic_id="escalation_digest")  # 09:05 Ташкент
 @queue.task(name="escalation_digest", queue="notify", queueing_lock="escalation_digest")
 async def escalation_digest(timestamp: int) -> int:
-    return await build_notifications(get_container()).digest()
+    return await (await build_notifications(get_container())).digest()
 
 
 @queue.periodic(cron="*/5 * * * *", periodic_id="snooze_expiry")

@@ -10,15 +10,22 @@ import argparse
 from aiogram import Bot
 
 from app.config import get_settings
+from app.container import get_container
+from app.integrations.telegram import resolve_token
 
-ALLOWED_UPDATES = ["message", "callback_query"]  # = dispatcher.resolve_used_update_types()
+# = dispatcher.resolve_used_update_types()
+ALLOWED_UPDATES = ["message", "callback_query", "my_chat_member"]
 
 
 async def run(args: argparse.Namespace) -> int:
     settings = get_settings()
-    token = settings.telegram_bot_token.get_secret_value()
+    container = get_container()
+    try:
+        token, _ = await resolve_token(container.secrets_store, settings)
+    finally:
+        await container.aclose()
     if not token:
-        print("TELEGRAM_BOT_TOKEN не задан")  # noqa: T201 — CLI-вывод
+        print("Токен бота не задан: «Подключения» в CRM или TELEGRAM_BOT_TOKEN")  # noqa: T201
         return 1
     bot = Bot(token)
     try:

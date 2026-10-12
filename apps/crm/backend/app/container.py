@@ -6,7 +6,7 @@
 
 from dataclasses import dataclass
 from functools import cached_property, lru_cache
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from aiogram import Bot
 from openai import AsyncOpenAI
@@ -17,6 +17,7 @@ from app.config import Settings, get_settings
 from app.integrations.docling import DoclingClient
 from app.integrations.litellm import Embedder, make_client
 from app.integrations.s3 import ObjectStorage
+from app.security.secrets_store import SecretCipher, SecretsStore
 from app.services.settings import SettingsService
 
 if TYPE_CHECKING:
@@ -81,7 +82,7 @@ class Container:
 
         if self.settings.telegram_dry_run:
             return LeadMessenger(self.session_factory, DryRunSender())
-        return LeadMessenger(self.session_factory, self.telegram_bot)
+        return LeadMessenger(self.session_factory, CurrentBotSender(self))
 
     @cached_property
     def lead_service(self) -> "LeadService":
@@ -137,16 +138,47 @@ class Container:
         )
 
     @cached_property
-    def telegram_bot(self) -> Bot | None:
-        """Клиент Bot API для исходящих сообщений (воркер); None без токена."""
-        token = self.settings.telegram_bot_token.get_secret_value()
-        return Bot(token) if token else None
+    def secrets_store(self) -> SecretsStore:
+        cipher = SecretCipher.optional(self.settings.secrets_key.get_secret_value())
+        return SecretsStore(self.session_factory, cipher)
+
+    @cached_property
+    def _bots(self) -> dict[str, Bot]:
+        return {}
+
+    async def telegram_bot(self) -> Bot | None:
+        """Клиент Bot API для исходящих сообщений с действующим токеном (БД или env); None — нет.
+
+        Токен перечитывается при каждом вызове: смена в «Подключениях» действует и в воркере.
+        """
+        from app.integrations.telegram import resolve_token
+
+        token, _ = await resolve_token(self.secrets_store, self.settings)
+        if not token:
+            return None
+        bot = self._bots.get(token)
+        if bot is None:
+            bot = self._bots[token] = Bot(token)
+        return bot
 
     async def aclose(self) -> None:
-        if "telegram_bot" in self.__dict__ and self.telegram_bot is not None:
-            await self.telegram_bot.session.close()
+        for bot in self._bots.values():
+            await bot.session.close()
         if "engine" in self.__dict__:
             await self.engine.dispose()
+
+
+class CurrentBotSender:
+    """`TextSender` для `LeadMessenger`: бот с действующим токеном на момент отправки."""
+
+    def __init__(self, container: Container) -> None:
+        self._container = container
+
+    async def send_message(self, chat_id: int, text: str) -> Any:
+        bot = await self._container.telegram_bot()
+        if bot is None:
+            raise RuntimeError("telegram bot token is not configured")
+        return await bot.send_message(chat_id, text)
 
 
 async def _enqueue_ingest(document_id: int) -> object:
