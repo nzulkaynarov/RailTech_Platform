@@ -122,4 +122,14 @@ export const system = {
       alias: "Модель ИИ",
     } as Record<string, string>,
   },
+  profileUi: {
+    linkTelegramFirst:
+      "Сначала привяжите Telegram — попросите администратора указать ваш Telegram ID",
+    dmFailed:
+      "Бот не смог написать вам {time}. Откройте бота в Telegram и нажмите «Старт», затем «Проверить доставку».",
+  },
+  settingsUi: {
+    channelMoved: "Канал команды подключается в «Подключениях» — здесь только дежурные.",
+    openIntegrations: "Открыть «Подключения»",
+  },
 };

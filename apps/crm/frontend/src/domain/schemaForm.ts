@@ -85,6 +85,16 @@ export function normalize(value: unknown, schema: JsonSchema, root: JsonSchema):
   return value;
 }
 
+/** Схема без полей, которые редактируются на другом экране (форма их не показывает,
+ * но значения остаются в теле PUT — `normalize` идёт по полной схеме). */
+export function withoutFields(schema: JsonSchema, names: string[]): JsonSchema {
+  if (!schema.properties) return schema;
+  const properties = Object.fromEntries(
+    Object.entries(schema.properties).filter(([key]) => !names.includes(key)),
+  );
+  return { ...schema, properties };
+}
+
 export function bounds(schema: JsonSchema): { min?: number; max?: number } {
   const result: { min?: number; max?: number } = {};
   const min = schema.minimum ?? schema.exclusiveMinimum;

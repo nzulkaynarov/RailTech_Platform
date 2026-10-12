@@ -1,6 +1,6 @@
 import { SendOutlined } from "@ant-design/icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { App as AntApp, Button, Card, Flex, Switch, Typography } from "antd";
+import { Alert, App as AntApp, Button, Card, Flex, Switch, Typography } from "antd";
 import type { ReactNode } from "react";
 
 import { testNotification, updateMe } from "../../api/generated/crm";
@@ -10,6 +10,10 @@ import { keys } from "../../api/queries";
 import { useApiErrorToast } from "../../hooks/useApiErrorToast";
 import { useBrowserAlertsPref } from "../../hooks/useLeadAlerts";
 import { t } from "../../i18n/ru";
+import { formatDateTime } from "../../lib/time";
+
+/** Поле может добавить бэкенд (неудачная доставка личного сообщения); читаем необязательно. */
+type WithDmFailure = UserOut & { tg_dm_failed_at?: string | null };
 
 function Row({
   id,
@@ -52,9 +56,19 @@ export function NotifyCard({ user }: { user: UserOut }) {
     onError,
   });
   const isAdmin = user.roles.includes("admin");
+  const linked = user.tg_user_id !== null;
+  const dmFailedAt = (user as WithDmFailure).tg_dm_failed_at ?? null;
   return (
     <Card title={t.notify.title}>
       <Flex vertical gap="middle">
+        {!linked ? <Alert type="info" showIcon message={t.profileUi.linkTelegramFirst} /> : null}
+        {linked && dmFailedAt ? (
+          <Alert
+            type="warning"
+            showIcon
+            message={t.profileUi.dmFailed.replace("{time}", formatDateTime(dmFailedAt))}
+          />
+        ) : null}
         {isAdmin ? (
           <Row
             id="notify-system"
@@ -64,6 +78,7 @@ export function NotifyCard({ user }: { user: UserOut }) {
               <Switch
                 id="notify-system"
                 checked={user.notify_system}
+                disabled={!linked}
                 loading={save.isPending}
                 onChange={(v) => {
                   save.mutate({ notify_system: v });
@@ -80,6 +95,7 @@ export function NotifyCard({ user }: { user: UserOut }) {
             <Switch
               id="notify-leads"
               checked={user.notify_leads}
+              disabled={!linked}
               loading={save.isPending}
               onChange={(v) => {
                 save.mutate({ notify_leads: v });
@@ -91,6 +107,7 @@ export function NotifyCard({ user }: { user: UserOut }) {
         <div>
           <Button
             icon={<SendOutlined aria-hidden />}
+            disabled={!linked}
             loading={test.isPending}
             onClick={() => {
               test.mutate();

@@ -1,4 +1,4 @@
-import { KeyOutlined } from "@ant-design/icons";
+import { LockOutlined } from "@ant-design/icons";
 import { Button, Card, Descriptions, Flex, Tag, Typography } from "antd";
 import { useNavigate } from "react-router";
 
@@ -25,7 +25,7 @@ export function ProfilePage() {
         title={t.page.profile}
         extra={
           <Button
-            icon={<KeyOutlined aria-hidden />}
+            icon={<LockOutlined aria-hidden />}
             onClick={() => {
               void navigate("/change-password");
             }}

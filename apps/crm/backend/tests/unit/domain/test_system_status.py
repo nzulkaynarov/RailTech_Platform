@@ -6,7 +6,14 @@ import pytest
 
 from app.domain import system_status as rules
 from app.domain.alerts import QUEUE_LIMIT
-from app.domain.system_status import AlertRow, BackupFacts, BotFacts, Component, QueueFacts
+from app.domain.system_status import (
+    AlertRow,
+    BackupFacts,
+    BotFacts,
+    Component,
+    QueueFacts,
+    Status,
+)
 
 NOW = datetime(2026, 10, 12, 9, 0, tzinfo=UTC)
 
@@ -121,7 +128,8 @@ def test_request_answered_by_newer_success() -> None:
 
 
 def test_ordered_puts_failures_first() -> None:
-    comps = [Component(k, k, st, "", NOW) for k, st in [("a", "ok"), ("b", "warn"), ("c", "fail")]]
+    statuses: list[tuple[str, Status]] = [("a", "ok"), ("b", "warn"), ("c", "fail")]
+    comps = [Component(k, k, st, "", NOW) for k, st in statuses]
     assert [c.key for c in rules.ordered(comps)] == ["c", "b", "a"]
 
 
