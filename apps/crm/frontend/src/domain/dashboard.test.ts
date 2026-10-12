@@ -36,8 +36,9 @@ describe("dashboard tiles", () => {
   const tiles = dashboardTiles(data, { from: "2026-09-12", to: "2026-10-11" });
 
   it("puts four business metrics first", () => {
-    expect(tiles.primary.map((x) => x.key)).toEqual(["leads", "taken", "won", "takeTime"]);
-    expect(tiles.secondary.find((x) => x.key === "fallback")?.value).toBe("25%");
+    expect(tiles.primary.map((x) => x.key)).toEqual(["leads", "taken", "won", "takeTime", "cost"]);
+    // доля без ответа — на спидометре «Работа бота», не плиткой
+    expect(tiles.secondary.map((x) => x.key)).toEqual(["openEscalations", "escalations", "gaps"]);
   });
 
   it("won deals drill down to the deals list filtered by «Выиграна» (ADR-0019)", () => {
