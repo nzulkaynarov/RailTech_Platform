@@ -65,13 +65,14 @@ router_settings:
   # Жёсткий потолок расходов по провайдеру (ADR-0014): счётчик в памяти прокси, без БД
   # (глобальный max_budget LiteLLM без БД не применяется). Мягкий порог — settings.budget
   # (BudgetGuard → fallback-model) и алерт > 80 %. Превышение → запросы к провайдеру
-  # отклоняются → бот честно передаёт диалог человеку. Значения в USD за сутки.
+  # отклоняются → бот честно передаёт диалог человеку. Значения в USD за сутки (решение владельца
+  # 2026-10-12, Q-008: Anthropic $3, Gemini $1; мягкий порог settings.budget.daily_usd = $2).
   provider_budget_config:
     anthropic:
-      budget_limit: 25
+      budget_limit: 3
       time_period: 1d
     gemini:
-      budget_limit: 15
+      budget_limit: 1
       time_period: 1d
   fallbacks:
     - dialog-model: [fallback-model]

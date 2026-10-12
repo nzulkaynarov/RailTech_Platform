@@ -318,7 +318,9 @@ class QualificationSettings(_Strict):
 
 
 class BudgetSettings(_Strict):
-    daily_usd: float = Field(default=10.0, ge=0)
+    # Ниже жёсткого потолка Anthropic ($3, infra/litellm.config.yaml): диалог уходит на fallback-model
+    # раньше, чем провайдер начнёт отклонять запросы (решение владельца Q-008, 2026-10-12).
+    daily_usd: float = Field(default=2.0, ge=0)
     fallback_model_enabled: bool = True
 
 
