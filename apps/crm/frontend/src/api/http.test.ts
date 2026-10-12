@@ -19,8 +19,8 @@ describe("http", () => {
       .mockResolvedValueOnce(json(200, { access_token: "new" }))
       .mockResolvedValueOnce(json(200, { ok: true }));
     vi.stubGlobal("fetch", fetchMock);
-    const result = await http<{ data: unknown; status: number }>("/api/v1/leads", {});
-    expect(result.status).toBe(200);
+    const result = await http<{ ok: boolean }>("/api/v1/leads", {});
+    expect(result).toEqual({ ok: true });
     const retried = fetchMock.mock.calls[2]?.[1] as RequestInit;
     expect(new Headers(retried.headers).get("Authorization")).toBe("Bearer new");
   });

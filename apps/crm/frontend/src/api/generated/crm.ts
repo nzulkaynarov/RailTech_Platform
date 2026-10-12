@@ -4,6 +4,22 @@
  * RailTech CRM API
  * OpenAPI spec version: 0.1.0
  */
+import { useMutation, useQuery } from "@tanstack/react-query";
+import type {
+  DataTag,
+  DefinedInitialDataOptions,
+  DefinedUseQueryResult,
+  MutationFunction,
+  QueryClient,
+  QueryFunction,
+  QueryKey,
+  UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
+  UseQueryOptions,
+  UseQueryResult,
+} from "@tanstack/react-query";
+
 import type {
   AccessOut,
   ActionResult,
@@ -110,25 +126,24 @@ import type {
 } from "./model";
 
 import { http } from "../http";
+import type { ErrorType } from "../http";
 
-export type listAuditResponse200 = {
-  data: AuditPage;
-  status: 200;
-};
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
-export type listAuditResponse422 = {
-  data: ErrorOut;
-  status: 422;
+const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
+  const result = { queryKey } as T & { queryKey: K };
+  for (const key of Object.keys(query)) {
+    // The explicit queryKey always wins, matching the previous
+    // `{ ...query, queryKey }` spread where it was set last.
+    if (key === "queryKey") continue;
+    Object.defineProperty(result, key, {
+      enumerable: true,
+      configurable: true,
+      get: () => (query as Record<string, unknown>)[key],
+    });
+  }
+  return result;
 };
-
-export type listAuditResponseSuccess = listAuditResponse200 & {
-  headers: Headers;
-};
-export type listAuditResponseError = listAuditResponse422 & {
-  headers: Headers;
-};
-
-export type listAuditResponse = listAuditResponseSuccess | listAuditResponseError;
 
 export const getListAuditUrl = (params?: ListAuditParams) => {
   const normalizedParams = new URLSearchParams();
@@ -159,31 +174,116 @@ export const getListAuditUrl = (params?: ListAuditParams) => {
 export const listAudit = async (
   params?: ListAuditParams,
   options?: Parameters<typeof http>[1],
-): Promise<listAuditResponse> => {
-  return http<listAuditResponse>(getListAuditUrl(params), {
+): Promise<AuditPage> => {
+  return http<AuditPage>(getListAuditUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export type changePasswordResponse204 = {
-  data: void;
-  status: 204;
+export const getListAuditQueryKey = (params?: ListAuditParams) => {
+  return [`/api/v1/audit`, ...(params ? [params] : [])] as const;
 };
 
-export type changePasswordResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getListAuditQueryOptions = <
+  TData = Awaited<ReturnType<typeof listAudit>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListAuditParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAudit>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListAuditQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listAudit>>> = ({ signal }) =>
+    listAudit(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listAudit>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type changePasswordResponseSuccess = changePasswordResponse204 & {
-  headers: Headers;
-};
-export type changePasswordResponseError = changePasswordResponse422 & {
-  headers: Headers;
-};
+export type ListAuditQueryResult = NonNullable<Awaited<ReturnType<typeof listAudit>>>;
+export type ListAuditQueryError = ErrorType<ErrorOut>;
 
-export type changePasswordResponse = changePasswordResponseSuccess | changePasswordResponseError;
+export function useListAudit<
+  TData = Awaited<ReturnType<typeof listAudit>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params: undefined | ListAuditParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAudit>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAudit>>,
+          TError,
+          Awaited<ReturnType<typeof listAudit>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListAudit<
+  TData = Awaited<ReturnType<typeof listAudit>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListAuditParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAudit>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAudit>>,
+          TError,
+          Awaited<ReturnType<typeof listAudit>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListAudit<
+  TData = Awaited<ReturnType<typeof listAudit>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListAuditParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAudit>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List Audit
+ */
+
+export function useListAudit<
+  TData = Awaited<ReturnType<typeof listAudit>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListAuditParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAudit>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListAuditQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getChangePasswordUrl = () => {
   return `/api/v1/auth/change-password`;
@@ -195,7 +295,7 @@ export const getChangePasswordUrl = () => {
 export const changePassword = async (
   changePasswordRequest: ChangePasswordRequest,
   options?: Parameters<typeof http>[1],
-): Promise<changePasswordResponse> => {
+): Promise<void> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -215,7 +315,7 @@ export const changePassword = async (
     }
     return headers;
   };
-  return http<changePasswordResponse>(getChangePasswordUrl(), {
+  return http<void>(getChangePasswordUrl(), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -223,24 +323,71 @@ export const changePassword = async (
   });
 };
 
-export type loginResponse200 = {
-  data: TokenResponse;
-  status: 200;
+export const getChangePasswordMutationKey = () => ["changePassword"] as const;
+
+export const getChangePasswordMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof changePassword>>,
+    TError,
+    ChangePasswordMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof changePassword>>,
+  TError,
+  ChangePasswordMutationVariables,
+  TContext
+> => {
+  const mutationKey = getChangePasswordMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof changePassword>>,
+    ChangePasswordMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return changePassword(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type loginResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type ChangePasswordMutationResult = NonNullable<Awaited<ReturnType<typeof changePassword>>>;
+export type ChangePasswordMutationBody = ChangePasswordRequest;
+export type ChangePasswordMutationError = ErrorType<ErrorOut>;
+export type ChangePasswordMutationVariables = { data: ChangePasswordRequest };
 
-export type loginResponseSuccess = loginResponse200 & {
-  headers: Headers;
+/**
+ * @summary Change Password
+ */
+export const useChangePassword = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof changePassword>>,
+      TError,
+      ChangePasswordMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof changePassword>>,
+  TError,
+  ChangePasswordMutationVariables,
+  TContext
+> => {
+  return useMutation(getChangePasswordMutationOptions(options), queryClient);
 };
-export type loginResponseError = loginResponse422 & {
-  headers: Headers;
-};
-
-export type loginResponse = loginResponseSuccess | loginResponseError;
 
 export const getLoginUrl = () => {
   return `/api/v1/auth/login`;
@@ -252,7 +399,7 @@ export const getLoginUrl = () => {
 export const login = async (
   loginRequest: LoginRequest,
   options?: Parameters<typeof http>[1],
-): Promise<loginResponse> => {
+): Promise<TokenResponse> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -272,7 +419,7 @@ export const login = async (
     }
     return headers;
   };
-  return http<loginResponse>(getLoginUrl(), {
+  return http<TokenResponse>(getLoginUrl(), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -280,24 +427,70 @@ export const login = async (
   });
 };
 
-export type logoutResponse204 = {
-  data: void;
-  status: 204;
+export const getLoginMutationKey = () => ["login"] as const;
+
+export const getLoginMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof login>>,
+    TError,
+    LoginMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof login>>,
+  TError,
+  LoginMutationVariables,
+  TContext
+> => {
+  const mutationKey = getLoginMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof login>>, LoginMutationVariables> = (
+    props,
+  ) => {
+    const { data } = props ?? {};
+
+    return login(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type logoutResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type LoginMutationResult = NonNullable<Awaited<ReturnType<typeof login>>>;
+export type LoginMutationBody = LoginRequest;
+export type LoginMutationError = ErrorType<ErrorOut>;
+export type LoginMutationVariables = { data: LoginRequest };
 
-export type logoutResponseSuccess = logoutResponse204 & {
-  headers: Headers;
+/**
+ * @summary Login
+ */
+export const useLogin = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof login>>,
+      TError,
+      LoginMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof login>>,
+  TError,
+  LoginMutationVariables,
+  TContext
+> => {
+  return useMutation(getLoginMutationOptions(options), queryClient);
 };
-export type logoutResponseError = logoutResponse422 & {
-  headers: Headers;
-};
-
-export type logoutResponse = logoutResponseSuccess | logoutResponseError;
 
 export const getLogoutUrl = () => {
   return `/api/v1/auth/logout`;
@@ -306,31 +499,52 @@ export const getLogoutUrl = () => {
 /**
  * @summary Logout
  */
-export const logout = async (options?: Parameters<typeof http>[1]): Promise<logoutResponse> => {
-  return http<logoutResponse>(getLogoutUrl(), {
+export const logout = async (options?: Parameters<typeof http>[1]): Promise<void> => {
+  return http<void>(getLogoutUrl(), {
     ...options,
     method: "POST",
   });
 };
 
-export type refreshResponse200 = {
-  data: TokenResponse;
-  status: 200;
+export const getLogoutMutationKey = () => ["logout"] as const;
+
+export const getLogoutMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError, void, TContext>;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError, void, TContext> => {
+  const mutationKey = getLogoutMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof logout>>, void> = () => {
+    return logout(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type refreshResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type LogoutMutationResult = NonNullable<Awaited<ReturnType<typeof logout>>>;
 
-export type refreshResponseSuccess = refreshResponse200 & {
-  headers: Headers;
-};
-export type refreshResponseError = refreshResponse422 & {
-  headers: Headers;
-};
+export type LogoutMutationError = ErrorType<ErrorOut>;
 
-export type refreshResponse = refreshResponseSuccess | refreshResponseError;
+/**
+ * @summary Logout
+ */
+export const useLogout = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof logout>>, TError, void, TContext>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof logout>>, TError, void, TContext> => {
+  return useMutation(getLogoutMutationOptions(options), queryClient);
+};
 
 export const getRefreshUrl = () => {
   return `/api/v1/auth/refresh`;
@@ -339,31 +553,52 @@ export const getRefreshUrl = () => {
 /**
  * @summary Refresh
  */
-export const refresh = async (options?: Parameters<typeof http>[1]): Promise<refreshResponse> => {
-  return http<refreshResponse>(getRefreshUrl(), {
+export const refresh = async (options?: Parameters<typeof http>[1]): Promise<TokenResponse> => {
+  return http<TokenResponse>(getRefreshUrl(), {
     ...options,
     method: "POST",
   });
 };
 
-export type listClientsResponse200 = {
-  data: ClientListItem[];
-  status: 200;
+export const getRefreshMutationKey = () => ["refresh"] as const;
+
+export const getRefreshMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof refresh>>, TError, void, TContext>;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof refresh>>, TError, void, TContext> => {
+  const mutationKey = getRefreshMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof refresh>>, void> = () => {
+    return refresh(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type listClientsResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type RefreshMutationResult = NonNullable<Awaited<ReturnType<typeof refresh>>>;
 
-export type listClientsResponseSuccess = listClientsResponse200 & {
-  headers: Headers;
-};
-export type listClientsResponseError = listClientsResponse422 & {
-  headers: Headers;
-};
+export type RefreshMutationError = ErrorType<ErrorOut>;
 
-export type listClientsResponse = listClientsResponseSuccess | listClientsResponseError;
+/**
+ * @summary Refresh
+ */
+export const useRefresh = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof refresh>>, TError, void, TContext>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof refresh>>, TError, void, TContext> => {
+  return useMutation(getRefreshMutationOptions(options), queryClient);
+};
 
 export const getListClientsUrl = (params?: ListClientsParams) => {
   const normalizedParams = new URLSearchParams();
@@ -385,31 +620,116 @@ export const getListClientsUrl = (params?: ListClientsParams) => {
 export const listClients = async (
   params?: ListClientsParams,
   options?: Parameters<typeof http>[1],
-): Promise<listClientsResponse> => {
-  return http<listClientsResponse>(getListClientsUrl(params), {
+): Promise<ClientListItem[]> => {
+  return http<ClientListItem[]>(getListClientsUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export type createClientResponse201 = {
-  data: Created;
-  status: 201;
+export const getListClientsQueryKey = (params?: ListClientsParams) => {
+  return [`/api/v1/clients`, ...(params ? [params] : [])] as const;
 };
 
-export type createClientResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getListClientsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listClients>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListClientsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listClients>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListClientsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listClients>>> = ({ signal }) =>
+    listClients(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listClients>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type createClientResponseSuccess = createClientResponse201 & {
-  headers: Headers;
-};
-export type createClientResponseError = createClientResponse422 & {
-  headers: Headers;
-};
+export type ListClientsQueryResult = NonNullable<Awaited<ReturnType<typeof listClients>>>;
+export type ListClientsQueryError = ErrorType<ErrorOut>;
 
-export type createClientResponse = createClientResponseSuccess | createClientResponseError;
+export function useListClients<
+  TData = Awaited<ReturnType<typeof listClients>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params: undefined | ListClientsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listClients>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listClients>>,
+          TError,
+          Awaited<ReturnType<typeof listClients>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListClients<
+  TData = Awaited<ReturnType<typeof listClients>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListClientsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listClients>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listClients>>,
+          TError,
+          Awaited<ReturnType<typeof listClients>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListClients<
+  TData = Awaited<ReturnType<typeof listClients>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListClientsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listClients>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List Clients
+ */
+
+export function useListClients<
+  TData = Awaited<ReturnType<typeof listClients>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListClientsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listClients>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListClientsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getCreateClientUrl = () => {
   return `/api/v1/clients`;
@@ -421,7 +741,7 @@ export const getCreateClientUrl = () => {
 export const createClient = async (
   clientCreate: ClientCreate,
   options?: Parameters<typeof http>[1],
-): Promise<createClientResponse> => {
+): Promise<Created> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -441,7 +761,7 @@ export const createClient = async (
     }
     return headers;
   };
-  return http<createClientResponse>(getCreateClientUrl(), {
+  return http<Created>(getCreateClientUrl(), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -449,24 +769,71 @@ export const createClient = async (
   });
 };
 
-export type getClientResponse200 = {
-  data: ClientDetail;
-  status: 200;
+export const getCreateClientMutationKey = () => ["createClient"] as const;
+
+export const getCreateClientMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createClient>>,
+    TError,
+    CreateClientMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createClient>>,
+  TError,
+  CreateClientMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateClientMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createClient>>,
+    CreateClientMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createClient(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type getClientResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type CreateClientMutationResult = NonNullable<Awaited<ReturnType<typeof createClient>>>;
+export type CreateClientMutationBody = ClientCreate;
+export type CreateClientMutationError = ErrorType<ErrorOut>;
+export type CreateClientMutationVariables = { data: ClientCreate };
 
-export type getClientResponseSuccess = getClientResponse200 & {
-  headers: Headers;
+/**
+ * @summary Create Client
+ */
+export const useCreateClient = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createClient>>,
+      TError,
+      CreateClientMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createClient>>,
+  TError,
+  CreateClientMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateClientMutationOptions(options), queryClient);
 };
-export type getClientResponseError = getClientResponse422 & {
-  headers: Headers;
-};
-
-export type getClientResponse = getClientResponseSuccess | getClientResponseError;
 
 export const getGetClientUrl = (clientId: number) => {
   return `/api/v1/clients/${clientId}`;
@@ -478,31 +845,119 @@ export const getGetClientUrl = (clientId: number) => {
 export const getClient = async (
   clientId: number,
   options?: Parameters<typeof http>[1],
-): Promise<getClientResponse> => {
-  return http<getClientResponse>(getGetClientUrl(clientId), {
+): Promise<ClientDetail> => {
+  return http<ClientDetail>(getGetClientUrl(clientId), {
     ...options,
     method: "GET",
   });
 };
 
-export type updateClientResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getGetClientQueryKey = (clientId: number) => {
+  return [`/api/v1/clients/${clientId}`] as const;
 };
 
-export type updateClientResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getGetClientQueryOptions = <
+  TData = Awaited<ReturnType<typeof getClient>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  clientId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getClient>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetClientQueryKey(clientId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getClient>>> = ({ signal }) =>
+    getClient(clientId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: clientId !== null && clientId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getClient>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
-export type updateClientResponseSuccess = updateClientResponse200 & {
-  headers: Headers;
-};
-export type updateClientResponseError = updateClientResponse422 & {
-  headers: Headers;
-};
+export type GetClientQueryResult = NonNullable<Awaited<ReturnType<typeof getClient>>>;
+export type GetClientQueryError = ErrorType<ErrorOut>;
 
-export type updateClientResponse = updateClientResponseSuccess | updateClientResponseError;
+export function useGetClient<
+  TData = Awaited<ReturnType<typeof getClient>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  clientId: number,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getClient>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getClient>>,
+          TError,
+          Awaited<ReturnType<typeof getClient>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetClient<
+  TData = Awaited<ReturnType<typeof getClient>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  clientId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getClient>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getClient>>,
+          TError,
+          Awaited<ReturnType<typeof getClient>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetClient<
+  TData = Awaited<ReturnType<typeof getClient>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  clientId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getClient>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get Client
+ */
+
+export function useGetClient<
+  TData = Awaited<ReturnType<typeof getClient>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  clientId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getClient>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetClientQueryOptions(clientId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getUpdateClientUrl = (clientId: number) => {
   return `/api/v1/clients/${clientId}`;
@@ -515,7 +970,7 @@ export const updateClient = async (
   clientId: number,
   clientUpdate: ClientUpdate,
   options?: Parameters<typeof http>[1],
-): Promise<updateClientResponse> => {
+): Promise<ActionResult> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -535,7 +990,7 @@ export const updateClient = async (
     }
     return headers;
   };
-  return http<updateClientResponse>(getUpdateClientUrl(clientId), {
+  return http<ActionResult>(getUpdateClientUrl(clientId), {
     ...options,
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -543,25 +998,71 @@ export const updateClient = async (
   });
 };
 
-export type listClientContactsResponse200 = {
-  data: ClientContacts;
-  status: 200;
+export const getUpdateClientMutationKey = () => ["updateClient"] as const;
+
+export const getUpdateClientMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateClient>>,
+    TError,
+    UpdateClientMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateClient>>,
+  TError,
+  UpdateClientMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateClientMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateClient>>,
+    UpdateClientMutationVariables
+  > = (props) => {
+    const { clientId, data } = props ?? {};
+
+    return updateClient(clientId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type listClientContactsResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type UpdateClientMutationResult = NonNullable<Awaited<ReturnType<typeof updateClient>>>;
+export type UpdateClientMutationBody = ClientUpdate;
+export type UpdateClientMutationError = ErrorType<ErrorOut>;
+export type UpdateClientMutationVariables = { clientId: number; data: ClientUpdate };
 
-export type listClientContactsResponseSuccess = listClientContactsResponse200 & {
-  headers: Headers;
+/**
+ * @summary Update Client
+ */
+export const useUpdateClient = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateClient>>,
+      TError,
+      UpdateClientMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateClient>>,
+  TError,
+  UpdateClientMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateClientMutationOptions(options), queryClient);
 };
-export type listClientContactsResponseError = listClientContactsResponse422 & {
-  headers: Headers;
-};
-
-export type listClientContactsResponse =
-  listClientContactsResponseSuccess | listClientContactsResponseError;
 
 export const getListClientContactsUrl = (clientId: number) => {
   return `/api/v1/clients/${clientId}/contacts`;
@@ -574,32 +1075,123 @@ export const getListClientContactsUrl = (clientId: number) => {
 export const listClientContacts = async (
   clientId: number,
   options?: Parameters<typeof http>[1],
-): Promise<listClientContactsResponse> => {
-  return http<listClientContactsResponse>(getListClientContactsUrl(clientId), {
+): Promise<ClientContacts> => {
+  return http<ClientContacts>(getListClientContactsUrl(clientId), {
     ...options,
     method: "GET",
   });
 };
 
-export type createClientContactResponse201 = {
-  data: Created;
-  status: 201;
+export const getListClientContactsQueryKey = (clientId: number) => {
+  return [`/api/v1/clients/${clientId}/contacts`] as const;
 };
 
-export type createClientContactResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getListClientContactsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listClientContacts>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  clientId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listClientContacts>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListClientContactsQueryKey(clientId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listClientContacts>>> = ({ signal }) =>
+    listClientContacts(clientId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: clientId !== null && clientId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof listClientContacts>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
-export type createClientContactResponseSuccess = createClientContactResponse201 & {
-  headers: Headers;
-};
-export type createClientContactResponseError = createClientContactResponse422 & {
-  headers: Headers;
-};
+export type ListClientContactsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listClientContacts>>
+>;
+export type ListClientContactsQueryError = ErrorType<ErrorOut>;
 
-export type createClientContactResponse =
-  createClientContactResponseSuccess | createClientContactResponseError;
+export function useListClientContacts<
+  TData = Awaited<ReturnType<typeof listClientContacts>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  clientId: number,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listClientContacts>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listClientContacts>>,
+          TError,
+          Awaited<ReturnType<typeof listClientContacts>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListClientContacts<
+  TData = Awaited<ReturnType<typeof listClientContacts>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  clientId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listClientContacts>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listClientContacts>>,
+          TError,
+          Awaited<ReturnType<typeof listClientContacts>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListClientContacts<
+  TData = Awaited<ReturnType<typeof listClientContacts>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  clientId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listClientContacts>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List Client Contacts
+ */
+
+export function useListClientContacts<
+  TData = Awaited<ReturnType<typeof listClientContacts>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  clientId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listClientContacts>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListClientContactsQueryOptions(clientId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getCreateClientContactUrl = (clientId: number) => {
   return `/api/v1/clients/${clientId}/contacts`;
@@ -612,7 +1204,7 @@ export const createClientContact = async (
   clientId: number,
   contactIn: ContactIn,
   options?: Parameters<typeof http>[1],
-): Promise<createClientContactResponse> => {
+): Promise<Created> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -632,7 +1224,7 @@ export const createClientContact = async (
     }
     return headers;
   };
-  return http<createClientContactResponse>(getCreateClientContactUrl(clientId), {
+  return http<Created>(getCreateClientContactUrl(clientId), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -640,25 +1232,73 @@ export const createClientContact = async (
   });
 };
 
-export type deleteClientContactResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getCreateClientContactMutationKey = () => ["createClientContact"] as const;
+
+export const getCreateClientContactMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createClientContact>>,
+    TError,
+    CreateClientContactMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createClientContact>>,
+  TError,
+  CreateClientContactMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateClientContactMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createClientContact>>,
+    CreateClientContactMutationVariables
+  > = (props) => {
+    const { clientId, data } = props ?? {};
+
+    return createClientContact(clientId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type deleteClientContactResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type CreateClientContactMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createClientContact>>
+>;
+export type CreateClientContactMutationBody = ContactIn;
+export type CreateClientContactMutationError = ErrorType<ErrorOut>;
+export type CreateClientContactMutationVariables = { clientId: number; data: ContactIn };
 
-export type deleteClientContactResponseSuccess = deleteClientContactResponse200 & {
-  headers: Headers;
+/**
+ * @summary Create Client Contact
+ */
+export const useCreateClientContact = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createClientContact>>,
+      TError,
+      CreateClientContactMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createClientContact>>,
+  TError,
+  CreateClientContactMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateClientContactMutationOptions(options), queryClient);
 };
-export type deleteClientContactResponseError = deleteClientContactResponse422 & {
-  headers: Headers;
-};
-
-export type deleteClientContactResponse =
-  deleteClientContactResponseSuccess | deleteClientContactResponseError;
 
 export const getDeleteClientContactUrl = (clientId: number, contactId: number) => {
   return `/api/v1/clients/${clientId}/contacts/${contactId}`;
@@ -671,32 +1311,80 @@ export const deleteClientContact = async (
   clientId: number,
   contactId: number,
   options?: Parameters<typeof http>[1],
-): Promise<deleteClientContactResponse> => {
-  return http<deleteClientContactResponse>(getDeleteClientContactUrl(clientId, contactId), {
+): Promise<ActionResult> => {
+  return http<ActionResult>(getDeleteClientContactUrl(clientId, contactId), {
     ...options,
     method: "DELETE",
   });
 };
 
-export type updateClientContactResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getDeleteClientContactMutationKey = () => ["deleteClientContact"] as const;
+
+export const getDeleteClientContactMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteClientContact>>,
+    TError,
+    DeleteClientContactMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteClientContact>>,
+  TError,
+  DeleteClientContactMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteClientContactMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteClientContact>>,
+    DeleteClientContactMutationVariables
+  > = (props) => {
+    const { clientId, contactId } = props ?? {};
+
+    return deleteClientContact(clientId, contactId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type updateClientContactResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type DeleteClientContactMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteClientContact>>
+>;
 
-export type updateClientContactResponseSuccess = updateClientContactResponse200 & {
-  headers: Headers;
-};
-export type updateClientContactResponseError = updateClientContactResponse422 & {
-  headers: Headers;
-};
+export type DeleteClientContactMutationError = ErrorType<ErrorOut>;
+export type DeleteClientContactMutationVariables = { clientId: number; contactId: number };
 
-export type updateClientContactResponse =
-  updateClientContactResponseSuccess | updateClientContactResponseError;
+/**
+ * @summary Delete Client Contact
+ */
+export const useDeleteClientContact = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteClientContact>>,
+      TError,
+      DeleteClientContactMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteClientContact>>,
+  TError,
+  DeleteClientContactMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteClientContactMutationOptions(options), queryClient);
+};
 
 export const getUpdateClientContactUrl = (clientId: number, contactId: number) => {
   return `/api/v1/clients/${clientId}/contacts/${contactId}`;
@@ -710,7 +1398,7 @@ export const updateClientContact = async (
   contactId: number,
   contactIn: ContactIn,
   options?: Parameters<typeof http>[1],
-): Promise<updateClientContactResponse> => {
+): Promise<ActionResult> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -730,7 +1418,7 @@ export const updateClientContact = async (
     }
     return headers;
   };
-  return http<updateClientContactResponse>(getUpdateClientContactUrl(clientId, contactId), {
+  return http<ActionResult>(getUpdateClientContactUrl(clientId, contactId), {
     ...options,
     method: "PUT",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -738,24 +1426,77 @@ export const updateClientContact = async (
   });
 };
 
-export type linkTelegramResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getUpdateClientContactMutationKey = () => ["updateClientContact"] as const;
+
+export const getUpdateClientContactMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateClientContact>>,
+    TError,
+    UpdateClientContactMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateClientContact>>,
+  TError,
+  UpdateClientContactMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateClientContactMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateClientContact>>,
+    UpdateClientContactMutationVariables
+  > = (props) => {
+    const { clientId, contactId, data } = props ?? {};
+
+    return updateClientContact(clientId, contactId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type linkTelegramResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export type UpdateClientContactMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateClientContact>>
+>;
+export type UpdateClientContactMutationBody = ContactIn;
+export type UpdateClientContactMutationError = ErrorType<ErrorOut>;
+export type UpdateClientContactMutationVariables = {
+  clientId: number;
+  contactId: number;
+  data: ContactIn;
 };
 
-export type linkTelegramResponseSuccess = linkTelegramResponse200 & {
-  headers: Headers;
+/**
+ * @summary Update Client Contact
+ */
+export const useUpdateClientContact = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateClientContact>>,
+      TError,
+      UpdateClientContactMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateClientContact>>,
+  TError,
+  UpdateClientContactMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateClientContactMutationOptions(options), queryClient);
 };
-export type linkTelegramResponseError = linkTelegramResponse422 & {
-  headers: Headers;
-};
-
-export type linkTelegramResponse = linkTelegramResponseSuccess | linkTelegramResponseError;
 
 export const getLinkTelegramUrl = (clientId: number) => {
   return `/api/v1/clients/${clientId}/telegram`;
@@ -768,7 +1509,7 @@ export const linkTelegram = async (
   clientId: number,
   linkTelegramBody: LinkTelegram,
   options?: Parameters<typeof http>[1],
-): Promise<linkTelegramResponse> => {
+): Promise<ActionResult> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -788,7 +1529,7 @@ export const linkTelegram = async (
     }
     return headers;
   };
-  return http<linkTelegramResponse>(getLinkTelegramUrl(clientId), {
+  return http<ActionResult>(getLinkTelegramUrl(clientId), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -796,24 +1537,71 @@ export const linkTelegram = async (
   });
 };
 
-export type unlinkTelegramResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getLinkTelegramMutationKey = () => ["linkTelegram"] as const;
+
+export const getLinkTelegramMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof linkTelegram>>,
+    TError,
+    LinkTelegramMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof linkTelegram>>,
+  TError,
+  LinkTelegramMutationVariables,
+  TContext
+> => {
+  const mutationKey = getLinkTelegramMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof linkTelegram>>,
+    LinkTelegramMutationVariables
+  > = (props) => {
+    const { clientId, data } = props ?? {};
+
+    return linkTelegram(clientId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type unlinkTelegramResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type LinkTelegramMutationResult = NonNullable<Awaited<ReturnType<typeof linkTelegram>>>;
+export type LinkTelegramMutationBody = LinkTelegram;
+export type LinkTelegramMutationError = ErrorType<ErrorOut>;
+export type LinkTelegramMutationVariables = { clientId: number; data: LinkTelegram };
 
-export type unlinkTelegramResponseSuccess = unlinkTelegramResponse200 & {
-  headers: Headers;
+/**
+ * @summary Link Telegram
+ */
+export const useLinkTelegram = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof linkTelegram>>,
+      TError,
+      LinkTelegramMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof linkTelegram>>,
+  TError,
+  LinkTelegramMutationVariables,
+  TContext
+> => {
+  return useMutation(getLinkTelegramMutationOptions(options), queryClient);
 };
-export type unlinkTelegramResponseError = unlinkTelegramResponse422 & {
-  headers: Headers;
-};
-
-export type unlinkTelegramResponse = unlinkTelegramResponseSuccess | unlinkTelegramResponseError;
 
 export const getUnlinkTelegramUrl = (clientId: number, tgUserId: number) => {
   return `/api/v1/clients/${clientId}/telegram/${tgUserId}`;
@@ -826,31 +1614,78 @@ export const unlinkTelegram = async (
   clientId: number,
   tgUserId: number,
   options?: Parameters<typeof http>[1],
-): Promise<unlinkTelegramResponse> => {
-  return http<unlinkTelegramResponse>(getUnlinkTelegramUrl(clientId, tgUserId), {
+): Promise<ActionResult> => {
+  return http<ActionResult>(getUnlinkTelegramUrl(clientId, tgUserId), {
     ...options,
     method: "DELETE",
   });
 };
 
-export type getDashboardResponse200 = {
-  data: Dashboard;
-  status: 200;
+export const getUnlinkTelegramMutationKey = () => ["unlinkTelegram"] as const;
+
+export const getUnlinkTelegramMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unlinkTelegram>>,
+    TError,
+    UnlinkTelegramMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof unlinkTelegram>>,
+  TError,
+  UnlinkTelegramMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUnlinkTelegramMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof unlinkTelegram>>,
+    UnlinkTelegramMutationVariables
+  > = (props) => {
+    const { clientId, tgUserId } = props ?? {};
+
+    return unlinkTelegram(clientId, tgUserId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type getDashboardResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type UnlinkTelegramMutationResult = NonNullable<Awaited<ReturnType<typeof unlinkTelegram>>>;
 
-export type getDashboardResponseSuccess = getDashboardResponse200 & {
-  headers: Headers;
-};
-export type getDashboardResponseError = getDashboardResponse422 & {
-  headers: Headers;
-};
+export type UnlinkTelegramMutationError = ErrorType<ErrorOut>;
+export type UnlinkTelegramMutationVariables = { clientId: number; tgUserId: number };
 
-export type getDashboardResponse = getDashboardResponseSuccess | getDashboardResponseError;
+/**
+ * @summary Unlink Telegram
+ */
+export const useUnlinkTelegram = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof unlinkTelegram>>,
+      TError,
+      UnlinkTelegramMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof unlinkTelegram>>,
+  TError,
+  UnlinkTelegramMutationVariables,
+  TContext
+> => {
+  return useMutation(getUnlinkTelegramMutationOptions(options), queryClient);
+};
 
 export const getGetDashboardUrl = (params?: GetDashboardParams) => {
   const normalizedParams = new URLSearchParams();
@@ -874,32 +1709,116 @@ export const getGetDashboardUrl = (params?: GetDashboardParams) => {
 export const getDashboard = async (
   params?: GetDashboardParams,
   options?: Parameters<typeof http>[1],
-): Promise<getDashboardResponse> => {
-  return http<getDashboardResponse>(getGetDashboardUrl(params), {
+): Promise<Dashboard> => {
+  return http<Dashboard>(getGetDashboardUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export type refreshDashboardResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getGetDashboardQueryKey = (params?: GetDashboardParams) => {
+  return [`/api/v1/dashboard`, ...(params ? [params] : [])] as const;
 };
 
-export type refreshDashboardResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getGetDashboardQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDashboard>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: GetDashboardParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getDashboard>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetDashboardQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getDashboard>>> = ({ signal }) =>
+    getDashboard(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getDashboard>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type refreshDashboardResponseSuccess = refreshDashboardResponse200 & {
-  headers: Headers;
-};
-export type refreshDashboardResponseError = refreshDashboardResponse422 & {
-  headers: Headers;
-};
+export type GetDashboardQueryResult = NonNullable<Awaited<ReturnType<typeof getDashboard>>>;
+export type GetDashboardQueryError = ErrorType<ErrorOut>;
 
-export type refreshDashboardResponse =
-  refreshDashboardResponseSuccess | refreshDashboardResponseError;
+export function useGetDashboard<
+  TData = Awaited<ReturnType<typeof getDashboard>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params: undefined | GetDashboardParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getDashboard>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDashboard>>,
+          TError,
+          Awaited<ReturnType<typeof getDashboard>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetDashboard<
+  TData = Awaited<ReturnType<typeof getDashboard>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: GetDashboardParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getDashboard>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDashboard>>,
+          TError,
+          Awaited<ReturnType<typeof getDashboard>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetDashboard<
+  TData = Awaited<ReturnType<typeof getDashboard>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: GetDashboardParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getDashboard>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get Dashboard
+ */
+
+export function useGetDashboard<
+  TData = Awaited<ReturnType<typeof getDashboard>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: GetDashboardParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getDashboard>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetDashboardQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getRefreshDashboardUrl = () => {
   return `/api/v1/dashboard/refresh`;
@@ -910,31 +1829,64 @@ export const getRefreshDashboardUrl = () => {
  */
 export const refreshDashboard = async (
   options?: Parameters<typeof http>[1],
-): Promise<refreshDashboardResponse> => {
-  return http<refreshDashboardResponse>(getRefreshDashboardUrl(), {
+): Promise<ActionResult> => {
+  return http<ActionResult>(getRefreshDashboardUrl(), {
     ...options,
     method: "POST",
   });
 };
 
-export type listDealsResponse200 = {
-  data: DealOut[];
-  status: 200;
+export const getRefreshDashboardMutationKey = () => ["refreshDashboard"] as const;
+
+export const getRefreshDashboardMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof refreshDashboard>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof refreshDashboard>>, TError, void, TContext> => {
+  const mutationKey = getRefreshDashboardMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof refreshDashboard>>, void> = () => {
+    return refreshDashboard(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type listDealsResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type RefreshDashboardMutationResult = NonNullable<
+  Awaited<ReturnType<typeof refreshDashboard>>
+>;
 
-export type listDealsResponseSuccess = listDealsResponse200 & {
-  headers: Headers;
-};
-export type listDealsResponseError = listDealsResponse422 & {
-  headers: Headers;
-};
+export type RefreshDashboardMutationError = ErrorType<ErrorOut>;
 
-export type listDealsResponse = listDealsResponseSuccess | listDealsResponseError;
+/**
+ * @summary Refresh Dashboard
+ */
+export const useRefreshDashboard = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof refreshDashboard>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof refreshDashboard>>, TError, void, TContext> => {
+  return useMutation(getRefreshDashboardMutationOptions(options), queryClient);
+};
 
 export const getListDealsUrl = (params?: ListDealsParams) => {
   const normalizedParams = new URLSearchParams();
@@ -957,31 +1909,116 @@ export const getListDealsUrl = (params?: ListDealsParams) => {
 export const listDeals = async (
   params?: ListDealsParams,
   options?: Parameters<typeof http>[1],
-): Promise<listDealsResponse> => {
-  return http<listDealsResponse>(getListDealsUrl(params), {
+): Promise<DealOut[]> => {
+  return http<DealOut[]>(getListDealsUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export type createDealResponse201 = {
-  data: Created;
-  status: 201;
+export const getListDealsQueryKey = (params?: ListDealsParams) => {
+  return [`/api/v1/deals`, ...(params ? [params] : [])] as const;
 };
 
-export type createDealResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getListDealsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listDeals>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListDealsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDeals>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListDealsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listDeals>>> = ({ signal }) =>
+    listDeals(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listDeals>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type createDealResponseSuccess = createDealResponse201 & {
-  headers: Headers;
-};
-export type createDealResponseError = createDealResponse422 & {
-  headers: Headers;
-};
+export type ListDealsQueryResult = NonNullable<Awaited<ReturnType<typeof listDeals>>>;
+export type ListDealsQueryError = ErrorType<ErrorOut>;
 
-export type createDealResponse = createDealResponseSuccess | createDealResponseError;
+export function useListDeals<
+  TData = Awaited<ReturnType<typeof listDeals>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params: undefined | ListDealsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDeals>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listDeals>>,
+          TError,
+          Awaited<ReturnType<typeof listDeals>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListDeals<
+  TData = Awaited<ReturnType<typeof listDeals>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListDealsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDeals>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listDeals>>,
+          TError,
+          Awaited<ReturnType<typeof listDeals>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListDeals<
+  TData = Awaited<ReturnType<typeof listDeals>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListDealsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDeals>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List Deals
+ */
+
+export function useListDeals<
+  TData = Awaited<ReturnType<typeof listDeals>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListDealsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDeals>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListDealsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getCreateDealUrl = () => {
   return `/api/v1/deals`;
@@ -994,7 +2031,7 @@ export const getCreateDealUrl = () => {
 export const createDeal = async (
   dealCreate: DealCreate,
   options?: Parameters<typeof http>[1],
-): Promise<createDealResponse> => {
+): Promise<Created> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -1014,7 +2051,7 @@ export const createDeal = async (
     }
     return headers;
   };
-  return http<createDealResponse>(getCreateDealUrl(), {
+  return http<Created>(getCreateDealUrl(), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -1022,24 +2059,71 @@ export const createDeal = async (
   });
 };
 
-export type dealOptionsResponse200 = {
-  data: DealOptions;
-  status: 200;
+export const getCreateDealMutationKey = () => ["createDeal"] as const;
+
+export const getCreateDealMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createDeal>>,
+    TError,
+    CreateDealMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createDeal>>,
+  TError,
+  CreateDealMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateDealMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createDeal>>,
+    CreateDealMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createDeal(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type dealOptionsResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type CreateDealMutationResult = NonNullable<Awaited<ReturnType<typeof createDeal>>>;
+export type CreateDealMutationBody = DealCreate;
+export type CreateDealMutationError = ErrorType<ErrorOut>;
+export type CreateDealMutationVariables = { data: DealCreate };
 
-export type dealOptionsResponseSuccess = dealOptionsResponse200 & {
-  headers: Headers;
+/**
+ * @summary Create Deal
+ */
+export const useCreateDeal = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createDeal>>,
+      TError,
+      CreateDealMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createDeal>>,
+  TError,
+  CreateDealMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateDealMutationOptions(options), queryClient);
 };
-export type dealOptionsResponseError = dealOptionsResponse422 & {
-  headers: Headers;
-};
-
-export type dealOptionsResponse = dealOptionsResponseSuccess | dealOptionsResponseError;
 
 export const getDealOptionsUrl = () => {
   return `/api/v1/deals/options`;
@@ -1049,33 +2133,109 @@ export const getDealOptionsUrl = () => {
  * Причины отказа и валюта по умолчанию — для форм сделки и закрытия лида.
  * @summary Deal Options
  */
-export const dealOptions = async (
-  options?: Parameters<typeof http>[1],
-): Promise<dealOptionsResponse> => {
-  return http<dealOptionsResponse>(getDealOptionsUrl(), {
+export const dealOptions = async (options?: Parameters<typeof http>[1]): Promise<DealOptions> => {
+  return http<DealOptions>(getDealOptionsUrl(), {
     ...options,
     method: "GET",
   });
 };
 
-export type dealsSummaryResponse200 = {
-  data: DealsSummary;
-  status: 200;
+export const getDealOptionsQueryKey = () => {
+  return [`/api/v1/deals/options`] as const;
 };
 
-export type dealsSummaryResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getDealOptionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof dealOptions>>,
+  TError = ErrorType<ErrorOut>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof dealOptions>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getDealOptionsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof dealOptions>>> = ({ signal }) =>
+    dealOptions({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof dealOptions>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type dealsSummaryResponseSuccess = dealsSummaryResponse200 & {
-  headers: Headers;
-};
-export type dealsSummaryResponseError = dealsSummaryResponse422 & {
-  headers: Headers;
-};
+export type DealOptionsQueryResult = NonNullable<Awaited<ReturnType<typeof dealOptions>>>;
+export type DealOptionsQueryError = ErrorType<ErrorOut>;
 
-export type dealsSummaryResponse = dealsSummaryResponseSuccess | dealsSummaryResponseError;
+export function useDealOptions<
+  TData = Awaited<ReturnType<typeof dealOptions>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof dealOptions>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof dealOptions>>,
+          TError,
+          Awaited<ReturnType<typeof dealOptions>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDealOptions<
+  TData = Awaited<ReturnType<typeof dealOptions>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof dealOptions>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof dealOptions>>,
+          TError,
+          Awaited<ReturnType<typeof dealOptions>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDealOptions<
+  TData = Awaited<ReturnType<typeof dealOptions>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof dealOptions>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Deal Options
+ */
+
+export function useDealOptions<
+  TData = Awaited<ReturnType<typeof dealOptions>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof dealOptions>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getDealOptionsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getDealsSummaryUrl = (params?: DealsSummaryParams) => {
   const normalizedParams = new URLSearchParams();
@@ -1100,31 +2260,116 @@ export const getDealsSummaryUrl = (params?: DealsSummaryParams) => {
 export const dealsSummary = async (
   params?: DealsSummaryParams,
   options?: Parameters<typeof http>[1],
-): Promise<dealsSummaryResponse> => {
-  return http<dealsSummaryResponse>(getDealsSummaryUrl(params), {
+): Promise<DealsSummary> => {
+  return http<DealsSummary>(getDealsSummaryUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export type getDealResponse200 = {
-  data: DealOut;
-  status: 200;
+export const getDealsSummaryQueryKey = (params?: DealsSummaryParams) => {
+  return [`/api/v1/deals/summary`, ...(params ? [params] : [])] as const;
 };
 
-export type getDealResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getDealsSummaryQueryOptions = <
+  TData = Awaited<ReturnType<typeof dealsSummary>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: DealsSummaryParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof dealsSummary>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getDealsSummaryQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof dealsSummary>>> = ({ signal }) =>
+    dealsSummary(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof dealsSummary>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type getDealResponseSuccess = getDealResponse200 & {
-  headers: Headers;
-};
-export type getDealResponseError = getDealResponse422 & {
-  headers: Headers;
-};
+export type DealsSummaryQueryResult = NonNullable<Awaited<ReturnType<typeof dealsSummary>>>;
+export type DealsSummaryQueryError = ErrorType<ErrorOut>;
 
-export type getDealResponse = getDealResponseSuccess | getDealResponseError;
+export function useDealsSummary<
+  TData = Awaited<ReturnType<typeof dealsSummary>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params: undefined | DealsSummaryParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof dealsSummary>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof dealsSummary>>,
+          TError,
+          Awaited<ReturnType<typeof dealsSummary>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDealsSummary<
+  TData = Awaited<ReturnType<typeof dealsSummary>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: DealsSummaryParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof dealsSummary>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof dealsSummary>>,
+          TError,
+          Awaited<ReturnType<typeof dealsSummary>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDealsSummary<
+  TData = Awaited<ReturnType<typeof dealsSummary>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: DealsSummaryParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof dealsSummary>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Deals Summary
+ */
+
+export function useDealsSummary<
+  TData = Awaited<ReturnType<typeof dealsSummary>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: DealsSummaryParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof dealsSummary>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getDealsSummaryQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getGetDealUrl = (dealId: number) => {
   return `/api/v1/deals/${dealId}`;
@@ -1136,31 +2381,119 @@ export const getGetDealUrl = (dealId: number) => {
 export const getDeal = async (
   dealId: number,
   options?: Parameters<typeof http>[1],
-): Promise<getDealResponse> => {
-  return http<getDealResponse>(getGetDealUrl(dealId), {
+): Promise<DealOut> => {
+  return http<DealOut>(getGetDealUrl(dealId), {
     ...options,
     method: "GET",
   });
 };
 
-export type updateDealResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getGetDealQueryKey = (dealId: number) => {
+  return [`/api/v1/deals/${dealId}`] as const;
 };
 
-export type updateDealResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getGetDealQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDeal>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  dealId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getDeal>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetDealQueryKey(dealId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getDeal>>> = ({ signal }) =>
+    getDeal(dealId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: dealId !== null && dealId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getDeal>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
-export type updateDealResponseSuccess = updateDealResponse200 & {
-  headers: Headers;
-};
-export type updateDealResponseError = updateDealResponse422 & {
-  headers: Headers;
-};
+export type GetDealQueryResult = NonNullable<Awaited<ReturnType<typeof getDeal>>>;
+export type GetDealQueryError = ErrorType<ErrorOut>;
 
-export type updateDealResponse = updateDealResponseSuccess | updateDealResponseError;
+export function useGetDeal<
+  TData = Awaited<ReturnType<typeof getDeal>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  dealId: number,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getDeal>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDeal>>,
+          TError,
+          Awaited<ReturnType<typeof getDeal>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetDeal<
+  TData = Awaited<ReturnType<typeof getDeal>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  dealId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getDeal>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDeal>>,
+          TError,
+          Awaited<ReturnType<typeof getDeal>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetDeal<
+  TData = Awaited<ReturnType<typeof getDeal>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  dealId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getDeal>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get Deal
+ */
+
+export function useGetDeal<
+  TData = Awaited<ReturnType<typeof getDeal>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  dealId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getDeal>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetDealQueryOptions(dealId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getUpdateDealUrl = (dealId: number) => {
   return `/api/v1/deals/${dealId}`;
@@ -1174,7 +2507,7 @@ export const updateDeal = async (
   dealId: number,
   dealUpdate: DealUpdate,
   options?: Parameters<typeof http>[1],
-): Promise<updateDealResponse> => {
+): Promise<ActionResult> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -1194,7 +2527,7 @@ export const updateDeal = async (
     }
     return headers;
   };
-  return http<updateDealResponse>(getUpdateDealUrl(dealId), {
+  return http<ActionResult>(getUpdateDealUrl(dealId), {
     ...options,
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -1202,24 +2535,71 @@ export const updateDeal = async (
   });
 };
 
-export type listDocumentsResponse200 = {
-  data: DocumentOut[];
-  status: 200;
+export const getUpdateDealMutationKey = () => ["updateDeal"] as const;
+
+export const getUpdateDealMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateDeal>>,
+    TError,
+    UpdateDealMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateDeal>>,
+  TError,
+  UpdateDealMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateDealMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateDeal>>,
+    UpdateDealMutationVariables
+  > = (props) => {
+    const { dealId, data } = props ?? {};
+
+    return updateDeal(dealId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type listDocumentsResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type UpdateDealMutationResult = NonNullable<Awaited<ReturnType<typeof updateDeal>>>;
+export type UpdateDealMutationBody = DealUpdate;
+export type UpdateDealMutationError = ErrorType<ErrorOut>;
+export type UpdateDealMutationVariables = { dealId: number; data: DealUpdate };
 
-export type listDocumentsResponseSuccess = listDocumentsResponse200 & {
-  headers: Headers;
+/**
+ * @summary Update Deal
+ */
+export const useUpdateDeal = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateDeal>>,
+      TError,
+      UpdateDealMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateDeal>>,
+  TError,
+  UpdateDealMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateDealMutationOptions(options), queryClient);
 };
-export type listDocumentsResponseError = listDocumentsResponse422 & {
-  headers: Headers;
-};
-
-export type listDocumentsResponse = listDocumentsResponseSuccess | listDocumentsResponseError;
 
 export const getListDocumentsUrl = (params?: ListDocumentsParams) => {
   const normalizedParams = new URLSearchParams();
@@ -1243,31 +2623,116 @@ export const getListDocumentsUrl = (params?: ListDocumentsParams) => {
 export const listDocuments = async (
   params?: ListDocumentsParams,
   options?: Parameters<typeof http>[1],
-): Promise<listDocumentsResponse> => {
-  return http<listDocumentsResponse>(getListDocumentsUrl(params), {
+): Promise<DocumentOut[]> => {
+  return http<DocumentOut[]>(getListDocumentsUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export type uploadDocumentResponse201 = {
-  data: Created;
-  status: 201;
+export const getListDocumentsQueryKey = (params?: ListDocumentsParams) => {
+  return [`/api/v1/documents`, ...(params ? [params] : [])] as const;
 };
 
-export type uploadDocumentResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getListDocumentsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listDocuments>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListDocumentsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDocuments>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListDocumentsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listDocuments>>> = ({ signal }) =>
+    listDocuments(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listDocuments>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type uploadDocumentResponseSuccess = uploadDocumentResponse201 & {
-  headers: Headers;
-};
-export type uploadDocumentResponseError = uploadDocumentResponse422 & {
-  headers: Headers;
-};
+export type ListDocumentsQueryResult = NonNullable<Awaited<ReturnType<typeof listDocuments>>>;
+export type ListDocumentsQueryError = ErrorType<ErrorOut>;
 
-export type uploadDocumentResponse = uploadDocumentResponseSuccess | uploadDocumentResponseError;
+export function useListDocuments<
+  TData = Awaited<ReturnType<typeof listDocuments>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params: undefined | ListDocumentsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDocuments>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listDocuments>>,
+          TError,
+          Awaited<ReturnType<typeof listDocuments>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListDocuments<
+  TData = Awaited<ReturnType<typeof listDocuments>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListDocumentsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDocuments>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listDocuments>>,
+          TError,
+          Awaited<ReturnType<typeof listDocuments>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListDocuments<
+  TData = Awaited<ReturnType<typeof listDocuments>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListDocumentsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDocuments>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List Documents
+ */
+
+export function useListDocuments<
+  TData = Awaited<ReturnType<typeof listDocuments>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListDocumentsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDocuments>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListDocumentsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getUploadDocumentUrl = () => {
   return `/api/v1/documents`;
@@ -1279,7 +2744,7 @@ export const getUploadDocumentUrl = () => {
 export const uploadDocument = async (
   bodyUploadDocument: BodyUploadDocument,
   options?: Parameters<typeof http>[1],
-): Promise<uploadDocumentResponse> => {
+): Promise<Created> => {
   const formData = new FormData();
   formData.append(`client_id`, bodyUploadDocument.client_id.toString());
   if (bodyUploadDocument.doc_date !== undefined && bodyUploadDocument.doc_date !== null) {
@@ -1295,31 +2760,78 @@ export const uploadDocument = async (
     formData.append(`visible`, bodyUploadDocument.visible.toString());
   }
 
-  return http<uploadDocumentResponse>(getUploadDocumentUrl(), {
+  return http<Created>(getUploadDocumentUrl(), {
     ...options,
     method: "POST",
     body: formData,
   });
 };
 
-export type updateDocumentResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getUploadDocumentMutationKey = () => ["uploadDocument"] as const;
+
+export const getUploadDocumentMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof uploadDocument>>,
+    TError,
+    UploadDocumentMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof uploadDocument>>,
+  TError,
+  UploadDocumentMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUploadDocumentMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof uploadDocument>>,
+    UploadDocumentMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return uploadDocument(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type updateDocumentResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type UploadDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof uploadDocument>>>;
+export type UploadDocumentMutationBody = BodyUploadDocument;
+export type UploadDocumentMutationError = ErrorType<ErrorOut>;
+export type UploadDocumentMutationVariables = { data: BodyUploadDocument };
 
-export type updateDocumentResponseSuccess = updateDocumentResponse200 & {
-  headers: Headers;
+/**
+ * @summary Upload Document
+ */
+export const useUploadDocument = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof uploadDocument>>,
+      TError,
+      UploadDocumentMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof uploadDocument>>,
+  TError,
+  UploadDocumentMutationVariables,
+  TContext
+> => {
+  return useMutation(getUploadDocumentMutationOptions(options), queryClient);
 };
-export type updateDocumentResponseError = updateDocumentResponse422 & {
-  headers: Headers;
-};
-
-export type updateDocumentResponse = updateDocumentResponseSuccess | updateDocumentResponseError;
 
 export const getUpdateDocumentUrl = (documentId: number) => {
   return `/api/v1/documents/${documentId}`;
@@ -1332,7 +2844,7 @@ export const updateDocument = async (
   documentId: number,
   documentUpdate: DocumentUpdate,
   options?: Parameters<typeof http>[1],
-): Promise<updateDocumentResponse> => {
+): Promise<ActionResult> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -1352,7 +2864,7 @@ export const updateDocument = async (
     }
     return headers;
   };
-  return http<updateDocumentResponse>(getUpdateDocumentUrl(documentId), {
+  return http<ActionResult>(getUpdateDocumentUrl(documentId), {
     ...options,
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -1360,24 +2872,71 @@ export const updateDocument = async (
   });
 };
 
-export type documentAccessResponse200 = {
-  data: AccessOut[];
-  status: 200;
+export const getUpdateDocumentMutationKey = () => ["updateDocument"] as const;
+
+export const getUpdateDocumentMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateDocument>>,
+    TError,
+    UpdateDocumentMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateDocument>>,
+  TError,
+  UpdateDocumentMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateDocumentMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateDocument>>,
+    UpdateDocumentMutationVariables
+  > = (props) => {
+    const { documentId, data } = props ?? {};
+
+    return updateDocument(documentId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type documentAccessResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type UpdateDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof updateDocument>>>;
+export type UpdateDocumentMutationBody = DocumentUpdate;
+export type UpdateDocumentMutationError = ErrorType<ErrorOut>;
+export type UpdateDocumentMutationVariables = { documentId: number; data: DocumentUpdate };
 
-export type documentAccessResponseSuccess = documentAccessResponse200 & {
-  headers: Headers;
+/**
+ * @summary Update Document
+ */
+export const useUpdateDocument = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateDocument>>,
+      TError,
+      UpdateDocumentMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateDocument>>,
+  TError,
+  UpdateDocumentMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateDocumentMutationOptions(options), queryClient);
 };
-export type documentAccessResponseError = documentAccessResponse422 & {
-  headers: Headers;
-};
-
-export type documentAccessResponse = documentAccessResponseSuccess | documentAccessResponseError;
 
 export const getDocumentAccessUrl = (documentId: number) => {
   return `/api/v1/documents/${documentId}/access`;
@@ -1389,32 +2948,119 @@ export const getDocumentAccessUrl = (documentId: number) => {
 export const documentAccess = async (
   documentId: number,
   options?: Parameters<typeof http>[1],
-): Promise<documentAccessResponse> => {
-  return http<documentAccessResponse>(getDocumentAccessUrl(documentId), {
+): Promise<AccessOut[]> => {
+  return http<AccessOut[]>(getDocumentAccessUrl(documentId), {
     ...options,
     method: "GET",
   });
 };
 
-export type downloadDocumentResponse200 = {
-  data: unknown;
-  status: 200;
+export const getDocumentAccessQueryKey = (documentId: number) => {
+  return [`/api/v1/documents/${documentId}/access`] as const;
 };
 
-export type downloadDocumentResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getDocumentAccessQueryOptions = <
+  TData = Awaited<ReturnType<typeof documentAccess>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  documentId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof documentAccess>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getDocumentAccessQueryKey(documentId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof documentAccess>>> = ({ signal }) =>
+    documentAccess(documentId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: documentId !== null && documentId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof documentAccess>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
-export type downloadDocumentResponseSuccess = downloadDocumentResponse200 & {
-  headers: Headers;
-};
-export type downloadDocumentResponseError = downloadDocumentResponse422 & {
-  headers: Headers;
-};
+export type DocumentAccessQueryResult = NonNullable<Awaited<ReturnType<typeof documentAccess>>>;
+export type DocumentAccessQueryError = ErrorType<ErrorOut>;
 
-export type downloadDocumentResponse =
-  downloadDocumentResponseSuccess | downloadDocumentResponseError;
+export function useDocumentAccess<
+  TData = Awaited<ReturnType<typeof documentAccess>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  documentId: number,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof documentAccess>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof documentAccess>>,
+          TError,
+          Awaited<ReturnType<typeof documentAccess>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDocumentAccess<
+  TData = Awaited<ReturnType<typeof documentAccess>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  documentId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof documentAccess>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof documentAccess>>,
+          TError,
+          Awaited<ReturnType<typeof documentAccess>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDocumentAccess<
+  TData = Awaited<ReturnType<typeof documentAccess>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  documentId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof documentAccess>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Document Access
+ */
+
+export function useDocumentAccess<
+  TData = Awaited<ReturnType<typeof documentAccess>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  documentId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof documentAccess>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getDocumentAccessQueryOptions(documentId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getDownloadDocumentUrl = (documentId: number) => {
   return `/api/v1/documents/${documentId}/download`;
@@ -1426,31 +3072,119 @@ export const getDownloadDocumentUrl = (documentId: number) => {
 export const downloadDocument = async (
   documentId: number,
   options?: Parameters<typeof http>[1],
-): Promise<downloadDocumentResponse> => {
-  return http<downloadDocumentResponse>(getDownloadDocumentUrl(documentId), {
+): Promise<unknown> => {
+  return http<unknown>(getDownloadDocumentUrl(documentId), {
     ...options,
     method: "GET",
   });
 };
 
-export type exportClientsResponse200 = {
-  data: void;
-  status: 200;
+export const getDownloadDocumentQueryKey = (documentId: number) => {
+  return [`/api/v1/documents/${documentId}/download`] as const;
 };
 
-export type exportClientsResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getDownloadDocumentQueryOptions = <
+  TData = Awaited<ReturnType<typeof downloadDocument>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  documentId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadDocument>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getDownloadDocumentQueryKey(documentId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadDocument>>> = ({ signal }) =>
+    downloadDocument(documentId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: documentId !== null && documentId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof downloadDocument>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
-export type exportClientsResponseSuccess = exportClientsResponse200 & {
-  headers: Headers;
-};
-export type exportClientsResponseError = exportClientsResponse422 & {
-  headers: Headers;
-};
+export type DownloadDocumentQueryResult = NonNullable<Awaited<ReturnType<typeof downloadDocument>>>;
+export type DownloadDocumentQueryError = ErrorType<ErrorOut>;
 
-export type exportClientsResponse = exportClientsResponseSuccess | exportClientsResponseError;
+export function useDownloadDocument<
+  TData = Awaited<ReturnType<typeof downloadDocument>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  documentId: number,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadDocument>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadDocument>>,
+          TError,
+          Awaited<ReturnType<typeof downloadDocument>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadDocument<
+  TData = Awaited<ReturnType<typeof downloadDocument>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  documentId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadDocument>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadDocument>>,
+          TError,
+          Awaited<ReturnType<typeof downloadDocument>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadDocument<
+  TData = Awaited<ReturnType<typeof downloadDocument>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  documentId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadDocument>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Download Document
+ */
+
+export function useDownloadDocument<
+  TData = Awaited<ReturnType<typeof downloadDocument>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  documentId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadDocument>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getDownloadDocumentQueryOptions(documentId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getExportClientsUrl = (params?: ExportClientsParams) => {
   const normalizedParams = new URLSearchParams();
@@ -1475,31 +3209,116 @@ export const getExportClientsUrl = (params?: ExportClientsParams) => {
 export const exportClients = async (
   params?: ExportClientsParams,
   options?: Parameters<typeof http>[1],
-): Promise<exportClientsResponse> => {
-  return http<exportClientsResponse>(getExportClientsUrl(params), {
+): Promise<void> => {
+  return http<void>(getExportClientsUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export type exportDealsResponse200 = {
-  data: void;
-  status: 200;
+export const getExportClientsQueryKey = (params?: ExportClientsParams) => {
+  return [`/api/v1/export/clients.csv`, ...(params ? [params] : [])] as const;
 };
 
-export type exportDealsResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getExportClientsQueryOptions = <
+  TData = Awaited<ReturnType<typeof exportClients>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ExportClientsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof exportClients>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getExportClientsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof exportClients>>> = ({ signal }) =>
+    exportClients(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof exportClients>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type exportDealsResponseSuccess = exportDealsResponse200 & {
-  headers: Headers;
-};
-export type exportDealsResponseError = exportDealsResponse422 & {
-  headers: Headers;
-};
+export type ExportClientsQueryResult = NonNullable<Awaited<ReturnType<typeof exportClients>>>;
+export type ExportClientsQueryError = ErrorType<ErrorOut>;
 
-export type exportDealsResponse = exportDealsResponseSuccess | exportDealsResponseError;
+export function useExportClients<
+  TData = Awaited<ReturnType<typeof exportClients>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params: undefined | ExportClientsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof exportClients>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exportClients>>,
+          TError,
+          Awaited<ReturnType<typeof exportClients>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useExportClients<
+  TData = Awaited<ReturnType<typeof exportClients>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ExportClientsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof exportClients>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exportClients>>,
+          TError,
+          Awaited<ReturnType<typeof exportClients>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useExportClients<
+  TData = Awaited<ReturnType<typeof exportClients>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ExportClientsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof exportClients>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Export Clients
+ */
+
+export function useExportClients<
+  TData = Awaited<ReturnType<typeof exportClients>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ExportClientsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof exportClients>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getExportClientsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getExportDealsUrl = (params?: ExportDealsParams) => {
   const normalizedParams = new URLSearchParams();
@@ -1524,31 +3343,116 @@ export const getExportDealsUrl = (params?: ExportDealsParams) => {
 export const exportDeals = async (
   params?: ExportDealsParams,
   options?: Parameters<typeof http>[1],
-): Promise<exportDealsResponse> => {
-  return http<exportDealsResponse>(getExportDealsUrl(params), {
+): Promise<void> => {
+  return http<void>(getExportDealsUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export type exportLeadsResponse200 = {
-  data: void;
-  status: 200;
+export const getExportDealsQueryKey = (params?: ExportDealsParams) => {
+  return [`/api/v1/export/deals.csv`, ...(params ? [params] : [])] as const;
 };
 
-export type exportLeadsResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getExportDealsQueryOptions = <
+  TData = Awaited<ReturnType<typeof exportDeals>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ExportDealsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof exportDeals>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getExportDealsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof exportDeals>>> = ({ signal }) =>
+    exportDeals(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof exportDeals>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type exportLeadsResponseSuccess = exportLeadsResponse200 & {
-  headers: Headers;
-};
-export type exportLeadsResponseError = exportLeadsResponse422 & {
-  headers: Headers;
-};
+export type ExportDealsQueryResult = NonNullable<Awaited<ReturnType<typeof exportDeals>>>;
+export type ExportDealsQueryError = ErrorType<ErrorOut>;
 
-export type exportLeadsResponse = exportLeadsResponseSuccess | exportLeadsResponseError;
+export function useExportDeals<
+  TData = Awaited<ReturnType<typeof exportDeals>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params: undefined | ExportDealsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof exportDeals>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exportDeals>>,
+          TError,
+          Awaited<ReturnType<typeof exportDeals>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useExportDeals<
+  TData = Awaited<ReturnType<typeof exportDeals>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ExportDealsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof exportDeals>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exportDeals>>,
+          TError,
+          Awaited<ReturnType<typeof exportDeals>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useExportDeals<
+  TData = Awaited<ReturnType<typeof exportDeals>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ExportDealsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof exportDeals>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Export Deals
+ */
+
+export function useExportDeals<
+  TData = Awaited<ReturnType<typeof exportDeals>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ExportDealsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof exportDeals>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getExportDealsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getExportLeadsUrl = (params?: ExportLeadsParams) => {
   const normalizedParams = new URLSearchParams();
@@ -1573,31 +3477,116 @@ export const getExportLeadsUrl = (params?: ExportLeadsParams) => {
 export const exportLeads = async (
   params?: ExportLeadsParams,
   options?: Parameters<typeof http>[1],
-): Promise<exportLeadsResponse> => {
-  return http<exportLeadsResponse>(getExportLeadsUrl(params), {
+): Promise<void> => {
+  return http<void>(getExportLeadsUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export type inboxResponse200 = {
-  data: InboxResponse;
-  status: 200;
+export const getExportLeadsQueryKey = (params?: ExportLeadsParams) => {
+  return [`/api/v1/export/leads.csv`, ...(params ? [params] : [])] as const;
 };
 
-export type inboxResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getExportLeadsQueryOptions = <
+  TData = Awaited<ReturnType<typeof exportLeads>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ExportLeadsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof exportLeads>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getExportLeadsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof exportLeads>>> = ({ signal }) =>
+    exportLeads(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof exportLeads>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type inboxResponseSuccess = inboxResponse200 & {
-  headers: Headers;
-};
-export type inboxResponseError = inboxResponse422 & {
-  headers: Headers;
-};
+export type ExportLeadsQueryResult = NonNullable<Awaited<ReturnType<typeof exportLeads>>>;
+export type ExportLeadsQueryError = ErrorType<ErrorOut>;
 
-export type inboxResponse = inboxResponseSuccess | inboxResponseError;
+export function useExportLeads<
+  TData = Awaited<ReturnType<typeof exportLeads>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params: undefined | ExportLeadsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof exportLeads>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exportLeads>>,
+          TError,
+          Awaited<ReturnType<typeof exportLeads>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useExportLeads<
+  TData = Awaited<ReturnType<typeof exportLeads>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ExportLeadsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof exportLeads>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exportLeads>>,
+          TError,
+          Awaited<ReturnType<typeof exportLeads>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useExportLeads<
+  TData = Awaited<ReturnType<typeof exportLeads>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ExportLeadsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof exportLeads>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Export Leads
+ */
+
+export function useExportLeads<
+  TData = Awaited<ReturnType<typeof exportLeads>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ExportLeadsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof exportLeads>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getExportLeadsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getInboxUrl = () => {
   return `/api/v1/inbox`;
@@ -1607,32 +3596,97 @@ export const getInboxUrl = () => {
  * Очередь работы — менеджеру и админу; наблюдатель смотрит «Лиды» (SPEC §10.1).
  * @summary Inbox
  */
-export const inbox = async (options?: Parameters<typeof http>[1]): Promise<inboxResponse> => {
-  return http<inboxResponse>(getInboxUrl(), {
+export const inbox = async (options?: Parameters<typeof http>[1]): Promise<InboxResponse> => {
+  return http<InboxResponse>(getInboxUrl(), {
     ...options,
     method: "GET",
   });
 };
 
-export type getTelegramStatusResponse200 = {
-  data: TelegramStatusOut;
-  status: 200;
+export const getInboxQueryKey = () => {
+  return [`/api/v1/inbox`] as const;
 };
 
-export type getTelegramStatusResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getInboxQueryOptions = <
+  TData = Awaited<ReturnType<typeof inbox>>,
+  TError = ErrorType<ErrorOut>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof inbox>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getInboxQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof inbox>>> = ({ signal }) =>
+    inbox({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof inbox>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type getTelegramStatusResponseSuccess = getTelegramStatusResponse200 & {
-  headers: Headers;
-};
-export type getTelegramStatusResponseError = getTelegramStatusResponse422 & {
-  headers: Headers;
-};
+export type InboxQueryResult = NonNullable<Awaited<ReturnType<typeof inbox>>>;
+export type InboxQueryError = ErrorType<ErrorOut>;
 
-export type getTelegramStatusResponse =
-  getTelegramStatusResponseSuccess | getTelegramStatusResponseError;
+export function useInbox<TData = Awaited<ReturnType<typeof inbox>>, TError = ErrorType<ErrorOut>>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof inbox>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof inbox>>,
+          TError,
+          Awaited<ReturnType<typeof inbox>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useInbox<TData = Awaited<ReturnType<typeof inbox>>, TError = ErrorType<ErrorOut>>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof inbox>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof inbox>>,
+          TError,
+          Awaited<ReturnType<typeof inbox>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useInbox<TData = Awaited<ReturnType<typeof inbox>>, TError = ErrorType<ErrorOut>>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof inbox>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Inbox
+ */
+
+export function useInbox<TData = Awaited<ReturnType<typeof inbox>>, TError = ErrorType<ErrorOut>>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof inbox>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getInboxQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getGetTelegramStatusUrl = () => {
   return `/api/v1/integrations/telegram`;
@@ -1643,32 +3697,111 @@ export const getGetTelegramStatusUrl = () => {
  */
 export const getTelegramStatus = async (
   options?: Parameters<typeof http>[1],
-): Promise<getTelegramStatusResponse> => {
-  return http<getTelegramStatusResponse>(getGetTelegramStatusUrl(), {
+): Promise<TelegramStatusOut> => {
+  return http<TelegramStatusOut>(getGetTelegramStatusUrl(), {
     ...options,
     method: "GET",
   });
 };
 
-export type sendTelegramChannelTestResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getGetTelegramStatusQueryKey = () => {
+  return [`/api/v1/integrations/telegram`] as const;
 };
 
-export type sendTelegramChannelTestResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getGetTelegramStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTelegramStatus>>,
+  TError = ErrorType<ErrorOut>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTelegramStatus>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetTelegramStatusQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getTelegramStatus>>> = ({ signal }) =>
+    getTelegramStatus({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getTelegramStatus>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type sendTelegramChannelTestResponseSuccess = sendTelegramChannelTestResponse200 & {
-  headers: Headers;
-};
-export type sendTelegramChannelTestResponseError = sendTelegramChannelTestResponse422 & {
-  headers: Headers;
-};
+export type GetTelegramStatusQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTelegramStatus>>
+>;
+export type GetTelegramStatusQueryError = ErrorType<ErrorOut>;
 
-export type sendTelegramChannelTestResponse =
-  sendTelegramChannelTestResponseSuccess | sendTelegramChannelTestResponseError;
+export function useGetTelegramStatus<
+  TData = Awaited<ReturnType<typeof getTelegramStatus>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTelegramStatus>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTelegramStatus>>,
+          TError,
+          Awaited<ReturnType<typeof getTelegramStatus>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetTelegramStatus<
+  TData = Awaited<ReturnType<typeof getTelegramStatus>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTelegramStatus>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTelegramStatus>>,
+          TError,
+          Awaited<ReturnType<typeof getTelegramStatus>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetTelegramStatus<
+  TData = Awaited<ReturnType<typeof getTelegramStatus>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTelegramStatus>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get Telegram Status
+ */
+
+export function useGetTelegramStatus<
+  TData = Awaited<ReturnType<typeof getTelegramStatus>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTelegramStatus>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetTelegramStatusQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getSendTelegramChannelTestUrl = () => {
   return `/api/v1/integrations/telegram/channel/test`;
@@ -1679,32 +3812,77 @@ export const getSendTelegramChannelTestUrl = () => {
  */
 export const sendTelegramChannelTest = async (
   options?: Parameters<typeof http>[1],
-): Promise<sendTelegramChannelTestResponse> => {
-  return http<sendTelegramChannelTestResponse>(getSendTelegramChannelTestUrl(), {
+): Promise<ActionResult> => {
+  return http<ActionResult>(getSendTelegramChannelTestUrl(), {
     ...options,
     method: "POST",
   });
 };
 
-export type listTelegramChannelsResponse200 = {
-  data: ChatCandidateOut[];
-  status: 200;
+export const getSendTelegramChannelTestMutationKey = () => ["sendTelegramChannelTest"] as const;
+
+export const getSendTelegramChannelTestMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendTelegramChannelTest>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof sendTelegramChannelTest>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = getSendTelegramChannelTestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof sendTelegramChannelTest>>,
+    void
+  > = () => {
+    return sendTelegramChannelTest(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type listTelegramChannelsResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type SendTelegramChannelTestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof sendTelegramChannelTest>>
+>;
 
-export type listTelegramChannelsResponseSuccess = listTelegramChannelsResponse200 & {
-  headers: Headers;
-};
-export type listTelegramChannelsResponseError = listTelegramChannelsResponse422 & {
-  headers: Headers;
-};
+export type SendTelegramChannelTestMutationError = ErrorType<ErrorOut>;
 
-export type listTelegramChannelsResponse =
-  listTelegramChannelsResponseSuccess | listTelegramChannelsResponseError;
+/**
+ * @summary Send Telegram Channel Test
+ */
+export const useSendTelegramChannelTest = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof sendTelegramChannelTest>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof sendTelegramChannelTest>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getSendTelegramChannelTestMutationOptions(options), queryClient);
+};
 
 export const getListTelegramChannelsUrl = () => {
   return `/api/v1/integrations/telegram/channels`;
@@ -1715,32 +3893,119 @@ export const getListTelegramChannelsUrl = () => {
  */
 export const listTelegramChannels = async (
   options?: Parameters<typeof http>[1],
-): Promise<listTelegramChannelsResponse> => {
-  return http<listTelegramChannelsResponse>(getListTelegramChannelsUrl(), {
+): Promise<ChatCandidateOut[]> => {
+  return http<ChatCandidateOut[]>(getListTelegramChannelsUrl(), {
     ...options,
     method: "GET",
   });
 };
 
-export type connectTelegramChannelResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getListTelegramChannelsQueryKey = () => {
+  return [`/api/v1/integrations/telegram/channels`] as const;
 };
 
-export type connectTelegramChannelResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getListTelegramChannelsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listTelegramChannels>>,
+  TError = ErrorType<ErrorOut>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTelegramChannels>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListTelegramChannelsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listTelegramChannels>>> = ({ signal }) =>
+    listTelegramChannels({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listTelegramChannels>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type connectTelegramChannelResponseSuccess = connectTelegramChannelResponse200 & {
-  headers: Headers;
-};
-export type connectTelegramChannelResponseError = connectTelegramChannelResponse422 & {
-  headers: Headers;
-};
+export type ListTelegramChannelsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listTelegramChannels>>
+>;
+export type ListTelegramChannelsQueryError = ErrorType<ErrorOut>;
 
-export type connectTelegramChannelResponse =
-  connectTelegramChannelResponseSuccess | connectTelegramChannelResponseError;
+export function useListTelegramChannels<
+  TData = Awaited<ReturnType<typeof listTelegramChannels>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listTelegramChannels>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listTelegramChannels>>,
+          TError,
+          Awaited<ReturnType<typeof listTelegramChannels>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListTelegramChannels<
+  TData = Awaited<ReturnType<typeof listTelegramChannels>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listTelegramChannels>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listTelegramChannels>>,
+          TError,
+          Awaited<ReturnType<typeof listTelegramChannels>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListTelegramChannels<
+  TData = Awaited<ReturnType<typeof listTelegramChannels>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listTelegramChannels>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List Telegram Channels
+ */
+
+export function useListTelegramChannels<
+  TData = Awaited<ReturnType<typeof listTelegramChannels>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listTelegramChannels>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListTelegramChannelsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getConnectTelegramChannelUrl = (chatId: number) => {
   return `/api/v1/integrations/telegram/channels/${chatId}/connect`;
@@ -1752,32 +4017,80 @@ export const getConnectTelegramChannelUrl = (chatId: number) => {
 export const connectTelegramChannel = async (
   chatId: number,
   options?: Parameters<typeof http>[1],
-): Promise<connectTelegramChannelResponse> => {
-  return http<connectTelegramChannelResponse>(getConnectTelegramChannelUrl(chatId), {
+): Promise<ActionResult> => {
+  return http<ActionResult>(getConnectTelegramChannelUrl(chatId), {
     ...options,
     method: "POST",
   });
 };
 
-export type getTelegramProfileResponse200 = {
-  data: BotProfileOut;
-  status: 200;
+export const getConnectTelegramChannelMutationKey = () => ["connectTelegramChannel"] as const;
+
+export const getConnectTelegramChannelMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof connectTelegramChannel>>,
+    TError,
+    ConnectTelegramChannelMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof connectTelegramChannel>>,
+  TError,
+  ConnectTelegramChannelMutationVariables,
+  TContext
+> => {
+  const mutationKey = getConnectTelegramChannelMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof connectTelegramChannel>>,
+    ConnectTelegramChannelMutationVariables
+  > = (props) => {
+    const { chatId } = props ?? {};
+
+    return connectTelegramChannel(chatId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type getTelegramProfileResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type ConnectTelegramChannelMutationResult = NonNullable<
+  Awaited<ReturnType<typeof connectTelegramChannel>>
+>;
 
-export type getTelegramProfileResponseSuccess = getTelegramProfileResponse200 & {
-  headers: Headers;
-};
-export type getTelegramProfileResponseError = getTelegramProfileResponse422 & {
-  headers: Headers;
-};
+export type ConnectTelegramChannelMutationError = ErrorType<ErrorOut>;
+export type ConnectTelegramChannelMutationVariables = { chatId: number };
 
-export type getTelegramProfileResponse =
-  getTelegramProfileResponseSuccess | getTelegramProfileResponseError;
+/**
+ * @summary Connect Telegram Channel
+ */
+export const useConnectTelegramChannel = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof connectTelegramChannel>>,
+      TError,
+      ConnectTelegramChannelMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof connectTelegramChannel>>,
+  TError,
+  ConnectTelegramChannelMutationVariables,
+  TContext
+> => {
+  return useMutation(getConnectTelegramChannelMutationOptions(options), queryClient);
+};
 
 export const getGetTelegramProfileUrl = () => {
   return `/api/v1/integrations/telegram/profile`;
@@ -1789,32 +4102,113 @@ export const getGetTelegramProfileUrl = () => {
  */
 export const getTelegramProfile = async (
   options?: Parameters<typeof http>[1],
-): Promise<getTelegramProfileResponse> => {
-  return http<getTelegramProfileResponse>(getGetTelegramProfileUrl(), {
+): Promise<BotProfileOut> => {
+  return http<BotProfileOut>(getGetTelegramProfileUrl(), {
     ...options,
     method: "GET",
   });
 };
 
-export type putTelegramProfileResponse200 = {
-  data: BotProfileOut;
-  status: 200;
+export const getGetTelegramProfileQueryKey = () => {
+  return [`/api/v1/integrations/telegram/profile`] as const;
 };
 
-export type putTelegramProfileResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getGetTelegramProfileQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTelegramProfile>>,
+  TError = ErrorType<ErrorOut>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTelegramProfile>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetTelegramProfileQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getTelegramProfile>>> = ({ signal }) =>
+    getTelegramProfile({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getTelegramProfile>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type putTelegramProfileResponseSuccess = putTelegramProfileResponse200 & {
-  headers: Headers;
-};
-export type putTelegramProfileResponseError = putTelegramProfileResponse422 & {
-  headers: Headers;
-};
+export type GetTelegramProfileQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTelegramProfile>>
+>;
+export type GetTelegramProfileQueryError = ErrorType<ErrorOut>;
 
-export type putTelegramProfileResponse =
-  putTelegramProfileResponseSuccess | putTelegramProfileResponseError;
+export function useGetTelegramProfile<
+  TData = Awaited<ReturnType<typeof getTelegramProfile>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTelegramProfile>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTelegramProfile>>,
+          TError,
+          Awaited<ReturnType<typeof getTelegramProfile>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetTelegramProfile<
+  TData = Awaited<ReturnType<typeof getTelegramProfile>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getTelegramProfile>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTelegramProfile>>,
+          TError,
+          Awaited<ReturnType<typeof getTelegramProfile>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetTelegramProfile<
+  TData = Awaited<ReturnType<typeof getTelegramProfile>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTelegramProfile>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get Telegram Profile
+ */
+
+export function useGetTelegramProfile<
+  TData = Awaited<ReturnType<typeof getTelegramProfile>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTelegramProfile>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetTelegramProfileQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getPutTelegramProfileUrl = () => {
   return `/api/v1/integrations/telegram/profile`;
@@ -1827,7 +4221,7 @@ export const getPutTelegramProfileUrl = () => {
 export const putTelegramProfile = async (
   botProfileSettings: BotProfileSettings,
   options?: Parameters<typeof http>[1],
-): Promise<putTelegramProfileResponse> => {
+): Promise<BotProfileOut> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -1847,7 +4241,7 @@ export const putTelegramProfile = async (
     }
     return headers;
   };
-  return http<putTelegramProfileResponse>(getPutTelegramProfileUrl(), {
+  return http<BotProfileOut>(getPutTelegramProfileUrl(), {
     ...options,
     method: "PUT",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -1855,25 +4249,73 @@ export const putTelegramProfile = async (
   });
 };
 
-export type putTelegramTokenResponse200 = {
-  data: TelegramStatusOut;
-  status: 200;
+export const getPutTelegramProfileMutationKey = () => ["putTelegramProfile"] as const;
+
+export const getPutTelegramProfileMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof putTelegramProfile>>,
+    TError,
+    PutTelegramProfileMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof putTelegramProfile>>,
+  TError,
+  PutTelegramProfileMutationVariables,
+  TContext
+> => {
+  const mutationKey = getPutTelegramProfileMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof putTelegramProfile>>,
+    PutTelegramProfileMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return putTelegramProfile(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type putTelegramTokenResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type PutTelegramProfileMutationResult = NonNullable<
+  Awaited<ReturnType<typeof putTelegramProfile>>
+>;
+export type PutTelegramProfileMutationBody = BotProfileSettings;
+export type PutTelegramProfileMutationError = ErrorType<ErrorOut>;
+export type PutTelegramProfileMutationVariables = { data: BotProfileSettings };
 
-export type putTelegramTokenResponseSuccess = putTelegramTokenResponse200 & {
-  headers: Headers;
+/**
+ * @summary Put Telegram Profile
+ */
+export const usePutTelegramProfile = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof putTelegramProfile>>,
+      TError,
+      PutTelegramProfileMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof putTelegramProfile>>,
+  TError,
+  PutTelegramProfileMutationVariables,
+  TContext
+> => {
+  return useMutation(getPutTelegramProfileMutationOptions(options), queryClient);
 };
-export type putTelegramTokenResponseError = putTelegramTokenResponse422 & {
-  headers: Headers;
-};
-
-export type putTelegramTokenResponse =
-  putTelegramTokenResponseSuccess | putTelegramTokenResponseError;
 
 export const getPutTelegramTokenUrl = () => {
   return `/api/v1/integrations/telegram/token`;
@@ -1886,7 +4328,7 @@ export const getPutTelegramTokenUrl = () => {
 export const putTelegramToken = async (
   telegramTokenIn: TelegramTokenIn,
   options?: Parameters<typeof http>[1],
-): Promise<putTelegramTokenResponse> => {
+): Promise<TelegramStatusOut> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -1906,7 +4348,7 @@ export const putTelegramToken = async (
     }
     return headers;
   };
-  return http<putTelegramTokenResponse>(getPutTelegramTokenUrl(), {
+  return http<TelegramStatusOut>(getPutTelegramTokenUrl(), {
     ...options,
     method: "PUT",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -1914,24 +4356,73 @@ export const putTelegramToken = async (
   });
 };
 
-export type listKbDocumentsResponse200 = {
-  data: KbDocumentOut[];
-  status: 200;
+export const getPutTelegramTokenMutationKey = () => ["putTelegramToken"] as const;
+
+export const getPutTelegramTokenMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof putTelegramToken>>,
+    TError,
+    PutTelegramTokenMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof putTelegramToken>>,
+  TError,
+  PutTelegramTokenMutationVariables,
+  TContext
+> => {
+  const mutationKey = getPutTelegramTokenMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof putTelegramToken>>,
+    PutTelegramTokenMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return putTelegramToken(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type listKbDocumentsResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type PutTelegramTokenMutationResult = NonNullable<
+  Awaited<ReturnType<typeof putTelegramToken>>
+>;
+export type PutTelegramTokenMutationBody = TelegramTokenIn;
+export type PutTelegramTokenMutationError = ErrorType<ErrorOut>;
+export type PutTelegramTokenMutationVariables = { data: TelegramTokenIn };
 
-export type listKbDocumentsResponseSuccess = listKbDocumentsResponse200 & {
-  headers: Headers;
+/**
+ * @summary Put Telegram Token
+ */
+export const usePutTelegramToken = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof putTelegramToken>>,
+      TError,
+      PutTelegramTokenMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof putTelegramToken>>,
+  TError,
+  PutTelegramTokenMutationVariables,
+  TContext
+> => {
+  return useMutation(getPutTelegramTokenMutationOptions(options), queryClient);
 };
-export type listKbDocumentsResponseError = listKbDocumentsResponse422 & {
-  headers: Headers;
-};
-
-export type listKbDocumentsResponse = listKbDocumentsResponseSuccess | listKbDocumentsResponseError;
 
 export const getListKbDocumentsUrl = (params?: ListKbDocumentsParams) => {
   const normalizedParams = new URLSearchParams();
@@ -1955,32 +4446,116 @@ export const getListKbDocumentsUrl = (params?: ListKbDocumentsParams) => {
 export const listKbDocuments = async (
   params?: ListKbDocumentsParams,
   options?: Parameters<typeof http>[1],
-): Promise<listKbDocumentsResponse> => {
-  return http<listKbDocumentsResponse>(getListKbDocumentsUrl(params), {
+): Promise<KbDocumentOut[]> => {
+  return http<KbDocumentOut[]>(getListKbDocumentsUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export type uploadKbDocumentResponse201 = {
-  data: Created;
-  status: 201;
+export const getListKbDocumentsQueryKey = (params?: ListKbDocumentsParams) => {
+  return [`/api/v1/kb/documents`, ...(params ? [params] : [])] as const;
 };
 
-export type uploadKbDocumentResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getListKbDocumentsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listKbDocuments>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListKbDocumentsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbDocuments>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListKbDocumentsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listKbDocuments>>> = ({ signal }) =>
+    listKbDocuments(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listKbDocuments>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type uploadKbDocumentResponseSuccess = uploadKbDocumentResponse201 & {
-  headers: Headers;
-};
-export type uploadKbDocumentResponseError = uploadKbDocumentResponse422 & {
-  headers: Headers;
-};
+export type ListKbDocumentsQueryResult = NonNullable<Awaited<ReturnType<typeof listKbDocuments>>>;
+export type ListKbDocumentsQueryError = ErrorType<ErrorOut>;
 
-export type uploadKbDocumentResponse =
-  uploadKbDocumentResponseSuccess | uploadKbDocumentResponseError;
+export function useListKbDocuments<
+  TData = Awaited<ReturnType<typeof listKbDocuments>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params: undefined | ListKbDocumentsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbDocuments>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listKbDocuments>>,
+          TError,
+          Awaited<ReturnType<typeof listKbDocuments>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListKbDocuments<
+  TData = Awaited<ReturnType<typeof listKbDocuments>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListKbDocumentsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbDocuments>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listKbDocuments>>,
+          TError,
+          Awaited<ReturnType<typeof listKbDocuments>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListKbDocuments<
+  TData = Awaited<ReturnType<typeof listKbDocuments>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListKbDocumentsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbDocuments>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List Kb Documents
+ */
+
+export function useListKbDocuments<
+  TData = Awaited<ReturnType<typeof listKbDocuments>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListKbDocumentsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbDocuments>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListKbDocumentsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getUploadKbDocumentUrl = () => {
   return `/api/v1/kb/documents`;
@@ -1992,7 +4567,7 @@ export const getUploadKbDocumentUrl = () => {
 export const uploadKbDocument = async (
   bodyUploadKbDocument: BodyUploadKbDocument,
   options?: Parameters<typeof http>[1],
-): Promise<uploadKbDocumentResponse> => {
+): Promise<Created> => {
   const formData = new FormData();
   formData.append(`file`, bodyUploadKbDocument.file);
   if (bodyUploadKbDocument.gap_id !== undefined && bodyUploadKbDocument.gap_id !== null) {
@@ -2004,32 +4579,80 @@ export const uploadKbDocument = async (
   }
   formData.append(`title`, bodyUploadKbDocument.title);
 
-  return http<uploadKbDocumentResponse>(getUploadKbDocumentUrl(), {
+  return http<Created>(getUploadKbDocumentUrl(), {
     ...options,
     method: "POST",
     body: formData,
   });
 };
 
-export type createManualDocumentResponse201 = {
-  data: Created;
-  status: 201;
+export const getUploadKbDocumentMutationKey = () => ["uploadKbDocument"] as const;
+
+export const getUploadKbDocumentMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof uploadKbDocument>>,
+    TError,
+    UploadKbDocumentMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof uploadKbDocument>>,
+  TError,
+  UploadKbDocumentMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUploadKbDocumentMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof uploadKbDocument>>,
+    UploadKbDocumentMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return uploadKbDocument(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type createManualDocumentResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type UploadKbDocumentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof uploadKbDocument>>
+>;
+export type UploadKbDocumentMutationBody = BodyUploadKbDocument;
+export type UploadKbDocumentMutationError = ErrorType<ErrorOut>;
+export type UploadKbDocumentMutationVariables = { data: BodyUploadKbDocument };
 
-export type createManualDocumentResponseSuccess = createManualDocumentResponse201 & {
-  headers: Headers;
+/**
+ * @summary Upload Kb Document
+ */
+export const useUploadKbDocument = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof uploadKbDocument>>,
+      TError,
+      UploadKbDocumentMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof uploadKbDocument>>,
+  TError,
+  UploadKbDocumentMutationVariables,
+  TContext
+> => {
+  return useMutation(getUploadKbDocumentMutationOptions(options), queryClient);
 };
-export type createManualDocumentResponseError = createManualDocumentResponse422 & {
-  headers: Headers;
-};
-
-export type createManualDocumentResponse =
-  createManualDocumentResponseSuccess | createManualDocumentResponseError;
 
 export const getCreateManualDocumentUrl = () => {
   return `/api/v1/kb/documents/manual`;
@@ -2041,7 +4664,7 @@ export const getCreateManualDocumentUrl = () => {
 export const createManualDocument = async (
   manualDocument: ManualDocument,
   options?: Parameters<typeof http>[1],
-): Promise<createManualDocumentResponse> => {
+): Promise<Created> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -2061,7 +4684,7 @@ export const createManualDocument = async (
     }
     return headers;
   };
-  return http<createManualDocumentResponse>(getCreateManualDocumentUrl(), {
+  return http<Created>(getCreateManualDocumentUrl(), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -2069,24 +4692,73 @@ export const createManualDocument = async (
   });
 };
 
-export type getKbDocumentResponse200 = {
-  data: KbDocumentOut;
-  status: 200;
+export const getCreateManualDocumentMutationKey = () => ["createManualDocument"] as const;
+
+export const getCreateManualDocumentMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createManualDocument>>,
+    TError,
+    CreateManualDocumentMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createManualDocument>>,
+  TError,
+  CreateManualDocumentMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateManualDocumentMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createManualDocument>>,
+    CreateManualDocumentMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createManualDocument(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type getKbDocumentResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type CreateManualDocumentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createManualDocument>>
+>;
+export type CreateManualDocumentMutationBody = ManualDocument;
+export type CreateManualDocumentMutationError = ErrorType<ErrorOut>;
+export type CreateManualDocumentMutationVariables = { data: ManualDocument };
 
-export type getKbDocumentResponseSuccess = getKbDocumentResponse200 & {
-  headers: Headers;
+/**
+ * @summary Create Manual Document
+ */
+export const useCreateManualDocument = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createManualDocument>>,
+      TError,
+      CreateManualDocumentMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createManualDocument>>,
+  TError,
+  CreateManualDocumentMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateManualDocumentMutationOptions(options), queryClient);
 };
-export type getKbDocumentResponseError = getKbDocumentResponse422 & {
-  headers: Headers;
-};
-
-export type getKbDocumentResponse = getKbDocumentResponseSuccess | getKbDocumentResponseError;
 
 export const getGetKbDocumentUrl = (documentId: number) => {
   return `/api/v1/kb/documents/${documentId}`;
@@ -2098,32 +4770,119 @@ export const getGetKbDocumentUrl = (documentId: number) => {
 export const getKbDocument = async (
   documentId: number,
   options?: Parameters<typeof http>[1],
-): Promise<getKbDocumentResponse> => {
-  return http<getKbDocumentResponse>(getGetKbDocumentUrl(documentId), {
+): Promise<KbDocumentOut> => {
+  return http<KbDocumentOut>(getGetKbDocumentUrl(documentId), {
     ...options,
     method: "GET",
   });
 };
 
-export type updateKbDocumentResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getGetKbDocumentQueryKey = (documentId: number) => {
+  return [`/api/v1/kb/documents/${documentId}`] as const;
 };
 
-export type updateKbDocumentResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getGetKbDocumentQueryOptions = <
+  TData = Awaited<ReturnType<typeof getKbDocument>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  documentId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getKbDocument>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetKbDocumentQueryKey(documentId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getKbDocument>>> = ({ signal }) =>
+    getKbDocument(documentId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: documentId !== null && documentId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getKbDocument>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
-export type updateKbDocumentResponseSuccess = updateKbDocumentResponse200 & {
-  headers: Headers;
-};
-export type updateKbDocumentResponseError = updateKbDocumentResponse422 & {
-  headers: Headers;
-};
+export type GetKbDocumentQueryResult = NonNullable<Awaited<ReturnType<typeof getKbDocument>>>;
+export type GetKbDocumentQueryError = ErrorType<ErrorOut>;
 
-export type updateKbDocumentResponse =
-  updateKbDocumentResponseSuccess | updateKbDocumentResponseError;
+export function useGetKbDocument<
+  TData = Awaited<ReturnType<typeof getKbDocument>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  documentId: number,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getKbDocument>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getKbDocument>>,
+          TError,
+          Awaited<ReturnType<typeof getKbDocument>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetKbDocument<
+  TData = Awaited<ReturnType<typeof getKbDocument>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  documentId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getKbDocument>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getKbDocument>>,
+          TError,
+          Awaited<ReturnType<typeof getKbDocument>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetKbDocument<
+  TData = Awaited<ReturnType<typeof getKbDocument>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  documentId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getKbDocument>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get Kb Document
+ */
+
+export function useGetKbDocument<
+  TData = Awaited<ReturnType<typeof getKbDocument>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  documentId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getKbDocument>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetKbDocumentQueryOptions(documentId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getUpdateKbDocumentUrl = (documentId: number) => {
   return `/api/v1/kb/documents/${documentId}`;
@@ -2136,7 +4895,7 @@ export const updateKbDocument = async (
   documentId: number,
   kbDocumentPatch: KbDocumentPatch,
   options?: Parameters<typeof http>[1],
-): Promise<updateKbDocumentResponse> => {
+): Promise<ActionResult> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -2156,7 +4915,7 @@ export const updateKbDocument = async (
     }
     return headers;
   };
-  return http<updateKbDocumentResponse>(getUpdateKbDocumentUrl(documentId), {
+  return http<ActionResult>(getUpdateKbDocumentUrl(documentId), {
     ...options,
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -2164,24 +4923,73 @@ export const updateKbDocument = async (
   });
 };
 
-export type listKbChunksResponse200 = {
-  data: KbChunkOut[];
-  status: 200;
+export const getUpdateKbDocumentMutationKey = () => ["updateKbDocument"] as const;
+
+export const getUpdateKbDocumentMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateKbDocument>>,
+    TError,
+    UpdateKbDocumentMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateKbDocument>>,
+  TError,
+  UpdateKbDocumentMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateKbDocumentMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateKbDocument>>,
+    UpdateKbDocumentMutationVariables
+  > = (props) => {
+    const { documentId, data } = props ?? {};
+
+    return updateKbDocument(documentId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type listKbChunksResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type UpdateKbDocumentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateKbDocument>>
+>;
+export type UpdateKbDocumentMutationBody = KbDocumentPatch;
+export type UpdateKbDocumentMutationError = ErrorType<ErrorOut>;
+export type UpdateKbDocumentMutationVariables = { documentId: number; data: KbDocumentPatch };
 
-export type listKbChunksResponseSuccess = listKbChunksResponse200 & {
-  headers: Headers;
+/**
+ * @summary Update Kb Document
+ */
+export const useUpdateKbDocument = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateKbDocument>>,
+      TError,
+      UpdateKbDocumentMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateKbDocument>>,
+  TError,
+  UpdateKbDocumentMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateKbDocumentMutationOptions(options), queryClient);
 };
-export type listKbChunksResponseError = listKbChunksResponse422 & {
-  headers: Headers;
-};
-
-export type listKbChunksResponse = listKbChunksResponseSuccess | listKbChunksResponseError;
 
 export const getListKbChunksUrl = (documentId: number) => {
   return `/api/v1/kb/documents/${documentId}/chunks`;
@@ -2193,32 +5001,119 @@ export const getListKbChunksUrl = (documentId: number) => {
 export const listKbChunks = async (
   documentId: number,
   options?: Parameters<typeof http>[1],
-): Promise<listKbChunksResponse> => {
-  return http<listKbChunksResponse>(getListKbChunksUrl(documentId), {
+): Promise<KbChunkOut[]> => {
+  return http<KbChunkOut[]>(getListKbChunksUrl(documentId), {
     ...options,
     method: "GET",
   });
 };
 
-export type reingestKbDocumentResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getListKbChunksQueryKey = (documentId: number) => {
+  return [`/api/v1/kb/documents/${documentId}/chunks`] as const;
 };
 
-export type reingestKbDocumentResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getListKbChunksQueryOptions = <
+  TData = Awaited<ReturnType<typeof listKbChunks>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  documentId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbChunks>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListKbChunksQueryKey(documentId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listKbChunks>>> = ({ signal }) =>
+    listKbChunks(documentId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: documentId !== null && documentId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof listKbChunks>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
-export type reingestKbDocumentResponseSuccess = reingestKbDocumentResponse200 & {
-  headers: Headers;
-};
-export type reingestKbDocumentResponseError = reingestKbDocumentResponse422 & {
-  headers: Headers;
-};
+export type ListKbChunksQueryResult = NonNullable<Awaited<ReturnType<typeof listKbChunks>>>;
+export type ListKbChunksQueryError = ErrorType<ErrorOut>;
 
-export type reingestKbDocumentResponse =
-  reingestKbDocumentResponseSuccess | reingestKbDocumentResponseError;
+export function useListKbChunks<
+  TData = Awaited<ReturnType<typeof listKbChunks>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  documentId: number,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbChunks>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listKbChunks>>,
+          TError,
+          Awaited<ReturnType<typeof listKbChunks>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListKbChunks<
+  TData = Awaited<ReturnType<typeof listKbChunks>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  documentId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbChunks>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listKbChunks>>,
+          TError,
+          Awaited<ReturnType<typeof listKbChunks>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListKbChunks<
+  TData = Awaited<ReturnType<typeof listKbChunks>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  documentId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbChunks>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List Kb Chunks
+ */
+
+export function useListKbChunks<
+  TData = Awaited<ReturnType<typeof listKbChunks>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  documentId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbChunks>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListKbChunksQueryOptions(documentId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getReingestKbDocumentUrl = (documentId: number) => {
   return `/api/v1/kb/documents/${documentId}/reingest`;
@@ -2230,31 +5125,80 @@ export const getReingestKbDocumentUrl = (documentId: number) => {
 export const reingestKbDocument = async (
   documentId: number,
   options?: Parameters<typeof http>[1],
-): Promise<reingestKbDocumentResponse> => {
-  return http<reingestKbDocumentResponse>(getReingestKbDocumentUrl(documentId), {
+): Promise<ActionResult> => {
+  return http<ActionResult>(getReingestKbDocumentUrl(documentId), {
     ...options,
     method: "POST",
   });
 };
 
-export type listKbGapsResponse200 = {
-  data: KbGapPage;
-  status: 200;
+export const getReingestKbDocumentMutationKey = () => ["reingestKbDocument"] as const;
+
+export const getReingestKbDocumentMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof reingestKbDocument>>,
+    TError,
+    ReingestKbDocumentMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof reingestKbDocument>>,
+  TError,
+  ReingestKbDocumentMutationVariables,
+  TContext
+> => {
+  const mutationKey = getReingestKbDocumentMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof reingestKbDocument>>,
+    ReingestKbDocumentMutationVariables
+  > = (props) => {
+    const { documentId } = props ?? {};
+
+    return reingestKbDocument(documentId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type listKbGapsResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type ReingestKbDocumentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof reingestKbDocument>>
+>;
 
-export type listKbGapsResponseSuccess = listKbGapsResponse200 & {
-  headers: Headers;
-};
-export type listKbGapsResponseError = listKbGapsResponse422 & {
-  headers: Headers;
-};
+export type ReingestKbDocumentMutationError = ErrorType<ErrorOut>;
+export type ReingestKbDocumentMutationVariables = { documentId: number };
 
-export type listKbGapsResponse = listKbGapsResponseSuccess | listKbGapsResponseError;
+/**
+ * @summary Reingest Kb Document
+ */
+export const useReingestKbDocument = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof reingestKbDocument>>,
+      TError,
+      ReingestKbDocumentMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof reingestKbDocument>>,
+  TError,
+  ReingestKbDocumentMutationVariables,
+  TContext
+> => {
+  return useMutation(getReingestKbDocumentMutationOptions(options), queryClient);
+};
 
 export const getListKbGapsUrl = (params?: ListKbGapsParams) => {
   const normalizedParams = new URLSearchParams();
@@ -2276,31 +5220,116 @@ export const getListKbGapsUrl = (params?: ListKbGapsParams) => {
 export const listKbGaps = async (
   params?: ListKbGapsParams,
   options?: Parameters<typeof http>[1],
-): Promise<listKbGapsResponse> => {
-  return http<listKbGapsResponse>(getListKbGapsUrl(params), {
+): Promise<KbGapPage> => {
+  return http<KbGapPage>(getListKbGapsUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export type ignoreGapResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getListKbGapsQueryKey = (params?: ListKbGapsParams) => {
+  return [`/api/v1/kb/gaps`, ...(params ? [params] : [])] as const;
 };
 
-export type ignoreGapResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getListKbGapsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listKbGaps>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListKbGapsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbGaps>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListKbGapsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listKbGaps>>> = ({ signal }) =>
+    listKbGaps(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listKbGaps>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type ignoreGapResponseSuccess = ignoreGapResponse200 & {
-  headers: Headers;
-};
-export type ignoreGapResponseError = ignoreGapResponse422 & {
-  headers: Headers;
-};
+export type ListKbGapsQueryResult = NonNullable<Awaited<ReturnType<typeof listKbGaps>>>;
+export type ListKbGapsQueryError = ErrorType<ErrorOut>;
 
-export type ignoreGapResponse = ignoreGapResponseSuccess | ignoreGapResponseError;
+export function useListKbGaps<
+  TData = Awaited<ReturnType<typeof listKbGaps>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params: undefined | ListKbGapsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbGaps>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listKbGaps>>,
+          TError,
+          Awaited<ReturnType<typeof listKbGaps>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListKbGaps<
+  TData = Awaited<ReturnType<typeof listKbGaps>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListKbGapsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbGaps>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listKbGaps>>,
+          TError,
+          Awaited<ReturnType<typeof listKbGaps>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListKbGaps<
+  TData = Awaited<ReturnType<typeof listKbGaps>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListKbGapsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbGaps>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List Kb Gaps
+ */
+
+export function useListKbGaps<
+  TData = Awaited<ReturnType<typeof listKbGaps>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListKbGapsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbGaps>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListKbGapsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getIgnoreGapUrl = (gapId: number) => {
   return `/api/v1/kb/gaps/${gapId}/ignore`;
@@ -2312,31 +5341,78 @@ export const getIgnoreGapUrl = (gapId: number) => {
 export const ignoreGap = async (
   gapId: number,
   options?: Parameters<typeof http>[1],
-): Promise<ignoreGapResponse> => {
-  return http<ignoreGapResponse>(getIgnoreGapUrl(gapId), {
+): Promise<ActionResult> => {
+  return http<ActionResult>(getIgnoreGapUrl(gapId), {
     ...options,
     method: "POST",
   });
 };
 
-export type reopenGapResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getIgnoreGapMutationKey = () => ["ignoreGap"] as const;
+
+export const getIgnoreGapMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof ignoreGap>>,
+    TError,
+    IgnoreGapMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof ignoreGap>>,
+  TError,
+  IgnoreGapMutationVariables,
+  TContext
+> => {
+  const mutationKey = getIgnoreGapMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof ignoreGap>>,
+    IgnoreGapMutationVariables
+  > = (props) => {
+    const { gapId } = props ?? {};
+
+    return ignoreGap(gapId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type reopenGapResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type IgnoreGapMutationResult = NonNullable<Awaited<ReturnType<typeof ignoreGap>>>;
 
-export type reopenGapResponseSuccess = reopenGapResponse200 & {
-  headers: Headers;
-};
-export type reopenGapResponseError = reopenGapResponse422 & {
-  headers: Headers;
-};
+export type IgnoreGapMutationError = ErrorType<ErrorOut>;
+export type IgnoreGapMutationVariables = { gapId: number };
 
-export type reopenGapResponse = reopenGapResponseSuccess | reopenGapResponseError;
+/**
+ * @summary Ignore Gap
+ */
+export const useIgnoreGap = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof ignoreGap>>,
+      TError,
+      IgnoreGapMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof ignoreGap>>,
+  TError,
+  IgnoreGapMutationVariables,
+  TContext
+> => {
+  return useMutation(getIgnoreGapMutationOptions(options), queryClient);
+};
 
 export const getReopenGapUrl = (gapId: number) => {
   return `/api/v1/kb/gaps/${gapId}/reopen`;
@@ -2348,31 +5424,78 @@ export const getReopenGapUrl = (gapId: number) => {
 export const reopenGap = async (
   gapId: number,
   options?: Parameters<typeof http>[1],
-): Promise<reopenGapResponse> => {
-  return http<reopenGapResponse>(getReopenGapUrl(gapId), {
+): Promise<ActionResult> => {
+  return http<ActionResult>(getReopenGapUrl(gapId), {
     ...options,
     method: "POST",
   });
 };
 
-export type resolveGapResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getReopenGapMutationKey = () => ["reopenGap"] as const;
+
+export const getReopenGapMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof reopenGap>>,
+    TError,
+    ReopenGapMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof reopenGap>>,
+  TError,
+  ReopenGapMutationVariables,
+  TContext
+> => {
+  const mutationKey = getReopenGapMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof reopenGap>>,
+    ReopenGapMutationVariables
+  > = (props) => {
+    const { gapId } = props ?? {};
+
+    return reopenGap(gapId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type resolveGapResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type ReopenGapMutationResult = NonNullable<Awaited<ReturnType<typeof reopenGap>>>;
 
-export type resolveGapResponseSuccess = resolveGapResponse200 & {
-  headers: Headers;
-};
-export type resolveGapResponseError = resolveGapResponse422 & {
-  headers: Headers;
-};
+export type ReopenGapMutationError = ErrorType<ErrorOut>;
+export type ReopenGapMutationVariables = { gapId: number };
 
-export type resolveGapResponse = resolveGapResponseSuccess | resolveGapResponseError;
+/**
+ * @summary Reopen Gap
+ */
+export const useReopenGap = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof reopenGap>>,
+      TError,
+      ReopenGapMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof reopenGap>>,
+  TError,
+  ReopenGapMutationVariables,
+  TContext
+> => {
+  return useMutation(getReopenGapMutationOptions(options), queryClient);
+};
 
 export const getResolveGapUrl = (gapId: number) => {
   return `/api/v1/kb/gaps/${gapId}/resolve`;
@@ -2385,7 +5508,7 @@ export const resolveGap = async (
   gapId: number,
   resolveGapBody: ResolveGap,
   options?: Parameters<typeof http>[1],
-): Promise<resolveGapResponse> => {
+): Promise<ActionResult> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -2405,7 +5528,7 @@ export const resolveGap = async (
     }
     return headers;
   };
-  return http<resolveGapResponse>(getResolveGapUrl(gapId), {
+  return http<ActionResult>(getResolveGapUrl(gapId), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -2413,24 +5536,71 @@ export const resolveGap = async (
   });
 };
 
-export type listProductsResponse200 = {
-  data: ProductOut[];
-  status: 200;
+export const getResolveGapMutationKey = () => ["resolveGap"] as const;
+
+export const getResolveGapMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resolveGap>>,
+    TError,
+    ResolveGapMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resolveGap>>,
+  TError,
+  ResolveGapMutationVariables,
+  TContext
+> => {
+  const mutationKey = getResolveGapMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resolveGap>>,
+    ResolveGapMutationVariables
+  > = (props) => {
+    const { gapId, data } = props ?? {};
+
+    return resolveGap(gapId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type listProductsResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type ResolveGapMutationResult = NonNullable<Awaited<ReturnType<typeof resolveGap>>>;
+export type ResolveGapMutationBody = ResolveGap;
+export type ResolveGapMutationError = ErrorType<ErrorOut>;
+export type ResolveGapMutationVariables = { gapId: number; data: ResolveGap };
 
-export type listProductsResponseSuccess = listProductsResponse200 & {
-  headers: Headers;
+/**
+ * @summary Resolve Gap
+ */
+export const useResolveGap = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof resolveGap>>,
+      TError,
+      ResolveGapMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof resolveGap>>,
+  TError,
+  ResolveGapMutationVariables,
+  TContext
+> => {
+  return useMutation(getResolveGapMutationOptions(options), queryClient);
 };
-export type listProductsResponseError = listProductsResponse422 & {
-  headers: Headers;
-};
-
-export type listProductsResponse = listProductsResponseSuccess | listProductsResponseError;
 
 export const getListProductsUrl = () => {
   return `/api/v1/kb/products`;
@@ -2441,33 +5611,109 @@ export const getListProductsUrl = () => {
  * и списках вместо ключей. Правка справочника — по-прежнему `kb:write`.
  * @summary List Products
  */
-export const listProducts = async (
-  options?: Parameters<typeof http>[1],
-): Promise<listProductsResponse> => {
-  return http<listProductsResponse>(getListProductsUrl(), {
+export const listProducts = async (options?: Parameters<typeof http>[1]): Promise<ProductOut[]> => {
+  return http<ProductOut[]>(getListProductsUrl(), {
     ...options,
     method: "GET",
   });
 };
 
-export type upsertProductResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getListProductsQueryKey = () => {
+  return [`/api/v1/kb/products`] as const;
 };
 
-export type upsertProductResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getListProductsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listProducts>>,
+  TError = ErrorType<ErrorOut>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProducts>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListProductsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listProducts>>> = ({ signal }) =>
+    listProducts({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listProducts>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type upsertProductResponseSuccess = upsertProductResponse200 & {
-  headers: Headers;
-};
-export type upsertProductResponseError = upsertProductResponse422 & {
-  headers: Headers;
-};
+export type ListProductsQueryResult = NonNullable<Awaited<ReturnType<typeof listProducts>>>;
+export type ListProductsQueryError = ErrorType<ErrorOut>;
 
-export type upsertProductResponse = upsertProductResponseSuccess | upsertProductResponseError;
+export function useListProducts<
+  TData = Awaited<ReturnType<typeof listProducts>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProducts>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listProducts>>,
+          TError,
+          Awaited<ReturnType<typeof listProducts>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListProducts<
+  TData = Awaited<ReturnType<typeof listProducts>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProducts>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listProducts>>,
+          TError,
+          Awaited<ReturnType<typeof listProducts>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListProducts<
+  TData = Awaited<ReturnType<typeof listProducts>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProducts>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List Products
+ */
+
+export function useListProducts<
+  TData = Awaited<ReturnType<typeof listProducts>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProducts>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListProductsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getUpsertProductUrl = (key: string) => {
   return `/api/v1/kb/products/${key}`;
@@ -2480,7 +5726,7 @@ export const upsertProduct = async (
   key: string,
   productIn: ProductIn,
   options?: Parameters<typeof http>[1],
-): Promise<upsertProductResponse> => {
+): Promise<ActionResult> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -2500,7 +5746,7 @@ export const upsertProduct = async (
     }
     return headers;
   };
-  return http<upsertProductResponse>(getUpsertProductUrl(key), {
+  return http<ActionResult>(getUpsertProductUrl(key), {
     ...options,
     method: "PUT",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -2508,24 +5754,71 @@ export const upsertProduct = async (
   });
 };
 
-export type kbTestSearchResponse200 = {
-  data: SearchResponse;
-  status: 200;
+export const getUpsertProductMutationKey = () => ["upsertProduct"] as const;
+
+export const getUpsertProductMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof upsertProduct>>,
+    TError,
+    UpsertProductMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof upsertProduct>>,
+  TError,
+  UpsertProductMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpsertProductMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof upsertProduct>>,
+    UpsertProductMutationVariables
+  > = (props) => {
+    const { key, data } = props ?? {};
+
+    return upsertProduct(key, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type kbTestSearchResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type UpsertProductMutationResult = NonNullable<Awaited<ReturnType<typeof upsertProduct>>>;
+export type UpsertProductMutationBody = ProductIn;
+export type UpsertProductMutationError = ErrorType<ErrorOut>;
+export type UpsertProductMutationVariables = { key: string; data: ProductIn };
 
-export type kbTestSearchResponseSuccess = kbTestSearchResponse200 & {
-  headers: Headers;
+/**
+ * @summary Upsert Product
+ */
+export const useUpsertProduct = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof upsertProduct>>,
+      TError,
+      UpsertProductMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof upsertProduct>>,
+  TError,
+  UpsertProductMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpsertProductMutationOptions(options), queryClient);
 };
-export type kbTestSearchResponseError = kbTestSearchResponse422 & {
-  headers: Headers;
-};
-
-export type kbTestSearchResponse = kbTestSearchResponseSuccess | kbTestSearchResponseError;
 
 export const getKbTestSearchUrl = () => {
   return `/api/v1/kb/search`;
@@ -2538,7 +5831,7 @@ export const getKbTestSearchUrl = () => {
 export const kbTestSearch = async (
   searchRequest: SearchRequest,
   options?: Parameters<typeof http>[1],
-): Promise<kbTestSearchResponse> => {
+): Promise<SearchResponse> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -2558,7 +5851,7 @@ export const kbTestSearch = async (
     }
     return headers;
   };
-  return http<kbTestSearchResponse>(getKbTestSearchUrl(), {
+  return http<SearchResponse>(getKbTestSearchUrl(), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -2566,24 +5859,71 @@ export const kbTestSearch = async (
   });
 };
 
-export type listLeadsResponse200 = {
-  data: LeadPage;
-  status: 200;
+export const getKbTestSearchMutationKey = () => ["kbTestSearch"] as const;
+
+export const getKbTestSearchMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof kbTestSearch>>,
+    TError,
+    KbTestSearchMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof kbTestSearch>>,
+  TError,
+  KbTestSearchMutationVariables,
+  TContext
+> => {
+  const mutationKey = getKbTestSearchMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof kbTestSearch>>,
+    KbTestSearchMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return kbTestSearch(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type listLeadsResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type KbTestSearchMutationResult = NonNullable<Awaited<ReturnType<typeof kbTestSearch>>>;
+export type KbTestSearchMutationBody = SearchRequest;
+export type KbTestSearchMutationError = ErrorType<ErrorOut>;
+export type KbTestSearchMutationVariables = { data: SearchRequest };
 
-export type listLeadsResponseSuccess = listLeadsResponse200 & {
-  headers: Headers;
+/**
+ * @summary Kb Test Search
+ */
+export const useKbTestSearch = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof kbTestSearch>>,
+      TError,
+      KbTestSearchMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof kbTestSearch>>,
+  TError,
+  KbTestSearchMutationVariables,
+  TContext
+> => {
+  return useMutation(getKbTestSearchMutationOptions(options), queryClient);
 };
-export type listLeadsResponseError = listLeadsResponse422 & {
-  headers: Headers;
-};
-
-export type listLeadsResponse = listLeadsResponseSuccess | listLeadsResponseError;
 
 export const getListLeadsUrl = (params?: ListLeadsParams) => {
   const normalizedParams = new URLSearchParams();
@@ -2605,31 +5945,116 @@ export const getListLeadsUrl = (params?: ListLeadsParams) => {
 export const listLeads = async (
   params?: ListLeadsParams,
   options?: Parameters<typeof http>[1],
-): Promise<listLeadsResponse> => {
-  return http<listLeadsResponse>(getListLeadsUrl(params), {
+): Promise<LeadPage> => {
+  return http<LeadPage>(getListLeadsUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export type getLeadResponse200 = {
-  data: LeadDetail;
-  status: 200;
+export const getListLeadsQueryKey = (params?: ListLeadsParams) => {
+  return [`/api/v1/leads`, ...(params ? [params] : [])] as const;
 };
 
-export type getLeadResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getListLeadsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listLeads>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListLeadsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listLeads>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListLeadsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listLeads>>> = ({ signal }) =>
+    listLeads(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listLeads>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type getLeadResponseSuccess = getLeadResponse200 & {
-  headers: Headers;
-};
-export type getLeadResponseError = getLeadResponse422 & {
-  headers: Headers;
-};
+export type ListLeadsQueryResult = NonNullable<Awaited<ReturnType<typeof listLeads>>>;
+export type ListLeadsQueryError = ErrorType<ErrorOut>;
 
-export type getLeadResponse = getLeadResponseSuccess | getLeadResponseError;
+export function useListLeads<
+  TData = Awaited<ReturnType<typeof listLeads>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params: undefined | ListLeadsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listLeads>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listLeads>>,
+          TError,
+          Awaited<ReturnType<typeof listLeads>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListLeads<
+  TData = Awaited<ReturnType<typeof listLeads>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListLeadsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listLeads>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listLeads>>,
+          TError,
+          Awaited<ReturnType<typeof listLeads>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListLeads<
+  TData = Awaited<ReturnType<typeof listLeads>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListLeadsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listLeads>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List Leads
+ */
+
+export function useListLeads<
+  TData = Awaited<ReturnType<typeof listLeads>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListLeadsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listLeads>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListLeadsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getGetLeadUrl = (leadId: number) => {
   return `/api/v1/leads/${leadId}`;
@@ -2641,31 +6066,119 @@ export const getGetLeadUrl = (leadId: number) => {
 export const getLead = async (
   leadId: number,
   options?: Parameters<typeof http>[1],
-): Promise<getLeadResponse> => {
-  return http<getLeadResponse>(getGetLeadUrl(leadId), {
+): Promise<LeadDetail> => {
+  return http<LeadDetail>(getGetLeadUrl(leadId), {
     ...options,
     method: "GET",
   });
 };
 
-export type acknowledgeResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getGetLeadQueryKey = (leadId: number) => {
+  return [`/api/v1/leads/${leadId}`] as const;
 };
 
-export type acknowledgeResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getGetLeadQueryOptions = <
+  TData = Awaited<ReturnType<typeof getLead>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  leadId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getLead>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetLeadQueryKey(leadId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getLead>>> = ({ signal }) =>
+    getLead(leadId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: leadId !== null && leadId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getLead>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
-export type acknowledgeResponseSuccess = acknowledgeResponse200 & {
-  headers: Headers;
-};
-export type acknowledgeResponseError = acknowledgeResponse422 & {
-  headers: Headers;
-};
+export type GetLeadQueryResult = NonNullable<Awaited<ReturnType<typeof getLead>>>;
+export type GetLeadQueryError = ErrorType<ErrorOut>;
 
-export type acknowledgeResponse = acknowledgeResponseSuccess | acknowledgeResponseError;
+export function useGetLead<
+  TData = Awaited<ReturnType<typeof getLead>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  leadId: number,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getLead>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getLead>>,
+          TError,
+          Awaited<ReturnType<typeof getLead>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetLead<
+  TData = Awaited<ReturnType<typeof getLead>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  leadId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getLead>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getLead>>,
+          TError,
+          Awaited<ReturnType<typeof getLead>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetLead<
+  TData = Awaited<ReturnType<typeof getLead>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  leadId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getLead>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get Lead
+ */
+
+export function useGetLead<
+  TData = Awaited<ReturnType<typeof getLead>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  leadId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getLead>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetLeadQueryOptions(leadId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getAcknowledgeUrl = (leadId: number) => {
   return `/api/v1/leads/${leadId}/actions/acknowledge`;
@@ -2678,31 +6191,78 @@ export const getAcknowledgeUrl = (leadId: number) => {
 export const acknowledge = async (
   leadId: number,
   options?: Parameters<typeof http>[1],
-): Promise<acknowledgeResponse> => {
-  return http<acknowledgeResponse>(getAcknowledgeUrl(leadId), {
+): Promise<ActionResult> => {
+  return http<ActionResult>(getAcknowledgeUrl(leadId), {
     ...options,
     method: "POST",
   });
 };
 
-export type assignResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getAcknowledgeMutationKey = () => ["acknowledge"] as const;
+
+export const getAcknowledgeMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof acknowledge>>,
+    TError,
+    AcknowledgeMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof acknowledge>>,
+  TError,
+  AcknowledgeMutationVariables,
+  TContext
+> => {
+  const mutationKey = getAcknowledgeMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof acknowledge>>,
+    AcknowledgeMutationVariables
+  > = (props) => {
+    const { leadId } = props ?? {};
+
+    return acknowledge(leadId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type assignResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type AcknowledgeMutationResult = NonNullable<Awaited<ReturnType<typeof acknowledge>>>;
 
-export type assignResponseSuccess = assignResponse200 & {
-  headers: Headers;
-};
-export type assignResponseError = assignResponse422 & {
-  headers: Headers;
-};
+export type AcknowledgeMutationError = ErrorType<ErrorOut>;
+export type AcknowledgeMutationVariables = { leadId: number };
 
-export type assignResponse = assignResponseSuccess | assignResponseError;
+/**
+ * @summary Acknowledge
+ */
+export const useAcknowledge = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof acknowledge>>,
+      TError,
+      AcknowledgeMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof acknowledge>>,
+  TError,
+  AcknowledgeMutationVariables,
+  TContext
+> => {
+  return useMutation(getAcknowledgeMutationOptions(options), queryClient);
+};
 
 export const getAssignUrl = (leadId: number) => {
   return `/api/v1/leads/${leadId}/actions/assign`;
@@ -2715,7 +6275,7 @@ export const assign = async (
   leadId: number,
   assignBody: Assign,
   options?: Parameters<typeof http>[1],
-): Promise<assignResponse> => {
+): Promise<ActionResult> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -2735,7 +6295,7 @@ export const assign = async (
     }
     return headers;
   };
-  return http<assignResponse>(getAssignUrl(leadId), {
+  return http<ActionResult>(getAssignUrl(leadId), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -2743,24 +6303,71 @@ export const assign = async (
   });
 };
 
-export type closeLostResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getAssignMutationKey = () => ["assign"] as const;
+
+export const getAssignMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof assign>>,
+    TError,
+    AssignMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof assign>>,
+  TError,
+  AssignMutationVariables,
+  TContext
+> => {
+  const mutationKey = getAssignMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof assign>>,
+    AssignMutationVariables
+  > = (props) => {
+    const { leadId, data } = props ?? {};
+
+    return assign(leadId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type closeLostResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type AssignMutationResult = NonNullable<Awaited<ReturnType<typeof assign>>>;
+export type AssignMutationBody = Assign;
+export type AssignMutationError = ErrorType<ErrorOut>;
+export type AssignMutationVariables = { leadId: number; data: Assign };
 
-export type closeLostResponseSuccess = closeLostResponse200 & {
-  headers: Headers;
+/**
+ * @summary Assign
+ */
+export const useAssign = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof assign>>,
+      TError,
+      AssignMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof assign>>,
+  TError,
+  AssignMutationVariables,
+  TContext
+> => {
+  return useMutation(getAssignMutationOptions(options), queryClient);
 };
-export type closeLostResponseError = closeLostResponse422 & {
-  headers: Headers;
-};
-
-export type closeLostResponse = closeLostResponseSuccess | closeLostResponseError;
 
 export const getCloseLostUrl = (leadId: number) => {
   return `/api/v1/leads/${leadId}/actions/close_lost`;
@@ -2773,7 +6380,7 @@ export const closeLost = async (
   leadId: number,
   close: Close,
   options?: Parameters<typeof http>[1],
-): Promise<closeLostResponse> => {
+): Promise<ActionResult> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -2793,7 +6400,7 @@ export const closeLost = async (
     }
     return headers;
   };
-  return http<closeLostResponse>(getCloseLostUrl(leadId), {
+  return http<ActionResult>(getCloseLostUrl(leadId), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -2801,24 +6408,71 @@ export const closeLost = async (
   });
 };
 
-export type closeWonResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getCloseLostMutationKey = () => ["closeLost"] as const;
+
+export const getCloseLostMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof closeLost>>,
+    TError,
+    CloseLostMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof closeLost>>,
+  TError,
+  CloseLostMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCloseLostMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof closeLost>>,
+    CloseLostMutationVariables
+  > = (props) => {
+    const { leadId, data } = props ?? {};
+
+    return closeLost(leadId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type closeWonResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type CloseLostMutationResult = NonNullable<Awaited<ReturnType<typeof closeLost>>>;
+export type CloseLostMutationBody = Close;
+export type CloseLostMutationError = ErrorType<ErrorOut>;
+export type CloseLostMutationVariables = { leadId: number; data: Close };
 
-export type closeWonResponseSuccess = closeWonResponse200 & {
-  headers: Headers;
+/**
+ * @summary Close Lost
+ */
+export const useCloseLost = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof closeLost>>,
+      TError,
+      CloseLostMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof closeLost>>,
+  TError,
+  CloseLostMutationVariables,
+  TContext
+> => {
+  return useMutation(getCloseLostMutationOptions(options), queryClient);
 };
-export type closeWonResponseError = closeWonResponse422 & {
-  headers: Headers;
-};
-
-export type closeWonResponse = closeWonResponseSuccess | closeWonResponseError;
 
 export const getCloseWonUrl = (leadId: number) => {
   return `/api/v1/leads/${leadId}/actions/close_won`;
@@ -2831,7 +6485,7 @@ export const closeWon = async (
   leadId: number,
   close: Close,
   options?: Parameters<typeof http>[1],
-): Promise<closeWonResponse> => {
+): Promise<ActionResult> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -2851,7 +6505,7 @@ export const closeWon = async (
     }
     return headers;
   };
-  return http<closeWonResponse>(getCloseWonUrl(leadId), {
+  return http<ActionResult>(getCloseWonUrl(leadId), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -2859,24 +6513,71 @@ export const closeWon = async (
   });
 };
 
-export type makeCustomerResponse201 = {
-  data: Created;
-  status: 201;
+export const getCloseWonMutationKey = () => ["closeWon"] as const;
+
+export const getCloseWonMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof closeWon>>,
+    TError,
+    CloseWonMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof closeWon>>,
+  TError,
+  CloseWonMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCloseWonMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof closeWon>>,
+    CloseWonMutationVariables
+  > = (props) => {
+    const { leadId, data } = props ?? {};
+
+    return closeWon(leadId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type makeCustomerResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type CloseWonMutationResult = NonNullable<Awaited<ReturnType<typeof closeWon>>>;
+export type CloseWonMutationBody = Close;
+export type CloseWonMutationError = ErrorType<ErrorOut>;
+export type CloseWonMutationVariables = { leadId: number; data: Close };
 
-export type makeCustomerResponseSuccess = makeCustomerResponse201 & {
-  headers: Headers;
+/**
+ * @summary Close Won
+ */
+export const useCloseWon = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof closeWon>>,
+      TError,
+      CloseWonMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof closeWon>>,
+  TError,
+  CloseWonMutationVariables,
+  TContext
+> => {
+  return useMutation(getCloseWonMutationOptions(options), queryClient);
 };
-export type makeCustomerResponseError = makeCustomerResponse422 & {
-  headers: Headers;
-};
-
-export type makeCustomerResponse = makeCustomerResponseSuccess | makeCustomerResponseError;
 
 export const getMakeCustomerUrl = (leadId: number) => {
   return `/api/v1/leads/${leadId}/actions/make_customer`;
@@ -2889,7 +6590,7 @@ export const makeCustomer = async (
   leadId: number,
   makeCustomerBody: MakeCustomer,
   options?: Parameters<typeof http>[1],
-): Promise<makeCustomerResponse> => {
+): Promise<Created> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -2909,7 +6610,7 @@ export const makeCustomer = async (
     }
     return headers;
   };
-  return http<makeCustomerResponse>(getMakeCustomerUrl(leadId), {
+  return http<Created>(getMakeCustomerUrl(leadId), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -2917,24 +6618,71 @@ export const makeCustomer = async (
   });
 };
 
-export type newDealResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getMakeCustomerMutationKey = () => ["makeCustomer"] as const;
+
+export const getMakeCustomerMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof makeCustomer>>,
+    TError,
+    MakeCustomerMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof makeCustomer>>,
+  TError,
+  MakeCustomerMutationVariables,
+  TContext
+> => {
+  const mutationKey = getMakeCustomerMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof makeCustomer>>,
+    MakeCustomerMutationVariables
+  > = (props) => {
+    const { leadId, data } = props ?? {};
+
+    return makeCustomer(leadId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type newDealResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type MakeCustomerMutationResult = NonNullable<Awaited<ReturnType<typeof makeCustomer>>>;
+export type MakeCustomerMutationBody = MakeCustomer;
+export type MakeCustomerMutationError = ErrorType<ErrorOut>;
+export type MakeCustomerMutationVariables = { leadId: number; data: MakeCustomer };
 
-export type newDealResponseSuccess = newDealResponse200 & {
-  headers: Headers;
+/**
+ * @summary Make Customer
+ */
+export const useMakeCustomer = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof makeCustomer>>,
+      TError,
+      MakeCustomerMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof makeCustomer>>,
+  TError,
+  MakeCustomerMutationVariables,
+  TContext
+> => {
+  return useMutation(getMakeCustomerMutationOptions(options), queryClient);
 };
-export type newDealResponseError = newDealResponse422 & {
-  headers: Headers;
-};
-
-export type newDealResponse = newDealResponseSuccess | newDealResponseError;
 
 export const getNewDealUrl = (leadId: number) => {
   return `/api/v1/leads/${leadId}/actions/new_deal`;
@@ -2946,31 +6694,78 @@ export const getNewDealUrl = (leadId: number) => {
 export const newDeal = async (
   leadId: number,
   options?: Parameters<typeof http>[1],
-): Promise<newDealResponse> => {
-  return http<newDealResponse>(getNewDealUrl(leadId), {
+): Promise<ActionResult> => {
+  return http<ActionResult>(getNewDealUrl(leadId), {
     ...options,
     method: "POST",
   });
 };
 
-export type noteResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getNewDealMutationKey = () => ["newDeal"] as const;
+
+export const getNewDealMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof newDeal>>,
+    TError,
+    NewDealMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof newDeal>>,
+  TError,
+  NewDealMutationVariables,
+  TContext
+> => {
+  const mutationKey = getNewDealMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof newDeal>>,
+    NewDealMutationVariables
+  > = (props) => {
+    const { leadId } = props ?? {};
+
+    return newDeal(leadId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type noteResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type NewDealMutationResult = NonNullable<Awaited<ReturnType<typeof newDeal>>>;
 
-export type noteResponseSuccess = noteResponse200 & {
-  headers: Headers;
-};
-export type noteResponseError = noteResponse422 & {
-  headers: Headers;
-};
+export type NewDealMutationError = ErrorType<ErrorOut>;
+export type NewDealMutationVariables = { leadId: number };
 
-export type noteResponse = noteResponseSuccess | noteResponseError;
+/**
+ * @summary New Deal
+ */
+export const useNewDeal = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof newDeal>>,
+      TError,
+      NewDealMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof newDeal>>,
+  TError,
+  NewDealMutationVariables,
+  TContext
+> => {
+  return useMutation(getNewDealMutationOptions(options), queryClient);
+};
 
 export const getNoteUrl = (leadId: number) => {
   return `/api/v1/leads/${leadId}/actions/note`;
@@ -2983,7 +6778,7 @@ export const note = async (
   leadId: number,
   noteCreate: NoteCreate,
   options?: Parameters<typeof http>[1],
-): Promise<noteResponse> => {
+): Promise<ActionResult> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -3003,7 +6798,7 @@ export const note = async (
     }
     return headers;
   };
-  return http<noteResponse>(getNoteUrl(leadId), {
+  return http<ActionResult>(getNoteUrl(leadId), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -3011,24 +6806,62 @@ export const note = async (
   });
 };
 
-export type returnToBotResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getNoteMutationKey = () => ["note"] as const;
+
+export const getNoteMutationOptions = <TError = ErrorType<ErrorOut>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof note>>,
+    TError,
+    NoteMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof note>>,
+  TError,
+  NoteMutationVariables,
+  TContext
+> => {
+  const mutationKey = getNoteMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof note>>, NoteMutationVariables> = (
+    props,
+  ) => {
+    const { leadId, data } = props ?? {};
+
+    return note(leadId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type returnToBotResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type NoteMutationResult = NonNullable<Awaited<ReturnType<typeof note>>>;
+export type NoteMutationBody = NoteCreate;
+export type NoteMutationError = ErrorType<ErrorOut>;
+export type NoteMutationVariables = { leadId: number; data: NoteCreate };
 
-export type returnToBotResponseSuccess = returnToBotResponse200 & {
-  headers: Headers;
+/**
+ * @summary Note
+ */
+export const useNote = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof note>>,
+      TError,
+      NoteMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof note>>, TError, NoteMutationVariables, TContext> => {
+  return useMutation(getNoteMutationOptions(options), queryClient);
 };
-export type returnToBotResponseError = returnToBotResponse422 & {
-  headers: Headers;
-};
-
-export type returnToBotResponse = returnToBotResponseSuccess | returnToBotResponseError;
 
 export const getReturnToBotUrl = (leadId: number) => {
   return `/api/v1/leads/${leadId}/actions/return_to_bot`;
@@ -3041,7 +6874,7 @@ export const returnToBot = async (
   leadId: number,
   returnToBotBody: ReturnToBot,
   options?: Parameters<typeof http>[1],
-): Promise<returnToBotResponse> => {
+): Promise<ActionResult> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -3061,7 +6894,7 @@ export const returnToBot = async (
     }
     return headers;
   };
-  return http<returnToBotResponse>(getReturnToBotUrl(leadId), {
+  return http<ActionResult>(getReturnToBotUrl(leadId), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -3069,24 +6902,71 @@ export const returnToBot = async (
   });
 };
 
-export type snoozeResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getReturnToBotMutationKey = () => ["returnToBot"] as const;
+
+export const getReturnToBotMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof returnToBot>>,
+    TError,
+    ReturnToBotMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof returnToBot>>,
+  TError,
+  ReturnToBotMutationVariables,
+  TContext
+> => {
+  const mutationKey = getReturnToBotMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof returnToBot>>,
+    ReturnToBotMutationVariables
+  > = (props) => {
+    const { leadId, data } = props ?? {};
+
+    return returnToBot(leadId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type snoozeResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type ReturnToBotMutationResult = NonNullable<Awaited<ReturnType<typeof returnToBot>>>;
+export type ReturnToBotMutationBody = ReturnToBot;
+export type ReturnToBotMutationError = ErrorType<ErrorOut>;
+export type ReturnToBotMutationVariables = { leadId: number; data: ReturnToBot };
 
-export type snoozeResponseSuccess = snoozeResponse200 & {
-  headers: Headers;
+/**
+ * @summary Return To Bot
+ */
+export const useReturnToBot = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof returnToBot>>,
+      TError,
+      ReturnToBotMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof returnToBot>>,
+  TError,
+  ReturnToBotMutationVariables,
+  TContext
+> => {
+  return useMutation(getReturnToBotMutationOptions(options), queryClient);
 };
-export type snoozeResponseError = snoozeResponse422 & {
-  headers: Headers;
-};
-
-export type snoozeResponse = snoozeResponseSuccess | snoozeResponseError;
 
 export const getSnoozeUrl = (leadId: number) => {
   return `/api/v1/leads/${leadId}/actions/snooze`;
@@ -3099,7 +6979,7 @@ export const snooze = async (
   leadId: number,
   snoozeBody: Snooze,
   options?: Parameters<typeof http>[1],
-): Promise<snoozeResponse> => {
+): Promise<ActionResult> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -3119,7 +6999,7 @@ export const snooze = async (
     }
     return headers;
   };
-  return http<snoozeResponse>(getSnoozeUrl(leadId), {
+  return http<ActionResult>(getSnoozeUrl(leadId), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -3127,24 +7007,71 @@ export const snooze = async (
   });
 };
 
-export type takeResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getSnoozeMutationKey = () => ["snooze"] as const;
+
+export const getSnoozeMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof snooze>>,
+    TError,
+    SnoozeMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof snooze>>,
+  TError,
+  SnoozeMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSnoozeMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof snooze>>,
+    SnoozeMutationVariables
+  > = (props) => {
+    const { leadId, data } = props ?? {};
+
+    return snooze(leadId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type takeResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type SnoozeMutationResult = NonNullable<Awaited<ReturnType<typeof snooze>>>;
+export type SnoozeMutationBody = Snooze;
+export type SnoozeMutationError = ErrorType<ErrorOut>;
+export type SnoozeMutationVariables = { leadId: number; data: Snooze };
 
-export type takeResponseSuccess = takeResponse200 & {
-  headers: Headers;
+/**
+ * @summary Snooze
+ */
+export const useSnooze = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof snooze>>,
+      TError,
+      SnoozeMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof snooze>>,
+  TError,
+  SnoozeMutationVariables,
+  TContext
+> => {
+  return useMutation(getSnoozeMutationOptions(options), queryClient);
 };
-export type takeResponseError = takeResponse422 & {
-  headers: Headers;
-};
-
-export type takeResponse = takeResponseSuccess | takeResponseError;
 
 export const getTakeUrl = (leadId: number) => {
   return `/api/v1/leads/${leadId}/actions/take`;
@@ -3156,31 +7083,69 @@ export const getTakeUrl = (leadId: number) => {
 export const take = async (
   leadId: number,
   options?: Parameters<typeof http>[1],
-): Promise<takeResponse> => {
-  return http<takeResponse>(getTakeUrl(leadId), {
+): Promise<ActionResult> => {
+  return http<ActionResult>(getTakeUrl(leadId), {
     ...options,
     method: "POST",
   });
 };
 
-export type unsnoozeResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getTakeMutationKey = () => ["take"] as const;
+
+export const getTakeMutationOptions = <TError = ErrorType<ErrorOut>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof take>>,
+    TError,
+    TakeMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof take>>,
+  TError,
+  TakeMutationVariables,
+  TContext
+> => {
+  const mutationKey = getTakeMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof take>>, TakeMutationVariables> = (
+    props,
+  ) => {
+    const { leadId } = props ?? {};
+
+    return take(leadId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type unsnoozeResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type TakeMutationResult = NonNullable<Awaited<ReturnType<typeof take>>>;
 
-export type unsnoozeResponseSuccess = unsnoozeResponse200 & {
-  headers: Headers;
-};
-export type unsnoozeResponseError = unsnoozeResponse422 & {
-  headers: Headers;
-};
+export type TakeMutationError = ErrorType<ErrorOut>;
+export type TakeMutationVariables = { leadId: number };
 
-export type unsnoozeResponse = unsnoozeResponseSuccess | unsnoozeResponseError;
+/**
+ * @summary Take
+ */
+export const useTake = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof take>>,
+      TError,
+      TakeMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof take>>, TError, TakeMutationVariables, TContext> => {
+  return useMutation(getTakeMutationOptions(options), queryClient);
+};
 
 export const getUnsnoozeUrl = (leadId: number) => {
   return `/api/v1/leads/${leadId}/actions/unsnooze`;
@@ -3193,31 +7158,78 @@ export const getUnsnoozeUrl = (leadId: number) => {
 export const unsnooze = async (
   leadId: number,
   options?: Parameters<typeof http>[1],
-): Promise<unsnoozeResponse> => {
-  return http<unsnoozeResponse>(getUnsnoozeUrl(leadId), {
+): Promise<ActionResult> => {
+  return http<ActionResult>(getUnsnoozeUrl(leadId), {
     ...options,
     method: "POST",
   });
 };
 
-export type assistResponse200 = {
-  data: AssistOut;
-  status: 200;
+export const getUnsnoozeMutationKey = () => ["unsnooze"] as const;
+
+export const getUnsnoozeMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unsnooze>>,
+    TError,
+    UnsnoozeMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof unsnooze>>,
+  TError,
+  UnsnoozeMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUnsnoozeMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof unsnooze>>,
+    UnsnoozeMutationVariables
+  > = (props) => {
+    const { leadId } = props ?? {};
+
+    return unsnooze(leadId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type assistResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type UnsnoozeMutationResult = NonNullable<Awaited<ReturnType<typeof unsnooze>>>;
 
-export type assistResponseSuccess = assistResponse200 & {
-  headers: Headers;
-};
-export type assistResponseError = assistResponse422 & {
-  headers: Headers;
-};
+export type UnsnoozeMutationError = ErrorType<ErrorOut>;
+export type UnsnoozeMutationVariables = { leadId: number };
 
-export type assistResponse = assistResponseSuccess | assistResponseError;
+/**
+ * @summary Unsnooze
+ */
+export const useUnsnooze = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof unsnooze>>,
+      TError,
+      UnsnoozeMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof unsnooze>>,
+  TError,
+  UnsnoozeMutationVariables,
+  TContext
+> => {
+  return useMutation(getUnsnoozeMutationOptions(options), queryClient);
+};
 
 export const getAssistUrl = (leadId: number) => {
   return `/api/v1/leads/${leadId}/assist`;
@@ -3231,7 +7243,7 @@ export const assist = async (
   leadId: number,
   assistRequest: AssistRequest,
   options?: Parameters<typeof http>[1],
-): Promise<assistResponse> => {
+): Promise<AssistOut> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -3251,7 +7263,7 @@ export const assist = async (
     }
     return headers;
   };
-  return http<assistResponse>(getAssistUrl(leadId), {
+  return http<AssistOut>(getAssistUrl(leadId), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -3259,24 +7271,71 @@ export const assist = async (
   });
 };
 
-export type leadDecisionsResponse200 = {
-  data: DecisionsResponse;
-  status: 200;
+export const getAssistMutationKey = () => ["assist"] as const;
+
+export const getAssistMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof assist>>,
+    TError,
+    AssistMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof assist>>,
+  TError,
+  AssistMutationVariables,
+  TContext
+> => {
+  const mutationKey = getAssistMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof assist>>,
+    AssistMutationVariables
+  > = (props) => {
+    const { leadId, data } = props ?? {};
+
+    return assist(leadId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type leadDecisionsResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type AssistMutationResult = NonNullable<Awaited<ReturnType<typeof assist>>>;
+export type AssistMutationBody = AssistRequest;
+export type AssistMutationError = ErrorType<ErrorOut>;
+export type AssistMutationVariables = { leadId: number; data: AssistRequest };
 
-export type leadDecisionsResponseSuccess = leadDecisionsResponse200 & {
-  headers: Headers;
+/**
+ * @summary Assist
+ */
+export const useAssist = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof assist>>,
+      TError,
+      AssistMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof assist>>,
+  TError,
+  AssistMutationVariables,
+  TContext
+> => {
+  return useMutation(getAssistMutationOptions(options), queryClient);
 };
-export type leadDecisionsResponseError = leadDecisionsResponse422 & {
-  headers: Headers;
-};
-
-export type leadDecisionsResponse = leadDecisionsResponseSuccess | leadDecisionsResponseError;
 
 export const getLeadDecisionsUrl = (leadId: number, params?: LeadDecisionsParams) => {
   const normalizedParams = new URLSearchParams();
@@ -3301,31 +7360,124 @@ export const leadDecisions = async (
   leadId: number,
   params?: LeadDecisionsParams,
   options?: Parameters<typeof http>[1],
-): Promise<leadDecisionsResponse> => {
-  return http<leadDecisionsResponse>(getLeadDecisionsUrl(leadId, params), {
+): Promise<DecisionsResponse> => {
+  return http<DecisionsResponse>(getLeadDecisionsUrl(leadId, params), {
     ...options,
     method: "GET",
   });
 };
 
-export type leadMessagesResponse200 = {
-  data: MessageOut[];
-  status: 200;
+export const getLeadDecisionsQueryKey = (leadId: number, params?: LeadDecisionsParams) => {
+  return [`/api/v1/leads/${leadId}/decisions`, ...(params ? [params] : [])] as const;
 };
 
-export type leadMessagesResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getLeadDecisionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof leadDecisions>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  leadId: number,
+  params?: LeadDecisionsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof leadDecisions>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getLeadDecisionsQueryKey(leadId, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof leadDecisions>>> = ({ signal }) =>
+    leadDecisions(leadId, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: leadId !== null && leadId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof leadDecisions>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
-export type leadMessagesResponseSuccess = leadMessagesResponse200 & {
-  headers: Headers;
-};
-export type leadMessagesResponseError = leadMessagesResponse422 & {
-  headers: Headers;
-};
+export type LeadDecisionsQueryResult = NonNullable<Awaited<ReturnType<typeof leadDecisions>>>;
+export type LeadDecisionsQueryError = ErrorType<ErrorOut>;
 
-export type leadMessagesResponse = leadMessagesResponseSuccess | leadMessagesResponseError;
+export function useLeadDecisions<
+  TData = Awaited<ReturnType<typeof leadDecisions>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  leadId: number,
+  params: undefined | LeadDecisionsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof leadDecisions>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof leadDecisions>>,
+          TError,
+          Awaited<ReturnType<typeof leadDecisions>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useLeadDecisions<
+  TData = Awaited<ReturnType<typeof leadDecisions>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  leadId: number,
+  params?: LeadDecisionsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof leadDecisions>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof leadDecisions>>,
+          TError,
+          Awaited<ReturnType<typeof leadDecisions>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useLeadDecisions<
+  TData = Awaited<ReturnType<typeof leadDecisions>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  leadId: number,
+  params?: LeadDecisionsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof leadDecisions>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Lead Decisions
+ */
+
+export function useLeadDecisions<
+  TData = Awaited<ReturnType<typeof leadDecisions>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  leadId: number,
+  params?: LeadDecisionsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof leadDecisions>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getLeadDecisionsQueryOptions(leadId, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getLeadMessagesUrl = (leadId: number, params?: LeadMessagesParams) => {
   const normalizedParams = new URLSearchParams();
@@ -3350,31 +7502,124 @@ export const leadMessages = async (
   leadId: number,
   params?: LeadMessagesParams,
   options?: Parameters<typeof http>[1],
-): Promise<leadMessagesResponse> => {
-  return http<leadMessagesResponse>(getLeadMessagesUrl(leadId, params), {
+): Promise<MessageOut[]> => {
+  return http<MessageOut[]>(getLeadMessagesUrl(leadId, params), {
     ...options,
     method: "GET",
   });
 };
 
-export type replyResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getLeadMessagesQueryKey = (leadId: number, params?: LeadMessagesParams) => {
+  return [`/api/v1/leads/${leadId}/messages`, ...(params ? [params] : [])] as const;
 };
 
-export type replyResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getLeadMessagesQueryOptions = <
+  TData = Awaited<ReturnType<typeof leadMessages>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  leadId: number,
+  params?: LeadMessagesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof leadMessages>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getLeadMessagesQueryKey(leadId, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof leadMessages>>> = ({ signal }) =>
+    leadMessages(leadId, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: leadId !== null && leadId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof leadMessages>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
-export type replyResponseSuccess = replyResponse200 & {
-  headers: Headers;
-};
-export type replyResponseError = replyResponse422 & {
-  headers: Headers;
-};
+export type LeadMessagesQueryResult = NonNullable<Awaited<ReturnType<typeof leadMessages>>>;
+export type LeadMessagesQueryError = ErrorType<ErrorOut>;
 
-export type replyResponse = replyResponseSuccess | replyResponseError;
+export function useLeadMessages<
+  TData = Awaited<ReturnType<typeof leadMessages>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  leadId: number,
+  params: undefined | LeadMessagesParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof leadMessages>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof leadMessages>>,
+          TError,
+          Awaited<ReturnType<typeof leadMessages>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useLeadMessages<
+  TData = Awaited<ReturnType<typeof leadMessages>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  leadId: number,
+  params?: LeadMessagesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof leadMessages>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof leadMessages>>,
+          TError,
+          Awaited<ReturnType<typeof leadMessages>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useLeadMessages<
+  TData = Awaited<ReturnType<typeof leadMessages>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  leadId: number,
+  params?: LeadMessagesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof leadMessages>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Lead Messages
+ */
+
+export function useLeadMessages<
+  TData = Awaited<ReturnType<typeof leadMessages>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  leadId: number,
+  params?: LeadMessagesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof leadMessages>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getLeadMessagesQueryOptions(leadId, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getReplyUrl = (leadId: number) => {
   return `/api/v1/leads/${leadId}/messages`;
@@ -3387,7 +7632,7 @@ export const reply = async (
   leadId: number,
   replyBody: Reply,
   options?: Parameters<typeof http>[1],
-): Promise<replyResponse> => {
+): Promise<ActionResult> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -3407,7 +7652,7 @@ export const reply = async (
     }
     return headers;
   };
-  return http<replyResponse>(getReplyUrl(leadId), {
+  return http<ActionResult>(getReplyUrl(leadId), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -3415,24 +7660,70 @@ export const reply = async (
   });
 };
 
-export type leadNotesResponse200 = {
-  data: NoteOut[];
-  status: 200;
+export const getReplyMutationKey = () => ["reply"] as const;
+
+export const getReplyMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof reply>>,
+    TError,
+    ReplyMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof reply>>,
+  TError,
+  ReplyMutationVariables,
+  TContext
+> => {
+  const mutationKey = getReplyMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof reply>>, ReplyMutationVariables> = (
+    props,
+  ) => {
+    const { leadId, data } = props ?? {};
+
+    return reply(leadId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type leadNotesResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type ReplyMutationResult = NonNullable<Awaited<ReturnType<typeof reply>>>;
+export type ReplyMutationBody = Reply;
+export type ReplyMutationError = ErrorType<ErrorOut>;
+export type ReplyMutationVariables = { leadId: number; data: Reply };
 
-export type leadNotesResponseSuccess = leadNotesResponse200 & {
-  headers: Headers;
+/**
+ * @summary Reply
+ */
+export const useReply = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof reply>>,
+      TError,
+      ReplyMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof reply>>,
+  TError,
+  ReplyMutationVariables,
+  TContext
+> => {
+  return useMutation(getReplyMutationOptions(options), queryClient);
 };
-export type leadNotesResponseError = leadNotesResponse422 & {
-  headers: Headers;
-};
-
-export type leadNotesResponse = leadNotesResponseSuccess | leadNotesResponseError;
 
 export const getLeadNotesUrl = (leadId: number) => {
   return `/api/v1/leads/${leadId}/notes`;
@@ -3444,31 +7735,119 @@ export const getLeadNotesUrl = (leadId: number) => {
 export const leadNotes = async (
   leadId: number,
   options?: Parameters<typeof http>[1],
-): Promise<leadNotesResponse> => {
-  return http<leadNotesResponse>(getLeadNotesUrl(leadId), {
+): Promise<NoteOut[]> => {
+  return http<NoteOut[]>(getLeadNotesUrl(leadId), {
     ...options,
     method: "GET",
   });
 };
 
-export type meResponse200 = {
-  data: UserOut;
-  status: 200;
+export const getLeadNotesQueryKey = (leadId: number) => {
+  return [`/api/v1/leads/${leadId}/notes`] as const;
 };
 
-export type meResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getLeadNotesQueryOptions = <
+  TData = Awaited<ReturnType<typeof leadNotes>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  leadId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof leadNotes>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getLeadNotesQueryKey(leadId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof leadNotes>>> = ({ signal }) =>
+    leadNotes(leadId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: leadId !== null && leadId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof leadNotes>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
-export type meResponseSuccess = meResponse200 & {
-  headers: Headers;
-};
-export type meResponseError = meResponse422 & {
-  headers: Headers;
-};
+export type LeadNotesQueryResult = NonNullable<Awaited<ReturnType<typeof leadNotes>>>;
+export type LeadNotesQueryError = ErrorType<ErrorOut>;
 
-export type meResponse = meResponseSuccess | meResponseError;
+export function useLeadNotes<
+  TData = Awaited<ReturnType<typeof leadNotes>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  leadId: number,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof leadNotes>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof leadNotes>>,
+          TError,
+          Awaited<ReturnType<typeof leadNotes>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useLeadNotes<
+  TData = Awaited<ReturnType<typeof leadNotes>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  leadId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof leadNotes>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof leadNotes>>,
+          TError,
+          Awaited<ReturnType<typeof leadNotes>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useLeadNotes<
+  TData = Awaited<ReturnType<typeof leadNotes>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  leadId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof leadNotes>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Lead Notes
+ */
+
+export function useLeadNotes<
+  TData = Awaited<ReturnType<typeof leadNotes>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  leadId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof leadNotes>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getLeadNotesQueryOptions(leadId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getMeUrl = () => {
   return `/api/v1/me`;
@@ -3477,31 +7856,97 @@ export const getMeUrl = () => {
 /**
  * @summary Me
  */
-export const me = async (options?: Parameters<typeof http>[1]): Promise<meResponse> => {
-  return http<meResponse>(getMeUrl(), {
+export const me = async (options?: Parameters<typeof http>[1]): Promise<UserOut> => {
+  return http<UserOut>(getMeUrl(), {
     ...options,
     method: "GET",
   });
 };
 
-export type updateMeResponse200 = {
-  data: UserOut;
-  status: 200;
+export const getMeQueryKey = () => {
+  return [`/api/v1/me`] as const;
 };
 
-export type updateMeResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getMeQueryOptions = <
+  TData = Awaited<ReturnType<typeof me>>,
+  TError = ErrorType<ErrorOut>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof me>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getMeQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof me>>> = ({ signal }) =>
+    me({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof me>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type updateMeResponseSuccess = updateMeResponse200 & {
-  headers: Headers;
-};
-export type updateMeResponseError = updateMeResponse422 & {
-  headers: Headers;
-};
+export type MeQueryResult = NonNullable<Awaited<ReturnType<typeof me>>>;
+export type MeQueryError = ErrorType<ErrorOut>;
 
-export type updateMeResponse = updateMeResponseSuccess | updateMeResponseError;
+export function useMe<TData = Awaited<ReturnType<typeof me>>, TError = ErrorType<ErrorOut>>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof me>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof me>>,
+          TError,
+          Awaited<ReturnType<typeof me>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useMe<TData = Awaited<ReturnType<typeof me>>, TError = ErrorType<ErrorOut>>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof me>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof me>>,
+          TError,
+          Awaited<ReturnType<typeof me>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useMe<TData = Awaited<ReturnType<typeof me>>, TError = ErrorType<ErrorOut>>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof me>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Me
+ */
+
+export function useMe<TData = Awaited<ReturnType<typeof me>>, TError = ErrorType<ErrorOut>>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof me>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getMeQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getUpdateMeUrl = () => {
   return `/api/v1/me`;
@@ -3513,7 +7958,7 @@ export const getUpdateMeUrl = () => {
 export const updateMe = async (
   mePatch: MePatch,
   options?: Parameters<typeof http>[1],
-): Promise<updateMeResponse> => {
+): Promise<UserOut> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -3533,7 +7978,7 @@ export const updateMe = async (
     }
     return headers;
   };
-  return http<updateMeResponse>(getUpdateMeUrl(), {
+  return http<UserOut>(getUpdateMeUrl(), {
     ...options,
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -3541,24 +7986,71 @@ export const updateMe = async (
   });
 };
 
-export type permissionsResponse200 = {
-  data: PermissionsResponse;
-  status: 200;
+export const getUpdateMeMutationKey = () => ["updateMe"] as const;
+
+export const getUpdateMeMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMe>>,
+    TError,
+    UpdateMeMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateMe>>,
+  TError,
+  UpdateMeMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateMeMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateMe>>,
+    UpdateMeMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateMe(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type permissionsResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type UpdateMeMutationResult = NonNullable<Awaited<ReturnType<typeof updateMe>>>;
+export type UpdateMeMutationBody = MePatch;
+export type UpdateMeMutationError = ErrorType<ErrorOut>;
+export type UpdateMeMutationVariables = { data: MePatch };
 
-export type permissionsResponseSuccess = permissionsResponse200 & {
-  headers: Headers;
+/**
+ * @summary Update Me
+ */
+export const useUpdateMe = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateMe>>,
+      TError,
+      UpdateMeMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateMe>>,
+  TError,
+  UpdateMeMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateMeMutationOptions(options), queryClient);
 };
-export type permissionsResponseError = permissionsResponse422 & {
-  headers: Headers;
-};
-
-export type permissionsResponse = permissionsResponseSuccess | permissionsResponseError;
 
 export const getPermissionsUrl = () => {
   return `/api/v1/me/permissions`;
@@ -3570,32 +8062,109 @@ export const getPermissionsUrl = () => {
  */
 export const permissions = async (
   options?: Parameters<typeof http>[1],
-): Promise<permissionsResponse> => {
-  return http<permissionsResponse>(getPermissionsUrl(), {
+): Promise<PermissionsResponse> => {
+  return http<PermissionsResponse>(getPermissionsUrl(), {
     ...options,
     method: "GET",
   });
 };
 
-export type testNotificationResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getPermissionsQueryKey = () => {
+  return [`/api/v1/me/permissions`] as const;
 };
 
-export type testNotificationResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getPermissionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof permissions>>,
+  TError = ErrorType<ErrorOut>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof permissions>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getPermissionsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof permissions>>> = ({ signal }) =>
+    permissions({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof permissions>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type testNotificationResponseSuccess = testNotificationResponse200 & {
-  headers: Headers;
-};
-export type testNotificationResponseError = testNotificationResponse422 & {
-  headers: Headers;
-};
+export type PermissionsQueryResult = NonNullable<Awaited<ReturnType<typeof permissions>>>;
+export type PermissionsQueryError = ErrorType<ErrorOut>;
 
-export type testNotificationResponse =
-  testNotificationResponseSuccess | testNotificationResponseError;
+export function usePermissions<
+  TData = Awaited<ReturnType<typeof permissions>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof permissions>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof permissions>>,
+          TError,
+          Awaited<ReturnType<typeof permissions>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function usePermissions<
+  TData = Awaited<ReturnType<typeof permissions>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof permissions>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof permissions>>,
+          TError,
+          Awaited<ReturnType<typeof permissions>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function usePermissions<
+  TData = Awaited<ReturnType<typeof permissions>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof permissions>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Permissions
+ */
+
+export function usePermissions<
+  TData = Awaited<ReturnType<typeof permissions>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof permissions>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getPermissionsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getTestNotificationUrl = () => {
   return `/api/v1/me/test-notification`;
@@ -3607,31 +8176,64 @@ export const getTestNotificationUrl = () => {
  */
 export const testNotification = async (
   options?: Parameters<typeof http>[1],
-): Promise<testNotificationResponse> => {
-  return http<testNotificationResponse>(getTestNotificationUrl(), {
+): Promise<ActionResult> => {
+  return http<ActionResult>(getTestNotificationUrl(), {
     ...options,
     method: "POST",
   });
 };
 
-export type listModelsResponse200 = {
-  data: ModelStatus[];
-  status: 200;
+export const getTestNotificationMutationKey = () => ["testNotification"] as const;
+
+export const getTestNotificationMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof testNotification>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof testNotification>>, TError, void, TContext> => {
+  const mutationKey = getTestNotificationMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof testNotification>>, void> = () => {
+    return testNotification(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type listModelsResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type TestNotificationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof testNotification>>
+>;
 
-export type listModelsResponseSuccess = listModelsResponse200 & {
-  headers: Headers;
-};
-export type listModelsResponseError = listModelsResponse422 & {
-  headers: Headers;
-};
+export type TestNotificationMutationError = ErrorType<ErrorOut>;
 
-export type listModelsResponse = listModelsResponseSuccess | listModelsResponseError;
+/**
+ * @summary Test Notification
+ */
+export const useTestNotification = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof testNotification>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof testNotification>>, TError, void, TContext> => {
+  return useMutation(getTestNotificationMutationOptions(options), queryClient);
+};
 
 export const getListModelsUrl = () => {
   return `/api/v1/models`;
@@ -3640,33 +8242,109 @@ export const getListModelsUrl = () => {
 /**
  * @summary List Models
  */
-export const listModels = async (
-  options?: Parameters<typeof http>[1],
-): Promise<listModelsResponse> => {
-  return http<listModelsResponse>(getListModelsUrl(), {
+export const listModels = async (options?: Parameters<typeof http>[1]): Promise<ModelStatus[]> => {
+  return http<ModelStatus[]>(getListModelsUrl(), {
     ...options,
     method: "GET",
   });
 };
 
-export type changeModelResponse200 = {
-  data: ModelChangeResult;
-  status: 200;
+export const getListModelsQueryKey = () => {
+  return [`/api/v1/models`] as const;
 };
 
-export type changeModelResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getListModelsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listModels>>,
+  TError = ErrorType<ErrorOut>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listModels>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListModelsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listModels>>> = ({ signal }) =>
+    listModels({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listModels>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type changeModelResponseSuccess = changeModelResponse200 & {
-  headers: Headers;
-};
-export type changeModelResponseError = changeModelResponse422 & {
-  headers: Headers;
-};
+export type ListModelsQueryResult = NonNullable<Awaited<ReturnType<typeof listModels>>>;
+export type ListModelsQueryError = ErrorType<ErrorOut>;
 
-export type changeModelResponse = changeModelResponseSuccess | changeModelResponseError;
+export function useListModels<
+  TData = Awaited<ReturnType<typeof listModels>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listModels>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listModels>>,
+          TError,
+          Awaited<ReturnType<typeof listModels>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListModels<
+  TData = Awaited<ReturnType<typeof listModels>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listModels>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listModels>>,
+          TError,
+          Awaited<ReturnType<typeof listModels>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListModels<
+  TData = Awaited<ReturnType<typeof listModels>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listModels>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List Models
+ */
+
+export function useListModels<
+  TData = Awaited<ReturnType<typeof listModels>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listModels>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListModelsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getChangeModelUrl = (alias: string) => {
   return `/api/v1/models/${alias}`;
@@ -3680,7 +8358,7 @@ export const changeModel = async (
   alias: string,
   modelChangeIn: ModelChangeIn,
   options?: Parameters<typeof http>[1],
-): Promise<changeModelResponse> => {
+): Promise<ModelChangeResult> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -3700,7 +8378,7 @@ export const changeModel = async (
     }
     return headers;
   };
-  return http<changeModelResponse>(getChangeModelUrl(alias), {
+  return http<ModelChangeResult>(getChangeModelUrl(alias), {
     ...options,
     method: "PUT",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -3708,24 +8386,71 @@ export const changeModel = async (
   });
 };
 
-export type resetModelResponse200 = {
-  data: ModelChangeResult;
-  status: 200;
+export const getChangeModelMutationKey = () => ["changeModel"] as const;
+
+export const getChangeModelMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof changeModel>>,
+    TError,
+    ChangeModelMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof changeModel>>,
+  TError,
+  ChangeModelMutationVariables,
+  TContext
+> => {
+  const mutationKey = getChangeModelMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof changeModel>>,
+    ChangeModelMutationVariables
+  > = (props) => {
+    const { alias, data } = props ?? {};
+
+    return changeModel(alias, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type resetModelResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type ChangeModelMutationResult = NonNullable<Awaited<ReturnType<typeof changeModel>>>;
+export type ChangeModelMutationBody = ModelChangeIn;
+export type ChangeModelMutationError = ErrorType<ErrorOut>;
+export type ChangeModelMutationVariables = { alias: string; data: ModelChangeIn };
 
-export type resetModelResponseSuccess = resetModelResponse200 & {
-  headers: Headers;
+/**
+ * @summary Change Model
+ */
+export const useChangeModel = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof changeModel>>,
+      TError,
+      ChangeModelMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof changeModel>>,
+  TError,
+  ChangeModelMutationVariables,
+  TContext
+> => {
+  return useMutation(getChangeModelMutationOptions(options), queryClient);
 };
-export type resetModelResponseError = resetModelResponse422 & {
-  headers: Headers;
-};
-
-export type resetModelResponse = resetModelResponseSuccess | resetModelResponseError;
 
 export const getResetModelUrl = (alias: string) => {
   return `/api/v1/models/${alias}/reset`;
@@ -3739,7 +8464,7 @@ export const resetModel = async (
   alias: string,
   modelResetIn: ModelResetIn,
   options?: Parameters<typeof http>[1],
-): Promise<resetModelResponse> => {
+): Promise<ModelChangeResult> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -3759,7 +8484,7 @@ export const resetModel = async (
     }
     return headers;
   };
-  return http<resetModelResponse>(getResetModelUrl(alias), {
+  return http<ModelChangeResult>(getResetModelUrl(alias), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -3767,24 +8492,71 @@ export const resetModel = async (
   });
 };
 
-export type testModelResponse200 = {
-  data: ModelTestResult;
-  status: 200;
+export const getResetModelMutationKey = () => ["resetModel"] as const;
+
+export const getResetModelMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resetModel>>,
+    TError,
+    ResetModelMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resetModel>>,
+  TError,
+  ResetModelMutationVariables,
+  TContext
+> => {
+  const mutationKey = getResetModelMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resetModel>>,
+    ResetModelMutationVariables
+  > = (props) => {
+    const { alias, data } = props ?? {};
+
+    return resetModel(alias, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type testModelResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type ResetModelMutationResult = NonNullable<Awaited<ReturnType<typeof resetModel>>>;
+export type ResetModelMutationBody = ModelResetIn;
+export type ResetModelMutationError = ErrorType<ErrorOut>;
+export type ResetModelMutationVariables = { alias: string; data: ModelResetIn };
 
-export type testModelResponseSuccess = testModelResponse200 & {
-  headers: Headers;
+/**
+ * @summary Reset Model
+ */
+export const useResetModel = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof resetModel>>,
+      TError,
+      ResetModelMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof resetModel>>,
+  TError,
+  ResetModelMutationVariables,
+  TContext
+> => {
+  return useMutation(getResetModelMutationOptions(options), queryClient);
 };
-export type testModelResponseError = testModelResponse422 & {
-  headers: Headers;
-};
-
-export type testModelResponse = testModelResponseSuccess | testModelResponseError;
 
 export const getTestModelUrl = (alias: string) => {
   return `/api/v1/models/${alias}/test`;
@@ -3796,32 +8568,78 @@ export const getTestModelUrl = (alias: string) => {
 export const testModel = async (
   alias: string,
   options?: Parameters<typeof http>[1],
-): Promise<testModelResponse> => {
-  return http<testModelResponse>(getTestModelUrl(alias), {
+): Promise<ModelTestResult> => {
+  return http<ModelTestResult>(getTestModelUrl(alias), {
     ...options,
     method: "POST",
   });
 };
 
-export type listReplyTemplatesResponse200 = {
-  data: ReplyTemplateOut[];
-  status: 200;
+export const getTestModelMutationKey = () => ["testModel"] as const;
+
+export const getTestModelMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof testModel>>,
+    TError,
+    TestModelMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof testModel>>,
+  TError,
+  TestModelMutationVariables,
+  TContext
+> => {
+  const mutationKey = getTestModelMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof testModel>>,
+    TestModelMutationVariables
+  > = (props) => {
+    const { alias } = props ?? {};
+
+    return testModel(alias, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type listReplyTemplatesResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type TestModelMutationResult = NonNullable<Awaited<ReturnType<typeof testModel>>>;
 
-export type listReplyTemplatesResponseSuccess = listReplyTemplatesResponse200 & {
-  headers: Headers;
-};
-export type listReplyTemplatesResponseError = listReplyTemplatesResponse422 & {
-  headers: Headers;
-};
+export type TestModelMutationError = ErrorType<ErrorOut>;
+export type TestModelMutationVariables = { alias: string };
 
-export type listReplyTemplatesResponse =
-  listReplyTemplatesResponseSuccess | listReplyTemplatesResponseError;
+/**
+ * @summary Test Model
+ */
+export const useTestModel = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof testModel>>,
+      TError,
+      TestModelMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof testModel>>,
+  TError,
+  TestModelMutationVariables,
+  TContext
+> => {
+  return useMutation(getTestModelMutationOptions(options), queryClient);
+};
 
 export const getListReplyTemplatesUrl = () => {
   return `/api/v1/reply-templates`;
@@ -3833,32 +8651,113 @@ export const getListReplyTemplatesUrl = () => {
  */
 export const listReplyTemplates = async (
   options?: Parameters<typeof http>[1],
-): Promise<listReplyTemplatesResponse> => {
-  return http<listReplyTemplatesResponse>(getListReplyTemplatesUrl(), {
+): Promise<ReplyTemplateOut[]> => {
+  return http<ReplyTemplateOut[]>(getListReplyTemplatesUrl(), {
     ...options,
     method: "GET",
   });
 };
 
-export type createReplyTemplateResponse201 = {
-  data: Created;
-  status: 201;
+export const getListReplyTemplatesQueryKey = () => {
+  return [`/api/v1/reply-templates`] as const;
 };
 
-export type createReplyTemplateResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getListReplyTemplatesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listReplyTemplates>>,
+  TError = ErrorType<ErrorOut>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listReplyTemplates>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListReplyTemplatesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listReplyTemplates>>> = ({ signal }) =>
+    listReplyTemplates({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listReplyTemplates>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type createReplyTemplateResponseSuccess = createReplyTemplateResponse201 & {
-  headers: Headers;
-};
-export type createReplyTemplateResponseError = createReplyTemplateResponse422 & {
-  headers: Headers;
-};
+export type ListReplyTemplatesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listReplyTemplates>>
+>;
+export type ListReplyTemplatesQueryError = ErrorType<ErrorOut>;
 
-export type createReplyTemplateResponse =
-  createReplyTemplateResponseSuccess | createReplyTemplateResponseError;
+export function useListReplyTemplates<
+  TData = Awaited<ReturnType<typeof listReplyTemplates>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listReplyTemplates>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listReplyTemplates>>,
+          TError,
+          Awaited<ReturnType<typeof listReplyTemplates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListReplyTemplates<
+  TData = Awaited<ReturnType<typeof listReplyTemplates>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listReplyTemplates>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listReplyTemplates>>,
+          TError,
+          Awaited<ReturnType<typeof listReplyTemplates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListReplyTemplates<
+  TData = Awaited<ReturnType<typeof listReplyTemplates>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listReplyTemplates>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List Reply Templates
+ */
+
+export function useListReplyTemplates<
+  TData = Awaited<ReturnType<typeof listReplyTemplates>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listReplyTemplates>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListReplyTemplatesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getCreateReplyTemplateUrl = () => {
   return `/api/v1/reply-templates`;
@@ -3870,7 +8769,7 @@ export const getCreateReplyTemplateUrl = () => {
 export const createReplyTemplate = async (
   replyTemplateIn: ReplyTemplateIn,
   options?: Parameters<typeof http>[1],
-): Promise<createReplyTemplateResponse> => {
+): Promise<Created> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -3890,7 +8789,7 @@ export const createReplyTemplate = async (
     }
     return headers;
   };
-  return http<createReplyTemplateResponse>(getCreateReplyTemplateUrl(), {
+  return http<Created>(getCreateReplyTemplateUrl(), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -3898,25 +8797,73 @@ export const createReplyTemplate = async (
   });
 };
 
-export type deleteReplyTemplateResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getCreateReplyTemplateMutationKey = () => ["createReplyTemplate"] as const;
+
+export const getCreateReplyTemplateMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createReplyTemplate>>,
+    TError,
+    CreateReplyTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createReplyTemplate>>,
+  TError,
+  CreateReplyTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateReplyTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createReplyTemplate>>,
+    CreateReplyTemplateMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createReplyTemplate(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type deleteReplyTemplateResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type CreateReplyTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createReplyTemplate>>
+>;
+export type CreateReplyTemplateMutationBody = ReplyTemplateIn;
+export type CreateReplyTemplateMutationError = ErrorType<ErrorOut>;
+export type CreateReplyTemplateMutationVariables = { data: ReplyTemplateIn };
 
-export type deleteReplyTemplateResponseSuccess = deleteReplyTemplateResponse200 & {
-  headers: Headers;
+/**
+ * @summary Create Reply Template
+ */
+export const useCreateReplyTemplate = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createReplyTemplate>>,
+      TError,
+      CreateReplyTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createReplyTemplate>>,
+  TError,
+  CreateReplyTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateReplyTemplateMutationOptions(options), queryClient);
 };
-export type deleteReplyTemplateResponseError = deleteReplyTemplateResponse422 & {
-  headers: Headers;
-};
-
-export type deleteReplyTemplateResponse =
-  deleteReplyTemplateResponseSuccess | deleteReplyTemplateResponseError;
 
 export const getDeleteReplyTemplateUrl = (templateId: number) => {
   return `/api/v1/reply-templates/${templateId}`;
@@ -3928,32 +8875,80 @@ export const getDeleteReplyTemplateUrl = (templateId: number) => {
 export const deleteReplyTemplate = async (
   templateId: number,
   options?: Parameters<typeof http>[1],
-): Promise<deleteReplyTemplateResponse> => {
-  return http<deleteReplyTemplateResponse>(getDeleteReplyTemplateUrl(templateId), {
+): Promise<ActionResult> => {
+  return http<ActionResult>(getDeleteReplyTemplateUrl(templateId), {
     ...options,
     method: "DELETE",
   });
 };
 
-export type updateReplyTemplateResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getDeleteReplyTemplateMutationKey = () => ["deleteReplyTemplate"] as const;
+
+export const getDeleteReplyTemplateMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteReplyTemplate>>,
+    TError,
+    DeleteReplyTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteReplyTemplate>>,
+  TError,
+  DeleteReplyTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteReplyTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteReplyTemplate>>,
+    DeleteReplyTemplateMutationVariables
+  > = (props) => {
+    const { templateId } = props ?? {};
+
+    return deleteReplyTemplate(templateId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type updateReplyTemplateResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type DeleteReplyTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteReplyTemplate>>
+>;
 
-export type updateReplyTemplateResponseSuccess = updateReplyTemplateResponse200 & {
-  headers: Headers;
-};
-export type updateReplyTemplateResponseError = updateReplyTemplateResponse422 & {
-  headers: Headers;
-};
+export type DeleteReplyTemplateMutationError = ErrorType<ErrorOut>;
+export type DeleteReplyTemplateMutationVariables = { templateId: number };
 
-export type updateReplyTemplateResponse =
-  updateReplyTemplateResponseSuccess | updateReplyTemplateResponseError;
+/**
+ * @summary Delete Reply Template
+ */
+export const useDeleteReplyTemplate = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteReplyTemplate>>,
+      TError,
+      DeleteReplyTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteReplyTemplate>>,
+  TError,
+  DeleteReplyTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteReplyTemplateMutationOptions(options), queryClient);
+};
 
 export const getUpdateReplyTemplateUrl = (templateId: number) => {
   return `/api/v1/reply-templates/${templateId}`;
@@ -3966,7 +8961,7 @@ export const updateReplyTemplate = async (
   templateId: number,
   replyTemplateIn: ReplyTemplateIn,
   options?: Parameters<typeof http>[1],
-): Promise<updateReplyTemplateResponse> => {
+): Promise<ActionResult> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -3986,7 +8981,7 @@ export const updateReplyTemplate = async (
     }
     return headers;
   };
-  return http<updateReplyTemplateResponse>(getUpdateReplyTemplateUrl(templateId), {
+  return http<ActionResult>(getUpdateReplyTemplateUrl(templateId), {
     ...options,
     method: "PUT",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -3994,24 +8989,73 @@ export const updateReplyTemplate = async (
   });
 };
 
-export type sandboxMessageResponse200 = {
-  data: SandboxTurnOut;
-  status: 200;
+export const getUpdateReplyTemplateMutationKey = () => ["updateReplyTemplate"] as const;
+
+export const getUpdateReplyTemplateMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateReplyTemplate>>,
+    TError,
+    UpdateReplyTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateReplyTemplate>>,
+  TError,
+  UpdateReplyTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateReplyTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateReplyTemplate>>,
+    UpdateReplyTemplateMutationVariables
+  > = (props) => {
+    const { templateId, data } = props ?? {};
+
+    return updateReplyTemplate(templateId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type sandboxMessageResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type UpdateReplyTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateReplyTemplate>>
+>;
+export type UpdateReplyTemplateMutationBody = ReplyTemplateIn;
+export type UpdateReplyTemplateMutationError = ErrorType<ErrorOut>;
+export type UpdateReplyTemplateMutationVariables = { templateId: number; data: ReplyTemplateIn };
 
-export type sandboxMessageResponseSuccess = sandboxMessageResponse200 & {
-  headers: Headers;
+/**
+ * @summary Update Reply Template
+ */
+export const useUpdateReplyTemplate = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateReplyTemplate>>,
+      TError,
+      UpdateReplyTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateReplyTemplate>>,
+  TError,
+  UpdateReplyTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateReplyTemplateMutationOptions(options), queryClient);
 };
-export type sandboxMessageResponseError = sandboxMessageResponse422 & {
-  headers: Headers;
-};
-
-export type sandboxMessageResponse = sandboxMessageResponseSuccess | sandboxMessageResponseError;
 
 export const getSandboxMessageUrl = () => {
   return `/api/v1/sandbox/messages`;
@@ -4027,7 +9071,7 @@ export const getSandboxMessageUrl = () => {
 export const sandboxMessage = async (
   sandboxMessageIn: SandboxMessageIn,
   options?: Parameters<typeof http>[1],
-): Promise<sandboxMessageResponse> => {
+): Promise<SandboxTurnOut> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -4047,7 +9091,7 @@ export const sandboxMessage = async (
     }
     return headers;
   };
-  return http<sandboxMessageResponse>(getSandboxMessageUrl(), {
+  return http<SandboxTurnOut>(getSandboxMessageUrl(), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -4055,24 +9099,71 @@ export const sandboxMessage = async (
   });
 };
 
-export type sandboxResetResponse204 = {
-  data: void;
-  status: 204;
+export const getSandboxMessageMutationKey = () => ["sandboxMessage"] as const;
+
+export const getSandboxMessageMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sandboxMessage>>,
+    TError,
+    SandboxMessageMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof sandboxMessage>>,
+  TError,
+  SandboxMessageMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSandboxMessageMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof sandboxMessage>>,
+    SandboxMessageMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return sandboxMessage(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type sandboxResetResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type SandboxMessageMutationResult = NonNullable<Awaited<ReturnType<typeof sandboxMessage>>>;
+export type SandboxMessageMutationBody = SandboxMessageIn;
+export type SandboxMessageMutationError = ErrorType<ErrorOut>;
+export type SandboxMessageMutationVariables = { data: SandboxMessageIn };
 
-export type sandboxResetResponseSuccess = sandboxResetResponse204 & {
-  headers: Headers;
+/**
+ * @summary Sandbox Message
+ */
+export const useSandboxMessage = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof sandboxMessage>>,
+      TError,
+      SandboxMessageMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof sandboxMessage>>,
+  TError,
+  SandboxMessageMutationVariables,
+  TContext
+> => {
+  return useMutation(getSandboxMessageMutationOptions(options), queryClient);
 };
-export type sandboxResetResponseError = sandboxResetResponse422 & {
-  headers: Headers;
-};
-
-export type sandboxResetResponse = sandboxResetResponseSuccess | sandboxResetResponseError;
 
 export const getSandboxResetUrl = () => {
   return `/api/v1/sandbox/reset`;
@@ -4082,34 +9173,52 @@ export const getSandboxResetUrl = () => {
  * «Начать заново»: тестовый диалог админа удаляется целиком.
  * @summary Sandbox Reset
  */
-export const sandboxReset = async (
-  options?: Parameters<typeof http>[1],
-): Promise<sandboxResetResponse> => {
-  return http<sandboxResetResponse>(getSandboxResetUrl(), {
+export const sandboxReset = async (options?: Parameters<typeof http>[1]): Promise<void> => {
+  return http<void>(getSandboxResetUrl(), {
     ...options,
     method: "POST",
   });
 };
 
-export type listServiceRequestsResponse200 = {
-  data: ServiceRequestItem[];
-  status: 200;
+export const getSandboxResetMutationKey = () => ["sandboxReset"] as const;
+
+export const getSandboxResetMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof sandboxReset>>, TError, void, TContext>;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof sandboxReset>>, TError, void, TContext> => {
+  const mutationKey = getSandboxResetMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof sandboxReset>>, void> = () => {
+    return sandboxReset(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type listServiceRequestsResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type SandboxResetMutationResult = NonNullable<Awaited<ReturnType<typeof sandboxReset>>>;
 
-export type listServiceRequestsResponseSuccess = listServiceRequestsResponse200 & {
-  headers: Headers;
-};
-export type listServiceRequestsResponseError = listServiceRequestsResponse422 & {
-  headers: Headers;
-};
+export type SandboxResetMutationError = ErrorType<ErrorOut>;
 
-export type listServiceRequestsResponse =
-  listServiceRequestsResponseSuccess | listServiceRequestsResponseError;
+/**
+ * @summary Sandbox Reset
+ */
+export const useSandboxReset = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof sandboxReset>>, TError, void, TContext>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof sandboxReset>>, TError, void, TContext> => {
+  return useMutation(getSandboxResetMutationOptions(options), queryClient);
+};
 
 export const getListServiceRequestsUrl = (params?: ListServiceRequestsParams) => {
   const normalizedParams = new URLSearchParams();
@@ -4134,32 +9243,128 @@ export const getListServiceRequestsUrl = (params?: ListServiceRequestsParams) =>
 export const listServiceRequests = async (
   params?: ListServiceRequestsParams,
   options?: Parameters<typeof http>[1],
-): Promise<listServiceRequestsResponse> => {
-  return http<listServiceRequestsResponse>(getListServiceRequestsUrl(params), {
+): Promise<ServiceRequestItem[]> => {
+  return http<ServiceRequestItem[]>(getListServiceRequestsUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export type closeServiceRequestResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getListServiceRequestsQueryKey = (params?: ListServiceRequestsParams) => {
+  return [`/api/v1/service-requests`, ...(params ? [params] : [])] as const;
 };
 
-export type closeServiceRequestResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getListServiceRequestsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listServiceRequests>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListServiceRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listServiceRequests>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListServiceRequestsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listServiceRequests>>> = ({ signal }) =>
+    listServiceRequests(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listServiceRequests>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type closeServiceRequestResponseSuccess = closeServiceRequestResponse200 & {
-  headers: Headers;
-};
-export type closeServiceRequestResponseError = closeServiceRequestResponse422 & {
-  headers: Headers;
-};
+export type ListServiceRequestsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listServiceRequests>>
+>;
+export type ListServiceRequestsQueryError = ErrorType<ErrorOut>;
 
-export type closeServiceRequestResponse =
-  closeServiceRequestResponseSuccess | closeServiceRequestResponseError;
+export function useListServiceRequests<
+  TData = Awaited<ReturnType<typeof listServiceRequests>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params: undefined | ListServiceRequestsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listServiceRequests>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listServiceRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listServiceRequests>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListServiceRequests<
+  TData = Awaited<ReturnType<typeof listServiceRequests>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListServiceRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listServiceRequests>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listServiceRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listServiceRequests>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListServiceRequests<
+  TData = Awaited<ReturnType<typeof listServiceRequests>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListServiceRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listServiceRequests>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List Service Requests
+ */
+
+export function useListServiceRequests<
+  TData = Awaited<ReturnType<typeof listServiceRequests>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListServiceRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listServiceRequests>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListServiceRequestsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getCloseServiceRequestUrl = (requestId: number) => {
   return `/api/v1/service-requests/${requestId}/close`;
@@ -4172,7 +9377,7 @@ export const closeServiceRequest = async (
   requestId: number,
   serviceRequestClose: ServiceRequestClose,
   options?: Parameters<typeof http>[1],
-): Promise<closeServiceRequestResponse> => {
+): Promise<ActionResult> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -4192,7 +9397,7 @@ export const closeServiceRequest = async (
     }
     return headers;
   };
-  return http<closeServiceRequestResponse>(getCloseServiceRequestUrl(requestId), {
+  return http<ActionResult>(getCloseServiceRequestUrl(requestId), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -4200,24 +9405,73 @@ export const closeServiceRequest = async (
   });
 };
 
-export type getSettingsResponse200 = {
-  data: SettingsResponse;
-  status: 200;
+export const getCloseServiceRequestMutationKey = () => ["closeServiceRequest"] as const;
+
+export const getCloseServiceRequestMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof closeServiceRequest>>,
+    TError,
+    CloseServiceRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof closeServiceRequest>>,
+  TError,
+  CloseServiceRequestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCloseServiceRequestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof closeServiceRequest>>,
+    CloseServiceRequestMutationVariables
+  > = (props) => {
+    const { requestId, data } = props ?? {};
+
+    return closeServiceRequest(requestId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type getSettingsResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type CloseServiceRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof closeServiceRequest>>
+>;
+export type CloseServiceRequestMutationBody = ServiceRequestClose;
+export type CloseServiceRequestMutationError = ErrorType<ErrorOut>;
+export type CloseServiceRequestMutationVariables = { requestId: number; data: ServiceRequestClose };
 
-export type getSettingsResponseSuccess = getSettingsResponse200 & {
-  headers: Headers;
+/**
+ * @summary Close Service Request
+ */
+export const useCloseServiceRequest = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof closeServiceRequest>>,
+      TError,
+      CloseServiceRequestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof closeServiceRequest>>,
+  TError,
+  CloseServiceRequestMutationVariables,
+  TContext
+> => {
+  return useMutation(getCloseServiceRequestMutationOptions(options), queryClient);
 };
-export type getSettingsResponseError = getSettingsResponse422 & {
-  headers: Headers;
-};
-
-export type getSettingsResponse = getSettingsResponseSuccess | getSettingsResponseError;
 
 export const getGetSettingsUrl = () => {
   return `/api/v1/settings`;
@@ -4228,32 +9482,109 @@ export const getGetSettingsUrl = () => {
  */
 export const getSettings = async (
   options?: Parameters<typeof http>[1],
-): Promise<getSettingsResponse> => {
-  return http<getSettingsResponse>(getGetSettingsUrl(), {
+): Promise<SettingsResponse> => {
+  return http<SettingsResponse>(getGetSettingsUrl(), {
     ...options,
     method: "GET",
   });
 };
 
-export type escalationDryRunResponse200 = {
-  data: DryRunResponse;
-  status: 200;
+export const getGetSettingsQueryKey = () => {
+  return [`/api/v1/settings`] as const;
 };
 
-export type escalationDryRunResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getGetSettingsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSettings>>,
+  TError = ErrorType<ErrorOut>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSettings>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetSettingsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getSettings>>> = ({ signal }) =>
+    getSettings({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getSettings>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type escalationDryRunResponseSuccess = escalationDryRunResponse200 & {
-  headers: Headers;
-};
-export type escalationDryRunResponseError = escalationDryRunResponse422 & {
-  headers: Headers;
-};
+export type GetSettingsQueryResult = NonNullable<Awaited<ReturnType<typeof getSettings>>>;
+export type GetSettingsQueryError = ErrorType<ErrorOut>;
 
-export type escalationDryRunResponse =
-  escalationDryRunResponseSuccess | escalationDryRunResponseError;
+export function useGetSettings<
+  TData = Awaited<ReturnType<typeof getSettings>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSettings>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSettings>>,
+          TError,
+          Awaited<ReturnType<typeof getSettings>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSettings<
+  TData = Awaited<ReturnType<typeof getSettings>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSettings>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSettings>>,
+          TError,
+          Awaited<ReturnType<typeof getSettings>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSettings<
+  TData = Awaited<ReturnType<typeof getSettings>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSettings>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get Settings
+ */
+
+export function useGetSettings<
+  TData = Awaited<ReturnType<typeof getSettings>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSettings>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetSettingsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getEscalationDryRunUrl = () => {
   return `/api/v1/settings/escalation/dry-run`;
@@ -4265,7 +9596,7 @@ export const getEscalationDryRunUrl = () => {
 export const escalationDryRun = async (
   escalationSettings: EscalationSettings,
   options?: Parameters<typeof http>[1],
-): Promise<escalationDryRunResponse> => {
+): Promise<DryRunResponse> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -4285,7 +9616,7 @@ export const escalationDryRun = async (
     }
     return headers;
   };
-  return http<escalationDryRunResponse>(getEscalationDryRunUrl(), {
+  return http<DryRunResponse>(getEscalationDryRunUrl(), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -4293,24 +9624,73 @@ export const escalationDryRun = async (
   });
 };
 
-export type putSettingResponse200 = {
-  data: ActionResult;
-  status: 200;
+export const getEscalationDryRunMutationKey = () => ["escalationDryRun"] as const;
+
+export const getEscalationDryRunMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof escalationDryRun>>,
+    TError,
+    EscalationDryRunMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof escalationDryRun>>,
+  TError,
+  EscalationDryRunMutationVariables,
+  TContext
+> => {
+  const mutationKey = getEscalationDryRunMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof escalationDryRun>>,
+    EscalationDryRunMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return escalationDryRun(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type putSettingResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type EscalationDryRunMutationResult = NonNullable<
+  Awaited<ReturnType<typeof escalationDryRun>>
+>;
+export type EscalationDryRunMutationBody = EscalationSettings;
+export type EscalationDryRunMutationError = ErrorType<ErrorOut>;
+export type EscalationDryRunMutationVariables = { data: EscalationSettings };
 
-export type putSettingResponseSuccess = putSettingResponse200 & {
-  headers: Headers;
+/**
+ * @summary Escalation Dry Run
+ */
+export const useEscalationDryRun = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof escalationDryRun>>,
+      TError,
+      EscalationDryRunMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof escalationDryRun>>,
+  TError,
+  EscalationDryRunMutationVariables,
+  TContext
+> => {
+  return useMutation(getEscalationDryRunMutationOptions(options), queryClient);
 };
-export type putSettingResponseError = putSettingResponse422 & {
-  headers: Headers;
-};
-
-export type putSettingResponse = putSettingResponseSuccess | putSettingResponseError;
 
 export const getPutSettingUrl = (key: string) => {
   return `/api/v1/settings/${key}`;
@@ -4323,7 +9703,7 @@ export const putSetting = async (
   key: string,
   putSettingBody: PutSettingBody,
   options?: Parameters<typeof http>[1],
-): Promise<putSettingResponse> => {
+): Promise<ActionResult> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -4343,7 +9723,7 @@ export const putSetting = async (
     }
     return headers;
   };
-  return http<putSettingResponse>(getPutSettingUrl(key), {
+  return http<ActionResult>(getPutSettingUrl(key), {
     ...options,
     method: "PUT",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -4351,25 +9731,71 @@ export const putSetting = async (
   });
 };
 
-export type createFirstAdminResponse200 = {
-  data: TokenResponse;
-  status: 200;
+export const getPutSettingMutationKey = () => ["putSetting"] as const;
+
+export const getPutSettingMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof putSetting>>,
+    TError,
+    PutSettingMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof putSetting>>,
+  TError,
+  PutSettingMutationVariables,
+  TContext
+> => {
+  const mutationKey = getPutSettingMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof putSetting>>,
+    PutSettingMutationVariables
+  > = (props) => {
+    const { key, data } = props ?? {};
+
+    return putSetting(key, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type createFirstAdminResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type PutSettingMutationResult = NonNullable<Awaited<ReturnType<typeof putSetting>>>;
+export type PutSettingMutationBody = PutSettingBody;
+export type PutSettingMutationError = ErrorType<ErrorOut>;
+export type PutSettingMutationVariables = { key: string; data: PutSettingBody };
 
-export type createFirstAdminResponseSuccess = createFirstAdminResponse200 & {
-  headers: Headers;
+/**
+ * @summary Put Setting
+ */
+export const usePutSetting = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof putSetting>>,
+      TError,
+      PutSettingMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof putSetting>>,
+  TError,
+  PutSettingMutationVariables,
+  TContext
+> => {
+  return useMutation(getPutSettingMutationOptions(options), queryClient);
 };
-export type createFirstAdminResponseError = createFirstAdminResponse422 & {
-  headers: Headers;
-};
-
-export type createFirstAdminResponse =
-  createFirstAdminResponseSuccess | createFirstAdminResponseError;
 
 export const getCreateFirstAdminUrl = () => {
   return `/api/v1/setup/admin`;
@@ -4385,7 +9811,7 @@ export const getCreateFirstAdminUrl = () => {
 export const createFirstAdmin = async (
   setupAdminRequest: SetupAdminRequest,
   options?: Parameters<typeof http>[1],
-): Promise<createFirstAdminResponse> => {
+): Promise<TokenResponse> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -4405,7 +9831,7 @@ export const createFirstAdmin = async (
     }
     return headers;
   };
-  return http<createFirstAdminResponse>(getCreateFirstAdminUrl(), {
+  return http<TokenResponse>(getCreateFirstAdminUrl(), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -4413,25 +9839,73 @@ export const createFirstAdmin = async (
   });
 };
 
-export type getSetupChecklistResponse200 = {
-  data: SetupChecklist;
-  status: 200;
+export const getCreateFirstAdminMutationKey = () => ["createFirstAdmin"] as const;
+
+export const getCreateFirstAdminMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createFirstAdmin>>,
+    TError,
+    CreateFirstAdminMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createFirstAdmin>>,
+  TError,
+  CreateFirstAdminMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateFirstAdminMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createFirstAdmin>>,
+    CreateFirstAdminMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createFirstAdmin(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type getSetupChecklistResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type CreateFirstAdminMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createFirstAdmin>>
+>;
+export type CreateFirstAdminMutationBody = SetupAdminRequest;
+export type CreateFirstAdminMutationError = ErrorType<ErrorOut>;
+export type CreateFirstAdminMutationVariables = { data: SetupAdminRequest };
 
-export type getSetupChecklistResponseSuccess = getSetupChecklistResponse200 & {
-  headers: Headers;
+/**
+ * @summary Create First Admin
+ */
+export const useCreateFirstAdmin = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createFirstAdmin>>,
+      TError,
+      CreateFirstAdminMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createFirstAdmin>>,
+  TError,
+  CreateFirstAdminMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateFirstAdminMutationOptions(options), queryClient);
 };
-export type getSetupChecklistResponseError = getSetupChecklistResponse422 & {
-  headers: Headers;
-};
-
-export type getSetupChecklistResponse =
-  getSetupChecklistResponseSuccess | getSetupChecklistResponseError;
 
 export const getGetSetupChecklistUrl = () => {
   return `/api/v1/setup/checklist`;
@@ -4445,31 +9919,111 @@ export const getGetSetupChecklistUrl = () => {
  */
 export const getSetupChecklist = async (
   options?: Parameters<typeof http>[1],
-): Promise<getSetupChecklistResponse> => {
-  return http<getSetupChecklistResponse>(getGetSetupChecklistUrl(), {
+): Promise<SetupChecklist> => {
+  return http<SetupChecklist>(getGetSetupChecklistUrl(), {
     ...options,
     method: "GET",
   });
 };
 
-export type getSetupStateResponse200 = {
-  data: SetupState;
-  status: 200;
+export const getGetSetupChecklistQueryKey = () => {
+  return [`/api/v1/setup/checklist`] as const;
 };
 
-export type getSetupStateResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getGetSetupChecklistQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSetupChecklist>>,
+  TError = ErrorType<ErrorOut>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSetupChecklist>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetSetupChecklistQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getSetupChecklist>>> = ({ signal }) =>
+    getSetupChecklist({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getSetupChecklist>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type getSetupStateResponseSuccess = getSetupStateResponse200 & {
-  headers: Headers;
-};
-export type getSetupStateResponseError = getSetupStateResponse422 & {
-  headers: Headers;
-};
+export type GetSetupChecklistQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getSetupChecklist>>
+>;
+export type GetSetupChecklistQueryError = ErrorType<ErrorOut>;
 
-export type getSetupStateResponse = getSetupStateResponseSuccess | getSetupStateResponseError;
+export function useGetSetupChecklist<
+  TData = Awaited<ReturnType<typeof getSetupChecklist>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSetupChecklist>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSetupChecklist>>,
+          TError,
+          Awaited<ReturnType<typeof getSetupChecklist>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSetupChecklist<
+  TData = Awaited<ReturnType<typeof getSetupChecklist>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSetupChecklist>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSetupChecklist>>,
+          TError,
+          Awaited<ReturnType<typeof getSetupChecklist>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSetupChecklist<
+  TData = Awaited<ReturnType<typeof getSetupChecklist>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSetupChecklist>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get Setup Checklist
+ */
+
+export function useGetSetupChecklist<
+  TData = Awaited<ReturnType<typeof getSetupChecklist>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSetupChecklist>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetSetupChecklistQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getGetSetupStateUrl = () => {
   return `/api/v1/setup/state`;
@@ -4479,33 +10033,109 @@ export const getGetSetupStateUrl = () => {
  * Публично: нужен ли мастер первого запуска (в CRM ещё нет активного администратора).
  * @summary Get Setup State
  */
-export const getSetupState = async (
-  options?: Parameters<typeof http>[1],
-): Promise<getSetupStateResponse> => {
-  return http<getSetupStateResponse>(getGetSetupStateUrl(), {
+export const getSetupState = async (options?: Parameters<typeof http>[1]): Promise<SetupState> => {
+  return http<SetupState>(getGetSetupStateUrl(), {
     ...options,
     method: "GET",
   });
 };
 
-export type getSpendResponse200 = {
-  data: SpendReport;
-  status: 200;
+export const getGetSetupStateQueryKey = () => {
+  return [`/api/v1/setup/state`] as const;
 };
 
-export type getSpendResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getGetSetupStateQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSetupState>>,
+  TError = ErrorType<ErrorOut>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSetupState>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetSetupStateQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getSetupState>>> = ({ signal }) =>
+    getSetupState({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getSetupState>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type getSpendResponseSuccess = getSpendResponse200 & {
-  headers: Headers;
-};
-export type getSpendResponseError = getSpendResponse422 & {
-  headers: Headers;
-};
+export type GetSetupStateQueryResult = NonNullable<Awaited<ReturnType<typeof getSetupState>>>;
+export type GetSetupStateQueryError = ErrorType<ErrorOut>;
 
-export type getSpendResponse = getSpendResponseSuccess | getSpendResponseError;
+export function useGetSetupState<
+  TData = Awaited<ReturnType<typeof getSetupState>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSetupState>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSetupState>>,
+          TError,
+          Awaited<ReturnType<typeof getSetupState>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSetupState<
+  TData = Awaited<ReturnType<typeof getSetupState>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSetupState>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSetupState>>,
+          TError,
+          Awaited<ReturnType<typeof getSetupState>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSetupState<
+  TData = Awaited<ReturnType<typeof getSetupState>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSetupState>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get Setup State
+ */
+
+export function useGetSetupState<
+  TData = Awaited<ReturnType<typeof getSetupState>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSetupState>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetSetupStateQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getGetSpendUrl = (params?: GetSpendParams) => {
   const normalizedParams = new URLSearchParams();
@@ -4527,31 +10157,116 @@ export const getGetSpendUrl = (params?: GetSpendParams) => {
 export const getSpend = async (
   params?: GetSpendParams,
   options?: Parameters<typeof http>[1],
-): Promise<getSpendResponse> => {
-  return http<getSpendResponse>(getGetSpendUrl(params), {
+): Promise<SpendReport> => {
+  return http<SpendReport>(getGetSpendUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export type streamResponse200 = {
-  data: void;
-  status: 200;
+export const getGetSpendQueryKey = (params?: GetSpendParams) => {
+  return [`/api/v1/spend`, ...(params ? [params] : [])] as const;
 };
 
-export type streamResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getGetSpendQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSpend>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: GetSpendParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSpend>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetSpendQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getSpend>>> = ({ signal }) =>
+    getSpend(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getSpend>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type streamResponseSuccess = streamResponse200 & {
-  headers: Headers;
-};
-export type streamResponseError = streamResponse422 & {
-  headers: Headers;
-};
+export type GetSpendQueryResult = NonNullable<Awaited<ReturnType<typeof getSpend>>>;
+export type GetSpendQueryError = ErrorType<ErrorOut>;
 
-export type streamResponse = streamResponseSuccess | streamResponseError;
+export function useGetSpend<
+  TData = Awaited<ReturnType<typeof getSpend>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params: undefined | GetSpendParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSpend>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSpend>>,
+          TError,
+          Awaited<ReturnType<typeof getSpend>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSpend<
+  TData = Awaited<ReturnType<typeof getSpend>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: GetSpendParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSpend>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSpend>>,
+          TError,
+          Awaited<ReturnType<typeof getSpend>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSpend<
+  TData = Awaited<ReturnType<typeof getSpend>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: GetSpendParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSpend>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get Spend
+ */
+
+export function useGetSpend<
+  TData = Awaited<ReturnType<typeof getSpend>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: GetSpendParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSpend>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetSpendQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getStreamUrl = () => {
   return `/api/v1/stream`;
@@ -4560,31 +10275,97 @@ export const getStreamUrl = () => {
 /**
  * @summary Stream
  */
-export const stream = async (options?: Parameters<typeof http>[1]): Promise<streamResponse> => {
-  return http<streamResponse>(getStreamUrl(), {
+export const stream = async (options?: Parameters<typeof http>[1]): Promise<void> => {
+  return http<void>(getStreamUrl(), {
     ...options,
     method: "GET",
   });
 };
 
-export type listBackupsResponse200 = {
-  data: BackupsOut;
-  status: 200;
+export const getStreamQueryKey = () => {
+  return [`/api/v1/stream`] as const;
 };
 
-export type listBackupsResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getStreamQueryOptions = <
+  TData = Awaited<ReturnType<typeof stream>>,
+  TError = ErrorType<ErrorOut>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof stream>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getStreamQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof stream>>> = ({ signal }) =>
+    stream({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof stream>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type listBackupsResponseSuccess = listBackupsResponse200 & {
-  headers: Headers;
-};
-export type listBackupsResponseError = listBackupsResponse422 & {
-  headers: Headers;
-};
+export type StreamQueryResult = NonNullable<Awaited<ReturnType<typeof stream>>>;
+export type StreamQueryError = ErrorType<ErrorOut>;
 
-export type listBackupsResponse = listBackupsResponseSuccess | listBackupsResponseError;
+export function useStream<TData = Awaited<ReturnType<typeof stream>>, TError = ErrorType<ErrorOut>>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof stream>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof stream>>,
+          TError,
+          Awaited<ReturnType<typeof stream>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useStream<TData = Awaited<ReturnType<typeof stream>>, TError = ErrorType<ErrorOut>>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof stream>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof stream>>,
+          TError,
+          Awaited<ReturnType<typeof stream>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useStream<TData = Awaited<ReturnType<typeof stream>>, TError = ErrorType<ErrorOut>>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof stream>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Stream
+ */
+
+export function useStream<TData = Awaited<ReturnType<typeof stream>>, TError = ErrorType<ErrorOut>>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof stream>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getStreamQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getListBackupsUrl = () => {
   return `/api/v1/system/backups`;
@@ -4594,33 +10375,109 @@ export const getListBackupsUrl = () => {
  * Последние бэкапы из тома `backups` (каталоги `<UTC-штамп>`), время последнего успеха.
  * @summary List Backups
  */
-export const listBackups = async (
-  options?: Parameters<typeof http>[1],
-): Promise<listBackupsResponse> => {
-  return http<listBackupsResponse>(getListBackupsUrl(), {
+export const listBackups = async (options?: Parameters<typeof http>[1]): Promise<BackupsOut> => {
+  return http<BackupsOut>(getListBackupsUrl(), {
     ...options,
     method: "GET",
   });
 };
 
-export type requestBackupResponse202 = {
-  data: BackupsOut;
-  status: 202;
+export const getListBackupsQueryKey = () => {
+  return [`/api/v1/system/backups`] as const;
 };
 
-export type requestBackupResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getListBackupsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listBackups>>,
+  TError = ErrorType<ErrorOut>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listBackups>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListBackupsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listBackups>>> = ({ signal }) =>
+    listBackups({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listBackups>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type requestBackupResponseSuccess = requestBackupResponse202 & {
-  headers: Headers;
-};
-export type requestBackupResponseError = requestBackupResponse422 & {
-  headers: Headers;
-};
+export type ListBackupsQueryResult = NonNullable<Awaited<ReturnType<typeof listBackups>>>;
+export type ListBackupsQueryError = ErrorType<ErrorOut>;
 
-export type requestBackupResponse = requestBackupResponseSuccess | requestBackupResponseError;
+export function useListBackups<
+  TData = Awaited<ReturnType<typeof listBackups>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listBackups>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listBackups>>,
+          TError,
+          Awaited<ReturnType<typeof listBackups>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListBackups<
+  TData = Awaited<ReturnType<typeof listBackups>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listBackups>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listBackups>>,
+          TError,
+          Awaited<ReturnType<typeof listBackups>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListBackups<
+  TData = Awaited<ReturnType<typeof listBackups>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listBackups>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List Backups
+ */
+
+export function useListBackups<
+  TData = Awaited<ReturnType<typeof listBackups>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listBackups>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListBackupsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getRequestBackupUrl = () => {
   return `/api/v1/system/backups`;
@@ -4633,33 +10490,57 @@ export const getRequestBackupUrl = () => {
  * запрос, который сервис не забрал за 2 мин, ставится заново.
  * @summary Request Backup
  */
-export const requestBackup = async (
-  options?: Parameters<typeof http>[1],
-): Promise<requestBackupResponse> => {
-  return http<requestBackupResponse>(getRequestBackupUrl(), {
+export const requestBackup = async (options?: Parameters<typeof http>[1]): Promise<BackupsOut> => {
+  return http<BackupsOut>(getRequestBackupUrl(), {
     ...options,
     method: "POST",
   });
 };
 
-export type systemStatusResponse200 = {
-  data: SystemStatusOut;
-  status: 200;
+export const getRequestBackupMutationKey = () => ["requestBackup"] as const;
+
+export const getRequestBackupMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof requestBackup>>, TError, void, TContext>;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof requestBackup>>, TError, void, TContext> => {
+  const mutationKey = getRequestBackupMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestBackup>>, void> = () => {
+    return requestBackup(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type systemStatusResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type RequestBackupMutationResult = NonNullable<Awaited<ReturnType<typeof requestBackup>>>;
 
-export type systemStatusResponseSuccess = systemStatusResponse200 & {
-  headers: Headers;
-};
-export type systemStatusResponseError = systemStatusResponse422 & {
-  headers: Headers;
-};
+export type RequestBackupMutationError = ErrorType<ErrorOut>;
 
-export type systemStatusResponse = systemStatusResponseSuccess | systemStatusResponseError;
+/**
+ * @summary Request Backup
+ */
+export const useRequestBackup = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof requestBackup>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof requestBackup>>, TError, void, TContext> => {
+  return useMutation(getRequestBackupMutationOptions(options), queryClient);
+};
 
 export const getSystemStatusUrl = () => {
   return `/api/v1/system/status`;
@@ -4673,31 +10554,109 @@ export const getSystemStatusUrl = () => {
  */
 export const systemStatus = async (
   options?: Parameters<typeof http>[1],
-): Promise<systemStatusResponse> => {
-  return http<systemStatusResponse>(getSystemStatusUrl(), {
+): Promise<SystemStatusOut> => {
+  return http<SystemStatusOut>(getSystemStatusUrl(), {
     ...options,
     method: "GET",
   });
 };
 
-export type teamResponse200 = {
-  data: TeamMember[];
-  status: 200;
+export const getSystemStatusQueryKey = () => {
+  return [`/api/v1/system/status`] as const;
 };
 
-export type teamResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getSystemStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof systemStatus>>,
+  TError = ErrorType<ErrorOut>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof systemStatus>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getSystemStatusQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof systemStatus>>> = ({ signal }) =>
+    systemStatus({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof systemStatus>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type teamResponseSuccess = teamResponse200 & {
-  headers: Headers;
-};
-export type teamResponseError = teamResponse422 & {
-  headers: Headers;
-};
+export type SystemStatusQueryResult = NonNullable<Awaited<ReturnType<typeof systemStatus>>>;
+export type SystemStatusQueryError = ErrorType<ErrorOut>;
 
-export type teamResponse = teamResponseSuccess | teamResponseError;
+export function useSystemStatus<
+  TData = Awaited<ReturnType<typeof systemStatus>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof systemStatus>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof systemStatus>>,
+          TError,
+          Awaited<ReturnType<typeof systemStatus>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSystemStatus<
+  TData = Awaited<ReturnType<typeof systemStatus>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof systemStatus>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof systemStatus>>,
+          TError,
+          Awaited<ReturnType<typeof systemStatus>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSystemStatus<
+  TData = Awaited<ReturnType<typeof systemStatus>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof systemStatus>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary System Status
+ */
+
+export function useSystemStatus<
+  TData = Awaited<ReturnType<typeof systemStatus>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof systemStatus>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getSystemStatusQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getTeamUrl = () => {
   return `/api/v1/team`;
@@ -4707,31 +10666,97 @@ export const getTeamUrl = () => {
  * Активные менеджеры и админы: кому передать лида, чьё имя показать (без email и ролей).
  * @summary Team
  */
-export const team = async (options?: Parameters<typeof http>[1]): Promise<teamResponse> => {
-  return http<teamResponse>(getTeamUrl(), {
+export const team = async (options?: Parameters<typeof http>[1]): Promise<TeamMember[]> => {
+  return http<TeamMember[]>(getTeamUrl(), {
     ...options,
     method: "GET",
   });
 };
 
-export type listUsersResponse200 = {
-  data: UserOut[];
-  status: 200;
+export const getTeamQueryKey = () => {
+  return [`/api/v1/team`] as const;
 };
 
-export type listUsersResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getTeamQueryOptions = <
+  TData = Awaited<ReturnType<typeof team>>,
+  TError = ErrorType<ErrorOut>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof team>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getTeamQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof team>>> = ({ signal }) =>
+    team({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof team>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type listUsersResponseSuccess = listUsersResponse200 & {
-  headers: Headers;
-};
-export type listUsersResponseError = listUsersResponse422 & {
-  headers: Headers;
-};
+export type TeamQueryResult = NonNullable<Awaited<ReturnType<typeof team>>>;
+export type TeamQueryError = ErrorType<ErrorOut>;
 
-export type listUsersResponse = listUsersResponseSuccess | listUsersResponseError;
+export function useTeam<TData = Awaited<ReturnType<typeof team>>, TError = ErrorType<ErrorOut>>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof team>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof team>>,
+          TError,
+          Awaited<ReturnType<typeof team>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useTeam<TData = Awaited<ReturnType<typeof team>>, TError = ErrorType<ErrorOut>>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof team>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof team>>,
+          TError,
+          Awaited<ReturnType<typeof team>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useTeam<TData = Awaited<ReturnType<typeof team>>, TError = ErrorType<ErrorOut>>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof team>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Team
+ */
+
+export function useTeam<TData = Awaited<ReturnType<typeof team>>, TError = ErrorType<ErrorOut>>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof team>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getTeamQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getListUsersUrl = () => {
   return `/api/v1/users`;
@@ -4740,33 +10765,109 @@ export const getListUsersUrl = () => {
 /**
  * @summary List Users
  */
-export const listUsers = async (
-  options?: Parameters<typeof http>[1],
-): Promise<listUsersResponse> => {
-  return http<listUsersResponse>(getListUsersUrl(), {
+export const listUsers = async (options?: Parameters<typeof http>[1]): Promise<UserOut[]> => {
+  return http<UserOut[]>(getListUsersUrl(), {
     ...options,
     method: "GET",
   });
 };
 
-export type createUserResponse201 = {
-  data: UserCreated;
-  status: 201;
+export const getListUsersQueryKey = () => {
+  return [`/api/v1/users`] as const;
 };
 
-export type createUserResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getListUsersQueryOptions = <
+  TData = Awaited<ReturnType<typeof listUsers>>,
+  TError = ErrorType<ErrorOut>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListUsersQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listUsers>>> = ({ signal }) =>
+    listUsers({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listUsers>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type createUserResponseSuccess = createUserResponse201 & {
-  headers: Headers;
-};
-export type createUserResponseError = createUserResponse422 & {
-  headers: Headers;
-};
+export type ListUsersQueryResult = NonNullable<Awaited<ReturnType<typeof listUsers>>>;
+export type ListUsersQueryError = ErrorType<ErrorOut>;
 
-export type createUserResponse = createUserResponseSuccess | createUserResponseError;
+export function useListUsers<
+  TData = Awaited<ReturnType<typeof listUsers>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listUsers>>,
+          TError,
+          Awaited<ReturnType<typeof listUsers>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListUsers<
+  TData = Awaited<ReturnType<typeof listUsers>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listUsers>>,
+          TError,
+          Awaited<ReturnType<typeof listUsers>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListUsers<
+  TData = Awaited<ReturnType<typeof listUsers>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List Users
+ */
+
+export function useListUsers<
+  TData = Awaited<ReturnType<typeof listUsers>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListUsersQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getCreateUserUrl = () => {
   return `/api/v1/users`;
@@ -4778,7 +10879,7 @@ export const getCreateUserUrl = () => {
 export const createUser = async (
   userCreate: UserCreate,
   options?: Parameters<typeof http>[1],
-): Promise<createUserResponse> => {
+): Promise<UserCreated> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -4798,7 +10899,7 @@ export const createUser = async (
     }
     return headers;
   };
-  return http<createUserResponse>(getCreateUserUrl(), {
+  return http<UserCreated>(getCreateUserUrl(), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -4806,24 +10907,71 @@ export const createUser = async (
   });
 };
 
-export type getUserResponse200 = {
-  data: UserOut;
-  status: 200;
+export const getCreateUserMutationKey = () => ["createUser"] as const;
+
+export const getCreateUserMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createUser>>,
+    TError,
+    CreateUserMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createUser>>,
+  TError,
+  CreateUserMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateUserMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createUser>>,
+    CreateUserMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createUser(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type getUserResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type CreateUserMutationResult = NonNullable<Awaited<ReturnType<typeof createUser>>>;
+export type CreateUserMutationBody = UserCreate;
+export type CreateUserMutationError = ErrorType<ErrorOut>;
+export type CreateUserMutationVariables = { data: UserCreate };
 
-export type getUserResponseSuccess = getUserResponse200 & {
-  headers: Headers;
+/**
+ * @summary Create User
+ */
+export const useCreateUser = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createUser>>,
+      TError,
+      CreateUserMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createUser>>,
+  TError,
+  CreateUserMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateUserMutationOptions(options), queryClient);
 };
-export type getUserResponseError = getUserResponse422 & {
-  headers: Headers;
-};
-
-export type getUserResponse = getUserResponseSuccess | getUserResponseError;
 
 export const getGetUserUrl = (userId: number) => {
   return `/api/v1/users/${userId}`;
@@ -4835,31 +10983,119 @@ export const getGetUserUrl = (userId: number) => {
 export const getUser = async (
   userId: number,
   options?: Parameters<typeof http>[1],
-): Promise<getUserResponse> => {
-  return http<getUserResponse>(getGetUserUrl(userId), {
+): Promise<UserOut> => {
+  return http<UserOut>(getGetUserUrl(userId), {
     ...options,
     method: "GET",
   });
 };
 
-export type updateUserResponse200 = {
-  data: UserOut;
-  status: 200;
+export const getGetUserQueryKey = (userId: number) => {
+  return [`/api/v1/users/${userId}`] as const;
 };
 
-export type updateUserResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getGetUserQueryOptions = <
+  TData = Awaited<ReturnType<typeof getUser>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  userId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getUser>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetUserQueryKey(userId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getUser>>> = ({ signal }) =>
+    getUser(userId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: userId !== null && userId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getUser>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
 };
 
-export type updateUserResponseSuccess = updateUserResponse200 & {
-  headers: Headers;
-};
-export type updateUserResponseError = updateUserResponse422 & {
-  headers: Headers;
-};
+export type GetUserQueryResult = NonNullable<Awaited<ReturnType<typeof getUser>>>;
+export type GetUserQueryError = ErrorType<ErrorOut>;
 
-export type updateUserResponse = updateUserResponseSuccess | updateUserResponseError;
+export function useGetUser<
+  TData = Awaited<ReturnType<typeof getUser>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  userId: number,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getUser>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUser>>,
+          TError,
+          Awaited<ReturnType<typeof getUser>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetUser<
+  TData = Awaited<ReturnType<typeof getUser>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  userId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getUser>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getUser>>,
+          TError,
+          Awaited<ReturnType<typeof getUser>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetUser<
+  TData = Awaited<ReturnType<typeof getUser>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  userId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getUser>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get User
+ */
+
+export function useGetUser<
+  TData = Awaited<ReturnType<typeof getUser>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  userId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getUser>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetUserQueryOptions(userId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getUpdateUserUrl = (userId: number) => {
   return `/api/v1/users/${userId}`;
@@ -4872,7 +11108,7 @@ export const updateUser = async (
   userId: number,
   userUpdate: UserUpdate,
   options?: Parameters<typeof http>[1],
-): Promise<updateUserResponse> => {
+): Promise<UserOut> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -4892,7 +11128,7 @@ export const updateUser = async (
     }
     return headers;
   };
-  return http<updateUserResponse>(getUpdateUserUrl(userId), {
+  return http<UserOut>(getUpdateUserUrl(userId), {
     ...options,
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -4900,24 +11136,71 @@ export const updateUser = async (
   });
 };
 
-export type resetPasswordResponse200 = {
-  data: PasswordReset;
-  status: 200;
+export const getUpdateUserMutationKey = () => ["updateUser"] as const;
+
+export const getUpdateUserMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateUser>>,
+    TError,
+    UpdateUserMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateUser>>,
+  TError,
+  UpdateUserMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateUserMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateUser>>,
+    UpdateUserMutationVariables
+  > = (props) => {
+    const { userId, data } = props ?? {};
+
+    return updateUser(userId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type resetPasswordResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type UpdateUserMutationResult = NonNullable<Awaited<ReturnType<typeof updateUser>>>;
+export type UpdateUserMutationBody = UserUpdate;
+export type UpdateUserMutationError = ErrorType<ErrorOut>;
+export type UpdateUserMutationVariables = { userId: number; data: UserUpdate };
 
-export type resetPasswordResponseSuccess = resetPasswordResponse200 & {
-  headers: Headers;
+/**
+ * @summary Update User
+ */
+export const useUpdateUser = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateUser>>,
+      TError,
+      UpdateUserMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateUser>>,
+  TError,
+  UpdateUserMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateUserMutationOptions(options), queryClient);
 };
-export type resetPasswordResponseError = resetPasswordResponse422 & {
-  headers: Headers;
-};
-
-export type resetPasswordResponse = resetPasswordResponseSuccess | resetPasswordResponseError;
 
 export const getResetPasswordUrl = (userId: number) => {
   return `/api/v1/users/${userId}/reset-password`;
@@ -4929,31 +11212,78 @@ export const getResetPasswordUrl = (userId: number) => {
 export const resetPassword = async (
   userId: number,
   options?: Parameters<typeof http>[1],
-): Promise<resetPasswordResponse> => {
-  return http<resetPasswordResponse>(getResetPasswordUrl(userId), {
+): Promise<PasswordReset> => {
+  return http<PasswordReset>(getResetPasswordUrl(userId), {
     ...options,
     method: "POST",
   });
 };
 
-export type healthResponse200 = {
-  data: HealthResponse;
-  status: 200;
+export const getResetPasswordMutationKey = () => ["resetPassword"] as const;
+
+export const getResetPasswordMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resetPassword>>,
+    TError,
+    ResetPasswordMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resetPassword>>,
+  TError,
+  ResetPasswordMutationVariables,
+  TContext
+> => {
+  const mutationKey = getResetPasswordMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resetPassword>>,
+    ResetPasswordMutationVariables
+  > = (props) => {
+    const { userId } = props ?? {};
+
+    return resetPassword(userId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
 };
 
-export type healthResponse422 = {
-  data: ErrorOut;
-  status: 422;
-};
+export type ResetPasswordMutationResult = NonNullable<Awaited<ReturnType<typeof resetPassword>>>;
 
-export type healthResponseSuccess = healthResponse200 & {
-  headers: Headers;
-};
-export type healthResponseError = healthResponse422 & {
-  headers: Headers;
-};
+export type ResetPasswordMutationError = ErrorType<ErrorOut>;
+export type ResetPasswordMutationVariables = { userId: number };
 
-export type healthResponse = healthResponseSuccess | healthResponseError;
+/**
+ * @summary Reset Password
+ */
+export const useResetPassword = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof resetPassword>>,
+      TError,
+      ResetPasswordMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof resetPassword>>,
+  TError,
+  ResetPasswordMutationVariables,
+  TContext
+> => {
+  return useMutation(getResetPasswordMutationOptions(options), queryClient);
+};
 
 export const getHealthUrl = () => {
   return `/health`;
@@ -4962,36 +11292,97 @@ export const getHealthUrl = () => {
 /**
  * @summary Health
  */
-export const health = async (options?: Parameters<typeof http>[1]): Promise<healthResponse> => {
-  return http<healthResponse>(getHealthUrl(), {
+export const health = async (options?: Parameters<typeof http>[1]): Promise<HealthResponse> => {
+  return http<HealthResponse>(getHealthUrl(), {
     ...options,
     method: "GET",
   });
 };
 
-export type readyResponse200 = {
-  data: ReadyResponse;
-  status: 200;
+export const getHealthQueryKey = () => {
+  return [`/health`] as const;
 };
 
-export type readyResponse422 = {
-  data: ErrorOut;
-  status: 422;
+export const getHealthQueryOptions = <
+  TData = Awaited<ReturnType<typeof health>>,
+  TError = ErrorType<ErrorOut>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof health>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getHealthQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof health>>> = ({ signal }) =>
+    health({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof health>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type readyResponse503 = {
-  data: ReadyResponse;
-  status: 503;
-};
+export type HealthQueryResult = NonNullable<Awaited<ReturnType<typeof health>>>;
+export type HealthQueryError = ErrorType<ErrorOut>;
 
-export type readyResponseSuccess = readyResponse200 & {
-  headers: Headers;
-};
-export type readyResponseError = (readyResponse422 | readyResponse503) & {
-  headers: Headers;
-};
+export function useHealth<TData = Awaited<ReturnType<typeof health>>, TError = ErrorType<ErrorOut>>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof health>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof health>>,
+          TError,
+          Awaited<ReturnType<typeof health>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useHealth<TData = Awaited<ReturnType<typeof health>>, TError = ErrorType<ErrorOut>>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof health>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof health>>,
+          TError,
+          Awaited<ReturnType<typeof health>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useHealth<TData = Awaited<ReturnType<typeof health>>, TError = ErrorType<ErrorOut>>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof health>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Health
+ */
 
-export type readyResponse = readyResponseSuccess | readyResponseError;
+export function useHealth<TData = Awaited<ReturnType<typeof health>>, TError = ErrorType<ErrorOut>>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof health>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getHealthQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getReadyUrl = () => {
   return `/ready`;
@@ -5000,9 +11391,106 @@ export const getReadyUrl = () => {
 /**
  * @summary Ready
  */
-export const ready = async (options?: Parameters<typeof http>[1]): Promise<readyResponse> => {
-  return http<readyResponse>(getReadyUrl(), {
+export const ready = async (options?: Parameters<typeof http>[1]): Promise<ReadyResponse> => {
+  return http<ReadyResponse>(getReadyUrl(), {
     ...options,
     method: "GET",
   });
 };
+
+export const getReadyQueryKey = () => {
+  return [`/ready`] as const;
+};
+
+export const getReadyQueryOptions = <
+  TData = Awaited<ReturnType<typeof ready>>,
+  TError = ErrorType<ErrorOut | ReadyResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof ready>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getReadyQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof ready>>> = ({ signal }) =>
+    ready({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof ready>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ReadyQueryResult = NonNullable<Awaited<ReturnType<typeof ready>>>;
+export type ReadyQueryError = ErrorType<ErrorOut | ReadyResponse>;
+
+export function useReady<
+  TData = Awaited<ReturnType<typeof ready>>,
+  TError = ErrorType<ErrorOut | ReadyResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof ready>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof ready>>,
+          TError,
+          Awaited<ReturnType<typeof ready>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useReady<
+  TData = Awaited<ReturnType<typeof ready>>,
+  TError = ErrorType<ErrorOut | ReadyResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof ready>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof ready>>,
+          TError,
+          Awaited<ReturnType<typeof ready>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useReady<
+  TData = Awaited<ReturnType<typeof ready>>,
+  TError = ErrorType<ErrorOut | ReadyResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof ready>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Ready
+ */
+
+export function useReady<
+  TData = Awaited<ReturnType<typeof ready>>,
+  TError = ErrorType<ErrorOut | ReadyResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof ready>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getReadyQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}

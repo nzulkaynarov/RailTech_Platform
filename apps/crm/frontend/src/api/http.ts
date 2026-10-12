@@ -97,19 +97,31 @@ export async function rawFetch(url: string, options: RequestInit = {}): Promise<
   return response;
 }
 
-/** Мутатор orval: возвращает `{ data, status, headers }`, при ошибке бросает `ApiError`. */
+/**
+ * Мутатор orval: возвращает тело успешного ответа (`override.fetch.includeHttpResponseReturnType:
+ * false`), при ошибке бросает `ApiError`. Кэш TanStack Query хранит DTO как есть.
+ */
 export const http = async <T>(url: string, options: RequestInit): Promise<T> => {
   const response = await rawFetch(url, options);
   const data = await parse(response);
   if (!response.ok) throw toError(response.status, data);
-  return { data, status: response.status, headers: response.headers } as T;
+  return data as T;
 };
 
-type Success<R> = R extends { status: 200 | 201 | 204; data: infer D } ? D : never;
+/**
+ * Тип ошибки сгенерированных хуков: orval ищет `ErrorType<Body>` рядом с мутатором и подставляет
+ * его вместо `ErrorOut`. Тело ошибки уже разобрано `http` в поля `ApiError`.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- сигнатуру задаёт orval
+export type ErrorType<_Body> = ApiError;
 
-/** Данные успешного ответа: ошибки `http` уже бросил как `ApiError`. */
-export function unwrap<R extends { status: number; data: unknown }>(response: R): Success<R> {
-  return response.data as Success<R>;
+/**
+ * Совместимость: раньше клиент orval возвращал конверт `{ data, status, headers }`.
+ * Теперь мутатор отдаёт тело ответа — функция ничего не меняет (ADR-0021); новый код
+ * её не использует, старые вызовы на страницах убираются при их следующей правке.
+ */
+export function unwrap<T>(data: T): T {
+  return data;
 }
 
 /** Скачать файл с авторизацией (ответ API — бинарный, не JSON). */
