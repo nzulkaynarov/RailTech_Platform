@@ -19,7 +19,7 @@ import type {
   ClientContacts,
   ClientCreate,
   ClientDetail,
-  ClientOut,
+  ClientListItem,
   ClientUpdate,
   Close,
   ContactIn,
@@ -335,7 +335,7 @@ export const refresh = async (options?: Parameters<typeof http>[1]): Promise<ref
 };
 
 export type listClientsResponse200 = {
-  data: ClientOut[];
+  data: ClientListItem[];
   status: 200;
 };
 

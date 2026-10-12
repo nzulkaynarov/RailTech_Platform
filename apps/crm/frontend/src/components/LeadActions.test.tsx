@@ -208,7 +208,7 @@ describe("availableActions", () => {
 
 describe("replyState", () => {
   it.each([
-    ["viewer", lead({}), viewer, false, "Наблюдатель"],
+    ["viewer", lead({}), viewer, false, "Только просмотр"],
     ["someone else's lead", theirs, manager, false, "Азиза"],
     ["not taken yet", lead({}), manager, false, "Забрать"],
     ["my lead", lead({ owner_mode: "human", assigned_user_id: 7 }), manager, true, ""],

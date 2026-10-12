@@ -19,6 +19,13 @@ class ClientOut(BaseModel):
     created_at: datetime
 
 
+class ClientListItem(ClientOut):
+    """Строка списка клиентов: открытые сделки и последнее сообщение по любому лиду клиента."""
+
+    open_deals: int
+    last_activity_at: datetime | None
+
+
 class ClientCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     inn: str | None = Field(default=None, max_length=32)

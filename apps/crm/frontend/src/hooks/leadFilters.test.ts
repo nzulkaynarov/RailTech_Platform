@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { leadFiltersToSearch, parseLeadFilters, toListParams } from "./leadFilters";
+import {
+  activeFilterCount,
+  leadFiltersToSearch,
+  parseLeadFilters,
+  toListParams,
+} from "./leadFilters";
 
 describe("lead filters in URL", () => {
   it("round-trips through the query string", () => {
@@ -32,5 +37,16 @@ describe("lead filters in URL", () => {
       limit: 50,
       sort: "last_message",
     });
+  });
+});
+
+describe("activeFilterCount", () => {
+  it.each([
+    [{ page: 1 }, 0],
+    [{ page: 2, sort: "score" }, 0],
+    [{ page: 1, q: "abc", stage: "new" }, 2],
+    [{ page: 1, min_score: 0, from: "2026-10-01", to: "2026-10-12" }, 2],
+  ])("%j → %i", (f, n) => {
+    expect(activeFilterCount(f)).toBe(n);
   });
 });

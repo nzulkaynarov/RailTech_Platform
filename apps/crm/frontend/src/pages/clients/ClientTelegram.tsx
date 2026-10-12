@@ -1,5 +1,15 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { App as AntApp, Button, Card, Flex, InputNumber, List, Tag, Typography } from "antd";
+import {
+  App as AntApp,
+  Button,
+  Card,
+  Flex,
+  InputNumber,
+  List,
+  Select,
+  Tag,
+  Typography,
+} from "antd";
 import { useState } from "react";
 
 import { adminKeys } from "../../api/adminQueries";
@@ -103,31 +113,59 @@ function Identities({ items, canWrite, onAction }: ListProps & { canWrite: boole
   );
 }
 
-function Candidates({ items, onAction }: ListProps) {
-  if (!items.length) return null;
+/** Привязка: выбор аккаунта из лидов клиента; ввод ID — по ссылке «Ввести ID вручную». */
+function LinkPicker({
+  candidates,
+  pending,
+  onLink,
+}: {
+  candidates: IdentityOut[];
+  pending: boolean;
+  onLink: (id: number) => void;
+}) {
+  const [picked, setPicked] = useState<number | null>(null);
+  const [manual, setManual] = useState(false);
   return (
-    <List
-      size="small"
-      header={t.clients.candidates}
-      dataSource={items}
-      renderItem={(i) => (
-        <List.Item
-          actions={[
-            <Button
-              key="l"
-              size="small"
-              onClick={() => {
-                onAction(i);
-              }}
-            >
-              {t.clients.link}
-            </Button>,
-          ]}
-        >
-          {identityLabel(i)}
-        </List.Item>
+    <Flex vertical gap="small">
+      {candidates.length ? (
+        <Flex wrap gap="small">
+          <Select<number>
+            aria-label={t.clients.pickFromLeads}
+            placeholder={t.clients.pickFromLeads}
+            className="filter-lg"
+            value={picked}
+            onChange={setPicked}
+            options={candidates.map((i) => ({ value: i.tg_user_id, label: identityLabel(i) }))}
+          />
+          <Button
+            disabled={picked === null}
+            loading={pending}
+            onClick={() => {
+              if (picked !== null) onLink(picked);
+              setPicked(null);
+            }}
+          >
+            {t.clients.link}
+          </Button>
+        </Flex>
+      ) : (
+        <Typography.Text type="secondary">{t.clients.noLeadAccounts}</Typography.Text>
       )}
-    />
+      {manual ? (
+        <LinkById pending={pending} onLink={onLink} />
+      ) : (
+        <Button
+          type="link"
+          size="small"
+          className="self-start"
+          onClick={() => {
+            setManual(true);
+          }}
+        >
+          {t.clients.enterIdManually}
+        </Button>
+      )}
+    </Flex>
   );
 }
 
@@ -152,15 +190,7 @@ export function ClientTelegram({ data, canWrite }: { data: ClientDetail; canWrit
         <Typography.Text type="secondary">{t.clients.telegramHint}</Typography.Text>
         <Identities items={data.identities} canWrite={canWrite} onAction={unlink} />
         {canWrite ? (
-          <>
-            <Candidates
-              items={data.candidates}
-              onAction={(i) => {
-                link(i.tg_user_id);
-              }}
-            />
-            <LinkById pending={act.isPending} onLink={link} />
-          </>
+          <LinkPicker candidates={data.candidates} pending={act.isPending} onLink={link} />
         ) : null}
       </Flex>
     </Card>

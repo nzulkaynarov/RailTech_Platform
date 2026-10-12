@@ -76,3 +76,9 @@ export function toListParams(filters: LeadFilters): ListLeadsParams {
     offset: (filters.page - 1) * LEADS_PAGE,
   };
 }
+
+/** Сколько фильтров включено (сортировка и страница — не фильтры; период — один фильтр). */
+export function activeFilterCount(f: LeadFilters): number {
+  const flags = [f.q, f.stage, f.owner, f.language, f.min_score, f.from ?? f.to];
+  return flags.filter((v) => v !== undefined && v !== "").length;
+}

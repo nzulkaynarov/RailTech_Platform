@@ -34,7 +34,6 @@ export function resolveSection(requested: string | null, available: string[]): s
 
 const TEXT_GROUPS: Record<string, string[]> = {
   welcome: [
-    "consent_version",
     "greeting",
     "consent",
     "consent_button",
@@ -108,14 +107,18 @@ const TEXT_GROUPS: Record<string, string[]> = {
   erase: ["erase_confirm", "erase_button", "cancel_button", "erase_cancelled", "erased"],
 };
 
+/** Служебные поля (версия согласия) — в свёрнутой группе «Дополнительно», последней. */
+const ADVANCED_TEXTS = ["consent_version"];
+
 /** Ключи `texts.*` по смысловым группам; новые ключи с бэка — в «other», не теряются. */
 export function textGroups(keys: string[]): { key: string; fields: string[] }[] {
-  const known = new Set(Object.values(TEXT_GROUPS).flat());
+  const known = new Set([...Object.values(TEXT_GROUPS).flat(), ...ADVANCED_TEXTS]);
   const groups = Object.entries(TEXT_GROUPS).map(([key, fields]) => ({
     key,
     fields: fields.filter((f) => keys.includes(f)),
   }));
   groups.push({ key: "other", fields: keys.filter((k) => !known.has(k)) });
+  groups.push({ key: "advanced", fields: ADVANCED_TEXTS.filter((k) => keys.includes(k)) });
   return groups.filter((g) => g.fields.length > 0);
 }
 

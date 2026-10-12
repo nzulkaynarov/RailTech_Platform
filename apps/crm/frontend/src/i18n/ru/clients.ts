@@ -29,6 +29,13 @@ export const clients = {
     verified: "Подтверждён",
     leads: "Лиды",
     leadsEmpty: "У клиента пока нет лидов",
+    addInline: "Добавить",
+    enterIdManually: "Ввести ID вручную",
+    pickFromLeads: "Аккаунт из лидов клиента",
+    noLeadAccounts: "У лидов клиента нет Telegram-аккаунтов для привязки",
+    owner: "Ответственный",
+    openDeals: "Открытых сделок",
+    lastActivity: "Последняя активность",
     documents: "Документы",
     documentsEmpty: "Документов пока нет",
     documentsEmptyHint:
@@ -62,7 +69,6 @@ export const clients = {
     makeCustomer: "Сделать клиентом",
     edit: "Изменить",
     saved: "Клиент «{name}» сохранён",
-    owner: "Ответственный",
     notes: "Заметки",
     deactivateHint:
       "Неактивный клиент не получает документы в боте — бот будет говорить с ним как с лидом.",

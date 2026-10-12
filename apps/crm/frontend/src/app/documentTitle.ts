@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+
 import { t } from "../i18n/ru";
 
 type TitleOptions = {
@@ -40,4 +42,18 @@ function sectionTitle({ resource, action, params, pathname }: TitleOptions): str
 export function documentTitle(options: TitleOptions): string {
   const section = sectionTitle(options);
   return section ? t.app.documentTitle.replace("{page}", section) : t.app.title;
+}
+
+/** Заголовок вкладки карточки по имени сущности: «ООО Ромашка — RailTech CRM». */
+export const entityDocumentTitle = (name: string): string =>
+  t.app.documentTitle.replace("{page}", name);
+
+/**
+ * Перекрывает заголовок по маршруту, когда имя загрузилось (данные приходят после
+ * `DocumentTitleHandler`, поэтому эффект срабатывает позже и побеждает).
+ */
+export function useEntityDocumentTitle(name: string | null | undefined): void {
+  useEffect(() => {
+    if (name) document.title = entityDocumentTitle(name);
+  }, [name]);
 }

@@ -29,7 +29,7 @@ export * from "./checklistItemKey";
 export * from "./clientContacts";
 export * from "./clientCreate";
 export * from "./clientDetail";
-export * from "./clientOut";
+export * from "./clientListItem";
 export * from "./clientUpdate";
 export * from "./close";
 export * from "./componentStatusOut";

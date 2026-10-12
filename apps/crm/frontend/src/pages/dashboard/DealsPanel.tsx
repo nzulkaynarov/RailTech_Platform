@@ -57,7 +57,7 @@ export function DealsPanel({ days }: { days: number }) {
                 </Card>
               </Link>
             </div>
-            <Typography.Title level={3} className="section-title">
+            <Typography.Title level={3} className="section-label">
               {t.deals.lostByReason}
             </Typography.Title>
             {data.lost_by_reason.length ? (
