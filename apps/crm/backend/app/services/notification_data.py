@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.auth import Role, User, UserRole
 from app.models.kb import Product
-from app.models.leads import Conversation, Lead, Message
+from app.models.leads import Conversation, Lead, Message, TelegramIdentity
 from app.models.qualification import Escalation
 from app.schemas.settings import AppSettings
 from app.services import channel_texts as tx
@@ -65,6 +65,7 @@ async def load_card(
         snoozed_by=await _name(session, lead.assigned_user_id),
         product_names=await _product_names(session, interest),
         escalation_id=escalation.id,
+        phone=await _phone(session, lead.id),
     )
     return escalation, card
 
@@ -102,6 +103,14 @@ async def _product_names(session: AsyncSession, keys: Sequence[str]) -> dict[str
         return {}
     rows = await session.execute(select(Product.key, Product.name).where(Product.key.in_(keys)))
     return {row.key: row.name for row in rows.all()}
+
+
+async def _phone(session: AsyncSession, lead_id: int) -> str | None:
+    stmt = select(TelegramIdentity.phone_e164).where(
+        TelegramIdentity.lead_id == lead_id, TelegramIdentity.phone_e164.is_not(None)
+    )
+    value: str | None = (await session.scalars(stmt.limit(1))).first()
+    return value
 
 
 async def _last_lead_text(session: AsyncSession, lead_id: int) -> str | None:

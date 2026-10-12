@@ -48,7 +48,9 @@ def test_render_matches_spec_layout() -> None:
     assert "Рекомендация: позвонить сегодня" in text
     assert "Последнее: 👤 «Ок, пусть позвонят, лучше после 15:00»" in text
     assert "CRM:" not in text
+    assert "Номер: не указан" in text  # передача по сигналу бота без номера
     assert can_take(CARD)
+    assert "Номер: +998901234567" in render(replace(CARD, phone="+998901234567"))
 
 
 def test_taken_card_shows_manager_and_local_time() -> None:

@@ -122,6 +122,16 @@ class ClientBotTexts(CheckedTexts):
         "Yaxshi, raqamsiz davom etamiz.",
         "Okay, we'll continue without it.",
     )
+    phone_before_manager: LocalizedText = _t(
+        "Чтобы менеджер мог связаться с вами, поделитесь номером телефона кнопкой ниже — сразу после этого передам ваш вопрос. Это также защищает от спама.",
+        "Menejer siz bilan bogʻlana olishi uchun quyidagi tugma orqali telefon raqamingizni yuboring — shundan soʻng savolingizni darhol menejerga beraman. Bu spamdan ham himoya qiladi.",
+        "So a manager can contact you, share your phone number with the button below — I will pass your question on right after that. This also protects against spam.",
+    )
+    phone_declined_manager: LocalizedText = _t(
+        "Хорошо, продолжу отвечать сам. Менеджера позову, когда поделитесь номером.",
+        "Yaxshi, oʻzim javob berishda davom etaman. Raqamingizni yuborganingizda menejerni chaqiraman.",
+        "Okay, I'll keep answering myself. I'll call a manager once you share your number.",
+    )
     phone_not_own: LocalizedText = _t(
         "Сохранить можно только ваш собственный номер — кнопкой «Поделиться номером».",
         "Faqat oʻz raqamingizni «Raqamni yuborish» tugmasi orqali saqlash mumkin.",

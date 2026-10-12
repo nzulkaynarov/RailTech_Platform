@@ -2416,6 +2416,12 @@
             "title": "Reminder Minutes",
             "type": "integer"
           },
+          "require_phone_for_human_request": {
+            "default": true,
+            "description": "Просьба лида позвать менеджера — только после номера телефона из Telegram",
+            "title": "Require Phone For Human Request",
+            "type": "boolean"
+          },
           "sla_minutes": {
             "default": 15,
             "minimum": 1.0,
