@@ -181,3 +181,20 @@ h2.section-title.ant-typography {
     font-size: var(--ant-font-size-lg);
   }
 }
+.model-id {
+  font-size: var(--ant-font-size-sm);
+}
+.model-health {
+  max-width: 320px;
+}
+.model-error {
+  display: block;
+  max-width: 320px;
+}
+
+.audit-logins {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ant-margin-xxs);
+  white-space: nowrap;
+}

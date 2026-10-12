@@ -1,11 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { barStatus, limitPercent, purposeLabel, roleLabel, usd } from "./spend";
+import { barStatus, hasTestSpend, limitPercent, purposeLabel, roleLabel, usd } from "./spend";
 
 describe("spend helpers", () => {
+  it("detects test spend", () => {
+    expect(hasTestSpend({ by_kind: [{ key: "work", cost_usd: 1 }] })).toBe(false);
+    expect(hasTestSpend({ by_kind: [{ key: "test", cost_usd: 0 }] })).toBe(false);
+    expect(hasTestSpend({ by_kind: [{ key: "test", cost_usd: 0.2 }] })).toBe(true);
+  });
+
   it.each([
     [0, "$0.00"],
-    [0.0042, "$0.0042"],
+    [0.0042, "< $0.01"],
     [1.5, "$1.50"],
     [12.345, "$12.35"],
   ])("formats %s as %s", (value, expected) => {

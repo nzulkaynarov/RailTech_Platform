@@ -10,6 +10,7 @@ import { PageHeader } from "../../components/PageHeader";
 import { PageState } from "../../components/PageState";
 import {
   barStatus,
+  hasTestSpend,
   kindLabel,
   limitPercent,
   PROVIDER_CONSOLES,
@@ -26,7 +27,9 @@ function Providers({ report }: { report: SpendReport }) {
   const soft = limitPercent(report.today_usd, report.daily_usd);
   return (
     <Card title={t.spend.today} size="small">
-      <Typography.Paragraph type="secondary">{t.spend.todayHint}</Typography.Paragraph>
+      <Typography.Paragraph type="secondary">
+        {t.spend.todayHint} <Link to="/settings?section=budget">{t.spend.budgetLink}</Link>
+      </Typography.Paragraph>
       <Flex vertical gap="small">
         {report.providers.map((p) => {
           const percent = limitPercent(p.spent_usd, p.limit_usd);
@@ -73,23 +76,28 @@ const sliceColumns = (label: (key: string) => string, title: string): ColumnsTyp
   { title: t.spend.cost, dataIndex: "cost_usd", align: "right", render: usd, width: 110 },
 ];
 
-const dayColumns: ColumnsType<SpendDay> = [
+const dayColumns = (withTests: boolean): ColumnsType<SpendDay> => [
   { title: t.spend.day, dataIndex: "day", render: (v: string) => formatDate(v) },
   { title: t.spend.work, dataIndex: "work_usd", align: "right", render: usd },
-  { title: t.spend.test, dataIndex: "test_usd", align: "right", render: usd },
+  ...(withTests
+    ? [{ title: t.spend.test, dataIndex: "test_usd", align: "right" as const, render: usd }]
+    : []),
 ];
 
 const leadColumns: ColumnsType<LeadSpend> = [
   {
     title: t.spend.lead,
     dataIndex: "lead_id",
-    render: (id: number) => <Link to={`/leads/${String(id)}`}>#{id}</Link>,
+    render: (id: number, r) => (
+      <Link to={`/leads/${String(id)}`}>{r.lead_name ?? `${t.spend.lead} #${String(id)}`}</Link>
+    ),
   },
   { title: t.spend.calls, dataIndex: "calls", align: "right", width: 90 },
   { title: t.spend.cost, dataIndex: "cost_usd", align: "right", render: usd, width: 110 },
 ];
 
 function Breakdown({ report }: { report: SpendReport }) {
+  const withTests = hasTestSpend(report);
   return (
     <Row gutter={[16, 16]}>
       <Col xs={24} lg={12}>
@@ -103,17 +111,19 @@ function Breakdown({ report }: { report: SpendReport }) {
           />
         </Card>
       </Col>
-      <Col xs={24} lg={12}>
-        <Card title={t.spend.byKind} size="small">
-          <Table
-            rowKey="key"
-            size="small"
-            pagination={false}
-            dataSource={report.by_kind}
-            columns={sliceColumns(kindLabel, t.spend.purpose)}
-          />
-        </Card>
-      </Col>
+      {withTests ? (
+        <Col xs={24} lg={12}>
+          <Card title={t.spend.byKind} size="small">
+            <Table
+              rowKey="key"
+              size="small"
+              pagination={false}
+              dataSource={report.by_kind}
+              columns={sliceColumns(kindLabel, t.spend.purpose)}
+            />
+          </Card>
+        </Col>
+      ) : null}
       <Col xs={24} lg={12}>
         <Card title={t.spend.perLead} size="small">
           <Flex gap="large" wrap>
@@ -139,7 +149,7 @@ function Breakdown({ report }: { report: SpendReport }) {
             size="small"
             pagination={{ pageSize: 10, hideOnSinglePage: true }}
             dataSource={[...report.series].reverse()}
-            columns={dayColumns}
+            columns={dayColumns(withTests)}
           />
         </Card>
       </Col>

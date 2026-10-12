@@ -35,12 +35,14 @@ export const adminKeys = {
   system: ["system", "status"] as const,
 };
 
-/** «Состояние системы»: только чтение, моделей не вызывает; авто-обновление раз в минуту. */
-export const useSystemStatus = () =>
+/** «Состояние системы»: только чтение, моделей не вызывает; авто-обновление раз в минуту.
+ * Один запрос на странице «Состояние» и в индикаторе шапки (общий ключ кэша). */
+export const useSystemStatus = (enabled = true) =>
   useQuery({
     queryKey: adminKeys.system,
     queryFn: async () => unwrap(await systemStatus()),
     refetchInterval: 60_000,
+    enabled,
   });
 
 export const useKbDocuments = () =>

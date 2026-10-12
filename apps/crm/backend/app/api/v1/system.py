@@ -1,6 +1,7 @@
 """Резервные копии (admin): статус и «Сделать сейчас» — ADR-0013, runbook backup-restore.md.
 
-Восстановление в интерфейсе нет и не будет: оно разрушительно, только `scripts/restore.sh`.
+Восстановления в интерфейсе нет и не будет: оно разрушительно, его выполняет администратор
+сервера по runbook (`scripts/restore.sh`).
 """
 
 from datetime import UTC, datetime, timedelta
@@ -10,21 +11,26 @@ from fastapi import APIRouter, Depends, status
 
 from app.api.deps import ContainerDep, require
 from app.domain.errors import ConflictError
+from app.domain.system_status import request_unanswered
 from app.schemas.setup import BackupItem, BackupsOut
 from app.security import audit
 from app.security.principal import Principal
-from app.services.backups import STALE_AFTER_HOURS, BackupStatus
+from app.services.backups import STALE_AFTER_HOURS, BackupStatus, facts
 
 router = APIRouter(prefix="/api/v1/system", tags=["system"])
 
 
 def _out(state: BackupStatus, now: datetime) -> BackupsOut:
     last = state.last_success_at
+    known = facts(state, now)
+    stuck = request_unanswered(now, known)
     return BackupsOut(
         available=state.available,
         last_success_at=last,
         stale=last is None or now - last > timedelta(hours=STALE_AFTER_HOURS),
-        requested_at=state.requested_at,
+        requested_at=None if stuck else state.requested_at,
+        daemon_alive=known.daemon_alive,
+        request_stuck=stuck,
         items=[BackupItem(name=i.name, at=i.at, size_bytes=i.size_bytes) for i in state.items],
     )
 
@@ -42,9 +48,10 @@ async def request_backup(
     principal: Annotated[Principal, Depends(require("backups", "write"))],
     container: ContainerDep,
 ) -> BackupsOut:
-    """Запросить бэкап вне расписания: контейнер `backup` начнёт его в течение ~30 с.
+    """Запросить бэкап вне расписания: сервис бэкапа начнёт его в течение ~30 с.
 
-    409, если том бэкапов не смонтирован в api. Повторный запрос до начала — без изменений.
+    409, если том бэкапов не смонтирован в api. Повторный запрос до начала — без изменений;
+    запрос, который сервис не забрал за 2 мин, ставится заново.
     """
     service = container.backup_service
     if not (await service.status(limit=0)).available:

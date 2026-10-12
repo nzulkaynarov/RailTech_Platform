@@ -1,9 +1,9 @@
 /** Подписи и расчёты экранов «Расходы» и «Модели ИИ» — без React, с тестами. */
 import { t } from "../i18n/ru";
 
-/** Доллары: мелкие суммы — до десятых цента, чтобы не показывать «$0.00» при реальном расходе. */
+/** Доллары: реальный, но меньше цента расход — «< $0.01», а не «$0.00» или «$0.0042». */
 export function usd(value: number): string {
-  if (value > 0 && value < 0.01) return `$${value.toFixed(4)}`;
+  if (value > 0 && value < 0.01) return "< $0.01";
   return `$${value.toFixed(2)}`;
 }
 
@@ -23,6 +23,11 @@ export function barStatus(percent: number | null): BarStatus {
 
 export const purposeLabel = (key: string): string => t.spend.purposes[key] ?? key;
 export const kindLabel = (key: string): string => t.spend.kinds[key] ?? key;
+/** Были ли тестовые расходы (eval, нагрузка) — иначе срез «Работа и тесты» не нужен. */
+export function hasTestSpend(report: { by_kind: { key: string; cost_usd: number }[] }): boolean {
+  return report.by_kind.some((k) => k.key === "test" && k.cost_usd > 0);
+}
+
 export const roleLabel = (alias: string): string => t.models.roles[alias] ?? alias;
 export const healthLabel = (health: string): string => t.models.health[health] ?? health;
 

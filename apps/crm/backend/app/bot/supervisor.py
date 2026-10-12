@@ -48,7 +48,8 @@ class BotSupervisor:
 
     @property
     def running(self) -> bool:
-        return self.runtime is not None
+        """Бот принимает обновления: runtime есть и его polling-задача жива (или webhook)."""
+        return self.runtime is not None and self.runtime.running
 
     async def start(self) -> None:
         async with self._lock:

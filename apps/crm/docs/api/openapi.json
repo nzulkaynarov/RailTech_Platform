@@ -166,6 +166,18 @@
             "title": "Action",
             "type": "string"
           },
+          "actor_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Имя пользователя-автора",
+            "title": "Actor Name"
+          },
           "actor_type": {
             "title": "Actor Type",
             "type": "string"
@@ -308,6 +320,11 @@
             "title": "Available",
             "type": "boolean"
           },
+          "daemon_alive": {
+            "description": "Сервис бэкапа отвечает: heartbeat свежее 2 мин",
+            "title": "Daemon Alive",
+            "type": "boolean"
+          },
           "items": {
             "items": {
               "$ref": "#/components/schemas/BackupItem"
@@ -327,6 +344,11 @@
             ],
             "title": "Last Success At"
           },
+          "request_stuck": {
+            "description": "Запрос «Сделать сейчас» старше 2 мин без новой копии — можно повторить",
+            "title": "Request Stuck",
+            "type": "boolean"
+          },
           "requested_at": {
             "anyOf": [
               {
@@ -337,7 +359,7 @@
                 "type": "null"
               }
             ],
-            "description": "«Сделать сейчас» ждёт контейнер backup",
+            "description": "«Сделать сейчас» ждёт сервис бэкапа",
             "title": "Requested At"
           },
           "stale": {
@@ -351,6 +373,8 @@
           "last_success_at",
           "stale",
           "requested_at",
+          "daemon_alive",
+          "request_stuck",
           "items"
         ],
         "title": "BackupsOut",
@@ -3140,6 +3164,17 @@
           "lead_id": {
             "title": "Lead Id",
             "type": "integer"
+          },
+          "lead_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Name"
           }
         },
         "required": [
@@ -5149,6 +5184,28 @@
                 }
               ],
               "title": "Created To"
+            }
+          },
+          {
+            "description": "Скрыть действия с этими префиксами (напр. auth.login)",
+            "in": "query",
+            "name": "exclude_actions",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 64,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Скрыть действия с этими префиксами (напр. auth.login)",
+              "title": "Exclude Actions"
             }
           },
           {
@@ -9271,7 +9328,7 @@
     },
     "/api/v1/setup/checklist": {
       "get": {
-        "description": "Чек-лист настройки для админа: что сделано и куда идти. Без платных вызовов моделей.",
+        "description": "Чек-лист настройки для админа: что сделано и куда идти. Без платных вызовов моделей.\n\nБот и модели — из тех же проверок, что «Состояние системы» (бот = принимает сообщения).",
         "operationId": "get_setup_checklist",
         "responses": {
           "200": {
@@ -9454,7 +9511,7 @@
         ]
       },
       "post": {
-        "description": "Запросить бэкап вне расписания: контейнер `backup` начнёт его в течение ~30 с.\n\n409, если том бэкапов не смонтирован в api. Повторный запрос до начала — без изменений.",
+        "description": "Запросить бэкап вне расписания: сервис бэкапа начнёт его в течение ~30 с.\n\n409, если том бэкапов не смонтирован в api. Повторный запрос до начала — без изменений;\nзапрос, который сервис не забрал за 2 мин, ставится заново.",
         "operationId": "request_backup",
         "responses": {
           "202": {
@@ -9491,7 +9548,7 @@
     },
     "/api/v1/system/status": {
       "get": {
-        "description": "Только чтение: моделей не вызывает, их здоровье — из последней проверки монитора.",
+        "description": "Только чтение: моделей не вызывает, их здоровье — из последней проверки монитора.\n\nКомпоненты отсортированы: сбой → предупреждение → неизвестно → норма.",
         "operationId": "system_status",
         "responses": {
           "200": {

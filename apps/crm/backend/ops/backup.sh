@@ -4,7 +4,8 @@
 #
 #   backup.sh --once     один бэкап (make backup)
 #   backup.sh --daemon   ежедневно в $BACKUP_AT_UTC (по умолчанию 22:00 UTC = 03:00 Ташкент)
-#                        и по запросу из CRM (файл $BACKUP_DIR/request_now, проверка раз в 30 с)
+#                        и по запросу из CRM (файл $BACKUP_DIR/request_now, проверка раз в 30 с);
+#                        каждые 30 с пишет $BACKUP_DIR/heartbeat (epoch) — CRM видит, что демон жив
 set -euo pipefail
 
 BACKUP_DIR="${BACKUP_DIR:-/backups}"
@@ -46,6 +47,7 @@ case "${1:---once}" in
     while true; do
       due=$(( $(date -u +%s) + $(seconds_until) ))
       while (( $(date -u +%s) < due )); do
+        date -u +%s > "$BACKUP_DIR/heartbeat"
         if [[ -f "$BACKUP_DIR/request_now" ]]; then
           rm -f "$BACKUP_DIR/request_now"
           log "backup_requested"
@@ -53,7 +55,11 @@ case "${1:---once}" in
         fi
         sleep 30
       done
+      # Пока идёт бэкап (минуты), heartbeat пишет фоновый цикл — CRM не считает демон зависшим.
+      ( while true; do date -u +%s > "$BACKUP_DIR/heartbeat"; sleep 30; done ) &
+      beat_pid=$!
       backup_once || log "backup_failed"
+      kill "$beat_pid" 2>/dev/null || true
     done
     ;;
   -h|--help) sed -n '2,8p' "$0" ;;

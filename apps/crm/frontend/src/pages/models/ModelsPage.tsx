@@ -1,4 +1,4 @@
-import { App as AntApp, Button, Table, Tag, Typography } from "antd";
+import { App as AntApp, Button, Table, Tag, Tooltip, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 
 import type { ModelStatus } from "../../api/generated/model";
@@ -8,7 +8,8 @@ import { PageHeader } from "../../components/PageHeader";
 import { PageState } from "../../components/PageState";
 import { healthLabel, roleLabel, usd } from "../../domain/spend";
 import { t } from "../../i18n/ru";
-import { formatDateTime } from "../../lib/time";
+import { useNow } from "../../hooks/useNow";
+import { fromNow } from "../../lib/time";
 import "../admin.css";
 
 const HEALTH_COLOR: Record<string, string> = {
@@ -42,35 +43,41 @@ function useCheck() {
   };
 }
 
-function columns(check: (alias: string) => void): ColumnsType<ModelStatus> {
+function columns(check: (alias: string) => void, now: Date): ColumnsType<ModelStatus> {
   return [
-    { title: t.models.role, dataIndex: "alias", render: (v: string) => roleLabel(v) },
     {
-      title: t.models.provider,
-      dataIndex: "provider",
-      render: (v: string | null) => v ?? t.models.unknownProvider,
-    },
-    {
-      title: t.models.model,
-      dataIndex: "model",
-      responsive: ["md"],
-      render: (v: string | null) => <Typography.Text code>{v ?? "—"}</Typography.Text>,
+      title: t.models.role,
+      dataIndex: "alias",
+      render: (v: string, r) => (
+        <div>
+          <div>{roleLabel(v)}</div>
+          <Typography.Text type="secondary" className="model-id">
+            {[r.provider ?? t.models.unknownProvider, r.model].filter(Boolean).join(" · ")}
+          </Typography.Text>
+        </div>
+      ),
     },
     {
       title: t.models.status,
       dataIndex: "health",
       render: (v: string, r) => (
-        <>
+        <div className="model-health">
           <Tag color={HEALTH_COLOR[v] ?? "default"}>{healthLabel(v)}</Tag>
-          {r.health_detail && <Typography.Text type="danger">{r.health_detail}</Typography.Text>}
-        </>
+          {r.health_detail ? (
+            <Tooltip title={r.health_detail}>
+              <Typography.Text type="danger" ellipsis className="model-error">
+                {r.health_detail}
+              </Typography.Text>
+            </Tooltip>
+          ) : null}
+        </div>
       ),
     },
     {
       title: t.models.checkedAt,
       dataIndex: "checked_at",
-      responsive: ["lg"],
-      render: (v: string | null) => (v ? formatDateTime(v) : "—"),
+      responsive: ["md"],
+      render: (v: string | null) => (v ? fromNow(v, now) : "—"),
     },
     { title: t.models.todaySpend, dataIndex: "today_usd", align: "right", render: usd },
     {
@@ -95,18 +102,21 @@ function columns(check: (alias: string) => void): ColumnsType<ModelStatus> {
 export function ModelsPage() {
   const query = useModels();
   const check = useCheck();
+  const now = useNow();
   return (
     <PageBody>
       <PageHeader title={t.page.models} />
-      <Typography.Paragraph type="secondary">{t.models.hint}</Typography.Paragraph>
+      <Typography.Paragraph type="secondary">
+        {t.models.hint} {t.models.checkedHint}
+      </Typography.Paragraph>
       <PageState query={query}>
         <Table
           rowKey="alias"
           size="small"
           pagination={false}
-          scroll={{ x: "max-content" }}
+          scroll={{ x: 720 }}
           dataSource={query.data ?? []}
-          columns={columns(check)}
+          columns={columns(check, now)}
         />
       </PageState>
     </PageBody>

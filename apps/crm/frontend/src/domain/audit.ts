@@ -4,8 +4,9 @@
  */
 import type { AuditItem } from "../api/generated/model";
 import { t } from "../i18n/ru";
-import { formatDate } from "../lib/time";
-import { languageLabel, ownerModeLabel, roleLabel, stageLabel } from "./labels";
+import { formatDate, formatDateTime } from "../lib/time";
+import { entityLabel, languageLabel, ownerModeLabel, roleLabel, stageLabel } from "./labels";
+import { roleLabel as modelRoleLabel, usd } from "./spend";
 
 /** Справочники для подстановки имён вместо ID. */
 export type AuditContext = {
@@ -34,7 +35,12 @@ export function fieldName(path: string): string {
   const last = parts.at(-1) ?? path;
   const isLang = parts.length > 1 && LANGS.has(last);
   const key = isLang ? (parts.at(-2) ?? last) : last;
-  const base = F[key] ?? t.settings.fields[key] ?? t.settings.botTexts[key]?.label ?? key;
+  const base =
+    F[key] ??
+    t.auditUi.fields[key] ??
+    t.settings.fields[key] ??
+    t.settings.botTexts[key]?.label ??
+    key;
   return isLang ? `${base} (${languageLabel(last)})` : base;
 }
 
@@ -52,6 +58,9 @@ function codeValue(field: string, text: string, ctx: AuditContext): string | nul
   if (field === "client_id") return `${t.labels.entity["client"] ?? ""} #${text}`;
   if (field === "document_id") return `${t.audit.fields["document_id"] ?? ""} #${text}`;
   if (field === "note_id") return `#${text}`;
+  if (field === "cost_usd" && !Number.isNaN(Number(text))) return usd(Number(text));
+  if (field === "alias") return modelRoleLabel(text);
+  if (field === "requested_at") return formatDateTime(text);
   if (field === "stage") return stageLabel(text).label;
   if (field === "owner_mode") return ownerModeLabel(text);
   if (field === "language") return languageLabel(text);
@@ -110,4 +119,19 @@ export function auditDiff(item: AuditItem, ctx: AuditContext): string {
       c.before === undefined ? `${c.field}: ${c.after}` : `${c.field}: ${c.before} → ${c.after}`,
     )
     .join("; ");
+}
+
+/** Объект записи словами: «Модель ИИ «Диалог»», имя пользователя; иначе — «Тип #id». */
+export function entityText(
+  type: string,
+  id: string | null | undefined,
+  ctx: AuditContext,
+): string | undefined {
+  if (!id) return undefined;
+  if (type === "model") return t.auditUi.modelEntity.replace("{role}", modelRoleLabel(id));
+  if (type === "user") {
+    const name = ctx.userName(Number(id));
+    return name ? `${entityLabel(type)}: ${name}` : undefined;
+  }
+  return undefined;
 }

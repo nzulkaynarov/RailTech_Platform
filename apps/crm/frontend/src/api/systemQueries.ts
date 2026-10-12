@@ -30,7 +30,7 @@ export const useBackups = () =>
   useQuery({
     queryKey: systemKeys.backups,
     queryFn: async () => unwrap(await listBackups()),
-    // Пока запрос «сделать сейчас» ждёт контейнер backup — обновляем раз в 15 с.
+    // Пока запрос «сделать сейчас» ждёт сервис бэкапа — обновляем раз в 15 с.
     refetchInterval: (query) => (query.state.data?.requested_at ? 15_000 : false),
   });
 

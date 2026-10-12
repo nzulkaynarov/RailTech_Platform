@@ -11,6 +11,20 @@
 .setup-checklist {
   margin-bottom: var(--ant-margin);
 }
+.setup-checklist-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ant-margin-xs) var(--ant-margin-sm);
+}
+.setup-checklist-title {
+  white-space: nowrap;
+}
+.setup-checklist-progress {
+  flex: 1 1 120px;
+  min-width: 120px;
+  margin: 0;
+}
 .setup-checklist .ant-list-item {
   flex-wrap: wrap;
   gap: var(--ant-margin-xs);

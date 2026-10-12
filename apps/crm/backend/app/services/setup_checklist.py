@@ -1,25 +1,27 @@
 """Чек-лист «Настройка CRM» на главной админа (scope-аудит §3 п. 9, §4).
 
-Только чтение и бесплатные проверки: модели — пинг шлюза LiteLLM и активные алерты монитора
-`model:*` (монитор сам решает, когда звать провайдеров); платных вызовов здесь нет.
+Бот и модели — из тех же проверок, что и «Состояние системы» (`SystemStatusService`):
+бот готов, только если принимает сообщения; модели — по состоянию монитора `model:*`.
+Платных вызовов здесь нет.
 """
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.system_status import Component
 from app.models.auth import User
 from app.models.kb import KbDocument
 from app.models.leads import Message, Setting
-from app.models.system import SystemAlert
 
 LINKS: dict[str, str] = {
     "company": "/settings?section=company",
     "business_hours": "/settings?section=business_hours",
-    "models": "/settings?section=budget",
-    "bot": "/settings?section=bot",
-    "channel": "/settings?section=notifications",
+    "models": "/models",
+    "bot": "/integrations",
+    "channel": "/integrations",
     "kb": "/kb",
     "team": "/users",
     "test_dialog": "/leads",
@@ -30,9 +32,8 @@ LINKS: dict[str, str] = {
 class SetupFacts:
     company_saved: bool
     business_hours_saved: bool
-    litellm_ok: bool
-    model_alerts: int
-    bot_configured: bool
+    models_ok: bool
+    bot_running: bool
     channel_set: bool
     kb_indexed: bool
     teammate_with_telegram: bool
@@ -44,8 +45,8 @@ def checklist(facts: SetupFacts) -> list[tuple[str, bool]]:
     return [
         ("company", facts.company_saved),
         ("business_hours", facts.business_hours_saved),
-        ("models", facts.litellm_ok and facts.model_alerts == 0),
-        ("bot", facts.bot_configured),
+        ("models", facts.models_ok),
+        ("bot", facts.bot_running),
         ("channel", facts.channel_set),
         ("kb", facts.kb_indexed),
         ("team", facts.teammate_with_telegram),
@@ -57,13 +58,19 @@ async def saved_settings(session: AsyncSession) -> set[str]:
     return set(await session.scalars(select(Setting.key)))
 
 
-async def model_alerts(session: AsyncSession) -> int:
-    rows = await session.scalars(
-        select(SystemAlert.key).where(
-            SystemAlert.active.is_(True), SystemAlert.key.startswith("model:")
-        )
+def health_facts(components: Sequence[Component]) -> tuple[bool, bool]:
+    """(модели готовы, бот работает) — по компонентам «Состояния системы».
+
+    Модели готовы: шлюз доступен и ни одна модель не в сбое по монитору (или «Проверить»).
+    """
+    by_key = {c.key: c for c in components}
+    gateway = by_key.get("litellm")
+    models = [c for c in components if c.key.startswith("model:")]
+    models_ok = (
+        gateway is not None and gateway.status == "ok" and all(c.status != "fail" for c in models)
     )
-    return len(list(rows))
+    bot = by_key.get("bot")
+    return models_ok, bot is not None and bot.status == "ok"
 
 
 async def kb_indexed(session: AsyncSession) -> bool:

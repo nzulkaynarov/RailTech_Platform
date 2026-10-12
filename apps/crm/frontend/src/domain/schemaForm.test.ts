@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { type JsonSchema, kindOf, normalize, resolve } from "./schemaForm";
+import { type JsonSchema, kindOf, normalize, resolve, withoutFields } from "./schemaForm";
 
 const root: JsonSchema = {
   $defs: {
@@ -45,5 +45,14 @@ describe("schemaForm", () => {
       terms: ["x"],
       min_score: 0.5,
     });
+  });
+});
+
+describe("withoutFields", () => {
+  it("hides a field from the form, keeps the rest", () => {
+    const schema = { type: "object", properties: { channel_id: {}, duty_user_ids: {} } };
+    expect(Object.keys(withoutFields(schema, ["channel_id"]).properties ?? {})).toEqual([
+      "duty_user_ids",
+    ]);
   });
 });

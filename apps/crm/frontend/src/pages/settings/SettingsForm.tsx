@@ -1,13 +1,14 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Alert, App as AntApp, Badge, Button, Card, Flex, Form, Typography } from "antd";
 import { useState } from "react";
+import { Link } from "react-router";
 
 import { adminKeys } from "../../api/adminQueries";
 import { escalationDryRun, putSetting } from "../../api/generated/crm";
 import type { DryRunResponse, EscalationSettings } from "../../api/generated/model";
 import { unwrap } from "../../api/http";
 import { SchemaField } from "../../components/SchemaFields";
-import { type JsonSchema, normalize } from "../../domain/schemaForm";
+import { type JsonSchema, normalize, withoutFields } from "../../domain/schemaForm";
 import { useApiErrorToast } from "../../hooks/useApiErrorToast";
 import { useUnsavedChangesPrompt } from "../../hooks/useUnsavedChangesPrompt";
 import { t } from "../../i18n/ru";
@@ -99,7 +100,26 @@ export function SettingsForm({ settingKey, schema, values, samples }: Props) {
         {settingKey === "texts" ? (
           <TextsSection schema={schema} samples={samples} />
         ) : (
-          <SchemaField name={[]} schema={schema} root={schema} label="" samples={samples} />
+          <>
+            {settingKey === "notifications" ? (
+              <Alert
+                type="info"
+                showIcon
+                className="mb-16"
+                message={t.settingsUi.channelMoved}
+                action={<Link to="/integrations">{t.settingsUi.openIntegrations}</Link>}
+              />
+            ) : null}
+            <SchemaField
+              name={[]}
+              schema={
+                settingKey === "notifications" ? withoutFields(schema, ["channel_id"]) : schema
+              }
+              root={schema}
+              label=""
+              samples={samples}
+            />
+          </>
         )}
         {settingKey === "escalation" ? (
           <Flex vertical gap="small" align="start" className="mb-16">

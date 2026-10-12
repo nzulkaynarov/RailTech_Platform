@@ -28,7 +28,8 @@ const columns: ColumnsType<BackupItem> = [
 
 /**
  * Резервные копии (admin, ADR-0013): возраст последней копии, список и «Сделать сейчас».
- * Восстановление — только с сервера (runbook backup-restore).
+ * Сервис бэкапа жив — по heartbeat; запрос, который он не забрал за 2 мин, можно повторить.
+ * Восстановление выполняет администратор сервера (runbook backup-restore).
  */
 export function BackupsPage() {
   const query = useBackups();
@@ -63,6 +64,12 @@ export function BackupsPage() {
           <Flex vertical gap="middle">
             {!data.available ? (
               <Alert type="info" showIcon message={t.backups.unavailable} />
+            ) : null}
+            {data.available && !data.daemon_alive ? (
+              <Alert type="error" showIcon message={t.backups.daemonDown} />
+            ) : null}
+            {data.available && data.daemon_alive && data.request_stuck ? (
+              <Alert type="warning" showIcon message={t.backups.stuck} />
             ) : null}
             {data.available && data.stale ? (
               <Alert
