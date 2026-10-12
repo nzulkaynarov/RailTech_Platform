@@ -373,12 +373,14 @@ class ConversationService(ErasureMixin, DeliveryFailureMixin, RecordsMixin):
                     meta=turn_meta(result) if index == 0 else {"notice": notice},
                 )
                 document = result.document if index == 0 else None
+                choices = result.document_choices if index == 0 else []
                 outgoing.append(
                     Outgoing(
                         text,
                         keyboard=offer if index == 0 else None,
                         message_id=message.id,
                         document=document,
+                        choices=choices,
                         language=turn.language,
                         lead_id=turn.lead_id,
                     )

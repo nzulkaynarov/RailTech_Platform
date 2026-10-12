@@ -142,6 +142,17 @@ class DialogNodes:
         text = self._settings.texts.document_sent.get(_lang(state), title=str(link["title"]))
         return {"reply": text, "document": link}
 
+    def choose_document(self, state: DialogState) -> dict[str, Any]:
+        """Несколько документов клиента (BOT-07): текст из настроек и кнопки, без модели.
+
+        Id — только из ответа docs-mcp (поиск по клиенту из подписанного контекста); при нажатии
+        принадлежность ещё раз проверяет `ClientBotService.document`.
+        """
+        return {
+            "reply": self._settings.texts.docs_choose.get(_lang(state)),
+            "document_choices": customer.choices(state["docs"]),
+        }
+
     async def answer(self, state: DialogState) -> dict[str, Any]:
         if state["reason"] == "ack":
             # «Ок/спасибо» — короткий ответ из настроек, без модели и без встречного вопроса.

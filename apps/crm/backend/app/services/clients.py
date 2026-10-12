@@ -28,12 +28,13 @@ from app.models.clients import Client, ServiceRequest
 from app.models.leads import Lead, TelegramIdentity
 from app.models.qualification import Escalation
 from app.repositories import events
+from app.repositories import leads as leads_repo
 from app.security import audit
 from app.security.principal import Principal
 from app.services import lead_parts, stages
 from app.services.escalation import OPEN_STATUSES
 from app.services.lead_messenger import LeadMessenger
-from app.services.leads import LANGUAGES
+from app.services.leads import LANGUAGES, ChatsChanged, notify_chats
 from app.services.settings import SettingsService
 
 logger = structlog.get_logger(__name__)
@@ -48,10 +49,13 @@ class ClientService:
         sessions: async_sessionmaker[AsyncSession],
         settings: SettingsService | None = None,
         messenger: LeadMessenger | None = None,
+        on_chats_changed: ChatsChanged | None = None,
     ) -> None:
         self._sessions = sessions
         self._settings = settings
         self._messenger = messenger
+        # Привязка/отвязка/«Сделать клиентом» меняют меню бота (вариант client) — сразу.
+        self._on_chats_changed = on_chats_changed
 
     async def create(self, who: Principal, name: str, inn: str | None, segment: str | None) -> int:
         async with self._sessions() as session, session.begin():
@@ -96,6 +100,11 @@ class ClientService:
                     before=before,
                     after=after,
                 )
+            # Деактивированный клиент — снова меню лида (`verified_client`), и наоборот.
+            chats = (
+                await leads_repo.chats_of_client(session, client_id) if "is_active" in after else []
+            )
+        await notify_chats(self._on_chats_changed, chats)
 
     async def link_identity(self, who: Principal, client_id: int, tg_user_id: int) -> None:
         """Подтверждение менеджером: этот Telegram-аккаунт принадлежит клиенту."""
@@ -122,6 +131,7 @@ class ClientService:
                 client_id,
                 after={"tg_user_id": tg_user_id},
             )
+        await notify_chats(self._on_chats_changed, [tg_user_id])
 
     async def unlink_identity(self, who: Principal, client_id: int, tg_user_id: int) -> None:
         async with self._sessions() as session, session.begin():
@@ -139,6 +149,7 @@ class ClientService:
             await audit.record(
                 session, who.actor, "client.unlink_telegram", "client", client_id, after=after
             )
+        await notify_chats(self._on_chats_changed, [tg_user_id])
 
     async def make_customer(
         self, who: Principal, lead_id: int, client_id: int | None, new_name: str | None
@@ -195,6 +206,8 @@ class ClientService:
             )
             await events.publish(session, "lead.updated", lead_id=lead_id)
             language = lead.language
+            chats = await leads_repo.chats_of_lead(session, lead_id)
+        await notify_chats(self._on_chats_changed, chats)
         await self._notify_access(lead_id, language)
         return client_id
 

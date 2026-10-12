@@ -44,6 +44,8 @@ class ChatResult:
     tool_calls: list[ToolCall] = field(default_factory=list)
     used_fallback: bool = False
     cost_usd: float | None = None
+    # `length` — ответ оборван лимитом `max_tokens` (JSON structured output не закрыт).
+    finish_reason: str | None = None
 
 
 class ChatCompleter(Protocol):
@@ -171,6 +173,7 @@ def _to_result(
         tool_calls=calls,
         used_fallback=used_fallback,
         cost_usd=cost_usd,
+        finish_reason=getattr(choice, "finish_reason", None),
     )
 
 

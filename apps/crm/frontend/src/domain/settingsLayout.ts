@@ -80,6 +80,7 @@ const TEXT_GROUPS: Record<string, string[]> = {
     "client_access_granted",
     "request_text_only",
     "docs_list",
+    "docs_choose",
     "docs_empty",
     "request_prompt",
     "request_created",

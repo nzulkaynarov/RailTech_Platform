@@ -68,7 +68,7 @@ def test_is_smalltalk(text: str, expected: bool) -> None:
     [
         (True, True, 1, Action.DELIVER_DOCUMENT, "document_match"),
         (False, True, 0, Action.HANDOFF, "document_not_found"),
-        (False, True, 3, Action.ANSWER, "documents_ambiguous"),
+        (False, True, 3, Action.CHOOSE_DOCUMENT, "documents_ambiguous"),
         (False, False, 0, Action.ANSWER, "kb"),
     ],
 )

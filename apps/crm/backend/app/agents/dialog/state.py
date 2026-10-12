@@ -23,6 +23,7 @@ class DialogState(TypedDict):
     callback_requested: bool
     docs: list[dict[str, Any]] | None
     document: dict[str, Any] | None
+    document_choices: list[tuple[int, str]]
     service_request: bool
 
 
@@ -38,6 +39,8 @@ class DialogResult:
     trace_id: str | None = None
     prompt_version: str | None = None
     document: dict[str, Any] | None = None
+    # BOT-07: (id, подпись) документов клиента для кнопок выбора; id — из поиска кода.
+    document_choices: list[tuple[int, str]] = field(default_factory=list)
     service_request: bool = False
     mode: str = "prospect"
     price_quoted: bool = False
