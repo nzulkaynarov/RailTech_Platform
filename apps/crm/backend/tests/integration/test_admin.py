@@ -85,7 +85,7 @@ async def test_upload_ingest_and_test_search(harness: Harness, admin: dict[str, 
         "/api/v1/kb/search", headers=admin, json={"query": "доставка по Ташкенту", "language": "ru"}
     ).json()
     assert found["hits"][0]["document_id"] == document_id
-    assert found["min_score"] == 0.55
+    assert found["min_score"] == 0.7  # калибровка аудита 2026-10-12
     bad = harness.client.post(
         "/api/v1/kb/documents",
         headers=admin,

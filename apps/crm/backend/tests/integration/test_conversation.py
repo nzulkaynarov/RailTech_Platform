@@ -263,7 +263,7 @@ async def test_delete_erases_messages_and_unlinks_identity(stack: Stack) -> None
         texts = set((await session.scalars(select(Message.text))).all())
     assert texts == {ERASED_TEXT}
     out = await stack.service.handle_message(msg("Снова здравствуйте"))
-    assert out[-1].keyboard == "consent"
+    assert out[-1].keyboard == "language"  # Q-022: после /delete — снова выбор языка
 
 
 async def test_agent_failure_is_reported_to_the_team_without_silencing_the_bot(

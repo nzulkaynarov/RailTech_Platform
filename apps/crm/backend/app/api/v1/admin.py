@@ -79,9 +79,9 @@ async def list_audit(
         ids = {r.actor_user_id for r in rows if r.actor_user_id is not None}
         names = (
             dict(
-                (await session.execute(select(User.id, User.full_name).where(User.id.in_(ids))))
-                .tuples()
-                .all()
+                (
+                    await session.execute(select(User.id, User.full_name).where(User.id.in_(ids)))
+                ).all()
             )
             if ids
             else {}
@@ -105,4 +105,4 @@ async def _actor_names(session: AsyncSession, ids: set[int | None]) -> dict[int,
     if not wanted:
         return {}
     rows = await session.execute(select(User.id, User.full_name).where(User.id.in_(wanted)))
-    return dict(rows.tuples().all())
+    return dict(rows.all())

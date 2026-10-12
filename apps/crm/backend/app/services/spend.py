@@ -88,4 +88,4 @@ async def _lead_names(session: AsyncSession, ids: list[int]) -> dict[int, str]:
     if not ids:
         return {}
     rows = await session.execute(select(Lead.id, Lead.display_name).where(Lead.id.in_(ids)))
-    return {lead_id: name for lead_id, name in rows.tuples().all() if name}
+    return {lead_id: name for lead_id, name in rows.all() if name}
