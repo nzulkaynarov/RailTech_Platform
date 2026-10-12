@@ -10,6 +10,7 @@ import {
   useMe,
   useMessages,
   usePermissionsQuery,
+  useTeam,
 } from "../../api/queries";
 import { allowed } from "../../app/providers/access";
 import { ChatThread } from "../../components/ChatThread";
@@ -20,6 +21,7 @@ import { Owner } from "../../components/Owner";
 import { PageBody } from "../../components/PageBody";
 import { PageHeader } from "../../components/PageHeader";
 import { PageState } from "../../components/PageState";
+import { QueueNav } from "../../components/QueueNav";
 import { StageBadge } from "../../components/StageBadge";
 import { leadLinkText } from "../../domain/entities";
 import { useApiErrorToast } from "../../hooks/useApiErrorToast";
@@ -45,9 +47,11 @@ function useRights(): ActionRights | null {
 
 function Chat({ lead, rights }: { lead: LeadDetail; rights: ActionRights }) {
   const messages = useMessages(lead.id);
+  const team = useTeam();
   const action = useLeadAction(lead.id);
   const onError = useApiErrorToast();
   const reply = replyState(lead, rights);
+  const authorName = (userId: number) => team.data?.find((m) => m.id === userId)?.full_name;
   const send = async (text: string) => {
     try {
       await action.mutateAsync({ kind: "reply", text });
@@ -64,6 +68,7 @@ function Chat({ lead, rights }: { lead: LeadDetail; rights: ActionRights }) {
         hint={reply.hint}
         sending={action.isPending}
         language={lead.language}
+        authorName={authorName}
         onSend={send}
       />
     </PageState>
@@ -103,6 +108,7 @@ function LeadHeader({ lead, rights }: { lead: LeadDetail; rights: ActionRights }
   return (
     <PageHeader
       back="/leads"
+      nav={rights.take ? <QueueNav leadId={lead.id} /> : null}
       title={leadLinkText(lead.id, lead.display_name)}
       extra={<LeadActions lead={lead} rights={rights} />}
     >

@@ -72,6 +72,12 @@ export const slaColor = (level: string): string => SLA_COLOR[level] ?? "default"
 /** Цвет точки на ленте «Почему система так решила»: переход, передача, обычный прогон. */
 export const decisionColor = (kind: string, escalated: boolean): string =>
   kind === "transition" ? "blue" : escalated ? "red" : "gray";
+/**
+ * Ошибка прогона квалификатора словами. API отдаёт `Класс: текст` исключения — менеджеру
+ * это не нужно; сырой текст остаётся в `title` для админа.
+ */
+export const decisionErrorLabel = (error: string): string =>
+  error.startsWith("LlmUnavailableError") ? t.lead.modelUnavailable : t.lead.decisionFailed;
 /** Продукт, которым интересуется лид (ключ каталога KB). */
 export const productLabel = (key: string): Label => ({ label: key, color: "blue" });
 export const ingestLabel = (code: string): Label => ({

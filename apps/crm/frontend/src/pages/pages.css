@@ -74,3 +74,18 @@ h1.page-title.ant-typography {
 h1.page-title.auth-title {
   margin-bottom: var(--ant-margin);
 }
+
+/* «Назад» слева, навигация по очереди (карточка лида) справа — одной строкой. */
+.page-nav-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--ant-margin-xs);
+}
+.queue-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ant-margin-xs);
+  margin-bottom: var(--ant-margin-xs);
+}

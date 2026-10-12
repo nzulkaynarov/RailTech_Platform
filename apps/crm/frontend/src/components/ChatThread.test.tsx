@@ -48,6 +48,26 @@ describe("ChatThread", () => {
     expect(screen.getByText("Javob")).not.toHaveAttribute("lang");
   });
 
+  it("signs a manager reply with the colleague's name, falls back to the role", () => {
+    const names = new Map([[7, "Елена"]]);
+    render(
+      <ChatThread
+        messages={[
+          { ...message(1, "manager", "Здравствуйте!"), sent_by_user_id: 7 },
+          { ...message(2, "manager", "Уволенный коллега"), sent_by_user_id: 9 },
+          message(3, "bot", "Бот ответил"),
+        ]}
+        canReply={false}
+        sending={false}
+        authorName={(id) => names.get(id)}
+        onSend={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/^Елена ·/)).toBeInTheDocument();
+    expect(screen.getByText(/^Менеджер ·/)).toBeInTheDocument();
+    expect(screen.getByText(/^Бот ·/)).toBeInTheDocument();
+  });
+
   it("explains an empty thread", () => {
     render(<ChatThread messages={[]} canReply={false} sending={false} onSend={vi.fn()} />);
     expect(screen.getByText("Сообщений пока нет")).toBeInTheDocument();

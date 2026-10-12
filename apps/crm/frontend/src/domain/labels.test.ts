@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   auditActionLabel,
+  decisionErrorLabel,
   entityLabel,
   languageLabel,
   looksLikeCode,
@@ -82,5 +83,15 @@ describe("labels", () => {
     expect(entityLabel("kb_gap")).toBe("Пробел базы знаний");
     expect(languageLabel("UZ")).toBe("UZ");
     expect(reasonLabel("agent_unavailable")).toBe("Сбой ИИ-ассистента");
+  });
+});
+
+describe("decisionErrorLabel", () => {
+  it.each([
+    ["LlmUnavailableError: qualifier-model", "ИИ-ассистент был недоступен — оценка не обновлена"],
+    ["ValidationError: 1 validation error", "Ошибка квалификатора"],
+    ["", "Ошибка квалификатора"],
+  ])("%s", (error, expected) => {
+    expect(decisionErrorLabel(error)).toBe(expected);
   });
 });

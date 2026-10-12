@@ -17,10 +17,27 @@ type Props = {
   sending: boolean;
   /** Язык лида — для атрибута `lang` у его сообщений (WCAG 3.1.2). */
   language?: string | undefined;
+  /** Имя коллеги по `sent_by_user_id` — на ответах менеджера видно, кто писал (как в Front). */
+  authorName?: (userId: number) => string | undefined;
   onSend: (text: string) => Promise<void>;
 };
 
-function Bubble({ message, language }: { message: MessageOut; language: string | undefined }) {
+type BubbleProps = {
+  message: MessageOut;
+  language: string | undefined;
+  authorName: Props["authorName"];
+};
+
+/** Подпись сообщения: «Елена» для ответа менеджера, иначе роль («Бот», «Лид»). */
+function authorLabel(message: MessageOut, authorName: Props["authorName"]): string {
+  const name =
+    message.role === "manager" && message.sent_by_user_id !== null
+      ? authorName?.(message.sent_by_user_id)
+      : undefined;
+  return name ?? t.roleNames[message.role] ?? message.role;
+}
+
+function Bubble({ message, language, authorName }: BubbleProps) {
   const own = message.role === "bot" || message.role === "manager";
   const attachments = message.attachments.map((a) =>
     typeof a["name"] === "string" ? a["name"] : "file",
@@ -29,7 +46,7 @@ function Bubble({ message, language }: { message: MessageOut; language: string |
     <div className={own ? "chat-row chat-own" : "chat-row"}>
       <div className={`chat-bubble chat-${message.role}`}>
         <Typography.Text type="secondary" className="chat-meta">
-          {t.roleNames[message.role] ?? message.role} · {formatWhen(message.created_at)}
+          {authorLabel(message, authorName)} · {formatWhen(message.created_at)}
         </Typography.Text>
         <div className="chat-text" lang={messageLang(message.role, language)}>
           {message.text}
@@ -104,16 +121,28 @@ function ReplyBox({ sending, onSend }: ReplyProps) {
 }
 
 /** Переписка с лидом и поле ответа (только ответственный в режиме human). */
-export function ChatThread({ messages, canReply, hint, sending, language, onSend }: Props) {
-  const bottom = useRef<HTMLDivElement>(null);
+export function ChatThread({
+  messages,
+  canReply,
+  hint,
+  sending,
+  language,
+  authorName,
+  onSend,
+}: Props) {
+  const list = useRef<HTMLDivElement>(null);
 
+  // Прокручивается только лента, не страница: шапка с именем и «Забрать» остаётся на месте
+  // (на телефоне `scrollIntoView` уводил всю страницу к низу переписки).
   useEffect(() => {
-    bottom.current?.scrollIntoView({ block: "end" });
+    const el = list.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [messages.length]);
 
   return (
     <div className="chat-thread">
       <div
+        ref={list}
         className="chat-list"
         data-testid="chat-thread"
         role="log"
@@ -121,11 +150,12 @@ export function ChatThread({ messages, canReply, hint, sending, language, onSend
         aria-label={t.lead.chat}
       >
         {messages.length ? (
-          messages.map((m) => <Bubble key={m.id} message={m} language={language} />)
+          messages.map((m) => (
+            <Bubble key={m.id} message={m} language={language} authorName={authorName} />
+          ))
         ) : (
           <EmptyState title={t.lead.chatEmpty} hint={t.lead.chatEmptyHint} />
         )}
-        <div ref={bottom} />
       </div>
       {canReply ? (
         <ReplyBox sending={sending} onSend={onSend} />

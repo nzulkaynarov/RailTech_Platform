@@ -5,7 +5,14 @@ import { useLocation, useNavigate } from "react-router";
 
 import { t } from "../i18n/ru";
 
-type Props = { title: ReactNode; back?: string; extra?: ReactNode; children?: ReactNode };
+type Props = {
+  title: ReactNode;
+  back?: string;
+  /** Навигация по очереди справа от «Назад» (карточка лида). */
+  nav?: ReactNode;
+  extra?: ReactNode;
+  children?: ReactNode;
+};
 
 /**
  * Шапка страницы: «Назад», заголовок, действия (аудит UI U-10). «Назад» возвращает туда,
@@ -13,7 +20,7 @@ type Props = { title: ReactNode; back?: string; extra?: ReactNode; children?: Re
  * Заголовок — единственный h1 страницы (WCAG 1.3.1), визуально — размер h4 (`.page-title`).
  * Внешнего отступа нет: ритм задаёт `PageBody`.
  */
-export function PageHeader({ title, back, extra, children }: Props) {
+export function PageHeader({ title, back, nav, extra, children }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
   const goBack = () => {
@@ -22,15 +29,20 @@ export function PageHeader({ title, back, extra, children }: Props) {
   };
   return (
     <div className="page-header">
-      {back ? (
-        <Button
-          type="link"
-          className="page-back"
-          icon={<ArrowLeftOutlined aria-hidden />}
-          onClick={goBack}
-        >
-          {t.common.back}
-        </Button>
+      {back || nav ? (
+        <div className="page-nav-row">
+          {back ? (
+            <Button
+              type="link"
+              className="page-back"
+              icon={<ArrowLeftOutlined aria-hidden />}
+              onClick={goBack}
+            >
+              {t.common.back}
+            </Button>
+          ) : null}
+          {nav}
+        </div>
       ) : null}
       <Space wrap align="center" className="page-title-row">
         <Typography.Title level={1} className="page-title">
