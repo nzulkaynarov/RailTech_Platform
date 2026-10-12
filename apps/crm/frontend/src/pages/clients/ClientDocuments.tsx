@@ -144,7 +144,7 @@ const emptyState = (canWrite: boolean, open: () => void) => ({
   compact: true,
   title: t.clients.documentsEmpty,
   hint: t.clients.documentsEmptyHint,
-  ...(canWrite ? { action: { label: t.clients.addInline, onClick: open } } : {}),
+  ...(canWrite ? { action: { label: t.clients.upload, onClick: open } } : {}),
 });
 
 /** Документы клиента: загрузка, видимость клиенту, скачивание и журнал доступа — в «⋯». */

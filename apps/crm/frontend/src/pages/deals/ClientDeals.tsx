@@ -38,7 +38,7 @@ export function ClientDeals({ clientId, canWrite }: { clientId: number; canWrite
           !items.length && {
             compact: true,
             title: t.deals.clientEmpty,
-            ...(canWrite ? { action: { label: t.clients.addInline, onClick: create } } : {}),
+            ...(canWrite ? { action: { label: t.deals.create, onClick: create } } : {}),
           }
         }
       >
