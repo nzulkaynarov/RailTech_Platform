@@ -60,7 +60,7 @@ export function DealsPanel({ days }: { days: number }) {
               pagination={false}
               dataSource={data.lost_by_reason}
               columns={REASON_COLUMNS}
-              locale={{ emptyText: t.deals.lostEmpty }}
+              locale={{ emptyText: <Typography.Text>{t.deals.lostEmpty}</Typography.Text> }}
             />
           </>
         ) : null}

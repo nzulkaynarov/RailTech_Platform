@@ -16,6 +16,28 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
+# Перенос истории (ADR-0019): лиды, закрытые до появления сделок, становятся сделками —
+# иначе дашборд показывает «Сделок 3» и «Выиграно 0». Идемпотентно (NOT EXISTS по лиду).
+BACKFILL = """
+INSERT INTO deals (client_id, lead_id, title, product_key, currency, stage, closed_at,
+                   lost_reason, owner_user_id, created_at, updated_at)
+SELECT l.client_id, l.id,
+       COALESCE(NULLIF(l.display_name, ''), 'Лид #' || l.id),
+       l.product_interest[1], 'UZS', t.to_stage, t.at,
+       CASE WHEN t.to_stage = 'lost' THEN 'Другое' END,
+       l.assigned_user_id, t.at, t.at
+FROM (
+    SELECT DISTINCT ON (lead_id) lead_id, to_stage, created_at AS at
+    FROM stage_transitions
+    WHERE to_stage IN ('won', 'lost')
+    ORDER BY lead_id, created_at DESC
+) t
+JOIN leads l ON l.id = t.lead_id
+WHERE l.erased_at IS NULL
+  AND NOT EXISTS (SELECT 1 FROM deals d WHERE d.lead_id = l.id)
+"""
+
+
 def upgrade() -> None:
     op.create_table(
         "deals",
@@ -69,6 +91,7 @@ def upgrade() -> None:
         "CREATE TRIGGER trg_deals_updated_at BEFORE UPDATE ON deals "
         "FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
     )
+    op.execute(BACKFILL)
 
 
 def downgrade() -> None:
