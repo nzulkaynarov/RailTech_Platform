@@ -7,32 +7,18 @@
 from datetime import date, time
 from typing import Final, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 from app.domain.business_hours import BusinessHours
 from app.domain.qualification import DecisionRole, Timeline
 from app.domain.qualification_rules import Fact, QualificationCriteria
 from app.domain.triggers import TriggerCode, TriggerSettings
+from app.schemas.settings_base import Language, LocalizedText, StrictModel, localized
+from app.schemas.settings_client import ClientBotTexts
 
-Language = Literal["ru", "uz", "en"]
+__all__ = ["AppSettings", "Language", "LocalizedText"]
 
-
-class _Strict(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-
-class LocalizedText(_Strict):
-    ru: str
-    uz: str
-    en: str
-
-    def get(self, language: Language, **params: str) -> str:
-        template: str = getattr(self, language)
-        return template.format(**params) if params else template
-
-
-def _t(ru: str, uz: str, en: str) -> LocalizedText:
-    return LocalizedText(ru=ru, uz=uz, en=en)
+_t = localized
 
 
 _DAYS: dict[str, tuple[str, ...]] = {
@@ -60,12 +46,12 @@ def _day_ranges(days: list[int], names: tuple[str, ...]) -> str:
     return ", ".join(parts)
 
 
-class CompanySettings(_Strict):
+class CompanySettings(StrictModel):
     name: str = "RailTech"
     crm_base_url: str = "http://localhost"
 
 
-class BusinessHoursSettings(_Strict):
+class BusinessHoursSettings(StrictModel):
     timezone: str = "Asia/Tashkent"
     start: time = time(9, 0)
     end: time = time(18, 0)
@@ -93,7 +79,9 @@ class BusinessHoursSettings(_Strict):
         )
 
 
-class TextsSettings(_Strict):
+class TextsSettings(ClientBotTexts):
+    """Тексты бота; меню клиента и запрос номера — в `ClientBotTexts`."""
+
     # Клиенту человек — всегда «менеджер / menejer / manager» (Q-015). Узбекский — официальная
     # латиница: oʻ/gʻ (U+02BB), тутук-белги ʼ (U+02BC).
     consent_version: str = "2026-10-08"
@@ -232,7 +220,7 @@ class TextsSettings(_Strict):
     )
 
 
-class EscalationSettings(_Strict):
+class EscalationSettings(StrictModel):
     high_score_threshold: int = Field(default=70, ge=0, le=100)
     no_progress_turns: int = Field(default=4, ge=1)
     kb_gap_streak: int = Field(default=2, ge=1)
@@ -271,24 +259,26 @@ class EscalationSettings(_Strict):
         )
 
 
-class KbSettings(_Strict):
+class KbSettings(StrictModel):
     min_score: float = Field(default=0.55, ge=0, le=1)
     top_k: int = Field(default=6, ge=1, le=10)
 
 
-class BotSettings(_Strict):
+class BotSettings(StrictModel):
     persona: str = "Вежливый, спокойный ассистент без давления и навязывания; отвечает по делу."
     max_words: int = Field(default=120, ge=20, le=400)
     history_messages: int = Field(default=20, ge=2, le=50)
     rate_limit_per_minute: int = Field(default=20, ge=1)
     unresponsive_days: int = Field(default=7, ge=1, le=90)  # BUSINESS §5: 7 дней
+    # Q-020: один раз предложить «Поделиться номером» (квалификация или запрос менеджера).
+    ask_phone: bool = True
 
 
-class TermsSettings(_Strict):
+class TermsSettings(StrictModel):
     terms: list[str] = Field(default_factory=list)
 
 
-class NotificationsSettings(_Strict):
+class NotificationsSettings(StrictModel):
     channel_id: int | None = None
     duty_user_ids: list[int] = Field(default_factory=list)
 
@@ -298,7 +288,7 @@ _ANY_OF_FACTS: Final[tuple[Fact, ...]] = ("timeline", "decision_role", "budget")
 _ROLES: Final[tuple[DecisionRole, ...]] = ("decision_maker", "influencer", "researcher")
 
 
-class QualificationSettings(_Strict):
+class QualificationSettings(StrictModel):
     """Когда лид «Квалифицирован» (ADR-0016). По умолчанию — BUSINESS §5."""
 
     required_facts: list[Fact] = Field(default_factory=lambda: list(_REQUIRED_FACTS))
@@ -317,7 +307,7 @@ class QualificationSettings(_Strict):
         )
 
 
-class BudgetSettings(_Strict):
+class BudgetSettings(StrictModel):
     # Ниже жёсткого потолка Anthropic ($3, infra/litellm.config.yaml): диалог уходит на fallback-model
     # раньше, чем провайдер начнёт отклонять запросы (решение владельца Q-008, 2026-10-12).
     daily_usd: float = Field(default=2.0, ge=0)
@@ -339,7 +329,7 @@ SETTINGS_MODELS: Final[dict[str, type[BaseModel]]] = {
 }
 
 
-class AppSettings(_Strict):
+class AppSettings(StrictModel):
     company: CompanySettings = Field(default_factory=CompanySettings)
     business_hours: BusinessHoursSettings = Field(default_factory=BusinessHoursSettings)
     texts: TextsSettings = Field(default_factory=TextsSettings)

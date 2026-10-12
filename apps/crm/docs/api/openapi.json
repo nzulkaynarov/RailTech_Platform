@@ -1906,6 +1906,17 @@
             "title": "Owner Mode",
             "type": "string"
           },
+          "phone_e164": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone E164"
+          },
           "product_interest": {
             "items": {
               "type": "string"

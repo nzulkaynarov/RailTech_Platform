@@ -15,6 +15,7 @@ from app.bot.runtime import BotRuntime, build_dispatcher
 from app.container import Container
 from app.security.rbac import Rbac
 from app.services.budget import BudgetedModel, BudgetGuard
+from app.services.client_bot import ClientBotService
 from app.services.conversation import ActivityHook, ConversationService, EscalationHook
 
 logger = structlog.get_logger(__name__)
@@ -63,6 +64,20 @@ def build_conversation(
     )
 
 
+def build_client_bot(
+    container: Container, on_escalation: EscalationHook | None = None
+) -> ClientBotService:
+    """Меню клиента, /docs (ссылка S3 на 10 минут, как у docs-mcp), /request, номер."""
+    bucket = container.settings.s3_bucket_documents
+
+    async def presign(key: str, ttl_s: int) -> str:
+        return await container.storage.presigned_get(bucket, key, ttl_s)
+
+    return ClientBotService(
+        container.session_factory, container.settings_service, presign, on_escalation
+    )
+
+
 def _attachments_eraser(container: Container) -> Callable[[list[str]], Awaitable[None]]:
     async def erase(keys: list[str]) -> None:
         for key in keys:
@@ -93,6 +108,7 @@ async def bot_lifespan(
             config.s3_bucket_attachments,
             leads=container.lead_service,
             rbac=rbac,
+            client_bot=build_client_bot(container, on_escalation),
         )
         runtime = BotRuntime.create(config, dispatcher)
         await runtime.start()

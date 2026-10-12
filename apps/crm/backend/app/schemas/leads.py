@@ -43,6 +43,8 @@ class LeadDetail(LeadOut):
     qualification: dict[str, Any]
     consent_given_at: datetime | None
     tg_username: str | None
+    # Номер из кнопки «Поделиться номером» в боте (Q-020), E.164; удаляется по /delete.
+    phone_e164: str | None = None
     notes_count: int
     snoozed_until: datetime | None
     # Открытый сервисный запрос лида или его клиента — ссылка из карточки (Q-017).

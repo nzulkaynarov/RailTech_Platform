@@ -167,6 +167,7 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
             raise NotFoundError("lead not found")
         escalation = (await crm.active_escalations(session, [lead_id])).get(lead_id)
         username = await crm.tg_username(session, lead_id)
+        phone = await crm.tg_phone(session, lead_id)
         names = await crm.user_names(session, [lead])
         request_id = await service_requests.open_request_id(session, lead)
     base = lead_out(lead, escalation, names)
@@ -175,6 +176,7 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
         qualification=dict(lead.qualification or {}),
         consent_given_at=lead.consent_given_at,
         tg_username=username,
+        phone_e164=phone,
         notes_count=lead.notes_count,
         snoozed_until=lead.snoozed_until,
         open_service_request_id=request_id,

@@ -34,6 +34,11 @@ def _for_client(client_id: int, *, visible_only: bool) -> Select[Document]:
     return stmt
 
 
+def visible_for_client(client_id: int) -> Select[Document]:
+    """Запрос видимых клиенту документов (меню /docs бота) — тот же фильтр, что у docs-mcp."""
+    return _for_client(client_id, visible_only=True)
+
+
 async def search_for_client(
     session: AsyncSession, client_id: int, text: str, flt: DocumentFilter, limit: int = MAX_RESULTS
 ) -> Sequence[Document]:
