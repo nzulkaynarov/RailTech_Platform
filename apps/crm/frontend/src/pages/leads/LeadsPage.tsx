@@ -19,12 +19,14 @@ import { useLeads } from "../../api/queries";
 import { LeadLink } from "../../components/EntityLink";
 import { Owner } from "../../components/Owner";
 import { PageBody } from "../../components/PageBody";
+import { ExportCsvButton } from "../../components/ExportCsvButton";
 import { PageHeader } from "../../components/PageHeader";
 import { PageState } from "../../components/PageState";
 import { LangTag, PriorityTag, StageBadge } from "../../components/StageBadge";
 import { languageOptions, stageOptions } from "../../domain/labels";
 import {
   activeFilterCount,
+  exportParams,
   LEAD_SORTS,
   LEADS_PAGE,
   type LeadFilters,
@@ -250,7 +252,10 @@ export function LeadsPage() {
   const items = query.data?.items ?? [];
   return (
     <PageBody>
-      <PageHeader title={t.page.leads} />
+      <PageHeader
+        title={t.page.leads}
+        extra={<ExportCsvButton target={{ entity: "leads", params: exportParams(filters) }} />}
+      />
       {phone ? (
         <PhoneFilters filters={filters} update={update} reset={reset} />
       ) : (

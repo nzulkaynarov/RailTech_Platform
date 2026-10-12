@@ -6,10 +6,18 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Request
 
 from app.api.deps import ContainerDep, require
+from app.bot.profile import ProfilePublish
 from app.bot.supervisor import BotSupervisor
 from app.integrations.telegram import AiogramProbe
-from app.schemas.integrations import ChatCandidateOut, TelegramStatusOut, TelegramTokenIn
+from app.schemas.integrations import (
+    BotProfileOut,
+    ChatCandidateOut,
+    ProfilePublishOut,
+    TelegramStatusOut,
+    TelegramTokenIn,
+)
 from app.schemas.leads import ActionResult
+from app.schemas.settings_profile import BotProfileSettings
 from app.security.principal import Principal
 from app.security.reauth import LockoutPolicy
 from app.services.integrations import TelegramIntegrationService
@@ -53,6 +61,25 @@ async def put_telegram_token(
     """Проверить токен в Telegram (`getMe`), сохранить зашифрованным, перезапустить бота."""
     await service.save_token(who, body.token.get_secret_value(), body.password.get_secret_value())
     return TelegramStatusOut(**asdict(await service.status()))
+
+
+def _profile_out(profile: BotProfileSettings, result: ProfilePublish | None) -> BotProfileOut:
+    published = ProfilePublishOut(**asdict(result)) if result is not None else None
+    return BotProfileOut(profile=profile, published=published)
+
+
+@router.get("/telegram/profile", response_model=BotProfileOut)
+async def get_telegram_profile(_: Reader, service: ServiceDep) -> BotProfileOut:
+    """Имя, описание и краткое описание бота (ru/uz/en) и статус публикации в Telegram."""
+    return _profile_out(*await service.profile())
+
+
+@router.put("/telegram/profile", response_model=BotProfileOut)
+async def put_telegram_profile(
+    body: BotProfileSettings, who: Writer, service: ServiceDep
+) -> BotProfileOut:
+    """Сохранить профиль бота и опубликовать изменения в Telegram (setMyName и т. п.)."""
+    return _profile_out(*await service.save_profile(who, body))
 
 
 @router.get("/telegram/channels", response_model=list[ChatCandidateOut])

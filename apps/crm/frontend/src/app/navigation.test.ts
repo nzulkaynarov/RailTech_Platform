@@ -20,6 +20,7 @@ const admin = everything([
   "spend",
   "kb",
   "settings",
+  "reply_templates",
   "users",
   "integrations",
   "models",
@@ -49,7 +50,7 @@ describe("menu IA (audit 2026-10-12)", () => {
     expect(shape(visibleNav(admin, "admin"))).toEqual([
       ["work", "inbox,leads,clients,deals"],
       ["analytics", "dashboard,spend"],
-      ["bot", "kb,gaps,settings"],
+      ["bot", "kb,gaps,settings,templates"],
       ["admin", "users,integrations,models,system,backups,audit"],
     ]);
   });

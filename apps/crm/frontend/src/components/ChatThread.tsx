@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import type { MessageOut } from "../api/generated/model";
 import { chatKeyAction, messageLang } from "../domain/chatKeys";
+import type { FillContext } from "../domain/replyTemplates";
 import { t } from "../i18n/ru";
 import type { AssistRunner } from "../hooks/useReplyAssist";
 import { formatWhen } from "../lib/time";
@@ -11,6 +12,7 @@ import "../styles/workspace.css";
 import "./ChatThread.css";
 import { EmptyState } from "./EmptyState";
 import { ReplyAssist } from "./ReplyAssist";
+import { ReplyTemplates } from "./ReplyTemplates";
 
 type Props = {
   messages: MessageOut[];
@@ -24,6 +26,8 @@ type Props = {
   onSend: (text: string) => Promise<void>;
   /** ИИ-помощь у поля ответа (Q-019); без неё — только ручной ответ. */
   assist?: AssistRunner | undefined;
+  /** Шаблоны ответов: язык лида и подстановки; без них кнопки «Шаблоны» нет. */
+  templates?: FillContext | undefined;
 };
 
 type BubbleProps = {
@@ -77,10 +81,11 @@ type ReplyProps = {
   sending: boolean;
   onSend: (text: string) => Promise<void>;
   assist: AssistRunner | undefined;
+  templates: FillContext | undefined;
 };
 
 /** Поле ответа: закреплено внизу на телефоне; клавиши — `domain/chatKeys`. */
-function ReplyBox({ sending, onSend, assist }: ReplyProps) {
+function ReplyBox({ sending, onSend, assist, templates }: ReplyProps) {
   const [draft, setDraft] = useState("");
   const touch = useTouchInput();
   const send = async () => {
@@ -99,8 +104,20 @@ function ReplyBox({ sending, onSend, assist }: ReplyProps) {
   };
   return (
     <div className="chat-reply">
-      {assist ? (
-        <ReplyAssist draft={draft} setDraft={setDraft} runner={assist} disabled={sending} />
+      {assist || templates ? (
+        <div className="chat-tools">
+          {templates ? (
+            <ReplyTemplates
+              draft={draft}
+              setDraft={setDraft}
+              context={templates}
+              disabled={sending}
+            />
+          ) : null}
+          {assist ? (
+            <ReplyAssist draft={draft} setDraft={setDraft} runner={assist} disabled={sending} />
+          ) : null}
+        </div>
       ) : null}
       <div className="chat-reply-row">
         <Input.TextArea
@@ -141,6 +158,7 @@ export function ChatThread({
   authorName,
   onSend,
   assist,
+  templates,
 }: Props) {
   const list = useRef<HTMLDivElement>(null);
 
@@ -170,7 +188,7 @@ export function ChatThread({
         )}
       </div>
       {canReply ? (
-        <ReplyBox sending={sending} onSend={onSend} assist={assist} />
+        <ReplyBox sending={sending} onSend={onSend} assist={assist} templates={templates} />
       ) : (
         <Typography.Text type="secondary">{hint ?? t.lead.replyHint}</Typography.Text>
       )}

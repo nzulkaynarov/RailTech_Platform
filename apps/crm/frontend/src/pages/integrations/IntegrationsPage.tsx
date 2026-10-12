@@ -10,6 +10,7 @@ import { PageHeader } from "../../components/PageHeader";
 import { PageState } from "../../components/PageState";
 import { useApiErrorToast } from "../../hooks/useApiErrorToast";
 import { t } from "../../i18n/ru";
+import { BotProfileCard } from "./BotProfileCard";
 import { TeamChannelCard } from "./TeamChannelCard";
 import { TelegramBotCard } from "./TelegramBotCard";
 
@@ -39,6 +40,7 @@ export function IntegrationsPage() {
                 });
               }}
             />
+            <BotProfileCard />
             <TeamChannelCard
               status={status.data}
               channels={channels}

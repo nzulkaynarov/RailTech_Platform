@@ -31,6 +31,8 @@ import "../../styles/workspace.css";
 import { LeadNotes, LeadSummary } from "./LeadSummary";
 import "../pages.css";
 
+const useRightsMatrix = () => usePermissionsQuery().data;
+
 function useRights(): ActionRights | null {
   const me = useMe();
   const perms = usePermissionsQuery();
@@ -54,6 +56,15 @@ function Chat({ lead, rights }: { lead: LeadDetail; rights: ActionRights }) {
   const onError = useApiErrorToast();
   const reply = replyState(lead, rights);
   const assist = useReplyAssist(lead.id);
+  const me = useMe();
+  const canTemplates = allowed(useRightsMatrix(), "reply_templates", "read");
+  const templates = canTemplates
+    ? {
+        language: lead.language,
+        name: lead.display_name,
+        manager: me.data?.full_name ?? lead.assigned_user_name ?? "",
+      }
+    : undefined;
   const authorName = (userId: number) => team.data?.find((m) => m.id === userId)?.full_name;
   const send = async (text: string) => {
     try {
@@ -74,6 +85,7 @@ function Chat({ lead, rights }: { lead: LeadDetail; rights: ActionRights }) {
         authorName={authorName}
         onSend={send}
         assist={rights.assist ? assist : undefined}
+        templates={templates}
       />
     </PageState>
   );

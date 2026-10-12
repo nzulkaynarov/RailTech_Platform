@@ -12,6 +12,7 @@ from typing import Any
 import structlog
 from aiogram import Dispatcher
 
+from app.bot.profile import ProfilePublish
 from app.bot.runtime import BotRuntime
 from app.config import Settings
 from app.integrations.telegram import TokenSource
@@ -41,6 +42,8 @@ class BotSupervisor:
         self.source: TokenSource = "none"
         self.username: str | None = None
         self.last_error: str | None = None
+        # Последняя публикация профиля бота (старт или сохранение в «Подключениях»).
+        self.profile: ProfilePublish | None = None
 
     @property
     def mode(self) -> str:
@@ -85,6 +88,7 @@ class BotSupervisor:
                 await runtime.bot.session.close()
             return
         self.runtime, self.last_error = runtime, None
+        self.profile = runtime.profile
         try:
             me = await runtime.bot.get_me()
             self.username = me.username

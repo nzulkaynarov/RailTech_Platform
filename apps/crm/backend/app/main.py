@@ -16,10 +16,12 @@ from app.api.v1 import (
     client_contacts,
     clients,
     deals,
+    export,
     integrations,
     kb,
     leads,
     me,
+    reply_templates,
     setup,
     spend,
     stream,
@@ -131,6 +133,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         spend,
         integrations,
         system_status,
+        reply_templates,
+        export,
     )
     for module in routers:
         router = module.router

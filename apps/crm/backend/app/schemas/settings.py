@@ -17,6 +17,7 @@ from app.schemas.settings_base import Language, LocalizedText, StrictModel, loca
 from app.schemas.settings_client import ClientBotTexts
 from app.schemas.settings_deals import DealsSettings
 from app.schemas.settings_hours import BusinessHoursSettings
+from app.schemas.settings_profile import BotProfileSettings
 
 __all__ = ["AppSettings", "BusinessHoursSettings", "Language", "LocalizedText"]
 
@@ -329,6 +330,7 @@ SETTINGS_MODELS: Final[dict[str, type[BaseModel]]] = {
     "notifications": NotificationsSettings,
     "budget": BudgetSettings,
     "deals": DealsSettings,
+    "bot_profile": BotProfileSettings,
 }
 
 
@@ -360,6 +362,7 @@ class AppSettings(StrictModel):
     notifications: NotificationsSettings = Field(default_factory=NotificationsSettings)
     budget: BudgetSettings = Field(default_factory=BudgetSettings)
     deals: DealsSettings = Field(default_factory=DealsSettings)
+    bot_profile: BotProfileSettings = Field(default_factory=BotProfileSettings)
 
     def lead_notice(
         self,

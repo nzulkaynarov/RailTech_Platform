@@ -501,6 +501,48 @@
         "title": "Body_upload_kb_document",
         "type": "object"
       },
+      "BotProfileOut": {
+        "properties": {
+          "profile": {
+            "$ref": "#/components/schemas/BotProfileSettings"
+          },
+          "published": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProfilePublishOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "profile",
+          "published"
+        ],
+        "title": "BotProfileOut",
+        "type": "object"
+      },
+      "BotProfileSettings": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "$ref": "#/components/schemas/LocalizedText",
+            "description": "«Что умеет этот бот?» — видно до /start, до 512 символов"
+          },
+          "name": {
+            "$ref": "#/components/schemas/LocalizedText",
+            "description": "Имя бота в Telegram, до 64 символов"
+          },
+          "short_description": {
+            "$ref": "#/components/schemas/LocalizedText",
+            "description": "Краткое описание в профиле бота и при пересылке, до 120 символов"
+          }
+        },
+        "title": "BotProfileSettings",
+        "type": "object"
+      },
       "ChangePasswordRequest": {
         "properties": {
           "current_password": {
@@ -3218,6 +3260,30 @@
         "title": "LinkTelegram",
         "type": "object"
       },
+      "LocalizedText": {
+        "additionalProperties": false,
+        "properties": {
+          "en": {
+            "title": "En",
+            "type": "string"
+          },
+          "ru": {
+            "title": "Ru",
+            "type": "string"
+          },
+          "uz": {
+            "title": "Uz",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ru",
+          "uz",
+          "en"
+        ],
+        "title": "LocalizedText",
+        "type": "object"
+      },
       "LoginRequest": {
         "properties": {
           "email": {
@@ -3715,6 +3781,60 @@
         "title": "ProductOut",
         "type": "object"
       },
+      "ProfilePublishOut": {
+        "description": "Итог последней публикации профиля в Telegram; `error` — код, текст — на фронте.",
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "changed": {
+            "title": "Changed",
+            "type": "integer"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "enum": [
+                  "rate_limited",
+                  "telegram_error",
+                  "bot_not_running"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "retry_after": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry After"
+          }
+        },
+        "required": [
+          "ok",
+          "at",
+          "changed",
+          "error",
+          "retry_after"
+        ],
+        "title": "ProfilePublishOut",
+        "type": "object"
+      },
       "ProviderToday": {
         "properties": {
           "limit_usd": {
@@ -4021,6 +4141,57 @@
           "text"
         ],
         "title": "Reply",
+        "type": "object"
+      },
+      "ReplyTemplateIn": {
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "$ref": "#/components/schemas/LocalizedText"
+          },
+          "title": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "text"
+        ],
+        "title": "ReplyTemplateIn",
+        "type": "object"
+      },
+      "ReplyTemplateOut": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "text": {
+            "$ref": "#/components/schemas/LocalizedText"
+          },
+          "title": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "text",
+          "id",
+          "updated_at"
+        ],
+        "title": "ReplyTemplateOut",
         "type": "object"
       },
       "ResolveGap": {
@@ -6727,6 +6898,325 @@
         ]
       }
     },
+    "/api/v1/export/clients.csv": {
+      "get": {
+        "description": "Клиенты (как в списке «Клиенты», до 10 000 строк), CSV для Excel.",
+        "operationId": "export_clients",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Export Clients",
+        "tags": [
+          "export"
+        ]
+      }
+    },
+    "/api/v1/export/deals.csv": {
+      "get": {
+        "description": "Сделки с фильтрами экрана «Сделки» (до 10 000 строк), CSV для Excel.",
+        "operationId": "export_deals",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "stage",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "open",
+                    "won",
+                    "lost"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Stage"
+            }
+          },
+          {
+            "in": "query",
+            "name": "owner_user_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Owner User Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "client_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Client Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "closed_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Closed From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "closed_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Closed To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Export Deals",
+        "tags": [
+          "export"
+        ]
+      }
+    },
+    "/api/v1/export/leads.csv": {
+      "get": {
+        "description": "Лиды с фильтрами экрана «Лиды» (до 10 000 строк), CSV для Excel.",
+        "operationId": "export_leads",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "stage",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Stage"
+            }
+          },
+          {
+            "in": "query",
+            "name": "owner",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(me|none|\\d+)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Owner"
+            }
+          },
+          {
+            "in": "query",
+            "name": "min_score",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Min Score"
+            }
+          },
+          {
+            "in": "query",
+            "name": "language",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(ru|uz|en)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Language"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "created_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Created From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "created_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Created To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Export Leads",
+        "tags": [
+          "export"
+        ]
+      }
+    },
     "/api/v1/inbox": {
       "get": {
         "description": "Очередь работы — менеджеру и админу; наблюдатель смотрит «Лиды» (SPEC §10.1).",
@@ -6918,6 +7408,88 @@
           }
         ],
         "summary": "Connect Telegram Channel",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/api/v1/integrations/telegram/profile": {
+      "get": {
+        "description": "Имя, описание и краткое описание бота (ru/uz/en) и статус публикации в Telegram.",
+        "operationId": "get_telegram_profile",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BotProfileOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Telegram Profile",
+        "tags": [
+          "integrations"
+        ]
+      },
+      "put": {
+        "description": "Сохранить профиль бота и опубликовать изменения в Telegram (setMyName и т. п.).",
+        "operationId": "put_telegram_profile",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BotProfileSettings"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BotProfileOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Telegram Profile",
         "tags": [
           "integrations"
         ]
@@ -9080,6 +9652,193 @@
         "summary": "Test Model",
         "tags": [
           "spend"
+        ]
+      }
+    },
+    "/api/v1/reply-templates": {
+      "get": {
+        "description": "Шаблоны по названию; текст на ru/uz/en с подстановками `{name}`, `{manager}`.",
+        "operationId": "list_reply_templates",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ReplyTemplateOut"
+                  },
+                  "title": "Response List Reply Templates",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Reply Templates",
+        "tags": [
+          "reply-templates"
+        ]
+      },
+      "post": {
+        "operationId": "create_reply_template",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyTemplateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Reply Template",
+        "tags": [
+          "reply-templates"
+        ]
+      }
+    },
+    "/api/v1/reply-templates/{template_id}": {
+      "delete": {
+        "operationId": "delete_reply_template",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "title": "Template Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Reply Template",
+        "tags": [
+          "reply-templates"
+        ]
+      },
+      "put": {
+        "operationId": "update_reply_template",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "title": "Template Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyTemplateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Reply Template",
+        "tags": [
+          "reply-templates"
         ]
       }
     },

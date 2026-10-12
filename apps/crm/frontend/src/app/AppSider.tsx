@@ -12,6 +12,7 @@ import {
   QuestionCircleOutlined,
   SettingOutlined,
   ShopOutlined,
+  SnippetsOutlined,
   TeamOutlined,
   UnorderedListOutlined,
 } from "@ant-design/icons";
@@ -38,6 +39,7 @@ const ICONS: Record<NavKey, ReactNode> = {
   kb: <BookOutlined />,
   gaps: <QuestionCircleOutlined />,
   settings: <SettingOutlined />,
+  templates: <SnippetsOutlined />,
   users: <TeamOutlined />,
   integrations: <ApiOutlined />,
   models: <ExperimentOutlined />,

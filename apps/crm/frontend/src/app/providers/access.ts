@@ -20,6 +20,7 @@ const RESOURCE_MAP: Record<string, [string, string]> = {
   kb: ["kb", "read"],
   gaps: ["kb", "write"], // разбор пробелов — работа админа; менеджер видит KB только для чтения
   settings: ["settings", "read"],
+  templates: ["reply_templates", "write"], // правит админ; менеджер выбирает в карточке лида
   audit: ["audit", "read"],
   spend: ["spend", "read"],
   models: ["models", "read"],
@@ -32,6 +33,7 @@ const RESOURCE_MAP: Record<string, [string, string]> = {
 const ADMIN_SECTIONS = new Set([
   "gaps",
   "settings",
+  "templates",
   "spend",
   "models",
   "audit",
