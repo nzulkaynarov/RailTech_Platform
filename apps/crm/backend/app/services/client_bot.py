@@ -20,6 +20,7 @@ from app.domain.handoff_gate import needs_phone_first
 from app.domain.language import detect_language, mismatch_offer
 from app.domain.triggers import TriggerSignals, evaluate
 from app.models.clients import Document, ServiceRequest
+from app.models.qualification import Escalation
 from app.repositories import documents as docs_repo
 from app.repositories import leads as repo
 from app.schemas.settings import Language
@@ -27,6 +28,7 @@ from app.services import escalation
 from app.services.conversation_support import current_lead, lang_of, verified_client
 from app.services.conversation_types import EscalationHook, Outgoing
 from app.services.documents import LINK_TTL_S
+from app.services.lead_parts import ACTIVE_ESCALATION
 from app.services.settings import SettingsService
 
 logger = structlog.get_logger(__name__)
@@ -56,11 +58,14 @@ class ClientBotService:
         settings: SettingsService,
         presign: Presign | None = None,
         on_escalation: EscalationHook | None = None,
+        on_card_changed: Callable[[int], Awaitable[None]] | None = None,
     ) -> None:
         self._sessions = sessions
         self._settings = settings
         self._presign = presign
         self._on_escalation = on_escalation
+        # Перерисовать карточку передачи в канале (номер появился после передачи по решению кода).
+        self._on_card_changed = on_card_changed
 
     async def status(self, tg_user_id: int) -> ChatStatus:
         cfg = await self._settings.get()
@@ -171,11 +176,29 @@ class ClientBotService:
         return detected if offer else None
 
     async def save_phone(self, tg_user_id: int, phone_e164: str) -> None:
+        """Номер — в идентичность; если у лида уже открыта передача, её карточка в канале
+        перерисовывается, чтобы менеджер увидел номер, а не «Номер: не указан»."""
+        escalation_id: int | None = None
         async with self._sessions() as session, session.begin():
             identity = await repo.get_identity(session, tg_user_id)
             if identity is not None:
                 identity.phone_e164 = phone_e164
+                if identity.lead_id is not None:
+                    escalation_id = await session.scalar(
+                        select(Escalation.id)
+                        .where(
+                            Escalation.lead_id == identity.lead_id,
+                            Escalation.status.in_(ACTIVE_ESCALATION),
+                        )
+                        .order_by(Escalation.id.desc())
+                        .limit(1)
+                    )
         logger.info("lead_phone_saved", tg_user_id=tg_user_id)
+        if escalation_id is not None and self._on_card_changed is not None:
+            try:
+                await self._on_card_changed(escalation_id)
+            except Exception:  # noqa: BLE001 — номер сохранён; карточка обновится со следующим событием
+                logger.warning("phone_card_refresh_failed", escalation_id=escalation_id)
 
     async def documents(self, tg_user_id: int) -> list[tuple[int, str]] | None:
         """До 10 документов клиента, новые первыми; None — собеседник не клиент."""

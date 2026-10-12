@@ -6,9 +6,10 @@
 """
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 from unittest.mock import AsyncMock
 
+import pytest
 from aiogram.types import CallbackQuery, ReplyKeyboardMarkup, ReplyKeyboardRemove
 
 from app.bot import client_handlers, handlers, keyboards
@@ -171,3 +172,46 @@ async def test_ordinary_text_is_not_gated() -> None:
     )
     assert [t.human_requested for t in conv.turns] == [False]
     assert not client.pending
+
+
+class _Sessions:
+    """Фабрика сессий для одного `async with sessions() as s, s.begin()`."""
+
+    def __init__(self, session: Any) -> None:
+        self.session = session
+
+    def __call__(self) -> "_Sessions":
+        return self
+
+    async def __aenter__(self) -> Any:
+        return self.session
+
+    async def __aexit__(self, *args: object) -> None:
+        return None
+
+
+async def test_phone_saved_after_system_handoff_refreshes_the_channel_card(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Номер пришёл после передачи по решению кода — карточка в канале перерисовывается."""
+    from unittest.mock import AsyncMock, MagicMock
+
+    from app.repositories import leads as leads_repo
+    from app.services import client_bot as module
+
+    refreshed: list[int] = []
+
+    async def refresh(escalation_id: int) -> None:
+        refreshed.append(escalation_id)
+
+    identity = MagicMock(lead_id=7, phone_e164=None)
+    session = MagicMock()
+    session.scalar = AsyncMock(return_value=42)
+    session.begin = MagicMock(return_value=AsyncMock())
+    monkeypatch.setattr(leads_repo, "get_identity", AsyncMock(return_value=identity))
+    svc = module.ClientBotService(
+        cast(Any, _Sessions(session)), cast(Any, MagicMock()), on_card_changed=refresh
+    )
+    await svc.save_phone(1, "+998901234567")
+    assert identity.phone_e164 == "+998901234567"
+    assert refreshed == [42]

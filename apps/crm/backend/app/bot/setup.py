@@ -105,8 +105,17 @@ def build_client_bot(
     async def presign(key: str, ttl_s: int) -> str:
         return await container.storage.presigned_get(bucket, key, ttl_s)
 
+    async def refresh_card(escalation_id: int) -> None:
+        from app.tasks.notify import enqueue_escalation
+
+        await enqueue_escalation(escalation_id, new=False)
+
     return ClientBotService(
-        container.session_factory, container.settings_service, presign, on_escalation
+        container.session_factory,
+        container.settings_service,
+        presign,
+        on_escalation,
+        on_card_changed=refresh_card,
     )
 
 
