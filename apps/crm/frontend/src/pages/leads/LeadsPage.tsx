@@ -1,245 +1,79 @@
-import { FilterOutlined } from "@ant-design/icons";
-import {
-  Button,
-  DatePicker,
-  Drawer,
-  Flex,
-  Grid,
-  Input,
-  InputNumber,
-  Select,
-  Space,
-  Table,
-} from "antd";
-import dayjs from "dayjs";
+import { Grid, Table } from "antd";
+import type { ColumnsType } from "antd/es/table";
 import { useState } from "react";
 
 import type { LeadOut } from "../../api/generated/model";
-import { useLeads } from "../../api/queries";
+import { useLeads, useMe, usePermissionsQuery } from "../../api/queries";
+import { allowed } from "../../app/providers/access";
 import { LeadLink } from "../../components/EntityLink";
+import { ExportCsvButton } from "../../components/ExportCsvButton";
+import { LeadPreviewDrawer } from "../../components/LeadPreviewDrawer";
 import { Owner } from "../../components/Owner";
 import { PageBody } from "../../components/PageBody";
-import { ExportCsvButton } from "../../components/ExportCsvButton";
 import { PageHeader } from "../../components/PageHeader";
 import { PageState } from "../../components/PageState";
 import { LangTag, PriorityTag, StageBadge } from "../../components/StageBadge";
-import { languageOptions, stageOptions } from "../../domain/labels";
-import {
-  activeFilterCount,
-  exportParams,
-  LEAD_SORTS,
-  LEADS_PAGE,
-  type LeadFilters,
-  toListParams,
-} from "../../hooks/leadFilters";
+import { exportParams, LEADS_PAGE, toListParams } from "../../hooks/leadFilters";
 import { useLeadFilters } from "../../hooks/useLeadFilters";
 import { t } from "../../i18n/ru";
-import { DATE_FORMAT, formatWhen } from "../../lib/time";
+import { isRowClick } from "../../lib/rowClick";
+import { formatWhen } from "../../lib/time";
 import "../../styles/workspace.css";
 import "../pages.css";
 import { LeadCards } from "./LeadCards";
+import { Filters, PhoneFilters } from "./LeadFilters";
 
-type Update = (patch: Partial<LeadFilters>) => void;
-type FilterProps = { filters: LeadFilters; update: Update };
-
-/** Поиск, стадия, ответственный. У каждого поля — доступное имя (axe `label`, WCAG 3.3.2). */
-function MainFilters({ filters, update }: FilterProps) {
-  return (
-    <>
-      <Input.Search
-        allowClear
-        key={filters.q ?? ""}
-        aria-label={t.leads.search}
-        defaultValue={filters.q}
-        placeholder={t.leads.search}
-        onSearch={(q) => {
-          update({ q: q || undefined });
-        }}
-        style={{ width: 240 }}
-      />
-      <Select
-        allowClear
-        aria-label={t.leads.stage}
-        placeholder={t.leads.stage}
-        style={{ width: 180 }}
-        value={filters.stage}
-        options={stageOptions()}
-        onChange={(stage?: string) => {
-          update({ stage });
-        }}
-      />
-      <Select
-        allowClear
-        aria-label={t.leads.owner}
-        placeholder={t.leads.owner}
-        style={{ width: 176 }}
-        value={filters.owner}
-        options={[
-          { value: "me", label: t.leads.ownerMe },
-          { value: "none", label: t.leads.ownerNone },
-        ]}
-        onChange={(owner?: string) => {
-          update({ owner });
-        }}
-      />
-    </>
-  );
-}
-
-/** Язык, оценка, период и сортировка. */
-function MoreFilters({ filters, update }: FilterProps) {
-  return (
-    <>
-      <Select
-        allowClear
-        aria-label={t.leads.language}
-        placeholder={t.leads.language}
-        style={{ width: 176 }}
-        value={filters.language}
-        options={languageOptions()}
-        onChange={(language?: string) => {
-          update({ language });
-        }}
-      />
-      <InputNumber
-        min={0}
-        max={100}
-        aria-label={t.leads.minScore}
-        placeholder={t.leads.minScore}
-        style={{ width: 128 }}
-        value={filters.min_score ?? null}
-        onChange={(value) => {
-          update({ min_score: value ?? undefined });
-        }}
-      />
-      <DatePicker.RangePicker
-        format={DATE_FORMAT}
-        aria-label={t.leads.periodLabel}
-        placeholder={t.leads.period}
-        value={filters.from && filters.to ? [dayjs(filters.from), dayjs(filters.to)] : null}
-        onChange={(range) => {
-          update({ from: range?.[0]?.format("YYYY-MM-DD"), to: range?.[1]?.format("YYYY-MM-DD") });
-        }}
-      />
-      <Select
-        aria-label={t.leads.sort}
-        style={{ width: 224 }}
-        value={filters.sort ?? "last_message"}
-        options={LEAD_SORTS.map((v) => ({ value: v, label: t.leads.sorts[v] ?? v }))}
-        onChange={(sort: string) => {
-          update({ sort: sort === "last_message" ? undefined : sort });
-        }}
-      />
-    </>
-  );
-}
-
-function ResetButton({ filters, reset }: { filters: LeadFilters; reset: () => void }) {
-  if (!activeFilterCount(filters)) return null;
-  return (
-    <Button type="link" onClick={reset}>
-      {t.leads.reset}
-    </Button>
-  );
-}
-
-type FiltersProps = FilterProps & { reset: () => void };
-
-function Filters(props: FiltersProps) {
-  return (
-    <Space wrap role="search" aria-label={t.leads.filters}>
-      <MainFilters {...props} />
-      <MoreFilters {...props} />
-      <ResetButton filters={props.filters} reset={props.reset} />
-    </Space>
-  );
-}
-
-/** Телефон: одна кнопка «Фильтры (n)» и нижняя панель с теми же полями. */
-function PhoneFilters(props: FiltersProps) {
-  const [open, setOpen] = useState(false);
-  const n = activeFilterCount(props.filters);
-  return (
-    <>
-      <Button
-        icon={<FilterOutlined />}
-        className="filters-button"
-        onClick={() => {
-          setOpen(true);
-        }}
-      >
-        {n ? t.leads.filtersCount.replace("{n}", String(n)) : t.leads.filtersButton}
-      </Button>
-      <Drawer
-        placement="bottom"
-        height="auto"
-        open={open}
-        title={t.leads.filters}
-        onClose={() => {
-          setOpen(false);
-        }}
-        footer={
-          <Button
-            type="primary"
-            block
-            onClick={() => {
-              setOpen(false);
-            }}
-          >
-            {t.leads.showResults}
-          </Button>
-        }
-      >
-        <Flex
-          vertical
-          gap="small"
-          role="search"
-          aria-label={t.leads.filters}
-          className="drawer-filters"
-        >
-          <MainFilters {...props} />
-          <MoreFilters {...props} />
-          <ResetButton filters={props.filters} reset={props.reset} />
-        </Flex>
-      </Drawer>
-    </>
-  );
-}
-
-const COLUMNS = [
+/** Колонки с шириной: приоритет — отдельной узкой колонкой, а не тегом в «Кто ведёт». */
+const COLUMNS: ColumnsType<LeadOut> = [
   {
     title: t.leads.name,
-    render: (_: unknown, lead: LeadOut) => <LeadLink id={lead.id} name={lead.display_name} />,
+    width: 180,
+    ellipsis: true,
+    render: (_: unknown, lead) => <LeadLink id={lead.id} name={lead.display_name} />,
   },
-  { title: t.leads.stage, render: (_: unknown, l: LeadOut) => <StageBadge stage={l.stage} /> },
-  { title: t.leads.score, dataIndex: "score", width: 90 },
+  {
+    title: t.leads.stage,
+    width: 130,
+    render: (_: unknown, l) => <StageBadge stage={l.stage} />,
+  },
+  {
+    title: t.leads.priority,
+    width: 100,
+    render: (_: unknown, l) =>
+      l.escalation ? <PriorityTag priority={l.escalation.priority} /> : null,
+  },
+  { title: t.leads.score, dataIndex: "score", width: 72, align: "right" },
   {
     title: t.leads.whoLeads,
-    render: (_: unknown, lead: LeadOut) => (
-      <Space>
-        <Owner lead={lead} />
-        {lead.escalation ? <PriorityTag priority={lead.escalation.priority} /> : null}
-      </Space>
-    ),
+    width: 190,
+    ellipsis: true,
+    render: (_: unknown, lead) => <Owner lead={lead} />,
   },
   {
     title: t.leads.language,
-    width: 80,
-    render: (_: unknown, l: LeadOut) => <LangTag language={l.language} />,
+    width: 64,
+    render: (_: unknown, l) => <LangTag language={l.language} />,
   },
   { title: t.leads.need, dataIndex: "need_summary", ellipsis: true },
   {
     title: t.leads.lastMessage,
-    render: (_: unknown, l: LeadOut) =>
+    width: 140,
+    render: (_: unknown, l) =>
       l.last_lead_msg_at ? formatWhen(l.last_lead_msg_at) : t.common.none,
   },
 ];
 
-/** Таблица лидов (SPEC §10.1): фильтры, период и сортировка — в URL; на телефоне — карточки. */
+/**
+ * Таблица лидов (SPEC §10.1, UX волна 2): фильтры в одну строку, редкие — в «Ещё фильтры»;
+ * всё — в URL. Клик по строке — краткая сводка справа; на телефоне — карточки.
+ */
 export function LeadsPage() {
   const { filters, update, reset } = useLeadFilters();
   const query = useLeads(toListParams(filters));
   const phone = Grid.useBreakpoint().sm === false;
+  const me = useMe();
+  const canTake = allowed(usePermissionsQuery().data, "leads", "take") && Boolean(me.data);
+  const [preview, setPreview] = useState<number | null>(null);
   const pagination = {
     current: filters.page,
     pageSize: LEADS_PAGE,
@@ -267,14 +101,30 @@ export function LeadsPage() {
         ) : (
           <Table<LeadOut>
             rowKey="id"
+            size="small"
+            sticky
+            tableLayout="fixed"
             loading={query.isLoading}
             dataSource={items}
-            scroll={{ x: 720 }}
+            scroll={{ x: 1040 }}
             pagination={pagination}
             columns={COLUMNS}
+            rowClassName="lead-row"
+            onRow={(lead) => ({
+              onClick: (event) => {
+                if (isRowClick(event.target)) setPreview(lead.id);
+              },
+            })}
           />
         )}
       </PageState>
+      <LeadPreviewDrawer
+        leadId={preview}
+        canTake={canTake}
+        onClose={() => {
+          setPreview(null);
+        }}
+      />
     </PageBody>
   );
 }
