@@ -26,6 +26,7 @@ import type {
   ErrorOut,
   EscalationSettings,
   GetDashboardParams,
+  GetSpendParams,
   HealthResponse,
   InboxResponse,
   KbChunkOut,
@@ -49,6 +50,8 @@ import type {
   ManualDocument,
   MePatch,
   MessageOut,
+  ModelStatus,
+  ModelTestResult,
   NoteCreate,
   NoteOut,
   PasswordReset,
@@ -66,6 +69,7 @@ import type {
   ServiceRequestItem,
   SettingsResponse,
   Snooze,
+  SpendReport,
   TeamMember,
   TokenResponse,
   UserCreate,
@@ -2473,6 +2477,77 @@ export const permissions = async (
   });
 };
 
+export type listModelsResponse200 = {
+  data: ModelStatus[];
+  status: 200;
+};
+
+export type listModelsResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type listModelsResponseSuccess = listModelsResponse200 & {
+  headers: Headers;
+};
+export type listModelsResponseError = listModelsResponse422 & {
+  headers: Headers;
+};
+
+export type listModelsResponse = listModelsResponseSuccess | listModelsResponseError;
+
+export const getListModelsUrl = () => {
+  return `/api/v1/models`;
+};
+
+/**
+ * @summary List Models
+ */
+export const listModels = async (
+  options?: Parameters<typeof http>[1],
+): Promise<listModelsResponse> => {
+  return http<listModelsResponse>(getListModelsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type testModelResponse200 = {
+  data: ModelTestResult;
+  status: 200;
+};
+
+export type testModelResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type testModelResponseSuccess = testModelResponse200 & {
+  headers: Headers;
+};
+export type testModelResponseError = testModelResponse422 & {
+  headers: Headers;
+};
+
+export type testModelResponse = testModelResponseSuccess | testModelResponseError;
+
+export const getTestModelUrl = (alias: string) => {
+  return `/api/v1/models/${alias}/test`;
+};
+
+/**
+ * @summary Test Model
+ */
+export const testModel = async (
+  alias: string,
+  options?: Parameters<typeof http>[1],
+): Promise<testModelResponse> => {
+  return http<testModelResponse>(getTestModelUrl(alias), {
+    ...options,
+    method: "POST",
+  });
+};
+
 export type listServiceRequestsResponse200 = {
   data: ServiceRequestItem[];
   status: 200;
@@ -2730,6 +2805,52 @@ export const putSetting = async (
     method: "PUT",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
     body: JSON.stringify(putSettingBody),
+  });
+};
+
+export type getSpendResponse200 = {
+  data: SpendReport;
+  status: 200;
+};
+
+export type getSpendResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type getSpendResponseSuccess = getSpendResponse200 & {
+  headers: Headers;
+};
+export type getSpendResponseError = getSpendResponse422 & {
+  headers: Headers;
+};
+
+export type getSpendResponse = getSpendResponseSuccess | getSpendResponseError;
+
+export const getGetSpendUrl = (params?: GetSpendParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/spend?${stringifiedParams}` : `/api/v1/spend`;
+};
+
+/**
+ * @summary Get Spend
+ */
+export const getSpend = async (
+  params?: GetSpendParams,
+  options?: Parameters<typeof http>[1],
+): Promise<getSpendResponse> => {
+  return http<getSpendResponse>(getGetSpendUrl(params), {
+    ...options,
+    method: "GET",
   });
 };
 

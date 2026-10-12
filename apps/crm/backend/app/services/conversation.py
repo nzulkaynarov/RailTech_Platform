@@ -20,6 +20,7 @@ from app.domain.dialog_policy import Action
 from app.domain.language import Language, detect_language
 from app.domain.stages import OwnerMode, Stage, TransitionSource
 from app.domain.triggers import TriggerSignals, evaluate
+from app.integrations.llm_usage import lead_scope
 from app.models.leads import Conversation, Lead
 from app.repositories import leads as repo
 from app.schemas.settings import AppSettings
@@ -294,16 +295,17 @@ class ConversationService(ErasureMixin):
             client_id=turn.client_id,
         )
         try:
-            return await self._agent.run(
-                lead_id=turn.lead_id,
-                text=turn.text,
-                language=turn.language,
-                context_token=token,
-                settings=cfg,
-                human_requested=turn.human,
-                stage=turn.stage,
-                mode=turn.mode,
-            )
+            with lead_scope(turn.lead_id):
+                return await self._agent.run(
+                    lead_id=turn.lead_id,
+                    text=turn.text,
+                    language=turn.language,
+                    context_token=token,
+                    settings=cfg,
+                    human_requested=turn.human,
+                    stage=turn.stage,
+                    mode=turn.mode,
+                )
         except Exception:
             logger.exception("dialog_agent_failed", lead_id=turn.lead_id)
             return None

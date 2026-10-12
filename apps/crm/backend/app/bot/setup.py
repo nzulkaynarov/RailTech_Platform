@@ -14,7 +14,7 @@ from app.agents.mcp_client import McpToolClient
 from app.bot.runtime import BotRuntime, build_dispatcher
 from app.container import Container
 from app.security.rbac import Rbac
-from app.services.budget import BudgetedModel, BudgetGuard
+from app.services.budget import BudgetedModel
 from app.services.conversation import ActivityHook, ConversationService, EscalationHook
 
 logger = structlog.get_logger(__name__)
@@ -46,10 +46,11 @@ def build_conversation(
     on_escalation: EscalationHook | None = None,
 ) -> ConversationService:
     """Диалоговый контур бота: BudgetGuard → модель, MCP-инструменты, чекпоинтер."""
+    usage = container.usage_recorder
     model = BudgetedModel(
-        ChatModel(container.llm, "dialog-model"),
-        ChatModel(container.llm, "fallback-model"),
-        BudgetGuard(container.session_factory, container.settings_service),
+        ChatModel(container.llm, "dialog-model", usage=usage),
+        ChatModel(container.llm, "fallback-model", usage=usage, purpose="dialog"),
+        container.budget_guard,
     )
     agent = DialogAgent(McpToolClient(container.settings), model, saver)
     return ConversationService(

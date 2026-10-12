@@ -12,12 +12,11 @@ from app.models.leads import Lead
 from app.models.qualification import Escalation
 from app.models.system import SystemAlert
 
-SPENT_SINCE = text(
-    """
-    SELECT coalesce((SELECT sum((meta->>'cost_usd')::double precision) FROM messages
-                     WHERE role = 'bot' AND created_at >= :since), 0)
-         + coalesce((SELECT sum(cost_usd) FROM qualifier_runs WHERE created_at >= :since), 0)
-    """
+# Расход за сутки — из единого учёта вызовов моделей (работа и тесты расходуют одни сутки).
+SPENT_SINCE = text("SELECT coalesce(sum(cost_usd), 0) FROM llm_usage WHERE at >= :since")
+SPENT_BY_PROVIDER = text(
+    "SELECT provider, coalesce(sum(cost_usd), 0) AS usd FROM llm_usage "
+    "WHERE at >= :since GROUP BY provider"
 )
 QUEUE_SIZE = text(
     "SELECT count(*) FROM procrastinate_jobs "
@@ -44,6 +43,11 @@ class DailyFigures:
 
 async def spent_since(session: AsyncSession, since: datetime) -> float:
     return float((await session.execute(SPENT_SINCE, {"since": since})).scalar_one() or 0.0)
+
+
+async def spent_by_provider(session: AsyncSession, since: datetime) -> dict[str, float]:
+    rows = (await session.execute(SPENT_BY_PROVIDER, {"since": since})).all()
+    return {r.provider: float(r.usd) for r in rows if r.provider}
 
 
 async def queue_size(session: AsyncSession) -> int:

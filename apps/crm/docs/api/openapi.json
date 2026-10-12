@@ -2123,6 +2123,29 @@
         "title": "LeadPage",
         "type": "object"
       },
+      "LeadSpend": {
+        "properties": {
+          "calls": {
+            "title": "Calls",
+            "type": "integer"
+          },
+          "cost_usd": {
+            "title": "Cost Usd",
+            "type": "number"
+          },
+          "lead_id": {
+            "title": "Lead Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "lead_id",
+          "cost_usd",
+          "calls"
+        ],
+        "title": "LeadSpend",
+        "type": "object"
+      },
       "LinkTelegram": {
         "properties": {
           "tg_user_id": {
@@ -2315,6 +2338,130 @@
         "title": "MessageOut",
         "type": "object"
       },
+      "ModelStatus": {
+        "properties": {
+          "alias": {
+            "title": "Alias",
+            "type": "string"
+          },
+          "checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked At"
+          },
+          "health": {
+            "enum": [
+              "ok",
+              "problem",
+              "unknown"
+            ],
+            "title": "Health",
+            "type": "string"
+          },
+          "health_detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Health Detail"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "today_usd": {
+            "title": "Today Usd",
+            "type": "number"
+          }
+        },
+        "required": [
+          "alias",
+          "provider",
+          "model",
+          "health",
+          "health_detail",
+          "checked_at",
+          "today_usd"
+        ],
+        "title": "ModelStatus",
+        "type": "object"
+      },
+      "ModelTestResult": {
+        "properties": {
+          "alias": {
+            "title": "Alias",
+            "type": "string"
+          },
+          "cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Usd"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "latency_ms": {
+            "title": "Latency Ms",
+            "type": "integer"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "alias",
+          "ok",
+          "detail",
+          "latency_ms",
+          "cost_usd"
+        ],
+        "title": "ModelTestResult",
+        "type": "object"
+      },
       "NoteCreate": {
         "properties": {
           "text": {
@@ -2481,6 +2628,29 @@
           "is_active"
         ],
         "title": "ProductOut",
+        "type": "object"
+      },
+      "ProviderToday": {
+        "properties": {
+          "limit_usd": {
+            "title": "Limit Usd",
+            "type": "number"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "spent_usd": {
+            "title": "Spent Usd",
+            "type": "number"
+          }
+        },
+        "required": [
+          "provider",
+          "spent_usd",
+          "limit_usd"
+        ],
+        "title": "ProviderToday",
         "type": "object"
       },
       "QualifierRunItem": {
@@ -3095,6 +3265,131 @@
           "until"
         ],
         "title": "Snooze",
+        "type": "object"
+      },
+      "SpendDay": {
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "test_usd": {
+            "title": "Test Usd",
+            "type": "number"
+          },
+          "work_usd": {
+            "title": "Work Usd",
+            "type": "number"
+          }
+        },
+        "required": [
+          "day",
+          "work_usd",
+          "test_usd"
+        ],
+        "title": "SpendDay",
+        "type": "object"
+      },
+      "SpendReport": {
+        "properties": {
+          "avg_per_lead_usd": {
+            "title": "Avg Per Lead Usd",
+            "type": "number"
+          },
+          "by_kind": {
+            "items": {
+              "$ref": "#/components/schemas/SpendSlice"
+            },
+            "title": "By Kind",
+            "type": "array"
+          },
+          "by_purpose": {
+            "items": {
+              "$ref": "#/components/schemas/SpendSlice"
+            },
+            "title": "By Purpose",
+            "type": "array"
+          },
+          "daily_usd": {
+            "title": "Daily Usd",
+            "type": "number"
+          },
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "leads": {
+            "title": "Leads",
+            "type": "integer"
+          },
+          "providers": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderToday"
+            },
+            "title": "Providers",
+            "type": "array"
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/SpendDay"
+            },
+            "title": "Series",
+            "type": "array"
+          },
+          "today_usd": {
+            "title": "Today Usd",
+            "type": "number"
+          },
+          "top_leads": {
+            "items": {
+              "$ref": "#/components/schemas/LeadSpend"
+            },
+            "title": "Top Leads",
+            "type": "array"
+          },
+          "total_usd": {
+            "title": "Total Usd",
+            "type": "number"
+          }
+        },
+        "required": [
+          "days",
+          "today_usd",
+          "daily_usd",
+          "providers",
+          "series",
+          "by_purpose",
+          "by_kind",
+          "total_usd",
+          "leads",
+          "avg_per_lead_usd",
+          "top_leads"
+        ],
+        "title": "SpendReport",
+        "type": "object"
+      },
+      "SpendSlice": {
+        "properties": {
+          "calls": {
+            "title": "Calls",
+            "type": "integer"
+          },
+          "cost_usd": {
+            "title": "Cost Usd",
+            "type": "number"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "cost_usd",
+          "calls"
+        ],
+        "title": "SpendSlice",
         "type": "object"
       },
       "TeamMember": {
@@ -6293,6 +6588,94 @@
         ]
       }
     },
+    "/api/v1/models": {
+      "get": {
+        "operationId": "list_models",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ModelStatus"
+                  },
+                  "title": "Response List Models",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Models",
+        "tags": [
+          "spend"
+        ]
+      }
+    },
+    "/api/v1/models/{alias}/test": {
+      "post": {
+        "operationId": "test_model",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "alias",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "title": "Alias",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelTestResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Test Model",
+        "tags": [
+          "spend"
+        ]
+      }
+    },
     "/api/v1/service-requests": {
       "get": {
         "description": "Запросы клиентов (Q-017): открытые — во «Входящих», кто ждёт дольше, первыми.",
@@ -6558,6 +6941,56 @@
         "summary": "Put Setting",
         "tags": [
           "settings"
+        ]
+      }
+    },
+    "/api/v1/spend": {
+      "get": {
+        "operationId": "get_spend",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 180,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpendReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Spend",
+        "tags": [
+          "spend"
         ]
       }
     },

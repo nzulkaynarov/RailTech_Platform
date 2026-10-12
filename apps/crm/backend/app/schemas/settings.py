@@ -317,11 +317,24 @@ class QualificationSettings(_Strict):
         )
 
 
+class ProviderLimitsSettings(_Strict):
+    """Дневной лимит по провайдеру (USD, сутки по Ташкенту, 0 — без лимита), Q-008.
+
+    Ключ — провайдер LiteLLM (префикс модели `anthropic/…`, `gemini/…`). Проверяет наш код перед
+    вызовом; потолок `provider_budget_config` в infra/litellm.config.yaml — аварийный, выше.
+    """
+
+    anthropic: float = Field(default=3.0, ge=0)
+    gemini: float = Field(default=1.0, ge=0)
+
+
 class BudgetSettings(_Strict):
     # Ниже жёсткого потолка Anthropic ($3, infra/litellm.config.yaml): диалог уходит на fallback-model
     # раньше, чем провайдер начнёт отклонять запросы (решение владельца Q-008, 2026-10-12).
     daily_usd: float = Field(default=2.0, ge=0)
     fallback_model_enabled: bool = True
+    # Сверх лимита провайдера диалог → fallback-model (если его провайдер в лимите), иначе — отказ.
+    providers: ProviderLimitsSettings = Field(default_factory=ProviderLimitsSettings)
 
 
 SETTINGS_MODELS: Final[dict[str, type[BaseModel]]] = {

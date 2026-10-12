@@ -59,13 +59,13 @@ test-e2e: ## E2E-тесты (появляются с Фазы 4)
 eval: ## ПЛАТНО (реальные модели, ~150 вызовов): полный golden. make eval CONFIRM=yes [EVAL_MAX_USD=1]
 	@$(MAKE) --no-print-directory _paid-check
 	mkdir -p backend/evals/reports
-	$(COMPOSE) run --rm -e EVAL_MAX_USD=$(or $(EVAL_MAX_USD),1) -v "$(CURDIR)/backend/evals/reports:/app/evals/reports" worker pytest -m eval evals -p no:cacheprovider -s
+	$(COMPOSE) run --rm -e LLM_USAGE_KIND=test -e EVAL_MAX_USD=$(or $(EVAL_MAX_USD),1) -v "$(CURDIR)/backend/evals/reports:/app/evals/reports" worker pytest -m eval evals -p no:cacheprovider -s
 
 .PHONY: eval-quick
 eval-quick: ## ПЛАТНО, ~20 вызовов: 12 ключевых кейсов. make eval-quick CONFIRM=yes [EVAL_MAX_USD=0.3]
 	@$(MAKE) --no-print-directory _paid-check
 	mkdir -p backend/evals/reports
-	$(COMPOSE) run --rm -e EVAL_MAX_USD=$(or $(EVAL_MAX_USD),0.3) -e EVAL_CASES=$(QUICK_CASES) -v "$(CURDIR)/backend/evals/reports:/app/evals/reports" worker pytest -m eval evals -p no:cacheprovider -s
+	$(COMPOSE) run --rm -e LLM_USAGE_KIND=test -e EVAL_MAX_USD=$(or $(EVAL_MAX_USD),0.3) -e EVAL_CASES=$(QUICK_CASES) -v "$(CURDIR)/backend/evals/reports:/app/evals/reports" worker pytest -m eval evals -p no:cacheprovider -s
 
 QUICK_CASES := kb-ru-pos-timeline,kb-uz-track-install,kb-en-track-packages,not-in-kb-ru-weather,injection-ru-inside-kb-question,human-ru-operator,customer-contract-july-ru,customer-change-terms,price-without-kb,price-quoted-from-price-list,researcher-early,info-geography
 
@@ -120,7 +120,7 @@ migrate: ## Применить миграции Alembic на dev-стенде
 
 .PHONY: load-test
 load-test: ## Нагрузочный smoke: 50 параллельных диалогов, p95 ≤ 6 с (реальные модели, ADR-0014)
-	$(COMPOSE) run --rm worker python -m app load-test --yes $(args)
+	$(COMPOSE) run --rm -e LLM_USAGE_KIND=test worker python -m app load-test --yes $(args)
 
 .PHONY: kb-demo
 kb-demo: ## Загрузить демо-базу знаний (нужны ключи моделей в .env)
@@ -128,7 +128,7 @@ kb-demo: ## Загрузить демо-базу знаний (нужны клю
 
 .PHONY: kb-eval
 kb-eval: ## Проверить поиск на демо-KB: top-3 ≥ 13/15, uz ≥ 3/4 (гейт Фазы 1)
-	$(COMPOSE) run --rm worker python -m app kb-eval
+	$(COMPOSE) run --rm -e LLM_USAGE_KIND=test worker python -m app kb-eval
 
 .PHONY: kb-ingest
 kb-ingest: ## Загрузить файл в KB: make kb-ingest f=path/to/file.pdf lang=ru product=pos-integration

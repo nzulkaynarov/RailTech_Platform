@@ -48,6 +48,8 @@ class Settings(BaseSettings):
     litellm_base_url: AnyHttpUrl = AnyHttpUrl("http://litellm:4000")
     litellm_api_key: SecretStr = SecretStr("")
     llm_timeout_s: float = Field(default=20.0, gt=0)
+    # Пометка вызовов в учёте расходов (`llm_usage.kind`): `test` ставят make eval/load-test.
+    llm_usage_kind: Literal["work", "test"] = "work"
 
     docling_url: AnyHttpUrl = AnyHttpUrl("http://docling:5001")
     docling_api_key: SecretStr = SecretStr("")
