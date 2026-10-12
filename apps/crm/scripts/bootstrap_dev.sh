@@ -54,9 +54,24 @@ check_tools() {
   command -v curl >/dev/null || die "curl не найден."
 }
 
+# Переменные, появившиеся в .env.example позже (например, LITELLM_SALT_KEY, ADR-0020), дописываются
+# в существующий .env; CHANGE_ME в них заменяется ниже. Существующие значения не трогаются.
+add_missing_vars() {
+  local line name
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ "$line" =~ ^([A-Z][A-Z0-9_]*)= ]] || continue
+    name="${BASH_REMATCH[1]}"
+    if ! grep -q "^${name}=" "$ENV_FILE"; then
+      printf '%s\n' "$line" >>"$ENV_FILE"
+      info "В .env добавлена новая переменная ${name}."
+    fi
+  done <"$ROOT/.env.example"
+}
+
 create_env() {
   if [[ -f "$ENV_FILE" ]]; then
-    info ".env уже существует — оставляю как есть."
+    info ".env уже существует — оставляю как есть, добавляю только новые переменные."
+    add_missing_vars
   else
     cp "$ROOT/.env.example" "$ENV_FILE"
     info "Создан .env из .env.example."

@@ -23,6 +23,13 @@ backup_once() {
   log "backup_started"
   PGPASSWORD="$POSTGRES_PASSWORD" "$PG_BIN/pg_dump" -h "$POSTGRES_HOST" -p "${POSTGRES_PORT:-5432}" \
     -U "$POSTGRES_USER" -d "$POSTGRES_DB" --format=custom --no-owner --file "$dir.partial/db.dump"
+  # Модели и ключи, заданные в CRM «Модели ИИ», — в отдельной БД LiteLLM (ADR-0020); ключи там
+  # зашифрованы LITELLM_SALT_KEY из .env (в копию не входит). Нет БД — пропускаем.
+  if PGPASSWORD="$POSTGRES_PASSWORD" "$PG_BIN/psql" -h "$POSTGRES_HOST" -p "${POSTGRES_PORT:-5432}" \
+      -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc "select 1 from pg_database where datname='litellm'" | grep -q 1; then
+    PGPASSWORD="$POSTGRES_PASSWORD" "$PG_BIN/pg_dump" -h "$POSTGRES_HOST" -p "${POSTGRES_PORT:-5432}" \
+      -U "$POSTGRES_USER" -d litellm --format=custom --no-owner --file "$dir.partial/litellm.dump"
+  fi
   python -m app s3-mirror --dest "$dir.partial/s3"
   (cd "$dir.partial" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
   mv "$dir.partial" "$dir"

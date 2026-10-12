@@ -3,7 +3,7 @@
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 
 class ProviderToday(BaseModel):
@@ -61,3 +61,30 @@ class ModelTestResult(BaseModel):
     detail: str | None
     latency_ms: int
     cost_usd: float | None
+
+
+class ModelChangeIn(BaseModel):
+    """Смена роли (ADR-0020). Ключ без значения — ключ провайдера из env сервера (`.env`)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    provider: Literal["anthropic", "gemini", "openai"]
+    model: str = Field(min_length=1, max_length=128)
+    api_key: SecretStr | None = Field(default=None, min_length=8, max_length=512)
+    api_base: str | None = Field(default=None, max_length=256)
+    password: SecretStr = Field(min_length=1, max_length=256)
+
+
+class ModelResetIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    password: SecretStr = Field(min_length=1, max_length=256)
+
+
+class ModelChangeResult(BaseModel):
+    alias: str
+    provider: str
+    model: str
+    key_source: Literal["crm", "env"]
+    reindex_required: bool
+    quality_check_recommended: bool

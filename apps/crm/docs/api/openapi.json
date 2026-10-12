@@ -3423,6 +3423,129 @@
         "title": "MessageOut",
         "type": "object"
       },
+      "ModelChangeIn": {
+        "additionalProperties": false,
+        "description": "Смена роли (ADR-0020). Ключ без значения — ключ провайдера из env сервера (`.env`).",
+        "properties": {
+          "api_base": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Base"
+          },
+          "api_key": {
+            "anyOf": [
+              {
+                "format": "password",
+                "maxLength": 512,
+                "minLength": 8,
+                "type": "string",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Key"
+          },
+          "model": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Model",
+            "type": "string"
+          },
+          "password": {
+            "format": "password",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "provider": {
+            "enum": [
+              "anthropic",
+              "gemini",
+              "openai"
+            ],
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "model",
+          "password"
+        ],
+        "title": "ModelChangeIn",
+        "type": "object"
+      },
+      "ModelChangeResult": {
+        "properties": {
+          "alias": {
+            "title": "Alias",
+            "type": "string"
+          },
+          "key_source": {
+            "enum": [
+              "crm",
+              "env"
+            ],
+            "title": "Key Source",
+            "type": "string"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "quality_check_recommended": {
+            "title": "Quality Check Recommended",
+            "type": "boolean"
+          },
+          "reindex_required": {
+            "title": "Reindex Required",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "alias",
+          "provider",
+          "model",
+          "key_source",
+          "reindex_required",
+          "quality_check_recommended"
+        ],
+        "title": "ModelChangeResult",
+        "type": "object"
+      },
+      "ModelResetIn": {
+        "additionalProperties": false,
+        "properties": {
+          "password": {
+            "format": "password",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string",
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "password"
+        ],
+        "title": "ModelResetIn",
+        "type": "object"
+      },
       "ModelStatus": {
         "properties": {
           "alias": {
@@ -3979,7 +4102,10 @@
           "assist_empty",
           "assist_no_history",
           "deal_won_final",
-          "no_consent"
+          "no_consent",
+          "litellm_unavailable",
+          "model_key_required",
+          "model_in_config"
         ],
         "title": "Reason",
         "type": "string"
@@ -9162,6 +9288,124 @@
           }
         ],
         "summary": "List Models",
+        "tags": [
+          "spend"
+        ]
+      }
+    },
+    "/api/v1/models/{alias}": {
+      "put": {
+        "description": "Сменить провайдера/модель/ключ роли в LiteLLM без перезапуска (re-auth, аудит без ключа).",
+        "operationId": "change_model",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "alias",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "title": "Alias",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelChangeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelChangeResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Change Model",
+        "tags": [
+          "spend"
+        ]
+      }
+    },
+    "/api/v1/models/{alias}/reset": {
+      "post": {
+        "description": "Вернуть роль к значению по умолчанию (`infra/litellm.models.yaml`, ключ из env сервера).",
+        "operationId": "reset_model",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "alias",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "title": "Alias",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelResetIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelChangeResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reset Model",
         "tags": [
           "spend"
         ]

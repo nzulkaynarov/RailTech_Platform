@@ -63,6 +63,9 @@ import type {
   ManualDocument,
   MePatch,
   MessageOut,
+  ModelChangeIn,
+  ModelChangeResult,
+  ModelResetIn,
   ModelStatus,
   ModelTestResult,
   NoteCreate,
@@ -3393,6 +3396,124 @@ export const listModels = async (
   return http<listModelsResponse>(getListModelsUrl(), {
     ...options,
     method: "GET",
+  });
+};
+
+export type changeModelResponse200 = {
+  data: ModelChangeResult;
+  status: 200;
+};
+
+export type changeModelResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type changeModelResponseSuccess = changeModelResponse200 & {
+  headers: Headers;
+};
+export type changeModelResponseError = changeModelResponse422 & {
+  headers: Headers;
+};
+
+export type changeModelResponse = changeModelResponseSuccess | changeModelResponseError;
+
+export const getChangeModelUrl = (alias: string) => {
+  return `/api/v1/models/${alias}`;
+};
+
+/**
+ * Сменить провайдера/модель/ключ роли в LiteLLM без перезапуска (re-auth, аудит без ключа).
+ * @summary Change Model
+ */
+export const changeModel = async (
+  alias: string,
+  modelChangeIn: ModelChangeIn,
+  options?: Parameters<typeof http>[1],
+): Promise<changeModelResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<changeModelResponse>(getChangeModelUrl(alias), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(modelChangeIn),
+  });
+};
+
+export type resetModelResponse200 = {
+  data: ModelChangeResult;
+  status: 200;
+};
+
+export type resetModelResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type resetModelResponseSuccess = resetModelResponse200 & {
+  headers: Headers;
+};
+export type resetModelResponseError = resetModelResponse422 & {
+  headers: Headers;
+};
+
+export type resetModelResponse = resetModelResponseSuccess | resetModelResponseError;
+
+export const getResetModelUrl = (alias: string) => {
+  return `/api/v1/models/${alias}/reset`;
+};
+
+/**
+ * Вернуть роль к значению по умолчанию (`infra/litellm.models.yaml`, ключ из env сервера).
+ * @summary Reset Model
+ */
+export const resetModel = async (
+  alias: string,
+  modelResetIn: ModelResetIn,
+  options?: Parameters<typeof http>[1],
+): Promise<resetModelResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<resetModelResponse>(getResetModelUrl(alias), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(modelResetIn),
   });
 };
 

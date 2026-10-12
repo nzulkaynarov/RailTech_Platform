@@ -98,15 +98,43 @@ services:
       rustfs:
         condition: service_healthy
 
+  # Отдельная БД `litellm` в том же Postgres (ADR-0020): модели и их ключи (шифр LITELLM_SALT_KEY).
+  litellm-db-init:
+    image: pgvector/pgvector:0.8.7-pg16
+    restart: "no"
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+    command:
+      - sh
+      - -c
+      - >-
+        psql -tAc "SELECT 1 FROM pg_database WHERE datname = 'litellm'" | grep -q 1
+        || psql -c "CREATE DATABASE litellm"
+    healthcheck:
+      disable: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   litellm:
     image: ghcr.io/berriai/litellm:v1.104.2
     command: ["--config", "/app/config.yaml", "--port", "4000"]
     environment:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?set in .env}
+      # Модели — в БД LiteLLM, меняются из CRM без перезапуска (ADR-0020).
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/litellm
+      STORE_MODEL_IN_DB: "True"
+      LITELLM_SALT_KEY: ${LITELLM_SALT_KEY:?set in .env}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     volumes:
       - ./litellm.config.yaml:/app/config.yaml:ro
+    depends_on:
+      litellm-db-init:
+        condition: service_completed_successfully
     healthcheck:
       test:
         - CMD
@@ -117,6 +145,19 @@ services:
       timeout: 5s
       retries: 20
       start_period: 20s
+
+  # Модели по умолчанию в БД LiteLLM: создаёт только отсутствующие алиасы (ADR-0020).
+  litellm-seed:
+    <<: *backend
+    command: ["python", "-m", "app", "litellm-seed"]
+    restart: "no"
+    volumes:
+      - ./litellm.models.yaml:/app/litellm.models.yaml:ro
+    healthcheck:
+      disable: true
+    depends_on:
+      litellm:
+        condition: service_healthy
 
   # Миграции Alembic (вкл. схему Procrastinate) перед стартом api и worker.
   migrate:
@@ -139,6 +180,7 @@ services:
       FORWARDED_ALLOW_IPS: "*"
     volumes:
       - ./casbin:/app/casbin:ro
+      - ./litellm.models.yaml:/app/litellm.models.yaml:ro
       # Статус бэкапов и флаг «сделать сейчас» (ADR-0013); pg_dump — только в контейнере backup.
       - backups:/backups
     depends_on: &backend-deps
@@ -150,6 +192,8 @@ services:
         condition: service_completed_successfully
       litellm:
         condition: service_healthy
+      litellm-seed:
+        condition: service_completed_successfully
     healthcheck:
       test:
         - CMD

@@ -206,6 +206,10 @@ export const core = {
     assist_no_history: "Нет сообщения клиента, на которое нужен ответ",
     deal_won_final: "Выигранную сделку может изменить только администратор",
     no_consent: "Лид не дал согласие на обработку данных — писать ему нельзя",
+    litellm_unavailable: "Шлюз моделей (LiteLLM) не принял изменение — модель не изменена",
+    model_key_required: "Для этого провайдера на сервере нет ключа — введите API-ключ",
+    model_in_config:
+      "Роль задана в файле конфигурации LiteLLM — уберите model_list из конфига (ADR-0020)",
   } as Record<string, string>,
   common: {
     colleague: "коллега",

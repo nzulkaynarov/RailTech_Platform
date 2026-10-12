@@ -53,6 +53,9 @@ class Reason(StrEnum):
     ASSIST_NO_HISTORY = "assist_no_history"
     DEAL_WON_FINAL = "deal_won_final"
     NO_CONSENT = "no_consent"
+    LITELLM_UNAVAILABLE = "litellm_unavailable"
+    MODEL_KEY_REQUIRED = "model_key_required"
+    MODEL_IN_CONFIG = "model_in_config"
 
 
 class DomainError(Exception):

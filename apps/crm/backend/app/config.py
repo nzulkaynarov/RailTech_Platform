@@ -47,6 +47,8 @@ class Settings(BaseSettings):
 
     litellm_base_url: AnyHttpUrl = AnyHttpUrl("http://litellm:4000")
     litellm_api_key: SecretStr = SecretStr("")
+    # Модели ролей по умолчанию (ADR-0020): засев БД LiteLLM и «Сбросить» в «Модели ИИ».
+    litellm_models_path: Path = Path("/app/litellm.models.yaml")
     llm_timeout_s: float = Field(default=20.0, gt=0)
     # Пометка вызовов в учёте расходов (`llm_usage.kind`): `test` ставят make eval/load-test.
     llm_usage_kind: Literal["work", "test"] = "work"

@@ -24,3 +24,4 @@
 | [0017](0017-api-error-reasons.md) | Подкод `details.reason` и поле `details.field` в ошибках API; единый формат для всех ошибок | accepted | 9 |
 | [0018](0018-admin-console-connectors-and-secrets.md) | Подключения настраивает админ в CRM; секреты интеграций — в БД зашифрованными | accepted | 9 |
 | [0019](0019-deals-entity.md) | Сделка — отдельная сущность рядом с лидом; воронка лида не дублируется | accepted | 9 |
+| [0020](0020-models-and-keys-from-crm.md) | Модели и ключи ролей меняет админ в CRM через БД LiteLLM (без рестарта) | accepted | 9 |

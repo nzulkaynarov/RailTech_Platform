@@ -35,7 +35,7 @@ CATALOG: Final[dict[str, tuple[str, ...]]] = {
     "audit": ("read",),
     "backups": ("read", "write"),
     "spend": ("read",),
-    "models": ("read", "test"),
+    "models": ("read", "test", "write"),
     "integrations": ("read", "write"),
     "system": ("read",),
     "sandbox": ("use",),
