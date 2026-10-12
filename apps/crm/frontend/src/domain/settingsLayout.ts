@@ -12,7 +12,7 @@ const SECTION_GROUPS: SectionGroup[] = [
   { key: "company", sections: ["company", "business_hours"] },
   { key: "bot", sections: ["texts", "bot", "kb", "stop_words", "competitors"] },
   { key: "handoff", sections: ["escalation", "qualification"] },
-  { key: "team", sections: ["notifications"] },
+  { key: "team", sections: ["notifications", "deals"] },
   { key: "spend", sections: ["budget"] },
 ];
 

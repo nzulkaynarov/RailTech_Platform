@@ -1,6 +1,7 @@
 """DTO лидов, переписки, входящих и действий (SPEC §10.1)."""
 
 from datetime import datetime
+from decimal import Decimal
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -99,6 +100,9 @@ class TeamMember(BaseModel):
 
 class Close(BaseModel):
     reason: str | None = Field(default=None, max_length=1000)
+    # Сделка лида (ADR-0019): сумма — необязательно; причина отказа — из справочника «Настроек».
+    amount: Decimal | None = Field(default=None, ge=0, max_digits=14, decimal_places=2)
+    lost_reason: str | None = Field(default=None, max_length=120)
 
 
 class NoteCreate(BaseModel):

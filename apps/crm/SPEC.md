@@ -215,6 +215,12 @@ leads(
   source 'telegram', notes_count INT
 )
 clients(id, name, inn TEXT NULL, segment TEXT, owner_user_id, is_active)
+deals(                                              -- сделки клиента (Q-013, ADR-0019)
+  id, client_id NULL, lead_id NULL, title, product_key NULL, amount NUMERIC(14,2) NULL,
+  currency CHAR(3) DEFAULT 'UZS', stage 'open'|'won'|'lost', expected_close_date DATE NULL,
+  closed_at NULL, lost_reason NULL,                 -- значение из settings.deals.lost_reasons
+  owner_user_id NULL, created_at, updated_at
+)
 telegram_identities(
   id, tg_user_id UNIQUE, tg_username, tg_first_name, lead_id NULL, client_id NULL,
   phone_e164 NULL, verified_by_user_id NULL, verified_at NULL, is_blocked BOOL
@@ -275,7 +281,7 @@ service_requests(id, client_id, lead_id NULL, summary, status 'open'|'closed', c
 settings(key PK, value JSONB, schema_version INT, updated_by, updated_at)
 ```
 Ключи и JSON-схемы валидируются Pydantic-моделями в `app/schemas/settings.py`:
-`company`, `business_hours`, `texts` (greeting/consent/handoff/off_hours × ru/uz/en; подписи меню `menu_*`, команды клиента `docs_*`/`request_*`/`client_only`, номер `phone_*` — Q-011/Q-020, класс `ClientBotTexts`), `escalation` (триггеры, пороги, `no_progress_turns`, SLA, `price_always_to_manager`), `qualification` (критерии «Квалифицирован»: обязательные и дополнительные факты, горизонт срока, роли — ADR-0016), `kb` (`min_score`, `top_k`), `bot` (persona, `max_words`, `history_messages`, `rate_limit_per_minute`, `unresponsive_days`, `ask_phone` — один раз попросить номер, Q-020), `competitors`, `stop_words`, `notifications` (`channel_id`, `duty_user_ids`), `budget` (`daily_usd`, `fallback_model_enabled`, `providers` — дневной лимит USD по провайдеру LiteLLM: `anthropic` 3, `gemini` 1, 0 — без лимита; Q-008).
+`company`, `business_hours`, `texts` (greeting/consent/handoff/off_hours × ru/uz/en; подписи меню `menu_*`, команды клиента `docs_*`/`request_*`/`client_only`, номер `phone_*` — Q-011/Q-020, класс `ClientBotTexts`), `escalation` (триггеры, пороги, `no_progress_turns`, SLA, `price_always_to_manager`), `qualification` (критерии «Квалифицирован»: обязательные и дополнительные факты, горизонт срока, роли — ADR-0016), `kb` (`min_score`, `top_k`), `bot` (persona, `max_words`, `history_messages`, `rate_limit_per_minute`, `unresponsive_days`, `ask_phone` — один раз попросить номер, Q-020), `competitors`, `stop_words`, `notifications` (`channel_id`, `duty_user_ids`), `budget` (`daily_usd`, `fallback_model_enabled`, `providers` — дневной лимит USD по провайдеру LiteLLM: `anthropic` 3, `gemini` 1, 0 — без лимита; Q-008), `deals` (`lost_reasons` — справочник причин отказа, `currency` — валюта новых сделок, UZS; ADR-0019).
 
 ### 5.8. Техническое
 
@@ -478,12 +484,13 @@ Middleware: идемпотентность, rate-limit (20 сообщений/м
 | **Лиды** | manager, admin, viewer(ro) | Таблица с фильтрами (стадия, владелец, score, период, язык), сохранённые фильтры |
 | **Карточка лида** | manager, admin, viewer(ro) | Слева: шапка (стадия, score, владелец, язык, согласие), резюме, квалификация, причина эскалации, заметки. Центр: `ChatThread` — переписка с ролями, поле ответа (только `owner_mode=human` и владелец/админ), кнопки: Забрать · Вернуть боту (с заметкой, лид получает `texts.returned_to_bot`) · Отложить · Сделка заключена · Закрыть отказом · Сделать клиентом · Передать коллеге (`actions/assign`) · Новая сделка (для клиента, `actions/new_deal`) — ADR-0015. Владелец показывается по имени (`assigned_user_name`; справочник команды `GET /team` — всем ролям). Справа: «Почему система так решила» — последние `qualifier_runs` и `stage_transitions` в человекочитаемом виде |
 | **Клиенты** | manager, admin, viewer(ro) | Карточка клиента: контакты, привязанные Telegram-идентичности (с подтверждением), документы, связанные лиды/диалоги, сервисные запросы |
+| **Сделки** | manager, admin, viewer(ro) | `/deals`: таблица (название, клиент, сумма с валютой, стадия, ожидаемое закрытие, ответственный, причина отказа), фильтры стадия/ответственный (`?stage=won`), создание и правка в модальном окне; на карточке клиента — блок «Сделки» с «Новая сделка». Закрытие лида «Сделка заключена»/«Отказ» закрывает его открытую сделку в той же транзакции (ADR-0019). API: `GET/POST /api/v1/deals`, `GET/PATCH /api/v1/deals/{id}`, `GET /api/v1/deals/summary?days=`, `GET /api/v1/deals/options`; права `deals:read` (все роли), `deals:write` (manager, admin) |
 | **Документы** | manager, admin | Загрузка документов клиенту (тип, номер, дата), видимость клиенту, журнал доступа |
 | **База знаний** | admin | Документы KB, ингест, активность, просмотр чанков, тестовый поиск («что найдёт бот на этот вопрос») |
 | **Пробелы KB** | admin | Вопросы без ответа: частота, язык, примеры диалогов, действия: «Создать документ», «Привязать к документу», «Игнорировать» |
 | **Настройки** | admin | Формы по ключам `settings` с валидацией; предпросмотр текстов на 3 языках; редактор правил эскалации |
 | **Пользователи** | admin | Список, роли, создание с временным паролем (обязательная смена при первом входе, `users.must_change_password`), сброс пароля админом, деактивация (с передачей лидов в работе и клиентов коллеге — иначе 409 `user_has_active_leads`, ADR-0015), привязка Telegram; защита «последний админ». Email-приглашения — в расширениях (§15) |
-| **Дашборд** | все | Воронка, эскалации по причинам, время до «Забрать», доля fallback, стоимость моделей (из Langfuse API), пробелы KB |
+| **Дашборд** | все | Сделки за период (выиграно числом и суммой по валютам, отказы по причинам; плитка «Сделок» ведёт в `/deals?stage=won`), воронка, эскалации по причинам, время до «Забрать», доля fallback, стоимость моделей (из Langfuse API), пробелы KB |
 | **Аудит** | admin | `audit_log` с фильтрами |
 
 ### 10.2. Переключатель режима

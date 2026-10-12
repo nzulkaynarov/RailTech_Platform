@@ -8,6 +8,7 @@
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from typing import Any, Final, Literal
 
 import structlog
@@ -34,7 +35,7 @@ from app.repositories import users as users_repo
 from app.schemas.settings import Language
 from app.security import audit
 from app.security.principal import Principal
-from app.services import stages
+from app.services import deals, stages
 from app.services.escalation import OPEN_STATUSES
 from app.services.lead_messenger import LeadMessenger
 from app.services.settings import SettingsService
@@ -204,8 +205,16 @@ class LeadService:
         await self._notify(changed)
 
     async def close(
-        self, who: Principal, lead_id: int, outcome: Outcome, reason: str | None
+        self,
+        who: Principal,
+        lead_id: int,
+        outcome: Outcome,
+        reason: str | None,
+        *,
+        amount: Decimal | None = None,
+        lost_reason: str | None = None,
     ) -> None:
+        cfg = await self._settings.get()
         async with self._sessions() as session, session.begin():
             lead = await _lead(session, lead_id)
             _require_owner(lead, who)
@@ -216,6 +225,10 @@ class LeadService:
             before = _snapshot(lead)
             target = Stage.WON if outcome == "won" else Stage.LOST
             await _move(session, lead, target, who, reason or outcome)
+            # Сделка лида закрывается в той же транзакции (ADR-0019).
+            await deals.apply_lead_outcome(
+                session, who, lead, outcome, cfg.deals, reason_code=lost_reason, amount=amount
+            )
             # Итог зафиксирован — диалог снова ведёт бот, иначе лид пишет в тишину.
             # Владелец остаётся: он ответственный за клиента после сделки.
             lead.owner_mode = OwnerMode.BOT.value

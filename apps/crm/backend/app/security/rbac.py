@@ -27,6 +27,7 @@ CATALOG: Final[dict[str, tuple[str, ...]]] = {
     "stream": ("read",),
     "dashboard": ("read",),
     "clients": ("read", "write"),
+    "deals": ("read", "write"),
     "documents": ("read", "write"),
     "users": ("read", "write"),
     "settings": ("read", "write"),

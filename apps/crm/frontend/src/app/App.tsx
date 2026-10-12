@@ -6,6 +6,7 @@ import {
   ControlOutlined,
   DashboardOutlined,
   DollarOutlined,
+  FundOutlined,
   ExperimentOutlined,
   HeartOutlined,
   QuestionCircleOutlined,
@@ -31,6 +32,7 @@ import { SpendPage } from "../pages/spend/SpendPage";
 import { ClientDetailPage } from "../pages/clients/ClientDetailPage";
 import { ClientsPage } from "../pages/clients/ClientsPage";
 import { DashboardPage } from "../pages/dashboard/DashboardPage";
+import { DealsPage } from "../pages/deals/DealsPage";
 import { GapsPage } from "../pages/gaps/GapsPage";
 import { InboxNavIcon } from "../components/InboxNavIcon";
 import { InboxPage } from "../pages/inbox/InboxPage";
@@ -76,6 +78,7 @@ const resources = [
     show: "/clients/:id",
     meta: { label: t.nav.clients, icon: <ShopOutlined /> },
   },
+  { name: "deals", list: "/deals", meta: { label: t.nav.deals, icon: <FundOutlined /> } },
   {
     name: "dashboard",
     list: "/dashboard",
@@ -174,6 +177,14 @@ export function App() {
                 <Route path="/leads/:id" element={<LeadDetailPage />} />
                 <Route path="/clients" element={<ClientsPage />} />
                 <Route path="/clients/:id" element={<ClientDetailPage />} />
+                <Route
+                  path="/deals"
+                  element={
+                    <RouteGuard resource="deals">
+                      <DealsPage />
+                    </RouteGuard>
+                  }
+                />
                 <Route
                   path="/dashboard"
                   element={

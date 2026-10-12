@@ -169,4 +169,5 @@ def test_reason_values_are_a_stable_contract() -> None:
         "bot_not_running",
         "channel_not_configured",
         "channel_send_failed",
+        "deal_won_final",
     }

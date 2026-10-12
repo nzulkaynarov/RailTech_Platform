@@ -13,6 +13,7 @@ import { PageState } from "../../components/PageState";
 import { StageBadge } from "../../components/StageBadge";
 import { t } from "../../i18n/ru";
 import { formatDate } from "../../lib/time";
+import { ClientDeals } from "../deals/ClientDeals";
 import { ClientDocuments } from "./ClientDocuments";
 import { ClientTelegram } from "./ClientTelegram";
 import { EditClient } from "./EditClient";
@@ -83,6 +84,9 @@ export function ClientDetailPage() {
       <Details data={data} />
       <ClientTelegram data={data} canWrite={canWrite} />
       <Leads data={data} />
+      {allowed(perms.data, "deals", "read") ? (
+        <ClientDeals clientId={id} canWrite={allowed(perms.data, "deals", "write")} />
+      ) : null}
       {allowed(perms.data, "documents", "read") ? (
         <Card size="small" title={t.clients.documents}>
           <ClientDocuments clientId={id} canWrite={allowed(perms.data, "documents", "write")} />

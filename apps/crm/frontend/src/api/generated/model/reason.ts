@@ -45,4 +45,5 @@ export const Reason = {
   bot_not_running: "bot_not_running",
   channel_not_configured: "channel_not_configured",
   channel_send_failed: "channel_send_failed",
+  deal_won_final: "deal_won_final",
 } as const;

@@ -45,6 +45,7 @@ class Reason(StrEnum):
     BOT_NOT_RUNNING = "bot_not_running"
     CHANNEL_NOT_CONFIGURED = "channel_not_configured"
     CHANNEL_SEND_FAILED = "channel_send_failed"
+    DEAL_WON_FINAL = "deal_won_final"
 
 
 class DomainError(Exception):

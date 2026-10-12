@@ -23,6 +23,7 @@ TABLES = (
     "kb_documents",
     "kb_gaps",
     "products",
+    "deals",
     "leads",
     "telegram_identities",
     "conversations",
