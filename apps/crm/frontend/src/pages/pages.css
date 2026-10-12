@@ -97,8 +97,18 @@ h1.page-title.auth-title {
   height: 64px;
   padding: 0 var(--ant-padding);
 }
+/* Сайдбар высотой в экран: меню прокручивается само, кнопка сворачивания antd (48 px) всегда внизу
+   и не ложится поверх пунктов, когда меню админа длиннее экрана. */
+.app-sider.ant-layout-sider {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  align-self: flex-start;
+}
 .app-sider .ant-layout-sider-children {
-  overflow: auto;
+  height: calc(100vh - 48px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .app-nav.ant-menu {
   border-inline-end: none !important;
