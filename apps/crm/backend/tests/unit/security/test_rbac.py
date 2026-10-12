@@ -14,6 +14,7 @@ MANAGER = {
     ("leads", "work"),
     ("leads", "reply"),
     ("leads", "note"),
+    ("leads", "assist"),
     ("stream", "read"),
     ("dashboard", "read"),
     ("clients", "read"),
@@ -52,4 +53,5 @@ def test_permissions_payload_shape() -> None:
         "work": False,
         "reply": False,
         "note": False,
+        "assist": False,
     }

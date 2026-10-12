@@ -90,6 +90,76 @@
         "title": "Assign",
         "type": "object"
       },
+      "AssistOut": {
+        "description": "Текст для поля ответа (клиенту не отправляется). `notice`: `numbers_removed` — из\nчерновика убраны предложения с числами не из базы знаний; `new_numbers` — правка добавила\nчисла, возвращён исходный текст.",
+        "properties": {
+          "cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Usd"
+          },
+          "notice": {
+            "anyOf": [
+              {
+                "enum": [
+                  "numbers_removed",
+                  "new_numbers"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notice"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "AssistOut",
+        "type": "object"
+      },
+      "AssistRequest": {
+        "description": "ИИ-помощь при ответе (Q-019): `draft` — черновик, `improve` — правка текста `text`.",
+        "properties": {
+          "mode": {
+            "enum": [
+              "draft",
+              "improve"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "title": "AssistRequest",
+        "type": "object"
+      },
       "AuditItem": {
         "properties": {
           "action": {
@@ -3359,7 +3429,12 @@
           "secrets_key_missing",
           "bot_not_running",
           "channel_not_configured",
-          "channel_send_failed"
+          "channel_send_failed",
+          "assist_disabled",
+          "assist_budget",
+          "assist_unavailable",
+          "assist_empty",
+          "assist_no_history"
         ],
         "title": "Reason",
         "type": "string"
@@ -7394,6 +7469,64 @@
           }
         ],
         "summary": "Take",
+        "tags": [
+          "leads"
+        ]
+      }
+    },
+    "/api/v1/leads/{lead_id}/assist": {
+      "post": {
+        "description": "ИИ-помощь менеджеру (Q-019): текст для поля ответа; клиенту ничего не отправляется.",
+        "operationId": "assist",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lead_id",
+            "required": true,
+            "schema": {
+              "title": "Lead Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssistRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Assist",
         "tags": [
           "leads"
         ]

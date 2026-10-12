@@ -37,6 +37,8 @@ export const spend = {
       embed_ingest: "Индексация базы знаний",
       probe: "Проверка моделей",
       test: "Тест",
+      assist_draft: "Черновик ответа менеджеру",
+      assist_improve: "Улучшение текста менеджера",
     } as Record<string, string>,
     kinds: { work: "Работа", test: "Тесты (eval, нагрузка)" } as Record<string, string>,
   },

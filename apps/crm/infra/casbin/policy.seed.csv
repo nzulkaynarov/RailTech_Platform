@@ -4,6 +4,7 @@ p, manager, crm, leads, take
 p, manager, crm, leads, work
 p, manager, crm, leads, reply
 p, manager, crm, leads, note
+p, manager, crm, leads, assist
 p, manager, crm, stream, read
 p, manager, crm, dashboard, read
 p, manager, crm, clients, read

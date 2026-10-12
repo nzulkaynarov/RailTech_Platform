@@ -68,3 +68,11 @@
     background: var(--ant-color-bg-layout);
   }
 }
+
+/* ИИ-помощь у поля ответа (Q-019): кнопки переносятся на узком экране. */
+.chat-assist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ant-margin-xxs);
+  min-width: 0;
+}

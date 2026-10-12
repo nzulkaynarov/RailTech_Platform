@@ -23,6 +23,8 @@ from app.schemas.decisions import (
 from app.schemas.leads import (
     ActionResult,
     Assign,
+    AssistOut,
+    AssistRequest,
     Close,
     EscalationOut,
     InboxResponse,
@@ -45,6 +47,7 @@ Reader = Annotated[Principal, Depends(require("leads", "read"))]
 Taker = Annotated[Principal, Depends(require("leads", "take"))]
 Worker = Annotated[Principal, Depends(require("leads", "work"))]
 Replier = Annotated[Principal, Depends(require("leads", "reply"))]
+Assister = Annotated[Principal, Depends(require("leads", "assist"))]
 Noter = Annotated[Principal, Depends(require("leads", "note"))]
 
 
@@ -202,6 +205,15 @@ async def lead_messages(
 @router.post("/leads/{lead_id}/messages", response_model=ActionResult)
 async def reply(lead_id: int, body: Reply, who: Replier, container: ContainerDep) -> ActionResult:
     return ActionResult(id=await container.lead_service.reply(who, lead_id, body.text))
+
+
+@router.post("/leads/{lead_id}/assist", response_model=AssistOut)
+async def assist(
+    lead_id: int, body: AssistRequest, who: Assister, container: ContainerDep
+) -> AssistOut:
+    """ИИ-помощь менеджеру (Q-019): текст для поля ответа; клиенту ничего не отправляется."""
+    result = await container.assist_service.assist(who, lead_id, body.mode, body.text)
+    return AssistOut(text=result.text, cost_usd=result.cost_usd, notice=result.notice)
 
 
 @router.get("/leads/{lead_id}/notes", response_model=list[NoteOut])
