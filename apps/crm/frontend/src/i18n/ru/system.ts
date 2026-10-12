@@ -108,4 +108,18 @@ export const system = {
       crm_url: "адрес CRM",
     } as Record<string, string>,
   },
+  auditUi: {
+    showLogins: "Показать входы",
+    modelEntity: "Модель ИИ «{role}»",
+    /** Поля системных записей (модели, бэкапы, подключения) — дополняют `t.audit.fields`. */
+    fields: {
+      ok: "Ответила",
+      cost_usd: "Стоимость",
+      requested_at: "Запрошено",
+      last4: "Токен (последние 4)",
+      bot_username: "Бот",
+      channel_id: "Канал команды",
+      alias: "Модель ИИ",
+    } as Record<string, string>,
+  },
 };

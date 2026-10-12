@@ -169,3 +169,10 @@ h2.section-title.ant-typography {
   display: block;
   max-width: 320px;
 }
+
+.audit-logins {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ant-margin-xxs);
+  white-space: nowrap;
+}
