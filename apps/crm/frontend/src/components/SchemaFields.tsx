@@ -1,4 +1,16 @@
-import { Badge, Card, Form, Input, InputNumber, Select, Switch, Tabs, Typography } from "antd";
+import {
+  Badge,
+  Card,
+  Col,
+  Form,
+  Input,
+  InputNumber,
+  Row,
+  Select,
+  Switch,
+  Tabs,
+  Typography,
+} from "antd";
 
 import { t } from "../i18n/ru";
 import { bounds, type JsonSchema, kindOf, resolve } from "../domain/schemaForm";
@@ -7,6 +19,7 @@ import {
   fieldLabel,
   fillPlaceholders,
   hasPlaceholders,
+  isShortField,
   widgetFor,
 } from "../domain/settingsLayout";
 import { languageLabel } from "../domain/labels";
@@ -80,6 +93,29 @@ function Localized({ name, label: title, samples }: Omit<Props, "schema" | "root
   );
 }
 
+/** Три поля ru/uz/en друг под другом с предпросмотром — редактор текста бота в панели. */
+export function LocalizedFields({ name, label: title, samples }: Omit<Props, "schema" | "root">) {
+  return (
+    <>
+      {(["ru", "uz", "en"] as const).map((lang) => (
+        <div key={lang}>
+          <Form.Item
+            name={[...name, lang]}
+            label={languageLabel(lang)}
+            rules={[{ required: true, whitespace: true, message: t.settings.emptyTranslation }]}
+          >
+            <Input.TextArea
+              aria-label={`${title} · ${languageLabel(lang)}`}
+              autoSize={{ minRows: 3, maxRows: 10 }}
+            />
+          </Form.Item>
+          <Preview name={[...name, lang]} samples={samples} />
+        </div>
+      ))}
+    </>
+  );
+}
+
 function control(key: string, s: JsonSchema) {
   const format = s.type === "array" ? s.items?.format : s.format;
   const widget = widgetFor(key, format ? { format } : {});
@@ -115,19 +151,21 @@ export function SchemaField({ name, schema, root, label: title, samples }: Props
   const kind = kindOf(s);
   if (kind === "localized") return <Localized name={name} label={title} samples={samples} />;
   if (kind === "object") {
+    // Короткие поля (числа, переключатели, выбор) — по два в ряд на широком экране.
     return (
-      <>
+      <Row gutter={16}>
         {Object.entries(s.properties ?? {}).map(([key, child]) => (
-          <SchemaField
-            key={key}
-            name={[...name, key]}
-            schema={child}
-            root={root}
-            label={fieldLabel(key, child)}
-            samples={samples}
-          />
+          <Col key={key} xs={24} lg={isShortField(key, resolve(child, root).schema) ? 12 : 24}>
+            <SchemaField
+              name={[...name, key]}
+              schema={child}
+              root={root}
+              label={fieldLabel(key, child)}
+              samples={samples}
+            />
+          </Col>
         ))}
-      </>
+      </Row>
     );
   }
   const key = lastKey(name);

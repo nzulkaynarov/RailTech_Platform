@@ -42,7 +42,7 @@ h3.section-label.ant-typography {
   }
 }
 .settings-form {
-  max-width: 720px;
+  max-width: 1080px;
 }
 .settings-number {
   width: 220px;
@@ -57,16 +57,21 @@ h3.section-label.ant-typography {
 .settings-preview {
   white-space: pre-wrap;
 }
-/* Липкая панель «Сохранить» — всегда видна внизу экрана, пока форма на экране. */
-.settings-savebar {
-  position: sticky;
-  bottom: 0;
-  z-index: 3;
-  margin: var(--ant-margin) calc(-1 * var(--ant-padding-sm)) calc(-1 * var(--ant-padding-sm));
-  padding: var(--ant-padding-sm);
-  background: var(--ant-color-bg-container);
-  border-top: 1px solid var(--ant-color-border-secondary);
-  border-radius: 0 0 var(--ant-border-radius-lg) var(--ant-border-radius-lg);
+/* Шапка раздела настроек: заголовок и «Сохранить» — прилипает к верху (antd Affix). */
+.settings-header {
+  padding: var(--ant-padding-xs) 0;
+  background: var(--ant-color-bg-layout);
+}
+.settings-header h2.section-title.ant-typography {
+  margin: 0;
+}
+/* Тексты бота: ячейка языка в одну строку, «когда отправляется» — мелко. */
+.settings-text-cell.ant-typography {
+  display: block;
+  max-width: 100%;
+}
+.settings-text-when.ant-typography {
+  font-size: var(--ant-font-size-sm);
 }
 
 /* Дашборд: плитки и полосы причин. */
