@@ -57,14 +57,18 @@ export function LeadSummary({ lead }: { lead: LeadDetail }) {
         </Descriptions.Item>
         <Descriptions.Item label={t.lead.phone}>
           {lead.phone_e164 ? (
-            <a href={`tel:${lead.phone_e164}`}>{lead.phone_e164}</a>
+            <a className="nowrap" href={`tel:${lead.phone_e164}`}>
+              {lead.phone_e164}
+            </a>
           ) : (
             t.common.none
           )}
         </Descriptions.Item>
         {lead.client_phone_e164 ? (
           <Descriptions.Item label={t.lead.clientPhone}>
-            <a href={`tel:${lead.client_phone_e164}`}>{lead.client_phone_e164}</a>
+            <a className="nowrap" href={`tel:${lead.client_phone_e164}`}>
+              {lead.client_phone_e164}
+            </a>
           </Descriptions.Item>
         ) : null}
       </Descriptions>

@@ -57,7 +57,7 @@ describe("useTakeAndOpen", () => {
 describe("doneText", () => {
   it.each([
     [{ kind: "take" } as const, "Лид ваш"],
-    [{ kind: "won", reason: null } as const, "Сделка закрыта"],
+    [{ kind: "won", reason: null, amount: null } as const, "Сделка закрыта"],
     [{ kind: "reply", text: "x" } as const, "Готово"],
   ])("%j → %s", (action, text) => {
     expect(doneText(action)).toBe(text);

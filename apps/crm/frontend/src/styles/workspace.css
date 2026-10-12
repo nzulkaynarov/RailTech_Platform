@@ -49,3 +49,7 @@
 .dialog-alert {
   margin-bottom: var(--ant-margin-sm);
 }
+
+.dialog-field {
+  margin-bottom: var(--ant-margin-sm);
+}
