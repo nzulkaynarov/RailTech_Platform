@@ -45,6 +45,11 @@ class Reason(StrEnum):
     BOT_NOT_RUNNING = "bot_not_running"
     CHANNEL_NOT_CONFIGURED = "channel_not_configured"
     CHANNEL_SEND_FAILED = "channel_send_failed"
+    ASSIST_DISABLED = "assist_disabled"
+    ASSIST_BUDGET = "assist_budget"
+    ASSIST_UNAVAILABLE = "assist_unavailable"
+    ASSIST_EMPTY = "assist_empty"
+    ASSIST_NO_HISTORY = "assist_no_history"
 
 
 class DomainError(Exception):

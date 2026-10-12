@@ -45,4 +45,9 @@ export const Reason = {
   bot_not_running: "bot_not_running",
   channel_not_configured: "channel_not_configured",
   channel_send_failed: "channel_send_failed",
+  assist_disabled: "assist_disabled",
+  assist_budget: "assist_budget",
+  assist_unavailable: "assist_unavailable",
+  assist_empty: "assist_empty",
+  assist_no_history: "assist_no_history",
 } as const;

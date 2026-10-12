@@ -6,7 +6,7 @@
 
 from dataclasses import dataclass
 from functools import cached_property, lru_cache
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from aiogram import Bot
 from openai import AsyncOpenAI
@@ -22,6 +22,7 @@ from app.security.secrets_store import SecretCipher, SecretsStore
 from app.services.settings import SettingsService
 
 if TYPE_CHECKING:
+    from app.services.assist import AssistService
     from app.services.auth import AuthService
     from app.services.backups import BackupService
     from app.services.budget import BudgetGuard
@@ -133,6 +134,29 @@ class Container:
             self.settings_service,
             self.lead_messenger,
             on_escalation_changed=_escalation_changed,
+        )
+
+    @cached_property
+    def assist_service(self) -> "AssistService":
+        from app.agents.llm import ChatModel
+        from app.services.assist import AssistService, DbAssistStore, KbFragments
+        from app.services.budget import BudgetedModel
+
+        usage = self.usage_recorder
+
+        def model(purpose: Literal["assist_draft", "assist_improve"]) -> BudgetedModel:
+            return BudgetedModel(
+                ChatModel(self.llm, "dialog-model", usage=usage, purpose=purpose),
+                ChatModel(self.llm, "fallback-model", usage=usage, purpose=purpose),
+                self.budget_guard,
+            )
+
+        return AssistService(
+            self.settings_service,
+            DbAssistStore(self.session_factory),
+            KbFragments(self.kb_search),
+            {"draft": model("assist_draft"), "improve": model("assist_improve")},
+            self.budget_guard,
         )
 
     @cached_property

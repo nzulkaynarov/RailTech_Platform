@@ -169,4 +169,9 @@ def test_reason_values_are_a_stable_contract() -> None:
         "bot_not_running",
         "channel_not_configured",
         "channel_send_failed",
+        "assist_disabled",
+        "assist_budget",
+        "assist_unavailable",
+        "assist_empty",
+        "assist_no_history",
     }

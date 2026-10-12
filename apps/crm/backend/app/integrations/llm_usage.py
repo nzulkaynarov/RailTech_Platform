@@ -12,7 +12,16 @@ from dataclasses import dataclass
 from typing import Literal, Protocol
 
 Purpose = Literal[
-    "dialog", "qualifier", "judge", "fallback", "embed_query", "embed_ingest", "probe", "test"
+    "dialog",
+    "qualifier",
+    "judge",
+    "fallback",
+    "embed_query",
+    "embed_ingest",
+    "probe",
+    "test",
+    "assist_draft",
+    "assist_improve",
 ]
 
 _current_lead: ContextVar[int | None] = ContextVar("llm_usage_lead_id", default=None)

@@ -8,6 +8,8 @@ import type {
   AccessOut,
   ActionResult,
   Assign,
+  AssistOut,
+  AssistRequest,
   AuditPage,
   BackupsOut,
   BodyUploadDocument,
@@ -2368,6 +2370,65 @@ export const take = async (
   return http<takeResponse>(getTakeUrl(leadId), {
     ...options,
     method: "POST",
+  });
+};
+
+export type assistResponse200 = {
+  data: AssistOut;
+  status: 200;
+};
+
+export type assistResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type assistResponseSuccess = assistResponse200 & {
+  headers: Headers;
+};
+export type assistResponseError = assistResponse422 & {
+  headers: Headers;
+};
+
+export type assistResponse = assistResponseSuccess | assistResponseError;
+
+export const getAssistUrl = (leadId: number) => {
+  return `/api/v1/leads/${leadId}/assist`;
+};
+
+/**
+ * ИИ-помощь менеджеру (Q-019): текст для поля ответа; клиенту ничего не отправляется.
+ * @summary Assist
+ */
+export const assist = async (
+  leadId: number,
+  assistRequest: AssistRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<assistResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<assistResponse>(getAssistUrl(leadId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(assistRequest),
   });
 };
 

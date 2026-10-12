@@ -110,6 +110,23 @@ class Reply(BaseModel):
     text: str = Field(min_length=1, max_length=4000)
 
 
+class AssistRequest(BaseModel):
+    """ИИ-помощь при ответе (Q-019): `draft` — черновик, `improve` — правка текста `text`."""
+
+    mode: Literal["draft", "improve"]
+    text: str | None = Field(default=None, max_length=4000)
+
+
+class AssistOut(BaseModel):
+    """Текст для поля ответа (клиенту не отправляется). `notice`: `numbers_removed` — из
+    черновика убраны предложения с числами не из базы знаний; `new_numbers` — правка добавила
+    числа, возвращён исходный текст."""
+
+    text: str
+    cost_usd: float | None = None
+    notice: Literal["numbers_removed", "new_numbers"] | None = None
+
+
 class ActionResult(BaseModel):
     ok: Literal[True] = True
     id: int | None = None

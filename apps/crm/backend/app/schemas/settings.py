@@ -272,6 +272,9 @@ class BotSettings(StrictModel):
     unresponsive_days: int = Field(default=7, ge=1, le=90)  # BUSINESS §5: 7 дней
     # Q-020: один раз предложить «Поделиться номером» (квалификация или запрос менеджера).
     ask_phone: bool = True
+    # Q-019: ИИ-помощь менеджеру при ответе («Черновик», «Улучшить») — только по кнопке.
+    assist_enabled: bool = True
+    assist_max_input_chars: int = Field(default=2000, ge=200, le=4000)
 
 
 class TermsSettings(StrictModel):
