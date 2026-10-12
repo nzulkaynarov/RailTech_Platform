@@ -142,25 +142,44 @@ async def test_group_chats_are_left_alone() -> None:
     bot.set_my_commands.assert_not_awaited()
 
 
-async def test_own_contact_is_saved_in_e164_and_keyboard_removed() -> None:
-    bot, client, fsm = fake_bot(), FakeClientBot(), state()
+class RecordingConversation:
+    """Запись в переписку CRM (менеджер должен видеть, что клиент поделился номером)."""
+
+    def __init__(self) -> None:
+        self.lead_messages: list[str] = []
+        self.bot_replies: list[str] = []
+
+    async def record_lead_message(self, inc: Any, meta: Any = None) -> int:
+        self.lead_messages.append(inc.text)
+        return 1
+
+    async def record_bot_replies(self, tg_user_id: int, outgoing: list[Any]) -> None:
+        self.bot_replies.extend(o.text for o in outgoing)
+
+
+async def test_own_contact_is_saved_recorded_and_keyboard_removed() -> None:
+    bot, client, fsm, conv = fake_bot(), FakeClientBot(), state(), RecordingConversation()
     await fsm.set_state(client_handlers.PhoneForm.pending)
     contact = {"phone_number": "998901234567", "first_name": "Азиз", "user_id": USER}
-    await client_handlers.on_contact(message(bot, contact=contact), client, FakeSettings(), fsm)
+    event = message(bot, contact=contact)
+    await client_handlers.on_own_contact(event, client, conv, FakeSettings(), fsm)  # type: ignore[arg-type]
     assert client.phones == ["+998901234567"]
     reply = sent(bot)[0]
     assert reply.text == CFG.texts.phone_saved.ru
     assert isinstance(reply.reply_markup, ReplyKeyboardRemove)
     assert await fsm.get_state() is None
+    assert conv.lead_messages == ["📇 Азиз: 998901234567"]
+    assert conv.bot_replies == [CFG.texts.phone_saved.ru]
 
 
-@pytest.mark.parametrize("user_id", [999, None])  # чужой контакт или без Telegram-аккаунта
-async def test_foreign_contact_is_not_saved(user_id: int | None) -> None:
-    bot, client = fake_bot(), FakeClientBot()
+@pytest.mark.parametrize(
+    ("user_id", "own"),
+    [(USER, True), (999, False), (None, False)],  # свой / чужой / контакт без Telegram-аккаунта
+)
+def test_only_own_contact_is_routed_to_the_phone_handler(user_id: int | None, own: bool) -> None:
     contact = {"phone_number": "+998901112233", "first_name": "Коллега", "user_id": user_id}
-    await client_handlers.on_contact(message(bot, contact=contact), client, FakeSettings(), state())
-    assert client.phones == []
-    assert sent(bot)[0].text == CFG.texts.phone_not_own.ru
+    # чужой контакт обрабатывает основной роутер — передаёт менеджеру текстом, как до Q-020
+    assert client_handlers._own_contact(message(fake_bot(), contact=contact)) is own
 
 
 async def test_not_now_removes_keyboard() -> None:
