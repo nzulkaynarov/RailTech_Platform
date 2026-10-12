@@ -11,6 +11,7 @@ export interface LeadDetail {
   assigned_user_id: number | null;
   assigned_user_name?: string | null;
   client_id?: number | null;
+  client_phone_e164?: string | null;
   consent_given_at: string | null;
   created_at: string;
   display_name: string;

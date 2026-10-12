@@ -13,6 +13,7 @@ export type Reason = (typeof Reason)[keyof typeof Reason];
 export const Reason = {
   email_taken: "email_taken",
   invalid_email: "invalid_email",
+  invalid_phone: "invalid_phone",
   telegram_taken: "telegram_taken",
   telegram_linked_elsewhere: "telegram_linked_elsewhere",
   telegram_unknown: "telegram_unknown",
