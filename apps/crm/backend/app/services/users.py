@@ -20,7 +20,7 @@ from app.domain.errors import (
     ValidationFailedError,
 )
 from app.domain.lead_access import loses_work_role
-from app.models.auth import ROLES, RefreshToken, User
+from app.models.auth import RefreshToken, User
 from app.models.clients import Client
 from app.models.deals import Deal
 from app.models.leads import Lead
@@ -34,6 +34,7 @@ from app.security.passwords import (
     validate_new_password,
     verify_password,
 )
+from app.services.user_parts import check_roles, normalize_email
 
 
 @dataclass(frozen=True, slots=True)
@@ -87,11 +88,11 @@ class UserService:
         self, actor: Actor, email: str, full_name: str, roles: Sequence[str]
     ) -> tuple[UserView, str]:
         """Новый пользователь и временный пароль (показывается один раз)."""
-        _check_roles(roles)
+        check_roles(roles)
         password = temporary_password()
         async with self._sessions() as session, session.begin():
             user = User(
-                email=_email(email),
+                email=normalize_email(email),
                 full_name=full_name.strip(),
                 password_hash=hash_password(password),
                 must_change_password=True,
@@ -111,7 +112,7 @@ class UserService:
 
     async def update(self, actor: Actor, user_id: int, patch: UserPatch) -> UserView:
         if patch.roles is not None:
-            _check_roles(patch.roles)
+            check_roles(patch.roles)
         async with self._sessions() as session, session.begin():
             await repo.lock_admin_set(session)
             user = await repo.get(session, user_id, for_update=True)
@@ -276,7 +277,7 @@ async def _upsert_admin(
 ) -> int:
     user = await repo.by_email(session, email, for_update=True)
     if user is None:
-        user = User(email=_email(email), full_name=full_name, password_hash="")
+        user = User(email=normalize_email(email), full_name=full_name, password_hash="")
         session.add(user)
         await session.flush()
     user.password_hash = hash_password(secret)
@@ -361,19 +362,6 @@ async def _revoke_tokens(session: AsyncSession, user_id: int) -> None:
         .where(RefreshToken.user_id == user_id, RefreshToken.revoked_at.is_(None))
         .values(revoked_at=datetime.now(UTC))
     )
-
-
-def _check_roles(roles: Sequence[str]) -> None:
-    unknown = set(roles) - set(ROLES)
-    if unknown or not roles:
-        raise ValidationFailedError("unknown or empty roles", field="roles")
-
-
-def _email(email: str) -> str:
-    value = email.strip().lower()
-    if "@" not in value or len(value) > 255:
-        raise ValidationFailedError("invalid email", reason=Reason.INVALID_EMAIL, field="email")
-    return value
 
 
 def _view(user: User, roles: list[str]) -> UserView:

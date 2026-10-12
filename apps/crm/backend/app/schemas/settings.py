@@ -15,6 +15,7 @@ from app.domain.qualification_rules import Fact, QualificationCriteria
 from app.domain.triggers import TriggerCode, TriggerSettings
 from app.schemas.settings_base import Language, LocalizedText, StrictModel, localized
 from app.schemas.settings_client import ClientBotTexts
+from app.schemas.settings_deals import DealsSettings
 from app.schemas.settings_hours import BusinessHoursSettings
 
 __all__ = ["AppSettings", "BusinessHoursSettings", "Language", "LocalizedText"]
@@ -308,19 +309,6 @@ class BudgetSettings(StrictModel):
     fallback_model_enabled: bool = True
     # Сверх лимита провайдера диалог → fallback-model (если его провайдер в лимите), иначе — отказ.
     providers: ProviderLimitsSettings = Field(default_factory=ProviderLimitsSettings)
-
-
-_LOST_REASONS: Final = ("Дорого", "Выбрали конкурента", "Нет бюджета", "Не актуально")
-_LOST_REASONS_TAIL: Final = ("Не вышли на связь", "Другое")
-
-
-class DealsSettings(StrictModel):
-    """Справочник причин отказа и валюта новых сделок (Q-013, ADR-0019)."""
-
-    lost_reasons: list[str] = Field(
-        default_factory=lambda: [*_LOST_REASONS, *_LOST_REASONS_TAIL], min_length=1
-    )
-    currency: str = Field(default="UZS", pattern="^[A-Z]{3}$")
 
 
 SETTINGS_MODELS: Final[dict[str, type[BaseModel]]] = {

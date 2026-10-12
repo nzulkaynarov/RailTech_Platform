@@ -4,7 +4,7 @@
  * чтобы `SchemaFields` не показывал сырой ключ. Поля берутся прямо из Pydantic-моделей
  * бэкенда — новое поле без подписи уронит этот тест.
  */
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -31,7 +31,11 @@ function modelFields(python: string): Map<string, string[]> {
 
 // vitest запускается из каталога frontend/ (pnpm test, CI).
 const schemas = resolve(process.cwd(), "../backend/app/schemas");
-const source = readFileSync(resolve(schemas, "settings.py"), "utf8");
+// Модели настроек разнесены по `settings*.py` (лимит размера файла) — сторож читает все.
+const source = readdirSync(schemas)
+  .filter((name) => /^settings(_\w+)?\.py$/.test(name) && name !== "settings_client.py")
+  .map((name) => readFileSync(resolve(schemas, name), "utf8"))
+  .join("\n");
 // Тексты меню клиента и номера — базовый класс `ClientBotTexts` (отдельный файл, лимит размера).
 const client = readFileSync(resolve(schemas, "settings_client.py"), "utf8");
 const models = modelFields(source);

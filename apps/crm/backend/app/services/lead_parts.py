@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.domain.stages import Stage
 from app.models.leads import Lead, LeadNote
 from app.models.qualification import StageTransition
+from app.repositories import users as users_repo
 from app.security.principal import Principal
 
 
@@ -40,3 +41,9 @@ def snapshot(lead: Lead) -> dict[str, Any]:
         "owner_mode": lead.owner_mode,
         "assigned_user_id": lead.assigned_user_id,
     }
+
+
+async def user_name(session: AsyncSession, user_id: int | None) -> str | None:
+    """Имя того, кто ведёт лида, — для «Лида уже забрал …» (имена команды видны всем ролям)."""
+    user = await users_repo.get(session, user_id) if user_id is not None else None
+    return user.full_name if user is not None else None

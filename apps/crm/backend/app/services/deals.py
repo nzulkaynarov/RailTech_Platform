@@ -27,7 +27,7 @@ from app.models.deals import Deal
 from app.models.kb import Product
 from app.models.leads import Lead, Setting
 from app.schemas.deals import CurrencySum, DealCreate, DealsSummary, DealUpdate, ReasonCount
-from app.schemas.settings import DealsSettings
+from app.schemas.settings_deals import DealsSettings
 from app.security import audit
 from app.security.principal import Principal
 

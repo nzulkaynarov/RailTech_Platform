@@ -90,7 +90,7 @@ class LeadService:
                     "lead is already taken",
                     reason=Reason.LEAD_TAKEN,
                     assigned_user_id=lead.assigned_user_id,
-                    assigned_user_name=await _user_name(session, lead.assigned_user_id),
+                    assigned_user_name=await lead_parts.user_name(session, lead.assigned_user_id),
                 )
             before = lead_parts.snapshot(lead)
             # Из «Отказа» — снова в работу (ADR-0015); клиента и «Сделку» берут без смены стадии.
@@ -367,12 +367,6 @@ async def _lead(session: AsyncSession, lead_id: int) -> Lead:
     if lead is None or lead.erased_at is not None:
         raise NotFoundError("lead not found")
     return lead
-
-
-async def _user_name(session: AsyncSession, user_id: int | None) -> str | None:
-    """Имя того, кто ведёт лида, — для «Лида уже забрал …» (имена команды видны всем ролям)."""
-    user = await users_repo.get(session, user_id) if user_id is not None else None
-    return user.full_name if user is not None else None
 
 
 def _require_owner(lead: Lead, who: Principal) -> None:

@@ -27,7 +27,7 @@ from app.repositories import leads as repo
 from app.schemas.settings import AppSettings
 from app.security.agent_context import issue
 from app.services import escalation, stages
-from app.services.conversation_erasure import ErasureMixin
+from app.services.conversation_erasure import DeliveryFailureMixin, ErasureMixin
 from app.services.conversation_support import (
     agent_failure,
     apply_counters,
@@ -39,7 +39,6 @@ from app.services.conversation_support import (
     lead_of,
     notify_owner,
     pending_question,
-    report_failure,
     turn_meta,
     turn_signals,
     update_language,
@@ -69,7 +68,7 @@ __all__ = [
 logger = structlog.get_logger(__name__)
 
 
-class ConversationService(ErasureMixin):
+class ConversationService(ErasureMixin, DeliveryFailureMixin):
     def __init__(
         self,
         sessions: async_sessionmaker[AsyncSession],
@@ -382,15 +381,6 @@ class ConversationService(ErasureMixin):
             if replies:
                 lead.last_bot_msg_at = now
         return outgoing, applied.escalation_id if applied else None
-
-    async def report_delivery_failure(self, lead_id: int) -> None:
-        """Бот не смог отправить файл клиенту — команда узнаёт через info-эскалацию."""
-        cfg = await self._settings.get()
-        async with self._sessions() as session, session.begin():
-            lead = await repo.get_lead(session, lead_id, for_update=True)
-            signals = TriggerSignals(delivery_failed=True)
-            escalation_id = await report_failure(session, lead, cfg, signals) if lead else None
-        await self._fire(None, escalation_id, lead_id)
 
     async def _fire(
         self, lead_id: int | None, escalation_id: int | None, escalated_lead: int | None = None

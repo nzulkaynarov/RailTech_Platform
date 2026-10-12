@@ -11,7 +11,7 @@ from app.domain.errors import ConflictError
 from app.models.deals import Deal
 from app.models.leads import Lead
 from app.schemas.deals import DealCreate, DealUpdate
-from app.schemas.settings import DealsSettings
+from app.schemas.settings_deals import DealsSettings
 from app.security.principal import Principal
 from app.services import deals
 from app.services.conversation import ConversationService
