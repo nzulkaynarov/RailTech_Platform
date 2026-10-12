@@ -122,6 +122,15 @@ export const getListAuditUrl = (params?: ListAuditParams) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ["exclude_actions"];
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? "null" : String(v));
+      });
+      return;
+    }
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? "null" : String(value));
     }
@@ -3695,6 +3704,8 @@ export const getGetSetupChecklistUrl = () => {
 
 /**
  * Чек-лист настройки для админа: что сделано и куда идти. Без платных вызовов моделей.
+ *
+ * Бот и модели — из тех же проверок, что «Состояние системы» (бот = принимает сообщения).
  * @summary Get Setup Checklist
  */
 export const getSetupChecklist = async (
@@ -3881,9 +3892,10 @@ export const getRequestBackupUrl = () => {
 };
 
 /**
- * Запросить бэкап вне расписания: контейнер `backup` начнёт его в течение ~30 с.
+ * Запросить бэкап вне расписания: сервис бэкапа начнёт его в течение ~30 с.
  *
- * 409, если том бэкапов не смонтирован в api. Повторный запрос до начала — без изменений.
+ * 409, если том бэкапов не смонтирован в api. Повторный запрос до начала — без изменений;
+ * запрос, который сервис не забрал за 2 мин, ставится заново.
  * @summary Request Backup
  */
 export const requestBackup = async (
@@ -3920,6 +3932,8 @@ export const getSystemStatusUrl = () => {
 
 /**
  * Только чтение: моделей не вызывает, их здоровье — из последней проверки монитора.
+ *
+ * Компоненты отсортированы: сбой → предупреждение → неизвестно → норма.
  * @summary System Status
  */
 export const systemStatus = async (

@@ -59,6 +59,9 @@ async def test_model(
         raise NotFoundError("unknown model alias")
     result = await models_status.probe(container.llm, alias, container.usage_recorder)
     async with container.session_factory() as session, session.begin():
+        await models_status.record_probe(
+            session, alias, result.ok, result.detail, datetime.now(UTC)
+        )
         await audit.record(
             session,
             who.actor,

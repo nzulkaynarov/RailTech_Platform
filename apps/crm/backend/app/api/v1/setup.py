@@ -1,12 +1,14 @@
 """Мастер первого запуска и чек-лист «Настройка CRM» (scope-аудит §3 п. 9, §4)."""
 
+from datetime import UTC, datetime
 from typing import Annotated, cast
 
 from fastapi import APIRouter, Depends, Request, Response
 
 from app.api.deps import ContainerDep, client_ip, require
+from app.api.health import get_readiness
 from app.api.v1.auth import respond_with_session
-from app.bot.configured import bot_configured
+from app.api.v1.system_status import collect_components
 from app.schemas.auth import TokenResponse
 from app.schemas.setup import (
     ChecklistItem,
@@ -56,21 +58,22 @@ async def get_setup_checklist(
     request: Request,
     principal: Annotated[Principal, Depends(require("settings", "write"))],
     container: ContainerDep,
+    readiness: Annotated[ReadinessService, Depends(get_readiness)],
 ) -> SetupChecklist:
-    """Чек-лист настройки для админа: что сделано и куда идти. Без платных вызовов моделей."""
+    """Чек-лист настройки для админа: что сделано и куда идти. Без платных вызовов моделей.
+
+    Бот и модели — из тех же проверок, что «Состояние системы» (бот = принимает сообщения).
+    """
     cfg = await container.settings_service.get()
-    readiness = cast(ReadinessService | None, getattr(request.app.state, "readiness", None))
-    litellm_ok = False
-    if readiness is not None:
-        litellm_ok = (await readiness.check()).checks.get("litellm", False)
+    components = await collect_components(request, container, readiness, datetime.now(UTC))
+    models_ok, bot_running = checks.health_facts(components)
     async with container.session_factory() as session:
         saved = await checks.saved_settings(session)
         facts = checks.SetupFacts(
             company_saved="company" in saved,
             business_hours_saved="business_hours" in saved,
-            litellm_ok=litellm_ok,
-            model_alerts=await checks.model_alerts(session),
-            bot_configured=await bot_configured(container),
+            models_ok=models_ok,
+            bot_running=bot_running,
             channel_set=cfg.notifications.channel_id is not None,
             kb_indexed=await checks.kb_indexed(session),
             teammate_with_telegram=await checks.teammate_with_telegram(session, principal.user_id),

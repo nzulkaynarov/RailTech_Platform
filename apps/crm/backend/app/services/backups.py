@@ -3,8 +3,9 @@
 Бэкапы пишет контейнер `backup` (`ops/backup.sh`) в том `backups`: каталоги
 `<UTC-штамп>/` и файл `last_success`. api смонтирован в тот же том и только читает его,
 а «сделать сейчас» — файл-флаг `request_now`, который демон бэкапа проверяет раз в 30 с.
+Демон раз в 30 с обновляет `heartbeat` (epoch): свежее 2 мин — сервис жив.
 pg_dump в образе api нет (он только в образе backup), поэтому сам бэкап api не запускает.
-Восстановление — только с сервера (`scripts/restore.sh`).
+Восстановление — только с сервера (`scripts/restore.sh`), в интерфейсе его нет.
 """
 
 import asyncio
@@ -13,8 +14,11 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+from app.domain.system_status import DAEMON_SILENT_AFTER, REQUEST_UNANSWERED_AFTER, BackupFacts
+
 REQUEST_FILE = "request_now"
 LAST_SUCCESS_FILE = "last_success"
+HEARTBEAT_FILE = "heartbeat"
 STAMP = re.compile(r"^\d{8}T\d{6}Z$")
 STALE_AFTER_HOURS = 26
 
@@ -32,6 +36,7 @@ class BackupStatus:
     last_success_at: datetime | None
     requested_at: datetime | None
     items: list[BackupEntry]
+    heartbeat_at: datetime | None = None
 
 
 class BackupService:
@@ -42,19 +47,26 @@ class BackupService:
         return await asyncio.to_thread(self._status, limit)
 
     async def request_now(self, now: datetime) -> datetime:
-        """Поставить флаг; повторный запрос до начала бэкапа ничего не меняет."""
+        """Поставить флаг; повторный запрос до начала бэкапа ничего не меняет.
+
+        Флаг старше 2 мин (демон его не забрал) ставится заново с новым временем.
+        """
         return await asyncio.to_thread(self._request, now)
 
     def _status(self, limit: int) -> BackupStatus:
         if not self._root.is_dir():
-            return BackupStatus(False, None, None, [])
+            return BackupStatus(False, None, None, [], None)
         entries = [
             BackupEntry(path.name, parse_stamp(path.name), _size(path))
             for path in sorted(self._root.iterdir(), reverse=True)
             if path.is_dir() and STAMP.match(path.name)
         ][:limit]
         return BackupStatus(
-            True, _epoch_file(self._root / LAST_SUCCESS_FILE), self._requested(), entries
+            True,
+            _epoch_file(self._root / LAST_SUCCESS_FILE),
+            self._requested(),
+            entries,
+            _epoch_file(self._root / HEARTBEAT_FILE),
         )
 
     def _requested(self) -> datetime | None:
@@ -62,7 +74,7 @@ class BackupService:
 
     def _request(self, now: datetime) -> datetime:
         existing = self._requested()
-        if existing is not None:
+        if existing is not None and now - existing <= REQUEST_UNANSWERED_AFTER:
             return existing
         tmp = self._root / f".{REQUEST_FILE}.tmp"
         tmp.write_text(str(int(now.timestamp())), encoding="utf-8")
@@ -83,3 +95,18 @@ def _epoch_file(path: Path) -> datetime | None:
         return datetime.fromtimestamp(int(path.read_text(encoding="utf-8").strip()), UTC)
     except (OSError, ValueError):
         return None
+
+
+def daemon_alive(state: BackupStatus, now: datetime) -> bool:
+    """Демон бэкапа жив: heartbeat свежее 2 минут (он обновляется раз в 30 с)."""
+    beat = state.heartbeat_at
+    return beat is not None and now - beat <= DAEMON_SILENT_AFTER
+
+
+def facts(state: BackupStatus, now: datetime) -> BackupFacts:
+    return BackupFacts(
+        mounted=state.available,
+        daemon_alive=daemon_alive(state, now),
+        last_success=state.last_success_at,
+        requested_at=state.requested_at,
+    )

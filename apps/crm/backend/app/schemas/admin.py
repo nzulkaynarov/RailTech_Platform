@@ -3,7 +3,7 @@
 from datetime import date, datetime
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class SettingsResponse(BaseModel):
@@ -64,6 +64,7 @@ class AuditItem(BaseModel):
     after: dict[str, Any] | None
     ip: str | None
     created_at: datetime
+    actor_name: str | None = Field(default=None, description="Имя пользователя-автора")
 
 
 class AuditPage(BaseModel):

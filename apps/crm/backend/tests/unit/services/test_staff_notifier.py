@@ -127,3 +127,5 @@ def test_missing_secrets_names_only() -> None:
     assert "JWT_SECRET" not in missing
     assert "TELEGRAM_WEBHOOK_SECRET" in missing
     assert all(name.isupper() for name in missing)
+    assert "TELEGRAM_BOT_TOKEN" in missing
+    assert "TELEGRAM_BOT_TOKEN" not in missing_secrets(config, token_elsewhere=True)

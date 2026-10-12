@@ -4,9 +4,11 @@ from collections.abc import Mapping
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.budget import day_start
+from app.models.leads import Lead
 from app.repositories import monitoring as monitoring_repo
 from app.repositories import spend as repo
 from app.schemas.settings import AppSettings
@@ -50,6 +52,8 @@ async def build(session: AsyncSession, cfg: AppSettings, days: int, now: datetim
     leads = await repo.per_lead(session, since)
     lead_total = sum(usd for _, usd, _ in leads)
     by_kind = await repo.grouped(session, since, "kind")
+    top = leads[:TOP_LEADS]
+    names = await _lead_names(session, [lead_id for lead_id, _, _ in top])
     return SpendReport(
         days=days,
         today_usd=round(await monitoring_repo.spent_since(session, today_start), 4),
@@ -67,11 +71,21 @@ async def build(session: AsyncSession, cfg: AppSettings, days: int, now: datetim
         leads=len(leads),
         avg_per_lead_usd=round(lead_total / len(leads), 4) if leads else 0.0,
         top_leads=[
-            LeadSpend(lead_id=lead_id, cost_usd=round(usd, 4), calls=n)
-            for lead_id, usd, n in leads[:TOP_LEADS]
+            LeadSpend(
+                lead_id=lead_id, lead_name=names.get(lead_id), cost_usd=round(usd, 4), calls=n
+            )
+            for lead_id, usd, n in top
         ],
     )
 
 
 def _slices(rows: list[tuple[str, float, int]]) -> list[SpendSlice]:
     return [SpendSlice(key=key, cost_usd=round(usd, 4), calls=n) for key, usd, n in rows]
+
+
+async def _lead_names(session: AsyncSession, ids: list[int]) -> dict[int, str]:
+    """Имена лидов для «Топ лидов по расходу» — вместо голых номеров."""
+    if not ids:
+        return {}
+    rows = await session.execute(select(Lead.id, Lead.display_name).where(Lead.id.in_(ids)))
+    return {lead_id: name for lead_id, name in rows.tuples().all() if name}

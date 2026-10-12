@@ -6,8 +6,9 @@
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Final, Literal
+from urllib.parse import urlsplit
 
 from app.domain.alerts import QUEUE_LIMIT
 
@@ -47,7 +48,37 @@ class QueueFacts:
     failed_last_hour: int
 
 
+@dataclass(frozen=True, slots=True)
+class BotFacts:
+    """Что известно о боте в процессе api (`BotSupervisor`): без значений токена."""
+
+    running: bool
+    source: str
+    last_error: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class BackupFacts:
+    """Состояние тома бэкапов и демона (`services/backups.py`)."""
+
+    mounted: bool
+    daemon_alive: bool
+    last_success: datetime | None
+    requested_at: datetime | None
+
+
 STALE_BACKUP_HOURS = 26
+DAEMON_SILENT_AFTER: Final = timedelta(minutes=2)
+REQUEST_UNANSWERED_AFTER: Final = timedelta(minutes=2)
+ROLE_TITLES: Final = {
+    "dialog-model": "Диалог",
+    "qualifier-model": "Квалификатор",
+    "fallback-model": "Резерв",
+    "embed-model": "Поиск",
+    "judge-model": "Проверка качества",
+}
+_ORDER: Final = ("fail", "warn", "unknown", "ok")
+_LOCAL_HOSTS: Final = frozenset({"localhost", "127.0.0.1", "0.0.0.0", "::1"})  # noqa: S104
 
 
 def dependencies(checks: Mapping[str, bool], now: datetime) -> list[Component]:
@@ -76,13 +107,27 @@ def models(alerts: Sequence[AlertRow]) -> list[Component]:
     return [
         Component(
             a.key,
-            f"Модель {a.key.split(':', 1)[1]}",
+            f"Модель ИИ: {role_title(a.key.split(':', 1)[1])}",
             "fail" if a.active else "ok",
-            (a.detail or "проблема у провайдера") if a.active else "",
+            _model_reason(a.detail) if a.active else "",
             a.updated_at,
         )
         for a in rows
     ]
+
+
+def role_title(alias: str) -> str:
+    return ROLE_TITLES.get(alias, alias)
+
+
+def _model_reason(detail: str | None) -> str:
+    base = detail or "проблема у провайдера"
+    return f"{base}. Проверьте баланс и ключ у провайдера («Модели ИИ» → «Проверить»)"
+
+
+def ordered(components: Sequence[Component]) -> list[Component]:
+    """Сначала сбои, затем предупреждения и неизвестное, исправное — в конце (порядок стабилен)."""
+    return sorted(components, key=lambda c: _ORDER.index(c.status))
 
 
 def budget(alerts: Sequence[AlertRow], now: datetime) -> Component:
@@ -92,18 +137,40 @@ def budget(alerts: Sequence[AlertRow], now: datetime) -> Component:
     return Component("budget", "Бюджет моделей", "ok", "", row.updated_at if row else now)
 
 
-def bot(running: bool | None, mode: str, now: datetime) -> Component:
-    if running is None:
-        return Component(
-            "bot",
-            "Telegram-бот",
-            "fail",
-            "Бот выключен: нет токена или TELEGRAM_MODE=disabled",
-            now,
-        )
-    if not running:
-        return Component("bot", "Telegram-бот", "fail", "Бот остановился — перезапустите api", now)
-    return Component("bot", "Telegram-бот", "ok", f"режим {mode}", now)
+def bot(facts: BotFacts | None, mode: str, now: datetime) -> Component:
+    """Бот «работает» только если polling-задача жива; причина — из супервизора, не догадка."""
+    title = "Telegram-бот"
+    if mode == "disabled":
+        return Component("bot", title, "fail", "Бот выключен настройкой сервера", now)
+    if facts is None or facts.source == "none":
+        reason = "Токен бота не задан — «Подключения» → «Telegram-бот»"
+        return Component("bot", title, "fail", reason, now)
+    if not facts.running:
+        why = f" ({facts.last_error})" if facts.last_error else ""
+        reason = f"Бот не принимает сообщения{why} — проверьте токен в «Подключениях»"
+        return Component("bot", title, "fail", reason, now)
+    return Component("bot", title, "ok", "принимает сообщения", now)
+
+
+def crm_url_problem(url: str) -> str | None:
+    """Почему ссылки на CRM в Telegram не откроются у менеджеров; None — адрес в порядке."""
+    parts = urlsplit(url.strip())
+    host = (parts.hostname or "").lower()
+    if not host:
+        return "Адрес CRM не указан"
+    if host in _LOCAL_HOSTS or host.endswith(".localhost"):
+        return "Адрес CRM указывает на этот компьютер — ссылки из Telegram не откроются у команды"
+    if parts.scheme != "https":
+        return "Адрес CRM без https — ссылки откроются без защищённого соединения"
+    return None
+
+
+def crm_url(url: str, now: datetime) -> Component:
+    problem = crm_url_problem(url)
+    title = "Адрес CRM"
+    if problem is None:
+        return Component("crm_url", title, "ok", url, now)
+    return Component("crm_url", title, "warn", f"{problem} — «Настройки» → «Компания»", now)
 
 
 def channel(channel_id: int | None, now: datetime) -> Component:
@@ -112,7 +179,7 @@ def channel(channel_id: int | None, now: datetime) -> Component:
             "channel",
             "Канал команды",
             "warn",
-            "Канал не указан в «Настройках» — передачи менеджерам никуда не приходят",
+            "Канал не подключён — «Подключения» → «Канал команды»; передачи менеджерам не приходят",
             now,
         )
     return Component("channel", "Канал команды", "ok", "", now)
@@ -131,25 +198,42 @@ def queue(facts: QueueFacts, now: datetime) -> Component:
     return Component("queue", "Очередь задач", status, reason, now)
 
 
-def backup(now: datetime, available: bool, last_success: datetime | None) -> Component:
-    """Последний успешный бэкап из тома `backups` (ADR-0013): старше 26 ч — внимание, нет — сбой."""
-    name = "Последний бэкап"
-    if not available:
-        reason = (
-            "Том резервных копий не подключён к серверу CRM — проверьте по runbook backup-restore"
-        )
+def backup(now: datetime, facts: BackupFacts) -> Component:
+    """Бэкапы (ADR-0013): демон жив по heartbeat, последняя копия не старше 26 ч."""
+    name = "Резервные копии"
+    if not facts.mounted:
+        reason = "Хранилище резервных копий не подключено — обратитесь к администратору сервера"
         return Component("backup", name, "unknown", reason, now)
-    if last_success is None:
+    if not facts.daemon_alive:
+        reason = "Сервис резервного копирования не отвечает — обратитесь к администратору сервера"
+        return Component("backup", name, "fail", reason, now)
+    if request_unanswered(now, facts):
+        reason = "Запрошенная копия не началась — сервис резервного копирования не отвечает"
+        return Component("backup", name, "warn", reason, now)
+    if facts.last_success is None:
         return Component("backup", name, "fail", "Успешных копий нет — «Резервные копии»", now)
-    age_h = (now - last_success).total_seconds() / 3600
+    age_h = (now - facts.last_success).total_seconds() / 3600
     if age_h > STALE_BACKUP_HOURS:
-        reason = f"Последняя копия {int(age_h)} ч назад — проверьте контейнер backup"
+        reason = f"Последняя копия {int(age_h)} ч назад — сделайте копию в «Резервных копиях»"
         return Component("backup", name, "warn", reason, now)
     return Component("backup", name, "ok", f"Последняя копия {int(age_h)} ч назад", now)
 
 
-def secrets(missing: Sequence[str], now: datetime) -> Component:
+def request_unanswered(now: datetime, facts: BackupFacts) -> bool:
+    """«Сделать сейчас» висит дольше 2 мин без нового успеха — демон флаг не забрал."""
+    asked = facts.requested_at
+    if asked is None or now - asked <= REQUEST_UNANSWERED_AFTER:
+        return False
+    return facts.last_success is None or facts.last_success < asked
+
+
+def secrets(missing: Sequence[str], now: datetime, *, secrets_key: bool = True) -> Component:
+    title = "Секреты сервера"
     if missing:
         names = ", ".join(missing)
-        return Component("secrets", "Секреты сервера", "fail", f"Не заданы в .env: {names}", now)
-    return Component("secrets", "Секреты сервера", "ok", "все обязательные заданы", now)
+        reason = f"Не заданы на сервере: {names} — обратитесь к администратору сервера"
+        return Component("secrets", title, "fail", reason, now)
+    if not secrets_key:
+        reason = "Не задан ключ шифрования (SECRETS_KEY) — токен бота нельзя сменить из интерфейса"
+        return Component("secrets", title, "warn", reason, now)
+    return Component("secrets", title, "ok", "все обязательные заданы", now)

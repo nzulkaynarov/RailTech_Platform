@@ -9,4 +9,5 @@ export interface LeadSpend {
   calls: number;
   cost_usd: number;
   lead_id: number;
+  lead_name?: string | null;
 }

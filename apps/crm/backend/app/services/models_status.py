@@ -7,9 +7,11 @@
 
 import time
 from collections.abc import Mapping
+from datetime import datetime
 from typing import Final
 
 from openai import APIError, AsyncOpenAI
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.integrations.litellm import COST_HEADER, EMBED_ALIAS
 from app.integrations.litellm_catalog import ModelEntry
@@ -90,3 +92,27 @@ def _embed_usage(response: object) -> tuple[str | None, int, int]:
 
 def _ms(started: float) -> int:
     return int((time.monotonic() - started) * 1000)
+
+
+async def record_probe(
+    session: AsyncSession, alias: str, ok: bool, detail: str | None, now: datetime
+) -> None:
+    """Результат «Проверить» — в состояние монитора (`system_alerts`, `model:<alias>`).
+
+    Тогда «Состояние системы», чек-лист и «Модели ИИ» показывают одно и то же. `sent_at`
+    не трогаем: о новом сбое в канал по-прежнему сообщает монитор.
+    """
+    key = f"model:{alias}"
+    row = await session.get(SystemAlert, key)
+    if row is None:
+        row = SystemAlert(key=key, active=False)
+        session.add(row)
+    if ok:
+        if row.active:
+            row.active, row.resolved_at, row.first_seen_at, row.sent_at = False, now, None, None
+        row.detail = None
+    else:
+        if not row.active:
+            row.active, row.first_seen_at, row.sent_at, row.resolved_at = True, now, None, None
+        row.detail = detail
+    row.updated_at = now

@@ -26,6 +26,7 @@ class SpendSlice(BaseModel):
 
 class LeadSpend(BaseModel):
     lead_id: int
+    lead_name: str | None = None
     cost_usd: float
     calls: int
 

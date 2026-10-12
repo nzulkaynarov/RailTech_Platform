@@ -1,11 +1,14 @@
 """Статус бэкапов из тома и флаг «сделать сейчас»; чек-лист настройки."""
 
 from dataclasses import replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from app.services.backups import REQUEST_FILE, BackupService
-from app.services.setup_checklist import LINKS, SetupFacts, checklist
+import pytest
+
+from app.domain.system_status import Component
+from app.services.backups import HEARTBEAT_FILE, REQUEST_FILE, BackupService, daemon_alive
+from app.services.setup_checklist import LINKS, SetupFacts, checklist, health_facts
 
 NOW = datetime(2026, 10, 12, 9, 0, tzinfo=UTC)
 
@@ -34,18 +37,28 @@ async def test_lists_finished_backups_newest_first(tmp_path: Path) -> None:
 async def test_request_now_is_idempotent(tmp_path: Path) -> None:
     service = BackupService(tmp_path)
     first = await service.request_now(NOW)
-    later = await service.request_now(NOW.replace(hour=10))
+    later = await service.request_now(NOW + timedelta(minutes=1))
     assert first == later == NOW
     assert (tmp_path / REQUEST_FILE).read_text() == str(int(NOW.timestamp()))
     assert (await service.status()).requested_at == NOW
+    retry = NOW + timedelta(minutes=5)
+    assert await service.request_now(retry) == retry
+
+
+async def test_heartbeat_tells_daemon_alive(tmp_path: Path) -> None:
+    service = BackupService(tmp_path)
+    assert not daemon_alive(await service.status(), NOW)
+    (tmp_path / HEARTBEAT_FILE).write_text(str(int(NOW.timestamp()) - 60))
+    assert daemon_alive(await service.status(), NOW)
+    (tmp_path / HEARTBEAT_FILE).write_text(str(int(NOW.timestamp()) - 300))
+    assert not daemon_alive(await service.status(), NOW)
 
 
 ALL_DONE = SetupFacts(
     company_saved=True,
     business_hours_saved=True,
-    litellm_ok=True,
-    model_alerts=0,
-    bot_configured=True,
+    models_ok=True,
+    bot_running=True,
     channel_set=True,
     kb_indexed=True,
     teammate_with_telegram=True,
@@ -59,6 +72,26 @@ def test_checklist_all_done_and_links() -> None:
     assert [k for k, _ in items] == list(LINKS)
 
 
-def test_models_need_gateway_and_no_alerts() -> None:
-    assert dict(checklist(replace(ALL_DONE, litellm_ok=False)))["models"] is False
-    assert dict(checklist(replace(ALL_DONE, model_alerts=1)))["models"] is False
+def test_models_and_bot_flags() -> None:
+    assert dict(checklist(replace(ALL_DONE, models_ok=False)))["models"] is False
+    assert dict(checklist(replace(ALL_DONE, bot_running=False)))["bot"] is False
+
+
+def _c(key: str, status: str) -> Component:
+    return Component(key, key, status, "", NOW)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("components", "expected"),
+    [
+        ([_c("litellm", "ok"), _c("model:dialog-model", "ok"), _c("bot", "ok")], (True, True)),
+        ([_c("litellm", "ok"), _c("models", "unknown"), _c("bot", "fail")], (True, False)),
+        ([_c("litellm", "fail"), _c("model:dialog-model", "ok")], (False, False)),
+        ([_c("litellm", "ok"), _c("model:a", "ok"), _c("model:b", "fail")], (False, False)),
+    ],
+    ids=["healthy", "monitor-not-yet", "gateway-down", "one-model-down"],
+)
+def test_health_facts_follow_system_status(
+    components: list[Component], expected: tuple[bool, bool]
+) -> None:
+    assert health_facts(components) == expected

@@ -9,9 +9,13 @@ import type { BackupItem } from "./backupItem";
 export interface BackupsOut {
   /** Том бэкапов смонтирован в api */
   available: boolean;
+  /** Сервис бэкапа отвечает: heartbeat свежее 2 мин */
+  daemon_alive: boolean;
   items: BackupItem[];
   last_success_at: string | null;
-  /** «Сделать сейчас» ждёт контейнер backup */
+  /** Запрос «Сделать сейчас» старше 2 мин без новой копии — можно повторить */
+  request_stuck: boolean;
+  /** «Сделать сейчас» ждёт сервис бэкапа */
   requested_at: string | null;
   /** Последний успешный бэкап старше 26 ч или его нет */
   stale: boolean;

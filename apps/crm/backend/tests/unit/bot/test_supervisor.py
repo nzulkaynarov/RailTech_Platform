@@ -16,6 +16,7 @@ class FakeRuntime:
         self.started = False
         self.stopped_with: bool | None = None
         self.bot = self
+        self.running = True
 
     async def start(self) -> None:
         self.started = True
@@ -100,3 +101,12 @@ async def test_start_failure_keeps_api_alive(monkeypatch: pytest.MonkeyPatch) ->
     await h.supervisor.start()
     assert not h.supervisor.running
     assert h.supervisor.last_error == "RuntimeError"
+
+
+async def test_finished_polling_task_means_not_running() -> None:
+    """Polling-задача завершилась (сеть, отозванный токен) — бот не работает, а не «онлайн»."""
+    h = Harness()
+    await h.supervisor.start()
+    assert h.supervisor.running
+    h.runtimes[0].running = False
+    assert not h.supervisor.running

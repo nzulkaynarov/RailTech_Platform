@@ -50,5 +50,9 @@ class BackupsOut(BaseModel):
     available: bool = Field(description="Том бэкапов смонтирован в api")
     last_success_at: datetime | None
     stale: bool = Field(description="Последний успешный бэкап старше 26 ч или его нет")
-    requested_at: datetime | None = Field(description="«Сделать сейчас» ждёт контейнер backup")
+    requested_at: datetime | None = Field(description="«Сделать сейчас» ждёт сервис бэкапа")
+    daemon_alive: bool = Field(description="Сервис бэкапа отвечает: heartbeat свежее 2 мин")
+    request_stuck: bool = Field(
+        description="Запрос «Сделать сейчас» старше 2 мин без новой копии — можно повторить"
+    )
     items: list[BackupItem]
