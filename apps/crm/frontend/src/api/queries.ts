@@ -93,8 +93,8 @@ export type LeadAction =
   | { kind: "return"; note: string | null }
   | { kind: "snooze"; until: string }
   | { kind: "unsnooze" }
-  | { kind: "won"; reason: string | null }
-  | { kind: "lost"; reason: string | null }
+  | { kind: "won"; reason: string | null; amount: number | null }
+  | { kind: "lost"; reason: string | null; lostReason: string | null }
   | { kind: "note"; text: string; visibleToBot: boolean }
   | { kind: "reply"; text: string };
 
@@ -122,10 +122,10 @@ async function runAction(id: number, action: LeadAction): Promise<void> {
       await unsnooze(id);
       return;
     case "won":
-      await closeWon(id, { reason: action.reason });
+      await closeWon(id, { reason: action.reason, amount: action.amount });
       return;
     case "lost":
-      await closeLost(id, { reason: action.reason });
+      await closeLost(id, { reason: action.reason, lost_reason: action.lostReason });
       return;
     case "note":
       await note(id, { text: action.text, visible_to_bot: action.visibleToBot });

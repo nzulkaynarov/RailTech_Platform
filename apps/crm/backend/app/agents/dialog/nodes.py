@@ -16,7 +16,12 @@ from app.domain.business_hours import is_business_time
 from app.domain.dialog_policy import Action, DecisionInput, decide
 from app.domain.keywords import find_terms
 from app.domain.stages import OwnerMode, Stage
-from app.domain.text import drop_trailing_question, ends_with_question, limit_words
+from app.domain.text import (
+    drop_trailing_question,
+    ends_with_question,
+    limit_words,
+    normalize_uzbek,
+)
 from app.schemas.settings import AppSettings, Language
 
 logger = structlog.get_logger(__name__)
@@ -179,6 +184,8 @@ class DialogNodes:
             text = drop_trailing_question(text)
         # Лимит длины — гарантия кода, промпт лишь просит (модель иногда превышает).
         reply = limit_words(text, self._settings.bot.max_words)
+        if _lang(state) == "uz":
+            reply = normalize_uzbek(reply)
         if request_number is not None and str(request_number) not in reply:
             created = self._settings.texts.request_created.get(
                 _lang(state), number=str(request_number)

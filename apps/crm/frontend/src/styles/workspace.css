@@ -44,3 +44,12 @@
   align-items: center;
   gap: var(--ant-margin-xs);
 }
+
+/* Предупреждение над полем в диалоге действия с лидом. */
+.dialog-alert {
+  margin-bottom: var(--ant-margin-sm);
+}
+
+.dialog-field {
+  margin-bottom: var(--ant-margin-sm);
+}

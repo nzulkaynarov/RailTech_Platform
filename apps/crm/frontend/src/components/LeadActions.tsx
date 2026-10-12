@@ -3,12 +3,13 @@ import { Alert, App as AntApp, Button, Dropdown, Grid, Space } from "antd";
 import { useState } from "react";
 
 import type { LeadDetail } from "../api/generated/model";
-import type { LeadAction } from "../api/queries";
+import { type LeadAction, useMessages } from "../api/queries";
 import { useConfirmDanger } from "../hooks/useConfirmDanger";
 import { useLeadActionRunner } from "../hooks/useLeadActionRunner";
 import { t } from "../i18n/ru";
 import "../styles/workspace.css";
 import { AssignLead } from "./AssignLead";
+import { lastUnanswered } from "../domain/unanswered";
 import { type Dialog, LeadActionDialog } from "./LeadActionDialog";
 import {
   type ActionKey,
@@ -165,6 +166,7 @@ export function LeadActions({ lead, rights }: { lead: LeadDetail; rights: Action
   };
   const onAction = useHandlers(lead, run, setDialog);
   const available = new Set([plan.primary, ...plan.more]);
+  const unanswered = lastUnanswered(useMessages(lead.id).data);
   return (
     <>
       <ActionButtons plan={plan} busy={busy} onAction={onAction} />
@@ -174,6 +176,7 @@ export function LeadActions({ lead, rights }: { lead: LeadDetail; rights: Action
         busy={busy}
         onRun={runAndClose}
         onClose={close}
+        unanswered={unanswered}
       />
       {available.has("assign") ? (
         <AssignLead lead={lead} open={dialog === "assign"} busy={busy} onClose={close} run={run} />
