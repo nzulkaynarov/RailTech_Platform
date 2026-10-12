@@ -15,6 +15,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.bot_menu import MenuVariant, menu_variant, should_ask_phone
+from app.domain.consent import consent_required
+from app.domain.handoff_gate import needs_phone_first
 from app.domain.language import detect_language, mismatch_offer
 from app.domain.triggers import TriggerSignals, evaluate
 from app.models.clients import Document, ServiceRequest
@@ -32,6 +34,8 @@ logger = structlog.get_logger(__name__)
 Presign = Callable[[str, int], Awaitable[str]]
 DOCS_LIMIT = 10
 PHONE_ASKED = "phone_asked_at"
+# Лид просил менеджера без номера: передадим, как только поделится номером (2026-10-12).
+HANDOFF_PENDING = "handoff_pending_phone_at"
 LANGUAGE_MISMATCH = "language_mismatch_streak"
 LANGUAGE_OFFERED = "language_offered_at"
 
@@ -95,6 +99,49 @@ class ClientBotService:
                 stored = dict(lead.qualification or {})
                 stored[PHONE_ASKED] = datetime.now(UTC).isoformat()
                 lead.qualification = stored
+
+    async def hold_handoff_for_phone(self, tg_user_id: int) -> Language | None:
+        """Просьба лида позвать менеджера: нужен ли сначала номер (`needs_phone_first`).
+
+        Да — помечает ожидание в `leads.qualification` (и «номер уже спрашивали», чтобы
+        middleware не спросил второй раз тем же ходом) и возвращает язык ответа; None —
+        передавать как обычно.
+        """
+        cfg = await self._settings.get()
+        async with self._sessions() as session, session.begin():
+            identity = await repo.get_identity(session, tg_user_id)
+            lead, _ = await current_lead(session, tg_user_id)
+            live = lead if lead is not None and lead.erased_at is None else None
+            client_id = await verified_client(session, tg_user_id)
+            hold = live is not None and needs_phone_first(
+                required=cfg.escalation.require_phone_for_human_request,
+                source="lead",
+                has_phone=bool(identity and identity.phone_e164),
+                is_client=client_id is not None,
+                owner_mode=live.owner_mode,
+                consent_given=not consent_required(
+                    live.consent_given_at, live.consent_version, cfg.texts.consent_version
+                ),
+            )
+            if live is None or not hold:
+                return None
+            now = datetime.now(UTC).isoformat()
+            stored = dict(live.qualification or {})
+            stored[HANDOFF_PENDING] = now
+            stored.setdefault(PHONE_ASKED, now)
+            live.qualification = stored
+            logger.info("handoff_waits_for_phone", lead_id=live.id)
+            return lang_of(live)
+
+    async def take_pending_handoff(self, tg_user_id: int) -> bool:
+        """Снять пометку «ждём номер для передачи»; True — она стояла."""
+        async with self._sessions() as session, session.begin():
+            lead, _ = await current_lead(session, tg_user_id)
+            stored = dict(lead.qualification or {}) if lead is not None else {}
+            if lead is None or stored.pop(HANDOFF_PENDING, None) is None:
+                return False
+            lead.qualification = stored
+            return True
 
     async def language_offer(self, tg_user_id: int, text: str) -> Language | None:
         """Язык зафиксирован, а два сообщения подряд — на другом: предложить кнопки один раз.

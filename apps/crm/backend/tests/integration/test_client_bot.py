@@ -5,10 +5,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.models.clients import Client, Document, DocumentAccessLog, ServiceRequest
-from app.models.leads import Lead, TelegramIdentity
+from app.models.leads import Lead, Setting, TelegramIdentity
 from app.models.qualification import Escalation
-from app.services.client_bot import PHONE_ASKED, ClientBotService
+from app.schemas.settings import EscalationSettings
+from app.services.client_bot import HANDOFF_PENDING, PHONE_ASKED, ClientBotService
 from app.services.conversation import ConversationService, Incoming
+from app.services.notification_data import load_card
 from app.services.settings import SettingsService
 from tests.integration.test_customer import USER, customer, service
 from tests.unit.agents.fakes import ReplayModel
@@ -97,3 +99,44 @@ async def test_phone_flag_and_save(
         lead = (await session.scalars(select(Lead))).one()
     assert identity.phone_e164 == "+998901234567"
     assert PHONE_ASKED in lead.qualification
+
+
+async def test_human_request_without_phone_waits_then_hands_off_with_phone(
+    service: Service, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    """Решение владельца 2026-10-12: просьба лида — сначала номер, затем та же передача."""
+    svc, _, _ = service
+    await svc.start(Incoming(tg_user_id=USER, chat_id=USER, text="/start", language_code="ru"))
+    await svc.accept_consent(USER)
+    bot = bot_service(sessions)
+    assert await bot.hold_handoff_for_phone(USER) == "ru"
+    async with sessions() as session:
+        lead = (await session.scalars(select(Lead))).one()
+        assert (await session.scalars(select(Escalation))).first() is None
+    assert HANDOFF_PENDING in lead.qualification
+    assert PHONE_ASKED in lead.qualification  # middleware не спросит второй раз тем же ходом
+    assert lead.owner_mode == "bot"
+    assert await bot.take_pending_handoff(USER)
+    assert not await bot.take_pending_handoff(USER)  # пометка снимается один раз
+    await bot.save_phone(USER, "+998901234567")
+    assert await bot.hold_handoff_for_phone(USER) is None  # номер есть — передаём сразу
+    await svc.handle_message(Incoming(USER, USER, "📇 Азиз", human_requested=True))
+    cfg = await SettingsService(sessions, ttl_s=0).get()
+    async with sessions() as session:
+        escalation = (await session.scalars(select(Escalation))).one()
+        loaded = await load_card(session, escalation.id, cfg)
+    assert escalation.reason_codes == ["human_requested"]
+    assert loaded is not None
+    assert loaded[1].phone == "+998901234567"
+
+
+async def test_human_request_gate_can_be_switched_off(
+    service: Service, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    svc, _, _ = service
+    await svc.start(Incoming(tg_user_id=USER, chat_id=USER, text="/start", language_code="ru"))
+    await svc.accept_consent(USER)
+    off = EscalationSettings(require_phone_for_human_request=False).model_dump(mode="json")
+    async with sessions() as session, session.begin():
+        session.add(Setting(key="escalation", value=off))
+    assert await bot_service(sessions).hold_handoff_for_phone(USER) is None

@@ -103,6 +103,8 @@ const TEXT_GROUPS: Record<string, string[]> = {
     "phone_saved",
     "phone_skipped",
     "phone_not_own",
+    "phone_before_manager",
+    "phone_declined_manager",
   ],
   erase: ["erase_confirm", "erase_button", "cancel_button", "erase_cancelled", "erased"],
 };

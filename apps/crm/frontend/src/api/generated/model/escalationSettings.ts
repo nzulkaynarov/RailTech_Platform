@@ -25,6 +25,8 @@ export interface EscalationSettings {
   qualifier_min_confidence?: number;
   /** @minimum 1 */
   reminder_minutes?: number;
+  /** Просьба лида позвать менеджера — только после номера телефона из Telegram */
+  require_phone_for_human_request?: boolean;
   /** @minimum 1 */
   sla_minutes?: number;
 }

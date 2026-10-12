@@ -10,6 +10,7 @@ import httpx
 import structlog
 from aiogram import Bot, F, Router
 from aiogram.filters import Command, CommandStart
+from aiogram.fsm.context import FSMContext
 from aiogram.types import (
     BufferedInputFile,
     CallbackQuery,
@@ -29,6 +30,7 @@ from app.bot.attachments import (
     shared_text,
     store_attachment,
 )
+from app.bot.phone_gate import ask_phone_first, human_words_wait_for_phone
 from app.domain.bot_menu import MenuVariant, contact_request
 from app.domain.language import requested_language
 from app.integrations.s3 import ObjectStorage
@@ -149,9 +151,16 @@ async def on_delete(
 
 @router.message(Command("human"), F.from_user)
 async def on_human(
-    message: Message, bot: Bot, conversation: ConversationService, settings: SettingsService
+    message: Message,
+    bot: Bot,
+    conversation: ConversationService,
+    settings: SettingsService,
+    client_bot: ClientBotService,
+    state: FSMContext | None = None,
 ) -> None:
     inc = _incoming(message, message.text or "/human", human_requested=True)
+    if await ask_phone_first(inc, bot, conversation, client_bot, settings, state):
+        return
     await send(bot, message.chat.id, await conversation.handle_message(inc), settings)
 
 
@@ -170,8 +179,9 @@ async def on_text(
     conversation: ConversationService,
     settings: SettingsService,
     client_bot: ClientBotService,
+    state: FSMContext | None = None,
 ) -> None:
-    await respond(message, bot, conversation, settings, client_bot)
+    await respond(message, bot, conversation, settings, client_bot, state)
 
 
 async def respond(
@@ -180,12 +190,22 @@ async def respond(
     conversation: ConversationService,
     settings: SettingsService,
     client_bot: ClientBotService,
+    state: FSMContext | None = None,
     *,
     remove_reply_keyboard: bool = False,
 ) -> None:
     """Текст лида: смена языка и контакты компании решает код, остальное — диалог."""
     text, uid, chat_id = message.text or "", _user(message).id, message.chat.id
     out = await _deterministic(message, text, uid, conversation, settings)
+    if out is None and await human_words_wait_for_phone(
+        _incoming(message, text, human_requested=True),
+        bot,
+        conversation,
+        client_bot,
+        settings,
+        state,
+    ):
+        return
     if out is None:
         # Ответ модели может идти десятки секунд — показываем «печатает…».
         async with ChatActionSender.typing(chat_id=chat_id, bot=bot):
@@ -319,7 +339,12 @@ async def on_erase(
 
 @router.callback_query(F.data.in_({keyboards.OFFER_HUMAN, keyboards.OFFER_NO}))
 async def on_handoff_offer(
-    query: CallbackQuery, bot: Bot, conversation: ConversationService, settings: SettingsService
+    query: CallbackQuery,
+    bot: Bot,
+    conversation: ConversationService,
+    settings: SettingsService,
+    client_bot: ClientBotService,
+    state: FSMContext | None = None,
 ) -> None:
     await query.answer()
     message = query.message
@@ -339,6 +364,8 @@ async def on_handoff_offer(
         text=cfg.texts.handoff_offer_yes.get(language),
         human_requested=True,
     )
+    if await ask_phone_first(inc, bot, conversation, client_bot, settings, state):
+        return
     await send(bot, message.chat.id, await conversation.handle_message(inc), settings)
 
 
