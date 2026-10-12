@@ -6,8 +6,10 @@
 """
 
 import re
+from collections.abc import Iterable
 from typing import Final, Literal
 
+from app.domain.keywords import find_terms
 from app.domain.stages import OwnerMode, Stage
 
 MenuVariant = Literal["prospect", "with_manager", "client"]
@@ -17,7 +19,7 @@ MENUS: Final[dict[MenuVariant, tuple[Command, ...]]] = {
     "prospect": ("start", "human", "lang", "help", "delete"),
     # Менеджер уже ведёт диалог — «Связаться с менеджером» не нужна.
     "with_manager": ("start", "lang", "help", "delete"),
-    "client": ("docs", "request", "status", "lang", "delete"),
+    "client": ("docs", "request", "status", "human", "lang", "help", "delete"),
 }
 CLIENT_COMMANDS: Final[frozenset[Command]] = frozenset({"docs", "request", "status"})
 
@@ -49,6 +51,54 @@ def should_ask_phone(
     if not enabled or already_asked or has_phone or is_client or stage is None:
         return False
     return stage in _PHONE_STAGES or owner_mode in (OwnerMode.HUMAN, OwnerMode.PAUSED)
+
+
+_CONTACT_TERMS: Final = (
+    "номер*",
+    "телефон*",
+    "адрес*",
+    "сайт*",
+    "контакт*",
+    "реквизит*",
+    "raqam*",
+    "telefon*",
+    "manzil*",
+    "sayt*",
+    "kontakt*",
+    "phone*",
+    "number",
+    "address*",
+    "website*",
+    "site",
+    "contact*",
+)
+# «Номер договора/запроса» — не про контакты компании.
+_NOT_CONTACT_TERMS: Final = (
+    "договор*",
+    "заказ*",
+    "запрос*",
+    "заявк*",
+    "счет*",
+    "shartnoma*",
+    "buyurtma*",
+    "so'rov*",
+    "hisob*",
+    "contract*",
+    "order*",
+    "request*",
+    "invoice*",
+)
+_CONTACT_MAX_WORDS: Final = 8
+
+
+def contact_request(text: str, human_terms: Iterable[str]) -> bool:
+    """«Дайте телефон/адрес/сайт» — ответ из настроек `company` без модели (Q-023).
+
+    Просьба о менеджере («дай номер менеджера») важнее: её ведёт передача менеджеру.
+    """
+    if len(text.split()) > _CONTACT_MAX_WORDS or find_terms(text, human_terms):
+        return False
+    return bool(find_terms(text, _CONTACT_TERMS)) and not find_terms(text, _NOT_CONTACT_TERMS)
 
 
 def normalize_phone(raw: str) -> str | None:

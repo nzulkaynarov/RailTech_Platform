@@ -25,7 +25,7 @@ def test_menu_variant(is_client: bool, owner_mode: str | None, variant: str) -> 
     [
         ("prospect", ("start", "human", "lang", "help", "delete")),
         ("with_manager", ("start", "lang", "help", "delete")),
-        ("client", ("docs", "request", "status", "lang", "delete")),
+        ("client", ("docs", "request", "status", "human", "lang", "help", "delete")),
     ],
 )
 def test_menu_commands(variant: str, commands: tuple[str, ...]) -> None:

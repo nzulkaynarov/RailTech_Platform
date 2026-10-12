@@ -48,4 +48,9 @@ def test_off_hours_text_follows_business_hours(
 ) -> None:
     """Аудит BOT-19: часы работы в тексте лиду берутся из настроек, а не зашиты."""
     cfg = AppSettings(business_hours=BusinessHoursSettings(weekdays=weekdays))
-    assert expected in cfg.lead_notice("off_hours", language)
+    assert cfg.business_hours.describe(language) == expected
+    # Переопределённый админом текст с {hours} по-прежнему получает расписание из настроек.
+    custom = cfg.texts.model_copy(
+        update={"off_hours": cfg.texts.off_hours.model_copy(update={language: "{hours}"})}
+    )
+    assert cfg.model_copy(update={"texts": custom}).lead_notice("off_hours", language) == expected

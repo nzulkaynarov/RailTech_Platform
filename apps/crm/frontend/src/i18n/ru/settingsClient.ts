@@ -8,9 +8,9 @@ const menu = (command: string, who: string): BotTextLabel => ({
 
 export const clientBotTexts: Record<string, BotTextLabel> = {
   menu_start: menu("start", "у потенциальных клиентов"),
-  menu_human: menu("human", "у потенциальных клиентов, пока лида не ведёт менеджер"),
+  menu_human: menu("human", "у клиентов и у потенциальных, пока лида не ведёт менеджер"),
   menu_lang: menu("lang", "у всех"),
-  menu_help: menu("help", "у потенциальных клиентов"),
+  menu_help: menu("help", "у всех"),
   menu_delete: menu("delete", "у всех"),
   menu_docs: menu("docs", "у клиентов"),
   menu_request: menu("request", "у клиентов"),
@@ -51,5 +51,45 @@ export const clientBotTexts: Record<string, BotTextLabel> = {
   phone_not_own: {
     label: "Чужой контакт",
     when: "Клиент прислал чужой контакт — сохраняем только его собственный номер.",
+  },
+  help_with_manager: {
+    label: "Справка /help (ведёт менеджер)",
+    when: "По /help, когда диалог ведёт менеджер. Перечисляет команды этого меню.",
+  },
+  help_client: {
+    label: "Справка /help (клиент)",
+    when: "По /help у клиента после договора. Перечисляет команды меню клиента.",
+  },
+  client_access_granted: {
+    label: "Клиенту открыт доступ",
+    when: "Один раз, когда менеджер сделал лида клиентом: доступны /docs и /request.",
+  },
+  request_text_only: {
+    label: "Запрос — только текстом",
+    when: "Клиент вызвал /request и прислал файл или голосовое вместо описания.",
+  },
+  language_first: {
+    label: "Первое сообщение: выбор языка",
+    when: "Первое сообщение новому собеседнику — сразу на трёх языках, под ним кнопки языков.",
+  },
+  handoff_offer_declined: {
+    label: "Ответ на «Не нужно»",
+    when: "Клиент нажал «Не нужно» под ответом «нет в базе знаний».",
+  },
+  contacts: {
+    label: "Контакты компании: заголовок",
+    when: "На «дайте телефон/адрес/сайт» — над значениями из раздела «Компания».",
+  },
+  contact_labels: {
+    label: "Контакты компании: подписи",
+    when: "Подписи телефона, сайта и адреса через «|» — в этом порядке.",
+  },
+  contacts_missing: {
+    label: "Контакты не заданы",
+    when: "Спросили телефон/адрес/сайт, а в «Компании» они пустые; под текстом — кнопки менеджера.",
+  },
+  sla_promise: {
+    label: "Обещание срока ответа",
+    when: "Подставляется в «Передача менеджеру» как {sla}. {minutes} — SLA из раздела «Передачи».",
   },
 };

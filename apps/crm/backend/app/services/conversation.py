@@ -31,6 +31,7 @@ from app.services.conversation_erasure import ErasureMixin
 from app.services.conversation_support import (
     agent_failure,
     apply_counters,
+    consent_offer,
     consent_prompt,
     current_lead,
     escalated,
@@ -131,11 +132,6 @@ class ConversationService(ErasureMixin):
             await repo.add_message(session, conversation_id=conversation.id, role="bot", text=text)
         return [Outgoing(text)]
 
-    async def help(self, tg_user_id: int) -> list[Outgoing]:
-        cfg = await self._settings.get()
-        language = await self.language_of(tg_user_id)
-        return [Outgoing(cfg.texts.help.get(language, company=cfg.company.name))]
-
     async def unsupported(self, tg_user_id: int) -> list[Outgoing]:
         """Стикер, опрос и т. п.: состояние не меняется, просим написать текстом."""
         cfg = await self._settings.get()
@@ -196,13 +192,19 @@ class ConversationService(ErasureMixin):
         return [Outgoing(text)]
 
     async def set_language(self, tg_user_id: int, language: Language) -> list[Outgoing]:
+        """Кнопка языка, /lang или «давай по-русски»; до согласия — согласие на этом языке."""
         cfg = await self._settings.get()
+        confirmation = [Outgoing(cfg.texts.language_set.get(language), language=language)]
         async with self._sessions() as session, session.begin():
-            lead, _ = await current_lead(session, tg_user_id)
+            lead, conversation = await current_lead(session, tg_user_id)
             if lead is None:
-                return [Outgoing(cfg.texts.language_set.get(language))]
+                return confirmation
             lead.language, lead.language_confirmed, lead.language_candidate = language, True, None
-        return [Outgoing(cfg.texts.language_set.get(language))]
+            if conversation is not None and consent_required(
+                lead.consent_given_at, lead.consent_version, cfg.texts.consent_version
+            ):
+                return await consent_offer(session, conversation, lead, cfg)
+        return confirmation
 
     async def _receive(
         self, inc: Incoming, cfg: AppSettings

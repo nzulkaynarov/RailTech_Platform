@@ -11,12 +11,22 @@ import httpx
 import structlog
 from aiogram import Bot, F, Router
 from aiogram.filters import Command, CommandStart
-from aiogram.types import BufferedInputFile, CallbackQuery, Message, User
+from aiogram.types import (
+    BufferedInputFile,
+    CallbackQuery,
+    InlineKeyboardMarkup,
+    Message,
+    ReplyKeyboardRemove,
+    User,
+)
 from aiogram.utils.chat_action import ChatActionSender
 
 from app.bot import keyboards
+from app.domain.bot_menu import MenuVariant, contact_request
+from app.domain.language import requested_language
 from app.integrations.s3 import ObjectStorage
-from app.schemas.settings import Language
+from app.schemas.settings import AppSettings, Language
+from app.services.client_bot import ClientBotService
 from app.services.conversation import ConversationService, Incoming, Outgoing
 from app.services.settings import SettingsService
 
@@ -56,11 +66,14 @@ async def send(
     outgoing: list[Outgoing],
     settings: SettingsService,
     conversation: ConversationService | None = None,
+    *,
+    remove_reply_keyboard: bool = False,
 ) -> None:
+    """Отправка ответов; `remove_reply_keyboard` — убрать «Поделиться номером» первым ответом."""
     if not outgoing:
         return
     cfg = await settings.get()
-    for item in outgoing:
+    for index, item in enumerate(outgoing):
         if item.document is not None:
             if not await _send_document(bot, chat_id, item):
                 # Не пишем «Отправляю документ» без файла; команда узнаёт о сбое.
@@ -68,16 +81,22 @@ async def send(
                 if conversation is not None and item.lead_id is not None:
                     await conversation.report_delivery_failure(item.lead_id)
             continue
-        markup = None
-        if item.keyboard == "consent":
-            markup = keyboards.consent(cfg, item.language)
-        elif item.keyboard == "language":
-            markup = keyboards.languages()
-        elif item.keyboard == "erase_confirm":
-            markup = keyboards.erase_confirm(cfg, item.language)
-        elif item.keyboard == "handoff_offer":
-            markup = keyboards.handoff_offer(cfg, item.language)
+        markup: InlineKeyboardMarkup | ReplyKeyboardRemove | None = _markup(cfg, item)
+        if markup is None and remove_reply_keyboard and index == 0:
+            markup = ReplyKeyboardRemove()
         await bot.send_message(chat_id, item.text, reply_markup=markup)
+
+
+def _markup(cfg: AppSettings, item: Outgoing) -> InlineKeyboardMarkup | None:
+    if item.keyboard == "consent":
+        return keyboards.consent(cfg, item.language)
+    if item.keyboard == "language":
+        return keyboards.languages()
+    if item.keyboard == "erase_confirm":
+        return keyboards.erase_confirm(cfg, item.language)
+    if item.keyboard == "handoff_offer":
+        return keyboards.handoff_offer(cfg, item.language)
+    return None
 
 
 @router.message(CommandStart(), F.from_user)
@@ -88,11 +107,22 @@ async def on_start(
     await send(bot, message.chat.id, out, settings)
 
 
+def help_text(cfg: AppSettings, variant: MenuVariant, language: Language) -> str:
+    """/help перечисляет ровно команды меню этого статуса (SPEC §9.2)."""
+    texts = cfg.texts
+    text = {"prospect": texts.help, "with_manager": texts.help_with_manager}.get(
+        variant, texts.help_client
+    )
+    return text.get(language, company=cfg.company.name)
+
+
 @router.message(Command("help"), F.from_user)
 async def on_help(
-    message: Message, bot: Bot, conversation: ConversationService, settings: SettingsService
+    message: Message, client_bot: ClientBotService, settings: SettingsService
 ) -> None:
-    await send(bot, message.chat.id, await conversation.help(_user(message).id), settings)
+    cfg = await settings.get()
+    status = await client_bot.status(_user(message).id)
+    await message.answer(help_text(cfg, status.variant, status.language))
 
 
 @router.message(Command("lang"), F.from_user)
@@ -121,21 +151,64 @@ async def on_human(
 
 @router.message(F.text.startswith("/"), F.from_user)
 async def on_unknown_command(
-    message: Message, bot: Bot, conversation: ConversationService, settings: SettingsService
+    message: Message, client_bot: ClientBotService, settings: SettingsService
 ) -> None:
     """Неизвестная команда — подсказка, а не вопрос модели."""
-    await send(bot, message.chat.id, await conversation.help(_user(message).id), settings)
+    await on_help(message, client_bot, settings)
 
 
 @router.message(F.text, F.from_user)
 async def on_text(
-    message: Message, bot: Bot, conversation: ConversationService, settings: SettingsService
+    message: Message,
+    bot: Bot,
+    conversation: ConversationService,
+    settings: SettingsService,
+    client_bot: ClientBotService,
 ) -> None:
-    inc = _incoming(message, message.text or "")
-    # Ответ модели может идти десятки секунд — показываем «печатает…».
-    async with ChatActionSender.typing(chat_id=message.chat.id, bot=bot):
-        out = await conversation.handle_message(inc)
-    await send(bot, message.chat.id, out, settings, conversation)
+    await respond(message, bot, conversation, settings, client_bot)
+
+
+async def respond(
+    message: Message,
+    bot: Bot,
+    conversation: ConversationService,
+    settings: SettingsService,
+    client_bot: ClientBotService,
+    *,
+    remove_reply_keyboard: bool = False,
+) -> None:
+    """Текст лида: смена языка и контакты компании решает код, остальное — диалог."""
+    text, uid, chat_id = message.text or "", _user(message).id, message.chat.id
+    out = await _deterministic(text, uid, conversation, settings)
+    if out is None:
+        # Ответ модели может идти десятки секунд — показываем «печатает…».
+        async with ChatActionSender.typing(chat_id=chat_id, bot=bot):
+            out = await conversation.handle_message(_incoming(message, text))
+        offer = await client_bot.language_offer(uid, text)
+        if offer is not None:
+            cfg = await settings.get()
+            out.append(Outgoing(cfg.texts.language_prompt.get(offer), keyboard="language"))
+    await send(
+        bot, chat_id, out, settings, conversation, remove_reply_keyboard=remove_reply_keyboard
+    )
+
+
+async def _deterministic(
+    text: str, uid: int, conversation: ConversationService, settings: SettingsService
+) -> list[Outgoing] | None:
+    """Ответ без модели (Q-022, Q-023): «давай по-русски» и «дайте телефон/адрес/сайт»."""
+    language = requested_language(text)
+    if language is not None:
+        return await conversation.set_language(uid, language)
+    cfg = await settings.get()
+    if not contact_request(text, cfg.escalation.human_request_terms):
+        return None
+    current = await conversation.language_of(uid)
+    contacts = cfg.company_contacts(current)
+    if contacts is not None:
+        return [Outgoing(contacts, language=current)]
+    missing = cfg.texts.contacts_missing.get(current)
+    return [Outgoing(missing, keyboard="handoff_offer", language=current)]
 
 
 MEDIA = F.document | F.photo | F.voice | F.audio | F.video | F.video_note | F.animation
@@ -217,10 +290,11 @@ async def on_handoff_offer(
     if not isinstance(message, Message):
         return
     await message.edit_reply_markup(reply_markup=None)
-    if query.data != keyboards.OFFER_HUMAN:
-        return
     cfg = await settings.get()
     language = await conversation.language_of(query.from_user.id)
+    if query.data != keyboards.OFFER_HUMAN:
+        await bot.send_message(message.chat.id, cfg.texts.handoff_offer_declined.get(language))
+        return
     inc = Incoming(
         tg_user_id=query.from_user.id,
         chat_id=message.chat.id,

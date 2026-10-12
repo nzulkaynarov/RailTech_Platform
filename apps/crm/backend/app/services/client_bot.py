@@ -15,6 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.bot_menu import MenuVariant, menu_variant, should_ask_phone
+from app.domain.language import detect_language, mismatch_offer
 from app.domain.triggers import TriggerSignals, evaluate
 from app.models.clients import Document, ServiceRequest
 from app.repositories import documents as docs_repo
@@ -31,6 +32,8 @@ logger = structlog.get_logger(__name__)
 Presign = Callable[[str, int], Awaitable[str]]
 DOCS_LIMIT = 10
 PHONE_ASKED = "phone_asked_at"
+LANGUAGE_MISMATCH = "language_mismatch_streak"
+LANGUAGE_OFFERED = "language_offered_at"
 
 
 @dataclass(frozen=True, slots=True)
@@ -92,6 +95,33 @@ class ClientBotService:
                 stored = dict(lead.qualification or {})
                 stored[PHONE_ASKED] = datetime.now(UTC).isoformat()
                 lead.qualification = stored
+
+    async def language_offer(self, tg_user_id: int, text: str) -> Language | None:
+        """Язык зафиксирован, а два сообщения подряд — на другом: предложить кнопки один раз.
+
+        Серия и флаг — в `leads.qualification` (как флаг номера): квалификатор их не затирает.
+        """
+        if not text.strip():
+            return None
+        async with self._sessions() as session, session.begin():
+            lead, _ = await current_lead(session, tg_user_id)
+            if lead is None or not lead.language_confirmed:
+                return None
+            fixed = lang_of(lead)
+            detected = detect_language(text, default=fixed)
+            stored = dict(lead.qualification or {})
+            streak, offer = mismatch_offer(
+                fixed,
+                detected,
+                int(stored.get(LANGUAGE_MISMATCH, 0)),
+                bool(stored.get(LANGUAGE_OFFERED)),
+            )
+            if streak != stored.get(LANGUAGE_MISMATCH, 0) or offer:
+                stored[LANGUAGE_MISMATCH] = streak
+                if offer:
+                    stored[LANGUAGE_OFFERED] = datetime.now(UTC).isoformat()
+                lead.qualification = stored
+        return detected if offer else None
 
     async def save_phone(self, tg_user_id: int, phone_e164: str) -> None:
         async with self._sessions() as session, session.begin():
