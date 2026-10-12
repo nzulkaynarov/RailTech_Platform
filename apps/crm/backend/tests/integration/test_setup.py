@@ -64,8 +64,12 @@ async def test_parallel_first_admins_only_one_wins(
 ) -> None:
     service = UserService(sessions)
     results = await asyncio.gather(
-        service.create_first_admin("a@railtech.uz", "A", "Sup3rSecretPass", Actor.system()),
-        service.create_first_admin("b@railtech.uz", "B", "Sup3rSecretPass", Actor.system()),
+        service.create_first_admin(
+            "first@railtech.uz", "Первый", "Sup3rSecretPass", Actor.system()
+        ),
+        service.create_first_admin(
+            "second@railtech.uz", "Второй", "Sup3rSecretPass", Actor.system()
+        ),
         return_exceptions=True,
     )
     assert sum(isinstance(r, int) for r in results) == 1

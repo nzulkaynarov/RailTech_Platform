@@ -5,6 +5,7 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -33,7 +34,7 @@ class FakeProbe:
 def client(
     sessions: async_sessionmaker[AsyncSession], live_settings: Settings
 ) -> Iterator[TestClient]:
-    settings = live_settings.model_copy(update={"secrets_key": "k" * 64})
+    settings = live_settings.model_copy(update={"secrets_key": SecretStr("k" * 64)})
     app = create_app(settings)
     with TestClient(app) as test_client:
         app.state.bot = None  # без настоящего Telegram: перезапуск бота не нужен

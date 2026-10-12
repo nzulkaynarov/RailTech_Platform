@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.models.clients import Document, DocumentAccessLog, ServiceRequest
+from app.models.clients import Client, Document, DocumentAccessLog, ServiceRequest
 from app.models.leads import Lead, TelegramIdentity
 from app.models.qualification import Escalation
 from app.services.client_bot import PHONE_ASKED, ClientBotService
@@ -51,8 +51,11 @@ async def test_client_documents_request_and_status(
     assert docs is not None
     assert docs[0][1].startswith("Договор поставки №15")
     async with sessions() as session, session.begin():
+        stranger = Client(name="Чужая компания")
+        session.add(stranger)
+        await session.flush()
         other = Document(
-            client_id=client_id + 1000, type="act", title="Чужой", filename="x.pdf",
+            client_id=stranger.id, type="act", title="Чужой", filename="x.pdf",
             mime="application/pdf", size_bytes=1, storage_key="k/x",
         )  # fmt: skip
         session.add(other)

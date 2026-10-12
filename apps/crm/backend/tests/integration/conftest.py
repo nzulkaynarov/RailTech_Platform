@@ -43,6 +43,7 @@ TABLES = (
     "system_alerts",
     "integration_secrets",
     "telegram_chat_candidates",
+    "llm_usage",
     "procrastinate_jobs",
 )
 FAKE_KEY = "x" * 40  # фиктивный ключ только для тестов

@@ -62,7 +62,7 @@ async def test_no_dm_when_unsubscribed(sessions: async_sessionmaker[AsyncSession
 
 
 async def test_alert_reaches_subscribed_admin(sessions: async_sessionmaker[AsyncSession]) -> None:
-    admin, _ = await make_user(sessions, "a@x.uz", ["admin"])
+    admin, _ = await make_user(sessions, "owner@x.uz", ["admin"])
     tg = 7001
     await link(sessions, admin.id, tg)
     bot = FakeSender()
