@@ -274,7 +274,7 @@ service_requests(id, client_id, lead_id NULL, summary, status 'open'|'closed', c
 settings(key PK, value JSONB, schema_version INT, updated_by, updated_at)
 ```
 Ключи и JSON-схемы валидируются Pydantic-моделями в `app/schemas/settings.py`:
-`company`, `business_hours`, `texts` (greeting/consent/handoff/off_hours × ru/uz/en), `escalation` (триггеры, пороги, `no_progress_turns`, SLA, `price_always_to_manager`), `qualification` (критерии «Квалифицирован»: обязательные и дополнительные факты, горизонт срока, роли — ADR-0016), `kb` (`min_score`, `top_k`), `bot` (persona, `max_words`, `history_messages`, `rate_limit_per_minute`, `unresponsive_days`), `competitors`, `stop_words`, `notifications` (`channel_id`, `duty_user_ids`), `budget` (`daily_usd`, `fallback_model_enabled`).
+`company`, `business_hours`, `texts` (greeting/consent/handoff/off_hours × ru/uz/en; подписи меню `menu_*`, команды клиента `docs_*`/`request_*`/`client_only`, номер `phone_*` — Q-011/Q-020, класс `ClientBotTexts`), `escalation` (триггеры, пороги, `no_progress_turns`, SLA, `price_always_to_manager`), `qualification` (критерии «Квалифицирован»: обязательные и дополнительные факты, горизонт срока, роли — ADR-0016), `kb` (`min_score`, `top_k`), `bot` (persona, `max_words`, `history_messages`, `rate_limit_per_minute`, `unresponsive_days`, `ask_phone` — один раз попросить номер, Q-020), `competitors`, `stop_words`, `notifications` (`channel_id`, `duty_user_ids`), `budget` (`daily_usd`, `fallback_model_enabled`).
 
 ### 5.8. Техническое
 
@@ -450,7 +450,19 @@ class QualifierOutput(BaseModel):
 
 ### 9.2. Клиентский бот
 
-Команды: `/start`, `/lang`, `/human`, `/delete`, `/help`. Middleware: идемпотентность, rate-limit (20 сообщений/мин на пользователя, при превышении — вежливое сообщение), маскирование PII в логах, проверка согласия. Вложения лида (фото/документы) сохраняются в S3 (RustFS) и показываются в CRM; бот в v2 на вложения отвечает «передам коллеге» + триггер `info`.
+Команды: `/start`, `/lang`, `/human`, `/delete`, `/help`; клиенту — `/docs`, `/request`, `/status`.
+
+**Интерфейс по статусу (Q-011, Q-020; `domain/bot_menu.py`, `services/client_bot.py`, `bot/status.py`).** Меню чата (`BotCommandScopeChat`) выбирает код после каждого сообщения/кнопки лида; публикуется только при смене варианта или языка (кэш в процессе бота):
+
+| Статус | Признак | Меню |
+|---|---|---|
+| prospect | нет подтверждённой привязки к клиенту | Начать · Связаться с менеджером · Сменить язык · Что умеет бот · Удалить переписку |
+| with_manager | prospect и `owner_mode = human` | то же без «Связаться с менеджером» |
+| client | `verified_client` (как режим customer агента) | Мои документы `/docs` · Запрос менеджеру `/request` · Статус запроса `/status` · Сменить язык · Удалить переписку |
+
+`/docs` — до 10 видимых клиенту документов кнопками (новые первыми), `client_id` только из подтверждённой идентичности, выдача файла и журнал доступа — как у docs-mcp. `/request` — описание следующим сообщением → `service_requests` + info-эскалация `service_request`. `/status` — открытый запрос словами. Prospect на командах клиента получает `texts.client_only`. Номер телефона: один раз (флаг `leads.qualification.phone_asked_at`), когда лид квалифицирован/передан или ждёт менеджера, при `bot.ask_phone`; сохраняется только собственный контакт (`contact.user_id == from_user.id`) в `telegram_identities.phone_e164` (E.164), показывается в карточке лида, стирается по `/delete`.
+
+Middleware: идемпотентность, rate-limit (20 сообщений/мин на пользователя, при превышении — вежливое сообщение), маскирование PII в логах, проверка согласия. Вложения лида (фото/документы) сохраняются в S3 (RustFS) и показываются в CRM; бот в v2 на вложения отвечает «передам коллеге» + триггер `info`.
 
 ---
 

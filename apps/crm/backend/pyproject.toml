@@ -76,6 +76,7 @@ ignore = ["RUF001", "RUF002", "RUF003", "SIM905"]
 "evals/test_*.py" = ["S101", "S106", "T201"]
 "alembic/versions/**" = ["S608"]
 "app/schemas/settings.py" = ["E501"]
+"app/schemas/settings_client.py" = ["E501"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app", "tests"]

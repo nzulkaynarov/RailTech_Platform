@@ -1,6 +1,11 @@
 """Inline-клавиатуры клиентского бота."""
 
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    KeyboardButton,
+    ReplyKeyboardMarkup,
+)
 
 from app.schemas.settings import AppSettings, Language
 
@@ -11,6 +16,7 @@ ERASE_CONFIRM = "erase:confirm"
 ERASE_CANCEL = "erase:cancel"
 OFFER_HUMAN = "offer:human"
 OFFER_NO = "offer:no"
+DOC_PREFIX = "doc:"
 LANGUAGE_LABELS: dict[Language, str] = {"ru": "Русский", "uz": "Oʻzbekcha", "en": "English"}
 
 
@@ -50,3 +56,22 @@ def handoff_offer(settings: AppSettings, language: Language) -> InlineKeyboardMa
         InlineKeyboardButton(text=texts.handoff_offer_no.get(language), callback_data=OFFER_NO),
     ]
     return InlineKeyboardMarkup(inline_keyboard=[row])
+
+
+def phone_request(settings: AppSettings, language: Language) -> ReplyKeyboardMarkup:
+    """Одноразовая клавиатура Q-020: «Поделиться номером» (свой контакт) и «Не сейчас»."""
+    texts = settings.texts
+    share = KeyboardButton(text=texts.phone_share_button.get(language), request_contact=True)
+    skip = KeyboardButton(text=texts.phone_skip_button.get(language))
+    return ReplyKeyboardMarkup(
+        keyboard=[[share], [skip]], resize_keyboard=True, one_time_keyboard=True
+    )
+
+
+def documents(items: list[tuple[int, str]]) -> InlineKeyboardMarkup:
+    """Документы клиента кнопками; в callback — только id, принадлежность проверяет сервис."""
+    rows = [
+        [InlineKeyboardButton(text=title, callback_data=f"{DOC_PREFIX}{doc_id}")]
+        for doc_id, title in items
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=rows)

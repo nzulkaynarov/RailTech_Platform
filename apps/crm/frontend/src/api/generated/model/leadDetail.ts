@@ -22,6 +22,7 @@ export interface LeadDetail {
   notes_count: number;
   open_service_request_id?: number | null;
   owner_mode: string;
+  phone_e164?: string | null;
   product_interest: string[];
   qualification: LeadDetailQualification;
   score: number;

@@ -1,5 +1,7 @@
 /** Настройки: разделы, подписи полей, тексты бота (подпись + «когда отправляется»). */
 
+import { clientBotTexts } from "./settingsClient";
+
 type Dict = Record<string, string>;
 export type BotTextLabel = { label: string; when: string };
 
@@ -90,6 +92,7 @@ const botTexts: Record<string, BotTextLabel> = {
   cancel_button: { label: "Кнопка «Отмена»", when: "Под подтверждением удаления." },
   erase_cancelled: { label: "Удаление отменено", when: "Если клиент нажал «Отмена»." },
   erased: { label: "Переписка удалена", when: "После удаления переписки." },
+  ...clientBotTexts,
 };
 
 export const settings = {
@@ -100,6 +103,8 @@ export const settings = {
     title: "Договор № 12",
     summary: "акт сверки за сентябрь",
     resolution: "акт отправили на почту",
+    number: "17",
+    date: "12.10.2026",
   } as Dict,
   dryRun: "Проверить на последних 50 диалогах",
   dryRunHint: "Покажет, сколько передач было бы при новых значениях. Ничего не меняет.",
@@ -154,6 +159,8 @@ export const settings = {
     handoff: "Передача менеджеру",
     fallback: "Нет ответа и сбои",
     clients: "Клиенты и документы",
+    menu: "Меню команд",
+    phone: "Номер телефона",
     erase: "Удаление переписки",
     other: "Другие тексты",
   } as Dict,
@@ -182,6 +189,7 @@ export const settings = {
     history_messages: "Сообщений истории в контексте",
     rate_limit_per_minute: "Сообщений в минуту от клиента",
     unresponsive_days: "Дней тишины до «Не отвечает»",
+    ask_phone: "Один раз попросить номер телефона (квалифицирован или просит менеджера)",
     terms: "Слова",
     channel_id: "ID приватного канала",
     duty_user_ids: "Дежурные",

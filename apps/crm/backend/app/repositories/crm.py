@@ -150,3 +150,10 @@ async def tg_username(session: AsyncSession, lead_id: int) -> str | None:
     stmt = select(TelegramIdentity.tg_username).where(TelegramIdentity.lead_id == lead_id)
     value: str | None = (await session.scalars(stmt)).first()
     return value
+
+
+async def tg_phone(session: AsyncSession, lead_id: int) -> str | None:
+    """Номер, которым лид поделился кнопкой в боте (Q-020), E.164."""
+    stmt = select(TelegramIdentity.phone_e164).where(TelegramIdentity.lead_id == lead_id)
+    value: str | None = (await session.scalars(stmt)).first()
+    return value

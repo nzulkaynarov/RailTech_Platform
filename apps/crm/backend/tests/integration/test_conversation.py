@@ -17,7 +17,7 @@ from app.container import Container
 from app.mcp import crm_server, kb_server
 from app.mcp.common import build_app
 from app.models.kb import KbGap
-from app.models.leads import Lead, Message
+from app.models.leads import Lead, Message, TelegramIdentity
 from app.models.qualification import Escalation, StageTransition
 from app.repositories.leads import ERASED_TEXT
 from app.services.conversation import ConversationService, Incoming
@@ -236,7 +236,13 @@ async def test_delete_erases_messages_and_unlinks_identity(stack: Stack) -> None
         msg("", attachments=[{"kind": "file", "storage_key": "tg/1/2/voice.ogg", "stored": True}])
     )
     stack.hooks.clear()
+    async with stack.sessions() as session, session.begin():
+        identity = (await session.scalars(select(TelegramIdentity))).one()
+        identity.phone_e164 = "+998901234567"  # Q-020: номер из кнопки «Поделиться номером»
     await stack.service.erase(USER)
+    async with stack.sessions() as session:
+        phones = (await session.scalars(select(TelegramIdentity.phone_e164))).all()
+    assert phones == [None]  # /delete стирает и номер
     async with stack.sessions() as session:
         escalation = (await session.scalars(select(Escalation))).one()
     assert (escalation.status, escalation.outcome) == ("closed", "erased")

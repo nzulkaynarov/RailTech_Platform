@@ -59,6 +59,7 @@ export const leads = {
     summary: "Резюме",
     client: "Клиент",
     openClient: "Открыть карточку клиента",
+    phone: "Телефон (из Telegram)",
     clientCreated: "Клиент создан",
     qualification: "Квалификация",
     escalation: "Причина передачи",
