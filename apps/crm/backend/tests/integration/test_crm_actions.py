@@ -216,7 +216,7 @@ async def test_channel_post_then_edit_after_take(
     post = bot.posts[0]
     assert post["chat_id"] == -100500
     assert f"Лид #{lead_id}" in post["text"]
-    assert post["reply_markup"].inline_keyboard[0][0].callback_data == f"take:{lead_id}"
+    assert post["reply_markup"].inline_keyboard[0][0].callback_data == f"take:e{escalation.id}"
 
     manager, password = await make_user(sessions, "ch@railtech.uz", ["manager"])
     client.post(

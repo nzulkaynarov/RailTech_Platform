@@ -46,6 +46,7 @@ class UserView:
     ui_mode: str
     notify_system: bool = True
     notify_leads: bool = True
+    tg_dm_failed_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -363,6 +364,7 @@ def _view(user: User, roles: list[str]) -> UserView:
         ui_mode=user.ui_mode,
         notify_system=user.notify_system,
         notify_leads=user.notify_leads,
+        tg_dm_failed_at=user.tg_dm_failed_at,
     )
 
 

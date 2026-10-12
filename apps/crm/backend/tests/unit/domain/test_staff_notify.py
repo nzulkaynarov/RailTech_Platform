@@ -91,14 +91,20 @@ def test_lead_dm_due(last: datetime | None, expected: bool) -> None:
 def test_lead_dm_text_has_preview_and_link() -> None:
     text = lead_dm_text("Иван", "Когда  будет\nпоставка?", "https://crm.example.com/", 42)
     assert text == (
-        "💬 Новое сообщение от Иван: «Когда будет поставка?» — открыть: "
-        "https://crm.example.com/leads/42"
+        "💬 Новое сообщение от лида #42 Иван: «Когда будет поставка?» — "
+        '<a href="https://crm.example.com/leads/42">открыть в CRM</a>'
     )
+
+
+def test_lead_dm_text_escapes_html() -> None:
+    text = lead_dm_text("<b>", "a < b", "https://x", 1)
+    assert "&lt;b&gt;" in text
+    assert "a &lt; b" in text
 
 
 def test_lead_dm_text_truncates_and_names_unnamed() -> None:
     text = lead_dm_text("", "a" * 500, "http://localhost", 5)
-    assert "Лид #5" in text
+    assert "лида #5:" in text
     preview = text.split("«", 1)[1].split("»", 1)[0]
     assert len(preview) == PREVIEW_CHARS
     assert preview.endswith("…")

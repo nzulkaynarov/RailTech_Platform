@@ -95,7 +95,8 @@ async def test_alerts_fire_once_repeat_and_resolve(
     first = await svc.check(now)
     assert sorted(first) == [
         "⚠️ Бюджет моделей: $0.90 из $1.00 за сегодня (90%)",
-        "⚠️ Задача ingest_kb_document: упала после всех попыток: 1 за последний час",
+        "⚠️ Задача «Загрузка документа в базу знаний»: упала после всех попыток: "
+        "1 за последний час\nЧто делать: откройте документ в «Базе знаний» и загрузите заново",
     ]
     assert await svc.check(now + timedelta(minutes=1)) == []  # дедупликация
     third = await svc.check(now + timedelta(minutes=2))
@@ -118,7 +119,8 @@ async def test_daily_report_and_budget_guard(sessions: async_sessionmaker[AsyncS
     report = await monitor(sessions, bot, [True]).daily_report(datetime.now(UTC))
     assert report is not None
     assert "новых лидов: 1" in report
-    assert "стоимость моделей: $0.75 из $0.50" in report
+    assert "$" not in report  # стоимость — только админам в личку
+    assert "просрочен срок реакции: 0" in report
     guard = BudgetGuard(sessions, SettingsService(sessions, ttl_s=0))
     assert await guard.fallback_required() is True
     await SettingsService(sessions, ttl_s=0).update(

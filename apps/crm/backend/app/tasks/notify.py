@@ -8,9 +8,11 @@ from sqlalchemy import select
 
 from app.container import Container, get_container
 from app.domain.business_hours import add_business_minutes
+from app.domain.escalation import reset_sla
 from app.models.leads import Lead
 from app.models.qualification import Escalation
 from app.repositories import events
+from app.services.channel_card import needs_sla
 from app.services.notifications import NotificationService
 from app.services.staff_notifier import StaffNotifier
 from app.tasks.queue import queue
@@ -24,7 +26,10 @@ async def build_notifications(c: Container) -> NotificationService:
 
 @queue.task(name="sync_escalation_post", queue="notify", retry=RETRY)
 async def sync_escalation_post(escalation_id: int) -> bool:
-    return await (await build_notifications(get_container())).sync(escalation_id)
+    result = await (await build_notifications(get_container())).publish(escalation_id)
+    if result.raised_to_hot:
+        await _schedule_sla(escalation_id)  # срок сбросил services/escalation (reset_sla)
+    return result.ok
 
 
 @queue.task(name="escalation_sla_check", queue="notify", retry=RETRY)
@@ -66,8 +71,12 @@ async def snooze_expiry(timestamp: int) -> int:
                 .with_for_update(skip_locked=True)
             )
         ).all()
+        cfg = await c.settings_service.get()
         for row in rows:
             row.status, row.snoozed_until = "open", None
+            if needs_sla(row.priority):  # после «Отложить» срок реакции отсчитывается заново
+                timer = reset_sla(now, cfg.escalation.sla_minutes, cfg.business_hours.domain())
+                row.sla_due_at, row.sla_notified_at = timer.sla_due_at, timer.sla_notified_at
             lead = await session.get(Lead, row.lead_id, with_for_update=True)
             if lead is not None:
                 lead.snoozed_until = None
@@ -75,9 +84,31 @@ async def snooze_expiry(timestamp: int) -> int:
                 session, "escalation.updated", lead_id=row.lead_id, escalation_id=row.id
             )
             reopened.append(row.id)
+    notifications = await build_notifications(c)
     for escalation_id in reopened:
         await enqueue_escalation(escalation_id, new=False)
+        await notifications.reopened(escalation_id)
+        await _schedule_sla(escalation_id)
     return len(reopened)
+
+
+@queue.task(name="lead_handed_over", queue="notify", retry=RETRY)
+async def lead_handed_over(lead_id: int, user_id: int) -> bool:
+    """«Передать коллеге»: карточка в канале — на нового ответственного, ему — личное сообщение."""
+    c = get_container()
+    bot = await c.telegram_bot()
+    escalation_id = await NotificationService(
+        c.session_factory, c.settings_service, bot
+    ).handed_over(lead_id, user_id)
+    if escalation_id is not None:
+        await enqueue_escalation(escalation_id, new=False)
+    cfg = await c.settings_service.get()
+    notifier = StaffNotifier(c.session_factory, bot)
+    return await notifier.handed_over(lead_id, user_id, cfg.company.crm_base_url)
+
+
+async def enqueue_handover(lead_id: int, user_id: int) -> None:
+    await lead_handed_over.defer_async(lead_id=lead_id, user_id=user_id)
 
 
 @queue.task(name="notify_lead_message", queue="notify")
@@ -105,15 +136,26 @@ async def enqueue_escalation(escalation_id: int, *, new: bool = True) -> None:
     await sync_escalation_post.configure(lock=f"escalation-{escalation_id}").defer_async(
         escalation_id=escalation_id
     )
-    if not new:
-        return
+    if new:
+        await _schedule_sla(escalation_id)
+
+
+async def _schedule_sla(escalation_id: int) -> None:
+    """Проверка срока реакции в `sla_due_at` — только для тёплых и горячих (info — сигнал)."""
     c = get_container()
     async with c.session_factory() as session:
-        due = await session.scalar(
-            select(Escalation.sla_due_at).where(Escalation.id == escalation_id)
-        )
-    if due is not None:
-        await _defer(escalation_sla_check, f"sla-{escalation_id}", due, escalation_id)
+        row = (
+            await session.execute(
+                select(Escalation.sla_due_at, Escalation.priority).where(
+                    Escalation.id == escalation_id
+                )
+            )
+        ).first()
+    if row is None or row.sla_due_at is None or not needs_sla(row.priority):
+        return
+    # Ключ со сроком: перезапуск срока ставит новую проверку, старая отработает вхолостую.
+    lock = f"sla-{escalation_id}-{int(row.sla_due_at.timestamp())}"
+    await _defer(escalation_sla_check, lock, row.sla_due_at, escalation_id)
 
 
 async def _defer(task: object, lock: str, at: datetime, escalation_id: int) -> None:

@@ -27,6 +27,7 @@ def to_out(view: UserView) -> UserOut:
         ui_mode=view.ui_mode,
         notify_system=view.notify_system,
         notify_leads=view.notify_leads,
+        tg_dm_failed_at=view.tg_dm_failed_at,
     )
 
 

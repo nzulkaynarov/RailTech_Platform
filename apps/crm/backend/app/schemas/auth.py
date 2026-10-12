@@ -1,5 +1,6 @@
 """DTO аутентификации, профиля и пользователей (SPEC §10.1)."""
 
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -36,6 +37,8 @@ class UserOut(BaseModel):
     ui_mode: str
     notify_system: bool
     notify_leads: bool
+    # Когда Telegram последний раз отказал в личном сообщении; None — доставка работает.
+    tg_dm_failed_at: datetime | None = None
 
 
 class MePatch(BaseModel):

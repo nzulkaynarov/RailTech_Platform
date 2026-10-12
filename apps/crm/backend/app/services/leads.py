@@ -43,6 +43,7 @@ from app.services.settings import SettingsService
 logger = structlog.get_logger(__name__)
 
 EscalationChanged = Callable[[int], Awaitable[None]]
+LeadAssigned = Callable[[int, int], Awaitable[None]]  # (lead_id, user_id) → канал и личка
 Outcome = Literal["won", "lost"]
 MAX_SNOOZE: Final = timedelta(days=7)
 ACTIVE_ESCALATION = (*OPEN_STATUSES, "taken")
@@ -65,11 +66,13 @@ class LeadService:
         settings: SettingsService,
         messenger: LeadMessenger,
         on_escalation_changed: EscalationChanged | None = None,
+        on_assigned: LeadAssigned | None = None,
     ) -> None:
         self._sessions = sessions
         self._settings = settings
         self._messenger = messenger
         self._on_escalation_changed = on_escalation_changed
+        self._on_assigned = on_assigned
 
     async def take(self, who: Principal, lead_id: int) -> None:
         cfg = await self._settings.get()
@@ -177,6 +180,11 @@ class LeadService:
         text = cfg.texts.manager_joined.get(language, manager=name)
         await self._messenger.send(lead_id, text, {"notice": "manager_joined"})
         await self._notify(changed)
+        if self._on_assigned is not None:
+            try:
+                await self._on_assigned(lead_id, user_id)
+            except Exception as exc:  # noqa: BLE001 — очередь недоступна; передача уже сохранена
+                logger.warning("lead_assign_notify_failed", lead_id=lead_id, error=repr(exc))
 
     async def snooze(self, who: Principal, lead_id: int, until: datetime) -> None:
         now = datetime.now(UTC)

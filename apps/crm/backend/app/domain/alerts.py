@@ -4,12 +4,13 @@
 (отправить / напомнить / снять / ничего). Состояние хранит `system_alerts`.
 """
 
-from collections.abc import Set
+from collections.abc import Callable, Set
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import StrEnum
 from typing import Final
 
+# Пороги монитора — одно место (технические, не бизнес-правила: в «Настройки» не выносим).
 QUEUE_LIMIT: Final = 100
 BUDGET_WARN_SHARE: Final = 0.8
 LITELLM_GRACE: Final = timedelta(minutes=2)
@@ -37,6 +38,10 @@ class HealthSnapshot:
     daily_budget_usd: float = 0.0  # 0 — без лимита
     # Проверка моделей у провайдеров: алиас → проблема или None; None целиком — не проверяли.
     models: dict[str, str | None] | None = None
+    # Задачи, у которых после последнего сбоя был успешный запуск: только они «в норме».
+    recovered_tasks: frozenset[str] = frozenset()
+    # Сколько лидов за окно не получили ответ из-за сбоя ИИ (одна сводка вместо карточек).
+    ai_failures: int = 0
 
 
 @dataclass(frozen=True)
@@ -46,6 +51,7 @@ class Check:
     title: str
     detail: str
     grace: timedelta = timedelta(0)
+    hint: str = ""  # «что делать» — для задач воркера и сбоев ИИ
 
 
 @dataclass(frozen=True)
@@ -63,8 +69,22 @@ class Decision(StrEnum):
     RESOLVE = "resolve"
 
 
-def checks(snapshot: HealthSnapshot, known_failed: Set[str] = frozenset()) -> list[Check]:
-    """Проверки SPEC §13; `known_failed` — задачи, по которым алерт уже есть (чтобы снять)."""
+TaskTexts = Callable[[str], tuple[str, str]]
+
+
+def _task_texts(task: str) -> tuple[str, str]:
+    return f"Задача {task}", ""
+
+
+def checks(
+    snapshot: HealthSnapshot,
+    known_failed: Set[str] = frozenset(),
+    task_texts: TaskTexts = _task_texts,
+) -> list[Check]:
+    """Проверки SPEC §13; `known_failed` — задачи, по которым алерт уже есть (чтобы снять).
+
+    Алерт задачи снимается только успешным запуском после сбоя (`recovered_tasks`),
+    а не тем, что сбой ушёл из часового окна."""
     result = [
         Check(
             "queue_size",
@@ -80,6 +100,15 @@ def checks(snapshot: HealthSnapshot, known_failed: Set[str] = frozenset()) -> li
             LITELLM_GRACE,
         ),
     ]
+    result.append(
+        Check(
+            "ai_failures",
+            snapshot.ai_failures > 0,
+            "ИИ-ассистент",
+            f"не ответил клиентам за последний час: {snapshot.ai_failures}",
+            hint="проверьте LiteLLM, модели и бюджет; ответьте клиентам из CRM",
+        )
+    )
     budget = snapshot.daily_budget_usd
     share = snapshot.spent_usd / budget if budget > 0 else 0.0
     result.append(
@@ -96,12 +125,19 @@ def checks(snapshot: HealthSnapshot, known_failed: Set[str] = frozenset()) -> li
         )
     for task in sorted(set(snapshot.failed_tasks) | set(known_failed)):
         count = snapshot.failed_tasks.get(task, 0)
+        title, hint = task_texts(task)
+        detail = (
+            f"упала после всех попыток: {count} за последний час"
+            if count
+            else "упала после всех попыток; успешного запуска после сбоя ещё не было"
+        )
         result.append(
             Check(
                 f"failed_task:{task}",
-                count > 0,
-                f"Задача {task}",
-                f"упала после всех попыток: {count} за последний час",
+                task not in snapshot.recovered_tasks,
+                title,
+                detail,
+                hint=hint,
             )
         )
     return result

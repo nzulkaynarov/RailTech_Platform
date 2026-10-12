@@ -4904,6 +4904,18 @@
             "title": "Roles",
             "type": "array"
           },
+          "tg_dm_failed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tg Dm Failed At"
+          },
           "tg_user_id": {
             "anyOf": [
               {

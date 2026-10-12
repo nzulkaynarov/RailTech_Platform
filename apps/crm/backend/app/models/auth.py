@@ -43,6 +43,8 @@ class User(TimestampMixin, Base):
     # Личные уведомления от бота (Q-010): системные алерты (админы) и сообщения своих лидов.
     notify_system: Mapped[bool] = mapped_column(Boolean, server_default=sql("true"))
     notify_leads: Mapped[bool] = mapped_column(Boolean, server_default=sql("true"))
+    # Telegram отказал в личном сообщении (не нажат «Старт»/бот заблокирован); снимается успехом.
+    tg_dm_failed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Role(Base):

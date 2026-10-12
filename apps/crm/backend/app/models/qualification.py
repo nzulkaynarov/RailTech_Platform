@@ -75,6 +75,10 @@ class Escalation(TimestampMixin, Base):
     )
     taken_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     channel_message_id: Mapped[int | None] = mapped_column(BigInteger)
+    # Чат, куда ушёл пост: смена канала в настройках не ломает старые карточки.
+    channel_chat_id: Mapped[int | None] = mapped_column(BigInteger)
+    # Приоритет на карточке при последней синхронизации: «стал горячим» → ответ на пост.
+    posted_priority: Mapped[str | None] = mapped_column(String(8))
     sla_due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     sla_notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     snoozed_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
