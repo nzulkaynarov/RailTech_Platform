@@ -62,6 +62,14 @@ class CurrencySum(BaseModel):
     amount: Decimal
 
 
+class DealDay(BaseModel):
+    """Сделок закрыто за день (по часовому поясу команды): выиграно и проиграно."""
+
+    day: date
+    won: int
+    lost: int
+
+
 class DealsSummary(BaseModel):
     days: int
     won_count: int
@@ -71,6 +79,9 @@ class DealsSummary(BaseModel):
     lost_count: int
     lost_by_reason: list[ReasonCount]
     open_count: int
+    daily: list[DealDay] = Field(
+        default_factory=list, description="Выиграно/проиграно по дням периода, без пропусков"
+    )
 
 
 class DealOptions(BaseModel):

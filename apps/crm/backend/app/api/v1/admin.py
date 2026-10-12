@@ -27,7 +27,7 @@ async def get_dashboard(
     cfg = await container.settings_service.get()
     today = datetime.now(ZoneInfo(cfg.business_hours.timezone)).date()
     async with container.session_factory() as session:
-        return await dashboard.build(session, days, today)
+        return await dashboard.build(session, days, today, cfg.business_hours.timezone)
 
 
 @router.post("/dashboard/refresh", response_model=ActionResult)

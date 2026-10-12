@@ -17,10 +17,11 @@ export const useDeals = (params: ListDealsParams) =>
     queryFn: async () => unwrap(await listDeals(compact(params))),
   });
 
-export const useDealsSummary = (days: number) =>
+export const useDealsSummary = (days: number, enabled = true) =>
   useQuery({
     queryKey: dealKeys.summary(days),
     queryFn: async () => unwrap(await dealsSummary({ days })),
+    enabled,
   });
 
 export const useDealOptions = () =>
