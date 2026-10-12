@@ -66,8 +66,9 @@ export const core = {
     paused: "Бот на паузе",
     responsible: "ответственный",
     botLeads: "Ведёт бот",
+    waiting: "Ждёт менеджера · {wait}",
   } as Record<string, string>,
-  priority: { hot: "Горячий", warm: "Тёплый", info: "Инфо" } as Record<string, string>,
+  priority: { hot: "Горячий", warm: "Тёплый", info: "Низкий" } as Record<string, string>,
   reasons: {
     human_requested: "Просит человека",
     callback_requested: "Просит звонок",

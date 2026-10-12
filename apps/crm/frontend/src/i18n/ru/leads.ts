@@ -37,6 +37,7 @@ export const leads = {
     stage: "Стадия",
     score: "Оценка",
     owner: "Ответственный",
+    whoLeads: "Кто ведёт",
     language: "Язык",
     lastMessage: "Последнее сообщение",
     need: "Потребность",
