@@ -17,7 +17,7 @@ permissions:
   contents: read
 
 env:
-  UV_VERSION: "0.12.23"
+  UV_VERSION: "0.13.0"
   PYTHON_VERSION: "3.12"
   NODE_VERSION: "22"
 
@@ -44,6 +44,13 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: uv version matches backend/Dockerfile
+        run: |
+          image=$(sed -n 's|^FROM ghcr.io/astral-sh/uv:\([0-9.]*\).*|\1|p' backend/Dockerfile)
+          if [ "$image" != "$UV_VERSION" ]; then
+            echo "::error::UV_VERSION=$UV_VERSION in workflows, uv:$image in backend/Dockerfile — update .github/workflows/{ci,eval-gate}.yml"
+            exit 1
+          fi
       - name: Install
         run: make install
       - name: Backend — ruff, mypy
