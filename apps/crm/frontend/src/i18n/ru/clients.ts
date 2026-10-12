@@ -124,7 +124,7 @@ export const clients = {
       to_user_id: "Кому передано",
       active_leads: "Лидов передано",
       note_id: "Заметка",
-      visible_to_bot: "Видна боту",
+      visible_to_bot: "Бот учитывает",
       client_id: "Клиент",
       document_id: "Документ",
       type: "Тип",

@@ -1789,6 +1789,11 @@
           "won_count": {
             "title": "Won Count",
             "type": "integer"
+          },
+          "won_without_amount": {
+            "default": 0,
+            "title": "Won Without Amount",
+            "type": "integer"
           }
         },
         "required": [

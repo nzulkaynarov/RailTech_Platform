@@ -119,7 +119,7 @@ function LeadHeader({ lead, rights }: { lead: LeadDetail; rights: ActionRights }
       <div className="lead-meta">
         <StageBadge stage={lead.stage} />
         <span>
-          {t.leads.owner}: <Owner lead={lead} />
+          {t.leads.whoLeads}: <Owner lead={lead} />
         </span>
       </div>
       {plan.ownerBanner ? (

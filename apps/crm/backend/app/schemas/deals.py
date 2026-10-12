@@ -66,6 +66,8 @@ class DealsSummary(BaseModel):
     days: int
     won_count: int
     won_amounts: list[CurrencySum]
+    won_without_amount: int = 0
+    """Выигранные сделки без суммы: дашборд не выдаёт частичную сумму за полную."""
     lost_count: int
     lost_by_reason: list[ReasonCount]
     open_count: int

@@ -35,7 +35,7 @@ const BACKEND_SAMPLES: [string, AuditItem, string][] = [
     `Стадия: ${stageLabel("handoff").label} → ${stageLabel("in_progress").label}; ` +
       `Кто ведёт: ${ownerModeLabel("paused")} → ${ownerModeLabel("human")}; Ответственный: — → Анна`,
   ],
-  ["lead note", item(null, { note_id: 7, visible_to_bot: true }), "Заметка: #7; Видна боту: Да"],
+  ["lead note", item(null, { note_id: 7, visible_to_bot: true }), "Заметка: #7; Бот учитывает: Да"],
   [
     "user create",
     item(null, {

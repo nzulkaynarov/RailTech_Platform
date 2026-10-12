@@ -14,4 +14,5 @@ export interface DealsSummary {
   open_count: number;
   won_amounts: CurrencySum[];
   won_count: number;
+  won_without_amount?: number;
 }

@@ -2,6 +2,8 @@ import { Button, Space } from "antd";
 import { useState } from "react";
 
 import { useKbDocuments } from "../../api/adminQueries";
+import { usePermissionsQuery } from "../../api/queries";
+import { allowed } from "../../app/providers/access";
 import type { KbDocumentOut } from "../../api/generated/model";
 import { PageBody } from "../../components/PageBody";
 import { PageHeader } from "../../components/PageHeader";
@@ -68,6 +70,8 @@ function CreateDialogs({ dialog, m, close }: { dialog: Dialog; m: Mutations; clo
 /** База знаний (admin, PLAN Фаза 5): документы, загрузка, индексация, фрагменты, тест поиска. */
 export function KbPage() {
   const query = useKbDocuments();
+  // Менеджер видит базу знаний только для чтения: правка — право `kb:write` (истина на бэке).
+  const canWrite = allowed(usePermissionsQuery().data, "kb", "write");
   const [dialog, setDialog] = useState<Dialog>(null);
   const [chunksOf, setChunksOf] = useState<KbDocumentOut | null>(null);
   const productName = useProductNames();
@@ -93,7 +97,10 @@ export function KbPage() {
 
   return (
     <PageBody>
-      <PageHeader title={t.page.kb} extra={<CreateButtons onOpen={setDialog} />} />
+      <PageHeader
+        title={t.page.kb}
+        extra={canWrite ? <CreateButtons onOpen={setDialog} /> : null}
+      />
       <TestSearch />
       <PageState
         query={query}
@@ -103,6 +110,7 @@ export function KbPage() {
           data={query.data ?? []}
           loading={query.isFetching && !query.data}
           productName={productName}
+          canWrite={canWrite}
           onOpen={setChunksOf}
           onToggle={toggle}
           onReingest={(d) => {

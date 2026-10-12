@@ -35,7 +35,12 @@ function columns(showClient: boolean, onEdit: Props["onEdit"]): ColumnsType<Deal
       title: t.deals.amount,
       dataIndex: "amount",
       align: "right",
-      render: (_: unknown, d) => formatMoney(d.amount, d.currency),
+      render: (_: unknown, d) =>
+        d.amount === null || d.amount === "" ? (
+          <Tag bordered={false}>{t.deals.amountMissing}</Tag>
+        ) : (
+          formatMoney(d.amount, d.currency)
+        ),
     },
     {
       title: t.deals.stage,

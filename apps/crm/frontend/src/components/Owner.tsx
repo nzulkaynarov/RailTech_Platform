@@ -1,23 +1,19 @@
-import { Space, Tag, Typography } from "antd";
+import { Tag, Typography } from "antd";
 
 import type { LeadOut } from "../api/generated/model";
-import { ownerModeTag } from "../domain/labels";
-import { t } from "../i18n/ru";
+import { whoLeads } from "../domain/owner";
 
 /**
- * Кто отвечает за лида. Ответственный — всегда человек (как assignee в Intercom/Front);
- * «ведёт бот» и «бот на паузе» — режим переписки, показывается тегом рядом с именем.
+ * «Кто ведёт»: Бот / Ждёт менеджера · N мин / Имя менеджера — одно значение в ячейке
+ * (как assignee в Intercom/Front). Во время передачи — никогда не «Бот».
  */
-export function Owner({ lead }: { lead: Pick<LeadOut, "owner_mode" | "assigned_user_name"> }) {
-  const name = lead.assigned_user_name;
-  if (lead.owner_mode === "human") {
-    return <Typography.Text>{name ?? t.owner.human}</Typography.Text>;
-  }
-  const mode = lead.owner_mode === "paused" ? ownerModeTag("paused") : ownerModeTag("bot");
-  return (
-    <Space size={4} wrap>
-      {name ? <Typography.Text>{name}</Typography.Text> : null}
-      <Tag color={mode.color}>{lead.owner_mode === "paused" ? mode.label : t.owner.botLeads}</Tag>
-    </Space>
-  );
+export function Owner({
+  lead,
+}: {
+  lead: Pick<LeadOut, "owner_mode" | "assigned_user_name" | "escalation">;
+}) {
+  const who = whoLeads(lead);
+  if (who.kind === "human") return <Typography.Text>{who.label}</Typography.Text>;
+  const color = who.kind === "waiting" ? "warning" : who.kind === "paused" ? "default" : "blue";
+  return <Tag color={color}>{who.label}</Tag>;
 }

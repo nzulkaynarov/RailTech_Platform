@@ -4,9 +4,10 @@ import { Link } from "react-router";
 
 import type { DailyStat, PermissionsResponse } from "../../api/generated/model";
 import { StageBadge } from "../../components/StageBadge";
-import { leadsPath, reasonBars, type Tile, tileLink } from "../../domain/dashboard";
+import { leadsPath, reasonBars, type Tile, tileLink, visibleTiles } from "../../domain/dashboard";
 import { reasonLabel, STAGE_ORDER } from "../../domain/labels";
 import { t } from "../../i18n/ru";
+import { formatNumber, formatUsd } from "../../lib/format";
 import { formatDate } from "../../lib/time";
 
 function TileCard({ tile, link, primary }: { tile: Tile; link: string | null; primary: boolean }) {
@@ -43,7 +44,7 @@ export function Tiles({
 }) {
   return (
     <div className={primary ? "metric-grid metric-grid--primary" : "metric-grid"}>
-      {tiles.map((tile) => (
+      {visibleTiles(tiles, perms).map((tile) => (
         <TileCard
           key={tile.key}
           tile={tile}
@@ -78,10 +79,22 @@ export function Bars({ data }: { data: Record<string, number> }) {
   );
 }
 
+/** Все стадии, включая нулевые: пустая стадия — тоже сигнал. Итог — отдельной строкой. */
 export function Funnel({ funnel }: { funnel: Record<string, number> }) {
-  const rows = STAGE_ORDER.filter((s) => funnel[s]).map((stage) => ({ stage, n: funnel[stage] }));
+  const rows = STAGE_ORDER.map((stage) => ({ stage, n: funnel[stage] ?? 0 }));
+  const total = Object.values(funnel).reduce((sum, n) => sum + n, 0);
   return (
     <Table
+      summary={() => (
+        <Table.Summary.Row>
+          <Table.Summary.Cell index={0}>
+            <Typography.Text strong>{t.dashboard.funnelTotal}</Typography.Text>
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={1} align="right">
+            <Typography.Text strong>{formatNumber(total)}</Typography.Text>
+          </Table.Summary.Cell>
+        </Table.Summary.Row>
+      )}
       size="small"
       pagination={false}
       showHeader={false}
@@ -95,7 +108,7 @@ export function Funnel({ funnel }: { funnel: Record<string, number> }) {
             </Link>
           ),
         },
-        { dataIndex: "n", align: "right" },
+        { dataIndex: "n", align: "right", render: (n: number) => formatNumber(n) },
       ]}
     />
   );
@@ -108,7 +121,7 @@ const DAILY_COLUMNS = [
   { title: t.dashboard.taken, dataIndex: "taken" },
   { title: t.dashboard.won, dataIndex: "won" },
   { title: t.dashboard.lost, dataIndex: "lost" },
-  { title: t.dashboard.cost, dataIndex: "cost_usd", render: (v: number) => v.toFixed(2) },
+  { title: t.dashboard.cost, dataIndex: "cost_usd", render: (v: number) => formatUsd(v) },
 ];
 
 /** Таблица по дням — свёрнута: вторична к плиткам и воронке. */
@@ -145,12 +158,13 @@ export function Panels({
   return (
     <Row gutter={[16, 16]}>
       <Col xs={24} lg={12}>
-        <Card size="small" title={t.dashboard.funnel}>
+        <Card size="small" title={<h3 className="card-heading">{t.dashboard.funnel}</h3>}>
+          <Typography.Paragraph type="secondary">{t.dashboard.funnelHint}</Typography.Paragraph>
           <Funnel funnel={funnel} />
         </Card>
       </Col>
       <Col xs={24} lg={12}>
-        <Card size="small" title={t.dashboard.reasons}>
+        <Card size="small" title={<h3 className="card-heading">{t.dashboard.reasons}</h3>}>
           <Bars data={reasons} />
         </Card>
       </Col>

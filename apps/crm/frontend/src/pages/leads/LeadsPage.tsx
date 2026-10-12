@@ -129,7 +129,7 @@ const COLUMNS = [
   { title: t.leads.stage, render: (_: unknown, l: LeadOut) => <StageBadge stage={l.stage} /> },
   { title: t.leads.score, dataIndex: "score", width: 90 },
   {
-    title: t.leads.owner,
+    title: t.leads.whoLeads,
     render: (_: unknown, lead: LeadOut) => (
       <Space>
         <Owner lead={lead} />

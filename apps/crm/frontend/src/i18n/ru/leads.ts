@@ -37,6 +37,7 @@ export const leads = {
     stage: "Стадия",
     score: "Оценка",
     owner: "Ответственный",
+    whoLeads: "Кто ведёт",
     language: "Язык",
     lastMessage: "Последнее сообщение",
     need: "Потребность",
@@ -127,7 +128,7 @@ export const leads = {
     lostReason: "Причина отказа",
     note: "Добавить заметку",
     noteText: "Текст заметки",
-    noteForBot: "Видна боту",
+    noteForBot: "Бот учитывает",
     newDeal: "Открыть новую сделку",
     newDealConfirm:
       "Открыть новую сделку с клиентом? Диалог перейдёт к вам, бот перестанет отвечать клиенту.",

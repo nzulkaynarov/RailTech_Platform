@@ -80,6 +80,10 @@ async def test_won_deal_is_final_for_manager_but_not_admin(
     async with sessions() as session, session.begin():
         deal_id = await deals.create(session, who, DealCreate(title="Ремонт"), CFG)
         await deals.update(session, who, deal_id, DealUpdate(stage="won"), CFG)
+    # выигрыш без суммы считается отдельно: дашборд не выдаёт частичную сумму за полную
+    async with sessions() as session:
+        report = await deals.summary(session, 30, datetime.now(UTC))
+    assert (report.won_count, report.won_without_amount) == (1, 1)
     with pytest.raises(ConflictError):
         async with sessions() as session, session.begin():
             await deals.update(session, who, deal_id, DealUpdate(stage="open"), CFG)

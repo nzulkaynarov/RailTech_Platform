@@ -23,6 +23,7 @@ MANAGER = {
     ("documents", "write"),
     ("deals", "read"),
     ("deals", "write"),
+    ("kb", "read"),  # база знаний — только просмотр (аудит 2026-10-12)
 }
 VIEWER = {
     ("leads", "read"),
