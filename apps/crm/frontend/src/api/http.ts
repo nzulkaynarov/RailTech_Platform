@@ -115,15 +115,6 @@ export const http = async <T>(url: string, options: RequestInit): Promise<T> => 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- сигнатуру задаёт orval
 export type ErrorType<_Body> = ApiError;
 
-/**
- * Совместимость: раньше клиент orval возвращал конверт `{ data, status, headers }`.
- * Теперь мутатор отдаёт тело ответа — функция ничего не меняет (ADR-0021); новый код
- * её не использует, старые вызовы на страницах убираются при их следующей правке.
- */
-export function unwrap<T>(data: T): T {
-  return data;
-}
-
 /** Скачать файл с авторизацией (ответ API — бинарный, не JSON). */
 export async function downloadFile(url: string, filename: string): Promise<void> {
   const response = await rawFetch(url);

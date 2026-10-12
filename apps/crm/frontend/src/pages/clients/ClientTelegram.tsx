@@ -5,7 +5,6 @@ import { useState } from "react";
 import { adminKeys } from "../../api/adminQueries";
 import { linkTelegram, unlinkTelegram } from "../../api/generated/crm";
 import type { ClientDetail, IdentityOut } from "../../api/generated/model";
-import { unwrap } from "../../api/http";
 import { RowActions } from "../../components/RowActions";
 import { useApiErrorToast } from "../../hooks/useApiErrorToast";
 import { useConfirmDanger } from "../../hooks/useConfirmDanger";
@@ -24,9 +23,8 @@ function useTelegramAction(clientId: number) {
   const { message } = AntApp.useApp();
   return useMutation({
     mutationFn: async (a: Action) => {
-      if (a.kind === "link")
-        return unwrap(await linkTelegram(clientId, { tg_user_id: a.tgUserId }));
-      return unwrap(await unlinkTelegram(clientId, a.tgUserId));
+      if (a.kind === "link") return await linkTelegram(clientId, { tg_user_id: a.tgUserId });
+      return await unlinkTelegram(clientId, a.tgUserId);
     },
     onSuccess: (_, a) => {
       void message.success(a.kind === "link" ? t.clients.linked : t.clients.unlinked);

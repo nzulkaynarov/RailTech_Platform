@@ -5,7 +5,6 @@ import { Link } from "react-router";
 
 import { useClients } from "../api/adminQueries";
 import { getGetLeadQueryKey, makeCustomer } from "../api/generated/crm";
-import { unwrap } from "../api/http";
 import { useApiErrorToast } from "../hooks/useApiErrorToast";
 import { t } from "../i18n/ru";
 
@@ -23,12 +22,10 @@ export function MakeCustomer({ leadId, open, onClose }: Props) {
   const { notification } = AntApp.useApp();
   const mutation = useMutation({
     mutationFn: async () =>
-      unwrap(
-        await makeCustomer(leadId, {
-          client_id: clientId,
-          new_client_name: clientId ? null : name,
-        }),
-      ),
+      await makeCustomer(leadId, {
+        client_id: clientId,
+        new_client_name: clientId ? null : name,
+      }),
     onSuccess: (created) => {
       onClose();
       void query.invalidateQueries({ queryKey: getGetLeadQueryKey(leadId) });

@@ -3,7 +3,6 @@ import { App as AntApp } from "antd";
 
 import { createManualDocument, ignoreGap, reopenGap, resolveGap } from "../../api/generated/crm";
 import type { KbGapOut } from "../../api/generated/model";
-import { unwrap } from "../../api/http";
 import { invalidateKeys, queryKeys } from "../../api/queryKeys";
 import { useApiErrorToast } from "../../hooks/useApiErrorToast";
 import { t } from "../../i18n/ru";
@@ -20,9 +19,9 @@ const DONE: Record<GapAction["kind"], string> = {
 };
 
 async function run(a: GapAction) {
-  if (a.kind === "link") return unwrap(await resolveGap(a.gap.id, { document_id: a.documentId }));
-  if (a.kind === "ignore") return unwrap(await ignoreGap(a.gap.id));
-  return unwrap(await reopenGap(a.gap.id));
+  if (a.kind === "link") return await resolveGap(a.gap.id, { document_id: a.documentId });
+  if (a.kind === "ignore") return await ignoreGap(a.gap.id);
+  return await reopenGap(a.gap.id);
 }
 
 /** Действия над пробелом и создание документа из вопроса; тост — по действию. */
@@ -44,15 +43,13 @@ export function useGapActions(onDone: () => void) {
   });
   const create = useMutation({
     mutationFn: async (v: ManualValues & { gapId: number }) =>
-      unwrap(
-        await createManualDocument({
-          title: v.title,
-          markdown: v.markdown,
-          language: v.language,
-          product_key: v.product_key ?? null,
-          gap_id: v.gapId,
-        }),
-      ),
+      await createManualDocument({
+        title: v.title,
+        markdown: v.markdown,
+        language: v.language,
+        product_key: v.product_key ?? null,
+        gap_id: v.gapId,
+      }),
     onSuccess: () => {
       finish(t.gaps.created);
     },

@@ -6,7 +6,6 @@ import { Link, useNavigate, useSearchParams } from "react-router";
 import { useClients } from "../../api/adminQueries";
 import { createClient, getListClientsQueryKey } from "../../api/generated/crm";
 import type { ClientCreate, ClientListItem } from "../../api/generated/model";
-import { unwrap } from "../../api/http";
 import { usePermissionsQuery, useTeam } from "../../api/queries";
 import { allowed } from "../../app/providers/access";
 import { BooleanTag } from "../../components/BooleanTag";
@@ -61,7 +60,7 @@ function CreateClientDialog({ open, onClose }: { open: boolean; onClose: () => v
   const client = useQueryClient();
   const { message } = AntApp.useApp();
   const create = useMutation({
-    mutationFn: async (values: ClientCreate) => unwrap(await createClient(values)),
+    mutationFn: async (values: ClientCreate) => await createClient(values),
     onSuccess: (created, values) => {
       onClose();
       void message.success(t.clients.created.replace("{name}", values.name));
