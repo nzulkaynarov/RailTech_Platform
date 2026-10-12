@@ -37,6 +37,10 @@ class UsageEvent:
     cost_usd: float | None
 
 
+# Заголовок LiteLLM со стоимостью вызова — одна константа для чата, эмбеддингов и проверки моделей.
+COST_HEADER = "x-litellm-response-cost"
+
+
 class UsageSink(Protocol):
     async def record(self, event: UsageEvent) -> None: ...
 

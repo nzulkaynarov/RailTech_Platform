@@ -27,6 +27,8 @@ class DbUsageRecorder:
         self._kind = kind
 
     async def record(self, event: UsageEvent) -> None:
+        if event.cost_usd is None:
+            logger.warning("llm_usage_cost_missing", alias=event.alias, purpose=event.purpose)
         try:
             provider = await self._catalog.provider(event.alias) if self._catalog else None
             async with self._sessions() as session, session.begin():

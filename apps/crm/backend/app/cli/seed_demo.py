@@ -50,6 +50,9 @@ async def _manager(service: UserService, email: str, password: str) -> None:
 
 async def run(args: argparse.Namespace) -> int:
     container = get_container()
+    if container.settings.app_env == "prod":
+        print("Демо-данные на prod не загружаются (APP_ENV=prod).")  # noqa: T201 — CLI
+        return 2
     try:
         await _manager(container.user_service, args.manager_email, args.manager_password)
         async with container.session_factory() as session, session.begin():

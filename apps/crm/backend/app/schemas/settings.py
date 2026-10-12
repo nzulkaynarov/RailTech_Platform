@@ -323,8 +323,10 @@ class ProviderLimitsSettings(StrictModel):
     вызовом; потолок `provider_budget_config` в infra/litellm.config.yaml — аварийный, выше.
     """
 
-    anthropic: float = Field(default=3.0, ge=0)
-    gemini: float = Field(default=1.0, ge=0)
+    # 80 % от аварийного потолка LiteLLM ($3 / $1, Q-008): наш код переводит на резервную модель
+    # раньше, чем провайдер начнёт отклонять запросы.
+    anthropic: float = Field(default=2.4, ge=0)
+    gemini: float = Field(default=0.8, ge=0)
 
 
 class BudgetSettings(StrictModel):

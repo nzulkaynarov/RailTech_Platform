@@ -12,7 +12,6 @@ from app.agents.llm import ChatModel
 from app.agents.qualifier.graph import QualifierAgent
 from app.container import Container, get_container
 from app.services.budget import BudgetedModel
-from app.services.lead_messenger import LeadMessenger
 from app.services.qualifier import QualifierService
 from app.tasks.queue import queue
 
@@ -31,7 +30,7 @@ async def build_qualifier_service(c: Container) -> QualifierService:
                 alias="qualifier-model",
             )
         ),
-        LeadMessenger(c.session_factory, await c.telegram_bot()),
+        c.lead_messenger,  # тот же отправитель, что у CRM: уважает TELEGRAM_DRY_RUN
         on_escalation=_escalated,
     )
 

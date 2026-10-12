@@ -15,12 +15,11 @@ from pydantic import AnyHttpUrl
 
 from app.config import Settings
 from app.domain.embedding_profile import ACTIVE_PROFILE, EmbeddingProfile, l2_normalize
-from app.integrations.llm_usage import Purpose, UsageEvent, UsageSink, parse_cost
+from app.integrations.llm_usage import COST_HEADER, Purpose, UsageEvent, UsageSink, parse_cost
 
 Alias = Literal["dialog-model", "qualifier-model", "judge-model", "fallback-model"]
 EMBED_ALIAS: Final = "embed-model"
 EMBED_BATCH: Final = 64
-COST_HEADER: Final = "x-litellm-response-cost"
 
 
 async def ping(client: httpx.AsyncClient, base_url: AnyHttpUrl) -> None:

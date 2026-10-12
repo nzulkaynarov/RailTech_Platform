@@ -15,13 +15,12 @@ from openai import APIError, AsyncOpenAI
 
 from app.integrations import langfuse as lf
 from app.integrations.litellm import Alias
-from app.integrations.llm_usage import Purpose, UsageEvent, UsageSink, parse_cost
+from app.integrations.llm_usage import COST_HEADER, Purpose, UsageEvent, UsageSink, parse_cost
 
 logger = structlog.get_logger(__name__)
 
 FALLBACK: Alias = "fallback-model"
 # Стоимость вызова, которую LiteLLM Proxy возвращает заголовком ответа.
-COST_HEADER = "x-litellm-response-cost"
 
 
 class LlmUnavailableError(Exception):
