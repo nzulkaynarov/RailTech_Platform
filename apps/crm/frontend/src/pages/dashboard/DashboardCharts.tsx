@@ -2,7 +2,7 @@
  * Графики дашборда (SPEC §10.1, UX волна 4) на `@ant-design/plots`. Модуль грузится лениво
  * (`React.lazy` в `DashboardPage`), чтобы библиотека графиков не попадала в другие страницы.
  */
-import { Bar, Column, Funnel, Gauge, Line } from "@ant-design/plots";
+import { Bar, Column, Gauge, Line } from "@ant-design/plots";
 import { Col, Row } from "antd";
 
 import type { Dashboard, DealsSummary } from "../../api/generated/model";
@@ -42,22 +42,24 @@ function FlowChart({ daily }: { daily: Dashboard["daily"] }) {
   );
 }
 
-function FunnelChart({ funnel }: { funnel: Record<string, number> }) {
-  const { theme } = useChartTheme();
+/** Лиды по стадиям сейчас — срез, а не конверсия, поэтому столбцы, а не воронка. */
+function StagesChart({ funnel }: { funnel: Record<string, number> }) {
+  const { theme, token } = useChartTheme();
   const data = funnelSlices(funnel);
   const total = data.reduce((sum, s) => sum + s.value, 0);
-  const title = `${C.funnel} · ${t.dashboard.funnelTotal}: ${String(total)}`;
+  const title = `${C.funnel} · ${t.dashboard.funnelTotal.toLowerCase()} ${String(total)}`;
   return (
     <ChartCard title={title} summary={summarize(title, data)} empty={isEmpty(data)}>
-      <Funnel
+      <Bar
         data={data}
         xField="label"
         yField="value"
         autoFit
         height={CHART_HEIGHT}
         theme={theme}
-        legend={false}
-        label={{ text: (d: { label: string; value: number }) => `${d.label}: ${String(d.value)}` }}
+        axis={AXES}
+        style={{ fill: token.colorPrimary }}
+        label={{ text: "value", position: "right" }}
       />
     </ChartCard>
   );
@@ -144,7 +146,7 @@ export default function DashboardCharts({
         <FlowChart daily={data.daily} />
       </Col>
       <Col xs={24} lg={8}>
-        <FunnelChart funnel={data.funnel} />
+        <StagesChart funnel={data.funnel} />
       </Col>
       <Col xs={24} lg={deals ? 8 : 24}>
         <ReasonsChart reasons={data.escalation_reasons} />

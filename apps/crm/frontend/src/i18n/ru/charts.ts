@@ -14,7 +14,7 @@ export const charts = {
       taken: "Забрали",
       won: "Выиграно",
     } as Record<string, string>,
-    funnel: "Воронка: все лиды по стадиям сейчас",
+    funnel: "Воронка сейчас",
     reasons: "Почему передаём",
     deals: "Сделки по дням",
     dealSeries: { won: "Выиграно", lost: "Проиграно" } as Record<string, string>,

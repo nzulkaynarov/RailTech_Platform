@@ -131,7 +131,6 @@ export function ManagersCard({
             size="small"
             rowKey="user_id"
             pagination={false}
-            scroll={{ x: 520 }}
             dataSource={managers}
             columns={MANAGER_COLUMNS}
           />

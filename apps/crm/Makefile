@@ -95,12 +95,12 @@ migration: ## Создать миграцию: make migration m="add leads"
 # --- dev-стенд (Docker, запускает человек) ----------------------------------------
 
 .PHONY: up
-up: ## Поднять dev-стенд (без Langfuse)
-	$(COMPOSE) up -d --build
+up: ## Поднять dev-стенд (без Langfuse); --renew-anon-volumes — свежий node_modules web после смены зависимостей
+	$(COMPOSE) up -d --build --renew-anon-volumes
 
 .PHONY: up-obs
 up-obs: ## Поднять dev-стенд с Langfuse (профиль observability)
-	$(COMPOSE) --profile observability up -d --build
+	$(COMPOSE) --profile observability up -d --build --renew-anon-volumes
 
 .PHONY: down
 down: ## Остановить dev-стенд (данные в volumes сохраняются)
