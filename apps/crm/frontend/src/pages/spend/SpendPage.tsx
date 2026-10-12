@@ -28,7 +28,10 @@ function Providers({ report }: { report: SpendReport }) {
   return (
     <Card title={t.spend.today} size="small">
       <Typography.Paragraph type="secondary">
-        {t.spend.todayHint} <Link to="/settings?section=budget">{t.spend.budgetLink}</Link>
+        {t.spend.todayHint}{" "}
+        <Link className="inline-link" to="/settings?section=budget">
+          {t.spend.budgetLink}
+        </Link>
       </Typography.Paragraph>
       <Flex vertical gap="small">
         {report.providers.map((p) => {

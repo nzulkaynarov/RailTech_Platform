@@ -41,3 +41,9 @@
 .ant-tag.ant-tag-orange {
   color: var(--crm-tag-orange);
 }
+
+/* Ссылка внутри абзаца отличается не только цветом (WCAG 1.4.1, axe link-in-text-block). */
+.ant-typography a.inline-link,
+a.inline-link {
+  text-decoration: underline;
+}
