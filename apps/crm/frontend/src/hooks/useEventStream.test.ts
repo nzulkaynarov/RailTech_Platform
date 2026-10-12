@@ -1,6 +1,17 @@
+import { QueryClient } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { consume, keysFor, parseSse } from "./useEventStream";
+import {
+  getGetLeadQueryKey,
+  getInboxQueryKey,
+  getLeadDecisionsQueryKey,
+  getLeadMessagesQueryKey,
+  getLeadNotesQueryKey,
+  getListClientsQueryKey,
+  getListLeadsQueryKey,
+  getListServiceRequestsQueryKey,
+} from "../api/generated/crm";
+import { type CrmEvent, consume, keysFor, parseSse } from "./useEventStream";
 
 describe("parseSse", () => {
   it("splits complete events and keeps the tail", () => {
@@ -16,14 +27,51 @@ describe("parseSse", () => {
   });
 });
 
+const LISTS = [getInboxQueryKey(), getListServiceRequestsQueryKey(), getListLeadsQueryKey()];
+const LEAD_7 = [
+  getGetLeadQueryKey(7),
+  getLeadMessagesQueryKey(7),
+  getLeadNotesQueryKey(7),
+  getLeadDecisionsQueryKey(7),
+];
+
 describe("keysFor", () => {
-  it("invalidates the lead and lists", () => {
-    expect(keysFor({ type: "message.created", lead_id: 7 })).toEqual([
-      ["inbox"],
-      ["service-requests", "open"],
-      ["leads"],
-      ["lead", 7],
-    ]);
+  it.each<[CrmEvent["type"], number | null, unknown[]]>([
+    ["message.created", 7, [...LISTS, ...LEAD_7]],
+    ["lead.updated", 7, [...LISTS, ...LEAD_7]],
+    ["escalation.updated", 7, [...LISTS, ...LEAD_7]],
+    ["message.created", null, LISTS],
+    ["lead.updated", null, LISTS],
+    ["escalation.updated", null, LISTS],
+  ])("%s (lead %s) invalidates the expected generated keys", (type, leadId, expected) => {
+    expect(keysFor({ type, lead_id: leadId })).toEqual(expected);
+  });
+
+  it("treats an event without lead_id as a list-only change", () => {
+    expect(keysFor({ type: "lead.updated" })).toEqual(LISTS);
+  });
+
+  it("hits cached queries of the lead and every list page, not other leads or clients", async () => {
+    const client = new QueryClient();
+    const cached = [
+      getListLeadsQueryKey({ limit: 50, offset: 100, stage: "qualified" }),
+      getListServiceRequestsQueryKey({ status: "open" }),
+      getInboxQueryKey(),
+      getGetLeadQueryKey(7),
+      getLeadMessagesQueryKey(7),
+      getGetLeadQueryKey(8),
+      getLeadMessagesQueryKey(8),
+      getListClientsQueryKey(),
+    ];
+    for (const key of cached) client.setQueryData(key, {});
+    for (const queryKey of keysFor({ type: "message.created", lead_id: 7 }))
+      await client.invalidateQueries({ queryKey });
+    const stale = client
+      .getQueryCache()
+      .findAll()
+      .filter((q) => q.state.isInvalidated)
+      .map((q) => q.queryKey);
+    expect(stale).toEqual(cached.slice(0, 5));
   });
 });
 

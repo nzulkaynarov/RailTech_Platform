@@ -6,7 +6,6 @@ import { useState } from "react";
 import { adminKeys, useClientContacts } from "../../api/adminQueries";
 import { createClientContact, deleteClientContact } from "../../api/generated/crm";
 import type { ContactOut, ContactSuggestion } from "../../api/generated/model";
-import { unwrap } from "../../api/http";
 import { EmptyState } from "../../components/EmptyState";
 import { RowActions } from "../../components/RowActions";
 import { useApiErrorToast } from "../../hooks/useApiErrorToast";
@@ -51,7 +50,7 @@ function useContactMutations(clientId: number) {
   const onError = useApiErrorToast();
   const refresh = () => query.invalidateQueries({ queryKey: adminKeys.clientContacts(clientId) });
   const remove = useMutation({
-    mutationFn: async (c: ContactOut) => unwrap(await deleteClientContact(clientId, c.id)),
+    mutationFn: async (c: ContactOut) => await deleteClientContact(clientId, c.id),
     onSuccess: (_, c) => {
       void message.success(t.contacts.removed.replace("{name}", c.full_name));
       void refresh();
@@ -60,7 +59,7 @@ function useContactMutations(clientId: number) {
   });
   const addSuggested = useMutation({
     mutationFn: async (a: { s: ContactSuggestion; primary: boolean }) =>
-      unwrap(await createClientContact(clientId, fromSuggestion(a.s, a.primary))),
+      await createClientContact(clientId, fromSuggestion(a.s, a.primary)),
     onSuccess: (_, a) => {
       void message.success(t.contacts.added.replace("{name}", a.s.full_name));
       void refresh();

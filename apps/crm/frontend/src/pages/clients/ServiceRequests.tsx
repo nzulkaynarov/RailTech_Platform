@@ -5,7 +5,6 @@ import { useState } from "react";
 import { adminKeys } from "../../api/adminQueries";
 import { closeServiceRequest } from "../../api/generated/crm";
 import type { ServiceRequestOut } from "../../api/generated/model";
-import { unwrap } from "../../api/http";
 import { LeadLink } from "../../components/EntityLink";
 import { EmptyState } from "../../components/EmptyState";
 import { RequestStatusTag } from "../../components/StageBadge";
@@ -23,7 +22,7 @@ function CloseRequestDialog({ clientId, request, onClose }: CloseProps) {
   const { message } = AntApp.useApp();
   const close = useMutation({
     mutationFn: async (v: { id: number; resolution: string }) =>
-      unwrap(await closeServiceRequest(v.id, { resolution: v.resolution })),
+      await closeServiceRequest(v.id, { resolution: v.resolution }),
     onSuccess: () => {
       onClose();
       void message.success(t.clients.closed);

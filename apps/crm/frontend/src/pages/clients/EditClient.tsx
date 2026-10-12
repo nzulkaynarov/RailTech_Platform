@@ -3,9 +3,8 @@ import { Alert, App as AntApp, Button, Form, Input, Modal, Select, Switch } from
 import { useState } from "react";
 
 import { adminKeys } from "../../api/adminQueries";
-import { updateClient } from "../../api/generated/crm";
+import { getListClientsQueryKey, updateClient } from "../../api/generated/crm";
 import type { ClientDetail, ClientUpdate } from "../../api/generated/model";
-import { unwrap } from "../../api/http";
 import { useTeam } from "../../api/queries";
 import { useApiErrorToast } from "../../hooks/useApiErrorToast";
 import { t } from "../../i18n/ru";
@@ -15,20 +14,18 @@ function useSaveClient(client: ClientDetail, onSaved: () => void) {
   const { message } = AntApp.useApp();
   return useMutation({
     mutationFn: async (values: ClientUpdate) =>
-      unwrap(
-        await updateClient(client.id, {
-          ...values,
-          inn: values.inn?.trim() || null,
-          segment: values.segment?.trim() || null,
-          notes: values.notes?.trim() || null,
-          owner_user_id: values.owner_user_id ?? null,
-        }),
-      ),
+      await updateClient(client.id, {
+        ...values,
+        inn: values.inn?.trim() || null,
+        segment: values.segment?.trim() || null,
+        notes: values.notes?.trim() || null,
+        owner_user_id: values.owner_user_id ?? null,
+      }),
     onSuccess: (_, values) => {
       onSaved();
       void message.success(t.clients.saved.replace("{name}", values.name ?? client.name));
       void query.invalidateQueries({ queryKey: adminKeys.client(client.id) });
-      void query.invalidateQueries({ queryKey: ["clients"] });
+      void query.invalidateQueries({ queryKey: getListClientsQueryKey() });
     },
     onError: useApiErrorToast(),
   });

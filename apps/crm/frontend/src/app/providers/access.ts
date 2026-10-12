@@ -2,7 +2,6 @@ import type { AccessControlProvider } from "@refinedev/core";
 import type { QueryClient } from "@tanstack/react-query";
 
 import { me, permissions } from "../../api/generated/crm";
-import { unwrap } from "../../api/http";
 import type { PermissionsResponse } from "../../api/generated/model";
 import { keys } from "../../api/queries";
 
@@ -70,14 +69,14 @@ export function accessControlProvider(client: QueryClient): AccessControlProvide
       if (target === "self") return { can: true };
       const matrix = await client.query<PermissionsResponse>({
         queryKey: keys.permissions,
-        queryFn: async () => unwrap(await permissions()),
+        queryFn: async () => await permissions(),
         staleTime: 60_000,
       });
       if (ADMIN_SECTIONS.has(resource ?? "")) {
         // Режим «Менеджер» скрывает админские разделы — только навигация (SPEC §10.2).
         const user = await client.query({
           queryKey: keys.me,
-          queryFn: async () => unwrap(await me()),
+          queryFn: async () => await me(),
           staleTime: 60_000,
         });
         if (user.ui_mode !== "admin") return { can: false };

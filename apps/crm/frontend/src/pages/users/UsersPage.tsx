@@ -4,7 +4,6 @@ import { useState } from "react";
 
 import { createUser, resetPassword, updateUser } from "../../api/generated/crm";
 import type { UserCreate, UserOut, UserUpdate } from "../../api/generated/model";
-import { unwrap } from "../../api/http";
 import { keys, useUsers } from "../../api/queries";
 import { PageBody } from "../../components/PageBody";
 import { PageHeader } from "../../components/PageHeader";
@@ -31,7 +30,7 @@ function useUserMutations(on: {
   const refresh = () => client.invalidateQueries({ queryKey: keys.users });
   return {
     create: useMutation({
-      mutationFn: async (values: UserCreate) => unwrap(await createUser(values)),
+      mutationFn: async (values: UserCreate) => await createUser(values),
       onSuccess: (result, values) => {
         on.created();
         on.password(result.temporary_password);
@@ -42,7 +41,7 @@ function useUserMutations(on: {
     }),
     update: useMutation({
       mutationFn: async ({ user, values }: { user: UserOut; values: UserUpdate }) =>
-        unwrap(await updateUser(user.id, values)),
+        await updateUser(user.id, values),
       onSuccess: (_, { user, values }) => {
         on.updated();
         void message.success(named(t.userAdmin.updated, values.full_name ?? user.full_name));
@@ -56,7 +55,7 @@ function useUserMutations(on: {
       },
     }),
     reset: useMutation({
-      mutationFn: async (user: UserOut) => unwrap(await resetPassword(user.id)),
+      mutationFn: async (user: UserOut) => await resetPassword(user.id),
       onSuccess: (result, user) => {
         on.password(result.temporary_password);
         void message.success(named(t.userAdmin.passwordReset, user.full_name));

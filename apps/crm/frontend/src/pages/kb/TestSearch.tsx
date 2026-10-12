@@ -4,7 +4,6 @@ import { useState } from "react";
 
 import { kbTestSearch } from "../../api/generated/crm";
 import type { SearchResponse } from "../../api/generated/model";
-import { unwrap } from "../../api/http";
 import { SectionError } from "../../components/PageState";
 import { languageOptions } from "../../domain/labels";
 import { t } from "../../i18n/ru";
@@ -51,8 +50,7 @@ export function TestSearch() {
   const [language, setLanguage] = useState<Language | undefined>();
   const [query, setQuery] = useState("");
   const search = useMutation({
-    mutationFn: async (q: string) =>
-      unwrap(await kbTestSearch({ query: q, language: language ?? null })),
+    mutationFn: async (q: string) => await kbTestSearch({ query: q, language: language ?? null }),
   });
   const run = (q: string) => {
     setQuery(q.trim());

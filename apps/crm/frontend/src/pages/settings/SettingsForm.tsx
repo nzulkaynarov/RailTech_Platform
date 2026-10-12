@@ -7,7 +7,7 @@ import { Link } from "react-router";
 import { adminKeys } from "../../api/adminQueries";
 import { escalationDryRun, putSetting } from "../../api/generated/crm";
 import type { DryRunResponse, EscalationSettings } from "../../api/generated/model";
-import { ApiError, unwrap } from "../../api/http";
+import { ApiError } from "../../api/http";
 import { SchemaField } from "../../components/SchemaFields";
 import { type JsonSchema, normalize, withoutFields } from "../../domain/schemaForm";
 import { errorPaths } from "../../domain/settingsLayout";
@@ -65,7 +65,7 @@ function useSettingMutations(
   const onError = useApiErrorToast();
   const [report, setReport] = useState<DryRunResponse | null>(null);
   const save = useMutation({
-    mutationFn: async (body: Values) => unwrap(await putSetting(settingKey, body)),
+    mutationFn: async (body: Values) => await putSetting(settingKey, body),
     onSuccess: () => {
       onSaved();
       const section = t.settings.keys[settingKey] ?? settingKey;
@@ -79,7 +79,7 @@ function useSettingMutations(
   });
   const dryRun = useMutation({
     mutationFn: async (body: Values) =>
-      unwrap(await escalationDryRun(body as unknown as EscalationSettings)),
+      await escalationDryRun(body as unknown as EscalationSettings),
     onSuccess: setReport,
     onError,
   });

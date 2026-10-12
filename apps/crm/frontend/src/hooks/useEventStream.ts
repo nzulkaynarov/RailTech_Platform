@@ -1,8 +1,8 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { type QueryKey, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
 import { rawFetch } from "../api/http";
-import { keys } from "../api/queries";
+import { queryKeys } from "../api/queryKeys";
 
 export type CrmEvent = {
   type: "message.created" | "lead.updated" | "escalation.updated";
@@ -35,11 +35,15 @@ export function parseSse(buffer: string): { events: CrmEvent[]; rest: string } {
   return { events, rest };
 }
 
-/** Какие запросы перечитать по событию. */
-export function keysFor(event: CrmEvent): readonly (readonly unknown[])[] {
+/**
+ * Какие запросы перечитать по событию — сгенерированные ключи orval (ADR-0021).
+ * Любое событие меняет списки (входящие, открытые запросы, все страницы «Лидов»);
+ * событие с `lead_id` — ещё и карточку лида целиком: шапку, переписку, заметки, решения.
+ */
+export function keysFor(event: CrmEvent): QueryKey[] {
+  const lists = queryKeys.leadLists();
   const lead = event.lead_id ?? undefined;
-  const common = [keys.inbox, keys.serviceRequests, ["leads"]] as const;
-  return lead === undefined ? common : [...common, ["lead", lead]];
+  return lead === undefined ? lists : [...lists, ...queryKeys.lead(lead)];
 }
 
 /**

@@ -7,7 +7,7 @@ import { Navigate, useNavigate } from "react-router";
 import { useSettings } from "../../api/adminQueries";
 import { createFirstAdmin } from "../../api/generated/crm";
 import type { SetupAdminRequest } from "../../api/generated/model";
-import { tokenStore, unwrap } from "../../api/http";
+import { tokenStore } from "../../api/http";
 import { systemKeys, useSetupState } from "../../api/systemQueries";
 import { passwordChange } from "../../app/providers/auth";
 import { apiErrorField, apiErrorMessage } from "../../hooks/useApiErrorToast";
@@ -24,7 +24,7 @@ function AdminStep({ onDone }: { onDone: () => void }) {
   const [form] = Form.useForm<SetupAdminRequest>();
   const [error, setError] = useState<string | null>(null);
   const create = useMutation({
-    mutationFn: async (body: SetupAdminRequest) => unwrap(await createFirstAdmin(body)),
+    mutationFn: async (body: SetupAdminRequest) => await createFirstAdmin(body),
     onSuccess: (data) => {
       tokenStore.set(data.access_token);
       passwordChange.required = data.must_change_password;

@@ -5,7 +5,6 @@ import { type ReactNode, useState } from "react";
 
 import { testNotification, updateMe } from "../../api/generated/crm";
 import type { MePatch, UserOut } from "../../api/generated/model";
-import { unwrap } from "../../api/http";
 import { keys } from "../../api/queries";
 import { useApiErrorToast } from "../../hooks/useApiErrorToast";
 import {
@@ -88,12 +87,12 @@ export function NotifyCard({ user }: { user: UserOut }) {
   const { message } = AntApp.useApp();
   const browser = useBrowserAlertsPref();
   const save = useMutation({
-    mutationFn: async (patch: MePatch) => unwrap(await updateMe(patch)),
+    mutationFn: async (patch: MePatch) => await updateMe(patch),
     onSuccess: () => client.invalidateQueries({ queryKey: keys.me }),
     onError,
   });
   const test = useMutation({
-    mutationFn: async () => unwrap(await testNotification()),
+    mutationFn: async () => await testNotification(),
     onSuccess: () => void message.success(t.notify.testSent),
     onError,
   });

@@ -1,5 +1,5 @@
 /** Шаблоны ответов, профиль бота и экспорт CSV (аудит 2026-10-12 §3, §5). */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import {
   createReplyTemplate,
@@ -7,10 +7,12 @@ import {
   getExportClientsUrl,
   getExportDealsUrl,
   getExportLeadsUrl,
-  getTelegramProfile,
-  listReplyTemplates,
+  getGetTelegramProfileQueryKey,
+  getListReplyTemplatesQueryKey,
   putTelegramProfile,
   updateReplyTemplate,
+  useGetTelegramProfile,
+  useListReplyTemplates,
 } from "./generated/crm";
 import type {
   BotProfileSettings,
@@ -19,53 +21,37 @@ import type {
   ExportLeadsParams,
   ReplyTemplateIn,
 } from "./generated/model";
-import { compact, downloadFile, unwrap } from "./http";
-
-export const templateKeys = {
-  list: ["reply-templates"] as const,
-  profile: ["integrations", "telegram", "profile"] as const,
-};
+import { compact, downloadFile } from "./http";
 
 export const useReplyTemplates = (enabled = true) =>
-  useQuery({
-    queryKey: templateKeys.list,
-    queryFn: async () => unwrap(await listReplyTemplates()),
-    enabled,
-    staleTime: 60_000,
-  });
+  useListReplyTemplates({ query: { enabled, staleTime: 60_000 } });
 
 export function useReplyTemplateMutations(onError: (error: unknown) => void) {
   const client = useQueryClient();
-  const refresh = () => client.invalidateQueries({ queryKey: templateKeys.list });
+  const refresh = () => client.invalidateQueries({ queryKey: getListReplyTemplatesQueryKey() });
   return {
     save: useMutation({
       mutationFn: async ({ id, body }: { id: number | null; body: ReplyTemplateIn }) =>
-        id === null
-          ? unwrap(await createReplyTemplate(body))
-          : unwrap(await updateReplyTemplate(id, body)),
+        id === null ? await createReplyTemplate(body) : await updateReplyTemplate(id, body),
       onSuccess: () => void refresh(),
       onError,
     }),
     remove: useMutation({
-      mutationFn: async (id: number) => unwrap(await deleteReplyTemplate(id)),
+      mutationFn: (id: number) => deleteReplyTemplate(id),
       onSuccess: () => void refresh(),
       onError,
     }),
   };
 }
 
-export const useBotProfile = () =>
-  useQuery({
-    queryKey: templateKeys.profile,
-    queryFn: async () => unwrap(await getTelegramProfile()),
-  });
+export const useBotProfile = () => useGetTelegramProfile();
 
 export function useSaveBotProfile(onError: (error: unknown) => void) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: async (body: BotProfileSettings) => unwrap(await putTelegramProfile(body)),
+    mutationFn: (body: BotProfileSettings) => putTelegramProfile(body),
     onSuccess: (next) => {
-      client.setQueryData(templateKeys.profile, next);
+      client.setQueryData(getGetTelegramProfileQueryKey(), next);
     },
     onError,
   });

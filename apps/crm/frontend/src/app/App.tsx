@@ -44,7 +44,6 @@ import { ensureLiveRegion } from "./liveRegion";
 import { NotFound, RouteGuard } from "./RouteGuard";
 import { accessControlProvider } from "./providers/access";
 import { authProvider } from "./providers/auth";
-import { dataProvider } from "./providers/data";
 import { i18nProvider } from "./providers/i18n";
 import { appTheme } from "./theme";
 
@@ -96,7 +95,6 @@ export function App() {
         <AntApp message={messageConfig}>
           <Refine
             routerProvider={routerProvider}
-            dataProvider={dataProvider}
             i18nProvider={i18nProvider}
             authProvider={authProvider}
             accessControlProvider={accessControlProvider(queryClient)}

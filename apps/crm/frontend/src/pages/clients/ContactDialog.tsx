@@ -5,7 +5,6 @@ import { useEffect } from "react";
 import { adminKeys } from "../../api/adminQueries";
 import { createClientContact, updateClientContact } from "../../api/generated/crm";
 import type { ContactOut } from "../../api/generated/model";
-import { unwrap } from "../../api/http";
 import { apiErrorMessage } from "../../hooks/useApiErrorToast";
 import { t } from "../../i18n/ru";
 import {
@@ -36,8 +35,8 @@ export function ContactDialog({ clientId, contact, open, onClose }: Props) {
   const save = useMutation({
     mutationFn: async (values: ContactFormValues) => {
       const body = toContactIn(values, contact?.telegram_identity_id);
-      if (contact) return unwrap(await updateClientContact(clientId, contact.id, body));
-      return unwrap(await createClientContact(clientId, body));
+      if (contact) return await updateClientContact(clientId, contact.id, body);
+      return await createClientContact(clientId, body);
     },
     onSuccess: (_, values) => {
       const text = contact ? t.contacts.saved : t.contacts.added;
