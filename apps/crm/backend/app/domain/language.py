@@ -9,12 +9,25 @@
 import re
 from typing import Final, Literal
 
+from app.domain.text import normalize_question
+
 Language = Literal["ru", "uz", "en"]
 
 DEFAULT_LANGUAGE: Final[Language] = "ru"
 
 _CYRILLIC = re.compile(r"[а-яёўқғҳ]", re.IGNORECASE)
 _UZ_CYRILLIC = re.compile(r"[ўқғҳ]", re.IGNORECASE)
+_CYR_WORDS = re.compile(r"[а-яёўқғҳ]+", re.IGNORECASE)
+# Узбекская кириллица без ўқғҳ (пишут с русской раскладки): частые слова, которых нет в русском.
+_UZ_CYR_WORDS: Final = frozenset(
+    "нима қандай кандай керак бор борми йўқ йук йок ассалому алейкум алайкум рахмат "
+    "раҳмат қанча канча нархи нарх салом илтимос учун билан ва хизмат мен сиз биз бу "
+    "қачон качон қаерда каерда қилиш килиш мумкин мумкинми яхши хоп хўп".split()
+)
+_RU_WORDS: Final = frozenset(
+    "и в во не на что как я вы мы это есть нет да можно сколько цена здравствуйте "
+    "привет у с по для мне нам вас какой какая где когда".split()
+)
 _LATIN = re.compile(r"[a-z]", re.IGNORECASE)
 _WORDS = re.compile(r"[a-z‘’'`ʻʼ]+", re.IGNORECASE)
 
@@ -50,8 +63,14 @@ def detect_language(text: str, default: Language = DEFAULT_LANGUAGE) -> Language
     if cyrillic == 0 and latin == 0:
         return default
     if cyrillic >= latin:
-        return "uz" if _UZ_CYRILLIC.search(text) else "ru"
+        return "uz" if _UZ_CYRILLIC.search(text) or _uzbek_cyrillic(text) else "ru"
     return "uz" if _uzbek_score(text) > _english_score(text) else "en"
+
+
+def _uzbek_cyrillic(text: str) -> bool:
+    words = [w.casefold() for w in _CYR_WORDS.findall(text)]
+    uz = sum(1 for w in words if w in _UZ_CYR_WORDS)
+    return uz > 0 and uz >= sum(1 for w in words if w in _RU_WORDS)
 
 
 def _uzbek_score(text: str) -> float:
@@ -84,3 +103,70 @@ def next_language(
     if candidate == detected:
         return detected, True, None
     return detected, False, detected
+
+
+# Явная просьба сменить язык (Q-022). Фразы — в виде normalize_question (дефис → пробел,
+# апострофы → «'»). Только короткие сообщения: «как будет X in English» — не просьба.
+_SWITCH: Final[dict[Language, tuple[str, ...]]] = {
+    "ru": (
+        "на русском",
+        "по русски",
+        "на русский",
+        "русский язык",
+        "russian please",
+        "in russian",
+        "ruscha",
+        "rus tilida",
+    ),
+    "uz": (
+        "o'zbekcha",
+        "ozbekcha",
+        "uzbekcha",
+        "o'zbek tilida",
+        "ozbek tilida",
+        "uzbek tilida",
+        "ўзбекча",
+        "узбекча",
+        "ўзбек тилида",
+        "узбек тилида",
+        "на узбекском",
+        "по узбекски",
+        "in uzbek",
+        "uzbek please",
+    ),
+    "en": (
+        "in english",
+        "english please",
+        "speak english",
+        "на английском",
+        "по английски",
+        "inglizcha",
+        "ingliz tilida",
+    ),
+}
+_SWITCH_MAX_WORDS: Final = 5
+
+
+def requested_language(text: str) -> Language | None:
+    """Язык, на который человек явно просит перейти («давай по-русски», «in English»)."""
+    normalized = normalize_question(text)
+    if not normalized or len(normalized.split()) > _SWITCH_MAX_WORDS:
+        return None
+    haystack = f" {normalized} "
+    for language, phrases in _SWITCH.items():
+        if any(f" {phrase} " in haystack for phrase in phrases):
+            return language
+    return None
+
+
+def mismatch_offer(
+    fixed: Language, detected: Language, streak: int, offered: bool
+) -> tuple[int, bool]:
+    """Язык зафиксирован, а человек пишет на другом: (новая серия, предложить кнопки?).
+
+    Кнопки языка предлагаются один раз — после двух сообщений подряд не на языке диалога.
+    """
+    if detected == fixed:
+        return 0, False
+    streak += 1
+    return streak, streak >= 2 and not offered

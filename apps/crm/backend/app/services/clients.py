@@ -7,6 +7,7 @@
 from datetime import UTC, datetime
 from typing import Any
 
+import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -31,6 +32,8 @@ from app.services.escalation import OPEN_STATUSES
 from app.services.lead_messenger import LeadMessenger
 from app.services.leads import LANGUAGES
 from app.services.settings import SettingsService
+
+logger = structlog.get_logger(__name__)
 
 CLEARABLE = frozenset({"inn", "segment", "notes", "owner_user_id"})
 EDITABLE = CLEARABLE | {"name", "is_active"}
@@ -185,7 +188,20 @@ class ClientService:
                 after={"client_id": client_id},
             )
             await events.publish(session, "lead.updated", lead_id=lead_id)
-            return client_id
+            language = lead.language
+        await self._notify_access(lead_id, language)
+        return client_id
+
+    async def _notify_access(self, lead_id: int, language: str) -> None:
+        """Один раз при привязке: клиенту стали доступны документы и запросы (/help)."""
+        if self._settings is None or self._messenger is None:
+            return
+        cfg = await self._settings.get()
+        text = cfg.texts.client_access_granted.get(LANGUAGES.get(language, "ru"))
+        try:
+            await self._messenger.send(lead_id, text, {"notice": "client_access_granted"})
+        except Exception:
+            logger.exception("client_access_notice_failed", lead_id=lead_id)
 
     async def close_service_request(self, who: Principal, request_id: int, resolution: str) -> None:
         """Закрыть запрос клиента с итогом: клиент получает ответ в боте (ADR-0015)."""
@@ -215,7 +231,10 @@ class ClientService:
         if lead is not None and self._settings is not None and self._messenger is not None:
             cfg = await self._settings.get()
             text = cfg.texts.service_request_closed.get(
-                LANGUAGES.get(language, "ru"), summary=summary[:200], resolution=resolution.strip()
+                LANGUAGES.get(language, "ru"),
+                number=str(request_id),
+                summary=summary[:200],
+                resolution=resolution.strip(),
             )
             await self._messenger.send(lead.id, text, {"notice": "service_request_closed"})
 

@@ -11,9 +11,10 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 
 from app.bot import keyboards
-from app.bot.handlers import send
+from app.bot.handlers import MEDIA, respond, send
 from app.domain.bot_menu import normalize_phone
 from app.services.client_bot import ClientBotService
+from app.services.conversation import ConversationService
 from app.services.settings import SettingsService
 
 router = Router(name="client-bot-client")
@@ -146,3 +147,27 @@ async def on_phone_skip(
     cfg = await settings.get()
     language = (await client_bot.status(_uid(message))).language
     await message.answer(cfg.texts.phone_skipped.get(language), reply_markup=ReplyKeyboardRemove())
+
+
+@router.message(PhoneForm.pending, F.text, ~F.text.startswith("/"), F.from_user)
+async def on_text_instead_of_phone(
+    message: Message,
+    bot: Bot,
+    conversation: ConversationService,
+    client_bot: ClientBotService,
+    settings: SettingsService,
+    state: FSMContext,
+) -> None:
+    """Человек пишет вместо кнопки: отвечаем как обычно и убираем клавиатуру номера."""
+    await state.clear()
+    await respond(message, bot, conversation, settings, client_bot, remove_reply_keyboard=True)
+
+
+@router.message(RequestForm.summary, MEDIA, F.from_user)
+async def on_request_media(
+    message: Message, client_bot: ClientBotService, settings: SettingsService
+) -> None:
+    """Описание запроса ждём текстом; ожидание не сбрасываем."""
+    cfg = await settings.get()
+    language = (await client_bot.status(_uid(message))).language
+    await message.answer(cfg.texts.request_text_only.get(language))

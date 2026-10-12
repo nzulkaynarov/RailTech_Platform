@@ -86,16 +86,33 @@ async def notify_owner(hook: ActivityHook | None, early: list[Outgoing], turn: T
 async def consent_prompt(
     session: AsyncSession, conversation: Conversation, lead: Lead, cfg: AppSettings, is_new: bool
 ) -> list[Outgoing]:
+    """Первый контакт — выбор языка (Q-022), согласие — после него на выбранном языке."""
     language = lang_of(lead)
     texts = cfg.texts
     out: list[Outgoing] = []
     if is_new:
-        out.append(Outgoing(texts.greeting.get(language, company=cfg.company.name)))
-        out.append(Outgoing(texts.consent.get(language), keyboard="consent", language=language))
+        first = texts.language_first
+        picker = "\n".join((first.uz, first.ru, first.en))
+        out.append(Outgoing(picker, keyboard="language", language=language))
     else:
         out.append(
             Outgoing(texts.consent_required.get(language), keyboard="consent", language=language)
         )
+    for item in out:
+        await repo.add_message(session, conversation_id=conversation.id, role="bot", text=item.text)
+    return out
+
+
+async def consent_offer(
+    session: AsyncSession, conversation: Conversation, lead: Lead, cfg: AppSettings
+) -> list[Outgoing]:
+    """Язык выбран кнопкой, согласия ещё нет: приветствие и согласие на этом языке."""
+    language = lang_of(lead)
+    texts = cfg.texts
+    out = [
+        Outgoing(texts.greeting.get(language, company=cfg.company.name), language=language),
+        Outgoing(texts.consent.get(language), keyboard="consent", language=language),
+    ]
     for item in out:
         await repo.add_message(session, conversation_id=conversation.id, role="bot", text=item.text)
     return out

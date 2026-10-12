@@ -101,13 +101,20 @@ async def consented(stack: Stack) -> None:
     await stack.service.accept_consent(USER)
 
 
-async def test_first_message_asks_consent_and_does_not_answer(stack: Stack) -> None:
+async def test_first_message_asks_language_then_consent_and_does_not_answer(stack: Stack) -> None:
+    """Q-022: первое сообщение — выбор языка, согласие — на выбранном языке."""
     out = await stack.service.handle_message(msg("Сколько стоит касса?", language_code="ru"))
+    assert [o.keyboard for o in out] == ["language"]
+    assert "Muloqot tilini tanlang" in out[0].text
+    assert "Choose your language" in out[0].text
+    out = await stack.service.set_language(USER, "uz")
     assert [o.keyboard for o in out] == [None, "consent"]
+    assert out[1].text.startswith("Davom etish uchun")
     assert stack.model.requests == []
     async with stack.sessions() as session:
         roles = (await session.scalars(select(Message.role).order_by(Message.id))).all()
-    assert roles == ["lead", "bot", "bot"]
+    assert roles == ["lead", "bot", "bot", "bot"]
+    assert (await lead_row(stack.sessions)).language == "uz"
 
 
 async def test_question_asked_before_consent_is_answered_right_after(stack: Stack) -> None:

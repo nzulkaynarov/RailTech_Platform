@@ -89,9 +89,9 @@ def sent(bot: AsyncMock) -> list[SendMessage]:
     [
         ("prospect", "ru", "Связаться с менеджером", "Мои документы"),
         ("with_manager", "ru", "Удалить переписку", "Связаться с менеджером"),
-        ("client", "ru", "Мои документы", "Что умеет бот"),
+        ("client", "ru", "Мои документы", "Начать"),
         ("client", "uz", "Hujjatlarim", "Boshlash"),
-        ("client", "en", "Request status", "Talk to a manager"),
+        ("client", "en", "Talk to a manager", "Start"),
     ],
 )
 def test_menu_labels_come_from_settings(

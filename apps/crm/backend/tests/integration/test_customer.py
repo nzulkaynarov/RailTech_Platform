@@ -164,7 +164,7 @@ async def test_service_request_via_tool(
     who = Principal(admin.id, "Босс", ("admin",))
     await clients.close_service_request(who, request.id, "Инженер приедет завтра в 10:00")
     assert sender.sent[-1][1] == (
-        "По вашему запросу «Касса не печатает чеки»: Инженер приедет завтра в 10:00"
+        f"По вашему запросу №{request.id} «Касса не печатает чеки»: Инженер приедет завтра в 10:00"
     )
     async with sessions() as session:
         escalation = (await session.scalars(select(Escalation))).one()
