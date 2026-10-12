@@ -51,7 +51,9 @@ async def while_waiting(
         hits = evaluate(signals, cfg.escalation.triggers())
         applied = await escalation.apply(session, lead, hits, cfg, now)
     escalation_id = applied.escalation_id if applied else None
-    if not ack_due(lead.last_bot_msg_at, now):
+    # Явная просьба позвать человека (кнопка, «соедините с менеджером») подтверждается всегда:
+    # тишина на нажатие выглядит как сломанная кнопка. Прочие сообщения — не чаще ACK_INTERVAL.
+    if not human_requested and not ack_due(lead.last_bot_msg_at, now):
         return WaitingReply(None, None, escalation_id)
     reply = cfg.texts.waiting_for_manager.get(language)
     message = await repo.add_message(

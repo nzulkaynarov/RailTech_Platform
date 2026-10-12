@@ -65,3 +65,14 @@ def staff_name(full_name: str, language: str) -> str:
 
 def ends_with_question(text: str) -> bool:
     return text.rstrip().endswith("?")
+
+
+# Узбекская латиница: oʻ/gʻ пишутся U+02BB, апостроф — U+02BC (ʼ). Модели часто пишут ASCII «'»
+# или «’» — исправляем кодом, а не просьбой в промпте (аудит 2026-10-12, P2-24).
+_UZ_TURNED = re.compile(r"(?<=[oOgG])['’‘`]")
+_UZ_APOSTROPHE = re.compile(r"(?<=\w)['’](?=\w)")
+
+
+def normalize_uzbek(text: str) -> str:
+    """«bog'liq» → «bogʻliq», «ma'lumot» → «maʼlumot»; остальной текст не трогается."""
+    return _UZ_APOSTROPHE.sub("ʼ", _UZ_TURNED.sub("ʻ", text))
