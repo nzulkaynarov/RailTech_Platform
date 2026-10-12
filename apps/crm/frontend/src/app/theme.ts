@@ -41,6 +41,14 @@ export const appTheme: ThemeConfig = {
     colorWarningBorder: "#ffe58f",
     motion: !reduceMotion,
   },
+  components: {
+    /**
+     * Плотность таблиц — один раз здесь, а не `size="small"` на каждой странице: отступы ячеек
+     * обычной таблицы = отступам `small` (paddingXS, 8 px). Кнопки и поля остаются обычного
+     * размера — зоны касания на телефоне не уменьшаются (глобальный `componentSize` не берём).
+     */
+    Table: { cellPaddingBlock: 8, cellPaddingInline: 8 },
+  },
 };
 
 /**

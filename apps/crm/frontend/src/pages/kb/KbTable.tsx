@@ -128,6 +128,7 @@ export function KbTable({
 }: Handlers & { data: KbDocumentOut[]; loading: boolean }) {
   return (
     <Table<KbDocumentOut>
+      sticky
       rowKey="id"
       loading={loading}
       dataSource={data}

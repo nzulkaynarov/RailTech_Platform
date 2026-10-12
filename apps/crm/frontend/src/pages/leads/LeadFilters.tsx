@@ -22,6 +22,7 @@ import {
   type LeadFilters,
 } from "../../hooks/leadFilters";
 import { t } from "../../i18n/ru";
+import { rangePresets } from "../../lib/datePresets";
 import { DATE_FORMAT } from "../../lib/time";
 
 type Update = (patch: Partial<LeadFilters>) => void;
@@ -102,6 +103,7 @@ function MoreFilters({ filters, update }: FilterProps) {
         format={DATE_FORMAT}
         aria-label={t.leads.periodLabel}
         placeholder={t.leads.period}
+        presets={rangePresets()}
         style={{ width: "100%" }}
         value={filters.from && filters.to ? [dayjs(filters.from), dayjs(filters.to)] : null}
         onChange={(range) => {

@@ -100,6 +100,7 @@ export function GapsTable({
 }: Handlers & { data: KbGapOut[]; loading: boolean }) {
   return (
     <Table<KbGapOut>
+      sticky
       rowKey="id"
       loading={loading}
       dataSource={data}
