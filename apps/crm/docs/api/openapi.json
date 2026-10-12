@@ -4054,6 +4054,138 @@
         "title": "ReturnToBot",
         "type": "object"
       },
+      "SandboxMessageIn": {
+        "properties": {
+          "language": {
+            "default": "ru",
+            "enum": [
+              "ru",
+              "uz",
+              "en"
+            ],
+            "title": "Language",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "SandboxMessageIn",
+        "type": "object"
+      },
+      "SandboxReply": {
+        "properties": {
+          "buttons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Buttons",
+            "type": "array"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "buttons"
+        ],
+        "title": "SandboxReply",
+        "type": "object"
+      },
+      "SandboxTurnOut": {
+        "properties": {
+          "replies": {
+            "items": {
+              "$ref": "#/components/schemas/SandboxReply"
+            },
+            "title": "Replies",
+            "type": "array"
+          },
+          "why": {
+            "$ref": "#/components/schemas/SandboxWhy"
+          }
+        },
+        "required": [
+          "replies",
+          "why"
+        ],
+        "title": "SandboxTurnOut",
+        "type": "object"
+      },
+      "SandboxWhy": {
+        "description": "Почему бот так ответил: решение, причина, документы базы знаний, сработавшие триггеры.",
+        "properties": {
+          "best_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Best Score"
+          },
+          "decision": {
+            "title": "Decision",
+            "type": "string"
+          },
+          "documents": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Documents",
+            "type": "array"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "triggers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Triggers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "decision",
+          "reason",
+          "best_score",
+          "documents",
+          "triggers",
+          "priority"
+        ],
+        "title": "SandboxWhy",
+        "type": "object"
+      },
       "SearchHitOut": {
         "properties": {
           "chunk_id": {
@@ -9080,6 +9212,83 @@
         "summary": "Test Model",
         "tags": [
           "spend"
+        ]
+      }
+    },
+    "/api/v1/sandbox/messages": {
+      "post": {
+        "description": "Сообщение боту от имени тестового лида админа: тот же ход, что в Telegram.\n\nПлатно: вызовы моделей пишутся в «Расходы» с пометкой «тест». Передача менеджеру\nпоказывается в `why` и в CRM не создаётся; квалификатор и канал не задействуются.",
+        "operationId": "sandbox_message",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SandboxMessageIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SandboxTurnOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Sandbox Message",
+        "tags": [
+          "sandbox"
+        ]
+      }
+    },
+    "/api/v1/sandbox/reset": {
+      "post": {
+        "description": "«Начать заново»: тестовый диалог админа удаляется целиком.",
+        "operationId": "sandbox_reset",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Sandbox Reset",
+        "tags": [
+          "sandbox"
         ]
       }
     },

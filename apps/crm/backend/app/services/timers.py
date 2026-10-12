@@ -11,6 +11,7 @@ import structlog
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.domain.sandbox import SANDBOX_SOURCE
 from app.domain.stages import Stage, TransitionSource
 from app.models.leads import Lead
 from app.services import stages
@@ -33,6 +34,7 @@ async def mark_unresponsive(
         .where(
             Lead.stage.in_([s.value for s in TIMER_STAGES]),
             Lead.erased_at.is_(None),
+            Lead.source != SANDBOX_SOURCE,
             Lead.last_lead_msg_at < cutoff,
             last_ours > Lead.last_lead_msg_at,
         )

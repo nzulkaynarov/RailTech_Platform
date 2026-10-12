@@ -88,6 +88,9 @@ MATRIX = [
     ("POST", "/api/v1/deals", {"title": "Матрица прав"}, {"admin", "manager"}),
     # пустой текст → 422 до вызова модели; важно только «не 401/403»
     ("POST", "/api/v1/leads/{lead}/assist", {"mode": "improve", "text": ""}, {"admin", "manager"}),
+    # «Проверить бота»: пустой текст → 422 до хода агента; «Начать заново» без диалога — no-op
+    ("POST", "/api/v1/sandbox/messages", {"text": "", "language": "ru"}, {"admin"}),
+    ("POST", "/api/v1/sandbox/reset", None, {"admin"}),
 ]
 
 

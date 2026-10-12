@@ -38,6 +38,7 @@ CATALOG: Final[dict[str, tuple[str, ...]]] = {
     "models": ("read", "test"),
     "integrations": ("read", "write"),
     "system": ("read",),
+    "sandbox": ("use",),
 }
 
 

@@ -3,13 +3,11 @@
 Запись никогда не ломает вызов модели: любая ошибка — предупреждение в лог.
 """
 
-from typing import Literal
-
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.integrations.litellm_catalog import ModelCatalog
-from app.integrations.llm_usage import UsageEvent, current_lead_id
+from app.integrations.llm_usage import UsageEvent, UsageKind, current_kind, current_lead_id
 from app.models.system import LlmUsage
 
 logger = structlog.get_logger(__name__)
@@ -20,7 +18,7 @@ class DbUsageRecorder:
         self,
         sessions: async_sessionmaker[AsyncSession],
         catalog: ModelCatalog | None,
-        kind: Literal["work", "test"] = "work",
+        kind: UsageKind = "work",
     ) -> None:
         self._sessions = sessions
         self._catalog = catalog
@@ -42,7 +40,7 @@ class DbUsageRecorder:
                         output_tokens=event.output_tokens,
                         cost_usd=event.cost_usd or 0.0,
                         lead_id=current_lead_id(),
-                        kind=self._kind,
+                        kind=current_kind() or self._kind,
                     )
                 )
         except Exception as exc:  # noqa: BLE001 — учёт не должен ронять ответ клиенту

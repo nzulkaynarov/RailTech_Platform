@@ -4,6 +4,7 @@ import { deals } from "./ru/deals";
 import { core } from "./ru/core";
 import { integrations } from "./ru/integrations";
 import { leads } from "./ru/leads";
+import { sandbox } from "./ru/sandbox";
 import { spend } from "./ru/spend";
 import { system } from "./ru/system";
 
@@ -18,6 +19,7 @@ export const ru = {
   ...spend,
   ...integrations,
   ...deals,
+  ...sandbox,
 };
 
 export type Dictionary = typeof ru;
