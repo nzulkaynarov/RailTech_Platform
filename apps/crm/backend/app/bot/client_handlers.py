@@ -11,10 +11,12 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 
 from app.bot import keyboards
+from app.bot.attachments import shared_text
 from app.bot.handlers import MEDIA, respond, send
 from app.domain.bot_menu import normalize_phone
 from app.services.client_bot import ClientBotService
-from app.services.conversation import ConversationService
+from app.services.conversation import ConversationService, Incoming
+from app.services.conversation_types import Outgoing
 from app.services.settings import SettingsService
 
 router = Router(name="client-bot-client")
@@ -114,22 +116,43 @@ async def on_status(
     await message.answer(text)
 
 
-@router.message(F.contact, F.from_user)
-async def on_contact(
-    message: Message, client_bot: ClientBotService, settings: SettingsService, state: FSMContext
+def _own_contact(message: Message) -> bool:
+    """Номер самого отправителя (кнопка «Поделиться номером» или свой контакт вручную)."""
+    contact, sender = message.contact, message.from_user
+    return contact is not None and sender is not None and contact.user_id == sender.id
+
+
+@router.message(F.contact, F.from_user, _own_contact)
+async def on_own_contact(
+    message: Message,
+    client_bot: ClientBotService,
+    conversation: ConversationService,
+    settings: SettingsService,
+    state: FSMContext,
 ) -> None:
-    """Сохраняем только собственный номер отправителя (кнопка request_contact), не чужой контакт."""
+    """Свой номер — в карточку лида и в переписку (менеджер видит, что клиент поделился номером).
+
+    Чужой контакт (карточка коллеги клиента) сюда не попадает: его обрабатывает основной роутер
+    и передаёт в переписку текстом, как было до Q-020.
+    """
     if message.contact is None:
         return
     cfg = await settings.get()
     language = (await client_bot.status(_uid(message))).language
     phone = normalize_phone(message.contact.phone_number)
-    if message.contact.user_id != _uid(message) or phone is None:
-        await message.answer(cfg.texts.phone_not_own.get(language))
-        return
     await state.clear()
+    await conversation.record_lead_message(
+        Incoming(_uid(message), message.chat.id, shared_text(message))
+    )
+    if phone is None:
+        reply = cfg.texts.phone_not_own.get(language)
+        await conversation.record_bot_replies(_uid(message), [Outgoing(reply, language=language)])
+        await message.answer(reply)
+        return
     await client_bot.save_phone(_uid(message), phone)
-    await message.answer(cfg.texts.phone_saved.get(language), reply_markup=ReplyKeyboardRemove())
+    reply = cfg.texts.phone_saved.get(language)
+    await conversation.record_bot_replies(_uid(message), [Outgoing(reply, language=language)])
+    await message.answer(reply, reply_markup=ReplyKeyboardRemove())
 
 
 async def _is_skip(message: Message, settings: SettingsService) -> bool:
