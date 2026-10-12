@@ -1,4 +1,4 @@
-import { Alert, App as AntApp, Button, Card, Form, Input, Tag, Typography } from "antd";
+import { Alert, App as AntApp, Button, Form, Input, Tabs, Tag, Typography } from "antd";
 
 import type { BotProfileOut, BotProfileSettings } from "../../api/generated/model";
 import { useBotProfile, useSaveBotProfile } from "../../api/templateQueries";
@@ -30,54 +30,57 @@ function PublishStatus({ published }: { published: BotProfileOut["published"] })
   );
 }
 
-/** Имя и описания бота на ru/uz/en (ADR-0018): сохранение публикует их в Telegram. */
+/** Вкладка «Профиль бота»: имя и описания на ru/uz/en — вкладками языков (ADR-0018); сохранение публикует их в Telegram. */
 export function BotProfileCard() {
   const profile = useBotProfile();
   const save = useSaveBotProfile(useApiErrorToast());
   const { message } = AntApp.useApp();
   return (
-    <Card title={tt.title}>
-      <PageState query={profile} variant="section">
-        {profile.data ? (
-          <Form<BotProfileSettings>
-            layout="vertical"
-            initialValues={profile.data.profile}
-            onFinish={(values) => {
-              save.mutate(values, { onSuccess: () => void message.success(tt.saved) });
-            }}
-          >
-            <Typography.Paragraph type="secondary">{tt.intro}</Typography.Paragraph>
-            <PublishStatus published={profile.data.published} />
-            {FIELDS.map((field) => (
-              <fieldset key={field.key} className="bot-profile-group">
-                <legend>{field.label}</legend>
-                {LANGUAGES.map((language) => (
-                  <Form.Item
-                    key={language}
-                    name={[field.key, language]}
-                    label={tt[language]}
-                    htmlFor={`bot-${field.key}-${language}`}
-                  >
-                    {field.area ? (
-                      <Input.TextArea
-                        id={`bot-${field.key}-${language}`}
-                        autoSize={{ minRows: 2, maxRows: 6 }}
-                        maxLength={field.max}
-                        showCount
-                      />
-                    ) : (
-                      <Input id={`bot-${field.key}-${language}`} maxLength={field.max} showCount />
-                    )}
-                  </Form.Item>
-                ))}
-              </fieldset>
-            ))}
-            <Button type="primary" htmlType="submit" loading={save.isPending}>
-              {tt.save}
-            </Button>
-          </Form>
-        ) : null}
-      </PageState>
-    </Card>
+    <PageState query={profile} variant="section">
+      {profile.data ? (
+        <Form<BotProfileSettings>
+          layout="vertical"
+          initialValues={profile.data.profile}
+          onFinish={(values) => {
+            save.mutate(values, { onSuccess: () => void message.success(tt.saved) });
+          }}
+        >
+          <Typography.Paragraph type="secondary">{tt.intro}</Typography.Paragraph>
+          <PublishStatus published={profile.data.published} />
+          <Tabs
+            size="small"
+            aria-label={tt.languages}
+            items={LANGUAGES.map((language) => ({
+              key: language,
+              label: tt[language],
+              // Все языки в форме сразу: иначе «Сохранить» не отправит поля неоткрытых вкладок.
+              forceRender: true,
+              children: FIELDS.map((field) => (
+                <Form.Item
+                  key={field.key}
+                  name={[field.key, language]}
+                  label={field.label}
+                  htmlFor={`bot-${field.key}-${language}`}
+                >
+                  {field.area ? (
+                    <Input.TextArea
+                      id={`bot-${field.key}-${language}`}
+                      autoSize={{ minRows: 2, maxRows: 6 }}
+                      maxLength={field.max}
+                      showCount
+                    />
+                  ) : (
+                    <Input id={`bot-${field.key}-${language}`} maxLength={field.max} showCount />
+                  )}
+                </Form.Item>
+              )),
+            }))}
+          />
+          <Button type="primary" htmlType="submit" loading={save.isPending}>
+            {tt.save}
+          </Button>
+        </Form>
+      ) : null}
+    </PageState>
   );
 }

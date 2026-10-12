@@ -1,4 +1,4 @@
-import type { TelegramStatusOut } from "../api/generated/model";
+import type { BotProfileOut, TelegramStatusOut } from "../api/generated/model";
 
 export type BotState = "running" | "stopped" | "notConfigured" | "failed";
 
@@ -26,4 +26,29 @@ export function channelLabel(
 ): string | null {
   if (id === null) return null;
   return title ?? unknown.replace("{id}", String(id));
+}
+
+/** Значок состояния во вкладке «Подключений» (antd `Badge status`). */
+export type TabStatus = "success" | "error" | "warning" | "default";
+
+const BOT_TAB: Record<BotState, TabStatus> = {
+  running: "success",
+  stopped: "default",
+  notConfigured: "warning",
+  failed: "error",
+};
+
+/** Состояние каждой вкладки из уже загруженных данных; профиль ещё не загружен — без значка. */
+export function integrationTabStatus(
+  status: TelegramStatusOut,
+  profile: BotProfileOut | undefined,
+): Record<"bot" | "profile" | "channel", TabStatus | null> {
+  const published = profile?.published;
+  let profileStatus: TabStatus | null = null;
+  if (profile) profileStatus = published ? (published.ok ? "success" : "warning") : "default";
+  return {
+    bot: BOT_TAB[botState(status)],
+    profile: profileStatus,
+    channel: status.channel_id === null ? "warning" : "success",
+  };
 }

@@ -1,6 +1,6 @@
 import { PlusOutlined } from "@ant-design/icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { App as AntApp, Button, Card, Flex, List, Space, Tag, Typography } from "antd";
+import { App as AntApp, Button, Flex, List, Skeleton, Space, Tag, Typography } from "antd";
 import { useState } from "react";
 
 import { adminKeys, useClientContacts } from "../../api/adminQueries";
@@ -107,7 +107,7 @@ function Suggestions({ items, pending, onAdd }: SuggestionsProps) {
   );
 }
 
-/** Контакты клиента (Q-011): список, добавление/правка, удаление, «Добавить из Telegram» (Q-020). */
+/** Вкладка «Контакты» клиента (Q-011): список, добавление/правка, удаление, «Добавить из Telegram» (Q-020). */
 export function ClientContacts({ clientId, canWrite }: { clientId: number; canWrite: boolean }) {
   const query = useClientContacts(clientId);
   const [dialog, setDialog] = useState<Dialog>({ open: false, contact: null });
@@ -146,36 +146,32 @@ export function ClientContacts({ clientId, canWrite }: { clientId: number; canWr
     />
   );
   return (
-    <Card
-      size="small"
-      title={t.contacts.title}
-      loading={query.isLoading}
-      extra={
-        canWrite && contacts.length ? (
-          <Button size="small" icon={<PlusOutlined />} onClick={openNew}>
-            {t.contacts.add}
-          </Button>
-        ) : null
-      }
-    >
-      {contacts.length ? (
-        <List
-          size="small"
-          dataSource={contacts}
-          renderItem={(c) => (
-            <List.Item actions={canWrite ? [menu(c)] : []}>
-              <ContactLine c={c} />
-            </List.Item>
-          )}
-        />
-      ) : (
-        <EmptyState
-          compact
-          title={t.contacts.empty}
-          hint={t.contacts.emptyHint}
-          {...(canWrite ? { action: { label: t.contacts.add, onClick: openNew } } : {})}
-        />
-      )}
+    <Flex vertical gap="small">
+      {canWrite && contacts.length ? (
+        <Button className="self-start" icon={<PlusOutlined />} onClick={openNew}>
+          {t.contacts.add}
+        </Button>
+      ) : null}
+      <Skeleton loading={query.isLoading} active>
+        {contacts.length ? (
+          <List
+            size="small"
+            dataSource={contacts}
+            renderItem={(c) => (
+              <List.Item actions={canWrite ? [menu(c)] : []}>
+                <ContactLine c={c} />
+              </List.Item>
+            )}
+          />
+        ) : (
+          <EmptyState
+            compact
+            title={t.contacts.empty}
+            hint={t.contacts.emptyHint}
+            {...(canWrite ? { action: { label: t.contacts.add, onClick: openNew } } : {})}
+          />
+        )}
+      </Skeleton>
       {canWrite ? (
         <Suggestions
           items={query.data?.suggestions ?? []}
@@ -193,6 +189,6 @@ export function ClientContacts({ clientId, canWrite }: { clientId: number; canWr
           setDialog({ open: false, contact: null });
         }}
       />
-    </Card>
+    </Flex>
   );
 }

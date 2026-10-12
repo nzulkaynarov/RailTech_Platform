@@ -1,4 +1,4 @@
-import { Alert, Button, Card, Descriptions, Flex, Form, Input, Modal, Tag, Typography } from "antd";
+import { Alert, Button, Descriptions, Flex, Form, Input, Modal, Tag, Typography } from "antd";
 import { useState } from "react";
 
 import type { TelegramStatusOut, TelegramTokenIn } from "../../api/generated/model";
@@ -11,7 +11,7 @@ type Props = {
   onSave: (body: TelegramTokenIn, done: () => void) => void;
 };
 
-/** Карточка бота: статус и поле токена только на запись; сохранение — после пароля. */
+/** Вкладка «Telegram-бот»: статус и поле токена только на запись; сохранение — после пароля. */
 export function TelegramBotCard({ status, saving, onSave }: Props) {
   const [token, setToken] = useState("");
   const [password, setPassword] = useState("");
@@ -22,7 +22,7 @@ export function TelegramBotCard({ status, saving, onSave }: Props) {
     setPassword("");
   };
   return (
-    <Card title={t.integrations.botTitle}>
+    <Flex vertical gap="middle">
       <Descriptions column={1} size="small">
         <Descriptions.Item label={t.integrations.botStatus}>
           <Tag color={BOT_STATE_COLOR[state]}>{t.botState[state]}</Tag>
@@ -99,6 +99,6 @@ export function TelegramBotCard({ status, saving, onSave }: Props) {
           />
         </Flex>
       </Modal>
-    </Card>
+    </Flex>
   );
 }

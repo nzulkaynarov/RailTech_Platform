@@ -1,15 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  App as AntApp,
-  Button,
-  Card,
-  Flex,
-  InputNumber,
-  List,
-  Select,
-  Tag,
-  Typography,
-} from "antd";
+import { App as AntApp, Button, Flex, InputNumber, List, Select, Tag, Typography } from "antd";
 import { useState } from "react";
 
 import { adminKeys } from "../../api/adminQueries";
@@ -185,14 +175,12 @@ export function ClientTelegram({ data, canWrite }: { data: ClientDetail; canWrit
     });
   };
   return (
-    <Card size="small" title={t.clients.telegram}>
-      <Flex vertical gap="small">
-        <Typography.Text type="secondary">{t.clients.telegramHint}</Typography.Text>
-        <Identities items={data.identities} canWrite={canWrite} onAction={unlink} />
-        {canWrite ? (
-          <LinkPicker candidates={data.candidates} pending={act.isPending} onLink={link} />
-        ) : null}
-      </Flex>
-    </Card>
+    <Flex vertical gap="small">
+      <Typography.Text type="secondary">{t.clients.telegramHint}</Typography.Text>
+      <Identities items={data.identities} canWrite={canWrite} onAction={unlink} />
+      {canWrite ? (
+        <LinkPicker candidates={data.candidates} pending={act.isPending} onLink={link} />
+      ) : null}
+    </Flex>
   );
 }

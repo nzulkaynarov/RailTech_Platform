@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import type { ComponentStatusOut, SystemStatusOut } from "../api/generated/model";
-import { bySeverity, criticalFailures, headerHealth, warningsText } from "./systemHealth";
+import {
+  bySeverity,
+  componentPath,
+  criticalFailures,
+  headerHealth,
+  warningsText,
+} from "./systemHealth";
 
 const c = (key: string, status: ComponentStatusOut["status"]): ComponentStatusOut => ({
   key,
@@ -41,5 +47,22 @@ describe("headerHealth", () => {
   it("sorts fail, warn, unknown, ok", () => {
     const sorted = bySeverity([c("a", "ok"), c("b", "unknown"), c("c", "warn"), c("d", "fail")]);
     expect(sorted.map((x) => x.key)).toEqual(["d", "c", "b", "a"]);
+  });
+});
+
+describe("componentPath", () => {
+  it.each([
+    ["bot", "/integrations?tab=bot"],
+    ["channel", "/integrations?tab=channel"],
+    ["model:dialog-model", "/models"],
+    ["model:embed-model", "/models"],
+    ["backup", "/backups"],
+    ["budget", "/spend"],
+    ["crm_url", "/settings?section=company"],
+    ["database", null],
+    ["queue", null],
+    ["future", null],
+  ])("%s → %s", (key, path) => {
+    expect(componentPath(key)).toBe(path);
   });
 });

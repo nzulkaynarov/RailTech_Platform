@@ -14,6 +14,16 @@ export const clients = {
     status: "Статус",
     search: "Название или ИНН",
     details: "Реквизиты",
+    /** Вкладки карточки клиента (UX волна 3). */
+    tabs: {
+      contacts: "Контакты",
+      deals: "Сделки",
+      leads: "Лиды",
+      requests: "Запросы",
+      documents: "Документы",
+      telegram: "Telegram",
+    } as Record<string, string>,
+    sections: "Разделы клиента",
     telegram: "Telegram клиента",
     telegramHint: "Бот выдаёт документы только подтверждённым аккаунтам клиента.",
     telegramEmpty: "Telegram-аккаунты не привязаны",

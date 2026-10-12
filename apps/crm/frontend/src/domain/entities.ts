@@ -1,5 +1,8 @@
 import { t } from "../i18n/ru";
 
+/** Выгрузки CSV (`export.{entity}`) ведут в свой список. */
+const EXPORTS = new Set(["leads", "clients", "deals"]);
+
 /** Куда ведёт объект аудита/ссылки: у лида и клиента есть карточки, у остального — раздел. */
 export function entityPath(type: string, id: number | string | null | undefined): string | null {
   switch (type) {
@@ -16,6 +19,20 @@ export function entityPath(type: string, id: number | string | null | undefined)
       return "/gaps";
     case "settings":
       return "/settings";
+    case "deal":
+      return "/deals";
+    case "model":
+      return "/models";
+    case "reply_template":
+      return "/templates";
+    case "sandbox":
+      return "/sandbox";
+    case "integration_secret":
+      return "/integrations";
+    case "export":
+      return EXPORTS.has(String(id)) ? `/${String(id)}` : null;
+    case "system":
+      return id === "backups" ? "/backups" : "/system";
     default:
       return null;
   }

@@ -1,6 +1,19 @@
 /** «Подключения» (аудит 2026-10-12, шаг 2): Telegram-бот и канал команды. */
 export const integrations = {
   integrations: {
+    /** Вкладки «Подключений» (UX волна 3) и состояние словами для значка во вкладке. */
+    tabs: {
+      bot: "Telegram-бот",
+      profile: "Профиль бота",
+      channel: "Канал команды",
+    } as Record<string, string>,
+    sections: "Разделы подключений",
+    tabState: {
+      success: "в норме",
+      warning: "требует внимания",
+      error: "ошибка",
+      default: "не настроено",
+    } as Record<string, string>,
     botTitle: "Telegram-бот",
     botStatus: "Состояние",
     botUsername: "Бот",

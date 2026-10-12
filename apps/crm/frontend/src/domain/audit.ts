@@ -52,38 +52,53 @@ function shorten(text: string): string {
 const asText = (value: unknown): string =>
   typeof value === "string" ? value : JSON.stringify(value);
 
+const ID_FIELDS = new Set(["note_id", "contact_id", "telegram_identity_id"]);
+const DATE_FIELDS = new Set(["doc_date", "expected_close_date"]);
+
 /** Код или ссылка по смыслу поля; `null` — показать как есть. */
-function codeValue(field: string, text: string, ctx: AuditContext): string | null {
+function codeValue(field: string, text: string, ctx: AuditContext, entity?: string): string | null {
+  const known = t.auditUi.values[field]?.[text];
+  if (known) return known;
   if (USER_FIELDS.has(field)) return ctx.userName(Number(text)) ?? `#${text}`;
   if (field === "client_id") return `${t.labels.entity["client"] ?? ""} #${text}`;
   if (field === "document_id") return `${t.audit.fields["document_id"] ?? ""} #${text}`;
-  if (field === "note_id") return `#${text}`;
+  if (field === "lead_id") return `${entityLabel("lead")} #${text}`;
+  if (ID_FIELDS.has(field)) return `#${text}`;
   if (field === "cost_usd" && !Number.isNaN(Number(text))) return usd(Number(text));
   if (field === "alias") return modelRoleLabel(text);
   if (field === "requested_at") return formatDateTime(text);
+  if (field === "stage" && entity === "deal") return t.deals.stages[text] ?? text;
   if (field === "stage") return stageLabel(text).label;
+  if (field === "decision") return t.sandbox.decisions[text] ?? text;
   if (field === "owner_mode") return ownerModeLabel(text);
   if (field === "language") return languageLabel(text);
   if (field === "type") return t.clients.types[text] ?? text;
   if (field === "product" || field === "product_key") return ctx.productName(text) ?? text;
   if (field === "roles") return roleLabel(text);
   if (field === "weekdays") return t.settings.weekdays[Number(text)] ?? text;
-  if (field === "doc_date" && /^\d{4}-\d{2}-\d{2}/.test(text)) return formatDate(text.slice(0, 10));
+  if (DATE_FIELDS.has(field) && /^\d{4}-\d{2}-\d{2}/.test(text)) {
+    return formatDate(text.slice(0, 10));
+  }
   return null;
 }
 
 /** Значение поля по-человечески. */
-export function fieldValue(key: string, value: unknown, ctx: AuditContext): string {
+export function fieldValue(
+  key: string,
+  value: unknown,
+  ctx: AuditContext,
+  entity?: string,
+): string {
   if (isEmpty(value)) return t.common.none;
   const field = key.split(".").at(-1) ?? key;
   if (typeof value === "boolean") return value ? t.common.yes : t.common.no;
   if (Array.isArray(value)) {
-    const items = value.map((v) => fieldValue(field, v, ctx));
+    const items = value.map((v) => fieldValue(field, v, ctx, entity));
     return items.length ? items.join(", ") : t.common.none;
   }
   const text = asText(value);
   if (text in BOOLEAN_TEXT) return BOOLEAN_TEXT[text] ? t.common.yes : t.common.no;
-  return codeValue(field, text, ctx) ?? shorten(text);
+  return codeValue(field, text, ctx, entity) ?? shorten(text);
 }
 
 /** Вложенные объекты (настройки) — плоско: `greeting.ru`. */
@@ -106,8 +121,9 @@ export function auditChanges(item: AuditItem, ctx: AuditContext): AuditChange[] 
   return keys
     .filter((k) => JSON.stringify(before[k]) !== JSON.stringify(after[k]))
     .map((k) => {
-      const change: AuditChange = { field: fieldName(k), after: fieldValue(k, after[k], ctx) };
-      if (k in before) change.before = fieldValue(k, before[k], ctx);
+      const value = (v: unknown) => fieldValue(k, v, ctx, item.entity_type);
+      const change: AuditChange = { field: fieldName(k), after: value(after[k]) };
+      if (k in before) change.before = value(before[k]);
       return change;
     });
 }
@@ -128,6 +144,9 @@ export function entityText(
   ctx: AuditContext,
 ): string | undefined {
   if (!id) return undefined;
+  const known = t.auditUi.objects[`${type}:${id}`];
+  if (known) return known;
+  if (type === "sandbox") return t.auditUi.sandbox;
   if (type === "model") return t.auditUi.modelEntity.replace("{role}", modelRoleLabel(id));
   if (type === "user") {
     const name = ctx.userName(Number(id));
