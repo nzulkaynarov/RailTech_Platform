@@ -1,20 +1,10 @@
-import {
-  DatePicker,
-  Drawer,
-  Form,
-  Input,
-  List,
-  Modal,
-  Select,
-  Switch,
-  Upload,
-  Typography,
-} from "antd";
+import { DatePicker, Drawer, Form, Input, List, Modal, Select, Switch, Typography } from "antd";
 import type { UploadFile } from "antd";
 import type { Dayjs } from "dayjs";
 
 import { useDocumentAccess } from "../../api/adminQueries";
 import type { BodyUploadDocumentType, DocumentOut } from "../../api/generated/model";
+import { FileDragger } from "../../components/FileDragger";
 import { PageState } from "../../components/PageState";
 import { actorLabel } from "../../domain/labels";
 import { t } from "../../i18n/ru";
@@ -66,9 +56,7 @@ export function UploadDocumentDialog({ open, saving, onCancel, onSubmit }: Uploa
           rules={[{ required: true }]}
           getValueFromEvent={(e: { fileList: UploadFile[] }) => e.fileList.slice(-1)}
         >
-          <Upload beforeUpload={() => false} maxCount={1}>
-            <a>{t.kb.file}</a>
-          </Upload>
+          <FileDragger />
         </Form.Item>
         <Form.Item name="type" label={t.clients.type} rules={[{ required: true }]}>
           <Select options={TYPE_OPTIONS} />

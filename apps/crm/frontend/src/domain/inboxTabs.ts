@@ -22,3 +22,10 @@ export function pickInboxTab(
   if (isTab(param) && available.includes(param)) return param;
   return available.find((tab) => (counts[tab] ?? 0) > 0) ?? available[0] ?? "handoffs";
 }
+
+/** Лид в панели предпросмотра из `?lead=`: целое положительное число, иначе `null` (панель пуста). */
+export function pickPreviewLead(param: string | null): number | null {
+  if (param === null || !/^\d+$/.test(param)) return null;
+  const id = Number(param);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
+}

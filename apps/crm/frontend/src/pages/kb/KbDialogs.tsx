@@ -1,7 +1,8 @@
-import { Form, Input, Modal, Select, Upload } from "antd";
-import type { UploadFile } from "antd";
+import { Form, Input, Modal, Select } from "antd";
+import type { SelectProps, UploadFile } from "antd";
 
 import { useProducts } from "../../api/adminQueries";
+import { FileDragger } from "../../components/FileDragger";
 import { t } from "../../i18n/ru";
 import { languageOptions } from "../../domain/labels";
 
@@ -20,10 +21,12 @@ export type ManualValues = {
 
 const LANGUAGES = languageOptions();
 
-function ProductSelect() {
+/** `id`, `value` и `onChange` приходят от `Form.Item`: без `id` подпись поля не связана со списком. */
+function ProductSelect(props: SelectProps<string>) {
   const { data } = useProducts();
   return (
     <Select
+      {...props}
       allowClear
       options={(data ?? []).map((p) => ({ value: p.key, label: `${p.name} (${p.key})` }))}
     />
@@ -60,13 +63,7 @@ export function UploadDialog({ open, saving, onCancel, onSubmit }: DialogProps<U
           getValueFromEvent={(e: { fileList: UploadFile[] }) => e.fileList.slice(-1)}
           rules={[{ required: true }]}
         >
-          <Upload
-            beforeUpload={() => false}
-            maxCount={1}
-            accept=".pdf,.docx,.pptx,.xlsx,.md,.html,.htm,.txt"
-          >
-            <a>{t.kb.file}</a>
-          </Upload>
+          <FileDragger accept=".pdf,.docx,.pptx,.xlsx,.md,.html,.htm,.txt" />
         </Form.Item>
         <Form.Item name="title" label={t.kb.title} rules={[{ required: true, max: 500 }]}>
           <Input />

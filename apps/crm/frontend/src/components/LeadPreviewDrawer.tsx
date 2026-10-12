@@ -1,4 +1,4 @@
-import { Button, Descriptions, Drawer, Grid, List, Space, Typography } from "antd";
+import { Button, Card, Descriptions, Drawer, Grid, List, Space, Typography } from "antd";
 import { useNavigate } from "react-router";
 
 import type { LeadDetail, MessageOut } from "../api/generated/model";
@@ -109,32 +109,39 @@ type Props = {
   canTake: boolean;
 };
 
-function Body({ leadId, canTake, onClose }: Props & { leadId: number }) {
+type Preview = { leadId: number; canTake: boolean };
+
+/** Одна сводка для панели справа и для `Drawer`: заголовок, содержимое и кнопки. */
+function useLeadPreview({ leadId, canTake }: Preview) {
   const lead = useLead(leadId);
   const navigate = useNavigate();
   const data = lead.data;
-  const free = data ? data.owner_mode !== "human" : false;
+  const free = canTake && (data ? data.owner_mode !== "human" : false);
+  const title = data ? leadLinkText(data.id, data.display_name) : leadLinkText(leadId);
+  const body = (
+    <PageState query={lead} variant="section">
+      {data ? <Summary lead={data} /> : null}
+    </PageState>
+  );
+  const footer = (
+    <Space wrap>
+      <Button
+        type={free ? "default" : "primary"}
+        onClick={() => void navigate(`/leads/${String(leadId)}`)}
+      >
+        {t.leadPreview.openCard}
+      </Button>
+      {free ? <TakeButton leadId={leadId} size="middle" /> : null}
+    </Space>
+  );
+  return { title, body, footer };
+}
+
+function Body({ leadId, canTake, onClose }: Props & { leadId: number }) {
+  const { title, body, footer } = useLeadPreview({ leadId, canTake });
   return (
-    <Drawer
-      open
-      width={420}
-      onClose={onClose}
-      title={data ? leadLinkText(data.id, data.display_name) : leadLinkText(leadId)}
-      footer={
-        <Space wrap>
-          <Button
-            type={canTake && free ? "default" : "primary"}
-            onClick={() => void navigate(`/leads/${String(leadId)}`)}
-          >
-            {t.leadPreview.openCard}
-          </Button>
-          {canTake && free ? <TakeButton leadId={leadId} size="middle" /> : null}
-        </Space>
-      }
-    >
-      <PageState query={lead} variant="section">
-        {data ? <Summary lead={data} /> : null}
-      </PageState>
+    <Drawer open width={420} onClose={onClose} title={title} footer={footer}>
+      {body}
     </Drawer>
   );
 }
@@ -146,4 +153,34 @@ function Body({ leadId, canTake, onClose }: Props & { leadId: number }) {
 export function LeadPreviewDrawer(props: Props) {
   if (props.leadId === null) return null;
   return <Body {...props} leadId={props.leadId} />;
+}
+
+function PaneBody(props: Preview) {
+  const { title, body, footer } = useLeadPreview(props);
+  return (
+    <Card
+      size="small"
+      title={title}
+      className="lead-preview-pane"
+      classNames={{ body: "lead-preview-body" }}
+      actions={[footer]}
+    >
+      {body}
+    </Card>
+  );
+}
+
+/**
+ * Та же сводка постоянной панелью справа от списка (Входящие на широком экране, Refine/antd P2,
+ * п. 7): без выбранного лида — подсказка одной строкой.
+ */
+export function LeadPreviewPane({ leadId, canTake }: { leadId: number | null; canTake: boolean }) {
+  if (leadId === null) {
+    return (
+      <Card size="small" className="lead-preview-pane">
+        <EmptyState compact title={t.leadPreview.pick} />
+      </Card>
+    );
+  }
+  return <PaneBody leadId={leadId} canTake={canTake} />;
 }
