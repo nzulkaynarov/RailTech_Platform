@@ -7,6 +7,7 @@ from typing import Any
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.sandbox import SANDBOX_SOURCE
 from app.models.kb import KbGap
 from app.models.leads import Lead
 from app.models.qualification import Escalation
@@ -44,7 +45,9 @@ async def build(session: AsyncSession, days: int, today: date) -> Dashboard:
     ).all()
     funnel_rows = (
         await session.execute(
-            select(Lead.stage, func.count()).where(Lead.erased_at.is_(None)).group_by(Lead.stage)
+            select(Lead.stage, func.count())
+            .where(Lead.erased_at.is_(None), Lead.source != SANDBOX_SOURCE)
+            .group_by(Lead.stage)
         )
     ).all()
     totals = _sum(daily, today)

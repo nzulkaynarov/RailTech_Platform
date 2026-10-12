@@ -20,6 +20,7 @@ from app.api.v1 import (
     kb,
     leads,
     me,
+    sandbox,
     setup,
     spend,
     stream,
@@ -131,6 +132,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         spend,
         integrations,
         system_status,
+        sandbox,
     )
     for module in routers:
         router = module.router

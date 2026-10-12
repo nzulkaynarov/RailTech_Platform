@@ -8,6 +8,7 @@ from typing import Any
 from sqlalchemy import ColumnElement, Select, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.sandbox import SANDBOX_SOURCE
 from app.models.auth import User
 from app.models.clients import ClientContact
 from app.models.leads import Conversation, Lead, LeadNote, Message, TelegramIdentity
@@ -32,7 +33,7 @@ class LeadFilter:
 
 
 def _filtered(f: LeadFilter, me: int) -> Select[Lead]:
-    stmt = select(Lead).where(Lead.erased_at.is_(None))
+    stmt = select(Lead).where(Lead.erased_at.is_(None), Lead.source != SANDBOX_SOURCE)
     if f.stage:
         stmt = stmt.where(Lead.stage.in_(f.stage.split(",")))
     if f.owner == "me":
@@ -98,7 +99,11 @@ async def inbox(session: AsyncSession, me: int) -> tuple[list[Lead], list[Lead],
         await session.scalars(
             select(Lead)
             .join(Escalation, Escalation.lead_id == Lead.id)
-            .where(Escalation.status.in_(("open", "snoozed")), Lead.erased_at.is_(None))
+            .where(
+                Escalation.status.in_(("open", "snoozed")),
+                Lead.erased_at.is_(None),
+                Lead.source != SANDBOX_SOURCE,
+            )
             .order_by(Escalation.created_at)
         )
     ).all()
@@ -106,7 +111,10 @@ async def inbox(session: AsyncSession, me: int) -> tuple[list[Lead], list[Lead],
         await session.scalars(
             select(Lead)
             .where(
-                Lead.assigned_user_id == me, Lead.owner_mode == "human", Lead.erased_at.is_(None)
+                Lead.assigned_user_id == me,
+                Lead.owner_mode == "human",
+                Lead.erased_at.is_(None),
+                Lead.source != SANDBOX_SOURCE,
             )
             # Сначала те, кто ждёт ответа: лид написал после последнего ответа менеджера.
             .order_by(_waits_for_reply.desc(), Lead.last_lead_msg_at.desc().nulls_last())
@@ -120,6 +128,7 @@ async def inbox(session: AsyncSession, me: int) -> tuple[list[Lead], list[Lead],
                 Lead.owner_mode == "paused",
                 Lead.assigned_user_id.is_(None),
                 Lead.erased_at.is_(None),
+                Lead.source != SANDBOX_SOURCE,
             )
             .order_by(Lead.last_lead_msg_at.desc().nulls_last())
             .limit(100)

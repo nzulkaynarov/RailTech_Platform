@@ -76,6 +76,8 @@ import type {
   Reply,
   ResolveGap,
   ReturnToBot,
+  SandboxMessageIn,
+  SandboxTurnOut,
   SearchRequest,
   SearchResponse,
   ServiceRequestClose,
@@ -3425,6 +3427,103 @@ export const testModel = async (
   options?: Parameters<typeof http>[1],
 ): Promise<testModelResponse> => {
   return http<testModelResponse>(getTestModelUrl(alias), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export type sandboxMessageResponse200 = {
+  data: SandboxTurnOut;
+  status: 200;
+};
+
+export type sandboxMessageResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type sandboxMessageResponseSuccess = sandboxMessageResponse200 & {
+  headers: Headers;
+};
+export type sandboxMessageResponseError = sandboxMessageResponse422 & {
+  headers: Headers;
+};
+
+export type sandboxMessageResponse = sandboxMessageResponseSuccess | sandboxMessageResponseError;
+
+export const getSandboxMessageUrl = () => {
+  return `/api/v1/sandbox/messages`;
+};
+
+/**
+ * Сообщение боту от имени тестового лида админа: тот же ход, что в Telegram.
+ *
+ * Платно: вызовы моделей пишутся в «Расходы» с пометкой «тест». Передача менеджеру
+ * показывается в `why` и в CRM не создаётся; квалификатор и канал не задействуются.
+ * @summary Sandbox Message
+ */
+export const sandboxMessage = async (
+  sandboxMessageIn: SandboxMessageIn,
+  options?: Parameters<typeof http>[1],
+): Promise<sandboxMessageResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<sandboxMessageResponse>(getSandboxMessageUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(sandboxMessageIn),
+  });
+};
+
+export type sandboxResetResponse204 = {
+  data: void;
+  status: 204;
+};
+
+export type sandboxResetResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type sandboxResetResponseSuccess = sandboxResetResponse204 & {
+  headers: Headers;
+};
+export type sandboxResetResponseError = sandboxResetResponse422 & {
+  headers: Headers;
+};
+
+export type sandboxResetResponse = sandboxResetResponseSuccess | sandboxResetResponseError;
+
+export const getSandboxResetUrl = () => {
+  return `/api/v1/sandbox/reset`;
+};
+
+/**
+ * «Начать заново»: тестовый диалог админа удаляется целиком.
+ * @summary Sandbox Reset
+ */
+export const sandboxReset = async (
+  options?: Parameters<typeof http>[1],
+): Promise<sandboxResetResponse> => {
+  return http<sandboxResetResponse>(getSandboxResetUrl(), {
     ...options,
     method: "POST",
   });

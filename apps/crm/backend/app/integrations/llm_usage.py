@@ -24,7 +24,10 @@ Purpose = Literal[
     "assist_improve",
 ]
 
+UsageKind = Literal["work", "test"]
+
 _current_lead: ContextVar[int | None] = ContextVar("llm_usage_lead_id", default=None)
+_current_kind: ContextVar[UsageKind | None] = ContextVar("llm_usage_kind", default=None)
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,6 +60,20 @@ def lead_scope(lead_id: int | None) -> Iterator[None]:
         yield
     finally:
         _current_lead.reset(token)
+
+
+def current_kind() -> UsageKind | None:
+    return _current_kind.get()
+
+
+@contextmanager
+def kind_scope(kind: UsageKind) -> Iterator[None]:
+    """Вызовы внутри блока учитываются с этим `kind` (песочница бота → `test`), а не по env."""
+    token = _current_kind.set(kind)
+    try:
+        yield
+    finally:
+        _current_kind.reset(token)
 
 
 def parse_cost(raw: str | None) -> float | None:

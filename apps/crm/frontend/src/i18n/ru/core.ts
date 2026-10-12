@@ -16,6 +16,7 @@ export const core = {
     deals: "Сделки",
     kb: "База знаний",
     gaps: "Пробелы знаний",
+    sandbox: "Проверить бота",
     settings: "Настройки",
     audit: "Аудит",
     spend: "Расходы",
@@ -223,6 +224,7 @@ export const core = {
     back: "Назад",
   },
   page: {
+    sandbox: "Проверить бота",
     leads: "Лиды",
     clients: "Клиенты",
     deals: "Сделки",
