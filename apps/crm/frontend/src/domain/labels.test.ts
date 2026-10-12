@@ -9,6 +9,7 @@ import {
   qualificationText,
   reasonLabel,
   rejectedReason,
+  segmentLabel,
   stageLabel,
   STAGE_ORDER,
   transitionReason,
@@ -65,9 +66,7 @@ describe("labels", () => {
   });
 
   it("hides technical rejection text", () => {
-    expect(rejectedReason("transition won -> engaged is not allowed")).toBe(
-      "переход не разрешён правилами",
-    );
+    expect(rejectedReason("transition won -> engaged is not allowed")).toBe("не применено");
   });
 
   it.each([
@@ -93,5 +92,17 @@ describe("decisionErrorLabel", () => {
     ["", "Ошибка квалификатора"],
   ])("%s", (error, expected) => {
     expect(decisionErrorLabel(error)).toBe(expected);
+  });
+});
+
+describe("segmentLabel", () => {
+  it.each([
+    ["transport", "Транспорт"],
+    ["Retail", "Ритейл"],
+    ["агро", "Агро"],
+    ["", "—"],
+    [null, "—"],
+  ])("%j → %s", (code, expected) => {
+    expect(segmentLabel(code)).toBe(expected);
   });
 });

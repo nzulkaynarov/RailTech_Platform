@@ -1,5 +1,18 @@
-import { Button, DatePicker, Grid, Input, InputNumber, Select, Space, Table } from "antd";
+import { FilterOutlined } from "@ant-design/icons";
+import {
+  Button,
+  DatePicker,
+  Drawer,
+  Flex,
+  Grid,
+  Input,
+  InputNumber,
+  Select,
+  Space,
+  Table,
+} from "antd";
 import dayjs from "dayjs";
+import { useState } from "react";
 
 import type { LeadOut } from "../../api/generated/model";
 import { useLeads } from "../../api/queries";
@@ -10,7 +23,13 @@ import { PageHeader } from "../../components/PageHeader";
 import { PageState } from "../../components/PageState";
 import { LangTag, PriorityTag, StageBadge } from "../../components/StageBadge";
 import { languageOptions, stageOptions } from "../../domain/labels";
-import { LEAD_SORTS, LEADS_PAGE, type LeadFilters, toListParams } from "../../hooks/leadFilters";
+import {
+  activeFilterCount,
+  LEAD_SORTS,
+  LEADS_PAGE,
+  type LeadFilters,
+  toListParams,
+} from "../../hooks/leadFilters";
 import { useLeadFilters } from "../../hooks/useLeadFilters";
 import { t } from "../../i18n/ru";
 import { DATE_FORMAT, formatWhen } from "../../lib/time";
@@ -85,6 +104,7 @@ function MoreFilters({ filters, update }: FilterProps) {
         max={100}
         aria-label={t.leads.minScore}
         placeholder={t.leads.minScore}
+        style={{ width: 128 }}
         value={filters.min_score ?? null}
         onChange={(value) => {
           update({ min_score: value ?? undefined });
@@ -112,12 +132,75 @@ function MoreFilters({ filters, update }: FilterProps) {
   );
 }
 
-function Filters(props: FilterProps) {
+function ResetButton({ filters, reset }: { filters: LeadFilters; reset: () => void }) {
+  if (!activeFilterCount(filters)) return null;
+  return (
+    <Button type="link" onClick={reset}>
+      {t.leads.reset}
+    </Button>
+  );
+}
+
+type FiltersProps = FilterProps & { reset: () => void };
+
+function Filters(props: FiltersProps) {
   return (
     <Space wrap role="search" aria-label={t.leads.filters}>
       <MainFilters {...props} />
       <MoreFilters {...props} />
+      <ResetButton filters={props.filters} reset={props.reset} />
     </Space>
+  );
+}
+
+/** Телефон: одна кнопка «Фильтры (n)» и нижняя панель с теми же полями. */
+function PhoneFilters(props: FiltersProps) {
+  const [open, setOpen] = useState(false);
+  const n = activeFilterCount(props.filters);
+  return (
+    <>
+      <Button
+        icon={<FilterOutlined />}
+        className="filters-button"
+        onClick={() => {
+          setOpen(true);
+        }}
+      >
+        {n ? t.leads.filtersCount.replace("{n}", String(n)) : t.leads.filtersButton}
+      </Button>
+      <Drawer
+        placement="bottom"
+        height="auto"
+        open={open}
+        title={t.leads.filters}
+        onClose={() => {
+          setOpen(false);
+        }}
+        footer={
+          <Button
+            type="primary"
+            block
+            onClick={() => {
+              setOpen(false);
+            }}
+          >
+            {t.leads.showResults}
+          </Button>
+        }
+      >
+        <Flex
+          vertical
+          gap="small"
+          role="search"
+          aria-label={t.leads.filters}
+          className="drawer-filters"
+        >
+          <MainFilters {...props} />
+          <MoreFilters {...props} />
+          <ResetButton filters={props.filters} reset={props.reset} />
+        </Flex>
+      </Drawer>
+    </>
   );
 }
 
@@ -167,8 +250,12 @@ export function LeadsPage() {
   const items = query.data?.items ?? [];
   return (
     <PageBody>
-      <PageHeader title={t.page.leads} extra={<Button onClick={reset}>{t.leads.reset}</Button>} />
-      <Filters filters={filters} update={update} />
+      <PageHeader title={t.page.leads} />
+      {phone ? (
+        <PhoneFilters filters={filters} update={update} reset={reset} />
+      ) : (
+        <Filters filters={filters} update={update} reset={reset} />
+      )}
       <PageState query={query} inline>
         {phone ? (
           <LeadCards items={items} loading={query.isLoading} pagination={pagination} />

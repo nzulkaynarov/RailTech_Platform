@@ -223,7 +223,11 @@ async def test_crm_link_telegram_and_make_customer(
         )
         assert unknown.status_code == 404
         vh = login(client, viewer.email, vpassword)
-        assert client.get("/api/v1/clients", headers=vh).status_code == 200
+        listed = client.get("/api/v1/clients", headers=vh)
+        assert listed.status_code == 200
+        row = next(c for c in listed.json() if c["id"] == client_id)
+        assert isinstance(row["open_deals"], int)
+        assert "last_activity_at" in row
         assert client.post("/api/v1/clients", json={"name": "x"}, headers=vh).status_code == 403
         assert client.get("/api/v1/documents", headers=vh).status_code == 403
     async with sessions() as session:

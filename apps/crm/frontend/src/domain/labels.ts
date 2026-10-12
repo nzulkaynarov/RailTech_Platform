@@ -114,6 +114,14 @@ export const QUALIFICATION_KEYS = [
 export const qualificationText = (key: string, value: unknown): string =>
   `${pick(L.qualification, key)}: ${pick(L.qualificationValue, String(value))}`;
 
+/** Сегмент клиента: известный код — словами, иначе как ввели, с заглавной буквы. */
+export function segmentLabel(code: string | null | undefined): string {
+  const value = (code ?? "").trim();
+  if (!value) return t.common.none;
+  const known = L.segment[value.toLowerCase()];
+  return known ?? value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 export const sourceLabel = (code: string): string => pick(L.source, code);
 
 /** Похоже на служебный код (`price_or_contract_asked`), а не на текст для человека. */

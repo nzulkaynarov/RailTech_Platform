@@ -161,7 +161,7 @@ export function LeadDetailPage() {
                 <LeadNotes leadId={id} />
               </Space>
             }
-            why={<DecisionsPanel query={decisions} />}
+            why={<DecisionsPanel query={decisions} isAdmin={rights.isAdmin} />}
           />
         </PageBody>
       ) : null}

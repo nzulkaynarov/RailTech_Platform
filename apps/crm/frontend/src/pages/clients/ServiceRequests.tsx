@@ -90,7 +90,9 @@ function RequestText({ r }: { r: ServiceRequestOut }) {
 export function ServiceRequests({ clientId, requests, canWrite }: Props) {
   const [closing, setClosing] = useState<ServiceRequestOut | null>(null);
   if (!requests.length) {
-    return <EmptyState title={t.clients.requestsEmpty} hint={t.clients.requestsEmptyHint} />;
+    return (
+      <EmptyState compact title={t.clients.requestsEmpty} hint={t.clients.requestsEmptyHint} />
+    );
   }
   const actions = (r: ServiceRequestOut) =>
     canWrite && r.status === "open"

@@ -129,3 +129,11 @@ h1.page-title.auth-title {
 .mode-banner {
   margin-bottom: var(--ant-margin);
 }
+
+/* Телефон: кнопка «Фильтры (n)» по ширине текста, поля в нижней панели — во всю ширину. */
+.filters-button {
+  align-self: flex-start;
+}
+.drawer-filters > * {
+  width: 100% !important;
+}

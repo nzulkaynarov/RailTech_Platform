@@ -4,13 +4,13 @@ import { useState } from "react";
 
 import { adminKeys } from "../../api/adminQueries";
 import { updateClient } from "../../api/generated/crm";
-import type { ClientOut, ClientUpdate } from "../../api/generated/model";
+import type { ClientDetail, ClientUpdate } from "../../api/generated/model";
 import { unwrap } from "../../api/http";
 import { useTeam } from "../../api/queries";
 import { useApiErrorToast } from "../../hooks/useApiErrorToast";
 import { t } from "../../i18n/ru";
 
-function useSaveClient(client: ClientOut, onSaved: () => void) {
+function useSaveClient(client: ClientDetail, onSaved: () => void) {
   const query = useQueryClient();
   const { message } = AntApp.useApp();
   return useMutation({
@@ -35,7 +35,7 @@ function useSaveClient(client: ClientOut, onSaved: () => void) {
 }
 
 /** Карточка клиента: правка полей; пустое поле очищает значение (ИНН, сегмент, ответственный). */
-export function EditClient({ client }: { client: ClientOut }) {
+export function EditClient({ client }: { client: ClientDetail }) {
   const [open, setOpen] = useState(false);
   const [form] = Form.useForm<ClientUpdate>();
   const active = Form.useWatch("is_active", form);

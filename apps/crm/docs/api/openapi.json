@@ -757,7 +757,8 @@
         "title": "ClientDetail",
         "type": "object"
       },
-      "ClientOut": {
+      "ClientListItem": {
+        "description": "Строка списка клиентов: открытые сделки и последнее сообщение по любому лиду клиента.",
         "properties": {
           "created_at": {
             "format": "date-time",
@@ -783,6 +784,18 @@
             "title": "Is Active",
             "type": "boolean"
           },
+          "last_activity_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Activity At"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -797,6 +810,10 @@
               }
             ],
             "title": "Notes"
+          },
+          "open_deals": {
+            "title": "Open Deals",
+            "type": "integer"
           },
           "owner_user_id": {
             "anyOf": [
@@ -829,9 +846,11 @@
           "owner_user_id",
           "is_active",
           "notes",
-          "created_at"
+          "created_at",
+          "open_deals",
+          "last_activity_at"
         ],
-        "title": "ClientOut",
+        "title": "ClientListItem",
         "type": "object"
       },
       "ClientUpdate": {
@@ -5464,7 +5483,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/ClientOut"
+                    "$ref": "#/components/schemas/ClientListItem"
                   },
                   "title": "Response List Clients",
                   "type": "array"

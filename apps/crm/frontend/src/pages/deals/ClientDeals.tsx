@@ -15,20 +15,17 @@ export function ClientDeals({ clientId, canWrite }: { clientId: number; canWrite
   const [editing, setEditing] = useState<DealOut | null>(null);
   const [open, setOpen] = useState(false);
   const items = query.data ?? [];
+  const create = () => {
+    setEditing(null);
+    setOpen(true);
+  };
   return (
     <Card
       size="small"
       title={t.nav.deals}
       extra={
-        canWrite ? (
-          <Button
-            size="small"
-            icon={<PlusOutlined />}
-            onClick={() => {
-              setEditing(null);
-              setOpen(true);
-            }}
-          >
+        canWrite && items.length ? (
+          <Button size="small" icon={<PlusOutlined />} onClick={create}>
             {t.deals.create}
           </Button>
         ) : null
@@ -37,7 +34,13 @@ export function ClientDeals({ clientId, canWrite }: { clientId: number; canWrite
       <PageState
         query={query}
         variant="section"
-        empty={!items.length && { title: t.deals.clientEmpty }}
+        empty={
+          !items.length && {
+            compact: true,
+            title: t.deals.clientEmpty,
+            ...(canWrite ? { action: { label: t.clients.addInline, onClick: create } } : {}),
+          }
+        }
       >
         <DealsTable
           deals={items}

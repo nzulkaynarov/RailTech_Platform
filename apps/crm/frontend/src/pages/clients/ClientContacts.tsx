@@ -170,11 +170,10 @@ export function ClientContacts({ clientId, canWrite }: { clientId: number; canWr
         />
       ) : (
         <EmptyState
+          compact
           title={t.contacts.empty}
           hint={t.contacts.emptyHint}
-          {...(canWrite
-            ? { action: { label: t.contacts.add, icon: <PlusOutlined />, onClick: openNew } }
-            : {})}
+          {...(canWrite ? { action: { label: t.clients.addInline, onClick: openNew } } : {})}
         />
       )}
       {canWrite ? (
