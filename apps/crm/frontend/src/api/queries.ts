@@ -54,9 +54,10 @@ export const useInbox = () =>
   useQuery({ queryKey: keys.inbox, queryFn: async () => unwrap(await inbox()) });
 
 /** Открытые запросы клиентов (Q-017): самый старый первым, как в API. */
-export const useOpenServiceRequests = () =>
+export const useOpenServiceRequests = (enabled = true) =>
   useQuery({
     queryKey: keys.serviceRequests,
+    enabled,
     queryFn: async () => unwrap(await listServiceRequests({ status: "open" })),
   });
 

@@ -1,41 +1,27 @@
-import { Button, Card, Grid, List, Tag, Tooltip, Typography } from "antd";
+import { Flex, Grid, List, Select, Tabs, Tag, Tooltip, Typography } from "antd";
+import { type ReactNode, useState } from "react";
+import { useSearchParams } from "react-router";
 
-import type { EscalationOut, LeadOut } from "../../api/generated/model";
-import { useInbox, useMe, usePermissionsQuery } from "../../api/queries";
+import type { EscalationOut, InboxResponse, LeadOut } from "../../api/generated/model";
+import { useInbox, useMe, useOpenServiceRequests, usePermissionsQuery } from "../../api/queries";
 import { allowed } from "../../app/providers/access";
 import { EmptyState, type EmptyStateProps } from "../../components/EmptyState";
 import { LeadLink } from "../../components/EntityLink";
+import { LeadPreviewDrawer, TakeButton } from "../../components/LeadPreviewDrawer";
 import { PageBody } from "../../components/PageBody";
 import { PageHeader } from "../../components/PageHeader";
 import { PageState } from "../../components/PageState";
 import { PriorityTag, StageBadge } from "../../components/StageBadge";
+import { INBOX_TABS, type InboxTab, pickInboxTab } from "../../domain/inboxTabs";
 import { reasonLabel, slaColor, unreadLabel } from "../../domain/labels";
 import { HOUR, formatWait, isWaiting, slaState, sortHandoffs } from "../../domain/sla";
 import { useNow } from "../../hooks/useNow";
-import { useTakeAndOpen } from "../../hooks/useLeadActionRunner";
 import { t } from "../../i18n/ru";
+import { isRowClick } from "../../lib/rowClick";
 import { formatDateTime, formatWhen, fromNow } from "../../lib/time";
 import "../../styles/workspace.css";
-import { ServiceRequestsColumn } from "./ServiceRequestsColumn";
+import { ServiceRequestsList } from "./ServiceRequestsList";
 import "../pages.css";
-
-/** «Забрать» прямо из очереди и сразу в карточку лида (как Intercom «Assign to me»). */
-function QuickTake({ lead }: { lead: LeadOut }) {
-  const { takeAndOpen, busy } = useTakeAndOpen(lead.id);
-  const phone = Grid.useBreakpoint().sm === false;
-  return (
-    <Button
-      size={phone ? "large" : "small"}
-      block={phone}
-      type="primary"
-      className="touch-target"
-      loading={busy}
-      onClick={() => void takeAndOpen()}
-    >
-      {t.actions.take}
-    </Button>
-  );
-}
 
 /** Сколько ждёт передача; цвет — по сроку реакции из настроек (через `sla_due_at`). */
 function SlaTimer({ escalation, now }: { escalation: EscalationOut; now: Date }) {
@@ -73,16 +59,21 @@ function LastMessage({ at }: { at: string | null }) {
   );
 }
 
-type ItemProps = { lead: LeadOut; canTake: boolean; now: Date };
+type ItemProps = { lead: LeadOut; canTake: boolean; now: Date; onOpen: (id: number) => void };
 
-function LeadItem({ lead, canTake, now }: ItemProps) {
-  const free = lead.owner_mode !== "human";
+/** Строка: имя · приоритет · ждёт N мин; ниже стадия, причины и потребность; справа «Забрать». */
+function LeadItem({ lead, canTake, now, onOpen }: ItemProps) {
   const e = lead.escalation;
   const unread = unreadLabel();
   return (
     <List.Item
-      className={e?.priority === "hot" ? "inbox-hot" : ""}
-      actions={canTake && free ? [<QuickTake key="take" lead={lead} />] : []}
+      className={e?.priority === "hot" ? "inbox-row inbox-hot" : "inbox-row"}
+      onClick={(event) => {
+        if (isRowClick(event.target)) onOpen(lead.id);
+      }}
+      actions={
+        canTake && lead.owner_mode !== "human" ? [<TakeButton key="take" leadId={lead.id} />] : []
+      }
     >
       <List.Item.Meta
         title={
@@ -90,90 +81,153 @@ function LeadItem({ lead, canTake, now }: ItemProps) {
             <LeadLink id={lead.id} name={lead.display_name} />
             {e ? <PriorityTag priority={e.priority} /> : null}
             {lead.unread ? <Tag color={unread.color}>{unread.label}</Tag> : null}
-          </span>
-        }
-        description={
-          <span className="lead-card-row">
             {e && isWaiting(e) ? (
               <SlaTimer escalation={e} now={now} />
             ) : (
               <LastMessage at={lead.last_lead_msg_at} />
             )}
-            <StageBadge stage={lead.stage} />
-            {e ? (
-              <Typography.Text>{e.reason_codes.map(reasonLabel).join(", ")}</Typography.Text>
-            ) : null}
-            {lead.need_summary ? (
-              <Typography.Text type="secondary">{lead.need_summary}</Typography.Text>
-            ) : null}
           </span>
+        }
+        description={
+          <>
+            <span className="lead-card-row">
+              <StageBadge stage={lead.stage} />
+              {e ? (
+                <Typography.Text>{e.reason_codes.map(reasonLabel).join(", ")}</Typography.Text>
+              ) : null}
+            </span>
+            {lead.need_summary ? (
+              <Typography.Paragraph type="secondary" ellipsis className="inbox-need">
+                {lead.need_summary}
+              </Typography.Paragraph>
+            ) : null}
+          </>
         }
       />
     </List.Item>
   );
 }
 
-type ColumnProps = Omit<ItemProps, "lead"> & {
-  title: string;
-  empty: EmptyStateProps;
-  leads: LeadOut[];
-};
+type LeadListProps = Omit<ItemProps, "lead"> & { leads: LeadOut[]; empty: EmptyStateProps };
 
-function Column({ title, empty, leads, canTake, now }: ColumnProps) {
+function LeadList({ leads, empty, ...rest }: LeadListProps) {
+  if (!leads.length) return <EmptyState compact {...empty} />;
   return (
-    <Card title={`${title} · ${String(leads.length)}`} size="small">
-      {leads.length ? (
-        <List
-          dataSource={leads}
-          renderItem={(lead) => <LeadItem lead={lead} canTake={canTake} now={now} />}
-        />
-      ) : (
-        <EmptyState {...empty} />
-      )}
-    </Card>
+    <List
+      size="small"
+      dataSource={leads}
+      renderItem={(lead) => <LeadItem lead={lead} {...rest} />}
+    />
   );
 }
 
-/** Входящие (SPEC §10.1): открытые передачи (горячие и дольше ждущие первыми), мои лиды, без ответственного. */
+type TabSpec = { leads: LeadOut[]; empty: EmptyStateProps; take: boolean };
+
+function leadTabs(data: InboxResponse): Record<Exclude<InboxTab, "requests">, TabSpec> {
+  return {
+    handoffs: {
+      leads: sortHandoffs(data.escalations),
+      empty: { title: t.inbox.emptyEscalations },
+      take: true,
+    },
+    mine: {
+      leads: data.mine,
+      empty: { title: t.inbox.emptyMine, hint: t.inbox.emptyMineHint },
+      take: false,
+    },
+    unassigned: { leads: data.unassigned, empty: { title: t.inbox.emptyUnassigned }, take: true },
+  };
+}
+
+type Section = { key: InboxTab; label: string; children: ReactNode };
+type SectionsProps = { active: InboxTab; items: Section[]; onChange: (tab: string) => void };
+
+/**
+ * Десктоп — вкладки; телефон — выпадающий список разделов (четыре вкладки со счётчиками
+ * не помещаются в 390 px, а «…» antd внутри `tablist` нарушает axe aria-required-children).
+ */
+function Sections({ active, items, onChange }: SectionsProps) {
+  const phone = Grid.useBreakpoint().sm === false;
+  if (!phone) {
+    return (
+      <Tabs aria-label={t.inbox.tabsLabel} activeKey={active} items={items} onChange={onChange} />
+    );
+  }
+  return (
+    <Flex vertical gap="small">
+      <Select
+        aria-label={t.inbox.tabsLabel}
+        value={active}
+        options={items.map(({ key, label }) => ({ value: key, label }))}
+        onChange={onChange}
+        size="large"
+      />
+      {items.find((item) => item.key === active)?.children}
+    </Flex>
+  );
+}
+
+/**
+ * Входящие (SPEC §10.1, UX волна 2): один список с вкладками «Передачи · Мои · Без ответственного ·
+ * Запросы клиентов» и счётчиками; вкладка — в URL. Клик по строке — краткая сводка справа.
+ */
 export function InboxPage() {
   const query = useInbox();
   const me = useMe();
   const perms = usePermissionsQuery();
   const now = useNow();
+  const [search, setSearch] = useSearchParams();
+  const [preview, setPreview] = useState<number | null>(null);
   const canTake = allowed(perms.data, "leads", "take") && Boolean(me.data);
   const canSeeClients = allowed(perms.data, "clients", "read");
+  const requests = useOpenServiceRequests(canSeeClients);
   const data = query.data;
+  const specs = data ? leadTabs(data) : null;
+  const available = canSeeClients ? INBOX_TABS : INBOX_TABS.filter((k) => k !== "requests");
+  const counts = {
+    handoffs: specs?.handoffs.leads.length,
+    mine: specs?.mine.leads.length,
+    unassigned: specs?.unassigned.leads.length,
+    requests: requests.data?.length,
+  };
+  const active = pickInboxTab(search.get("tab"), counts, available);
+  const items = available.map((key) => {
+    const spec = key === "requests" ? null : specs?.[key];
+    return {
+      key,
+      label: `${t.inbox.tabs[key] ?? key} · ${String(counts[key] ?? 0)}`,
+      children: spec ? (
+        <LeadList
+          leads={spec.leads}
+          empty={spec.empty}
+          canTake={canTake && spec.take}
+          now={now}
+          onOpen={setPreview}
+        />
+      ) : key === "requests" ? (
+        <ServiceRequestsList query={requests} now={now} />
+      ) : null,
+    };
+  });
   return (
     <PageBody>
       <PageHeader title={t.page.inbox} />
       <PageState query={query} ready={Boolean(data)}>
-        {data ? (
-          <div className="inbox-grid">
-            <Column
-              title={t.inbox.escalations}
-              empty={{ title: t.inbox.emptyEscalations }}
-              leads={sortHandoffs(data.escalations)}
-              canTake={canTake}
-              now={now}
-            />
-            <Column
-              title={t.inbox.mine}
-              empty={{ title: t.inbox.emptyMine, hint: t.inbox.emptyMineHint }}
-              leads={data.mine}
-              canTake={false}
-              now={now}
-            />
-            <Column
-              title={t.inbox.unassigned}
-              empty={{ title: t.inbox.emptyUnassigned }}
-              leads={data.unassigned}
-              canTake={canTake}
-              now={now}
-            />
-            {canSeeClients ? <ServiceRequestsColumn now={now} /> : null}
-          </div>
-        ) : null}
+        <Sections
+          active={active}
+          items={items}
+          onChange={(tab) => {
+            setSearch({ tab }, { replace: true });
+          }}
+        />
       </PageState>
+      <LeadPreviewDrawer
+        leadId={preview}
+        canTake={canTake}
+        onClose={() => {
+          setPreview(null);
+        }}
+      />
     </PageBody>
   );
 }

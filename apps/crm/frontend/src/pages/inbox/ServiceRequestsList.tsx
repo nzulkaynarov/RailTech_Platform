@@ -1,8 +1,8 @@
-import { Button, Card, List, Tag, Typography } from "antd";
+import type { UseQueryResult } from "@tanstack/react-query";
+import { Button, List, Tag, Typography } from "antd";
 import { Link } from "react-router";
 
 import type { ServiceRequestItem } from "../../api/generated/model";
-import { useOpenServiceRequests } from "../../api/queries";
 import { LeadLink } from "../../components/EntityLink";
 import { PageState } from "../../components/PageState";
 import { formatWait } from "../../domain/sla";
@@ -42,26 +42,26 @@ function RequestItem({ request, now }: { request: ServiceRequestItem; now: Date 
   );
 }
 
-/** Открытые запросы клиентов после сделки (Q-017): самый долгий — первым, закрытие — в карточке клиента. */
-export function ServiceRequestsColumn({ now }: { now: Date }) {
-  const query = useOpenServiceRequests();
+type Props = { query: UseQueryResult<ServiceRequestItem[]>; now: Date };
+
+/** Вкладка «Запросы клиентов» (Q-017): самый долгий — первым, закрытие — в карточке клиента. */
+export function ServiceRequestsList({ query, now }: Props) {
   const items = query.data ?? [];
   return (
-    <Card title={`${t.inbox.requests} · ${String(items.length)}`} size="small">
-      <PageState
-        query={query}
-        variant="section"
-        empty={
-          query.data && !items.length
-            ? { title: t.inbox.emptyRequests, hint: t.inbox.emptyRequestsHint }
-            : null
-        }
-      >
-        <List
-          dataSource={items}
-          renderItem={(request) => <RequestItem request={request} now={now} />}
-        />
-      </PageState>
-    </Card>
+    <PageState
+      query={query}
+      variant="section"
+      empty={
+        query.data && !items.length
+          ? { compact: true, title: t.inbox.emptyRequests, hint: t.inbox.emptyRequestsHint }
+          : null
+      }
+    >
+      <List
+        size="small"
+        dataSource={items}
+        renderItem={(request) => <RequestItem request={request} now={now} />}
+      />
+    </PageState>
   );
 }
