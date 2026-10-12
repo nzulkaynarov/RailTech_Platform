@@ -17,7 +17,7 @@ from app.models.leads import Conversation, Lead, Message
 from app.repositories import leads as repo
 from app.schemas.settings import AppSettings
 from app.services import escalation
-from app.services.conversation_types import ActivityHook, Outgoing, Turn
+from app.services.conversation_types import ActivityHook, Keyboard, Outgoing, Turn
 
 logger = structlog.get_logger(__name__)
 
@@ -174,3 +174,44 @@ async def report_failure(
     hits = evaluate(signals, cfg.escalation.triggers())
     applied = await escalation.apply(session, lead, hits, cfg, datetime.now(UTC))
     return applied.escalation_id if applied else None
+
+
+def failure_reply(
+    cfg: AppSettings, language: Language, notice: str | None
+) -> tuple[str, Keyboard | None, dict[str, Any]]:
+    """Ответ лиду при сбое агента: первый раз — честно и с кнопкой «Позвать менеджера»;
+    повторный сбой подряд передаёт лида менеджеру — без второго извинения (аудит P0)."""
+    if notice in ("handoff", "off_hours"):
+        text = cfg.lead_notice(notice, language)  # type: ignore[arg-type]
+        return text, None, {"error": "agent_unavailable", "notice": notice}
+    text = cfg.texts.service_unavailable.get(language)
+    return text, "handoff_offer", {"error": "agent_unavailable"}
+
+
+async def agent_failure(
+    session: AsyncSession,
+    conversation: Conversation,
+    lead: Lead,
+    cfg: AppSettings,
+    language: Language,
+) -> tuple[list[Outgoing], int | None]:
+    """Ход не удался (модель, crm-mcp): сбой считается как fallback — серия из
+    `kb_gap_streak` подряд создаёт warm-эскалацию и передачу менеджеру (решает код)."""
+    lead.consecutive_fallbacks += 1
+    signals = TriggerSignals(
+        agent_unavailable=True, consecutive_fallbacks=lead.consecutive_fallbacks
+    )
+    hits = evaluate(signals, cfg.escalation.triggers())
+    now = datetime.now(UTC)
+    applied = await escalation.apply(
+        session, lead, hits, cfg, now, reason_text="dialog: agent_unavailable"
+    )
+    text, keyboard, meta = failure_reply(cfg, language, applied.plan.lead_text if applied else None)
+    message = await repo.add_message(
+        session, conversation_id=conversation.id, role="bot", text=text, meta=meta
+    )
+    lead.last_bot_msg_at = now
+    outgoing = Outgoing(
+        text, keyboard=keyboard, message_id=message.id, language=language, lead_id=lead.id
+    )
+    return [outgoing], applied.escalation_id if applied else None

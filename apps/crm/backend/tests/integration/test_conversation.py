@@ -23,7 +23,7 @@ from app.repositories.leads import ERASED_TEXT
 from app.services.conversation import ConversationService, Incoming
 from app.services.settings import SettingsService
 from tests.fakes import FakeEmbedder
-from tests.integration.kb_seed import seed_kb
+from tests.integration.kb_seed import hash_threshold, seed_kb
 from tests.integration.servers import free_port, running
 from tests.unit.agents.fakes import ReplayModel, reply
 
@@ -46,6 +46,7 @@ async def stack(
     sessions: async_sessionmaker[AsyncSession], live_settings: Settings
 ) -> AsyncIterator[Stack]:
     await seed_kb(sessions)
+    await hash_threshold(sessions)
     container = Container(live_settings)
     container.__dict__["session_factory"] = sessions
     container.__dict__["embedder"] = FakeEmbedder()
@@ -269,3 +270,17 @@ async def test_agent_failure_is_reported_to_the_team_without_silencing_the_bot(
     assert (escalation.reason_codes, escalation.priority) == (["agent_unavailable"], "info")
     assert (await lead_row(stack.sessions)).owner_mode == "bot"
     assert ("escalation", escalation.lead_id) in stack.hooks
+    assert out[-1].keyboard == "handoff_offer"
+
+
+async def test_second_agent_failure_in_a_row_hands_off_without_repeating_the_apology(
+    stack: Stack,
+) -> None:
+    await consented(stack)
+    first = await stack.service.handle_message(msg("Что входит в тариф Старт для кассы RT-POS?"))
+    second = await stack.service.handle_message(msg("А для двух касс?"))
+    assert second[-1].text != first[-1].text
+    assert "менеджер его увидит" not in second[-1].text
+    escalation = await only_escalation(stack.sessions)
+    assert escalation.priority == "warm"
+    assert (await lead_row(stack.sessions)).owner_mode == "paused"

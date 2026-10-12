@@ -16,6 +16,7 @@ from aiogram.client.default import DefaultBotProperties
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bot import channel, chat_member, client_handlers, commands, handlers
+from app.bot.errors import ErrorReplier
 from app.bot.middlewares import IdempotencyMiddleware, RateLimitMiddleware
 from app.bot.status import ClientStatusMiddleware
 from app.config import Settings
@@ -59,6 +60,8 @@ def build_dispatcher(
     dispatcher.include_router(client_handlers.router)
     dispatcher.include_router(chat_member.router)
     dispatcher.include_router(handlers.router)
+    # Сбой обработчика: лог и одно «не получается ответить» на чат, а не тишина (аудит).
+    dispatcher.errors.register(ErrorReplier())
     return dispatcher
 
 

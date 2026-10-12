@@ -53,6 +53,33 @@ _SMALLTALK: Final = frozenset(
         "good morning",
     }
 )
+# Подтверждение/благодарность: короткий ответ из настроек без модели и без встречного вопроса.
+_ACK: Final = frozenset(
+    {
+        "спасибо",
+        "спасибо большое",
+        "большое спасибо",
+        "благодарю",
+        "ок",
+        "окей",
+        "хорошо",
+        "понятно",
+        "ясно",
+        "rahmat",
+        "katta rahmat",
+        "tushunarli",
+        "yaxshi",
+        "xop",
+        "mayli",
+        "thanks",
+        "thank you",
+        "thx",
+        "ok",
+        "okay",
+        "got it",
+        "great",
+    }
+)
 _QUESTION: Final = re.compile(
     r"\?|\b(как|что|сколько|где|когда|можно|есть ли"
     r"|qanday|qancha|nima|qayerda|how|what|where|when|can)\b",
@@ -74,6 +101,7 @@ class DecisionInput:
     document_requested: bool = False
     documents_found: int = 0
     customer: bool = False
+    kb_unavailable: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -86,6 +114,10 @@ class Decision:
 def is_smalltalk(text: str) -> bool:
     normalized = normalize_question(text)
     return normalized in _SMALLTALK or (len(normalized.split()) <= 2 and not _QUESTION.search(text))
+
+
+def is_ack(text: str) -> bool:
+    return normalize_question(text) in _ACK
 
 
 def decide(inp: DecisionInput) -> Decision:
@@ -103,7 +135,12 @@ def decide(inp: DecisionInput) -> Decision:
     if inp.document_requested:
         # Несколько кандидатов: модель перечислит их и спросит, какой нужен.
         return Decision(Action.ANSWER, reason="documents_ambiguous")
+    if is_ack(inp.text):
+        return Decision(Action.ANSWER, reason="ack")
     smalltalk = is_smalltalk(inp.text)
+    if inp.kb_unavailable and not smalltalk and not inp.customer:
+        # Поиск недоступен: честный ответ с предложением менеджера, а не извинение (аудит P0).
+        return Decision(Action.FALLBACK, reason="kb_unavailable")
     confident = inp.best_score is not None and inp.best_score >= inp.min_score
     if not confident and not smalltalk and inp.customer:
         # Клиенту отвечает сервисный промпт: без фактов из KB он оформляет запрос менеджеру.

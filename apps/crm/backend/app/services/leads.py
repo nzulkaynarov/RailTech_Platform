@@ -27,6 +27,7 @@ from app.domain.errors import (
 from app.domain.lead_access import may_snooze
 from app.domain.stage_machine import stage_before_handoff
 from app.domain.stages import OwnerMode, Stage, TransitionSource
+from app.domain.text import staff_name
 from app.models.leads import Lead, LeadNote
 from app.models.qualification import Escalation, StageTransition
 from app.repositories import events
@@ -102,7 +103,7 @@ class LeadService:
                 escalation.taken_at = datetime.now(UTC)
             changed = await self._finish(session, who, lead, "lead.take", before, escalation)
             language = LANGUAGES.get(lead.language, "ru")
-        text = cfg.texts.manager_joined.get(language, manager=who.first_name or who.full_name)
+        text = cfg.texts.manager_joined.get(language, manager=staff_name(who.full_name, language))
         await self._messenger.send(lead_id, text, {"notice": "manager_joined"})
         await self._notify(changed)
 
@@ -173,7 +174,7 @@ class LeadService:
             lead.assigned_user_id = user_id
             changed = await self._finish(session, who, lead, "lead.assign", before, None)
             language = LANGUAGES.get(lead.language, "ru")
-            name = target.full_name.split()[0] if target.full_name.strip() else target.full_name
+            name = staff_name(target.full_name, language)
         text = cfg.texts.manager_joined.get(language, manager=name)
         await self._messenger.send(lead_id, text, {"notice": "manager_joined"})
         await self._notify(changed)

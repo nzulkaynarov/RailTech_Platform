@@ -19,6 +19,7 @@ from app.domain.consent import consent_required
 from app.domain.dialog_policy import Action
 from app.domain.language import Language, detect_language
 from app.domain.stages import OwnerMode, Stage, TransitionSource
+from app.domain.text import drop_trailing_question
 from app.domain.triggers import TriggerSignals, evaluate
 from app.integrations.llm_usage import lead_scope
 from app.models.leads import Conversation, Lead
@@ -28,6 +29,7 @@ from app.security.agent_context import issue
 from app.services import escalation, stages
 from app.services.conversation_erasure import ErasureMixin
 from app.services.conversation_support import (
+    agent_failure,
     apply_counters,
     consent_prompt,
     current_lead,
@@ -97,6 +99,11 @@ class ConversationService(ErasureMixin):
                 await self._fire(*escalated)
             elif early:
                 await self._fire(lead_of(early), None)
+            return early
+        if turn.owner_mode == OwnerMode.HUMAN:
+            # Лида ведёт человек: агент не запускается (ни MCP, ни извинений), сообщение
+            # сохранено и менеджер уведомлён выше; квалификатор — как раньше.
+            await self._fire(turn.lead_id if turn.mode == "prospect" else None, None)
             return early
         return early + await self._answer(turn, cfg)
 
@@ -322,20 +329,10 @@ class ConversationService(ErasureMixin):
             if lead is None or conversation is None:
                 return [], None
             if result is None:
-                text = cfg.texts.service_unavailable.get(turn.language)
-                await repo.add_message(
-                    session,
-                    conversation_id=conversation.id,
-                    role="system",
-                    text=text,
-                    meta={"error": "agent_unavailable"},
-                )
-                failure = await report_failure(
-                    session, lead, cfg, TriggerSignals(agent_unavailable=True)
-                )
-                return [Outgoing(text)], failure
+                return await agent_failure(session, conversation, lead, cfg, turn.language)
             apply_counters(lead, result)
-            if result.action == Action.FALLBACK:
+            if result.action == Action.FALLBACK and result.reason != "kb_unavailable":
+                # Сбой поиска — не пробел базы знаний: в журнал только «нет ответа в KB».
                 await register_gap(
                     session,
                     question=turn.text,
@@ -351,7 +348,11 @@ class ConversationService(ErasureMixin):
             notice = applied.plan.lead_text if applied else None
             fallback = result.action == Action.FALLBACK
             # «Могу передать, если хотите» и сразу «Передаю…» — противоречие: оставляем второе.
-            replies = [result.reply] if result.reply and not (fallback and notice) else []
+            reply = result.reply
+            if reply and notice and result.action == Action.ANSWER:
+                # Сразу за ответом идёт «Передаю менеджеру» — встречный вопрос модели лишний.
+                reply = drop_trailing_question(reply)
+            replies = [reply] if reply and not (fallback and notice) else []
             offer: Keyboard | None = "handoff_offer" if fallback and not notice else None
             if notice is not None and result.action != Action.HANDOFF:
                 notice_text = cfg.lead_notice(notice, turn.language)

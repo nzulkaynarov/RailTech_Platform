@@ -218,6 +218,11 @@ class TextsSettings(ClientBotTexts):
     language_set: LocalizedText = _t(
         "Буду отвечать на русском.", "Oʻzbek tilida javob beraman.", "I'll reply in English."
     )
+    smalltalk_ack: LocalizedText = _t(
+        "Пожалуйста! Если появятся вопросы — пишите.",
+        "Arzimaydi! Savollar boʻlsa, yozing.",
+        "You're welcome! Write any time you have a question.",
+    )
 
 
 class EscalationSettings(StrictModel):
@@ -260,13 +265,16 @@ class EscalationSettings(StrictModel):
 
 
 class KbSettings(StrictModel):
-    min_score: float = Field(default=0.55, ge=0, le=1)
+    # Аудит 2026-10-12: бессмыслица набирала 0.60–0.68 — порог выше этого шума (SPEC §7.1).
+    min_score: float = Field(default=0.70, ge=0, le=1)
     top_k: int = Field(default=6, ge=1, le=10)
+    # Таймаут попытки поиска kb-mcp; после второй неудачи — честный ответ без модели.
+    search_timeout_s: float = Field(default=6.0, ge=1, le=30)
 
 
 class BotSettings(StrictModel):
     persona: str = "Вежливый, спокойный ассистент без давления и навязывания; отвечает по делу."
-    max_words: int = Field(default=120, ge=20, le=400)
+    max_words: int = Field(default=60, ge=20, le=400)
     history_messages: int = Field(default=20, ge=2, le=50)
     rate_limit_per_minute: int = Field(default=20, ge=1)
     unresponsive_days: int = Field(default=7, ge=1, le=90)  # BUSINESS §5: 7 дней
