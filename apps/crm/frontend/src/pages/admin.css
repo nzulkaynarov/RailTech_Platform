@@ -7,6 +7,14 @@ h2.section-title.ant-typography {
   font-size: var(--ant-font-size-heading-5);
   line-height: var(--ant-line-height-heading-5);
 }
+/* Подзаголовок внутри карточки: меньше заголовка карточки, как подпись раздела. */
+h3.section-label.ant-typography {
+  margin: var(--ant-margin) 0 var(--ant-margin-xs);
+  font-size: var(--ant-font-size-sm);
+  font-weight: var(--ant-font-weight-strong, 600);
+  line-height: var(--ant-line-height-sm, 1.67);
+  color: var(--ant-color-text-secondary);
+}
 
 /* Настройки: разделы слева, форма справа; на мобильном — одна колонка. */
 .settings-layout {
@@ -58,6 +66,7 @@ h2.section-title.ant-typography {
   padding: var(--ant-padding-sm);
   background: var(--ant-color-bg-container);
   border-top: 1px solid var(--ant-color-border-secondary);
+  border-radius: 0 0 var(--ant-border-radius-lg) var(--ant-border-radius-lg);
 }
 
 /* Дашборд: плитки и полосы причин. */
@@ -152,4 +161,49 @@ h2.section-title.ant-typography {
 }
 .link-by-id {
   max-width: 420px;
+}
+/* Контакт клиента: длинные email и имена переносятся на 390 px, не растягивают карточку. */
+.contact-line {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Заголовок карточки — настоящий заголовок (h2/h3) в размере заголовка карточки antd. */
+.card-heading {
+  margin: 0;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+.metric-hint {
+  display: block;
+  font-size: var(--ant-font-size-sm);
+}
+/* Плитки KPI на телефоне — сетка 2×N, а не столбик из одиночных карточек. */
+@media (max-width: 575px) {
+  .metric-grid,
+  .metric-grid--primary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--ant-margin-sm);
+  }
+  .metric-card .ant-statistic-content {
+    font-size: var(--ant-font-size-lg);
+  }
+}
+.model-id {
+  font-size: var(--ant-font-size-sm);
+}
+.model-health {
+  max-width: 320px;
+}
+.model-error {
+  display: block;
+  max-width: 320px;
+}
+
+.audit-logins {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ant-margin-xxs);
+  white-space: nowrap;
 }

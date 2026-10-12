@@ -50,6 +50,7 @@ MATRIX = [
         {"until": "2000-01-01T00:00:00Z"},
         {"admin", "manager"},
     ),
+    ("POST", "/api/v1/leads/{lead}/actions/unsnooze", None, {"admin", "manager"}),
     ("POST", "/api/v1/leads/{lead}/actions/close_won", {}, {"admin", "manager"}),
     ("POST", "/api/v1/leads/{lead}/actions/close_lost", {}, {"admin", "manager"}),
     ("POST", "/api/v1/leads/{lead}/actions/return_to_bot", {}, {"admin", "manager"}),
@@ -71,6 +72,22 @@ MATRIX = [
     ("GET", "/api/v1/service-requests?status=closed", None, {"admin", "manager", "viewer"}),
     ("GET", "/api/v1/me", None, {"admin", "manager", "viewer"}),
     ("GET", "/api/v1/me/permissions", None, {"admin", "manager", "viewer"}),
+    ("GET", "/api/v1/setup/checklist", None, {"admin"}),
+    ("GET", "/api/v1/system/backups", None, {"admin"}),
+    # Волны F–G (аудит 2026-10-12): новые разделы. Платные (`/models/{a}/test`) и меняющие
+    # систему вызовы (бэкап «сейчас», токен бота) здесь не дёргаются — у них свои тесты.
+    ("GET", "/api/v1/system/status", None, {"admin"}),
+    ("GET", "/api/v1/spend", None, {"admin"}),
+    ("GET", "/api/v1/models", None, {"admin"}),
+    ("GET", "/api/v1/integrations/telegram", None, {"admin"}),
+    ("GET", "/api/v1/integrations/telegram/channels", None, {"admin"}),
+    ("GET", "/api/v1/kb/products", None, {"admin", "manager", "viewer"}),
+    ("GET", "/api/v1/deals", None, {"admin", "manager", "viewer"}),
+    ("GET", "/api/v1/deals/summary", None, {"admin", "manager", "viewer"}),
+    ("GET", "/api/v1/deals/options", None, {"admin", "manager", "viewer"}),
+    ("POST", "/api/v1/deals", {"title": "Матрица прав"}, {"admin", "manager"}),
+    # пустой текст → 422 до вызова модели; важно только «не 401/403»
+    ("POST", "/api/v1/leads/{lead}/assist", {"mode": "improve", "text": ""}, {"admin", "manager"}),
 ]
 
 

@@ -164,7 +164,7 @@ async def test_service_request_via_tool(
     who = Principal(admin.id, "Босс", ("admin",))
     await clients.close_service_request(who, request.id, "Инженер приедет завтра в 10:00")
     assert sender.sent[-1][1] == (
-        "По вашему запросу «Касса не печатает чеки»: Инженер приедет завтра в 10:00"
+        f"По вашему запросу №{request.id} «Касса не печатает чеки»: Инженер приедет завтра в 10:00"
     )
     async with sessions() as session:
         escalation = (await session.scalars(select(Escalation))).one()
@@ -223,7 +223,11 @@ async def test_crm_link_telegram_and_make_customer(
         )
         assert unknown.status_code == 404
         vh = login(client, viewer.email, vpassword)
-        assert client.get("/api/v1/clients", headers=vh).status_code == 200
+        listed = client.get("/api/v1/clients", headers=vh)
+        assert listed.status_code == 200
+        row = next(c for c in listed.json() if c["id"] == client_id)
+        assert isinstance(row["open_deals"], int)
+        assert "last_activity_at" in row
         assert client.post("/api/v1/clients", json={"name": "x"}, headers=vh).status_code == 403
         assert client.get("/api/v1/documents", headers=vh).status_code == 403
     async with sessions() as session:

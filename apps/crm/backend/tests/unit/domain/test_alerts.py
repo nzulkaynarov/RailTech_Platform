@@ -44,9 +44,26 @@ def test_checks(snapshot: HealthSnapshot, expected: set[str]) -> None:
     assert active(snapshot) == expected
 
 
-def test_known_failed_task_gets_inactive_check_to_resolve() -> None:
-    keys = {c.key: c.active for c in checks(HealthSnapshot(), {"ingest_kb_document"})}
-    assert keys["failed_task:ingest_kb_document"] is False
+def test_known_failed_task_resolves_only_after_successful_run() -> None:
+    known = {"ingest_kb_document"}
+    quiet = {c.key: c.active for c in checks(HealthSnapshot(), known)}
+    assert quiet["failed_task:ingest_kb_document"] is True  # окно опустело — ещё не «в норме»
+    ok = HealthSnapshot(recovered_tasks=frozenset(known))
+    assert {c.key: c.active for c in checks(ok, known)}["failed_task:ingest_kb_document"] is False
+
+
+def test_recovered_task_with_failures_in_window_is_resolved() -> None:
+    snap = HealthSnapshot(
+        failed_tasks={"system_monitor": 3}, recovered_tasks=frozenset({"system_monitor"})
+    )
+    assert "failed_task:system_monitor" not in active(snap)
+
+
+def test_task_texts_and_ai_failures() -> None:
+    snap = HealthSnapshot(failed_tasks={"x": 1}, ai_failures=2)
+    found = {c.key: c for c in checks(snap, set(), lambda t: (f"Задача «{t}»", "сделать"))}
+    assert (found["failed_task:x"].title, found["failed_task:x"].hint) == ("Задача «x»", "сделать")
+    assert found["ai_failures"].active is True
 
 
 def check(active: bool = True, grace: timedelta = timedelta(0)) -> Check:

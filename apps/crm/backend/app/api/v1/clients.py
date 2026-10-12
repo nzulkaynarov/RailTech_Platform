@@ -5,19 +5,21 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
 from fastapi.responses import Response
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import ContainerDep, require
 from app.domain.errors import NotFoundError
 from app.models.clients import Client, Document, DocumentAccessLog, ServiceRequest
 from app.models.leads import Lead, TelegramIdentity
+from app.repositories import clients as clients_repo
 from app.repositories import service_requests
 from app.repositories.service_requests import RequestStatus
 from app.schemas.clients import (
     AccessOut,
     ClientCreate,
     ClientDetail,
+    ClientListItem,
     ClientOut,
     ClientUpdate,
     DocType,
@@ -49,15 +51,16 @@ def _client_out(c: Client) -> ClientOut:
     return ClientOut.model_validate(c, from_attributes=True)
 
 
-@router.get("/clients", response_model=list[ClientOut])
+@router.get("/clients", response_model=list[ClientListItem])
 async def list_clients(
     _: ClientReader, container: ContainerDep, q: Annotated[str | None, Query(max_length=100)] = None
-) -> list[ClientOut]:
-    stmt = select(Client).order_by(Client.name)
-    if q:
-        stmt = stmt.where(or_(Client.name.ilike(f"%{q}%"), Client.inn.ilike(f"%{q}%")))
+) -> list[ClientListItem]:
     async with container.session_factory() as session:
-        return [_client_out(c) for c in (await session.scalars(stmt.limit(500))).all()]
+        rows = await clients_repo.list_with_stats(session, q, 500)
+    return [
+        ClientListItem(**_client_out(c).model_dump(), open_deals=deals, last_activity_at=last)
+        for c, deals, last in rows
+    ]
 
 
 @router.post("/clients", response_model=Created, status_code=status.HTTP_201_CREATED)

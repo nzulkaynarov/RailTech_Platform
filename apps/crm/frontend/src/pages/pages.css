@@ -89,3 +89,51 @@ h1.page-title.auth-title {
   gap: var(--ant-margin-xs);
   margin-bottom: var(--ant-margin-xs);
 }
+
+/* Сайдбар (app/AppSider.tsx): группы по задачам, счётчик справа от подписи. */
+.app-sider-title {
+  display: flex;
+  align-items: center;
+  height: 64px;
+  padding: 0 var(--ant-padding);
+}
+.app-sider .ant-layout-sider-children {
+  overflow: auto;
+}
+.app-nav.ant-menu {
+  border-inline-end: none !important;
+}
+.app-nav .ant-menu-item-group-title {
+  font-size: var(--ant-font-size-sm);
+  color: var(--ant-color-text-secondary);
+}
+.nav-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ant-margin-xs);
+}
+.nav-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ant-menu-inline-collapsed .nav-count {
+  display: none;
+}
+
+/* Переключатель режима: выбранный сегмент залит основным цветом — режим виден сразу. */
+.mode-switch .ant-segmented-item-selected {
+  background: var(--ant-color-primary);
+  color: var(--ant-color-text-light-solid);
+}
+.mode-banner {
+  margin-bottom: var(--ant-margin);
+}
+
+/* Телефон: кнопка «Фильтры (n)» по ширине текста, поля в нижней панели — во всю ширину. */
+.filters-button {
+  align-self: flex-start;
+}
+.drawer-filters > * {
+  width: 100% !important;
+}

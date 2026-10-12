@@ -1,5 +1,7 @@
 /** Настройки: разделы, подписи полей, тексты бота (подпись + «когда отправляется»). */
 
+import { clientBotTexts } from "./settingsClient";
+
 type Dict = Record<string, string>;
 export type BotTextLabel = { label: string; when: string };
 
@@ -30,14 +32,18 @@ const botTexts: Record<string, BotTextLabel> = {
   },
   language_prompt: { label: "Выбор языка", when: "По команде /lang, над кнопками языков." },
   language_set: { label: "Язык выбран", when: "После выбора языка." },
+  smalltalk_ack: {
+    label: "Ответ на «спасибо» и «понятно»",
+    when: "Когда клиент благодарит или соглашается — бот отвечает этим текстом без ИИ.",
+  },
   help: { label: "Справка", when: "По команде /help." },
   handoff: {
     label: "Передача менеджеру (рабочее время)",
-    when: "Когда диалог передаётся команде в рабочее время.",
+    when: "Когда диалог передаётся команде в рабочее время. {sla} — текст «Обещание срока ответа».",
   },
   off_hours: {
     label: "Передача менеджеру (нерабочее время)",
-    when: "Когда диалог передаётся вне рабочих часов. {hours} — часы из раздела «Рабочие часы».",
+    when: "Вне рабочих часов. {next} — ближайшее рабочее время с учётом праздников, {hours} — расписание.",
   },
   waiting_for_manager: {
     label: "Ожидание менеджера",
@@ -56,6 +62,10 @@ const botTexts: Record<string, BotTextLabel> = {
   attachment_received: {
     label: "Файл получен",
     when: "Когда клиент прислал файл — файл уходит команде.",
+  },
+  attachment_too_large: {
+    label: "Файл больше 20 МБ",
+    when: "Когда клиент прислал файл больше 20 МБ — бот просит ссылку, файл не сохраняется.",
   },
   fallback: {
     label: "Нет ответа в базе знаний",
@@ -80,7 +90,7 @@ const botTexts: Record<string, BotTextLabel> = {
   document_failed: { label: "Документ не отправлен", when: "Если Telegram не принял файл." },
   service_request_closed: {
     label: "Ответ на сервисный запрос",
-    when: "Когда менеджер закрыл запрос. {summary} — суть запроса, {resolution} — ответ.",
+    when: "Когда менеджер закрыл запрос. {number} — номер, {summary} — суть, {resolution} — ответ.",
   },
   erase_confirm: {
     label: "Подтверждение удаления",
@@ -90,6 +100,7 @@ const botTexts: Record<string, BotTextLabel> = {
   cancel_button: { label: "Кнопка «Отмена»", when: "Под подтверждением удаления." },
   erase_cancelled: { label: "Удаление отменено", when: "Если клиент нажал «Отмена»." },
   erased: { label: "Переписка удалена", when: "После удаления переписки." },
+  ...clientBotTexts,
 };
 
 export const settings = {
@@ -100,6 +111,11 @@ export const settings = {
     title: "Договор № 12",
     summary: "акт сверки за сентябрь",
     resolution: "акт отправили на почту",
+    number: "17",
+    date: "12.10.2026",
+    next: "завтра с 9:00",
+    sla: "Обычно отвечаем в течение 15 минут в рабочее время",
+    minutes: "15",
   } as Dict,
   dryRun: "Проверить на последних 50 диалогах",
   dryRunHint: "Покажет, сколько передач было бы при новых значениях. Ничего не меняет.",
@@ -139,6 +155,7 @@ export const settings = {
     qualification: "Квалификация",
     notifications: "Канал команды",
     budget: "Бюджет моделей",
+    deals: "Сделки",
   } as Dict,
   sectionHints: {
     business_hours: "От рабочих часов зависят SLA, напоминания и текст бота в нерабочее время.",
@@ -148,19 +165,28 @@ export const settings = {
     escalation: "Когда бот передаёт диалог команде и как быстро команда должна ответить.",
     notifications: "Куда приходят карточки передач и кого упоминать в напоминаниях.",
     budget: "Дневной лимит расходов на ИИ-модели.",
+    deals: "Причины отказа для закрытия сделки и валюта новых сделок.",
   } as Dict,
   textGroups: {
     welcome: "Приветствие и согласие",
     handoff: "Передача менеджеру",
     fallback: "Нет ответа и сбои",
     clients: "Клиенты и документы",
+    menu: "Меню команд",
+    phone: "Номер телефона",
     erase: "Удаление переписки",
     other: "Другие тексты",
+    advanced: "Дополнительно",
   } as Dict,
   botTexts,
   fields: {
     name: "Название компании",
     crm_base_url: "Адрес CRM (для ссылок в канале)",
+    phone: "Телефон компании (бот называет его по просьбе клиента)",
+    site: "Сайт компании",
+    address: "Адрес компании",
+    lost_reasons: "Причины отказа",
+    currency: "Валюта по умолчанию (код ISO, например UZS)",
     timezone: "Часовой пояс",
     start: "Начало рабочего дня",
     end: "Конец рабочего дня",
@@ -177,16 +203,24 @@ export const settings = {
     human_request_terms: "Слова «позовите человека»",
     min_score: "Минимальное сходство, чтобы бот отвечал (0–1)",
     top_k: "Сколько фрагментов базы знаний бот читает перед ответом",
+    search_timeout_s: "Сколько секунд ждать поиск по базе знаний",
     persona: "Характер ассистента",
     max_words: "Максимум слов в ответе",
     history_messages: "Сообщений истории в контексте",
     rate_limit_per_minute: "Сообщений в минуту от клиента",
     unresponsive_days: "Дней тишины до «Не отвечает»",
+    ask_phone: "Один раз попросить номер телефона (квалифицирован или просит менеджера)",
+    assist_enabled: "ИИ-помощь менеджеру при ответе («Черновик», «Улучшить»)",
+    assist_max_input_chars: "Максимум символов текста для «Улучшить»",
     terms: "Слова",
     channel_id: "ID приватного канала",
     duty_user_ids: "Дежурные",
+    manager_dm_throttle_minutes: "Пауза между личными уведомлениями менеджеру",
     daily_usd: "Дневной бюджет",
     fallback_model_enabled: "Переходить на запасную модель",
+    providers: "Дневной лимит по провайдеру",
+    anthropic: "Anthropic (диалог, квалификатор, проверка качества)",
+    gemini: "Google Gemini (запасная модель, поиск)",
     price_always_to_manager:
       "Любой вопрос о цене — менеджеру (даже если бот назвал цену из прайса)",
     required_facts: "Обязательные факты",
@@ -207,15 +241,22 @@ export const settings = {
     terms: "Слово или начало слова со * (жалоб* — жалоба, жалобу…); Enter — добавить.",
     channel_id: "Число со знаком минус, например -100…; бот должен быть админом канала.",
     duty_user_ids: "Получают @упоминание в напоминаниях о просроченных передачах.",
+    manager_dm_throttle_minutes:
+      "Лид пишет несколько сообщений подряд — менеджер получит в Telegram одно уведомление за это время.",
     holidays: "В эти дни SLA не считается, бот отвечает текстом нерабочего времени.",
-    daily_usd: "В долларах США.",
+    daily_usd: "В долларах США. Выше — диалог переходит на запасную модель.",
+    anthropic: "USD в сутки (по Ташкенту), 0 — без лимита. Выше — диалог на запасной модели.",
+    gemini: "USD в сутки (по Ташкенту), 0 — без лимита. Выше — бот передаёт диалоги менеджеру.",
   } as Dict,
   units: {
+    manager_dm_throttle_minutes: "мин",
     sla_minutes: "мин",
     reminder_minutes: "мин",
     unresponsive_days: "дн.",
     high_score_threshold: "из 100",
     daily_usd: "$",
+    anthropic: "$",
+    gemini: "$",
   } as Dict,
   options: {
     need: "Потребность",

@@ -8,17 +8,29 @@ import type {
   AccessOut,
   ActionResult,
   Assign,
+  AssistOut,
+  AssistRequest,
   AuditPage,
+  BackupsOut,
   BodyUploadDocument,
   BodyUploadKbDocument,
   ChangePasswordRequest,
+  ChatCandidateOut,
+  ClientContacts,
   ClientCreate,
   ClientDetail,
-  ClientOut,
+  ClientListItem,
   ClientUpdate,
   Close,
+  ContactIn,
   Created,
   Dashboard,
+  DealCreate,
+  DealOptions,
+  DealOut,
+  DealUpdate,
+  DealsSummary,
+  DealsSummaryParams,
   DecisionsResponse,
   DocumentOut,
   DocumentUpdate,
@@ -26,6 +38,7 @@ import type {
   ErrorOut,
   EscalationSettings,
   GetDashboardParams,
+  GetSpendParams,
   HealthResponse,
   InboxResponse,
   KbChunkOut,
@@ -39,6 +52,7 @@ import type {
   LinkTelegram,
   ListAuditParams,
   ListClientsParams,
+  ListDealsParams,
   ListDocumentsParams,
   ListKbDocumentsParams,
   ListKbGapsParams,
@@ -49,6 +63,8 @@ import type {
   ManualDocument,
   MePatch,
   MessageOut,
+  ModelStatus,
+  ModelTestResult,
   NoteCreate,
   NoteOut,
   PasswordReset,
@@ -65,8 +81,15 @@ import type {
   ServiceRequestClose,
   ServiceRequestItem,
   SettingsResponse,
+  SetupAdminRequest,
+  SetupChecklist,
+  SetupState,
   Snooze,
+  SpendReport,
+  SystemStatusOut,
   TeamMember,
+  TelegramStatusOut,
+  TelegramTokenIn,
   TokenResponse,
   UserCreate,
   UserCreated,
@@ -99,6 +122,15 @@ export const getListAuditUrl = (params?: ListAuditParams) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ["exclude_actions"];
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? "null" : String(v));
+      });
+      return;
+    }
+
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? "null" : String(value));
     }
@@ -303,7 +335,7 @@ export const refresh = async (options?: Parameters<typeof http>[1]): Promise<ref
 };
 
 export type listClientsResponse200 = {
-  data: ClientOut[];
+  data: ClientListItem[];
   status: 200;
 };
 
@@ -499,6 +531,201 @@ export const updateClient = async (
   });
 };
 
+export type listClientContactsResponse200 = {
+  data: ClientContacts;
+  status: 200;
+};
+
+export type listClientContactsResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type listClientContactsResponseSuccess = listClientContactsResponse200 & {
+  headers: Headers;
+};
+export type listClientContactsResponseError = listClientContactsResponse422 & {
+  headers: Headers;
+};
+
+export type listClientContactsResponse =
+  listClientContactsResponseSuccess | listClientContactsResponseError;
+
+export const getListClientContactsUrl = (clientId: number) => {
+  return `/api/v1/clients/${clientId}/contacts`;
+};
+
+/**
+ * Контакты (основной первым) и подтверждённые Telegram-аккаунты с номером для «Добавить».
+ * @summary List Client Contacts
+ */
+export const listClientContacts = async (
+  clientId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<listClientContactsResponse> => {
+  return http<listClientContactsResponse>(getListClientContactsUrl(clientId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type createClientContactResponse201 = {
+  data: Created;
+  status: 201;
+};
+
+export type createClientContactResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type createClientContactResponseSuccess = createClientContactResponse201 & {
+  headers: Headers;
+};
+export type createClientContactResponseError = createClientContactResponse422 & {
+  headers: Headers;
+};
+
+export type createClientContactResponse =
+  createClientContactResponseSuccess | createClientContactResponseError;
+
+export const getCreateClientContactUrl = (clientId: number) => {
+  return `/api/v1/clients/${clientId}/contacts`;
+};
+
+/**
+ * @summary Create Client Contact
+ */
+export const createClientContact = async (
+  clientId: number,
+  contactIn: ContactIn,
+  options?: Parameters<typeof http>[1],
+): Promise<createClientContactResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<createClientContactResponse>(getCreateClientContactUrl(clientId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(contactIn),
+  });
+};
+
+export type deleteClientContactResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type deleteClientContactResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type deleteClientContactResponseSuccess = deleteClientContactResponse200 & {
+  headers: Headers;
+};
+export type deleteClientContactResponseError = deleteClientContactResponse422 & {
+  headers: Headers;
+};
+
+export type deleteClientContactResponse =
+  deleteClientContactResponseSuccess | deleteClientContactResponseError;
+
+export const getDeleteClientContactUrl = (clientId: number, contactId: number) => {
+  return `/api/v1/clients/${clientId}/contacts/${contactId}`;
+};
+
+/**
+ * @summary Delete Client Contact
+ */
+export const deleteClientContact = async (
+  clientId: number,
+  contactId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<deleteClientContactResponse> => {
+  return http<deleteClientContactResponse>(getDeleteClientContactUrl(clientId, contactId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export type updateClientContactResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type updateClientContactResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type updateClientContactResponseSuccess = updateClientContactResponse200 & {
+  headers: Headers;
+};
+export type updateClientContactResponseError = updateClientContactResponse422 & {
+  headers: Headers;
+};
+
+export type updateClientContactResponse =
+  updateClientContactResponseSuccess | updateClientContactResponseError;
+
+export const getUpdateClientContactUrl = (clientId: number, contactId: number) => {
+  return `/api/v1/clients/${clientId}/contacts/${contactId}`;
+};
+
+/**
+ * @summary Update Client Contact
+ */
+export const updateClientContact = async (
+  clientId: number,
+  contactId: number,
+  contactIn: ContactIn,
+  options?: Parameters<typeof http>[1],
+): Promise<updateClientContactResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<updateClientContactResponse>(getUpdateClientContactUrl(clientId, contactId), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(contactIn),
+  });
+};
+
 export type linkTelegramResponse200 = {
   data: ActionResult;
   status: 200;
@@ -675,6 +902,291 @@ export const refreshDashboard = async (
   return http<refreshDashboardResponse>(getRefreshDashboardUrl(), {
     ...options,
     method: "POST",
+  });
+};
+
+export type listDealsResponse200 = {
+  data: DealOut[];
+  status: 200;
+};
+
+export type listDealsResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type listDealsResponseSuccess = listDealsResponse200 & {
+  headers: Headers;
+};
+export type listDealsResponseError = listDealsResponse422 & {
+  headers: Headers;
+};
+
+export type listDealsResponse = listDealsResponseSuccess | listDealsResponseError;
+
+export const getListDealsUrl = (params?: ListDealsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/deals?${stringifiedParams}` : `/api/v1/deals`;
+};
+
+/**
+ * Сделки, новые сверху (до 500). Период закрытия — включительно, по дате UTC.
+ * @summary List Deals
+ */
+export const listDeals = async (
+  params?: ListDealsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<listDealsResponse> => {
+  return http<listDealsResponse>(getListDealsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type createDealResponse201 = {
+  data: Created;
+  status: 201;
+};
+
+export type createDealResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type createDealResponseSuccess = createDealResponse201 & {
+  headers: Headers;
+};
+export type createDealResponseError = createDealResponse422 & {
+  headers: Headers;
+};
+
+export type createDealResponse = createDealResponseSuccess | createDealResponseError;
+
+export const getCreateDealUrl = () => {
+  return `/api/v1/deals`;
+};
+
+/**
+ * Новая сделка; валюта по умолчанию — из настройки `deals.currency`.
+ * @summary Create Deal
+ */
+export const createDeal = async (
+  dealCreate: DealCreate,
+  options?: Parameters<typeof http>[1],
+): Promise<createDealResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<createDealResponse>(getCreateDealUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(dealCreate),
+  });
+};
+
+export type dealOptionsResponse200 = {
+  data: DealOptions;
+  status: 200;
+};
+
+export type dealOptionsResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type dealOptionsResponseSuccess = dealOptionsResponse200 & {
+  headers: Headers;
+};
+export type dealOptionsResponseError = dealOptionsResponse422 & {
+  headers: Headers;
+};
+
+export type dealOptionsResponse = dealOptionsResponseSuccess | dealOptionsResponseError;
+
+export const getDealOptionsUrl = () => {
+  return `/api/v1/deals/options`;
+};
+
+/**
+ * Причины отказа и валюта по умолчанию — для форм сделки и закрытия лида.
+ * @summary Deal Options
+ */
+export const dealOptions = async (
+  options?: Parameters<typeof http>[1],
+): Promise<dealOptionsResponse> => {
+  return http<dealOptionsResponse>(getDealOptionsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type dealsSummaryResponse200 = {
+  data: DealsSummary;
+  status: 200;
+};
+
+export type dealsSummaryResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type dealsSummaryResponseSuccess = dealsSummaryResponse200 & {
+  headers: Headers;
+};
+export type dealsSummaryResponseError = dealsSummaryResponse422 & {
+  headers: Headers;
+};
+
+export type dealsSummaryResponse = dealsSummaryResponseSuccess | dealsSummaryResponseError;
+
+export const getDealsSummaryUrl = (params?: DealsSummaryParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/deals/summary?${stringifiedParams}`
+    : `/api/v1/deals/summary`;
+};
+
+/**
+ * Выигрыш (число и суммы по валютам) и отказы по причинам за последние `days` дней.
+ * @summary Deals Summary
+ */
+export const dealsSummary = async (
+  params?: DealsSummaryParams,
+  options?: Parameters<typeof http>[1],
+): Promise<dealsSummaryResponse> => {
+  return http<dealsSummaryResponse>(getDealsSummaryUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type getDealResponse200 = {
+  data: DealOut;
+  status: 200;
+};
+
+export type getDealResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type getDealResponseSuccess = getDealResponse200 & {
+  headers: Headers;
+};
+export type getDealResponseError = getDealResponse422 & {
+  headers: Headers;
+};
+
+export type getDealResponse = getDealResponseSuccess | getDealResponseError;
+
+export const getGetDealUrl = (dealId: number) => {
+  return `/api/v1/deals/${dealId}`;
+};
+
+/**
+ * @summary Get Deal
+ */
+export const getDeal = async (
+  dealId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<getDealResponse> => {
+  return http<getDealResponse>(getGetDealUrl(dealId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type updateDealResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type updateDealResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type updateDealResponseSuccess = updateDealResponse200 & {
+  headers: Headers;
+};
+export type updateDealResponseError = updateDealResponse422 & {
+  headers: Headers;
+};
+
+export type updateDealResponse = updateDealResponseSuccess | updateDealResponseError;
+
+export const getUpdateDealUrl = (dealId: number) => {
+  return `/api/v1/deals/${dealId}`;
+};
+
+/**
+ * Изменить сделку. Выигранную менять может только админ (409 `deal_won_final`).
+ * @summary Update Deal
+ */
+export const updateDeal = async (
+  dealId: number,
+  dealUpdate: DealUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<updateDealResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<updateDealResponse>(getUpdateDealUrl(dealId), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(dealUpdate),
   });
 };
 
@@ -940,6 +1452,210 @@ export const inbox = async (options?: Parameters<typeof http>[1]): Promise<inbox
   return http<inboxResponse>(getInboxUrl(), {
     ...options,
     method: "GET",
+  });
+};
+
+export type getTelegramStatusResponse200 = {
+  data: TelegramStatusOut;
+  status: 200;
+};
+
+export type getTelegramStatusResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type getTelegramStatusResponseSuccess = getTelegramStatusResponse200 & {
+  headers: Headers;
+};
+export type getTelegramStatusResponseError = getTelegramStatusResponse422 & {
+  headers: Headers;
+};
+
+export type getTelegramStatusResponse =
+  getTelegramStatusResponseSuccess | getTelegramStatusResponseError;
+
+export const getGetTelegramStatusUrl = () => {
+  return `/api/v1/integrations/telegram`;
+};
+
+/**
+ * @summary Get Telegram Status
+ */
+export const getTelegramStatus = async (
+  options?: Parameters<typeof http>[1],
+): Promise<getTelegramStatusResponse> => {
+  return http<getTelegramStatusResponse>(getGetTelegramStatusUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type sendTelegramChannelTestResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type sendTelegramChannelTestResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type sendTelegramChannelTestResponseSuccess = sendTelegramChannelTestResponse200 & {
+  headers: Headers;
+};
+export type sendTelegramChannelTestResponseError = sendTelegramChannelTestResponse422 & {
+  headers: Headers;
+};
+
+export type sendTelegramChannelTestResponse =
+  sendTelegramChannelTestResponseSuccess | sendTelegramChannelTestResponseError;
+
+export const getSendTelegramChannelTestUrl = () => {
+  return `/api/v1/integrations/telegram/channel/test`;
+};
+
+/**
+ * @summary Send Telegram Channel Test
+ */
+export const sendTelegramChannelTest = async (
+  options?: Parameters<typeof http>[1],
+): Promise<sendTelegramChannelTestResponse> => {
+  return http<sendTelegramChannelTestResponse>(getSendTelegramChannelTestUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export type listTelegramChannelsResponse200 = {
+  data: ChatCandidateOut[];
+  status: 200;
+};
+
+export type listTelegramChannelsResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type listTelegramChannelsResponseSuccess = listTelegramChannelsResponse200 & {
+  headers: Headers;
+};
+export type listTelegramChannelsResponseError = listTelegramChannelsResponse422 & {
+  headers: Headers;
+};
+
+export type listTelegramChannelsResponse =
+  listTelegramChannelsResponseSuccess | listTelegramChannelsResponseError;
+
+export const getListTelegramChannelsUrl = () => {
+  return `/api/v1/integrations/telegram/channels`;
+};
+
+/**
+ * @summary List Telegram Channels
+ */
+export const listTelegramChannels = async (
+  options?: Parameters<typeof http>[1],
+): Promise<listTelegramChannelsResponse> => {
+  return http<listTelegramChannelsResponse>(getListTelegramChannelsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type connectTelegramChannelResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type connectTelegramChannelResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type connectTelegramChannelResponseSuccess = connectTelegramChannelResponse200 & {
+  headers: Headers;
+};
+export type connectTelegramChannelResponseError = connectTelegramChannelResponse422 & {
+  headers: Headers;
+};
+
+export type connectTelegramChannelResponse =
+  connectTelegramChannelResponseSuccess | connectTelegramChannelResponseError;
+
+export const getConnectTelegramChannelUrl = (chatId: number) => {
+  return `/api/v1/integrations/telegram/channels/${chatId}/connect`;
+};
+
+/**
+ * @summary Connect Telegram Channel
+ */
+export const connectTelegramChannel = async (
+  chatId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<connectTelegramChannelResponse> => {
+  return http<connectTelegramChannelResponse>(getConnectTelegramChannelUrl(chatId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export type putTelegramTokenResponse200 = {
+  data: TelegramStatusOut;
+  status: 200;
+};
+
+export type putTelegramTokenResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type putTelegramTokenResponseSuccess = putTelegramTokenResponse200 & {
+  headers: Headers;
+};
+export type putTelegramTokenResponseError = putTelegramTokenResponse422 & {
+  headers: Headers;
+};
+
+export type putTelegramTokenResponse =
+  putTelegramTokenResponseSuccess | putTelegramTokenResponseError;
+
+export const getPutTelegramTokenUrl = () => {
+  return `/api/v1/integrations/telegram/token`;
+};
+
+/**
+ * Проверить токен в Telegram (`getMe`), сохранить зашифрованным, перезапустить бота.
+ * @summary Put Telegram Token
+ */
+export const putTelegramToken = async (
+  telegramTokenIn: TelegramTokenIn,
+  options?: Parameters<typeof http>[1],
+): Promise<putTelegramTokenResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<putTelegramTokenResponse>(getPutTelegramTokenUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(telegramTokenIn),
   });
 };
 
@@ -1677,6 +2393,43 @@ export const getLead = async (
   });
 };
 
+export type acknowledgeResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type acknowledgeResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type acknowledgeResponseSuccess = acknowledgeResponse200 & {
+  headers: Headers;
+};
+export type acknowledgeResponseError = acknowledgeResponse422 & {
+  headers: Headers;
+};
+
+export type acknowledgeResponse = acknowledgeResponseSuccess | acknowledgeResponseError;
+
+export const getAcknowledgeUrl = (leadId: number) => {
+  return `/api/v1/leads/${leadId}/actions/acknowledge`;
+};
+
+/**
+ * «Принято к сведению»: закрыть информационную передачу, лид остаётся у бота.
+ * @summary Acknowledge
+ */
+export const acknowledge = async (
+  leadId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<acknowledgeResponse> => {
+  return http<acknowledgeResponse>(getAcknowledgeUrl(leadId), {
+    ...options,
+    method: "POST",
+  });
+};
+
 export type assignResponse200 = {
   data: ActionResult;
   status: 200;
@@ -2155,6 +2908,102 @@ export const take = async (
   });
 };
 
+export type unsnoozeResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type unsnoozeResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type unsnoozeResponseSuccess = unsnoozeResponse200 & {
+  headers: Headers;
+};
+export type unsnoozeResponseError = unsnoozeResponse422 & {
+  headers: Headers;
+};
+
+export type unsnoozeResponse = unsnoozeResponseSuccess | unsnoozeResponseError;
+
+export const getUnsnoozeUrl = (leadId: number) => {
+  return `/api/v1/leads/${leadId}/actions/unsnooze`;
+};
+
+/**
+ * «Вернуть из отложенных»: передача снова открыта, срок реакции — заново.
+ * @summary Unsnooze
+ */
+export const unsnooze = async (
+  leadId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<unsnoozeResponse> => {
+  return http<unsnoozeResponse>(getUnsnoozeUrl(leadId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export type assistResponse200 = {
+  data: AssistOut;
+  status: 200;
+};
+
+export type assistResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type assistResponseSuccess = assistResponse200 & {
+  headers: Headers;
+};
+export type assistResponseError = assistResponse422 & {
+  headers: Headers;
+};
+
+export type assistResponse = assistResponseSuccess | assistResponseError;
+
+export const getAssistUrl = (leadId: number) => {
+  return `/api/v1/leads/${leadId}/assist`;
+};
+
+/**
+ * ИИ-помощь менеджеру (Q-019): текст для поля ответа; клиенту ничего не отправляется.
+ * @summary Assist
+ */
+export const assist = async (
+  leadId: number,
+  assistRequest: AssistRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<assistResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<assistResponse>(getAssistUrl(leadId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(assistRequest),
+  });
+};
+
 export type leadDecisionsResponse200 = {
   data: DecisionsResponse;
   status: 200;
@@ -2473,6 +3322,114 @@ export const permissions = async (
   });
 };
 
+export type testNotificationResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type testNotificationResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type testNotificationResponseSuccess = testNotificationResponse200 & {
+  headers: Headers;
+};
+export type testNotificationResponseError = testNotificationResponse422 & {
+  headers: Headers;
+};
+
+export type testNotificationResponse =
+  testNotificationResponseSuccess | testNotificationResponseError;
+
+export const getTestNotificationUrl = () => {
+  return `/api/v1/me/test-notification`;
+};
+
+/**
+ * «Проверить доставку»: личное сообщение от бота себе; отказ Telegram → 409 с его текстом.
+ * @summary Test Notification
+ */
+export const testNotification = async (
+  options?: Parameters<typeof http>[1],
+): Promise<testNotificationResponse> => {
+  return http<testNotificationResponse>(getTestNotificationUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export type listModelsResponse200 = {
+  data: ModelStatus[];
+  status: 200;
+};
+
+export type listModelsResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type listModelsResponseSuccess = listModelsResponse200 & {
+  headers: Headers;
+};
+export type listModelsResponseError = listModelsResponse422 & {
+  headers: Headers;
+};
+
+export type listModelsResponse = listModelsResponseSuccess | listModelsResponseError;
+
+export const getListModelsUrl = () => {
+  return `/api/v1/models`;
+};
+
+/**
+ * @summary List Models
+ */
+export const listModels = async (
+  options?: Parameters<typeof http>[1],
+): Promise<listModelsResponse> => {
+  return http<listModelsResponse>(getListModelsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type testModelResponse200 = {
+  data: ModelTestResult;
+  status: 200;
+};
+
+export type testModelResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type testModelResponseSuccess = testModelResponse200 & {
+  headers: Headers;
+};
+export type testModelResponseError = testModelResponse422 & {
+  headers: Headers;
+};
+
+export type testModelResponse = testModelResponseSuccess | testModelResponseError;
+
+export const getTestModelUrl = (alias: string) => {
+  return `/api/v1/models/${alias}/test`;
+};
+
+/**
+ * @summary Test Model
+ */
+export const testModel = async (
+  alias: string,
+  options?: Parameters<typeof http>[1],
+): Promise<testModelResponse> => {
+  return http<testModelResponse>(getTestModelUrl(alias), {
+    ...options,
+    method: "POST",
+  });
+};
+
 export type listServiceRequestsResponse200 = {
   data: ServiceRequestItem[];
   status: 200;
@@ -2733,6 +3690,189 @@ export const putSetting = async (
   });
 };
 
+export type createFirstAdminResponse200 = {
+  data: TokenResponse;
+  status: 200;
+};
+
+export type createFirstAdminResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type createFirstAdminResponseSuccess = createFirstAdminResponse200 & {
+  headers: Headers;
+};
+export type createFirstAdminResponseError = createFirstAdminResponse422 & {
+  headers: Headers;
+};
+
+export type createFirstAdminResponse =
+  createFirstAdminResponseSuccess | createFirstAdminResponseError;
+
+export const getCreateFirstAdminUrl = () => {
+  return `/api/v1/setup/admin`;
+};
+
+/**
+ * Публично, один раз: код из логов api (`setup_code_issued`) → первый админ и вход.
+ *
+ * Неверный код — 422 `setup_code_invalid`, истёкший — `setup_code_expired`, перебор —
+ * `setup_locked` (15 мин); админ уже есть — 409 `setup_done`. Ответ — как у `/auth/login`.
+ * @summary Create First Admin
+ */
+export const createFirstAdmin = async (
+  setupAdminRequest: SetupAdminRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<createFirstAdminResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<createFirstAdminResponse>(getCreateFirstAdminUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(setupAdminRequest),
+  });
+};
+
+export type getSetupChecklistResponse200 = {
+  data: SetupChecklist;
+  status: 200;
+};
+
+export type getSetupChecklistResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type getSetupChecklistResponseSuccess = getSetupChecklistResponse200 & {
+  headers: Headers;
+};
+export type getSetupChecklistResponseError = getSetupChecklistResponse422 & {
+  headers: Headers;
+};
+
+export type getSetupChecklistResponse =
+  getSetupChecklistResponseSuccess | getSetupChecklistResponseError;
+
+export const getGetSetupChecklistUrl = () => {
+  return `/api/v1/setup/checklist`;
+};
+
+/**
+ * Чек-лист настройки для админа: что сделано и куда идти. Без платных вызовов моделей.
+ *
+ * Бот и модели — из тех же проверок, что «Состояние системы» (бот = принимает сообщения).
+ * @summary Get Setup Checklist
+ */
+export const getSetupChecklist = async (
+  options?: Parameters<typeof http>[1],
+): Promise<getSetupChecklistResponse> => {
+  return http<getSetupChecklistResponse>(getGetSetupChecklistUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type getSetupStateResponse200 = {
+  data: SetupState;
+  status: 200;
+};
+
+export type getSetupStateResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type getSetupStateResponseSuccess = getSetupStateResponse200 & {
+  headers: Headers;
+};
+export type getSetupStateResponseError = getSetupStateResponse422 & {
+  headers: Headers;
+};
+
+export type getSetupStateResponse = getSetupStateResponseSuccess | getSetupStateResponseError;
+
+export const getGetSetupStateUrl = () => {
+  return `/api/v1/setup/state`;
+};
+
+/**
+ * Публично: нужен ли мастер первого запуска (в CRM ещё нет активного администратора).
+ * @summary Get Setup State
+ */
+export const getSetupState = async (
+  options?: Parameters<typeof http>[1],
+): Promise<getSetupStateResponse> => {
+  return http<getSetupStateResponse>(getGetSetupStateUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type getSpendResponse200 = {
+  data: SpendReport;
+  status: 200;
+};
+
+export type getSpendResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type getSpendResponseSuccess = getSpendResponse200 & {
+  headers: Headers;
+};
+export type getSpendResponseError = getSpendResponse422 & {
+  headers: Headers;
+};
+
+export type getSpendResponse = getSpendResponseSuccess | getSpendResponseError;
+
+export const getGetSpendUrl = (params?: GetSpendParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/spend?${stringifiedParams}` : `/api/v1/spend`;
+};
+
+/**
+ * @summary Get Spend
+ */
+export const getSpend = async (
+  params?: GetSpendParams,
+  options?: Parameters<typeof http>[1],
+): Promise<getSpendResponse> => {
+  return http<getSpendResponse>(getGetSpendUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
 export type streamResponse200 = {
   data: void;
   status: 200;
@@ -2761,6 +3901,119 @@ export const getStreamUrl = () => {
  */
 export const stream = async (options?: Parameters<typeof http>[1]): Promise<streamResponse> => {
   return http<streamResponse>(getStreamUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type listBackupsResponse200 = {
+  data: BackupsOut;
+  status: 200;
+};
+
+export type listBackupsResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type listBackupsResponseSuccess = listBackupsResponse200 & {
+  headers: Headers;
+};
+export type listBackupsResponseError = listBackupsResponse422 & {
+  headers: Headers;
+};
+
+export type listBackupsResponse = listBackupsResponseSuccess | listBackupsResponseError;
+
+export const getListBackupsUrl = () => {
+  return `/api/v1/system/backups`;
+};
+
+/**
+ * Последние бэкапы из тома `backups` (каталоги `<UTC-штамп>`), время последнего успеха.
+ * @summary List Backups
+ */
+export const listBackups = async (
+  options?: Parameters<typeof http>[1],
+): Promise<listBackupsResponse> => {
+  return http<listBackupsResponse>(getListBackupsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type requestBackupResponse202 = {
+  data: BackupsOut;
+  status: 202;
+};
+
+export type requestBackupResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type requestBackupResponseSuccess = requestBackupResponse202 & {
+  headers: Headers;
+};
+export type requestBackupResponseError = requestBackupResponse422 & {
+  headers: Headers;
+};
+
+export type requestBackupResponse = requestBackupResponseSuccess | requestBackupResponseError;
+
+export const getRequestBackupUrl = () => {
+  return `/api/v1/system/backups`;
+};
+
+/**
+ * Запросить бэкап вне расписания: сервис бэкапа начнёт его в течение ~30 с.
+ *
+ * 409, если том бэкапов не смонтирован в api. Повторный запрос до начала — без изменений;
+ * запрос, который сервис не забрал за 2 мин, ставится заново.
+ * @summary Request Backup
+ */
+export const requestBackup = async (
+  options?: Parameters<typeof http>[1],
+): Promise<requestBackupResponse> => {
+  return http<requestBackupResponse>(getRequestBackupUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export type systemStatusResponse200 = {
+  data: SystemStatusOut;
+  status: 200;
+};
+
+export type systemStatusResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type systemStatusResponseSuccess = systemStatusResponse200 & {
+  headers: Headers;
+};
+export type systemStatusResponseError = systemStatusResponse422 & {
+  headers: Headers;
+};
+
+export type systemStatusResponse = systemStatusResponseSuccess | systemStatusResponseError;
+
+export const getSystemStatusUrl = () => {
+  return `/api/v1/system/status`;
+};
+
+/**
+ * Только чтение: моделей не вызывает, их здоровье — из последней проверки монитора.
+ *
+ * Компоненты отсортированы: сбой → предупреждение → неизвестно → норма.
+ * @summary System Status
+ */
+export const systemStatus = async (
+  options?: Parameters<typeof http>[1],
+): Promise<systemStatusResponse> => {
+  return http<systemStatusResponse>(getSystemStatusUrl(), {
     ...options,
     method: "GET",
   });

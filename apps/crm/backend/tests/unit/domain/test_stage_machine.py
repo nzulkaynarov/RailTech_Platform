@@ -1,6 +1,6 @@
 import pytest
 
-from app.domain.stage_machine import decide, stage_before_handoff
+from app.domain.stage_machine import decide, stage_after_unlink, stage_before_handoff
 from app.domain.stages import Stage as S
 from app.domain.stages import TransitionSource as Src
 
@@ -33,6 +33,10 @@ ALLOWED = [
     (S.LOST, S.IN_PROGRESS, Src.USER),
     (S.CUSTOMER, S.IN_PROGRESS, Src.USER),
     (S.LOST, S.CUSTOMER, Src.SYSTEM),
+    # «Вернуть боту» повторной сделки клиента.
+    (S.IN_PROGRESS, S.CUSTOMER, Src.USER),
+    (S.CUSTOMER, S.WON, Src.USER),
+    (S.CUSTOMER, S.ENGAGED, Src.USER),
 ]
 
 REJECTED = [
@@ -58,6 +62,7 @@ REJECTED = [
     (S.ENGAGED, S.IN_PROGRESS, Src.TRIGGER),
     (S.WON, S.IN_PROGRESS, Src.USER),
     (S.CUSTOMER, S.ENGAGED, Src.SYSTEM),
+    (S.CUSTOMER, S.WON, Src.SYSTEM),
     # ADR-0015: в handoff ждёт лид, а не мы — «молчуном» не считается.
     (S.HANDOFF, S.UNRESPONSIVE, Src.TIMER),
     (S.CUSTOMER, S.IN_PROGRESS, Src.TRIGGER),
@@ -97,7 +102,49 @@ def test_same_stage_is_noop(stage: S) -> None:
         ([(S.QUALIFIED, S.HANDOFF), (S.HANDOFF, S.ENGAGED), (S.ENGAGED, S.HANDOFF)], S.ENGAGED),
         ([(S.ENGAGED, S.QUALIFIED), (S.QUALIFIED, S.IN_PROGRESS)], S.QUALIFIED),
         ([(S.QUALIFIED, S.HANDOFF), (S.HANDOFF, S.IN_PROGRESS)], S.QUALIFIED),
+        # «Новая сделка» клиента → «Вернуть боту»: снова клиент, а не лид (аудит P0-2).
+        (
+            [
+                (S.QUALIFIED, S.HANDOFF),
+                (S.HANDOFF, S.IN_PROGRESS),
+                (S.IN_PROGRESS, S.WON),
+                (S.WON, S.CUSTOMER),
+                (S.CUSTOMER, S.IN_PROGRESS),
+            ],
+            S.CUSTOMER,
+        ),
+        # Повторная сделка закрыта, клиент снова «Забран» из бота — вход из клиента.
+        (
+            [(S.CUSTOMER, S.IN_PROGRESS), (S.IN_PROGRESS, S.CUSTOMER), (S.CUSTOMER, S.IN_PROGRESS)],
+            S.CUSTOMER,
+        ),
+        # Из «Отказа» снова в работу — ищем, откуда лид пришёл раньше.
+        (
+            [(S.QUALIFIED, S.IN_PROGRESS), (S.IN_PROGRESS, S.LOST), (S.LOST, S.IN_PROGRESS)],
+            S.QUALIFIED,
+        ),
     ],
 )
 def test_stage_before_handoff(history: list[tuple[S, S]], expected: S) -> None:
     assert stage_before_handoff(history) == expected
+
+
+@pytest.mark.parametrize(
+    ("history", "expected"),
+    [
+        ([], S.ENGAGED),
+        ([(S.IN_PROGRESS, S.WON), (S.WON, S.CUSTOMER)], S.WON),
+        (
+            [
+                (S.WON, S.CUSTOMER),
+                (S.CUSTOMER, S.IN_PROGRESS),
+                (S.IN_PROGRESS, S.LOST),
+                (S.LOST, S.CUSTOMER),
+            ],
+            S.WON,
+        ),
+        ([(S.IN_PROGRESS, S.CUSTOMER)], S.ENGAGED),
+    ],
+)
+def test_stage_after_unlink(history: list[tuple[S, S]], expected: S) -> None:
+    assert stage_after_unlink(history) == expected

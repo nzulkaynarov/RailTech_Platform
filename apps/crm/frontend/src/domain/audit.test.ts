@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { AuditItem } from "../api/generated/model";
-import { type AuditContext, auditChanges, auditDiff, fieldName } from "./audit";
+import { type AuditContext, auditChanges, auditDiff, entityText, fieldName } from "./audit";
 import { ownerModeLabel, stageLabel } from "./labels";
 
 const ctx: AuditContext = {
@@ -35,7 +35,7 @@ const BACKEND_SAMPLES: [string, AuditItem, string][] = [
     `Стадия: ${stageLabel("handoff").label} → ${stageLabel("in_progress").label}; ` +
       `Кто ведёт: ${ownerModeLabel("paused")} → ${ownerModeLabel("human")}; Ответственный: — → Анна`,
   ],
-  ["lead note", item(null, { note_id: 7, visible_to_bot: true }), "Заметка: #7; Видна боту: Да"],
+  ["lead note", item(null, { note_id: 7, visible_to_bot: true }), "Заметка: #7; Бот учитывает: Да"],
   [
     "user create",
     item(null, {
@@ -111,5 +111,21 @@ describe("audit diff", () => {
 
   it("settings field names come from settings labels", () => {
     expect(fieldName("high_score_threshold")).toBe("Оценка лида для передачи");
+  });
+});
+
+describe("system records in human words", () => {
+  it("model test: role name and cost below a cent", () => {
+    const changes = auditChanges(item(null, { ok: true, cost_usd: 0.0003 }), ctx);
+    expect(changes).toEqual([
+      { field: "Ответила", after: "Да" },
+      { field: "Стоимость", after: "< $0.01" },
+    ]);
+    expect(entityText("model", "dialog-model", ctx)).toBe("Модель ИИ «Диалог»");
+  });
+
+  it("user entity shows the name", () => {
+    expect(entityText("user", "2", ctx)).toContain("Бахтиёр");
+    expect(entityText("lead", "2", ctx)).toBeUndefined();
   });
 });

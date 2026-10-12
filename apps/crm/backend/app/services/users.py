@@ -19,11 +19,13 @@ from app.domain.errors import (
     Reason,
     ValidationFailedError,
 )
-from app.models.auth import ROLES, RefreshToken, User
+from app.domain.lead_access import loses_work_role
+from app.models.auth import RefreshToken, User
 from app.models.clients import Client
+from app.models.deals import Deal
 from app.models.leads import Lead
 from app.repositories import users as repo
-from app.security import audit
+from app.security import audit, reauth
 from app.security.audit import Actor
 from app.security.passwords import (
     WeakPasswordError,
@@ -32,6 +34,7 @@ from app.security.passwords import (
     validate_new_password,
     verify_password,
 )
+from app.services.user_parts import check_roles, normalize_email
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,6 +47,9 @@ class UserView:
     tg_user_id: int | None
     must_change_password: bool
     ui_mode: str
+    notify_system: bool = True
+    notify_leads: bool = True
+    tg_dm_failed_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,8 +63,13 @@ class UserPatch:
 
 
 class UserService:
-    def __init__(self, sessions: async_sessionmaker[AsyncSession]) -> None:
+    def __init__(
+        self,
+        sessions: async_sessionmaker[AsyncSession],
+        lockout: reauth.LockoutPolicy | None = None,
+    ) -> None:
         self._sessions = sessions
+        self._lockout = lockout or reauth.LockoutPolicy()
 
     async def list_all(self) -> list[UserView]:
         async with self._sessions() as session:
@@ -77,11 +88,11 @@ class UserService:
         self, actor: Actor, email: str, full_name: str, roles: Sequence[str]
     ) -> tuple[UserView, str]:
         """Новый пользователь и временный пароль (показывается один раз)."""
-        _check_roles(roles)
+        check_roles(roles)
         password = temporary_password()
         async with self._sessions() as session, session.begin():
             user = User(
-                email=_email(email),
+                email=normalize_email(email),
                 full_name=full_name.strip(),
                 password_hash=hash_password(password),
                 must_change_password=True,
@@ -101,7 +112,7 @@ class UserService:
 
     async def update(self, actor: Actor, user_id: int, patch: UserPatch) -> UserView:
         if patch.roles is not None:
-            _check_roles(patch.roles)
+            check_roles(patch.roles)
         async with self._sessions() as session, session.begin():
             await repo.lock_admin_set(session)
             user = await repo.get(session, user_id, for_update=True)
@@ -120,8 +131,10 @@ class UserService:
                 roles = sorted(patch.roles)
                 if "admin" not in roles:
                     user.ui_mode = "manager"
-            if patch.is_active is False:
+            stops_work = patch.roles is not None and loses_work_role(before.roles, patch.roles)
+            if patch.is_active is False or stops_work:
                 await _hand_over_work(session, actor, user_id, patch.transfer_to_user_id)
+            if patch.is_active is False:
                 await _revoke_tokens(session, user_id)
             try:
                 await session.flush()
@@ -156,16 +169,20 @@ class UserService:
         return password
 
     async def change_password(self, actor: Actor, user_id: int, current: str, new: str) -> None:
+        # Lockout как у входа (аудит P0-4): счётчик коммитится, ошибка — после транзакции.
         async with self._sessions() as session, session.begin():
             user = await repo.get(session, user_id, for_update=True)
             if user is None:
                 raise NotFoundError("user not found")
-            if not verify_password(user.password_hash, current):
-                raise ValidationFailedError(
-                    "current password is wrong",
-                    reason=Reason.WRONG_PASSWORD,
-                    field="current_password",
-                )
+            failure = reauth.check(
+                user, current, datetime.now(UTC), self._lockout, field="current_password"
+            )
+        if failure is not None:
+            raise failure
+        async with self._sessions() as session, session.begin():
+            user = await repo.get(session, user_id, for_update=True)
+            if user is None:
+                raise NotFoundError("user not found")
             if verify_password(user.password_hash, new):
                 raise ValidationFailedError(
                     "new password must differ",
@@ -193,32 +210,84 @@ class UserService:
             user.ui_mode = mode
             return _view(user, roles)
 
+    async def set_notify(
+        self, actor: Actor, user_id: int, *, system: bool | None, leads: bool | None
+    ) -> UserView:
+        """Подписки на личные уведомления от бота (Q-010) — меняет только сам пользователь."""
+        async with self._sessions() as session, session.begin():
+            user = await repo.get(session, user_id, for_update=True)
+            if user is None:
+                raise NotFoundError("user not found")
+            before = {"notify_system": user.notify_system, "notify_leads": user.notify_leads}
+            if system is not None:
+                user.notify_system = system
+            if leads is not None:
+                user.notify_leads = leads
+            after = {"notify_system": user.notify_system, "notify_leads": user.notify_leads}
+            if after != before:
+                await audit.record(
+                    session, actor, "user.notify", "user", user_id, before=before, after=after
+                )
+            return _view(user, await repo.roles_of(session, user_id))
+
     async def bootstrap_admin(self, email: str, full_name: str, password: str | None) -> str:
         """Первый админ (scripts/create_admin.py). Возвращает пароль (временный, если не задан)."""
         actor = Actor.system()
         secret = password or temporary_password()
         if password:
-            try:
-                validate_new_password(password, email=email)
-            except WeakPasswordError as exc:
-                raise ValidationFailedError(
-                    str(exc), reason=Reason.WEAK_PASSWORD, field="password"
-                ) from exc
+            _check_password(password, email)
         async with self._sessions() as session, session.begin():
-            user = await repo.by_email(session, email, for_update=True)
-            if user is None:
-                user = User(email=_email(email), full_name=full_name, password_hash="")
-                session.add(user)
-                await session.flush()
-            user.password_hash = hash_password(secret)
-            user.must_change_password = password is None
-            user.is_active = True
-            user.ui_mode = "admin"
-            user.failed_logins, user.locked_until = 0, None
-            roles = set(await repo.roles_of(session, user.id)) | {"admin"}
-            await repo.set_roles(session, user.id, sorted(roles), None)
-            await audit.record(session, actor, "user.bootstrap_admin", "user", user.id)
+            user_id = await _upsert_admin(session, email, full_name, secret, password is None)
+            await audit.record(session, actor, "user.bootstrap_admin", "user", user_id)
         return secret
+
+    async def create_first_admin(
+        self, email: str, full_name: str, password: str, actor: Actor
+    ) -> int:
+        """Админ из мастера первого запуска: только пока нет ни одного активного админа.
+
+        Блокировка роли admin сериализует параллельные попытки; вторая получит 409.
+        """
+        _check_password(password, email)
+        async with self._sessions() as session, session.begin():
+            await repo.lock_admin_set(session)
+            if await repo.count_active_admins(session) > 0:
+                raise ConflictError("admin already exists", reason=Reason.SETUP_DONE)
+            try:
+                user_id = await _upsert_admin(session, email, full_name.strip(), password, False)
+            except IntegrityError as exc:
+                raise ConflictError("admin already exists", reason=Reason.SETUP_DONE) from exc
+            await audit.record(
+                session, actor, "setup.admin_created", "user", user_id, after={"email": email}
+            )
+        return user_id
+
+
+def _check_password(password: str, email: str) -> None:
+    try:
+        validate_new_password(password, email=email)
+    except WeakPasswordError as exc:
+        raise ValidationFailedError(
+            str(exc), reason=Reason.WEAK_PASSWORD, field="password"
+        ) from exc
+
+
+async def _upsert_admin(
+    session: AsyncSession, email: str, full_name: str, secret: str, temporary: bool
+) -> int:
+    user = await repo.by_email(session, email, for_update=True)
+    if user is None:
+        user = User(email=normalize_email(email), full_name=full_name, password_hash="")
+        session.add(user)
+        await session.flush()
+    user.password_hash = hash_password(secret)
+    user.must_change_password = temporary
+    user.is_active = True
+    user.ui_mode = "admin"
+    user.failed_logins, user.locked_until = 0, None
+    roles = set(await repo.roles_of(session, user.id)) | {"admin"}
+    await repo.set_roles(session, user.id, sorted(roles), None)
+    return user.id
 
 
 def _apply(user: User, patch: UserPatch) -> None:
@@ -248,6 +317,7 @@ async def _hand_over_work(
     if to_user_id is None:
         if leads:
             raise ActiveLeadsError("hand over the leads first", count=len(leads))
+        await _reassign(session, user_id, None)  # лиды у бота и сделки — в общую очередь
         return
     target = await repo.get(session, to_user_id)
     roles = await repo.roles_of(session, to_user_id) if target else []
@@ -258,11 +328,7 @@ async def _hand_over_work(
             reason=Reason.INACTIVE_COLLEAGUE,
             field="transfer_to_user_id",
         )
-    await session.execute(
-        update(Lead)
-        .where(Lead.assigned_user_id == user_id, Lead.erased_at.is_(None))
-        .values(assigned_user_id=to_user_id)
-    )
+    await _reassign(session, user_id, to_user_id)
     await session.execute(
         update(Client).where(Client.owner_user_id == user_id).values(owner_user_id=to_user_id)
     )
@@ -276,25 +342,26 @@ async def _hand_over_work(
     )
 
 
+async def _reassign(session: AsyncSession, user_id: int, to_user_id: int | None) -> None:
+    """Все лиды с ответственным (и у бота — клиенты после сделки) и открытые сделки."""
+    await session.execute(
+        update(Lead)
+        .where(Lead.assigned_user_id == user_id, Lead.erased_at.is_(None))
+        .values(assigned_user_id=to_user_id)
+    )
+    await session.execute(
+        update(Deal)
+        .where(Deal.owner_user_id == user_id, Deal.stage == "open")
+        .values(owner_user_id=to_user_id)
+    )
+
+
 async def _revoke_tokens(session: AsyncSession, user_id: int) -> None:
     await session.execute(
         update(RefreshToken)
         .where(RefreshToken.user_id == user_id, RefreshToken.revoked_at.is_(None))
         .values(revoked_at=datetime.now(UTC))
     )
-
-
-def _check_roles(roles: Sequence[str]) -> None:
-    unknown = set(roles) - set(ROLES)
-    if unknown or not roles:
-        raise ValidationFailedError("unknown or empty roles", field="roles")
-
-
-def _email(email: str) -> str:
-    value = email.strip().lower()
-    if "@" not in value or len(value) > 255:
-        raise ValidationFailedError("invalid email", reason=Reason.INVALID_EMAIL, field="email")
-    return value
 
 
 def _view(user: User, roles: list[str]) -> UserView:
@@ -307,6 +374,9 @@ def _view(user: User, roles: list[str]) -> UserView:
         tg_user_id=user.tg_user_id,
         must_change_password=user.must_change_password,
         ui_mode=user.ui_mode,
+        notify_system=user.notify_system,
+        notify_leads=user.notify_leads,
+        tg_dm_failed_at=user.tg_dm_failed_at,
     )
 
 

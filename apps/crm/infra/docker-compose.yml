@@ -30,6 +30,7 @@ x-backend: &backend
     DOCLING_API_KEY: ${DOCLING_API_KEY}
     AGENT_CONTEXT_KEY: ${AGENT_CONTEXT_KEY}
     JWT_SECRET: ${JWT_SECRET}
+    SECRETS_KEY: ${SECRETS_KEY:-}
     TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
     TELEGRAM_MODE: ${TELEGRAM_MODE:-polling}
     TELEGRAM_WEBHOOK_URL: ${TELEGRAM_WEBHOOK_URL:-}
@@ -138,6 +139,8 @@ services:
       FORWARDED_ALLOW_IPS: "*"
     volumes:
       - ./casbin:/app/casbin:ro
+      # Статус бэкапов и флаг «сделать сейчас» (ADR-0013); pg_dump — только в контейнере backup.
+      - backups:/backups
     depends_on: &backend-deps
       migrate:
         condition: service_completed_successfully

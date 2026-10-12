@@ -18,6 +18,7 @@ import {
   listServiceRequests,
   listUsers,
   me,
+  acknowledge,
   newDeal,
   note,
   permissions,
@@ -25,6 +26,7 @@ import {
   returnToBot,
   snooze,
   take,
+  unsnooze,
   team,
 } from "./generated/crm";
 import type { ListLeadsParams } from "./generated/model";
@@ -85,10 +87,12 @@ export const useTeam = () =>
 
 export type LeadAction =
   | { kind: "take" }
+  | { kind: "acknowledge" }
   | { kind: "newDeal" }
   | { kind: "assign"; userId: number }
   | { kind: "return"; note: string | null }
   | { kind: "snooze"; until: string }
+  | { kind: "unsnooze" }
   | { kind: "won"; reason: string | null }
   | { kind: "lost"; reason: string | null }
   | { kind: "note"; text: string; visibleToBot: boolean }
@@ -98,6 +102,9 @@ async function runAction(id: number, action: LeadAction): Promise<void> {
   switch (action.kind) {
     case "take":
       await take(id);
+      return;
+    case "acknowledge":
+      await acknowledge(id);
       return;
     case "newDeal":
       await newDeal(id);
@@ -110,6 +117,9 @@ async function runAction(id: number, action: LeadAction): Promise<void> {
       return;
     case "snooze":
       await snooze(id, { until: action.until });
+      return;
+    case "unsnooze":
+      await unsnooze(id);
       return;
     case "won":
       await closeWon(id, { reason: action.reason });

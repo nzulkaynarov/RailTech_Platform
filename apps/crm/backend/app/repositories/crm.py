@@ -9,6 +9,7 @@ from sqlalchemy import ColumnElement, Select, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.auth import User
+from app.models.clients import ClientContact
 from app.models.leads import Conversation, Lead, LeadNote, Message, TelegramIdentity
 from app.models.qualification import Escalation
 
@@ -148,5 +149,23 @@ async def notes(session: AsyncSession, lead_id: int) -> Sequence[LeadNote]:
 
 async def tg_username(session: AsyncSession, lead_id: int) -> str | None:
     stmt = select(TelegramIdentity.tg_username).where(TelegramIdentity.lead_id == lead_id)
+    value: str | None = (await session.scalars(stmt)).first()
+    return value
+
+
+async def tg_phone(session: AsyncSession, lead_id: int) -> str | None:
+    """Номер, которым лид поделился кнопкой в боте (Q-020), E.164."""
+    stmt = select(TelegramIdentity.phone_e164).where(TelegramIdentity.lead_id == lead_id)
+    value: str | None = (await session.scalars(stmt)).first()
+    return value
+
+
+async def client_primary_phone(session: AsyncSession, client_id: int | None) -> str | None:
+    """Телефон основного контакта клиента лида (Q-011) — рядом с номером из Telegram."""
+    if client_id is None:
+        return None
+    stmt = select(ClientContact.phone_e164).where(
+        ClientContact.client_id == client_id, ClientContact.is_primary.is_(True)
+    )
     value: str | None = (await session.scalars(stmt)).first()
     return value

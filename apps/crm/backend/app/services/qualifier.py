@@ -18,6 +18,7 @@ from app.domain import qualifier_decision as qd
 from app.domain.keywords import find_terms
 from app.domain.qualification import LeadSignals, Qualification
 from app.domain.stages import Stage, TransitionSource
+from app.integrations.llm_usage import lead_scope
 from app.models.leads import Lead, Message
 from app.models.qualification import QualifierRun
 from app.repositories import kb as kb_repo
@@ -57,7 +58,8 @@ class QualifierService:
             return None
         data, trigger_id, new_lead_texts = prepared
         try:
-            result: QualifierResult | None = await self._agent.run(data)
+            with lead_scope(lead_id):
+                result: QualifierResult | None = await self._agent.run(data)
             error = None
         except Exception as exc:
             logger.exception("qualifier_failed", lead_id=lead_id)

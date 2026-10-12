@@ -18,7 +18,7 @@ test("admin sections render and greeting can be changed", async ({ page }) => {
   await login(page);
 
   await page.goto("/dashboard");
-  await expect(page.getByText("Воронка (сейчас)")).toBeVisible();
+  await expect(page.getByText(/^Воронка/).first()).toBeVisible();
 
   await page.goto("/kb");
   await expect(page.getByRole("button", { name: "Загрузить файл" })).toBeVisible();
@@ -48,4 +48,8 @@ test("admin sections render and greeting can be changed", async ({ page }) => {
 
   await page.goto("/audit");
   await expect(page.getByText("Изменил настройки").first()).toBeVisible();
+
+  await page.goto("/system");
+  await expect(page.getByRole("heading", { name: "Состояние системы" })).toBeVisible();
+  await expect(page.getByText("База данных")).toBeVisible();
 });

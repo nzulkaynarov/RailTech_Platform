@@ -6,5 +6,7 @@
  */
 
 export interface Close {
+  amount?: number | string | null;
+  lost_reason?: string | null;
   reason?: string | null;
 }

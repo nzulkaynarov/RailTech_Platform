@@ -17,13 +17,13 @@ from app.container import Container
 from app.mcp import crm_server, kb_server
 from app.mcp.common import build_app
 from app.models.kb import KbGap
-from app.models.leads import Lead, Message
+from app.models.leads import Lead, Message, TelegramIdentity
 from app.models.qualification import Escalation, StageTransition
 from app.repositories.leads import ERASED_TEXT
 from app.services.conversation import ConversationService, Incoming
 from app.services.settings import SettingsService
 from tests.fakes import FakeEmbedder
-from tests.integration.kb_seed import seed_kb
+from tests.integration.kb_seed import hash_threshold, seed_kb
 from tests.integration.servers import free_port, running
 from tests.unit.agents.fakes import ReplayModel, reply
 
@@ -46,6 +46,7 @@ async def stack(
     sessions: async_sessionmaker[AsyncSession], live_settings: Settings
 ) -> AsyncIterator[Stack]:
     await seed_kb(sessions)
+    await hash_threshold(sessions)
     container = Container(live_settings)
     container.__dict__["session_factory"] = sessions
     container.__dict__["embedder"] = FakeEmbedder()
@@ -101,13 +102,20 @@ async def consented(stack: Stack) -> None:
     await stack.service.accept_consent(USER)
 
 
-async def test_first_message_asks_consent_and_does_not_answer(stack: Stack) -> None:
+async def test_first_message_asks_language_then_consent_and_does_not_answer(stack: Stack) -> None:
+    """Q-022: первое сообщение — выбор языка, согласие — на выбранном языке."""
     out = await stack.service.handle_message(msg("Сколько стоит касса?", language_code="ru"))
+    assert [o.keyboard for o in out] == ["language"]
+    assert "Muloqot tilini tanlang" in out[0].text
+    assert "Choose your language" in out[0].text
+    out = await stack.service.set_language(USER, "uz")
     assert [o.keyboard for o in out] == [None, "consent"]
+    assert out[1].text.startswith("Davom etish uchun")
     assert stack.model.requests == []
     async with stack.sessions() as session:
         roles = (await session.scalars(select(Message.role).order_by(Message.id))).all()
-    assert roles == ["lead", "bot", "bot"]
+    assert roles == ["lead", "bot", "bot", "bot"]
+    assert (await lead_row(stack.sessions)).language == "uz"
 
 
 async def test_question_asked_before_consent_is_answered_right_after(stack: Stack) -> None:
@@ -236,7 +244,13 @@ async def test_delete_erases_messages_and_unlinks_identity(stack: Stack) -> None
         msg("", attachments=[{"kind": "file", "storage_key": "tg/1/2/voice.ogg", "stored": True}])
     )
     stack.hooks.clear()
+    async with stack.sessions() as session, session.begin():
+        identity = (await session.scalars(select(TelegramIdentity))).one()
+        identity.phone_e164 = "+998901234567"  # Q-020: номер из кнопки «Поделиться номером»
     await stack.service.erase(USER)
+    async with stack.sessions() as session:
+        phones = (await session.scalars(select(TelegramIdentity.phone_e164))).all()
+    assert phones == [None]  # /delete стирает и номер
     async with stack.sessions() as session:
         escalation = (await session.scalars(select(Escalation))).one()
     assert (escalation.status, escalation.outcome) == ("closed", "erased")
@@ -249,7 +263,7 @@ async def test_delete_erases_messages_and_unlinks_identity(stack: Stack) -> None
         texts = set((await session.scalars(select(Message.text))).all())
     assert texts == {ERASED_TEXT}
     out = await stack.service.handle_message(msg("Снова здравствуйте"))
-    assert out[-1].keyboard == "consent"
+    assert out[-1].keyboard == "language"  # Q-022: после /delete — снова выбор языка
 
 
 async def test_agent_failure_is_reported_to_the_team_without_silencing_the_bot(
@@ -263,3 +277,17 @@ async def test_agent_failure_is_reported_to_the_team_without_silencing_the_bot(
     assert (escalation.reason_codes, escalation.priority) == (["agent_unavailable"], "info")
     assert (await lead_row(stack.sessions)).owner_mode == "bot"
     assert ("escalation", escalation.lead_id) in stack.hooks
+    assert out[-1].keyboard == "handoff_offer"
+
+
+async def test_second_agent_failure_in_a_row_hands_off_without_repeating_the_apology(
+    stack: Stack,
+) -> None:
+    await consented(stack)
+    first = await stack.service.handle_message(msg("Что входит в тариф Старт для кассы RT-POS?"))
+    second = await stack.service.handle_message(msg("А для двух касс?"))
+    assert second[-1].text != first[-1].text
+    assert "менеджер его увидит" not in second[-1].text
+    escalation = await only_escalation(stack.sessions)
+    assert escalation.priority == "warm"
+    assert (await lead_row(stack.sessions)).owner_mode == "paused"

@@ -3,19 +3,23 @@
 from datetime import UTC, datetime
 from typing import Any
 
+import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.dialog.state import DialogResult
 from app.domain.dialog_policy import Action, is_smalltalk
 from app.domain.language import Language, detect_language, next_language
+from app.domain.stages import OwnerMode
 from app.domain.triggers import TriggerSignals, evaluate
 from app.models.clients import Client
 from app.models.leads import Conversation, Lead, Message
 from app.repositories import leads as repo
 from app.schemas.settings import AppSettings
 from app.services import escalation
-from app.services.conversation_types import Outgoing, Turn
+from app.services.conversation_types import ActivityHook, Keyboard, Outgoing, Turn
+
+logger = structlog.get_logger(__name__)
 
 
 def apply_counters(lead: Lead, result: DialogResult) -> None:
@@ -60,19 +64,55 @@ def lead_of(outgoing: list[Outgoing]) -> int | None:
     return next((o.lead_id for o in outgoing if o.lead_id is not None), None)
 
 
+def owner_notice_target(early: list[Outgoing], turn: Turn | None) -> int | None:
+    """Лид, о сообщении которого, возможно, надо написать менеджеру: ход в режиме «человек»
+    или ответ без модели (вложение и т. п.); окончательно решает задача по данным лида."""
+    if turn is None:
+        return lead_of(early)
+    return turn.lead_id if turn.owner_mode == OwnerMode.HUMAN else None
+
+
+async def notify_owner(hook: ActivityHook | None, early: list[Outgoing], turn: Turn | None) -> None:
+    """Хук «сообщение лида» после коммита (Q-010); ошибка очереди не ломает ответ клиенту."""
+    lead_id = owner_notice_target(early, turn)
+    if hook is None or lead_id is None:
+        return
+    try:
+        await hook(lead_id)
+    except Exception:
+        logger.exception("conversation_hook_failed", lead_id=lead_id)
+
+
 async def consent_prompt(
     session: AsyncSession, conversation: Conversation, lead: Lead, cfg: AppSettings, is_new: bool
 ) -> list[Outgoing]:
+    """Первый контакт — выбор языка (Q-022), согласие — после него на выбранном языке."""
     language = lang_of(lead)
     texts = cfg.texts
     out: list[Outgoing] = []
     if is_new:
-        out.append(Outgoing(texts.greeting.get(language, company=cfg.company.name)))
-        out.append(Outgoing(texts.consent.get(language), keyboard="consent", language=language))
+        first = texts.language_first
+        picker = "\n".join((first.uz, first.ru, first.en))
+        out.append(Outgoing(picker, keyboard="language", language=language))
     else:
         out.append(
             Outgoing(texts.consent_required.get(language), keyboard="consent", language=language)
         )
+    for item in out:
+        await repo.add_message(session, conversation_id=conversation.id, role="bot", text=item.text)
+    return out
+
+
+async def consent_offer(
+    session: AsyncSession, conversation: Conversation, lead: Lead, cfg: AppSettings
+) -> list[Outgoing]:
+    """Язык выбран кнопкой, согласия ещё нет: приветствие и согласие на этом языке."""
+    language = lang_of(lead)
+    texts = cfg.texts
+    out = [
+        Outgoing(texts.greeting.get(language, company=cfg.company.name), language=language),
+        Outgoing(texts.consent.get(language), keyboard="consent", language=language),
+    ]
     for item in out:
         await repo.add_message(session, conversation_id=conversation.id, role="bot", text=item.text)
     return out
@@ -151,3 +191,44 @@ async def report_failure(
     hits = evaluate(signals, cfg.escalation.triggers())
     applied = await escalation.apply(session, lead, hits, cfg, datetime.now(UTC))
     return applied.escalation_id if applied else None
+
+
+def failure_reply(
+    cfg: AppSettings, language: Language, notice: str | None
+) -> tuple[str, Keyboard | None, dict[str, Any]]:
+    """Ответ лиду при сбое агента: первый раз — честно и с кнопкой «Позвать менеджера»;
+    повторный сбой подряд передаёт лида менеджеру — без второго извинения (аудит P0)."""
+    if notice in ("handoff", "off_hours"):
+        text = cfg.lead_notice(notice, language)  # type: ignore[arg-type]
+        return text, None, {"error": "agent_unavailable", "notice": notice}
+    text = cfg.texts.service_unavailable.get(language)
+    return text, "handoff_offer", {"error": "agent_unavailable"}
+
+
+async def agent_failure(
+    session: AsyncSession,
+    conversation: Conversation,
+    lead: Lead,
+    cfg: AppSettings,
+    language: Language,
+) -> tuple[list[Outgoing], int | None]:
+    """Ход не удался (модель, crm-mcp): сбой считается как fallback — серия из
+    `kb_gap_streak` подряд создаёт warm-эскалацию и передачу менеджеру (решает код)."""
+    lead.consecutive_fallbacks += 1
+    signals = TriggerSignals(
+        agent_unavailable=True, consecutive_fallbacks=lead.consecutive_fallbacks
+    )
+    hits = evaluate(signals, cfg.escalation.triggers())
+    now = datetime.now(UTC)
+    applied = await escalation.apply(
+        session, lead, hits, cfg, now, reason_text="dialog: agent_unavailable"
+    )
+    text, keyboard, meta = failure_reply(cfg, language, applied.plan.lead_text if applied else None)
+    message = await repo.add_message(
+        session, conversation_id=conversation.id, role="bot", text=text, meta=meta
+    )
+    lead.last_bot_msg_at = now
+    outgoing = Outgoing(
+        text, keyboard=keyboard, message_id=message.id, language=language, lead_id=lead.id
+    )
+    return [outgoing], applied.escalation_id if applied else None

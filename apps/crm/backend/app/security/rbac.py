@@ -23,15 +23,21 @@ DOMAIN: Final = "crm"
 
 # Каталог прав, который видит фронт (`GET /me/permissions`).
 CATALOG: Final[dict[str, tuple[str, ...]]] = {
-    "leads": ("read", "take", "work", "reply", "note"),
+    "leads": ("read", "take", "work", "reply", "note", "assist"),
     "stream": ("read",),
     "dashboard": ("read",),
     "clients": ("read", "write"),
+    "deals": ("read", "write"),
     "documents": ("read", "write"),
     "users": ("read", "write"),
     "settings": ("read", "write"),
     "kb": ("read", "write"),
     "audit": ("read",),
+    "backups": ("read", "write"),
+    "spend": ("read",),
+    "models": ("read", "test"),
+    "integrations": ("read", "write"),
+    "system": ("read",),
 }
 
 

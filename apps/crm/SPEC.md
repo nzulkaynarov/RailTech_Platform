@@ -105,7 +105,7 @@
 1. Telegram → `api` (webhook/polling) → проверка `secret_token`, идемпотентность по `update_id` (таблица `tg_updates`).
 2. `api` сохраняет `messages(role=lead)`, обновляет `leads.last_lead_msg_at`.
 3. Если `leads.owner_mode = bot` → запуск диалогового агента (§7.1) → ответ лиду → `messages(role=bot)`.
-   Если `owner_mode = human` → сообщение попадает в CRM в реальном времени (SSE), бот молчит.
+   Если `owner_mode = human` → сообщение попадает в CRM в реальном времени (SSE), бот молчит: агент не запускается вовсе (ни MCP, ни извинений при сбое), менеджер получает уведомление.
    Если `owner_mode = paused` → модель не вызывается (ждёт менеджера); код отвечает `texts.waiting_for_manager` не чаще раза в 30 мин, `/human` и стоп-слова поднимают приоритет открытой эскалации до `hot` (ADR-0015).
 4. `api` ставит задачу Procrastinate `qualify_lead(lead_id)` с дедупликацией (`queueing_lock = lead_id`, если уже в очереди — не дублируется).
 
@@ -192,7 +192,7 @@ railtech-crm/
 ### 5.1. Пользователи и доступ
 
 ```sql
-users(id, email UNIQUE, password_hash, full_name, tg_user_id UNIQUE NULL, is_active, must_change_password BOOL DEFAULT true, ui_mode 'admin'|'manager', last_login_at)
+users(id, email UNIQUE, password_hash, full_name, tg_user_id UNIQUE NULL, is_active, must_change_password BOOL DEFAULT true, ui_mode 'admin'|'manager', last_login_at, notify_system BOOL DEFAULT true, notify_leads BOOL DEFAULT true)  -- подписки на личные сообщения от бота (Q-010)
 roles(id, name UNIQUE)                     -- admin | manager | viewer (seed)
 user_roles(user_id, role_id, granted_by, granted_at)   -- PK (user_id, role_id)
 casbin_rule(...)                           -- таблица адаптера Casbin
@@ -211,16 +211,36 @@ leads(
   consent_given_at NULL, consent_version TEXT,
   need_summary TEXT, product_interest TEXT[], qualification JSONB,
   last_lead_msg_at, last_bot_msg_at, last_human_msg_at, snoozed_until, unresponsive_since,
+  manager_notified_at NULL,                         -- троттлинг личных уведомлений менеджеру (Q-010)
   source 'telegram', notes_count INT
 )
 clients(id, name, inn TEXT NULL, segment TEXT, owner_user_id, is_active)
+deals(                                              -- сделки клиента (Q-013, ADR-0019)
+  id, client_id NULL, lead_id NULL, title, product_key NULL, amount NUMERIC(14,2) NULL,
+  currency CHAR(3) DEFAULT 'UZS', stage 'open'|'won'|'lost', expected_close_date DATE NULL,
+  closed_at NULL, lost_reason NULL,                 -- значение из settings.deals.lost_reasons
+  owner_user_id NULL, created_at, updated_at
+)
 telegram_identities(
   id, tg_user_id UNIQUE, tg_username, tg_first_name, lead_id NULL, client_id NULL,
   phone_e164 NULL, verified_by_user_id NULL, verified_at NULL, is_blocked BOOL
 )
+client_contacts(                                    -- контактные лица клиента (Q-011)
+  id, client_id → clients ON DELETE CASCADE, full_name, position NULL,
+  phone_e164 NULL,                                  -- тот же нормализатор E.164, что и номер из бота
+  email NULL,                                       -- нижний регистр, проверка формата
+  telegram_identity_id NULL → telegram_identities ON DELETE SET NULL,
+  is_primary BOOL,                                  -- частичный UNIQUE (client_id) WHERE is_primary
+  note NULL, created_at, updated_at
+)
 ```
 
 Правило: доступ к данным клиента из бота возможен только если `telegram_identities.client_id IS NOT NULL AND verified_at IS NOT NULL`.
+
+Контакты клиента: «Добавить из Telegram» предлагает подтверждённые идентичности клиента с `phone_e164`,
+которых ещё нет среди контактов (по `telegram_identity_id` или номеру); связать контакт можно только с
+подтверждённой идентичностью этого же клиента. Телефон основного контакта показывается в карточке лида
+этого клиента (`LeadDetail.client_phone_e164`).
 
 ### 5.3. Диалог
 
@@ -264,6 +284,8 @@ documents(id, client_id, type 'contract'|'proposal'|'letter'|'invoice'|'act'|'ot
 document_access_log(id, document_id, accessed_by_type 'bot'|'user', accessed_by_id, tg_user_id NULL, created_at)
 service_requests(id, client_id, lead_id NULL, summary, status 'open'|'closed', closed_by NULL,
                  resolution TEXT NULL, closed_at NULL)   -- создаёт инструмент create_service_request; закрытие — с ответом клиенту (ADR-0015)
+-- Связи с эскалацией нет: закрытие запроса закрывает open/snoozed info-эскалацию лида, все причины
+-- которой — service_request, и только когда у лида не осталось других открытых запросов.
 ```
 
 Документы скачиваются сотрудником через API (`GET /documents/{id}/download`, запись в журнал), клиентом — файлом от бота; RustFS наружу не публикуется.
@@ -274,13 +296,14 @@ service_requests(id, client_id, lead_id NULL, summary, status 'open'|'closed', c
 settings(key PK, value JSONB, schema_version INT, updated_by, updated_at)
 ```
 Ключи и JSON-схемы валидируются Pydantic-моделями в `app/schemas/settings.py`:
-`company`, `business_hours`, `texts` (greeting/consent/handoff/off_hours × ru/uz/en), `escalation` (триггеры, пороги, `no_progress_turns`, SLA, `price_always_to_manager`), `qualification` (критерии «Квалифицирован»: обязательные и дополнительные факты, горизонт срока, роли — ADR-0016), `kb` (`min_score`, `top_k`), `bot` (persona, `max_words`, `history_messages`, `rate_limit_per_minute`, `unresponsive_days`), `competitors`, `stop_words`, `notifications` (`channel_id`, `duty_user_ids`), `budget` (`daily_usd`, `fallback_model_enabled`).
+`company` (`name`, `crm_base_url`, `phone`/`site`/`address` — ответ бота на «дайте контакты», Q-023), `business_hours`, `texts` (greeting/consent/handoff/off_hours × ru/uz/en, плейсхолдеры `{sla}`, `{next}`, `{hours}`; подписи меню `menu_*`, команды клиента `docs_*`/`request_*`/`client_only`, номер `phone_*` — Q-011/Q-020, класс `ClientBotTexts`), `escalation` (триггеры, пороги, `no_progress_turns`, SLA, `price_always_to_manager`), `qualification` (критерии «Квалифицирован»: обязательные и дополнительные факты, горизонт срока, роли — ADR-0016), `kb` (`min_score` — по умолчанию 0.70, калибровка аудита 2026-10-12: бессмыслица набирала 0.60–0.68; `top_k`; `search_timeout_s` — таймаут попытки kb-mcp, 6 с), `bot` (persona, `max_words` — по умолчанию 60, `history_messages`, `rate_limit_per_minute`, `unresponsive_days`, `ask_phone` — один раз попросить номер, Q-020; `assist_enabled`, `assist_max_input_chars` — ИИ-помощь менеджеру «Черновик»/«Улучшить», `POST /leads/{id}/assist`, право `leads:assist`, Q-019), `competitors`, `stop_words`, `notifications` (`channel_id`, `duty_user_ids`), `budget` (`daily_usd`, `fallback_model_enabled`, `providers` — дневной лимит USD по провайдеру LiteLLM: `anthropic` 3, `gemini` 1, 0 — без лимита; Q-008), `deals` (`lost_reasons` — справочник причин отказа, `currency` — валюта новых сделок, UZS; ADR-0019).
 
 ### 5.8. Техническое
 
 - Таблицы Procrastinate (`procrastinate_*`) — создаются его миграциями.
 - Таблицы LangGraph `PostgresSaver` (`checkpoints`, `checkpoint_writes`, ...).
 - `system_alerts(key PK, active, detail, first_seen_at, sent_at, resolved_at, updated_at)` — дедупликация системных алертов монитора (§13).
+- `llm_usage(id, at, purpose, alias, provider, model, input_tokens, output_tokens, cost_usd, lead_id NULL, kind 'work'|'test')`, индекс по `at` — единый учёт каждого вызова модели (чат и эмбеддинги; стоимость — заголовок LiteLLM `x-litellm-response-cost`); `kind='test'` — `LLM_USAGE_KIND=test` в make eval/eval-quick/load-test/kb-eval. Источник для BudgetGuard, монитора и экрана «Расходы».
 
 ---
 
@@ -308,6 +331,7 @@ ALLOWED = {
   ("unresponsive"|"lost","engaged"): {"system"},  # новое сообщение лида
   ("lost","in_progress"): {"user"},               # Забрать вернувшегося (ADR-0015)
   ("customer","in_progress"): {"user"},           # Новая сделка с клиентом (ADR-0015)
+  ("customer","won"|"engaged"): {"user"},         # отвязан последний подтверждённый Telegram: в won, если клиентом стал из won, иначе engaged
 }
 ```
 Квалификатор может предлагать только `engaged`, `qualified`. Всё остальное отклоняется с записью `rejected_reason`.
@@ -334,9 +358,9 @@ load_context → detect_language → guard_consent → select_mode(prospect|cust
 - `load_context`: лид, идентичность, последние 20 сообщений, заметки с `visible_to_bot`, стадия, `need_summary`, `qualification`, настройки.
 - `detect_language`: по тексту; фиксируется после 2 совпадающих сообщений; команда `/lang` для смены.
 - `select_mode`: `customer`, если идентичность верифицирована и привязана к `client_id`; иначе `prospect`.
-- `retrieve`: `kb-mcp.search_kb` (prospect и customer) и `docs-mcp.search_documents` (только customer). Гибридный поиск: вектор (cosine) + BM25 (`ts_rank_cd`) → RRF → top-6 → порог `kb.min_score`.
-- `decide` (код): `owner_mode != bot` → стоп; hard-триггер по стоп-словам/`/human` → `handoff`; документ найден однозначно → `deliver_document`; `best_score < min_score` и вопрос по продукту → `fallback`; потребность не ясна и стадия ≤ engaged → `answer` с флагом «один уточняющий вопрос»; иначе `answer`.
-- `answer/clarify`: `dialog-model`, промпт `dialog_prospect.md` / `dialog_customer.md`, в контексте только найденные фрагменты. ≤ 120 слов, без списков, максимум один вопрос.
+- `retrieve`: `kb-mcp.search_kb` (prospect и customer) и `docs-mcp.search_documents` (только customer). Гибридный поиск: вектор (cosine) + BM25 (`ts_rank_cd`) → RRF → top-6 → порог `kb.min_score`. Попытка поиска ограничена `kb.search_timeout_s`; при сбое — одна повторная, затем ход продолжается с пометкой «KB недоступна» (ход не падает).
+- `decide` (код): `owner_mode != bot` → стоп; hard-триггер по стоп-словам/`/human` → `handoff`; документ найден однозначно → `deliver_document`; «ок/спасибо/понятно» (ru/uz/en) → короткий `texts.smalltalk_ack` без модели; KB недоступна (prospect, не smalltalk) → `fallback` (`reason=kb_unavailable`, без записи в `kb_gaps`); `best_score < min_score` и вопрос по продукту → `fallback`; потребность не ясна и стадия ≤ engaged → `answer` с флагом «один уточняющий вопрос»; иначе `answer`.
+- `answer/clarify`: `dialog-model`, промпт `dialog_prospect.md` / `dialog_customer.md`, в контексте только найденные фрагменты. ≤ `bot.max_words` слов (60), без списков, максимум один вопрос. Гарантии кода поверх ответа модели: встречный вопрос в конце убирается, если бот спрашивал в одном из двух предыдущих ответов, в ответ на smalltalk и перед уведомлением о передаче менеджеру. Модель получает настоящий результат инструмента (`ok`/ошибка/`not_allowed`); `create_service_request` возвращает `request_number`, и ответ клиенту обязательно содержит «Запрос №N» (`texts.request_created`), как в `/request`. Промпт запрещает упоминать «базу знаний» и внутренние источники.
 - `fallback`: честный отказ + `kb_gaps` (upsert по нормализованному вопросу, `occurrences++`).
 - `deliver_document`: отправка файла из S3 (RustFS) через Telegram + `document_access_log`.
 - Таймаут вызова модели 20 с, один ретрай, затем `fallback-model`; при недоступности — служебное сообщение лиду, событие сохраняется.
@@ -383,7 +407,7 @@ class QualifierOutput(BaseModel):
 
 ### 7.3. Клиентский режим
 
-- Привязка: менеджер в CRM на карточке клиента «Привязать Telegram» → выбирает идентичность из лидов этого клиента или вводит `tg_user_id`/username → `verified_at`. Дополнительно бот может запросить номер телефона (`request_contact`) и сверить с `clients`-контактами — ускоряет, но не заменяет подтверждение менеджером.
+- Привязка: менеджер в CRM на карточке клиента «Привязать Telegram» → выбирает идентичность из лидов этого клиента или вводит `tg_user_id`/username → `verified_at`. «Отвязать» последний подтверждённый Telegram лида очищает `leads.client_id`, а лида в стадии `customer` возвращает в `won` (если клиентом он стал из «Выиграна»), иначе в `engaged` (`stage_machine.stage_after_unlink`, аудит `client.unlink_telegram`). Дополнительно бот может запросить номер телефона (`request_contact`) и сверить с `clients`-контактами — ускоряет, но не заменяет подтверждение менеджером.
 - Интенты: документ, статус (заглушка в v2 → `create_service_request`), поддержка, человек.
 - Все обращения к `documents` фильтруются `client_id` из контекста на уровне SQL; тесты на попытку доступа к чужому `document_id` обязательны.
 
@@ -411,7 +435,7 @@ class QualifierOutput(BaseModel):
 | `qualifier_recommend` | `recommend_escalation ∧ confidence ≥ 0.7` | warm |
 | `document_not_found` (customer) | Запрос документа без результата | warm |
 | `service_request` (customer) | Интент `service` | info |
-| `agent_unavailable` | Сбой диалогового агента (лиду — `texts.service_unavailable`) | info |
+| `agent_unavailable` | Сбой диалогового агента (лиду — `texts.service_unavailable` с кнопкой «Позвать менеджера»; сбой считается в `consecutive_fallbacks`, повторный подряд → `kb_gap_streak` warm: лиду одно «передаю менеджеру», без второго извинения) | info |
 | `delivery_failed` | Бот не смог отправить файл документа | info |
 
 Триггер → эскалация всегда. Одна открытая эскалация на лида: новые триггеры дописываются, приоритет повышается, в канале редактируется существующий пост.
@@ -434,10 +458,11 @@ class QualifierOutput(BaseModel):
 ```
 🔥 Лид #124 · Азиз · RU · Оценка 75 · Квалифицирован
 Потребность: интеграция онлайн-кассы с 1С для 3 магазинов
-Интерес: pos-integration · Срок: до 3 мес. · Роль: ЛПР
+Интерес: Интеграция касс · Срок: до 3 мес. · Роль: ЛПР
 Почему: Цена/условия — нет в базе; Просит звонок
 Рекомендация: позвонить сегодня, уточнить число касс и версию 1С
 Последнее: 👤 «Ок, пусть позвонят, лучше после 15:00»
+⏳ ждёт 12 мин · с 14:20
 
 [ Забрать ]   [ Открыть в CRM ]
 ```
@@ -445,12 +470,38 @@ class QualifierOutput(BaseModel):
 Метки стадий, причин передачи, сроков и ролей — те же, что в CRM (один словарь канала `app/services/channel_texts.py`, термин — «Передача», Q-015); порог «бот N раз подряд не нашёл ответ» — из `settings.escalation.kb_gap_streak`.
 
 - **Забрать** — `callback_query`; бот сопоставляет `from.id` с `users.tg_user_id`; нет совпадения → ответ «Привяжите Telegram в профиле CRM». Успех → `LeadService.take(lead_id, user)` (те же правила, что из CRM) → пост редактируется: «Забрал: Имя · 14:32», кнопка исчезает.
+- Кнопка несёт id передачи: `take:e<escalation_id>`. Передача уже не открыта/не отложена (или старая кнопка `take:<lead_id>`) → «Карточка устарела», пост пересинхронизируется. Лида ведёт другой сотрудник → ответ «Лида ведёт Имя…» — кнопка не перехватывает лида даже у админа (передача — только «Передать коллеге» в CRM).
+- Карточка без сырых кодов: продукты — названиями из `products` (неизвестные ключи и `company` не показываются), время — в `business_hours.timezone`; «Забрал: Имя · 14:32» (не сегодня — «пн 14:32»); «⏳ ждёт N · с HH:MM» (больше суток — «2 д 3 ч»); «💤 Отложено до 15:00 · Имя».
+- Пост запоминает `escalations.channel_chat_id` (смена канала в настройках не ломает старые посты) и `posted_priority`. Telegram ответил «message to edit not found»/«chat not found»/Forbidden → `channel_message_id` очищается; передачу можно забрать → карточка публикуется заново в текущий канал, иначе молча завершается.
+- Срок реакции и упоминания — только для `warm`/`hot`; `info` — сигнал без SLA (бот продолжает отвечать). Передача только из-за сбоя ИИ (`agent_unavailable`) карточку не публикует: сбой сводится в один системный алерт админам `ai_failures` (§13).
+- Стал горячим → ответ на пост «🔺 Стал горячим», срок реакции заново (`reset_sla`), новая проверка SLA; конец «Отложить» → ответ «⏰ Снова открыт после «Отложить»» и тоже новый срок. Дежурных нет → SLA-напоминание упоминает активных менеджеров с Telegram (до 5).
+- «Передать коллеге» → передача переписывается на нового ответственного (карточка обновляется), ему — личное сообщение «Вам передан лид #N …». Отказ Telegram в личке → `users.tg_dm_failed_at` (виден в профиле, снимается успешной отправкой); окно тишины `manager_notified_at` ставится только после доставки.
+- Ссылки на CRM — всегда `<a href>`; кнопка-ссылка — только для https. `domain/crm_url.py::crm_url_problem` — проверка адреса (не https / localhost) для «Состояния».
+- Сводка 09:05: горячие → тёплые → инфо, имя, причина, сколько ждёт; больше 30 — «…и ещё N».
 - **Открыть в CRM** — URL `https://<host>/leads/124`.
 - Больше кнопок в канале нет. Ответы лиду — только из CRM.
 
 ### 9.2. Клиентский бот
 
-Команды: `/start`, `/lang`, `/human`, `/delete`, `/help`. Middleware: идемпотентность, rate-limit (20 сообщений/мин на пользователя, при превышении — вежливое сообщение), маскирование PII в логах, проверка согласия. Вложения лида (фото/документы) сохраняются в S3 (RustFS) и показываются в CRM; бот в v2 на вложения отвечает «передам коллеге» + триггер `info`.
+Команды: `/start`, `/lang`, `/human`, `/delete`, `/help`; клиенту — `/docs`, `/request`, `/status`.
+
+**Интерфейс по статусу (Q-011, Q-020; `domain/bot_menu.py`, `services/client_bot.py`, `bot/status.py`).** Меню чата (`BotCommandScopeChat`) выбирает код после каждого сообщения/кнопки лида; публикуется только при смене варианта или языка (кэш в процессе бота):
+
+| Статус | Признак | Меню |
+|---|---|---|
+| prospect | нет подтверждённой привязки к клиенту | Начать · Связаться с менеджером · Сменить язык · Что умеет бот · Удалить переписку |
+| with_manager | prospect и `owner_mode = human` | то же без «Связаться с менеджером» |
+| client | `verified_client` (как режим customer агента) | Мои документы `/docs` · Запрос менеджеру `/request` · Статус запроса `/status` · Связаться с менеджером `/human` · Сменить язык · Что умеет бот `/help` · Удалить переписку |
+
+`/help` — по статусу: `texts.help` (prospect), `texts.help_with_manager`, `texts.help_client`; каждый перечисляет ровно команды своего меню (кроме `/start` и `/help`; тест `test_help_lists_exactly_the_menu`). Когда менеджер делает лида клиентом (`make_customer`), бот один раз пишет `texts.client_access_granted` (доступны `/docs`, `/request`). `client_only` подсказывает: договор уже есть — `/human`, менеджер подключит доступ.
+
+**Язык (Q-022; `domain/language.py`).** Первое сообщение новому собеседнику — `texts.language_first` сразу на трёх языках с кнопками «Oʻzbekcha / Русский / English»; приветствие и согласие — после выбора, на выбранном языке (вопрос, заданный до согласия, получает ответ сразу после согласия). Явная просьба («по-русски», «oʻzbekcha», «in English», ≤ 5 слов) — `requested_language` → `set_language` + `texts.language_set` без модели. Язык зафиксирован, а два сообщения подряд на другом — один раз кнопки языка (`leads.qualification.language_mismatch_streak`/`language_offered_at`). Узбекская кириллица без ўқғҳ определяется по словарю частых слов (нима, керак, канча, рахмат…).
+
+**Без модели (код решает, SPEC §1.3).** Просьба о человеке — `escalation.human_request_terms` (основы `менеджер*`, `operator*`, `menejer*`, фразы «живой человек», «real person»; «человек»/«odam»/«person» — только формами и фразами, чтобы «нас 5 человек» и «personal data» не передавали менеджеру). «Дайте телефон/адрес/сайт» (`contact_request`, ≤ 8 слов, не про номер договора/запроса, просьба о менеджере важнее) — ответ из `company.phone/site/address` (`texts.contacts`, `texts.contact_labels`); пусто — `texts.contacts_missing` с кнопками менеджера. Ответ на «Не нужно» — `texts.handoff_offer_declined`. Передача менеджеру: в рабочее время `texts.handoff` с `{sla}` (`texts.sla_promise`, `{minutes}` = `escalation.sla_minutes`), вне — `texts.off_hours` с `{next}` — ближайшее рабочее время с учётом праздников («завтра с 9:00», «в понедельник с 9:00»). Текст вместо кнопки «Поделиться номером» — обычный ответ и `ReplyKeyboardRemove`. Файл/голос во время `/request` — `texts.request_text_only` (ожидание описания не сбрасывается). Закрытый запрос называет номер (`service_request_closed`, `{number}`).
+
+`/docs` — до 10 видимых клиенту документов кнопками (новые первыми), `client_id` только из подтверждённой идентичности, выдача файла и журнал доступа — как у docs-mcp. `/request` — описание следующим сообщением → `service_requests` + info-эскалация `service_request`. `/status` — открытый запрос словами. Prospect на командах клиента получает `texts.client_only`. Номер телефона: один раз (флаг `leads.qualification.phone_asked_at`), когда лид квалифицирован/передан или ждёт менеджера, при `bot.ask_phone`; сохраняется только собственный контакт (`contact.user_id == from_user.id`) в `telegram_identities.phone_e164` (E.164), показывается в карточке лида, стирается по `/delete`.
+
+Middleware: идемпотентность, rate-limit (20 сообщений/мин на пользователя, при превышении — вежливое сообщение не чаще раза в минуту; сообщение лида всё равно сохраняется в переписку с `meta.rate_limited`, бот на него не отвечает), маскирование PII в логах, проверка согласия. Вложения лида (фото/документы) сохраняются в S3 (RustFS) и показываются в CRM; бот в v2 на вложения отвечает «передам коллеге» + триггер `info`. До согласия файл в S3 не загружается: в переписке остаётся пометка `{stored: false, note: «файл получен до согласия»}`. Файл больше 20 МБ (лимит Bot API) не скачивается: бот отвечает `texts.attachment_too_large` («Файл больше 20 МБ — пришлите ссылку или сожмите»), без «передам» и без триггера; сообщение с пометкой `too_large` видно в CRM. Ответы обработчиков без модели (контакты компании Q-023, подтверждение смены языка, «пришлите текстом», «Не нужно» под предложением менеджера) записываются в переписку с ролью `bot` вместе с сообщением лида — менеджер видит в CRM всё, что видел клиент.
 
 ---
 
@@ -462,14 +513,15 @@ class QualifierOutput(BaseModel):
 |---|---|---|
 | **Входящие** | manager, admin | Открытые эскалации (hot первыми), мои лиды, лиды без владельца, запросы клиентов (открытые сервисные запросы, кто ждёт дольше — первым: `GET /api/v1/service-requests?status=open`, право `clients:read`; в карточке лида-клиента — ссылка по `open_service_request_id`, Q-017); счётчики в сайдбаре; live через SSE `/api/v1/stream` |
 | **Лиды** | manager, admin, viewer(ro) | Таблица с фильтрами (стадия, владелец, score, период, язык), сохранённые фильтры |
-| **Карточка лида** | manager, admin, viewer(ro) | Слева: шапка (стадия, score, владелец, язык, согласие), резюме, квалификация, причина эскалации, заметки. Центр: `ChatThread` — переписка с ролями, поле ответа (только `owner_mode=human` и владелец/админ), кнопки: Забрать · Вернуть боту (с заметкой, лид получает `texts.returned_to_bot`) · Отложить · Сделка заключена · Закрыть отказом · Сделать клиентом · Передать коллеге (`actions/assign`) · Новая сделка (для клиента, `actions/new_deal`) — ADR-0015. Владелец показывается по имени (`assigned_user_name`; справочник команды `GET /team` — всем ролям). Справа: «Почему система так решила» — последние `qualifier_runs` и `stage_transitions` в человекочитаемом виде |
+| **Карточка лида** | manager, admin, viewer(ro) | Слева: шапка (стадия, score, владелец, язык, согласие), резюме, квалификация, причина эскалации, заметки. Центр: `ChatThread` — переписка с ролями, поле ответа (только `owner_mode=human` и владелец/админ), кнопки: Принято к сведению (информационная передача у бота: `actions/acknowledge`, закрывает эскалацию без смены стадии и владельца) · Забрать · Вернуть боту (повторная сделка клиента возвращается в «Клиент») (с заметкой, лид получает `texts.returned_to_bot`) · Отложить · Вернуть из отложенных (`actions/unsnooze`: права как у «Отложить», передача снова `open`, срок реакции заново `reset_sla`, пост в канале и новая проверка SLA, аудит `lead.unsnooze`, SSE) · Сделка заключена · Закрыть отказом · Сделать клиентом · Передать коллеге (`actions/assign`) · Новая сделка (для клиента, `actions/new_deal`) — ADR-0015. Владелец показывается по имени (`assigned_user_name`; справочник команды `GET /team` — всем ролям). Справа: «Почему система так решила» — последние `qualifier_runs` и `stage_transitions` в человекочитаемом виде |
 | **Клиенты** | manager, admin, viewer(ro) | Карточка клиента: контакты, привязанные Telegram-идентичности (с подтверждением), документы, связанные лиды/диалоги, сервисные запросы |
+| **Сделки** | manager, admin, viewer(ro) | `/deals`: таблица (название, клиент, сумма с валютой, стадия, ожидаемое закрытие, ответственный, причина отказа), фильтры стадия/ответственный (`?stage=won`), создание и правка в модальном окне; на карточке клиента — блок «Сделки» с «Новая сделка». Открытую сделку создаёт код при входе лида в «Квалифицирован» и при «Новая сделка» (одна открытая на лида, название «Клиент — продукт»); закрытие лида «Сделка заключена»/«Отказ» закрывает её в той же транзакции, отказ без открытой сделки создаёт проигранную с причиной; выигранную сделку правит только админ (Q-021, ADR-0019). API: `GET/POST /api/v1/deals`, `GET/PATCH /api/v1/deals/{id}`, `GET /api/v1/deals/summary?days=`, `GET /api/v1/deals/options`; права `deals:read` (все роли), `deals:write` (manager, admin) |
 | **Документы** | manager, admin | Загрузка документов клиенту (тип, номер, дата), видимость клиенту, журнал доступа |
-| **База знаний** | admin | Документы KB, ингест, активность, просмотр чанков, тестовый поиск («что найдёт бот на этот вопрос») |
+| **База знаний** | admin, manager(ro) | Документы KB (менеджер — только просмотр и тестовый поиск, право `kb:read`; правка — `kb:write`, admin), ингест, активность, просмотр чанков, тестовый поиск («что найдёт бот на этот вопрос») |
 | **Пробелы KB** | admin | Вопросы без ответа: частота, язык, примеры диалогов, действия: «Создать документ», «Привязать к документу», «Игнорировать» |
 | **Настройки** | admin | Формы по ключам `settings` с валидацией; предпросмотр текстов на 3 языках; редактор правил эскалации |
-| **Пользователи** | admin | Список, роли, создание с временным паролем (обязательная смена при первом входе, `users.must_change_password`), сброс пароля админом, деактивация (с передачей лидов в работе и клиентов коллеге — иначе 409 `user_has_active_leads`, ADR-0015), привязка Telegram; защита «последний админ». Email-приглашения — в расширениях (§15) |
-| **Дашборд** | все | Воронка, эскалации по причинам, время до «Забрать», доля fallback, стоимость моделей (из Langfuse API), пробелы KB |
+| **Пользователи** | admin | Список, роли, создание с временным паролем (обязательная смена при первом входе, `users.must_change_password`), сброс пароля админом, деактивация и снятие роли менеджера (с передачей лидов в работе и клиентов коллеге — иначе 409 `user_has_active_leads`, ADR-0015; диалог тогда показывает выбор «Передать лидов и сделки коллеге» и отправляет изменение ещё раз с `transfer_to_user_id`), привязка Telegram; защита «последний админ». Email-приглашения — в расширениях (§15) |
+| **Дашборд** | все | Сделки за период (выиграно числом и суммой по валютам, отказы по причинам; плитка «Сделок» ведёт в `/deals?stage=won`), воронка, эскалации по причинам, время до «Забрать», доля fallback, стоимость моделей (из Langfuse API), пробелы KB |
 | **Аудит** | admin | `audit_log` с фильтрами |
 
 ### 10.2. Переключатель режима
@@ -514,9 +566,11 @@ Refine с кастомным `dataProvider` (REST `/api/v1`), `authProvider` (co
 
 - Трейсы: каждый ход диалога и каждый запуск квалификатора — Langfuse trace с `lead_id`, `mode`, `stage`; стоимость агрегируется.
 - Логи: structlog JSON, `request_id`, `lead_id`; уровни по env.
-- Метрики здоровья: `GET /health` (liveness), `GET /ready` (БД, S3/RustFS, LiteLLM); ежедневный отчёт в канал (General-пост): новых лидов, эскалаций, открытых пробелов KB, стоимость.
-- Алерты (в канал, префикс ⚠️): задача в `failed` после 3 ретраев; LiteLLM недоступен > 2 мин; очередь > 100 задач; бюджет > 80 %; у провайдера модели закончились кредиты/квота или отклонён ключ — проба раз в час запросом в 1 токен к `dialog-model` (Anthropic) и `fallback-model` (Gemini) с `disable_fallbacks` (иначе сбой Claude скрыт ответом Gemini), ключ алерта `model:<alias>`, снятие — только по успешной пробе. Монитор — периодическая задача `system_monitor` (раз в минуту, `domain/alerts.py`); дедупликация в таблице `system_alerts(key PK, active, detail, first_seen_at, sent_at, resolved_at, updated_at)`: пост на переходе в проблему, повтор не чаще 6 ч, снятие постом «✅ … в норме». Итоги дня — `daily_report` в 18:05 Asia/Tashkent (пн–пт).
-- BudgetGuard: расход за сутки (Asia/Tashkent) = `messages.meta.cost_usd` + `qualifier_runs.cost_usd`; при ≥ 100 % `budget.daily_usd` и `fallback_model_enabled` диалог идёт на `fallback-model` (кэш решения 60 с), квалификатор продолжает; `daily_usd = 0` — без лимита.
+- Метрики здоровья: `GET /health` (liveness), `GET /ready` (БД, S3/RustFS, LiteLLM); ежедневный отчёт в канал (General-пост): новых лидов, передач, просрочек срока реакции, медиана до «Забрать», кто сколько забрал, открытых пробелов KB и топ-3 вопросов, ссылка на дашборд; стоимость моделей — только админам в личку.
+- Алерты (личным сообщением от бота активным админам с `notify_system` и привязанным Telegram; если никому не доставлено — в канал; префикс ⚠️): задача в `failed` после 3 ретраев; LiteLLM недоступен > 2 мин; очередь > 100 задач; бюджет > 80 %; у провайдера модели закончились кредиты/квота или отклонён ключ — проба раз в час запросом в 1 токен к `dialog-model` (Anthropic) и `fallback-model` (Gemini) с `disable_fallbacks` (иначе сбой Claude скрыт ответом Gemini), ключ алерта `model:<alias>`, снятие — только по успешной пробе. Монитор — периодическая задача `system_monitor` (раз в минуту, `domain/alerts.py`); дедупликация в таблице `system_alerts(key PK, active, detail, first_seen_at, sent_at, resolved_at, updated_at)`: пост на переходе в проблему, повтор не чаще 6 ч, снятие постом «✅ … в норме». Состояние решается и сохраняется в транзакции, отправка (таймаут Bot API 10 с, ошибки Telegram ловятся) — после коммита; недоставленный алерт остаётся без `sent_at` и уходит следующим проходом. Алерт задачи снимается только успешным запуском этой задачи после сбоя (не опустевшим окном); у алерта задачи — человеческое название и «Что делать» (`channel_texts.TASKS`). Строка `model:<alias>` пишется и для исправной модели (`updated_at` = время пробы). Итоги дня — `daily_report` в 18:05 Asia/Tashkent (пн–пт).
+- Экран «Состояние системы» (`/system`, admin; `GET /api/v1/system/status`): БД, S3, LiteLLM (проверки `/ready`), модели — по последней пробе монитора (`system_alerts` `model:*`, без вызовов моделей), бюджет, очередь (ожидание, зависшие > 15 мин, упавшие за час), канал, бот, бэкап (`unknown`: том бэкапов не подключён; `warn` «Резервное копирование не запущено на этом сервере» — файла `heartbeat` нет вовсе, демон не развёрнут, напр. dev; `fail` — heartbeat был и устарел > 2 мин или успешных копий нет), наличие обязательных секретов (только имена). Статусы `ok|warn|fail|unknown` с причиной и временем проверки.
+- Личные уведомления (Q-010): сообщение лида в режиме `human` → задача `notify_lead_message` → личка ответственному менеджеру (`notify_leads`, без кнопок, ссылка на карточку `company.crm_base_url`/leads/{id}), не чаще `notifications.manager_dm_throttle_minutes`. В CRM — звук и уведомление браузера по SSE `message.created` (`assigned_user_id` = текущий пользователь), включается в профиле.
+- BudgetGuard: расход за сутки (Asia/Tashkent) = сумма `llm_usage.cost_usd` (работа и тесты; кэш 60 с). Мягкий бюджет: при ≥ 100 % `budget.daily_usd` и `fallback_model_enabled` диалог идёт на `fallback-model`, квалификатор продолжает; `daily_usd = 0` — без лимита. Лимит провайдера `budget.providers` (проверка до вызова): провайдер за лимитом → диалог на `fallback-model`, если провайдер резерва в лимите, иначе `LlmUnavailableError` (бот честно передаёт человеку); квалификатор — отказ. Провайдер алиаса — из LiteLLM `GET /model/info` (`model_info.litellm_provider` или префикс `litellm_params.model`), кэш 5 мин; неизвестен → лимит провайдера не применяется. Потолок `provider_budget_config` LiteLLM — аварийный, выше настроек.
 - Runbooks: деплой, откат, бэкап/восстановление, ротация ключей, «бот молчит», «эскалации не приходят», «стоимость выросла», «откат промпта», eval-gate, «переезд dev → prod».
 
 ---

@@ -141,6 +141,7 @@ function useDocumentHandlers(m: Mutations) {
 }
 
 const emptyState = (canWrite: boolean, open: () => void) => ({
+  compact: true,
   title: t.clients.documentsEmpty,
   hint: t.clients.documentsEmptyHint,
   ...(canWrite ? { action: { label: t.clients.upload, onClick: open } } : {}),

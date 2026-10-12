@@ -4,7 +4,7 @@
  * чтобы `SchemaFields` не показывал сырой ключ. Поля берутся прямо из Pydantic-моделей
  * бэкенда — новое поле без подписи уронит этот тест.
  */
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -30,8 +30,16 @@ function modelFields(python: string): Map<string, string[]> {
 }
 
 // vitest запускается из каталога frontend/ (pnpm test, CI).
-const source = readFileSync(resolve(process.cwd(), "../backend/app/schemas/settings.py"), "utf8");
+const schemas = resolve(process.cwd(), "../backend/app/schemas");
+// Модели настроек разнесены по `settings*.py` (лимит размера файла) — сторож читает все.
+const source = readdirSync(schemas)
+  .filter((name) => /^settings(_\w+)?\.py$/.test(name) && name !== "settings_client.py")
+  .map((name) => readFileSync(resolve(schemas, name), "utf8"))
+  .join("\n");
+// Тексты меню клиента и номера — базовый класс `ClientBotTexts` (отдельный файл, лимит размера).
+const client = readFileSync(resolve(schemas, "settings_client.py"), "utf8");
 const models = modelFields(source);
+const clientTexts = modelFields(client).get("ClientBotTexts") ?? [];
 const settingsModels = [...models.keys()].filter(
   (name) => name.endsWith("Settings") && name !== "AppSettings",
 );
@@ -49,7 +57,10 @@ describe("settings labels guard", () => {
   });
 
   it("every bot text has a label and «when it is sent»", () => {
-    const texts = (models.get("TextsSettings") ?? []).filter((k) => k !== "consent_version");
+    const texts = [...(models.get("TextsSettings") ?? []), ...clientTexts].filter(
+      (k) => k !== "consent_version",
+    );
+    expect(clientTexts).toContain("phone_request");
     expect(texts.length).toBeGreaterThan(20);
     const missing = texts.filter((k) => {
       const text = t.settings.botTexts[k];

@@ -1,6 +1,7 @@
 """DTO лидов, переписки, входящих и действий (SPEC §10.1)."""
 
 from datetime import datetime
+from decimal import Decimal
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -43,6 +44,10 @@ class LeadDetail(LeadOut):
     qualification: dict[str, Any]
     consent_given_at: datetime | None
     tg_username: str | None
+    # Номер из кнопки «Поделиться номером» в боте (Q-020), E.164; удаляется по /delete.
+    phone_e164: str | None = None
+    # Телефон основного контакта клиента, если лид привязан к клиенту (Q-011).
+    client_phone_e164: str | None = None
     notes_count: int
     snoozed_until: datetime | None
     # Открытый сервисный запрос лида или его клиента — ссылка из карточки (Q-017).
@@ -97,6 +102,9 @@ class TeamMember(BaseModel):
 
 class Close(BaseModel):
     reason: str | None = Field(default=None, max_length=1000)
+    # Сделка лида (ADR-0019): сумма — необязательно; причина отказа — из справочника «Настроек».
+    amount: Decimal | None = Field(default=None, ge=0, max_digits=14, decimal_places=2)
+    lost_reason: str | None = Field(default=None, max_length=120)
 
 
 class NoteCreate(BaseModel):
@@ -106,6 +114,23 @@ class NoteCreate(BaseModel):
 
 class Reply(BaseModel):
     text: str = Field(min_length=1, max_length=4000)
+
+
+class AssistRequest(BaseModel):
+    """ИИ-помощь при ответе (Q-019): `draft` — черновик, `improve` — правка текста `text`."""
+
+    mode: Literal["draft", "improve"]
+    text: str | None = Field(default=None, max_length=4000)
+
+
+class AssistOut(BaseModel):
+    """Текст для поля ответа (клиенту не отправляется). `notice`: `numbers_removed` — из
+    черновика убраны предложения с числами не из базы знаний; `new_numbers` — правка добавила
+    числа, возвращён исходный текст."""
+
+    text: str
+    cost_usd: float | None = None
+    notice: Literal["numbers_removed", "new_numbers"] | None = None
 
 
 class ActionResult(BaseModel):

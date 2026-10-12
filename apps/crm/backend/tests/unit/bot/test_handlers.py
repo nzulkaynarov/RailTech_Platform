@@ -6,7 +6,8 @@ from typing import Any
 import pytest
 from aiogram.types import Message
 
-from app.bot.handlers import _media, _shared_text
+from app.bot.attachments import media_of as _media
+from app.bot.attachments import shared_text as _shared_text
 
 
 def message(**content: Any) -> Message:

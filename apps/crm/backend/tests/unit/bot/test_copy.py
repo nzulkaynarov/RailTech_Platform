@@ -4,7 +4,6 @@ import re
 
 import pytest
 
-from app.bot.commands import COMMANDS
 from app.bot.keyboards import LANGUAGE_LABELS
 from app.schemas.settings import LocalizedText, TextsSettings
 
@@ -14,7 +13,7 @@ FIELDS = [name for name, value in TEXTS if isinstance(value, LocalizedText)]
 
 def _all(language: str) -> list[str]:
     texts = [getattr(getattr(TEXTS, name), language) for name in FIELDS]
-    return texts + [text for _, text in COMMANDS[language]]
+    return texts  # подписи меню (menu_*) — тоже тексты настроек
 
 
 # Человек для клиента — только «менеджер» (Q-015); бот не обещает «уточнить» сам (Q-016).

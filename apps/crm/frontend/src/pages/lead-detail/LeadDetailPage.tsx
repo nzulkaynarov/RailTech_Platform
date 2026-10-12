@@ -25,6 +25,7 @@ import { QueueNav } from "../../components/QueueNav";
 import { StageBadge } from "../../components/StageBadge";
 import { leadLinkText } from "../../domain/entities";
 import { useApiErrorToast } from "../../hooks/useApiErrorToast";
+import { useReplyAssist } from "../../hooks/useReplyAssist";
 import { t } from "../../i18n/ru";
 import "../../styles/workspace.css";
 import { LeadNotes, LeadSummary } from "./LeadSummary";
@@ -39,6 +40,7 @@ function useRights(): ActionRights | null {
     work: allowed(perms.data, "leads", "work"),
     note: allowed(perms.data, "leads", "note"),
     reply: allowed(perms.data, "leads", "reply"),
+    assist: allowed(perms.data, "leads", "assist"),
     clients: allowed(perms.data, "clients", "write"),
     userId: me.data.id,
     isAdmin: me.data.roles.includes("admin"),
@@ -51,6 +53,7 @@ function Chat({ lead, rights }: { lead: LeadDetail; rights: ActionRights }) {
   const action = useLeadAction(lead.id);
   const onError = useApiErrorToast();
   const reply = replyState(lead, rights);
+  const assist = useReplyAssist(lead.id);
   const authorName = (userId: number) => team.data?.find((m) => m.id === userId)?.full_name;
   const send = async (text: string) => {
     try {
@@ -70,6 +73,7 @@ function Chat({ lead, rights }: { lead: LeadDetail; rights: ActionRights }) {
         language={lead.language}
         authorName={authorName}
         onSend={send}
+        assist={rights.assist ? assist : undefined}
       />
     </PageState>
   );
@@ -115,7 +119,7 @@ function LeadHeader({ lead, rights }: { lead: LeadDetail; rights: ActionRights }
       <div className="lead-meta">
         <StageBadge stage={lead.stage} />
         <span>
-          {t.leads.owner}: <Owner lead={lead} />
+          {t.leads.whoLeads}: <Owner lead={lead} />
         </span>
       </div>
       {plan.ownerBanner ? (
@@ -157,7 +161,7 @@ export function LeadDetailPage() {
                 <LeadNotes leadId={id} />
               </Space>
             }
-            why={<DecisionsPanel query={decisions} />}
+            why={<DecisionsPanel query={decisions} isAdmin={rights.isAdmin} />}
           />
         </PageBody>
       ) : null}

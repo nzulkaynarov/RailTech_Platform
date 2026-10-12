@@ -5,6 +5,7 @@ import {
   documentAccess,
   getClient,
   getDashboard,
+  listClientContacts,
   listClients,
   listDocuments,
   getSettings,
@@ -13,6 +14,7 @@ import {
   listKbDocuments,
   listKbGaps,
   listProducts,
+  systemStatus,
 } from "./generated/crm";
 import type { ListAuditParams, ListKbGapsParams } from "./generated/model";
 import { compact, unwrap } from "./http";
@@ -28,8 +30,20 @@ export const adminKeys = {
   clients: (q: string) => ["clients", q] as const,
   client: (id: number) => ["client", id] as const,
   clientDocuments: (id: number) => ["client", id, "documents"] as const,
+  clientContacts: (id: number) => ["client", id, "contacts"] as const,
   access: (id: number) => ["document", id, "access"] as const,
+  system: ["system", "status"] as const,
 };
+
+/** «Состояние системы»: только чтение, моделей не вызывает; авто-обновление раз в минуту.
+ * Один запрос на странице «Состояние» и в индикаторе шапки (общий ключ кэша). */
+export const useSystemStatus = (enabled = true) =>
+  useQuery({
+    queryKey: adminKeys.system,
+    queryFn: async () => unwrap(await systemStatus()),
+    refetchInterval: 60_000,
+    enabled,
+  });
 
 export const useKbDocuments = () =>
   useQuery({
@@ -81,6 +95,12 @@ export const useClients = (q: string) =>
 
 export const useClient = (id: number) =>
   useQuery({ queryKey: adminKeys.client(id), queryFn: async () => unwrap(await getClient(id)) });
+
+export const useClientContacts = (id: number) =>
+  useQuery({
+    queryKey: adminKeys.clientContacts(id),
+    queryFn: async () => unwrap(await listClientContacts(id)),
+  });
 
 export const useClientDocuments = (id: number) =>
   useQuery({

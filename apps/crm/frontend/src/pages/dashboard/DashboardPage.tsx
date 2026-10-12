@@ -8,12 +8,14 @@ import { usePermissionsQuery } from "../../api/queries";
 import { allowed } from "../../app/providers/access";
 import { PageBody } from "../../components/PageBody";
 import { PageHeader } from "../../components/PageHeader";
+import { SetupChecklistCard } from "../../components/SetupChecklistCard";
 import { PageState } from "../../components/PageState";
 import { dashboardTiles } from "../../domain/dashboard";
 import { useApiErrorToast } from "../../hooks/useApiErrorToast";
 import { t } from "../../i18n/ru";
 import { formatDateTime, tashkent } from "../../lib/time";
 import { Daily, Panels, Tiles } from "./DashboardParts";
+import { DealsPanel } from "./DealsPanel";
 import "../admin.css";
 
 const PERIODS = [7, 30, 90].map((n) => ({
@@ -76,10 +78,12 @@ export function DashboardPage() {
   return (
     <PageBody>
       <PageHeader title={t.page.dashboard} extra={controls} />
+      <SetupChecklistCard />
       <PageState query={query} ready={Boolean(data)}>
         {data && tiles ? (
           <>
             <Tiles tiles={tiles.primary} perms={perms.data} primary />
+            {allowed(perms.data, "deals", "read") ? <DealsPanel days={days} /> : null}
             <Typography.Title level={2} className="section-title">
               {t.dashboard.secondary}
             </Typography.Title>

@@ -1,4 +1,4 @@
-import { DatePicker, Flex, Select, Table, Typography } from "antd";
+import { DatePicker, Flex, Select, Switch, Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs, { type Dayjs } from "dayjs";
 import { useState } from "react";
@@ -10,7 +10,7 @@ import { EntityLink } from "../../components/EntityLink";
 import { PageBody } from "../../components/PageBody";
 import { PageHeader } from "../../components/PageHeader";
 import { PageState } from "../../components/PageState";
-import { type AuditContext, auditDiff } from "../../domain/audit";
+import { type AuditContext, auditDiff, entityText } from "../../domain/audit";
 import { actorLabel, auditActionLabel, ENTITY_TYPES, entityLabel } from "../../domain/labels";
 import { useProductNames } from "../../hooks/useProductNames";
 import { t } from "../../i18n/ru";
@@ -18,6 +18,8 @@ import { DATE_FORMAT, formatDateTime, TIMEZONE } from "../../lib/time";
 import "../admin.css";
 
 const PAGE = 50;
+/** Входы (и неудачные попытки) по умолчанию скрыты — они забивают журнал изменений. */
+const HIDE_LOGINS = ["auth.login"];
 const ACTION_OPTIONS = Object.keys(t.labels.auditAction).map((value) => ({
   value,
   label: auditActionLabel(value),
@@ -76,6 +78,15 @@ function Filters({ update, users }: { update: Update; users: Option[] }) {
           update({ entity_type: v ?? null });
         }}
       />
+      <label className="audit-logins">
+        <Switch
+          size="small"
+          onChange={(on) => {
+            update({ exclude_actions: on ? null : HIDE_LOGINS });
+          }}
+        />{" "}
+        {t.auditUi.showLogins}
+      </label>
       <DatePicker.RangePicker
         className="filter-range"
         aria-label={t.audit.period}
@@ -101,7 +112,7 @@ function columns(ctx: AuditContext): ColumnsType<AuditItem> {
       title: t.audit.actor,
       render: (_, r) =>
         r.actor_user_id
-          ? (ctx.userName(r.actor_user_id) ?? `#${String(r.actor_user_id)}`)
+          ? (r.actor_name ?? ctx.userName(r.actor_user_id) ?? `#${String(r.actor_user_id)}`)
           : actorLabel(r.actor_type),
     },
     { title: t.audit.action, render: (_, r) => auditActionLabel(r.action) },
@@ -109,7 +120,11 @@ function columns(ctx: AuditContext): ColumnsType<AuditItem> {
       title: t.audit.entity,
       className: "nowrap",
       width: 180,
-      render: (_, r) => <EntityLink type={r.entity_type} id={r.entity_id} />,
+      render: (_, r) => (
+        <EntityLink type={r.entity_type} id={r.entity_id}>
+          {entityText(r.entity_type, r.entity_id, ctx)}
+        </EntityLink>
+      ),
     },
     {
       title: t.audit.changes,
@@ -121,7 +136,11 @@ function columns(ctx: AuditContext): ColumnsType<AuditItem> {
 
 /** Журнал аудита (admin): кто, что, над чем, до/после — словами, со ссылкой на объект. */
 export function AuditPage() {
-  const [params, setParams] = useState<ListAuditParams>({ limit: PAGE, offset: 0 });
+  const [params, setParams] = useState<ListAuditParams>({
+    limit: PAGE,
+    offset: 0,
+    exclude_actions: HIDE_LOGINS,
+  });
   const query = useAudit(params);
   const users = useUsers();
   const productName = useProductNames();

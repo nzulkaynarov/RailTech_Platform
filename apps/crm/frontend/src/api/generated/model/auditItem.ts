@@ -9,6 +9,8 @@ import type { AuditItemBefore } from "./auditItemBefore";
 
 export interface AuditItem {
   action: string;
+  /** Имя пользователя-автора */
+  actor_name?: string | null;
   actor_type: string;
   actor_user_id: number | null;
   after: AuditItemAfter;

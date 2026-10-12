@@ -48,6 +48,8 @@ class Settings(BaseSettings):
     litellm_base_url: AnyHttpUrl = AnyHttpUrl("http://litellm:4000")
     litellm_api_key: SecretStr = SecretStr("")
     llm_timeout_s: float = Field(default=20.0, gt=0)
+    # Пометка вызовов в учёте расходов (`llm_usage.kind`): `test` ставят make eval/load-test.
+    llm_usage_kind: Literal["work", "test"] = "work"
 
     docling_url: AnyHttpUrl = AnyHttpUrl("http://docling:5001")
     docling_api_key: SecretStr = SecretStr("")
@@ -71,12 +73,17 @@ class Settings(BaseSettings):
 
     ready_check_timeout_s: float = Field(default=2.0, gt=0, le=10)
 
+    # Ключ Fernet для секретов интеграций в БД (токен бота из «Подключений»). Без него — только env.
+    secrets_key: SecretStr = SecretStr("")
+
     jwt_secret: SecretStr = SecretStr("")
     access_token_ttl_s: int = Field(default=900, ge=60)
     refresh_token_ttl_days: int = Field(default=30, ge=1)
     login_max_failures: int = Field(default=10, ge=3)
     login_lockout_minutes: int = Field(default=15, ge=1)
     casbin_dir: Path = Field(default_factory=_default_casbin_dir)
+    # Том бэкапов (ADR-0013), api смонтирован в него: список копий и запрос «сделать сейчас».
+    backup_dir: Path = Path("/backups")
 
     def _postgres_dsn(self, scheme: str) -> str:
         user = quote(self.postgres_user, safe="")

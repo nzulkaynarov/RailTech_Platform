@@ -55,11 +55,20 @@ export function CreateUserDialog({ open, saving, onCancel, onSubmit }: CreatePro
 type EditProps = {
   user: UserOut | null;
   saving: boolean;
+  /** Бэкенд потребовал передать лидов (число; 0 — неизвестно), `null` — не требовал. */
+  transferRequired?: number | null;
   onCancel: () => void;
   onSubmit: (values: UserUpdate) => void;
 };
 
-export function EditUserDialog({ user, saving, onCancel, onSubmit }: EditProps) {
+export function EditUserDialog({
+  user,
+  saving,
+  transferRequired = null,
+  onCancel,
+  onSubmit,
+}: EditProps) {
+  const mustTransfer = transferRequired !== null;
   const [form] = Form.useForm<UserUpdate>();
   const active = Form.useWatch("is_active", form);
   const team = useTeam();
@@ -105,11 +114,23 @@ export function EditUserDialog({ user, saving, onCancel, onSubmit }: EditProps) 
           <Form.Item name="is_active" label={t.users.active} valuePropName="checked">
             <Switch />
           </Form.Item>
-          {user.is_active && active === false ? (
+          {mustTransfer ? (
+            <Alert
+              type="warning"
+              showIcon
+              message={t.users.transferRequired}
+              description={t.users.transferRequiredHint.replace(
+                "{count}",
+                transferRequired ? String(transferRequired) : "—",
+              )}
+            />
+          ) : null}
+          {(user.is_active && active === false) || mustTransfer ? (
             <Form.Item
               name="transfer_to_user_id"
-              label={t.users.transferTo}
+              label={mustTransfer ? t.users.transferRequired : t.users.transferTo}
               extra={t.users.transferHint}
+              rules={mustTransfer ? [{ required: true }] : []}
             >
               <Select allowClear showSearch optionFilterProp="label" options={colleagues} />
             </Form.Item>

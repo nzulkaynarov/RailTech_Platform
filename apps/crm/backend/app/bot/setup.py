@@ -1,9 +1,12 @@
 """Сборка диалогового контура в процессе API: чекпоинтер, агент, сервис, бот."""
 
+import asyncio
+import contextlib
 from collections.abc import AsyncIterator, Awaitable, Callable
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 
 import structlog
+from aiogram import Dispatcher
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
@@ -11,10 +14,13 @@ from psycopg_pool import AsyncConnectionPool
 from app.agents.dialog.graph import DialogAgent
 from app.agents.llm import ChatModel
 from app.agents.mcp_client import McpToolClient
-from app.bot.runtime import BotRuntime, build_dispatcher
+from app.bot.runtime import build_dispatcher
+from app.bot.supervisor import BotSupervisor
 from app.container import Container
+from app.integrations.telegram import TokenSource, resolve_token
 from app.security.rbac import Rbac
-from app.services.budget import BudgetedModel, BudgetGuard
+from app.services.budget import BudgetedModel
+from app.services.client_bot import ClientBotService
 from app.services.conversation import ActivityHook, ConversationService, EscalationHook
 
 logger = structlog.get_logger(__name__)
@@ -44,12 +50,14 @@ def build_conversation(
     saver: AsyncPostgresSaver,
     on_activity: ActivityHook | None = None,
     on_escalation: EscalationHook | None = None,
+    on_lead_message: ActivityHook | None = None,
 ) -> ConversationService:
     """Диалоговый контур бота: BudgetGuard → модель, MCP-инструменты, чекпоинтер."""
+    usage = container.usage_recorder
     model = BudgetedModel(
-        ChatModel(container.llm, "dialog-model"),
-        ChatModel(container.llm, "fallback-model"),
-        BudgetGuard(container.session_factory, container.settings_service),
+        ChatModel(container.llm, "dialog-model", usage=usage),
+        ChatModel(container.llm, "fallback-model", usage=usage, purpose="dialog"),
+        container.budget_guard,
     )
     agent = DialogAgent(McpToolClient(container.settings), model, saver)
     return ConversationService(
@@ -60,6 +68,21 @@ def build_conversation(
         on_activity=on_activity,
         on_escalation=on_escalation,
         erase_attachments=_attachments_eraser(container),
+        on_lead_message=on_lead_message,
+    )
+
+
+def build_client_bot(
+    container: Container, on_escalation: EscalationHook | None = None
+) -> ClientBotService:
+    """Меню клиента, /docs (ссылка S3 на 10 минут, как у docs-mcp), /request, номер."""
+    bucket = container.settings.s3_bucket_documents
+
+    async def presign(key: str, ttl_s: int) -> str:
+        return await container.storage.presigned_get(bucket, key, ttl_s)
+
+    return ClientBotService(
+        container.session_factory, container.settings_service, presign, on_escalation
     )
 
 
@@ -76,27 +99,44 @@ async def bot_lifespan(
     container: Container,
     on_activity: ActivityHook | None = None,
     on_escalation: EscalationHook | None = None,
-) -> AsyncIterator[BotRuntime | None]:
+    on_lead_message: ActivityHook | None = None,
+) -> AsyncIterator[BotSupervisor | None]:
+    """Супервизор бота: токен — из «Подключений» (БД) или env; смена токена — без рестарта API."""
     config = container.settings
-    if config.telegram_mode == "disabled" or not config.telegram_bot_token.get_secret_value():
+    if config.telegram_mode == "disabled":
         logger.warning("bot_disabled", mode=config.telegram_mode)
         yield None
         return
-    async with checkpointer(container) as saver:
-        conversation = build_conversation(container, saver, on_activity, on_escalation)
-        rbac = await Rbac.create(container.engine, config.casbin_dir)
-        dispatcher = build_dispatcher(
-            container.session_factory,
-            conversation,
-            container.settings_service,
-            container.storage,
-            config.s3_bucket_attachments,
-            leads=container.lead_service,
-            rbac=rbac,
-        )
-        runtime = BotRuntime.create(config, dispatcher)
-        await runtime.start()
+    async with AsyncExitStack() as stack:
+
+        async def make_dispatcher() -> Dispatcher:
+            saver = await stack.enter_async_context(checkpointer(container))
+            conversation = build_conversation(
+                container, saver, on_activity, on_escalation, on_lead_message
+            )
+            rbac = await Rbac.create(container.engine, config.casbin_dir)
+            return build_dispatcher(
+                container.session_factory,
+                conversation,
+                container.settings_service,
+                container.storage,
+                config.s3_bucket_attachments,
+                leads=container.lead_service,
+                rbac=rbac,
+                client_bot=build_client_bot(container, on_escalation),
+            )
+
+        async def resolve() -> tuple[str, TokenSource]:
+            return await resolve_token(container.secrets_store, config)
+
+        supervisor = BotSupervisor(config, resolve, make_dispatcher)
+        # Бот стартует в фоне: недоступный Telegram не должен держать старт CRM (иначе сбой
+        # Telegram = недоступная CRM); причина видна в «Подключениях» и «Состоянии».
+        starting = asyncio.create_task(supervisor.start(), name="bot_supervisor_start")
         try:
-            yield runtime
+            yield supervisor
         finally:
-            await runtime.stop()
+            starting.cancel()
+            with contextlib.suppress(asyncio.CancelledError, Exception):
+                await starting
+            await supervisor.stop()

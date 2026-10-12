@@ -85,7 +85,7 @@ async def test_upload_ingest_and_test_search(harness: Harness, admin: dict[str, 
         "/api/v1/kb/search", headers=admin, json={"query": "доставка по Ташкенту", "language": "ru"}
     ).json()
     assert found["hits"][0]["document_id"] == document_id
-    assert found["min_score"] == 0.55
+    assert found["min_score"] == 0.7  # калибровка аудита 2026-10-12
     bad = harness.client.post(
         "/api/v1/kb/documents",
         headers=admin,
@@ -187,9 +187,9 @@ async def test_settings_cache_ttl_is_shared_through_db(
     """Другой процесс (воркер) видит изменение после TTL кэша без рестарта."""
     clock = [0.0]
     worker = SettingsService(sessions, ttl_s=30, clock=lambda: clock[0])
-    assert (await worker.get()).kb.min_score == 0.55
+    assert (await worker.get()).kb.min_score == 0.7
     await SettingsService(sessions).update("kb", {"min_score": 0.6, "top_k": 6}, None)
-    assert (await worker.get()).kb.min_score == 0.55  # кэш ещё жив
+    assert (await worker.get()).kb.min_score == 0.7  # кэш ещё жив
     clock[0] = 31
     assert (await worker.get()).kb.min_score == 0.6
 

@@ -19,22 +19,27 @@ from app.domain.consent import consent_required
 from app.domain.dialog_policy import Action
 from app.domain.language import Language, detect_language
 from app.domain.stages import OwnerMode, Stage, TransitionSource
+from app.domain.text import drop_trailing_question
 from app.domain.triggers import TriggerSignals, evaluate
+from app.integrations.llm_usage import lead_scope
 from app.models.leads import Conversation, Lead
 from app.repositories import leads as repo
 from app.schemas.settings import AppSettings
 from app.security.agent_context import issue
 from app.services import escalation, stages
-from app.services.conversation_erasure import ErasureMixin
+from app.services.conversation_erasure import DeliveryFailureMixin, ErasureMixin
+from app.services.conversation_records import RecordsMixin
 from app.services.conversation_support import (
+    agent_failure,
     apply_counters,
+    consent_offer,
     consent_prompt,
     current_lead,
     escalated,
     lang_of,
     lead_of,
+    notify_owner,
     pending_question,
-    report_failure,
     turn_meta,
     turn_signals,
     update_language,
@@ -58,14 +63,13 @@ __all__ = [
     "ConversationService",
     "EscalationHook",
     "Incoming",
-    "Keyboard",
     "Outgoing",
 ]
 
 logger = structlog.get_logger(__name__)
 
 
-class ConversationService(ErasureMixin):
+class ConversationService(ErasureMixin, DeliveryFailureMixin, RecordsMixin):
     def __init__(
         self,
         sessions: async_sessionmaker[AsyncSession],
@@ -75,6 +79,7 @@ class ConversationService(ErasureMixin):
         on_activity: ActivityHook | None = None,
         on_escalation: EscalationHook | None = None,
         erase_attachments: AttachmentsEraser | None = None,
+        on_lead_message: ActivityHook | None = None,
     ) -> None:
         self._sessions = sessions
         self._settings = settings
@@ -83,16 +88,23 @@ class ConversationService(ErasureMixin):
         self._on_activity = on_activity
         self._on_escalation = on_escalation
         self._erase_attachments = erase_attachments
+        self._on_lead_message = on_lead_message
         self._locks: dict[int, asyncio.Lock] = {}
 
     async def handle_message(self, inc: Incoming) -> list[Outgoing]:
         cfg = await self._settings.get()
         early, turn, escalated = await self._receive(inc, cfg)
+        await notify_owner(self._on_lead_message, early, turn)  # Q-010: личка менеджеру
         if turn is None:
             if escalated is not None:
                 await self._fire(*escalated)
             elif early:
                 await self._fire(lead_of(early), None)
+            return early
+        if turn.owner_mode == OwnerMode.HUMAN:
+            # Лида ведёт человек: агент не запускается (ни MCP, ни извинений), сообщение
+            # сохранено и менеджер уведомлён выше; квалификатор — как раньше.
+            await self._fire(turn.lead_id if turn.mode == "prospect" else None, None)
             return early
         return early + await self._answer(turn, cfg)
 
@@ -119,11 +131,6 @@ class ConversationService(ErasureMixin):
             text = cfg.texts.greeting.get(lang_of(lead), company=cfg.company.name)
             await repo.add_message(session, conversation_id=conversation.id, role="bot", text=text)
         return [Outgoing(text)]
-
-    async def help(self, tg_user_id: int) -> list[Outgoing]:
-        cfg = await self._settings.get()
-        language = await self.language_of(tg_user_id)
-        return [Outgoing(cfg.texts.help.get(language, company=cfg.company.name))]
 
     async def unsupported(self, tg_user_id: int) -> list[Outgoing]:
         """Стикер, опрос и т. п.: состояние не меняется, просим написать текстом."""
@@ -185,13 +192,23 @@ class ConversationService(ErasureMixin):
         return [Outgoing(text)]
 
     async def set_language(self, tg_user_id: int, language: Language) -> list[Outgoing]:
+        """Кнопка языка, /lang или «давай по-русски»; до согласия — согласие на этом языке."""
         cfg = await self._settings.get()
+        confirmation = [Outgoing(cfg.texts.language_set.get(language), language=language)]
         async with self._sessions() as session, session.begin():
-            lead, _ = await current_lead(session, tg_user_id)
+            lead, conversation = await current_lead(session, tg_user_id)
             if lead is None:
-                return [Outgoing(cfg.texts.language_set.get(language))]
+                return confirmation
             lead.language, lead.language_confirmed, lead.language_candidate = language, True, None
-        return [Outgoing(cfg.texts.language_set.get(language))]
+            if conversation is not None and consent_required(
+                lead.consent_given_at, lead.consent_version, cfg.texts.consent_version
+            ):
+                return await consent_offer(session, conversation, lead, cfg)
+            if conversation is not None:  # менеджер видит подтверждение в CRM
+                await repo.add_message(
+                    session, conversation_id=conversation.id, role="bot", text=confirmation[0].text
+                )
+        return confirmation
 
     async def _receive(
         self, inc: Incoming, cfg: AppSettings
@@ -294,16 +311,17 @@ class ConversationService(ErasureMixin):
             client_id=turn.client_id,
         )
         try:
-            return await self._agent.run(
-                lead_id=turn.lead_id,
-                text=turn.text,
-                language=turn.language,
-                context_token=token,
-                settings=cfg,
-                human_requested=turn.human,
-                stage=turn.stage,
-                mode=turn.mode,
-            )
+            with lead_scope(turn.lead_id):
+                return await self._agent.run(
+                    lead_id=turn.lead_id,
+                    text=turn.text,
+                    language=turn.language,
+                    context_token=token,
+                    settings=cfg,
+                    human_requested=turn.human,
+                    stage=turn.stage,
+                    mode=turn.mode,
+                )
         except Exception:
             logger.exception("dialog_agent_failed", lead_id=turn.lead_id)
             return None
@@ -317,20 +335,10 @@ class ConversationService(ErasureMixin):
             if lead is None or conversation is None:
                 return [], None
             if result is None:
-                text = cfg.texts.service_unavailable.get(turn.language)
-                await repo.add_message(
-                    session,
-                    conversation_id=conversation.id,
-                    role="system",
-                    text=text,
-                    meta={"error": "agent_unavailable"},
-                )
-                failure = await report_failure(
-                    session, lead, cfg, TriggerSignals(agent_unavailable=True)
-                )
-                return [Outgoing(text)], failure
+                return await agent_failure(session, conversation, lead, cfg, turn.language)
             apply_counters(lead, result)
-            if result.action == Action.FALLBACK:
+            if result.action == Action.FALLBACK and result.reason != "kb_unavailable":
+                # Сбой поиска — не пробел базы знаний: в журнал только «нет ответа в KB».
                 await register_gap(
                     session,
                     question=turn.text,
@@ -346,7 +354,11 @@ class ConversationService(ErasureMixin):
             notice = applied.plan.lead_text if applied else None
             fallback = result.action == Action.FALLBACK
             # «Могу передать, если хотите» и сразу «Передаю…» — противоречие: оставляем второе.
-            replies = [result.reply] if result.reply and not (fallback and notice) else []
+            reply = result.reply
+            if reply and notice and result.action == Action.ANSWER:
+                # Сразу за ответом идёт «Передаю менеджеру» — встречный вопрос модели лишний.
+                reply = drop_trailing_question(reply)
+            replies = [reply] if reply and not (fallback and notice) else []
             offer: Keyboard | None = "handoff_offer" if fallback and not notice else None
             if notice is not None and result.action != Action.HANDOFF:
                 notice_text = cfg.lead_notice(notice, turn.language)
@@ -374,15 +386,6 @@ class ConversationService(ErasureMixin):
             if replies:
                 lead.last_bot_msg_at = now
         return outgoing, applied.escalation_id if applied else None
-
-    async def report_delivery_failure(self, lead_id: int) -> None:
-        """Бот не смог отправить файл клиенту — команда узнаёт через info-эскалацию."""
-        cfg = await self._settings.get()
-        async with self._sessions() as session, session.begin():
-            lead = await repo.get_lead(session, lead_id, for_update=True)
-            signals = TriggerSignals(delivery_failed=True)
-            escalation_id = await report_failure(session, lead, cfg, signals) if lead else None
-        await self._fire(None, escalation_id, lead_id)
 
     async def _fire(
         self, lead_id: int | None, escalation_id: int | None, escalated_lead: int | None = None

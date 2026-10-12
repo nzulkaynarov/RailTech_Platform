@@ -41,5 +41,10 @@ export function formatWhen(value: Input, now: Input = new Date()): string {
   return at.format(DATETIME_FORMAT);
 }
 
-export const fromNow = (value: Input, now: Input = new Date()): string =>
-  tashkent(value).from(tashkent(now));
+/** «5 минут назад». Время сервера чуть впереди часов браузера — не «через несколько секунд»,
+ * а «несколько секунд назад»: событие уже произошло. */
+export const fromNow = (value: Input, now: Input = new Date()): string => {
+  const at = tashkent(value);
+  const ref = tashkent(now);
+  return (at.isAfter(ref) ? ref : at).from(ref);
+};

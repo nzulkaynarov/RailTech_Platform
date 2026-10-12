@@ -1,5 +1,5 @@
-import { KeyOutlined } from "@ant-design/icons";
-import { Button, Card, Descriptions, Tag, Typography } from "antd";
+import { LockOutlined } from "@ant-design/icons";
+import { Button, Card, Descriptions, Flex, Tag, Typography } from "antd";
 import { useNavigate } from "react-router";
 
 import type { UserOut } from "../../api/generated/model";
@@ -10,8 +10,9 @@ import { PageHeader } from "../../components/PageHeader";
 import { PageState } from "../../components/PageState";
 import { roleLabel } from "../../domain/labels";
 import { t } from "../../i18n/ru";
+import { NotifyCard } from "./NotifyCard";
 
-/** Профиль: свои данные и смена пароля. Режим «Админ/Менеджер» — только в шапке. */
+/** Профиль: свои данные, смена пароля и уведомления. Режим «Админ/Менеджер» — только в шапке. */
 export function ProfilePage() {
   const me = useMe();
   const perms = usePermissionsQuery();
@@ -24,7 +25,7 @@ export function ProfilePage() {
         title={t.page.profile}
         extra={
           <Button
-            icon={<KeyOutlined aria-hidden />}
+            icon={<LockOutlined aria-hidden />}
             onClick={() => {
               void navigate("/change-password");
             }}
@@ -34,7 +35,12 @@ export function ProfilePage() {
         }
       />
       <PageState query={me}>
-        {me.data ? <ProfileCard user={me.data} telegramHint={canTake} /> : null}
+        {me.data ? (
+          <Flex vertical gap="middle">
+            <ProfileCard user={me.data} telegramHint={canTake} />
+            <NotifyCard user={me.data} />
+          </Flex>
+        ) : null}
       </PageState>
     </PageBody>
   );

@@ -13,9 +13,13 @@ class Reason(StrEnum):
 
     EMAIL_TAKEN = "email_taken"
     INVALID_EMAIL = "invalid_email"
+    INVALID_PHONE = "invalid_phone"
     TELEGRAM_TAKEN = "telegram_taken"
     TELEGRAM_LINKED_ELSEWHERE = "telegram_linked_elsewhere"
     TELEGRAM_UNKNOWN = "telegram_unknown"
+    TELEGRAM_NOT_LINKED = "telegram_not_linked"
+    TELEGRAM_REFUSED = "telegram_refused"
+    BOT_NOT_CONFIGURED = "bot_not_configured"
     WRONG_PASSWORD = "wrong_password"  # noqa: S105 — подкод ошибки, не секрет
     SAME_PASSWORD = "same_password"  # noqa: S105 — подкод ошибки, не секрет
     WEAK_PASSWORD = "weak_password"  # noqa: S105 — подкод ошибки, не секрет
@@ -32,6 +36,23 @@ class Reason(StrEnum):
     FILE_EMPTY = "file_empty"
     FILE_TYPE = "file_type"
     DOCUMENT_INDEXING = "document_indexing"
+    SETUP_DONE = "setup_done"
+    SETUP_CODE_INVALID = "setup_code_invalid"
+    SETUP_CODE_EXPIRED = "setup_code_expired"
+    SETUP_LOCKED = "setup_locked"
+    INVALID_BOT_TOKEN = "invalid_bot_token"  # noqa: S105 — подкод ошибки, не секрет
+    TELEGRAM_UNAVAILABLE = "telegram_unavailable"
+    SECRETS_KEY_MISSING = "secrets_key_missing"
+    BOT_NOT_RUNNING = "bot_not_running"
+    CHANNEL_NOT_CONFIGURED = "channel_not_configured"
+    CHANNEL_SEND_FAILED = "channel_send_failed"
+    ASSIST_DISABLED = "assist_disabled"
+    ASSIST_BUDGET = "assist_budget"
+    ASSIST_UNAVAILABLE = "assist_unavailable"
+    ASSIST_EMPTY = "assist_empty"
+    ASSIST_NO_HISTORY = "assist_no_history"
+    DEAL_WON_FINAL = "deal_won_final"
+    NO_CONSENT = "no_consent"
 
 
 class DomainError(Exception):
@@ -93,3 +114,9 @@ class PasswordChangeRequiredError(DomainError):
 
 class ValidationFailedError(DomainError):
     code = "validation_failed"
+
+
+class UpstreamUnavailableError(DomainError):
+    """Внешний сервис (Telegram) не ответил или отказал (502)."""
+
+    code = "upstream_unavailable"

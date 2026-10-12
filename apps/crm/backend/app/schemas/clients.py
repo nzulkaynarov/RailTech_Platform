@@ -19,6 +19,13 @@ class ClientOut(BaseModel):
     created_at: datetime
 
 
+class ClientListItem(ClientOut):
+    """Строка списка клиентов: открытые сделки и последнее сообщение по любому лиду клиента."""
+
+    open_deals: int
+    last_activity_at: datetime | None
+
+
 class ClientCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     inn: str | None = Field(default=None, max_length=32)
@@ -117,3 +124,42 @@ class ClientDetail(ClientOut):
 class MakeCustomer(BaseModel):
     client_id: int | None = None
     new_client_name: str | None = Field(default=None, max_length=255)
+
+
+class ContactOut(BaseModel):
+    id: int
+    full_name: str
+    position: str | None
+    phone_e164: str | None
+    email: str | None
+    telegram_identity_id: int | None
+    is_primary: bool
+    note: str | None
+    created_at: datetime
+
+
+class ContactSuggestion(BaseModel):
+    """Подтверждённый Telegram-аккаунт клиента с номером, которого ещё нет среди контактов."""
+
+    telegram_identity_id: int
+    tg_user_id: int
+    tg_username: str | None
+    full_name: str
+    phone_e164: str
+
+
+class ClientContacts(BaseModel):
+    contacts: list[ContactOut]
+    suggestions: list[ContactSuggestion]
+
+
+class ContactIn(BaseModel):
+    """Телефон — в любом виде с кодом страны, сервер приводит к E.164; пустая строка — нет."""
+
+    full_name: str = Field(min_length=1, max_length=255)
+    position: str | None = Field(default=None, max_length=255)
+    phone: str | None = Field(default=None, max_length=32)
+    email: str | None = Field(default=None, max_length=255)
+    is_primary: bool = False
+    note: str | None = Field(default=None, max_length=2000)
+    telegram_identity_id: int | None = Field(default=None, gt=0)

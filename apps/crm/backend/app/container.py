@@ -6,7 +6,7 @@
 
 from dataclasses import dataclass
 from functools import cached_property, lru_cache
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Literal
 
 from aiogram import Bot
 from openai import AsyncOpenAI
@@ -16,11 +16,17 @@ from app import db
 from app.config import Settings, get_settings
 from app.integrations.docling import DoclingClient
 from app.integrations.litellm import Embedder, make_client
+from app.integrations.litellm_catalog import ModelCatalog
 from app.integrations.s3 import ObjectStorage
+from app.security.secrets_store import SecretCipher, SecretsStore
 from app.services.settings import SettingsService
 
 if TYPE_CHECKING:
+    from app.services.assist import AssistService
     from app.services.auth import AuthService
+    from app.services.backups import BackupService
+    from app.services.budget import BudgetGuard
+    from app.services.client_contacts import ClientContactService
     from app.services.clients import ClientService
     from app.services.documents import DocumentService
     from app.services.kb.admin import KbAdminService
@@ -28,6 +34,8 @@ if TYPE_CHECKING:
     from app.services.kb.search import KbSearchService
     from app.services.lead_messenger import LeadMessenger
     from app.services.leads import LeadService
+    from app.services.llm_usage import DbUsageRecorder
+    from app.services.setup import SetupService
     from app.services.users import UserService
 
 
@@ -48,8 +56,26 @@ class Container:
         return make_client(self.settings)
 
     @cached_property
+    def model_catalog(self) -> ModelCatalog:
+        return ModelCatalog(self.settings.litellm_base_url, self.settings.litellm_api_key)
+
+    @cached_property
+    def usage_recorder(self) -> "DbUsageRecorder":
+        from app.services.llm_usage import DbUsageRecorder
+
+        return DbUsageRecorder(
+            self.session_factory, self.model_catalog, self.settings.llm_usage_kind
+        )
+
+    @cached_property
+    def budget_guard(self) -> "BudgetGuard":
+        from app.services.budget import BudgetGuard
+
+        return BudgetGuard(self.session_factory, self.settings_service, self.model_catalog)
+
+    @cached_property
     def embedder(self) -> Embedder:
-        return Embedder(self.llm)
+        return Embedder(self.llm, usage=self.usage_recorder)
 
     @cached_property
     def storage(self) -> ObjectStorage:
@@ -71,9 +97,30 @@ class Container:
 
     @cached_property
     def user_service(self) -> "UserService":
+        from app.security.reauth import LockoutPolicy
         from app.services.users import UserService
 
-        return UserService(self.session_factory)
+        return UserService(
+            self.session_factory,
+            LockoutPolicy(self.settings.login_max_failures, self.settings.login_lockout_minutes),
+        )
+
+    @cached_property
+    def setup_service(self) -> "SetupService":
+        from app.repositories import users as users_repo
+        from app.services.setup import SetupService
+
+        async def count_admins() -> int:
+            async with self.session_factory() as session:
+                return await users_repo.count_active_admins(session)
+
+        return SetupService(count_admins, self.user_service.create_first_admin)
+
+    @cached_property
+    def backup_service(self) -> "BackupService":
+        from app.services.backups import BackupService
+
+        return BackupService(self.settings.backup_dir)
 
     @cached_property
     def lead_messenger(self) -> "LeadMessenger":
@@ -81,7 +128,7 @@ class Container:
 
         if self.settings.telegram_dry_run:
             return LeadMessenger(self.session_factory, DryRunSender())
-        return LeadMessenger(self.session_factory, self.telegram_bot)
+        return LeadMessenger(self.session_factory, CurrentBotSender(self))
 
     @cached_property
     def lead_service(self) -> "LeadService":
@@ -92,6 +139,31 @@ class Container:
             self.settings_service,
             self.lead_messenger,
             on_escalation_changed=_escalation_changed,
+            on_assigned=_lead_assigned,
+            on_escalation_reopened=_escalation_reopened,
+        )
+
+    @cached_property
+    def assist_service(self) -> "AssistService":
+        from app.agents.llm import ChatModel
+        from app.services.assist import AssistService, DbAssistStore, KbFragments
+        from app.services.budget import BudgetedModel
+
+        usage = self.usage_recorder
+
+        def model(purpose: Literal["assist_draft", "assist_improve"]) -> BudgetedModel:
+            return BudgetedModel(
+                ChatModel(self.llm, "dialog-model", usage=usage, purpose=purpose),
+                ChatModel(self.llm, "fallback-model", usage=usage, purpose=purpose),
+                self.budget_guard,
+            )
+
+        return AssistService(
+            self.settings_service,
+            DbAssistStore(self.session_factory),
+            KbFragments(self.kb_search),
+            {"draft": model("assist_draft"), "improve": model("assist_improve")},
+            self.budget_guard,
         )
 
     @cached_property
@@ -125,6 +197,12 @@ class Container:
         return ClientService(self.session_factory, self.settings_service, self.lead_messenger)
 
     @cached_property
+    def contact_service(self) -> "ClientContactService":
+        from app.services.client_contacts import ClientContactService
+
+        return ClientContactService(self.session_factory)
+
+    @cached_property
     def document_service(self) -> "DocumentService":
         from app.services.documents import DocumentService
 
@@ -137,16 +215,47 @@ class Container:
         )
 
     @cached_property
-    def telegram_bot(self) -> Bot | None:
-        """Клиент Bot API для исходящих сообщений (воркер); None без токена."""
-        token = self.settings.telegram_bot_token.get_secret_value()
-        return Bot(token) if token else None
+    def secrets_store(self) -> SecretsStore:
+        cipher = SecretCipher.optional(self.settings.secrets_key.get_secret_value())
+        return SecretsStore(self.session_factory, cipher)
+
+    @cached_property
+    def _bots(self) -> dict[str, Bot]:
+        return {}
+
+    async def telegram_bot(self) -> Bot | None:
+        """Клиент Bot API для исходящих сообщений с действующим токеном (БД или env); None — нет.
+
+        Токен перечитывается при каждом вызове: смена в «Подключениях» действует и в воркере.
+        """
+        from app.integrations.telegram import resolve_token
+
+        token, _ = await resolve_token(self.secrets_store, self.settings)
+        if not token:
+            return None
+        bot = self._bots.get(token)
+        if bot is None:
+            bot = self._bots[token] = Bot(token)
+        return bot
 
     async def aclose(self) -> None:
-        if "telegram_bot" in self.__dict__ and self.telegram_bot is not None:
-            await self.telegram_bot.session.close()
+        for bot in self._bots.values():
+            await bot.session.close()
         if "engine" in self.__dict__:
             await self.engine.dispose()
+
+
+class CurrentBotSender:
+    """`TextSender` для `LeadMessenger`: бот с действующим токеном на момент отправки."""
+
+    def __init__(self, container: Container) -> None:
+        self._container = container
+
+    async def send_message(self, chat_id: int, text: str) -> Any:
+        bot = await self._container.telegram_bot()
+        if bot is None:
+            raise RuntimeError("telegram bot token is not configured")
+        return await bot.send_message(chat_id, text)
 
 
 async def _enqueue_ingest(document_id: int) -> object:
@@ -165,6 +274,19 @@ async def _escalation_changed(escalation_id: int) -> None:
     from app.tasks.notify import enqueue_escalation
 
     await enqueue_escalation(escalation_id, new=False)
+
+
+async def _escalation_reopened(escalation_id: int) -> None:
+    """Передача снова открыта («Вернуть из отложенных»): пост и проверка SLA в новый срок."""
+    from app.tasks.notify import enqueue_escalation
+
+    await enqueue_escalation(escalation_id, new=True)
+
+
+async def _lead_assigned(lead_id: int, user_id: int) -> None:
+    from app.tasks.notify import enqueue_handover
+
+    await enqueue_handover(lead_id, user_id)
 
 
 @lru_cache

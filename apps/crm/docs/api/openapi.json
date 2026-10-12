@@ -90,11 +90,93 @@
         "title": "Assign",
         "type": "object"
       },
+      "AssistOut": {
+        "description": "Текст для поля ответа (клиенту не отправляется). `notice`: `numbers_removed` — из\nчерновика убраны предложения с числами не из базы знаний; `new_numbers` — правка добавила\nчисла, возвращён исходный текст.",
+        "properties": {
+          "cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Usd"
+          },
+          "notice": {
+            "anyOf": [
+              {
+                "enum": [
+                  "numbers_removed",
+                  "new_numbers"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notice"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "AssistOut",
+        "type": "object"
+      },
+      "AssistRequest": {
+        "description": "ИИ-помощь при ответе (Q-019): `draft` — черновик, `improve` — правка текста `text`.",
+        "properties": {
+          "mode": {
+            "enum": [
+              "draft",
+              "improve"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "title": "AssistRequest",
+        "type": "object"
+      },
       "AuditItem": {
         "properties": {
           "action": {
             "title": "Action",
             "type": "string"
+          },
+          "actor_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Имя пользователя-автора",
+            "title": "Actor Name"
           },
           "actor_type": {
             "title": "Actor Type",
@@ -205,6 +287,97 @@
           "total"
         ],
         "title": "AuditPage",
+        "type": "object"
+      },
+      "BackupItem": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "at",
+          "size_bytes"
+        ],
+        "title": "BackupItem",
+        "type": "object"
+      },
+      "BackupsOut": {
+        "properties": {
+          "available": {
+            "description": "Том бэкапов смонтирован в api",
+            "title": "Available",
+            "type": "boolean"
+          },
+          "daemon_alive": {
+            "description": "Сервис бэкапа отвечает: heartbeat свежее 2 мин",
+            "title": "Daemon Alive",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BackupItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "last_success_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success At"
+          },
+          "request_stuck": {
+            "description": "Запрос «Сделать сейчас» старше 2 мин без новой копии — можно повторить",
+            "title": "Request Stuck",
+            "type": "boolean"
+          },
+          "requested_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "«Сделать сейчас» ждёт сервис бэкапа",
+            "title": "Requested At"
+          },
+          "stale": {
+            "description": "Последний успешный бэкап старше 26 ч или его нет",
+            "title": "Stale",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "available",
+          "last_success_at",
+          "stale",
+          "requested_at",
+          "daemon_alive",
+          "request_stuck",
+          "items"
+        ],
+        "title": "BackupsOut",
         "type": "object"
       },
       "Body_upload_document": {
@@ -348,6 +521,92 @@
           "new_password"
         ],
         "title": "ChangePasswordRequest",
+        "type": "object"
+      },
+      "ChatCandidateOut": {
+        "properties": {
+          "chat_id": {
+            "title": "Chat Id",
+            "type": "integer"
+          },
+          "chat_type": {
+            "title": "Chat Type",
+            "type": "string"
+          },
+          "detected_at": {
+            "format": "date-time",
+            "title": "Detected At",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "chat_id",
+          "title",
+          "chat_type",
+          "detected_at"
+        ],
+        "title": "ChatCandidateOut",
+        "type": "object"
+      },
+      "ChecklistItem": {
+        "properties": {
+          "done": {
+            "title": "Done",
+            "type": "boolean"
+          },
+          "key": {
+            "enum": [
+              "company",
+              "business_hours",
+              "models",
+              "bot",
+              "channel",
+              "kb",
+              "team",
+              "test_dialog"
+            ],
+            "title": "Key",
+            "type": "string"
+          },
+          "link": {
+            "title": "Link",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "done",
+          "link"
+        ],
+        "title": "ChecklistItem",
+        "type": "object"
+      },
+      "ClientContacts": {
+        "properties": {
+          "contacts": {
+            "items": {
+              "$ref": "#/components/schemas/ContactOut"
+            },
+            "title": "Contacts",
+            "type": "array"
+          },
+          "suggestions": {
+            "items": {
+              "$ref": "#/components/schemas/ContactSuggestion"
+            },
+            "title": "Suggestions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "contacts",
+          "suggestions"
+        ],
+        "title": "ClientContacts",
         "type": "object"
       },
       "ClientCreate": {
@@ -498,7 +757,8 @@
         "title": "ClientDetail",
         "type": "object"
       },
-      "ClientOut": {
+      "ClientListItem": {
+        "description": "Строка списка клиентов: открытые сделки и последнее сообщение по любому лиду клиента.",
         "properties": {
           "created_at": {
             "format": "date-time",
@@ -524,6 +784,18 @@
             "title": "Is Active",
             "type": "boolean"
           },
+          "last_activity_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Activity At"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -538,6 +810,10 @@
               }
             ],
             "title": "Notes"
+          },
+          "open_deals": {
+            "title": "Open Deals",
+            "type": "integer"
           },
           "owner_user_id": {
             "anyOf": [
@@ -570,9 +846,11 @@
           "owner_user_id",
           "is_active",
           "notes",
-          "created_at"
+          "created_at",
+          "open_deals",
+          "last_activity_at"
         ],
-        "title": "ClientOut",
+        "title": "ClientListItem",
         "type": "object"
       },
       "ClientUpdate": {
@@ -654,6 +932,34 @@
       },
       "Close": {
         "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "lost_reason": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lost Reason"
+          },
           "reason": {
             "anyOf": [
               {
@@ -670,6 +976,264 @@
         "title": "Close",
         "type": "object"
       },
+      "ComponentStatusOut": {
+        "properties": {
+          "checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked At"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "warn",
+              "fail",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "title",
+          "status",
+          "reason",
+          "checked_at"
+        ],
+        "title": "ComponentStatusOut",
+        "type": "object"
+      },
+      "ContactIn": {
+        "description": "Телефон — в любом виде с кодом страны, сервер приводит к E.164; пустая строка — нет.",
+        "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "full_name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Full Name",
+            "type": "string"
+          },
+          "is_primary": {
+            "default": false,
+            "title": "Is Primary",
+            "type": "boolean"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          },
+          "telegram_identity_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Telegram Identity Id"
+          }
+        },
+        "required": [
+          "full_name"
+        ],
+        "title": "ContactIn",
+        "type": "object"
+      },
+      "ContactOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_primary": {
+            "title": "Is Primary",
+            "type": "boolean"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "phone_e164": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone E164"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          },
+          "telegram_identity_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Telegram Identity Id"
+          }
+        },
+        "required": [
+          "id",
+          "full_name",
+          "position",
+          "phone_e164",
+          "email",
+          "telegram_identity_id",
+          "is_primary",
+          "note",
+          "created_at"
+        ],
+        "title": "ContactOut",
+        "type": "object"
+      },
+      "ContactSuggestion": {
+        "description": "Подтверждённый Telegram-аккаунт клиента с номером, которого ещё нет среди контактов.",
+        "properties": {
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "phone_e164": {
+            "title": "Phone E164",
+            "type": "string"
+          },
+          "telegram_identity_id": {
+            "title": "Telegram Identity Id",
+            "type": "integer"
+          },
+          "tg_user_id": {
+            "title": "Tg User Id",
+            "type": "integer"
+          },
+          "tg_username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tg Username"
+          }
+        },
+        "required": [
+          "telegram_identity_id",
+          "tg_user_id",
+          "tg_username",
+          "full_name",
+          "phone_e164"
+        ],
+        "title": "ContactSuggestion",
+        "type": "object"
+      },
       "Created": {
         "properties": {
           "id": {
@@ -681,6 +1245,25 @@
           "id"
         ],
         "title": "Created",
+        "type": "object"
+      },
+      "CurrencySum": {
+        "properties": {
+          "amount": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          }
+        },
+        "required": [
+          "currency",
+          "amount"
+        ],
+        "title": "CurrencySum",
         "type": "object"
       },
       "DailyStat": {
@@ -823,6 +1406,448 @@
           "refreshed_at"
         ],
         "title": "Dashboard",
+        "type": "object"
+      },
+      "DealCreate": {
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "client_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "expected_close_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Close Date"
+          },
+          "lead_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Id"
+          },
+          "owner_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner User Id"
+          },
+          "product_key": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Key"
+          },
+          "title": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "title": "DealCreate",
+        "type": "object"
+      },
+      "DealOptions": {
+        "description": "Справочник для форм: причины отказа и валюта по умолчанию из настройки `deals`.",
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "lost_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Lost Reasons",
+            "type": "array"
+          }
+        },
+        "required": [
+          "lost_reasons",
+          "currency"
+        ],
+        "title": "DealOptions",
+        "type": "object"
+      },
+      "DealOut": {
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "client_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
+          "client_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Name"
+          },
+          "closed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "expected_close_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Close Date"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "lead_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Id"
+          },
+          "lost_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lost Reason"
+          },
+          "owner_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Name"
+          },
+          "owner_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner User Id"
+          },
+          "product_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Key"
+          },
+          "stage": {
+            "enum": [
+              "open",
+              "won",
+              "lost"
+            ],
+            "title": "Stage",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "client_id",
+          "lead_id",
+          "title",
+          "product_key",
+          "amount",
+          "currency",
+          "stage",
+          "expected_close_date",
+          "closed_at",
+          "lost_reason",
+          "owner_user_id",
+          "created_at"
+        ],
+        "title": "DealOut",
+        "type": "object"
+      },
+      "DealUpdate": {
+        "description": "Только переданные поля меняются; `stage=lost` без причины → «Другое».",
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "expected_close_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Close Date"
+          },
+          "lost_reason": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lost Reason"
+          },
+          "owner_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner User Id"
+          },
+          "product_key": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Key"
+          },
+          "stage": {
+            "anyOf": [
+              {
+                "enum": [
+                  "open",
+                  "won",
+                  "lost"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "DealUpdate",
+        "type": "object"
+      },
+      "DealsSummary": {
+        "properties": {
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "lost_by_reason": {
+            "items": {
+              "$ref": "#/components/schemas/ReasonCount"
+            },
+            "title": "Lost By Reason",
+            "type": "array"
+          },
+          "lost_count": {
+            "title": "Lost Count",
+            "type": "integer"
+          },
+          "open_count": {
+            "title": "Open Count",
+            "type": "integer"
+          },
+          "won_amounts": {
+            "items": {
+              "$ref": "#/components/schemas/CurrencySum"
+            },
+            "title": "Won Amounts",
+            "type": "array"
+          },
+          "won_count": {
+            "title": "Won Count",
+            "type": "integer"
+          },
+          "won_without_amount": {
+            "default": 0,
+            "title": "Won Without Amount",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "days",
+          "won_count",
+          "won_amounts",
+          "lost_count",
+          "lost_by_reason",
+          "open_count"
+        ],
+        "title": "DealsSummary",
         "type": "object"
       },
       "DecisionsResponse": {
@@ -1825,6 +2850,17 @@
             ],
             "title": "Client Id"
           },
+          "client_phone_e164": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Phone E164"
+          },
           "consent_given_at": {
             "anyOf": [
               {
@@ -1905,6 +2941,17 @@
           "owner_mode": {
             "title": "Owner Mode",
             "type": "string"
+          },
+          "phone_e164": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone E164"
           },
           "product_interest": {
             "items": {
@@ -2123,6 +3170,40 @@
         "title": "LeadPage",
         "type": "object"
       },
+      "LeadSpend": {
+        "properties": {
+          "calls": {
+            "title": "Calls",
+            "type": "integer"
+          },
+          "cost_usd": {
+            "title": "Cost Usd",
+            "type": "number"
+          },
+          "lead_id": {
+            "title": "Lead Id",
+            "type": "integer"
+          },
+          "lead_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Name"
+          }
+        },
+        "required": [
+          "lead_id",
+          "cost_usd",
+          "calls"
+        ],
+        "title": "LeadSpend",
+        "type": "object"
+      },
       "LinkTelegram": {
         "properties": {
           "tg_user_id": {
@@ -2243,19 +3324,46 @@
         "type": "object"
       },
       "MePatch": {
+        "description": "Своё: режим навигации и подписки на личные уведомления от бота (Q-010).",
         "properties": {
-          "ui_mode": {
-            "enum": [
-              "admin",
-              "manager"
+          "notify_leads": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
             ],
-            "title": "Ui Mode",
-            "type": "string"
+            "title": "Notify Leads"
+          },
+          "notify_system": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notify System"
+          },
+          "ui_mode": {
+            "anyOf": [
+              {
+                "enum": [
+                  "admin",
+                  "manager"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ui Mode"
           }
         },
-        "required": [
-          "ui_mode"
-        ],
         "title": "MePatch",
         "type": "object"
       },
@@ -2313,6 +3421,130 @@
           "meta"
         ],
         "title": "MessageOut",
+        "type": "object"
+      },
+      "ModelStatus": {
+        "properties": {
+          "alias": {
+            "title": "Alias",
+            "type": "string"
+          },
+          "checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked At"
+          },
+          "health": {
+            "enum": [
+              "ok",
+              "problem",
+              "unknown"
+            ],
+            "title": "Health",
+            "type": "string"
+          },
+          "health_detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Health Detail"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "today_usd": {
+            "title": "Today Usd",
+            "type": "number"
+          }
+        },
+        "required": [
+          "alias",
+          "provider",
+          "model",
+          "health",
+          "health_detail",
+          "checked_at",
+          "today_usd"
+        ],
+        "title": "ModelStatus",
+        "type": "object"
+      },
+      "ModelTestResult": {
+        "properties": {
+          "alias": {
+            "title": "Alias",
+            "type": "string"
+          },
+          "cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Usd"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "latency_ms": {
+            "title": "Latency Ms",
+            "type": "integer"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "alias",
+          "ok",
+          "detail",
+          "latency_ms",
+          "cost_usd"
+        ],
+        "title": "ModelTestResult",
         "type": "object"
       },
       "NoteCreate": {
@@ -2481,6 +3713,29 @@
           "is_active"
         ],
         "title": "ProductOut",
+        "type": "object"
+      },
+      "ProviderToday": {
+        "properties": {
+          "limit_usd": {
+            "title": "Limit Usd",
+            "type": "number"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "spent_usd": {
+            "title": "Spent Usd",
+            "type": "number"
+          }
+        },
+        "required": [
+          "provider",
+          "spent_usd",
+          "limit_usd"
+        ],
+        "title": "ProviderToday",
         "type": "object"
       },
       "QualifierRunItem": {
@@ -2685,9 +3940,13 @@
         "enum": [
           "email_taken",
           "invalid_email",
+          "invalid_phone",
           "telegram_taken",
           "telegram_linked_elsewhere",
           "telegram_unknown",
+          "telegram_not_linked",
+          "telegram_refused",
+          "bot_not_configured",
           "wrong_password",
           "same_password",
           "weak_password",
@@ -2703,10 +3962,51 @@
           "file_too_large",
           "file_empty",
           "file_type",
-          "document_indexing"
+          "document_indexing",
+          "setup_done",
+          "setup_code_invalid",
+          "setup_code_expired",
+          "setup_locked",
+          "invalid_bot_token",
+          "telegram_unavailable",
+          "secrets_key_missing",
+          "bot_not_running",
+          "channel_not_configured",
+          "channel_send_failed",
+          "assist_disabled",
+          "assist_budget",
+          "assist_unavailable",
+          "assist_empty",
+          "assist_no_history",
+          "deal_won_final",
+          "no_consent"
         ],
         "title": "Reason",
         "type": "string"
+      },
+      "ReasonCount": {
+        "properties": {
+          "amount": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason",
+          "count",
+          "amount"
+        ],
+        "title": "ReasonCount",
+        "type": "object"
       },
       "Reply": {
         "properties": {
@@ -3083,6 +4383,81 @@
         "title": "SettingsResponse",
         "type": "object"
       },
+      "SetupAdminRequest": {
+        "properties": {
+          "code": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "email": {
+            "maxLength": 255,
+            "minLength": 3,
+            "title": "Email",
+            "type": "string"
+          },
+          "full_name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Full Name",
+            "type": "string"
+          },
+          "password": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "email",
+          "full_name",
+          "password"
+        ],
+        "title": "SetupAdminRequest",
+        "type": "object"
+      },
+      "SetupChecklist": {
+        "properties": {
+          "done": {
+            "title": "Done",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ChecklistItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "done",
+          "total"
+        ],
+        "title": "SetupChecklist",
+        "type": "object"
+      },
+      "SetupState": {
+        "properties": {
+          "needs_setup": {
+            "title": "Needs Setup",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "needs_setup"
+        ],
+        "title": "SetupState",
+        "type": "object"
+      },
       "Snooze": {
         "properties": {
           "until": {
@@ -3095,6 +4470,164 @@
           "until"
         ],
         "title": "Snooze",
+        "type": "object"
+      },
+      "SpendDay": {
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "test_usd": {
+            "title": "Test Usd",
+            "type": "number"
+          },
+          "work_usd": {
+            "title": "Work Usd",
+            "type": "number"
+          }
+        },
+        "required": [
+          "day",
+          "work_usd",
+          "test_usd"
+        ],
+        "title": "SpendDay",
+        "type": "object"
+      },
+      "SpendReport": {
+        "properties": {
+          "avg_per_lead_usd": {
+            "title": "Avg Per Lead Usd",
+            "type": "number"
+          },
+          "by_kind": {
+            "items": {
+              "$ref": "#/components/schemas/SpendSlice"
+            },
+            "title": "By Kind",
+            "type": "array"
+          },
+          "by_purpose": {
+            "items": {
+              "$ref": "#/components/schemas/SpendSlice"
+            },
+            "title": "By Purpose",
+            "type": "array"
+          },
+          "daily_usd": {
+            "title": "Daily Usd",
+            "type": "number"
+          },
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "leads": {
+            "title": "Leads",
+            "type": "integer"
+          },
+          "providers": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderToday"
+            },
+            "title": "Providers",
+            "type": "array"
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/SpendDay"
+            },
+            "title": "Series",
+            "type": "array"
+          },
+          "today_usd": {
+            "title": "Today Usd",
+            "type": "number"
+          },
+          "top_leads": {
+            "items": {
+              "$ref": "#/components/schemas/LeadSpend"
+            },
+            "title": "Top Leads",
+            "type": "array"
+          },
+          "total_usd": {
+            "title": "Total Usd",
+            "type": "number"
+          }
+        },
+        "required": [
+          "days",
+          "today_usd",
+          "daily_usd",
+          "providers",
+          "series",
+          "by_purpose",
+          "by_kind",
+          "total_usd",
+          "leads",
+          "avg_per_lead_usd",
+          "top_leads"
+        ],
+        "title": "SpendReport",
+        "type": "object"
+      },
+      "SpendSlice": {
+        "properties": {
+          "calls": {
+            "title": "Calls",
+            "type": "integer"
+          },
+          "cost_usd": {
+            "title": "Cost Usd",
+            "type": "number"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "cost_usd",
+          "calls"
+        ],
+        "title": "SpendSlice",
+        "type": "object"
+      },
+      "SystemStatusOut": {
+        "properties": {
+          "checked_at": {
+            "format": "date-time",
+            "title": "Checked At",
+            "type": "string"
+          },
+          "components": {
+            "items": {
+              "$ref": "#/components/schemas/ComponentStatusOut"
+            },
+            "title": "Components",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "warn",
+              "fail",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "checked_at",
+          "components"
+        ],
+        "title": "SystemStatusOut",
         "type": "object"
       },
       "TeamMember": {
@@ -3113,6 +4646,145 @@
           "full_name"
         ],
         "title": "TeamMember",
+        "type": "object"
+      },
+      "TelegramStatusOut": {
+        "description": "Значение токена сюда не попадает никогда — только `configured` и `last4`.",
+        "properties": {
+          "channel_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channel Id"
+          },
+          "channel_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channel Title"
+          },
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "last4": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last4"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "mode": {
+            "title": "Mode",
+            "type": "string"
+          },
+          "running": {
+            "title": "Running",
+            "type": "boolean"
+          },
+          "secrets_enabled": {
+            "title": "Secrets Enabled",
+            "type": "boolean"
+          },
+          "source": {
+            "enum": [
+              "db",
+              "env",
+              "none"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          }
+        },
+        "required": [
+          "configured",
+          "source",
+          "last4",
+          "updated_at",
+          "username",
+          "mode",
+          "running",
+          "last_error",
+          "secrets_enabled",
+          "channel_id",
+          "channel_title"
+        ],
+        "title": "TelegramStatusOut",
+        "type": "object"
+      },
+      "TelegramTokenIn": {
+        "additionalProperties": false,
+        "properties": {
+          "password": {
+            "format": "password",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "token": {
+            "format": "password",
+            "maxLength": 128,
+            "minLength": 20,
+            "title": "Token",
+            "type": "string",
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "token",
+          "password"
+        ],
+        "title": "TelegramTokenIn",
         "type": "object"
       },
       "TokenResponse": {
@@ -3277,12 +4949,32 @@
             "title": "Must Change Password",
             "type": "boolean"
           },
+          "notify_leads": {
+            "title": "Notify Leads",
+            "type": "boolean"
+          },
+          "notify_system": {
+            "title": "Notify System",
+            "type": "boolean"
+          },
           "roles": {
             "items": {
               "type": "string"
             },
             "title": "Roles",
             "type": "array"
+          },
+          "tg_dm_failed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tg Dm Failed At"
           },
           "tg_user_id": {
             "anyOf": [
@@ -3308,7 +5000,9 @@
           "is_active",
           "tg_user_id",
           "must_change_password",
-          "ui_mode"
+          "ui_mode",
+          "notify_system",
+          "notify_leads"
         ],
         "title": "UserOut",
         "type": "object"
@@ -3509,6 +5203,28 @@
                 }
               ],
               "title": "Created To"
+            }
+          },
+          {
+            "description": "Скрыть действия с этими префиксами (напр. auth.login)",
+            "in": "query",
+            "name": "exclude_actions",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 64,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Скрыть действия с этими префиксами (напр. auth.login)",
+              "title": "Exclude Actions"
             }
           },
           {
@@ -3767,7 +5483,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/ClientOut"
+                    "$ref": "#/components/schemas/ClientListItem"
                   },
                   "title": "Response List Clients",
                   "type": "array"
@@ -3939,6 +5655,229 @@
           }
         ],
         "summary": "Update Client",
+        "tags": [
+          "clients"
+        ]
+      }
+    },
+    "/api/v1/clients/{client_id}/contacts": {
+      "get": {
+        "description": "Контакты (основной первым) и подтверждённые Telegram-аккаунты с номером для «Добавить».",
+        "operationId": "list_client_contacts",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContacts"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Client Contacts",
+        "tags": [
+          "clients"
+        ]
+      },
+      "post": {
+        "operationId": "create_client_contact",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Client Contact",
+        "tags": [
+          "clients"
+        ]
+      }
+    },
+    "/api/v1/clients/{client_id}/contacts/{contact_id}": {
+      "delete": {
+        "operationId": "delete_client_contact",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "title": "Contact Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Client Contact",
+        "tags": [
+          "clients"
+        ]
+      },
+      "put": {
+        "operationId": "update_client_contact",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "title": "Contact Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Client Contact",
         "tags": [
           "clients"
         ]
@@ -4140,6 +6079,372 @@
         "summary": "Refresh Dashboard",
         "tags": [
           "admin"
+        ]
+      }
+    },
+    "/api/v1/deals": {
+      "get": {
+        "description": "Сделки, новые сверху (до 500). Период закрытия — включительно, по дате UTC.",
+        "operationId": "list_deals",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "stage",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "open",
+                    "won",
+                    "lost"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Stage"
+            }
+          },
+          {
+            "in": "query",
+            "name": "owner_user_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Owner User Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "client_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Client Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "closed_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Closed From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "closed_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Closed To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DealOut"
+                  },
+                  "title": "Response List Deals",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Deals",
+        "tags": [
+          "deals"
+        ]
+      },
+      "post": {
+        "description": "Новая сделка; валюта по умолчанию — из настройки `deals.currency`.",
+        "operationId": "create_deal",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DealCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Deal",
+        "tags": [
+          "deals"
+        ]
+      }
+    },
+    "/api/v1/deals/options": {
+      "get": {
+        "description": "Причины отказа и валюта по умолчанию — для форм сделки и закрытия лида.",
+        "operationId": "deal_options",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DealOptions"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Deal Options",
+        "tags": [
+          "deals"
+        ]
+      }
+    },
+    "/api/v1/deals/summary": {
+      "get": {
+        "description": "Выигрыш (число и суммы по валютам) и отказы по причинам за последние `days` дней.",
+        "operationId": "deals_summary",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 365,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DealsSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Deals Summary",
+        "tags": [
+          "deals"
+        ]
+      }
+    },
+    "/api/v1/deals/{deal_id}": {
+      "get": {
+        "operationId": "get_deal",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deal_id",
+            "required": true,
+            "schema": {
+              "title": "Deal Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DealOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Deal",
+        "tags": [
+          "deals"
+        ]
+      },
+      "patch": {
+        "description": "Изменить сделку. Выигранную менять может только админ (409 `deal_won_final`).",
+        "operationId": "update_deal",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deal_id",
+            "required": true,
+            "schema": {
+              "title": "Deal Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DealUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Deal",
+        "tags": [
+          "deals"
         ]
       }
     },
@@ -4456,6 +6761,212 @@
         "summary": "Inbox",
         "tags": [
           "leads"
+        ]
+      }
+    },
+    "/api/v1/integrations/telegram": {
+      "get": {
+        "operationId": "get_telegram_status",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelegramStatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Telegram Status",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/api/v1/integrations/telegram/channel/test": {
+      "post": {
+        "operationId": "send_telegram_channel_test",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Send Telegram Channel Test",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/api/v1/integrations/telegram/channels": {
+      "get": {
+        "operationId": "list_telegram_channels",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ChatCandidateOut"
+                  },
+                  "title": "Response List Telegram Channels",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Telegram Channels",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/api/v1/integrations/telegram/channels/{chat_id}/connect": {
+      "post": {
+        "operationId": "connect_telegram_channel",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chat_id",
+            "required": true,
+            "schema": {
+              "title": "Chat Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Connect Telegram Channel",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/api/v1/integrations/telegram/token": {
+      "put": {
+        "description": "Проверить токен в Telegram (`getMe`), сохранить зашифрованным, перезапустить бота.",
+        "operationId": "put_telegram_token",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TelegramTokenIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TelegramStatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Telegram Token",
+        "tags": [
+          "integrations"
         ]
       }
     },
@@ -5439,6 +7950,54 @@
         ]
       }
     },
+    "/api/v1/leads/{lead_id}/actions/acknowledge": {
+      "post": {
+        "description": "«Принято к сведению»: закрыть информационную передачу, лид остаётся у бота.",
+        "operationId": "acknowledge",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lead_id",
+            "required": true,
+            "schema": {
+              "title": "Lead Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Acknowledge",
+        "tags": [
+          "leads"
+        ]
+      }
+    },
     "/api/v1/leads/{lead_id}/actions/assign": {
       "post": {
         "operationId": "assign",
@@ -5932,6 +8491,112 @@
         ]
       }
     },
+    "/api/v1/leads/{lead_id}/actions/unsnooze": {
+      "post": {
+        "description": "«Вернуть из отложенных»: передача снова открыта, срок реакции — заново.",
+        "operationId": "unsnooze",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lead_id",
+            "required": true,
+            "schema": {
+              "title": "Lead Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unsnooze",
+        "tags": [
+          "leads"
+        ]
+      }
+    },
+    "/api/v1/leads/{lead_id}/assist": {
+      "post": {
+        "description": "ИИ-помощь менеджеру (Q-019): текст для поля ответа; клиенту ничего не отправляется.",
+        "operationId": "assist",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lead_id",
+            "required": true,
+            "schema": {
+              "title": "Lead Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssistRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Assist",
+        "tags": [
+          "leads"
+        ]
+      }
+    },
     "/api/v1/leads/{lead_id}/decisions": {
       "get": {
         "operationId": "lead_decisions",
@@ -6293,6 +8958,131 @@
         ]
       }
     },
+    "/api/v1/me/test-notification": {
+      "post": {
+        "description": "«Проверить доставку»: личное сообщение от бота себе; отказ Telegram → 409 с его текстом.",
+        "operationId": "test_notification",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Test Notification",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/v1/models": {
+      "get": {
+        "operationId": "list_models",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ModelStatus"
+                  },
+                  "title": "Response List Models",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Models",
+        "tags": [
+          "spend"
+        ]
+      }
+    },
+    "/api/v1/models/{alias}/test": {
+      "post": {
+        "operationId": "test_model",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "alias",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "title": "Alias",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelTestResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Test Model",
+        "tags": [
+          "spend"
+        ]
+      }
+    },
     "/api/v1/service-requests": {
       "get": {
         "description": "Запросы клиентов (Q-017): открытые — во «Входящих», кто ждёт дольше, первыми.",
@@ -6561,6 +9351,167 @@
         ]
       }
     },
+    "/api/v1/setup/admin": {
+      "post": {
+        "description": "Публично, один раз: код из логов api (`setup_code_issued`) → первый админ и вход.\n\nНеверный код — 422 `setup_code_invalid`, истёкший — `setup_code_expired`, перебор —\n`setup_locked` (15 мин); админ уже есть — 409 `setup_done`. Ответ — как у `/auth/login`.",
+        "operationId": "create_first_admin",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetupAdminRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "summary": "Create First Admin",
+        "tags": [
+          "setup"
+        ]
+      }
+    },
+    "/api/v1/setup/checklist": {
+      "get": {
+        "description": "Чек-лист настройки для админа: что сделано и куда идти. Без платных вызовов моделей.\n\nБот и модели — из тех же проверок, что «Состояние системы» (бот = принимает сообщения).",
+        "operationId": "get_setup_checklist",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupChecklist"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Setup Checklist",
+        "tags": [
+          "setup"
+        ]
+      }
+    },
+    "/api/v1/setup/state": {
+      "get": {
+        "description": "Публично: нужен ли мастер первого запуска (в CRM ещё нет активного администратора).",
+        "operationId": "get_setup_state",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupState"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "summary": "Get Setup State",
+        "tags": [
+          "setup"
+        ]
+      }
+    },
+    "/api/v1/spend": {
+      "get": {
+        "operationId": "get_spend",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 180,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpendReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Spend",
+        "tags": [
+          "spend"
+        ]
+      }
+    },
     "/api/v1/stream": {
       "get": {
         "operationId": "stream",
@@ -6587,6 +9538,115 @@
         "summary": "Stream",
         "tags": [
           "stream"
+        ]
+      }
+    },
+    "/api/v1/system/backups": {
+      "get": {
+        "description": "Последние бэкапы из тома `backups` (каталоги `<UTC-штамп>`), время последнего успеха.",
+        "operationId": "list_backups",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Backups",
+        "tags": [
+          "system"
+        ]
+      },
+      "post": {
+        "description": "Запросить бэкап вне расписания: сервис бэкапа начнёт его в течение ~30 с.\n\n409, если том бэкапов не смонтирован в api. Повторный запрос до начала — без изменений;\nзапрос, который сервис не забрал за 2 мин, ставится заново.",
+        "operationId": "request_backup",
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Request Backup",
+        "tags": [
+          "system"
+        ]
+      }
+    },
+    "/api/v1/system/status": {
+      "get": {
+        "description": "Только чтение: моделей не вызывает, их здоровье — из последней проверки монитора.\n\nКомпоненты отсортированы: сбой → предупреждение → неизвестно → норма.",
+        "operationId": "system_status",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemStatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "System Status",
+        "tags": [
+          "system"
         ]
       }
     },

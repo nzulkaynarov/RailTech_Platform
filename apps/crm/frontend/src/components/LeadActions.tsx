@@ -20,11 +20,13 @@ import {
 import { MakeCustomer } from "./MakeCustomer";
 
 const LABEL: Record<ActionKey, string> = {
+  acknowledge: t.actions.acknowledge,
   take: t.actions.take,
   takeOver: t.actions.takeOver,
   won: t.actions.won,
   lost: t.actions.lost,
   snooze: t.actions.snooze,
+  unsnooze: t.actions.unsnooze,
   returnToBot: t.actions.returnToBot,
   assign: t.actions.assign,
   newDeal: t.actions.newDeal,
@@ -57,8 +59,8 @@ function useHandlers(lead: LeadDetail, run: Run, open: (d: Open) => void) {
       open(dialog);
       return;
     }
-    if (key === "take") {
-      void run({ kind: "take" });
+    if (key === "take" || key === "acknowledge" || key === "unsnooze") {
+      void run({ kind: key });
       return;
     }
     if (key === "takeOver") {

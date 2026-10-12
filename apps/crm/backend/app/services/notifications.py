@@ -2,16 +2,18 @@
 
 Пост всегда рендерится из текущего состояния БД — `sync` идемпотентен:
 нет поста → отправить, есть → отредактировать. Вызывается из воркера.
+Пост удалён или бот потерял канал → карточка публикуется заново (если передачу ещё можно
+забрать) или молча завершается — «Забрать» на устаревшей карточке не остаётся.
 """
 
-from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from html import escape
-from typing import Any
+from typing import Final
 
 import structlog
 from aiogram import Bot
-from aiogram.exceptions import TelegramBadRequest
+from aiogram.exceptions import TelegramAPIError, TelegramBadRequest, TelegramForbiddenError
 from aiogram.types import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -21,15 +23,41 @@ from aiogram.types import (
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.models.auth import User
-from app.models.leads import Conversation, Lead, Message
+from app.models.leads import Lead
 from app.models.qualification import Escalation
 from app.schemas.settings import AppSettings
 from app.services import channel_texts as tx
-from app.services.channel_card import TAKE_PREFIX, CardData, can_take, render
+from app.services.channel_card import (
+    PRIORITY_RANK,
+    CardData,
+    can_take,
+    duration,
+    is_silent,
+    needs_sla,
+    render,
+    take_data,
+    why,
+)
+from app.services.notification_data import lead_link, load_card, mentions
 from app.services.settings import SettingsService
+from app.services.staff_notifier import SEND_TIMEOUT_S
 
 logger = structlog.get_logger(__name__)
+DIGEST_LIMIT: Final = 30
+# Ответы Telegram, после которых пост править бессмысленно: удалён, канал сменился/недоступен.
+_GONE: Final = (
+    "message to edit not found",
+    "message can't be edited",
+    "chat not found",
+    "message_id_invalid",
+    "message not found",
+)
+
+
+@dataclass(frozen=True, slots=True)
+class SyncResult:
+    ok: bool
+    raised_to_hot: bool = False  # карточка стала горячей — срок реакции заново (задача ставит SLA)
 
 
 class NotificationService:
@@ -44,66 +72,90 @@ class NotificationService:
         self._bot = bot
 
     async def sync(self, escalation_id: int) -> bool:
+        return (await self.publish(escalation_id)).ok
+
+    async def publish(self, escalation_id: int) -> SyncResult:
+        """Пост карточки: отправить, отредактировать или опубликовать заново."""
         cfg = await self._settings.get()
-        channel = cfg.notifications.channel_id
-        if self._bot is None or channel is None:
+        if self._bot is None:
             logger.info("channel_not_configured", escalation_id=escalation_id)
-            return False
+            return SyncResult(ok=False)
         async with self._sessions() as session:
-            loaded = await _load(session, escalation_id, cfg)
+            loaded = await load_card(session, escalation_id, cfg)
         if loaded is None:
-            return False
+            return SyncResult(ok=False)
         escalation, card = loaded
-        text, markup = render(card), _keyboard(card)
         if escalation.channel_message_id is None:
-            if not can_take(card):
-                return False
-            sent = await self._bot.send_message(
-                channel, text, parse_mode="HTML", reply_markup=markup
+            return SyncResult(ok=await self._post(cfg, escalation, card))
+        chat = escalation.channel_chat_id or cfg.notifications.channel_id
+        if chat is None or not await self._edit(chat, escalation.channel_message_id, card):
+            await self._forget_post(escalation_id)
+            logger.info("channel_post_gone", escalation_id=escalation_id)
+            return SyncResult(ok=await self._post(cfg, escalation, card))
+        raised = (
+            card.priority == "hot"
+            and escalation.posted_priority not in (None, "hot")
+            and card.status == "open"
+        )
+        await self._save_post(escalation_id, chat, escalation.channel_message_id, card.priority)
+        if raised:
+            await self._reply(chat, escalation.channel_message_id, tx.RAISED_HOT, escalation_id)
+        return SyncResult(ok=True, raised_to_hot=raised)
+
+    async def reopened(self, escalation_id: int) -> None:
+        """«Отложить» истекло: ответ на карточку, чтобы пост снова заметили."""
+        async with self._sessions() as session:
+            row = await session.get(Escalation, escalation_id)
+        if row is not None and row.channel_message_id and row.channel_chat_id:
+            chat, message_id = row.channel_chat_id, row.channel_message_id
+            await self._reply(chat, message_id, tx.SNOOZE_OVER, escalation_id)
+
+    async def handed_over(self, lead_id: int, user_id: int) -> int | None:
+        """«Передать коллеге»: передача лида закреплена за новым ответственным (для карточки)."""
+        async with self._sessions() as session, session.begin():
+            row = await session.scalar(
+                select(Escalation)
+                .where(Escalation.lead_id == lead_id, Escalation.status == "taken")
+                .order_by(Escalation.id.desc())
+                .limit(1)
+                .with_for_update()
             )
-            async with self._sessions() as session, session.begin():
-                row = await session.get(Escalation, escalation_id, with_for_update=True)
-                if row is not None:
-                    row.channel_message_id = sent.message_id
-            return True
-        try:
-            await self._bot.edit_message_text(
-                text,
-                chat_id=channel,
-                message_id=escalation.channel_message_id,
-                parse_mode="HTML",
-                reply_markup=markup,
-            )
-        except TelegramBadRequest as exc:
-            if "not modified" not in str(exc):
-                raise
-        return True
+            if row is None:
+                return None
+            row.taken_by_user_id, row.taken_at = user_id, datetime.now(UTC)
+            return row.id
 
     async def mark_sla_overdue(self, escalation_id: int) -> bool:
-        """SLA истёк, а эскалацию не забрали: пометить пост и упомянуть дежурных."""
+        """SLA истёк, а эскалацию не забрали: пометить пост и упомянуть дежурных.
+
+        Info-передачи — сигналы без срока реакции (бот продолжает отвечать)."""
         cfg = await self._settings.get()
         async with self._sessions() as session, session.begin():
             row = await session.get(Escalation, escalation_id, with_for_update=True)
-            if row is None or row.status != "open" or row.sla_notified_at is not None:
-                return False
+            if (
+                row is None
+                or row.status != "open"
+                or row.sla_notified_at is not None
+                or not needs_sla(row.priority)
+                or (row.sla_due_at is not None and row.sla_due_at > datetime.now(UTC))
+            ):
+                return False  # срок перезапущен (стал горячим, вернулся из «Отложить»)
             row.sla_notified_at = datetime.now(UTC)
         await self.sync(escalation_id)
-        text = tx.SLA_REMINDER.format(lead_id=row.lead_id, minutes=_waiting_minutes(row))
-        await self._remind(cfg, escalation_id, text)
+        await self._remind(cfg, row, tx.SLA_REMINDER)
         return True
 
     async def remind(self, escalation_id: int) -> bool:
         cfg = await self._settings.get()
         async with self._sessions() as session:
             row = await session.get(Escalation, escalation_id)
-        if row is None or row.status != "open":
+        if row is None or row.status != "open" or not needs_sla(row.priority):
             return False
-        text = tx.REMINDER.format(lead_id=row.lead_id, minutes=_waiting_minutes(row))
-        await self._remind(cfg, escalation_id, text)
+        await self._remind(cfg, row, tx.REMINDER)
         return True
 
     async def digest(self) -> int:
-        """Ежедневная сводка открытых эскалаций (09:05 по Ташкенту)."""
+        """Ежедневная сводка открытых эскалаций (09:05 по Ташкенту): горячие первыми."""
         cfg = await self._settings.get()
         channel = cfg.notifications.channel_id
         async with self._sessions() as session:
@@ -111,122 +163,129 @@ class NotificationService:
                 await session.scalars(
                     select(Escalation)
                     .where(Escalation.status.in_(("open", "snoozed")))
-                    .order_by(Escalation.priority, Escalation.id)
+                    .order_by(Escalation.created_at, Escalation.id)
                 )
             ).all()
-        if self._bot is None or channel is None or not rows:
-            return 0
-        base = cfg.company.crm_base_url.rstrip("/")
-        lines = [tx.DIGEST_TITLE.format(count=len(rows))]
-        lines += [
-            tx.DIGEST_LINE.format(
-                icon=tx.PRIORITY_ICON.get(r.priority, "•"),
-                lead_id=r.lead_id,
-                priority=tx.PRIORITY.get(r.priority, r.priority),
-                url=f"{base}/leads/{r.lead_id}",
-            )
-            for r in rows[:30]
-        ]
-        await self._bot.send_message(
-            channel, "\n".join(lines), link_preview_options=LinkPreviewOptions(is_disabled=True)
-        )
+            if self._bot is None or channel is None or not rows:
+                return 0
+            ordered = sorted(rows, key=lambda r: (PRIORITY_RANK.get(r.priority, 9), r.created_at))
+            lines = [tx.DIGEST_TITLE.format(count=len(rows))]
+            for r in ordered[:DIGEST_LIMIT]:
+                lines.append(await _digest_line(session, r, cfg))
+        if len(rows) > DIGEST_LIMIT:
+            lines.append(tx.DIGEST_MORE.format(count=len(rows) - DIGEST_LIMIT))
+        await self._send(channel, "\n".join(lines), "digest")
         return len(rows)
 
-    async def _remind(self, cfg: AppSettings, escalation_id: int, title: str) -> None:
+    async def _post(self, cfg: AppSettings, escalation: Escalation, card: CardData) -> bool:
         channel = cfg.notifications.channel_id
         if self._bot is None or channel is None:
+            logger.info("channel_not_configured", escalation_id=escalation.id)
+            return False
+        if not can_take(card) or is_silent(card.reason_codes):
+            return False
+        sent = await self._bot.send_message(
+            channel,
+            render(card),
+            parse_mode="HTML",
+            reply_markup=_keyboard(card),
+            request_timeout=SEND_TIMEOUT_S,
+        )
+        await self._save_post(escalation.id, channel, sent.message_id, card.priority)
+        return True
+
+    async def _edit(self, chat: int, message_id: int, card: CardData) -> bool:
+        """False — поста больше нет (удалён, канал сменился); сетевые сбои — наверх, на ретрай."""
+        if self._bot is None:
+            return True
+        try:
+            await self._bot.edit_message_text(
+                render(card),
+                chat_id=chat,
+                message_id=message_id,
+                parse_mode="HTML",
+                reply_markup=_keyboard(card),
+                request_timeout=SEND_TIMEOUT_S,
+            )
+        except TelegramForbiddenError:
+            return False
+        except TelegramBadRequest as exc:
+            text = str(exc).lower()
+            if "not modified" in text:
+                return True
+            if any(marker in text for marker in _GONE):
+                return False
+            raise
+        return True
+
+    async def _save_post(self, escalation_id: int, chat: int, message_id: int, prio: str) -> None:
+        async with self._sessions() as session, session.begin():
+            row = await session.get(Escalation, escalation_id, with_for_update=True)
+            if row is not None:
+                row.channel_message_id, row.channel_chat_id = message_id, chat
+                row.posted_priority = prio
+
+    async def _forget_post(self, escalation_id: int) -> None:
+        async with self._sessions() as session, session.begin():
+            row = await session.get(Escalation, escalation_id, with_for_update=True)
+            if row is not None:
+                row.channel_message_id = row.channel_chat_id = None
+
+    async def _remind(self, cfg: AppSettings, row: Escalation, template: str) -> None:
+        channel = row.channel_chat_id or cfg.notifications.channel_id
+        if channel is None:
             return
         async with self._sessions() as session:
-            row = await session.get(Escalation, escalation_id)
-            duty = await _mentions(session, cfg.notifications.duty_user_ids)
-        text = title + (f"\n{duty}" if duty else "")
-        await self._bot.send_message(
-            channel,
-            text,
-            parse_mode="HTML",
-            reply_parameters=(
-                ReplyParameters(message_id=row.channel_message_id, allow_sending_without_reply=True)
-                if row is not None and row.channel_message_id
-                else None
-            ),
-        )
+            people = await mentions(session, cfg.notifications.duty_user_ids)
+        lead = lead_link(cfg, row.lead_id)
+        waited = duration(datetime.now(UTC) - row.created_at)
+        text = template.format(lead=lead, waited=waited) + (f"\n{people}" if people else "")
+        await self._send(channel, text, "reminder", reply_to=row.channel_message_id)
+
+    async def _reply(self, chat: int, message_id: int, text: str, escalation_id: int) -> None:
+        await self._send(chat, text, f"reply-{escalation_id}", reply_to=message_id)
+
+    async def _send(self, chat: int, text: str, key: str, *, reply_to: int | None = None) -> bool:
+        if self._bot is None:
+            return False
+        try:
+            await self._bot.send_message(
+                chat,
+                text,
+                parse_mode="HTML",
+                link_preview_options=LinkPreviewOptions(is_disabled=True),
+                reply_parameters=(
+                    ReplyParameters(message_id=reply_to, allow_sending_without_reply=True)
+                    if reply_to
+                    else None
+                ),
+                request_timeout=SEND_TIMEOUT_S,
+            )
+        except TelegramAPIError as exc:
+            logger.warning("channel_send_failed", key=key, error=type(exc).__name__)
+            return False
+        return True
 
 
 def _keyboard(card: CardData) -> InlineKeyboardMarkup | None:
     row: list[InlineKeyboardButton] = []
     if can_take(card):
         row.append(
-            InlineKeyboardButton(text=tx.TAKE_BUTTON, callback_data=f"{TAKE_PREFIX}{card.lead_id}")
+            InlineKeyboardButton(text=tx.TAKE_BUTTON, callback_data=take_data(card.escalation_id))
         )
     if card.crm_url.startswith("https://"):
         row.append(InlineKeyboardButton(text=tx.OPEN_BUTTON, url=card.crm_url))
     return InlineKeyboardMarkup(inline_keyboard=[row]) if row else None
 
 
-async def _load(
-    session: AsyncSession, escalation_id: int, cfg: AppSettings
-) -> tuple[Escalation, CardData] | None:
-    escalation = await session.get(Escalation, escalation_id)
-    if escalation is None:
-        return None
-    lead = await session.get(Lead, escalation.lead_id)
-    if lead is None:
-        return None
-    taken_by = (
-        await session.get(User, escalation.taken_by_user_id)
-        if escalation.taken_by_user_id
-        else None
-    )
-    stored: dict[str, Any] = dict(lead.qualification or {})
-    card = CardData(
-        lead_id=lead.id,
-        display_name=lead.display_name,
-        language=lead.language,
-        score=lead.score,
-        stage=lead.stage,
-        need_summary=lead.need_summary,
-        product_interest=list(lead.product_interest or []),
-        timeline=stored.get("timeline"),
-        decision_role=stored.get("decision_role"),
-        priority=escalation.priority,
-        reason_codes=list(escalation.reason_codes or []),
-        reason_text=escalation.reason_text,
-        recommendation=escalation.recommendation,
-        status=escalation.status,
-        taken_by=taken_by.full_name if taken_by else None,
-        taken_at=escalation.taken_at,
-        sla_overdue=escalation.sla_notified_at is not None,
-        last_lead_message=await _last_lead_text(session, lead.id),
-        crm_url=f"{cfg.company.crm_base_url.rstrip('/')}/leads/{lead.id}",
-        timezone=cfg.business_hours.timezone,
-        kb_gap_streak=cfg.escalation.kb_gap_streak,
-    )
-    return escalation, card
-
-
-def _waiting_minutes(escalation: Escalation) -> int:
-    """Сколько лид ждёт с момента передачи — в напоминании вместо «всё ещё ждёт»."""
-    return max(0, int((datetime.now(UTC) - escalation.created_at).total_seconds() // 60))
-
-
-async def _last_lead_text(session: AsyncSession, lead_id: int) -> str | None:
-    stmt = (
-        select(Message.text)
-        .join(Conversation, Conversation.id == Message.conversation_id)
-        .where(Conversation.lead_id == lead_id, Message.role == "lead", Message.text != "")
-        .order_by(Message.id.desc())
-        .limit(1)
-    )
-    value: str | None = await session.scalar(stmt)
-    return value
-
-
-async def _mentions(session: AsyncSession, user_ids: Sequence[int]) -> str:
-    if not user_ids:
-        return ""
-    users = (await session.scalars(select(User).where(User.id.in_(user_ids)))).all()
-    return " ".join(
-        f'<a href="tg://user?id={u.tg_user_id}">{escape(u.full_name)}</a>'
-        for u in users
-        if u.tg_user_id
+async def _digest_line(session: AsyncSession, row: Escalation, cfg: AppSettings) -> str:
+    lead = await session.get(Lead, row.lead_id)
+    name = escape((lead.display_name if lead else "") or tx.NO_NAME)
+    reason = escape(why(row.reason_codes or [], None) or tx.PRIORITY.get(row.priority, ""))
+    return tx.DIGEST_LINE.format(
+        icon=tx.PRIORITY_ICON.get(row.priority, "•"),
+        lead=lead_link(cfg, row.lead_id),
+        name=name,
+        why=reason,
+        waited=duration(datetime.now(UTC) - row.created_at),
     )

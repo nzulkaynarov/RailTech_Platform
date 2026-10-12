@@ -5,13 +5,18 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface ClientOut {
+/**
+ * Строка списка клиентов: открытые сделки и последнее сообщение по любому лиду клиента.
+ */
+export interface ClientListItem {
   created_at: string;
   id: number;
   inn: string | null;
   is_active: boolean;
+  last_activity_at: string | null;
   name: string;
   notes: string | null;
+  open_deals: number;
   owner_user_id: number | null;
   segment: string | null;
 }

@@ -162,7 +162,9 @@ async def container() -> AsyncIterator[Container]:
 async def test_golden_case(case: GoldenCase, container: Container) -> None:
     budget.guard()
     tools = EvalTools(case, KbSearchService(container.session_factory, container.embedder))
-    agent = DialogAgent(tools, ChatModel(container.llm, "dialog-model"))
+    agent = DialogAgent(
+        tools, ChatModel(container.llm, "dialog-model", usage=container.usage_recorder)
+    )
     result = await agent.run(
         lead_id=0,
         text=case.message,
@@ -243,7 +245,7 @@ async def _judge(container: Container, fragments: list[str], question: str, answ
         question=prompts.xml_escape(question),
         answer=prompts.xml_escape(answer),
     )
-    judge = ChatModel(container.llm, "judge-model", max_tokens=512)
+    judge = ChatModel(container.llm, "judge-model", max_tokens=512, usage=container.usage_recorder)
     verdict = await judge.complete(
         [{"role": "user", "content": system}], response_format=JUDGE_SCHEMA, name="eval.judge"
     )

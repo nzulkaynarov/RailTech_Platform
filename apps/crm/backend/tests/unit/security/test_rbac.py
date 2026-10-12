@@ -14,14 +14,24 @@ MANAGER = {
     ("leads", "work"),
     ("leads", "reply"),
     ("leads", "note"),
+    ("leads", "assist"),
     ("stream", "read"),
     ("dashboard", "read"),
     ("clients", "read"),
     ("clients", "write"),
     ("documents", "read"),
     ("documents", "write"),
+    ("deals", "read"),
+    ("deals", "write"),
+    ("kb", "read"),  # база знаний — только просмотр (аудит 2026-10-12)
 }
-VIEWER = {("leads", "read"), ("stream", "read"), ("dashboard", "read"), ("clients", "read")}
+VIEWER = {
+    ("leads", "read"),
+    ("stream", "read"),
+    ("dashboard", "read"),
+    ("clients", "read"),
+    ("deals", "read"),
+}
 ALL = {(r, a) for r, actions in CATALOG.items() for a in actions}
 
 
@@ -52,4 +62,5 @@ def test_permissions_payload_shape() -> None:
         "work": False,
         "reply": False,
         "note": False,
+        "assist": False,
     }

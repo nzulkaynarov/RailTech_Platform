@@ -12,7 +12,7 @@ const SECTION_GROUPS: SectionGroup[] = [
   { key: "company", sections: ["company", "business_hours"] },
   { key: "bot", sections: ["texts", "bot", "kb", "stop_words", "competitors"] },
   { key: "handoff", sections: ["escalation", "qualification"] },
-  { key: "team", sections: ["notifications"] },
+  { key: "team", sections: ["notifications", "deals"] },
   { key: "spend", sections: ["budget"] },
 ];
 
@@ -34,7 +34,6 @@ export function resolveSection(requested: string | null, available: string[]): s
 
 const TEXT_GROUPS: Record<string, string[]> = {
   welcome: [
-    "consent_version",
     "greeting",
     "consent",
     "consent_button",
@@ -43,33 +42,83 @@ const TEXT_GROUPS: Record<string, string[]> = {
     "consent_accepted_pending",
     "consent_declined",
     "consent_required",
+    "language_first",
     "language_prompt",
     "language_set",
     "help",
+    "help_with_manager",
+    "help_client",
+    "contacts",
+    "contact_labels",
+    "contacts_missing",
   ],
   handoff: [
     "handoff",
+    "sla_promise",
     "off_hours",
     "waiting_for_manager",
     "manager_joined",
     "returned_to_bot",
     "handoff_offer_yes",
     "handoff_offer_no",
+    "handoff_offer_declined",
     "attachment_received",
+    "attachment_too_large",
   ],
-  fallback: ["fallback", "service_unavailable", "rate_limited", "unsupported_message"],
-  clients: ["document_sent", "document_failed", "service_request_closed"],
+  fallback: [
+    "fallback",
+    "service_unavailable",
+    "rate_limited",
+    "unsupported_message",
+    "smalltalk_ack",
+  ],
+  clients: [
+    "document_sent",
+    "document_failed",
+    "service_request_closed",
+    "client_only",
+    "client_access_granted",
+    "request_text_only",
+    "docs_list",
+    "docs_empty",
+    "request_prompt",
+    "request_created",
+    "request_status_open",
+    "request_status_none",
+  ],
+  menu: [
+    "menu_start",
+    "menu_human",
+    "menu_lang",
+    "menu_help",
+    "menu_delete",
+    "menu_docs",
+    "menu_request",
+    "menu_status",
+  ],
+  phone: [
+    "phone_request",
+    "phone_share_button",
+    "phone_skip_button",
+    "phone_saved",
+    "phone_skipped",
+    "phone_not_own",
+  ],
   erase: ["erase_confirm", "erase_button", "cancel_button", "erase_cancelled", "erased"],
 };
 
+/** Служебные поля (версия согласия) — в свёрнутой группе «Дополнительно», последней. */
+const ADVANCED_TEXTS = ["consent_version"];
+
 /** Ключи `texts.*` по смысловым группам; новые ключи с бэка — в «other», не теряются. */
 export function textGroups(keys: string[]): { key: string; fields: string[] }[] {
-  const known = new Set(Object.values(TEXT_GROUPS).flat());
+  const known = new Set([...Object.values(TEXT_GROUPS).flat(), ...ADVANCED_TEXTS]);
   const groups = Object.entries(TEXT_GROUPS).map(([key, fields]) => ({
     key,
     fields: fields.filter((f) => keys.includes(f)),
   }));
   groups.push({ key: "other", fields: keys.filter((k) => !known.has(k)) });
+  groups.push({ key: "advanced", fields: ADVANCED_TEXTS.filter((k) => keys.includes(k)) });
   return groups.filter((g) => g.fields.length > 0);
 }
 

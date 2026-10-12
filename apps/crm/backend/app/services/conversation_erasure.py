@@ -7,8 +7,9 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.language import Language
+from app.domain.triggers import TriggerSignals
 from app.repositories import leads as repo
-from app.services.conversation_support import current_lead, lang_of
+from app.services.conversation_support import current_lead, lang_of, report_failure
 from app.services.conversation_types import AttachmentsEraser, Outgoing
 from app.services.settings import SettingsService
 
@@ -73,3 +74,23 @@ class ErasureMixin:
             logger.exception("lead_erase_cleanup_failed", lead_id=lead_id)
         for escalation_id in escalations:
             await self._fire(None, escalation_id, escalated_lead=lead_id)
+
+
+class DeliveryFailureMixin:
+    """Часть `ConversationService`: файл не доставлен клиенту → info-эскалация для команды."""
+
+    _sessions: async_sessionmaker[AsyncSession]
+    _settings: SettingsService
+
+    async def _fire(
+        self, lead_id: int | None, escalation_id: int | None, escalated_lead: int | None = None
+    ) -> None:
+        raise NotImplementedError
+
+    async def report_delivery_failure(self, lead_id: int) -> None:
+        cfg = await self._settings.get()
+        async with self._sessions() as session, session.begin():
+            lead = await repo.get_lead(session, lead_id, for_update=True)
+            signals = TriggerSignals(delivery_failed=True)
+            escalation_id = await report_failure(session, lead, cfg, signals) if lead else None
+        await self._fire(None, escalation_id, lead_id)

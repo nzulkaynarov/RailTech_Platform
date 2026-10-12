@@ -6,10 +6,18 @@
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Final, Literal
 
+from app.domain.business_hours import BusinessHours, add_business_minutes
 from app.domain.stages import OwnerMode, Stage
-from app.domain.triggers import Priority, TriggerCode, TriggerHit, max_priority
+from app.domain.triggers import (
+    PRIORITY_ORDER,
+    Priority,
+    TriggerCode,
+    TriggerHit,
+    max_priority,
+)
 
 HANDOFF_FROM: Final = frozenset({Stage.NEW, Stage.ENGAGED, Stage.QUALIFIED, Stage.UNRESPONSIVE})
 
@@ -68,3 +76,21 @@ def plan(
         lead_text=("handoff" if business_time else "off_hours") if hand_over else None,
         channel_action="post" if is_new else ("edit" if changed else "none"),
     )
+
+
+@dataclass(frozen=True, slots=True)
+class SlaTimer:
+    """Новый срок SLA: `sla_notified_at` сбрасывается, чтобы напоминание пришло снова."""
+
+    sla_due_at: datetime
+    sla_notified_at: None = None
+
+
+def reset_sla(now: datetime, sla_minutes: int, hours: BusinessHours) -> SlaTimer:
+    """Перезапуск SLA-таймера (аудит 2026-10-12, P1-8): при повышении приоритета и по
+    окончании «Отложить» — иначе просроченное напоминание уже отправлено и новое не придёт."""
+    return SlaTimer(sla_due_at=add_business_minutes(now, sla_minutes, hours))
+
+
+def priority_raised(before: Priority, after: Priority) -> bool:
+    return PRIORITY_ORDER[after] > PRIORITY_ORDER[before]

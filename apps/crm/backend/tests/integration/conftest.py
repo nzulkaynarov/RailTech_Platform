@@ -23,6 +23,7 @@ TABLES = (
     "kb_documents",
     "kb_gaps",
     "products",
+    "deals",
     "leads",
     "telegram_identities",
     "conversations",
@@ -37,10 +38,14 @@ TABLES = (
     "audit_log",
     "refresh_tokens",
     "clients",
+    "client_contacts",
     "documents",
     "document_access_log",
     "service_requests",
     "system_alerts",
+    "integration_secrets",
+    "telegram_chat_candidates",
+    "llm_usage",
     "procrastinate_jobs",
 )
 FAKE_KEY = "x" * 40  # фиктивный ключ только для тестов

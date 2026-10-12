@@ -23,6 +23,8 @@ from app.schemas.decisions import (
 from app.schemas.leads import (
     ActionResult,
     Assign,
+    AssistOut,
+    AssistRequest,
     Close,
     EscalationOut,
     InboxResponse,
@@ -45,6 +47,7 @@ Reader = Annotated[Principal, Depends(require("leads", "read"))]
 Taker = Annotated[Principal, Depends(require("leads", "take"))]
 Worker = Annotated[Principal, Depends(require("leads", "work"))]
 Replier = Annotated[Principal, Depends(require("leads", "reply"))]
+Assister = Annotated[Principal, Depends(require("leads", "assist"))]
 Noter = Annotated[Principal, Depends(require("leads", "note"))]
 
 
@@ -167,6 +170,8 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
             raise NotFoundError("lead not found")
         escalation = (await crm.active_escalations(session, [lead_id])).get(lead_id)
         username = await crm.tg_username(session, lead_id)
+        phone = await crm.tg_phone(session, lead_id)
+        client_phone = await crm.client_primary_phone(session, lead.client_id)
         names = await crm.user_names(session, [lead])
         request_id = await service_requests.open_request_id(session, lead)
     base = lead_out(lead, escalation, names)
@@ -175,6 +180,8 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
         qualification=dict(lead.qualification or {}),
         consent_given_at=lead.consent_given_at,
         tg_username=username,
+        phone_e164=phone,
+        client_phone_e164=client_phone,
         notes_count=lead.notes_count,
         snoozed_until=lead.snoozed_until,
         open_service_request_id=request_id,
@@ -200,6 +207,15 @@ async def reply(lead_id: int, body: Reply, who: Replier, container: ContainerDep
     return ActionResult(id=await container.lead_service.reply(who, lead_id, body.text))
 
 
+@router.post("/leads/{lead_id}/assist", response_model=AssistOut)
+async def assist(
+    lead_id: int, body: AssistRequest, who: Assister, container: ContainerDep
+) -> AssistOut:
+    """ИИ-помощь менеджеру (Q-019): текст для поля ответа; клиенту ничего не отправляется."""
+    result = await container.assist_service.assist(who, lead_id, body.mode, body.text)
+    return AssistOut(text=result.text, cost_usd=result.cost_usd, notice=result.notice)
+
+
 @router.get("/leads/{lead_id}/notes", response_model=list[NoteOut])
 async def lead_notes(lead_id: int, _: Reader, container: ContainerDep) -> list[NoteOut]:
     async with container.session_factory() as session:
@@ -223,6 +239,13 @@ async def take(lead_id: int, who: Taker, container: ContainerDep) -> ActionResul
     return ActionResult()
 
 
+@router.post("/leads/{lead_id}/actions/acknowledge", response_model=ActionResult)
+async def acknowledge(lead_id: int, who: Taker, container: ContainerDep) -> ActionResult:
+    """«Принято к сведению»: закрыть информационную передачу, лид остаётся у бота."""
+    await container.lead_service.acknowledge(who, lead_id)
+    return ActionResult()
+
+
 @router.post("/leads/{lead_id}/actions/return_to_bot", response_model=ActionResult)
 async def return_to_bot(
     lead_id: int, body: ReturnToBot, who: Worker, container: ContainerDep
@@ -237,11 +260,20 @@ async def snooze(lead_id: int, body: Snooze, who: Worker, container: ContainerDe
     return ActionResult()
 
 
+@router.post("/leads/{lead_id}/actions/unsnooze", response_model=ActionResult)
+async def unsnooze(lead_id: int, who: Worker, container: ContainerDep) -> ActionResult:
+    """«Вернуть из отложенных»: передача снова открыта, срок реакции — заново."""
+    await container.lead_service.unsnooze(who, lead_id)
+    return ActionResult()
+
+
 @router.post("/leads/{lead_id}/actions/close_won", response_model=ActionResult)
 async def close_won(
     lead_id: int, body: Close, who: Worker, container: ContainerDep
 ) -> ActionResult:
-    await container.lead_service.close(who, lead_id, "won", body.reason)
+    await container.lead_service.close(
+        who, lead_id, "won", body.reason, amount=body.amount, lost_reason=body.lost_reason
+    )
     return ActionResult()
 
 
@@ -249,7 +281,9 @@ async def close_won(
 async def close_lost(
     lead_id: int, body: Close, who: Worker, container: ContainerDep
 ) -> ActionResult:
-    await container.lead_service.close(who, lead_id, "lost", body.reason)
+    await container.lead_service.close(
+        who, lead_id, "lost", body.reason, amount=body.amount, lost_reason=body.lost_reason
+    )
     return ActionResult()
 
 

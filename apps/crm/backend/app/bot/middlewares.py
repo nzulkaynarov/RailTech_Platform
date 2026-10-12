@@ -11,9 +11,11 @@ from aiogram.types import Message, TelegramObject, Update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.bot.attachments import attachment_meta, media_of
 from app.domain.language import Language
 from app.models.leads import TgUpdate
 from app.schemas.settings import AppSettings
+from app.services.conversation_types import Incoming
 
 logger = structlog.get_logger(__name__)
 
@@ -70,9 +72,32 @@ class RateLimitMiddleware(BaseMiddleware):
                 self._warned[user_id] = now
                 await event.answer(cfg.texts.rate_limited.get(await _language(event, data)))
             logger.info("tg_rate_limited", tg_user_id=user_id)
+            await _record_silenced(event, data)
             return None
         hits.append(now)
         return await handler(event, data)
+
+
+async def _record_silenced(event: Message, data: dict[str, Any]) -> None:
+    """Бот промолчал, но сообщение лида сохраняется: менеджер увидит его в CRM."""
+    conversation = data.get("conversation")
+    user = event.from_user
+    if conversation is None or user is None:
+        return
+    text = (event.text or event.caption or "")[:4000]
+    media = media_of(event)
+    attachments = [attachment_meta(media) | {"stored": False}] if media else []
+    inc = Incoming(
+        tg_user_id=user.id,
+        chat_id=event.chat.id,
+        text=text,
+        message_id=event.message_id,
+        attachments=attachments,
+    )
+    try:
+        await conversation.record_lead_message(inc, meta={"rate_limited": True})
+    except Exception:
+        logger.exception("tg_rate_limited_record_failed", tg_user_id=user.id)
 
 
 async def _language(event: Message, data: dict[str, Any]) -> Language:

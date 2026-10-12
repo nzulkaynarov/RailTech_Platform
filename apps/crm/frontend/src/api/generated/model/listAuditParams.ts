@@ -13,6 +13,10 @@ export type ListAuditParams = {
   created_from?: string | null;
   created_to?: string | null;
   /**
+   * Скрыть действия с этими префиксами (напр. auth.login)
+   */
+  exclude_actions?: string[] | null;
+  /**
    * @minimum 1
    * @maximum 200
    */

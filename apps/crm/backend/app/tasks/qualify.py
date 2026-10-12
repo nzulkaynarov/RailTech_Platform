@@ -11,19 +11,26 @@ from procrastinate.exceptions import AlreadyEnqueued
 from app.agents.llm import ChatModel
 from app.agents.qualifier.graph import QualifierAgent
 from app.container import Container, get_container
-from app.services.lead_messenger import LeadMessenger
+from app.services.budget import BudgetedModel
 from app.services.qualifier import QualifierService
 from app.tasks.queue import queue
 
 DELAY_S = 5
 
 
-def build_qualifier_service(c: Container) -> QualifierService:
+async def build_qualifier_service(c: Container) -> QualifierService:
     return QualifierService(
         c.session_factory,
         c.settings_service,
-        QualifierAgent(ChatModel(c.llm, "qualifier-model")),
-        LeadMessenger(c.session_factory, c.telegram_bot),
+        QualifierAgent(
+            BudgetedModel(
+                ChatModel(c.llm, "qualifier-model", usage=c.usage_recorder),
+                None,
+                c.budget_guard,
+                alias="qualifier-model",
+            )
+        ),
+        c.lead_messenger,  # тот же отправитель, что у CRM: уважает TELEGRAM_DRY_RUN
         on_escalation=_escalated,
     )
 
@@ -40,7 +47,7 @@ async def _escalated(lead_id: int, escalation_id: int) -> None:
     retry=RetryStrategy(max_attempts=2, wait=10),
 )
 async def qualify_lead(lead_id: int) -> int | None:
-    return await build_qualifier_service(get_container()).run(lead_id)
+    return await (await build_qualifier_service(get_container())).run(lead_id)
 
 
 async def enqueue_qualify(lead_id: int) -> bool:
