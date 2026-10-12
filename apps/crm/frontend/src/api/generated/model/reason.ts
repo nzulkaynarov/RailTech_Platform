@@ -51,4 +51,5 @@ export const Reason = {
   assist_unavailable: "assist_unavailable",
   assist_empty: "assist_empty",
   assist_no_history: "assist_no_history",
+  deal_won_final: "deal_won_final",
 } as const;

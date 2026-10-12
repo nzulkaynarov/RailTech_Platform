@@ -25,6 +25,12 @@ import type {
   ContactIn,
   Created,
   Dashboard,
+  DealCreate,
+  DealOptions,
+  DealOut,
+  DealUpdate,
+  DealsSummary,
+  DealsSummaryParams,
   DecisionsResponse,
   DocumentOut,
   DocumentUpdate,
@@ -46,6 +52,7 @@ import type {
   LinkTelegram,
   ListAuditParams,
   ListClientsParams,
+  ListDealsParams,
   ListDocumentsParams,
   ListKbDocumentsParams,
   ListKbGapsParams,
@@ -886,6 +893,291 @@ export const refreshDashboard = async (
   return http<refreshDashboardResponse>(getRefreshDashboardUrl(), {
     ...options,
     method: "POST",
+  });
+};
+
+export type listDealsResponse200 = {
+  data: DealOut[];
+  status: 200;
+};
+
+export type listDealsResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type listDealsResponseSuccess = listDealsResponse200 & {
+  headers: Headers;
+};
+export type listDealsResponseError = listDealsResponse422 & {
+  headers: Headers;
+};
+
+export type listDealsResponse = listDealsResponseSuccess | listDealsResponseError;
+
+export const getListDealsUrl = (params?: ListDealsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/deals?${stringifiedParams}` : `/api/v1/deals`;
+};
+
+/**
+ * Сделки, новые сверху (до 500). Период закрытия — включительно, по дате UTC.
+ * @summary List Deals
+ */
+export const listDeals = async (
+  params?: ListDealsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<listDealsResponse> => {
+  return http<listDealsResponse>(getListDealsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type createDealResponse201 = {
+  data: Created;
+  status: 201;
+};
+
+export type createDealResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type createDealResponseSuccess = createDealResponse201 & {
+  headers: Headers;
+};
+export type createDealResponseError = createDealResponse422 & {
+  headers: Headers;
+};
+
+export type createDealResponse = createDealResponseSuccess | createDealResponseError;
+
+export const getCreateDealUrl = () => {
+  return `/api/v1/deals`;
+};
+
+/**
+ * Новая сделка; валюта по умолчанию — из настройки `deals.currency`.
+ * @summary Create Deal
+ */
+export const createDeal = async (
+  dealCreate: DealCreate,
+  options?: Parameters<typeof http>[1],
+): Promise<createDealResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<createDealResponse>(getCreateDealUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(dealCreate),
+  });
+};
+
+export type dealOptionsResponse200 = {
+  data: DealOptions;
+  status: 200;
+};
+
+export type dealOptionsResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type dealOptionsResponseSuccess = dealOptionsResponse200 & {
+  headers: Headers;
+};
+export type dealOptionsResponseError = dealOptionsResponse422 & {
+  headers: Headers;
+};
+
+export type dealOptionsResponse = dealOptionsResponseSuccess | dealOptionsResponseError;
+
+export const getDealOptionsUrl = () => {
+  return `/api/v1/deals/options`;
+};
+
+/**
+ * Причины отказа и валюта по умолчанию — для форм сделки и закрытия лида.
+ * @summary Deal Options
+ */
+export const dealOptions = async (
+  options?: Parameters<typeof http>[1],
+): Promise<dealOptionsResponse> => {
+  return http<dealOptionsResponse>(getDealOptionsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type dealsSummaryResponse200 = {
+  data: DealsSummary;
+  status: 200;
+};
+
+export type dealsSummaryResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type dealsSummaryResponseSuccess = dealsSummaryResponse200 & {
+  headers: Headers;
+};
+export type dealsSummaryResponseError = dealsSummaryResponse422 & {
+  headers: Headers;
+};
+
+export type dealsSummaryResponse = dealsSummaryResponseSuccess | dealsSummaryResponseError;
+
+export const getDealsSummaryUrl = (params?: DealsSummaryParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/deals/summary?${stringifiedParams}`
+    : `/api/v1/deals/summary`;
+};
+
+/**
+ * Выигрыш (число и суммы по валютам) и отказы по причинам за последние `days` дней.
+ * @summary Deals Summary
+ */
+export const dealsSummary = async (
+  params?: DealsSummaryParams,
+  options?: Parameters<typeof http>[1],
+): Promise<dealsSummaryResponse> => {
+  return http<dealsSummaryResponse>(getDealsSummaryUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type getDealResponse200 = {
+  data: DealOut;
+  status: 200;
+};
+
+export type getDealResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type getDealResponseSuccess = getDealResponse200 & {
+  headers: Headers;
+};
+export type getDealResponseError = getDealResponse422 & {
+  headers: Headers;
+};
+
+export type getDealResponse = getDealResponseSuccess | getDealResponseError;
+
+export const getGetDealUrl = (dealId: number) => {
+  return `/api/v1/deals/${dealId}`;
+};
+
+/**
+ * @summary Get Deal
+ */
+export const getDeal = async (
+  dealId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<getDealResponse> => {
+  return http<getDealResponse>(getGetDealUrl(dealId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type updateDealResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type updateDealResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type updateDealResponseSuccess = updateDealResponse200 & {
+  headers: Headers;
+};
+export type updateDealResponseError = updateDealResponse422 & {
+  headers: Headers;
+};
+
+export type updateDealResponse = updateDealResponseSuccess | updateDealResponseError;
+
+export const getUpdateDealUrl = (dealId: number) => {
+  return `/api/v1/deals/${dealId}`;
+};
+
+/**
+ * Изменить сделку. Выигранную менять может только админ (409 `deal_won_final`).
+ * @summary Update Deal
+ */
+export const updateDeal = async (
+  dealId: number,
+  dealUpdate: DealUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<updateDealResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<updateDealResponse>(getUpdateDealUrl(dealId), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(dealUpdate),
   });
 };
 

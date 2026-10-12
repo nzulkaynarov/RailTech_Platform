@@ -21,8 +21,16 @@ MANAGER = {
     ("clients", "write"),
     ("documents", "read"),
     ("documents", "write"),
+    ("deals", "read"),
+    ("deals", "write"),
 }
-VIEWER = {("leads", "read"), ("stream", "read"), ("dashboard", "read"), ("clients", "read")}
+VIEWER = {
+    ("leads", "read"),
+    ("stream", "read"),
+    ("dashboard", "read"),
+    ("clients", "read"),
+    ("deals", "read"),
+}
 ALL = {(r, a) for r, actions in CATALOG.items() for a in actions}
 
 

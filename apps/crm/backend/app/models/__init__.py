@@ -3,6 +3,7 @@
 from app.models import (  # noqa: F401
     auth,
     clients,
+    deals,
     integrations,
     kb,
     leads,

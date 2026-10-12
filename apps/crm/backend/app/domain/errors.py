@@ -51,6 +51,7 @@ class Reason(StrEnum):
     ASSIST_UNAVAILABLE = "assist_unavailable"
     ASSIST_EMPTY = "assist_empty"
     ASSIST_NO_HISTORY = "assist_no_history"
+    DEAL_WON_FINAL = "deal_won_final"
 
 
 class DomainError(Exception):

@@ -23,9 +23,9 @@ const percent = (share: number | null) =>
   share === null ? t.common.none : `${String(Math.round(share * 100))}%`;
 
 /**
- * Ключевые бизнес-метрики (крупно) и операционные (мельче). «Сделок» без ссылки:
- * выигранные сделки сразу переходят в стадию «Клиент», а фильтра «закрыта в периоде»
- * у списка лидов нет — клик открыл бы пустой или неверный список.
+ * Ключевые бизнес-метрики (крупно) и операционные (мельче). «Сделок» ведёт в раздел
+ * «Сделки» с фильтром «Выиграна» (ADR-0019): выигранный лид сразу становится «Клиентом»,
+ * поэтому список лидов для этой плитки не подходит.
  */
 export function dashboardTiles(
   data: Dashboard,
@@ -41,7 +41,12 @@ export function dashboardTiles(
         target: { resource: "leads", path: leadsPath(period) },
       },
       { key: "taken", title: t.dashboard.taken, value: totals.taken, target: null },
-      { key: "won", title: t.dashboard.won, value: totals.won, target: null },
+      {
+        key: "won",
+        title: t.dashboard.won,
+        value: totals.won,
+        target: { resource: "deals", path: "/deals?stage=won" },
+      },
       {
         key: "takeTime",
         title: t.dashboard.takeTime,

@@ -39,8 +39,11 @@ describe("dashboard tiles", () => {
     expect(tiles.secondary.find((x) => x.key === "fallback")?.value).toBe("25%");
   });
 
-  it("won deals have no drill-down (they move on to «Клиент»)", () => {
-    expect(tiles.primary.find((x) => x.key === "won")?.target).toBeNull();
+  it("won deals drill down to the deals list filtered by «Выиграна» (ADR-0019)", () => {
+    expect(tiles.primary.find((x) => x.key === "won")?.target).toEqual({
+      resource: "deals",
+      path: "/deals?stage=won",
+    });
   });
 
   it.each([

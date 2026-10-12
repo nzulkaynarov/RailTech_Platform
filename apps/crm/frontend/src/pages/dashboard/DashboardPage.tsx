@@ -15,6 +15,7 @@ import { useApiErrorToast } from "../../hooks/useApiErrorToast";
 import { t } from "../../i18n/ru";
 import { formatDateTime, tashkent } from "../../lib/time";
 import { Daily, Panels, Tiles } from "./DashboardParts";
+import { DealsPanel } from "./DealsPanel";
 import "../admin.css";
 
 const PERIODS = [7, 30, 90].map((n) => ({
@@ -82,6 +83,7 @@ export function DashboardPage() {
         {data && tiles ? (
           <>
             <Tiles tiles={tiles.primary} perms={perms.data} primary />
+            {allowed(perms.data, "deals", "read") ? <DealsPanel days={days} /> : null}
             <Typography.Title level={2} className="section-title">
               {t.dashboard.secondary}
             </Typography.Title>

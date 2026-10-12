@@ -13,6 +13,7 @@ export const core = {
     leads: "Лиды",
     dashboard: "Дашборд",
     clients: "Клиенты",
+    deals: "Сделки",
     kb: "База знаний",
     gaps: "Пробелы знаний",
     settings: "Настройки",
@@ -175,6 +176,7 @@ export const core = {
     assist_unavailable: "Модель сейчас недоступна — напишите ответ сами или повторите позже",
     assist_empty: "ИИ не смог составить черновик без выдуманных цифр — напишите ответ сами",
     assist_no_history: "Нет сообщения клиента, на которое нужен ответ",
+    deal_won_final: "Выигранную сделку может изменить только администратор",
   } as Record<string, string>,
   common: {
     colleague: "коллега",
@@ -194,6 +196,7 @@ export const core = {
   page: {
     leads: "Лиды",
     clients: "Клиенты",
+    deals: "Сделки",
     dashboard: "Дашборд",
     kb: "База знаний",
     gaps: "Пробелы знаний",

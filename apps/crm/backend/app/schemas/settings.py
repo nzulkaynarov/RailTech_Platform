@@ -336,6 +336,19 @@ class BudgetSettings(StrictModel):
     providers: ProviderLimitsSettings = Field(default_factory=ProviderLimitsSettings)
 
 
+_LOST_REASONS: Final = ("Дорого", "Выбрали конкурента", "Нет бюджета", "Не актуально")
+_LOST_REASONS_TAIL: Final = ("Не вышли на связь", "Другое")
+
+
+class DealsSettings(StrictModel):
+    """Справочник причин отказа и валюта новых сделок (Q-013, ADR-0019)."""
+
+    lost_reasons: list[str] = Field(
+        default_factory=lambda: [*_LOST_REASONS, *_LOST_REASONS_TAIL], min_length=1
+    )
+    currency: str = Field(default="UZS", pattern="^[A-Z]{3}$")
+
+
 SETTINGS_MODELS: Final[dict[str, type[BaseModel]]] = {
     "company": CompanySettings,
     "business_hours": BusinessHoursSettings,
@@ -348,6 +361,7 @@ SETTINGS_MODELS: Final[dict[str, type[BaseModel]]] = {
     "stop_words": TermsSettings,
     "notifications": NotificationsSettings,
     "budget": BudgetSettings,
+    "deals": DealsSettings,
 }
 
 
@@ -378,6 +392,7 @@ class AppSettings(StrictModel):
     )
     notifications: NotificationsSettings = Field(default_factory=NotificationsSettings)
     budget: BudgetSettings = Field(default_factory=BudgetSettings)
+    deals: DealsSettings = Field(default_factory=DealsSettings)
 
     def lead_notice(self, key: Literal["handoff", "off_hours"], language: Language) -> str:
         """Текст лиду при передаче менеджеру; рабочие часы — из настроек."""

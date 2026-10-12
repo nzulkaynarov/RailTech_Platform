@@ -257,7 +257,9 @@ async def snooze(lead_id: int, body: Snooze, who: Worker, container: ContainerDe
 async def close_won(
     lead_id: int, body: Close, who: Worker, container: ContainerDep
 ) -> ActionResult:
-    await container.lead_service.close(who, lead_id, "won", body.reason)
+    await container.lead_service.close(
+        who, lead_id, "won", body.reason, amount=body.amount, lost_reason=body.lost_reason
+    )
     return ActionResult()
 
 
@@ -265,7 +267,9 @@ async def close_won(
 async def close_lost(
     lead_id: int, body: Close, who: Worker, container: ContainerDep
 ) -> ActionResult:
-    await container.lead_service.close(who, lead_id, "lost", body.reason)
+    await container.lead_service.close(
+        who, lead_id, "lost", body.reason, amount=body.amount, lost_reason=body.lost_reason
+    )
     return ActionResult()
 
 
