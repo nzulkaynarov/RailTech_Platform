@@ -55,6 +55,8 @@ class CardData:
     # Названия продуктов из справочника `products`; ключа нет в справочнике — не показываем.
     product_names: Mapping[str, str] | None = None
     escalation_id: int = 0  # для кнопки `take:e<id>`
+    # Номер из Telegram (`telegram_identities.phone_e164`); нет — «Номер: не указан».
+    phone: str | None = None
 
 
 def render(card: CardData) -> str:
@@ -65,6 +67,7 @@ def render(card: CardData) -> str:
         f"{icon} <b>{title}</b> · {name} · {card.language.upper()} · "
         f"{tx.SCORE.format(score=card.score)} · {tx.stage(card.stage)}",
     ]
+    lines.append(tx.PHONE.format(phone=escape(card.phone)) if card.phone else tx.PHONE_MISSING)
     if card.need_summary:
         lines.append(tx.NEED.format(text=escape(card.need_summary)))
     lines.append(" · ".join(_details(card)))

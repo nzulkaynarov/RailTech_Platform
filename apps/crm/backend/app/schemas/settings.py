@@ -196,6 +196,11 @@ class EscalationSettings(StrictModel):
     disabled_triggers: list[str] = Field(default_factory=list)
     # Любой вопрос о цене — менеджеру, даже если бот назвал цену из прайса (ADR-0016).
     price_always_to_manager: bool = False
+    # Решение владельца 2026-10-12: лид просит менеджера без номера — сначала номер из Telegram.
+    require_phone_for_human_request: bool = Field(
+        default=True,
+        description="Просьба лида позвать менеджера — только после номера телефона из Telegram",
+    )
     # «основа*» — любая словоформа: «менеджером», «menejerga», «operatorga». «Человек», «odam»,
     # «person» — только формами/фразами: «нас 5 человек», «odamlar», «personal data» — не просьба.
     human_request_terms: list[str] = Field(

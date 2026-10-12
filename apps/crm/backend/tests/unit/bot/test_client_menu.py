@@ -54,6 +54,9 @@ class FakeClientBot:
     async def save_phone(self, tg_user_id: int, phone: str) -> None:
         self.phones.append(phone)
 
+    async def take_pending_handoff(self, tg_user_id: int) -> bool:
+        return False
+
     async def documents(self, tg_user_id: int) -> list[tuple[int, str]] | None:
         return self.docs if self.client_id is not None else None
 
@@ -162,7 +165,7 @@ async def test_own_contact_is_saved_recorded_and_keyboard_removed() -> None:
     await fsm.set_state(client_handlers.PhoneForm.pending)
     contact = {"phone_number": "998901234567", "first_name": "Азиз", "user_id": USER}
     event = message(bot, contact=contact)
-    await client_handlers.on_own_contact(event, client, conv, FakeSettings(), fsm)
+    await client_handlers.on_own_contact(event, client, conv, FakeSettings(), fsm, bot)
     assert client.phones == ["+998901234567"]
     reply = sent(bot)[0]
     assert reply.text == CFG.texts.phone_saved.ru
@@ -186,7 +189,7 @@ async def test_not_now_removes_keyboard() -> None:
     bot, client, fsm = fake_bot(), FakeClientBot(), state()
     await fsm.set_state(client_handlers.PhoneForm.pending)
     event = message(bot, text=CFG.texts.phone_skip_button.ru)
-    await client_handlers.on_phone_skip(event, client, FakeSettings(), fsm)
+    await client_handlers.on_phone_skip(event, client, RecordingConversation(), FakeSettings(), fsm)
     reply = sent(bot)[0]
     assert reply.text == CFG.texts.phone_skipped.ru
     assert isinstance(reply.reply_markup, ReplyKeyboardRemove)

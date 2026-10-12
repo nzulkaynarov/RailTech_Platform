@@ -12,6 +12,7 @@ from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 
 from app.bot import keyboards
 from app.bot.attachments import shared_text
+from app.bot.forms import PhoneForm
 from app.bot.handlers import MEDIA, respond, send
 from app.domain.bot_menu import normalize_phone
 from app.services.client_bot import ClientBotService
@@ -23,14 +24,11 @@ router = Router(name="client-bot-client")
 router.message.filter(F.chat.type == "private")
 
 
+__all__ = ["PhoneForm", "RequestForm", "router"]
+
+
 class RequestForm(StatesGroup):
     summary = State()
-
-
-class PhoneForm(StatesGroup):
-    """Бот показал клавиатуру номера: «Не сейчас» перехватываем только в этом состоянии."""
-
-    pending = State()
 
 
 def _uid(message: Message) -> int:
@@ -129,11 +127,13 @@ async def on_own_contact(
     conversation: ConversationService,
     settings: SettingsService,
     state: FSMContext,
+    bot: Bot,
 ) -> None:
     """Свой номер — в карточку лида и в переписку (менеджер видит, что клиент поделился номером).
 
-    Чужой контакт (карточка коллеги клиента) сюда не попадает: его обрабатывает основной роутер
-    и передаёт в переписку текстом, как было до Q-020.
+    Лид ждал менеджера до номера — передача тем же путём, что /human (эскалация, карточка
+    в канале, «Передаю менеджеру»). Чужой контакт (карточка коллеги клиента) сюда не попадает:
+    его обрабатывает основной роутер и передаёт в переписку текстом, как было до Q-020.
     """
     if message.contact is None:
         return
@@ -141,6 +141,10 @@ async def on_own_contact(
     language = (await client_bot.status(_uid(message))).language
     phone = normalize_phone(message.contact.phone_number)
     await state.clear()
+    if phone is not None and await client_bot.take_pending_handoff(_uid(message)):
+        await client_bot.save_phone(_uid(message), phone)
+        await _handoff_after_phone(message, bot, conversation, settings)
+        return
     await conversation.record_lead_message(
         Incoming(_uid(message), message.chat.id, shared_text(message))
     )
@@ -155,6 +159,20 @@ async def on_own_contact(
     await message.answer(reply, reply_markup=ReplyKeyboardRemove())
 
 
+async def _handoff_after_phone(
+    message: Message, bot: Bot, conversation: ConversationService, settings: SettingsService
+) -> None:
+    inc = Incoming(
+        _uid(message),
+        message.chat.id,
+        shared_text(message),
+        message_id=message.message_id,
+        human_requested=True,
+    )
+    out = await conversation.handle_message(inc)
+    await send(bot, message.chat.id, out, settings, conversation, remove_reply_keyboard=True)
+
+
 async def _is_skip(message: Message, settings: SettingsService) -> bool:
     cfg = await settings.get()
     skip = cfg.texts.phone_skip_button
@@ -163,13 +181,24 @@ async def _is_skip(message: Message, settings: SettingsService) -> bool:
 
 @router.message(PhoneForm.pending, F.text, F.from_user, _is_skip)
 async def on_phone_skip(
-    message: Message, client_bot: ClientBotService, settings: SettingsService, state: FSMContext
+    message: Message,
+    client_bot: ClientBotService,
+    conversation: ConversationService,
+    settings: SettingsService,
+    state: FSMContext,
 ) -> None:
-    """«Не сейчас» — убрать клавиатуру; второй раз номер не спрашиваем (флаг уже стоит)."""
+    """«Не сейчас» — убрать клавиатуру. Номер просили для передачи — менеджера не зовём, бот
+    отвечает дальше, новая просьба спросит номер снова; иначе второй раз не спрашиваем."""
     await state.clear()
     cfg = await settings.get()
-    language = (await client_bot.status(_uid(message))).language
-    await message.answer(cfg.texts.phone_skipped.get(language), reply_markup=ReplyKeyboardRemove())
+    uid = _uid(message)
+    language = (await client_bot.status(uid)).language
+    texts = cfg.texts
+    declined = await client_bot.take_pending_handoff(uid)
+    reply = (texts.phone_declined_manager if declined else texts.phone_skipped).get(language)
+    await conversation.record_lead_message(Incoming(uid, message.chat.id, message.text or ""))
+    await conversation.record_bot_replies(uid, [Outgoing(reply, language=language)])
+    await message.answer(reply, reply_markup=ReplyKeyboardRemove())
 
 
 @router.message(PhoneForm.pending, F.text, ~F.text.startswith("/"), F.from_user)
@@ -183,7 +212,9 @@ async def on_text_instead_of_phone(
 ) -> None:
     """Человек пишет вместо кнопки: отвечаем как обычно и убираем клавиатуру номера."""
     await state.clear()
-    await respond(message, bot, conversation, settings, client_bot, remove_reply_keyboard=True)
+    await respond(
+        message, bot, conversation, settings, client_bot, state, remove_reply_keyboard=True
+    )
 
 
 @router.message(RequestForm.summary, MEDIA, F.from_user)

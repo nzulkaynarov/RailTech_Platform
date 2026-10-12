@@ -15,9 +15,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.bot_menu import MenuVariant, menu_variant, should_ask_phone
+from app.domain.consent import consent_required
+from app.domain.handoff_gate import needs_phone_first
 from app.domain.language import detect_language, mismatch_offer
 from app.domain.triggers import TriggerSignals, evaluate
 from app.models.clients import Document, ServiceRequest
+from app.models.qualification import Escalation
 from app.repositories import documents as docs_repo
 from app.repositories import leads as repo
 from app.schemas.settings import Language
@@ -25,6 +28,7 @@ from app.services import escalation
 from app.services.conversation_support import current_lead, lang_of, verified_client
 from app.services.conversation_types import EscalationHook, Outgoing
 from app.services.documents import LINK_TTL_S
+from app.services.lead_parts import ACTIVE_ESCALATION
 from app.services.settings import SettingsService
 
 logger = structlog.get_logger(__name__)
@@ -32,6 +36,8 @@ logger = structlog.get_logger(__name__)
 Presign = Callable[[str, int], Awaitable[str]]
 DOCS_LIMIT = 10
 PHONE_ASKED = "phone_asked_at"
+# Лид просил менеджера без номера: передадим, как только поделится номером (2026-10-12).
+HANDOFF_PENDING = "handoff_pending_phone_at"
 LANGUAGE_MISMATCH = "language_mismatch_streak"
 LANGUAGE_OFFERED = "language_offered_at"
 
@@ -52,11 +58,14 @@ class ClientBotService:
         settings: SettingsService,
         presign: Presign | None = None,
         on_escalation: EscalationHook | None = None,
+        on_card_changed: Callable[[int], Awaitable[None]] | None = None,
     ) -> None:
         self._sessions = sessions
         self._settings = settings
         self._presign = presign
         self._on_escalation = on_escalation
+        # Перерисовать карточку передачи в канале (номер появился после передачи по решению кода).
+        self._on_card_changed = on_card_changed
 
     async def status(self, tg_user_id: int) -> ChatStatus:
         cfg = await self._settings.get()
@@ -96,6 +105,49 @@ class ClientBotService:
                 stored[PHONE_ASKED] = datetime.now(UTC).isoformat()
                 lead.qualification = stored
 
+    async def hold_handoff_for_phone(self, tg_user_id: int) -> Language | None:
+        """Просьба лида позвать менеджера: нужен ли сначала номер (`needs_phone_first`).
+
+        Да — помечает ожидание в `leads.qualification` (и «номер уже спрашивали», чтобы
+        middleware не спросил второй раз тем же ходом) и возвращает язык ответа; None —
+        передавать как обычно.
+        """
+        cfg = await self._settings.get()
+        async with self._sessions() as session, session.begin():
+            identity = await repo.get_identity(session, tg_user_id)
+            lead, _ = await current_lead(session, tg_user_id)
+            live = lead if lead is not None and lead.erased_at is None else None
+            client_id = await verified_client(session, tg_user_id)
+            hold = live is not None and needs_phone_first(
+                required=cfg.escalation.require_phone_for_human_request,
+                source="lead",
+                has_phone=bool(identity and identity.phone_e164),
+                is_client=client_id is not None,
+                owner_mode=live.owner_mode,
+                consent_given=not consent_required(
+                    live.consent_given_at, live.consent_version, cfg.texts.consent_version
+                ),
+            )
+            if live is None or not hold:
+                return None
+            now = datetime.now(UTC).isoformat()
+            stored = dict(live.qualification or {})
+            stored[HANDOFF_PENDING] = now
+            stored.setdefault(PHONE_ASKED, now)
+            live.qualification = stored
+            logger.info("handoff_waits_for_phone", lead_id=live.id)
+            return lang_of(live)
+
+    async def take_pending_handoff(self, tg_user_id: int) -> bool:
+        """Снять пометку «ждём номер для передачи»; True — она стояла."""
+        async with self._sessions() as session, session.begin():
+            lead, _ = await current_lead(session, tg_user_id)
+            stored = dict(lead.qualification or {}) if lead is not None else {}
+            if lead is None or stored.pop(HANDOFF_PENDING, None) is None:
+                return False
+            lead.qualification = stored
+            return True
+
     async def language_offer(self, tg_user_id: int, text: str) -> Language | None:
         """Язык зафиксирован, а два сообщения подряд — на другом: предложить кнопки один раз.
 
@@ -124,11 +176,29 @@ class ClientBotService:
         return detected if offer else None
 
     async def save_phone(self, tg_user_id: int, phone_e164: str) -> None:
+        """Номер — в идентичность; если у лида уже открыта передача, её карточка в канале
+        перерисовывается, чтобы менеджер увидел номер, а не «Номер: не указан»."""
+        escalation_id: int | None = None
         async with self._sessions() as session, session.begin():
             identity = await repo.get_identity(session, tg_user_id)
             if identity is not None:
                 identity.phone_e164 = phone_e164
+                if identity.lead_id is not None:
+                    escalation_id = await session.scalar(
+                        select(Escalation.id)
+                        .where(
+                            Escalation.lead_id == identity.lead_id,
+                            Escalation.status.in_(ACTIVE_ESCALATION),
+                        )
+                        .order_by(Escalation.id.desc())
+                        .limit(1)
+                    )
         logger.info("lead_phone_saved", tg_user_id=tg_user_id)
+        if escalation_id is not None and self._on_card_changed is not None:
+            try:
+                await self._on_card_changed(escalation_id)
+            except Exception:  # noqa: BLE001 — номер сохранён; карточка обновится со следующим событием
+                logger.warning("phone_card_refresh_failed", escalation_id=escalation_id)
 
     async def documents(self, tg_user_id: int) -> list[tuple[int, str]] | None:
         """До 10 документов клиента, новые первыми; None — собеседник не клиент."""
