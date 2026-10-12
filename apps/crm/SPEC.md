@@ -303,6 +303,8 @@ settings(key PK, value JSONB, schema_version INT, updated_by, updated_at)
 - Таблицы Procrastinate (`procrastinate_*`) — создаются его миграциями.
 - Таблицы LangGraph `PostgresSaver` (`checkpoints`, `checkpoint_writes`, ...).
 - `system_alerts(key PK, active, detail, first_seen_at, sent_at, resolved_at, updated_at)` — дедупликация системных алертов монитора (§13).
+- `integration_secrets(key PK, ciphertext, last4, updated_by FK users, updated_at)` — секреты интеграций, введённые админом в CRM (токен бота); шифр Fernet с ключом из `SECRETS_KEY`, значение не возвращается API и не пишется в логи (ADR-0018).
+- `telegram_chat_candidates(chat_id PK, title, kind, detected_at)` — каналы и группы, куда бота добавили администратором (событие `my_chat_member`); из них админ выбирает канал команды (ADR-0018).
 - `llm_usage(id, at, purpose, alias, provider, model, input_tokens, output_tokens, cost_usd, lead_id NULL, kind 'work'|'test')`, индекс по `at` — единый учёт каждого вызова модели (чат и эмбеддинги; стоимость — заголовок LiteLLM `x-litellm-response-cost`); `kind='test'` — `LLM_USAGE_KIND=test` в make eval/eval-quick/load-test/kb-eval. Источник для BudgetGuard, монитора и экрана «Расходы».
 
 ---
@@ -538,7 +540,7 @@ Refine с кастомным `dataProvider` (REST `/api/v1`), `authProvider` (co
 
 | Область | Требование |
 |---|---|
-| Секреты | Только в `.env` на стенде и GitHub Secrets; в репозитории — `.env.example`. Ключи провайдеров моделей знает только `litellm`. pre-commit с `gitleaks` |
+| Секреты | Инфраструктурные — только в `.env` на стенде и GitHub Secrets; секреты интеграций, которые админ вводит в CRM (токен бота), — в `integration_secrets` зашифрованными ключом `SECRETS_KEY` из `.env` (ADR-0018), поле только на запись, смена — с повторным паролем и аудитом без значения; в репозитории — `.env.example`. Ключи провайдеров моделей знает только `litellm`. pre-commit с `gitleaks` |
 | Аутентификация | argon2id; JWT access 15 мин в памяти, refresh в httpOnly/SameSite=Strict cookie с ротацией; logout отзывает refresh; блокировка после 10 неудачных входов на 15 мин |
 | Авторизация | Casbin на каждом REST-эндпоинте через зависимость `require(action, resource)`; объектные проверки (владелец лида) — в сервисах. MCP-инструменты — только внутренняя сеть + HMAC-контекст |
 | Данные клиентов | Все запросы к `documents`/`clients` из бота — с обязательным `client_id` из верифицированной идентичности; интеграционные тесты на cross-tenant доступ |
