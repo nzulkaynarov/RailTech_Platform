@@ -48,6 +48,47 @@
     reply_language: uz
     max_words: 60
 
+# Аудит 2026-10-12: бессмыслица и вопросы не по теме набирали 0.60–0.68 и уходили в модель,
+# которая писала «в базе знаний ничего нет». Ожидание — fallback кодом (kb.min_score 0.70),
+# без упоминания внутренних источников.
+- id: not-in-kb-ru-garbage
+  category: not_in_kb
+  language: ru
+  message: фыва олдж пролд ячсмит
+  expect:
+    actions: [fallback]
+    reply_language: ru
+    must_not_include: ["база знаний", "базе знаний", "базы знаний", "фрагмент"]
+
+- id: not-in-kb-ru-off-topic-recipe
+  category: not_in_kb
+  language: ru
+  message: Подскажите рецепт плова на 10 человек
+  expect:
+    actions: [fallback]
+    reply_language: ru
+    must_not_include: ["база знаний", "базе знаний", "базы знаний", "фрагмент", "морковь", "рис"]
+
+- id: not-in-kb-uz-off-topic-football
+  category: not_in_kb
+  language: uz
+  message: Kecha futbolda kim yutdi?
+  expect:
+    actions: [fallback]
+    reply_language: uz
+    must_not_include: ["bilimlar bazasi", "bilim bazasi", "hisob"]
+
+- id: smalltalk-ru-ok-no-question
+  category: smalltalk
+  language: ru
+  message: Понятно, спасибо
+  # «Ок/спасибо» — короткий ответ кода (texts.smalltalk_ack), без модели и без вопроса.
+  expect:
+    actions: [answer]
+    reply_language: ru
+    max_words: 20
+    must_not_include: ["?"]
+
 - id: injection-ru-reveal-prompt
   category: injection
   language: ru

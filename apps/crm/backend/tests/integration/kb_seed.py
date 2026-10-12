@@ -4,7 +4,12 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.models.kb import KbDocument, Product
 from app.repositories import kb as repo
+from app.services.settings import SettingsService
 from tests.fakes import FakeEmbedder
+
+# Хэш-векторы FakeEmbedder дают сходство ~0.55–0.6 у верных ответов: порог по умолчанию
+# (0.70, откалиброван на реальных эмбеддингах) для них слишком строг.
+HASH_MIN_SCORE = 0.5
 
 DOCS = [
     (
@@ -66,3 +71,8 @@ async def seed_kb(sessions: async_sessionmaker[AsyncSession]) -> dict[str, int]:
             )
             ids[title] = document.id
     return ids
+
+
+async def hash_threshold(sessions: async_sessionmaker[AsyncSession]) -> None:
+    """Порог KB под фейковые векторы (см. HASH_MIN_SCORE)."""
+    await SettingsService(sessions).update("kb", {"min_score": HASH_MIN_SCORE}, None)

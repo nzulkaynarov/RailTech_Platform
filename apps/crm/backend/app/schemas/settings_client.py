@@ -4,11 +4,11 @@
 `settings.py` оставался в лимите размера файла. Узбекский — латиница oʻ/gʻ.
 """
 
-from app.schemas.settings_base import LocalizedText, StrictModel
+from app.schemas.settings_base import CheckedTexts, LocalizedText
 from app.schemas.settings_base import localized as _t
 
 
-class ClientBotTexts(StrictModel):
+class ClientBotTexts(CheckedTexts):
     # Подписи команд в кнопке «Меню» Telegram (до 256 символов, без эмодзи).
     menu_start: LocalizedText = _t("Начать", "Boshlash", "Start")
     menu_human: LocalizedText = _t(

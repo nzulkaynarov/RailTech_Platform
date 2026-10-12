@@ -57,7 +57,13 @@ const TEXT_GROUPS: Record<string, string[]> = {
     "handoff_offer_no",
     "attachment_received",
   ],
-  fallback: ["fallback", "service_unavailable", "rate_limited", "unsupported_message"],
+  fallback: [
+    "fallback",
+    "service_unavailable",
+    "rate_limited",
+    "unsupported_message",
+    "smalltalk_ack",
+  ],
   clients: [
     "document_sent",
     "document_failed",
