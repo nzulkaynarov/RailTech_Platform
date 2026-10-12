@@ -1,6 +1,6 @@
 """Сделка закрывается вместе с лидом в одной транзакции; выигранная — финал (ADR-0019)."""
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 import pytest
@@ -52,6 +52,30 @@ async def test_won_lead_creates_won_deal_with_amount(
         other = await deal_rows(session, filtered(None, None, None, None, None, lead_id + 1))
     assert [d.id for d in mine] == [deal.id]
     assert other == []
+
+
+@pytest.mark.parametrize(
+    ("closed_at", "day", "found"),
+    [
+        # 20:00 UTC 11.10 — уже 01:00 12.10 по Ташкенту (UTC+5): сделка дня 12.10, не 11.10.
+        (datetime(2026, 10, 11, 20, 0, tzinfo=UTC), "2026-10-12", True),
+        (datetime(2026, 10, 11, 20, 0, tzinfo=UTC), "2026-10-11", False),
+        # 18:59 UTC 11.10 — 23:59 11.10 по Ташкенту.
+        (datetime(2026, 10, 11, 18, 59, tzinfo=UTC), "2026-10-11", True),
+    ],
+)
+async def test_closed_period_uses_team_timezone(
+    sessions: async_sessionmaker[AsyncSession], closed_at: datetime, day: str, found: bool
+) -> None:
+    async with sessions() as session, session.begin():
+        await session.execute(delete(Deal))
+        session.add(Deal(title="Граница суток", stage="won", closed_at=closed_at))
+    when = date.fromisoformat(day)
+    async with sessions() as session:
+        rows = await deal_rows(
+            session, filtered(None, None, None, when, when, None, "Asia/Tashkent")
+        )
+    assert bool(rows) is found
 
 
 async def test_lost_lead_marks_open_deal_lost_with_reason(

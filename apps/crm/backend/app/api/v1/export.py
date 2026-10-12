@@ -184,7 +184,9 @@ async def export_deals(
     closed_to: date | None = None,
 ) -> StreamingResponse:
     """Сделки с фильтрами экрана «Сделки» (до 10 000 строк), CSV для Excel."""
-    stmt = filtered(stage, owner_user_id, client_id, closed_from, closed_to).limit(MAX_ROWS)
+    tz = (await container.settings_service.get()).business_hours.timezone
+    stmt = filtered(stage, owner_user_id, client_id, closed_from, closed_to, None, tz)
+    stmt = stmt.limit(MAX_ROWS)
     async with container.session_factory() as session:
         deals = await deal_rows(session, stmt)
     rows: list[Sequence[csv_export.Cell]] = [

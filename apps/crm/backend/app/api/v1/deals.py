@@ -2,6 +2,7 @@
 
 from datetime import UTC, date, datetime, time, timedelta
 from typing import Annotated
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy import Select, select
@@ -46,8 +47,13 @@ def filtered(
     closed_from: date | None,
     closed_to: date | None,
     lead_id: int | None = None,
+    tz: str = "UTC",
 ) -> Select[Deal, str, str]:
-    """Фильтры списка сделок — общие для экрана и экспорта CSV."""
+    """Фильтры списка сделок — общие для экрана и экспорта CSV.
+
+    Период закрытия — включительно, по календарным дням часового пояса команды `tz`: так сделки
+    за день совпадают с дашбордом, который считает дни по тому же поясу.
+    """
     stmt = _joined().order_by(Deal.id.desc())
     if lead_id is not None:
         stmt = stmt.where(Deal.lead_id == lead_id)
@@ -57,10 +63,11 @@ def filtered(
         stmt = stmt.where(Deal.owner_user_id == owner_user_id)
     if client_id is not None:
         stmt = stmt.where(Deal.client_id == client_id)
+    zone = ZoneInfo(tz)
     if closed_from:
-        stmt = stmt.where(Deal.closed_at >= datetime.combine(closed_from, time(), UTC))
+        stmt = stmt.where(Deal.closed_at >= datetime.combine(closed_from, time(), zone))
     if closed_to:
-        end = datetime.combine(closed_to + timedelta(days=1), time(), UTC)
+        end = datetime.combine(closed_to + timedelta(days=1), time(), zone)
         stmt = stmt.where(Deal.closed_at < end)
     return stmt
 
@@ -86,8 +93,10 @@ async def list_deals(
     closed_to: date | None = None,
     lead_id: int | None = None,
 ) -> list[DealOut]:
-    """Сделки, новые сверху (до 500). Период закрытия — включительно, по дате UTC."""
-    stmt = filtered(stage, owner_user_id, client_id, closed_from, closed_to, lead_id).limit(500)
+    """Сделки, новые сверху (до 500). Период закрытия — включительно, по дням пояса команды."""
+    tz = (await container.settings_service.get()).business_hours.timezone
+    stmt = filtered(stage, owner_user_id, client_id, closed_from, closed_to, lead_id, tz)
+    stmt = stmt.limit(500)
     async with container.session_factory() as session:
         return await deal_rows(session, stmt)
 

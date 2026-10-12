@@ -29,10 +29,14 @@ export type Tile = {
 export const leadsPath = (filters: { stage?: string; from?: string; to?: string }) =>
   `/leads?${leadFiltersToSearch({ ...filters, page: 1 }).toString()}`;
 
+/** Выигранные сделки за период дашборда: даты закрытия — по дням часового пояса команды. */
+export const wonDealsPath = (period: { from: string; to: string }) =>
+  `/deals?${new URLSearchParams({ stage: "won", closed_from: period.from, closed_to: period.to }).toString()}`;
+
 /**
  * Ключевые бизнес-метрики (крупно) и операционные (мельче). «Сделок» ведёт в раздел
- * «Сделки» с фильтром «Выиграна» (ADR-0019): выигранный лид сразу становится «Клиентом»,
- * поэтому список лидов для этой плитки не подходит.
+ * «Сделки» с фильтром «Выиграна» за тот же период (ADR-0019): выигранный лид сразу становится
+ * «Клиентом», поэтому список лидов для этой плитки не подходит.
  */
 export function dashboardTiles(
   data: Dashboard,
@@ -61,7 +65,7 @@ export function dashboardTiles(
         key: "won",
         title: t.dashboard.won,
         value: formatNumber(totals.won),
-        target: { resource: "deals", path: "/deals?stage=won" },
+        target: { resource: "deals", path: wonDealsPath(period) },
         trend: trend(totals.won, prev?.won),
         hint: deals?.won_count ? wonSum(deals).value : null,
       },
