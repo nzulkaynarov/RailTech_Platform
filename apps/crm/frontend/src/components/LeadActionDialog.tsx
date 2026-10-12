@@ -1,4 +1,4 @@
-import { Checkbox, DatePicker, Input, Modal, Typography } from "antd";
+import { Alert, Checkbox, DatePicker, Input, Modal, Typography } from "antd";
 import type { Dayjs } from "dayjs";
 import { useState } from "react";
 
@@ -48,6 +48,8 @@ type Props = {
   busy: boolean;
   onClose: () => void;
   onRun: (action: LeadAction) => Promise<boolean>;
+  /** Последнее сообщение клиента без ответа — предупреждение перед «Вернуть боту». */
+  unanswered?: string | null;
 };
 
 /**
@@ -55,7 +57,7 @@ type Props = {
  * Монтируется заново при каждом открытии (`key`), поэтому «Отложить до» считается от
  * момента открытия, а не загрузки страницы.
  */
-export function LeadActionDialog({ dialog, busy, onClose, onRun }: Props) {
+export function LeadActionDialog({ dialog, busy, onClose, onRun, unanswered }: Props) {
   const [text, setText] = useState("");
   const [forBot, setForBot] = useState(true);
   const [until, setUntil] = useState<Dayjs | null>(() => defaultSnooze(new Date()));
@@ -75,6 +77,15 @@ export function LeadActionDialog({ dialog, busy, onClose, onRun }: Props) {
       onCancel={onClose}
       destroyOnHidden
     >
+      {dialog === "return" && unanswered ? (
+        <Alert
+          type="warning"
+          showIcon
+          className="dialog-alert"
+          message={t.actions.returnUnanswered}
+          description={`«${unanswered}»`}
+        />
+      ) : null}
       {dialog === "won" ? (
         <Typography.Paragraph type="secondary">{t.actions.wonNote}</Typography.Paragraph>
       ) : null}
