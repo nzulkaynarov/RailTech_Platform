@@ -25,6 +25,11 @@ echo "Проверка целостности $stamp…"
 echo "pg_restore → $POSTGRES_DB…"
 PGPASSWORD="$POSTGRES_PASSWORD" "$PG_BIN/pg_restore" -h "$POSTGRES_HOST" -p "${POSTGRES_PORT:-5432}" \
   -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner --exit-on-error "$dir/db.dump"
+if [[ -f "$dir/litellm.dump" ]]; then
+  echo "pg_restore → litellm (модели и ключи из «Модели ИИ»; нужен тот же LITELLM_SALT_KEY)…"
+  PGPASSWORD="$POSTGRES_PASSWORD" "$PG_BIN/pg_restore" -h "$POSTGRES_HOST" -p "${POSTGRES_PORT:-5432}" \
+    -U "$POSTGRES_USER" -d litellm --clean --if-exists --no-owner --exit-on-error "$dir/litellm.dump"
+fi
 echo "S3 → RustFS…"
 python -m app s3-mirror --restore "$dir/s3"
 echo "Готово: восстановлен $stamp. Дальше: запустите сервисы и проверьте /ready (runbook backup-restore)."

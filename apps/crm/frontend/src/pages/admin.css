@@ -207,3 +207,19 @@ h3.section-label.ant-typography {
   gap: var(--ant-margin-xxs);
   white-space: nowrap;
 }
+
+.model-warning {
+  margin-bottom: 12px;
+}
+/* Профиль бота в «Подключениях»: группа полей на трёх языках. */
+.bot-profile-group {
+  border: 0;
+  margin: 0 0 var(--ant-margin);
+  padding: 0;
+  min-width: 0;
+}
+.bot-profile-group > legend {
+  font-weight: 600;
+  margin-bottom: var(--ant-margin-xs);
+  font-size: var(--ant-font-size);
+}

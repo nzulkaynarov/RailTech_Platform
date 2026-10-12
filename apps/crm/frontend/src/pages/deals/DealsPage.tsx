@@ -9,6 +9,7 @@ import type { DealOut } from "../../api/generated/model";
 import { usePermissionsQuery, useTeam } from "../../api/queries";
 import { allowed } from "../../app/providers/access";
 import { PageBody } from "../../components/PageBody";
+import { ExportCsvButton } from "../../components/ExportCsvButton";
 import { PageHeader } from "../../components/PageHeader";
 import { PageState } from "../../components/PageState";
 import { stageFromSearch, stageLabel } from "../../domain/deals";
@@ -27,12 +28,13 @@ export function DealsPage() {
   const owner = Number(search.get("owner")) || undefined;
   const closedFrom = search.get("closed_from") ?? undefined;
   const closedTo = search.get("closed_to") ?? undefined;
-  const query = useDeals({
+  const filters = {
     ...(stage ? { stage } : {}),
     ...(owner ? { owner_user_id: owner } : {}),
     ...(closedFrom ? { closed_from: closedFrom } : {}),
     ...(closedTo ? { closed_to: closedTo } : {}),
-  });
+  };
+  const query = useDeals(filters);
   const team = useTeam();
   const perms = usePermissionsQuery();
   const canWrite = allowed(perms.data, "deals", "write");
@@ -59,11 +61,14 @@ export function DealsPage() {
       <PageHeader
         title={t.page.deals}
         extra={
-          canWrite ? (
-            <Button type="primary" icon={<PlusOutlined />} onClick={create}>
-              {t.deals.create}
-            </Button>
-          ) : null
+          <Space wrap>
+            <ExportCsvButton target={{ entity: "deals", params: filters }} />
+            {canWrite ? (
+              <Button type="primary" icon={<PlusOutlined />} onClick={create}>
+                {t.deals.create}
+              </Button>
+            ) : null}
+          </Space>
         }
       />
       <Space wrap>

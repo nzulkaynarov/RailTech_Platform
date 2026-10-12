@@ -156,6 +156,8 @@ export const settings = {
     notifications: "Канал команды",
     budget: "Бюджет моделей",
     deals: "Сделки",
+    // Правится в «Подключениях», на экране «Настройки» не показывается.
+    bot_profile: "Профиль бота в Telegram",
   } as Dict,
   sectionHints: {
     business_hours: "От рабочих часов зависят SLA, напоминания и текст бота в нерабочее время.",
@@ -180,6 +182,8 @@ export const settings = {
   } as Dict,
   botTexts,
   fields: {
+    description: "Что умеет бот (до /start)",
+    short_description: "Краткое описание бота",
     name: "Название компании",
     crm_base_url: "Адрес CRM (для ссылок в канале)",
     phone: "Телефон компании (бот называет его по просьбе клиента)",

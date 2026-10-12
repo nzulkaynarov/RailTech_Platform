@@ -76,3 +76,16 @@
   gap: var(--ant-margin-xxs);
   min-width: 0;
 }
+
+/* «Шаблоны» и ИИ-помощь в одну строку; на узком экране — переносятся. */
+.chat-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--ant-margin-xs);
+  min-width: 0;
+}
+.chat-templates {
+  min-width: 160px;
+  max-width: 100%;
+}

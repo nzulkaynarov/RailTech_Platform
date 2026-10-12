@@ -5,6 +5,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
+from app.schemas.settings_profile import BotProfileSettings
+
 
 class TelegramStatusOut(BaseModel):
     """Значение токена сюда не попадает никогда — только `configured` и `last4`."""
@@ -34,3 +36,19 @@ class ChatCandidateOut(BaseModel):
     title: str
     chat_type: str
     detected_at: datetime
+
+
+class ProfilePublishOut(BaseModel):
+    """Итог последней публикации профиля в Telegram; `error` — код, текст — на фронте."""
+
+    ok: bool
+    at: datetime
+    changed: int
+    error: Literal["rate_limited", "telegram_error", "bot_not_running"] | None
+    retry_after: int | None
+
+
+class BotProfileOut(BaseModel):
+    profile: BotProfileSettings
+    # None — с запуска API профиль ещё не публиковался (бот не запущен).
+    published: ProfilePublishOut | None

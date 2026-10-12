@@ -177,4 +177,7 @@ def test_reason_values_are_a_stable_contract() -> None:
         "assist_no_history",
         "deal_won_final",
         "no_consent",
+        "litellm_unavailable",
+        "model_key_required",
+        "model_in_config",
     }

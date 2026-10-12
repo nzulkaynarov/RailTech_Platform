@@ -12,8 +12,10 @@ import {
   QuestionCircleOutlined,
   SettingOutlined,
   ShopOutlined,
+  SnippetsOutlined,
   TeamOutlined,
   UnorderedListOutlined,
+  MessageOutlined,
 } from "@ant-design/icons";
 import { useThemedLayoutContext } from "@refinedev/antd";
 import { Badge, Drawer, Grid, Layout, Menu, theme } from "antd";
@@ -37,7 +39,9 @@ const ICONS: Record<NavKey, ReactNode> = {
   spend: <DollarOutlined />,
   kb: <BookOutlined />,
   gaps: <QuestionCircleOutlined />,
+  sandbox: <MessageOutlined />,
   settings: <SettingOutlined />,
+  templates: <SnippetsOutlined />,
   users: <TeamOutlined />,
   integrations: <ApiOutlined />,
   models: <ExperimentOutlined />,

@@ -10,6 +10,7 @@ from typing import Any
 import pytest
 from structlog.testing import capture_logs
 
+from app.bot.profile import ProfilePublish
 from app.domain.errors import (
     AccountLockedError,
     ConflictError,
@@ -24,6 +25,7 @@ from app.integrations.telegram import (
     TokenSource,
 )
 from app.schemas.integrations import TelegramStatusOut, TelegramTokenIn
+from app.schemas.settings_profile import BotProfileSettings
 from app.security.passwords import hash_password
 from app.security.principal import Principal
 from app.security.secrets_store import SecretCipher, SecretsStore
@@ -78,6 +80,7 @@ class FakeBot:
     running = True
     source: TokenSource = "db"
     username = "railtech_test_bot"
+    profile: ProfilePublish | None = None
     last_error = None
 
     def __init__(self) -> None:
@@ -210,3 +213,31 @@ async def test_reauth_locks_after_threshold(audit_log: list[dict[str, Any]]) -> 
         await service.save_token(ADMIN, TOKEN, "wrong-password-1")
     with pytest.raises(AccountLockedError):  # верный пароль блокировку не снимает
         await service.save_token(ADMIN, TOKEN, PASSWORD)
+
+
+async def test_profile_saved_with_audit_actor_even_without_bot() -> None:
+    saved: list[tuple[str, Any, Any]] = []
+
+    class Settings(FakeSettings):
+        async def update(self, key: str, value: Any, user_id: Any, actor: Any = None) -> None:
+            saved.append((key, value, actor))
+
+    async def no_bot() -> None:
+        return None
+
+    bot = FakeBot()
+    service = svc.TelegramIntegrationService(
+        fake_sessions(),
+        Settings(),  # type: ignore[arg-type]
+        FakeStore(),
+        FakeProbe(),
+        bot,
+        no_bot,
+        mode="polling",
+    )
+    body = BotProfileSettings.model_validate({"name": {"ru": "RailTech", "uz": "", "en": ""}})
+    _, result = await service.save_profile(ADMIN, body)
+    assert (saved[0][0], saved[0][2]) == ("bot_profile", ADMIN.actor)
+    assert result is not None
+    assert (result.ok, result.error) == (False, "bot_not_running")
+    assert bot.profile is result

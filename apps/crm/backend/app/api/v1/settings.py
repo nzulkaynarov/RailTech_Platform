@@ -16,12 +16,15 @@ router = APIRouter(prefix="/api/v1/settings", tags=["settings"])
 
 Reader = Annotated[Principal, Depends(require("settings", "read"))]
 Writer = Annotated[Principal, Depends(require("settings", "write"))]
+# Профиль бота правится и публикуется в «Подключениях» (`/integrations/telegram/profile`).
+PAGE_KEYS = tuple(key for key in SETTINGS_MODELS if key != "bot_profile")
 
 
 @router.get("", response_model=SettingsResponse)
 async def get_settings(_: Reader, container: ContainerDep) -> SettingsResponse:
-    values = await container.settings_service.raw()
-    schemas = {key: model.model_json_schema() for key, model in SETTINGS_MODELS.items()}
+    raw = await container.settings_service.raw()
+    values = {key: raw[key] for key in PAGE_KEYS}
+    schemas = {key: SETTINGS_MODELS[key].model_json_schema() for key in PAGE_KEYS}
     return SettingsResponse(values=values, schemas=schemas)
 
 
@@ -32,7 +35,7 @@ async def put_setting(
     who: Writer,
     container: ContainerDep,
 ) -> ActionResult:
-    if key not in SETTINGS_MODELS:
+    if key not in PAGE_KEYS:
         raise NotFoundError("unknown settings key")
     try:
         await container.settings_service.update(key, body, who.user_id, who.actor)

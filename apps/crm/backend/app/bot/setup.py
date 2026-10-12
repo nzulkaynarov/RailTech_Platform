@@ -72,6 +72,30 @@ def build_conversation(
     )
 
 
+class SandboxConversation:
+    """Диалоговый контур песочницы «Проверить бота»: тот же `build_conversation`, без хуков.
+
+    Чекпоинтер открывается при первом сообщении из CRM, закрывается с процессом API.
+    """
+
+    def __init__(self, container: Container) -> None:
+        self._container = container
+        self._stack = AsyncExitStack()
+        self._service: ConversationService | None = None
+        self._lock = asyncio.Lock()
+
+    async def __call__(self) -> ConversationService:
+        async with self._lock:
+            if self._service is None:
+                saver = await self._stack.enter_async_context(checkpointer(self._container))
+                self._service = build_conversation(self._container, saver)
+            return self._service
+
+    async def aclose(self) -> None:
+        self._service = None
+        await self._stack.aclose()
+
+
 def build_client_bot(
     container: Container, on_escalation: EscalationHook | None = None
 ) -> ClientBotService:

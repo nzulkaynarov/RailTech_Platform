@@ -17,6 +17,7 @@ class FakeRuntime:
         self.stopped_with: bool | None = None
         self.bot = self
         self.running = True
+        self.profile = None
 
     async def start(self) -> None:
         self.started = True

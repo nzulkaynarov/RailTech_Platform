@@ -4,8 +4,10 @@ import { deals } from "./ru/deals";
 import { core } from "./ru/core";
 import { integrations } from "./ru/integrations";
 import { leads } from "./ru/leads";
+import { sandbox } from "./ru/sandbox";
 import { spend } from "./ru/spend";
 import { system } from "./ru/system";
+import { templates } from "./ru/templates";
 
 /** Тексты интерфейса CRM (команда работает на русском; CLAUDE.md §4 — без хардкода в компонентах).
  * Разделы — в `ru/*.ts`, чтобы словарь не превышал лимит файла. */
@@ -18,6 +20,8 @@ export const ru = {
   ...spend,
   ...integrations,
   ...deals,
+  ...sandbox,
+  ...templates,
 };
 
 export type Dictionary = typeof ru;

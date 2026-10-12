@@ -35,6 +35,11 @@ services:
     build: !reset null
     restart: "no"
     environment: { APP_ENV: prod }
+  litellm-seed:
+    <<: *backend-image
+    build: !reset null
+    restart: "no"
+    environment: { APP_ENV: prod }
   api:
     <<: [*backend-image, *medium]
     build: !reset null

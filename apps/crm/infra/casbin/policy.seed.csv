@@ -14,6 +14,7 @@ p, manager, crm, deals, write
 p, manager, crm, documents, read
 p, manager, crm, documents, write
 p, manager, crm, kb, read
+p, manager, crm, reply_templates, read
 p, viewer, crm, leads, read
 p, viewer, crm, stream, read
 p, viewer, crm, dashboard, read

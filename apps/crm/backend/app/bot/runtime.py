@@ -18,9 +18,11 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.bot import channel, chat_member, client_handlers, commands, handlers
 from app.bot.errors import ErrorReplier
 from app.bot.middlewares import IdempotencyMiddleware, RateLimitMiddleware
+from app.bot.profile import ProfilePublish, publish_profile
 from app.bot.status import ClientStatusMiddleware
 from app.config import Settings
 from app.integrations.s3 import ObjectStorage
+from app.schemas.settings_profile import BotProfileSettings
 from app.security.rbac import Rbac
 from app.services.client_bot import ClientBotService
 from app.services.conversation import ConversationService
@@ -72,6 +74,7 @@ class BotRuntime:
         self.dispatcher = dispatcher
         self._polling: asyncio.Task[None] | None = None
         self._background: set[asyncio.Task[Any]] = set()
+        self.profile: ProfilePublish | None = None
 
     @classmethod
     def create(cls, config: Settings, dispatcher: Dispatcher, token: str) -> "BotRuntime":
@@ -82,7 +85,11 @@ class BotRuntime:
     async def start(self) -> None:
         allowed = self.dispatcher.resolve_used_update_types()
         settings = self.dispatcher.workflow_data.get("settings")
-        await commands.publish(self.bot, await settings.get() if settings else None)
+        cfg = await settings.get() if settings else None
+        await commands.publish(self.bot, cfg)
+        self.profile = await publish_profile(
+            self.bot, cfg.bot_profile if cfg else BotProfileSettings()
+        )
         if self._config.telegram_mode == "polling":
             await self.bot.delete_webhook(drop_pending_updates=False)
             self._polling = asyncio.create_task(

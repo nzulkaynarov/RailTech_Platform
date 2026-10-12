@@ -16,6 +16,7 @@ export const core = {
     deals: "Сделки",
     kb: "База знаний",
     gaps: "Пробелы знаний",
+    sandbox: "Проверить бота",
     settings: "Настройки",
     audit: "Аудит",
     spend: "Расходы",
@@ -23,6 +24,7 @@ export const core = {
     users: "Пользователи",
     backups: "Резервные копии",
     integrations: "Подключения",
+    templates: "Шаблоны ответов",
     system: "Состояние системы",
     profile: "Профиль",
     logout: "Выйти",
@@ -205,6 +207,10 @@ export const core = {
     assist_no_history: "Нет сообщения клиента, на которое нужен ответ",
     deal_won_final: "Выигранную сделку может изменить только администратор",
     no_consent: "Лид не дал согласие на обработку данных — писать ему нельзя",
+    litellm_unavailable: "Шлюз моделей (LiteLLM) не принял изменение — модель не изменена",
+    model_key_required: "Для этого провайдера на сервере нет ключа — введите API-ключ",
+    model_in_config:
+      "Роль задана в файле конфигурации LiteLLM — уберите model_list из конфига (ADR-0020)",
   } as Record<string, string>,
   common: {
     colleague: "коллега",
@@ -223,6 +229,7 @@ export const core = {
     back: "Назад",
   },
   page: {
+    sandbox: "Проверить бота",
     leads: "Лиды",
     clients: "Клиенты",
     deals: "Сделки",
@@ -235,6 +242,7 @@ export const core = {
     models: "Модели ИИ",
     users: "Пользователи",
     integrations: "Подключения",
+    templates: "Шаблоны ответов",
     system: "Состояние системы",
     inbox: "Входящие",
     profile: "Профиль",

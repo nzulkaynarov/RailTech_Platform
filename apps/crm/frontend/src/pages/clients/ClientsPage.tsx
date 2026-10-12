@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { App as AntApp, Button, Form, Input, Modal, Table } from "antd";
+import { App as AntApp, Button, Form, Input, Modal, Space, Table } from "antd";
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
@@ -11,6 +11,7 @@ import { usePermissionsQuery, useTeam } from "../../api/queries";
 import { allowed } from "../../app/providers/access";
 import { BooleanTag } from "../../components/BooleanTag";
 import { PageBody } from "../../components/PageBody";
+import { ExportCsvButton } from "../../components/ExportCsvButton";
 import { PageHeader } from "../../components/PageHeader";
 import { PageState } from "../../components/PageState";
 import { segmentLabel } from "../../domain/labels";
@@ -124,7 +125,15 @@ export function ClientsPage() {
 
   return (
     <PageBody>
-      <PageHeader title={t.page.clients} extra={create} />
+      <PageHeader
+        title={t.page.clients}
+        extra={
+          <Space wrap>
+            <ExportCsvButton target={{ entity: "clients", params: q ? { q } : {} }} />
+            {create}
+          </Space>
+        }
+      />
       <Input.Search
         allowClear
         defaultValue={q}

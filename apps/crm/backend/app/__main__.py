@@ -9,7 +9,8 @@
 - `telegram-webhook info|set|delete` — диагностика webhook prod-бота;
 - `s3-mirror --dest|--restore DIR` — копия бакетов для бэкапа;
 - `sample-dialogs` — выгрузка диалогов для еженедельной разметки (YAML в stdout);
-- `create-admin --email ...` — первый администратор CRM.
+- `create-admin --email ...` — первый администратор CRM;
+- `litellm-seed` — модели ролей по умолчанию в БД LiteLLM (ADR-0020).
 """
 
 import argparse
@@ -93,6 +94,7 @@ def _parser() -> argparse.ArgumentParser:
     commands.add_parser("kb-demo", help="загрузить демо-базу знаний (evals/fixtures/kb)")
     commands.add_parser("kb-eval", help="проверить поиск на демо-KB (гейт Фазы 1)")
     commands.add_parser("test-alert", help="тестовый пост в канал команды")
+    commands.add_parser("litellm-seed", help="модели ролей по умолчанию в БД LiteLLM")
     load = commands.add_parser("load-test", help="нагрузочный smoke: N параллельных диалогов")
     load.add_argument("--dialogs", type=int, default=50, help="параллельных диалогов (50)")
     load.add_argument("--turns", type=int, default=3, help="вопросов в диалоге (3)")
@@ -142,6 +144,10 @@ async def _run_cli(args: argparse.Namespace) -> int:
         from app.cli import kb_demo
 
         return await kb_demo.run()
+    if args.command == "litellm-seed":
+        from app.cli import litellm_seed
+
+        return await litellm_seed.run(args)
     if args.command == "test-alert":
         from app.cli import test_alert
 

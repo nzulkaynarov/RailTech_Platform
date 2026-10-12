@@ -1,0 +1,68 @@
+# Модели по умолчанию для ролей (ADR-0020). Это НЕ конфиг прокси: LiteLLM хранит модели в своей БД
+# (`STORE_MODEL_IN_DB`, ключи шифруются `LITELLM_SALT_KEY`), а этот файл — исходные значения.
+# `python -m app litellm-seed` (сервис `litellm-seed` в compose) создаёт в БД LiteLLM только
+# ОТСУТСТВУЮЩИЕ алиасы через `/model/new`; изменённые из CRM не трогает. «Сбросить» в CRM
+# возвращает алиас к записи отсюда. Формат — штатный `model_list` LiteLLM.
+#
+# Код знает только алиасы. Ключи провайдеров — ссылки `os.environ/…`: их разрешает сам прокси
+# (env сервиса litellm), в api/worker и в БД CRM ключи не попадают.
+#
+# model_info задан явно: встроенная карта моделей LiteLLM v1.104.2 не знает
+# claude-sonnet-5-5 / claude-haiku-5-5, а от флага supports_adaptive_thinking
+# зависит перевод reasoning_effort в output_config.effort (ADR-0004).
+
+model_list:
+  - model_name: dialog-model
+    litellm_params:
+      model: anthropic/claude-sonnet-5-5
+      api_key: os.environ/ANTHROPIC_API_KEY
+      reasoning_effort: low
+      timeout: 20
+      stream_timeout: 10
+    model_info:
+      supports_adaptive_thinking: true
+      supports_output_config: true
+      supports_response_schema: true
+      supports_sampling_params: false
+      input_cost_per_token: 0.000002
+      output_cost_per_token: 0.00001
+
+  - model_name: qualifier-model
+    litellm_params:
+      model: anthropic/claude-haiku-5-5
+      api_key: os.environ/ANTHROPIC_API_KEY
+      reasoning_effort: low
+      timeout: 30
+    model_info:
+      supports_adaptive_thinking: true
+      supports_output_config: true
+      supports_response_schema: true
+      supports_sampling_params: false
+      input_cost_per_token: 0.0000001
+      output_cost_per_token: 0.0000005
+
+  - model_name: judge-model
+    litellm_params:
+      model: anthropic/claude-sonnet-5-5
+      api_key: os.environ/ANTHROPIC_API_KEY
+      reasoning_effort: medium
+      timeout: 60
+    model_info:
+      supports_adaptive_thinking: true
+      supports_output_config: true
+      supports_response_schema: true
+      supports_sampling_params: false
+      input_cost_per_token: 0.000002
+      output_cost_per_token: 0.00001
+
+  - model_name: fallback-model
+    litellm_params:
+      model: gemini/gemini-3.8-flash
+      api_key: os.environ/GEMINI_API_KEY
+      timeout: 20
+
+  - model_name: embed-model
+    litellm_params:
+      model: gemini/gemini-embedding-2
+      api_key: os.environ/GEMINI_API_KEY
+      timeout: 30

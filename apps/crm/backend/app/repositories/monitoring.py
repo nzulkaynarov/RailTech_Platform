@@ -7,6 +7,7 @@ from typing import Any
 from sqlalchemy import any_, func, literal, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.sandbox import SANDBOX_SOURCE
 from app.models.auth import User
 from app.models.kb import KbGap
 from app.models.leads import Lead
@@ -103,7 +104,11 @@ async def daily_figures(session: AsyncSession, since: datetime) -> DailyFigures:
         return int((await session.execute(stmt)).scalar_one())
 
     return DailyFigures(
-        leads=await count(select(func.count()).select_from(Lead).where(Lead.created_at >= since)),
+        leads=await count(
+            select(func.count())
+            .select_from(Lead)
+            .where(Lead.created_at >= since, Lead.source != SANDBOX_SOURCE)
+        ),
         escalations=await count(
             select(func.count()).select_from(Escalation).where(Escalation.created_at >= since)
         ),

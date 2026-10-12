@@ -2,7 +2,7 @@
  * Фильтры списка лидов живут в URL (аудит UI U-05): «Назад» из карточки возвращает
  * тот же список, ссылку можно отправить коллеге, дашборд ведёт на отфильтрованный список.
  */
-import type { ListLeadsParams } from "../api/generated/model";
+import type { ExportLeadsParams, ListLeadsParams } from "../api/generated/model";
 
 export const LEADS_PAGE = 50;
 export const LEAD_SORTS = ["last_message", "score", "created"] as const;
@@ -74,6 +74,20 @@ export function toListParams(filters: LeadFilters): ListLeadsParams {
     sort: filters.sort ?? "last_message",
     limit: LEADS_PAGE,
     offset: (filters.page - 1) * LEADS_PAGE,
+  };
+}
+
+/** Фильтры для «Экспорт CSV»: те же, что у списка, без сортировки и страницы. */
+export function exportParams(filters: LeadFilters): ExportLeadsParams {
+  const p = toListParams(filters);
+  return {
+    q: p.q ?? null,
+    stage: p.stage ?? null,
+    owner: p.owner ?? null,
+    language: p.language ?? null,
+    min_score: p.min_score ?? null,
+    created_from: p.created_from ?? null,
+    created_to: p.created_to ?? null,
   };
 }
 

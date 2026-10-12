@@ -14,6 +14,8 @@ import type {
   BackupsOut,
   BodyUploadDocument,
   BodyUploadKbDocument,
+  BotProfileOut,
+  BotProfileSettings,
   ChangePasswordRequest,
   ChatCandidateOut,
   ClientContacts,
@@ -37,6 +39,9 @@ import type {
   DryRunResponse,
   ErrorOut,
   EscalationSettings,
+  ExportClientsParams,
+  ExportDealsParams,
+  ExportLeadsParams,
   GetDashboardParams,
   GetSpendParams,
   HealthResponse,
@@ -63,6 +68,9 @@ import type {
   ManualDocument,
   MePatch,
   MessageOut,
+  ModelChangeIn,
+  ModelChangeResult,
+  ModelResetIn,
   ModelStatus,
   ModelTestResult,
   NoteCreate,
@@ -74,8 +82,12 @@ import type {
   PutSettingBody,
   ReadyResponse,
   Reply,
+  ReplyTemplateIn,
+  ReplyTemplateOut,
   ResolveGap,
   ReturnToBot,
+  SandboxMessageIn,
+  SandboxTurnOut,
   SearchRequest,
   SearchResponse,
   ServiceRequestClose,
@@ -1421,6 +1433,153 @@ export const downloadDocument = async (
   });
 };
 
+export type exportClientsResponse200 = {
+  data: void;
+  status: 200;
+};
+
+export type exportClientsResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type exportClientsResponseSuccess = exportClientsResponse200 & {
+  headers: Headers;
+};
+export type exportClientsResponseError = exportClientsResponse422 & {
+  headers: Headers;
+};
+
+export type exportClientsResponse = exportClientsResponseSuccess | exportClientsResponseError;
+
+export const getExportClientsUrl = (params?: ExportClientsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/export/clients.csv?${stringifiedParams}`
+    : `/api/v1/export/clients.csv`;
+};
+
+/**
+ * Клиенты (как в списке «Клиенты», до 10 000 строк), CSV для Excel.
+ * @summary Export Clients
+ */
+export const exportClients = async (
+  params?: ExportClientsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<exportClientsResponse> => {
+  return http<exportClientsResponse>(getExportClientsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type exportDealsResponse200 = {
+  data: void;
+  status: 200;
+};
+
+export type exportDealsResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type exportDealsResponseSuccess = exportDealsResponse200 & {
+  headers: Headers;
+};
+export type exportDealsResponseError = exportDealsResponse422 & {
+  headers: Headers;
+};
+
+export type exportDealsResponse = exportDealsResponseSuccess | exportDealsResponseError;
+
+export const getExportDealsUrl = (params?: ExportDealsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/export/deals.csv?${stringifiedParams}`
+    : `/api/v1/export/deals.csv`;
+};
+
+/**
+ * Сделки с фильтрами экрана «Сделки» (до 10 000 строк), CSV для Excel.
+ * @summary Export Deals
+ */
+export const exportDeals = async (
+  params?: ExportDealsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<exportDealsResponse> => {
+  return http<exportDealsResponse>(getExportDealsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type exportLeadsResponse200 = {
+  data: void;
+  status: 200;
+};
+
+export type exportLeadsResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type exportLeadsResponseSuccess = exportLeadsResponse200 & {
+  headers: Headers;
+};
+export type exportLeadsResponseError = exportLeadsResponse422 & {
+  headers: Headers;
+};
+
+export type exportLeadsResponse = exportLeadsResponseSuccess | exportLeadsResponseError;
+
+export const getExportLeadsUrl = (params?: ExportLeadsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/export/leads.csv?${stringifiedParams}`
+    : `/api/v1/export/leads.csv`;
+};
+
+/**
+ * Лиды с фильтрами экрана «Лиды» (до 10 000 строк), CSV для Excel.
+ * @summary Export Leads
+ */
+export const exportLeads = async (
+  params?: ExportLeadsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<exportLeadsResponse> => {
+  return http<exportLeadsResponse>(getExportLeadsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
 export type inboxResponse200 = {
   data: InboxResponse;
   status: 200;
@@ -1597,6 +1756,102 @@ export const connectTelegramChannel = async (
   return http<connectTelegramChannelResponse>(getConnectTelegramChannelUrl(chatId), {
     ...options,
     method: "POST",
+  });
+};
+
+export type getTelegramProfileResponse200 = {
+  data: BotProfileOut;
+  status: 200;
+};
+
+export type getTelegramProfileResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type getTelegramProfileResponseSuccess = getTelegramProfileResponse200 & {
+  headers: Headers;
+};
+export type getTelegramProfileResponseError = getTelegramProfileResponse422 & {
+  headers: Headers;
+};
+
+export type getTelegramProfileResponse =
+  getTelegramProfileResponseSuccess | getTelegramProfileResponseError;
+
+export const getGetTelegramProfileUrl = () => {
+  return `/api/v1/integrations/telegram/profile`;
+};
+
+/**
+ * Имя, описание и краткое описание бота (ru/uz/en) и статус публикации в Telegram.
+ * @summary Get Telegram Profile
+ */
+export const getTelegramProfile = async (
+  options?: Parameters<typeof http>[1],
+): Promise<getTelegramProfileResponse> => {
+  return http<getTelegramProfileResponse>(getGetTelegramProfileUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type putTelegramProfileResponse200 = {
+  data: BotProfileOut;
+  status: 200;
+};
+
+export type putTelegramProfileResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type putTelegramProfileResponseSuccess = putTelegramProfileResponse200 & {
+  headers: Headers;
+};
+export type putTelegramProfileResponseError = putTelegramProfileResponse422 & {
+  headers: Headers;
+};
+
+export type putTelegramProfileResponse =
+  putTelegramProfileResponseSuccess | putTelegramProfileResponseError;
+
+export const getPutTelegramProfileUrl = () => {
+  return `/api/v1/integrations/telegram/profile`;
+};
+
+/**
+ * Сохранить профиль бота и опубликовать изменения в Telegram (setMyName и т. п.).
+ * @summary Put Telegram Profile
+ */
+export const putTelegramProfile = async (
+  botProfileSettings: BotProfileSettings,
+  options?: Parameters<typeof http>[1],
+): Promise<putTelegramProfileResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<putTelegramProfileResponse>(getPutTelegramProfileUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(botProfileSettings),
   });
 };
 
@@ -3394,6 +3649,124 @@ export const listModels = async (
   });
 };
 
+export type changeModelResponse200 = {
+  data: ModelChangeResult;
+  status: 200;
+};
+
+export type changeModelResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type changeModelResponseSuccess = changeModelResponse200 & {
+  headers: Headers;
+};
+export type changeModelResponseError = changeModelResponse422 & {
+  headers: Headers;
+};
+
+export type changeModelResponse = changeModelResponseSuccess | changeModelResponseError;
+
+export const getChangeModelUrl = (alias: string) => {
+  return `/api/v1/models/${alias}`;
+};
+
+/**
+ * Сменить провайдера/модель/ключ роли в LiteLLM без перезапуска (re-auth, аудит без ключа).
+ * @summary Change Model
+ */
+export const changeModel = async (
+  alias: string,
+  modelChangeIn: ModelChangeIn,
+  options?: Parameters<typeof http>[1],
+): Promise<changeModelResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<changeModelResponse>(getChangeModelUrl(alias), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(modelChangeIn),
+  });
+};
+
+export type resetModelResponse200 = {
+  data: ModelChangeResult;
+  status: 200;
+};
+
+export type resetModelResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type resetModelResponseSuccess = resetModelResponse200 & {
+  headers: Headers;
+};
+export type resetModelResponseError = resetModelResponse422 & {
+  headers: Headers;
+};
+
+export type resetModelResponse = resetModelResponseSuccess | resetModelResponseError;
+
+export const getResetModelUrl = (alias: string) => {
+  return `/api/v1/models/${alias}/reset`;
+};
+
+/**
+ * Вернуть роль к значению по умолчанию (`infra/litellm.models.yaml`, ключ из env сервера).
+ * @summary Reset Model
+ */
+export const resetModel = async (
+  alias: string,
+  modelResetIn: ModelResetIn,
+  options?: Parameters<typeof http>[1],
+): Promise<resetModelResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<resetModelResponse>(getResetModelUrl(alias), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(modelResetIn),
+  });
+};
+
 export type testModelResponse200 = {
   data: ModelTestResult;
   status: 200;
@@ -3425,6 +3798,294 @@ export const testModel = async (
   options?: Parameters<typeof http>[1],
 ): Promise<testModelResponse> => {
   return http<testModelResponse>(getTestModelUrl(alias), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export type listReplyTemplatesResponse200 = {
+  data: ReplyTemplateOut[];
+  status: 200;
+};
+
+export type listReplyTemplatesResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type listReplyTemplatesResponseSuccess = listReplyTemplatesResponse200 & {
+  headers: Headers;
+};
+export type listReplyTemplatesResponseError = listReplyTemplatesResponse422 & {
+  headers: Headers;
+};
+
+export type listReplyTemplatesResponse =
+  listReplyTemplatesResponseSuccess | listReplyTemplatesResponseError;
+
+export const getListReplyTemplatesUrl = () => {
+  return `/api/v1/reply-templates`;
+};
+
+/**
+ * Шаблоны по названию; текст на ru/uz/en с подстановками `{name}`, `{manager}`.
+ * @summary List Reply Templates
+ */
+export const listReplyTemplates = async (
+  options?: Parameters<typeof http>[1],
+): Promise<listReplyTemplatesResponse> => {
+  return http<listReplyTemplatesResponse>(getListReplyTemplatesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type createReplyTemplateResponse201 = {
+  data: Created;
+  status: 201;
+};
+
+export type createReplyTemplateResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type createReplyTemplateResponseSuccess = createReplyTemplateResponse201 & {
+  headers: Headers;
+};
+export type createReplyTemplateResponseError = createReplyTemplateResponse422 & {
+  headers: Headers;
+};
+
+export type createReplyTemplateResponse =
+  createReplyTemplateResponseSuccess | createReplyTemplateResponseError;
+
+export const getCreateReplyTemplateUrl = () => {
+  return `/api/v1/reply-templates`;
+};
+
+/**
+ * @summary Create Reply Template
+ */
+export const createReplyTemplate = async (
+  replyTemplateIn: ReplyTemplateIn,
+  options?: Parameters<typeof http>[1],
+): Promise<createReplyTemplateResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<createReplyTemplateResponse>(getCreateReplyTemplateUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(replyTemplateIn),
+  });
+};
+
+export type deleteReplyTemplateResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type deleteReplyTemplateResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type deleteReplyTemplateResponseSuccess = deleteReplyTemplateResponse200 & {
+  headers: Headers;
+};
+export type deleteReplyTemplateResponseError = deleteReplyTemplateResponse422 & {
+  headers: Headers;
+};
+
+export type deleteReplyTemplateResponse =
+  deleteReplyTemplateResponseSuccess | deleteReplyTemplateResponseError;
+
+export const getDeleteReplyTemplateUrl = (templateId: number) => {
+  return `/api/v1/reply-templates/${templateId}`;
+};
+
+/**
+ * @summary Delete Reply Template
+ */
+export const deleteReplyTemplate = async (
+  templateId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<deleteReplyTemplateResponse> => {
+  return http<deleteReplyTemplateResponse>(getDeleteReplyTemplateUrl(templateId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export type updateReplyTemplateResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type updateReplyTemplateResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type updateReplyTemplateResponseSuccess = updateReplyTemplateResponse200 & {
+  headers: Headers;
+};
+export type updateReplyTemplateResponseError = updateReplyTemplateResponse422 & {
+  headers: Headers;
+};
+
+export type updateReplyTemplateResponse =
+  updateReplyTemplateResponseSuccess | updateReplyTemplateResponseError;
+
+export const getUpdateReplyTemplateUrl = (templateId: number) => {
+  return `/api/v1/reply-templates/${templateId}`;
+};
+
+/**
+ * @summary Update Reply Template
+ */
+export const updateReplyTemplate = async (
+  templateId: number,
+  replyTemplateIn: ReplyTemplateIn,
+  options?: Parameters<typeof http>[1],
+): Promise<updateReplyTemplateResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<updateReplyTemplateResponse>(getUpdateReplyTemplateUrl(templateId), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(replyTemplateIn),
+  });
+};
+
+export type sandboxMessageResponse200 = {
+  data: SandboxTurnOut;
+  status: 200;
+};
+
+export type sandboxMessageResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type sandboxMessageResponseSuccess = sandboxMessageResponse200 & {
+  headers: Headers;
+};
+export type sandboxMessageResponseError = sandboxMessageResponse422 & {
+  headers: Headers;
+};
+
+export type sandboxMessageResponse = sandboxMessageResponseSuccess | sandboxMessageResponseError;
+
+export const getSandboxMessageUrl = () => {
+  return `/api/v1/sandbox/messages`;
+};
+
+/**
+ * Сообщение боту от имени тестового лида админа: тот же ход, что в Telegram.
+ *
+ * Платно: вызовы моделей пишутся в «Расходы» с пометкой «тест». Передача менеджеру
+ * показывается в `why` и в CRM не создаётся; квалификатор и канал не задействуются.
+ * @summary Sandbox Message
+ */
+export const sandboxMessage = async (
+  sandboxMessageIn: SandboxMessageIn,
+  options?: Parameters<typeof http>[1],
+): Promise<sandboxMessageResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<sandboxMessageResponse>(getSandboxMessageUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(sandboxMessageIn),
+  });
+};
+
+export type sandboxResetResponse204 = {
+  data: void;
+  status: 204;
+};
+
+export type sandboxResetResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type sandboxResetResponseSuccess = sandboxResetResponse204 & {
+  headers: Headers;
+};
+export type sandboxResetResponseError = sandboxResetResponse422 & {
+  headers: Headers;
+};
+
+export type sandboxResetResponse = sandboxResetResponseSuccess | sandboxResetResponseError;
+
+export const getSandboxResetUrl = () => {
+  return `/api/v1/sandbox/reset`;
+};
+
+/**
+ * «Начать заново»: тестовый диалог админа удаляется целиком.
+ * @summary Sandbox Reset
+ */
+export const sandboxReset = async (
+  options?: Parameters<typeof http>[1],
+): Promise<sandboxResetResponse> => {
+  return http<sandboxResetResponse>(getSandboxResetUrl(), {
     ...options,
     method: "POST",
   });

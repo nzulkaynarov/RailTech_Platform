@@ -6,7 +6,7 @@ import { homePath, navKeyOf, visibleNav } from "./navigation";
 const matrix = (permissions: Record<string, Record<string, boolean>>) =>
   ({ permissions }) as unknown as PermissionsResponse;
 
-const ALL = ["read", "write", "take"];
+const ALL = ["read", "write", "take", "use"];
 const everything = (resources: string[]) =>
   matrix(
     Object.fromEntries(resources.map((r) => [r, Object.fromEntries(ALL.map((a) => [a, true]))])),
@@ -20,6 +20,8 @@ const admin = everything([
   "spend",
   "kb",
   "settings",
+  "reply_templates",
+  "sandbox",
   "users",
   "integrations",
   "models",
@@ -49,7 +51,7 @@ describe("menu IA (audit 2026-10-12)", () => {
     expect(shape(visibleNav(admin, "admin"))).toEqual([
       ["work", "inbox,leads,clients,deals"],
       ["analytics", "dashboard,spend"],
-      ["bot", "kb,gaps,settings"],
+      ["bot", "kb,gaps,sandbox,templates,settings"],
       ["admin", "users,integrations,models,system,backups,audit"],
     ]);
   });

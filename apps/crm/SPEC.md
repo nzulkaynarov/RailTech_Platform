@@ -32,7 +32,7 @@
 | Оркестрация агентов | LangGraph | `PostgresSaver` для чекпоинтов |
 | Инструменты агентов | MCP-серверы на официальном Python SDK `mcp` (`MCPServer`, бывший FastMCP), транспорт streamable HTTP (stateless, JSON); клиент — `mcp.Client` (ADR-0011) | Три сервера: `kb-mcp`, `crm-mcp`, `docs-mcp` |
 | Шлюз моделей | LiteLLM Proxy (self-hosted) | Алиасы: `dialog-model`, `qualifier-model`, `judge-model`, `embed-model`, `fallback-model` |
-| Модели | Внешние API. Рекомендация: диалог — Anthropic Sonnet-класс; квалификатор/judge — Anthropic Haiku-класс или Google Flash-класс; embeddings — Google Gemini Embedding (мультиязычный, узбекский) или Voyage multilingual | Конкретные идентификаторы фиксируются в `infra/litellm.config.yaml` на момент старта и в ADR-0004 |
+| Модели | Внешние API. Рекомендация: диалог — Anthropic Sonnet-класс; квалификатор/judge — Anthropic Haiku-класс или Google Flash-класс; embeddings — Google Gemini Embedding (мультиязычный, узбекский) или Voyage multilingual | Значения по умолчанию — `infra/litellm.models.yaml` (ADR-0004); текущие модели и ключи ролей — в БД LiteLLM, меняет админ в CRM без рестарта (ADR-0020) |
 | БД | PostgreSQL 16 + pgvector | Одна база для домена, векторов, очереди, чекпоинтов |
 | Очередь и планировщик | Procrastinate | Задачи на Postgres: события квалификатора, таймеры SLA/снуз/unresponsive, ингест KB, ежедневные отчёты |
 | Файлы | RustFS (S3-совместимый, Apache-2.0; ADR-0009) | Документы клиентов, исходники KB, вложения из Telegram. Код работает только по протоколу S3 |
@@ -171,6 +171,7 @@ railtech-crm/
 ├── infra/
 │   ├── docker-compose.yml  docker-compose.dev.yml  docker-compose.prod.yml
 │   ├── litellm.config.yaml
+│   ├── litellm.models.yaml
 │   ├── Caddyfile.dev  Caddyfile.prod
 │   └── casbin/model.conf  casbin/policy.seed.csv
 ├── scripts/                  # bootstrap_dev.sh, seed_demo.py, create_admin.py, kb_ingest.py, backup.sh, restore.sh, smoke_dev.sh, smoke_prod.sh
@@ -253,6 +254,8 @@ messages(
 )
 tg_updates(update_id PK, received_at)                -- идемпотентность
 lead_notes(id, lead_id, user_id, text, visible_to_bot BOOL)
+reply_templates(id, title VARCHAR(120), text JSONB {ru,uz,en}, created_by NULL, created_at, updated_at)
+                                                     -- шаблоны быстрых ответов менеджера (0018), подстановки {name}/{manager}
 ```
 
 ### 5.4. Квалификация и эскалации
@@ -296,7 +299,7 @@ service_requests(id, client_id, lead_id NULL, summary, status 'open'|'closed', c
 settings(key PK, value JSONB, schema_version INT, updated_by, updated_at)
 ```
 Ключи и JSON-схемы валидируются Pydantic-моделями в `app/schemas/settings.py`:
-`company` (`name`, `crm_base_url`, `phone`/`site`/`address` — ответ бота на «дайте контакты», Q-023), `business_hours`, `texts` (greeting/consent/handoff/off_hours × ru/uz/en, плейсхолдеры `{sla}`, `{next}`, `{hours}`; подписи меню `menu_*`, команды клиента `docs_*`/`request_*`/`client_only`, номер `phone_*` — Q-011/Q-020, класс `ClientBotTexts`), `escalation` (триггеры, пороги, `no_progress_turns`, SLA, `price_always_to_manager`), `qualification` (критерии «Квалифицирован»: обязательные и дополнительные факты, горизонт срока, роли — ADR-0016), `kb` (`min_score` — по умолчанию 0.70, калибровка аудита 2026-10-12: бессмыслица набирала 0.60–0.68; `top_k`; `search_timeout_s` — таймаут попытки kb-mcp, 6 с), `bot` (persona, `max_words` — по умолчанию 60, `history_messages`, `rate_limit_per_minute`, `unresponsive_days`, `ask_phone` — один раз попросить номер, Q-020; `assist_enabled`, `assist_max_input_chars` — ИИ-помощь менеджеру «Черновик»/«Улучшить», `POST /leads/{id}/assist`, право `leads:assist`, Q-019), `competitors`, `stop_words`, `notifications` (`channel_id`, `duty_user_ids`), `budget` (`daily_usd`, `fallback_model_enabled`, `providers` — дневной лимит USD по провайдеру LiteLLM: `anthropic` 3, `gemini` 1, 0 — без лимита; Q-008), `deals` (`lost_reasons` — справочник причин отказа, `currency` — валюта новых сделок, UZS; ADR-0019).
+`company` (`name`, `crm_base_url`, `phone`/`site`/`address` — ответ бота на «дайте контакты», Q-023), `business_hours`, `texts` (greeting/consent/handoff/off_hours × ru/uz/en, плейсхолдеры `{sla}`, `{next}`, `{hours}`; подписи меню `menu_*`, команды клиента `docs_*`/`request_*`/`client_only`, номер `phone_*` — Q-011/Q-020, класс `ClientBotTexts`), `escalation` (триггеры, пороги, `no_progress_turns`, SLA, `price_always_to_manager`), `qualification` (критерии «Квалифицирован»: обязательные и дополнительные факты, горизонт срока, роли — ADR-0016), `kb` (`min_score` — по умолчанию 0.70, калибровка аудита 2026-10-12: бессмыслица набирала 0.60–0.68; `top_k`; `search_timeout_s` — таймаут попытки kb-mcp, 6 с), `bot` (persona, `max_words` — по умолчанию 60, `history_messages`, `rate_limit_per_minute`, `unresponsive_days`, `ask_phone` — один раз попросить номер, Q-020; `assist_enabled`, `assist_max_input_chars` — ИИ-помощь менеджеру «Черновик»/«Улучшить», `POST /leads/{id}/assist`, право `leads:assist`, Q-019), `competitors`, `stop_words`, `notifications` (`channel_id`, `duty_user_ids`), `budget` (`daily_usd`, `fallback_model_enabled`, `providers` — дневной лимит USD по провайдеру LiteLLM: `anthropic` 3, `gemini` 1, 0 — без лимита; Q-008), `deals` (`lost_reasons` — справочник причин отказа, `currency` — валюта новых сделок, UZS; ADR-0019), `bot_profile` (`name` ≤ 64, `description` ≤ 512 — «Что умеет бот» до /start, `short_description` ≤ 120, каждое × ru/uz/en; правится и публикуется в «Подключениях» через `setMyName`/`setMyDescription`/`setMyShortDescription` — русский без `language_code`, пустой русский не трогает BotFather; публикуются только отличия, при сохранении и старте бота; на экране «Настройки» не показывается — ADR-0018).
 
 ### 5.8. Техническое
 
@@ -305,7 +308,7 @@ settings(key PK, value JSONB, schema_version INT, updated_by, updated_at)
 - `system_alerts(key PK, active, detail, first_seen_at, sent_at, resolved_at, updated_at)` — дедупликация системных алертов монитора (§13).
 - `integration_secrets(key PK, ciphertext, last4, updated_by FK users, updated_at)` — секреты интеграций, введённые админом в CRM (токен бота); шифр Fernet с ключом из `SECRETS_KEY`, значение не возвращается API и не пишется в логи (ADR-0018).
 - `telegram_chat_candidates(chat_id PK, title, kind, detected_at)` — каналы и группы, куда бота добавили администратором (событие `my_chat_member`); из них админ выбирает канал команды (ADR-0018).
-- `llm_usage(id, at, purpose, alias, provider, model, input_tokens, output_tokens, cost_usd, lead_id NULL, kind 'work'|'test')`, индекс по `at` — единый учёт каждого вызова модели (чат и эмбеддинги; стоимость — заголовок LiteLLM `x-litellm-response-cost`); `kind='test'` — `LLM_USAGE_KIND=test` в make eval/eval-quick/load-test/kb-eval. Источник для BudgetGuard, монитора и экрана «Расходы».
+- `llm_usage(id, at, purpose, alias, provider, model, input_tokens, output_tokens, cost_usd, lead_id NULL, kind 'work'|'test')`, индекс по `at` — единый учёт каждого вызова модели (чат и эмбеддинги; стоимость — заголовок LiteLLM `x-litellm-response-cost`); `kind='test'` — `LLM_USAGE_KIND=test` в make eval/eval-quick/load-test/kb-eval, а для песочницы «Проверить бота» — на вызов (`kind_scope('test')`, §10.1). Источник для BudgetGuard, монитора и экрана «Расходы».
 
 ---
 
@@ -521,10 +524,14 @@ Middleware: идемпотентность, rate-limit (20 сообщений/м
 | **Документы** | manager, admin | Загрузка документов клиенту (тип, номер, дата), видимость клиенту, журнал доступа |
 | **База знаний** | admin, manager(ro) | Документы KB (менеджер — только просмотр и тестовый поиск, право `kb:read`; правка — `kb:write`, admin), ингест, активность, просмотр чанков, тестовый поиск («что найдёт бот на этот вопрос») |
 | **Пробелы KB** | admin | Вопросы без ответа: частота, язык, примеры диалогов, действия: «Создать документ», «Привязать к документу», «Игнорировать» |
+| **Проверить бота** | admin | `/sandbox` (меню «Бот»): админ пишет боту как клиент без Telegram — ход идёт через тот же `ConversationService.handle_message` (агент, MCP, триггеры, эскалация), выбор языка ru/uz/en, «Начать заново», под ответом свёрнутое «Почему так» (решение, причина, совпадение и документы KB, сработавшие правила передачи). Лид песочницы — `leads.source='sandbox'`, согласие дано автоматически, служебная идентичность `tg_user_id = −user_id`; без хуков: квалификатор, канал и уведомления не задействуются, передача показывается в ответе и сразу снимается. Такие лиды исключены из «Лидов», «Входящих», воронки и `mv_daily_stats`/`mv_escalation_reasons` (миграция `0018_sandbox_dashboard`), таймера «нет ответа» и ежедневного отчёта. Вызовы моделей — в «Расходах» как `kind='test'` (`kind_scope`). API: `POST /api/v1/sandbox/messages`, `POST /api/v1/sandbox/reset`; право `sandbox:use` (admin); аудит `sandbox.message`/`sandbox.reset` без текстов |
 | **Настройки** | admin | Формы по ключам `settings` с валидацией; предпросмотр текстов на 3 языках; редактор правил эскалации |
 | **Пользователи** | admin | Список, роли, создание с временным паролем (обязательная смена при первом входе, `users.must_change_password`), сброс пароля админом, деактивация и снятие роли менеджера (с передачей лидов в работе и клиентов коллеге — иначе 409 `user_has_active_leads`, ADR-0015; диалог тогда показывает выбор «Передать лидов и сделки коллеге» и отправляет изменение ещё раз с `transfer_to_user_id`), привязка Telegram; защита «последний админ». Email-приглашения — в расширениях (§15) |
 | **Дашборд** | все | Сделки за период (выиграно числом и суммой по валютам, отказы по причинам; плитка «Сделок» ведёт в `/deals?stage=won`), воронка, эскалации по причинам, время до «Забрать», доля fallback, стоимость моделей (из Langfuse API), пробелы KB |
 | **Аудит** | admin | `audit_log` с фильтрами |
+| **Шаблоны ответов** | admin (правка), manager (выбор) | `/templates`: название и текст на ru/uz/en с подстановками `{name}` (имя лида), `{manager}` (имя менеджера). В карточке лида у поля ответа — «Шаблоны» (выбор с поиском): текст на языке лида (пусто → русский) вставляется в поле, отправляет менеджер. API: `GET/POST /api/v1/reply-templates`, `PUT/DELETE /api/v1/reply-templates/{id}`; права `reply_templates:read` (manager, admin), `reply_templates:write` (admin); аудит `reply_template.*` |
+| **Подключения** | admin | Токен бота, канал команды (ADR-0018), профиль бота (имя, описание, краткое описание × ru/uz/en, статус «Опубликовано в Telegram» или причина словами): `GET/PUT /api/v1/integrations/telegram/profile` |
+| **Экспорт CSV** | admin | Кнопка «Экспорт CSV» на «Лидах», «Клиентах», «Сделках» с текущими фильтрами: `GET /api/v1/export/{leads,clients,deals}.csv`, право `export:read`, аудит `export.<entity>` с числом строк, до 10 000 строк. Формат под Excel ru-локали: UTF-8 с BOM, разделитель `;`, дробные с запятой, даты `ДД.ММ.ГГГГ ЧЧ:ММ` по Ташкенту, ячейки с `= + - @` в начале экранируются апострофом (CSV-инъекция); колонки — те же данные, что в списках |
 
 ### 10.2. Переключатель режима
 

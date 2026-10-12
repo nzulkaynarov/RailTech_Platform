@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from app.services.lead_messenger import LeadMessenger
     from app.services.leads import LeadService
     from app.services.llm_usage import DbUsageRecorder
+    from app.services.sandbox import SandboxService
     from app.services.setup import SetupService
     from app.services.users import UserService
 
@@ -167,6 +168,16 @@ class Container:
         )
 
     @cached_property
+    def sandbox_service(self) -> "SandboxService":
+        """«Проверить бота»: диалог из CRM через тот же контур, что и Telegram-бот."""
+        from app.bot.setup import SandboxConversation
+        from app.services.sandbox import SandboxService
+
+        return SandboxService(
+            self.session_factory, self.settings_service, SandboxConversation(self)
+        )
+
+    @cached_property
     def kb_ingest(self) -> "KbIngestService":
         from app.services.kb.ingest import KbIngestService
 
@@ -239,6 +250,8 @@ class Container:
         return bot
 
     async def aclose(self) -> None:
+        if "sandbox_service" in self.__dict__:
+            await self.sandbox_service.aclose()
         for bot in self._bots.values():
             await bot.session.close()
         if "engine" in self.__dict__:

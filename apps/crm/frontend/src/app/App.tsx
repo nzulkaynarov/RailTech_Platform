@@ -10,6 +10,7 @@ import { BrowserRouter, Outlet, Route, Routes } from "react-router";
 import { AuditPage } from "../pages/audit/AuditPage";
 import { BackupsPage } from "../pages/backups/BackupsPage";
 import { ModelsPage } from "../pages/models/ModelsPage";
+import { SandboxPage } from "../pages/sandbox/SandboxPage";
 import { SpendPage } from "../pages/spend/SpendPage";
 import { ClientDetailPage } from "../pages/clients/ClientDetailPage";
 import { ClientsPage } from "../pages/clients/ClientsPage";
@@ -18,6 +19,7 @@ import { DealsPage } from "../pages/deals/DealsPage";
 import { GapsPage } from "../pages/gaps/GapsPage";
 import { InboxPage } from "../pages/inbox/InboxPage";
 import { IntegrationsPage } from "../pages/integrations/IntegrationsPage";
+import { ReplyTemplatesPage } from "../pages/templates/ReplyTemplatesPage";
 import { HomeRedirect } from "./HomeRedirect";
 import { KbPage } from "../pages/kb/KbPage";
 import { SettingsPage } from "../pages/settings/SettingsPage";
@@ -56,7 +58,9 @@ const resources = [
   { name: "spend", list: "/spend", meta: { label: t.nav.spend } },
   { name: "kb", list: "/kb", meta: { label: t.nav.kb } },
   { name: "gaps", list: "/gaps", meta: { label: t.nav.gaps } },
+  { name: "sandbox", list: "/sandbox", meta: { label: t.nav.sandbox } },
   { name: "settings", list: "/settings", meta: { label: t.nav.settings } },
+  { name: "templates", list: "/templates", meta: { label: t.nav.templates } },
   { name: "users", list: "/users", meta: { label: t.nav.users } },
   { name: "integrations", list: "/integrations", meta: { label: t.nav.integrations } },
   { name: "models", list: "/models", meta: { label: t.nav.models } },
@@ -157,6 +161,14 @@ export function App() {
                   }
                 />
                 <Route
+                  path="/sandbox"
+                  element={
+                    <RouteGuard resource="sandbox">
+                      <SandboxPage />
+                    </RouteGuard>
+                  }
+                />
+                <Route
                   path="/spend"
                   element={
                     <RouteGuard resource="spend">
@@ -193,6 +205,14 @@ export function App() {
                   element={
                     <RouteGuard resource="backups">
                       <BackupsPage />
+                    </RouteGuard>
+                  }
+                />
+                <Route
+                  path="/templates"
+                  element={
+                    <RouteGuard resource="templates">
+                      <ReplyTemplatesPage />
                     </RouteGuard>
                   }
                 />
