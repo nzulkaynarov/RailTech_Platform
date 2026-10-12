@@ -2,6 +2,7 @@ import {
   AuditOutlined,
   BookOutlined,
   DashboardOutlined,
+  HeartOutlined,
   QuestionCircleOutlined,
   SettingOutlined,
   ShopOutlined,
@@ -28,6 +29,7 @@ import { InboxPage } from "../pages/inbox/InboxPage";
 import { HomeRedirect } from "./HomeRedirect";
 import { KbPage } from "../pages/kb/KbPage";
 import { SettingsPage } from "../pages/settings/SettingsPage";
+import { SystemPage } from "../pages/system/SystemPage";
 import { LeadDetailPage } from "../pages/lead-detail/LeadDetailPage";
 import { LeadsPage } from "../pages/leads/LeadsPage";
 import { ChangePasswordPage } from "../pages/login/ChangePasswordPage";
@@ -78,6 +80,7 @@ const resources = [
   },
   { name: "audit", list: "/audit", meta: { label: t.nav.audit, icon: <AuditOutlined /> } },
   { name: "users", list: "/users", meta: { label: t.nav.users, icon: <TeamOutlined /> } },
+  { name: "system", list: "/system", meta: { label: t.nav.system, icon: <HeartOutlined /> } },
   { name: "profile", list: "/profile", meta: { label: t.nav.profile, icon: <UserOutlined /> } },
 ];
 
@@ -176,6 +179,14 @@ export function App() {
                   element={
                     <RouteGuard resource="users">
                       <UsersPage />
+                    </RouteGuard>
+                  }
+                />
+                <Route
+                  path="/system"
+                  element={
+                    <RouteGuard resource="system">
+                      <SystemPage />
                     </RouteGuard>
                   }
                 />

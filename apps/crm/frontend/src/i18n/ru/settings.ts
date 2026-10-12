@@ -185,6 +185,7 @@ export const settings = {
     terms: "Слова",
     channel_id: "ID приватного канала",
     duty_user_ids: "Дежурные",
+    manager_dm_throttle_minutes: "Пауза между личными уведомлениями менеджеру",
     daily_usd: "Дневной бюджет",
     fallback_model_enabled: "Переходить на запасную модель",
     price_always_to_manager:
@@ -207,10 +208,13 @@ export const settings = {
     terms: "Слово или начало слова со * (жалоб* — жалоба, жалобу…); Enter — добавить.",
     channel_id: "Число со знаком минус, например -100…; бот должен быть админом канала.",
     duty_user_ids: "Получают @упоминание в напоминаниях о просроченных передачах.",
+    manager_dm_throttle_minutes:
+      "Лид пишет несколько сообщений подряд — менеджер получит в Telegram одно уведомление за это время.",
     holidays: "В эти дни SLA не считается, бот отвечает текстом нерабочего времени.",
     daily_usd: "В долларах США.",
   } as Dict,
   units: {
+    manager_dm_throttle_minutes: "мин",
     sla_minutes: "мин",
     reminder_minutes: "мин",
     unresponsive_days: "дн.",

@@ -21,9 +21,10 @@ const RESOURCE_MAP: Record<string, [string, string]> = {
   settings: ["settings", "read"],
   audit: ["audit", "read"],
   users: ["users", "read"],
+  system: ["system", "read"],
   profile: ["self", "read"],
 };
-const ADMIN_SECTIONS = new Set(["kb", "gaps", "settings", "audit", "users"]);
+const ADMIN_SECTIONS = new Set(["kb", "gaps", "settings", "audit", "users", "system"]);
 
 export function accessControlProvider(client: QueryClient): AccessControlProvider {
   return {

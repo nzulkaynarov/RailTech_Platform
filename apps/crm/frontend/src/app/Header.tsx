@@ -5,6 +5,7 @@ import { Badge, Button, Grid, Layout, Space, theme, Typography } from "antd";
 
 import { ModeSwitch } from "../components/ModeSwitch";
 import { useEventStream } from "../hooks/useEventStream";
+import { useLeadAlertHandler } from "../hooks/useLeadAlerts";
 import { t } from "../i18n/ru";
 
 /** Состояние SSE-соединения текстом, а не только цветом точки (WCAG 1.4.1, 4.1.3). */
@@ -24,7 +25,7 @@ export function ConnectionStatus({ live, compact = false }: { live: boolean; com
  */
 export function Header() {
   const { data: identity } = useGetIdentity<{ name: string }>();
-  const live = useEventStream(Boolean(identity));
+  const live = useEventStream(Boolean(identity), useLeadAlertHandler());
   const { token } = theme.useToken();
   const screens = Grid.useBreakpoint();
   const { setMobileSiderOpen } = useThemedLayoutContext();
