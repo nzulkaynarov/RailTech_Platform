@@ -47,8 +47,13 @@ test("admin sections render and greeting can be changed", async ({ page }) => {
   await page.getByRole("dialog").getByLabel("Название").fill(clientName);
   await page.getByRole("button", { name: "Создать клиента" }).click();
   await expect(page.getByRole("heading", { name: clientName })).toBeVisible();
-  // Разделы клиента — вкладками (UX волна 3); вкладка запоминается в адресе.
-  await page.getByRole("tab", { name: /Документы/ }).click();
+  // Разделы клиента — вкладками (UX волна 3), на телефоне — раскрывающимися секциями;
+  // выбранный раздел запоминается в адресе.
+  await page
+    .getByRole("tab", { name: /Документы/ })
+    .or(page.getByRole("button", { name: /Документы/ }))
+    .first()
+    .click();
   await expect(page).toHaveURL(/[?&]tab=documents/);
   await expect(page.getByRole("button", { name: "Загрузить документ" })).toBeVisible();
 
