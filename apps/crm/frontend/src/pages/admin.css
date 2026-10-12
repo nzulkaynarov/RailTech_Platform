@@ -207,3 +207,7 @@ h3.section-label.ant-typography {
   gap: var(--ant-margin-xxs);
   white-space: nowrap;
 }
+
+.model-warning {
+  margin-bottom: 12px;
+}

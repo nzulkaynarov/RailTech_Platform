@@ -53,4 +53,7 @@ export const Reason = {
   assist_no_history: "assist_no_history",
   deal_won_final: "deal_won_final",
   no_consent: "no_consent",
+  litellm_unavailable: "litellm_unavailable",
+  model_key_required: "model_key_required",
+  model_in_config: "model_in_config",
 } as const;

@@ -32,7 +32,7 @@
 | Оркестрация агентов | LangGraph | `PostgresSaver` для чекпоинтов |
 | Инструменты агентов | MCP-серверы на официальном Python SDK `mcp` (`MCPServer`, бывший FastMCP), транспорт streamable HTTP (stateless, JSON); клиент — `mcp.Client` (ADR-0011) | Три сервера: `kb-mcp`, `crm-mcp`, `docs-mcp` |
 | Шлюз моделей | LiteLLM Proxy (self-hosted) | Алиасы: `dialog-model`, `qualifier-model`, `judge-model`, `embed-model`, `fallback-model` |
-| Модели | Внешние API. Рекомендация: диалог — Anthropic Sonnet-класс; квалификатор/judge — Anthropic Haiku-класс или Google Flash-класс; embeddings — Google Gemini Embedding (мультиязычный, узбекский) или Voyage multilingual | Конкретные идентификаторы фиксируются в `infra/litellm.config.yaml` на момент старта и в ADR-0004 |
+| Модели | Внешние API. Рекомендация: диалог — Anthropic Sonnet-класс; квалификатор/judge — Anthropic Haiku-класс или Google Flash-класс; embeddings — Google Gemini Embedding (мультиязычный, узбекский) или Voyage multilingual | Значения по умолчанию — `infra/litellm.models.yaml` (ADR-0004); текущие модели и ключи ролей — в БД LiteLLM, меняет админ в CRM без рестарта (ADR-0020) |
 | БД | PostgreSQL 16 + pgvector | Одна база для домена, векторов, очереди, чекпоинтов |
 | Очередь и планировщик | Procrastinate | Задачи на Postgres: события квалификатора, таймеры SLA/снуз/unresponsive, ингест KB, ежедневные отчёты |
 | Файлы | RustFS (S3-совместимый, Apache-2.0; ADR-0009) | Документы клиентов, исходники KB, вложения из Telegram. Код работает только по протоколу S3 |
@@ -171,6 +171,7 @@ railtech-crm/
 ├── infra/
 │   ├── docker-compose.yml  docker-compose.dev.yml  docker-compose.prod.yml
 │   ├── litellm.config.yaml
+│   ├── litellm.models.yaml
 │   ├── Caddyfile.dev  Caddyfile.prod
 │   └── casbin/model.conf  casbin/policy.seed.csv
 ├── scripts/                  # bootstrap_dev.sh, seed_demo.py, create_admin.py, kb_ingest.py, backup.sh, restore.sh, smoke_dev.sh, smoke_prod.sh

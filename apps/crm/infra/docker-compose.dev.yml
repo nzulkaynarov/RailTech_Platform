@@ -23,6 +23,10 @@ services:
       - ../backend/evals:/app/evals:ro
       - ../backend/tests:/app/tests:ro
 
+  litellm-seed:
+    build: { target: dev }
+    volumes: *backend-src
+
   api:
     build: { target: dev }
     command: ["python", "-m", "app", "api", "--reload"]

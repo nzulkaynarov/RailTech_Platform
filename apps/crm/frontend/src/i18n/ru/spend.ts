@@ -44,7 +44,7 @@ export const spend = {
     kinds: { work: "Работа", test: "Тесты (eval, нагрузка)" } as Record<string, string>,
   },
   models: {
-    hint: "Только просмотр. Модели и ключи провайдеров меняет администратор сервера.",
+    hint: "Провайдера, модель и API-ключ роли можно сменить кнопкой «Изменить» — без перезапуска сервера.",
     checkedHint: "Монитор проверяет модели раз в час; «Проверить» обновляет состояние сразу.",
     role: "Роль",
     provider: "Провайдер",
@@ -60,6 +60,39 @@ export const spend = {
     ok: "Модель «{role}» отвечает ({ms} мс)",
     failed: "Модель «{role}» не ответила: {detail}",
     unknownProvider: "нет данных",
+    edit: "Изменить",
+    editAria: "Изменить модель «{role}»",
+    editTitle: "Модель роли «{role}»",
+    providerLabel: "Провайдер",
+    modelLabel: "Модель",
+    modelHint: "Идентификатор модели у провайдера, без префикса. Примеры: {examples}",
+    keyLabel: "API-ключ",
+    keyHint:
+      "Хранится только в шлюзе моделей (зашифрован). Пусто — ключ провайдера из .env сервера.",
+    keyRequired: "Для этого провайдера на сервере ключа нет — введите API-ключ.",
+    baseLabel: "Адрес API (необязательно)",
+    baseHint: "Только для своего или совместимого шлюза провайдера.",
+    passwordLabel: "Ваш пароль",
+    passwordHint: "Смена модели — чувствительное действие: подтвердите паролем.",
+    save: "Сохранить",
+    reset: "Вернуть по умолчанию",
+    cancel: "Отмена",
+    embedWarning:
+      "Смена модели поиска делает текущий индекс базы знаний несовместимым: после сохранения переиндексируйте базу знаний.",
+    dialogWarning:
+      "После смены модели диалога рекомендуем платную проверку качества (eval) — она не запускается автоматически.",
+    saved: "Роль «{role}»: {provider} · {model}",
+    reindexNow: "Переиндексируйте базу знаний: модель поиска изменилась.",
+    qualityNow: "Рекомендуется проверка качества диалога (платная, по согласию владельца).",
+    providers: { anthropic: "Anthropic", gemini: "Google Gemini", openai: "OpenAI" } as Record<
+      string,
+      string
+    >,
+    examples: {
+      anthropic: "claude-sonnet-5-5, claude-haiku-5-5",
+      gemini: "gemini-3.8-flash, gemini-embedding-2",
+      openai: "идентификатор из консоли OpenAI",
+    } as Record<string, string>,
     health: { ok: "В норме", problem: "Сбой", unknown: "Нет данных" } as Record<string, string>,
     roles: {
       "dialog-model": "Диалог",

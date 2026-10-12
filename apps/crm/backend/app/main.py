@@ -20,6 +20,7 @@ from app.api.v1 import (
     kb,
     leads,
     me,
+    models_admin,
     setup,
     spend,
     stream,
@@ -129,6 +130,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         setup,
         system,
         spend,
+        models_admin,
         integrations,
         system_status,
     )

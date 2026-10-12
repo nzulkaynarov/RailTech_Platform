@@ -2,7 +2,7 @@
 
 Источник — `GET /model/info` прокси (мастер-ключ из настроек процесса). Это единственное
 место правды о моделях (`infra/litellm.config.yaml` читает только сам прокси), и оно же будет
-верным, когда модели начнут храниться в БД LiteLLM. Из ответа берутся только алиас, модель и
+верным для моделей в БД LiteLLM (ADR-0020). Из ответа берутся только алиас, модель и
 провайдер — ключи провайдеров (`litellm_params.api_key`) никогда не копируются.
 
 Кэш на 5 минут; при недоступности прокси — последнее известное значение (или пусто:
@@ -78,6 +78,10 @@ class ModelCatalog:
             logger.warning("litellm_model_info_failed", error=type(exc).__name__)
             self._expires = self._clock() + RETRY_S
         return self._entries
+
+    def invalidate(self) -> None:
+        """Сбросить кэш: модель роли сменили из CRM (ADR-0020)."""
+        self._expires = 0.0
 
     async def provider(self, alias: str) -> str | None:
         entry = (await self.entries()).get(alias)
