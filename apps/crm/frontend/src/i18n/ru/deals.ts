@@ -25,6 +25,7 @@ export const deals = {
     clientEmpty: "У клиента нет сделок",
     stages: { open: "Открыта", won: "Выиграна", lost: "Проиграна" } as Record<string, string>,
     noAmount: "—",
+    amountMissing: "Сумма не указана",
     summaryTitle: "Сделки за период",
     wonCount: "Выиграно",
     wonSum: "Сумма выигрыша",

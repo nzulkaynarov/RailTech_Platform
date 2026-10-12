@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { formatDuration, formatNumber, formatUsd } from "./format";
 
-const plain = (s: string) => s.replace(/ /g, " ");
+const plain = (s: string) => s.replace(/\u00a0/g, " ");
 
 describe("ru-RU formatting", () => {
   it.each([

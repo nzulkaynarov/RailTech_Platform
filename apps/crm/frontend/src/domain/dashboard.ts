@@ -2,9 +2,10 @@
  * Плитки дашборда: что показывать крупно, куда ведёт клик и можно ли туда роли.
  * Чистые функции (дизайн-аудит 2026-10-11: иерархия метрик, ссылки без 403).
  */
-import type { Dashboard, PermissionsResponse } from "../api/generated/model";
+import type { Dashboard, DealsSummary, PermissionsResponse } from "../api/generated/model";
 import { allowed, sectionPermission } from "../app/providers/access";
 import { leadFiltersToSearch } from "../hooks/leadFilters";
+import { formatMoney } from "./deals";
 import { t } from "../i18n/ru";
 import { formatDuration, formatNumber, formatUsd } from "../lib/format";
 
@@ -120,4 +121,24 @@ export function reasonBars(
     .filter(([, value]) => value > 0)
     .sort((a, b) => b[1] - a[1])
     .map(([code, value]) => ({ code, value, percent: Math.round((value / max) * 100) }));
+}
+
+/**
+ * Сумма выигрыша: без сумм — «—» и подсказка, сколько сделок без суммы; частичная сумма
+ * помечается как неполная (аудит 2026-10-12: «$0» при неуказанных суммах вводил в заблуждение).
+ */
+export function wonSum(data: DealsSummary): { value: string; hint: string | null } {
+  const missing = data.won_without_amount ?? 0;
+  const known = data.won_count - missing;
+  const n = String(missing);
+  if (!data.won_count) return { value: t.common.none, hint: null };
+  if (!known) return { value: t.common.none, hint: t.deals.wonSumNone.replace("{n}", n) };
+  const value = data.won_amounts
+    .filter((s) => Number(s.amount) > 0)
+    .map((s) => formatMoney(s.amount, s.currency))
+    .join(" · ");
+  return {
+    value: value || t.common.none,
+    hint: missing ? t.deals.wonSumMissing.replace("{n}", n) : null,
+  };
 }

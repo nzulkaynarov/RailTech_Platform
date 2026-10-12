@@ -34,7 +34,7 @@ describe("whoLeads («Кто ведёт»)", () => {
   ])("%s", (_name, lead, kind, label) => {
     const who = whoLeads(lead, NOW);
     expect(who.kind).toBe(kind);
-    expect(who.label.replace(/ /g, " ")).toBe(label);
+    expect(who.label.replace(/\u00a0/g, " ")).toBe(label);
   });
 });
 

@@ -4,7 +4,7 @@ import { Navigate } from "react-router";
 
 import { ApiError } from "../api/http";
 import { useMe, usePermissionsQuery } from "../api/queries";
-import { useSetUiMode } from "../components/ModeSwitch";
+import { useSetUiMode } from "../hooks/useSetUiMode";
 import { QueryError } from "../components/PageState";
 import { t } from "../i18n/ru";
 import { homePath } from "./navigation";
