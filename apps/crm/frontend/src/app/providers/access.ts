@@ -18,7 +18,7 @@ const RESOURCE_MAP: Record<string, [string, string]> = {
   clients: ["clients", "read"],
   deals: ["deals", "read"],
   kb: ["kb", "read"],
-  gaps: ["kb", "read"],
+  gaps: ["kb", "write"], // разбор пробелов — работа админа; менеджер видит KB только для чтения
   settings: ["settings", "read"],
   audit: ["audit", "read"],
   spend: ["spend", "read"],
@@ -27,11 +27,9 @@ const RESOURCE_MAP: Record<string, [string, string]> = {
   backups: ["backups", "read"],
   integrations: ["integrations", "read"],
   system: ["system", "read"],
-  admin: ["system", "read"], // группа меню «Система»
   profile: ["self", "read"],
 };
 const ADMIN_SECTIONS = new Set([
-  "kb",
   "gaps",
   "settings",
   "spend",
@@ -41,8 +39,25 @@ const ADMIN_SECTIONS = new Set([
   "backups",
   "integrations",
   "system",
-  "admin",
 ]);
+
+/**
+ * Виден ли раздел: право из матрицы и, для админских разделов, режим «Админ».
+ * Одна функция для меню, `accessControlProvider` и стартовой страницы.
+ */
+export function canSee(
+  resource: string,
+  matrix: PermissionsResponse | undefined,
+  uiMode: string | null | undefined,
+): boolean {
+  const [target, verb] = RESOURCE_MAP[resource] ?? [resource, "read"];
+  if (target === "self") return true;
+  if (ADMIN_SECTIONS.has(resource) && uiMode !== "admin") return false;
+  return Boolean(matrix?.permissions[target]?.[verb]);
+}
+
+/** Раздел админский: в режиме «Менеджер» скрыт из меню (SPEC §10.2). */
+export const isAdminSection = (resource: string): boolean => ADMIN_SECTIONS.has(resource);
 
 export function accessControlProvider(client: QueryClient): AccessControlProvider {
   return {

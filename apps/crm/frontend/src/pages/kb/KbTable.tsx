@@ -8,6 +8,7 @@ import { t } from "../../i18n/ru";
 import { formatDateTime } from "../../lib/time";
 
 type Handlers = {
+  canWrite: boolean;
   productName: (key: string | null) => string;
   onOpen: (d: KbDocumentOut) => void;
   onToggle: (d: KbDocumentOut) => void;
@@ -60,7 +61,12 @@ function infoColumns({ productName, onOpen }: Handlers): ColumnsType<KbDocumentO
   ];
 }
 
-function controlColumns({ onOpen, onToggle, onReingest }: Handlers): ColumnsType<KbDocumentOut> {
+function controlColumns({
+  canWrite,
+  onOpen,
+  onToggle,
+  onReingest,
+}: Handlers): ColumnsType<KbDocumentOut> {
   return [
     {
       title: t.kb.active,
@@ -69,6 +75,7 @@ function controlColumns({ onOpen, onToggle, onReingest }: Handlers): ColumnsType
         <Switch
           aria-label={named(t.kb.activeFor, d)}
           checked={d.is_active}
+          disabled={!canWrite}
           onChange={() => {
             onToggle(d);
           }}
@@ -95,13 +102,17 @@ function controlColumns({ onOpen, onToggle, onReingest }: Handlers): ColumnsType
                 onOpen(d);
               },
             },
-            {
-              key: "reingest",
-              label: t.kb.reingest,
-              onClick: () => {
-                onReingest(d);
-              },
-            },
+            ...(canWrite
+              ? [
+                  {
+                    key: "reingest",
+                    label: t.kb.reingest,
+                    onClick: () => {
+                      onReingest(d);
+                    },
+                  },
+                ]
+              : []),
           ]}
         />
       ),

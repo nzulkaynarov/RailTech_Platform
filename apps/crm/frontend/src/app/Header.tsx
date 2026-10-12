@@ -1,12 +1,13 @@
 import { MenuOutlined } from "@ant-design/icons";
 import { useThemedLayoutContext } from "@refinedev/antd";
 import { useGetIdentity } from "@refinedev/core";
-import { Badge, Button, Grid, Layout, Space, theme, Typography } from "antd";
+import { Badge, Button, Grid, Layout, Space, theme } from "antd";
 
 import { ModeSwitch } from "../components/ModeSwitch";
 import { useEventStream } from "../hooks/useEventStream";
 import { useLeadAlertHandler } from "../hooks/useLeadAlerts";
 import { t } from "../i18n/ru";
+import { UserMenu } from "./UserMenu";
 
 /** Состояние SSE-соединения текстом, а не только цветом точки (WCAG 1.4.1, 4.1.3). */
 export function ConnectionStatus({ live, compact = false }: { live: boolean; compact?: boolean }) {
@@ -31,7 +32,7 @@ export function Header() {
   const { setMobileSiderOpen } = useThemedLayoutContext();
   // Та же граница, что у ThemedSider: меню-панель, пока брейкпоинт `lg` не достигнут.
   const drawerMenu = screens.lg === false;
-  // На телефоне в шапке только самое нужное: статус точкой, переключатель режима; имя — в профиле.
+  // На телефоне в шапке только самое нужное: статус точкой, режим, аватар (имя — в меню).
   const phone = screens.sm === false;
   return (
     <Layout.Header
@@ -59,7 +60,7 @@ export function Header() {
       <Space size="small">
         <ConnectionStatus live={live} compact={phone} />
         <ModeSwitch />
-        {phone ? null : <Typography.Text>{identity?.name}</Typography.Text>}
+        <UserMenu />
       </Space>
     </Layout.Header>
   );

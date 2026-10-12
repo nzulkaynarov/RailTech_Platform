@@ -1,9 +1,11 @@
-import { useCan } from "@refinedev/core";
 import { Navigate } from "react-router";
 
-/** Стартовая страница по правам: очередь работы, а наблюдателю — список лидов. */
+import { usePermissionsQuery } from "../api/queries";
+import { homePath } from "./navigation";
+
+/** Стартовая страница по правам: менеджер и админ — «Входящие», наблюдатель — дашборд. */
 export function HomeRedirect() {
-  const { data, isLoading } = useCan({ resource: "inbox", action: "list" });
+  const { data, isLoading } = usePermissionsQuery();
   if (isLoading) return null;
-  return <Navigate to={data?.can ? "/inbox" : "/leads"} replace />;
+  return <Navigate to={homePath(data)} replace />;
 }

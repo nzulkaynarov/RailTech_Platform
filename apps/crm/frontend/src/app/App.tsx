@@ -1,21 +1,3 @@
-import {
-  ApiOutlined,
-  AuditOutlined,
-  BookOutlined,
-  CloudServerOutlined,
-  ControlOutlined,
-  DashboardOutlined,
-  DollarOutlined,
-  FundOutlined,
-  ExperimentOutlined,
-  HeartOutlined,
-  QuestionCircleOutlined,
-  SettingOutlined,
-  ShopOutlined,
-  TeamOutlined,
-  UnorderedListOutlined,
-  UserOutlined,
-} from "@ant-design/icons";
 import { Authenticated, Refine } from "@refinedev/core";
 import { ThemedLayout, useNotificationProvider } from "@refinedev/antd";
 import routerProvider, { CatchAllNavigate, DocumentTitleHandler } from "@refinedev/react-router";
@@ -34,7 +16,6 @@ import { ClientsPage } from "../pages/clients/ClientsPage";
 import { DashboardPage } from "../pages/dashboard/DashboardPage";
 import { DealsPage } from "../pages/deals/DealsPage";
 import { GapsPage } from "../pages/gaps/GapsPage";
-import { InboxNavIcon } from "../components/InboxNavIcon";
 import { InboxPage } from "../pages/inbox/InboxPage";
 import { IntegrationsPage } from "../pages/integrations/IntegrationsPage";
 import { HomeRedirect } from "./HomeRedirect";
@@ -49,6 +30,7 @@ import { ProfilePage } from "../pages/profile/ProfilePage";
 import { SetupPage } from "../pages/setup/SetupPage";
 import { UsersPage } from "../pages/users/UsersPage";
 import { t } from "../i18n/ru";
+import { AppSider } from "./AppSider";
 import { AppTitle } from "./AppTitle";
 import { documentTitle } from "./documentTitle";
 import { Header } from "./Header";
@@ -64,67 +46,24 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: true, staleTime: 5_000 } },
 });
 
+// Ресурсы Refine — для заголовков вкладок и `useCan`; меню строит `AppSider` по `navigation.ts`.
 const resources = [
-  { name: "inbox", list: "/inbox", meta: { label: t.nav.inbox, icon: <InboxNavIcon /> } },
-  {
-    name: "leads",
-    list: "/leads",
-    show: "/leads/:id",
-    meta: { label: t.nav.leads, icon: <UnorderedListOutlined /> },
-  },
-  {
-    name: "clients",
-    list: "/clients",
-    show: "/clients/:id",
-    meta: { label: t.nav.clients, icon: <ShopOutlined /> },
-  },
-  { name: "deals", list: "/deals", meta: { label: t.nav.deals, icon: <FundOutlined /> } },
-  {
-    name: "dashboard",
-    list: "/dashboard",
-    meta: { label: t.nav.dashboard, icon: <DashboardOutlined /> },
-  },
-  { name: "kb", list: "/kb", meta: { label: t.nav.kb, icon: <BookOutlined /> } },
-  { name: "gaps", list: "/gaps", meta: { label: t.nav.gaps, icon: <QuestionCircleOutlined /> } },
-  {
-    name: "settings",
-    list: "/settings",
-    meta: { label: t.nav.settings, icon: <SettingOutlined /> },
-  },
-  { name: "users", list: "/users", meta: { label: t.nav.users, icon: <TeamOutlined /> } },
-  // Системные разделы админа — одной группой: меню остаётся коротким (бенчмарк Intercom/Linear).
-  { name: "admin", meta: { label: t.nav.admin, icon: <ControlOutlined /> } },
-  {
-    name: "integrations",
-    list: "/integrations",
-    meta: { label: t.nav.integrations, icon: <ApiOutlined />, parent: "admin" },
-  },
-  {
-    name: "models",
-    list: "/models",
-    meta: { label: t.nav.models, icon: <ExperimentOutlined />, parent: "admin" },
-  },
-  {
-    name: "spend",
-    list: "/spend",
-    meta: { label: t.nav.spend, icon: <DollarOutlined />, parent: "admin" },
-  },
-  {
-    name: "system",
-    list: "/system",
-    meta: { label: t.nav.system, icon: <HeartOutlined />, parent: "admin" },
-  },
-  {
-    name: "backups",
-    list: "/backups",
-    meta: { label: t.nav.backups, icon: <CloudServerOutlined />, parent: "admin" },
-  },
-  {
-    name: "audit",
-    list: "/audit",
-    meta: { label: t.nav.audit, icon: <AuditOutlined />, parent: "admin" },
-  },
-  { name: "profile", list: "/profile", meta: { label: t.nav.profile, icon: <UserOutlined /> } },
+  { name: "inbox", list: "/inbox", meta: { label: t.nav.inbox } },
+  { name: "leads", list: "/leads", show: "/leads/:id", meta: { label: t.nav.leads } },
+  { name: "clients", list: "/clients", show: "/clients/:id", meta: { label: t.nav.clients } },
+  { name: "deals", list: "/deals", meta: { label: t.nav.deals } },
+  { name: "dashboard", list: "/dashboard", meta: { label: t.nav.dashboard } },
+  { name: "spend", list: "/spend", meta: { label: t.nav.spend } },
+  { name: "kb", list: "/kb", meta: { label: t.nav.kb } },
+  { name: "gaps", list: "/gaps", meta: { label: t.nav.gaps } },
+  { name: "settings", list: "/settings", meta: { label: t.nav.settings } },
+  { name: "users", list: "/users", meta: { label: t.nav.users } },
+  { name: "integrations", list: "/integrations", meta: { label: t.nav.integrations } },
+  { name: "models", list: "/models", meta: { label: t.nav.models } },
+  { name: "system", list: "/system", meta: { label: t.nav.system } },
+  { name: "backups", list: "/backups", meta: { label: t.nav.backups } },
+  { name: "audit", list: "/audit", meta: { label: t.nav.audit } },
+  { name: "profile", list: "/profile", meta: { label: t.nav.profile } },
 ];
 
 /** Тосты в постоянном live-регионе — озвучиваются скринридером (WCAG 4.1.3). */
@@ -134,7 +73,7 @@ function Shell() {
   return (
     <Authenticated key="shell" fallback={<CatchAllNavigate to="/login" />}>
       <div className="app-shell">
-        <ThemedLayout Header={Header} Title={AppTitle}>
+        <ThemedLayout Header={Header} Title={AppTitle} Sider={AppSider}>
           <Outlet />
         </ThemedLayout>
       </div>

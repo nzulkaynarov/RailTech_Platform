@@ -27,8 +27,9 @@ const data = {
 
 const matrix = (perms: Record<string, Record<string, boolean>>) =>
   ({ permissions: perms, roles: [] }) as unknown as PermissionsResponse;
-const admin = matrix({ leads: { read: true, take: true }, kb: { read: true } });
-const manager = matrix({ leads: { read: true, take: true } });
+const admin = matrix({ leads: { read: true, take: true }, kb: { read: true, write: true } });
+// Менеджер читает базу знаний, но пробелы разбирает админ (`kb:write`).
+const manager = matrix({ leads: { read: true, take: true }, kb: { read: true } });
 const viewer = matrix({ leads: { read: true } });
 
 describe("dashboard tiles", () => {
