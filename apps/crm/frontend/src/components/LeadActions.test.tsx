@@ -184,6 +184,18 @@ describe("availableActions", () => {
   });
 
   it.each([
+    ["snoozed, nobody responsible", "snoozed", null, manager, true],
+    ["snoozed, someone else responsible", "snoozed", 3, manager, false],
+    ["snoozed, admin", "snoozed", 3, admin, true],
+    ["open handoff — nothing to return", "open", null, manager, false],
+    ["viewer", "snoozed", null, viewer, false],
+  ] as const)("unsnooze mirrors snooze rights: %s → %s", (_, status, owner, rights, can) => {
+    const item = lead({ assigned_user_id: owner, escalation: { ...openEscalation, status } });
+    expect(availableActions(item, rights).unsnooze).toBe(can);
+    if (can) expect(leadActionPlan(item, rights).more).toContain("unsnooze");
+  });
+
+  it.each([
     ["won, nobody responsible", null, manager, true],
     ["won, I am responsible", 7, manager, true],
     ["won, someone else responsible", 3, manager, false],

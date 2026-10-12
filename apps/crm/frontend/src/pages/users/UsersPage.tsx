@@ -13,6 +13,7 @@ import { useApiErrorToast } from "../../hooks/useApiErrorToast";
 import { useConfirmDanger } from "../../hooks/useConfirmDanger";
 import { t } from "../../i18n/ru";
 import { CreateUserDialog, EditUserDialog, TemporaryPassword } from "./UserDialogs";
+import { transferNeeded } from "./transfer";
 import { UsersTable } from "./UsersTable";
 import "../admin.css";
 
@@ -22,6 +23,7 @@ function useUserMutations(on: {
   created: () => void;
   updated: () => void;
   password: (value: string) => void;
+  transfer: (count: number | null) => void;
 }) {
   const client = useQueryClient();
   const { message } = AntApp.useApp();
@@ -46,7 +48,12 @@ function useUserMutations(on: {
         void message.success(named(t.userAdmin.updated, values.full_name ?? user.full_name));
         void refresh();
       },
-      onError,
+      // Сотрудник ведёт лидов: вместо тоста — выбор коллеги в том же диалоге (ADR-0015).
+      onError: (error) => {
+        const count = transferNeeded(error);
+        on.transfer(count);
+        if (count === null) onError(error);
+      },
     }),
     reset: useMutation({
       mutationFn: async (user: UserOut) => unwrap(await resetPassword(user.id)),
@@ -63,12 +70,13 @@ type Mutations = ReturnType<typeof useUserMutations>;
 type DialogsProps = {
   creating: boolean;
   editing: UserOut | null;
+  transfer: number | null;
   password: string | null;
   m: Mutations;
   close: () => void;
 };
 
-function Dialogs({ creating, editing, password, m, close }: DialogsProps) {
+function Dialogs({ creating, editing, transfer, password, m, close }: DialogsProps) {
   return (
     <>
       <CreateUserDialog
@@ -84,6 +92,7 @@ function Dialogs({ creating, editing, password, m, close }: DialogsProps) {
       <EditUserDialog
         user={editing}
         saving={m.update.isPending}
+        transferRequired={transfer}
         onCancel={() => {
           close();
         }}
@@ -108,14 +117,20 @@ export function UsersPage() {
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<UserOut | null>(null);
   const [password, setPassword] = useState<string | null>(null);
+  const [transfer, setTransfer] = useState<number | null>(null);
+  const edit = (u: UserOut | null) => {
+    setEditing(u);
+    setTransfer(null);
+  };
   const m = useUserMutations({
     created: () => {
       setCreating(false);
     },
     updated: () => {
-      setEditing(null);
+      edit(null);
     },
     password: setPassword,
+    transfer: setTransfer,
   });
   const reset = (u: UserOut) => {
     confirmDanger({
@@ -140,16 +155,17 @@ export function UsersPage() {
     <PageBody>
       <PageHeader title={t.page.users} extra={create} />
       <PageState query={query}>
-        <UsersTable data={query.data ?? []} loading={false} onEdit={setEditing} onReset={reset} />
+        <UsersTable data={query.data ?? []} loading={false} onEdit={edit} onReset={reset} />
       </PageState>
       <Dialogs
         creating={creating}
         editing={editing}
+        transfer={transfer}
         password={password}
         m={m}
         close={() => {
           setCreating(false);
-          setEditing(null);
+          edit(null);
           setPassword(null);
         }}
       />

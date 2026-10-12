@@ -87,10 +87,10 @@ async def attach(message: Message, conversation: FakeConversation) -> tuple[Fake
     bot, storage = FakeBot(), FakeStorage()
     await handlers.on_attachment(
         message,
-        bot,  # type: ignore[arg-type]
-        conversation,  # type: ignore[arg-type]
-        FakeSettings(),  # type: ignore[arg-type]
-        storage,  # type: ignore[arg-type]
+        bot,
+        conversation,
+        FakeSettings(),
+        storage,
         "attachments",
     )
     return bot, storage

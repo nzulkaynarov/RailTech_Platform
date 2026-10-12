@@ -120,6 +120,7 @@ export const leads = {
     acknowledge: "Принято к сведению",
     returnNote: "Заметка для бота (учтёт в ответах)",
     snooze: "Отложить",
+    unsnooze: "Вернуть из отложенных",
     snoozeUntil: "Отложить до",
     won: "Закрыть сделкой",
     wonTitle: "Закрыть сделку",

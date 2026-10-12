@@ -260,6 +260,13 @@ async def snooze(lead_id: int, body: Snooze, who: Worker, container: ContainerDe
     return ActionResult()
 
 
+@router.post("/leads/{lead_id}/actions/unsnooze", response_model=ActionResult)
+async def unsnooze(lead_id: int, who: Worker, container: ContainerDep) -> ActionResult:
+    """«Вернуть из отложенных»: передача снова открыта, срок реакции — заново."""
+    await container.lead_service.unsnooze(who, lead_id)
+    return ActionResult()
+
+
 @router.post("/leads/{lead_id}/actions/close_won", response_model=ActionResult)
 async def close_won(
     lead_id: int, body: Close, who: Worker, container: ContainerDep

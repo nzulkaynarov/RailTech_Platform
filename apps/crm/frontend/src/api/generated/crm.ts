@@ -2908,6 +2908,43 @@ export const take = async (
   });
 };
 
+export type unsnoozeResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type unsnoozeResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type unsnoozeResponseSuccess = unsnoozeResponse200 & {
+  headers: Headers;
+};
+export type unsnoozeResponseError = unsnoozeResponse422 & {
+  headers: Headers;
+};
+
+export type unsnoozeResponse = unsnoozeResponseSuccess | unsnoozeResponseError;
+
+export const getUnsnoozeUrl = (leadId: number) => {
+  return `/api/v1/leads/${leadId}/actions/unsnooze`;
+};
+
+/**
+ * «Вернуть из отложенных»: передача снова открыта, срок реакции — заново.
+ * @summary Unsnooze
+ */
+export const unsnooze = async (
+  leadId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<unsnoozeResponse> => {
+  return http<unsnoozeResponse>(getUnsnoozeUrl(leadId), {
+    ...options,
+    method: "POST",
+  });
+};
+
 export type assistResponse200 = {
   data: AssistOut;
   status: 200;
