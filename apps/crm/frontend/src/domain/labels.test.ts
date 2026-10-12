@@ -4,6 +4,7 @@ import {
   auditActionLabel,
   entityLabel,
   languageLabel,
+  looksLikeCode,
   qualificationText,
   reasonLabel,
   rejectedReason,
@@ -32,8 +33,34 @@ describe("labels", () => {
     ["qualifier: уточнить сроки", "квалификатор: уточнить сроки"],
     ["Клиент передумал", "Клиент передумал"],
     [null, ""],
+    [
+      "price_or_contract_asked, qualifier_recommend",
+      "Цена/условия — нет в базе; Рекомендация квалификатора",
+    ],
+    ["complaint", "Жалоба"],
+    ["human_requested, brand_new_trigger", "Просит человека; служебная причина"],
+    ["qualifier: price_inquiry", "решение квалификатора"],
   ])("transition reason %s", (reason, expected) => {
     expect(transitionReason(reason)).toBe(expected);
+  });
+
+  // Тест-сторож (дизайн-аудит 2026-10-11, находка 2): в «Почему» не бывает snake_case-кодов.
+  it.each([
+    "price_or_contract_asked, qualifier_recommend",
+    "human_requested",
+    "kb_gap_streak, no_progress, high_score",
+    "agent_unavailable",
+    "some_future_code",
+    "qualifier: request_contact",
+    "taken by manager",
+    "no reply for 14 days",
+    "lead wrote again",
+    "repeat deal",
+  ])("transitionReason(%j) shows no raw codes", (reason) => {
+    const text = transitionReason(reason);
+    expect(text).not.toBe("");
+    expect(text.split(/[;,:]\s*/).some((part) => looksLikeCode(part.trim()))).toBe(false);
+    expect(text).not.toMatch(/[a-z]+_[a-z]+/);
   });
 
   it("hides technical rejection text", () => {

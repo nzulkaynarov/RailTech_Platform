@@ -70,9 +70,13 @@ async def test_take_reply_return_with_note(
     card = client.get(f"/api/v1/leads/{lead_id}", headers=them).json()
     assert card["assigned_user_name"] == "dilshod"  # «кто ведёт» виден и не-админу
 
-    assert client.post(f"/api/v1/leads/{lead_id}/actions/take", headers=them).status_code == 409
+    taken = client.post(f"/api/v1/leads/{lead_id}/actions/take", headers=them)
+    assert taken.status_code == 409
+    assert taken.json()["details"]["reason"] == "lead_taken"
+    assert taken.json()["details"]["assigned_user_name"] == "dilshod"
     foreign = client.post(f"/api/v1/leads/{lead_id}/messages", json={"text": "x"}, headers=them)
     assert foreign.status_code == 403
+    assert foreign.json()["details"]["reason"] == "not_lead_owner"
 
     sent = client.post(
         f"/api/v1/leads/{lead_id}/messages", json={"text": "Добрый день!"}, headers=me
@@ -142,6 +146,32 @@ async def test_snooze_and_inbox(
     )
 
 
+async def test_snooze_with_owner_is_for_owner_or_admin(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    """Q-018: у лида есть ответственный — отложить может только он или админ."""
+    lead_id = await escalated_lead(sessions)
+    owner, password = await make_user(sessions, "owner@railtech.uz", ["manager"])
+    other, _ = await make_user(sessions, "other@railtech.uz", ["manager"])
+    admin, _ = await make_user(sessions, "boss@railtech.uz", ["admin"])
+    async with sessions() as session, session.begin():
+        lead = await session.get(Lead, lead_id)
+        assert lead is not None
+        lead.assigned_user_id = owner.id  # клиент со своим ответственным написал снова
+    until = (datetime.now(UTC) + timedelta(hours=2)).isoformat()
+    url = f"/api/v1/leads/{lead_id}/actions/snooze"
+
+    def snooze(email: str) -> Any:
+        return client.post(url, json={"until": until}, headers=login(client, email, password))
+
+    refused = snooze(other.email)
+    assert refused.status_code == 403
+    assert refused.json()["details"]["reason"] == "not_lead_owner"
+    assert snooze(owner.email).status_code == 200
+    assert snooze(admin.email).status_code == 200  # админ переносит срок отложенной передачи
+    assert snooze(other.email).status_code == 403
+
+
 async def test_lead_list_filters(
     client: TestClient, sessions: async_sessionmaker[AsyncSession]
 ) -> None:
@@ -194,7 +224,7 @@ async def test_channel_post_then_edit_after_take(
     )
     assert await service.sync(escalation.id)
     edit = bot.edits[-1]
-    assert "✅ Взял: ch" in edit["text"]
+    assert "✅ Забрал: ch" in edit["text"]
     assert edit["reply_markup"] is None
 
 

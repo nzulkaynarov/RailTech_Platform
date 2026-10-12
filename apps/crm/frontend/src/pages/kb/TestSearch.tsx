@@ -1,77 +1,98 @@
 import { useMutation } from "@tanstack/react-query";
-import { Alert, Card, Input, List, Select, Space, Tag, Typography } from "antd";
+import { Alert, Card, Flex, Input, List, Select, Space, Tag, Typography } from "antd";
 import { useState } from "react";
 
 import { kbTestSearch } from "../../api/generated/crm";
+import type { SearchResponse } from "../../api/generated/model";
 import { unwrap } from "../../api/http";
-import { t } from "../../i18n/ru";
+import { SectionError } from "../../components/PageState";
 import { languageOptions } from "../../domain/labels";
+import { t } from "../../i18n/ru";
+
+type Language = "ru" | "uz" | "en";
+
+function Result({ result }: { result: SearchResponse }) {
+  const score = `${result.best_score?.toFixed(2) ?? t.common.none} / ${String(result.min_score)}`;
+  return (
+    <>
+      <Alert
+        showIcon
+        type={result.confident ? "success" : "warning"}
+        message={`${result.confident ? t.kb.confident : t.kb.notConfident} · ${score}`}
+      />
+      <List
+        size="small"
+        dataSource={result.hits}
+        renderItem={(hit) => (
+          <List.Item>
+            <Space direction="vertical" size={0}>
+              <Space wrap>
+                <Typography.Text strong>{hit.document_title}</Typography.Text>
+                {hit.heading_path ? (
+                  <Typography.Text type="secondary">{hit.heading_path}</Typography.Text>
+                ) : null}
+                <Tag>
+                  {t.kb.similarity} {hit.similarity?.toFixed(2) ?? t.common.none}
+                </Tag>
+              </Space>
+              <Typography.Paragraph ellipsis={{ rows: 3, expandable: true }} className="m-0">
+                {hit.content}
+              </Typography.Paragraph>
+            </Space>
+          </List.Item>
+        )}
+      />
+    </>
+  );
+}
 
 /** «Что найдёт бот на этот вопрос» — тот же поиск и порог, что у диалогового агента. */
 export function TestSearch() {
-  const [language, setLanguage] = useState<"ru" | "uz" | "en" | undefined>();
+  const [language, setLanguage] = useState<Language | undefined>();
+  const [query, setQuery] = useState("");
   const search = useMutation({
-    mutationFn: async (query: string) =>
-      unwrap(await kbTestSearch({ query, language: language ?? null })),
+    mutationFn: async (q: string) =>
+      unwrap(await kbTestSearch({ query: q, language: language ?? null })),
   });
-  const result = search.data;
+  const run = (q: string) => {
+    setQuery(q.trim());
+    if (q.trim()) search.mutate(q.trim());
+  };
   return (
     <Card size="small" title={t.kb.testSearch}>
-      <Space.Compact style={{ width: "100%" }}>
-        <Select
-          allowClear
-          placeholder={t.kb.language}
-          style={{ width: 90 }}
-          value={language}
-          options={languageOptions()}
-          onChange={(v?: "ru" | "uz" | "en") => {
-            setLanguage(v);
-          }}
-        />
-        <Input.Search
-          enterButton
-          placeholder={t.kb.query}
-          loading={search.isPending}
-          onSearch={(q) => {
-            if (q.trim()) search.mutate(q.trim());
-          }}
-        />
-      </Space.Compact>
-      {result ? (
-        <>
-          <Alert
-            style={{ margin: "12px 0" }}
-            showIcon
-            type={result.confident ? "success" : "warning"}
-            message={`${result.confident ? t.kb.confident : t.kb.notConfident} · ${result.best_score?.toFixed(2) ?? "—"} / ${String(result.min_score)}`}
+      <Flex vertical gap="small">
+        <Typography.Text type="secondary">{t.kb.testSearchHint}</Typography.Text>
+        <Flex wrap gap="small">
+          <Select
+            allowClear
+            aria-label={t.kb.searchLanguage}
+            placeholder={t.kb.searchLanguage}
+            className="search-language"
+            value={language}
+            options={languageOptions()}
+            onChange={(v?: Language) => {
+              setLanguage(v);
+            }}
           />
-          <List
-            size="small"
-            dataSource={result.hits}
-            renderItem={(hit) => (
-              <List.Item>
-                <Space direction="vertical" size={0}>
-                  <Space wrap>
-                    <Typography.Text strong>{hit.document_title}</Typography.Text>
-                    {hit.heading_path ? (
-                      <Typography.Text type="secondary">{hit.heading_path}</Typography.Text>
-                    ) : null}
-                    <Tag>
-                      {t.kb.similarity} {hit.similarity?.toFixed(2) ?? "—"}
-                    </Tag>
-                  </Space>
-                  <Typography.Paragraph
-                    ellipsis={{ rows: 3, expandable: true }}
-                    style={{ margin: 0 }}
-                  >
-                    {hit.content}
-                  </Typography.Paragraph>
-                </Space>
-              </List.Item>
-            )}
+          <Input.Search
+            className="compact-input"
+            aria-label={t.kb.query}
+            enterButton
+            placeholder={t.kb.query}
+            loading={search.isPending}
+            onSearch={run}
           />
-        </>
-      ) : null}
+        </Flex>
+        {search.isError ? (
+          <SectionError
+            error={search.error}
+            onRetry={() => {
+              run(query);
+            }}
+          />
+        ) : null}
+        {search.data ? <Result result={search.data} /> : null}
+      </Flex>
     </Card>
   );
 }

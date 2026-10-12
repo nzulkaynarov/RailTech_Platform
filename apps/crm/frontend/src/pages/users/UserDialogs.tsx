@@ -28,7 +28,7 @@ export function CreateUserDialog({ open, saving, onCancel, onSubmit }: CreatePro
       onOk={() => {
         form.submit();
       }}
-      okText={t.actions.confirm}
+      okText={t.userAdmin.createOk}
       cancelText={t.actions.cancel}
       destroyOnHidden
     >
@@ -69,13 +69,13 @@ export function EditUserDialog({ user, saving, onCancel, onSubmit }: EditProps) 
   return (
     <Modal
       open={user !== null}
-      title={user?.email}
+      title={user ? t.userAdmin.editTitle.replace("{name}", user.full_name) : null}
       confirmLoading={saving}
       onCancel={onCancel}
       onOk={() => {
         form.submit();
       }}
-      okText={t.actions.confirm}
+      okText={t.common.save}
       cancelText={t.actions.cancel}
       destroyOnHidden
     >
@@ -100,7 +100,7 @@ export function EditUserDialog({ user, saving, onCancel, onSubmit }: EditProps) 
             <Select mode="multiple" options={ROLE_OPTIONS} />
           </Form.Item>
           <Form.Item name="tg_user_id" label={t.users.telegram}>
-            <InputNumber style={{ width: "100%" }} min={1} />
+            <InputNumber className="full-width" min={1} />
           </Form.Item>
           <Form.Item name="is_active" label={t.users.active} valuePropName="checked">
             <Switch />

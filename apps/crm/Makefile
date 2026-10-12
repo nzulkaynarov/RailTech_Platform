@@ -147,8 +147,8 @@ create-admin: ## Первый администратор: make create-admin emai
 	$(COMPOSE) run --rm api python -m app create-admin --email '$(email)' --name '$(or $(name),Администратор)'
 
 .PHONY: settings
-settings: ## Настройки: make settings key=notifications [value='{"channel_id": -100123}']
-	$(COMPOSE) run --rm --no-deps api python -m app settings '$(or $(key),all)' $(if $(value),'$(value)',)
+settings: ## Настройки: make settings key=notifications [value='{"channel_id": -100123}'] [reset=1]
+	$(COMPOSE) run --rm --no-deps api python -m app settings '$(or $(key),all)' $(if $(value),'$(value)',) $(if $(reset),--reset,)
 
 .PHONY: test-e2e-local
 test-e2e-local: ## E2E Playwright против запущенного стенда (BASE_URL=http://localhost)

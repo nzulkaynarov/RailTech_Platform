@@ -1,4 +1,4 @@
-"""Канал команды (SPEC §8.2, §9.1): пост-карточка эскалации, SLA, напоминания, сводка.
+"""Канал команды (SPEC §8.2, §9.1): пост-карточка передачи, SLA, напоминания, сводка.
 
 Пост всегда рендерится из текущего состояния БД — `sync` идемпотентен:
 нет поста → отправить, есть → отредактировать. Вызывается из воркера.
@@ -25,6 +25,7 @@ from app.models.auth import User
 from app.models.leads import Conversation, Lead, Message
 from app.models.qualification import Escalation
 from app.schemas.settings import AppSettings
+from app.services import channel_texts as tx
 from app.services.channel_card import TAKE_PREFIX, CardData, can_take, render
 from app.services.settings import SettingsService
 
@@ -87,7 +88,8 @@ class NotificationService:
                 return False
             row.sla_notified_at = datetime.now(UTC)
         await self.sync(escalation_id)
-        await self._remind(cfg, escalation_id, row.lead_id, "⏰ SLA: лид ждёт ответа")
+        text = tx.SLA_REMINDER.format(lead_id=row.lead_id, minutes=_waiting_minutes(row))
+        await self._remind(cfg, escalation_id, text)
         return True
 
     async def remind(self, escalation_id: int) -> bool:
@@ -96,7 +98,8 @@ class NotificationService:
             row = await session.get(Escalation, escalation_id)
         if row is None or row.status != "open":
             return False
-        await self._remind(cfg, escalation_id, row.lead_id, "🔔 Напоминание: лид всё ещё ждёт")
+        text = tx.REMINDER.format(lead_id=row.lead_id, minutes=_waiting_minutes(row))
+        await self._remind(cfg, escalation_id, text)
         return True
 
     async def digest(self) -> int:
@@ -114,21 +117,29 @@ class NotificationService:
         if self._bot is None or channel is None or not rows:
             return 0
         base = cfg.company.crm_base_url.rstrip("/")
-        lines = [f"📋 Открытые эскалации: {len(rows)}"]
-        lines += [f"• #{r.lead_id} · {r.priority} · {base}/leads/{r.lead_id}" for r in rows[:30]]
+        lines = [tx.DIGEST_TITLE.format(count=len(rows))]
+        lines += [
+            tx.DIGEST_LINE.format(
+                icon=tx.PRIORITY_ICON.get(r.priority, "•"),
+                lead_id=r.lead_id,
+                priority=tx.PRIORITY.get(r.priority, r.priority),
+                url=f"{base}/leads/{r.lead_id}",
+            )
+            for r in rows[:30]
+        ]
         await self._bot.send_message(
             channel, "\n".join(lines), link_preview_options=LinkPreviewOptions(is_disabled=True)
         )
         return len(rows)
 
-    async def _remind(self, cfg: AppSettings, escalation_id: int, lead_id: int, title: str) -> None:
+    async def _remind(self, cfg: AppSettings, escalation_id: int, title: str) -> None:
         channel = cfg.notifications.channel_id
         if self._bot is None or channel is None:
             return
         async with self._sessions() as session:
             row = await session.get(Escalation, escalation_id)
             duty = await _mentions(session, cfg.notifications.duty_user_ids)
-        text = f"{title} #{lead_id}" + (f"\n{duty}" if duty else "")
+        text = title + (f"\n{duty}" if duty else "")
         await self._bot.send_message(
             channel,
             text,
@@ -145,10 +156,10 @@ def _keyboard(card: CardData) -> InlineKeyboardMarkup | None:
     row: list[InlineKeyboardButton] = []
     if can_take(card):
         row.append(
-            InlineKeyboardButton(text="Забрать", callback_data=f"{TAKE_PREFIX}{card.lead_id}")
+            InlineKeyboardButton(text=tx.TAKE_BUTTON, callback_data=f"{TAKE_PREFIX}{card.lead_id}")
         )
     if card.crm_url.startswith("https://"):
-        row.append(InlineKeyboardButton(text="Открыть в CRM", url=card.crm_url))
+        row.append(InlineKeyboardButton(text=tx.OPEN_BUTTON, url=card.crm_url))
     return InlineKeyboardMarkup(inline_keyboard=[row]) if row else None
 
 
@@ -188,8 +199,14 @@ async def _load(
         last_lead_message=await _last_lead_text(session, lead.id),
         crm_url=f"{cfg.company.crm_base_url.rstrip('/')}/leads/{lead.id}",
         timezone=cfg.business_hours.timezone,
+        kb_gap_streak=cfg.escalation.kb_gap_streak,
     )
     return escalation, card
+
+
+def _waiting_minutes(escalation: Escalation) -> int:
+    """Сколько лид ждёт с момента передачи — в напоминании вместо «всё ещё ждёт»."""
+    return max(0, int((datetime.now(UTC) - escalation.created_at).total_seconds() // 60))
 
 
 async def _last_lead_text(session: AsyncSession, lead_id: int) -> str | None:

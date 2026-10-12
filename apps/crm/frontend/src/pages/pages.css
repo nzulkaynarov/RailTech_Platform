@@ -1,22 +1,23 @@
+/* Раскладка страниц. Цвета и отступы — токены темы (`--ant-*`, app/theme.ts, cssVar). */
 .page-center {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
-  background: #f5f5f5;
+  padding: var(--ant-padding);
+  background: var(--ant-color-bg-layout);
 }
 .auth-card {
   width: 100%;
   max-width: 380px;
 }
 .auth-alert {
-  margin-bottom: 16px;
+  margin-bottom: var(--ant-margin);
 }
 .lead-grid {
   display: grid;
   grid-template-columns: minmax(240px, 1fr) minmax(320px, 2fr) minmax(240px, 1fr);
-  gap: 16px;
+  gap: var(--ant-margin);
   align-items: start;
 }
 @media (max-width: 1100px) {
@@ -27,15 +28,49 @@
 .inbox-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 16px;
+  gap: var(--ant-margin);
 }
 .filters {
-  margin-bottom: 16px;
+  margin-bottom: var(--ant-margin);
 }
+/* PageHeader без внешнего отступа: расстояние до контента задаёт PageBody (единый ритм 16 px).
+   Переходное правило: страницы, ещё не обёрнутые в PageBody (заголовок — прямой потомок
+   контента), сохраняют отступ 16 px; внутри PageBody и Space-обёрток — 0 (было 32 px).
+   Убрать вместе с последней страницей без PageBody. */
 .page-header {
-  margin-bottom: 16px;
+  margin: 0;
+}
+:not(.page-body):not(.ant-space-item) > .page-header {
+  margin-bottom: var(--ant-margin);
 }
 .page-back {
   display: inline-block;
-  margin-bottom: 8px;
+  margin-bottom: var(--ant-margin-xs);
+}
+/* h1 страницы визуально — размер h4 (иерархия заголовков WCAG 1.3.1 без смены вида). */
+h1.page-title.ant-typography {
+  margin: 0;
+  font-size: var(--ant-font-size-heading-4);
+  line-height: var(--ant-line-height-heading-4);
+}
+.page-body {
+  width: 100%;
+}
+.app-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ant-margin-xs);
+  color: var(--ant-color-text-heading);
+  font-weight: 700;
+  font-size: var(--ant-font-size-lg);
+  text-decoration: none;
+}
+/* h1 внутри antd Result — оформление заголовка Result, а не браузерного h1. */
+.result-heading {
+  margin: 0;
+  font: inherit;
+  color: inherit;
+}
+h1.page-title.auth-title {
+  margin-bottom: var(--ant-margin);
 }

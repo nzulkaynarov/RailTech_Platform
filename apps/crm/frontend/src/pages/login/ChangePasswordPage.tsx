@@ -1,12 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Alert, App as AntApp, Button, Card, Form, Input, Typography } from "antd";
+import { Alert, App as AntApp, Button, Card, Flex, Form, Input, Typography } from "antd";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 
 import { changePassword } from "../../api/generated/crm";
-import type { ApiError } from "../../api/http";
 import { refreshAccess } from "../../api/http";
-import { errorText, t } from "../../i18n/ru";
+import { apiErrorMessage } from "../../hooks/useApiErrorToast";
+import { t } from "../../i18n/ru";
 import { passwordChange } from "../../app/providers/auth";
 import "../pages.css";
 
@@ -18,6 +18,8 @@ export function ChangePasswordPage() {
   const { message } = AntApp.useApp();
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // Принудительная смена временного пароля или добровольная — из профиля (можно отменить).
+  const [forced] = useState(() => passwordChange.required);
 
   const submit = async (values: Values) => {
     setSaving(true);
@@ -32,16 +34,18 @@ export function ChangePasswordPage() {
       void message.success(t.auth.changed);
       void navigate("/");
     } catch (e) {
-      setError(errorText((e as ApiError).code, (e as ApiError).message));
+      setError(apiErrorMessage(e));
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="page-center">
+    <main className="page-center">
       <Card className="auth-card">
-        <Typography.Title level={4}>{t.auth.changeTitle}</Typography.Title>
+        <Typography.Title level={1} className="page-title auth-title">
+          {forced ? t.auth.changeTitle : t.page.changePassword}
+        </Typography.Title>
         <Typography.Paragraph type="secondary">{t.auth.changeHint}</Typography.Paragraph>
         {error ? <Alert type="error" showIcon message={error} className="auth-alert" /> : null}
         <Form<Values> layout="vertical" onFinish={(v) => void submit(v)}>
@@ -67,11 +71,23 @@ export function ChangePasswordPage() {
           >
             <Input.Password autoComplete="new-password" />
           </Form.Item>
-          <Button type="primary" htmlType="submit" block loading={saving}>
-            {t.auth.save}
-          </Button>
+          <Flex vertical gap="small">
+            <Button type="primary" htmlType="submit" block loading={saving}>
+              {t.auth.save}
+            </Button>
+            {forced ? null : (
+              <Button
+                block
+                onClick={() => {
+                  void navigate(-1);
+                }}
+              >
+                {t.actions.cancel}
+              </Button>
+            )}
+          </Flex>
         </Form>
       </Card>
-    </div>
+    </main>
   );
 }

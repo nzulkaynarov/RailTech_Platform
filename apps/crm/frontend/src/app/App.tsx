@@ -2,7 +2,6 @@ import {
   AuditOutlined,
   BookOutlined,
   DashboardOutlined,
-  InboxOutlined,
   QuestionCircleOutlined,
   SettingOutlined,
   ShopOutlined,
@@ -11,8 +10,8 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import { Authenticated, Refine } from "@refinedev/core";
-import { ThemedLayout, ThemedTitle, useNotificationProvider } from "@refinedev/antd";
-import routerProvider, { CatchAllNavigate } from "@refinedev/react-router";
+import { ThemedLayout, useNotificationProvider } from "@refinedev/antd";
+import routerProvider, { CatchAllNavigate, DocumentTitleHandler } from "@refinedev/react-router";
 import { QueryClient } from "@tanstack/react-query";
 import { App as AntApp, ConfigProvider } from "antd";
 import ruRU from "antd/es/locale/ru_RU";
@@ -24,6 +23,7 @@ import { ClientDetailPage } from "../pages/clients/ClientDetailPage";
 import { ClientsPage } from "../pages/clients/ClientsPage";
 import { DashboardPage } from "../pages/dashboard/DashboardPage";
 import { GapsPage } from "../pages/gaps/GapsPage";
+import { InboxNavIcon } from "../components/InboxNavIcon";
 import { InboxPage } from "../pages/inbox/InboxPage";
 import { HomeRedirect } from "./HomeRedirect";
 import { KbPage } from "../pages/kb/KbPage";
@@ -35,19 +35,23 @@ import { LoginPage } from "../pages/login/LoginPage";
 import { ProfilePage } from "../pages/profile/ProfilePage";
 import { UsersPage } from "../pages/users/UsersPage";
 import { t } from "../i18n/ru";
+import { AppTitle } from "./AppTitle";
+import { documentTitle } from "./documentTitle";
 import { Header } from "./Header";
+import { ensureLiveRegion } from "./liveRegion";
 import { NotFound, RouteGuard } from "./RouteGuard";
 import { accessControlProvider } from "./providers/access";
 import { authProvider } from "./providers/auth";
 import { dataProvider } from "./providers/data";
 import { i18nProvider } from "./providers/i18n";
+import { appTheme } from "./theme";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: true, staleTime: 5_000 } },
 });
 
 const resources = [
-  { name: "inbox", list: "/inbox", meta: { label: t.nav.inbox, icon: <InboxOutlined /> } },
+  { name: "inbox", list: "/inbox", meta: { label: t.nav.inbox, icon: <InboxNavIcon /> } },
   {
     name: "leads",
     list: "/leads",
@@ -77,15 +81,17 @@ const resources = [
   { name: "profile", list: "/profile", meta: { label: t.nav.profile, icon: <UserOutlined /> } },
 ];
 
+/** Тосты в постоянном live-регионе — озвучиваются скринридером (WCAG 4.1.3). */
+const messageConfig = { getContainer: ensureLiveRegion };
+
 function Shell() {
   return (
     <Authenticated key="shell" fallback={<CatchAllNavigate to="/login" />}>
-      <ThemedLayout
-        Header={Header}
-        Title={(props) => <ThemedTitle {...props} text={t.app.title} />}
-      >
-        <Outlet />
-      </ThemedLayout>
+      <div className="app-shell">
+        <ThemedLayout Header={Header} Title={AppTitle}>
+          <Outlet />
+        </ThemedLayout>
+      </div>
     </Authenticated>
   );
 }
@@ -93,8 +99,8 @@ function Shell() {
 export function App() {
   return (
     <BrowserRouter>
-      <ConfigProvider locale={ruRU}>
-        <AntApp>
+      <ConfigProvider locale={ruRU} theme={appTheme}>
+        <AntApp message={messageConfig}>
           <Refine
             routerProvider={routerProvider}
             dataProvider={dataProvider}
@@ -109,6 +115,7 @@ export function App() {
               syncWithLocation: false,
             }}
           >
+            <DocumentTitleHandler handler={documentTitle} />
             <Routes>
               <Route element={<Shell />}>
                 <Route index element={<HomeRedirect />} />

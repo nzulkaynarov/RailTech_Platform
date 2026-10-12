@@ -15,6 +15,7 @@ from app.domain.errors import (
     ForbiddenError,
     InvalidTransitionError,
     NotFoundError,
+    Reason,
     ValidationFailedError,
 )
 from app.domain.stages import OwnerMode, Stage, TransitionSource
@@ -67,7 +68,11 @@ class ClientService:
             if owner is not None:
                 user = await session.get(User, owner)
                 if user is None or not user.is_active:
-                    raise ValidationFailedError("choose an active user", field="owner_user_id")
+                    raise ValidationFailedError(
+                        "choose an active user",
+                        reason=Reason.INACTIVE_COLLEAGUE,
+                        field="owner_user_id",
+                    )
             before, after = {}, {}
             for field, value in changes.items():
                 if value is None and field not in CLEARABLE:
@@ -92,7 +97,10 @@ class ClientService:
             await _client(session, client_id)
             identity = await _identity(session, tg_user_id)
             if identity.client_id not in (None, client_id):
-                raise ConflictError("telegram account is linked to another client")
+                raise ConflictError(
+                    "telegram account is linked to another client",
+                    reason=Reason.TELEGRAM_LINKED_ELSEWHERE,
+                )
             identity.client_id = client_id
             identity.verified_by_user_id = who.user_id
             identity.verified_at = datetime.now(UTC)
@@ -141,9 +149,13 @@ class ClientService:
             if lead is None or lead.erased_at is not None:
                 raise NotFoundError("lead not found")
             if lead.stage not in (Stage.WON, Stage.CUSTOMER):
-                raise InvalidTransitionError("close the deal (won) first")
+                raise InvalidTransitionError(
+                    "close the deal (won) first", reason=Reason.DEAL_NOT_CLOSED
+                )
             if lead.assigned_user_id not in (None, who.user_id) and not who.is_admin:
-                raise ForbiddenError("only the lead owner or an admin can do this")
+                raise ForbiddenError(
+                    "only the lead owner or an admin can do this", reason=Reason.NOT_LEAD_OWNER
+                )
             if client_id is None:
                 client = Client(name=(new_name or "").strip(), owner_user_id=who.user_id)
                 session.add(client)
@@ -183,7 +195,9 @@ class ClientService:
             if row is None:
                 raise NotFoundError("service request not found")
             if row.status != "open":
-                raise ConflictError("service request is already closed")
+                raise ConflictError(
+                    "service request is already closed", reason=Reason.SERVICE_REQUEST_CLOSED
+                )
             row.status, row.closed_by = "closed", who.user_id
             row.resolution, row.closed_at = resolution.strip(), now
             lead = await session.get(Lead, row.lead_id) if row.lead_id else None
@@ -237,7 +251,9 @@ async def _bind_identities(
     for identity in identities:
         if identity.client_id is not None and identity.client_id != client_id:
             raise ConflictError(
-                "telegram account is linked to another client", client_id=identity.client_id
+                "telegram account is linked to another client",
+                reason=Reason.TELEGRAM_LINKED_ELSEWHERE,
+                client_id=identity.client_id,
             )
     for identity in identities:
         identity.client_id = client_id
@@ -260,5 +276,7 @@ async def _identity(session: AsyncSession, tg_user_id: int) -> TelegramIdentity:
         )
     ).first()
     if identity is None:
-        raise NotFoundError("telegram account has never written to the bot")
+        raise NotFoundError(
+            "telegram account has never written to the bot", reason=Reason.TELEGRAM_UNKNOWN
+        )
     return identity

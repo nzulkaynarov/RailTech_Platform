@@ -34,9 +34,12 @@ export function LoginPage() {
   };
 
   return (
-    <div className="page-center">
+    <main className="page-center">
       <Card className="auth-card">
-        <Typography.Title level={3}>{t.auth.title}</Typography.Title>
+        <Typography.Text type="secondary">{t.app.title}</Typography.Text>
+        <Typography.Title level={1} className="page-title auth-title">
+          {t.auth.title}
+        </Typography.Title>
         {error ? <Alert type="error" showIcon message={error} className="auth-alert" /> : null}
         <Form<Values> layout="vertical" onFinish={(values) => void submit(values)}>
           <Form.Item name="email" label={t.auth.email} rules={[{ required: true, type: "email" }]}>
@@ -50,6 +53,6 @@ export function LoginPage() {
           </Button>
         </Form>
       </Card>
-    </div>
+    </main>
   );
 }

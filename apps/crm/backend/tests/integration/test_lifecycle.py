@@ -144,7 +144,7 @@ async def test_waiting_lead_is_acknowledged_without_model_once_per_interval(
     first = await svc.handle_message(msg("Ау, есть кто?"))
     second = await svc.handle_message(msg("Жду ответа"))
 
-    assert [o.text for o in first] == ["Ваше сообщение передано коллеге, он скоро ответит."]
+    assert [o.text for o in first] == ["Ваше сообщение передано менеджеру, он скоро ответит."]
     assert second == []
     assert model.requests == []
 

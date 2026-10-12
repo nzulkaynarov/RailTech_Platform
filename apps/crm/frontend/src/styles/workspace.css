@@ -1,0 +1,46 @@
+/* Рабочее место менеджера: входящие, список и карточка лида (дизайн-аудит 2026-10-11, волна B).
+   Цвета и отступы — только токены темы (`--ant-*`). */
+
+/* Цели касания ≥ 44 px на телефоне (WCAG 2.5.5, отчёт 2). */
+@media (max-width: 575px) {
+  .touch-target.ant-btn,
+  .lead-actions .ant-btn {
+    min-height: 44px;
+  }
+}
+
+/* Шапка карточки лида: стадия и ответственный рядом с именем. */
+.lead-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ant-margin-xs);
+  margin-top: var(--ant-margin-xs);
+}
+
+.lead-banner {
+  margin-top: var(--ant-margin-sm);
+}
+
+/* Входящие: строка передачи — имя и приоритет, ниже причина · стадия · ожидание. */
+.inbox-item-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ant-margin-xs);
+}
+.inbox-hot {
+  border-inline-start: 3px solid var(--ant-color-error);
+  padding-inline-start: var(--ant-padding-xs);
+}
+
+/* Список лидов карточками на телефоне. */
+.lead-card-list .ant-list-item {
+  display: block;
+}
+.lead-card-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ant-margin-xs);
+}

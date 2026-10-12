@@ -24,9 +24,13 @@ export function tashkent(value: Input): Dayjs {
   return dayjs(value).tz(TIMEZONE);
 }
 
-export const formatDate = (value: Input): string => tashkent(value).format("DD.MM.YYYY");
+/** Форматы дат — для `format(...)` и `DatePicker format=...` (единые на всех экранах). */
+export const DATE_FORMAT = "DD.MM.YYYY";
+export const DATETIME_FORMAT = "DD.MM.YYYY HH:mm";
 
-export const formatDateTime = (value: Input): string => tashkent(value).format("DD.MM.YYYY HH:mm");
+export const formatDate = (value: Input): string => tashkent(value).format(DATE_FORMAT);
+
+export const formatDateTime = (value: Input): string => tashkent(value).format(DATETIME_FORMAT);
 
 /** Компактно для лент: сегодня — только время, в этом году — без года, иначе полностью. */
 export function formatWhen(value: Input, now: Input = new Date()): string {
@@ -34,7 +38,7 @@ export function formatWhen(value: Input, now: Input = new Date()): string {
   const today = tashkent(now);
   if (at.isSame(today, "day")) return at.format("HH:mm");
   if (at.isSame(today, "year")) return at.format("DD.MM HH:mm");
-  return at.format("DD.MM.YYYY HH:mm");
+  return at.format(DATETIME_FORMAT);
 }
 
 export const fromNow = (value: Input, now: Input = new Date()): string =>

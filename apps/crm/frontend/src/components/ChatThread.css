@@ -1,47 +1,70 @@
+/* Цвета, размеры и тени — только токены темы (`--ant-*`, app/theme.ts, cssVar). */
 .chat-thread {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--ant-margin-sm);
   height: 100%;
 }
 .chat-list {
   flex: 1;
   overflow-y: auto;
   max-height: 60vh;
-  padding: 8px;
-  background: #fafafa;
-  border-radius: 8px;
+  padding: var(--ant-padding-xs);
+  background: var(--ant-color-fill-quaternary);
+  border-radius: var(--ant-border-radius-lg);
 }
 .chat-row {
   display: flex;
-  margin: 6px 0;
+  margin: var(--ant-margin-xs) 0;
 }
 .chat-own {
   justify-content: flex-end;
 }
 .chat-bubble {
   max-width: 80%;
-  padding: 8px 12px;
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  padding: var(--ant-padding-xs) var(--ant-padding-sm);
+  border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-bg-container);
+  box-shadow: var(--ant-box-shadow-tertiary);
 }
 .chat-bot {
-  background: #e6f4ff;
+  background: var(--ant-color-primary-bg);
 }
 .chat-manager {
-  background: #f6ffed;
+  background: var(--ant-color-success-bg);
 }
 .chat-system {
-  background: #fff7e6;
+  background: var(--ant-color-warning-bg);
 }
 .chat-meta {
-  font-size: 12px;
+  font-size: var(--ant-font-size-sm);
 }
 .chat-text {
   white-space: pre-wrap;
   word-break: break-word;
 }
 .chat-reply {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ant-margin-xxs);
   width: 100%;
+}
+.chat-reply-row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--ant-margin-xs);
+}
+/* Телефон: без вложенной прокрутки — лента растёт со страницей, поле ответа закреплено внизу. */
+@media (max-width: 767px) {
+  .chat-list {
+    max-height: none;
+    overflow-y: visible;
+  }
+  .chat-reply {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    padding: var(--ant-padding-xs) 0;
+    background: var(--ant-color-bg-layout);
+  }
 }

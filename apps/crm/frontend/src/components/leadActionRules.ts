@@ -1,3 +1,8 @@
+/**
+ * Какие действия доступны в карточке лида и какое из них главное (дизайн-аудит 2026-10-11,
+ * отчёт 1/2): одно primary по состоянию, остальное — в меню «Ещё», чужой лид — баннер
+ * вместо неактивных кнопок. Это только UI: права всё равно проверяет бэкенд.
+ */
 import type { LeadDetail } from "../api/generated/model";
 import { ownerModeLabel } from "../domain/labels";
 import { t } from "../i18n/ru";
@@ -12,60 +17,113 @@ export type ActionRights = {
   isAdmin: boolean;
 };
 
-/** Показывать ли кнопку и почему она неактивна (аудит UI U-03: не прятать молча). */
-export type ActionState = { visible: boolean; reason?: string };
-
 export type ActionKey =
-  "take" | "returnToBot" | "snooze" | "close" | "assign" | "newDeal" | "note" | "makeCustomer";
+  | "take"
+  | "takeOver"
+  | "won"
+  | "lost"
+  | "snooze"
+  | "returnToBot"
+  | "assign"
+  | "newDeal"
+  | "makeCustomer"
+  | "note";
 
-const PRE_WORK = new Set(["new", "engaged", "qualified", "handoff", "unresponsive"]);
-const hidden: ActionState = { visible: false };
-const shown: ActionState = { visible: true };
-const blocked = (reason: string): ActionState => ({ visible: true, reason });
+/** Порядок пунктов в «Ещё»: сначала работа с лидом, опасное и редкое — внизу. */
+export const ACTION_ORDER: readonly ActionKey[] = [
+  "take",
+  "won",
+  "makeCustomer",
+  "newDeal",
+  "note",
+  "snooze",
+  "assign",
+  "returnToBot",
+  "lost",
+  "takeOver",
+];
+
+/** Опасные действия: красный пункт меню и подтверждение. */
+export const DANGER_ACTIONS: ReadonlySet<ActionKey> = new Set(["lost", "takeOver"]);
+
+export type ActionPlan = {
+  /** Главное действие по состоянию лида (кнопка primary) или `null`. */
+  primary: ActionKey | null;
+  /** Остальные доступные действия — в меню «Ещё». */
+  more: ActionKey[];
+  /** Лида ведёт другой человек — один баннер вместо серых кнопок. */
+  ownerBanner: { name: string; hint: boolean } | null;
+};
 
 const ownerName = (lead: LeadDetail): string => lead.assigned_user_name ?? ownerModeLabel("human");
-const otherOwner = (lead: LeadDetail): string =>
-  t.why.otherOwner.replace("{name}", ownerName(lead));
 
-/** Ведёт ли лида другой человек (а я не админ) — тогда владельческие действия заблокированы. */
+/** Лида ведёт другой человек (не я) — независимо от роли. */
+const ownedByOther = (lead: LeadDetail, rights: ActionRights): boolean =>
+  lead.owner_mode === "human" && lead.assigned_user_id !== rights.userId;
+
+/** Ведёт ли лида другой человек, а я не админ — тогда владельческие действия недоступны. */
 function foreign(lead: LeadDetail, rights: ActionRights): boolean {
-  return lead.owner_mode === "human" && lead.assigned_user_id !== rights.userId && !rights.isAdmin;
+  return ownedByOther(lead, rights) && !rights.isAdmin;
 }
 
-/** Состояние каждого действия для лида (UI; права всё равно проверит бэкенд). */
-export function leadActionStates(
+/** Ждёт ли лид менеджера: открытая передача или бот на паузе. */
+const waitsForManager = (lead: LeadDetail): boolean =>
+  lead.escalation?.status === "open" || lead.owner_mode === "paused";
+
+/** Доступность каждого действия (UI; права всё равно проверит бэкенд). */
+export function availableActions(
   lead: LeadDetail,
   rights: ActionRights,
-): Record<ActionKey, ActionState> {
+): Record<ActionKey, boolean> {
   const mine = lead.owner_mode === "human" && lead.assigned_user_id === rights.userId;
   const human = lead.owner_mode === "human";
-  const other = foreign(lead, rights);
-  const ownerOnly = (visible: boolean): ActionState =>
-    !visible ? hidden : other ? blocked(otherOwner(lead)) : shown;
+  const other = ownedByOther(lead, rights);
+  const canOwn = !foreign(lead, rights);
+  const responsible = lead.assigned_user_id;
   return {
     // «Забрать» и из «Отказа»: вернувшегося лида снова берут в работу (ADR-0015).
-    take: !rights.take || mine ? hidden : other ? blocked(otherOwner(lead)) : shown,
-    returnToBot: ownerOnly(rights.work && lead.owner_mode !== "bot"),
-    snooze: rights.work && lead.escalation?.status === "open" ? shown : hidden,
-    close:
-      rights.work && lead.stage === "in_progress"
-        ? ownerOnly(true)
-        : rights.work && PRE_WORK.has(lead.stage)
-          ? blocked(t.why.takeFirst)
-          : hidden,
-    assign: ownerOnly(rights.work && human),
-    newDeal: rights.work && lead.stage === "customer" && !human ? shown : hidden,
-    note: rights.note ? shown : hidden,
-    makeCustomer: rights.clients && lead.stage === "won" ? shown : hidden,
+    take: rights.take && !mine && !other,
+    takeOver: rights.take && rights.isAdmin && other && responsible !== null,
+    won: rights.work && lead.stage === "in_progress" && canOwn,
+    lost: rights.work && lead.stage === "in_progress" && canOwn,
+    // Q-018: общая очередь; у лида есть ответственный — только он или админ.
+    snooze:
+      rights.take &&
+      lead.escalation?.status === "open" &&
+      (responsible === null || responsible === rights.userId || rights.isAdmin),
+    returnToBot: rights.work && lead.owner_mode !== "bot" && canOwn,
+    assign: rights.work && human && canOwn,
+    newDeal: rights.work && lead.stage === "customer" && !human,
+    makeCustomer: Boolean(rights.clients) && lead.stage === "won",
+    note: rights.note,
   };
 }
 
-/** Совместимость: «можно нажать» = видно и не заблокировано. */
-export function availableActions(lead: LeadDetail, rights: ActionRights) {
-  const states = leadActionStates(lead, rights);
-  return Object.fromEntries(
-    Object.entries(states).map(([key, s]) => [key, s.visible && !s.reason]),
-  ) as Record<ActionKey, boolean>;
+/** Главное действие: свой лид в работе → «Закрыть сделкой», ждёт менеджера → «Забрать». */
+function primaryAction(
+  lead: LeadDetail,
+  rights: ActionRights,
+  can: Record<ActionKey, boolean>,
+): ActionKey | null {
+  if (ownedByOther(lead, rights)) return null;
+  if (can.makeCustomer) return "makeCustomer";
+  if (can.won) return "won";
+  if (can.take && waitsForManager(lead)) return "take";
+  if (can.newDeal) return "newDeal";
+  return null;
+}
+
+/** План панели действий: primary, «Ещё» и баннер «Лида ведёт …». */
+export function leadActionPlan(lead: LeadDetail, rights: ActionRights): ActionPlan {
+  const can = availableActions(lead, rights);
+  const primary = primaryAction(lead, rights, can);
+  const more = ACTION_ORDER.filter((key) => can[key] && key !== primary);
+  const other = ownedByOther(lead, rights);
+  return {
+    primary,
+    more,
+    ownerBanner: other ? { name: ownerName(lead), hint: !rights.isAdmin } : null,
+  };
 }
 
 /** Может ли пользователь ответить лиду, а если нет — понятная причина под чатом. */
@@ -74,13 +132,9 @@ export function replyState(lead: LeadDetail, rights: ActionRights): { can: boole
   if (foreign(lead, rights)) {
     return { can: false, hint: t.why.replyOther.replace("{name}", ownerName(lead)) };
   }
-  if (lead.owner_mode !== "human") return { can: false, hint: t.why.replyTake };
+  if (lead.owner_mode !== "human") {
+    const can = availableActions(lead, rights);
+    return { can: false, hint: can.take ? t.why.replyTake : t.why.replyBot };
+  }
   return { can: true, hint: "" };
 }
-
-/** Админ забирает лида у другого менеджера — это перехват, его подтверждают. */
-export const isTakeover = (lead: LeadDetail, rights: ActionRights): boolean =>
-  rights.isAdmin &&
-  lead.owner_mode === "human" &&
-  lead.assigned_user_id !== null &&
-  lead.assigned_user_id !== rights.userId;

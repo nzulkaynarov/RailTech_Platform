@@ -1,15 +1,52 @@
-"""Исключения домена. API переводит их в HTTP одним обработчиком (`api/errors.py`)."""
+"""Исключения домена. API переводит их в HTTP одним обработчиком (`api/errors.py`).
+
+Тело ошибки: `{"code", "message", "details"}`. `code` — класс ошибки (`conflict`,
+`validation_failed`, …); `details.reason` — стабильный подкод конкретного случая
+(`Reason`), `details.field` — поле формы. `message` — для логов, не для показа.
+"""
+
+from enum import StrEnum
+
+
+class Reason(StrEnum):
+    """Подкоды `details.reason` — контракт с фронтом: значения не переименовывать."""
+
+    EMAIL_TAKEN = "email_taken"
+    INVALID_EMAIL = "invalid_email"
+    TELEGRAM_TAKEN = "telegram_taken"
+    TELEGRAM_LINKED_ELSEWHERE = "telegram_linked_elsewhere"
+    TELEGRAM_UNKNOWN = "telegram_unknown"
+    WRONG_PASSWORD = "wrong_password"  # noqa: S105 — подкод ошибки, не секрет
+    SAME_PASSWORD = "same_password"  # noqa: S105 — подкод ошибки, не секрет
+    WEAK_PASSWORD = "weak_password"  # noqa: S105 — подкод ошибки, не секрет
+    INACTIVE_COLLEAGUE = "inactive_colleague"
+    LEAD_TAKEN = "lead_taken"
+    TAKE_FIRST = "take_first"
+    DEAL_NOT_CLOSED = "deal_not_closed"
+    NOT_LEAD_OWNER = "not_lead_owner"
+    ALREADY_WITH_BOT = "already_with_bot"
+    NO_OPEN_HANDOFF = "no_open_handoff"
+    SNOOZE_RANGE = "snooze_range"
+    SERVICE_REQUEST_CLOSED = "service_request_closed"
+    FILE_TOO_LARGE = "file_too_large"
+    FILE_EMPTY = "file_empty"
+    FILE_TYPE = "file_type"
+    DOCUMENT_INDEXING = "document_indexing"
 
 
 class DomainError(Exception):
-    """Базовое исключение; `code` — машинно-читаемый код для фронта."""
+    """Базовое исключение; `code` — машинно-читаемый код для фронта, `reason` — подкод."""
 
     code = "domain_error"
 
-    def __init__(self, message: str = "", **details: object) -> None:
+    def __init__(
+        self, message: str = "", *, reason: Reason | None = None, **details: object
+    ) -> None:
         super().__init__(message or self.code)
         self.message = message or self.code
-        self.details = details
+        self.details: dict[str, object] = (
+            {"reason": reason.value, **details} if reason is not None else details
+        )
 
 
 class NotFoundError(DomainError):

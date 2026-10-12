@@ -4,13 +4,15 @@ import { Link } from "react-router";
 import type { LeadDetail } from "../../api/generated/model";
 import { useNotes } from "../../api/queries";
 import { EscalationReason } from "../../components/EscalationReason";
-import { Owner } from "../../components/Owner";
-import { LangTag, StageBadge } from "../../components/StageBadge";
-import { QUALIFICATION_KEYS, qualificationText } from "../../domain/labels";
+import { SectionError } from "../../components/PageState";
+import { LangTag } from "../../components/StageBadge";
+import { productLabel, QUALIFICATION_KEYS, qualificationText } from "../../domain/labels";
+import { useProductNames } from "../../hooks/useProductNames";
 import { t } from "../../i18n/ru";
 import { formatDate, formatWhen } from "../../lib/time";
 
 function Qualification({ lead }: { lead: LeadDetail }) {
+  const productName = useProductNames();
   const q = lead.qualification as Record<string, unknown>;
   const keys = QUALIFICATION_KEYS.filter((k) => q[k]);
   if (!keys.length && !lead.product_interest.length) return null;
@@ -22,8 +24,8 @@ function Qualification({ lead }: { lead: LeadDetail }) {
           <Tag key={k}>{qualificationText(k, q[k])}</Tag>
         ))}
         {lead.product_interest.map((p) => (
-          <Tag color="blue" key={p}>
-            {p}
+          <Tag color={productLabel(p).color} key={p}>
+            {productName(p)}
           </Tag>
         ))}
       </div>
@@ -35,13 +37,7 @@ export function LeadSummary({ lead }: { lead: LeadDetail }) {
   return (
     <Card size="small" title={t.lead.summary}>
       <Descriptions column={1} size="small">
-        <Descriptions.Item label={t.leads.stage}>
-          <StageBadge stage={lead.stage} />
-        </Descriptions.Item>
         <Descriptions.Item label={t.leads.score}>{lead.score}</Descriptions.Item>
-        <Descriptions.Item label={t.leads.owner}>
-          <Owner lead={lead} />
-        </Descriptions.Item>
         {lead.client_id ? (
           <Descriptions.Item label={t.lead.client}>
             <Link to={`/clients/${String(lead.client_id)}`}>{t.lead.openClient}</Link>
@@ -74,7 +70,18 @@ export function LeadSummary({ lead }: { lead: LeadDetail }) {
 }
 
 export function LeadNotes({ leadId }: { leadId: number }) {
-  const { data } = useNotes(leadId);
+  const notes = useNotes(leadId);
+  const data = notes.data;
+  if (notes.isError) {
+    return (
+      <SectionError
+        error={notes.error}
+        onRetry={() => {
+          void notes.refetch();
+        }}
+      />
+    );
+  }
   if (!data?.length) return null;
   return (
     <Card size="small" title={t.lead.notes}>

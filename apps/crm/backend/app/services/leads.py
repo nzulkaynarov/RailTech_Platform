@@ -20,8 +20,10 @@ from app.domain.errors import (
     ForbiddenError,
     InvalidTransitionError,
     NotFoundError,
+    Reason,
     ValidationFailedError,
 )
+from app.domain.lead_access import may_snooze
 from app.domain.stage_machine import stage_before_handoff
 from app.domain.stages import OwnerMode, Stage, TransitionSource
 from app.models.leads import Lead, LeadNote
@@ -79,7 +81,12 @@ class LeadService:
                 and lead.assigned_user_id is not None
                 and not who.is_admin
             ):
-                raise ConflictError("lead is already taken", assigned_user_id=lead.assigned_user_id)
+                raise ConflictError(
+                    "lead is already taken",
+                    reason=Reason.LEAD_TAKEN,
+                    assigned_user_id=lead.assigned_user_id,
+                    assigned_user_name=await _user_name(session, lead.assigned_user_id),
+                )
             before = _snapshot(lead)
             # Из «Отказа» — снова в работу (ADR-0015); клиента и «Сделку» берут без смены стадии.
             if lead.stage not in (Stage.IN_PROGRESS, Stage.WON, Stage.CUSTOMER):
@@ -103,7 +110,9 @@ class LeadService:
             lead = await _lead(session, lead_id)
             _require_owner(lead, who)
             if lead.owner_mode == OwnerMode.BOT:
-                raise ConflictError("lead is already handled by the bot")
+                raise ConflictError(
+                    "lead is already handled by the bot", reason=Reason.ALREADY_WITH_BOT
+                )
             before = _snapshot(lead)
             if lead.stage in (Stage.HANDOFF, Stage.IN_PROGRESS):
                 target = stage_before_handoff(await _history(session, lead_id))
@@ -147,12 +156,18 @@ class LeadService:
         async with self._sessions() as session, session.begin():
             lead = await _lead(session, lead_id)
             if lead.owner_mode != OwnerMode.HUMAN:
-                raise ConflictError("take the lead before handing it over")
+                raise ConflictError(
+                    "take the lead before handing it over", reason=Reason.TAKE_FIRST
+                )
             _require_owner(lead, who)
             target = await users_repo.get(session, user_id)
             roles = await users_repo.roles_of(session, user_id) if target else []
             if target is None or not target.is_active or not {"manager", "admin"} & set(roles):
-                raise ValidationFailedError("choose an active manager", field="user_id")
+                raise ValidationFailedError(
+                    "choose an active manager",
+                    reason=Reason.INACTIVE_COLLEAGUE,
+                    field="user_id",
+                )
             before = _snapshot(lead)
             lead.assigned_user_id = user_id
             changed = await self._finish(session, who, lead, "lead.assign", before, None)
@@ -165,12 +180,23 @@ class LeadService:
     async def snooze(self, who: Principal, lead_id: int, until: datetime) -> None:
         now = datetime.now(UTC)
         if until <= now or until - now > MAX_SNOOZE:
-            raise ValidationFailedError("snooze must be within 7 days", field="until")
+            raise ValidationFailedError(
+                "snooze must be within 7 days", reason=Reason.SNOOZE_RANGE, field="until"
+            )
         async with self._sessions() as session, session.begin():
             lead = await _lead(session, lead_id)
+            if not may_snooze(
+                assigned_user_id=lead.assigned_user_id, user_id=who.user_id, is_admin=who.is_admin
+            ):
+                raise ForbiddenError(
+                    "only the lead owner or an admin can snooze", reason=Reason.NOT_LEAD_OWNER
+                )
             escalation = await _active_escalation(session, lead_id)
             if escalation is None or escalation.status not in OPEN_STATUSES:
-                raise ConflictError("no open escalation to snooze")
+                raise ConflictError(
+                    "no open escalation to snooze",
+                    reason=Reason.NO_OPEN_HANDOFF,
+                )
             before = _snapshot(lead)
             escalation.status, escalation.snoozed_until = "snoozed", until
             lead.snoozed_until = until
@@ -184,7 +210,9 @@ class LeadService:
             lead = await _lead(session, lead_id)
             _require_owner(lead, who)
             if lead.stage != Stage.IN_PROGRESS:
-                raise InvalidTransitionError("take the lead before closing it")
+                raise InvalidTransitionError(
+                    "take the lead before closing it", reason=Reason.TAKE_FIRST
+                )
             before = _snapshot(lead)
             target = Stage.WON if outcome == "won" else Stage.LOST
             await _move(session, lead, target, who, reason or outcome)
@@ -235,7 +263,7 @@ class LeadService:
         async with self._sessions() as session, session.begin():
             lead = await _lead(session, lead_id)
             if lead.owner_mode != OwnerMode.HUMAN:
-                raise ConflictError("take the lead before replying")
+                raise ConflictError("take the lead before replying", reason=Reason.TAKE_FIRST)
             _require_owner(lead, who)
             lead.last_human_msg_at = datetime.now(UTC)
             await audit.record(session, who.actor, "lead.reply", "lead", lead_id)
@@ -289,11 +317,19 @@ async def _lead(session: AsyncSession, lead_id: int) -> Lead:
     return lead
 
 
+async def _user_name(session: AsyncSession, user_id: int | None) -> str | None:
+    """Имя того, кто ведёт лида, — для «Лида уже забрал …» (имена команды видны всем ролям)."""
+    user = await users_repo.get(session, user_id) if user_id is not None else None
+    return user.full_name if user is not None else None
+
+
 def _require_owner(lead: Lead, who: Principal) -> None:
     if who.is_admin:
         return
     if lead.owner_mode == OwnerMode.HUMAN and lead.assigned_user_id != who.user_id:
-        raise ForbiddenError("only the lead owner or an admin can do this")
+        raise ForbiddenError(
+            "only the lead owner or an admin can do this", reason=Reason.NOT_LEAD_OWNER
+        )
 
 
 async def _move(

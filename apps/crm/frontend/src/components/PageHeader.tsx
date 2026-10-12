@@ -10,6 +10,8 @@ type Props = { title: ReactNode; back?: string; extra?: ReactNode; children?: Re
 /**
  * Шапка страницы: «Назад», заголовок, действия (аудит UI U-10). «Назад» возвращает туда,
  * откуда пришли (список с теми же фильтрами); при прямом заходе — на `back`.
+ * Заголовок — единственный h1 страницы (WCAG 1.3.1), визуально — размер h4 (`.page-title`).
+ * Внешнего отступа нет: ритм задаёт `PageBody`.
  */
 export function PageHeader({ title, back, extra, children }: Props) {
   const navigate = useNavigate();
@@ -21,12 +23,17 @@ export function PageHeader({ title, back, extra, children }: Props) {
   return (
     <div className="page-header">
       {back ? (
-        <Button type="link" className="page-back" icon={<ArrowLeftOutlined />} onClick={goBack}>
+        <Button
+          type="link"
+          className="page-back"
+          icon={<ArrowLeftOutlined aria-hidden />}
+          onClick={goBack}
+        >
           {t.common.back}
         </Button>
       ) : null}
       <Space wrap align="center" className="page-title-row">
-        <Typography.Title level={4} style={{ margin: 0 }}>
+        <Typography.Title level={1} className="page-title">
           {title}
         </Typography.Title>
         {extra}

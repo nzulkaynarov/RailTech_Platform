@@ -67,6 +67,8 @@ MATRIX = [
     ),
     ("PATCH", "/api/v1/users/{viewer}", {"full_name": "Viewer"}, {"admin"}),
     ("POST", "/api/v1/users/{viewer}/reset-password", None, {"admin"}),
+    ("GET", "/api/v1/service-requests", None, {"admin", "manager", "viewer"}),
+    ("GET", "/api/v1/service-requests?status=closed", None, {"admin", "manager", "viewer"}),
     ("GET", "/api/v1/me", None, {"admin", "manager", "viewer"}),
     ("GET", "/api/v1/me/permissions", None, {"admin", "manager", "viewer"}),
 ]
@@ -164,6 +166,14 @@ async def test_temporary_password_forces_change(
         headers=headers,
     )
     assert weak.status_code == 422
+    assert weak.json()["details"] == {"reason": "weak_password", "field": "new_password"}
+    wrong = client.post(
+        "/api/v1/auth/change-password",
+        json={"current_password": "not-the-password-1", "new_password": PASSWORD},
+        headers=headers,
+    )
+    assert wrong.status_code == 422
+    assert wrong.json()["details"] == {"reason": "wrong_password", "field": "current_password"}
     changed = client.post(
         "/api/v1/auth/change-password",
         json={"current_password": temporary, "new_password": PASSWORD},
@@ -193,6 +203,13 @@ async def test_last_admin_is_protected(
     )
     assert second.status_code == 201
     assert second.json()["temporary_password"]
+    duplicate = client.post(
+        "/api/v1/users",
+        json={"email": "admin2@railtech.uz", "full_name": "Admin 2", "roles": ["admin"]},
+        headers=tokens["admin"],
+    )
+    assert duplicate.status_code == 409
+    assert duplicate.json()["details"] == {"reason": "email_taken", "field": "email"}
     assert (
         client.patch(
             f"/api/v1/users/{admin_id}",

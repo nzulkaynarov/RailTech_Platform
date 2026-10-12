@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { ApiError } from "../api/http";
 import { usePermissionsQuery } from "../api/queries";
 import { QueryError } from "../components/PageState";
+import { t } from "../i18n/ru";
 import { allowed, sectionPermission } from "./providers/access";
 
 /**
@@ -21,5 +22,10 @@ export function RouteGuard({ resource, children }: { resource: string; children:
   return <>{children}</>;
 }
 
-/** Несуществующий адрес — тот же экран, что и для удалённой записи. */
-export const NotFound = () => <QueryError error={new ApiError(404, "not_found", "")} />;
+/** Несуществующий адрес: свой текст — «запись удалена» здесь неправда (отчёт 2). */
+export const NotFound = () => (
+  <QueryError
+    error={new ApiError(404, "not_found", "")}
+    notFound={{ title: t.state.pageNotFound, hint: t.state.pageNotFoundHint }}
+  />
+);

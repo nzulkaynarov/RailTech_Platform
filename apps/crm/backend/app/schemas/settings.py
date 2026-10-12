@@ -94,18 +94,20 @@ class BusinessHoursSettings(_Strict):
 
 
 class TextsSettings(_Strict):
+    # Клиенту человек — всегда «менеджер / menejer / manager» (Q-015). Узбекский — официальная
+    # латиница: oʻ/gʻ (U+02BB), тутук-белги ʼ (U+02BC).
     consent_version: str = "2026-10-08"
     greeting: LocalizedText = _t(
-        "Здравствуйте! Я ассистент компании {company}. Отвечаю на вопросы о наших продуктах и услугах и, если нужно, подключу коллегу.",
-        "Assalomu alaykum! Men {company} kompaniyasining yordamchisiman. Mahsulot va xizmatlarimiz haqidagi savollarga javob beraman, kerak bo'lsa, hamkasbimni ulayman.",
-        "Hello! I'm the {company} assistant. I answer questions about our products and services and can connect you with a colleague when needed.",
+        "Здравствуйте! Я ассистент компании {company}. Отвечаю на вопросы о наших продуктах и услугах и, если нужно, подключу менеджера.",
+        "Assalomu alaykum! Men {company} kompaniyasining yordamchisiman. Mahsulot va xizmatlarimiz haqidagi savollarga javob beraman, kerak boʻlsa, menejerni ulayman.",
+        "Hello! I'm the {company} assistant. I answer questions about our products and services and can connect you with a manager when needed.",
     )
     consent: LocalizedText = _t(
         "Чтобы продолжить, подтвердите согласие на обработку персональных данных. Переписка хранится в системе компании и обрабатывается внешними ИИ-сервисами для подготовки ответов. Удалить переписку можно в любой момент командой /delete.",
-        "Davom etish uchun shaxsiy ma'lumotlarni qayta ishlashga roziligingizni tasdiqlang. Yozishmalar kompaniya tizimida saqlanadi va javoblarni tayyorlash uchun tashqi sun'iy intellekt xizmatlari tomonidan qayta ishlanadi. Yozishmalarni istalgan vaqtda /delete buyrug'i bilan o'chirishingiz mumkin.",
+        "Davom etish uchun shaxsiy maʼlumotlarni qayta ishlashga roziligingizni tasdiqlang. Yozishmalar kompaniya tizimida saqlanadi va javoblarni tayyorlash uchun tashqi sunʼiy intellekt xizmatlari tomonidan qayta ishlanadi. Yozishmalarni istalgan vaqtda /delete buyrugʻi bilan oʻchirishingiz mumkin.",
         "To continue, please confirm your consent to the processing of personal data. The conversation is stored in the company's system and processed by external AI services to prepare answers. You can delete the conversation at any time with /delete.",
     )
-    consent_button: LocalizedText = _t("Согласен", "Roziman", "I agree")
+    consent_button: LocalizedText = _t("Даю согласие", "Roziman", "I agree")
     consent_accepted: LocalizedText = _t(
         "Спасибо! Задайте ваш вопрос.",
         "Rahmat! Savolingizni yozing.",
@@ -114,16 +116,16 @@ class TextsSettings(_Strict):
     consent_accepted_pending: LocalizedText = _t(
         "Спасибо! Отвечаю на ваш вопрос.",
         "Rahmat! Savolingizga javob beraman.",
-        "Thank you! Answering your question.",
+        "Thank you! Let me answer your question.",
     )
-    consent_decline_button: LocalizedText = _t("Не согласен", "Rozi emasman", "I don't agree")
+    consent_decline_button: LocalizedText = _t("Не даю согласия", "Rozi emasman", "I don't agree")
     consent_declined: LocalizedText = _t(
-        "Понимаю. Без согласия я не могу отвечать на вопросы. Если передумаете — нажмите «Согласен»"
-        " выше или напишите /start. Удалить уже отправленные сообщения — /delete.",
-        "Tushunarli. Roziliksiz savollarga javob bera olmayman. Fikringiz o'zgarsa — yuqoridagi"
-        " «Roziman» tugmasini bosing yoki /start yozing. Yuborilgan xabarlarni o'chirish — /delete.",
-        "Understood. Without consent I can't answer questions. If you change your mind, press"
-        " «I agree» above or type /start. To delete messages already sent, use /delete.",
+        "Понимаю. Без согласия я не могу отвечать на вопросы. Если передумаете — нажмите"
+        " «Даю согласие» выше или напишите /start. Удалить уже отправленные сообщения — /delete.",
+        "Tushunarli. Roziliksiz savollarga javob bera olmayman. Fikringiz oʻzgarsa — yuqoridagi"
+        " «Roziman» tugmasini bosing yoki /start yozing. Yuborilgan xabarlarni oʻchirish — /delete.",
+        "Understood. Without consent I can't answer questions. If you change your mind, tap"
+        " “I agree” above or type /start. To delete messages already sent, use /delete.",
     )
     consent_required: LocalizedText = _t(
         "Пожалуйста, сначала подтвердите согласие кнопкой ниже.",
@@ -131,53 +133,54 @@ class TextsSettings(_Strict):
         "Please confirm your consent with the button below first.",
     )
     handoff: LocalizedText = _t(
-        "Передаю ваш вопрос коллеге — он свяжется с вами здесь в ближайшее время.",
-        "Savolingizni hamkasbimga topshiraman — u tez orada shu yerda siz bilan bog'lanadi.",
-        "I'm passing your question to a colleague who will reply here shortly.",
+        "Передаю ваш вопрос менеджеру — он ответит здесь в ближайшее время.",
+        "Savolingizni menejerga yuboraman — u tez orada shu yerda javob beradi.",
+        "I'm passing your question to a manager, who will reply here shortly.",
     )
     # {hours} подставляет код из «Рабочих часов» — текст не расходится с настройкой.
     off_hours: LocalizedText = _t(
-        "Передаю ваш вопрос коллеге. Сейчас нерабочее время: мы работаем {hours} и ответим в ближайшее рабочее время.",
-        "Savolingizni hamkasbimga topshiraman. Hozir ish vaqti emas: biz {hours} ishlaymiz va eng yaqin ish vaqtida javob beramiz.",
-        "I'm passing your question to a colleague. It's outside working hours now: we work {hours} and will reply during the next working hours.",
+        "Передаю ваш вопрос менеджеру. Сейчас нерабочее время: мы работаем {hours} и ответим в ближайшее рабочее время.",
+        "Savolingizni menejerga yuboraman. Hozir ish vaqti emas: biz {hours} ishlaymiz va eng yaqin ish vaqtida javob beramiz.",
+        "I'm passing your question to a manager. It's outside working hours now: we work {hours} and will reply as soon as we're back.",
     )
     waiting_for_manager: LocalizedText = _t(
-        "Ваше сообщение передано коллеге, он скоро ответит.",
-        "Xabaringiz hamkasbimga yetkazildi, u tez orada javob beradi.",
-        "Your message has been passed to a colleague, who will reply soon.",
+        "Ваше сообщение передано менеджеру, он скоро ответит.",
+        "Xabaringiz menejerga yuborildi, u tez orada javob beradi.",
+        "Your message has been passed to a manager, who will reply soon.",
     )
+    # Честно: ответа нет, вернуться с ним бот не может — предлагаем менеджера (Q-016).
     fallback: LocalizedText = _t(
-        "Точного ответа на этот вопрос у меня нет — уточню у коллег. Если хотите, могу передать вопрос менеджеру.",
-        "Bu savolga aniq javobim yo'q — hamkasblarimdan aniqlayman. Xohlasangiz, savolni menejerga topshirishim mumkin.",
-        "I don't have an exact answer to that — I'll check with my colleagues. If you like, I can pass your question to a manager.",
+        "В моих материалах нет точного ответа на этот вопрос. Передать его менеджеру? Он ответит здесь же.",
+        "Materiallarimda bu savolga aniq javob yoʻq. Savolni menejerga yuboraymi? U shu yerda javob beradi.",
+        "I don't have a reliable answer to that in my materials. Shall I pass it to a manager? They'll reply right here.",
     )
     handoff_offer_yes: LocalizedText = _t(
-        "Передать менеджеру", "Menejerga topshirish", "Pass to a manager"
+        "Позвать менеджера", "Menejerni chaqirish", "Talk to a manager"
     )
     handoff_offer_no: LocalizedText = _t("Не нужно", "Kerak emas", "No, thanks")
     help: LocalizedText = _t(
-        "Я отвечаю на вопросы о продуктах {company}. Команды: /lang — сменить язык, /human — позвать сотрудника, /delete — удалить переписку.",
-        "Men {company} mahsulotlari haqidagi savollarga javob beraman. Buyruqlar: /lang — tilni o'zgartirish, /human — xodimni chaqirish, /delete — yozishmani o'chirish.",
-        "I answer questions about {company} products. Commands: /lang — change language, /human — call a person, /delete — delete the conversation.",
+        "Я отвечаю на вопросы о продуктах {company}. Команды: /lang — сменить язык, /human — связаться с менеджером, /delete — удалить переписку.",
+        "Men {company} mahsulotlari haqidagi savollarga javob beraman. Buyruqlar: /lang — tilni oʻzgartirish, /human — menejer bilan bogʻlanish, /delete — yozishmani oʻchirish.",
+        "I answer questions about {company} products. Commands: /lang — change language, /human — talk to a manager, /delete — delete the conversation.",
     )
     rate_limited: LocalizedText = _t(
-        "Вы отправляете сообщения слишком часто. Пожалуйста, подождите минуту.",
-        "Siz xabarlarni juda tez yuboryapsiz. Iltimos, bir daqiqa kuting.",
-        "You're sending messages too quickly. Please wait a minute.",
+        "Получил много сообщений подряд — дайте мне минуту, и продолжим.",
+        "Ketma-ket koʻp xabar keldi — bir daqiqa kuting, keyin davom etamiz.",
+        "I've received a lot of messages in a row — give me a minute and we'll continue.",
     )
     erase_confirm: LocalizedText = _t(
         "Удалить всю переписку с нами? Это действие нельзя отменить.",
-        "Biz bilan barcha yozishmalarni o'chiraymi? Bu amalni qaytarib bo'lmaydi.",
+        "Biz bilan barcha yozishmalarni oʻchiraymi? Bu amalni qaytarib boʻlmaydi.",
         "Delete your whole conversation with us? This cannot be undone.",
     )
-    erase_button: LocalizedText = _t("Удалить", "O'chirish", "Delete")
+    erase_button: LocalizedText = _t("Удалить", "Oʻchirish", "Delete")
     cancel_button: LocalizedText = _t("Отмена", "Bekor qilish", "Cancel")
     erase_cancelled: LocalizedText = _t(
-        "Хорошо, ничего не удаляю.", "Yaxshi, hech narsa o'chirilmadi.", "OK, nothing was deleted."
+        "Хорошо, ничего не удаляю.", "Yaxshi, hech narsa oʻchirilmadi.", "OK, nothing was deleted."
     )
     erased: LocalizedText = _t(
         "Ваша переписка удалена. Если захотите продолжить, просто напишите снова.",
-        "Yozishmangiz o'chirildi. Davom etmoqchi bo'lsangiz, shunchaki qayta yozing.",
+        "Yozishmangiz oʻchirildi. Davom etmoqchi boʻlsangiz, shunchaki qayta yozing.",
         "Your conversation has been deleted. If you want to continue, just write again.",
     )
     document_sent: LocalizedText = _t(
@@ -187,44 +190,45 @@ class TextsSettings(_Strict):
     )
     document_failed: LocalizedText = _t(
         "Не получилось отправить файл. Попробуйте запросить его ещё раз чуть позже.",
-        "Faylni yuborib bo'lmadi. Birozdan keyin qayta so'rab ko'ring.",
+        "Faylni yuborib boʻlmadi. Birozdan keyin qayta soʻrab koʻring.",
         "I couldn't send the file. Please ask for it again a bit later.",
     )
     manager_joined: LocalizedText = _t(
         "Здравствуйте! Вашим вопросом занимается {manager}, ответ придёт в этот чат.",
-        "Assalomu alaykum! Savolingiz bilan {manager} shug'ullanmoqda, javob shu chatga keladi.",
+        "Assalomu alaykum! Savolingiz bilan {manager} shugʻullanmoqda, javob shu chatga keladi.",
         "Hello! {manager} is now handling your request and will reply in this chat.",
     )
     service_request_closed: LocalizedText = _t(
         "По вашему запросу «{summary}»: {resolution}",
-        "«{summary}» so'rovingiz bo'yicha: {resolution}",
+        "«{summary}» soʻrovingiz boʻyicha: {resolution}",
         "Regarding your request “{summary}”: {resolution}",
     )
     returned_to_bot: LocalizedText = _t(
-        "Снова на связи ассистент {company}. Если понадобится коллега, напишите /human.",
-        "Yana {company} yordamchisi aloqada. Hamkasb kerak bo'lsa, /human deb yozing.",
-        "The {company} assistant is back. If you need a colleague, type /human.",
+        "Снова на связи ассистент {company}. Если понадобится менеджер, напишите /human.",
+        "Yana {company} yordamchisi aloqada. Menejer kerak boʻlsa, /human deb yozing.",
+        "The {company} assistant is back. If you need a manager, type /human.",
     )
+    # И для голосовых: бот их не распознаёт, а передаёт менеджеру вложением.
     attachment_received: LocalizedText = _t(
-        "Спасибо, файл получен. Передам его коллеге.",
-        "Rahmat, fayl qabul qilindi. Uni hamkasbimga topshiraman.",
-        "Thanks, file received. I'll pass it to a colleague.",
+        "Спасибо, получил. Передам менеджеру.",
+        "Rahmat, qabul qildim. Menejerga yuboraman.",
+        "Thanks, got it. I'll pass it to a manager.",
     )
     unsupported_message: LocalizedText = _t(
-        "Пока я понимаю только текст, файлы и голосовые. Напишите, пожалуйста, ваш вопрос.",
-        "Hozircha faqat matn, fayl va ovozli xabarlarni tushunaman. Savolingizni yozing, iltimos.",
-        "For now I understand text, files and voice messages only. Please type your question.",
+        "Я понимаю текст, а файлы и голосовые сообщения передаю менеджеру. Напишите, пожалуйста, ваш вопрос.",
+        "Men matnni tushunaman, fayl va ovozli xabarlarni esa menejerga yuboraman. Savolingizni yozing, iltimos.",
+        "I can read text; files and voice messages I pass on to a manager. Please type your question.",
     )
     service_unavailable: LocalizedText = _t(
-        "Извините, сейчас не получается ответить. Ваше сообщение сохранено, коллеги его увидят.",
-        "Kechirasiz, hozir javob bera olmayapman. Xabaringiz saqlandi, hamkasblarim uni ko'radi.",
-        "Sorry, I can't answer right now. Your message has been saved and my colleagues will see it.",
+        "Извините, сейчас не получается ответить. Ваше сообщение сохранено, менеджер его увидит.",
+        "Kechirasiz, hozir javob bera olmayapman. Xabaringiz saqlandi, menejer uni koʻradi.",
+        "Sorry, I can't answer right now. Your message has been saved and a manager will see it.",
     )
     language_prompt: LocalizedText = _t(
         "Выберите язык общения:", "Muloqot tilini tanlang:", "Choose your language:"
     )
     language_set: LocalizedText = _t(
-        "Буду отвечать на русском.", "O'zbek tilida javob beraman.", "I'll reply in English."
+        "Буду отвечать на русском.", "Oʻzbek tilida javob beraman.", "I'll reply in English."
     )
 
 

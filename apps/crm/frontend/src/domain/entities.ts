@@ -1,3 +1,5 @@
+import { t } from "../i18n/ru";
+
 /** Куда ведёт объект аудита/ссылки: у лида и клиента есть карточки, у остального — раздел. */
 export function entityPath(type: string, id: number | string | null | undefined): string | null {
   switch (type) {
@@ -17,4 +19,10 @@ export function entityPath(type: string, id: number | string | null | undefined)
     default:
       return null;
   }
+}
+
+/** Текст ссылки на лида: `#id · имя` (без имени в данных — `#id`; пустое имя — «—»). */
+export function leadLinkText(id: number | string, name?: string | null): string {
+  if (name === undefined) return `#${String(id)}`;
+  return `#${String(id)} · ${name || t.common.none}`;
 }
