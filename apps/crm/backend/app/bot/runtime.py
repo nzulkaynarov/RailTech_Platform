@@ -61,7 +61,7 @@ def build_dispatcher(
     dispatcher.include_router(chat_member.router)
     dispatcher.include_router(handlers.router)
     # Сбой обработчика: лог и одно «не получается ответить» на чат, а не тишина (аудит).
-    dispatcher.errors.register(ErrorReplier())
+    dispatcher.errors.register(ErrorReplier().handle)
     return dispatcher
 
 

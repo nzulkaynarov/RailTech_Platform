@@ -46,7 +46,7 @@ class ErrorReplier:
         self._last[chat_id] = now
         return True
 
-    async def __call__(
+    async def handle(
         self,
         event: ErrorEvent,
         bot: Bot,

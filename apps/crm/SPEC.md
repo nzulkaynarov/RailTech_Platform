@@ -105,7 +105,7 @@
 1. Telegram → `api` (webhook/polling) → проверка `secret_token`, идемпотентность по `update_id` (таблица `tg_updates`).
 2. `api` сохраняет `messages(role=lead)`, обновляет `leads.last_lead_msg_at`.
 3. Если `leads.owner_mode = bot` → запуск диалогового агента (§7.1) → ответ лиду → `messages(role=bot)`.
-   Если `owner_mode = human` → сообщение попадает в CRM в реальном времени (SSE), бот молчит.
+   Если `owner_mode = human` → сообщение попадает в CRM в реальном времени (SSE), бот молчит: агент не запускается вовсе (ни MCP, ни извинений при сбое), менеджер получает уведомление.
    Если `owner_mode = paused` → модель не вызывается (ждёт менеджера); код отвечает `texts.waiting_for_manager` не чаще раза в 30 мин, `/human` и стоп-слова поднимают приоритет открытой эскалации до `hot` (ADR-0015).
 4. `api` ставит задачу Procrastinate `qualify_lead(lead_id)` с дедупликацией (`queueing_lock = lead_id`, если уже в очереди — не дублируется).
 
@@ -294,7 +294,7 @@ service_requests(id, client_id, lead_id NULL, summary, status 'open'|'closed', c
 settings(key PK, value JSONB, schema_version INT, updated_by, updated_at)
 ```
 Ключи и JSON-схемы валидируются Pydantic-моделями в `app/schemas/settings.py`:
-`company`, `business_hours`, `texts` (greeting/consent/handoff/off_hours × ru/uz/en; подписи меню `menu_*`, команды клиента `docs_*`/`request_*`/`client_only`, номер `phone_*` — Q-011/Q-020, класс `ClientBotTexts`), `escalation` (триггеры, пороги, `no_progress_turns`, SLA, `price_always_to_manager`), `qualification` (критерии «Квалифицирован»: обязательные и дополнительные факты, горизонт срока, роли — ADR-0016), `kb` (`min_score`, `top_k`), `bot` (persona, `max_words`, `history_messages`, `rate_limit_per_minute`, `unresponsive_days`, `ask_phone` — один раз попросить номер, Q-020; `assist_enabled`, `assist_max_input_chars` — ИИ-помощь менеджеру «Черновик»/«Улучшить», `POST /leads/{id}/assist`, право `leads:assist`, Q-019), `competitors`, `stop_words`, `notifications` (`channel_id`, `duty_user_ids`), `budget` (`daily_usd`, `fallback_model_enabled`, `providers` — дневной лимит USD по провайдеру LiteLLM: `anthropic` 3, `gemini` 1, 0 — без лимита; Q-008), `deals` (`lost_reasons` — справочник причин отказа, `currency` — валюта новых сделок, UZS; ADR-0019).
+`company`, `business_hours`, `texts` (greeting/consent/handoff/off_hours × ru/uz/en; подписи меню `menu_*`, команды клиента `docs_*`/`request_*`/`client_only`, номер `phone_*` — Q-011/Q-020, класс `ClientBotTexts`), `escalation` (триггеры, пороги, `no_progress_turns`, SLA, `price_always_to_manager`), `qualification` (критерии «Квалифицирован»: обязательные и дополнительные факты, горизонт срока, роли — ADR-0016), `kb` (`min_score` — по умолчанию 0.70, калибровка аудита 2026-10-12: бессмыслица набирала 0.60–0.68; `top_k`; `search_timeout_s` — таймаут попытки kb-mcp, 6 с), `bot` (persona, `max_words` — по умолчанию 60, `history_messages`, `rate_limit_per_minute`, `unresponsive_days`, `ask_phone` — один раз попросить номер, Q-020; `assist_enabled`, `assist_max_input_chars` — ИИ-помощь менеджеру «Черновик»/«Улучшить», `POST /leads/{id}/assist`, право `leads:assist`, Q-019), `competitors`, `stop_words`, `notifications` (`channel_id`, `duty_user_ids`), `budget` (`daily_usd`, `fallback_model_enabled`, `providers` — дневной лимит USD по провайдеру LiteLLM: `anthropic` 3, `gemini` 1, 0 — без лимита; Q-008), `deals` (`lost_reasons` — справочник причин отказа, `currency` — валюта новых сделок, UZS; ADR-0019).
 
 ### 5.8. Техническое
 
@@ -355,9 +355,9 @@ load_context → detect_language → guard_consent → select_mode(prospect|cust
 - `load_context`: лид, идентичность, последние 20 сообщений, заметки с `visible_to_bot`, стадия, `need_summary`, `qualification`, настройки.
 - `detect_language`: по тексту; фиксируется после 2 совпадающих сообщений; команда `/lang` для смены.
 - `select_mode`: `customer`, если идентичность верифицирована и привязана к `client_id`; иначе `prospect`.
-- `retrieve`: `kb-mcp.search_kb` (prospect и customer) и `docs-mcp.search_documents` (только customer). Гибридный поиск: вектор (cosine) + BM25 (`ts_rank_cd`) → RRF → top-6 → порог `kb.min_score`.
-- `decide` (код): `owner_mode != bot` → стоп; hard-триггер по стоп-словам/`/human` → `handoff`; документ найден однозначно → `deliver_document`; `best_score < min_score` и вопрос по продукту → `fallback`; потребность не ясна и стадия ≤ engaged → `answer` с флагом «один уточняющий вопрос»; иначе `answer`.
-- `answer/clarify`: `dialog-model`, промпт `dialog_prospect.md` / `dialog_customer.md`, в контексте только найденные фрагменты. ≤ 120 слов, без списков, максимум один вопрос.
+- `retrieve`: `kb-mcp.search_kb` (prospect и customer) и `docs-mcp.search_documents` (только customer). Гибридный поиск: вектор (cosine) + BM25 (`ts_rank_cd`) → RRF → top-6 → порог `kb.min_score`. Попытка поиска ограничена `kb.search_timeout_s`; при сбое — одна повторная, затем ход продолжается с пометкой «KB недоступна» (ход не падает).
+- `decide` (код): `owner_mode != bot` → стоп; hard-триггер по стоп-словам/`/human` → `handoff`; документ найден однозначно → `deliver_document`; «ок/спасибо/понятно» (ru/uz/en) → короткий `texts.smalltalk_ack` без модели; KB недоступна (prospect, не smalltalk) → `fallback` (`reason=kb_unavailable`, без записи в `kb_gaps`); `best_score < min_score` и вопрос по продукту → `fallback`; потребность не ясна и стадия ≤ engaged → `answer` с флагом «один уточняющий вопрос»; иначе `answer`.
+- `answer/clarify`: `dialog-model`, промпт `dialog_prospect.md` / `dialog_customer.md`, в контексте только найденные фрагменты. ≤ `bot.max_words` слов (60), без списков, максимум один вопрос. Гарантии кода поверх ответа модели: встречный вопрос в конце убирается, если бот спрашивал в одном из двух предыдущих ответов, в ответ на smalltalk и перед уведомлением о передаче менеджеру. Модель получает настоящий результат инструмента (`ok`/ошибка/`not_allowed`); `create_service_request` возвращает `request_number`, и ответ клиенту обязательно содержит «Запрос №N» (`texts.request_created`), как в `/request`. Промпт запрещает упоминать «базу знаний» и внутренние источники.
 - `fallback`: честный отказ + `kb_gaps` (upsert по нормализованному вопросу, `occurrences++`).
 - `deliver_document`: отправка файла из S3 (RustFS) через Telegram + `document_access_log`.
 - Таймаут вызова модели 20 с, один ретрай, затем `fallback-model`; при недоступности — служебное сообщение лиду, событие сохраняется.
@@ -432,7 +432,7 @@ class QualifierOutput(BaseModel):
 | `qualifier_recommend` | `recommend_escalation ∧ confidence ≥ 0.7` | warm |
 | `document_not_found` (customer) | Запрос документа без результата | warm |
 | `service_request` (customer) | Интент `service` | info |
-| `agent_unavailable` | Сбой диалогового агента (лиду — `texts.service_unavailable`) | info |
+| `agent_unavailable` | Сбой диалогового агента (лиду — `texts.service_unavailable` с кнопкой «Позвать менеджера»; сбой считается в `consecutive_fallbacks`, повторный подряд → `kb_gap_streak` warm: лиду одно «передаю менеджеру», без второго извинения) | info |
 | `delivery_failed` | Бот не смог отправить файл документа | info |
 
 Триггер → эскалация всегда. Одна открытая эскалация на лида: новые триггеры дописываются, приоритет повышается, в канале редактируется существующий пост.

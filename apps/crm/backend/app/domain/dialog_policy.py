@@ -54,11 +54,10 @@ _SMALLTALK: Final = frozenset(
     }
 )
 # Подтверждение/благодарность: короткий ответ из настроек без модели и без встречного вопроса.
-_ACK: Final = frozenset(
+# Сообщение целиком из этих слов («понятно, спасибо», «ok thanks», «katta rahmat»).
+_ACK_WORDS: Final = frozenset(
     {
         "спасибо",
-        "спасибо большое",
-        "большое спасибо",
         "благодарю",
         "ок",
         "окей",
@@ -66,19 +65,21 @@ _ACK: Final = frozenset(
         "понятно",
         "ясно",
         "rahmat",
-        "katta rahmat",
         "tushunarli",
         "yaxshi",
         "xop",
         "mayli",
         "thanks",
-        "thank you",
+        "thank",
         "thx",
         "ok",
         "okay",
-        "got it",
+        "got",
         "great",
     }
+)
+_ACK_FILLERS: Final = frozenset(
+    {"большое", "огромное", "вам", "katta", "sizga", "you", "it", "so", "much"}
 )
 _QUESTION: Final = re.compile(
     r"\?|\b(как|что|сколько|где|когда|можно|есть ли"
@@ -117,7 +118,12 @@ def is_smalltalk(text: str) -> bool:
 
 
 def is_ack(text: str) -> bool:
-    return normalize_question(text) in _ACK
+    words = normalize_question(text).split()
+    return (
+        0 < len(words) <= 4
+        and any(w in _ACK_WORDS for w in words)
+        and all(w in _ACK_WORDS or w in _ACK_FILLERS for w in words)
+    )
 
 
 def decide(inp: DecisionInput) -> Decision:
