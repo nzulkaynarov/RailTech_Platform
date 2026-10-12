@@ -11,9 +11,9 @@ from typing import Final
 
 from openai import APIError, AsyncOpenAI
 
-from app.integrations.litellm import COST_HEADER, EMBED_ALIAS
+from app.integrations.litellm import EMBED_ALIAS
 from app.integrations.litellm_catalog import ModelEntry
-from app.integrations.llm_usage import UsageEvent, UsageSink, parse_cost
+from app.integrations.llm_usage import COST_HEADER, UsageEvent, UsageSink, parse_cost
 from app.models.system import SystemAlert
 from app.schemas.spend import ModelStatus, ModelTestResult
 
