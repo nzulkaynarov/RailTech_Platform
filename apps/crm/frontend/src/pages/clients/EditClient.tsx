@@ -3,7 +3,7 @@ import { Alert, App as AntApp, Button, Form, Input, Modal, Select, Switch } from
 import { useState } from "react";
 
 import { adminKeys } from "../../api/adminQueries";
-import { updateClient } from "../../api/generated/crm";
+import { getListClientsQueryKey, updateClient } from "../../api/generated/crm";
 import type { ClientDetail, ClientUpdate } from "../../api/generated/model";
 import { unwrap } from "../../api/http";
 import { useTeam } from "../../api/queries";
@@ -28,7 +28,7 @@ function useSaveClient(client: ClientDetail, onSaved: () => void) {
       onSaved();
       void message.success(t.clients.saved.replace("{name}", values.name ?? client.name));
       void query.invalidateQueries({ queryKey: adminKeys.client(client.id) });
-      void query.invalidateQueries({ queryKey: ["clients"] });
+      void query.invalidateQueries({ queryKey: getListClientsQueryKey() });
     },
     onError: useApiErrorToast(),
   });

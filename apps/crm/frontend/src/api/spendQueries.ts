@@ -1,11 +1,11 @@
 /** Запросы «Расходы» и «Модели ИИ» (админ). */
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { adminKeys } from "./adminQueries";
 import {
   changeModel,
   getGetSetupChecklistQueryKey,
   getListModelsQueryKey,
+  getSystemStatusQueryKey,
   resetModel,
   testModel,
   useGetSpend,
@@ -24,7 +24,7 @@ export function useTestModel() {
     // Результат проверки пишется в состояние монитора — обновляем и «Состояние системы».
     onSettled: () =>
       Promise.all(
-        [getListModelsQueryKey(), adminKeys.system, getGetSetupChecklistQueryKey()].map(
+        [getListModelsQueryKey(), getSystemStatusQueryKey(), getGetSetupChecklistQueryKey()].map(
           (queryKey) => client.invalidateQueries({ queryKey }),
         ),
       ),

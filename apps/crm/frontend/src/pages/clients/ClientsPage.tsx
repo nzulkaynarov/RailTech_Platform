@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
 import { useClients } from "../../api/adminQueries";
-import { createClient } from "../../api/generated/crm";
+import { createClient, getListClientsQueryKey } from "../../api/generated/crm";
 import type { ClientCreate, ClientListItem } from "../../api/generated/model";
 import { unwrap } from "../../api/http";
 import { usePermissionsQuery, useTeam } from "../../api/queries";
@@ -65,7 +65,7 @@ function CreateClientDialog({ open, onClose }: { open: boolean; onClose: () => v
     onSuccess: (created, values) => {
       onClose();
       void message.success(t.clients.created.replace("{name}", values.name));
-      void client.invalidateQueries({ queryKey: ["clients"] });
+      void client.invalidateQueries({ queryKey: getListClientsQueryKey() });
       void navigate(`/clients/${String(created.id)}`);
     },
     onError: useApiErrorToast(),

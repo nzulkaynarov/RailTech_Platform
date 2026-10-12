@@ -9,6 +9,7 @@ import {
 } from "../../api/generated/crm";
 import type { KbDocumentOut } from "../../api/generated/model";
 import { unwrap } from "../../api/http";
+import { invalidateKeys, queryKeys } from "../../api/queryKeys";
 import { useApiErrorToast } from "../../hooks/useApiErrorToast";
 import { t } from "../../i18n/ru";
 import type { ManualValues, UploadValues } from "./KbDialogs";
@@ -20,7 +21,7 @@ export function useKbMutations(onCreated: () => void) {
   const client = useQueryClient();
   const { message } = AntApp.useApp();
   const onError = useApiErrorToast();
-  const refresh = () => client.invalidateQueries({ queryKey: ["kb"] });
+  const refresh = () => invalidateKeys(client, queryKeys.kb());
   const created = () => {
     onCreated();
     void refresh();

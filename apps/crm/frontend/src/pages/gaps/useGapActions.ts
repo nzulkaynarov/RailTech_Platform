@@ -4,6 +4,7 @@ import { App as AntApp } from "antd";
 import { createManualDocument, ignoreGap, reopenGap, resolveGap } from "../../api/generated/crm";
 import type { KbGapOut } from "../../api/generated/model";
 import { unwrap } from "../../api/http";
+import { invalidateKeys, queryKeys } from "../../api/queryKeys";
 import { useApiErrorToast } from "../../hooks/useApiErrorToast";
 import { t } from "../../i18n/ru";
 import type { ManualValues } from "../kb/KbDialogs";
@@ -31,7 +32,7 @@ export function useGapActions(onDone: () => void) {
   const onError = useApiErrorToast();
   const finish = (text: string) => {
     onDone();
-    void client.invalidateQueries({ queryKey: ["kb"] });
+    void invalidateKeys(client, queryKeys.kb());
     void message.success(text);
   };
   const act = useMutation({
