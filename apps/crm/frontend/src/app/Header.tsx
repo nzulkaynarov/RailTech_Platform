@@ -38,11 +38,14 @@ function SystemHealth({ live, compact }: { live: boolean; compact: boolean }) {
   const query = useSystemStatus();
   if (!live || !query.data) return <ConnectionStatus live={live} compact={compact} />;
   const health = headerHealth(query.data);
+  // Живая область — обёртка, а не сама ссылка: у `<a>` роль status недопустима (axe aria-allowed-role).
   return (
-    <Link to="/system" title={t.health.hint} role="status">
-      <Badge status={BADGE[health.tone]} text={compact ? null : health.label} />
-      {compact ? <span className="sr-only">{health.label}</span> : null}
-    </Link>
+    <span role="status">
+      <Link to="/system" title={t.health.hint}>
+        <Badge status={BADGE[health.tone]} text={compact ? null : health.label} />
+        {compact ? <span className="sr-only">{health.label}</span> : null}
+      </Link>
+    </span>
   );
 }
 

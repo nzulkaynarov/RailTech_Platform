@@ -44,3 +44,17 @@ export function criticalFailures(status: SystemStatusOut): ComponentStatusOut[] 
 export function bySeverity(components: ComponentStatusOut[]): ComponentStatusOut[] {
   return [...components].sort((a, b) => ORDER[a.status] - ORDER[b.status]);
 }
+
+/** Где это чинится в CRM: строка «Состояния» ведёт туда; серверные компоненты — без ссылки. */
+const FIX_PATH: Record<string, string> = {
+  bot: "/integrations?tab=bot",
+  channel: "/integrations?tab=channel",
+  backup: "/backups",
+  budget: "/spend",
+  crm_url: "/settings?section=company",
+};
+
+export function componentPath(key: string): string | null {
+  if (key.startsWith("model:")) return "/models";
+  return FIX_PATH[key] ?? null;
+}

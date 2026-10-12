@@ -1,4 +1,4 @@
-import { DatePicker, Flex, Select, Switch, Table, Typography } from "antd";
+import { DatePicker, Descriptions, Flex, Select, Switch, Table } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs, { type Dayjs } from "dayjs";
 import { useState } from "react";
@@ -10,7 +10,7 @@ import { EntityLink } from "../../components/EntityLink";
 import { PageBody } from "../../components/PageBody";
 import { PageHeader } from "../../components/PageHeader";
 import { PageState } from "../../components/PageState";
-import { type AuditContext, auditDiff, entityText } from "../../domain/audit";
+import { type AuditContext, auditChanges, entityText } from "../../domain/audit";
 import { actorLabel, auditActionLabel, ENTITY_TYPES, entityLabel } from "../../domain/labels";
 import { useProductNames } from "../../hooks/useProductNames";
 import { t } from "../../i18n/ru";
@@ -99,39 +99,52 @@ function Filters({ update, users }: { update: Update; users: Option[] }) {
   );
 }
 
+function actorText(r: AuditItem, ctx: AuditContext): string {
+  if (!r.actor_user_id) return actorLabel(r.actor_type);
+  return r.actor_name ?? ctx.userName(r.actor_user_id) ?? `#${String(r.actor_user_id)}`;
+}
+
+/** Одна строка на запись: когда · кто · действие · объект · IP; изменения — в раскрытии. */
 function columns(ctx: AuditContext): ColumnsType<AuditItem> {
   return [
     {
       title: t.audit.when,
       dataIndex: "created_at",
       className: "nowrap",
-      width: 150,
+      width: 140,
       render: (v: string) => formatDateTime(v),
     },
-    {
-      title: t.audit.actor,
-      render: (_, r) =>
-        r.actor_user_id
-          ? (r.actor_name ?? ctx.userName(r.actor_user_id) ?? `#${String(r.actor_user_id)}`)
-          : actorLabel(r.actor_type),
-    },
-    { title: t.audit.action, render: (_, r) => auditActionLabel(r.action) },
+    { title: t.audit.actor, width: 180, ellipsis: true, render: (_, r) => actorText(r, ctx) },
+    { title: t.audit.action, ellipsis: true, render: (_, r) => auditActionLabel(r.action) },
     {
       title: t.audit.entity,
-      className: "nowrap",
-      width: 180,
+      ellipsis: true,
+      width: 220,
       render: (_, r) => (
         <EntityLink type={r.entity_type} id={r.entity_id}>
           {entityText(r.entity_type, r.entity_id, ctx)}
         </EntityLink>
       ),
     },
-    {
-      title: t.audit.changes,
-      render: (_, r) => <Typography.Text>{auditDiff(r, ctx)}</Typography.Text>,
-    },
-    { title: t.audit.ip, dataIndex: "ip", width: 130 },
+    { title: t.audit.ip, dataIndex: "ip", className: "nowrap", width: 130 },
   ];
+}
+
+/** «Изменения» записи: поле — «до → после», по строке на поле. */
+function Changes({ item, ctx }: { item: AuditItem; ctx: AuditContext }) {
+  const changes = auditChanges(item, ctx);
+  return (
+    <Descriptions
+      size="small"
+      column={1}
+      title={t.audit.changes}
+      items={changes.map((c, i) => ({
+        key: String(i),
+        label: c.field,
+        children: c.before === undefined ? c.after : `${c.before} → ${c.after}`,
+      }))}
+    />
+  );
 }
 
 /** Журнал аудита (admin): кто, что, над чем, до/после — словами, со ссылкой на объект. */
@@ -162,7 +175,12 @@ export function AuditPage() {
           size="small"
           loading={query.isLoading}
           dataSource={query.data?.items ?? []}
-          scroll={{ x: 960 }}
+          sticky
+          scroll={{ x: 760 }}
+          expandable={{
+            rowExpandable: (r) => auditChanges(r, ctx).length > 0,
+            expandedRowRender: (r) => <Changes item={r} ctx={ctx} />,
+          }}
           pagination={{
             pageSize: PAGE,
             total: query.data?.total ?? 0,

@@ -1,7 +1,8 @@
-import { Card, Col, Descriptions, Flex, List, Row, Space, Typography } from "antd";
+import { Descriptions, List, Space, Typography } from "antd";
 import { useParams } from "react-router";
 
-import { useClient } from "../../api/adminQueries";
+import { useClient, useClientContacts, useClientDocuments } from "../../api/adminQueries";
+import { useDeals } from "../../api/dealQueries";
 import type { ClientDetail } from "../../api/generated/model";
 import { usePermissionsQuery } from "../../api/queries";
 import { useEntityDocumentTitle } from "../../app/documentTitle";
@@ -12,6 +13,7 @@ import { PageBody } from "../../components/PageBody";
 import { PageHeader } from "../../components/PageHeader";
 import { PageState } from "../../components/PageState";
 import { StageBadge } from "../../components/StageBadge";
+import { type UrlTab, UrlTabs } from "../../components/UrlTabs";
 import { segmentLabel } from "../../domain/labels";
 import { t } from "../../i18n/ru";
 import { formatDate } from "../../lib/time";
@@ -23,47 +25,126 @@ import { EditClient } from "./EditClient";
 import { ServiceRequests } from "./ServiceRequests";
 import "../admin.css";
 
+/** Реквизиты — одной строкой под названием клиента. */
 function Details({ data }: { data: ClientDetail }) {
   return (
-    <Card size="small" title={t.clients.details}>
-      <Descriptions size="small" column={{ xs: 1, md: 3, xl: 1, xxl: 3 }}>
-        <Descriptions.Item label={t.clients.inn}>{data.inn ?? t.common.none}</Descriptions.Item>
-        <Descriptions.Item label={t.clients.segment}>
-          {segmentLabel(data.segment)}
-        </Descriptions.Item>
-        <Descriptions.Item label={t.clients.status}>
-          <BooleanTag value={data.is_active} yes={t.clients.active} no={t.clients.inactive} />
-        </Descriptions.Item>
-      </Descriptions>
-    </Card>
+    <Descriptions
+      size="small"
+      column={{ xs: 1, sm: 3 }}
+      aria-label={t.clients.details}
+      items={[
+        { key: "inn", label: t.clients.inn, children: data.inn ?? t.common.none },
+        { key: "segment", label: t.clients.segment, children: segmentLabel(data.segment) },
+        {
+          key: "status",
+          label: t.clients.status,
+          children: (
+            <BooleanTag value={data.is_active} yes={t.clients.active} no={t.clients.inactive} />
+          ),
+        },
+      ]}
+    />
   );
 }
 
 /** Лиды клиента: имя · стадия · дата, чтобы строка была понятна без открытия. */
 function Leads({ data }: { data: ClientDetail }) {
   return (
-    <Card size="small" title={t.clients.leads}>
-      <List
-        size="small"
-        dataSource={data.leads}
-        locale={{
-          emptyText: <Typography.Text type="secondary">{t.clients.leadsEmpty}</Typography.Text>,
-        }}
-        renderItem={(lead) => (
-          <List.Item>
-            <Space wrap>
-              <LeadLink id={lead.id} name={lead.display_name} />
-              <StageBadge stage={lead.stage} />
-              <Typography.Text type="secondary">{formatDate(lead.created_at)}</Typography.Text>
-            </Space>
-          </List.Item>
-        )}
-      />
-    </Card>
+    <List
+      size="small"
+      dataSource={data.leads}
+      locale={{
+        emptyText: <Typography.Text type="secondary">{t.clients.leadsEmpty}</Typography.Text>,
+      }}
+      renderItem={(lead) => (
+        <List.Item>
+          <Space wrap>
+            <LeadLink id={lead.id} name={lead.display_name} />
+            <StageBadge stage={lead.stage} />
+            <Typography.Text type="secondary">{formatDate(lead.created_at)}</Typography.Text>
+          </Space>
+        </List.Item>
+      )}
+    />
   );
 }
 
-/** Карточка клиента (SPEC §10.1, §7.3): слева — кто клиент, справа — работа с ним (≥ 1200 px). */
+/** Название вкладки со счётчиком; пока данные грузятся — без числа. */
+function TabLabel({ tab, count }: { tab: string; count: number | undefined }) {
+  return (
+    <Space size={6}>
+      {t.clients.tabs[tab]}
+      {count === undefined ? null : <Typography.Text type="secondary">{count}</Typography.Text>}
+    </Space>
+  );
+}
+
+// Счётчики берут те же запросы, что и вкладки (кэш react-query), — лишних запросов нет.
+function ContactsLabel({ id }: { id: number }) {
+  return <TabLabel tab="contacts" count={useClientContacts(id).data?.contacts.length} />;
+}
+function DealsLabel({ id }: { id: number }) {
+  return <TabLabel tab="deals" count={useDeals({ client_id: id }).data?.length} />;
+}
+function DocumentsLabel({ id }: { id: number }) {
+  return <TabLabel tab="documents" count={useClientDocuments(id).data?.length} />;
+}
+
+/** Вкладки по правам: сделки и документы — только тем, кому они доступны. */
+function useClientTabs(id: number, data: ClientDetail): UrlTab[] {
+  const perms = usePermissionsQuery();
+  const canWrite = allowed(perms.data, "clients", "write");
+  const tabs: (UrlTab | null)[] = [
+    {
+      key: "contacts",
+      label: <ContactsLabel id={id} />,
+      children: <ClientContacts clientId={id} canWrite={canWrite} />,
+    },
+    allowed(perms.data, "deals", "read")
+      ? {
+          key: "deals",
+          label: <DealsLabel id={id} />,
+          children: <ClientDeals clientId={id} canWrite={allowed(perms.data, "deals", "write")} />,
+        }
+      : null,
+    {
+      key: "leads",
+      label: <TabLabel tab="leads" count={data.leads.length} />,
+      children: <Leads data={data} />,
+    },
+    {
+      key: "requests",
+      label: <TabLabel tab="requests" count={data.service_requests.length} />,
+      children: (
+        <ServiceRequests clientId={id} requests={data.service_requests} canWrite={canWrite} />
+      ),
+    },
+    allowed(perms.data, "documents", "read")
+      ? {
+          key: "documents",
+          label: <DocumentsLabel id={id} />,
+          children: (
+            <ClientDocuments clientId={id} canWrite={allowed(perms.data, "documents", "write")} />
+          ),
+        }
+      : null,
+    {
+      key: "telegram",
+      label: <TabLabel tab="telegram" count={data.identities.length} />,
+      children: <ClientTelegram data={data} canWrite={canWrite} />,
+    },
+  ];
+  return tabs.filter((tab): tab is UrlTab => tab !== null);
+}
+
+function ClientTabs({ id, data }: { id: number; data: ClientDetail }) {
+  return <UrlTabs label={t.clients.sections} items={useClientTabs(id, data)} />;
+}
+
+/**
+ * Карточка клиента (SPEC §10.1, §7.3; UX волна 3): реквизиты одной строкой в шапке, ниже вкладки
+ * «Контакты · Сделки · Лиды · Запросы · Документы · Telegram» со счётчиками; вкладка — в `?tab=`.
+ */
 export function ClientDetailPage() {
   const id = Number(useParams()["id"]);
   const query = useClient(id);
@@ -85,34 +166,8 @@ export function ClientDetailPage() {
         title={data.name}
         extra={canWrite ? <EditClient client={data} /> : null}
       />
-      <Row gutter={[16, 16]}>
-        <Col xs={24} xl={10}>
-          <Flex vertical gap={16}>
-            <Details data={data} />
-            <ClientContacts clientId={id} canWrite={canWrite} />
-            <ClientTelegram data={data} canWrite={canWrite} />
-          </Flex>
-        </Col>
-        <Col xs={24} xl={14}>
-          <Flex vertical gap={16}>
-            {allowed(perms.data, "deals", "read") ? (
-              <ClientDeals clientId={id} canWrite={allowed(perms.data, "deals", "write")} />
-            ) : null}
-            <Leads data={data} />
-            <Card size="small" title={t.clients.requests}>
-              <ServiceRequests clientId={id} requests={data.service_requests} canWrite={canWrite} />
-            </Card>
-            {allowed(perms.data, "documents", "read") ? (
-              <Card size="small" title={t.clients.documents}>
-                <ClientDocuments
-                  clientId={id}
-                  canWrite={allowed(perms.data, "documents", "write")}
-                />
-              </Card>
-            ) : null}
-          </Flex>
-        </Col>
-      </Row>
+      <Details data={data} />
+      <ClientTabs id={id} data={data} />
     </PageBody>
   );
 }

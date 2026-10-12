@@ -81,6 +81,37 @@ const BACKEND_SAMPLES: [string, AuditItem, string][] = [
     item({ weekdays: [0, 1, 2, 3, 4] }, { weekdays: [0, 1, 2, 3, 4, 5] }),
     "Рабочие дни: Пн, Вт, Ср, Чт, Пт → Пн, Вт, Ср, Чт, Пт, Сб",
   ],
+  [
+    "lead assist",
+    item(null, { mode: "draft", input_chars: 0, output_chars: 120, notice: null }),
+    "Режим: черновик; Символов в запросе: 0; Символов в ответе: 120; Предупреждение: —",
+  ],
+  [
+    "deal lost",
+    {
+      ...item(
+        { stage: "open", amount: null, lost_reason: null },
+        { stage: "lost", amount: "1500.00", lost_reason: "Дорого" },
+      ),
+      entity_type: "deal",
+    },
+    "Стадия: Открыта → Проиграна; Сумма: — → 1500.00; Причина отказа: — → Дорого",
+  ],
+  [
+    "contact create",
+    item(null, { contact_id: 3, phone_e164: "+998901234567", is_primary: true, position: "ГД" }),
+    "Контакт: #3; Телефон: +998901234567; Основной контакт: Да; Должность: ГД",
+  ],
+  [
+    "model update",
+    item({ models: ["a"] }, { model: "b", api_base: null, key: "env" }),
+    "Модели: a → —; Модель: b; Адрес API: —; Ключ API: из переменных сервера",
+  ],
+  [
+    "user notify",
+    item({ notify_system: true, notify_leads: false }, { notify_system: true, notify_leads: true }),
+    "Уведомления о лидах: Нет → Да",
+  ],
 ];
 
 describe("audit diff", () => {
@@ -122,6 +153,14 @@ describe("system records in human words", () => {
       { field: "Стоимость", after: "< $0.01" },
     ]);
     expect(entityText("model", "dialog-model", ctx)).toBe("Модель ИИ «Диалог»");
+  });
+
+  it("objects without a card get a human name", () => {
+    expect(entityText("system", "backups", ctx)).toBe("Резервные копии");
+    expect(entityText("export", "deals", ctx)).toBe("Выгрузка сделок");
+    expect(entityText("integration_secret", "telegram_bot_token", ctx)).toBe("Токен Telegram-бота");
+    expect(entityText("sandbox", "1", ctx)).toBe("Проверить бота");
+    expect(entityText("deal", "4", ctx)).toBeUndefined();
   });
 
   it("user entity shows the name", () => {
