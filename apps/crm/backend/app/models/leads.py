@@ -65,6 +65,8 @@ class Lead(TimestampMixin, Base):
     snoozed_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     unresponsive_since: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     handoff_notice_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Последнее личное уведомление менеджеру о сообщении лида (троттлинг, Q-010).
+    manager_notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     erased_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     source: Mapped[str] = mapped_column(String(16), server_default=sql("'telegram'"))
     notes_count: Mapped[int] = mapped_column(Integer, server_default=sql("0"))

@@ -44,6 +44,7 @@ def build_conversation(
     saver: AsyncPostgresSaver,
     on_activity: ActivityHook | None = None,
     on_escalation: EscalationHook | None = None,
+    on_lead_message: ActivityHook | None = None,
 ) -> ConversationService:
     """Диалоговый контур бота: BudgetGuard → модель, MCP-инструменты, чекпоинтер."""
     model = BudgetedModel(
@@ -60,6 +61,7 @@ def build_conversation(
         on_activity=on_activity,
         on_escalation=on_escalation,
         erase_attachments=_attachments_eraser(container),
+        on_lead_message=on_lead_message,
     )
 
 
@@ -76,6 +78,7 @@ async def bot_lifespan(
     container: Container,
     on_activity: ActivityHook | None = None,
     on_escalation: EscalationHook | None = None,
+    on_lead_message: ActivityHook | None = None,
 ) -> AsyncIterator[BotRuntime | None]:
     config = container.settings
     if config.telegram_mode == "disabled" or not config.telegram_bot_token.get_secret_value():
@@ -83,7 +86,9 @@ async def bot_lifespan(
         yield None
         return
     async with checkpointer(container) as saver:
-        conversation = build_conversation(container, saver, on_activity, on_escalation)
+        conversation = build_conversation(
+            container, saver, on_activity, on_escalation, on_lead_message
+        )
         rbac = await Rbac.create(container.engine, config.casbin_dir)
         dispatcher = build_dispatcher(
             container.session_factory,

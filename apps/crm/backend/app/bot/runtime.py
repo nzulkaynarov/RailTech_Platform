@@ -94,6 +94,13 @@ class BotRuntime:
             await asyncio.wait(self._background, timeout=10)
         await self.bot.session.close()
 
+    @property
+    def running(self) -> bool:
+        """Бот принимает обновления: polling-задача жива или включён webhook."""
+        if self._config.telegram_mode == "webhook":
+            return True
+        return self._polling is not None and not self._polling.done()
+
     def secret_matches(self, received: str | None) -> bool:
         expected = self._config.telegram_webhook_secret.get_secret_value()
         if self._config.telegram_mode != "webhook" or not expected:

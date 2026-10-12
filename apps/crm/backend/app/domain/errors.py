@@ -16,6 +16,9 @@ class Reason(StrEnum):
     TELEGRAM_TAKEN = "telegram_taken"
     TELEGRAM_LINKED_ELSEWHERE = "telegram_linked_elsewhere"
     TELEGRAM_UNKNOWN = "telegram_unknown"
+    TELEGRAM_NOT_LINKED = "telegram_not_linked"
+    TELEGRAM_REFUSED = "telegram_refused"
+    BOT_NOT_CONFIGURED = "bot_not_configured"
     WRONG_PASSWORD = "wrong_password"  # noqa: S105 — подкод ошибки, не секрет
     SAME_PASSWORD = "same_password"  # noqa: S105 — подкод ошибки, не секрет
     WEAK_PASSWORD = "weak_password"  # noqa: S105 — подкод ошибки, не секрет

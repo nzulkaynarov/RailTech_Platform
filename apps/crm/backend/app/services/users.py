@@ -44,6 +44,8 @@ class UserView:
     tg_user_id: int | None
     must_change_password: bool
     ui_mode: str
+    notify_system: bool = True
+    notify_leads: bool = True
 
 
 @dataclass(frozen=True, slots=True)
@@ -193,6 +195,26 @@ class UserService:
             user.ui_mode = mode
             return _view(user, roles)
 
+    async def set_notify(
+        self, actor: Actor, user_id: int, *, system: bool | None, leads: bool | None
+    ) -> UserView:
+        """Подписки на личные уведомления от бота (Q-010) — меняет только сам пользователь."""
+        async with self._sessions() as session, session.begin():
+            user = await repo.get(session, user_id, for_update=True)
+            if user is None:
+                raise NotFoundError("user not found")
+            before = {"notify_system": user.notify_system, "notify_leads": user.notify_leads}
+            if system is not None:
+                user.notify_system = system
+            if leads is not None:
+                user.notify_leads = leads
+            after = {"notify_system": user.notify_system, "notify_leads": user.notify_leads}
+            if after != before:
+                await audit.record(
+                    session, actor, "user.notify", "user", user_id, before=before, after=after
+                )
+            return _view(user, await repo.roles_of(session, user_id))
+
     async def bootstrap_admin(self, email: str, full_name: str, password: str | None) -> str:
         """Первый админ (scripts/create_admin.py). Возвращает пароль (временный, если не задан)."""
         actor = Actor.system()
@@ -307,6 +329,8 @@ def _view(user: User, roles: list[str]) -> UserView:
         tg_user_id=user.tg_user_id,
         must_change_password=user.must_change_password,
         ui_mode=user.ui_mode,
+        notify_system=user.notify_system,
+        notify_leads=user.notify_leads,
     )
 
 

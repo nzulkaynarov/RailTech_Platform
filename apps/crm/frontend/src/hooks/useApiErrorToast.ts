@@ -4,14 +4,17 @@ import { useCallback } from "react";
 import { ApiError } from "../api/http";
 import { errorText, t } from "../i18n/ru";
 
-/** Подкод из `details.reason` → текст; `{name}` — кто уже забрал лида. */
+/** Подкод из `details.reason` → текст; `{name}` — кто уже забрал лида, `{error}` — ответ Telegram. */
 function reasonText(error: ApiError): string | null {
   const reason = error.details["reason"];
   if (typeof reason !== "string") return null;
   const text = t.apiReasons[reason];
   if (!text) return null;
   const name = error.details["assigned_user_name"];
-  return text.replace("{name}", typeof name === "string" && name ? name : t.common.colleague);
+  const cause = error.details["telegram_error"];
+  return text
+    .replace("{name}", typeof name === "string" && name ? name : t.common.colleague)
+    .replace("{error}", typeof cause === "string" && cause ? cause : t.common.none);
 }
 
 /**

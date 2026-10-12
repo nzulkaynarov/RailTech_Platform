@@ -1,6 +1,6 @@
-"""Задачи канала команды (SPEC §8.2): пост/редактирование, SLA, напоминание, сводка, снуз."""
+"""Задачи уведомлений: канал команды (SPEC §8.2) и личные сообщения менеджеру (Q-010)."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from procrastinate import RetryStrategy
 from procrastinate.exceptions import AlreadyEnqueued
@@ -12,6 +12,7 @@ from app.models.leads import Lead
 from app.models.qualification import Escalation
 from app.repositories import events
 from app.services.notifications import NotificationService
+from app.services.staff_notifier import StaffNotifier
 from app.tasks.queue import queue
 
 RETRY = RetryStrategy(max_attempts=5, exponential_wait=3)
@@ -77,6 +78,26 @@ async def snooze_expiry(timestamp: int) -> int:
     for escalation_id in reopened:
         await enqueue_escalation(escalation_id, new=False)
     return len(reopened)
+
+
+@queue.task(name="notify_lead_message", queue="notify")
+async def notify_lead_message(lead_id: int) -> bool:
+    """Новое сообщение лида в работе у менеджера → личное сообщение ему (без повторов)."""
+    c = get_container()
+    cfg = await c.settings_service.get()
+    window = timedelta(minutes=cfg.notifications.manager_dm_throttle_minutes)
+    notifier = StaffNotifier(c.session_factory, c.telegram_bot)
+    return await notifier.lead_message(lead_id, datetime.now(UTC), window, cfg.company.crm_base_url)
+
+
+async def enqueue_lead_message(lead_id: int) -> None:
+    """Пачка сообщений подряд — одна задача в очереди (queueing_lock)."""
+    try:
+        await notify_lead_message.configure(queueing_lock=f"lead-dm-{lead_id}").defer_async(
+            lead_id=lead_id
+        )
+    except AlreadyEnqueued:
+        return
 
 
 async def enqueue_escalation(escalation_id: int, *, new: bool = True) -> None:

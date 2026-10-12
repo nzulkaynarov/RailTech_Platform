@@ -32,6 +32,7 @@ CATALOG: Final[dict[str, tuple[str, ...]]] = {
     "settings": ("read", "write"),
     "kb": ("read", "write"),
     "audit": ("read",),
+    "system": ("read",),
 }
 
 

@@ -115,6 +115,11 @@ export const core = {
     telegram_taken: "Этот Telegram ID уже привязан к другому пользователю",
     telegram_linked_elsewhere: "Этот Telegram уже привязан к другому клиенту",
     telegram_unknown: "Этот Telegram ещё не писал боту — привязать нельзя",
+    telegram_not_linked:
+      "К профилю не привязан Telegram — попросите администратора указать ваш Telegram ID",
+    telegram_refused:
+      "Telegram не доставил сообщение: {error}. Откройте бота и нажмите «Старт», затем повторите",
+    bot_not_configured: "Бот не настроен на сервере — сообщите администратору",
     wrong_password: "Текущий пароль неверен",
     same_password: "Новый пароль совпадает со старым",
     weak_password: "Пароль слишком простой — не короче 8 символов, буквы и цифры",

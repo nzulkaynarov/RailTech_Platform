@@ -66,6 +66,7 @@ import type {
   ServiceRequestItem,
   SettingsResponse,
   Snooze,
+  SystemStatusOut,
   TeamMember,
   TokenResponse,
   UserCreate,
@@ -2473,6 +2474,43 @@ export const permissions = async (
   });
 };
 
+export type testNotificationResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type testNotificationResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type testNotificationResponseSuccess = testNotificationResponse200 & {
+  headers: Headers;
+};
+export type testNotificationResponseError = testNotificationResponse422 & {
+  headers: Headers;
+};
+
+export type testNotificationResponse =
+  testNotificationResponseSuccess | testNotificationResponseError;
+
+export const getTestNotificationUrl = () => {
+  return `/api/v1/me/test-notification`;
+};
+
+/**
+ * «Проверить доставку»: личное сообщение от бота себе; отказ Telegram → 409 с его текстом.
+ * @summary Test Notification
+ */
+export const testNotification = async (
+  options?: Parameters<typeof http>[1],
+): Promise<testNotificationResponse> => {
+  return http<testNotificationResponse>(getTestNotificationUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
 export type listServiceRequestsResponse200 = {
   data: ServiceRequestItem[];
   status: 200;
@@ -2761,6 +2799,42 @@ export const getStreamUrl = () => {
  */
 export const stream = async (options?: Parameters<typeof http>[1]): Promise<streamResponse> => {
   return http<streamResponse>(getStreamUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export type systemStatusResponse200 = {
+  data: SystemStatusOut;
+  status: 200;
+};
+
+export type systemStatusResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type systemStatusResponseSuccess = systemStatusResponse200 & {
+  headers: Headers;
+};
+export type systemStatusResponseError = systemStatusResponse422 & {
+  headers: Headers;
+};
+
+export type systemStatusResponse = systemStatusResponseSuccess | systemStatusResponseError;
+
+export const getSystemStatusUrl = () => {
+  return `/api/v1/system/status`;
+};
+
+/**
+ * Только чтение: моделей не вызывает, их здоровье — из последней проверки монитора.
+ * @summary System Status
+ */
+export const systemStatus = async (
+  options?: Parameters<typeof http>[1],
+): Promise<systemStatusResponse> => {
+  return http<systemStatusResponse>(getSystemStatusUrl(), {
     ...options,
     method: "GET",
   });

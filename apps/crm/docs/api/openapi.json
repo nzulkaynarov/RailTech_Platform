@@ -670,6 +670,53 @@
         "title": "Close",
         "type": "object"
       },
+      "ComponentStatusOut": {
+        "properties": {
+          "checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked At"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "warn",
+              "fail",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "title",
+          "status",
+          "reason",
+          "checked_at"
+        ],
+        "title": "ComponentStatusOut",
+        "type": "object"
+      },
       "Created": {
         "properties": {
           "id": {
@@ -2243,19 +2290,46 @@
         "type": "object"
       },
       "MePatch": {
+        "description": "Своё: режим навигации и подписки на личные уведомления от бота (Q-010).",
         "properties": {
-          "ui_mode": {
-            "enum": [
-              "admin",
-              "manager"
+          "notify_leads": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
             ],
-            "title": "Ui Mode",
-            "type": "string"
+            "title": "Notify Leads"
+          },
+          "notify_system": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notify System"
+          },
+          "ui_mode": {
+            "anyOf": [
+              {
+                "enum": [
+                  "admin",
+                  "manager"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ui Mode"
           }
         },
-        "required": [
-          "ui_mode"
-        ],
         "title": "MePatch",
         "type": "object"
       },
@@ -2688,6 +2762,9 @@
           "telegram_taken",
           "telegram_linked_elsewhere",
           "telegram_unknown",
+          "telegram_not_linked",
+          "telegram_refused",
+          "bot_not_configured",
           "wrong_password",
           "same_password",
           "weak_password",
@@ -3097,6 +3174,39 @@
         "title": "Snooze",
         "type": "object"
       },
+      "SystemStatusOut": {
+        "properties": {
+          "checked_at": {
+            "format": "date-time",
+            "title": "Checked At",
+            "type": "string"
+          },
+          "components": {
+            "items": {
+              "$ref": "#/components/schemas/ComponentStatusOut"
+            },
+            "title": "Components",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "warn",
+              "fail",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "checked_at",
+          "components"
+        ],
+        "title": "SystemStatusOut",
+        "type": "object"
+      },
       "TeamMember": {
         "properties": {
           "full_name": {
@@ -3277,6 +3387,14 @@
             "title": "Must Change Password",
             "type": "boolean"
           },
+          "notify_leads": {
+            "title": "Notify Leads",
+            "type": "boolean"
+          },
+          "notify_system": {
+            "title": "Notify System",
+            "type": "boolean"
+          },
           "roles": {
             "items": {
               "type": "string"
@@ -3308,7 +3426,9 @@
           "is_active",
           "tg_user_id",
           "must_change_password",
-          "ui_mode"
+          "ui_mode",
+          "notify_system",
+          "notify_leads"
         ],
         "title": "UserOut",
         "type": "object"
@@ -6293,6 +6413,43 @@
         ]
       }
     },
+    "/api/v1/me/test-notification": {
+      "post": {
+        "description": "«Проверить доставку»: личное сообщение от бота себе; отказ Telegram → 409 с его текстом.",
+        "operationId": "test_notification",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Test Notification",
+        "tags": [
+          "me"
+        ]
+      }
+    },
     "/api/v1/service-requests": {
       "get": {
         "description": "Запросы клиентов (Q-017): открытые — во «Входящих», кто ждёт дольше, первыми.",
@@ -6587,6 +6744,43 @@
         "summary": "Stream",
         "tags": [
           "stream"
+        ]
+      }
+    },
+    "/api/v1/system/status": {
+      "get": {
+        "description": "Только чтение: моделей не вызывает, их здоровье — из последней проверки монитора.",
+        "operationId": "system_status",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemStatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "System Status",
+        "tags": [
+          "system"
         ]
       }
     },
