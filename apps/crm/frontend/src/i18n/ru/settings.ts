@@ -187,6 +187,9 @@ export const settings = {
     duty_user_ids: "Дежурные",
     daily_usd: "Дневной бюджет",
     fallback_model_enabled: "Переходить на запасную модель",
+    providers: "Дневной лимит по провайдеру",
+    anthropic: "Anthropic (диалог, квалификатор, проверка качества)",
+    gemini: "Google Gemini (запасная модель, поиск)",
     price_always_to_manager:
       "Любой вопрос о цене — менеджеру (даже если бот назвал цену из прайса)",
     required_facts: "Обязательные факты",
@@ -208,7 +211,9 @@ export const settings = {
     channel_id: "Число со знаком минус, например -100…; бот должен быть админом канала.",
     duty_user_ids: "Получают @упоминание в напоминаниях о просроченных передачах.",
     holidays: "В эти дни SLA не считается, бот отвечает текстом нерабочего времени.",
-    daily_usd: "В долларах США.",
+    daily_usd: "В долларах США. Выше — диалог переходит на запасную модель.",
+    anthropic: "USD в сутки (по Ташкенту), 0 — без лимита. Выше — диалог на запасной модели.",
+    gemini: "USD в сутки (по Ташкенту), 0 — без лимита. Выше — бот передаёт диалоги менеджеру.",
   } as Dict,
   units: {
     sla_minutes: "мин",
@@ -216,6 +221,8 @@ export const settings = {
     unresponsive_days: "дн.",
     high_score_threshold: "из 100",
     daily_usd: "$",
+    anthropic: "$",
+    gemini: "$",
   } as Dict,
   options: {
     need: "Потребность",

@@ -2,6 +2,8 @@ import {
   AuditOutlined,
   BookOutlined,
   DashboardOutlined,
+  DollarOutlined,
+  ExperimentOutlined,
   QuestionCircleOutlined,
   SettingOutlined,
   ShopOutlined,
@@ -19,6 +21,8 @@ import "dayjs/locale/ru";
 import { BrowserRouter, Outlet, Route, Routes } from "react-router";
 
 import { AuditPage } from "../pages/audit/AuditPage";
+import { ModelsPage } from "../pages/models/ModelsPage";
+import { SpendPage } from "../pages/spend/SpendPage";
 import { ClientDetailPage } from "../pages/clients/ClientDetailPage";
 import { ClientsPage } from "../pages/clients/ClientsPage";
 import { DashboardPage } from "../pages/dashboard/DashboardPage";
@@ -75,6 +79,12 @@ const resources = [
     name: "settings",
     list: "/settings",
     meta: { label: t.nav.settings, icon: <SettingOutlined /> },
+  },
+  { name: "spend", list: "/spend", meta: { label: t.nav.spend, icon: <DollarOutlined /> } },
+  {
+    name: "models",
+    list: "/models",
+    meta: { label: t.nav.models, icon: <ExperimentOutlined /> },
   },
   { name: "audit", list: "/audit", meta: { label: t.nav.audit, icon: <AuditOutlined /> } },
   { name: "users", list: "/users", meta: { label: t.nav.users, icon: <TeamOutlined /> } },
@@ -160,6 +170,22 @@ export function App() {
                   element={
                     <RouteGuard resource="settings">
                       <SettingsPage />
+                    </RouteGuard>
+                  }
+                />
+                <Route
+                  path="/spend"
+                  element={
+                    <RouteGuard resource="spend">
+                      <SpendPage />
+                    </RouteGuard>
+                  }
+                />
+                <Route
+                  path="/models"
+                  element={
+                    <RouteGuard resource="models">
+                      <ModelsPage />
                     </RouteGuard>
                   }
                 />
