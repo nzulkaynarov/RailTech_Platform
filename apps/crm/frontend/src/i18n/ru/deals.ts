@@ -28,6 +28,8 @@ export const deals = {
     summaryTitle: "Сделки за период",
     wonCount: "Выиграно",
     wonSum: "Сумма выигрыша",
+    wonSumMissing: "Сделок без суммы: {n} — итог неполный",
+    wonSumNone: "Суммы не указаны в выигранных сделках ({n})",
     lostCount: "Проиграно",
     openCount: "Открыто сейчас",
     lostByReason: "Отказы по причинам",

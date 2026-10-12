@@ -6,14 +6,18 @@ import type { Dashboard, PermissionsResponse } from "../api/generated/model";
 import { allowed, sectionPermission } from "../app/providers/access";
 import { leadFiltersToSearch } from "../hooks/leadFilters";
 import { t } from "../i18n/ru";
+import { formatDuration, formatNumber, formatUsd } from "../lib/format";
 
 /** Куда ведёт плитка: раздел Refine (для проверки прав) и адрес. */
 export type TileTarget = { resource: string; path: string };
 export type Tile = {
   key: string;
   title: string;
-  value: string | number;
+  /** Уже отформатировано (ru-RU): antd `Statistic` форматирует number по-английски. */
+  value: string;
   target: TileTarget | null;
+  /** Плитка видна только с этим правом (ресурс, действие); `undefined` — всем. */
+  requires?: [string, string];
 };
 
 export const leadsPath = (filters: { stage?: string; from?: string; to?: string }) =>
@@ -37,20 +41,20 @@ export function dashboardTiles(
       {
         key: "leads",
         title: t.dashboard.leads,
-        value: totals.leads_created,
+        value: formatNumber(totals.leads_created),
         target: { resource: "leads", path: leadsPath(period) },
       },
-      { key: "taken", title: t.dashboard.taken, value: totals.taken, target: null },
+      { key: "taken", title: t.dashboard.taken, value: formatNumber(totals.taken), target: null },
       {
         key: "won",
         title: t.dashboard.won,
-        value: totals.won,
+        value: formatNumber(totals.won),
         target: { resource: "deals", path: "/deals?stage=won" },
       },
       {
         key: "takeTime",
         title: t.dashboard.takeTime,
-        value: totals.avg_take_minutes ?? t.common.none,
+        value: formatDuration(totals.avg_take_minutes),
         target: null,
       },
     ],
@@ -58,20 +62,21 @@ export function dashboardTiles(
       {
         key: "openEscalations",
         title: t.dashboard.openEscalations,
-        value: data.open_escalations,
+        value: formatNumber(data.open_escalations),
         target: { resource: "inbox", path: "/inbox" },
       },
       {
         key: "escalations",
         title: t.dashboard.escalations,
-        value: totals.escalations,
+        value: formatNumber(totals.escalations),
         target: null,
       },
       {
         key: "gaps",
         title: t.dashboard.gaps,
-        value: data.open_gaps,
+        value: formatNumber(data.open_gaps),
         target: { resource: "gaps", path: "/gaps" },
+        requires: ["kb", "write"],
       },
       {
         key: "fallback",
@@ -79,9 +84,23 @@ export function dashboardTiles(
         value: percent(data.fallback_share),
         target: null,
       },
-      { key: "cost", title: t.dashboard.cost, value: totals.cost_usd.toFixed(2), target: null },
+      {
+        key: "cost",
+        title: t.dashboard.cost,
+        value: formatUsd(totals.cost_usd),
+        target: null,
+        requires: ["spend", "read"],
+      },
     ],
   };
+}
+
+/**
+ * Плитки, которые роль может видеть: стоимость моделей — с правом на «Расходы»,
+ * пробелы знаний — тем, кто их разбирает. Одно правило для всех ролей (аудит 2026-10-12).
+ */
+export function visibleTiles(tiles: Tile[], matrix: PermissionsResponse | undefined): Tile[] {
+  return tiles.filter((tile) => !tile.requires || allowed(matrix, ...tile.requires));
 }
 
 /** Адрес плитки, только если у роли есть право на раздел (как в RouteGuard); иначе `null`. */

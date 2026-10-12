@@ -148,7 +148,12 @@ async def summary(session: AsyncSession, days: int, now: datetime) -> DealsSumma
     since = now - timedelta(days=days)
     closed = (Deal.closed_at >= since,)
     won = await session.execute(
-        select(Deal.currency, func.count(), func.coalesce(func.sum(Deal.amount), 0))
+        select(
+            Deal.currency,
+            func.count(),
+            func.coalesce(func.sum(Deal.amount), 0),
+            func.count(Deal.amount),
+        )
         .where(Deal.stage == DealStage.WON.value, *closed)
         .group_by(Deal.currency)
         .order_by(Deal.currency)
@@ -171,6 +176,7 @@ async def summary(session: AsyncSession, days: int, now: datetime) -> DealsSumma
         days=days,
         won_count=sum(int(r[1]) for r in won_rows),
         won_amounts=[CurrencySum(currency=r[0], amount=Decimal(r[2] or 0)) for r in won_rows],
+        won_without_amount=sum(int(r[1]) - int(r[3]) for r in won_rows),
         lost_count=sum(int(r[1]) for r in lost_rows),
         lost_by_reason=[
             ReasonCount(reason=r[0], count=int(r[1]), amount=Decimal(r[2] or 0)) for r in lost_rows

@@ -30,6 +30,7 @@ export const core = {
     userMenu: "Меню пользователя",
     gapsCount: "{count} открытых пробелов",
   },
+  units: { d: "дн", h: "ч", min: "мин" },
   navGroup: {
     work: "Работа",
     analytics: "Аналитика",

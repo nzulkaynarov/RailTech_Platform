@@ -158,3 +158,26 @@ h2.section-title.ant-typography {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+/* Заголовок карточки — настоящий заголовок (h2/h3) в размере заголовка карточки antd. */
+.card-heading {
+  margin: 0;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+.metric-hint {
+  display: block;
+  font-size: var(--ant-font-size-sm);
+}
+/* Плитки KPI на телефоне — сетка 2×N, а не столбик из одиночных карточек. */
+@media (max-width: 575px) {
+  .metric-grid,
+  .metric-grid--primary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--ant-margin-sm);
+  }
+  .metric-card .ant-statistic-content {
+    font-size: var(--ant-font-size-lg);
+  }
+}
