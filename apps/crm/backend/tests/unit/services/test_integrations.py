@@ -11,6 +11,7 @@ import pytest
 from structlog.testing import capture_logs
 
 from app.domain.errors import (
+    AccountLockedError,
     ConflictError,
     Reason,
     UpstreamUnavailableError,
@@ -98,8 +99,13 @@ def audit_log(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, Any]]:
     async def record(*args: Any, **kwargs: Any) -> None:
         records.append({"args": args, **kwargs})
 
-    async def get_user(session: Any, user_id: int) -> Any:
-        return SimpleNamespace(id=user_id, password_hash=hash_password(PASSWORD))
+    user = SimpleNamespace(
+        id=0, password_hash=hash_password(PASSWORD), failed_logins=0, locked_until=None
+    )
+
+    async def get_user(session: Any, user_id: int, **_: Any) -> Any:
+        user.id = user_id
+        return user
 
     monkeypatch.setattr("app.services.integrations.audit.record", record)
     monkeypatch.setattr("app.services.integrations.users_repo.get", get_user)
@@ -192,3 +198,15 @@ async def test_send_test_requires_channel(audit_log: list[dict[str, Any]]) -> No
     with pytest.raises(ConflictError) as caught:
         await make(FakeProbe(), FakeStore()).send_test()
     assert caught.value.details["reason"] == Reason.CHANNEL_NOT_CONFIGURED
+
+
+async def test_reauth_locks_after_threshold(audit_log: list[dict[str, Any]]) -> None:
+    """Аудит P0-4: перебор пароля через «Токен бота» упирается в тот же lockout, что вход."""
+    service = make(FakeProbe(), FakeStore())
+    for _ in range(9):
+        with pytest.raises(ValidationFailedError):
+            await service.save_token(ADMIN, TOKEN, "wrong-password-1")
+    with pytest.raises(AccountLockedError):
+        await service.save_token(ADMIN, TOKEN, "wrong-password-1")
+    with pytest.raises(AccountLockedError):  # верный пароль блокировку не снимает
+        await service.save_token(ADMIN, TOKEN, PASSWORD)

@@ -29,3 +29,14 @@ export const stageLabel = (stage: string): string => t.deals.stages[stage] ?? st
 export function stageFromSearch(value: string | null): "open" | "won" | "lost" | undefined {
   return value === "open" || value === "won" || value === "lost" ? value : undefined;
 }
+
+/** Валюты формы: из настройки `deals.currency` и UZS/USD (без ручного ввода кода). */
+export const currencyOptions = (fromSettings: string): string[] =>
+  Array.from(new Set([fromSettings, "UZS", "USD"]));
+
+/** «1500000» → «1 500 000» (узкий неразрывный пробел не нужен — обычный пробел читаем). */
+export const groupThousands = (value: number | string | undefined): string =>
+  value === undefined || value === "" ? "" : String(value).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+
+export const parseAmount = (text: string | undefined): number =>
+  Number((text ?? "").replace(/[^\d.]/g, "")) || 0;

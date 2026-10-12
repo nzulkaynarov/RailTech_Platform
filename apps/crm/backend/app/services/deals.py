@@ -8,14 +8,24 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
+from pydantic import ValidationError
 from sqlalchemy import func, literal_column, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.deals import DealStage, lost_reason, may_transition, plan_lead_outcome
-from app.domain.errors import ConflictError, NotFoundError, Reason
+from app.domain.deals import (
+    DealStage,
+    deal_title,
+    lost_reason,
+    may_edit,
+    may_transition,
+    plan_lead_outcome,
+)
+from app.domain.errors import ConflictError, NotFoundError, Reason, ValidationFailedError
+from app.models.auth import User
 from app.models.clients import Client
 from app.models.deals import Deal
-from app.models.leads import Lead
+from app.models.kb import Product
+from app.models.leads import Lead, Setting
 from app.schemas.deals import CurrencySum, DealCreate, DealsSummary, DealUpdate, ReasonCount
 from app.schemas.settings import DealsSettings
 from app.security import audit
@@ -53,6 +63,58 @@ async def open_deal(session: AsyncSession, lead_id: int) -> Deal | None:
     return (await session.scalars(stmt)).first()
 
 
+async def title_for(session: AsyncSession, lead: Lead) -> str:
+    """«<Клиент или имя лида> — <продукт>»: имя продукта из `products` (аудит P1-5)."""
+    client = await session.get(Client, lead.client_id) if lead.client_id is not None else None
+    key = lead.product_interest[0] if lead.product_interest else None
+    product = await session.get(Product, key) if key else None
+    return deal_title(
+        client_name=client.name if client is not None else None,
+        lead_name=lead.display_name,
+        product_name=product.name if product is not None else key,
+        lead_id=lead.id,
+    )
+
+
+async def default_currency(session: AsyncSession) -> str:
+    """Валюта новых сделок из настройки `deals` (без кэша сервиса настроек — внутри транзакции)."""
+    row = await session.get(Setting, "deals")
+    try:
+        return DealsSettings.model_validate(row.value if row is not None else {}).currency
+    except ValidationError:
+        return DealsSettings().currency
+
+
+async def ensure_open_deal(
+    session: AsyncSession, lead: Lead, *, actor: Principal | None = None
+) -> Deal:
+    """Открытая сделка лида (Q-021): «Квалифицирован» и «Новая сделка». Идемпотентно —
+    одна открытая сделка на лида; повторный вызов возвращает существующую."""
+    deal = await open_deal(session, lead.id)
+    if deal is not None:
+        return deal
+    deal = Deal(
+        lead_id=lead.id,
+        client_id=lead.client_id,
+        title=await title_for(session, lead),
+        product_key=lead.product_interest[0] if lead.product_interest else None,
+        currency=await default_currency(session),
+        owner_user_id=lead.assigned_user_id,
+        stage=DealStage.OPEN.value,
+    )
+    session.add(deal)
+    await session.flush()
+    await audit.record(
+        session,
+        actor.actor if actor is not None else audit.Actor.system(),
+        "deal.open",
+        "deal",
+        deal.id,
+        after=snapshot(deal),
+    )
+    return deal
+
+
 async def apply_lead_outcome(
     session: AsyncSession,
     who: Principal,
@@ -73,7 +135,7 @@ async def apply_lead_outcome(
         deal = Deal(
             lead_id=lead.id,
             client_id=lead.client_id,
-            title=lead.display_name or f"#{lead.id}",
+            title=await title_for(session, lead),
             product_key=lead.product_interest[0] if lead.product_interest else None,
             currency=cfg.currency,
             owner_user_id=lead.assigned_user_id,
@@ -98,9 +160,12 @@ async def create(
         lead = await session.get(Lead, body.lead_id)
         if lead is None:
             raise NotFoundError("lead not found")
+        if client_id is not None and lead.client_id not in (None, client_id):
+            raise ValidationFailedError("lead belongs to another client", field="client_id")
         client_id = client_id or lead.client_id
     if client_id is not None and await session.get(Client, client_id) is None:
         raise NotFoundError("client not found")
+    await _check_owner(session, body.owner_user_id)
     deal = Deal(
         title=body.title.strip(),
         client_id=client_id,
@@ -123,8 +188,13 @@ async def update(
     deal = await session.get(Deal, deal_id)
     if deal is None:
         raise NotFoundError("deal not found")
+    if not may_edit(DealStage(deal.stage), is_admin=who.is_admin):
+        # Выигранная сделка — финал: сумму, валюту, владельца меняет только админ (аудит P0-3).
+        raise ConflictError("won deal is final", reason=Reason.DEAL_WON_FINAL)
     before = snapshot(deal)
     fields = body.model_dump(exclude_unset=True)
+    if "owner_user_id" in fields:
+        await _check_owner(session, fields["owner_user_id"])
     stage = fields.pop("stage", None)
     reason = fields.pop("lost_reason", None)
     for key, value in fields.items():
@@ -142,6 +212,16 @@ async def update(
     await audit.record(
         session, who.actor, "deal.update", "deal", deal.id, before=before, after=snapshot(deal)
     )
+
+
+async def _check_owner(session: AsyncSession, user_id: int | None) -> None:
+    if user_id is None:
+        return
+    user = await session.get(User, user_id)
+    if user is None or not user.is_active:
+        raise ValidationFailedError(
+            "choose an active colleague", reason=Reason.INACTIVE_COLLEAGUE, field="owner_user_id"
+        )
 
 
 async def summary(session: AsyncSession, days: int, now: datetime) -> DealsSummary:

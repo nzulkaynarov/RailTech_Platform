@@ -176,4 +176,5 @@ def test_reason_values_are_a_stable_contract() -> None:
         "assist_empty",
         "assist_no_history",
         "deal_won_final",
+        "no_consent",
     }

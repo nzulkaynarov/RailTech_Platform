@@ -52,6 +52,7 @@ class Reason(StrEnum):
     ASSIST_EMPTY = "assist_empty"
     ASSIST_NO_HISTORY = "assist_no_history"
     DEAL_WON_FINAL = "deal_won_final"
+    NO_CONSENT = "no_consent"
 
 
 class DomainError(Exception):

@@ -19,11 +19,13 @@ from app.domain.errors import (
     Reason,
     ValidationFailedError,
 )
+from app.domain.lead_access import loses_work_role
 from app.models.auth import ROLES, RefreshToken, User
 from app.models.clients import Client
+from app.models.deals import Deal
 from app.models.leads import Lead
 from app.repositories import users as repo
-from app.security import audit
+from app.security import audit, reauth
 from app.security.audit import Actor
 from app.security.passwords import (
     WeakPasswordError,
@@ -60,8 +62,13 @@ class UserPatch:
 
 
 class UserService:
-    def __init__(self, sessions: async_sessionmaker[AsyncSession]) -> None:
+    def __init__(
+        self,
+        sessions: async_sessionmaker[AsyncSession],
+        lockout: reauth.LockoutPolicy | None = None,
+    ) -> None:
         self._sessions = sessions
+        self._lockout = lockout or reauth.LockoutPolicy()
 
     async def list_all(self) -> list[UserView]:
         async with self._sessions() as session:
@@ -123,8 +130,10 @@ class UserService:
                 roles = sorted(patch.roles)
                 if "admin" not in roles:
                     user.ui_mode = "manager"
-            if patch.is_active is False:
+            stops_work = patch.roles is not None and loses_work_role(before.roles, patch.roles)
+            if patch.is_active is False or stops_work:
                 await _hand_over_work(session, actor, user_id, patch.transfer_to_user_id)
+            if patch.is_active is False:
                 await _revoke_tokens(session, user_id)
             try:
                 await session.flush()
@@ -159,16 +168,20 @@ class UserService:
         return password
 
     async def change_password(self, actor: Actor, user_id: int, current: str, new: str) -> None:
+        # Lockout как у входа (аудит P0-4): счётчик коммитится, ошибка — после транзакции.
         async with self._sessions() as session, session.begin():
             user = await repo.get(session, user_id, for_update=True)
             if user is None:
                 raise NotFoundError("user not found")
-            if not verify_password(user.password_hash, current):
-                raise ValidationFailedError(
-                    "current password is wrong",
-                    reason=Reason.WRONG_PASSWORD,
-                    field="current_password",
-                )
+            failure = reauth.check(
+                user, current, datetime.now(UTC), self._lockout, field="current_password"
+            )
+        if failure is not None:
+            raise failure
+        async with self._sessions() as session, session.begin():
+            user = await repo.get(session, user_id, for_update=True)
+            if user is None:
+                raise NotFoundError("user not found")
             if verify_password(user.password_hash, new):
                 raise ValidationFailedError(
                     "new password must differ",
@@ -303,6 +316,7 @@ async def _hand_over_work(
     if to_user_id is None:
         if leads:
             raise ActiveLeadsError("hand over the leads first", count=len(leads))
+        await _reassign(session, user_id, None)  # лиды у бота и сделки — в общую очередь
         return
     target = await repo.get(session, to_user_id)
     roles = await repo.roles_of(session, to_user_id) if target else []
@@ -313,11 +327,7 @@ async def _hand_over_work(
             reason=Reason.INACTIVE_COLLEAGUE,
             field="transfer_to_user_id",
         )
-    await session.execute(
-        update(Lead)
-        .where(Lead.assigned_user_id == user_id, Lead.erased_at.is_(None))
-        .values(assigned_user_id=to_user_id)
-    )
+    await _reassign(session, user_id, to_user_id)
     await session.execute(
         update(Client).where(Client.owner_user_id == user_id).values(owner_user_id=to_user_id)
     )
@@ -328,6 +338,20 @@ async def _hand_over_work(
         "user",
         user_id,
         after={"to_user_id": to_user_id, "active_leads": leads},
+    )
+
+
+async def _reassign(session: AsyncSession, user_id: int, to_user_id: int | None) -> None:
+    """Все лиды с ответственным (и у бота — клиенты после сделки) и открытые сделки."""
+    await session.execute(
+        update(Lead)
+        .where(Lead.assigned_user_id == user_id, Lead.erased_at.is_(None))
+        .values(assigned_user_id=to_user_id)
+    )
+    await session.execute(
+        update(Deal)
+        .where(Deal.owner_user_id == user_id, Deal.stage == "open")
+        .values(owner_user_id=to_user_id)
     )
 
 

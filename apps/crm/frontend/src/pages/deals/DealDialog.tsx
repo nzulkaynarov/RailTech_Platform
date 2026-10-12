@@ -7,7 +7,7 @@ import { useClients } from "../../api/adminQueries";
 import { useDealOptions, useSaveDeal } from "../../api/dealQueries";
 import type { DealOut } from "../../api/generated/model";
 import { useTeam } from "../../api/queries";
-import { stageLabel } from "../../domain/deals";
+import { currencyOptions, groupThousands, parseAmount, stageLabel } from "../../domain/deals";
 import { useApiErrorToast } from "../../hooks/useApiErrorToast";
 import { t } from "../../i18n/ru";
 
@@ -48,6 +48,7 @@ function initial(deal: DealOut | null, clientId: number | undefined, currency: s
 export function DealDialog({ open, deal, clientId, onClose }: Props) {
   const [form] = Form.useForm<Values>();
   const stage = Form.useWatch("stage", form);
+  const chosenCurrency = Form.useWatch("currency", form);
   const options = useDealOptions();
   const team = useTeam();
   const clients = useClients("");
@@ -110,11 +111,18 @@ export function DealDialog({ open, deal, clientId, onClose }: Props) {
             />
           </Form.Item>
         ) : null}
-        <Form.Item name="amount" label={t.deals.amount}>
-          <InputNumber min={0} step={1000} className="settings-number" />
-        </Form.Item>
         <Form.Item name="currency" label={t.deals.currency} rules={[{ len: 3 }]}>
-          <Input maxLength={3} />
+          <Select options={currencyOptions(currency).map((c) => ({ value: c, label: c }))} />
+        </Form.Item>
+        <Form.Item name="amount" label={t.deals.amount}>
+          <InputNumber<number>
+            min={0}
+            step={1000}
+            style={{ width: "100%" }}
+            formatter={groupThousands}
+            parser={parseAmount}
+            suffix={chosenCurrency ?? currency}
+          />
         </Form.Item>
         {deal ? (
           <Form.Item name="stage" label={t.deals.stage}>
@@ -135,7 +143,7 @@ export function DealDialog({ open, deal, clientId, onClose }: Props) {
           </Form.Item>
         ) : null}
         <Form.Item name="expected_close_date" label={t.deals.expected}>
-          <DatePicker format="DD.MM.YYYY" />
+          <DatePicker format="DD.MM.YYYY" style={{ width: "100%" }} />
         </Form.Item>
         <Form.Item name="owner_user_id" label={t.deals.owner}>
           <Select

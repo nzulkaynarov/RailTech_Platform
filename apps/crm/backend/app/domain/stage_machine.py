@@ -38,6 +38,8 @@ _ALLOWED: Final[dict[tuple[Stage, Stage], frozenset[TransitionSource]]] = {
     (S.LOST, S.IN_PROGRESS): frozenset({Src.USER}),
     (S.CUSTOMER, S.IN_PROGRESS): frozenset({Src.USER}),
     (S.LOST, S.CUSTOMER): frozenset({Src.SYSTEM}),
+    # «Вернуть боту» повторной сделки: клиент остаётся клиентом (аудит 2026-10-12, P0-2).
+    (S.IN_PROGRESS, S.CUSTOMER): frozenset({Src.USER}),
 }
 
 QUALIFIER_PROPOSABLE: Final = frozenset({S.ENGAGED, S.QUALIFIED})
@@ -85,9 +87,17 @@ def qualifier_path(current: Stage, proposed: Stage) -> tuple[tuple[Stage, ...], 
 
 
 def stage_before_handoff(history: Sequence[tuple[Stage, Stage]]) -> Stage:
-    """Стадия для «Вернуть боту»: откуда лид пришёл в handoff/in_progress (иначе engaged)."""
+    """Стадия для «Вернуть боту»: откуда лид пришёл в handoff/in_progress (иначе engaged).
+
+    Последний вход из «Клиента» («Новая сделка») возвращает в «Клиента»: повторная продажа
+    не делает клиента снова лидом.
+    """
     for from_stage, to_stage in reversed(history):
-        if to_stage in (S.HANDOFF, S.IN_PROGRESS) and from_stage in RETURN_TO_BOT_STAGES:
+        if to_stage not in (S.HANDOFF, S.IN_PROGRESS):
+            continue
+        if from_stage == S.CUSTOMER:
+            return S.CUSTOMER
+        if from_stage in RETURN_TO_BOT_STAGES:
             return from_stage
     return S.ENGAGED
 

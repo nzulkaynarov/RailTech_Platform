@@ -150,6 +150,48 @@ describe("availableActions", () => {
   ] as const)("snooze (Q-018): %s → %s", (_, item, rights, can) => {
     expect(availableActions(item, rights).snooze).toBe(can);
   });
+
+  const info = { ...openEscalation, priority: "info" };
+  const infoBot = lead({ stage: "engaged", owner_mode: "bot", escalation: info });
+
+  it.each([
+    ["info, open, lead with the bot", infoBot, manager, true],
+    [
+      "info, snoozed",
+      lead({ owner_mode: "bot", escalation: { ...info, status: "snoozed" } }),
+      manager,
+      true,
+    ],
+    ["hot handoff", handoff, manager, false],
+    [
+      "info, taken",
+      lead({ owner_mode: "human", assigned_user_id: 7, escalation: { ...info, status: "taken" } }),
+      manager,
+      false,
+    ],
+    ["viewer", infoBot, viewer, false],
+  ] as const)("acknowledge (audit P0-1): %s → %s", (_, item, rights, can) => {
+    expect(availableActions(item, rights).acknowledge).toBe(can);
+  });
+
+  it("acknowledge is the primary action for an info escalation on a bot lead", () => {
+    expect(leadActionPlan(infoBot, manager).primary).toBe("acknowledge");
+  });
+
+  it("snooze extends an already snoozed handoff", () => {
+    const snoozed = lead({ escalation: { ...openEscalation, status: "snoozed" } });
+    expect(availableActions(snoozed, manager).snooze).toBe(true);
+  });
+
+  it.each([
+    ["won, nobody responsible", null, manager, true],
+    ["won, I am responsible", 7, manager, true],
+    ["won, someone else responsible", 3, manager, false],
+    ["won, admin", 3, admin, true],
+  ] as const)("makeCustomer = may_make_customer: %s → %s", (_, owner, rights, can) => {
+    const item = lead({ stage: "won", owner_mode: "bot", assigned_user_id: owner });
+    expect(availableActions(item, rights).makeCustomer).toBe(can);
+  });
 });
 
 describe("replyState", () => {

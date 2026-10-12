@@ -7,6 +7,8 @@ from typing import Any
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.clients import ServiceRequest
+from app.models.deals import Deal
 from app.models.leads import Conversation, Lead, LeadNote, Message, TelegramIdentity
 from app.models.qualification import Escalation
 from app.repositories import events
@@ -151,8 +153,31 @@ async def erase_lead(session: AsyncSession, lead: Lead, now: datetime) -> int:
     await session.execute(
         update(LeadNote).where(LeadNote.lead_id == lead.id).values(text=ERASED_TEXT)
     )
+    await _erase_related(session, lead, now)
     lead.display_name = ""
+    lead.snoozed_until = None
     lead.need_summary = None
     lead.qualification = {}
     lead.erased_at = now
     return int(getattr(result, "rowcount", 0) or 0)
+
+
+async def _erase_related(session: AsyncSession, lead: Lead, now: datetime) -> None:
+    """Сделки и запросы клиента тоже несут ПДн лида (аудит 2026-10-12, P1-9)."""
+    name = (lead.display_name or "").strip()
+    if name:
+        await session.execute(
+            update(Deal)
+            .where(Deal.lead_id == lead.id, Deal.title.contains(name, autoescape=True))
+            .values(title=func.replace(Deal.title, name, f"Лид #{lead.id}"))
+        )
+    await session.execute(
+        update(ServiceRequest)
+        .where(ServiceRequest.lead_id == lead.id, ServiceRequest.status == "open")
+        .values(status="closed", closed_at=now)
+    )
+    await session.execute(
+        update(ServiceRequest)
+        .where(ServiceRequest.lead_id == lead.id)
+        .values(summary=ERASED_TEXT, resolution=None)
+    )

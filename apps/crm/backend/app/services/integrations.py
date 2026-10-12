@@ -6,7 +6,7 @@
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Protocol
 
 import structlog
@@ -30,8 +30,7 @@ from app.integrations.telegram import (
 )
 from app.repositories import telegram_chats
 from app.repositories import users as users_repo
-from app.security import audit
-from app.security.passwords import verify_password
+from app.security import audit, reauth
 from app.security.principal import Principal
 from app.security.secrets_store import TELEGRAM_BOT_TOKEN, SecretsStore, last4
 from app.services import channel_texts
@@ -90,7 +89,9 @@ class TelegramIntegrationService:
         current_bot: Callable[[], Awaitable[Bot | None]],
         *,
         mode: str,
+        lockout: reauth.LockoutPolicy | None = None,
     ) -> None:
+        self._lockout = lockout or reauth.LockoutPolicy()
         self._sessions = sessions
         self._settings = settings
         self._store = store
@@ -145,12 +146,16 @@ class TelegramIntegrationService:
         return identity
 
     async def _reauth(self, user_id: int, password: str) -> None:
-        async with self._sessions() as session:
-            user = await users_repo.get(session, user_id)
-        if user is None or not verify_password(user.password_hash, password):
-            raise ValidationFailedError(
-                "password is wrong", reason=Reason.WRONG_PASSWORD, field="password"
-            )
+        """Пароль с тем же lockout, что у входа (аудит P0-4); счётчик коммитится до ошибки."""
+        async with self._sessions() as session, session.begin():
+            user = await users_repo.get(session, user_id, for_update=True)
+            if user is None:
+                raise ValidationFailedError(
+                    "password is wrong", reason=Reason.WRONG_PASSWORD, field="password"
+                )
+            failure = reauth.check(user, password, datetime.now(UTC), self._lockout)
+        if failure is not None:
+            raise failure
 
     async def _check(self, token: str) -> BotIdentity:
         try:

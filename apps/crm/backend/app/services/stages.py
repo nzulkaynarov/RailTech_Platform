@@ -10,6 +10,7 @@ from app.domain.stages import Stage, TransitionSource
 from app.models.leads import Lead
 from app.models.qualification import StageTransition
 from app.repositories import events
+from app.services import deals
 
 logger = structlog.get_logger(__name__)
 
@@ -34,6 +35,9 @@ async def transition(
             lead.unresponsive_since = datetime.now(UTC)
         await _journal(session, lead.id, decision, source, reason, actor_user_id)
         await events.publish(session, "lead.updated", lead_id=lead.id, stage=target.value)
+        if target == Stage.QUALIFIED:
+            # Q-021: квалифицированный лид — открытая сделка (идемпотентно, одна на лида).
+            await deals.ensure_open_deal(session, lead)
     return decision
 
 

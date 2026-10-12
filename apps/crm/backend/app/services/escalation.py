@@ -14,7 +14,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.business_hours import add_business_minutes, is_business_time
-from app.domain.escalation import EscalationPlan, OpenEscalation, plan
+from app.domain.escalation import (
+    EscalationPlan,
+    OpenEscalation,
+    plan,
+    priority_raised,
+    reset_sla,
+)
 from app.domain.stages import OwnerMode, Stage, TransitionSource
 from app.domain.triggers import Priority, TriggerCode, TriggerHit
 from app.models.leads import Lead
@@ -79,6 +85,10 @@ async def apply(
         session.add(current)
     else:
         current.reason_codes = codes
+        if priority_raised(Priority(current.priority), escalation_plan.priority):
+            # Срочнее — новый срок и новое напоминание (аудит 2026-10-12, P1-8).
+            timer = reset_sla(now, cfg.escalation.sla_minutes, hours)
+            current.sla_due_at, current.sla_notified_at = timer.sla_due_at, timer.sla_notified_at
         current.priority = escalation_plan.priority.value
         current.reason_text = reason_text or current.reason_text
         current.recommendation = recommendation or current.recommendation

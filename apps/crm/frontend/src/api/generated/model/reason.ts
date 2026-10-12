@@ -52,4 +52,5 @@ export const Reason = {
   assist_empty: "assist_empty",
   assist_no_history: "assist_no_history",
   deal_won_final: "deal_won_final",
+  no_consent: "no_consent",
 } as const;
