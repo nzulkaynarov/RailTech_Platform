@@ -1,34 +1,33 @@
 /** Запросы «Расходы» и «Модели ИИ» (админ). */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { changeModel, getSpend, listModels, resetModel, testModel } from "./generated/crm";
+import { adminKeys } from "./adminQueries";
+import {
+  changeModel,
+  getListModelsQueryKey,
+  resetModel,
+  testModel,
+  useGetSpend,
+  useListModels,
+} from "./generated/crm";
 import type { ModelChangeIn } from "./generated/model";
-import { unwrap } from "./http";
+import { systemKeys } from "./systemQueries";
 
-export const spendKeys = {
-  spend: (days: number) => ["spend", days] as const,
-  models: ["models"] as const,
-};
+export const useSpend = (days: number) => useGetSpend({ days });
 
-export const useSpend = (days: number) =>
-  useQuery({
-    queryKey: spendKeys.spend(days),
-    queryFn: async () => unwrap(await getSpend({ days })),
-  });
-
-export const useModels = () =>
-  useQuery({ queryKey: spendKeys.models, queryFn: async () => unwrap(await listModels()) });
+export const useModels = () => useListModels();
 
 export function useTestModel() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: async (alias: string) => unwrap(await testModel(alias)),
+    mutationFn: (alias: string) => testModel(alias),
     // Результат проверки пишется в состояние монитора — обновляем и «Состояние системы».
-    onSettled: async () => {
-      await client.invalidateQueries({ queryKey: spendKeys.models });
-      await client.invalidateQueries({ queryKey: ["system", "status"] });
-      await client.invalidateQueries({ queryKey: ["setup", "checklist"] });
-    },
+    onSettled: () =>
+      Promise.all(
+        [getListModelsQueryKey(), adminKeys.system, systemKeys.checklist].map((queryKey) =>
+          client.invalidateQueries({ queryKey }),
+        ),
+      ),
   });
 }
 
@@ -36,14 +35,10 @@ export function useTestModel() {
 export function useChangeModel() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: async (args: { alias: string; body: ModelChangeIn; reset: boolean }) =>
-      unwrap(
-        args.reset
-          ? await resetModel(args.alias, { password: args.body.password })
-          : await changeModel(args.alias, args.body),
-      ),
-    onSuccess: async () => {
-      await client.invalidateQueries({ queryKey: spendKeys.models });
-    },
+    mutationFn: (args: { alias: string; body: ModelChangeIn; reset: boolean }) =>
+      args.reset
+        ? resetModel(args.alias, { password: args.body.password })
+        : changeModel(args.alias, args.body),
+    onSuccess: () => client.invalidateQueries({ queryKey: getListModelsQueryKey() }),
   });
 }
