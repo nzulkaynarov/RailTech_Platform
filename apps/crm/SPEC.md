@@ -274,13 +274,14 @@ service_requests(id, client_id, lead_id NULL, summary, status 'open'|'closed', c
 settings(key PK, value JSONB, schema_version INT, updated_by, updated_at)
 ```
 Ключи и JSON-схемы валидируются Pydantic-моделями в `app/schemas/settings.py`:
-`company`, `business_hours`, `texts` (greeting/consent/handoff/off_hours × ru/uz/en), `escalation` (триггеры, пороги, `no_progress_turns`, SLA, `price_always_to_manager`), `qualification` (критерии «Квалифицирован»: обязательные и дополнительные факты, горизонт срока, роли — ADR-0016), `kb` (`min_score`, `top_k`), `bot` (persona, `max_words`, `history_messages`, `rate_limit_per_minute`, `unresponsive_days`), `competitors`, `stop_words`, `notifications` (`channel_id`, `duty_user_ids`), `budget` (`daily_usd`, `fallback_model_enabled`).
+`company`, `business_hours`, `texts` (greeting/consent/handoff/off_hours × ru/uz/en), `escalation` (триггеры, пороги, `no_progress_turns`, SLA, `price_always_to_manager`), `qualification` (критерии «Квалифицирован»: обязательные и дополнительные факты, горизонт срока, роли — ADR-0016), `kb` (`min_score`, `top_k`), `bot` (persona, `max_words`, `history_messages`, `rate_limit_per_minute`, `unresponsive_days`), `competitors`, `stop_words`, `notifications` (`channel_id`, `duty_user_ids`), `budget` (`daily_usd`, `fallback_model_enabled`, `providers` — дневной лимит USD по провайдеру LiteLLM: `anthropic` 3, `gemini` 1, 0 — без лимита; Q-008).
 
 ### 5.8. Техническое
 
 - Таблицы Procrastinate (`procrastinate_*`) — создаются его миграциями.
 - Таблицы LangGraph `PostgresSaver` (`checkpoints`, `checkpoint_writes`, ...).
 - `system_alerts(key PK, active, detail, first_seen_at, sent_at, resolved_at, updated_at)` — дедупликация системных алертов монитора (§13).
+- `llm_usage(id, at, purpose, alias, provider, model, input_tokens, output_tokens, cost_usd, lead_id NULL, kind 'work'|'test')`, индекс по `at` — единый учёт каждого вызова модели (чат и эмбеддинги; стоимость — заголовок LiteLLM `x-litellm-response-cost`); `kind='test'` — `LLM_USAGE_KIND=test` в make eval/eval-quick/load-test/kb-eval. Источник для BudgetGuard, монитора и экрана «Расходы».
 
 ---
 
@@ -516,7 +517,7 @@ Refine с кастомным `dataProvider` (REST `/api/v1`), `authProvider` (co
 - Логи: structlog JSON, `request_id`, `lead_id`; уровни по env.
 - Метрики здоровья: `GET /health` (liveness), `GET /ready` (БД, S3/RustFS, LiteLLM); ежедневный отчёт в канал (General-пост): новых лидов, эскалаций, открытых пробелов KB, стоимость.
 - Алерты (в канал, префикс ⚠️): задача в `failed` после 3 ретраев; LiteLLM недоступен > 2 мин; очередь > 100 задач; бюджет > 80 %; у провайдера модели закончились кредиты/квота или отклонён ключ — проба раз в час запросом в 1 токен к `dialog-model` (Anthropic) и `fallback-model` (Gemini) с `disable_fallbacks` (иначе сбой Claude скрыт ответом Gemini), ключ алерта `model:<alias>`, снятие — только по успешной пробе. Монитор — периодическая задача `system_monitor` (раз в минуту, `domain/alerts.py`); дедупликация в таблице `system_alerts(key PK, active, detail, first_seen_at, sent_at, resolved_at, updated_at)`: пост на переходе в проблему, повтор не чаще 6 ч, снятие постом «✅ … в норме». Итоги дня — `daily_report` в 18:05 Asia/Tashkent (пн–пт).
-- BudgetGuard: расход за сутки (Asia/Tashkent) = `messages.meta.cost_usd` + `qualifier_runs.cost_usd`; при ≥ 100 % `budget.daily_usd` и `fallback_model_enabled` диалог идёт на `fallback-model` (кэш решения 60 с), квалификатор продолжает; `daily_usd = 0` — без лимита.
+- BudgetGuard: расход за сутки (Asia/Tashkent) = сумма `llm_usage.cost_usd` (работа и тесты; кэш 60 с). Мягкий бюджет: при ≥ 100 % `budget.daily_usd` и `fallback_model_enabled` диалог идёт на `fallback-model`, квалификатор продолжает; `daily_usd = 0` — без лимита. Лимит провайдера `budget.providers` (проверка до вызова): провайдер за лимитом → диалог на `fallback-model`, если провайдер резерва в лимите, иначе `LlmUnavailableError` (бот честно передаёт человеку); квалификатор — отказ. Провайдер алиаса — из LiteLLM `GET /model/info` (`model_info.litellm_provider` или префикс `litellm_params.model`), кэш 5 мин; неизвестен → лимит провайдера не применяется. Потолок `provider_budget_config` LiteLLM — аварийный, выше настроек.
 - Runbooks: деплой, откат, бэкап/восстановление, ротация ключей, «бот молчит», «эскалации не приходят», «стоимость выросла», «откат промпта», eval-gate, «переезд dev → prod».
 
 ---
