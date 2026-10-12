@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
 from app.main import create_app
+from app.models.auth import AuditLog
 from app.models.leads import Lead, LeadNote, Message
 from app.models.qualification import Escalation
 from app.repositories import events
@@ -144,6 +145,33 @@ async def test_snooze_and_inbox(
         ).status_code
         == 422
     )
+
+
+async def test_unsnooze_reopens_with_fresh_sla(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    """«Вернуть из отложенных»: передача снова открыта, срок реакции — заново, аудит."""
+    lead_id = await escalated_lead(sessions)
+    manager, password = await make_user(sessions, "unsnz@railtech.uz", ["manager"])
+    headers = login(client, manager.email, password)
+    url = f"/api/v1/leads/{lead_id}/actions/unsnooze"
+    not_snoozed = client.post(url, headers=headers)
+    assert not_snoozed.status_code == 409
+    until = (datetime.now(UTC) + timedelta(hours=2)).isoformat()
+    snooze_url = f"/api/v1/leads/{lead_id}/actions/snooze"
+    assert client.post(snooze_url, json={"until": until}, headers=headers).status_code == 200
+    async with sessions() as session, session.begin():
+        row = (await session.scalars(select(Escalation))).one()
+        row.sla_notified_at = datetime.now(UTC)  # напоминание по старому сроку уже ушло
+    assert client.post(url, headers=headers).status_code == 200
+    lead, escalation = await load(sessions, lead_id)
+    assert (escalation.status, escalation.snoozed_until) == ("open", None)
+    assert lead.snoozed_until is None
+    assert escalation.sla_notified_at is None
+    assert escalation.sla_due_at is not None
+    async with sessions() as session:
+        actions = (await session.scalars(select(AuditLog.action))).all()
+    assert "lead.unsnooze" in actions
 
 
 async def test_snooze_with_owner_is_for_owner_or_admin(

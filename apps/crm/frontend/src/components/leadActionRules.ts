@@ -26,6 +26,7 @@ export type ActionKey =
   | "won"
   | "lost"
   | "snooze"
+  | "unsnooze"
   | "returnToBot"
   | "assign"
   | "newDeal"
@@ -41,6 +42,7 @@ export const ACTION_ORDER: readonly ActionKey[] = [
   "newDeal",
   "note",
   "snooze",
+  "unsnooze",
   "assign",
   "returnToBot",
   "lost",
@@ -83,6 +85,10 @@ const mayMakeCustomer = (lead: LeadDetail, rights: ActionRights): boolean =>
   (lead.stage === "won" || lead.stage === "customer") &&
   (rights.isAdmin || lead.assigned_user_id === null || lead.assigned_user_id === rights.userId);
 
+/** Зеркало `may_snooze` (Q-018): общая очередь; у лида есть ответственный — только он или админ. */
+const maySnooze = (lead: LeadDetail, rights: ActionRights): boolean =>
+  lead.assigned_user_id === null || lead.assigned_user_id === rights.userId || rights.isAdmin;
+
 /** Ждёт ли лид менеджера: открытая передача или бот на паузе. */
 const waitsForManager = (lead: LeadDetail): boolean =>
   lead.escalation?.status === "open" || lead.owner_mode === "paused";
@@ -106,10 +112,9 @@ export function availableActions(
     won: rights.work && lead.stage === "in_progress" && canOwn,
     lost: rights.work && lead.stage === "in_progress" && canOwn,
     // Q-018: общая очередь; у лида есть ответственный — только он или админ.
-    snooze:
-      rights.take &&
-      pending(lead) &&
-      (responsible === null || responsible === rights.userId || rights.isAdmin),
+    snooze: rights.take && pending(lead) && maySnooze(lead, rights),
+    // «Вернуть из отложенных»: те же права, что у «Отложить» (POST …/actions/unsnooze).
+    unsnooze: rights.take && lead.escalation?.status === "snoozed" && maySnooze(lead, rights),
     returnToBot: rights.work && lead.owner_mode !== "bot" && canOwn,
     assign: rights.work && human && canOwn,
     newDeal: rights.work && lead.stage === "customer" && !human,

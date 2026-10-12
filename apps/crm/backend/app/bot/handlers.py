@@ -4,7 +4,6 @@
 передаются через workflow data диспетчера (`app/bot/runtime.py`).
 """
 
-import io
 from typing import Any
 
 import httpx
@@ -22,6 +21,14 @@ from aiogram.types import (
 from aiogram.utils.chat_action import ChatActionSender
 
 from app.bot import keyboards
+from app.bot.attachments import (
+    BEFORE_CONSENT,
+    MAX_ATTACHMENT_BYTES,
+    attachment_meta,
+    media_of,
+    shared_text,
+    store_attachment,
+)
 from app.domain.bot_menu import MenuVariant, contact_request
 from app.domain.language import requested_language
 from app.integrations.s3 import ObjectStorage
@@ -35,7 +42,6 @@ router = Router(name="client-bot")
 # Лиды — только личные чаты: сообщения групп, куда добавили бота, не становятся лидами.
 router.message.filter(F.chat.type == "private")
 
-MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024
 MAX_TEXT_CHARS = 4000
 LANGUAGES: dict[str, Language] = {"ru": "ru", "uz": "uz", "en": "en"}
 
@@ -179,7 +185,7 @@ async def respond(
 ) -> None:
     """Текст лида: смена языка и контакты компании решает код, остальное — диалог."""
     text, uid, chat_id = message.text or "", _user(message).id, message.chat.id
-    out = await _deterministic(text, uid, conversation, settings)
+    out = await _deterministic(message, text, uid, conversation, settings)
     if out is None:
         # Ответ модели может идти десятки секунд — показываем «печатает…».
         async with ChatActionSender.typing(chat_id=chat_id, bot=bot):
@@ -194,21 +200,32 @@ async def respond(
 
 
 async def _deterministic(
-    text: str, uid: int, conversation: ConversationService, settings: SettingsService
+    message: Message,
+    text: str,
+    uid: int,
+    conversation: ConversationService,
+    settings: SettingsService,
 ) -> list[Outgoing] | None:
-    """Ответ без модели (Q-022, Q-023): «давай по-русски» и «дайте телефон/адрес/сайт»."""
+    """Ответ без модели (Q-022, Q-023): «давай по-русски» и «дайте телефон/адрес/сайт».
+
+    Сообщение лида и ответ пишутся в переписку — менеджер видит их в CRM.
+    """
     language = requested_language(text)
-    if language is not None:
-        return await conversation.set_language(uid, language)
     cfg = await settings.get()
-    if not contact_request(text, cfg.escalation.human_request_terms):
+    if language is None and not contact_request(text, cfg.escalation.human_request_terms):
         return None
+    await conversation.record_lead_message(_incoming(message, text))
+    if language is not None:
+        return await conversation.set_language(uid, language)  # подтверждение пишет сервис
     current = await conversation.language_of(uid)
     contacts = cfg.company_contacts(current)
     if contacts is not None:
-        return [Outgoing(contacts, language=current)]
-    missing = cfg.texts.contacts_missing.get(current)
-    return [Outgoing(missing, keyboard="handoff_offer", language=current)]
+        out = [Outgoing(contacts, language=current)]
+    else:
+        missing = cfg.texts.contacts_missing.get(current)
+        out = [Outgoing(missing, keyboard="handoff_offer", language=current)]
+    await conversation.record_bot_replies(uid, out)
+    return out
 
 
 MEDIA = F.document | F.photo | F.voice | F.audio | F.video | F.video_note | F.animation
@@ -223,7 +240,24 @@ async def on_attachment(
     object_storage: ObjectStorage,
     attachments_bucket: str,
 ) -> None:
-    attachment = await _store_attachment(message, bot, object_storage, attachments_bucket)
+    uid = _user(message).id
+    media = media_of(message)
+    if media is not None and media[3] > MAX_ATTACHMENT_BYTES:
+        # Больше 20 МБ Telegram боту не отдаёт: честно просим ссылку, без «получил, передам».
+        meta = attachment_meta(media) | {"stored": False, "too_large": True}
+        await conversation.record_lead_message(
+            _incoming(message, message.caption or "", attachments=[meta])
+        )
+        cfg = await settings.get()
+        out = [Outgoing(cfg.texts.attachment_too_large.get(await conversation.language_of(uid)))]
+        await conversation.record_bot_replies(uid, out)
+        await send(bot, message.chat.id, out, settings)
+        return
+    if await conversation.accepts_files(uid):
+        attachment = await store_attachment(message, bot, object_storage, attachments_bucket)
+    else:
+        # До согласия файл не загружается в хранилище — в переписке остаётся пометка.
+        attachment = attachment_meta(media) | BEFORE_CONSENT if media else None
     inc = _incoming(message, message.caption or "", attachments=[attachment] if attachment else [])
     await send(bot, message.chat.id, await conversation.handle_message(inc), settings)
 
@@ -233,7 +267,7 @@ async def on_contact_or_location(
     message: Message, bot: Bot, conversation: ConversationService, settings: SettingsService
 ) -> None:
     """Контакт и геопозиция — в переписку текстом: менеджер увидит их в CRM."""
-    inc = _incoming(message, _shared_text(message))
+    inc = _incoming(message, shared_text(message))
     await send(bot, message.chat.id, await conversation.handle_message(inc), settings)
 
 
@@ -242,7 +276,9 @@ async def on_unsupported(
     message: Message, bot: Bot, conversation: ConversationService, settings: SettingsService
 ) -> None:
     """Стикеры, опросы и прочее не теряются молча: просим написать текстом."""
-    await send(bot, message.chat.id, await conversation.unsupported(_user(message).id), settings)
+    out = await conversation.unsupported(_user(message).id)
+    await conversation.record_bot_replies(_user(message).id, out)
+    await send(bot, message.chat.id, out, settings)
 
 
 @router.callback_query(F.data.in_({keyboards.CONSENT_ACCEPT, keyboards.CONSENT_DECLINE}))
@@ -293,7 +329,9 @@ async def on_handoff_offer(
     cfg = await settings.get()
     language = await conversation.language_of(query.from_user.id)
     if query.data != keyboards.OFFER_HUMAN:
-        await bot.send_message(message.chat.id, cfg.texts.handoff_offer_declined.get(language))
+        out = [Outgoing(cfg.texts.handoff_offer_declined.get(language), language=language)]
+        await conversation.record_bot_replies(query.from_user.id, out)
+        await send(bot, message.chat.id, out, settings)
         return
     inc = Incoming(
         tg_user_id=query.from_user.id,
@@ -328,54 +366,3 @@ async def _send_document(bot: Bot, chat_id: int, item: Outgoing) -> bool:
         logger.exception("document_send_failed", document_id=doc.get("document_id"))
         return False
     return True
-
-
-def _shared_text(message: Message) -> str:
-    if message.contact is not None:
-        contact = message.contact
-        name = " ".join(filter(None, (contact.first_name, contact.last_name)))
-        return f"📇 {name}: {contact.phone_number}".strip()
-    if message.location is not None:
-        return f"📍 {message.location.latitude:.5f}, {message.location.longitude:.5f}"
-    return ""
-
-
-def _media(message: Message) -> tuple[str, str, str, int] | None:
-    """file_id, имя, mime, размер вложения Telegram любого поддерживаемого вида."""
-    if message.photo:
-        photo = message.photo[-1]
-        return photo.file_id, "photo.jpg", "image/jpeg", photo.file_size or 0
-    named = message.document or message.audio or message.video or message.animation
-    if named is not None:
-        return (
-            named.file_id,
-            named.file_name or "file",
-            named.mime_type or "application/octet-stream",
-            named.file_size or 0,
-        )
-    if message.voice is not None:
-        voice = message.voice
-        return voice.file_id, "voice.ogg", voice.mime_type or "audio/ogg", voice.file_size or 0
-    if message.video_note is not None:
-        note = message.video_note
-        return note.file_id, "video_note.mp4", "video/mp4", note.file_size or 0
-    return None
-
-
-async def _store_attachment(
-    message: Message, bot: Bot, storage: ObjectStorage, bucket: str
-) -> dict[str, Any] | None:
-    media = _media(message)
-    if media is None:
-        return None
-    file_id, name, mime, size = media
-    meta: dict[str, Any] = {"kind": "file", "name": name, "mime": mime, "size": size}
-    if size > MAX_ATTACHMENT_BYTES:
-        return {**meta, "stored": False}
-    buffer = io.BytesIO()
-    await bot.download(file_id, destination=buffer)
-    safe = name.replace("/", "_").replace("\\", "_")[-120:]
-    key = f"tg/{message.chat.id}/{message.message_id}/{safe}"
-    await storage.put(bucket, key, buffer.getvalue(), mime)
-    logger.info("tg_attachment_stored", chat_id=message.chat.id, size=size)
-    return {**meta, "storage_key": key, "stored": True}

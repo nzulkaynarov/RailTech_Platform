@@ -8472,6 +8472,54 @@
         ]
       }
     },
+    "/api/v1/leads/{lead_id}/actions/unsnooze": {
+      "post": {
+        "description": "«Вернуть из отложенных»: передача снова открыта, срок реакции — заново.",
+        "operationId": "unsnooze",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lead_id",
+            "required": true,
+            "schema": {
+              "title": "Lead Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Unsnooze",
+        "tags": [
+          "leads"
+        ]
+      }
+    },
     "/api/v1/leads/{lead_id}/assist": {
       "post": {
         "description": "ИИ-помощь менеджеру (Q-019): текст для поля ответа; клиенту ничего не отправляется.",

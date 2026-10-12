@@ -3,7 +3,8 @@
 Бэкапы пишет контейнер `backup` (`ops/backup.sh`) в том `backups`: каталоги
 `<UTC-штамп>/` и файл `last_success`. api смонтирован в тот же том и только читает его,
 а «сделать сейчас» — файл-флаг `request_now`, который демон бэкапа проверяет раз в 30 с.
-Демон раз в 30 с обновляет `heartbeat` (epoch): свежее 2 мин — сервис жив.
+Демон раз в 30 с обновляет `heartbeat` (epoch): свежее 2 мин — сервис жив; файла нет
+вовсе — демон на этом сервере не развёрнут (dev), это предупреждение, а не авария.
 pg_dump в образе api нет (он только в образе backup), поэтому сам бэкап api не запускает.
 Восстановление — только с сервера (`scripts/restore.sh`), в интерфейсе его нет.
 """
@@ -37,6 +38,8 @@ class BackupStatus:
     requested_at: datetime | None
     items: list[BackupEntry]
     heartbeat_at: datetime | None = None
+    # Файл heartbeat существует (пусть и устаревший/битый): демон здесь развёрнут.
+    heartbeat_seen: bool = False
 
 
 class BackupService:
@@ -67,6 +70,7 @@ class BackupService:
             self._requested(),
             entries,
             _epoch_file(self._root / HEARTBEAT_FILE),
+            (self._root / HEARTBEAT_FILE).exists(),
         )
 
     def _requested(self) -> datetime | None:
@@ -109,4 +113,5 @@ def facts(state: BackupStatus, now: datetime) -> BackupFacts:
         daemon_alive=daemon_alive(state, now),
         last_success=state.last_success_at,
         requested_at=state.requested_at,
+        daemon_seen=state.heartbeat_seen,
     )

@@ -26,6 +26,7 @@ const LABEL: Record<ActionKey, string> = {
   won: t.actions.won,
   lost: t.actions.lost,
   snooze: t.actions.snooze,
+  unsnooze: t.actions.unsnooze,
   returnToBot: t.actions.returnToBot,
   assign: t.actions.assign,
   newDeal: t.actions.newDeal,
@@ -58,7 +59,7 @@ function useHandlers(lead: LeadDetail, run: Run, open: (d: Open) => void) {
       open(dialog);
       return;
     }
-    if (key === "take" || key === "acknowledge") {
+    if (key === "take" || key === "acknowledge" || key === "unsnooze") {
       void run({ kind: key });
       return;
     }

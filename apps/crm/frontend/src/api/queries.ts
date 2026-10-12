@@ -26,6 +26,7 @@ import {
   returnToBot,
   snooze,
   take,
+  unsnooze,
   team,
 } from "./generated/crm";
 import type { ListLeadsParams } from "./generated/model";
@@ -91,6 +92,7 @@ export type LeadAction =
   | { kind: "assign"; userId: number }
   | { kind: "return"; note: string | null }
   | { kind: "snooze"; until: string }
+  | { kind: "unsnooze" }
   | { kind: "won"; reason: string | null }
   | { kind: "lost"; reason: string | null }
   | { kind: "note"; text: string; visibleToBot: boolean }
@@ -115,6 +117,9 @@ async function runAction(id: number, action: LeadAction): Promise<void> {
       return;
     case "snooze":
       await snooze(id, { until: action.until });
+      return;
+    case "unsnooze":
+      await unsnooze(id);
       return;
     case "won":
       await closeWon(id, { reason: action.reason });

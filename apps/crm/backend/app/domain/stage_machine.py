@@ -40,6 +40,9 @@ _ALLOWED: Final[dict[tuple[Stage, Stage], frozenset[TransitionSource]]] = {
     (S.LOST, S.CUSTOMER): frozenset({Src.SYSTEM}),
     # «Вернуть боту» повторной сделки: клиент остаётся клиентом (аудит 2026-10-12, P0-2).
     (S.IN_PROGRESS, S.CUSTOMER): frozenset({Src.USER}),
+    # Отвязан последний подтверждённый Telegram клиента: лид перестаёт быть клиентом.
+    (S.CUSTOMER, S.WON): frozenset({Src.USER}),
+    (S.CUSTOMER, S.ENGAGED): frozenset({Src.USER}),
 }
 
 QUALIFIER_PROPOSABLE: Final = frozenset({S.ENGAGED, S.QUALIFIED})
@@ -99,6 +102,18 @@ def stage_before_handoff(history: Sequence[tuple[Stage, Stage]]) -> Stage:
             return S.CUSTOMER
         if from_stage in RETURN_TO_BOT_STAGES:
             return from_stage
+    return S.ENGAGED
+
+
+def stage_after_unlink(history: Sequence[tuple[Stage, Stage]]) -> Stage:
+    """Стадия «Клиента» после отвязки последнего подтверждённого Telegram.
+
+    Клиентом лид стал из «Выиграна» («Сделать клиентом») — туда и возвращается: сделка
+    закрыта, но клиента больше нет. Иначе (история неполная) — «Вовлечён».
+    """
+    for from_stage, to_stage in reversed(history):
+        if to_stage == S.CUSTOMER and from_stage == S.WON:
+            return S.WON
     return S.ENGAGED
 
 

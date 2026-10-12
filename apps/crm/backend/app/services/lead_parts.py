@@ -7,9 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.stages import Stage
 from app.models.leads import Lead, LeadNote
-from app.models.qualification import StageTransition
+from app.models.qualification import Escalation, StageTransition
 from app.repositories import users as users_repo
 from app.security.principal import Principal
+from app.services.escalation import OPEN_STATUSES
+
+ACTIVE_ESCALATION = (*OPEN_STATUSES, "taken")
 
 
 async def history(session: AsyncSession, lead_id: int) -> list[tuple[Stage, Stage]]:
@@ -47,3 +50,14 @@ async def user_name(session: AsyncSession, user_id: int | None) -> str | None:
     """Имя того, кто ведёт лида, — для «Лида уже забрал …» (имена команды видны всем ролям)."""
     user = await users_repo.get(session, user_id) if user_id is not None else None
     return user.full_name if user is not None else None
+
+
+async def active_escalation(session: AsyncSession, lead_id: int) -> Escalation | None:
+    """Последняя активная передача лида под блокировкой (после блокировки лида)."""
+    stmt = (
+        select(Escalation)
+        .where(Escalation.lead_id == lead_id, Escalation.status.in_(ACTIVE_ESCALATION))
+        .order_by(Escalation.id.desc())
+        .with_for_update()
+    )
+    return (await session.scalars(stmt)).first()

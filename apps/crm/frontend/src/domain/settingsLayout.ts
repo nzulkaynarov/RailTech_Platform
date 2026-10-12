@@ -64,6 +64,7 @@ const TEXT_GROUPS: Record<string, string[]> = {
     "handoff_offer_no",
     "handoff_offer_declined",
     "attachment_received",
+    "attachment_too_large",
   ],
   fallback: [
     "fallback",

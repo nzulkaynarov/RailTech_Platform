@@ -28,6 +28,7 @@ from app.schemas.settings import AppSettings
 from app.security.agent_context import issue
 from app.services import escalation, stages
 from app.services.conversation_erasure import DeliveryFailureMixin, ErasureMixin
+from app.services.conversation_records import RecordsMixin
 from app.services.conversation_support import (
     agent_failure,
     apply_counters,
@@ -68,7 +69,7 @@ __all__ = [
 logger = structlog.get_logger(__name__)
 
 
-class ConversationService(ErasureMixin, DeliveryFailureMixin):
+class ConversationService(ErasureMixin, DeliveryFailureMixin, RecordsMixin):
     def __init__(
         self,
         sessions: async_sessionmaker[AsyncSession],
@@ -203,6 +204,10 @@ class ConversationService(ErasureMixin, DeliveryFailureMixin):
                 lead.consent_given_at, lead.consent_version, cfg.texts.consent_version
             ):
                 return await consent_offer(session, conversation, lead, cfg)
+            if conversation is not None:  # менеджер видит подтверждение в CRM
+                await repo.add_message(
+                    session, conversation_id=conversation.id, role="bot", text=confirmation[0].text
+                )
         return confirmation
 
     async def _receive(

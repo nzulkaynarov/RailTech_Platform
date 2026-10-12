@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from app.domain.system_status import Component
-from app.services.backups import HEARTBEAT_FILE, REQUEST_FILE, BackupService, daemon_alive
+from app.services.backups import HEARTBEAT_FILE, REQUEST_FILE, BackupService, daemon_alive, facts
 from app.services.setup_checklist import LINKS, SetupFacts, checklist, health_facts
 
 NOW = datetime(2026, 10, 12, 9, 0, tzinfo=UTC)
@@ -52,6 +52,16 @@ async def test_heartbeat_tells_daemon_alive(tmp_path: Path) -> None:
     assert daemon_alive(await service.status(), NOW)
     (tmp_path / HEARTBEAT_FILE).write_text(str(int(NOW.timestamp()) - 300))
     assert not daemon_alive(await service.status(), NOW)
+
+
+async def test_heartbeat_never_existed_is_not_seen(tmp_path: Path) -> None:
+    """Нет файла heartbeat — демон не развёрнут (warn); был и устарел — fail."""
+    service = BackupService(tmp_path)
+    assert facts(await service.status(), NOW).daemon_seen is False
+    (tmp_path / HEARTBEAT_FILE).write_text(str(int(NOW.timestamp()) - 3600))
+    stale = facts(await service.status(), NOW)
+    assert stale.daemon_seen is True
+    assert stale.daemon_alive is False
 
 
 ALL_DONE = SetupFacts(

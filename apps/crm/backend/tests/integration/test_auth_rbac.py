@@ -50,6 +50,7 @@ MATRIX = [
         {"until": "2000-01-01T00:00:00Z"},
         {"admin", "manager"},
     ),
+    ("POST", "/api/v1/leads/{lead}/actions/unsnooze", None, {"admin", "manager"}),
     ("POST", "/api/v1/leads/{lead}/actions/close_won", {}, {"admin", "manager"}),
     ("POST", "/api/v1/leads/{lead}/actions/close_lost", {}, {"admin", "manager"}),
     ("POST", "/api/v1/leads/{lead}/actions/return_to_bot", {}, {"admin", "manager"}),

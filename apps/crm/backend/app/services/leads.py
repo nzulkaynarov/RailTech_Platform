@@ -7,12 +7,11 @@
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any, Final, Literal
 
 import structlog
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.errors import (
@@ -24,7 +23,7 @@ from app.domain.errors import (
     Reason,
     ValidationFailedError,
 )
-from app.domain.lead_access import may_acknowledge, may_snooze
+from app.domain.lead_access import may_acknowledge
 from app.domain.stage_machine import stage_before_handoff
 from app.domain.stages import OwnerMode, Stage, TransitionSource
 from app.domain.text import staff_name
@@ -36,7 +35,7 @@ from app.repositories import users as users_repo
 from app.schemas.settings import Language
 from app.security import audit
 from app.security.principal import Principal
-from app.services import deals, lead_parts, stages
+from app.services import deals, lead_parts, lead_snooze, stages
 from app.services.escalation import OPEN_STATUSES
 from app.services.lead_messenger import LeadMessenger
 from app.services.settings import SettingsService
@@ -46,8 +45,7 @@ logger = structlog.get_logger(__name__)
 EscalationChanged = Callable[[int], Awaitable[None]]
 LeadAssigned = Callable[[int, int], Awaitable[None]]  # (lead_id, user_id) → канал и личка
 Outcome = Literal["won", "lost"]
-MAX_SNOOZE: Final = timedelta(days=7)
-ACTIVE_ESCALATION = (*OPEN_STATUSES, "taken")
+_active_escalation = lead_parts.active_escalation
 LANGUAGES: Final[dict[str, Language]] = {"ru": "ru", "uz": "uz", "en": "en"}
 
 
@@ -68,12 +66,14 @@ class LeadService:
         messenger: LeadMessenger,
         on_escalation_changed: EscalationChanged | None = None,
         on_assigned: LeadAssigned | None = None,
+        on_escalation_reopened: EscalationChanged | None = None,
     ) -> None:
         self._sessions = sessions
         self._settings = settings
         self._messenger = messenger
         self._on_escalation_changed = on_escalation_changed
         self._on_assigned = on_assigned
+        self._on_escalation_reopened = on_escalation_reopened or on_escalation_changed
 
     async def take(self, who: Principal, lead_id: int) -> None:
         cfg = await self._settings.get()
@@ -189,30 +189,32 @@ class LeadService:
                 logger.warning("lead_assign_notify_failed", lead_id=lead_id, error=repr(exc))
 
     async def snooze(self, who: Principal, lead_id: int, until: datetime) -> None:
-        now = datetime.now(UTC)
-        if until <= now or until - now > MAX_SNOOZE:
-            raise ValidationFailedError(
-                "snooze must be within 7 days", reason=Reason.SNOOZE_RANGE, field="until"
-            )
+        lead_snooze.check_until(until, datetime.now(UTC))
         async with self._sessions() as session, session.begin():
             lead = await _lead(session, lead_id)
-            if not may_snooze(
-                assigned_user_id=lead.assigned_user_id, user_id=who.user_id, is_admin=who.is_admin
-            ):
-                raise ForbiddenError(
-                    "only the lead owner or an admin can snooze", reason=Reason.NOT_LEAD_OWNER
-                )
+            lead_snooze.check_snoozer(lead, who)
             escalation = await _active_escalation(session, lead_id)
             if escalation is None or escalation.status not in OPEN_STATUSES:
-                raise ConflictError(
-                    "no open escalation to snooze",
-                    reason=Reason.NO_OPEN_HANDOFF,
-                )
+                raise ConflictError("no open escalation to snooze", reason=Reason.NO_OPEN_HANDOFF)
             before = lead_parts.snapshot(lead)
             escalation.status, escalation.snoozed_until = "snoozed", until
             lead.snoozed_until = until
             changed = await self._finish(session, who, lead, "lead.snooze", before, escalation)
         await self._notify(changed)
+
+    async def unsnooze(self, who: Principal, lead_id: int) -> None:
+        """«Вернуть из отложенных»: передача снова открыта, SLA заново; права — как у «Отложить»."""
+        cfg = await self._settings.get()
+        async with self._sessions() as session, session.begin():
+            lead = await _lead(session, lead_id)
+            lead_snooze.check_snoozer(lead, who)
+            escalation = await _active_escalation(session, lead_id)
+            if escalation is None or escalation.status != "snoozed":
+                raise ConflictError("no snoozed escalation", reason=Reason.NO_OPEN_HANDOFF)
+            before = lead_parts.snapshot(lead)
+            lead_snooze.reopen(escalation, lead, datetime.now(UTC), cfg)
+            changed = await self._finish(session, who, lead, "lead.unsnooze", before, escalation)
+        await self._notify(changed, reopened=True)
 
     async def acknowledge(self, who: Principal, lead_id: int) -> None:
         """«Принято к сведению» (аудит P0-1): закрыть информационную передачу лида у бота,
@@ -350,10 +352,12 @@ class LeadService:
         logger.info(action.replace(".", "_"), lead_id=lead.id, user_id=who.user_id)
         return _Changed(escalation.id if escalation is not None else None)
 
-    async def _notify(self, changed: _Changed) -> None:
-        if changed.escalation_id is not None and self._on_escalation_changed is not None:
+    async def _notify(self, changed: _Changed, *, reopened: bool = False) -> None:
+        """Пост в канале; `reopened` — ещё и проверка SLA в новый срок (как у новой передачи)."""
+        hook = self._on_escalation_reopened if reopened else self._on_escalation_changed
+        if changed.escalation_id is not None and hook is not None:
             try:
-                await self._on_escalation_changed(changed.escalation_id)
+                await hook(changed.escalation_id)
             except Exception as exc:  # noqa: BLE001 — очередь недоступна; пост обновит следующий sync
                 logger.warning(
                     "escalation_notify_failed",
@@ -386,13 +390,3 @@ async def _move(
     )
     if not decision.allowed:
         raise InvalidTransitionError(decision.reason or "transition not allowed")
-
-
-async def _active_escalation(session: AsyncSession, lead_id: int) -> Escalation | None:
-    stmt = (
-        select(Escalation)
-        .where(Escalation.lead_id == lead_id, Escalation.status.in_(ACTIVE_ESCALATION))
-        .order_by(Escalation.id.desc())
-        .with_for_update()
-    )
-    return (await session.scalars(stmt)).first()
