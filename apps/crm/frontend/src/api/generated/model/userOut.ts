@@ -14,6 +14,7 @@ export interface UserOut {
   notify_leads: boolean;
   notify_system: boolean;
   roles: string[];
+  tg_dm_failed_at?: string | null;
   tg_user_id: number | null;
   ui_mode: string;
 }

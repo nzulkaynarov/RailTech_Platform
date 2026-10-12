@@ -5,12 +5,13 @@
 """
 
 from collections.abc import Sequence
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
+from html import escape
 from typing import Any, Protocol
 
 import structlog
-from aiogram.exceptions import TelegramAPIError
-from sqlalchemy import select
+from aiogram.exceptions import TelegramAPIError, TelegramForbiddenError
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.errors import ConflictError, Reason, ValidationFailedError
@@ -23,13 +24,24 @@ from app.domain.staff_notify import (
 )
 from app.models.auth import Role, User, UserRole
 from app.models.leads import Conversation, Lead, Message
+from app.services import channel_texts as tx
 
 logger = structlog.get_logger(__name__)
 TEST_TEXT = "✅ Проверка доставки: личные уведомления CRM приходят сюда."
+# Таймаут запроса к Bot API для сотрудников и канала: недоступный Telegram не держит задачу
+# минутами (по умолчанию у aiogram — 60 с).
+SEND_TIMEOUT_S = 10
 
 
 class Sender(Protocol):
-    async def send_message(self, chat_id: int, text: str) -> Any: ...
+    async def send_message(
+        self,
+        chat_id: int,
+        text: str,
+        *,
+        parse_mode: Any = ...,
+        request_timeout: int | None = ...,
+    ) -> Any: ...
 
 
 class StaffNotifier:
@@ -63,10 +75,51 @@ class StaffNotifier:
             target = lead_dm_target(lead.owner_mode, manager[0] if manager else None)
             if target is None:
                 return False
-            lead.manager_notified_at = now
             text = await _last_lead_text(session, lead_id)
             body = lead_dm_text(lead.display_name, text, base, lead_id)
-        return await self._try_send(target, body, key="lead_message", lead_id=lead_id)
+            user_id = lead.assigned_user_id
+        if not await self._deliver(user_id, target, body, key="lead_message", lead_id=lead_id):
+            return False
+        # Окно тишины — только после доставки: иначе отказ Telegram глушит уведомления на окно.
+        async with self._sessions() as session, session.begin():
+            lead = await session.get(Lead, lead_id, with_for_update=True)
+            if lead is not None:
+                lead.manager_notified_at = now
+        return True
+
+    async def handed_over(self, lead_id: int, user_id: int, base: str) -> bool:
+        """«Передать коллеге» → личное сообщение новому ответственному."""
+        if self._bot is None:
+            return False
+        async with self._sessions() as session:
+            user = await session.get(User, user_id)
+            lead = await session.get(Lead, lead_id)
+        if user is None or lead is None or not user.is_active or user.tg_user_id is None:
+            return False
+        url = escape(f"{base.rstrip('/')}/leads/{lead_id}", quote=True)
+        body = tx.HANDOVER_DM.format(
+            lead_id=lead_id,
+            name=escape(lead.display_name or tx.NO_NAME),
+            link=tx.CRM_OPEN.format(url=url),
+        )
+        return await self._deliver(user_id, user.tg_user_id, body, key="handover", lead_id=lead_id)
+
+    async def _deliver(self, user_id: int, chat_id: int, text: str, **log: object) -> bool:
+        """Личное сообщение сотруднику с отметкой «Telegram отказал» в профиле."""
+        failed: datetime | None = None
+        try:
+            ok = await self._try_send(chat_id, text, raise_forbidden=True, **log)
+        except TelegramForbiddenError:
+            ok, failed = False, datetime.now(UTC)
+        if ok or failed is not None:
+            await self._mark_dm(user_id, failed)
+        return ok
+
+    async def _mark_dm(self, user_id: int, failed_at: datetime | None) -> None:
+        async with self._sessions() as session, session.begin():
+            await session.execute(
+                update(User).where(User.id == user_id).values(tg_dm_failed_at=failed_at)
+            )
 
     async def test_message(self, user_id: int) -> None:
         """«Проверить доставку» из профиля; отказ Telegram → понятная ошибка с его текстом."""
@@ -79,18 +132,28 @@ class StaffNotifier:
                 "telegram is not linked", reason=Reason.TELEGRAM_NOT_LINKED, field="tg_user_id"
             )
         try:
-            await self._bot.send_message(tg_user_id, TEST_TEXT)
+            await self._bot.send_message(tg_user_id, TEST_TEXT, request_timeout=SEND_TIMEOUT_S)
         except TelegramAPIError as exc:
             logger.info("staff_test_dm_refused", user_id=user_id, error=exc.message)
             raise ConflictError(
                 "telegram refused", reason=Reason.TELEGRAM_REFUSED, telegram_error=exc.message
             ) from exc
+        await self._mark_dm(user_id, None)  # доставка работает — снять предупреждение в профиле
 
-    async def _try_send(self, chat_id: int, text: str, **log: object) -> bool:
+    async def _try_send(
+        self, chat_id: int, text: str, *, raise_forbidden: bool = False, **log: object
+    ) -> bool:
         if self._bot is None:
             return False
         try:
-            await self._bot.send_message(chat_id, text)
+            await self._bot.send_message(
+                chat_id, text, parse_mode="HTML", request_timeout=SEND_TIMEOUT_S
+            )
+        except TelegramForbiddenError as exc:
+            logger.warning("staff_dm_forbidden", error=exc.message, **log)
+            if raise_forbidden:
+                raise
+            return False
         except TelegramAPIError as exc:
             # Человек не нажал «Старт» или заблокировал бота — не повод ронять монитор/задачу.
             logger.warning("staff_dm_failed", error=exc.message, **log)

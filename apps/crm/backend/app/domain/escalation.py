@@ -6,8 +6,10 @@
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Final, Literal
 
+from app.domain.business_hours import BusinessHours, add_business_minutes
 from app.domain.stages import OwnerMode, Stage
 from app.domain.triggers import Priority, TriggerCode, TriggerHit, max_priority
 
@@ -68,3 +70,14 @@ def plan(
         lead_text=("handoff" if business_time else "off_hours") if hand_over else None,
         channel_action="post" if is_new else ("edit" if changed else "none"),
     )
+
+
+@dataclass(frozen=True, slots=True)
+class SlaTimer:
+    sla_due_at: datetime
+    sla_notified_at: datetime | None
+
+
+def reset_sla(now: datetime, sla_minutes: int, hours: BusinessHours) -> SlaTimer:
+    """Срок реакции заново: при повышении до горячего и после «Отложить»."""
+    return SlaTimer(add_business_minutes(now, sla_minutes, hours), None)

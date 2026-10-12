@@ -135,6 +135,7 @@ class Container:
             self.settings_service,
             self.lead_messenger,
             on_escalation_changed=_escalation_changed,
+            on_assigned=_lead_assigned,
         )
 
     @cached_property
@@ -268,6 +269,12 @@ async def _escalation_changed(escalation_id: int) -> None:
     from app.tasks.notify import enqueue_escalation
 
     await enqueue_escalation(escalation_id, new=False)
+
+
+async def _lead_assigned(lead_id: int, user_id: int) -> None:
+    from app.tasks.notify import enqueue_handover
+
+    await enqueue_handover(lead_id, user_id)
 
 
 @lru_cache

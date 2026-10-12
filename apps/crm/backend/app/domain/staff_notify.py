@@ -7,6 +7,7 @@
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from html import escape
 from typing import Final
 
 PREVIEW_CHARS: Final = 120
@@ -54,10 +55,12 @@ def lead_dm_due(last_sent_at: datetime | None, now: datetime, window: timedelta)
 
 
 def lead_dm_text(lead_name: str, text: str, crm_url: str, lead_id: int) -> str:
+    """HTML: превью экранировано, ссылка — `<a href>` (сырой адрес не показывается)."""
     preview = " ".join(text.split())
     if len(preview) > PREVIEW_CHARS:
         preview = preview[: PREVIEW_CHARS - 1].rstrip() + "…"
-    name = lead_name.strip() or f"Лид #{lead_id}"
-    body = f"«{preview}»" if preview else "(вложение)"
-    link = f"{crm_url.rstrip('/')}/leads/{lead_id}"
-    return f"💬 Новое сообщение от {name}: {body} — открыть: {link}"
+    name = escape(lead_name.strip())
+    who = f"лида #{lead_id} {name}" if name else f"лида #{lead_id}"
+    body = f"«{escape(preview)}»" if preview else "(вложение)"
+    link = escape(f"{crm_url.rstrip('/')}/leads/{lead_id}", quote=True)
+    return f'💬 Новое сообщение от {who}: {body} — <a href="{link}">открыть в CRM</a>'
