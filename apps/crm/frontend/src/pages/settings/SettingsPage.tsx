@@ -1,4 +1,3 @@
-import { Typography } from "antd";
 import { useSearchParams } from "react-router";
 
 import { useSettings } from "../../api/adminQueries";
@@ -47,17 +46,11 @@ export function SettingsPage() {
               }}
             />
             <section aria-labelledby="settings-section-title" className="settings-content">
-              <Typography.Title level={2} id="settings-section-title" className="section-title">
-                {t.settings.keys[section] ?? section}
-              </Typography.Title>
-              {t.settings.sectionHints[section] ? (
-                <Typography.Paragraph type="secondary">
-                  {t.settings.sectionHints[section]}
-                </Typography.Paragraph>
-              ) : null}
               <SettingsForm
                 key={section}
                 settingKey={section}
+                title={t.settings.keys[section] ?? section}
+                hint={t.settings.sectionHints[section]}
                 schema={data.schemas[section] as JsonSchema}
                 values={data.values[section] ?? {}}
                 samples={previewSamples(data)}
