@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import func, literal_column, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.deals import DealStage, lost_reason, may_transition, plan_lead_outcome
@@ -154,14 +154,13 @@ async def summary(session: AsyncSession, days: int, now: datetime) -> DealsSumma
         .order_by(Deal.currency)
     )
     won_rows = won.all()
+    # Одно выражение в SELECT и GROUP BY: два `coalesce(..., "—")` — два разных параметра,
+    # и PostgreSQL считает их разными выражениями (GroupingError).
+    reason = func.coalesce(Deal.lost_reason, literal_column("'—'")).label("reason")
     lost = await session.execute(
-        select(
-            func.coalesce(Deal.lost_reason, "—"),
-            func.count(),
-            func.coalesce(func.sum(Deal.amount), 0),
-        )
+        select(reason, func.count(), func.coalesce(func.sum(Deal.amount), 0))
         .where(Deal.stage == DealStage.LOST.value, *closed)
-        .group_by(func.coalesce(Deal.lost_reason, "—"))
+        .group_by(reason)
         .order_by(func.count().desc())
     )
     lost_rows = lost.all()

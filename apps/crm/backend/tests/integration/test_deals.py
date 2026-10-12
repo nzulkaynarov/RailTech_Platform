@@ -1,5 +1,6 @@
 """Сделка закрывается вместе с лидом в одной транзакции; выигранная — финал (ADR-0019)."""
 
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
@@ -59,6 +60,11 @@ async def test_lost_lead_marks_open_deal_lost_with_reason(
 
     [deal] = await all_deals(sessions)
     assert (deal.stage, deal.lost_reason) == ("lost", "Дорого")
+    # сводка дашборда группирует отказы по причине (регрессия: GroupingError в PostgreSQL)
+    async with sessions() as session:
+        report = await deals.summary(session, 30, datetime.now(UTC))
+    assert report.lost_count == 1
+    assert [r.reason for r in report.lost_by_reason] == ["Дорого"]
 
 
 async def test_won_deal_is_final_for_manager_but_not_admin(
