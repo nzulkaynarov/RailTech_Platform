@@ -3919,7 +3919,8 @@
           "assist_unavailable",
           "assist_empty",
           "assist_no_history",
-          "deal_won_final"
+          "deal_won_final",
+          "no_consent"
         ],
         "title": "Reason",
         "type": "string"
@@ -7851,6 +7852,54 @@
           }
         ],
         "summary": "Get Lead",
+        "tags": [
+          "leads"
+        ]
+      }
+    },
+    "/api/v1/leads/{lead_id}/actions/acknowledge": {
+      "post": {
+        "description": "«Принято к сведению»: закрыть информационную передачу, лид остаётся у бота.",
+        "operationId": "acknowledge",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lead_id",
+            "required": true,
+            "schema": {
+              "title": "Lead Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Acknowledge",
         "tags": [
           "leads"
         ]

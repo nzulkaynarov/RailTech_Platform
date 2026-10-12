@@ -22,17 +22,24 @@ BACKFILL = """
 INSERT INTO deals (client_id, lead_id, title, product_key, currency, stage, closed_at,
                    lost_reason, owner_user_id, created_at, updated_at)
 SELECT l.client_id, l.id,
-       COALESCE(NULLIF(l.display_name, ''), 'Лид #' || l.id),
+       -- «<Клиент или имя лида> — <продукт>» = domain/deals.deal_title (аудит 2026-10-12)
+       left(
+           COALESCE(NULLIF(btrim(c.name), ''), NULLIF(btrim(l.display_name), ''), 'Лид #' || l.id)
+           || COALESCE(' — ' || NULLIF(btrim(COALESCE(p.name, l.product_interest[1])), ''), ''),
+           255
+       ),
        l.product_interest[1], 'UZS', t.to_stage, t.at,
        CASE WHEN t.to_stage = 'lost' THEN 'Другое' END,
-       l.assigned_user_id, t.at, t.at
+       COALESCE(t.actor_user_id, l.assigned_user_id), t.at, t.at
 FROM (
-    SELECT DISTINCT ON (lead_id) lead_id, to_stage, created_at AS at
+    SELECT DISTINCT ON (lead_id) lead_id, to_stage, actor_user_id, created_at AS at
     FROM stage_transitions
     WHERE to_stage IN ('won', 'lost')
     ORDER BY lead_id, created_at DESC
 ) t
 JOIN leads l ON l.id = t.lead_id
+LEFT JOIN clients c ON c.id = l.client_id
+LEFT JOIN products p ON p.key = l.product_interest[1]
 WHERE l.erased_at IS NULL
   AND NOT EXISTS (SELECT 1 FROM deals d WHERE d.lead_id = l.id)
 """

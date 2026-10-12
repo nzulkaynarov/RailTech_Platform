@@ -18,6 +18,7 @@ import {
   listServiceRequests,
   listUsers,
   me,
+  acknowledge,
   newDeal,
   note,
   permissions,
@@ -85,6 +86,7 @@ export const useTeam = () =>
 
 export type LeadAction =
   | { kind: "take" }
+  | { kind: "acknowledge" }
   | { kind: "newDeal" }
   | { kind: "assign"; userId: number }
   | { kind: "return"; note: string | null }
@@ -98,6 +100,9 @@ async function runAction(id: number, action: LeadAction): Promise<void> {
   switch (action.kind) {
     case "take":
       await take(id);
+      return;
+    case "acknowledge":
+      await acknowledge(id);
       return;
     case "newDeal":
       await newDeal(id);

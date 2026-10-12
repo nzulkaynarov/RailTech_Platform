@@ -2384,6 +2384,43 @@ export const getLead = async (
   });
 };
 
+export type acknowledgeResponse200 = {
+  data: ActionResult;
+  status: 200;
+};
+
+export type acknowledgeResponse422 = {
+  data: ErrorOut;
+  status: 422;
+};
+
+export type acknowledgeResponseSuccess = acknowledgeResponse200 & {
+  headers: Headers;
+};
+export type acknowledgeResponseError = acknowledgeResponse422 & {
+  headers: Headers;
+};
+
+export type acknowledgeResponse = acknowledgeResponseSuccess | acknowledgeResponseError;
+
+export const getAcknowledgeUrl = (leadId: number) => {
+  return `/api/v1/leads/${leadId}/actions/acknowledge`;
+};
+
+/**
+ * «Принято к сведению»: закрыть информационную передачу, лид остаётся у бота.
+ * @summary Acknowledge
+ */
+export const acknowledge = async (
+  leadId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<acknowledgeResponse> => {
+  return http<acknowledgeResponse>(getAcknowledgeUrl(leadId), {
+    ...options,
+    method: "POST",
+  });
+};
+
 export type assignResponse200 = {
   data: ActionResult;
   status: 200;

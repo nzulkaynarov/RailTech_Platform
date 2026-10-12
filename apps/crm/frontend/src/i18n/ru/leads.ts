@@ -116,6 +116,7 @@ export const leads = {
     take: "Забрать",
     takeOver: "Перехватить",
     returnToBot: "Вернуть боту",
+    acknowledge: "Принято к сведению",
     returnNote: "Заметка для бота (учтёт в ответах)",
     snooze: "Отложить",
     snoozeUntil: "Отложить до",
@@ -136,6 +137,7 @@ export const leads = {
     /** Тост по действию (аудит UX-copy №12): что именно произошло. */
     doneBy: {
       take: "Лид ваш",
+      acknowledge: "Передача закрыта, лид остаётся у бота",
       return: "Лида вернули боту",
       snooze: "Передача отложена",
       won: "Сделка закрыта",

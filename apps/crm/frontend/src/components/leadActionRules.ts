@@ -20,6 +20,7 @@ export type ActionRights = {
 };
 
 export type ActionKey =
+  | "acknowledge"
   | "take"
   | "takeOver"
   | "won"
@@ -33,6 +34,7 @@ export type ActionKey =
 
 /** Порядок пунктов в «Ещё»: сначала работа с лидом, опасное и редкое — внизу. */
 export const ACTION_ORDER: readonly ActionKey[] = [
+  "acknowledge",
   "take",
   "won",
   "makeCustomer",
@@ -68,6 +70,19 @@ function foreign(lead: LeadDetail, rights: ActionRights): boolean {
   return ownedByOther(lead, rights) && !rights.isAdmin;
 }
 
+/** Открытая или отложенная передача. */
+const pending = (lead: LeadDetail): boolean =>
+  lead.escalation?.status === "open" || lead.escalation?.status === "snoozed";
+
+/** Зеркало `may_acknowledge` (domain/lead_access.py): информационная передача, открытая/отложенная. */
+const infoPending = (lead: LeadDetail): boolean =>
+  lead.escalation?.priority === "info" && pending(lead);
+
+/** Зеркало `may_make_customer` (domain/lead_access.py): ответственный или админ, без него — любой. */
+const mayMakeCustomer = (lead: LeadDetail, rights: ActionRights): boolean =>
+  (lead.stage === "won" || lead.stage === "customer") &&
+  (rights.isAdmin || lead.assigned_user_id === null || lead.assigned_user_id === rights.userId);
+
 /** Ждёт ли лид менеджера: открытая передача или бот на паузе. */
 const waitsForManager = (lead: LeadDetail): boolean =>
   lead.escalation?.status === "open" || lead.owner_mode === "paused";
@@ -83,6 +98,8 @@ export function availableActions(
   const canOwn = !foreign(lead, rights);
   const responsible = lead.assigned_user_id;
   return {
+    // Аудит P0-1: информационную передачу лида у бота закрывают без «Забрать» → «Вернуть боту».
+    acknowledge: rights.take && infoPending(lead) && lead.owner_mode !== "human",
     // «Забрать» и из «Отказа»: вернувшегося лида снова берут в работу (ADR-0015).
     take: rights.take && !mine && !other,
     takeOver: rights.take && rights.isAdmin && other && responsible !== null,
@@ -91,12 +108,12 @@ export function availableActions(
     // Q-018: общая очередь; у лида есть ответственный — только он или админ.
     snooze:
       rights.take &&
-      lead.escalation?.status === "open" &&
+      pending(lead) &&
       (responsible === null || responsible === rights.userId || rights.isAdmin),
     returnToBot: rights.work && lead.owner_mode !== "bot" && canOwn,
     assign: rights.work && human && canOwn,
     newDeal: rights.work && lead.stage === "customer" && !human,
-    makeCustomer: Boolean(rights.clients) && lead.stage === "won",
+    makeCustomer: Boolean(rights.clients) && lead.stage === "won" && mayMakeCustomer(lead, rights),
     note: rights.note,
   };
 }
@@ -108,6 +125,7 @@ function primaryAction(
   can: Record<ActionKey, boolean>,
 ): ActionKey | null {
   if (ownedByOther(lead, rights)) return null;
+  if (can.acknowledge) return "acknowledge";
   if (can.makeCustomer) return "makeCustomer";
   if (can.won) return "won";
   if (can.take && waitsForManager(lead)) return "take";
