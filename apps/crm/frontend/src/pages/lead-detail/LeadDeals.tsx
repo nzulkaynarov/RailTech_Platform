@@ -10,15 +10,13 @@ import { t } from "../../i18n/ru";
 import { formatDate } from "../../lib/time";
 
 /**
- * Вкладка «Сделки» карточки лида: сделки этого лида и его клиента. В API нет фильтра по лиду,
- * поэтому при наличии клиента берём сделки клиента, иначе — общий список и отбираем по `lead_id`.
+ * Вкладка «Сделки» карточки лида: сделки этого лида (фильтр `lead_id` в API). Все сделки
+ * клиента — по ссылке в карточку клиента.
  */
 export function LeadDeals({ lead }: { lead: LeadDetail }) {
   const clientId = lead.client_id ?? null;
-  const query = useDeals(clientId ? { client_id: clientId } : {});
-  const items = (query.data ?? []).filter(
-    (d) => d.lead_id === lead.id || (clientId !== null && d.client_id === clientId),
-  );
+  const query = useDeals({ lead_id: lead.id });
+  const items = query.data ?? [];
   const all = clientId ? `/clients/${String(clientId)}` : "/deals";
   return (
     <PageState query={query} variant="section">

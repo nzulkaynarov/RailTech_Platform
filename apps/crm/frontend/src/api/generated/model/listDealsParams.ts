@@ -12,4 +12,5 @@ export type ListDealsParams = {
   client_id?: number | null;
   closed_from?: string | null;
   closed_to?: string | null;
+  lead_id?: number | null;
 };
