@@ -157,6 +157,11 @@ class TextsSettings(ClientBotTexts):
         "Rahmat, qabul qildim. Menejerga yuboraman.",
         "Thanks, got it. I'll pass it to a manager.",
     )
+    attachment_too_large: LocalizedText = _t(
+        "Файл больше 20 МБ — пришлите ссылку или сожмите.",
+        "Fayl 20 MB dan katta — havolani yuboring yoki siqib yuboring.",
+        "The file is larger than 20 MB — please send a link or compress it.",
+    )
     unsupported_message: LocalizedText = _t(
         "Я понимаю текст, а файлы и голосовые сообщения передаю менеджеру. Напишите, пожалуйста, ваш вопрос.",
         "Men matnni tushunaman, fayl va ovozli xabarlarni esa menejerga yuboraman. Savolingizni yozing, iltimos.",
