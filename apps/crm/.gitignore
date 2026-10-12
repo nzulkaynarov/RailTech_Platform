@@ -39,3 +39,6 @@ reports/
 
 # Рабочие копии агентов Claude Code
 .claude/worktrees/
+
+# UI-ревью стенда (скилл ui-review)
+frontend/review-out/
