@@ -33,6 +33,8 @@ class Outgoing:
     language: Language = "ru"
     lead_id: int | None = None
     document: dict[str, Any] | None = None
+    # BOT-07: кнопки выбора документа (id из поиска кода, принадлежность проверяется при нажатии).
+    choices: list[tuple[int, str]] = field(default_factory=list)
 
 
 @dataclass

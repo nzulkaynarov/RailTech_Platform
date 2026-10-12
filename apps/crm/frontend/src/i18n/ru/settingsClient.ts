@@ -20,6 +20,10 @@ export const clientBotTexts: Record<string, BotTextLabel> = {
     when: "Потенциальный клиент вызвал /docs, /request или /status.",
   },
   docs_list: { label: "Список документов", when: "Над кнопками документов по команде /docs." },
+  docs_choose: {
+    label: "Выбор из нескольких документов",
+    when: "Клиент попросил документ, нашлось несколько — над кнопками с документами.",
+  },
   docs_empty: { label: "Документов нет", when: "Клиент вызвал /docs, а документов у него нет." },
   request_prompt: {
     label: "Просьба описать запрос",

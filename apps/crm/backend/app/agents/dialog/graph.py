@@ -33,6 +33,7 @@ def build_graph(nodes: DialogNodes, checkpointer: Checkpointer = None) -> Any:
     graph.add_node("fallback", nodes.fallback)
     graph.add_node("handoff", nodes.handoff)
     graph.add_node("deliver_document", nodes.deliver_document)
+    graph.add_node("choose_document", nodes.choose_document)
     graph.add_edge(START, "load_context")
     graph.add_conditional_edges("load_context", nodes.route_after_context, ["retrieve", "silent"])
     graph.add_edge("retrieve", "decide")
@@ -45,9 +46,10 @@ def build_graph(nodes: DialogNodes, checkpointer: Checkpointer = None) -> Any:
             Action.HANDOFF.value: "handoff",
             Action.SILENT.value: "silent",
             Action.DELIVER_DOCUMENT.value: "deliver_document",
+            Action.CHOOSE_DOCUMENT.value: "choose_document",
         },
     )
-    for name in ("silent", "answer", "fallback", "handoff", "deliver_document"):
+    for name in ("silent", "answer", "fallback", "handoff", "deliver_document", "choose_document"):
         graph.add_edge(name, END)
     return graph.compile(checkpointer=checkpointer)
 
@@ -95,6 +97,7 @@ class DialogAgent:
             "callback_requested": False,
             "docs": None,
             "document": None,
+            "document_choices": [],
             "service_request": False,
         }
         config = {"configurable": {"thread_id": _thread_id(lead_id)}}
@@ -122,6 +125,7 @@ def _result(state: dict[str, Any], trace_id: str | None) -> DialogResult:
         trace_id=trace_id,
         prompt_version=prompts.version(prompt_for(state.get("mode", "prospect"))),
         document=state.get("document"),
+        document_choices=list(state.get("document_choices") or []),
         service_request=bool(state.get("service_request")),
         mode=state.get("mode", "prospect"),
         price_quoted=price_quoted(

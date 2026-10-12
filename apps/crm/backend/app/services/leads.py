@@ -44,6 +44,8 @@ logger = structlog.get_logger(__name__)
 
 EscalationChanged = Callable[[int], Awaitable[None]]
 LeadAssigned = Callable[[int, int], Awaitable[None]]  # (lead_id, user_id) → канал и личка
+# Telegram-чаты, чьё меню бота надо обновить сразу (после коммита, через очередь).
+ChatsChanged = Callable[[list[int]], Awaitable[None]]
 Outcome = Literal["won", "lost"]
 _active_escalation = lead_parts.active_escalation
 LANGUAGES: Final[dict[str, Language]] = {"ru": "ru", "uz": "uz", "en": "en"}
@@ -56,6 +58,7 @@ class DeliveryError(DomainError):
 @dataclass(frozen=True, slots=True)
 class _Changed:
     escalation_id: int | None = None
+    chats: tuple[int, ...] = ()
 
 
 class LeadService:
@@ -67,6 +70,7 @@ class LeadService:
         on_escalation_changed: EscalationChanged | None = None,
         on_assigned: LeadAssigned | None = None,
         on_escalation_reopened: EscalationChanged | None = None,
+        on_chats_changed: ChatsChanged | None = None,
     ) -> None:
         self._sessions = sessions
         self._settings = settings
@@ -74,6 +78,7 @@ class LeadService:
         self._on_escalation_changed = on_escalation_changed
         self._on_assigned = on_assigned
         self._on_escalation_reopened = on_escalation_reopened or on_escalation_changed
+        self._on_chats_changed = on_chats_changed
 
     async def take(self, who: Principal, lead_id: int) -> None:
         cfg = await self._settings.get()
@@ -350,10 +355,14 @@ class LeadService:
                 status=escalation.status,
             )
         logger.info(action.replace(".", "_"), lead_id=lead.id, user_id=who.user_id)
-        return _Changed(escalation.id if escalation is not None else None)
+        # Меню бота зависит от режима (`domain/bot_menu.menu_variant`): сменился — обновить сразу.
+        menu = before.get("owner_mode") != lead.owner_mode
+        chats = tuple(await repo.chats_of_lead(session, lead.id)) if menu else ()
+        return _Changed(escalation.id if escalation is not None else None, chats)
 
     async def _notify(self, changed: _Changed, *, reopened: bool = False) -> None:
         """Пост в канале; `reopened` — ещё и проверка SLA в новый срок (как у новой передачи)."""
+        await notify_chats(self._on_chats_changed, list(changed.chats))
         hook = self._on_escalation_reopened if reopened else self._on_escalation_changed
         if changed.escalation_id is not None and hook is not None:
             try:
@@ -364,6 +373,17 @@ class LeadService:
                     escalation_id=changed.escalation_id,
                     error=type(exc).__name__,
                 )
+
+
+async def notify_chats(hook: ChatsChanged | None, chats: list[int]) -> None:
+    """После коммита: меню чатов в очередь; недоступная очередь не отменяет действие CRM
+    (меню всё равно обновится со следующим сообщением лида — `bot/status.py`)."""
+    if not chats or hook is None:
+        return
+    try:
+        await hook(chats)
+    except Exception as exc:  # noqa: BLE001 — действие уже сохранено
+        logger.warning("chat_menu_enqueue_failed", chats=len(chats), error=type(exc).__name__)
 
 
 async def _lead(session: AsyncSession, lead_id: int) -> Lead:

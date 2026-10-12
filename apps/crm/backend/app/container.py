@@ -142,6 +142,7 @@ class Container:
             on_escalation_changed=_escalation_changed,
             on_assigned=_lead_assigned,
             on_escalation_reopened=_escalation_reopened,
+            on_chats_changed=_chats_changed,
         )
 
     @cached_property
@@ -205,7 +206,12 @@ class Container:
     def client_service(self) -> "ClientService":
         from app.services.clients import ClientService
 
-        return ClientService(self.session_factory, self.settings_service, self.lead_messenger)
+        return ClientService(
+            self.session_factory,
+            self.settings_service,
+            self.lead_messenger,
+            on_chats_changed=_chats_changed,
+        )
 
     @cached_property
     def contact_service(self) -> "ClientContactService":
@@ -294,6 +300,13 @@ async def _escalation_reopened(escalation_id: int) -> None:
     from app.tasks.notify import enqueue_escalation
 
     await enqueue_escalation(escalation_id, new=True)
+
+
+async def _chats_changed(tg_user_ids: list[int]) -> None:
+    """Статус лида в CRM изменился — меню его чата в Telegram сразу, без ожидания сообщения."""
+    from app.tasks.notify import enqueue_chat_menus
+
+    await enqueue_chat_menus(tg_user_ids)
 
 
 async def _lead_assigned(lead_id: int, user_id: int) -> None:

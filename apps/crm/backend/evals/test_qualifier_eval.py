@@ -2,7 +2,8 @@
 
 Модель (`qualifier-model`) заполняет карточку, решения — код (`domain/`).
 Метрики на наборе: escalation precision ≥ 0.8, recall ≥ 0.9, stage accuracy ≥ 0.85.
-Запуск: `make eval` (нужны ключи моделей; БД не нужна).
+Запуск: `make eval` (нужны ключи моделей и БД: каждый вызов — в учёт `llm_usage`,
+`kind='test'` по `LLM_USAGE_KIND=test`, и в дневные лимиты провайдеров).
 """
 
 import json
@@ -13,14 +14,14 @@ import pytest
 import pytest_asyncio
 
 from app.agents.llm import ChatModel
-from app.agents.qualifier.graph import QualifierAgent, QualifierInput
+from app.agents.qualifier.graph import MAX_TOKENS, QualifierAgent, QualifierInput
 from app.config import Settings
+from app.container import Container
 from app.domain import qualifier_decision as qd
 from app.domain.keywords import find_terms
 from app.domain.qualification import LeadSignals, Qualification
 from app.domain.stages import Stage
 from app.domain.triggers import evaluate
-from app.integrations.litellm import make_client
 from app.schemas.settings import AppSettings, TermsSettings
 from evals import budget, report
 from evals.qualifier_cases import QualifierCase, load_products, load_qualifier_cases, turn_signals
@@ -54,9 +55,11 @@ async def agent() -> AsyncIterator[QualifierAgent]:
     settings = Settings()
     if not settings.litellm_api_key.get_secret_value():
         pytest.fail("LITELLM_API_KEY не задан: evals нужны реальные модели (make eval)")
-    client = make_client(settings)
-    yield QualifierAgent(ChatModel(client, "qualifier-model"))
-    await client.close()  # иначе незакрытые сокеты к LiteLLM роняют pytest (filterwarnings=error)
+    c = Container(settings)
+    # Тот же вызов, что в проде (`tasks/qualify.py`), и учёт расходов как у golden-диалогов.
+    yield QualifierAgent(ChatModel(c.llm, "qualifier-model", MAX_TOKENS, usage=c.usage_recorder))
+    await c.llm.close()  # иначе незакрытые сокеты к LiteLLM роняют pytest (filterwarnings=error)
+    await c.engine.dispose()
 
 
 @MODULE_LOOP

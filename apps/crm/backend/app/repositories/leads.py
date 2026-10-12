@@ -21,6 +21,17 @@ async def get_identity(session: AsyncSession, tg_user_id: int) -> TelegramIdenti
     return (await session.scalars(stmt)).first()
 
 
+async def chats_of_lead(session: AsyncSession, lead_id: int) -> list[int]:
+    """Telegram-аккаунты лида (личный чат = `tg_user_id`) — для меню чата после действий CRM."""
+    stmt = select(TelegramIdentity.tg_user_id).where(TelegramIdentity.lead_id == lead_id)
+    return list((await session.scalars(stmt)).all())
+
+
+async def chats_of_client(session: AsyncSession, client_id: int) -> list[int]:
+    stmt = select(TelegramIdentity.tg_user_id).where(TelegramIdentity.client_id == client_id)
+    return list((await session.scalars(stmt)).all())
+
+
 async def get_lead(session: AsyncSession, lead_id: int, *, for_update: bool = False) -> Lead | None:
     stmt = select(Lead).where(Lead.id == lead_id)
     if for_update:

@@ -101,3 +101,20 @@ async def test_purpose_follows_alias(alias: Any, purpose: str) -> None:
     sink = Sink()
     await ChatModel(FakeClient(set()), alias, usage=sink).complete([])  # type: ignore[arg-type]
     assert sink.events[0].purpose == purpose
+
+
+async def test_finish_reason_and_max_tokens_are_passed_through() -> None:
+    """Оборванный лимитом ответ виден вызывающему (квалификатор не парсит обрезанный JSON)."""
+    sent: dict[str, Any] = {}
+
+    class Truncating(FakeClient):
+        async def create(self, **kwargs: Any) -> Raw:
+            sent.update(kwargs)
+            parsed = response('{"intent": "pri', "served")
+            parsed.choices[0].finish_reason = "length"
+            return Raw(parsed, {})
+
+    model = ChatModel(Truncating(set()), "qualifier-model", max_tokens=4096)  # type: ignore[arg-type]
+    result = await model.complete([{"role": "user", "content": "hi"}])
+    assert result.finish_reason == "length"
+    assert sent["max_tokens"] == 4096

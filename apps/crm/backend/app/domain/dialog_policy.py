@@ -13,6 +13,8 @@ class Action(StrEnum):
     SILENT = "silent"
     HANDOFF = "handoff"
     DELIVER_DOCUMENT = "deliver_document"
+    # BOT-07: найдено несколько документов клиента — выбор кнопками (id — из поиска кода).
+    CHOOSE_DOCUMENT = "choose_document"
     FALLBACK = "fallback"
     ANSWER = "answer"
 
@@ -139,8 +141,8 @@ def decide(inp: DecisionInput) -> Decision:
         # Клиент просит документ, а у него такого нет — честно и сразу к менеджеру (C5).
         return Decision(Action.HANDOFF, reason="document_not_found")
     if inp.document_requested:
-        # Несколько кандидатов: модель перечислит их и спросит, какой нужен.
-        return Decision(Action.ANSWER, reason="documents_ambiguous")
+        # Несколько кандидатов: выбор кнопками без модели (BOT-07).
+        return Decision(Action.CHOOSE_DOCUMENT, reason="documents_ambiguous")
     if is_ack(inp.text):
         return Decision(Action.ANSWER, reason="ack")
     smalltalk = is_smalltalk(inp.text)

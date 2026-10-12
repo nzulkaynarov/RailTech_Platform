@@ -13,6 +13,7 @@ from app.agents.mcp_client import ToolCaller
 from app.domain import documents
 from app.schemas.settings import AppSettings
 
+CHOICES_LIMIT: Final = 10
 CUSTOMER_TOOLS: Final[list[dict[str, Any]]] = [
     {
         "type": "function",
@@ -61,6 +62,15 @@ async def search(
 def is_match(docs: list[dict[str, Any]] | None) -> bool:
     """Однозначно найден ровно один документ."""
     return docs is not None and len(docs) == 1
+
+
+def choices(docs: list[dict[str, Any]] | None) -> list[tuple[int, str]]:
+    """Кнопки выбора: (id, «название · дата»), не больше `CHOICES_LIMIT` (как список /docs)."""
+    out: list[tuple[int, str]] = []
+    for d in (docs or [])[:CHOICES_LIMIT]:
+        title, day = str(d.get("title") or ""), d.get("doc_date")
+        out.append((int(d["document_id"]), f"{title} · {day}" if day else title))
+    return out
 
 
 def documents_block(docs: list[dict[str, Any]] | None) -> str:

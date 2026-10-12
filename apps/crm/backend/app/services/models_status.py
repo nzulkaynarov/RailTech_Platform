@@ -6,13 +6,15 @@
 """
 
 import time
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from datetime import datetime
-from typing import Final
+from typing import Final, Protocol
 
-from openai import APIError, AsyncOpenAI
+from openai import APIError, APIStatusError, AsyncOpenAI
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.alerts import provider_problem
+from app.domain.budget import Route
 from app.integrations.litellm import EMBED_ALIAS
 from app.integrations.litellm_catalog import ModelEntry
 from app.integrations.llm_usage import COST_HEADER, UsageEvent, UsageSink, parse_cost
@@ -51,29 +53,65 @@ async def probe(client: AsyncOpenAI, alias: str, usage: UsageSink | None) -> Mod
     """Один минимальный запрос мимо резерва LiteLLM (`disable_fallbacks`): сбой виден честно."""
     started = time.monotonic()
     try:
-        if alias == EMBED_ALIAS:
-            raw_e = await client.embeddings.with_raw_response.create(model=alias, input=["ping"])
-            model, tokens_in, tokens_out = _embed_usage(raw_e.parse())
-            cost = parse_cost(raw_e.headers.get(COST_HEADER))
-        else:
-            raw_c = await client.chat.completions.with_raw_response.create(
-                model=alias,
-                messages=[{"role": "user", "content": "ping"}],
-                max_tokens=1,
-                extra_body={"disable_fallbacks": True},
-            )
-            model, tokens_in, tokens_out = _chat_usage(raw_c.parse())
-            cost = parse_cost(raw_c.headers.get(COST_HEADER))
+        cost = await ping(client, alias, usage)
     except APIError as exc:
         detail = f"{getattr(exc, 'status_code', '') or type(exc).__name__}: {exc.message}"[:200]
         return ModelTestResult(
             alias=alias, ok=False, detail=detail, latency_ms=_ms(started), cost_usd=None
         )
-    if usage is not None:
-        await usage.record(UsageEvent("probe", alias, model, tokens_in, tokens_out, cost))
     return ModelTestResult(
         alias=alias, ok=True, detail=None, latency_ms=_ms(started), cost_usd=cost
     )
+
+
+async def ping(client: AsyncOpenAI, alias: str, usage: UsageSink | None) -> float | None:
+    """Платный запрос в 1 токен (или эмбеддинг слова); успешный — строка `probe` в учёте.
+
+    Ошибку (`APIError`) пробрасывает: её разбирает вызывающий (кнопка «Проверить», монитор).
+    """
+    if alias == EMBED_ALIAS:
+        raw_e = await client.embeddings.with_raw_response.create(model=alias, input=["ping"])
+        model, tokens_in, tokens_out = _embed_usage(raw_e.parse())
+        cost = parse_cost(raw_e.headers.get(COST_HEADER))
+    else:
+        raw_c = await client.chat.completions.with_raw_response.create(
+            model=alias,
+            messages=[{"role": "user", "content": "ping"}],
+            max_tokens=1,
+            extra_body={"disable_fallbacks": True},
+        )
+        model, tokens_in, tokens_out = _chat_usage(raw_c.parse())
+        cost = parse_cost(raw_c.headers.get(COST_HEADER))
+    if usage is not None:
+        await usage.record(UsageEvent("probe", alias, model, tokens_in, tokens_out, cost))
+    return cost
+
+
+class RouteGuard(Protocol):
+    async def route(self, alias: str, *, allows_fallback: bool) -> Route: ...
+
+
+async def monitor_probe(
+    client: AsyncOpenAI, aliases: Sequence[str], usage: UsageSink | None, guard: RouteGuard
+) -> dict[str, str | None]:
+    """Часовая проверка монитора: по алиасу — проблема провайдера или None (всё хорошо).
+
+    Вызовы учитываются как любые другие (`llm_usage`, purpose `probe`) и проходят BudgetGuard:
+    провайдер сверх дневного лимита не проверяется (алиас не попадает в результат — состояние
+    алерта не меняется). Таймаут/сеть — тоже без результата: причина неизвестна.
+    """
+    result: dict[str, str | None] = {}
+    for alias in aliases:
+        if await guard.route(alias, allows_fallback=False) is Route.UNAVAILABLE:
+            continue
+        try:
+            await ping(client, alias, usage)
+            result[alias] = None
+        except APIStatusError as exc:
+            result[alias] = provider_problem(exc.status_code, str(exc.message))
+        except APIError:
+            continue
+    return result
 
 
 def _chat_usage(response: object) -> tuple[str | None, int, int]:

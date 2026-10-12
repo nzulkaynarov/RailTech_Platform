@@ -8,6 +8,7 @@ import json
 from dataclasses import dataclass
 from typing import Any, Final, TypedDict
 
+import structlog
 from langgraph.graph import END, START, StateGraph
 from pydantic import ValidationError
 
@@ -17,8 +18,14 @@ from app.agents.schema import response_format
 from app.domain.qualification import QualifierOutput
 from app.integrations import langfuse as lf
 
+logger = structlog.get_logger(__name__)
+
 PROMPT: Final = "qualifier"
 MAX_ATTEMPTS: Final = 2
+# Лимит вывода `qualifier-model`. Рассуждение модели (`reasoning_effort` в LiteLLM) расходует тот же
+# `max_tokens`, что и JSON карточки: при 1024 длинные переписки обрывали вывод на середине
+# (finish_reason=length → «Ошибка квалификатора»). Платим только за фактические токены.
+MAX_TOKENS: Final = 4096
 ROLE_TAGS: Final = {"lead": "client", "bot": "assistant", "manager": "manager", "system": "system"}
 FORMAT: Final = response_format(QualifierOutput, "qualifier_output")
 
@@ -97,6 +104,10 @@ class QualifierAgent:
             "model": result.model,
             "cost_usd": state["cost_usd"] + (result.cost_usd or 0.0),
         }
+        if result.finish_reason == "length":
+            # Обрезанный JSON не разбираем: повтор (или честный отказ) с понятной причиной.
+            logger.warning("qualifier_output_truncated", attempt=update["attempts"])
+            return {**update, "error": f"output truncated at max_tokens ({result.tokens_out})"}
         try:
             parsed = QualifierOutput.model_validate(json.loads(result.text))
         except (json.JSONDecodeError, ValidationError) as exc:

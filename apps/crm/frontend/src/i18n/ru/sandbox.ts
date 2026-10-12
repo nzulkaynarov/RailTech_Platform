@@ -31,6 +31,7 @@ export const sandbox = {
       fallback: "нет ответа в базе знаний",
       handoff: "передача менеджеру",
       deliver_document: "отправка документа",
+      choose_document: "выбор документа кнопками",
       silent: "без ответа",
       system: "служебный ответ",
     } as Record<string, string>,

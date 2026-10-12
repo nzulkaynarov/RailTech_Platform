@@ -9,7 +9,7 @@ from procrastinate import RetryStrategy
 from procrastinate.exceptions import AlreadyEnqueued
 
 from app.agents.llm import ChatModel
-from app.agents.qualifier.graph import QualifierAgent
+from app.agents.qualifier.graph import MAX_TOKENS, QualifierAgent
 from app.container import Container, get_container
 from app.services.budget import BudgetedModel
 from app.services.qualifier import QualifierService
@@ -24,7 +24,7 @@ async def build_qualifier_service(c: Container) -> QualifierService:
         c.settings_service,
         QualifierAgent(
             BudgetedModel(
-                ChatModel(c.llm, "qualifier-model", usage=c.usage_recorder),
+                ChatModel(c.llm, "qualifier-model", MAX_TOKENS, usage=c.usage_recorder),
                 None,
                 c.budget_guard,
                 alias="qualifier-model",

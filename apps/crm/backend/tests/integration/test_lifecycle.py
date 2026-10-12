@@ -103,6 +103,48 @@ async def test_customer_gets_documents_right_after_make_customer(
     assert out[-1].document["filename"] == "dogovor.pdf"
 
 
+async def test_several_documents_are_offered_as_buttons_of_own_client_only(
+    service: tuple[ConversationService, ReplayModel, list[str]],
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """BOT-07: два счёта клиента — выбор кнопками без модели; чужой счёт в кнопки не попадает."""
+    svc, model, _ = service
+    lead_id = await escalated_prospect(sessions, svc)
+    who, leads = await manager(sessions)
+    await leads.take(who, lead_id)
+    await leads.close(who, lead_id, "won", None)
+    client_id = await ClientService(sessions).make_customer(who, lead_id, None, "Альфа")
+    async with sessions() as session, session.begin():
+        stranger = Client(name="Бета")
+        session.add(stranger)
+        await session.flush()
+        for owner, day in ((client_id, 1), (client_id, 2), (stranger.id, 3)):
+            session.add(
+                Document(
+                    client_id=owner,
+                    type="invoice",
+                    title="Счёт",
+                    doc_date=date(2026, 9, day),
+                    storage_key=f"k/{day}",
+                    filename=f"{day}.pdf",
+                    mime="application/pdf",
+                    size_bytes=10,
+                )
+            )
+        await session.flush()
+        own = {
+            d.id
+            for d in await session.scalars(select(Document).where(Document.client_id == client_id))
+        }
+
+    out = await svc.handle_message(msg("Пришлите счёт за сентябрь"))
+
+    assert model.requests == []
+    assert out[-1].document is None
+    assert {doc_id for doc_id, _ in out[-1].choices} == own
+    assert all(label.startswith("Счёт · 2026-09-0") for _, label in out[-1].choices)
+
+
 async def test_make_customer_does_not_silently_move_telegram_to_another_client(
     service: tuple[ConversationService, ReplayModel, list[str]],
     sessions: async_sessionmaker[AsyncSession],
@@ -197,3 +239,33 @@ async def test_lost_lead_who_returns_can_be_taken_again(
     await leads.take(who, lead_id)
     stage, owner_mode, _ = await state(sessions, lead_id)
     assert (stage, owner_mode) == ("in_progress", "human")
+
+
+async def test_menu_chats_are_refreshed_right_after_crm_actions(
+    service: tuple[ConversationService, ReplayModel, list[str]],
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """Отложено из PR #21: меню чата — сразу после «Забрать», «Вернуть боту», итога сделки и
+    «Сделать клиентом», а не со следующим сообщением лида. Заметка режим не меняет — без вызова."""
+    svc, _, _ = service
+    lead_id = await escalated_prospect(sessions, svc)
+    account, _ = await make_user(sessions, "dilshod@railtech.uz", ["manager"])
+    who = Principal(account.id, "Дилшод Рахимов", ("manager",))
+    changed: list[list[int]] = []
+
+    async def record(chats: list[int]) -> None:
+        changed.append(chats)
+
+    settings = SettingsService(sessions, ttl_s=0)
+    messenger = LeadMessenger(sessions, FakeSender())
+    leads = LeadService(sessions, settings, messenger, on_chats_changed=record)
+    clients = ClientService(sessions, settings, messenger, on_chats_changed=record)
+
+    await leads.take(who, lead_id)
+    await leads.add_note(who, lead_id, "перезвонить", visible_to_bot=False)
+    await leads.return_to_bot(who, lead_id, None)
+    await leads.take(who, lead_id)
+    await leads.close(who, lead_id, "won", None)
+    await clients.make_customer(who, lead_id, None, "Альфа")
+
+    assert changed == [[USER]] * 5

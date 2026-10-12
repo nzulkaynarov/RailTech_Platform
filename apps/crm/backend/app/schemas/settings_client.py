@@ -79,6 +79,11 @@ class ClientBotTexts(CheckedTexts):
         "Hujjatlaringiz — faylni olish uchun bosing:",
         "Your documents — tap one to get the file:",
     )
+    docs_choose: LocalizedText = _t(
+        "Нашлось несколько документов — выберите нужный:",
+        "Bir nechta hujjat topildi — keraklisini tanlang:",
+        "I found several documents — choose the one you need:",
+    )
     docs_empty: LocalizedText = _t(
         "Пока у вас нет документов в системе. Если документ нужен — напишите /request.",
         "Hozircha tizimda hujjatlaringiz yoʻq. Hujjat kerak boʻlsa — /request yozing.",

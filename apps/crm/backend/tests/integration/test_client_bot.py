@@ -61,7 +61,10 @@ async def test_client_documents_request_and_status(
             mime="application/pdf", size_bytes=1, storage_key="k/x",
         )  # fmt: skip
         session.add(other)
-    assert await bot.document(USER, docs[0][0] + 999) is None  # чужой/несуществующий id
+        await session.flush()
+        foreign_id = other.id
+    assert await bot.document(USER, docs[0][0] + 999) is None  # несуществующий id
+    assert await bot.document(USER, foreign_id) is None  # чужой id в callback кнопки (BOT-07)
     out = await bot.document(USER, docs[0][0])
     assert out is not None
     assert out.document is not None

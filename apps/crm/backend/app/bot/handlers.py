@@ -96,6 +96,8 @@ async def send(
 
 
 def _markup(cfg: AppSettings, item: Outgoing) -> InlineKeyboardMarkup | None:
+    if item.choices:
+        return keyboards.documents(item.choices)
     if item.keyboard == "consent":
         return keyboards.consent(cfg, item.language)
     if item.keyboard == "language":

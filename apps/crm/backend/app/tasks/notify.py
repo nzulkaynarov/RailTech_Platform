@@ -1,11 +1,13 @@
 """Задачи уведомлений: канал команды (SPEC §8.2) и личные сообщения менеджеру (Q-010)."""
 
+from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 
 from procrastinate import RetryStrategy
 from procrastinate.exceptions import AlreadyEnqueued
 from sqlalchemy import select
 
+from app.bot import commands
 from app.container import Container, get_container
 from app.domain.business_hours import add_business_minutes
 from app.domain.escalation import reset_sla
@@ -13,6 +15,7 @@ from app.models.leads import Lead
 from app.models.qualification import Escalation
 from app.repositories import events
 from app.services.channel_card import needs_sla
+from app.services.client_bot import ClientBotService
 from app.services.notifications import NotificationService
 from app.services.staff_notifier import StaffNotifier
 from app.tasks.queue import queue
@@ -149,6 +152,28 @@ async def enqueue_lead_message(lead_id: int) -> None:
         )
     except AlreadyEnqueued:
         return
+
+
+@queue.task(name="refresh_chat_menu", queue="notify")
+async def refresh_chat_menu(tg_user_id: int) -> bool:
+    """Меню чата лида по статусу сразу после действия в CRM (Забрать, Вернуть боту, клиент)."""
+    c = get_container()
+    bot = await c.telegram_bot()
+    if bot is None or c.settings.telegram_dry_run:
+        return False
+    client_bot = ClientBotService(c.session_factory, c.settings_service)
+    return await commands.refresh_chat_menu(bot, client_bot, c.settings_service, tg_user_id)
+
+
+async def enqueue_chat_menus(tg_user_ids: Sequence[int]) -> None:
+    """После коммита: по задаче на чат; ещё не начатая задача того же чата — одна (lock)."""
+    for tg_user_id in tg_user_ids:
+        try:
+            await refresh_chat_menu.configure(queueing_lock=f"menu-{tg_user_id}").defer_async(
+                tg_user_id=tg_user_id
+            )
+        except AlreadyEnqueued:
+            continue
 
 
 async def enqueue_escalation(escalation_id: int, *, new: bool = True) -> None:
