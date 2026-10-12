@@ -64,10 +64,32 @@ async def snooze_expiry(timestamp: int) -> int:
     now = datetime.fromtimestamp(timestamp, UTC)
     reopened: list[int] = []
     async with c.session_factory() as session, session.begin():
+        # Порядок блокировок как у «Забрать»/«Отложить» (services/leads.py): сначала лид,
+        # потом эскалация. Обратный порядок (эскалация → лид) давал взаимную блокировку
+        # с ручными действиями менеджера. Занятые строки пропускаем — следующий прогон.
+        due = select(Escalation.lead_id).where(
+            Escalation.status == "snoozed", Escalation.snoozed_until <= now
+        )
+        leads = {
+            lead.id: lead
+            for lead in (
+                await session.scalars(
+                    select(Lead)
+                    .where(Lead.id.in_(due))
+                    .order_by(Lead.id)
+                    .with_for_update(skip_locked=True)
+                )
+            ).all()
+        }
         rows = (
             await session.scalars(
                 select(Escalation)
-                .where(Escalation.status == "snoozed", Escalation.snoozed_until <= now)
+                .where(
+                    Escalation.status == "snoozed",
+                    Escalation.snoozed_until <= now,
+                    Escalation.lead_id.in_(list(leads)),
+                )
+                .order_by(Escalation.id)
                 .with_for_update(skip_locked=True)
             )
         ).all()
@@ -77,9 +99,7 @@ async def snooze_expiry(timestamp: int) -> int:
             if needs_sla(row.priority):  # после «Отложить» срок реакции отсчитывается заново
                 timer = reset_sla(now, cfg.escalation.sla_minutes, cfg.business_hours.domain())
                 row.sla_due_at, row.sla_notified_at = timer.sla_due_at, timer.sla_notified_at
-            lead = await session.get(Lead, row.lead_id, with_for_update=True)
-            if lead is not None:
-                lead.snoozed_until = None
+            leads[row.lead_id].snoozed_until = None
             await events.publish(
                 session, "escalation.updated", lead_id=row.lead_id, escalation_id=row.id
             )

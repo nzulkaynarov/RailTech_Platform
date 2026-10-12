@@ -99,8 +99,9 @@ def _backup(
     alive: bool = True,
     last: datetime | None = NOW - timedelta(hours=2),
     asked: datetime | None = None,
+    seen: bool = True,
 ) -> str:
-    return rules.backup(NOW, BackupFacts(mounted, alive, last, asked)).status
+    return rules.backup(NOW, BackupFacts(mounted, alive, last, asked, seen)).status
 
 
 def test_channel_and_backup_and_secrets() -> None:
@@ -142,3 +143,19 @@ def test_model_titles_are_roles() -> None:
 def test_budget_warns_on_active_alert() -> None:
     assert rules.budget([AlertRow("budget", True, "$1.8 из $2", NOW)], NOW).status == "warn"
     assert rules.budget([], NOW).status == "ok"
+
+
+@pytest.mark.parametrize(
+    ("alive", "seen", "expected"),
+    [
+        (False, False, "warn"),  # демон не развёрнут (dev)
+        (False, True, "fail"),  # heartbeat был и устарел
+        (True, True, "ok"),
+    ],
+)
+def test_backup_daemon_never_seen_is_warn(alive: bool, seen: bool, expected: str) -> None:
+    assert _backup(alive=alive, seen=seen) == expected
+    if not seen:
+        facts = BackupFacts(True, alive, None, None, seen)
+        reason = rules.backup(NOW, facts).reason
+        assert reason == "Резервное копирование не запущено на этом сервере"

@@ -65,6 +65,8 @@ class BackupFacts:
     daemon_alive: bool
     last_success: datetime | None
     requested_at: datetime | None
+    # Файл heartbeat хоть раз появлялся: демон бэкапа на этом сервере развёрнут.
+    daemon_seen: bool = True
 
 
 STALE_BACKUP_HOURS = 26
@@ -199,11 +201,18 @@ def queue(facts: QueueFacts, now: datetime) -> Component:
 
 
 def backup(now: datetime, facts: BackupFacts) -> Component:
-    """Бэкапы (ADR-0013): демон жив по heartbeat, последняя копия не старше 26 ч."""
+    """Бэкапы (ADR-0013): демон жив по heartbeat, последняя копия не старше 26 ч.
+
+    heartbeat не появлялся ни разу — демон не развёрнут (warn); был и устарел — fail.
+    """
     name = "Резервные копии"
     if not facts.mounted:
         reason = "Хранилище резервных копий не подключено — обратитесь к администратору сервера"
         return Component("backup", name, "unknown", reason, now)
+    if not facts.daemon_alive and not facts.daemon_seen:
+        # Демона нет вовсе (dev, сервис не развёрнут) — предупреждение, а не авария.
+        reason = "Резервное копирование не запущено на этом сервере"
+        return Component("backup", name, "warn", reason, now)
     if not facts.daemon_alive:
         reason = "Сервис резервного копирования не отвечает — обратитесь к администратору сервера"
         return Component("backup", name, "fail", reason, now)

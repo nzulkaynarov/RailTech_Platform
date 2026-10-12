@@ -20,7 +20,9 @@ from app.domain.errors import (
     ValidationFailedError,
 )
 from app.domain.lead_access import may_make_customer
+from app.domain.stage_machine import stage_after_unlink
 from app.domain.stages import OwnerMode, Stage, TransitionSource
+from app.domain.triggers import TriggerCode
 from app.models.auth import User
 from app.models.clients import Client, ServiceRequest
 from app.models.leads import Lead, TelegramIdentity
@@ -28,7 +30,7 @@ from app.models.qualification import Escalation
 from app.repositories import events
 from app.security import audit
 from app.security.principal import Principal
-from app.services import stages
+from app.services import lead_parts, stages
 from app.services.escalation import OPEN_STATUSES
 from app.services.lead_messenger import LeadMessenger
 from app.services.leads import LANGUAGES
@@ -131,13 +133,11 @@ class ClientService:
                 None,
                 None,
             )
+            after: dict[str, Any] = {"tg_user_id": tg_user_id}
+            if identity.lead_id is not None:
+                after |= await _detach_lead(session, identity.lead_id, client_id, who)
             await audit.record(
-                session,
-                who.actor,
-                "client.unlink_telegram",
-                "client",
-                client_id,
-                after={"tg_user_id": tg_user_id},
+                session, who.actor, "client.unlink_telegram", "client", client_id, after=after
             )
 
     async def make_customer(
@@ -224,7 +224,7 @@ class ClientService:
             row.resolution, row.closed_at = resolution.strip(), now
             lead = await session.get(Lead, row.lead_id) if row.lead_id else None
             if lead is not None:
-                await _resolve_info_escalation(session, lead.id, now)
+                await _resolve_info_escalation(session, lead.id, request_id, now)
             await audit.record(
                 session,
                 who.actor,
@@ -245,23 +245,84 @@ class ClientService:
             await self._messenger.send(lead.id, text, {"notice": "service_request_closed"})
 
 
-async def _resolve_info_escalation(session: AsyncSession, lead_id: int, now: datetime) -> None:
-    """Информационная эскалация о запросе закрывается вместе с ним; срочные — нет."""
-    escalation = (
+async def _resolve_info_escalation(
+    session: AsyncSession, lead_id: int, request_id: int, now: datetime
+) -> None:
+    """Info-эскалация о запросах закрывается с последним открытым запросом лида.
+
+    Связи «эскалация ↔ запрос» в схеме нет: закрываем только info-эскалацию, все причины
+    которой — `service_request`, и только если у лида не осталось других открытых
+    запросов. Срочные и эскалации с другими причинами остаются у команды.
+    """
+    others = await session.scalar(
+        select(ServiceRequest.id)
+        .where(
+            ServiceRequest.lead_id == lead_id,
+            ServiceRequest.status == "open",
+            ServiceRequest.id != request_id,
+        )
+        .limit(1)
+    )
+    if others is not None:
+        return
+    rows = (
         await session.scalars(
-            select(Escalation).where(
+            select(Escalation)
+            .where(
                 Escalation.lead_id == lead_id,
                 Escalation.status.in_(OPEN_STATUSES),
                 Escalation.priority == "info",
             )
+            .with_for_update()
         )
-    ).first()
-    if escalation is not None:
+    ).all()
+    for escalation in rows:
+        if not only_service_request(escalation.reason_codes):
+            continue
         escalation.status, escalation.resolved_at = "closed", now
         escalation.outcome = "service_request_closed"
         await events.publish(
             session, "escalation.updated", lead_id=lead_id, escalation_id=escalation.id
         )
+
+
+def only_service_request(reason_codes: list[str] | None) -> bool:
+    """Эскалация создана только запросом клиента (других причин нет)."""
+    codes = set(reason_codes or ())
+    return bool(codes) and codes <= {TriggerCode.SERVICE_REQUEST.value}
+
+
+async def _detach_lead(
+    session: AsyncSession, lead_id: int, client_id: int, who: Principal
+) -> dict[str, Any]:
+    """Последний подтверждённый Telegram лида отвязан — лид больше не клиент (SPEC §7.3)."""
+    still_linked = await session.scalar(
+        select(TelegramIdentity.id)
+        .where(
+            TelegramIdentity.lead_id == lead_id,
+            TelegramIdentity.client_id == client_id,
+            TelegramIdentity.verified_at.is_not(None),
+        )
+        .limit(1)
+    )
+    lead = await session.get(Lead, lead_id, with_for_update=True)
+    if still_linked is not None or lead is None or lead.client_id != client_id:
+        return {}
+    lead.client_id = None
+    changes: dict[str, Any] = {"lead_id": lead_id, "lead_client_cleared": True}
+    if lead.stage == Stage.CUSTOMER:
+        target = stage_after_unlink(await lead_parts.history(session, lead_id))
+        await stages.transition(
+            session,
+            lead,
+            target,
+            TransitionSource.USER,
+            reason="telegram unlinked from client",
+            actor_user_id=who.user_id,
+        )
+        changes["stage"] = target.value
+    await events.publish(session, "lead.updated", lead_id=lead_id)
+    return changes
 
 
 async def _bind_identities(
