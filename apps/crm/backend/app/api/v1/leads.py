@@ -239,6 +239,13 @@ async def take(lead_id: int, who: Taker, container: ContainerDep) -> ActionResul
     return ActionResult()
 
 
+@router.post("/leads/{lead_id}/actions/acknowledge", response_model=ActionResult)
+async def acknowledge(lead_id: int, who: Taker, container: ContainerDep) -> ActionResult:
+    """«Принято к сведению»: закрыть информационную передачу, лид остаётся у бота."""
+    await container.lead_service.acknowledge(who, lead_id)
+    return ActionResult()
+
+
 @router.post("/leads/{lead_id}/actions/return_to_bot", response_model=ActionResult)
 async def return_to_bot(
     lead_id: int, body: ReturnToBot, who: Worker, container: ContainerDep

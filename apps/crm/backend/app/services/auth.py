@@ -16,7 +16,7 @@ from app.config import Settings
 from app.domain.errors import AccountLockedError, AuthError
 from app.models.auth import RefreshToken, User
 from app.repositories import users as repo
-from app.security import audit
+from app.security import audit, reauth
 from app.security.audit import Actor
 from app.security.passwords import hash_password, needs_rehash, verify_password
 from app.security.tokens import (
@@ -111,13 +111,12 @@ class AuthService:
                 await _revoke_family(session, row.family, datetime.now(UTC))
 
     def _register_failure(self, user: User, now: datetime) -> AuthError:
-        user.failed_logins += 1
-        if user.failed_logins < self._settings.login_max_failures:
-            return AuthError("invalid credentials")
-        user.locked_until = now + timedelta(minutes=self._settings.login_lockout_minutes)
-        user.failed_logins = 0
-        logger.warning("account_locked", user_id=user.id)
-        return AccountLockedError("account locked", until=user.locked_until.isoformat())
+        policy = reauth.LockoutPolicy(
+            self._settings.login_max_failures, self._settings.login_lockout_minutes
+        )
+        if reauth.register_failure(user, now, policy):
+            return reauth.locked_error(user)
+        return AuthError("invalid credentials")
 
     async def _issue(
         self, session: AsyncSession, user: User, family: str, client: ClientInfo, now: datetime

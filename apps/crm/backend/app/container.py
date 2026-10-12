@@ -97,9 +97,13 @@ class Container:
 
     @cached_property
     def user_service(self) -> "UserService":
+        from app.security.reauth import LockoutPolicy
         from app.services.users import UserService
 
-        return UserService(self.session_factory)
+        return UserService(
+            self.session_factory,
+            LockoutPolicy(self.settings.login_max_failures, self.settings.login_lockout_minutes),
+        )
 
     @cached_property
     def setup_service(self) -> "SetupService":

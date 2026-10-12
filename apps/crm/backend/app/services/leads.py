@@ -24,18 +24,18 @@ from app.domain.errors import (
     Reason,
     ValidationFailedError,
 )
-from app.domain.lead_access import may_snooze
+from app.domain.lead_access import may_acknowledge, may_snooze
 from app.domain.stage_machine import stage_before_handoff
 from app.domain.stages import OwnerMode, Stage, TransitionSource
-from app.models.leads import Lead, LeadNote
-from app.models.qualification import Escalation, StageTransition
+from app.models.leads import Lead
+from app.models.qualification import Escalation
 from app.repositories import events
 from app.repositories import leads as repo
 from app.repositories import users as users_repo
 from app.schemas.settings import Language
 from app.security import audit
 from app.security.principal import Principal
-from app.services import deals, stages
+from app.services import deals, lead_parts, stages
 from app.services.escalation import OPEN_STATUSES
 from app.services.lead_messenger import LeadMessenger
 from app.services.settings import SettingsService
@@ -88,7 +88,7 @@ class LeadService:
                     assigned_user_id=lead.assigned_user_id,
                     assigned_user_name=await _user_name(session, lead.assigned_user_id),
                 )
-            before = _snapshot(lead)
+            before = lead_parts.snapshot(lead)
             # Из «Отказа» — снова в работу (ADR-0015); клиента и «Сделку» берут без смены стадии.
             if lead.stage not in (Stage.IN_PROGRESS, Stage.WON, Stage.CUSTOMER):
                 await _move(session, lead, Stage.IN_PROGRESS, who, "taken by manager")
@@ -114,9 +114,9 @@ class LeadService:
                 raise ConflictError(
                     "lead is already handled by the bot", reason=Reason.ALREADY_WITH_BOT
                 )
-            before = _snapshot(lead)
+            before = lead_parts.snapshot(lead)
             if lead.stage in (Stage.HANDOFF, Stage.IN_PROGRESS):
-                target = stage_before_handoff(await _history(session, lead_id))
+                target = stage_before_handoff(await lead_parts.history(session, lead_id))
                 await _move(session, lead, target, who, "returned to bot")
             lead.owner_mode = OwnerMode.BOT.value
             lead.assigned_user_id = None
@@ -124,7 +124,7 @@ class LeadService:
             lead.consecutive_fallbacks = 0
             lead.bot_turns_without_progress = 0
             if note and note.strip():
-                _add_note(session, lead, who, note, visible_to_bot=True)
+                lead_parts.add_note(session, lead, who, note, visible_to_bot=True)
             escalation = await _active_escalation(session, lead_id)
             if escalation is not None:
                 escalation.status, escalation.resolved_at = "returned", datetime.now(UTC)
@@ -144,10 +144,11 @@ class LeadService:
             lead = await _lead(session, lead_id)
             if lead.stage != Stage.CUSTOMER:
                 raise InvalidTransitionError("new deal is opened for a customer only")
-            before = _snapshot(lead)
+            before = lead_parts.snapshot(lead)
             await _move(session, lead, Stage.IN_PROGRESS, who, "new deal")
             lead.owner_mode = OwnerMode.HUMAN.value
             lead.assigned_user_id = who.user_id
+            await deals.ensure_open_deal(session, lead, actor=who)  # Q-021
             changed = await self._finish(session, who, lead, "lead.new_deal", before, None)
         await self._notify(changed)
 
@@ -169,7 +170,7 @@ class LeadService:
                     reason=Reason.INACTIVE_COLLEAGUE,
                     field="user_id",
                 )
-            before = _snapshot(lead)
+            before = lead_parts.snapshot(lead)
             lead.assigned_user_id = user_id
             changed = await self._finish(session, who, lead, "lead.assign", before, None)
             language = LANGUAGES.get(lead.language, "ru")
@@ -198,10 +199,30 @@ class LeadService:
                     "no open escalation to snooze",
                     reason=Reason.NO_OPEN_HANDOFF,
                 )
-            before = _snapshot(lead)
+            before = lead_parts.snapshot(lead)
             escalation.status, escalation.snoozed_until = "snoozed", until
             lead.snoozed_until = until
             changed = await self._finish(session, who, lead, "lead.snooze", before, escalation)
+        await self._notify(changed)
+
+    async def acknowledge(self, who: Principal, lead_id: int) -> None:
+        """«Принято к сведению» (аудит P0-1): закрыть информационную передачу лида у бота,
+        не забирая его и не меняя стадию. Права — как у «Забрать» (RBAC)."""
+        async with self._sessions() as session, session.begin():
+            lead = await _lead(session, lead_id)
+            escalation = await _active_escalation(session, lead_id)
+            if escalation is None or not may_acknowledge(
+                priority=escalation.priority, status=escalation.status
+            ):
+                raise ConflictError(
+                    "no open info escalation to acknowledge", reason=Reason.NO_OPEN_HANDOFF
+                )
+            before = lead_parts.snapshot(lead)
+            escalation.status, escalation.resolved_at = "closed", datetime.now(UTC)
+            escalation.outcome, escalation.snoozed_until = "acknowledged", None
+            escalation.taken_by_user_id = who.user_id
+            lead.snoozed_until = None
+            changed = await self._finish(session, who, lead, "lead.acknowledge", before, escalation)
         await self._notify(changed)
 
     async def close(
@@ -222,7 +243,7 @@ class LeadService:
                 raise InvalidTransitionError(
                     "take the lead before closing it", reason=Reason.TAKE_FIRST
                 )
-            before = _snapshot(lead)
+            before = lead_parts.snapshot(lead)
             target = Stage.WON if outcome == "won" else Stage.LOST
             await _move(session, lead, target, who, reason or outcome)
             # Сделка лида закрывается в той же транзакции (ADR-0019).
@@ -245,7 +266,7 @@ class LeadService:
                 escalation.status, escalation.resolved_at = "closed", datetime.now(UTC)
                 escalation.outcome = outcome
             if reason and reason.strip():
-                _add_note(session, lead, who, reason, visible_to_bot=False)
+                lead_parts.add_note(session, lead, who, reason, visible_to_bot=False)
             changed = await self._finish(
                 session, who, lead, f"lead.close_{outcome}", before, escalation
             )
@@ -256,7 +277,7 @@ class LeadService:
             raise ValidationFailedError("note is empty", field="text")
         async with self._sessions() as session, session.begin():
             lead = await _lead(session, lead_id)
-            note = _add_note(session, lead, who, text, visible_to_bot=visible_to_bot)
+            note = lead_parts.add_note(session, lead, who, text, visible_to_bot=visible_to_bot)
             await session.flush()
             await audit.record(
                 session,
@@ -278,6 +299,9 @@ class LeadService:
             if lead.owner_mode != OwnerMode.HUMAN:
                 raise ConflictError("take the lead before replying", reason=Reason.TAKE_FIRST)
             _require_owner(lead, who)
+            if lead.consent_given_at is None:
+                # Без согласия на обработку данных писать лиду нельзя (аудит P2).
+                raise ConflictError("lead has not given consent", reason=Reason.NO_CONSENT)
             lead.last_human_msg_at = datetime.now(UTC)
             await audit.record(session, who.actor, "lead.reply", "lead", lead_id)
         message_id = await self._messenger.send(
@@ -297,7 +321,13 @@ class LeadService:
         escalation: Escalation | None,
     ) -> _Changed:
         await audit.record(
-            session, who.actor, action, "lead", lead.id, before=before, after=_snapshot(lead)
+            session,
+            who.actor,
+            action,
+            "lead",
+            lead.id,
+            before=before,
+            after=lead_parts.snapshot(lead),
         )
         await events.publish(session, "lead.updated", lead_id=lead.id, owner_mode=lead.owner_mode)
         if escalation is not None:
@@ -363,34 +393,3 @@ async def _active_escalation(session: AsyncSession, lead_id: int) -> Escalation 
         .with_for_update()
     )
     return (await session.scalars(stmt)).first()
-
-
-async def _history(session: AsyncSession, lead_id: int) -> list[tuple[Stage, Stage]]:
-    stmt = (
-        select(StageTransition.from_stage, StageTransition.to_stage)
-        .where(StageTransition.lead_id == lead_id)
-        .order_by(StageTransition.id)
-    )
-    return [(Stage(a), Stage(b)) for a, b in (await session.execute(stmt)).all()]
-
-
-def _add_note(
-    session: AsyncSession, lead: Lead, who: Principal, text: str, *, visible_to_bot: bool
-) -> LeadNote:
-    note = LeadNote(
-        lead_id=lead.id,
-        user_id=who.user_id,
-        text=text.strip()[:4000],
-        visible_to_bot=visible_to_bot,
-    )
-    session.add(note)
-    lead.notes_count += 1
-    return note
-
-
-def _snapshot(lead: Lead) -> dict[str, Any]:
-    return {
-        "stage": lead.stage,
-        "owner_mode": lead.owner_mode,
-        "assigned_user_id": lead.assigned_user_id,
-    }

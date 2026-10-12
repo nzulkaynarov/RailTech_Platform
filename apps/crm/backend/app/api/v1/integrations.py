@@ -11,6 +11,7 @@ from app.integrations.telegram import AiogramProbe
 from app.schemas.integrations import ChatCandidateOut, TelegramStatusOut, TelegramTokenIn
 from app.schemas.leads import ActionResult
 from app.security.principal import Principal
+from app.security.reauth import LockoutPolicy
 from app.services.integrations import TelegramIntegrationService
 
 router = APIRouter(prefix="/api/v1/integrations", tags=["integrations"])
@@ -31,6 +32,9 @@ def get_service(request: Request, container: ContainerDep) -> TelegramIntegratio
         supervisor if isinstance(supervisor, BotSupervisor) else None,
         container.telegram_bot,
         mode=container.settings.telegram_mode,
+        lockout=LockoutPolicy(
+            container.settings.login_max_failures, container.settings.login_lockout_minutes
+        ),
     )
 
 

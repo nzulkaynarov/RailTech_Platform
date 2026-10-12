@@ -28,6 +28,26 @@ def may_transition(current: DealStage, target: DealStage, *, is_admin: bool) -> 
     return True
 
 
+def may_edit(current: DealStage, *, is_admin: bool) -> bool:
+    """Любое изменение выигранной сделки (сумма, валюта, владелец, название) — только админ."""
+    return current != DealStage.WON or is_admin
+
+
+TITLE_MAX: Final = 255
+
+
+def deal_title(
+    *, client_name: str | None, lead_name: str | None, product_name: str | None, lead_id: int
+) -> str:
+    """Название сделки «<Клиент или имя лида> — <продукт>» (аудит 2026-10-12, P1-5).
+
+    То же правило — в SQL миграции `0017_deal_titles` (бэкфилл), держать синхронно.
+    """
+    who = (client_name or "").strip() or (lead_name or "").strip() or f"Лид #{lead_id}"
+    product = (product_name or "").strip()
+    return (f"{who} — {product}" if product else who)[:TITLE_MAX]
+
+
 def lost_reason(code: str | None, dictionary: list[str]) -> str:
     """Причина отказа: значение из справочника «Настроек», иначе «Другое»."""
     value = (code or "").strip()
@@ -45,15 +65,13 @@ class OutcomePlan:
 
 def plan_lead_outcome(
     outcome: str, has_open_deal: bool, reason_code: str | None, dictionary: list[str]
-) -> OutcomePlan | None:
-    """Выигрыш: закрыть открытую сделку или создать выигранную. Отказ: закрыть открытую.
-
-    Отказ без открытой сделки — сделку не создаём (`None`): терять было нечего.
-    """
+) -> OutcomePlan:
+    """Выигрыш: закрыть открытую сделку или создать выигранную. Отказ: закрыть открытую
+    или создать проигранную с причиной (Q-021) — иначе аналитика отказов пуста."""
     if outcome == DealStage.WON:
         return OutcomePlan(create=not has_open_deal, stage=DealStage.WON, lost_reason=None)
-    if not has_open_deal:
-        return None
     return OutcomePlan(
-        create=False, stage=DealStage.LOST, lost_reason=lost_reason(reason_code, dictionary)
+        create=not has_open_deal,
+        stage=DealStage.LOST,
+        lost_reason=lost_reason(reason_code, dictionary),
     )

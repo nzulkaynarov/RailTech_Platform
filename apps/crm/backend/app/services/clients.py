@@ -18,6 +18,7 @@ from app.domain.errors import (
     Reason,
     ValidationFailedError,
 )
+from app.domain.lead_access import may_make_customer
 from app.domain.stages import OwnerMode, Stage, TransitionSource
 from app.models.auth import User
 from app.models.clients import Client, ServiceRequest
@@ -152,7 +153,12 @@ class ClientService:
                 raise InvalidTransitionError(
                     "close the deal (won) first", reason=Reason.DEAL_NOT_CLOSED
                 )
-            if lead.assigned_user_id not in (None, who.user_id) and not who.is_admin:
+            if not may_make_customer(
+                stage=lead.stage,
+                assigned_user_id=lead.assigned_user_id,
+                user_id=who.user_id,
+                is_admin=who.is_admin,
+            ):
                 raise ForbiddenError(
                     "only the lead owner or an admin can do this", reason=Reason.NOT_LEAD_OWNER
                 )
