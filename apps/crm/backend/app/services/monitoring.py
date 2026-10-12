@@ -66,6 +66,9 @@ class MonitorService:
         )
         sent: list[str] = []
         async with self._sessions() as session, session.begin():
+            states = await repo.alert_states(session)
+            if models is not None:
+                models = {**_orphan_models(states), **models}
             snapshot = HealthSnapshot(
                 failed_tasks=await repo.failed_tasks(session, now - FAILED_WINDOW),
                 queue_size=await repo.queue_size(session),
@@ -76,7 +79,6 @@ class MonitorService:
                 daily_budget_usd=cfg.budget.daily_usd,
                 models=models,
             )
-            states = await repo.alert_states(session)
             known = {
                 key.split(":", 1)[1]
                 for key, row in states.items()
@@ -152,3 +154,13 @@ def _apply(
     row.detail, row.updated_at = item.detail, now
     if delivered:
         row.sent_at = now
+
+
+def _orphan_models(states: dict[str, SystemAlert]) -> dict[str, str | None]:
+    """Алерты моделей, которые монитор больше не проверяет, закрываются с очередной пробой:
+    иначе снятая с проб модель навсегда висит «Сбоем» в «Состоянии системы» и чек-листе."""
+    return {
+        key.split(":", 1)[1]: None
+        for key, row in states.items()
+        if key.startswith("model:") and row.active
+    }

@@ -65,7 +65,11 @@ export function BackupsPage() {
               <Alert type="info" showIcon message={t.backups.unavailable} />
             ) : null}
             {data.available && data.stale ? (
-              <Alert type="warning" showIcon message={t.backups.stale} />
+              <Alert
+                type="warning"
+                showIcon
+                message={data.last_success_at ? t.backups.stale : t.backups.none}
+              />
             ) : null}
             {data.requested_at ? (
               <Alert

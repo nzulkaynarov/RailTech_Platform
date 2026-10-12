@@ -3,6 +3,7 @@ import {
   AuditOutlined,
   BookOutlined,
   CloudServerOutlined,
+  ControlOutlined,
   DashboardOutlined,
   DollarOutlined,
   ExperimentOutlined,
@@ -87,25 +88,39 @@ const resources = [
     list: "/settings",
     meta: { label: t.nav.settings, icon: <SettingOutlined /> },
   },
-  { name: "spend", list: "/spend", meta: { label: t.nav.spend, icon: <DollarOutlined /> } },
-  {
-    name: "models",
-    list: "/models",
-    meta: { label: t.nav.models, icon: <ExperimentOutlined /> },
-  },
-  { name: "audit", list: "/audit", meta: { label: t.nav.audit, icon: <AuditOutlined /> } },
   { name: "users", list: "/users", meta: { label: t.nav.users, icon: <TeamOutlined /> } },
-  {
-    name: "backups",
-    list: "/backups",
-    meta: { label: t.nav.backups, icon: <CloudServerOutlined /> },
-  },
+  // Системные разделы админа — одной группой: меню остаётся коротким (бенчмарк Intercom/Linear).
+  { name: "admin", meta: { label: t.nav.admin, icon: <ControlOutlined /> } },
   {
     name: "integrations",
     list: "/integrations",
-    meta: { label: t.nav.integrations, icon: <ApiOutlined /> },
+    meta: { label: t.nav.integrations, icon: <ApiOutlined />, parent: "admin" },
   },
-  { name: "system", list: "/system", meta: { label: t.nav.system, icon: <HeartOutlined /> } },
+  {
+    name: "models",
+    list: "/models",
+    meta: { label: t.nav.models, icon: <ExperimentOutlined />, parent: "admin" },
+  },
+  {
+    name: "spend",
+    list: "/spend",
+    meta: { label: t.nav.spend, icon: <DollarOutlined />, parent: "admin" },
+  },
+  {
+    name: "system",
+    list: "/system",
+    meta: { label: t.nav.system, icon: <HeartOutlined />, parent: "admin" },
+  },
+  {
+    name: "backups",
+    list: "/backups",
+    meta: { label: t.nav.backups, icon: <CloudServerOutlined />, parent: "admin" },
+  },
+  {
+    name: "audit",
+    list: "/audit",
+    meta: { label: t.nav.audit, icon: <AuditOutlined />, parent: "admin" },
+  },
   { name: "profile", list: "/profile", meta: { label: t.nav.profile, icon: <UserOutlined /> } },
 ];
 

@@ -34,6 +34,8 @@ describe("time in Asia/Tashkent", () => {
 
   it("speaks Russian for relative time", () => {
     expect(fromNow("2026-10-09T08:00:00Z", "2026-10-09T09:00:00Z")).toBe("час назад");
+    // часы сервера чуть впереди браузера — событие не «в будущем»
+    expect(fromNow("2026-10-09T09:00:03Z", "2026-10-09T09:00:00Z")).toBe("несколько секунд назад");
   });
 });
 

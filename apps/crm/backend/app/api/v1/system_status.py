@@ -28,7 +28,11 @@ async def system_status(
     """Только чтение: моделей не вызывает, их здоровье — из последней проверки монитора."""
     bot = getattr(request.app.state, "bot", None)
     service = SystemStatusService(
-        container.session_factory, container.settings_service, container.settings, readiness
+        container.session_factory,
+        container.settings_service,
+        container.settings,
+        readiness,
+        container.backup_service,
     )
     now = datetime.now(UTC)
     components = await service.collect(now, bot.running if bot is not None else None)

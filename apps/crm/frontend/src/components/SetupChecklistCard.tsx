@@ -55,7 +55,11 @@ export function SetupChecklistCard() {
         </Button>
       }
     >
-      <Progress percent={Math.round((data.done / data.total) * 100)} showInfo={false} />
+      <Progress
+        percent={Math.round((data.done / data.total) * 100)}
+        showInfo={false}
+        aria-label={title}
+      />
       <List
         dataSource={data.items}
         renderItem={(item) => (

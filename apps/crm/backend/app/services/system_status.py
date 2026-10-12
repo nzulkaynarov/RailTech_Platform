@@ -15,6 +15,7 @@ from app.domain import system_status as rules
 from app.domain.system_status import AlertRow, Component, QueueFacts
 from app.models.system import SystemAlert
 from app.repositories import monitoring as repo
+from app.services.backups import BackupService
 from app.services.readiness import ReadinessService
 from app.services.settings import SettingsService
 
@@ -58,11 +59,13 @@ class SystemStatusService:
         settings: SettingsService,
         config: Settings,
         readiness: ReadinessService,
+        backups: BackupService | None = None,
     ) -> None:
         self._sessions = sessions
         self._settings = settings
         self._config = config
         self._readiness = readiness
+        self._backups = backups
 
     async def collect(self, now: datetime, bot_running: bool | None) -> list[Component]:
         report = await self._readiness.check()
@@ -75,7 +78,7 @@ class SystemStatusService:
             components.append(rules.queue(facts, now))
             components.append(rules.channel(cfg.notifications.channel_id, now))
         components.append(rules.bot(bot_running, self._config.telegram_mode, now))
-        components.append(rules.backup(now))
+        components.append(await self._backup(now))
         components.append(rules.secrets(missing_secrets(self._config), now))
         return components
 
@@ -92,3 +95,9 @@ class SystemStatusService:
             )
         alerts = [AlertRow(r.key, r.active, r.detail, r.updated_at) for r in rows]
         return alerts, facts
+
+    async def _backup(self, now: datetime) -> Component:
+        if self._backups is None:
+            return rules.backup(now, available=False, last_success=None)
+        state = await self._backups.status(limit=0)
+        return rules.backup(now, available=state.available, last_success=state.last_success_at)

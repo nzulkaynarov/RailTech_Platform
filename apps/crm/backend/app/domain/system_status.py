@@ -47,6 +47,9 @@ class QueueFacts:
     failed_last_hour: int
 
 
+STALE_BACKUP_HOURS = 26
+
+
 def dependencies(checks: Mapping[str, bool], now: datetime) -> list[Component]:
     result = []
     for key, (title, problem) in _DEPENDENCIES.items():
@@ -128,14 +131,21 @@ def queue(facts: QueueFacts, now: datetime) -> Component:
     return Component("queue", "Очередь задач", status, reason, now)
 
 
-def backup(now: datetime) -> Component:
-    return Component(
-        "backup",
-        "Последний бэкап",
-        "unknown",
-        "Бэкапы лежат в томе сервера, CRM их не видит — проверьте по runbook backup-restore",
-        now,
-    )
+def backup(now: datetime, available: bool, last_success: datetime | None) -> Component:
+    """Последний успешный бэкап из тома `backups` (ADR-0013): старше 26 ч — внимание, нет — сбой."""
+    name = "Последний бэкап"
+    if not available:
+        reason = (
+            "Том резервных копий не подключён к серверу CRM — проверьте по runbook backup-restore"
+        )
+        return Component("backup", name, "unknown", reason, now)
+    if last_success is None:
+        return Component("backup", name, "fail", "Успешных копий нет — «Резервные копии»", now)
+    age_h = (now - last_success).total_seconds() / 3600
+    if age_h > STALE_BACKUP_HOURS:
+        reason = f"Последняя копия {int(age_h)} ч назад — проверьте контейнер backup"
+        return Component("backup", name, "warn", reason, now)
+    return Component("backup", name, "ok", f"Последняя копия {int(age_h)} ч назад", now)
 
 
 def secrets(missing: Sequence[str], now: datetime) -> Component:

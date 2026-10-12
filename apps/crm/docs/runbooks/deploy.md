@@ -11,7 +11,12 @@
 4. `scripts/bootstrap_dev.sh` создаёт `.env` с секретами; затем в `.env`: `APP_ENV=prod`,
    `TELEGRAM_MODE=webhook`, `TELEGRAM_WEBHOOK_URL=https://DOMAIN/telegram/webhook`,
    `DOMAIN`, `ACME_EMAIL`, `ADMIN_ALLOW_CIDRS` (офис/VPN), prod-ключи провайдеров
-   (с лимитами расходов в консолях, ADR-0014), prod-токен бота.
+   (с лимитами расходов в консолях, ADR-0014). `SECRETS_KEY` (ADR-0018) `bootstrap_dev.sh` генерирует
+   сам — **сохраните его копию вне сервера**: без него токен бота, сохранённый в CRM, не расшифровать.
+   Токен бота можно не вписывать в `.env`: его вводит админ в «Система → Подключения».
+7. **Первый запуск без терминала** (ADR-0018): пока в БД нет админа, CRM открывает `/setup`.
+   Одноразовый код — в логах api: `make logs s=api | grep setup_code_issued` (24 ч; новый — после
+   рестарта api). Дальше — чек-лист «Настройка CRM» на главной: модели, бот, канал, база знаний, команда.
 5. GitHub → Settings → Environments → `production` (required reviewers — по желанию), secrets:
    `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` (приватный ключ deploy), `VPS_KNOWN_HOSTS`
    (`ssh-keyscan -t ed25519 <host>`), `VPS_APP_DIR=/srv/railtech`.

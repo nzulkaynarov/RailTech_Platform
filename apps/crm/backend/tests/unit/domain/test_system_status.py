@@ -1,6 +1,6 @@
 """Экран «Состояние системы»: правила статуса по фактам."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -62,7 +62,12 @@ def test_bot(running: bool | None, status: str) -> None:
 def test_channel_and_backup_and_secrets() -> None:
     assert rules.channel(None, NOW).status == "warn"
     assert rules.channel(-100, NOW).status == "ok"
-    assert rules.backup(NOW).status == "unknown"
+    assert rules.backup(NOW, available=False, last_success=None).status == "unknown"
+    assert rules.backup(NOW, available=True, last_success=None).status == "fail"
+    assert rules.backup(NOW, available=True, last_success=NOW - timedelta(hours=2)).status == "ok"
+    assert (
+        rules.backup(NOW, available=True, last_success=NOW - timedelta(hours=30)).status == "warn"
+    )
     missing = rules.secrets(["JWT_SECRET"], NOW)
     assert missing.status == "fail"
     assert "JWT_SECRET" in missing.reason
