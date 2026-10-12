@@ -22,6 +22,11 @@ export function useTestModel() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: async (alias: string) => unwrap(await testModel(alias)),
-    onSettled: () => client.invalidateQueries({ queryKey: spendKeys.models }),
+    // Результат проверки пишется в состояние монитора — обновляем и «Состояние системы».
+    onSettled: async () => {
+      await client.invalidateQueries({ queryKey: spendKeys.models });
+      await client.invalidateQueries({ queryKey: ["system", "status"] });
+      await client.invalidateQueries({ queryKey: ["setup", "checklist"] });
+    },
   });
 }

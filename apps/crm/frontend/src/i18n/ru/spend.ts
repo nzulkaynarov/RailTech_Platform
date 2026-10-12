@@ -2,9 +2,10 @@
 export const spend = {
   spend: {
     today: "Сегодня по провайдерам",
-    todayHint: "Сутки по Ташкенту. Лимиты меняются в «Настройках» → «Бюджет моделей».",
+    todayHint: "Сутки по Ташкенту.",
+    budgetLink: "Изменить лимиты",
     total: "Всего сегодня",
-    softBudget: "Мягкий бюджет",
+    softBudget: "Дневной бюджет (переход на резервную модель)",
     noLimit: "без лимита",
     of: "{spent} из {limit}",
     series: "По дням",
@@ -32,7 +33,7 @@ export const spend = {
       dialog: "Диалог с клиентом",
       qualifier: "Квалификатор",
       judge: "Проверка качества",
-      fallback: "Запасная модель",
+      fallback: "Резервная модель",
       embed_query: "Поиск по базе знаний",
       embed_ingest: "Индексация базы знаний",
       probe: "Проверка моделей",
@@ -43,7 +44,8 @@ export const spend = {
     kinds: { work: "Работа", test: "Тесты (eval, нагрузка)" } as Record<string, string>,
   },
   models: {
-    hint: "Только просмотр. Модели и ключи меняются на сервере (infra/litellm.config.yaml).",
+    hint: "Только просмотр. Модели и ключи провайдеров меняет администратор сервера.",
+    checkedHint: "Монитор проверяет модели раз в час; «Проверить» обновляет состояние сразу.",
     role: "Роль",
     provider: "Провайдер",
     model: "Модель",
@@ -62,8 +64,8 @@ export const spend = {
     roles: {
       "dialog-model": "Диалог",
       "qualifier-model": "Квалификатор",
-      "fallback-model": "Запасная",
-      "embed-model": "Поиск (эмбеддинги)",
+      "fallback-model": "Резерв",
+      "embed-model": "Поиск",
       "judge-model": "Проверка качества",
     } as Record<string, string>,
   },

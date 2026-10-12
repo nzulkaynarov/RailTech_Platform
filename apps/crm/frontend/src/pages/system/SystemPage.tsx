@@ -6,6 +6,7 @@ import type { ComponentStatusOut } from "../../api/generated/model";
 import { PageBody } from "../../components/PageBody";
 import { PageHeader } from "../../components/PageHeader";
 import { PageState } from "../../components/PageState";
+import { bySeverity, headerHealth } from "../../domain/systemHealth";
 import { useNow } from "../../hooks/useNow";
 import { t } from "../../i18n/ru";
 import { fromNow } from "../../lib/time";
@@ -49,9 +50,14 @@ export function SystemPage() {
       <PageState query={query}>
         {query.data ? (
           <Card>
+            <Typography.Paragraph strong>
+              {headerHealth(query.data).tone === "ok"
+                ? t.system.allOk
+                : headerHealth(query.data).label}
+            </Typography.Paragraph>
             <Typography.Paragraph type="secondary">{t.system.hint}</Typography.Paragraph>
             <List
-              dataSource={query.data.components}
+              dataSource={bySeverity(query.data.components)}
               rowKey="key"
               renderItem={(c) => (
                 <List.Item>
