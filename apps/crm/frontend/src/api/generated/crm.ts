@@ -1903,7 +1903,7 @@ export const getListDealsUrl = (params?: ListDealsParams) => {
 };
 
 /**
- * Сделки, новые сверху (до 500). Период закрытия — включительно, по дате UTC.
+ * Сделки, новые сверху (до 500). Период закрытия — включительно, по дням пояса команды.
  * @summary List Deals
  */
 export const listDeals = async (
