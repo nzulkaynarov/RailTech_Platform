@@ -41,10 +41,10 @@ describe("dashboard tiles", () => {
     expect(tiles.secondary.map((x) => x.key)).toEqual(["openEscalations", "escalations", "gaps"]);
   });
 
-  it("won deals drill down to the deals list filtered by «Выиграна» (ADR-0019)", () => {
+  it("won deals drill down to deals won in the same period (ADR-0019)", () => {
     expect(tiles.primary.find((x) => x.key === "won")?.target).toEqual({
       resource: "deals",
-      path: "/deals?stage=won",
+      path: "/deals?stage=won&closed_from=2026-09-12&closed_to=2026-10-11",
     });
   });
 
