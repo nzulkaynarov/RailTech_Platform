@@ -148,12 +148,18 @@ function Layout({ chat, summary, why, notes, deals }: Panes) {
   );
 }
 
-/** Сводка в шапке: стадия, кто ведёт, телефон, язык, оценка — одной строкой на десктопе. */
+/**
+ * Сводка в шапке: стадия, кто ведёт, телефон, язык, оценка. На широком экране — одной строкой,
+ * подпись над значением (`layout="vertical"`): в пять колонок «подпись: значение» длинный статус
+ * «Ждёт менеджера · N мин» и телефон налезали на соседние поля.
+ */
 function LeadFacts({ lead }: { lead: LeadDetail }) {
+  const wide = Grid.useBreakpoint().lg === true;
   return (
     <Descriptions
       size="small"
       className="lead-facts"
+      layout={wide ? "vertical" : "horizontal"}
       column={{ xs: 1, sm: 2, md: 3, lg: 5, xl: 5, xxl: 5 }}
       items={[
         { key: "stage", label: t.leads.stage, children: <StageBadge stage={lead.stage} /> },
