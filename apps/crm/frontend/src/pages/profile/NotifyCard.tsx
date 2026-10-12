@@ -1,13 +1,20 @@
-import { SendOutlined } from "@ant-design/icons";
+import { SendOutlined, SoundOutlined } from "@ant-design/icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Alert, App as AntApp, Button, Card, Flex, Switch, Typography } from "antd";
-import type { ReactNode } from "react";
+import { Alert, App as AntApp, Button, Card, Flex, Select, Space, Switch, Typography } from "antd";
+import { type ReactNode, useState } from "react";
 
 import { testNotification, updateMe } from "../../api/generated/crm";
 import type { MePatch, UserOut } from "../../api/generated/model";
 import { unwrap } from "../../api/http";
 import { keys } from "../../api/queries";
 import { useApiErrorToast } from "../../hooks/useApiErrorToast";
+import {
+  type SoundId,
+  SOUND_IDS,
+  playSound,
+  readSound,
+  writeSound,
+} from "../../domain/alertSounds";
 import { useBrowserAlertsPref } from "../../hooks/useLeadAlerts";
 import { t } from "../../i18n/ru";
 import { formatDateTime } from "../../lib/time";
@@ -36,6 +43,41 @@ function Row({
       </div>
       {control}
     </Flex>
+  );
+}
+
+/** Выбор звука: сохраняется в этом браузере, «Прослушать» — сразу, по клику (жест пользователя). */
+function SoundPicker() {
+  const [sound, setSound] = useState<SoundId>(readSound);
+  return (
+    <Row
+      id="notify-sound"
+      label={t.notify.sound}
+      hint={t.notify.soundHint}
+      control={
+        <Space.Compact>
+          <Select<SoundId>
+            id="notify-sound"
+            value={sound}
+            style={{ width: 170 }}
+            options={SOUND_IDS.map((id) => ({ value: id, label: t.notify.sounds[id] }))}
+            onChange={(id) => {
+              setSound(id);
+              writeSound(id);
+              playSound(id);
+            }}
+          />
+          <Button
+            icon={<SoundOutlined aria-hidden />}
+            aria-label={t.notify.soundPlay}
+            disabled={sound === "none"}
+            onClick={() => {
+              playSound(sound);
+            }}
+          />
+        </Space.Compact>
+      }
+    />
   );
 }
 
@@ -130,6 +172,7 @@ export function NotifyCard({ user }: { user: UserOut }) {
             />
           }
         />
+        {browser.enabled ? <SoundPicker /> : null}
       </Flex>
     </Card>
   );

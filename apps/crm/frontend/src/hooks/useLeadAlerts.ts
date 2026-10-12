@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 
 import { useMe } from "../api/queries";
+import { playSound, readSound } from "../domain/alertSounds";
 import { t } from "../i18n/ru";
 import type { CrmEvent } from "./useEventStream";
 
@@ -48,24 +49,6 @@ function permissionNow(): NotificationPermission | "unsupported" {
   return typeof Notification === "undefined" ? "unsupported" : Notification.permission;
 }
 
-/** Короткий сигнал без файла-ресурса: синус 880 Гц, 0,15 с. */
-export function beep(): void {
-  try {
-    const Ctx = window.AudioContext;
-    const ctx = new Ctx();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.frequency.value = 880;
-    gain.gain.value = 0.1;
-    osc.connect(gain).connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.15);
-    osc.onended = () => void ctx.close();
-  } catch {
-    // нет Web Audio или браузер не дал играть без жеста — молча пропускаем
-  }
-}
-
 function show(event: CrmEvent): void {
   try {
     const body = t.notify.browserBody.replace("{id}", String(event.lead_id ?? ""));
@@ -82,7 +65,7 @@ export function useLeadAlertHandler(): (event: CrmEvent) => void {
   return useCallback(
     (event: CrmEvent) => {
       const alert = alertFor(event, myId, readPref(), document.hidden, permissionNow());
-      if (alert.sound) beep();
+      if (alert.sound) playSound(readSound());
       if (alert.notify) show(event);
     },
     [myId],
