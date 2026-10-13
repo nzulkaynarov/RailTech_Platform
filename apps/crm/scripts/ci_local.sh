@@ -11,7 +11,7 @@ E2E_PG_PORT="${E2E_PG_PORT:-55442}"
 E2E_API_PORT="${E2E_API_PORT:-18000}"
 E2E_WEB_PORT=4173
 PASS=ci-only-password
-PG_IMAGE=pgvector/pgvector:0.8.7-pg16
+PG_IMAGE=pgvector/pgvector:0.8.7-pg17
 GITLEAKS_IMAGE=ghcr.io/gitleaks/gitleaks:v8.30.1
 LOGS="$ROOT/.ci-local"
 
@@ -30,7 +30,7 @@ usage() {
   e2e          одноразовый Postgres :$E2E_PG_PORT, миграции, seed-demo, API :$E2E_API_PORT,
                сборка фронта и preview :$E2E_WEB_PORT, Playwright (chromium + mobile)
   audit        pip-audit (prod-зависимости backend), pnpm audit --prod --audit-level high
-  build        образы backend/frontend (prod) и backup с проверкой pg_dump 16
+  build        образы backend/frontend (prod) и backup с проверкой pg_dump 17
 
 Стенд и его БД не используются; ключи и токен из .env в тесты не попадают.
 Логи — .ci-local/. Итог — таблица и код выхода 1 при любом сбое.
@@ -164,8 +164,8 @@ stage_build() {
   docker build -q --target prod -t railtech-backend:ci "$ROOT/backend" >/dev/null
   docker build -q --target prod -t railtech-frontend:ci "$ROOT/frontend" >/dev/null
   docker build -q --target backup -t railtech-backup:ci "$ROOT/backend" >/dev/null
-  docker run --rm railtech-backup:ci /usr/lib/postgresql/16/bin/pg_dump --version \
-    | grep -q "pg_dump (PostgreSQL) 16"
+  docker run --rm railtech-backup:ci /usr/lib/postgresql/17/bin/pg_dump --version \
+    | grep -q "pg_dump (PostgreSQL) 17"
   docker run --rm railtech-backup:ci /app/ops/backup.sh --help >/dev/null
   docker run --rm railtech-backup:ci python -m app s3-mirror --help >/dev/null
 }

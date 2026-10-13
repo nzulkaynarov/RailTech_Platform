@@ -2,7 +2,7 @@
 # (ORCHESTRATOR §3.11). Раннер — переменная репозитория CI_RUNNER (например, self-hosted),
 # по умолчанию ubuntu-latest (DECISIONS 2026-10-13: self-hosted или минуты GitHub — решает владелец).
 #
-# Порядок внутри приложения: lint → unit → integration (Postgres service) → build.
+# Порядок внутри приложения: lint → unit → integration (Postgres service) → build; CRM дополнительно e2e и аудит зависимостей.
 # Контракт: make contracts и чистый git diff в packages/contracts/generated.
 # Инфраструктура: docker compose config и caddy validate.
 # ci-ok — единственная обязательная проверка для защиты main: красный, если любой job упал.
@@ -249,6 +249,114 @@ jobs:
           cache-from: type=gha,scope=crm-${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=crm-${{ matrix.name }}
 
+  crm-e2e:
+    name: CRM · e2e (Playwright)
+    needs: [crm-lint, crm-unit]
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.7-pg17
+        env:
+          POSTGRES_DB: crm_e2e
+          POSTGRES_USER: rt
+          POSTGRES_PASSWORD: ci-only-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U rt -d crm_e2e"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      APP_ENV: test
+      LOG_FORMAT: console
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: crm_e2e
+      POSTGRES_USER: rt
+      POSTGRES_PASSWORD: ci-only-password
+      TELEGRAM_MODE: disabled
+      TELEGRAM_DRY_RUN: "true"
+      E2E_MANAGER_EMAIL: manager@demo.local
+      E2E_MANAGER_PASSWORD: ci-e2e-demo-42
+      E2E_ADMIN_EMAIL: admin@demo.local
+      E2E_ADMIN_PASSWORD: ci-e2e-boss-42
+    defaults:
+      run:
+        working-directory: apps/crm
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: apps/crm/backend/uv.lock
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: apps/crm/frontend/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: apps/crm/frontend/pnpm-lock.yaml
+      - name: Install
+        run: make install
+      - name: Backend — миграции, демо-данные, API
+        working-directory: apps/crm/backend
+        run: |
+          export JWT_SECRET="$(openssl rand -hex 32)"
+          uv run alembic upgrade head
+          uv run python -m app seed-demo --manager-password "$E2E_MANAGER_PASSWORD"
+          uv run python -m app create-admin --email "$E2E_ADMIN_EMAIL" --password "$E2E_ADMIN_PASSWORD"
+          nohup uv run python -m app api --port 8000 > ../api.log 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://localhost:8000/health && break; sleep 1; done
+      - name: Frontend — сборка и preview
+        working-directory: apps/crm/frontend
+        run: |
+          pnpm build
+          nohup pnpm preview --port 4173 --strictPort > ../preview.log 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://localhost:4173/ > /dev/null && break; sleep 1; done
+      - name: Playwright
+        working-directory: apps/crm/frontend
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          pnpm e2e
+      - name: Логи
+        if: failure()
+        run: tail -n 200 api.log preview.log || true
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: crm-playwright-report
+          path: apps/crm/frontend/playwright-report
+          retention-days: 7
+
+  crm-audit:
+    name: CRM · dependency audit
+    needs: changes
+    if: needs.changes.outputs.crm == 'true'
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: apps/crm/frontend/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: pip-audit (backend, prod-зависимости)
+        working-directory: apps/crm/backend
+        run: |
+          uv export --frozen --no-dev --no-emit-project --format requirements-txt -o /tmp/requirements.txt
+          uvx pip-audit@2.10.1 -r /tmp/requirements.txt --no-deps --disable-pip --progress-spinner off
+      - name: pnpm audit (frontend, prod, high+)
+        working-directory: apps/crm/frontend
+        run: pnpm audit --prod --audit-level high
+
   # ─── ERP и Cabinet: make check-<система> (пока кода нет — пропуск внутри цели) ─────────────
 
   erp:
@@ -322,7 +430,7 @@ jobs:
   ci-ok:
     name: CI ok
     if: always()
-    needs: [changes, gitleaks, crm-lint, crm-unit, crm-integration, crm-build, erp, cabinet, contracts, infra]
+    needs: [changes, gitleaks, crm-lint, crm-unit, crm-integration, crm-build, crm-e2e, crm-audit, erp, cabinet, contracts, infra]
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 5
     steps:

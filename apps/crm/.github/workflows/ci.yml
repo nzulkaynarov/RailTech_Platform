@@ -121,7 +121,7 @@ jobs:
     timeout-minutes: 20
     services:
       postgres:
-        image: pgvector/pgvector:0.8.7-pg16
+        image: pgvector/pgvector:0.8.7-pg17
         env:
           POSTGRES_DB: railtech_test
           POSTGRES_USER: railtech
@@ -174,7 +174,7 @@ jobs:
     timeout-minutes: 25
     services:
       postgres:
-        image: pgvector/pgvector:0.8.7-pg16
+        image: pgvector/pgvector:0.8.7-pg17
         env:
           POSTGRES_DB: railtech_e2e
           POSTGRES_USER: railtech
@@ -301,9 +301,9 @@ jobs:
           tags: railtech-${{ matrix.name }}:ci
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
-      - name: Образ backup — pg_dump 16 и скрипты на месте
+      - name: Образ backup — pg_dump 17 и скрипты на месте
         if: matrix.name == 'backup'
         run: |
-          docker run --rm railtech-backup:ci /usr/lib/postgresql/16/bin/pg_dump --version | grep -q "pg_dump (PostgreSQL) 16"
+          docker run --rm railtech-backup:ci /usr/lib/postgresql/17/bin/pg_dump --version | grep -q "pg_dump (PostgreSQL) 17"
           docker run --rm railtech-backup:ci /app/ops/backup.sh --help
           docker run --rm railtech-backup:ci python -m app s3-mirror --help

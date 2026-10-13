@@ -6,4 +6,4 @@ Workflow ансамбля — `.github/workflows/ci.yml` (GitHub читает т
 - **gitleaks** — всегда, по истории ветки, с `.gitleaks.toml` (`legacy/` в allowlist).
 - **`ci-ok`** — единственная обязательная проверка для защиты `main`: красная, если любой job упал или отменён; пропущенные (нет изменений) — зелёные.
 - **Раннер**: переменная репозитория `CI_RUNNER` (Settings → Variables), например `self-hosted`; пусто — `ubuntu-latest` (DECISIONS 2026-10-13: self-hosted вне прода или минуты GitHub — решает владелец).
-- Workflows внутри `apps/crm/.github/` не запускаются (не корень) — их шаги перенесены сюда с `working-directory: apps/crm`. E2E Playwright и `pip-audit`/`pnpm audit` CRM в ансамблевый CI пока не перенесены (отмечено в PROGRESS).
+- Workflows внутри `apps/crm/.github/` не запускаются (не корень) — их шаги перенесены сюда с `working-directory: apps/crm`. E2E Playwright (`crm-e2e`) и аудит зависимостей (`crm-audit`) CRM перенесены. Локальный эквивалент — `make ci-local` (`scripts/ci_local.sh`, `--full` включает e2e и аудит); он — гейт мержа, пока Actions заблокирован биллингом (QUESTIONS Q-10).

@@ -7,7 +7,7 @@
 set -euo pipefail
 
 BACKUP_DIR="${BACKUP_DIR:-/backups}"
-PG_BIN="${PG_BIN:-/usr/lib/postgresql/16/bin}"
+PG_BIN="${PG_BIN:-/usr/lib/postgresql/17/bin}"
 
 if [[ "${1:-}" == "--list" || -z "${1:-}" ]]; then
   ls -1 "$BACKUP_DIR" | grep -E '^20[0-9]{6}T[0-9]{6}Z$' || echo "бэкапов нет в $BACKUP_DIR"

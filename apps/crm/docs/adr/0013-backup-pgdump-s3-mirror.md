@@ -1,4 +1,4 @@
-# 0013. Бэкапить pg_dump 16 и копией бакетов кодом приложения в контейнере backup
+# 0013. Бэкапить pg_dump той же версии, что сервер (сейчас 17), и копией бакетов кодом приложения в контейнере backup
 
 - Статус: accepted (2026-10-12, владелец: «принимаю все рекомендации», Q-007)
 - Дата: 2026-10-08
@@ -47,3 +47,7 @@ SPEC §2 оставил выбор инструмента зеркалирова
 
 CI job `build` собирает образ `backup` и проверяет `pg_dump` 16; integration `test_s3_mirror`;
 гейт Фазы 8 — восстановление prod-бэкапа на dev (runbook `backup-restore.md`).
+
+## Поправка 2026-10-13 (RailTech Platform, M0)
+
+Сервер ансамбля — PostgreSQL 17 (`docs/ARCHITECTURE.md` §10, `infra/compose/base.yml`), поэтому правило «версия клиента = версия сервера» означает `postgresql-client-17`: `backend/Dockerfile` (target `backup`), `ops/backup.sh`, `ops/restore.sh`, образы Postgres в `infra/docker-compose.yml`, `scripts/test_int_local.sh`, `scripts/ci_local.sh` и workflows переведены на 17. Аргументы ADR не меняются.

@@ -164,7 +164,9 @@ B2B), бизнес-настройки — в SPA.
   Mini App в BotFather указывает на `cabinet.railtech.uz`. Бренд компании в доменах — нормально;
   продукт внутри нейтрален: имя и логотип — настройки.
 - Один PostgreSQL 17 с базами `crm` и `erp` (pgvector для `crm`); один Redis (раздельные БД);
-  один RustFS с бакетами `crm` и `erp`; LiteLLM и Langfuse — общие; бэкапы обеих баз — по runbook CRM.
+  один RustFS с бакетами `crm` и `erp` (факт M0-INF-03: CRM хранит файлы в своих трёх бакетах `kb-sources`,
+  `client-documents`, `tg-attachments` — переименование в один бакет потребовало бы правок кода CRM и
+  отложено; ERP получает бакет `erp`); LiteLLM и Langfuse — общие; бэкапы обеих баз — по runbook CRM.
 - Память: текущий VPS с 1.5 ГБ свободных не вместит второй стек — нужен сервер под оба (ориентир:
   8 ГБ ОЗУ, 4 vCPU; LiteLLM + Langfuse + два бэкенда + воркеры).
 - Деплой: один workflow на ансамбль с фильтрами по путям; self-hosted runner; миграции ERP после

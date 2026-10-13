@@ -67,6 +67,23 @@ docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .en
 - Сервисы CRM с префиксом `crm-`; MCP-серверы — `crm-mcp-kb|crm|docs`, адреса передаются через `*_MCP_URL`.
 - Redis теперь общий сервис ансамбля (в CRM был только для Langfuse).
 
+## Профиль `observability` (Langfuse)
+
+`make up-obs` добавляет ClickHouse, `langfuse-worker`, `langfuse-web` (≈2,6 ГБ памяти сверх стенда: по замеру 2026-10-13 — ClickHouse 0,9 ГБ, web 0,9 ГБ, worker 0,8 ГБ) и `http://langfuse.localhost`.
+Проверено 2026-10-13: `/api/public/health` через Caddy → `{"status":"OK","version":"4.56.0"}`, оба контейнера healthy. Healthcheck'и ходят по `process.env.HOSTNAME`: Next.js и воркер слушают только адрес из `HOSTNAME`, на `localhost`/`127.0.0.1` внутри контейнера — отказ.
+Первый вход — регистрация в UI Langfuse, затем Settings → API Keys → ключи в `.env` (`CRM_LANGFUSE_PUBLIC_KEY`,
+`CRM_LANGFUSE_SECRET_KEY`) и `make up`. Веб и воркер при старте применяют миграции ClickHouse; если воркер убит по памяти
+посреди миграций (код 137), веб падает с «Table … already exists». Лечение — пересоздать ClickHouse с нуля (трейсов ещё нет):
+
+```
+docker compose -p rt-platform --profile observability rm -sf clickhouse langfuse-web langfuse-worker
+docker volume rm rt-platform_clickhouse_data rt-platform_clickhouse_logs
+make up-obs
+```
+
+При нехватке памяти Docker Desktop (8 ГБ на несколько стендов) на время старта можно остановить `docling`, `crm-worker`,
+`crm-mcp-*` и вернуть их `make up`.
+
 ## Если не поднимается
 
 - `make ps` → `crm-api` не healthy: `make logs s=crm-api`; чаще всего — не применились миграции (`make logs s=crm-migrate`).

@@ -25,6 +25,7 @@ make check            # проверки всех приложений (make che
 make contracts        # валидация packages/contracts и генерация клиентов (с M0-INF-02)
 make up               # весь ансамбль локально на crm/erp/cabinet.localhost (с M0-INF-03)
 make hooks            # pre-commit корня: gitleaks и быстрые проверки
+make ci-local         # локальный CI — гейт мержа, пока GitHub Actions недоступен (args="--quick" без integration и build)
 ```
 
 До появления стенда ансамбля CRM поднимается отдельно: `make -C apps/crm up` (см. `apps/crm/README.md`).
