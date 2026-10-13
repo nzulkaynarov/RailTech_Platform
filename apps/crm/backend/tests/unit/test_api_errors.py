@@ -180,4 +180,9 @@ def test_reason_values_are_a_stable_contract() -> None:
         "litellm_unavailable",
         "model_key_required",
         "model_in_config",
+        "erp_not_configured",
+        "erp_invalid_url",
+        "erp_unauthorized",
+        "erp_unavailable",
+        "erp_bad_response",
     }

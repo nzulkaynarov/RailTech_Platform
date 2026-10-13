@@ -9,7 +9,7 @@ import { useProduct } from '@/hooks/useCatalog';
 import { useAuthStore } from '@/store/authStore';
 import { productStatusLabelKey } from '@/lib/codes';
 
-import { useProductForm } from '../admin-catalog/useProductForm';
+import { useProductForm } from '@/components/Shared/product-form/useProductForm';
 import { CompletenessRail } from './CompletenessRail';
 import { AiPanelSection } from './AiPanelSection';
 import { BasicsSection } from './BasicsSection';

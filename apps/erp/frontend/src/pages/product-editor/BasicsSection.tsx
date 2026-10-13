@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ManufacturerField } from '@/components/Shared/ManufacturerField';
 
-import type { ProductFormState } from '../admin-catalog/useProductForm';
+import type { ProductFormState } from '@/components/Shared/product-form/useProductForm';
 import { SECTION_IDS } from './anchors';
 
 /**

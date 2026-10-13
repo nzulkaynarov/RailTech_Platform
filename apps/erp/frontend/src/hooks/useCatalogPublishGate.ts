@@ -29,12 +29,10 @@ const NOT_BLOCKED: CatalogPublishGate = { isSeller: false, blocked: false, reaso
  * `SELLER_KYC_REQUIRED`.
  */
 export function useCatalogPublishGate(): CatalogPublishGate {
-  const role = useUserStore((s) => s.role);
   const activeStatus = useUserStore((s) => s.activeStatus);
   const capabilities = useUserStore((s) => s.capabilities);
 
-  // Оператор публикует в порядке модерации, а не от имени компании, — порог к нему не применим.
-  const isSeller = role !== 'ADMIN' && activeStatus === 'SELLER';
+  const isSeller = activeStatus === 'SELLER';
   if (!isSeller) return NOT_BLOCKED;
 
   if (!isKycVerified(capabilities.kyc_level)) {

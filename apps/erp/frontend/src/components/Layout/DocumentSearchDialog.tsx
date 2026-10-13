@@ -59,8 +59,7 @@ export function DocumentSearchDialog({ open, onOpenChange, onNavigate }: Documen
     const term = debouncedQuery.trim();
     const search = useSearchDocuments(term);
     const activeStatus = useUserStore((state) => state.activeStatus);
-    const isPlatformAdmin = useUserStore((state) => state.role === 'ADMIN');
-    const viewer = { isSeller: activeStatus === 'SELLER', isPlatformAdmin };
+    const viewer = { isSeller: activeStatus === 'SELLER' };
 
     const grouped = useMemo(() => {
         const results = search.data ?? [];

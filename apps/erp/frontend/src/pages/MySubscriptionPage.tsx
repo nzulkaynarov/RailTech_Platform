@@ -16,8 +16,8 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { PageShell } from './shared/PageShell';
-import { DetailKPIGrid } from '@/components/Admin/DetailKPIGrid';
-import { SubscriptionPayDialog } from '@/components/Admin/SubscriptionPayDialog';
+import { DetailKPIGrid } from '@/components/Shared/DetailKPIGrid';
+import { SubscriptionPayDialog } from '@/components/Shared/SubscriptionPayDialog';
 import { useMySubscription } from '@/hooks/useAccounts';
 import { subscriptionPlanLabelKey, subscriptionStatusLabelKey } from '@/lib/codes';
 

@@ -52,7 +52,7 @@ describe('ProfileSection', () => {
     vi.mocked(accountsApi.updateMe).mockReset();
     vi.mocked(toast.success).mockReset();
     vi.mocked(toast.error).mockReset();
-    useUserStore.setState({ role: 'USER', profile: { ...PROFILE } });
+    useUserStore.setState({ profile: { ...PROFILE } });
   });
 
   it('рендерит двухколоночную секцию: заголовок, поля профиля и предпочтения', () => {

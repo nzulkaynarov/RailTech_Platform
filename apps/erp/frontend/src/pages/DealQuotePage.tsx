@@ -15,7 +15,7 @@ import { useDeal, useTakeAndPrepareQuote } from '@/hooks/useCRM';
 import { useUserStore } from '@/store/userStore';
 import { useQuoteSendGate } from '@/hooks/useQuoteSendGate';
 import { translateApiError } from '@/lib/apiError';
-import { QuoteBuilderGrid } from '@/components/Admin/QuoteBuilderGrid';
+import { QuoteBuilderGrid } from '@/components/QuoteBuilder/QuoteBuilderGrid';
 import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
 import { QuoteApprovalChain } from '@/components/CRM/QuoteApprovalChain';
 import { QuoteSendGateBanner } from '@/components/CRM/QuoteSendGateBanner';

@@ -11,6 +11,7 @@ from app.domain.system_status import (
     BackupFacts,
     BotFacts,
     Component,
+    ErpFacts,
     QueueFacts,
     Status,
 )
@@ -178,3 +179,36 @@ def test_backup_daemon_never_seen_is_warn(alive: bool, seen: bool, expected: str
 def test_bot_failure_in_words(error: str | None, expected: str) -> None:
     assert expected in rules._bot_failure(error)
     assert "Error" not in rules._bot_failure(error)
+
+
+@pytest.mark.parametrize(
+    ("facts", "status", "fragment"),
+    [
+        (ErpFacts(configured=False), "unknown", "не настроен"),
+        (ErpFacts(True, "ok", "1.2.3", True, True, NOW, 12), "ok", "версия 1.2.3"),
+        (ErpFacts(True, "degraded", "1.2.3", True, True, NOW, 12), "warn", "деградации"),
+        (ErpFacts(True, "ok", "1.2.3", False, True, NOW, 12), "warn", "миграции"),
+        (ErpFacts(True, "ok", "1.2.3", True, False, NOW, 12), "warn", "очередь"),
+        (ErpFacts(True, error="unauthorized"), "fail", "токен"),
+        (ErpFacts(True, error="unavailable", detail="timeout"), "fail", "(timeout)"),
+        (ErpFacts(True, error="invalid_url"), "fail", "Адрес"),
+        (ErpFacts(True, error="bad_response"), "fail", "неожиданно"),
+    ],
+    ids=[
+        "none",
+        "ok",
+        "degraded",
+        "migrations",
+        "queue",
+        "unauthorized",
+        "unavailable",
+        "invalid_url",
+        "bad_response",
+    ],
+)
+def test_erp(facts: ErpFacts, status: str, fragment: str) -> None:
+    """Коннектор не настроен — «нет данных», не сбой: CRM без ERP автономна (ADR-0022)."""
+    component = rules.erp(facts, NOW)
+    assert (component.key, component.status) == ("erp", status)
+    assert fragment in component.reason
+    assert "Error" not in component.reason

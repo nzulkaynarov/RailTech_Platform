@@ -1,7 +1,6 @@
 import { useMemo, useRef } from 'react'; import { useTranslation } from 'react-i18next'; import { toast } from 'sonner'; import { FolderOpen, Download, FileText } from 'lucide-react'; import { extractBlobErrorCode, fetchDocumentBlob, saveBlob } from '@/lib/documents'; import { formatDate } from '@/lib/formatLocale'; import { translateApiError } from '@/lib/apiError'; import { Card, CardContent } from '@/components/ui/card'; import { Badge } from '@/components/ui/badge'; import { Button } from '@/components/ui/button'; import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable'; import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell'; import {   Toolbar, Pager } from '@/components/DataTable';
 import { useListParams, applyListParams } from '@/components/DataTable/listParams';
 import { useCompanyAttachments, useUploadCompanyFile } from '@/hooks/useSourcing';
-import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { useUserStore } from '@/store/userStore';
 import { DealLink } from '@/components/Shared/DealLink';
 import type { Attachment } from '@/api/sourcingApi';
@@ -21,7 +20,6 @@ export function CompanyFilesPage() {
   const { t } = useTranslation();
   const listParams = useListParams(['kind'] as const, { urlKey: 'company-files', defaultOrdering: '-uploaded_at' });
   const { data: attachments, isLoading, isError, refetch } = useCompanyAttachments();
-  const isViewer = useIsViewerMode();
   const companyId = useUserStore((s) => s.company.id);
   const uploadFile = useUploadCompanyFile();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -121,7 +119,7 @@ export function CompanyFilesPage() {
         label: t('companyFilesPage.upload'),
         onClick: () => fileInputRef.current?.click(),
         // Viewer-mode admins can't act; without a company there's no valid parent.
-        disabled: isViewer || companyId == null || uploadFile.isPending,
+        disabled: companyId == null || uploadFile.isPending,
       }]}
     >
       <input

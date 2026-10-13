@@ -3,7 +3,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { AppShell } from './layouts/AppShell';
-import { PlatformAdminShell } from './layouts/PlatformAdminShell';
 import { ErrorBoundary } from './components/Shared/ErrorBoundary';
 import { OnboardingTour } from './components/Shared/OnboardingTour';
 import { PageBreadcrumb } from './components/Shared/PageBreadcrumb';
@@ -176,11 +175,8 @@ function App() {
   }
 
   // Authenticated but no company — show profile completion (company + type selection).
-  // Exception: platform admin (SystemRole.ADMIN) enters viewer mode and does NOT
-  // need a company to moderate the platform.
   const hasCompany = user?.company || user?.primary_company || profileCompleted;
-  const isPlatformAdmin = user?.role_code === 'ADMIN';
-  if (!hasCompany && !isPlatformAdmin) {
+  if (!hasCompany) {
     return (
       <ProfileCompletionForm
         onComplete={async () => {
@@ -201,7 +197,6 @@ function App() {
 
 function MainApp() {
   const { t } = useTranslation();
-  const role = useUserStore((s) => s.role);
   const activeStatus = useUserStore((s) => s.activeStatus);
   const setActiveStatus = useUserStore((s) => s.setActiveStatus);
   const statusEntries = useUserStore((s) => s.company.statusEntries);
@@ -220,21 +215,18 @@ function MainApp() {
     window.history.pushState({ page: p }, '', `#${pageToHash(p)}`);
   };
 
-  // Unified page-access guard (role → KYC → context), driven by the pure
+  // Unified page-access guard (KYC → context), driven by the pure
   // evaluatePageGuard. DEFERRED until userStore bootstrap (`bootstrapped`,
   // i.e. screen === 'main'): on a cold deep-link the store still holds pre-auth
   // defaults, and enforcing then would bounce a valid hash to #dashboard and
   // clobber it via replaceState. Once loadFromAuth resolves real capabilities the
   // effect re-runs (deps below) and enforces exactly as before —
-  //   • non-admin on an admin-* page → toast.error(adminRequired) → dashboard;
-  //   • platform admin off its allowlist → toast.info(notAvailableHere) → dashboard;
   //   • unverified user off the KYC floor → toast.info(kycRequired) → dashboard;
   //   • page unique to the user's OTHER verified context → adopt it (+ refetch);
   //   • cross-role page (buyer→seller-only etc.) → toast.info(notAvailableHere) → dashboard.
   useEffect(() => {
     const decision = evaluatePageGuard({
       pageType: page.type,
-      role,
       kycStatus,
       activeStatus,
       statusEntries,
@@ -249,9 +241,7 @@ function MainApp() {
       return;
     }
     // decision.action === 'bounce' — surface WHY, then fall back to the dashboard.
-    if (decision.reason === 'admin') {
-      toast.error(t('guards.adminRequired'));
-    } else if (decision.reason === 'kyc') {
+    if (decision.reason === 'kyc') {
       // LOW-20: surface why the user was bounced back instead of silent redirect.
       toast.info(t('guards.kycRequired'));
     } else {
@@ -260,7 +250,7 @@ function MainApp() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- гейт страницы: не синхронизация, а НАВИГАЦИЯ с побочными действиями (toast + history.replaceState)
     setPage({ type: 'dashboard' });
     window.history.replaceState(null, '', '#dashboard');
-  }, [page.type, role, kycStatus, activeStatus, statusEntries, bootstrapped, setActiveStatus, queryClient, t]);
+  }, [page.type, kycStatus, activeStatus, statusEntries, bootstrapped, setActiveStatus, queryClient, t]);
 
   // Handle browser back/forward
   useEffect(() => {
@@ -315,11 +305,10 @@ function MainApp() {
     if (target.includes('/') || target.includes('?')) {
       const parsed = parseHashToPage(target);
       const decision = evaluatePageGuard({
-        pageType: parsed.type, role, kycStatus, activeStatus, statusEntries, bootstrapped,
+        pageType: parsed.type, kycStatus, activeStatus, statusEntries, bootstrapped,
       });
       if (decision.action === 'bounce') {
-        if (decision.reason === 'admin') toast.error(t('guards.adminRequired'));
-        else if (decision.reason === 'kyc') toast.info(t('guards.kycRequired'));
+        if (decision.reason === 'kyc') toast.info(t('guards.kycRequired'));
         else toast.info(t('guards.notAvailableHere'));
         navigateTo({ type: 'dashboard' });
         return;
@@ -338,22 +327,20 @@ function MainApp() {
       return;
     }
     // Решение о доступе — ТОТ ЖЕ `evaluatePageGuard`, что и у эффекта ниже. Раньше здесь
-    // проверялись только роль и админский список, а гейты KYC и контекста доставались уже
+    // проверялись только роль и её список страниц, а гейты KYC и контекста доставались уже
     // ПОСЛЕ перехода: страница успевала смонтироваться и отскакивала — пользователь видел
     // мигание вместо отказа (аудит UI 2026-07-30). Теперь отказ виден до навигации, причина
     // формулируется один раз, а `adopt` (страница другого подтверждённого контекста) как и
     // прежде пропускается вперёд — контекст переключит эффект.
     const decision = evaluatePageGuard({
       pageType: target,
-      role,
       kycStatus,
       activeStatus,
       statusEntries,
       bootstrapped,
     });
     if (decision.action === 'bounce') {
-      if (decision.reason === 'admin') toast.error(t('guards.adminRequired'));
-      else if (decision.reason === 'kyc') toast.info(t('guards.kycRequired'));
+      if (decision.reason === 'kyc') toast.info(t('guards.kycRequired'));
       else toast.info(t('guards.notAvailableHere'));
       navigateTo({ type: 'dashboard' });
       return;
@@ -391,7 +378,6 @@ function MainApp() {
 
   const { content, activePageId } = renderPage({
     page,
-    role,
     activeStatus,
     navigateTo,
     onNavigate: handleNavigate,
@@ -399,23 +385,9 @@ function MainApp() {
   });
 
   const breadcrumbs = getBreadcrumbs();
-  const isPlatformAdmin = useUserStore((s) => s.role === 'ADMIN');
   // Workspace pages own the whole content viewport (no p-6 chrome, no page scroll, no
   // breadcrumb) so their internal layout can manage a single scroll — currently the КП builder.
   const fullBleed = page.type === 'deal-quote';
-
-  if (isPlatformAdmin) {
-    return (
-      <PlatformAdminShell activePage={activePageId} onNavigate={handleNavigate}>
-        <Suspense fallback={<LoadingSkeleton />}>
-          {breadcrumbs.length > 0 && (
-            <PageBreadcrumb segments={breadcrumbs} onNavigate={handleNavigate} />
-          )}
-          {content}
-        </Suspense>
-      </PlatformAdminShell>
-    );
-  }
 
   return (
     <AppShell activePage={activePageId} onNavigate={handleNavigate} onStartTour={() => setShowTour(true)} fullBleed={fullBleed}>

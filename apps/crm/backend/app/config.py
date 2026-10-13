@@ -79,9 +79,12 @@ class Settings(BaseSettings):
     secrets_key: SecretStr = SecretStr("")
 
     # Коннектор «ERP» (ADR-0022, M3-CRM-02): пусто — коннектор не настроен, жизненный цикл в режиме
-    # `local`. Токен из «Подключений» (БД) имеет приоритет над env, как у бота (ADR-0018).
+    # `local`. Адрес и секреты из «Подключений» (БД) имеют приоритет над env, как у бота (ADR-0018).
+    # `erp_base_url` — корень ERP (`https://erp.example.com`); `/api/integration/v1` добавляет код.
     erp_base_url: str = ""
     erp_service_token: SecretStr = SecretStr("")
+    # Секрет подписи вебхуков ERP → CRM (CONTRACTS §3, `X-Signature`); приёмник — M3-CRM-04.
+    erp_webhook_secret: SecretStr = SecretStr("")
 
     jwt_secret: SecretStr = SecretStr("")
     access_token_ttl_s: int = Field(default=900, ge=60)

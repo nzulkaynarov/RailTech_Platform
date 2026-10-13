@@ -211,6 +211,11 @@ export const core = {
     model_key_required: "Для этого провайдера на сервере нет ключа — введите API-ключ",
     model_in_config:
       "Роль задана в файле конфигурации LiteLLM — уберите model_list из конфига (ADR-0020)",
+    erp_not_configured: "Коннектор ERP не настроен — укажите адрес и сервисный токен",
+    erp_invalid_url: "Адрес ERP некорректен — нужен http(s)://host без параметров",
+    erp_unauthorized: "ERP не приняла сервисный токен — проверьте токен в ERP и введите заново",
+    erp_unavailable: "ERP не отвечает — проверьте адрес и доступность сервера ERP",
+    erp_bad_response: "ERP ответила неожиданно — проверьте, что адрес ведёт на ERP",
   } as Record<string, string>,
   common: {
     colleague: "коллега",

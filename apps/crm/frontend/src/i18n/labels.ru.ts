@@ -133,6 +133,7 @@ export const labelsRu = {
     "sandbox.message": "Написал боту в «Проверить бота»",
     "sandbox.reset": "Очистил «Проверить бота»",
     "integrations.telegram_token": "Подключил Telegram-бота",
+    "integrations.erp": "Настроил коннектор ERP",
     "export.leads": "Выгрузил лидов в CSV",
     "export.clients": "Выгрузил клиентов в CSV",
     "export.deals": "Выгрузил сделки в CSV",
@@ -154,6 +155,7 @@ export const labelsRu = {
     sandbox: "Проверить бота",
     export: "Выгрузка",
     integration_secret: "Подключение",
+    integration: "Подключение",
   } as Dict,
   actor: { system: "Система", bot: "Бот", user: "Сотрудник" } as Dict,
 };

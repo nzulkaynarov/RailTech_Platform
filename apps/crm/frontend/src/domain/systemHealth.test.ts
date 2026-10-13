@@ -54,6 +54,7 @@ describe("componentPath", () => {
   it.each([
     ["bot", "/integrations?tab=bot"],
     ["channel", "/integrations?tab=channel"],
+    ["erp", "/integrations?tab=erp"],
     ["model:dialog-model", "/models"],
     ["model:embed-model", "/models"],
     ["backup", "/backups"],

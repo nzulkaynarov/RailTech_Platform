@@ -1,4 +1,4 @@
-"""«Подключения» (admin, аудит 2026-10-12 §3): Telegram-бот и канал команды из интерфейса."""
+"""«Подключения» (admin, аудит 2026-10-12 §3): Telegram-бот, канал команды и коннектор ERP."""
 
 from dataclasses import asdict
 from typing import Annotated
@@ -12,6 +12,9 @@ from app.integrations.telegram import AiogramProbe
 from app.schemas.integrations import (
     BotProfileOut,
     ChatCandidateOut,
+    ErpCheckOut,
+    ErpConnectorIn,
+    ErpStatusOut,
     ProfilePublishOut,
     TelegramStatusOut,
     TelegramTokenIn,
@@ -20,6 +23,7 @@ from app.schemas.leads import ActionResult
 from app.schemas.settings_profile import BotProfileSettings
 from app.security.principal import Principal
 from app.security.reauth import LockoutPolicy
+from app.services.erp_connector import ErpConnectorService, ErpStatus
 from app.services.integrations import TelegramIntegrationService
 
 router = APIRouter(prefix="/api/v1/integrations", tags=["integrations"])
@@ -97,3 +101,52 @@ async def connect_telegram_channel(chat_id: int, who: Writer, service: ServiceDe
 async def send_telegram_channel_test(_: Writer, service: ServiceDep) -> ActionResult:
     await service.send_test()
     return ActionResult()
+
+
+def get_erp_service(container: ContainerDep) -> ErpConnectorService:
+    return container.erp_connector
+
+
+ErpDep = Annotated[ErpConnectorService, Depends(get_erp_service)]
+
+
+def _erp_out(status: ErpStatus) -> ErpStatusOut:
+    return ErpStatusOut(**{**asdict(status), "mode": status.mode.value})
+
+
+@router.get("/erp", response_model=ErpStatusOut)
+async def get_erp_status(_: Reader, service: ErpDep) -> ErpStatusOut:
+    """Коннектор «ERP» (ADR-0018, ADR-0022): адрес, откуда взяты секреты, режим жизненного цикла.
+
+    Значения сервисного токена и секрета вебхуков не возвращаются — только «задан» и `last4`.
+    """
+    return _erp_out(await service.status())
+
+
+@router.put("/erp", response_model=ErpStatusOut)
+async def put_erp_connector(body: ErpConnectorIn, who: Writer, service: ErpDep) -> ErpStatusOut:
+    """Сохранить адрес ERP и секреты (после пароля админа); секрет `null` — оставить прежний.
+
+    Ошибки: `erp_invalid_url` (422, поле `base_url`), `wrong_password` (422),
+    `secrets_key_missing` (409 — секреты нельзя сохранить без `SECRETS_KEY`).
+    """
+    token = body.service_token.get_secret_value() if body.service_token is not None else None
+    webhook = body.webhook_secret.get_secret_value() if body.webhook_secret is not None else None
+    status = await service.save(
+        who,
+        base_url=body.base_url,
+        service_token=token,
+        webhook_secret=webhook,
+        password=body.password.get_secret_value(),
+    )
+    return _erp_out(status)
+
+
+@router.post("/erp/check", response_model=ErpCheckOut)
+async def check_erp_connection(_: Writer, service: ErpDep) -> ErpCheckOut:
+    """«Проверить связь»: `GET {base_url}/api/integration/v1/health` с сервисным токеном, 5 с.
+
+    Ошибки (ADR-0017, `details.reason`): `erp_not_configured` (409), `erp_invalid_url` (422),
+    `erp_unauthorized` / `erp_unavailable` / `erp_bad_response` (502).
+    """
+    return ErpCheckOut(**asdict(await service.check()))

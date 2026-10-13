@@ -1,21 +1,17 @@
-import { useState } from 'react'; import { useTranslation } from 'react-i18next'; import { Card, CardContent } from '@/components/ui/card'; import { formatDate } from '@/lib/formatLocale'; import { Badge } from '@/components/ui/badge'; import { Button } from '@/components/ui/button'; import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable'; import {   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, } from '@/components/ui/dropdown-menu'; import {   Calculator, Files, MoreHorizontal, Send, ShieldAlert, } from 'lucide-react'; import {   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, } from '@/components/ui/alert-dialog'; import { Label } from '@/components/ui/label'; import { Textarea } from '@/components/ui/textarea'; import { NewQuoteDialog } from '@/components/CRM/NewQuoteDialog'; import { SendQuoteDialog } from '@/components/CRM/SendQuoteDialog'; import { translateApiError } from '@/lib/apiError'; import { useUserStore } from '@/store/userStore'; import { QuoteStatus, quoteStatusLabelKey } from '@/lib/codes'; import { publicQuoteUrl } from '@/lib/quoteSend'; import { DocumentActions } from '@/components/Shared/DocumentActions'; import { useCurrencyStore } from '@/store/currencyStore'; import { useQuotes, useQuote, useDeal, useQuoteStatuses, useForceApproveQuote, useDuplicateQuote } from '@/hooks/useCRM'; import { sumMoney } from '@/utils/decimal'; import type { Quote } from '@/api/crmApi'; import { toast } from 'sonner'; import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell'; import { Toolbar, Pager } from '@/components/DataTable';
+import { useState } from 'react'; import { useTranslation } from 'react-i18next'; import { Card, CardContent } from '@/components/ui/card'; import { formatDate } from '@/lib/formatLocale'; import { Badge } from '@/components/ui/badge'; import { Button } from '@/components/ui/button'; import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable'; import {   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, } from '@/components/ui/dropdown-menu'; import {   Calculator, Files, MoreHorizontal, Send, } from 'lucide-react'; import { NewQuoteDialog } from '@/components/CRM/NewQuoteDialog'; import { SendQuoteDialog } from '@/components/CRM/SendQuoteDialog'; import { translateApiError } from '@/lib/apiError'; import { useUserStore } from '@/store/userStore'; import { QuoteStatus, quoteStatusLabelKey } from '@/lib/codes'; import { publicQuoteUrl } from '@/lib/quoteSend'; import { DocumentActions } from '@/components/Shared/DocumentActions'; import { useCurrencyStore } from '@/store/currencyStore'; import { useQuotes, useQuote, useDeal, useQuoteStatuses, useDuplicateQuote } from '@/hooks/useCRM'; import { sumMoney } from '@/utils/decimal'; import type { Quote } from '@/api/crmApi'; import { toast } from 'sonner'; import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell'; import { Toolbar, Pager } from '@/components/DataTable';
 import { useListParams, applyListParams } from '@/components/DataTable/listParams';
 
 export function QuotesPage() {
   const { t } = useTranslation();
-  const { activeStatus, role } = useUserStore();
+  const { activeStatus } = useUserStore();
   const { data: quotes, isLoading, isError, refetch } = useQuotes();
-  const forceApproveMut = useForceApproveQuote();
   const duplicateMut = useDuplicateQuote();
   const formatCurrency = useCurrencyStore((s) => s.format);
   const isBuyer = activeStatus === 'BUYER';
-  const isPlatformAdmin = role === 'ADMIN';
 
   const quotesList = quotes ?? [];
   const { data: statuses } = useQuoteStatuses();
   const listParams = useListParams(['status'] as const, { urlKey: 'quotes', defaultOrdering: '-created_at' });
-  const [forceApproveTarget, setForceApproveTarget] = useState<Quote | null>(null);
-  const [forceApproveReason, setForceApproveReason] = useState('');
   // Unified send (wave B2): the registry opens the SAME composer the builder uses —
   // recipient · validity · margin-vs-floor · approval outcome · below-floor justification —
   // so the seller gets ONE send experience from any surface. Track which row's КП is sending.
@@ -53,22 +49,6 @@ export function QuotesPage() {
       const newQuote = await duplicateMut.mutateAsync(quote.id);
       toast.success(t('pages.quotes.toast.duplicated', { id: quote.id }));
       window.location.hash = `deal-quote/${newQuote.deal}`;
-    } catch (e) {
-      toast.error(translateApiError(e));
-    }
-  };
-
-  const handleForceApprove = async () => {
-    if (!forceApproveTarget) return;
-    if (!forceApproveReason.trim()) {
-      toast.error(t('pages.quotes.toast.forceReasonRequired'));
-      return;
-    }
-    try {
-      await forceApproveMut.mutateAsync({ id: forceApproveTarget.id, reason: forceApproveReason });
-      toast.success(t('pages.quotes.toast.forceApproved', { id: forceApproveTarget.id }));
-      setForceApproveTarget(null);
-      setForceApproveReason('');
     } catch (e) {
       toast.error(translateApiError(e));
     }
@@ -130,13 +110,9 @@ export function QuotesPage() {
       // Send/force menu. `data-row-action` keeps a click here from also opening the row.
       id: 'actions', header: t('pages.quotes.table.actions'), className: 'text-center', mobileActions: true,
       cell: (q) => {
-        // «Дублировать» is a seller authoring action — offered to any non-buyer, non-viewer
-        // seller row (platform admins are viewers → no КП authoring, ADMIN_VIEWER_CANNOT_ACT).
-        const canDuplicate = !isBuyer && !isPlatformAdmin;
-        const showStatusMenu = !isBuyer
-          && (canDuplicate
-            || q.status_code === QuoteStatus.READY_TO_SEND
-            || (isPlatformAdmin && q.status_code !== QuoteStatus.APPROVED));
+        // «Дублировать» is a seller authoring action — offered to any non-buyer row.
+        const canDuplicate = !isBuyer;
+        const showStatusMenu = !isBuyer && (canDuplicate || q.status_code === QuoteStatus.READY_TO_SEND);
         return (
         <div className="flex items-center justify-center gap-1" data-row-action>
           <DocumentActions
@@ -166,12 +142,6 @@ export function QuotesPage() {
                   <DropdownMenuItem onClick={() => handleDuplicate(q)} disabled={duplicateMut.isPending}>
                     <Files className="mr-2 h-4 w-4" />
                     {t('pages.quotes.actions.duplicate')}
-                  </DropdownMenuItem>
-                )}
-                {isPlatformAdmin && q.status_code !== QuoteStatus.APPROVED && (
-                  <DropdownMenuItem onClick={() => setForceApproveTarget(q)} className="text-warning">
-                    <ShieldAlert className="mr-2 h-4 w-4" />
-                    {t('pages.quotes.actions.forceApprove')}
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>
@@ -253,37 +223,6 @@ export function QuotesPage() {
           })()}
         </CardContent>
       </Card>
-      <AlertDialog
-        open={!!forceApproveTarget}
-        onOpenChange={(o) => { if (!o) { setForceApproveTarget(null); setForceApproveReason(''); } }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-warning">
-              <ShieldAlert className="h-4 w-4" />
-              {t('pages.quotes.confirmForceApprove')}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('pages.quotes.forceApproveHint', { id: forceApproveTarget?.id })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="forceApproveReason">{t('pages.quotes.forceApproveReason')}</Label>
-            <Textarea
-              id="forceApproveReason"
-              value={forceApproveReason}
-              onChange={(e) => setForceApproveReason(e.target.value)}
-            />
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleForceApprove} disabled={forceApproveMut.isPending}>
-              {t('pages.quotes.actions.forceApprove')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       {/* Unified send composer (wave B2) — the same dialog the КП builder opens, so sending
           from the registry and from the builder is ONE experience (recipient, validity,
           margin-vs-floor, «согласовано автоматически», below-floor justification). Rendered

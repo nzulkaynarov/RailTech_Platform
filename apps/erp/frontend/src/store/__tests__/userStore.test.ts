@@ -6,9 +6,7 @@ describe('userStore', () => {
     // Reset store to defaults
     useUserStore.setState({
       screen: 'onboarding',
-      role: 'USER',
       activeStatus: 'BUYER',
-      isViewerMode: false,
       profile: {
         firstName: '',
         lastName: '',
@@ -35,10 +33,8 @@ describe('userStore', () => {
   it('should initialize with default values', () => {
     const state = useUserStore.getState();
     expect(state.screen).toBe('onboarding');
-    expect(state.role).toBe('USER');
     // Pre-auth default context is the narrowest/safest side (BUYER); see userStore.ts.
     expect(state.activeStatus).toBe('BUYER');
-    expect(state.isViewerMode).toBe(false);
     expect(state.profile.firstName).toBe('');
     expect(state.company.id).toBeNull();
   });
@@ -47,12 +43,6 @@ describe('userStore', () => {
     const { setActiveStatus } = useUserStore.getState();
     setActiveStatus('BUYER');
     expect(useUserStore.getState().activeStatus).toBe('BUYER');
-  });
-
-  it('should update role via setRole', () => {
-    const { setRole } = useUserStore.getState();
-    setRole('ADMIN');
-    expect(useUserStore.getState().role).toBe('ADMIN');
   });
 
   it('should partially update profile via updateProfile', () => {

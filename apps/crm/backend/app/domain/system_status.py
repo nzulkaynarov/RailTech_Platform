@@ -69,6 +69,22 @@ class BackupFacts:
     daemon_seen: bool = True
 
 
+@dataclass(frozen=True, slots=True)
+class ErpFacts:
+    """Итог последней проверки коннектора ERP (`services/erp_connector.py`, кэш 30 с)."""
+
+    configured: bool
+    status: str | None = None
+    version: str | None = None
+    migrations_applied: bool | None = None
+    queue_alive: bool | None = None
+    checked_at: datetime | None = None
+    latency_ms: int | None = None
+    # Класс ошибки пробы (`integrations/erp.ErpErrorKind`); None — ответ получен.
+    error: str | None = None
+    detail: str | None = None
+
+
 STALE_BACKUP_HOURS = 26
 DAEMON_SILENT_AFTER: Final = timedelta(minutes=2)
 REQUEST_UNANSWERED_AFTER: Final = timedelta(minutes=2)
@@ -244,6 +260,38 @@ def request_unanswered(now: datetime, facts: BackupFacts) -> bool:
     if asked is None or now - asked <= REQUEST_UNANSWERED_AFTER:
         return False
     return facts.last_success is None or facts.last_success < asked
+
+
+ERP_TITLE: Final = "ERP (бэк-офис)"
+_ERP_ERRORS: Final = {
+    "invalid_url": "Адрес ERP некорректен — исправьте в «Подключениях» → «ERP»",
+    "unauthorized": "ERP не принимает сервисный токен — введите новый в «Подключениях» → «ERP»",
+    "unavailable": "ERP не отвечает — проверьте адрес и доступность сервера ERP",
+    "bad_response": "ERP ответила неожиданно — проверьте, что адрес ведёт на интеграционный API",
+}
+
+
+def erp(facts: ErpFacts, now: datetime) -> Component:
+    """Коннектор не настроен — не ошибка (CRM автономна, ADR-0022); сбой связи — `fail`."""
+    if not facts.configured:
+        reason = "Коннектор ERP не настроен — «Подключения» → «ERP»; CRM работает автономно"
+        return Component("erp", ERP_TITLE, "unknown", reason, now)
+    if facts.error is not None:
+        reason = _ERP_ERRORS.get(facts.error, _ERP_ERRORS["bad_response"])
+        if facts.error == "unavailable" and facts.detail:
+            reason = reason.replace(" — ", f" ({facts.detail}) — ", 1)
+        return Component("erp", ERP_TITLE, "fail", reason, facts.checked_at or now)
+    problems = []
+    if facts.status == "degraded":
+        problems.append("ERP сообщает о деградации")
+    if facts.migrations_applied is False:
+        problems.append("миграции ERP не применены")
+    if facts.queue_alive is False:
+        problems.append("очередь задач ERP не отвечает")
+    version = f"версия {facts.version}" if facts.version else "версия неизвестна"
+    if problems:
+        return Component("erp", ERP_TITLE, "warn", f"{'; '.join(problems)} ({version})", now)
+    return Component("erp", ERP_TITLE, "ok", f"{version}, миграции применены, очередь жива", now)
 
 
 def secrets(missing: Sequence[str], now: datetime, *, secrets_key: bool = True) -> Component:

@@ -43,7 +43,7 @@ vi.mock('@/hooks/useQuoteSendGate', () => ({
 
 // Heavy children of the workspace aren't under test — stub them so the page renders
 // in isolation and the dialog is the only interactive surface.
-vi.mock('@/components/Admin/QuoteBuilderGrid', () => ({ QuoteBuilderGrid: () => null }));
+vi.mock('@/components/QuoteBuilder/QuoteBuilderGrid', () => ({ QuoteBuilderGrid: () => null }));
 vi.mock('@/components/CRM/GenerateQuoteDialog', () => ({ GenerateQuoteDialog: () => null }));
 vi.mock('@/components/CRM/QuoteApprovalChain', () => ({ QuoteApprovalChain: () => null }));
 vi.mock('@/components/CRM/QuoteSendGateBanner', () => ({ QuoteSendGateBanner: () => null }));

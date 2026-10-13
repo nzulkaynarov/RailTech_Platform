@@ -322,6 +322,16 @@ class BudgetSettings(StrictModel):
     providers: ProviderLimitsSettings = Field(default_factory=ProviderLimitsSettings)
 
 
+class IntegrationsSettings(StrictModel):
+    """Коннекторы «Подключений» без секретов (ADR-0018, M3-CRM-02); секреты — `integration_secrets`.
+
+    Правится на экране «Подключения» → «ERP», на экране «Настройки» не показывается.
+    """
+
+    # Корень ERP (`https://erp.example.com`); пусто — адрес из `ERP_BASE_URL`, иначе коннектора нет.
+    erp_base_url: str = Field(default="", max_length=500)
+
+
 SETTINGS_MODELS: Final[dict[str, type[BaseModel]]] = {
     "company": CompanySettings,
     "business_hours": BusinessHoursSettings,
@@ -336,6 +346,7 @@ SETTINGS_MODELS: Final[dict[str, type[BaseModel]]] = {
     "budget": BudgetSettings,
     "deals": DealsSettings,
     "bot_profile": BotProfileSettings,
+    "integrations": IntegrationsSettings,
 }
 
 
@@ -368,6 +379,7 @@ class AppSettings(StrictModel):
     budget: BudgetSettings = Field(default_factory=BudgetSettings)
     deals: DealsSettings = Field(default_factory=DealsSettings)
     bot_profile: BotProfileSettings = Field(default_factory=BotProfileSettings)
+    integrations: IntegrationsSettings = Field(default_factory=IntegrationsSettings)
 
     def lead_notice(
         self,
