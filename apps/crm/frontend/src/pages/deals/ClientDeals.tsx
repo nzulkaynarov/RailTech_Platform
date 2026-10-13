@@ -39,7 +39,7 @@ export function ClientDeals({ clientId, canWrite }: { clientId: number; canWrite
       >
         <DealsTable
           deals={items}
-          showClient={false}
+          embedded
           onEdit={
             canWrite
               ? (d) => {
