@@ -1,0 +1,42 @@
+# LiteLLM Proxy — единственный шлюз к моделям ансамбля (ADR-0005; CRM SPEC §1.6, §2; CRM ADR-0004, ADR-0020).
+# Один шлюз на CRM и ERP: ключи и бюджеты — в консоли админа CRM; ERP получает LITELLM_URL и ключ как секреты.
+# Код знает только алиасы. Модели (алиас → провайдер, модель, ключ) хранятся в БД LiteLLM
+# (`STORE_MODEL_IN_DB=True`, ключи шифруются `LITELLM_SALT_KEY`) и меняются из CRM
+# («Модели ИИ») через API управления моделями прокси, без перезапуска.
+# Значения по умолчанию — `infra/ai/litellm.models.yaml` (засевает `litellm-seed`), включая алиасы ERP.
+# model_list здесь НЕ задаётся: модель из конфига с тем же алиасом стала бы второй
+# deployment в группе балансировки, а не заменой, и не редактируется через API (ADR-0020).
+
+router_settings:
+  # Жёсткий потолок расходов по провайдеру (ADR-0014): счётчик в памяти прокси, без БД
+  # (глобальный max_budget LiteLLM без БД не применяется). Мягкий порог — settings.budget
+  # (BudgetGuard → fallback-model) и алерт > 80 %. Превышение → запросы к провайдеру
+  # отклоняются → бот честно передаёт диалог человеку. Значения в USD за сутки (решение владельца
+  # 2026-10-12, Q-008: Anthropic $3, Gemini $1; мягкий порог settings.budget.daily_usd = $2).
+  provider_budget_config:
+    anthropic:
+      budget_limit: 3
+      time_period: 1d
+    gemini:
+      budget_limit: 1
+      time_period: 1d
+  fallbacks:
+    - dialog-model: [fallback-model]
+    - qualifier-model: [fallback-model]
+    # ERP (M1-ERP-06): запасная модель та же, бюджет на день по системе — M3-CRM-09.
+    - intake-model: [fallback-model]
+    - match-model: [fallback-model]
+    - draft-model: [fallback-model]
+    - enrich-model: [fallback-model]
+  content_policy_fallbacks:
+    - dialog-model: [fallback-model]
+
+litellm_settings:
+  drop_params: true
+  num_retries: 1
+  request_timeout: 30
+  allowed_fails: 3
+  cooldown_time: 30
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
