@@ -24,15 +24,24 @@ def profile(**fields: tuple[str, str, str]) -> BotProfileSettings:
 
 
 class FakeBot:
-    """Хранит профиль как Telegram: значение языка или значение по умолчанию."""
+    """Хранит профиль как Telegram.
 
-    def __init__(self, fail: Exception | None = None) -> None:
+    `fallback=False` — как настоящий Telegram для имени (проверено на стенде 2026-10-13): язык без
+    своего текста отдаёт пустую строку. `fallback=True` — язык без текста отдаёт значение по
+    умолчанию; план должен быть идемпотентным в обоих случаях.
+    """
+
+    def __init__(self, fail: Exception | None = None, *, fallback: bool = False) -> None:
         self.values: dict[tuple[str, str | None], str] = {("name", None): "BotFather name"}
         self.calls: list[tuple[str, str | None, str]] = []
         self.fail = fail
+        self.fallback = fallback
 
     def _get(self, field: str, code: str | None) -> str:
-        return self.values.get((field, code)) or self.values.get((field, None), "")
+        own = self.values.get((field, code), "")
+        if own or code is None or not self.fallback:
+            return own
+        return self.values.get((field, None), "")
 
     def _set(self, field: str, value: str, code: str | None) -> bool:
         if self.fail is not None:
@@ -81,6 +90,9 @@ def test_telegram_limits(field: str, limit: int) -> None:
     [
         # Пустой русский — не трогаем BotFather; пустой язык, совпадающий с русским, — тоже.
         ({}, {("name", None): "X", ("name", "uz"): "X", ("name", "en"): "X"}, []),
+        # Язык без своего текста Telegram отдаёт пустым — убирать нечего (иначе setMyName на
+        # каждом старте бота и блокировка Telegram на часы).
+        ({}, {("name", None): "X", ("name", "uz"): "", ("name", "en"): ""}, []),
         (
             {("name", None): "RailTech"},
             {("name", None): "X", ("name", "uz"): "X", ("name", "en"): "X"},
@@ -113,8 +125,16 @@ def test_plan_changes(
     assert plan_changes(desired, current) == expected
 
 
-async def test_publish_sets_languages_then_is_idempotent() -> None:
-    bot = FakeBot()
+@pytest.mark.parametrize("fallback", [False, True])
+async def test_empty_profile_publishes_nothing(fallback: bool) -> None:
+    bot = FakeBot(fallback=fallback)
+    result = await publish_profile(bot, BotProfileSettings())  # type: ignore[arg-type]
+    assert (result.ok, result.changed, bot.calls) == (True, 0, [])
+
+
+@pytest.mark.parametrize("fallback", [False, True])
+async def test_publish_sets_languages_then_is_idempotent(fallback: bool) -> None:
+    bot = FakeBot(fallback=fallback)
     wanted = profile(
         name=("RailTech ассистент", "RailTech yordamchi", "RailTech assistant"),
         description=("Отвечаю на вопросы", "", ""),
