@@ -1,0 +1,98 @@
+# Root gitignore
+.DS_Store
+.idea/
+.vscode/
+.env
+*.env
+
+# Локальный venv с линтерами версий CI (создаёт `make lint-backend`, см. Makefile)
+.venv-tools/
+
+# Backend
+backend/venv/
+backend/__pycache__/
+backend/*.pyc
+backend/db.sqlite3
+backend/media/
+backend/static/
+backend/.env
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+
+# Documentation (Hugo)
+site-docs/public/
+site-docs/resources/_gen/
+site-docs/node_modules/
+site-docs/hugo
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Testing
+.ci-local/
+.pytest_cache/
+htmlcov/
+coverage/
+.coverage
+.nyc_output/
+playwright-report/
+test-results/
+
+# Build artifacts
+*.egg-info/
+build/
+*.whl
+
+# Docker
+docker-compose.override.yml
+
+# Temp/lock files
+*.tmp
+.~lock.*
+
+# Claude Code harness runtime artifacts
+.claude/scheduled_tasks.lock
+.claude/settings.local.json
+
+# Django collectstatic output — regenerated on every deploy (entrypoint.sh runs
+# collectstatic; WhiteNoise serves it). Never track generated build artifacts.
+backend/staticfiles/
+.claude/worktrees/
+
+# graphify knowledge-graph artifacts. Всё, кроме semantic-кэша, пересобирается
+# бесплатно (`graphify update .` — AST, без LLM), поэтому не трекается.
+graphify-out/*
+# ИСКЛЮЧЕНИЕ: cache/semantic/ — результат ПЛАТНОЙ LLM-экстракции Docs/ (~2 млн
+# токенов, 2026-07-29). 1.3 МБ, адресуется по хешу содержимого файла, поэтому
+# переносится между машинами как есть и переживает пересборку графа.
+# Удалить = оплатить весь корпус заново. См. Docs/dev/ops/ и память tooling-graphify.
+!graphify-out/cache/
+graphify-out/cache/*
+!graphify-out/cache/semantic/
+
+# Скомпилированные каталоги переводов — производные от .po (генерируются в сборке образа)
+*.mo

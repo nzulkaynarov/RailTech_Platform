@@ -1,0 +1,29 @@
+{% load document_format i18n %}
+{% comment %}
+  Блок «спецификация» договора (Приложение № 1). Заголовок — часть блока: приложение без
+  подписи «Спецификация» перестаёт быть приложением, поэтому удалить его отдельно от таблицы
+  нельзя. Строки — billable-позиции КП (юридически согласованный товар).
+{% endcomment %}
+<p style="font-weight:700;margin:12pt 0 4pt 0;">{% translate "Приложение № 1. Спецификация" %}</p>
+<table class="lines">
+  <thead>
+    <tr>
+      <th style="width:6%">{% translate "№" %}</th>
+      <th style="width:46%">{% translate "Наименование" %}</th>
+      <th style="width:12%" class="center">{% translate "Кол-во" %}</th>
+      <th style="width:18%" class="num">{% blocktranslate with currency=ccy %}Цена, {{ currency }}{% endblocktranslate %}</th>
+      <th style="width:18%" class="num">{% blocktranslate with currency=ccy %}Сумма, {{ currency }}{% endblocktranslate %}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in items %}
+    <tr>
+      <td class="num">{{ forloop.counter }}</td>
+      <td class="item-name">{% if item.product %}{{ item.product.name }}{% else %}{{ item.imported_raw_name }}{% endif %}</td>
+      <td class="center">{{ item.quantity|qty:item.unit }}</td>
+      <td class="num">{{ item.final_price_excl_vat|money }}</td>
+      <td class="num">{{ item.line_total|money }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>

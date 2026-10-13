@@ -1,0 +1,7 @@
+{% comment %}
+  Блок «примечание документа» ({{doc.notes}}): поле конкретной записи (invoice.notes /
+  contract.notes). Пустое примечание не печатает ничего — пустой заголовок хуже отсутствующего.
+{% endcomment %}
+{% if text %}
+<div class="notes-block"><span class="k">{{ label }}:</span><br>{{ text|linebreaks }}</div>
+{% endif %}

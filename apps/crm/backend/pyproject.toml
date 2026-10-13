@@ -1,0 +1,108 @@
+[project]
+name = "railtech-crm"
+version = "0.1.0"
+description = "RailTech CRM backend: API, Telegram bot, agents, worker"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "aiobotocore>=3.9.2",
+    "aiogram>=3.31.0",
+    "alembic>=1.20.0",
+    "argon2-cffi>=25.1.0",
+    "asgi-correlation-id>=5.0.1",
+    "casbin-async-sqlalchemy-adapter>=1.17.0",
+    "docling-core[chunking-openai]>=2.101.0",
+    "fastapi>=0.143.0",
+    "httpx>=0.28.1",
+    "huggingface-hub>=2.1.1",
+    "langfuse>=4.17.0",
+    "langgraph>=1.2.14",
+    "langgraph-checkpoint-postgres>=3.1.2",
+    "mcp>=2.3.0",
+    "openai>=3.26.1",
+    "pgvector>=0.5.0",
+    "procrastinate>=3.10.0",
+    "psycopg[binary,pool]>=3.3.6",
+    "pycasbin>=2.8.0",
+    "pydantic-settings>=2.15.0",
+    "pyjwt>=2.15.1",
+    "pyyaml>=6.0.3",
+    "sqlalchemy[asyncio]>=2.1.4",
+    "structlog>=26.1.0",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.13.1",
+    "mypy>=2.4.0",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "pytest-cov>=7.1.0",
+    "respx>=0.23.1",
+    "ruff>=0.16.10",
+    "types-pyyaml>=6.0.12.20260906",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = ["-ra", "--strict-markers", "-m", "not (integration or e2e or live or eval)"]
+markers = [
+    "unit: без внешних сервисов (по умолчанию)",
+    "integration: Postgres/RustFS (CI services)",
+    "e2e: сценарии через эмуляцию Telegram + REST",
+    "live: реальные модели; CI не запускает",
+    "eval: оценка качества ИИ (SPEC §12)",
+]
+filterwarnings = ["error", "ignore::DeprecationWarning:procrastinate.*"]
+
+[tool.coverage.run]
+source = ["app"]
+branch = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["alembic/sql"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "S", "BLE", "C4", "PT", "RUF", "ASYNC", "T20", "N"]
+ignore = ["RUF001", "RUF002", "RUF003", "SIM905"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106", "N817"]
+"evals/test_*.py" = ["S101", "S106", "T201"]
+"alembic/versions/**" = ["S608"]
+"app/schemas/settings.py" = ["E501"]
+"app/schemas/settings_client.py" = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "tests"]
+known-third-party = ["alembic"]
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["pydantic.mypy"]
+mypy_path = "."
+explicit_package_bases = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+exclude = ["^alembic/sql/"]
+
+[[tool.mypy.overrides]]
+module = ["app.domain.*", "app.security.*", "app.schemas.*"]
+strict = true
+
+[[tool.mypy.overrides]]
+module = ["aiobotocore.*", "procrastinate.*", "casbin.*", "casbin_async_sqlalchemy_adapter.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# docling-core реэкспортирует типы из __init__ без __all__.
+module = ["docling_core.*"]
+implicit_reexport = true

@@ -1,0 +1,49 @@
+/* Глобальные правила доступности (WCAG 2.1 AA; дизайн-аудит 2026-10-11, отчёт 4). */
+:focus-visible {
+  outline: 2px solid var(--ant-color-primary, #0958d9);
+  outline-offset: 2px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+/* Плавающая кнопка меню Refine (position: fixed) перекрывала заголовок страницы на мобильных;
+   меню открывается кнопкой в шапке (app/Header.tsx). */
+.app-shell > .ant-layout > .ant-btn {
+  display: none;
+}
+
+/* Текст preset-тегов: antd в режиме cssVar не даёт переопределить палитру (green7 и т. п.),
+   значения — из app/theme.ts (TAG_TEXT), контраст ≥ 4.5:1 (WCAG 1.4.3). */
+/* Специфичность 0,2,0: стили antd (cssinjs) подключаются позже этого файла. */
+.ant-tag.ant-tag-green {
+  color: var(--crm-tag-green);
+}
+.ant-tag.ant-tag-cyan {
+  color: var(--crm-tag-cyan);
+}
+.ant-tag.ant-tag-orange {
+  color: var(--crm-tag-orange);
+}
+
+/* Ссылка внутри абзаца отличается не только цветом (WCAG 1.4.1, axe link-in-text-block). */
+.ant-typography a.inline-link,
+a.inline-link {
+  text-decoration: underline;
+}

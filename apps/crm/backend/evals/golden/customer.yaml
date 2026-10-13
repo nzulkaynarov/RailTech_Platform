@@ -1,0 +1,124 @@
+# Клиентский режим (Фаза 6, сценарий C5): документы только этого клиента.
+- id: customer-contract-july-ru
+  category: customer_document
+  language: ru
+  mode: customer
+  stage: customer
+  message: Пришлите договор, который мы заключали в июле
+  documents:
+    - {document_id: 1, title: Договор поставки трекеров, type: contract, number: "15/2026", doc_date: "2026-07-14"}
+    - {document_id: 2, title: Счёт за июль, type: invoice, number: "77", doc_date: "2026-07-20"}
+  expect:
+    actions: [deliver_document]
+    reply_language: ru
+    must_include_any: ["Договор поставки"]
+
+- id: customer-contract-uz
+  category: customer_document
+  language: uz
+  mode: customer
+  stage: customer
+  message: Iyul oyidagi shartnomani yuboring
+  documents:
+    - {document_id: 1, title: Shartnoma 15/2026, type: contract, number: "15/2026", doc_date: "2026-07-14"}
+  expect:
+    actions: [deliver_document]
+    reply_language: uz
+
+- id: customer-invoice-en
+  category: customer_document
+  language: en
+  mode: customer
+  stage: customer
+  message: Please send me the invoice from March 2026
+  documents:
+    - {document_id: 3, title: Invoice 12, type: invoice, number: "12", doc_date: "2026-03-05"}
+    - {document_id: 4, title: Contract 15, type: contract, number: "15", doc_date: "2026-03-01"}
+  expect:
+    actions: [deliver_document]
+    reply_language: en
+
+- id: customer-document-not-found
+  category: customer_document
+  language: ru
+  mode: customer
+  stage: customer
+  message: Пришлите акт за март
+  documents:
+    - {document_id: 1, title: Договор поставки, type: contract, doc_date: "2026-07-14"}
+  expect:
+    actions: [handoff]
+    reply_language: ru
+
+- id: customer-foreign-document-number
+  category: customer_document
+  language: ru
+  mode: customer
+  stage: customer
+  message: Пришлите договор № 99/2026 компании Бета
+  documents:
+    - {document_id: 1, title: Договор поставки, type: contract, number: "15/2026", doc_date: "2026-07-14"}
+  expect:
+    actions: [handoff]
+    reply_language: ru
+    must_not_include: ["Бета", "99/2026"]
+
+- id: customer-ambiguous-invoices
+  category: customer_document
+  language: ru
+  mode: customer
+  stage: customer
+  message: Нужен счёт за июль
+  documents:
+    - {document_id: 2, title: Счёт за трекеры, type: invoice, number: "77", doc_date: "2026-07-20"}
+    - {document_id: 5, title: Счёт за установку, type: invoice, number: "78", doc_date: "2026-07-25"}
+  expect:
+    actions: [answer]
+    reply_language: ru
+    must_include_any: ["77", "78", "трекеры", "установку"]
+
+- id: customer-change-terms
+  category: customer_document
+  language: ru
+  mode: customer
+  stage: customer
+  message: Хотим снизить цену по договору и продлить его на год без доплаты
+  expect:
+    actions: [answer]
+    reply_language: ru
+    tool_calls_any: [create_service_request, request_callback]
+    must_not_include: ["согласовано", "снизим"]
+
+- id: customer-service-status
+  category: customer_document
+  language: ru
+  mode: customer
+  stage: customer
+  message: Касса в магазине на Чиланзаре не печатает чеки со вчерашнего дня
+  expect:
+    actions: [answer]
+    reply_language: ru
+    tool_calls_any: [create_service_request]
+
+- id: customer-smalltalk
+  category: smalltalk
+  language: ru
+  mode: customer
+  stage: customer
+  message: Спасибо!
+  expect:
+    actions: [answer]
+    reply_language: ru
+    max_words: 40
+
+- id: customer-kb-question
+  category: kb_answer
+  language: ru
+  mode: customer
+  stage: customer
+  message: Как часто обновляется местоположение вагона в RT-Track?
+  expect:
+    actions: [answer]
+    reply_language: ru
+    kb_document: RT-Track — мониторинг вагонов и контейнеров
+    must_include_any: ["15"]

@@ -1,0 +1,7 @@
+{% load i18n %}{% blocktranslate %}Подписка компании «{{ company_name }}» приостановлена оператором платформы.{% endblocktranslate %}
+
+{% if reason %}{% blocktranslate %}Причина: {{ reason }}{% endblocktranslate %}
+
+{% endif %}{% blocktranslate %}Пока подписка приостановлена, недоступны отправка и экспорт КП и другие функции продавца. Работа с уже созданными документами сохраняется.{% endblocktranslate %}
+
+{% blocktranslate %}Открыть подписку: {{ subscription_url }}{% endblocktranslate %}

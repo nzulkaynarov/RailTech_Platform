@@ -1,0 +1,516 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    # Правки одной документации не трогают ни код, ни контракт — полный прогон на них это
+    # чистая трата минут (docs-only PR прогонял все 11 джоб, включая backend-test и
+    # docker-build). macOS считает `docs/` и `Docs/` одним каталогом, Linux — разными:
+    # перечислены оба.
+    paths-ignore:
+      - 'Docs/**'
+      - 'docs/**'
+      - '**/*.md'
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - 'Docs/**'
+      - 'docs/**'
+      - '**/*.md'
+
+# Новый пуш в ветку ОТМЕНЯЕТ её предыдущий прогон: без этого докоммит (починил линт — запушил)
+# оставлял старый прогон крутиться до конца рядом с новым, и одна ветка съедала два-три полных
+# CI. На `main` не отменяем — там прогон подтверждает то, что уже смержено.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  i18n-symmetry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - name: Verify ru.json / en.json key sets match
+        run: python3 scripts/check_i18n_symmetry.py
+
+  backend-lint:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.12']
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install linting tools
+        run: |
+          pip install flake8 "black>=24,<25" "isort>=5,<6"
+
+      - name: Run flake8
+        run: flake8 backend/
+
+      - name: Check black formatting
+        run: black --check backend/
+
+      - name: Check isort imports
+        run: isort --check-only backend/
+
+  backend-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.12']
+
+    services:
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+      # Ephemeral Postgres, NOT Neon: pointing the suite at the *shared* Neon instance
+      # caused a recurring class of CI flakes — cold-start hangs, a stale test_neondb held
+      # open by a pooled session, and the SSL connection dropping mid test-DB-create ("SSL
+      # connection has been closed unexpectedly" inside _configure_timezone). A throwaway
+      # local DB, fresh every run, removes that entire class.
+      #
+      # Схема строится МИГРАЦИЯМИ (--nomigrations снят): по Rule 1 справочники и
+      # платформенные образцы шаблонов приходят данными-миграциями, поэтому база без
+      # миграций — другая база, и тесты на ней падают на пустых DealStage/ContractStatus.
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: railtech
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      # INF-09: psycopg2 is built from source (no more psycopg2-binary), so the
+      # runner needs libpq-dev + a compiler (gcc is pre-installed on ubuntu).
+      - name: Install system build deps (psycopg2 source, gettext)
+        # gettext нужен для compilemessages: .mo в git не хранится (это артефакт сборки,
+        # его собирает Dockerfile), а тест каталога проверяет РЕАЛЬНЫЙ перевод.
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq libpq-dev gettext
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          # pytest-cov is in the hashed lock now — do NOT append it on the CLI
+          # (an unhashed name aborts pip's --require-hashes mode).
+          pip install -r requirements.txt
+
+      - name: Compile translation catalogs
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/railtech
+          DB_SSLMODE: disable
+          DJANGO_SECRET_KEY: 'ci-test-secret-key-not-for-production'
+        run: |
+          cd backend
+          python manage.py compilemessages
+
+      - name: Run tests with coverage
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/railtech
+          DB_SSLMODE: disable
+          DJANGO_SECRET_KEY: 'ci-test-secret-key-not-for-production'
+          REDIS_URL: redis://localhost:6379/0
+          DEBUG: 'True'
+          # In-memory email backend: no SMTP server exists in CI, so the real
+          # SMTP default would make registration (send setup-password email)
+          # fail with ConnectionRefused. Cascades to EMAIL_CHANNELS (settings.py).
+          EMAIL_BACKEND: 'django.core.mail.backends.locmem.EmailBackend'
+        run: |
+          cd backend
+          # --create-db: build the test schema from current models on the fresh
+          # ephemeral Postgres (--create-db перебивает --reuse-db из addopts).
+          pytest --create-db --cov=. --cov-report=xml --cov-report=html --cov-fail-under=70
+
+  # Тестовая джоба выше применяет миграции вместе со схемой, но НЕ проверяет граф
+  # отдельно: `makemigrations --check` ловит ещё и «модель поменяли, миграцию не создали».
+  # Здесь миграции накатываются на чистый Postgres — так всплывает то, что видно только
+  # на свежем деплое (кривые межприложенческие зависимости, FieldError в сидах,
+  # недостающие миграции). Работает на одноразовой service-БД — Neon не трогает.
+  migration-check:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.12']
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: railtech
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/railtech
+      DB_SSLMODE: disable
+      DJANGO_SECRET_KEY: 'ci-migration-check-secret-key-not-for-production'
+      DJANGO_DEBUG: 'False'
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install system build deps (psycopg2 source)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq libpq-dev
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Check for missing migrations (model/migration drift)
+        run: |
+          cd backend
+          python manage.py makemigrations --check --dry-run
+
+      - name: Apply all migrations to a clean database (real deploy path)
+        run: |
+          cd backend
+          python manage.py migrate --noinput
+
+  api-contract:
+    # Fails if the committed OpenAPI schema or generated TS types drift from the
+    # code (F2.7). Regenerate both and `git diff` — keeps backend/schema.json +
+    # frontend/src/api/schema.d.ts honest so the frontend types can't silently rot.
+    # Python pinned to 3.12 (the Docker/prod runtime that produced the committed
+    # schema); openapi-typescript is locked in package-lock so its output is stable.
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: railtech
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/railtech
+      DB_SSLMODE: disable
+      DJANGO_SECRET_KEY: 'ci-api-contract-secret-key-not-for-production'
+      DJANGO_DEBUG: 'False'
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install system build deps (psycopg2 source)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq libpq-dev
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Regenerate OpenAPI schema
+        run: |
+          cd backend
+          python manage.py spectacular --format openapi-json --file schema.json
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Regenerate API types
+        run: |
+          cd frontend
+          npm run gen:api-types
+
+      - name: Fail on schema / type drift
+        run: |
+          if ! git diff --exit-code -- backend/schema.json frontend/src/api/schema.d.ts; then
+            echo "::error::OpenAPI schema or generated TS types are out of date."
+            echo "Run 'cd backend && python manage.py spectacular --format openapi-json --file schema.json'"
+            echo "then 'cd frontend && npm run gen:api-types', and commit the result."
+            exit 1
+          fi
+
+  frontend-lint:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['22']
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Run ESLint
+        run: |
+          cd frontend
+          npm run lint
+
+      # `tsc --noEmit` здесь НИЧЕГО не проверял: frontend/tsconfig.json — solution-style
+      # (`"files": []` + references), а вне build-режима tsc по ссылкам не ходит и
+      # компилирует ноль файлов (проверено 2026-08-13: файл с заведомой ошибкой типа
+      # проходил с кодом 0). Типы ловила только джоба frontend-build через `tsc -b`.
+      # Теперь шаг зовёт тот же скрипт, что и локальный `make typecheck`.
+      - name: Run TypeScript compiler
+        run: |
+          cd frontend
+          npm run lint:tsc
+
+  frontend-build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['22']
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: frontend-build
+          path: frontend/dist/
+
+  frontend-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['22']
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Run unit tests (vitest)
+        run: |
+          cd frontend
+          npm run test
+
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: [backend-lint, backend-test, migration-check, frontend-lint, frontend-build, frontend-test, deps-lock]
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+
+      - name: Build backend Docker image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: false
+          tags: railtech-backend:${{ github.sha }}
+          # Без кэша слоёв образ собирается с нуля каждый прогон (psycopg2 компилируется из
+          # исходников — INF-09). Кэш GitHub Actions режет эту джобу в разы.
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,scope=backend,mode=max
+
+      - name: Build frontend Docker image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: false
+          tags: railtech-frontend:${{ github.sha }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,scope=frontend,mode=max
+
+  security:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.12']
+        node-version: ['22']
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install system build deps (psycopg2 source)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq libpq-dev
+
+      - name: Install Python dependencies
+        run: |
+          # Upgrade pip first: pip-audit audits pip itself, and the setup-python
+          # baseline pip periodically carries its own advisories (unrelated to our
+          # locked deps, which are clean). Keeping pip current keeps the gate about
+          # OUR dependencies.
+          python -m pip install --upgrade pip
+          cd backend
+          pip install -r requirements.txt
+
+      # INF-02: hard gate — verified clean (2026-07-02: "No known vulnerabilities
+      # found" for requirements.txt). A new advisory now FAILS the job; triage with
+      # `pip-audit --ignore-vuln <ID>` for accepted risks instead of re-adding `|| true`.
+      - name: Run pip audit
+        run: |
+          pip install pip-audit
+          cd backend
+          pip-audit
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      # INF-02: hard gate — но ТОЛЬКО по прод-зависимостям (`--omit=dev`), это и есть
+      # документированный `--omit`, который прежний комментарий разрешал вместо
+      # continue-on-error. Причина (2026-08-08): гейт был красным из-за js-yaml
+      # (CVE-2026-59870) в цепочках eslint и openapi-typescript — обе dev-only, в бандл
+      # не попадают, а починить их мы не можем: `npm audit fix` упирается в 4.3.0,
+      # который ещё в уязвимом диапазоне, дальше только мажорный бамп самих eslint /
+      # openapi-typescript. Прод-достижимый nanoid тем же проходом закрыт (3.3.16→3.3.18),
+      # и `--omit=dev` сейчас даёт ровно 0 уязвимостей любой серьёзности.
+      # Рантайм-библиотеки (react, axios, zustand, i18next, react-query, decimal.js)
+      # лежат в `dependencies`, поэтому гейт НЕ слепнет — он проверяет всё, что уезжает
+      # пользователю. Новая high/critical в проде по-прежнему РОНЯЕТ джобу.
+      - name: Run npm audit (production dependencies — hard gate)
+        run: |
+          cd frontend
+          npm audit --omit=dev --audit-level=high
+
+      # Dev-зависимости остаются ВИДИМЫМИ, но не блокируют мерж: находка в тулчейне —
+      # повод обновить инструмент, а не повод держать main красным. Отдельная ночная
+      # джоба ради этого не заводится (минуты CI — дефицит), хватает строк в логе.
+      - name: Report dev-dependency advisories (non-blocking)
+        continue-on-error: true
+        run: |
+          cd frontend
+          npm audit --audit-level=high
+
+  deps-lock:
+    # INF-05: fail if requirements.txt / requirements-dev.txt drift from the .in
+    # sources (someone edited an .in but forgot to recompile). Recompiles with the
+    # SAME pinned pip-tools used to author the lock and asserts no diff.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+
+      - name: Install build deps + pinned pip-tools
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq libpq-dev
+          pip install "pip-tools==7.5.3"
+
+      - name: Recompile locks and fail on drift
+        run: |
+          cd backend
+          pip-compile --quiet --generate-hashes --no-strip-extras --output-file=requirements.txt requirements.in
+          pip-compile --quiet --generate-hashes --no-strip-extras -c requirements.txt --output-file=requirements-dev.txt requirements-dev.in
+          if ! git diff --exit-code -- requirements.txt requirements-dev.txt; then
+            echo "::error::requirements*.txt is out of sync with requirements*.in. Run: cd backend && pip-compile --generate-hashes --no-strip-extras requirements.in -o requirements.txt (and the -dev variant), then commit."
+            exit 1
+          fi

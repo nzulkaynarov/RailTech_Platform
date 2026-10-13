@@ -1,0 +1,19 @@
+# dev: http://localhost без TLS (SPEC §14).
+{
+	auto_https off
+}
+
+:80 {
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+	handle /health {
+		reverse_proxy api:8000
+	}
+	handle /ready {
+		reverse_proxy api:8000
+	}
+	handle {
+		reverse_proxy web:5173
+	}
+}

@@ -1,0 +1,1 @@
+export { ProductEditorPage } from './ProductEditorPage';

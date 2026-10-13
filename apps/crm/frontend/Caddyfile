@@ -1,0 +1,8 @@
+# Внутренний file-server SPA (сервис `web`, prod). TLS и роутинг — на edge-Caddy (infra/).
+:8080 {
+	root * /srv
+	encode zstd gzip
+	try_files {path} /index.html
+	file_server
+	header /assets/* Cache-Control "public, max-age=31536000, immutable"
+}

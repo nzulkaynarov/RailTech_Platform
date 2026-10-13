@@ -1,0 +1,139 @@
+# Эскалация и стадии (PLAN Фаза 3, задача 7). Продукты — evals/fixtures/kb/products.yaml.
+# expect.stage — стадия по предложению квалификатора до возможного handoff.
+- id: price-without-kb
+  category: pricing
+  language: ru
+  transcript:
+    - [lead, "Сколько стоит мониторинг 40 вагонов на год? Нужна цена в долларах."]
+    - [bot, "В моих материалах нет точного ответа на этот вопрос. Передать его менеджеру? Он ответит здесь же."]
+  expect: {escalate: true, triggers: [price_or_contract_asked], stage: engaged}
+
+- id: price-contract-terms
+  category: pricing
+  language: ru
+  transcript:
+    - [lead, "Какие условия договора на интеграцию касс, есть ли отсрочка платежа на 90 дней?"]
+    - [bot, "В моих материалах нет точного ответа на этот вопрос. Передать его менеджеру? Он ответит здесь же."]
+  expect: {escalate: true, triggers: [price_or_contract_asked], stage: engaged}
+
+- id: price-quoted-from-price-list
+  category: pricing
+  language: ru
+  stage: engaged
+  # Бот назвал цену из прайса (price_quoted) — передача не нужна (ADR-0016).
+  price_quoted: true
+  transcript:
+    - [lead, "Сколько стоит базовый пакет RT-Track?"]
+    - [bot, "Базовый пакет — 120 000 сум за трекер в месяц."]
+  expect: {escalate: false, stage: engaged}
+
+- id: price-answered-from-kb
+  category: pricing
+  language: ru
+  stage: new
+  transcript:
+    - [lead, "А сколько стоит RT-Track?"]
+    - [bot, "Цена зависит от пакета, количества трекеров и срока договора; расчёт делает менеджер."]
+  # Бот пообещал расчёт менеджера — передача обязательна (BUSINESS C2, решение владельца 2026-10-09).
+  expect: {escalate: true, triggers: [price_or_contract_asked], stage: engaged}
+
+- id: callback-request-ru
+  category: callback
+  language: ru
+  transcript:
+    - [lead, "Перезвоните мне, пожалуйста, завтра после обеда по интеграции касс."]
+    - [bot, "Хорошо, передам менеджеру."]
+  expect: {escalate: true, triggers: [callback_requested], stage: engaged}
+
+- id: callback-request-uz
+  category: callback
+  language: uz
+  transcript:
+    - [lead, "Iltimos, menga qo'ng'iroq qiling, vagon kuzatish bo'yicha gaplashmoqchiman."]
+    - [bot, "Yaxshi."]
+  expect: {escalate: true, triggers: [callback_requested], stage: engaged}
+
+- id: human-request-en
+  category: human
+  language: en
+  transcript:
+    - [lead, "Can I talk to a real person please?"]
+  expect: {escalate: true, triggers: [human_requested], stage: engaged}
+
+- id: negative-rude
+  category: negative
+  language: ru
+  transcript:
+    - [lead, "Касса для магазина нужна."]
+    - [bot, "Расскажите, сколько у вас касс?"]
+    - [lead, "Вы издеваетесь? Третий раз спрашиваю одно и то же, бесполезный бот!"]
+  expect: {escalate: true, triggers: [negative_sentiment], stage: engaged}
+
+- id: complaint-implementation
+  category: complaint
+  language: ru
+  transcript:
+    - [lead, "Хочу пожаловаться: ваш инженер обещал приехать в понедельник и не приехал, касса не работает."]
+  expect: {escalate: true, triggers: [complaint], stage: engaged}
+
+- id: competitor-compare
+  category: competitor
+  language: ru
+  transcript:
+    - [lead, "Чем вы лучше, чем Glonass-Track? Они предлагают то же самое по мониторингу вагонов."]
+    - [bot, "RT-Track показывает местоположение вагона каждые 15 минут."]
+  expect: {escalate: true, triggers: [competitor_mentioned], stage: engaged}
+
+- id: no-progress-fourth-turn
+  category: no_progress
+  language: ru
+  bot_turns_without_progress: 3
+  score: 25
+  transcript:
+    - [lead, "Ну а что ещё у вас есть?"]
+    - [bot, "Мы занимаемся интеграцией касс и мониторингом вагонов."]
+    - [lead, "Понятно. А ещё?"]
+  expect: {escalate: true, triggers: [no_progress], stage: engaged}
+
+- id: high-score-ready-buyer
+  category: high_score
+  language: ru
+  score: 40
+  transcript:
+    - [lead, "Я владелец сети из 3 аптек в Ташкенте. Нужна интеграция касс АТОЛ с 1С, запустить хотим в течение месяца."]
+    - [bot, "Для сети из 3–10 магазинов внедрение занимает от 2 до 4 недель."]
+    - [lead, "Отлично, подготовьте предложение, позвоните мне."]
+  expect: {escalate: true, triggers: [callback_requested], stage: qualified}
+
+- id: high-score-decision-maker-timeline
+  category: high_score
+  language: ru
+  score: 40
+  transcript:
+    - [lead, "Я директор экспедиторской компании. Нужен мониторинг 25 рефрижераторных контейнеров, старт в ближайшие 2 месяца, бюджет согласован."]
+    - [bot, "Для рефрижераторных контейнеров есть пакет «Холод» с датчиками температуры и влажности."]
+  expect: {escalate: true, triggers: [high_score], stage: qualified}
+
+- id: recommend-wants-proposal
+  category: recommend
+  language: en
+  transcript:
+    - [lead, "We run 12 stores and need POS integration with 1C. Please send a commercial proposal."]
+    - [bot, "For a chain of 3–10 stores implementation takes 2 to 4 weeks."]
+  # Потребность + продукт без срока, роли и бюджета → «Вовлечён» (правила по умолчанию, ADR-0016);
+  # передача менеджеру остаётся — клиент просит КП.
+  expect: {escalate: true, stage: engaged}
+
+- id: stop-word-lawyer
+  category: negative
+  language: ru
+  transcript:
+    - [lead, "Если не вернёте деньги, я обращусь в суд."]
+  expect: {escalate: true, triggers: [negative_sentiment], stage: engaged}
+
+- id: callback-with-time-en
+  category: callback
+  language: en
+  transcript:
+    - [lead, "Could your manager call me tomorrow at 11 about rail tracking?"]
+  expect: {escalate: true, triggers: [callback_requested], stage: engaged}

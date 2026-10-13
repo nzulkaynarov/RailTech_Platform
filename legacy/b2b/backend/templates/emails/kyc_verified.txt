@@ -1,0 +1,7 @@
+{% load i18n %}{% translate "Здравствуйте!" %}
+
+{% if level_code == "L3_CONTRACTED" %}{% blocktranslate %}Контракт для компании «{{ company_name }}» активирован. Все премиум-функции RailTech B2B теперь доступны вашей команде.{% endblocktranslate %}{% else %}{% blocktranslate %}KYC уровень L2 для компании «{{ company_name }}» (ИНН {{ company_inn }}) успешно подтверждён. Теперь вы можете работать в полном объёме на платформе.{% endblocktranslate %}{% endif %}
+
+{% translate "Открыть кабинет" %}: {{ frontend_url }}
+
+{% translate "— Команда RailTech B2B" %}
