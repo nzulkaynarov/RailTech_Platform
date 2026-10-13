@@ -2,6 +2,7 @@ import { theme } from "antd";
 import { describe, expect, it } from "vitest";
 
 import { TAG_TEXT, appTheme } from "./theme";
+import { RT_TOKENS } from "./tokens.generated";
 
 /** WCAG 2.1: относительная яркость и контраст; полупрозрачный цвет смешивается с фоном. */
 type Rgb = [number, number, number];
@@ -102,5 +103,11 @@ describe("theme contrast (WCAG 2.1 AA, 1.4.3)", () => {
 
   it("exposes css variables for custom stylesheets", () => {
     expect(appTheme.cssVar).toBe(true);
+  });
+
+  it("reads colours from the shared ui-tokens package", () => {
+    expect(appTheme.token?.colorPrimary).toBe(RT_TOKENS.colorPrimary);
+    expect(appTheme.token?.colorError).toBe(RT_TOKENS.colorError);
+    expect(tk.colorPrimary).toBe(RT_TOKENS.colorPrimary);
   });
 });

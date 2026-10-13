@@ -31,6 +31,10 @@ check-erp: ## ERP: появится с M1-ERP-01; пока кода нет — �
 check-cabinet: ## Cabinet: появится с M2-CAB-01; пока кода нет — пропуск
 	@if [ -f $(CABINET)/Makefile ]; then $(MAKE) -C $(CABINET) check; else echo "check-cabinet: $(CABINET) ещё без кода (M2-CAB-01) — пропуск"; fi
 
+.PHONY: tokens
+tokens: ## Токены дизайна: tokens.json → dist/ и apps/crm/frontend/src/app/tokens.generated.ts (M0-INF-05)
+	$(MAKE) -C packages/ui-tokens build
+
 .PHONY: contracts
 contracts: ## Валидация packages/contracts и генерация клиентов (M0-INF-02)
 	@if [ -f packages/contracts/Makefile ]; then $(MAKE) -C packages/contracts check; else echo "contracts: packages/contracts ещё не заполнен (M0-INF-02)"; exit 1; fi
