@@ -120,7 +120,7 @@ services:
         condition: service_healthy
 
   litellm:
-    image: ghcr.io/berriai/litellm:v1.104.2
+    image: ghcr.io/berriai/litellm:v1.105.0
     command: ["--config", "/app/config.yaml", "--port", "4000"]
     environment:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?set in .env}
