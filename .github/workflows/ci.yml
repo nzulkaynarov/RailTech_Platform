@@ -1,0 +1,332 @@
+# CI ансамбля (M0-INF-04): один workflow, job'ы по путям. legacy/b2b исключён из всех проверок
+# (ORCHESTRATOR §3.11). Раннер — переменная репозитория CI_RUNNER (например, self-hosted),
+# по умолчанию ubuntu-latest (DECISIONS 2026-10-13: self-hosted или минуты GitHub — решает владелец).
+#
+# Порядок внутри приложения: lint → unit → integration (Postgres service) → build.
+# Контракт: make contracts и чистый git diff в packages/contracts/generated.
+# Инфраструктура: docker compose config и caddy validate.
+# ci-ok — единственная обязательная проверка для защиты main: красный, если любой job упал.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  UV_VERSION: "0.13.0"
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "22"
+  GITLEAKS_VERSION: "8.30.1"
+
+jobs:
+  changes:
+    name: Что изменилось
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 5
+    outputs:
+      crm: ${{ steps.filter.outputs.crm }}
+      erp: ${{ steps.filter.outputs.erp }}
+      cabinet: ${{ steps.filter.outputs.cabinet }}
+      packages: ${{ steps.filter.outputs.packages }}
+      infra: ${{ steps.filter.outputs.infra }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            crm:
+              - 'apps/crm/**'
+              - 'packages/ui-tokens/**'
+            erp:
+              - 'apps/erp/**'
+              - 'packages/contracts/**'
+              - 'packages/ui-tokens/**'
+            cabinet:
+              - 'apps/cabinet/**'
+              - 'packages/contracts/**'
+              - 'packages/ui-tokens/**'
+            packages:
+              - 'packages/**'
+            infra:
+              - 'infra/**'
+              - '.env.example'
+              - 'Makefile'
+              - '.github/workflows/**'
+
+  gitleaks:
+    name: gitleaks
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: gitleaks (история ветки; legacy/ в allowlist .gitleaks.toml)
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar -xz -C /usr/local/bin gitleaks
+          gitleaks git --redact --verbose --config .gitleaks.toml .
+
+  # ─── CRM (apps/crm) ────────────────────────────────────────────────────────────────────────
+
+  crm-lint:
+    name: CRM · lint & typecheck
+    needs: changes
+    if: needs.changes.outputs.crm == 'true'
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/crm
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: apps/crm/backend/uv.lock
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: apps/crm/frontend/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: apps/crm/frontend/pnpm-lock.yaml
+      - name: uv version matches backend/Dockerfile
+        run: |
+          image=$(sed -n 's|^FROM ghcr.io/astral-sh/uv:\([0-9.]*\).*|\1|p' backend/Dockerfile)
+          if [ "$image" != "$UV_VERSION" ]; then
+            echo "::error::UV_VERSION=$UV_VERSION in workflow, uv:$image in apps/crm/backend/Dockerfile"
+            exit 1
+          fi
+      - name: Install
+        run: make install
+      - name: Backend — ruff, mypy
+        working-directory: apps/crm/backend
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+          uv run ruff check --config pyproject.toml ../scripts
+          uv run ruff format --config pyproject.toml --check ../scripts
+          uv run mypy app tests evals promptfoo alembic
+      - name: Frontend — eslint, prettier, tsc
+        working-directory: apps/crm/frontend
+        run: |
+          pnpm lint
+          pnpm format:check
+          pnpm typecheck
+      - name: OpenAPI CRM актуален
+        run: |
+          make openapi
+          git diff --exit-code -- docs/api/openapi.json frontend/src/api/generated \
+            || (echo "::error::OpenAPI CRM или клиент orval устарели — make -C apps/crm openapi"; exit 1)
+
+  crm-unit:
+    name: CRM · unit
+    needs: changes
+    if: needs.changes.outputs.crm == 'true'
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/crm
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: apps/crm/backend/uv.lock
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: apps/crm/frontend/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: apps/crm/frontend/pnpm-lock.yaml
+      - name: Install
+        run: make install
+      - name: Backend unit (pytest)
+        working-directory: apps/crm/backend
+        run: uv run pytest --cov --cov-report=term-missing
+      - name: Frontend unit (vitest)
+        working-directory: apps/crm/frontend
+        run: pnpm test
+
+  crm-integration:
+    name: CRM · integration
+    needs: [crm-lint, crm-unit]
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.7-pg17
+        env:
+          POSTGRES_DB: crm_test
+          POSTGRES_USER: rt
+          POSTGRES_PASSWORD: ci-only-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U rt -d crm_test"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      APP_ENV: test
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: crm_test
+      POSTGRES_USER: rt
+      POSTGRES_PASSWORD: ci-only-password
+      S3_ENDPOINT: http://localhost:9000
+      S3_ACCESS_KEY: rt
+      S3_SECRET_KEY: ci-only-password
+    steps:
+      - uses: actions/checkout@v7
+      - name: Start RustFS (тот же образ, что в infra/compose)
+        run: |
+          docker run -d --name rustfs -p 9000:9000 \
+            -e RUSTFS_ACCESS_KEY=rt -e RUSTFS_SECRET_KEY=ci-only-password \
+            -e RUSTFS_ADDRESS=0.0.0.0:9000 \
+            rustfs/rustfs:1.0.1
+          for i in $(seq 1 30); do
+            curl -fsS http://localhost:9000/health && exit 0
+            sleep 2
+          done
+          docker logs rustfs; exit 1
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: apps/crm/backend/uv.lock
+      - name: Install
+        working-directory: apps/crm/backend
+        run: uv sync --frozen
+      - name: Integration (pytest -m integration)
+        working-directory: apps/crm/backend
+        run: uv run pytest -m integration -v
+
+  crm-build:
+    name: CRM · build (${{ matrix.name }})
+    needs: [crm-lint, crm-unit]
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        include:
+          - name: backend
+            context: apps/crm/backend
+            target: prod
+          - name: frontend
+            context: apps/crm/frontend
+            target: prod
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.context }}
+          target: ${{ matrix.target }}
+          push: false
+          tags: rt-platform-crm-${{ matrix.name }}:ci
+          cache-from: type=gha,scope=crm-${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=crm-${{ matrix.name }}
+
+  # ─── ERP и Cabinet: make check-<система> (пока кода нет — пропуск внутри цели) ─────────────
+
+  erp:
+    name: ERP · check
+    needs: changes
+    if: needs.changes.outputs.erp == 'true'
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - run: make check-erp
+
+  cabinet:
+    name: Cabinet · check
+    needs: changes
+    if: needs.changes.outputs.cabinet == 'true'
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - run: make check-cabinet
+
+  # ─── packages: контракт и токены ───────────────────────────────────────────────────────────
+
+  contracts:
+    name: packages · contracts
+    needs: changes
+    if: needs.changes.outputs.packages == 'true'
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: packages/contracts/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: packages/contracts/pnpm-lock.yaml
+      - name: make contracts
+        run: make contracts
+      - name: Контракт и сгенерированное совпадают
+        run: |
+          git diff --exit-code -- packages/contracts/generated \
+            || (echo "::error::packages/contracts/generated устарел — выполните make contracts и закоммитьте"; exit 1)
+
+  # ─── infra: compose и Caddy валидны ────────────────────────────────────────────────────────
+
+  infra:
+    name: infra · compose & caddy
+    needs: changes
+    if: needs.changes.outputs.infra == 'true'
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: .env из .env.example (без секретов)
+        run: sed 's/CHANGE_ME/ci-only-value/' .env.example > .env
+      - name: docker compose config (dev, с профилем observability)
+        run: |
+          docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env \
+            --profile observability config -q
+      - name: caddy validate
+        run: |
+          docker run --rm -v "$PWD/infra/caddy/Caddyfile.dev:/etc/caddy/Caddyfile:ro" \
+            caddy:2.11.7-alpine caddy validate --config /etc/caddy/Caddyfile
+
+  # ─── Итог для защиты main ──────────────────────────────────────────────────────────────────
+
+  ci-ok:
+    name: CI ok
+    if: always()
+    needs: [changes, gitleaks, crm-lint, crm-unit, crm-integration, crm-build, erp, cabinet, contracts, infra]
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 5
+    steps:
+      - name: Ни один job не упал
+        run: |
+          echo '${{ toJSON(needs) }}' > needs.json
+          if grep -Eq '"result": "(failure|cancelled)"' needs.json; then
+            cat needs.json; exit 1
+          fi
+          echo "ok"
