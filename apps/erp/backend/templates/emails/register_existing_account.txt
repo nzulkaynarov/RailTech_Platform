@@ -1,0 +1,15 @@
+{% load i18n %}{% blocktranslate with name=first_name|default:"" %}Здравствуйте, {{ name }}!{% endblocktranslate %}
+
+{% blocktranslate %}На платформе RailTech B2B кто-то (возможно, вы) попытался зарегистрировать аккаунт с этим email. Аккаунт с этим адресом уже существует, поэтому новый создан не был.{% endblocktranslate %}
+
+{% translate "Если это были вы — просто войдите в систему:" %}
+
+{{ login_url }}
+
+{% translate "Забыли пароль? Восстановите его по ссылке:" %}
+
+{{ forgot_url }}
+
+{% translate "Если вы не пытались зарегистрироваться, никаких действий не требуется — аккаунт не был изменён." %}
+
+{% translate "— Команда RailTech B2B" %}

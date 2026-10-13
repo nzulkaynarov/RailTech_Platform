@@ -313,6 +313,106 @@ services:
       timeout: 3s
       retries: 10
 
+  # ─── ERP (apps/erp) — копия B2B, M1-ERP-01 ──────────────────────────────────────────────────
+  # Один образ для backend (Daphne), воркеров Celery и Beat; команда выбирает процесс (как в B2B).
+  # База `erp` на общем Postgres, Redis БД 1 (Celery) и 2 (Channels/кэш). Файлы — FileSystemStorage в томе
+  # (перевод на RustFS — отдельной задачей M1). CORS/CSRF в коде B2B захардкожены по DEBUG — на dev DEBUG=true.
+
+  erp-backend:
+    build:
+      context: ../../apps/erp/backend
+    command: ["daphne", "-b", "0.0.0.0", "-p", "8000", "core.asgi:application"]
+    environment: &erp-env
+      PYTHONUNBUFFERED: "1"
+      DJANGO_SETTINGS_MODULE: core.settings
+      DJANGO_SECRET_KEY: ${ERP_SECRET_KEY:?set in .env}
+      DJANGO_DEBUG: ${ERP_DEBUG:-true}
+      DJANGO_LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      AUTO_MIGRATE: "true"
+      ALLOWED_HOSTS: erp.localhost,localhost,127.0.0.1,erp-backend,${ERP_DOMAIN:-erp.railtech.uz}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/erp?sslmode=disable
+      DB_SSLMODE: disable
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/2
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD}@redis:6379/1
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD}@redis:6379/1
+      FRONTEND_URL: http://erp.localhost
+      SUPPORT_EMAIL: ${SUPPORT_EMAIL:-support@example.com}
+      EMAIL_BACKEND: ${ERP_EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
+      # Прямой SDK провайдера остаётся пустым: ИИ ERP переводится на LiteLLM в M1-ERP-06 (ADR-0005).
+      ANTHROPIC_API_KEY: ""
+      AI_IMPORT_ENABLED: "false"
+    volumes:
+      - erp_static:/app/staticfiles
+      - erp_media:/app/media
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/health/"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+
+  erp-worker:
+    build:
+      context: ../../apps/erp/backend
+    command: ["celery", "-A", "core", "worker", "-l", "info", "-Q", "default,pdf,imports"]
+    environment: *erp-env
+    volumes:
+      - erp_media:/app/media
+    depends_on:
+      erp-backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "celery", "-A", "core", "inspect", "ping", "-t", "10"]
+      interval: 60s
+      timeout: 20s
+      retries: 3
+      start_period: 45s
+
+  erp-worker-ai:
+    build:
+      context: ../../apps/erp/backend
+    command: ["celery", "-A", "core", "worker", "-l", "info", "-Q", "ai", "--concurrency=2"]
+    environment: *erp-env
+    volumes:
+      - erp_media:/app/media
+    depends_on:
+      erp-backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "celery", "-A", "core", "inspect", "ping", "-t", "10"]
+      interval: 60s
+      timeout: 20s
+      retries: 3
+      start_period: 45s
+
+  erp-beat:
+    build:
+      context: ../../apps/erp/backend
+    command: ["celery", "-A", "core", "beat", "-l", "info", "--scheduler", "django_celery_beat.schedulers:DatabaseScheduler"]
+    environment: *erp-env
+    depends_on:
+      erp-backend:
+        condition: service_healthy
+
+  # SPA ERP: сборка Vite + nginx (как в B2B). VITE_API_URL пустой → запросы относительные, /api и /ws
+  # ведёт Caddy на erp-backend с того же домена (CORS не нужен).
+  erp-web:
+    build:
+      context: ../../apps/erp/frontend
+      args:
+        VITE_API_URL: ""
+        VITE_WS_URL: ""
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
   # ─── Вход: Caddy на три домена ──────────────────────────────────────────────────────────────
 
   caddy:
@@ -321,6 +421,10 @@ services:
       crm-api:
         condition: service_healthy
       crm-web:
+        condition: service_healthy
+      erp-backend:
+        condition: service_healthy
+      erp-web:
         condition: service_healthy
     volumes:
       - caddy_data:/data
@@ -425,6 +529,8 @@ services:
       start_period: 30s
 
 volumes:
+  erp_static:
+  erp_media:
   postgres_data:
   redis_data:
   s3_data:

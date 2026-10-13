@@ -1,0 +1,23 @@
+{% extends "crm/_document_base.html" %}
+{% load i18n %}
+{% comment %}
+  Произвольный документ по шаблону («Документы 2.0»). The body is the SNAPSHOT
+  `rendered_html` — already sanitised (allowlist) at template-save time and with all
+  placeholder VALUES HTML-escaped at generation time, so it is safe to emit with
+  `|safe` here (double-escaping it would print literal tags). Brand wrapper (шапка,
+  реквизиты, подвал) comes from document_brand_context, like every seller PDF.
+{% endcomment %}
+{% block doc_meta %}
+  <div class="doc-no">{{ document.number }}</div>
+  {% with issued=document.created_at|date:"d.m.Y" %}<div>{% blocktranslate %}от {{ issued }}{% endblocktranslate %}</div>{% endwith %}
+{% endblock %}
+
+{% block doc_title %}{{ document.title|default:_("Документ") }}{% endblock %}
+
+{% block parties %}{% endblock %}
+
+{% block content %}
+  <div class="doc-body">
+    {{ document.rendered_html|safe }}
+  </div>
+{% endblock %}

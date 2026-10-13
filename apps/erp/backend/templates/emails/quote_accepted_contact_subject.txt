@@ -1,0 +1,1 @@
+{% load i18n %}{% blocktranslate %}Предложение {{ quote_number }} принято — договор готовится к подписанию{% endblocktranslate %}

@@ -364,10 +364,27 @@ jobs:
     needs: changes
     if: needs.changes.outputs.erp == 'true'
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 20
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/erp/frontend/package-lock.json
+      - name: Install (линтеры бэкенда, npm ci)
+        run: make -C apps/erp install
+      # lint + typecheck + i18n + vitest + pytest в контейнере на одноразовых Postgres 17 и Redis
       - run: make check-erp
+      - name: Миграции на чистой базе и отсутствие дрейфа моделей
+        run: apps/erp/scripts/test_backend_local.sh --migration-check
+      - name: Контейнеры тестов удалены
+        if: always()
+        run: apps/erp/scripts/test_backend_local.sh --down
 
   cabinet:
     name: Cabinet · check

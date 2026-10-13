@@ -24,19 +24,14 @@ http://crm.localhost {
 	}
 }
 
-# ─── ERP — бэк-офис: заготовка до M1-ERP-01 (apps/erp) ─────────────────────────────────────
+# ─── ERP — бэк-офис (apps/erp; копия B2B с M1-ERP-01) ────────────────────────────────────
 http://erp.localhost {
-	handle /health {
-		header Content-Type application/json
-		respond `{"status":"ok","system":"erp","stub":true,"next":"M1-ERP-01"}` 200
-	}
-	handle /api/* {
-		header Content-Type application/json
-		respond `{"detail":"ERP_NOT_IMPLEMENTED"}` 503
+	@backend path /api/* /admin/* /admin /ws/* /static/* /media/* /health /health/
+	handle @backend {
+		reverse_proxy erp-backend:8000
 	}
 	handle {
-		header Content-Type "text/plain; charset=utf-8"
-		respond "ERP (erp.localhost) — заготовка. Приложение apps/erp появится на вехе M1 (ORCHESTRATOR §6)." 200
+		reverse_proxy erp-web:80
 	}
 }
 

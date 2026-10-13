@@ -1,0 +1,43 @@
+<!doctype html>
+{% comment %}
+Shown (HTTP 410 GONE / 404) when a client opens a public КП link that is no longer valid —
+revoked, expired (valid_until passed or EXPIRED status), or unknown token. Browser-facing
+(the emailed link opens this endpoint directly, no SPA in front), so a human sees a friendly
+Russian page instead of the raw DRF/JSON error. Self-contained, matches quote_generating.html.
+NB: Django {# #} comments are SINGLE-LINE only — a multi-line one leaks as visible page text
+(caught in Wave B eyes-on); use {% comment %} for multi-line.
+{% endcomment %}
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }}</title>
+  <style>
+    :root { color-scheme: light; } /* client-facing document page — always light, never auto-dark by device (see quote_public_page.html) */
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #f3f4f6; color: #111827; padding: 24px;
+    }
+    .card {
+      max-width: 420px; width: 100%; background: #ffffff; border-radius: 12px; padding: 32px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06); text-align: center;
+    }
+    .icon {
+      width: 48px; height: 48px; margin: 0 auto 20px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      background: #fef3c7; color: #b45309; font-size: 26px; line-height: 1;
+    }
+    h1 { margin: 0 0 12px; font-size: 20px; line-height: 1.3; }
+    p { margin: 0; font-size: 15px; line-height: 1.5; color: #4b5563; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="icon" role="img" aria-label="Внимание">!</div>
+    <h1>{{ title }}</h1>
+    <p>{{ message }}</p>
+  </main>
+</body>
+</html>

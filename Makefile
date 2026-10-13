@@ -60,7 +60,7 @@ up-obs: _compose-check ## То же + Langfuse (профиль observability): l
 smoke: ## /health трёх доменов через Caddy (порт HTTP_PORT из .env)
 	@port=$${HTTP_PORT:-$(or $(HTTP_PORT),80)}; ok=1; \
 	for host in crm erp cabinet; do \
-	  code=$$(curl -s -o /dev/null -w '%{http_code}' --resolve $$host.localhost:$$port:127.0.0.1 http://$$host.localhost:$$port/health); \
+	  code=$$(curl -sL -o /dev/null -w '%{http_code}' --resolve $$host.localhost:$$port:127.0.0.1 http://$$host.localhost:$$port/health); \
 	  printf '  %-18s /health → %s\n' $$host.localhost $$code; [ "$$code" = 200 ] || ok=0; \
 	done; [ $$ok = 1 ] && echo "smoke: ok" || { echo "smoke: FAIL"; exit 1; }
 
