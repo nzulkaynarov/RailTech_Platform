@@ -204,4 +204,4 @@ M1 и независимая часть M3 идут параллельно в р
 
 ## 9. Текущее состояние
 
-Веха: **M0 в работе** — решения Q-1…Q-9 получены 2026-10-13 (`docs/DECISIONS.md`); репозиторий создан владельцем: **`RailTech_Platform`** (github.com/nzulkaynarov/RailTech_Platform, кодовое имя `rt_platform`). M0-INF-01 выполнен 2026-10-13 на ветке `m0/infra-01-monorepo` (ждёт PR и защиты `main`). Открыты: M0-INF-02, M0-INF-03, M0-INF-04, M0-DOC-01, M0-INF-05 — состояние в `docs/PROGRESS.md`.
+Веха: **M0 — все 6 задач выполнены 2026-10-13**, ждёт слияния стопки PR #1→#6 (`m0/infra-01-monorepo` → `infra-02-contracts` → `infra-03-compose` → `infra-04-ci` → `doc-01-claude-stubs` → `infra-05-ui-tokens`) и гейта владельца: `make env && make up && make smoke` на `crm.`/`erp.`/`cabinet.localhost`, `make check`, контракт v0 в `packages/contracts`. Репозиторий — **`RailTech_Platform`** (github.com/nzulkaynarov/RailTech_Platform, кодовое имя `rt_platform`). После гейта M0 параллельно стартуют M1 (ERP, роль ERP) и независимая часть M3 (M3-CRM-01/02/05/08, роль CRM). Состояние — `docs/PROGRESS.md`.
