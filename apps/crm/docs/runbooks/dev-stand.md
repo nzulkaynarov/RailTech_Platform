@@ -45,6 +45,8 @@ make smoke-dev
 6. **Порт 5432/9000/9001/4000/8000/3000 занят** (`port is already allocated`) другим проектом или локальным сервисом: задайте свободный порт в `.env` — `DEV_POSTGRES_PORT`, `DEV_S3_PORT`, `DEV_S3_CONSOLE_PORT`, `DEV_LITELLM_PORT`, `DEV_API_PORT`, `DEV_LANGFUSE_PORT` (например, `DEV_API_PORT=8001`), затем `make up`. `bootstrap_dev.sh` и `make smoke-dev` читают порты из `.env`; в командах этого runbook подставляйте свой порт вместо 8000.
 13. **Страница CRM пустая или «Failed to resolve import …» после обновления** (например, `@ant-design/plots`): у `web` `node_modules` — анонимный том, он переживает пересборку образа. `make up` пересоздаёт анонимные тома (`--renew-anon-volumes`; данные — в именованных томах, не затрагиваются). Если `make up` падает на `pnpm install` с `ConnectTimeoutError` к `registry.npmjs.org` — у Docker нет выхода в интернет (VPN/прокси на Mac): переключите сеть и повторите `make up`; стенд продолжает работать на прежнем образе.
 
+15. **GitHub Actions не запускает задания** («recent account payments have failed or your spending limit…»): гейт мержа — `scripts/ci_local.sh` (все задания `ci.yml` локально, одноразовые контейнеры, стенд не трогается); `scripts/ci_local.sh lint e2e` — выборочно; логи — `.ci-local/`.
+
 ## Проверка
 
 `make smoke-dev` → `Smoke OK`.
