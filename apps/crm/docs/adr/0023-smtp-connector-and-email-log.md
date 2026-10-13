@@ -41,7 +41,7 @@ ARCHITECTURE §18 пересмотрел это: транзакционная п
 
 - Хорошо: нет новой зависимости; граница (`SmtpTransport`) подменяется в тестах; паролей нет ни в журнале после отправки, ни в таблице задач, ни в аудите.
 - Плохо: `smtplib` блокирующий — поток на письмо (объёмы — единицы писем в день, приемлемо); для писем нужен `SECRETS_KEY` даже при SMTP из `.env`.
-- Что меняется: миграция `0020_email_log`; `app/integrations/smtp.py`, `services/mail*.py`, `services/smtp_connector.py`, `services/user_invites.py`, `tasks/mail.py`; API `/integrations/smtp*`, `/users/{id}/invite`, `/users/{id}/reset-password/email`; вкладка «Почта» и журнал.
+- Что меняется: миграция `0021_email_log`; `app/integrations/smtp.py`, `services/mail*.py`, `services/smtp_connector.py`, `services/user_invites.py`, `tasks/mail.py`; API `/integrations/smtp*`, `/users/{id}/invite`, `/users/{id}/reset-password/email`; вкладка «Почта» и журнал.
 
 ### Как проверяем
 

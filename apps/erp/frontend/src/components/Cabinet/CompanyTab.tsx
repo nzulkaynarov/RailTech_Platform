@@ -37,14 +37,13 @@ export function CompanyTab() {
     return key ? t(key) : doc.doc_type_display || '';
   };
   const { company, activeStatus, updateCompany } = useUserStore();
-  const isViewerMode = useUserStore((s) => s.isViewerMode);
   // ADR-0005 U2: editing the company profile is gated on the CompanyRole `settings.edit`
   // permission (useHasCompanyPermission keeps the legacy OWNER fallback), mirroring the backend's
   // member_has_permission('settings.edit') in CompanyViewSet._assert_owner_or_admin. A delegated
   // «Администратор компании» who passed the canEditCompanySettings section gate can now actually
-  // edit instead of seeing a dead read-only form. Platform admin stays read-only via isViewerMode.
+  // edit instead of seeing a dead read-only form.
   const canEditCompany = useHasCompanyPermission('settings.edit');
-  const canEdit = !isViewerMode && canEditCompany;
+  const canEdit = canEditCompany;
   // INN is locked once KYC is verified — it becomes a checked legal identifier.
   const innLocked = company.kycStatus === 'verified';
 

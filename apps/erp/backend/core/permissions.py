@@ -3,27 +3,27 @@ from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 class IsPlatformAdmin(BasePermission):
     """
-    Разрешает доступ только Platform Admin — владельцу платформы.
+    Разрешает доступ только администратору ERP — `is_superuser`.
 
-    Инвариант: is_superuser ИЛИ носитель SystemRole='ADMIN' БЕЗ memberships.
-    Регулирует всю платформу, не привязан ни к одной компании.
+    Операторская плоскость B2B («SystemRole=ADMIN без членств» и роли операторов) удалена в M1-ERP-02:
+    администрирование людей — в CRM (ARCHITECTURE §7), «Администратор» в CRM = суперпользователь ERP.
     """
 
     # Отказ обязан приходить КОДОМ: витрина переводит его по словарю `apiErrors`, а
     # человеческую фразу перевести нечем — `extractCode` (frontend/src/lib/apiError.ts)
     # требует UPPER_SNAKE, не находит его и печатает на экране системный `ERR_BAD_REQUEST`
-    # от axios. Так выглядел ЛЮБОЙ отказ по правам во всей операторской плоскости.
+    # от axios.
     message = "PLATFORM_ADMIN_REQUIRED"
 
     def has_permission(self, request, view):
         user = request.user
         if not (user and user.is_authenticated):
             return False
-        return user.is_platform_admin
+        return bool(user.is_superuser)
 
 
 class IsPlatformAdminOrReadOnly(BasePermission):
-    """Публично читать, писать — только Platform Admin."""
+    """Публично читать, писать — только администратор (`is_superuser`)."""
 
     def has_permission(self, request, view):
         if request.method in SAFE_METHODS:
@@ -31,48 +31,13 @@ class IsPlatformAdminOrReadOnly(BasePermission):
         user = request.user
         if not (user and user.is_authenticated):
             return False
-        return user.is_platform_admin
-
-
-class OperatorScoped(BasePermission):
-    """Platform-operator gate with a per-action sub-capability (ADR-0004 G1).
-
-    Coarse gate: the requester must be a Platform Operator (`is_platform_admin`).
-    Fine gate: if the view declares the required operator permission for the current
-    action, the operator's sub-role must hold it. The permission is resolved from, in
-    order: `view.operator_permissions[action]` (dict), else `view.operator_permission`
-    (single default). An UNMAPPED action falls back to the coarse platform-admin gate
-    only — so a missed mapping degrades to today's "any operator" behaviour, never a
-    silent lock-out. SUPER_OPERATOR / an operator with no sub-role assigned passes
-    everything (backward compatible).
-    """
-
-    message = "OPERATOR_PERMISSION_REQUIRED"
-
-    def has_permission(self, request, view):
-        user = request.user
-        if not (user and user.is_authenticated and user.is_platform_admin):
-            return False
-        perm = self._required_permission(view)
-        if perm is None:
-            return True
-        from accounts.services.permissions import operator_has_permission
-
-        return operator_has_permission(user, perm)
-
-    @staticmethod
-    def _required_permission(view):
-        per_action = getattr(view, "operator_permissions", None)
-        action = getattr(view, "action", None)
-        if per_action and action in per_action:
-            return per_action[action]
-        return getattr(view, "operator_permission", None)
+        return bool(user.is_superuser)
 
 
 class IsSupplierWithActiveSubscription(BasePermission):
     """
     Запись разрешена компаниям-поставщикам с активной/триальной подпиской.
-    Platform Admin обходит проверку. Чтение свободно.
+    Администратор обходит проверку. Чтение свободно.
     """
 
     message = "SUBSCRIPTION_REQUIRED"
@@ -83,7 +48,7 @@ class IsSupplierWithActiveSubscription(BasePermission):
             return True
         if not (user and user.is_authenticated):
             return False
-        if user.is_platform_admin:
+        if user.is_superuser:
             return True
         from accounts.models import SupplierSubscription
 
@@ -97,9 +62,7 @@ class IsSupplierWithActiveSubscription(BasePermission):
 class IsProductManagerOrAdmin(BasePermission):
     """
     Product edit rights (N3: слой прав `catalog.manage` теперь ДЕЙСТВУЮЩИЙ, а не декоративный):
-      - Platform operator: чтение свободно; запись — только суб-роли с
-        `moderation.force_override` (ADR-0004: SUPPORT «только просмотр» не должен уметь
-        удалять товары).
+      - Администратор (`is_superuser`): полный доступ.
       - Seller: членство владельца + `catalog.manage` из CompanyRole (до N3 код проверялся
         только меню — «Наблюдатель» не видел «Номенклатуру», но правил карточки по прямому
         API). Legacy-фолбэк без CompanyRole сохраняется в member_has_permission
@@ -112,8 +75,8 @@ class IsProductManagerOrAdmin(BasePermission):
         user = request.user
         if not (user and user.is_authenticated):
             return False
-        if user.is_platform_admin:
-            return self._operator_allowed(request, view)
+        if user.is_superuser:
+            return True
         if view.action == "create":
             from accounts.constants import Permission
             from accounts.services.permissions import member_has_permission
@@ -126,8 +89,8 @@ class IsProductManagerOrAdmin(BasePermission):
 
     def has_object_permission(self, request, view, obj):
         user = request.user
-        if user.is_platform_admin:
-            return self._operator_allowed(request, view)
+        if user.is_superuser:
+            return True
         # Ownership moved from the deprecated `manufacturer` FK (always NULL now) to
         # `owner_company` (the seller that created the card). Falling back to the
         # legacy field covers any pre-split rows. The old code only checked
@@ -140,20 +103,10 @@ class IsProductManagerOrAdmin(BasePermission):
 
         return member_has_permission(user, owner_id, Permission.CATALOG_MANAGE)
 
-    @staticmethod
-    def _operator_allowed(request, view) -> bool:
-        """Оператору чтение свободно, запись — по суб-способности (ADR-0004)."""
-        if request.method in SAFE_METHODS:
-            return True
-        from accounts.constants import OperatorPermission
-        from accounts.services.permissions import operator_has_permission
-
-        return operator_has_permission(request.user, OperatorPermission.MODERATION_FORCE_OVERRIDE)
-
 
 class IsOfferSupplierOrAdmin(BasePermission):
     """Object-level guard for SupplierOffer writes (C2 tenant isolation):
-      - Platform admin: full access.
+      - Администратор (`is_superuser`): full access.
       - Members of the offer's `supplier` company: edit/delete their own offers only.
     A seller must never be able to read or mutate a competitor's offer.
     """
@@ -164,7 +117,7 @@ class IsOfferSupplierOrAdmin(BasePermission):
         user = request.user
         if not (user and user.is_authenticated):
             return False
-        if user.is_platform_admin:
+        if user.is_superuser:
             return True
         return user.memberships.filter(is_active=True, company_id=obj.supplier_id).exists()
 
@@ -173,7 +126,7 @@ class IsCompanyMemberOrPlatformAdmin(BasePermission):
     """
     Object-level permission для мульти-тенантных ресурсов (Deal, Quote, Message, QuoteItem).
 
-    - Platform Admin: полный доступ.
+    - Администратор (`is_superuser`): полный доступ.
     - Остальные: доступ только к объектам своей компании (через CompanyMember).
     """
 
@@ -184,7 +137,7 @@ class IsCompanyMemberOrPlatformAdmin(BasePermission):
         if not (user and user.is_authenticated):
             return False
 
-        if user.is_platform_admin:
+        if user.is_superuser:
             return True
 
         # Seller team (can_sell): a seller may act on a CRM object IFF its deal is

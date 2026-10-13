@@ -51,11 +51,10 @@ export function resolveQuoteSendGate(capabilities: Capabilities, isSeller: boole
  * "late surprise" at send). UI-gating only — send_to_client remains the authoritative gate.
  */
 export function useQuoteSendGate(): QuoteSendGate {
-  const role = useUserStore((s) => s.role);
   const activeStatus = useUserStore((s) => s.activeStatus);
   const capabilities = useUserStore((s) => s.capabilities);
 
-  // Sending is a seller-side action; platform operators never act for a company.
-  const isSeller = role !== 'ADMIN' && activeStatus === 'SELLER';
+  // Sending is a seller-side action.
+  const isSeller = activeStatus === 'SELLER';
   return resolveQuoteSendGate(capabilities, isSeller);
 }

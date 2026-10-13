@@ -24,7 +24,6 @@ interface SubscriptionStatusBannerProps {
 export function SubscriptionStatusBanner({ onNavigate, onDismiss }: SubscriptionStatusBannerProps) {
   const { t } = useTranslation();
   const activeStatus = useUserStore((s) => s.activeStatus);
-  const role = useUserStore((s) => s.role);
   const sellerSubscriptionOperational = useUserStore((s) => s.sellerSubscriptionOperational);
   const { data: sub } = useMySubscription();
   // Часы для «осталось дней»: чистый рендер + баннер сам переходит в «истекла» без перезагрузки.
@@ -34,7 +33,6 @@ export function SubscriptionStatusBanner({ onNavigate, onDismiss }: Subscription
     activeStatus === 'SELLER';
 
   const alert = useMemo(() => {
-    if (role === 'ADMIN') return null;
     if (!relevantForRole) return null;
 
     // Authoritative backend signal (/me seller_subscription_operational): the
@@ -88,7 +86,7 @@ export function SubscriptionStatusBanner({ onNavigate, onDismiss }: Subscription
       }
     }
     return null;
-  }, [role, relevantForRole, sub, sellerSubscriptionOperational, now, t]);
+  }, [relevantForRole, sub, sellerSubscriptionOperational, now, t]);
 
   if (!alert) return null;
 

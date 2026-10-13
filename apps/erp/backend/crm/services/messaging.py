@@ -74,7 +74,7 @@ def user_can_access_deal_chat(user: CustomUser, deal: Deal) -> bool:
     """Platform admin, deal manager, deal client, or any active member of deal.company."""
     if not user or not user.is_authenticated:
         return False
-    if user.is_superuser or getattr(user, "is_platform_admin", False):
+    if user.is_superuser or getattr(user, "is_superuser", False):
         return True
     if deal.manager_id == user.id or deal.client_id == user.id:
         return True
@@ -135,10 +135,7 @@ def send_deal_message(
     # Sending is an ACTION, not read-only inspection — the platform-admin viewer must not
     # inject messages into a company's deal chat (audit L1; user_can_access_deal_chat
     # allows admin READ, but the write path is gated here).
-    from accounts.services.permissions import is_platform_admin_viewer
 
-    if is_platform_admin_viewer(user):
-        return None, "ADMIN_VIEWER_CANNOT_ACT"
     if not user_can_access_deal_chat(user, deal):
         return None, "NOT_DEAL_MEMBER"
     clean = (text or "").strip()

@@ -349,6 +349,27 @@ class IntegrationsSettings(StrictModel):
     smtp: SmtpSettings = Field(default_factory=SmtpSettings)
 
 
+class WebFormSettings(StrictModel):
+    """Антиспам публичной формы «Запрос» с сайта (M3-CRM-05, `domain/web_form.py`).
+
+    Без внешних сервисов: honeypot, подписанный токен формы (минимальное время заполнения и срок
+    жизни) и окно запросов по IP.
+    """
+
+    min_fill_seconds: int = Field(
+        default=3, ge=0, le=300, description="Минимум секунд между выдачей формы и отправкой"
+    )
+    token_ttl_minutes: int = Field(
+        default=60, ge=1, le=1440, description="Сколько минут действует токен формы"
+    )
+    rate_limit_per_hour: int = Field(
+        default=5, ge=1, le=1000, description="Не больше запросов с одного IP в час"
+    )
+    max_text_chars: int = Field(
+        default=4000, ge=100, le=10000, description="Максимум символов в поле «Что нужно»"
+    )
+
+
 SETTINGS_MODELS: Final[dict[str, type[BaseModel]]] = {
     "company": CompanySettings,
     "business_hours": BusinessHoursSettings,
@@ -364,6 +385,7 @@ SETTINGS_MODELS: Final[dict[str, type[BaseModel]]] = {
     "deals": DealsSettings,
     "bot_profile": BotProfileSettings,
     "integrations": IntegrationsSettings,
+    "web_form": WebFormSettings,
 }
 
 
@@ -397,6 +419,7 @@ class AppSettings(StrictModel):
     deals: DealsSettings = Field(default_factory=DealsSettings)
     bot_profile: BotProfileSettings = Field(default_factory=BotProfileSettings)
     integrations: IntegrationsSettings = Field(default_factory=IntegrationsSettings)
+    web_form: WebFormSettings = Field(default_factory=WebFormSettings)
 
     def lead_notice(
         self,

@@ -192,4 +192,11 @@ def test_reason_values_are_a_stable_contract() -> None:
         "smtp_auth_failed",
         "smtp_tls_failed",
         "smtp_rejected",
+        "lead_exists",
+        "client_exists",
+        "contact_required",
+        "form_token_invalid",
+        "form_too_fast",
+        "form_token_expired",
+        "rate_limited",
     }

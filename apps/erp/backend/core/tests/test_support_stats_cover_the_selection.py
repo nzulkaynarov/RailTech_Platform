@@ -28,6 +28,7 @@ def _api(user):
 @pytest.fixture
 def operator(db):
     return CustomUser.objects.create_user(
+        is_superuser=True,
         email="support.operator@test.uz",
         username="support_operator",
         password="Probe1234!",

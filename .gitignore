@@ -37,3 +37,6 @@ coverage/
 
 # Локальный CI и отчёты
 .ci-local/
+
+# Публичные CA-сертификаты ERP для синка ТН ВЭД (не секрет; правило *.pem выше их отсекало)
+!apps/erp/backend/master_data/certs/*.pem

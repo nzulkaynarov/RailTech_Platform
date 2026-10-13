@@ -3,7 +3,6 @@
 Covers `ensure_fulfillment` (creation + idempotency) and every authorization /
 side-effect branch of `update_fulfillment_status`:
 
-  * platform-admin viewer  → ADMIN_VIEWER_CANNOT_ACT
   * unknown status code     → FULFILLMENT_INVALID_STATUS
   * buyer-side statuses (ACCEPTED / DISPUTED) gated by can_buy on deal.company
   * seller-side statuses (SHIPPED / DELIVERED) gated by DealSellerRouting
@@ -101,6 +100,7 @@ def world(lookups):
         email="root@t.test", username="root@t.test", password="x", is_active=True, is_superuser=True, is_staff=True
     )
     admin_viewer = CustomUser.objects.create_user(
+        is_superuser=True,
         email="admin@t.test",
         username="admin@t.test",
         password="x",
@@ -142,16 +142,6 @@ def test_ensure_fulfillment_is_idempotent(world):
 
 
 # ── update_fulfillment_status: authorization branches ───────────────────────
-
-
-@pytest.mark.django_db
-def test_platform_admin_viewer_cannot_act(world):
-    crm_services.ensure_fulfillment(world["deal"])
-    obj, err = crm_services.update_fulfillment_status(
-        world["deal"].id, world["admin_viewer"], FulfillmentStatusCode.SHIPPED
-    )
-    assert obj is None
-    assert err == "ADMIN_VIEWER_CANNOT_ACT"
 
 
 @pytest.mark.django_db

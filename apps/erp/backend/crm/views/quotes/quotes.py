@@ -88,7 +88,7 @@ class QuoteViewSet(QuoteApprovalMixin, OptimisticLockingMixin, viewsets.ModelVie
 
         # Seller building КП across buyer заявки sees every quote — but only in a
         # seller context. In BUYER context the same user is scoped to its own deals.
-        if getattr(user, "is_platform_admin", False):
+        if getattr(user, "is_superuser", False):
             return queryset
         visible_deal_ids = seller_visible_deal_ids(user, self.request)
         if visible_deal_ids is not None:
@@ -105,11 +105,9 @@ class QuoteViewSet(QuoteApprovalMixin, OptimisticLockingMixin, viewsets.ModelVie
         (anchoring the КП-owning company + approval chain). Auto-increments version."""
         from rest_framework.exceptions import PermissionDenied
 
-        from accounts.services.permissions import can_edit_quote_pricing, is_platform_admin_viewer
+        from accounts.services.permissions import can_edit_quote_pricing
 
         user = self.request.user
-        if is_platform_admin_viewer(user):
-            raise PermissionDenied("ADMIN_VIEWER_CANNOT_ACT")
         if not (getattr(user, "is_superuser", False) or can_edit_quote_pricing(user)):
             raise PermissionDenied("ONLY_SELLER_CAN_BUILD_QUOTE")
         deal = serializer.validated_data.get("deal")
@@ -161,11 +159,9 @@ class QuoteViewSet(QuoteApprovalMixin, OptimisticLockingMixin, viewsets.ModelVie
         tax_country (by pk); changing vat_rate moves the VAT total, so recalc afterwards."""
         from rest_framework.exceptions import PermissionDenied
 
-        from accounts.services.permissions import can_edit_quote_pricing, is_platform_admin_viewer
+        from accounts.services.permissions import can_edit_quote_pricing
 
         user = self.request.user
-        if is_platform_admin_viewer(user):
-            raise PermissionDenied("ADMIN_VIEWER_CANNOT_ACT")
         if not (getattr(user, "is_superuser", False) or can_edit_quote_pricing(user)):
             raise PermissionDenied("ONLY_SELLER_CAN_BUILD_QUOTE")
         quote = serializer.instance
@@ -200,13 +196,11 @@ class QuoteViewSet(QuoteApprovalMixin, OptimisticLockingMixin, viewsets.ModelVie
         """Re-pull current CompanySettings defaults into this DRAFT КП (thin wrapper — Rule 8)."""
         from rest_framework.exceptions import PermissionDenied
 
-        from accounts.services.permissions import can_edit_quote_pricing, is_platform_admin_viewer
+        from accounts.services.permissions import can_edit_quote_pricing
         from crm.services.quotes._shared import _quote_seller_company
 
         quote = self.get_object()
         user = request.user
-        if is_platform_admin_viewer(user):
-            raise PermissionDenied("ADMIN_VIEWER_CANNOT_ACT")
         if not (getattr(user, "is_superuser", False) or can_edit_quote_pricing(user)):
             raise PermissionDenied("ONLY_SELLER_CAN_BUILD_QUOTE")
         if quote.frozen_at:

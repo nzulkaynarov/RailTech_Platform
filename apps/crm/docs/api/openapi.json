@@ -3327,6 +3327,17 @@
             ],
             "title": "Client Phone E164"
           },
+          "company_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Name"
+          },
           "consent_given_at": {
             "anyOf": [
               {
@@ -3347,6 +3358,17 @@
           "display_name": {
             "title": "Display Name",
             "type": "string"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
           },
           "escalation": {
             "anyOf": [
@@ -3446,6 +3468,11 @@
               }
             ],
             "title": "Snoozed Until"
+          },
+          "source": {
+            "default": "telegram",
+            "title": "Source",
+            "type": "string"
           },
           "stage": {
             "title": "Stage",
@@ -3588,6 +3615,11 @@
           "score": {
             "title": "Score",
             "type": "integer"
+          },
+          "source": {
+            "default": "telegram",
+            "title": "Source",
+            "type": "string"
           },
           "stage": {
             "title": "Stage",
@@ -3861,6 +3893,90 @@
           "language"
         ],
         "title": "ManualDocument",
+        "type": "object"
+      },
+      "ManualLeadIn": {
+        "description": "«Новый лид» во «Входящих»: звонок, письмо, рекомендация; создавший — ответственный.",
+        "properties": {
+          "company": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "language": {
+            "default": "ru",
+            "enum": [
+              "ru",
+              "uz",
+              "en"
+            ],
+            "title": "Language",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "need": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Need"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "source": {
+            "enum": [
+              "phone",
+              "email",
+              "referral"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "name"
+        ],
+        "title": "ManualLeadIn",
         "type": "object"
       },
       "MePatch": {
@@ -4710,7 +4826,14 @@
           "smtp_unavailable",
           "smtp_auth_failed",
           "smtp_tls_failed",
-          "smtp_rejected"
+          "smtp_rejected",
+          "lead_exists",
+          "client_exists",
+          "contact_required",
+          "form_token_invalid",
+          "form_too_fast",
+          "form_token_expired",
+          "rate_limited"
         ],
         "title": "Reason",
         "type": "string"
@@ -6248,6 +6371,140 @@
           }
         },
         "title": "UserUpdate",
+        "type": "object"
+      },
+      "WebFormToken": {
+        "description": "Токен формы «Запрос»: выдаётся вместе с формой, отправляется в `form_token`.",
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "min_fill_seconds": {
+            "title": "Min Fill Seconds",
+            "type": "integer"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "expires_at",
+          "min_fill_seconds"
+        ],
+        "title": "WebFormToken",
+        "type": "object"
+      },
+      "WebLeadAccepted": {
+        "description": "202: запрос принят. `lead_id` пустой — запрос отброшен антиспамом (honeypot).",
+        "properties": {
+          "lead_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Id"
+          }
+        },
+        "required": [
+          "lead_id"
+        ],
+        "title": "WebLeadAccepted",
+        "type": "object"
+      },
+      "WebLeadIn": {
+        "description": "Форма «Запрос» со страницы входа Cabinet: вложений в первой версии нет (Q-12).\n\n`website` — honeypot: человек поле не видит; заполнено — запрос принят, лид не создан.",
+        "properties": {
+          "company": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "form_token": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Form Token",
+            "type": "string"
+          },
+          "language": {
+            "default": "ru",
+            "enum": [
+              "ru",
+              "uz",
+              "en"
+            ],
+            "title": "Language",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "text": {
+            "maxLength": 10000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          },
+          "website": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Website"
+          }
+        },
+        "required": [
+          "name",
+          "text",
+          "form_token"
+        ],
+        "title": "WebLeadIn",
         "type": "object"
       }
     },
@@ -9831,6 +10088,125 @@
           }
         ],
         "summary": "List Leads",
+        "tags": [
+          "leads"
+        ]
+      },
+      "post": {
+        "description": "«Новый лид» вручную: звонок, письмо, рекомендация; создавший становится ответственным.\n\n409 `conflict` с `details.reason=lead_exists` (`lead_id`, `display_name`) или\n`client_exists` (`client_id`, `client_name`) — такой телефон/почта уже есть: откройте карточку.",
+        "operationId": "create_lead",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualLeadIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Lead",
+        "tags": [
+          "leads"
+        ]
+      }
+    },
+    "/api/v1/leads/web": {
+      "post": {
+        "description": "Форма «Запрос» со страницы входа Cabinet → лид CRM с источником `web` (ARCHITECTURE §17).\n\nБез аутентификации. Нужен телефон или e-mail. Ошибки: 422 `validation_failed` с\n`details.reason` (`form_token_invalid` | `form_too_fast` | `form_token_expired` |\n`contact_required` | `invalid_phone` | `invalid_email`), 429 `rate_limited`.\nПовторный запрос известного контакта дополняет существующую карточку.",
+        "operationId": "web_lead",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebLeadIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebLeadAccepted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "summary": "Web Lead",
+        "tags": [
+          "leads"
+        ]
+      }
+    },
+    "/api/v1/leads/web/token": {
+      "get": {
+        "description": "Токен формы «Запрос»: получить при показе формы, отправить в `form_token`.\n\nБез аутентификации. Отправка раньше `min_fill_seconds` или после `expires_at` отклоняется.",
+        "operationId": "web_lead_token",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebFormToken"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "summary": "Web Lead Token",
         "tags": [
           "leads"
         ]

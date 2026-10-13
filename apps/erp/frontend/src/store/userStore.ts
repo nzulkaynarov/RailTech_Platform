@@ -58,8 +58,6 @@ export interface Capabilities {
    *  в журнале, закрытом от арендатора: человек не знал, что исправить (находка 28). */
   kyc_last_reason?: string;
   permissions: string[];
-  is_platform_admin: boolean;
-  operator_permissions: string[] | null;
   /** Wave B2 (auto-claim) — true when the seller company effectively has ONE member with claim
    * rights, so «Взять в работу» is noise (there is no one to route work between). OPTIONAL: the
    * parallel backend (B1) lane adds it to /me.capabilities; until then it is undefined and the
@@ -77,23 +75,6 @@ export interface Capabilities {
   ai_daily_cap?: number | null;
   ai_daily_remaining?: number | null;
 }
-
-/* ─── System Role (Platform-level) ─────────────────────────────────────
- * After accounts/0010_platform_admin_model the only SystemRoles are ADMIN
- * (Platform Admin — owns the platform, no CompanyMember) and USER (everyone
- * else). The fine-grained "what can this user do inside their company" lives
- * in CompanyMember.role (WorkspaceRole) + can_sell / can_buy. See ADR-0002. */
-export type UserRole = 'ADMIN' | 'USER';
-
-export const roleLabels: Record<UserRole, string> = {
-  ADMIN: 'roles.admin',
-  USER: 'roles.user',
-};
-
-export const roleDescriptions: Record<UserRole, string> = {
-  ADMIN: 'roles.adminDesc',
-  USER: 'roles.userDesc',
-};
 
 /* ─── User Profile ──────────────────────────────────────────────────── */
 export interface UserProfile {
@@ -130,26 +111,13 @@ export type AppScreen = 'onboarding' | 'pending_verification' | 'main';
 /* ─── Store ─────────────────────────────────────────────────────────── */
 interface UserState {
   screen: AppScreen;
-  role: UserRole;
   activeStatus: CompanyStatus;
   profile: UserProfile;
   company: Company;
-  /** True iff `role === 'ADMIN'`. Kept under its old name to avoid a wave of
-   * renames across the call sites that still consume `isViewerMode`; semantics
-   * are now simple: platform admin never operates within a company (migration
-   * accounts/0010_platform_admin_model). The historical three-context synthetic
-   * switcher has been replaced by `PlatformAdminShell` at the app level. */
-  isViewerMode: boolean;
   /** Whether the seller company has an operational subscription. null for
    * non-sellers / before /me resolves. false → show the "subscription required"
    * banner (seller writes return SUBSCRIPTION_REQUIRED). */
   sellerSubscriptionOperational: boolean | null;
-  /** Platform Engineer (Django superuser): full privileges everywhere. */
-  isSuperuser: boolean;
-  /** The platform operator's effective permission codes for client-side capability
-   * gating (audit F3-UX). `null` = unrestricted (superuser, or an operator with no
-   * sub-role assigned); an array = exactly the codes the assigned sub-role grants. */
-  operatorPermissions: string[] | null;
   /** ADR-0005: consolidated capability object driving the unified nav engine. */
   capabilities: Capabilities;
 
@@ -158,7 +126,6 @@ interface UserState {
 
   /* ── Navigation ── */
   setActiveStatus: (status: CompanyStatus) => void;
-  setRole: (role: UserRole) => void;
   updateProfile: (profile: Partial<UserProfile>) => void;
   updateCompany: (company: Partial<Company>) => void;
 }
@@ -166,24 +133,18 @@ interface UserState {
 /* ─── Store ─────────────────────────────────────────────────────────── */
 
 export const useUserStore = create<UserState>((set, get) => ({
-  /* Default: empty until loaded from auth. Default role is USER — an admin
-   * default would make short-lived UI before auth finishes resolve into
-   * admin-only screens. */
+  /* Default: empty until loaded from auth. */
   screen: 'onboarding',
-  role: 'USER',
   /* Pre-auth default context is the NARROWEST/safest side, BUYER. It matches the
    * `|| 'BUYER'` fallback in api/client.ts (X-Active-Context) and the
    * `statusEntries.length === 0 ? 'BUYER'` fallback in loadFromAuth, so cold-load
    * requests never go out under a wider seller scope before /me resolves. */
   activeStatus: 'BUYER',
-  isViewerMode: false,
   sellerSubscriptionOperational: null,
-  isSuperuser: false,
-  operatorPermissions: null,
   capabilities: {
     kyc_level: null, can_buy: true, can_sell: true, subscription_active: false,
     can_send_quotes: false, quote_send_is_demo: false,
-    permissions: [], is_platform_admin: false, operator_permissions: null,
+    permissions: [],
   },
   profile: {
     firstName: '',
@@ -211,7 +172,7 @@ export const useUserStore = create<UserState>((set, get) => ({
     const { useAuthStore: authStoreHook } = await import('../store/authStore');
     const authState = authStoreHook.getState();
     if (authState.user) {
-      const { first_name, last_name, email, phone, position, role_code, company, avatar } = authState.user;
+      const { first_name, last_name, email, phone, position, company, avatar } = authState.user;
       // Nameless accounts (e.g. init_superadmin) fall back to the email local part
       // so the avatar never renders the "??" placeholder.
       const initials = (
@@ -245,22 +206,11 @@ export const useUserStore = create<UserState>((set, get) => ({
         can_sell?: boolean;
         can_buy?: boolean;
         seller_subscription_operational?: boolean | null;
-        is_superuser?: boolean;
-        operator_permissions?: string[] | null;
         capabilities?: Capabilities;
       };
       const canSell = userPayload.can_sell !== false;
       const canBuy = userPayload.can_buy !== false;
       const sellerSubscriptionOperational = userPayload.seller_subscription_operational ?? null;
-      const isSuperuser = userPayload.is_superuser === true;
-      const operatorPermissions = userPayload.operator_permissions ?? null;
-
-      // Platform admin is decided purely by the backend-computed flag (see
-      // CustomUser.is_platform_admin property) with a local fallback on role
-      // code. Admins are rendered by PlatformAdminShell and never see the
-      // three-context switcher, so no synthetic statusEntries are needed.
-      const backendFlag = (userPayload as { is_platform_admin?: boolean }).is_platform_admin;
-      const isPlatformAdmin = backendFlag ?? role_code === 'ADMIN';
 
       const rawEntries: CompanyStatusEntry[] = companyTypes.map((code) => ({
         status: typeMap[code] || 'BUYER',
@@ -294,8 +244,6 @@ export const useUserStore = create<UserState>((set, get) => ({
         can_send_quotes: sellerSubscriptionOperational === true,
         quote_send_is_demo: false,
         permissions: [],
-        is_platform_admin: isPlatformAdmin,
-        operator_permissions: operatorPermissions,
       };
 
       // Snapshot the context the store held BEFORE we resolve /me, so we can detect
@@ -305,14 +253,8 @@ export const useUserStore = create<UserState>((set, get) => ({
       set({
         screen: 'main',
         activeStatus,
-        // Kept for backwards compatibility with call sites still reading
-        // `isViewerMode`; see the UserState comment above.
-        isViewerMode: isPlatformAdmin,
         sellerSubscriptionOperational,
-        isSuperuser,
-        operatorPermissions,
         capabilities,
-        role: isPlatformAdmin ? 'ADMIN' : 'USER',
         profile: {
           firstName: first_name || '',
           lastName: last_name || '',
@@ -331,13 +273,9 @@ export const useUserStore = create<UserState>((set, get) => ({
           id: company.id ?? null,
           name: company.name || '',
           inn: company.inn || '',
-          // Platform admin is a moderator, not a business actor — their personal
-          // company's KYC state must not gate admin navigation. For regular users
-          // we keep the real verification_status_code mapping.
-          kycStatus: (isPlatformAdmin
+          kycStatus: (['L2_VERIFIED', 'L3_CONTRACTED'].includes(company.verification_status_code ?? '')
             ? 'verified'
-            : (['L2_VERIFIED', 'L3_CONTRACTED'].includes(company.verification_status_code ?? '') ? 'verified' : 'pending')
-          ) as 'verified' | 'pending' | 'not_started',
+            : 'pending') as 'verified' | 'pending' | 'not_started',
           country: company.country != null ? String(company.country) : '',
           city: '',
           logoUrl: company.logo ?? null,
@@ -346,9 +284,7 @@ export const useUserStore = create<UserState>((set, get) => ({
           id: null,
           name: '',
           inn: '',
-          // Platform admin has no company — KYC is not applicable, so we mark
-          // 'verified' to keep KYC banners / guards out of admin nav.
-          kycStatus: isPlatformAdmin ? 'verified' : 'not_started',
+          kycStatus: 'not_started',
           country: '',
           city: '',
           logoUrl: null,
@@ -370,7 +306,6 @@ export const useUserStore = create<UserState>((set, get) => ({
   },
 
   setActiveStatus: (status) => set({ activeStatus: status }),
-  setRole: (role) => set({ role }),
   updateProfile: (partial) =>
     set((s) => ({ profile: { ...s.profile, ...partial } })),
   updateCompany: (partial) =>

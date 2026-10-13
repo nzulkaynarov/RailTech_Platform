@@ -3,8 +3,8 @@ import { Loader2, Sparkles } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 
-import { AiEnrichPanel } from '../admin-catalog/AiEnrichPanel';
-import type { ProductFormState } from '../admin-catalog/useProductForm';
+import { AiEnrichPanel } from '@/components/Shared/product-form/AiEnrichPanel';
+import type { ProductFormState } from '@/components/Shared/product-form/useProductForm';
 
 /**
  * Панель ИИ в карточке-странице: та же механика «предложение по каждому полю», что в

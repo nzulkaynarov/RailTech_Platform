@@ -51,7 +51,7 @@ def _iter_view_layer_files():
             parts = rel.parts
             if "migrations" in parts or "tests" in parts or rel.name.startswith("test_"):
                 continue
-            in_views_package = "views" in parts[:-1] or "admin_api" in parts[:-1]
+            in_views_package = "views" in parts[:-1]
             is_views_module = rel.name.startswith("views")
             if in_views_package or is_views_module or str(rel) in EXTRA_HTTP_MODULES:
                 yield rel

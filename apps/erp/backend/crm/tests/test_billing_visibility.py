@@ -137,9 +137,13 @@ def world(lookups):
     other_co = _company("Other Seller Co", "O100", "SUPPLIER", kyc="L2_VERIFIED")
     other_user = _member(other_co, "other@bill.test", can_sell=True)
 
-    # Platform admin: SystemRole ADMIN with NO active membership → is_platform_admin.
+    # Platform admin: SystemRole ADMIN with NO active membership → is_superuser.
     admin_user = CustomUser.objects.create_user(
-        email="admin@bill.test", username="admin@bill.test", password="x", role=SystemRole.objects.get(code="ADMIN")
+        is_superuser=True,
+        email="admin@bill.test",
+        username="admin@bill.test",
+        password="x",
+        role=SystemRole.objects.get(code="ADMIN"),
     )
     # Authenticated user with no memberships and no admin role → sees nothing.
     nonmember_user = CustomUser.objects.create_user(

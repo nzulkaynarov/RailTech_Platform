@@ -25,6 +25,7 @@ PDF_HEADER = b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n"
 @pytest.fixture
 def operator(db):
     return CustomUser.objects.create_user(
+        is_superuser=True,
         email="upload.operator@test.uz",
         username="upload_operator",
         password="Probe1234!",

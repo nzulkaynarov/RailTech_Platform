@@ -20,6 +20,7 @@ export interface LeadOut {
   owner_mode: string;
   product_interest: string[];
   score: number;
+  source?: string;
   stage: string;
   unread?: boolean;
 }

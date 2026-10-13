@@ -38,6 +38,7 @@ def operator(db):
         username="archive_operator",
         password="Probe1234!",
         role=SystemRole.objects.get(code="ADMIN"),
+        is_superuser=True,
         is_active=True,
     )
 
@@ -312,19 +313,14 @@ def test_archive_state_is_not_a_form_field(operator, company):
 
 
 def test_narrow_operator_cannot_archive(company, db):
-    """Право `companies.manage`, а не «оператор вообще»: архив снимает компанию со всех
-    рабочих поверхностей платформы."""
-    from accounts.models import OperatorRole
+    """Архив — действие администратора (`is_superuser`): носитель SystemRole=ADMIN без
+    суперпользователя после M1-ERP-02 — не администратор."""
 
-    role = OperatorRole.objects.create(
-        code="ARCH_SUPPORT", name="Поддержка", permissions=["companies.view", "users.view"]
-    )
     viewer = CustomUser.objects.create_user(
         email="narrow@archive.test",
         username="narrow_archive",
         password="x",
         role=SystemRole.objects.get(code="ADMIN"),
-        operator_role=role,
         is_active=True,
     )
 
@@ -338,15 +334,12 @@ def test_narrow_operator_cannot_archive(company, db):
 
 
 def test_narrow_operator_cannot_delete(company, db):
-    from accounts.models import OperatorRole
 
-    role = OperatorRole.objects.create(code="ARCH_SUPPORT2", name="Поддержка 2", permissions=["companies.view"])
     viewer = CustomUser.objects.create_user(
         email="narrow2@archive.test",
         username="narrow2_archive",
         password="x",
         role=SystemRole.objects.get(code="ADMIN"),
-        operator_role=role,
         is_active=True,
     )
 

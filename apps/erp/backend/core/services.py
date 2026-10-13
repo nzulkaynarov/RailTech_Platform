@@ -68,7 +68,7 @@ def add_ticket_message(
         text=text,
         is_internal=is_internal,
     )
-    if author and author.is_platform_admin and ticket.status == SupportTicket.STATUS_OPEN and not is_internal:
+    if author and author.is_superuser and ticket.status == SupportTicket.STATUS_OPEN and not is_internal:
         ticket.status = SupportTicket.STATUS_IN_PROGRESS
         ticket.save(update_fields=["status", "updated_at"])
     return message

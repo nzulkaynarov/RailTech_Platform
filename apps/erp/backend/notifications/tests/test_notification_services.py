@@ -65,6 +65,7 @@ def people(lookups):
         can_buy=True,
     )
     operator = CustomUser.objects.create_user(
+        is_superuser=True,
         email="operator@svc.test",
         username="operator@svc.test",
         password="x",

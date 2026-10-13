@@ -12,7 +12,7 @@
 * **47.** `pay/` принимал `months=-2` → 200 и `valid_until` уезжал на 60 дней НАЗАД:
   подписка мгновенно переставала работать, а интерфейс печатал успех. Нечисловое значение
   давало 500 с HTML вместо `{"detail": "<CODE>"}`.
-* **51.** Отказ `OperatorScoped` приходил человеческой фразой, а не кодом — витрина не могла
+* **51.** Отказ `IsPlatformAdmin` приходил человеческой фразой, а не кодом — витрина не могла
   его перевести и печатала системный `ERR_BAD_REQUEST` от axios. Это касалось ЛЮБОГО отказа
   по правам во всей операторской плоскости, а не только подписок.
 """
@@ -29,7 +29,6 @@ from accounts.models import (
     CompanyMember,
     CompanyType,
     CustomUser,
-    OperatorRole,
     SupplierSubscription,
     SystemRole,
     VerificationStatus,
@@ -66,24 +65,19 @@ def world(db):
         can_sell=True,
     )
 
-    billing_role = OperatorRole.objects.create(
-        code="SUBS_BILLING", name="Биллинг", permissions=["billing.view", "billing.manage"]
-    )
     operator = CustomUser.objects.create_user(
         email="billing@subs.test",
         username="billing_subs",
         password="x",
         role=SystemRole.objects.get(code="ADMIN"),
-        operator_role=billing_role,
+        is_superuser=True,
         is_active=True,
     )
-    view_only_role = OperatorRole.objects.create(code="SUBS_VIEW", name="Только просмотр", permissions=["billing.view"])
     viewer = CustomUser.objects.create_user(
         email="viewer@subs.test",
         username="viewer_subs",
         password="x",
         role=SystemRole.objects.get(code="ADMIN"),
-        operator_role=view_only_role,
         is_active=True,
     )
 
@@ -239,12 +233,13 @@ def test_a_sane_payment_still_goes_through(world):
 
 def test_permission_refusal_arrives_as_a_translatable_code(world):
     """Отказ приходил ФРАЗОЙ — витрина не могла её перевести и печатала `ERR_BAD_REQUEST`
-    от axios. Это касалось любого отказа `OperatorScoped` во всей операторской плоскости."""
+    от axios. После M1-ERP-02 отказывает `IsPlatformAdmin`: администратор = суперпользователь,
+    носитель SystemRole=ADMIN без него — обычный пользователь."""
     resp = _api(world["viewer"]).post(f"/api/v1/accounts/subscriptions/{world['sub'].pk}/activate/")
 
     assert resp.status_code == 403
     detail = str(resp.json()["detail"])
-    assert detail == "OPERATOR_PERMISSION_REQUIRED", detail
+    assert detail == "PLATFORM_ADMIN_REQUIRED", detail
     assert detail.isupper() or "_" in detail, "код, а не человеческая фраза"
 
 

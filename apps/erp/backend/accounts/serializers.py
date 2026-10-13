@@ -17,7 +17,6 @@ from .models import (
     CompanyType,
     CustomUser,
     KYCDocument,
-    OperatorRole,
     SupplierSubscription,
 )
 
@@ -159,30 +158,6 @@ class CompanyRoleSerializer(serializers.ModelSerializer):
         return getattr(obj, "member_count", None) if hasattr(obj, "member_count") else obj.members.count()
 
 
-class OperatorRoleSerializer(serializers.ModelSerializer):
-    """A platform-operator sub-role with its capability set (ADR-0004 G1)."""
-
-    operator_count = serializers.SerializerMethodField()
-
-    class Meta:
-        model = OperatorRole
-        fields = [
-            "id",
-            "code",
-            "name",
-            "permissions",
-            "is_system",
-            "description",
-            "operator_count",
-            "created_at",
-            "updated_at",
-        ]
-        read_only_fields = ["id", "code", "is_system", "created_at", "updated_at"]
-
-    def get_operator_count(self, obj) -> int | None:
-        return getattr(obj, "operator_count", None) if hasattr(obj, "operator_count") else obj.operators.count()
-
-
 class KYCDocumentSerializer(serializers.ModelSerializer):
     # `doc_type_display` is the Russian-only lookup NAME — presentation fallback only.
     # `doc_type_code` is the stable lookup CODE the SPA maps to a localized label (IRON RULE 2).
@@ -308,7 +283,7 @@ class CompanySerializer(serializers.ModelSerializer):
         обход держателей стоит нескольких запросов на строку.
         """
         request = self.context.get("request")
-        if not (request and getattr(request.user, "is_platform_admin", False)):
+        if not (request and getattr(request.user, "is_superuser", False)):
             return None
         from accounts.services.company_lifecycle import can_delete_company
 
@@ -357,8 +332,8 @@ class UserSerializer(serializers.ModelSerializer):
     role_data = serializers.SerializerMethodField()
     workspace_role = serializers.SerializerMethodField()
     kyc_status = serializers.SerializerMethodField()
-    operator_role_data = serializers.SerializerMethodField()
-    is_platform_admin = serializers.BooleanField(read_only=True)
+    # Переходный алиас для SPA до чистки фронтенда (M1-ERP-02 волна 1b): администратор = superuser.
+    is_platform_admin = serializers.BooleanField(source="is_superuser", read_only=True)
 
     class Meta:
         model = CustomUser
@@ -378,8 +353,6 @@ class UserSerializer(serializers.ModelSerializer):
             "role_data",
             "workspace_role",
             "kyc_status",
-            "operator_role",
-            "operator_role_data",
             "is_platform_admin",
             "is_2fa_enabled",
             "is_active",
@@ -388,13 +361,7 @@ class UserSerializer(serializers.ModelSerializer):
             "last_login",
             "date_joined",
         ]
-        read_only_fields = ["id", "role", "operator_role", "is_2fa_enabled", "last_login", "date_joined"]
-
-    def get_operator_role_data(self, obj) -> dict | None:
-        op = obj.operator_role
-        if op:
-            return {"id": op.id, "code": op.code, "name": op.name}
-        return None
+        read_only_fields = ["id", "role", "is_2fa_enabled", "last_login", "date_joined"]
 
     def get_role_data(self, obj) -> dict | None:
         if obj.role:
@@ -497,7 +464,8 @@ class MeSerializer(serializers.ModelSerializer):
     role_data = serializers.SerializerMethodField()
     workspace_role = serializers.SerializerMethodField()
     kyc_status = serializers.SerializerMethodField()
-    is_platform_admin = serializers.BooleanField(read_only=True)
+    # Переходный алиас для SPA до чистки фронтенда (M1-ERP-02 волна 1b): администратор = superuser.
+    is_platform_admin = serializers.BooleanField(source="is_superuser", read_only=True)
     # Per-membership flags for the primary company. Frontend uses these to
     # filter the BUYER/SELLER/MANUFACTURER context-switcher.
     can_sell = serializers.SerializerMethodField()
@@ -506,15 +474,10 @@ class MeSerializer(serializers.ModelSerializer):
     # a "subscription required" banner before the seller hits SUBSCRIPTION_REQUIRED
     # on a write. None for non-sellers (banner only renders for can_sell users).
     seller_subscription_operational = serializers.SerializerMethodField()
-    # The platform operator's own sub-role + effective permission codes, so the React admin
-    # can GATE controls client-side (audit F3-UX). Without this the UI showed Add/Edit/Delete
-    # to a view-only operator, which only 403'd on save.
-    operator_role_code = serializers.CharField(source="operator_role.code", read_only=True)
-    operator_permissions = serializers.SerializerMethodField()
     is_superuser = serializers.BooleanField(read_only=True)
     # ADR-0005 (unified nav, Phase B): ONE explicit capability object the frontend's
     # buildNavigation() reads to render/gate the single nav from — instead of re-deriving it
-    # from scattered company_types/can_sell/can_buy/kyc/subscription/operator fields. UI gating
+    # from scattered company_types/can_sell/can_buy/kyc/subscription fields. UI gating
     # only; backend enforcement stays independent (member_has_permission / subscription / KYC-floor).
     capabilities = serializers.SerializerMethodField()
 
@@ -538,8 +501,6 @@ class MeSerializer(serializers.ModelSerializer):
             "kyc_status",
             "is_platform_admin",
             "is_superuser",
-            "operator_role_code",
-            "operator_permissions",
             "can_sell",
             "can_buy",
             "seller_subscription_operational",
@@ -592,24 +553,6 @@ class MeSerializer(serializers.ModelSerializer):
         if company_id is None:
             return None
         return company_has_operational_subscription(company_id)
-
-    def get_operator_permissions(self, obj):
-        """Effective operator permission codes for client-side capability gating.
-
-        None = UNRESTRICTED — superuser, an operator with no sub-role (backward-compat full
-        access), or an `is_system` sub-role (e.g. SUPER_OPERATOR). The is_system case MUST
-        mirror OperatorRole.has_perm's short-circuit (`return self.is_system or code in ...`),
-        otherwise a NEW permission code added later as a nav `requires` would be wrongly hidden
-        from existing super-operators whose stored permission JSON predates it (FE/BE authz
-        desync — audit M7). A list = exactly the codes the assigned sub-role grants, so the
-        React admin hides controls the operator can't use.
-        """
-        if not getattr(obj, "is_platform_admin", False):
-            return None
-        op_role = obj.operator_role
-        if getattr(obj, "is_superuser", False) or op_role is None or op_role.is_system:
-            return None
-        return list(op_role.permissions or [])
 
     def get_capabilities(self, obj):
         """Consolidated effective-capability object (ADR-0005). `permissions` are the member's
@@ -676,8 +619,7 @@ class MeSerializer(serializers.ModelSerializer):
             "ai_daily_cap": ai_usage["cap"],
             "ai_daily_remaining": ai_usage["remaining"],
             "permissions": permissions,
-            "is_platform_admin": bool(getattr(obj, "is_platform_admin", False)),
-            "operator_permissions": self.get_operator_permissions(obj),
+            "is_platform_admin": bool(getattr(obj, "is_superuser", False)),
         }
 
     @staticmethod

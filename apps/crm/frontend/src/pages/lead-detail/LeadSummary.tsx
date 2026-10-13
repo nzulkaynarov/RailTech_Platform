@@ -53,6 +53,18 @@ export function LeadSummary({ lead }: { lead: LeadDetail }) {
             <Link to={`/clients/${String(lead.client_id)}`}>{t.lead.openClient}</Link>
           </Descriptions.Item>
         ) : null}
+        {lead.company_name ? (
+          <Descriptions.Item label={t.lead.company}>{lead.company_name}</Descriptions.Item>
+        ) : null}
+        {lead.email ? (
+          <Descriptions.Item label={t.lead.email}>
+            <Typography.Text
+              copyable={{ text: lead.email, tooltips: [t.lead.copy, t.lead.copied] }}
+            >
+              <a href={`mailto:${lead.email}`}>{lead.email}</a>
+            </Typography.Text>
+          </Descriptions.Item>
+        ) : null}
         <Descriptions.Item label={t.lead.consent}>
           {lead.consent_given_at ? formatDate(lead.consent_given_at) : t.lead.consentNo}
         </Descriptions.Item>

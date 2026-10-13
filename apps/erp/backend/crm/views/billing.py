@@ -11,7 +11,7 @@ from rest_framework.response import Response
 from accounts.services.permissions import seller_company_ids, seller_visible_deal_ids
 from core.file_streaming import stream_file_field
 from core.optimistic_locking import OptimisticLockingMixin
-from core.permissions import IsCompanyMemberOrPlatformAdmin, OperatorScoped
+from core.permissions import IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin
 from crm import services as crm_services
 from crm.constants import DEFAULT_INVOICE_DUE_DAYS, InvoiceStatusCode
 from crm.models import Act, Contract, Fulfillment, Invoice, InvoiceItem, Payment
@@ -204,10 +204,6 @@ class ContractViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
     # Без FilterSet DjangoFilterBackend молча возвращает список ЦЕЛИКОМ — см. billing_filters.
     filterset_class = ContractFilter
     # Operator sub-capability for the admin contract overrides (ADR-0004 G1).
-    operator_permissions = {
-        "cancel": "moderation.force_override",
-        "force_cancel": "moderation.force_override",
-    }
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
@@ -219,7 +215,7 @@ class ContractViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         # Platform admin sees every billing record; otherwise BOTH sides of a deal
         # (buyer company + routed seller) see its records, regardless of the SPA
         # X-Active-Context header (WP-1). Seller side stays routing-scoped.
-        if getattr(user, "is_platform_admin", False):
+        if getattr(user, "is_superuser", False):
             return qs
         return qs.filter(
             _billing_visibility_q(user, self.request, deal_path="deal", seller_path="quote__seller_company_id")
@@ -330,7 +326,7 @@ class ContractViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         return Response(ContractSerializer(contract).data)
 
     @extend_schema(summary="Cancel contract", tags=["CRM"])
-    @action(detail=True, methods=["post"], url_path="cancel", permission_classes=[IsAuthenticated, OperatorScoped])
+    @action(detail=True, methods=["post"], url_path="cancel", permission_classes=[IsAuthenticated, IsPlatformAdmin])
     def cancel(self, request, pk=None):
         contract, err = crm_services.cancel_contract(int(pk), request.user, reason=request.data.get("reason", ""))
         if err:
@@ -350,7 +346,7 @@ class ContractViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         tags=["CRM"],
     )
     @action(
-        detail=True, methods=["post"], url_path="force-cancel", permission_classes=[IsAuthenticated, OperatorScoped]
+        detail=True, methods=["post"], url_path="force-cancel", permission_classes=[IsAuthenticated, IsPlatformAdmin]
     )
     def force_cancel(self, request, pk=None):
         contract, err = crm_services.force_cancel_contract(
@@ -399,7 +395,7 @@ class InvoiceViewSet(
         # Platform admin sees every billing record; otherwise BOTH sides of a deal
         # (buyer company + routed seller) see its records, regardless of the SPA
         # X-Active-Context header (WP-1). Seller side stays routing-scoped.
-        if getattr(user, "is_platform_admin", False):
+        if getattr(user, "is_superuser", False):
             return qs
         # Invoice ownership resolves through the contract chain OR — for a G2 contract-less MANUAL
         # invoice — through its items' source КП. Buyer sees its deals' invoices; seller sees the
@@ -581,7 +577,7 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
         # Platform admin sees every billing record; otherwise BOTH sides of a deal
         # (buyer company + routed seller) see its records, regardless of the SPA
         # X-Active-Context header (WP-1). Payment reaches its deal via invoice__deal.
-        if getattr(user, "is_platform_admin", False):
+        if getattr(user, "is_superuser", False):
             return qs
         return qs.filter(
             _billing_visibility_q(
@@ -621,7 +617,7 @@ class ActViewSet(viewsets.ReadOnlyModelViewSet):
         # (buyer company + routed seller) see its records, regardless of the SPA
         # X-Active-Context header (WP-1). Владелец акта резолвится по всем цепочкам его
         # счёта — иначе акт по ручному счёту уходил в фолбэк и был виден конкуренту.
-        if getattr(user, "is_platform_admin", False):
+        if getattr(user, "is_superuser", False):
             return qs
         return qs.filter(act_visibility_q(user, self.request)).distinct()
 
@@ -761,7 +757,7 @@ class FulfillmentViewSet(viewsets.ReadOnlyModelViewSet):
         # Platform admin sees every billing record; otherwise BOTH sides of a deal
         # (buyer company + routed seller) see its records, regardless of the SPA
         # X-Active-Context header (WP-1). Seller side stays routing-scoped.
-        if getattr(user, "is_platform_admin", False):
+        if getattr(user, "is_superuser", False):
             return qs
         return qs.filter(
             _billing_visibility_q(

@@ -1,12 +1,10 @@
-import { useMemo, useState } from 'react'; import { useTranslation } from 'react-i18next'; import { toast } from 'sonner'; import { translateApiError } from '@/lib/apiError'; import { formatDate, formatDateTime } from '@/lib/formatLocale'; import { extractBlobErrorCode, fetchDocumentBlob, saveBlob } from '@/lib/documents'; import { PenLine, Upload, Download, Receipt, Ban, FileSignature, ShieldAlert } from 'lucide-react'; import { DocumentActions } from '@/components/Shared/DocumentActions'; import { Badge } from '@/components/ui/badge'; import { Button } from '@/components/ui/button'; import { Label } from '@/components/ui/label'; import { Textarea } from '@/components/ui/textarea'; import {   Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, } from '@/components/ui/sheet'; import {   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, } from '@/components/ui/alert-dialog'; import { PageShell } from './shared/PageShell'; import { DocumentRegistry } from '@/components/Documents/DocumentRegistry'; import { useDocumentCoreColumns } from '@/components/Documents/useDocumentCoreColumns'; import { ManualModeBanner } from '@/components/Shared/ManualModeBanner'; import { Toolbar } from '@/components/DataTable';
+import { useMemo, useState } from 'react'; import { useTranslation } from 'react-i18next'; import { toast } from 'sonner'; import { translateApiError } from '@/lib/apiError'; import { formatDate, formatDateTime } from '@/lib/formatLocale'; import { extractBlobErrorCode, fetchDocumentBlob, saveBlob } from '@/lib/documents'; import { PenLine, Upload, Download, Receipt, Ban, FileSignature } from 'lucide-react'; import { DocumentActions } from '@/components/Shared/DocumentActions'; import { Badge } from '@/components/ui/badge'; import { Button } from '@/components/ui/button'; import { Label } from '@/components/ui/label'; import { Textarea } from '@/components/ui/textarea'; import {   Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, } from '@/components/ui/sheet'; import {   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, } from '@/components/ui/alert-dialog'; import { PageShell } from './shared/PageShell'; import { DocumentRegistry } from '@/components/Documents/DocumentRegistry'; import { useDocumentCoreColumns } from '@/components/Documents/useDocumentCoreColumns'; import { ManualModeBanner } from '@/components/Shared/ManualModeBanner'; import { Toolbar } from '@/components/DataTable';
 import { useListParams, applyListParams } from '@/components/DataTable/listParams';
 import {
   useContracts, useSignContractClient, useSignContractManager,
-  useUploadSignedContract, useCancelContract, useForceCancelContract, useGenerateInvoice,
+  useUploadSignedContract, useCancelContract, useGenerateInvoice,
 } from '@/hooks/useBilling';
-import { useUserStore } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
-import { useIsViewerMode } from '@/hooks/useViewerMode';
 import type { Contract, ContractStatus } from '@/api/contractsApi';
 import { ContractWordingSection } from '@/components/CRM/ContractWordingSection';
 import { DealLink } from '@/components/Shared/DealLink';
@@ -43,16 +41,10 @@ export function ContractsPage() {
   // (`crm/services/contracts.py`). Юридическая запись с чужим основанием — тихий, но дорогой
   // дефект: заголовок диалога называл один номер, а причина была написана про другой.
   const [cancelReason, setCancelReason] = useDraftState(cancelTarget, () => '');
-  const [forceCancelTarget, setForceCancelTarget] = useState<Contract | null>(null);
-  const [forceCancelReason, setForceCancelReason] = useDraftState(forceCancelTarget, () => '');
 
-  const role = useUserStore((s) => s.role);
-  const isPlatformAdmin = role === 'ADMIN';
   // Contract is double-signed: the buyer signs as client, the seller as manager. Which side the
   // viewer may sign is server-computed per contract (viewer_can_sign_client/manager) — NOT the
   // page context — so a dual buy+sell company gets the correct button either way.
-  const isViewer = useIsViewerMode();
-  const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
   const { data: contracts, isLoading, isError, refetch } = useContracts(undefined);
   const generateInvoice = useGenerateInvoice();
 
@@ -88,7 +80,6 @@ export function ContractsPage() {
   const signManager = useSignContractManager();
   const uploadSigned = useUploadSignedContract();
   const cancelMut = useCancelContract();
-  const forceCancelMut = useForceCancelContract();
 
   // P2-2: render the detail panel from the LIVE query cache (not a captured
   // snapshot). A sign/cancel mutation invalidates ['contracts'] → the list refetches
@@ -101,7 +92,7 @@ export function ContractsPage() {
   // Side indicator: which side the VIEWER acts as on THIS contract — derived from the
   // server-computed sign hints (viewer_can_sign_client/manager), not the SPA page context, so a
   // dual buy+sell company sees the correct side per contract regardless of which context it
-  // landed in. Null when the viewer is neither side (platform viewer / non-signer).
+  // landed in. Null when the viewer is neither side (non-signer).
   const sideBadgeFor = (contract: Contract) => {
     const side: 'buyer' | 'seller' | null = contract.viewer_can_sign_client
       ? 'buyer'
@@ -173,21 +164,6 @@ export function ContractsPage() {
     }
   };
 
-  const onForceCancel = async () => {
-    if (!forceCancelTarget) return;
-    if (!forceCancelReason.trim()) {
-      toast.error(t('contractsPage.forceCancelReasonRequired'));
-      return;
-    }
-    try {
-      await forceCancelMut.mutateAsync({ id: forceCancelTarget.id, reason: forceCancelReason });
-      toast.success(t('contractsPage.forceCancelled'));
-      setForceCancelTarget(null);
-      setSelectedId(null);
-    } catch (e) {
-      toast.error(translateApiError(e));
-    }
-  };
 
   const { items: pageItems, total } = applyListParams(contracts ?? [], listParams, {
     searchFields: (c) => [c.number, String(c.deal)],
@@ -338,8 +314,7 @@ export function ContractsPage() {
                   <Button
                     variant="outline"
                     onClick={() => onCreateInvoice(selected)}
-                    disabled={generateInvoice.isPending || isViewer}
-                    title={isViewer ? viewerTip : undefined}
+                    disabled={generateInvoice.isPending}
                   >
                     <Receipt className="mr-2 h-4 w-4" />
                     {t('contractsPage.createInvoice')}
@@ -348,8 +323,7 @@ export function ContractsPage() {
                 {selected.viewer_can_sign_client && !selected.client_signed_at && (selected.status === 'PENDING_CLIENT' || selected.status === 'DRAFT') && (
                   <Button
                     onClick={() => onSignClient(selected)}
-                    disabled={signClient.isPending || isViewer}
-                    title={isViewer ? viewerTip : undefined}
+                    disabled={signClient.isPending}
                   >
                     <PenLine className="mr-2 h-4 w-4" />
                     {t('contractsPage.signClient')}
@@ -358,16 +332,14 @@ export function ContractsPage() {
                 {selected.viewer_can_sign_manager && !selected.manager_signed_at && (selected.status === 'PENDING_MANAGER' || selected.status === 'PENDING_CLIENT' || selected.status === 'DRAFT') && (
                   <Button
                     onClick={() => onSignManager(selected)}
-                    disabled={signManager.isPending || isViewer}
-                    title={isViewer ? viewerTip : undefined}
+                    disabled={signManager.isPending}
                   >
                     <PenLine className="mr-2 h-4 w-4" />
                     {t('contractsPage.signManager')}
                   </Button>
                 )}
                 <label
-                  className={`flex items-center justify-center gap-2 rounded-md border border-dashed border-border px-3 py-2 text-sm ${isViewer ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-accent'}`}
-                  title={isViewer ? viewerTip : undefined}
+                  className={`flex items-center justify-center gap-2 rounded-md border border-dashed border-border px-3 py-2 text-sm cursor-pointer hover:bg-accent`}
                 >
                   <Upload className="h-4 w-4" />
                   <span>{t('contractsPage.uploadSigned')}</span>
@@ -375,7 +347,6 @@ export function ContractsPage() {
                     type="file"
                     className="hidden"
                     accept=".pdf,.jpg,.jpeg,.png"
-                    disabled={isViewer}
                     onChange={(e) => {
                       const f = e.target.files?.[0];
                       if (f) onUploadFile(selected, f);
@@ -387,21 +358,9 @@ export function ContractsPage() {
                   <Button
                     variant="destructive"
                     onClick={() => setCancelTarget(selected)}
-                    disabled={isViewer}
-                    title={isViewer ? viewerTip : undefined}
                   >
                     <Ban className="mr-2 h-4 w-4" />
                     {t('contractsPage.cancel')}
-                  </Button>
-                )}
-                {isPlatformAdmin && selected.status !== 'CANCELLED' && (
-                  <Button
-                    variant="outline"
-                    className="border-warning text-warning hover:bg-warning/10"
-                    onClick={() => setForceCancelTarget(selected)}
-                  >
-                    <ShieldAlert className="mr-2 h-4 w-4" />
-                    {t('contractsPage.forceCancel')}
                   </Button>
                 )}
               </div>
@@ -434,36 +393,6 @@ export function ContractsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog
-        open={!!forceCancelTarget}
-        onOpenChange={(o) => { if (!o) setForceCancelTarget(null); }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-warning">
-              <ShieldAlert className="h-4 w-4" />
-              {t('contractsPage.confirmForceCancel')}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('contractsPage.forceCancelHint', { number: forceCancelTarget?.number })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="forceCancelReason">{t('contractsPage.forceCancelReason')}</Label>
-            <Textarea
-              id="forceCancelReason"
-              value={forceCancelReason}
-              onChange={(e) => setForceCancelReason(e.target.value)}
-            />
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={onForceCancel} disabled={forceCancelMut.isPending}>
-              {t('contractsPage.forceCancel')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </PageShell>
   );
 }

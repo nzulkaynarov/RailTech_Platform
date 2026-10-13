@@ -20,7 +20,6 @@ vi.mock('@/api/contractsApi', async (importOriginal) => {
       signManager: vi.fn(),
       uploadSigned: vi.fn(),
       cancel: vi.fn(),
-      forceCancel: vi.fn(),
     },
   };
 });
@@ -74,7 +73,7 @@ describe('ContractsPage', () => {
   beforeEach(() => {
     signedState = false;
     // Regular company user, buyer context, not an admin viewer.
-    useUserStore.setState({ role: 'USER', activeStatus: 'BUYER', isViewerMode: false });
+    useUserStore.setState({ activeStatus: 'BUYER' });
     vi.mocked(contractsApi.list).mockImplementation(async () => (signedState ? [SIGNED] : [PENDING]));
     vi.mocked(contractsApi.signClient).mockImplementation(async () => {
       signedState = true;

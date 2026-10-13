@@ -15,6 +15,7 @@ MANAGER = {
     ("leads", "reply"),
     ("leads", "note"),
     ("leads", "assist"),
+    ("leads", "create"),  # «Новый лид» вручную (M3-CRM-05)
     ("stream", "read"),
     ("dashboard", "read"),
     ("clients", "read"),
@@ -64,4 +65,5 @@ def test_permissions_payload_shape() -> None:
         "reply": False,
         "note": False,
         "assist": False,
+        "create": False,
     }

@@ -24,10 +24,8 @@ REQUEST_EDITABLE_STAGES = frozenset({DealStageCode.DRAFT})
 
 def buyer_can_edit_request(deal: Deal, user: CustomUser) -> bool:
     """True if `user` may add/edit/remove the request line items on `deal`."""
-    from accounts.services.permissions import is_member_of, is_platform_admin_viewer
+    from accounts.services.permissions import is_member_of
 
-    if is_platform_admin_viewer(user):
-        return False
     if not is_member_of(user, deal.company_id, capability="buy"):
         return False
     stage_code = deal.stage.code if deal.stage_id else None
@@ -348,11 +346,9 @@ def route_request_to_sellers(user: CustomUser, deal: Deal, seller_company_ids: l
     from rest_framework.exceptions import PermissionDenied, ValidationError
 
     from accounts.models import Company
-    from accounts.services.permissions import is_member_of, is_platform_admin_viewer
+    from accounts.services.permissions import is_member_of
     from crm.models import DealSellerRouting
 
-    if is_platform_admin_viewer(user):
-        raise PermissionDenied("ADMIN_VIEWER_CANNOT_ACT")
     if not is_member_of(user, deal.company_id, capability="buy"):
         raise PermissionDenied("ONLY_BUYER_CAN_ROUTE")
     if (deal.stage.code if deal.stage_id else None) != DealStageCode.DRAFT:
@@ -405,10 +401,8 @@ def submit_request(user: CustomUser, deal: Deal) -> Deal:
     from rest_framework.exceptions import PermissionDenied, ValidationError
 
     from accounts.services.kyc import company_kyc_verified
-    from accounts.services.permissions import is_member_of, is_platform_admin_viewer
+    from accounts.services.permissions import is_member_of
 
-    if is_platform_admin_viewer(user):
-        raise PermissionDenied("ADMIN_VIEWER_CANNOT_ACT")
     if not is_member_of(user, deal.company_id, capability="buy"):
         raise PermissionDenied("ONLY_BUYER_CAN_SUBMIT_REQUEST")
     # ADR-0006 Phase E — KYC floor: «после KYC = минимум». Browsing + building a DRAFT заявка is

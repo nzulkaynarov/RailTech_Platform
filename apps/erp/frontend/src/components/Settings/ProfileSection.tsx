@@ -6,7 +6,7 @@
  */
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Shield, Save } from 'lucide-react';
+import { Save } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -15,12 +15,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 
-import { useUserStore, roleLabels } from '@/store/userStore';
+import { useUserStore } from '@/store/userStore';
 import { useThemeStore } from '@/store/themeStore';
 import { accountsApi } from '@/api/accountsApi';
 import { ImageUpload } from '@/components/Shared/ImageUpload';
@@ -28,7 +27,7 @@ import { ImageUpload } from '@/components/Shared/ImageUpload';
 export function ProfileSection() {
   const { t, i18n } = useTranslation();
   const { theme, setTheme } = useThemeStore();
-  const { profile, role, updateProfile } = useUserStore();
+  const { profile, updateProfile } = useUserStore();
   const [form, setForm] = useState({
     ...profile,
     language: i18n.language?.startsWith('ru') ? 'ru' : 'en',
@@ -119,11 +118,6 @@ export function ProfileSection() {
                 <Label htmlFor="position">{t('profile.fields.position')}</Label>
                 <Input id="position" value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} />
               </div>
-            </div>
-
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Shield className="h-4 w-4" />
-              {t('profile.personalInfo.role')}: <Badge variant="outline">{t(roleLabels[role])}</Badge>
             </div>
           </CardContent>
         </Card>

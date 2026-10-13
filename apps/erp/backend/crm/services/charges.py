@@ -76,10 +76,8 @@ def reorder_quote_charges(quote_id: int, ordered_ids, actor):
     """Set the cascade order of a КП's charges (seller action) and recalc. `ordered_ids` is the
     full list of charge ids in the new top-to-bottom order; sort_order = index. Thin service
     (Rule 8). Editable КП only (a sent/frozen КП is locked)."""
-    from accounts.services.permissions import is_platform_admin_viewer, is_seller
+    from accounts.services.permissions import is_seller
 
-    if is_platform_admin_viewer(actor):
-        return None, "ADMIN_VIEWER_CANNOT_ACT"
     if not (getattr(actor, "is_superuser", False) or is_seller(actor)):
         return None, "ONLY_SELLER_CAN_BUILD_QUOTE"
     quote = Quote.objects.filter(pk=quote_id).first()
@@ -108,10 +106,8 @@ def set_quote_delivery_basis(quote_id: int, basis_id, actor):
     Returns (quote, None) on success or (None, error_code). Thin service the
     viewset calls — keeps the endpoint a wrapper (Rule 8).
     """
-    from accounts.services.permissions import is_platform_admin_viewer, is_seller
+    from accounts.services.permissions import is_seller
 
-    if is_platform_admin_viewer(actor):
-        return None, "ADMIN_VIEWER_CANNOT_ACT"
     if not (getattr(actor, "is_superuser", False) or is_seller(actor)):
         return None, "ONLY_SELLER_CAN_BUILD_QUOTE"
 

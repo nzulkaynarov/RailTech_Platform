@@ -20,8 +20,6 @@ from accounts.views import (
     ForgotPasswordView,
     LogoutView,
     MeView,
-    OperatorPermissionCatalogView,
-    OperatorRoleViewSet,
     PermissionCatalogView,
     RegisterView,
     ResetPasswordView,
@@ -51,14 +49,6 @@ from catalog.views import (
     ProductViewSet,
     StockStatusViewSet,
     SupplierOfferViewSet,
-)
-from core.admin_api import (
-    AdminAccessLogView,
-    AdminActivityView,
-    AdminPulseView,
-    AdminSearchView,
-    AdminTriageQueueView,
-    BreakGlassView,
 )
 from core.health import health_check
 from core.views import PageStatsView, PlatformDashboardView, SupportTicketViewSet, SystemSettingsView
@@ -169,7 +159,6 @@ router.register(r"accounts/system-roles", SystemRoleViewSet, basename="systemrol
 router.register(r"accounts/workspace-roles", WorkspaceRoleViewSet, basename="workspacerole")
 router.register(r"accounts/company-types", CompanyTypeViewSet, basename="companytype")
 router.register(r"accounts/company-roles", CompanyRoleViewSet, basename="company-role")
-router.register(r"admin/operator-roles", OperatorRoleViewSet, basename="operator-role")
 router.register(r"notifications", NotificationViewSet, basename="notification")
 router.register(r"admin/email-templates", EmailTemplateViewSet, basename="admin-email-template")
 
@@ -261,13 +250,6 @@ urlpatterns = (
         path("api/v1/crm/timeline/", TimelineView.as_view(), name="crm-timeline"),
         path("api/v1/analytics/page-stats/", PageStatsView.as_view(), name="page-stats"),
         path("api/v1/analytics/platform-dashboard/", PlatformDashboardView.as_view(), name="platform-dashboard"),
-        # Admin Platform API
-        path("api/v1/admin/queue/", AdminTriageQueueView.as_view(), name="admin-queue"),
-        path("api/v1/admin/pulse/", AdminPulseView.as_view(), name="admin-pulse"),
-        path("api/v1/admin/search/", AdminSearchView.as_view(), name="admin-search"),
-        path("api/v1/admin/activity/", AdminActivityView.as_view(), name="admin-activity"),
-        path("api/v1/admin/break-glass/", BreakGlassView.as_view(), name="admin-break-glass"),
-        path("api/v1/admin/access-log/", AdminAccessLogView.as_view(), name="admin-access-log"),
         path("api/v1/crm/leads/", LeadCreateView.as_view(), name="lead-create"),
         # Public, unauthenticated КП surface by secret token (Wave A: page + offline acceptance).
         # The bare path content-negotiates (browser → HTML page, ?export=pdf → PDF); the action
@@ -289,11 +271,6 @@ urlpatterns = (
         path("api/v1/system-settings/", SystemSettingsView.as_view(), name="system-settings"),
         path("api/v1/accounts/me/", MeView.as_view(), name="current-user"),
         path("api/v1/accounts/permissions/", PermissionCatalogView.as_view(), name="permission-catalog"),
-        path(
-            "api/v1/admin/operator-permissions/",
-            OperatorPermissionCatalogView.as_view(),
-            name="operator-permission-catalog",
-        ),
         path("api/v1/health/", health_check, name="health_check"),
         # Root-level health endpoint for Docker/K8s healthchecks
         path("health/", health_check, name="health_check_root"),

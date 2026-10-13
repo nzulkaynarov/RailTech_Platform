@@ -4,7 +4,6 @@ import { ArrowLeft, Calculator, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { QuoteStatus, DealStage } from '@/lib/codes';
 import { useUserStore } from '@/store/userStore';
-import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { useIsSoloSeller } from '@/hooks/useCapabilities';
 import {
   useDeal, useChangeDealStage, useApproveQuote, useRejectQuote, useSendQuoteToClient,
@@ -49,8 +48,6 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
   const [rejectOpen, setRejectOpen] = useState(false);
   const [approveConfirmOpen, setApproveConfirmOpen] = useState(false);
   const [generateQuoteOpen, setGenerateQuoteOpen] = useState(false);
-  const isViewer = useIsViewerMode();
-  const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
 
   const changeStage = useChangeDealStage();
   const approveQuote = useApproveQuote();
@@ -197,8 +194,6 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
           canTakeAndPrepare={canTakeAndPrepare}
           canSubmitForReview={canSubmitForReview}
           canEditRequest={canEditRequest}
-          isViewer={isViewer}
-          viewerTip={viewerTip}
           changeStagePending={changeStage.isPending}
           claimPending={claimMut.isPending}
           releasePending={releaseMut.isPending}
@@ -295,7 +290,7 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
         {/* F2 II-4 — documents attached to this deal + «Создать документ» (pre-bound to the deal).
             Received counterparty documents surface here read-only with a «Получен» badge. Renders
             regardless of a buyer company, so a solo deal still has its documents surface. */}
-        <DealDocumentsCard dealId={deal.id} isViewer={isViewer} viewerTip={viewerTip} />
+        <DealDocumentsCard dealId={deal.id} />
 
         {/* CRM Phase A — deal history feed (renders nothing while empty) */}
         <DealTimeline dealId={deal.id} />

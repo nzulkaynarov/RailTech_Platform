@@ -37,6 +37,7 @@ def clear_lookup_cache():
 @pytest.fixture
 def operator(db):
     return CustomUser.objects.create_user(
+        is_superuser=True,
         email="lookup.operator@test.uz",
         username="lookup_operator",
         password="Probe1234!",

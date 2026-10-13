@@ -27,7 +27,6 @@ type MockUserState = {
   };
   activeStatus: 'BUYER' | 'SELLER';
   updateCompany: ReturnType<typeof vi.fn>;
-  isViewerMode: boolean;
   capabilities: { permissions: string[] };
 };
 const userStoreRef = vi.hoisted(() => ({ state: null as unknown as MockUserState }));
@@ -78,7 +77,6 @@ function makeUserState(
     },
     activeStatus: 'SELLER',
     updateCompany: vi.fn(),
-    isViewerMode: false,
     capabilities: { permissions },
   };
 }

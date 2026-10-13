@@ -8,16 +8,14 @@ interface ManualModeBannerProps {
 }
 
 /**
- * Reminds Platform Admin / seller-side staff that payment & e-sign are on the
+ * Reminds seller-side staff that payment & e-sign are on the
  * manual pipeline (no Click/Payme/E-IMZO yet). Hidden for buyers — they don't
  * need to know about internal tech debt, only about the button to click.
  */
 export function ManualModeBanner({ kind }: ManualModeBannerProps) {
   const { t } = useTranslation();
-  const role = useUserStore((s) => s.role);
   const activeStatus = useUserStore((s) => s.activeStatus);
-  const showForAudience =
-    role === 'ADMIN' || activeStatus === 'SELLER';
+  const showForAudience = activeStatus === 'SELLER';
   if (!showForAudience) return null;
   return (
     <Alert variant="default" className="border-warning/40 bg-warning/5">

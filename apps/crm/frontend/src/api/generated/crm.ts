@@ -88,6 +88,7 @@ import type {
   LoginRequest,
   MakeCustomer,
   ManualDocument,
+  ManualLeadIn,
   MePatch,
   MessageOut,
   ModelChangeIn,
@@ -132,6 +133,9 @@ import type {
   UserCreated,
   UserOut,
   UserUpdate,
+  WebFormToken,
+  WebLeadAccepted,
+  WebLeadIn,
 } from "./model";
 
 import { http } from "../http";
@@ -6848,6 +6852,338 @@ export function useListLeads<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getListLeadsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateLeadUrl = () => {
+  return `/api/v1/leads`;
+};
+
+/**
+ * «Новый лид» вручную: звонок, письмо, рекомендация; создавший становится ответственным.
+ *
+ * 409 `conflict` с `details.reason=lead_exists` (`lead_id`, `display_name`) или
+ * `client_exists` (`client_id`, `client_name`) — такой телефон/почта уже есть: откройте карточку.
+ * @summary Create Lead
+ */
+export const createLead = async (
+  manualLeadIn: ManualLeadIn,
+  options?: Parameters<typeof http>[1],
+): Promise<Created> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<Created>(getCreateLeadUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(manualLeadIn),
+  });
+};
+
+export const getCreateLeadMutationKey = () => ["createLead"] as const;
+
+export const getCreateLeadMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createLead>>,
+    TError,
+    CreateLeadMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createLead>>,
+  TError,
+  CreateLeadMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateLeadMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createLead>>,
+    CreateLeadMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createLead(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateLeadMutationResult = NonNullable<Awaited<ReturnType<typeof createLead>>>;
+export type CreateLeadMutationBody = ManualLeadIn;
+export type CreateLeadMutationError = ErrorType<ErrorOut>;
+export type CreateLeadMutationVariables = { data: ManualLeadIn };
+
+/**
+ * @summary Create Lead
+ */
+export const useCreateLead = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createLead>>,
+      TError,
+      CreateLeadMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createLead>>,
+  TError,
+  CreateLeadMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateLeadMutationOptions(options), queryClient);
+};
+
+export const getWebLeadUrl = () => {
+  return `/api/v1/leads/web`;
+};
+
+/**
+ * Форма «Запрос» со страницы входа Cabinet → лид CRM с источником `web` (ARCHITECTURE §17).
+ *
+ * Без аутентификации. Нужен телефон или e-mail. Ошибки: 422 `validation_failed` с
+ * `details.reason` (`form_token_invalid` | `form_too_fast` | `form_token_expired` |
+ * `contact_required` | `invalid_phone` | `invalid_email`), 429 `rate_limited`.
+ * Повторный запрос известного контакта дополняет существующую карточку.
+ * @summary Web Lead
+ */
+export const webLead = async (
+  webLeadIn: WebLeadIn,
+  options?: Parameters<typeof http>[1],
+): Promise<WebLeadAccepted> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<WebLeadAccepted>(getWebLeadUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(webLeadIn),
+  });
+};
+
+export const getWebLeadMutationKey = () => ["webLead"] as const;
+
+export const getWebLeadMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof webLead>>,
+    TError,
+    WebLeadMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof webLead>>,
+  TError,
+  WebLeadMutationVariables,
+  TContext
+> => {
+  const mutationKey = getWebLeadMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof webLead>>,
+    WebLeadMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return webLead(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type WebLeadMutationResult = NonNullable<Awaited<ReturnType<typeof webLead>>>;
+export type WebLeadMutationBody = WebLeadIn;
+export type WebLeadMutationError = ErrorType<ErrorOut>;
+export type WebLeadMutationVariables = { data: WebLeadIn };
+
+/**
+ * @summary Web Lead
+ */
+export const useWebLead = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof webLead>>,
+      TError,
+      WebLeadMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof webLead>>,
+  TError,
+  WebLeadMutationVariables,
+  TContext
+> => {
+  return useMutation(getWebLeadMutationOptions(options), queryClient);
+};
+
+export const getWebLeadTokenUrl = () => {
+  return `/api/v1/leads/web/token`;
+};
+
+/**
+ * Токен формы «Запрос»: получить при показе формы, отправить в `form_token`.
+ *
+ * Без аутентификации. Отправка раньше `min_fill_seconds` или после `expires_at` отклоняется.
+ * @summary Web Lead Token
+ */
+export const webLeadToken = async (options?: Parameters<typeof http>[1]): Promise<WebFormToken> => {
+  return http<WebFormToken>(getWebLeadTokenUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getWebLeadTokenQueryKey = () => {
+  return [`/api/v1/leads/web/token`] as const;
+};
+
+export const getWebLeadTokenQueryOptions = <
+  TData = Awaited<ReturnType<typeof webLeadToken>>,
+  TError = ErrorType<ErrorOut>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof webLeadToken>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getWebLeadTokenQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof webLeadToken>>> = ({ signal }) =>
+    webLeadToken({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof webLeadToken>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type WebLeadTokenQueryResult = NonNullable<Awaited<ReturnType<typeof webLeadToken>>>;
+export type WebLeadTokenQueryError = ErrorType<ErrorOut>;
+
+export function useWebLeadToken<
+  TData = Awaited<ReturnType<typeof webLeadToken>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof webLeadToken>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof webLeadToken>>,
+          TError,
+          Awaited<ReturnType<typeof webLeadToken>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useWebLeadToken<
+  TData = Awaited<ReturnType<typeof webLeadToken>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof webLeadToken>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof webLeadToken>>,
+          TError,
+          Awaited<ReturnType<typeof webLeadToken>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useWebLeadToken<
+  TData = Awaited<ReturnType<typeof webLeadToken>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof webLeadToken>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Web Lead Token
+ */
+
+export function useWebLeadToken<
+  TData = Awaited<ReturnType<typeof webLeadToken>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof webLeadToken>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getWebLeadTokenQueryOptions(options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

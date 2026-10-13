@@ -45,7 +45,7 @@ class PageStatsView(APIView):
             return Response(cached)
 
         # B2B data isolation: staff sees everything, regular users — only their companies
-        is_staff = request.user.is_platform_admin
+        is_staff = request.user.is_superuser
         if is_staff:
             deals_qs = Deal.objects.all()
             quotes_qs = Quote.objects.all()

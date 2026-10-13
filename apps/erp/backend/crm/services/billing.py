@@ -57,12 +57,10 @@ def generate_invoice_from_contract(
 
     from django.utils import timezone
 
-    from accounts.services import assert_seller_can_operate, is_platform_admin_viewer, is_seller
+    from accounts.services import assert_seller_can_operate, is_seller
 
     from ..models import Contract, Invoice, InvoiceItem
 
-    if actor is not None and is_platform_admin_viewer(actor):
-        return None, "ADMIN_VIEWER_CANNOT_ACT"
     # Issuing the invoice is a seller-side action.
     if actor is not None and not (getattr(actor, "is_superuser", False) or is_seller(actor)):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
@@ -306,7 +304,7 @@ def record_payment(
 
     from decimal import Decimal as D
 
-    from accounts.services import is_member_of, is_platform_admin_viewer
+    from accounts.services import is_member_of
 
     from ..models import Invoice, Payment
 
@@ -315,8 +313,6 @@ def record_payment(
     except Invoice.DoesNotExist:
         return None, "NOT_FOUND"
     # Actor-guard: platform-admin viewer cannot execute business actions.
-    if is_platform_admin_viewer(actor):
-        return None, "ADMIN_VIEWER_CANNOT_ACT"
     # Payment is recorded by the buyer side of the deal -- must be member w/ can_buy.
     # Additive guard (defense-in-depth): legacy can_buy capability OR explicit
     # payment.record CompanyRole permission. has_explicit_company_role_perm skips
@@ -458,17 +454,10 @@ def generate_act(
 ) -> Tuple[Optional[object], Optional[str]]:
     from django.utils import timezone
 
-    from accounts.services import (
-        assert_seller_can_operate,
-        is_platform_admin_viewer,
-        is_seller,
-        seller_company_routed_to_deal,
-    )
+    from accounts.services import assert_seller_can_operate, is_seller, seller_company_routed_to_deal
 
     from ..models import Act, Invoice
 
-    if actor is not None and is_platform_admin_viewer(actor):
-        return None, "ADMIN_VIEWER_CANNOT_ACT"
     # Issuing the act (acceptance certificate) is a seller-side action.
     if actor is not None and not (getattr(actor, "is_superuser", False) or is_seller(actor)):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
@@ -641,9 +630,9 @@ def act_viewer_side(actor, act) -> str:
     Акт двусторонний: выпускает исполнитель, принимает заказчик. Раньше сторона не
     различалась вовсе — кто первый нажал, тот и закрывал документ в одиночку.
     """
-    from accounts.services import is_member_of, is_platform_admin_viewer, seller_company_routed_to_deal
+    from accounts.services import is_member_of, seller_company_routed_to_deal
 
-    if actor is None or getattr(actor, "is_anonymous", False) or is_platform_admin_viewer(actor):
+    if actor is None or getattr(actor, "is_anonymous", False):
         return ""
     if seller_company_routed_to_deal(actor, act.deal_id):
         return "issuer"
@@ -681,10 +670,6 @@ def sign_act(act_id: int, actor: CustomUser, signed_file=None) -> Tuple[Optional
     """
     from django.utils import timezone
 
-    from accounts.services import is_platform_admin_viewer
-
-    if is_platform_admin_viewer(actor):
-        return None, "ADMIN_VIEWER_CANNOT_ACT"
     act = _locked_act(act_id)
     if act.status_code != ActStatusCode.ISSUED:
         return None, "ACT_SIGN_NOT_ALLOWED"
@@ -745,10 +730,7 @@ def reject_act(act_id: int, actor: CustomUser, reason: str = "") -> Tuple[Option
 
     Акт возвращается в DRAFT — исполнитель правит и выпускает заново.
     """
-    from accounts.services import is_platform_admin_viewer
 
-    if is_platform_admin_viewer(actor):
-        return None, "ADMIN_VIEWER_CANNOT_ACT"
     clean_reason = (reason or "").strip()
     if not clean_reason:
         return None, "REASON_REQUIRED"
@@ -804,12 +786,10 @@ def reissue_act(act_id: int, actor: CustomUser) -> Tuple[Optional[object], Optio
     """
     from django.utils import timezone
 
-    from accounts.services import assert_seller_can_operate, is_platform_admin_viewer
+    from accounts.services import assert_seller_can_operate
 
     from .document_blocks import frozen_body_for
 
-    if is_platform_admin_viewer(actor):
-        return None, "ADMIN_VIEWER_CANNOT_ACT"
     act = _locked_act(act_id)
     if act.status_code != ActStatusCode.DRAFT:
         return None, "ACT_REISSUE_NOT_ALLOWED"
@@ -877,10 +857,6 @@ def remind_act_acceptance(act_id: int, actor: CustomUser) -> Tuple[Optional[obje
 
     from django.utils import timezone
 
-    from accounts.services import is_platform_admin_viewer
-
-    if is_platform_admin_viewer(actor):
-        return None, "ADMIN_VIEWER_CANNOT_ACT"
     act = _locked_act(act_id)
     if act.status_code != ActStatusCode.ISSUED:
         return None, "ACT_REMINDER_NOT_ALLOWED"
@@ -918,10 +894,7 @@ def cancel_act(act_id: int, actor: CustomUser, reason: str = "") -> Tuple[Option
     («unvoid» не существует ни там, ни там). Согласованный обеими сторонами акт не отзывается:
     это уже закрытый документ, и его судьба решается новым актом, а не правкой старого.
     """
-    from accounts.services import is_platform_admin_viewer
 
-    if is_platform_admin_viewer(actor):
-        return None, "ADMIN_VIEWER_CANNOT_ACT"
     clean_reason = (reason or "").strip()
     if not clean_reason:
         return None, "REASON_REQUIRED"

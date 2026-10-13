@@ -62,7 +62,9 @@ def _seller_member(company: Company, email: str) -> CustomUser:
 
 def _operator(email: str = "operator@r6.test") -> CustomUser:
     admin_role, _ = SystemRole.objects.get_or_create(code="ADMIN", defaults={"name": "Администратор"})
-    return CustomUser.objects.create_user(email=email, username=email, password="pw", role=admin_role)
+    return CustomUser.objects.create_user(
+        is_superuser=True, email=email, username=email, password="pw", role=admin_role
+    )
 
 
 @pytest.fixture
@@ -233,14 +235,6 @@ def test_seller_cannot_review_his_own_request(world):
     assert response.status_code == 403
     row.refresh_from_db()
     assert row.status == "PENDING"
-
-
-def test_platform_operator_does_not_submit_requests_to_himself(world):
-    """ADR-0002: оператор ведёт справочник сам — заявка от его имени бессмысленна."""
-    response = _client_for(world["operator"]).post(ENDPOINT, {"proposed_name": "Операторская"}, format="json")
-
-    assert response.status_code == 403
-    assert response.data["detail"] == "ADMIN_VIEWER_CANNOT_ACT"
 
 
 def test_operator_sees_every_pending_request(world):

@@ -12,7 +12,7 @@ from rest_framework.response import Response
 from accounts import services
 from accounts.models import Company, CompanyMember, CustomUser
 from accounts.serializers import PlatformUserCreateSerializer, SelfUpdateSerializer, UserSerializer
-from core.permissions import OperatorScoped
+from core.permissions import IsPlatformAdmin
 
 
 @extend_schema_view(
@@ -54,23 +54,10 @@ class UserViewSet(viewsets.ModelViewSet):
         .order_by("-date_joined")
     )
     serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated, OperatorScoped]
+    permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
     # Operator sub-capability per action (ADR-0004 G1). Self-service actions
     # (change-password, update-me, upload/delete-avatar, me) carry their own
     # IsAuthenticated permission_classes and bypass this map.
-    operator_permissions = {
-        "list": "users.view",
-        "retrieve": "users.view",
-        "export": "users.view",
-        "create": "users.manage",
-        "update": "users.manage",
-        "partial_update": "users.manage",
-        "destroy": "users.manage",
-        "toggle_active": "users.manage",
-        "change_role": "users.manage",
-        "add_membership": "users.manage",
-        "remove_membership": "users.manage",
-    }
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     # `role__isnull` — срез «без системной роли». Учётки с `role=None` не отбирались НИЧЕМ:
     # вкладки реестра строятся по строкам справочника, а поле nullable. Человек существовал в
@@ -297,7 +284,7 @@ class UserViewSet(viewsets.ModelViewSet):
     )
     def upload_avatar_for(self, request, pk=None):
         target = self.get_object()
-        if not (request.user.is_platform_admin or request.user.pk == target.pk):
+        if not (request.user.is_superuser or request.user.pk == target.pk):
             raise exceptions.PermissionDenied("ONLY_ADMIN_OR_SELF_CAN_SET_AVATAR")
         avatar = request.FILES.get("avatar")
         if not avatar:
@@ -333,7 +320,7 @@ class UserViewSet(viewsets.ModelViewSet):
     )
     def delete_avatar_for(self, request, pk=None):
         target = self.get_object()
-        if not (request.user.is_platform_admin or request.user.pk == target.pk):
+        if not (request.user.is_superuser or request.user.pk == target.pk):
             raise exceptions.PermissionDenied("ONLY_ADMIN_OR_SELF_CAN_DELETE_AVATAR")
         if target.avatar:
             target.avatar.delete(save=False)

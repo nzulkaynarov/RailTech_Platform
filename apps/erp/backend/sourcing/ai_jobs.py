@@ -83,7 +83,7 @@ class AIJobStatusView(APIView):
 
     def get(self, request, task_id):
         # IDOR protection: verify job ownership via DB (not cache); platform admin bypasses.
-        if not request.user.is_platform_admin:
+        if not request.user.is_superuser:
             job_exists = AIJob.objects.filter(celery_task_id=task_id, owner=request.user).exists()
             if not job_exists:
                 return Response({"detail": "TASK_ACCESS_DENIED"}, status=status.HTTP_403_FORBIDDEN)

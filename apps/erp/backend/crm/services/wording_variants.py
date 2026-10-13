@@ -73,13 +73,11 @@ def select_contract_wording(contract, actor, *, field: str, variant_id):
     """Выбор редакции пункта для ЭТОГО договора: согласованный вариант либо возврат к
     дефолту компании (variant_id=None). Только пока договор не подписан ни одной стороной —
     подписанный текст неприкосновенен (двусторонний документ, G2)."""
-    from accounts.services import is_platform_admin_viewer, is_seller
+    from accounts.services import is_seller
     from accounts.services.permissions import seller_company_routed_to_deal
 
     from .quotes import _quote_seller_company
 
-    if is_platform_admin_viewer(actor):
-        return None, "ADMIN_VIEWER_CANNOT_ACT"
     if not (getattr(actor, "is_superuser", False) or is_seller(actor)):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
     if not (getattr(actor, "is_superuser", False) or seller_company_routed_to_deal(actor, contract.deal_id)):

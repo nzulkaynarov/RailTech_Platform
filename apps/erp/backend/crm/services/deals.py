@@ -167,21 +167,11 @@ def transition_deal_stage(
     Transition a Deal to a new stage by stage code.
 
     When validate_fsm=True, enforces the FSM transition matrix.
-    admin_override=True allows Platform Admin to bypass both the FSM and the
-    is_platform_admin_viewer guard. Use only from force_transition_deal_stage.
+    admin_override=True allows the administrator (superuser) to bypass the FSM.
+    Use only from force_transition_deal_stage.
     Logs the change to ActivityLog.
     Returns: (deal, error_or_None)
     """
-    # Actor-guard: when called by a real user (not internal/system), block
-    # platform-admin viewers. Internal callers (auto-tasks, smoke scripts) pass
-    # actor=None and bypass this check intentionally. admin_override also
-    # bypasses: that path requires a reason and is itself a platform admin act.
-    if actor is not None and not admin_override:
-        from accounts.services import is_platform_admin_viewer
-
-        if is_platform_admin_viewer(actor):
-            return None, "ADMIN_VIEWER_CANNOT_ACT"
-
     target_stage = DealStage.objects.filter(code=target_stage_code).first()
     if not target_stage:
         return None, "DEAL_STAGE_NOT_FOUND"
@@ -340,10 +330,7 @@ def convert_lead_to_deal(
 
     If `company` is not provided, tries to resolve one via the lead email.
     """
-    from accounts.services import is_platform_admin_viewer
 
-    if is_platform_admin_viewer(actor):
-        return None, "ADMIN_VIEWER_CANNOT_ACT"
     if lead.is_processed:
         return None, "LEAD_ALREADY_PROCESSED"
 
@@ -359,7 +346,7 @@ def convert_lead_to_deal(
     deal = Deal.objects.create(
         company=company,
         client=CustomUser.objects.filter(email__iexact=lead.email).first(),
-        manager=actor if (actor and actor.is_platform_admin) else None,
+        manager=actor if (actor and actor.is_superuser) else None,
         stage=draft_stage,
         title=(lead.message[:200] if lead.message else f"Лид: {lead.name}"),
         notes=f"Создано из Lead #{lead.id}\nEmail: {lead.email}\nТелефон: {lead.phone}",

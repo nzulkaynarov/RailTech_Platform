@@ -89,6 +89,7 @@ def lead_out(
         last_lead_msg_at=lead.last_lead_msg_at,
         created_at=lead.created_at,
         escalation=escalation_out(escalation),
+        source=lead.source,
     )
 
 
@@ -180,7 +181,9 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
         qualification=dict(lead.qualification or {}),
         consent_given_at=lead.consent_given_at,
         tg_username=username,
-        phone_e164=phone,
+        phone_e164=lead.phone_e164 or phone,
+        email=lead.email,
+        company_name=lead.company_name,
         client_phone_e164=client_phone,
         notes_count=lead.notes_count,
         snoozed_until=lead.snoozed_until,

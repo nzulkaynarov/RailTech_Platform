@@ -23,8 +23,6 @@ const BASE: Capabilities = {
   can_send_quotes: true,
   quote_send_is_demo: false,
   permissions: [],
-  is_platform_admin: false,
-  operator_permissions: null,
   ai_daily_used: 0,
   ai_daily_cap: null,
   ai_daily_remaining: null,

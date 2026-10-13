@@ -97,7 +97,7 @@ class RBACSecurityTest(TestCase):
         self.client_a = make_user("client_a", company=company_a)
         self.client_b = make_user("client_b")
         # Only a Platform Admin sees every company's deals (DealViewSet.get_queryset
-        # checks is_platform_admin, which is_superuser satisfies). A plain is_staff
+        # checks is_superuser, which is_superuser satisfies). A plain is_staff
         # user is not a platform admin under the ADR-0002 role model.
         self.manager = make_user("manager1", is_superuser=True)
 

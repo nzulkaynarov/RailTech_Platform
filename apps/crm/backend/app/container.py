@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from app.services.kb.admin import KbAdminService
     from app.services.kb.ingest import KbIngestService
     from app.services.kb.search import KbSearchService
+    from app.services.lead_intake import LeadIntakeService
     from app.services.lead_messenger import LeadMessenger
     from app.services.leads import LeadService
     from app.services.llm_usage import DbUsageRecorder
@@ -148,6 +149,17 @@ class Container:
             on_assigned=_lead_assigned,
             on_escalation_reopened=_escalation_reopened,
             on_chats_changed=_chats_changed,
+        )
+
+    @cached_property
+    def lead_intake(self) -> "LeadIntakeService":
+        """Форма «Запрос» с сайта и «Новый лид» вручную (M3-CRM-05); окно по IP — в процессе api."""
+        from app.services.lead_intake import LeadIntakeService
+
+        return LeadIntakeService(
+            self.session_factory,
+            self.settings_service,
+            self.settings.jwt_secret.get_secret_value().encode("utf-8"),
         )
 
     @cached_property

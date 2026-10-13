@@ -38,14 +38,20 @@ class LeadOut(BaseModel):
     last_lead_msg_at: datetime | None
     created_at: datetime
     escalation: EscalationOut | None = None
+    # Откуда пришёл лид (M3-CRM-05): telegram | web | phone | email | referral (| sandbox).
+    source: str = "telegram"
 
 
 class LeadDetail(LeadOut):
     qualification: dict[str, Any]
     consent_given_at: datetime | None
     tg_username: str | None
-    # Номер из кнопки «Поделиться номером» в боте (Q-020), E.164; удаляется по /delete.
+    # Номер из карточки (сайт/звонок/почта) или из кнопки «Поделиться номером» в боте (Q-020),
+    # E.164; удаляется по /delete.
     phone_e164: str | None = None
+    # Контакты лида без Telegram (M3-CRM-05).
+    email: str | None = None
+    company_name: str | None = None
     # Телефон основного контакта клиента, если лид привязан к клиенту (Q-011).
     client_phone_e164: str | None = None
     notes_count: int
