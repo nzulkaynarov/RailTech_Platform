@@ -123,6 +123,8 @@ export function segmentLabel(code: string | null | undefined): string {
 }
 
 export const sourceLabel = (code: string): string => pick(L.source, code);
+/** Источник лида: Telegram, сайт, звонок, почта, рекомендация (M3-CRM-05). */
+export const leadSourceLabel = (code: string): string => pick(L.leadSource, code);
 
 /** Похоже на служебный код (`price_or_contract_asked`), а не на текст для человека. */
 export const looksLikeCode = (text: string): boolean => /^[a-z][a-z0-9]*(_[a-z0-9]+)+$/.test(text);
@@ -144,6 +146,8 @@ export function transitionReason(reason: string | null | undefined): string {
   if (known) return known;
   const days = /^no reply for (\d+) days$/.exec(reason);
   if (days) return (L.transition["noReply"] ?? "").replace("{days}", days[1] ?? "");
+  const merged = /^merged with lead #(\d+)$/.exec(reason);
+  if (merged) return (L.transition["merged"] ?? "").replace("{id}", merged[1] ?? "");
   if (reason.startsWith("qualifier: ")) {
     const text = reason.slice("qualifier: ".length).trim();
     if (!text || looksLikeCode(text)) return L.transition["qualifierOnly"] ?? "";

@@ -24,7 +24,7 @@ import { PageState } from "../../components/PageState";
 import { QueueNav } from "../../components/QueueNav";
 import { LangTag, PriorityTag, StageBadge } from "../../components/StageBadge";
 import { leadLinkText } from "../../domain/entities";
-import { reasonLabel } from "../../domain/labels";
+import { leadSourceLabel, reasonLabel } from "../../domain/labels";
 import { useApiErrorToast } from "../../hooks/useApiErrorToast";
 import { useReplyAssist } from "../../hooks/useReplyAssist";
 import { t } from "../../i18n/ru";
@@ -200,7 +200,7 @@ function LeadFacts({ lead }: { lead: LeadDetail }) {
       size="small"
       className="lead-facts"
       layout={wide ? "vertical" : "horizontal"}
-      column={{ xs: 1, sm: 2, md: 3, lg: 5, xl: 5, xxl: 5 }}
+      column={{ xs: 1, sm: 2, md: 3, lg: 6, xl: 6, xxl: 6 }}
       items={[
         { key: "stage", label: t.leads.stage, children: <StageBadge stage={lead.stage} /> },
         { key: "owner", label: t.leads.whoLeads, children: <Owner lead={lead} /> },
@@ -220,6 +220,11 @@ function LeadFacts({ lead }: { lead: LeadDetail }) {
         },
         { key: "lang", label: t.leads.language, children: <LangTag language={lead.language} /> },
         { key: "score", label: t.leads.score, children: lead.score },
+        {
+          key: "source",
+          label: t.lead.source,
+          children: leadSourceLabel(lead.source ?? "telegram"),
+        },
       ]}
     />
   );

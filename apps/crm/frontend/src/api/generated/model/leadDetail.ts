@@ -12,9 +12,11 @@ export interface LeadDetail {
   assigned_user_name?: string | null;
   client_id?: number | null;
   client_phone_e164?: string | null;
+  company_name?: string | null;
   consent_given_at: string | null;
   created_at: string;
   display_name: string;
+  email?: string | null;
   escalation?: EscalationOut | null;
   id: number;
   language: string;
@@ -28,6 +30,7 @@ export interface LeadDetail {
   qualification: LeadDetailQualification;
   score: number;
   snoozed_until: string | null;
+  source?: string;
   stage: string;
   tg_username: string | null;
   unread?: boolean;

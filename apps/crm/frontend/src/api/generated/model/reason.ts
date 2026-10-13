@@ -61,4 +61,11 @@ export const Reason = {
   erp_unauthorized: "erp_unauthorized",
   erp_unavailable: "erp_unavailable",
   erp_bad_response: "erp_bad_response",
+  lead_exists: "lead_exists",
+  client_exists: "client_exists",
+  contact_required: "contact_required",
+  form_token_invalid: "form_token_invalid",
+  form_too_fast: "form_too_fast",
+  form_token_expired: "form_token_expired",
+  rate_limited: "rate_limited",
 } as const;
