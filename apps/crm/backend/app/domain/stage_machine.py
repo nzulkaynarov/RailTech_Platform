@@ -62,6 +62,9 @@ def decide(current: Stage, target: Stage, source: TransitionSource) -> Transitio
     """Разрешён ли переход; переход в ту же стадию — no-op, не ошибка."""
     if current == target:
         return TransitionDecision(current, target, allowed=True, changed=False)
+    if source == Src.ERP:
+        # Итог сделки приходит из ERP в зеркало сделок, стадия лида остаётся (ADR-0022).
+        return _reject(current, target, "erp events never move the lead stage")
     if source == Src.QUALIFIER and target not in QUALIFIER_PROPOSABLE:
         return _reject(
             current, target, f"qualifier may only propose engaged/qualified, got {target}"

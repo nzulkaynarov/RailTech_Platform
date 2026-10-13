@@ -45,7 +45,7 @@
 |---|---|
 | bot, agents, kb, qualifier, inbox, lead card, settings, admin console, evals | без изменений |
 | `services/deals`, ADR-0019 | становится зеркалом сделок ERP; создание сделки = заявка в ERP |
-| `ClientService.make_customer` | становится «Передать в бэк-офис»: вызывает ERP, стадия `customer`, бот в сервисный режим (ADR-0021) |
+| `ClientService.make_customer` | становится «Передать в бэк-офис»: вызывает ERP, стадия `customer`, бот в сервисный режим (CRM ADR-0022) |
 | `documents`, `docs-mcp` | документы клиента читаются из ERP через `erp-mcp`; собственное хранилище — только для файлов, которых в ERP нет |
 | `security/tokens`, пользователи | + `platform_access`, SSO-токены, провижининг |
 | `integrations/` | + коннектор ERP, приёмник вебхуков |

@@ -26,3 +26,4 @@
 | [0019](0019-deals-entity.md) | Сделка — отдельная сущность рядом с лидом; воронка лида не дублируется | accepted | 9 |
 | [0020](0020-models-and-keys-from-crm.md) | Модели и ключи ролей меняет админ в CRM через БД LiteLLM (без рестарта) | accepted | 9 |
 | [0021](0021-data-layer-orval-tanstack.md) | Единый слой данных фронта — хуки TanStack Query из orval; Refine — оболочка | accepted | 9 |
+| [0022](0022-lifecycle-handoff-to-backoffice.md) | «Передан в бэк-офис» = `customer`; итог сделки приходит из ERP в зеркало сделок; без коннектора — прежнее поведение (в ORCHESTRATOR/CONTRACTS назван «ADR-0021 CRM») | proposed | M3 |
