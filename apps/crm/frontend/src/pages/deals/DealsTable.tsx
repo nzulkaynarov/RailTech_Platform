@@ -11,8 +11,13 @@ import { formatDate } from "../../lib/time";
 type Props = {
   deals: DealOut[];
   loading?: boolean;
-  /** Колонка «Клиент» не нужна на карточке клиента. */
-  showClient?: boolean;
+  /**
+   * Вкладка «Сделки» карточки клиента: без колонки «Клиент», без липкой шапки и без
+   * горизонтальной прокрутки — таблица укладывается в ширину, названия обрезаются. Иначе antd
+   * делает тело таблицы прокручиваемой областью, а у наблюдателя в строках нет ни ссылок, ни
+   * кнопок — её не прокрутить с клавиатуры (axe scrollable-region-focusable).
+   */
+  embedded?: boolean;
   onEdit: ((deal: DealOut) => void) | null;
 };
 
@@ -92,16 +97,16 @@ function columns(showClient: boolean, onEdit: Props["onEdit"]): ColumnsType<Deal
 }
 
 /** Таблица сделок — общая для раздела «Сделки» и карточки клиента. */
-export function DealsTable({ deals, loading, showClient = true, onEdit }: Props) {
+export function DealsTable({ deals, loading, embedded = false, onEdit }: Props) {
   return (
     <Table<DealOut>
-      sticky
+      sticky={!embedded}
       rowKey="id"
       loading={loading ?? false}
       dataSource={deals}
-      columns={columns(showClient, onEdit)}
+      columns={columns(!embedded, onEdit)}
       pagination={deals.length > 50 ? { pageSize: 50 } : false}
-      scroll={{ x: "max-content" }}
+      {...(embedded ? {} : { scroll: { x: "max-content" } })}
     />
   );
 }
