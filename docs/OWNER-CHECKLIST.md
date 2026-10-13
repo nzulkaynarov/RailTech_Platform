@@ -6,7 +6,7 @@
 - [x] Ответить на Q-1…Q-5 в `QUESTIONS.md` (2026-10-13).
 - [x] Создать репозиторий — `RailTech_Platform` (github.com/nzulkaynarov/RailTech_Platform), 2026-10-13.
 - [ ] Включить защиту `main` (PR + зелёный CI) — после M0-INF-04.
-- [ ] Решить вопрос CI: минуты GitHub Actions или self-hosted runner на машине вне прода.
+- [ ] Решить вопрос CI: минуты GitHub Actions или self-hosted runner на машине вне прода (workflow готов, M0-INF-04; раннер задаётся переменной репозитория `CI_RUNNER`).
 - [x] Выдать агенту доступ к `crm-rt-ai` и `RailTech_SaaS_B2B` для переноса с историей (локальные клоны; перенос выполнен 2026-10-13, M0-INF-01).
 
 ## До M1 (гейт M0 отмечен)

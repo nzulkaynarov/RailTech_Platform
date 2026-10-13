@@ -128,6 +128,9 @@ jobs:
           pnpm lint
           pnpm format:check
           pnpm typecheck
+      - name: ui-tokens актуальны (packages/ui-tokens → tokens.generated.ts)
+        working-directory: .
+        run: make -C packages/ui-tokens check
       - name: OpenAPI CRM актуален
         run: |
           make openapi

@@ -1,4 +1,20 @@
 # packages/ui-tokens — общие токены дизайна
 
-Цвета, шрифт, радиусы, плотность для AntD-темы CRM и Tailwind-конфига ERP/Cabinet (`docs/ARCHITECTURE.md` §3).
-Заполняется задачей **M0-INF-05**: один файл токенов, обе темы читают его. Унификация компонентов — не цель.
+Один файл `tokens.json` задаёт цвета, шрифт, радиусы и плотность для всех трёх фронтендов
+(ARCHITECTURE §3: ансамбль выглядит одной семьёй; унификация компонентов — не цель). Значения — из темы
+CRM (дизайн-аудит 2026-10-11, контраст WCAG 2.1 AA ≥ 4.5:1, проверяется `apps/crm/frontend/src/app/theme.test.ts`).
+
+| Файл | Кто читает |
+|---|---|
+| `tokens.json` | **источник**, правится только он |
+| `dist/antd.ts` → копия `apps/crm/frontend/src/app/tokens.generated.ts` | AntD-тема CRM (`theme.ts` импортирует `RT_TOKENS`, `RT_TAG_TEXT`, `RT_TABLE_CELL_PADDING`). Копия нужна, потому что фронтенд CRM собирается в контейнере без доступа к `packages/` |
+| `dist/shadcn.css` | ERP и Cabinet: `@import "tailwindcss"; @import "../../../packages/ui-tokens/dist/shadcn.css";` — переменные shadcn (`--primary`, `--destructive`, `--success`…) и `@theme inline` для Tailwind 4 (M1-ERP-01, M2-CAB-01) |
+| `dist/tokens.css` | CSS-переменные `--rt-*` для любого другого потребителя (письма, PDF-шаблоны) |
+
+```
+make tokens                        # из корня: регенерировать всё
+make -C packages/ui-tokens check   # CI: сгенерированное совпадает с закоммиченным
+```
+
+Правило: меняется `tokens.json` → в том же PR перегенерированы `dist/` и `tokens.generated.ts`, тест контраста CRM зелёный.
+Тёмная тема — не здесь: приложения задают `.dark` поверх (решение при появлении потребности).
