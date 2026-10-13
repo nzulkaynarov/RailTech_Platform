@@ -62,6 +62,14 @@ class Reason(StrEnum):
     ERP_UNAUTHORIZED = "erp_unauthorized"
     ERP_UNAVAILABLE = "erp_unavailable"
     ERP_BAD_RESPONSE = "erp_bad_response"
+    # Источники лидов (M3-CRM-05): ручное создание и форма «Запрос» с сайта.
+    LEAD_EXISTS = "lead_exists"
+    CLIENT_EXISTS = "client_exists"
+    CONTACT_REQUIRED = "contact_required"
+    FORM_TOKEN_INVALID = "form_token_invalid"  # noqa: S105 — подкод ошибки, не секрет
+    FORM_TOO_FAST = "form_too_fast"
+    FORM_TOKEN_EXPIRED = "form_token_expired"  # noqa: S105 — подкод ошибки, не секрет
+    RATE_LIMITED = "rate_limited"
 
 
 class DomainError(Exception):
@@ -129,3 +137,9 @@ class UpstreamUnavailableError(DomainError):
     """Внешний сервис (Telegram) не ответил или отказал (502)."""
 
     code = "upstream_unavailable"
+
+
+class RateLimitedError(DomainError):
+    """Слишком много запросов с одного адреса (429) — публичная форма «Запрос»."""
+
+    code = "rate_limited"

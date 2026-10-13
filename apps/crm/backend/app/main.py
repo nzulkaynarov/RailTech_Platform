@@ -10,6 +10,7 @@ from fastapi import FastAPI
 
 from app import db
 from app.api import errors, health, telegram
+from app.api.cors import WebLeadCorsMiddleware
 from app.api.v1 import (
     admin,
     auth,
@@ -19,6 +20,7 @@ from app.api.v1 import (
     export,
     integrations,
     kb,
+    lead_intake,
     leads,
     me,
     models_admin,
@@ -115,6 +117,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         responses={422: {"model": ErrorOut, "description": "Ошибка валидации"}},
     )
     app.add_middleware(CorrelationIdMiddleware, header_name="X-Request-ID")
+    if settings.cabinet_origins:
+        # Только форма «Запрос» со страницы входа Cabinet; остальной API — same-origin (M3-CRM-05).
+        app.add_middleware(WebLeadCorsMiddleware, origins=settings.cabinet_origins)
     app.include_router(health.router)
     app.include_router(telegram.router)
     errors.install(app)
@@ -122,6 +127,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         auth,
         me,
         users,
+        # Раньше `leads`: `/leads/web*` не должен перехватываться `/leads/{lead_id}`.
+        lead_intake,
         leads,
         stream,
         kb,

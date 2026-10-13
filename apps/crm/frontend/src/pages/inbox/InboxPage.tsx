@@ -21,6 +21,7 @@ import { isRowClick } from "../../lib/rowClick";
 import { readSplit, saveSplit } from "../../lib/splitSize";
 import { formatDateTime, formatWhen, fromNow } from "../../lib/time";
 import "../../styles/workspace.css";
+import { NewLeadButton } from "./NewLeadDialog";
 import { ServiceRequestsList } from "./ServiceRequestsList";
 import "../pages.css";
 
@@ -246,6 +247,7 @@ function useInboxData() {
   const me = useMe();
   const perms = usePermissionsQuery();
   const canTake = allowed(perms.data, "leads", "take") && Boolean(me.data);
+  const canCreate = allowed(perms.data, "leads", "create");
   const canSeeClients = allowed(perms.data, "clients", "read");
   const requests = useOpenServiceRequests(canSeeClients);
   const specs = query.data ? leadTabs(query.data) : null;
@@ -256,7 +258,7 @@ function useInboxData() {
     unassigned: specs?.unassigned.leads.length,
     requests: requests.data?.length,
   };
-  return { query, requests, specs, available, counts, canTake };
+  return { query, requests, specs, available, counts, canTake, canCreate };
 }
 
 /**
@@ -265,7 +267,7 @@ function useInboxData() {
  * на широком экране в панели справа от списка, иначе в выезжающей панели.
  */
 export function InboxPage() {
-  const { query, requests, specs, available, counts, canTake } = useInboxData();
+  const { query, requests, specs, available, counts, canTake, canCreate } = useInboxData();
   const now = useNow();
   const url = useInboxUrl();
   const wide = Grid.useBreakpoint().xl === true;
@@ -299,7 +301,7 @@ export function InboxPage() {
   });
   return (
     <PageBody>
-      <PageHeader title={t.page.inbox} />
+      <PageHeader title={t.page.inbox} extra={canCreate ? <NewLeadButton /> : null} />
       <PageState query={query} ready={Boolean(query.data)}>
         <Sections active={active} items={items} onChange={url.setTab} />
       </PageState>

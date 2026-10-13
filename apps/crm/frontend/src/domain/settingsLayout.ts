@@ -11,7 +11,7 @@ export type SectionGroup = { key: string; sections: string[] };
 const SECTION_GROUPS: SectionGroup[] = [
   { key: "company", sections: ["company", "business_hours"] },
   { key: "bot", sections: ["texts", "bot", "kb", "stop_words", "competitors"] },
-  { key: "handoff", sections: ["escalation", "qualification"] },
+  { key: "handoff", sections: ["escalation", "qualification", "web_form"] },
   { key: "team", sections: ["notifications", "deals"] },
   { key: "spend", sections: ["budget"] },
 ];

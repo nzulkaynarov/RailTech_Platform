@@ -209,6 +209,8 @@ async def test_phone_saved_after_system_handoff_refreshes_the_channel_card(
     session.scalar = AsyncMock(return_value=42)
     session.begin = MagicMock(return_value=AsyncMock())
     monkeypatch.setattr(leads_repo, "get_identity", AsyncMock(return_value=identity))
+    # Склейка по номеру (M3-CRM-05) — отдельный сценарий integration; здесь совпадений нет.
+    monkeypatch.setattr(module, "merge_by_phone", AsyncMock(return_value=None))
     svc = module.ClientBotService(
         cast(Any, _Sessions(session)), cast(Any, MagicMock()), on_card_changed=refresh
     )

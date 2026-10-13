@@ -86,6 +86,11 @@ class Settings(BaseSettings):
     # Секрет подписи вебхуков ERP → CRM (CONTRACTS §3, `X-Signature`); приёмник — M3-CRM-04.
     erp_webhook_secret: SecretStr = SecretStr("")
 
+    # Origin страницы входа Cabinet, откуда вызывается публичная форма «Запрос»
+    # (`POST /api/v1/leads/web`, M3-CRM-05): `https://cabinet.railtech.uz`; несколько — через
+    # запятую. Пусто — CORS для формы не включён (только same-origin).
+    cabinet_origin: str = ""
+
     jwt_secret: SecretStr = SecretStr("")
     access_token_ttl_s: int = Field(default=900, ge=60)
     refresh_token_ttl_days: int = Field(default=30, ge=1)
@@ -102,6 +107,11 @@ class Settings(BaseSettings):
             f"{scheme}://{user}:{password}@{self.postgres_host}:"
             f"{self.postgres_port}/{self.postgres_db}"
         )
+
+    @property
+    def cabinet_origins(self) -> list[str]:
+        """Разрешённые origin формы «Запрос» без завершающего `/`."""
+        return [o.strip().rstrip("/") for o in self.cabinet_origin.split(",") if o.strip()]
 
     @property
     def cookie_secure(self) -> bool:

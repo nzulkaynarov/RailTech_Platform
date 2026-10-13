@@ -185,4 +185,11 @@ def test_reason_values_are_a_stable_contract() -> None:
         "erp_unauthorized",
         "erp_unavailable",
         "erp_bad_response",
+        "lead_exists",
+        "client_exists",
+        "contact_required",
+        "form_token_invalid",
+        "form_too_fast",
+        "form_token_expired",
+        "rate_limited",
     }
