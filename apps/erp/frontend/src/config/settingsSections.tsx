@@ -57,8 +57,6 @@ export interface SettingsSectionDef {
 
 /** Inputs the gate needs — mirrors what SettingsPage already reads from the stores. */
 export interface SettingsGateInput {
-  /** SystemRole ADMIN — platform operator rendered in PlatformAdminShell. */
-  isAdmin: boolean;
   /** WorkspaceRole OWNER of the company (authStore user.workspace_role). */
   isOwner: boolean;
   /** Consolidated /me capabilities (userStore) — permissions + can_sell drive the gates. */
@@ -109,49 +107,50 @@ const SECTION_RULES: SectionRule[] = [
   { def: { key: 'security', labelKey: 'profile.tabs.security', group: 'account' }, visible: () => true },
   // ── company ── ТОЛЬКО юр.реквизиты компании (CompanyTab): название/ИНН/банк/KYC — идентичность,
   // не внешний вид. PDF-бланк/бренд переехал в группу «documents» (решение владельца 27-07).
-  // ADMIN видит read-only превью компании.
   {
     def: { key: 'company', labelKey: 'settings.tabs.company', group: 'company' },
-    visible: (input) => input.isAdmin || hasSettingsEdit(input),
+    visible: (input) => hasSettingsEdit(input),
   },
   // ── documents ── всё «как выглядят мои документы» в одном месте (владелец 27-07).
   // Бланк и бренд — PDF-letterhead/тема/бланк КП (был подразделом company), продавец.
   {
     def: { key: 'branding', labelKey: 'settings.tabs.branding', group: 'documents' },
-    visible: (input) => !input.isAdmin && hasSettingsEdit(input) && sells(input),
+    visible: (input) => hasSettingsEdit(input) && sells(input),
   },
   // Шаблоны писем и актов — нужны И покупателю, И продавцу (решение владельца), гейт на settings.edit.
   {
     def: { key: 'doc-templates', labelKey: 'settings.tabs.docTemplates', group: 'documents' },
-    visible: (input) => !input.isAdmin && hasSettingsEdit(input),
+    visible: (input) => hasSettingsEdit(input),
   },
   // Нумерация документов (была в company) — номер тоже часть документа.
   {
     def: { key: 'numbering', labelKey: 'settings.tabs.numbering', group: 'documents' },
-    visible: (input) => !input.isAdmin && hasSettingsEdit(input) && sells(input),
+    visible: (input) => hasSettingsEdit(input) && sells(input),
   },
   // ── sales ── бизнес-дефолты КП (маржа/НДС/валюта/срок) + статьи расхода — НЕ внешний вид.
   {
     def: { key: 'defaults', labelKey: 'settings.tabs.defaults', group: 'sales' },
-    visible: (input) => !input.isAdmin && hasSettingsEdit(input) && sells(input),
+    visible: (input) => hasSettingsEdit(input) && sells(input),
   },
   // templates = «Статьи расхода КП» — ЕДИНСТВЕННАЯ секция на charge-праве.
   {
     def: { key: 'templates', labelKey: 'settings.tabs.templates', group: 'sales' },
-    visible: (input) => !input.isAdmin && hasChargeManage(input) && sells(input),
+    visible: (input) => hasChargeManage(input) && sells(input),
   },
-  // ── team ── (виден всем не-ADMIN; действия управления внутри гейтятся hasTeamManage).
-  { def: { key: 'team', labelKey: 'settings.tabs.team', group: 'team' }, visible: (input) => !input.isAdmin },
+  // ── team ── (виден всем; действия управления внутри гейтятся hasTeamManage).
+  { def: { key: 'team', labelKey: 'settings.tabs.team', group: 'team' }, visible: () => true },
   // ── billing ── (S5/P7) «План и подписка» — витрина плана КОМПАНИИ (read-only), перенос
   // top-level «Подписки» в Настройки. Гейт = компания-продавец (companySells): подписка —
-  // продавцовая сущность (T2), покупателю не нужна; ADMIN сюда не ходит (у него свой план в
-  // PlatformAdminShell). Права участника не требуются — витрина плана видна всей команде продавца.
+  // продавцовая сущность (T2), покупателю не нужна. Права участника не требуются — витрина плана
+  // видна всей команде продавца.
   {
     def: { key: 'billing', labelKey: 'settings.tabs.billing', group: 'billing' },
-    visible: (input) => !input.isAdmin && input.companySells,
+    visible: (input) => input.companySells,
   },
-  // ── platform ── SystemSettings CRUD, только Platform Operator.
-  { def: { key: 'platform', labelKey: 'settings.tabs.platform', group: 'platform' }, visible: (input) => input.isAdmin },
+  // ── platform ── SystemSettings (НДС, курс, имя платформы, 2FA). Раньше — только операторская
+  // плоскость; после её удаления (M1-ERP-02) до появления ролей бэк-офиса (M1-ERP-05) открыто
+  // OWNER'у как «Администратору». Сервер остаётся источником истины на PATCH.
+  { def: { key: 'platform', labelKey: 'settings.tabs.platform', group: 'platform' }, visible: (input) => input.isOwner },
 ];
 
 /** Видимые секции для пользователя — скрытие, не дизейбл (ADR-0005). */
@@ -160,10 +159,9 @@ export function buildSettingsSections(input: SettingsGateInput): SettingsSection
 }
 
 /**
- * Дефолтная секция (S1 — убираем тупик P3: раньше бросало в read-only company/team).
- * ADMIN → platform; все не-админы → profile (всегда видима, никогда не мёртвая).
+ * Дефолтная секция (S1 — убираем тупик P3: раньше бросало в read-only company/team):
+ * profile — всегда видима, никогда не мёртвая.
  */
-export function defaultSettingsSection(input: SettingsGateInput): SettingsSectionKey {
-  if (input.isAdmin) return 'platform';
+export function defaultSettingsSection(): SettingsSectionKey {
   return 'profile';
 }

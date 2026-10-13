@@ -18,8 +18,6 @@ function caps(overrides: Partial<Capabilities> = {}): Capabilities {
     can_send_quotes: false,
     quote_send_is_demo: false,
     permissions: [],
-    is_platform_admin: false,
-    operator_permissions: null,
     ...overrides,
   };
 }

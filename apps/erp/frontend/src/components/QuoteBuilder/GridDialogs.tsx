@@ -9,7 +9,7 @@ import {
 	AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { ExcelPasteDialog } from '@/components/QuoteBuilder/ExcelPasteDialog';
-import { AICatalogMatchDialog } from '@/components/Admin/AICatalogMatchDialog';
+import { AICatalogMatchDialog } from '@/components/QuoteBuilder/AICatalogMatchDialog';
 import { ImportFileDialog } from '@/components/QuoteBuilder/ImportFileDialog';
 import { QuoteSettingsDialog } from '@/components/CRM/QuoteSettingsDialog';
 import { ReassignProductDialog } from '@/components/CRM/ReassignProductDialog';

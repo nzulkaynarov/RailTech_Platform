@@ -5,7 +5,6 @@ import { useListParams, applyListParams } from '@/components/DataTable/listParam
 import {
   useInvoices, useGenerateAct, useIssueInvoice, useCancelInvoice, useUpdateInvoiceDraft, useActs,
 } from '@/hooks/useBilling';
-import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { useCurrencyStore } from '@/store/currencyStore';
 import type { Invoice, InvoiceStatus } from '@/api/billingApi';
 import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';
@@ -58,12 +57,10 @@ export function InvoicesPage() {
   const issueInvoice = useIssueInvoice();
   const cancelInvoice = useCancelInvoice();
   const updateDraft = useUpdateInvoiceDraft();
-  const isViewer = useIsViewerMode();
   // Оплата — действие ПОКУПАТЕЛЯ, выпуск акта — ПРОДАВЦА. Сторону по каждому счёту считает
   // сервер (`viewer_can_pay` / `viewer_can_manage`), как у договоров с viewer_can_sign_*:
   // прежний вывод из activeStatus брал первый тип компании, и посредник, который и покупает,
   // и продаёт, не видел кнопки «Сформировать акт» вовсе.
-  const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
 
   // DRAFT-only editable fields. Kept in local state, synced when the open
   // invoice changes; amounts are NOT editable (they derive from the contract).
@@ -261,7 +258,6 @@ export function InvoicesPage() {
                       type="date"
                       value={draftDue}
                       onChange={(e) => setDraftDue(e.target.value)}
-                      disabled={isViewer}
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -270,14 +266,12 @@ export function InvoicesPage() {
                       id="inv-draft-notes"
                       value={draftNotes}
                       onChange={(e) => setDraftNotes(e.target.value)}
-                      disabled={isViewer}
                     />
                   </div>
                   <Button
                     variant="outline"
                     onClick={onSaveDraft}
-                    disabled={updateDraft.isPending || isViewer}
-                    title={isViewer ? viewerTip : undefined}
+                    disabled={updateDraft.isPending}
                   >
                     <Save className="mr-2 h-4 w-4" />
                     {t('invoicesPage.saveDraft')}
@@ -289,8 +283,7 @@ export function InvoicesPage() {
                   )}
                   <Button
                     onClick={onIssue}
-                    disabled={issueInvoice.isPending || isViewer}
-                    title={isViewer ? viewerTip : undefined}
+                    disabled={issueInvoice.isPending}
                   >
                     <Send className="mr-2 h-4 w-4" />
                     {t('invoicesPage.issue')}
@@ -312,8 +305,6 @@ export function InvoicesPage() {
                   {selected.viewer_can_pay && (
                     <Button
                       onClick={() => setPayOpen(true)}
-                      disabled={isViewer}
-                      title={isViewer ? viewerTip : undefined}
                     >
                       <DollarSign className="mr-2 h-4 w-4" />
                       {t('invoicesPage.recordPayment')}
@@ -323,8 +314,7 @@ export function InvoicesPage() {
                     <Button
                       variant="outline"
                       onClick={onGenerateAct}
-                      disabled={generateAct.isPending || isViewer}
-                      title={isViewer ? viewerTip : undefined}
+                      disabled={generateAct.isPending}
                     >
                       <ScrollText className="mr-2 h-4 w-4" />
                       {t('invoicesPage.generateAct')}
@@ -337,8 +327,7 @@ export function InvoicesPage() {
                     <Button
                       variant="outline"
                       onClick={() => setCancelOpen(true)}
-                      disabled={cancelInvoice.isPending || isViewer}
-                      title={isViewer ? viewerTip : undefined}
+                      disabled={cancelInvoice.isPending}
                     >
                       <Ban className="mr-2 h-4 w-4" />
                       {t('invoicesPage.cancel')}

@@ -6,13 +6,8 @@
  */
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Store, Building2 } from 'lucide-react';
-
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-
 import { useAuthStore } from '@/store/authStore';
-import { useUserStore, companyStatusLabels } from '@/store/userStore';
+import { useUserStore } from '@/store/userStore';
 import { useUrlState } from '@/hooks/useUrlState';
 import {
   buildSettingsSections, defaultSettingsSection, type SettingsGateInput, type SettingsSectionKey,
@@ -33,13 +28,12 @@ import { MySubscriptionContent } from '@/pages/MySubscriptionPage';
 
 export function SettingsPage() {
   const { t } = useTranslation();
-  const { role, capabilities, company } = useUserStore();
+  const { capabilities, company } = useUserStore();
   const isOwner = useAuthStore((s) => s.user?.workspace_role === 'OWNER');
-  const isAdmin = role === 'ADMIN';
   // Компания типизирована как продавец (SUPPLIER/MANUFACTURER → statusEntries !== BUYER).
   // capabilities.can_sell — флаг участника и НЕ знает тип компании (см. settingsSections).
   const companySells = company.statusEntries.some((entry) => entry.status !== 'BUYER');
-  const gate: SettingsGateInput = { isAdmin, isOwner, capabilities, companySells };
+  const gate: SettingsGateInput = { isOwner, capabilities, companySells };
   const sections = buildSettingsSections(gate);
 
   // `?section=` живёт в search-части URL (useUrlState), hash остаётся `#settings` —
@@ -50,7 +44,7 @@ export function SettingsPage() {
   const urlSection = get('section') === 'documents' ? 'branding' : get('section');
   const activeSection: SettingsSectionKey = sections.some((section) => section.key === urlSection)
     ? (urlSection as SettingsSectionKey)
-    : defaultSettingsSection(gate);
+    : defaultSettingsSection();
 
   return (
     <div className="flex flex-col gap-6">
@@ -68,26 +62,24 @@ export function SettingsPage() {
         activeSection={activeSection}
         onSelectSection={(key) => set({ section: key })}
       >
-        <SectionContent sectionKey={activeSection} isAdmin={isAdmin} />
+        <SectionContent sectionKey={activeSection} />
       </SettingsLayout>
     </div>
   );
 }
 
 /** Маппинг секция → существующий компонент (монтируется как есть, spec PR 1). */
-function SectionContent(
-  { sectionKey, isAdmin }: { sectionKey: SettingsSectionKey; isAdmin: boolean },
-): ReactNode {
+function SectionContent({ sectionKey }: { sectionKey: SettingsSectionKey }): ReactNode {
   switch (sectionKey) {
     case 'profile':
       return <ProfileSection />;
     case 'security':
       return <SecuritySection />;
     case 'company':
-      // ADMIN — read-only превью; tenant — ТОЛЬКО юр.реквизиты компании (бренд переехал в `branding`).
+      // ТОЛЬКО юр.реквизиты компании (бренд переехал в `branding`).
       // Юр.реквизиты + роль компании на платформе: и то и другое — идентичность компании,
       // и запрашивают роль там же, где смотрят, какая она сейчас.
-      return isAdmin ? <AdminCompanyPreview /> : (
+      return (
         <div className="flex flex-col gap-6">
           <CompanyTab />
           <CompanyRoleSection />
@@ -130,53 +122,5 @@ function CompanyBrandingSection() {
       </div>
       <CompanyDocumentProfileSettings />
     </div>
-  );
-}
-
-/** Read-only превью компании для Platform Operator — перенесено из прежнего таба company как есть. */
-function AdminCompanyPreview() {
-  const { t } = useTranslation();
-  const company = useUserStore((s) => s.company);
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{t('settings.company.title')}</CardTitle>
-        <CardDescription>{t('settings.company.description')}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center justify-between rounded-lg border p-4">
-          <div className="flex items-center gap-3">
-            <Building2 className="h-5 w-5 text-muted-foreground" />
-            <div>
-              <p className="text-sm font-medium">{t('settings.company.statuses')}</p>
-              <p className="text-xs text-muted-foreground">{t('settings.company.statusesDesc')}</p>
-            </div>
-          </div>
-          <div className="flex gap-1.5">
-            {company.statusEntries.length === 0
-              ? <span className="text-xs text-muted-foreground">—</span>
-              : company.statusEntries.map((entry) => (
-                  <Badge key={entry.status} variant="secondary" className="text-xs">
-                    {t(companyStatusLabels[entry.status])}
-                    {entry.verification === 'pending' && ` (${t('settings.company.pending')})`}
-                  </Badge>
-                ))}
-          </div>
-        </div>
-        <div className="flex items-center justify-between rounded-lg border p-4">
-          <div className="flex items-center gap-3">
-            <Store className="h-5 w-5 text-muted-foreground" />
-            <div>
-              <p className="text-sm font-medium">{t('settings.company.companyInfo')}</p>
-              <p className="text-xs text-muted-foreground">{t('settings.company.companyInfoDesc')}</p>
-            </div>
-          </div>
-          <Badge variant="outline" className="text-xs">
-            {company.name || '—'}
-          </Badge>
-        </div>
-      </CardContent>
-    </Card>
   );
 }

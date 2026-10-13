@@ -3,7 +3,6 @@ import { useListParams, applyListParams } from '@/components/DataTable/listParam
 import { useActs, useSignAct, useRejectAct, useRemindAct, useCancelAct, useReissueAct } from '@/hooks/useBilling';
 import { RejectActDialog } from '@/components/Billing/RejectActDialog';
 import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';
-import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { DealLink } from '@/components/Shared/DealLink';
 import type { Act, ActStatus } from '@/api/billingApi';
@@ -103,8 +102,6 @@ export function ActsPage() {
   const reissueAct = useReissueAct();
   const [rejectOpen, setRejectOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
-  const isViewer = useIsViewerMode();
-  const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
   const formatCurrency = useCurrencyStore((s) => s.format);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   // Ссылка `#acts?open=<id>` строится письмами, уведомлениями и глобальным поиском, но эта
@@ -312,8 +309,7 @@ export function ActsPage() {
                 {selected.viewer_can_sign && (
                   <Button
                     onClick={() => onSign(selected.id)}
-                    disabled={isViewer || signAct.isPending}
-                    title={isViewer ? viewerTip : undefined}
+                    disabled={signAct.isPending}
                   >
                     <PenLine className="mr-2 h-4 w-4" />
                     {t('actsPage.accept')}
@@ -323,8 +319,7 @@ export function ActsPage() {
                   <Button
                     variant="outline"
                     onClick={() => setRejectOpen(true)}
-                    disabled={isViewer || rejectAct.isPending}
-                    title={isViewer ? viewerTip : undefined}
+                    disabled={rejectAct.isPending}
                   >
                     <Ban className="mr-2 h-4 w-4" />
                     {t('actsPage.reject')}
@@ -336,8 +331,7 @@ export function ActsPage() {
                   <Button
                     variant="outline"
                     onClick={() => onRemind(selected.id)}
-                    disabled={isViewer || remindAct.isPending}
-                    title={isViewer ? viewerTip : undefined}
+                    disabled={remindAct.isPending}
                   >
                     <BellRing className="mr-2 h-4 w-4" />
                     {t('actsPage.remind')}
@@ -353,8 +347,7 @@ export function ActsPage() {
                 {selected.viewer_can_reissue && (
                   <Button
                     onClick={() => onReissue(selected.id)}
-                    disabled={isViewer || reissueAct.isPending}
-                    title={isViewer ? viewerTip : undefined}
+                    disabled={reissueAct.isPending}
                   >
                     <PenLine className="mr-2 h-4 w-4" />
                     {t('actsPage.reissue')}
@@ -364,8 +357,7 @@ export function ActsPage() {
                   <Button
                     variant="outline"
                     onClick={() => setCancelOpen(true)}
-                    disabled={isViewer || cancelAct.isPending}
-                    title={isViewer ? viewerTip : undefined}
+                    disabled={cancelAct.isPending}
                   >
                     <Ban className="mr-2 h-4 w-4" />
                     {t('actsPage.cancel')}
@@ -373,8 +365,7 @@ export function ActsPage() {
                 )}
                 {selected.viewer_can_sign && (
                   <label
-                    className={`flex items-center justify-center gap-2 rounded-md border border-dashed border-border px-3 py-2 text-sm ${isViewer ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-accent'}`}
-                    title={isViewer ? viewerTip : undefined}
+                    className={`flex items-center justify-center gap-2 rounded-md border border-dashed border-border px-3 py-2 text-sm cursor-pointer hover:bg-accent`}
                   >
                     <PenLine className="h-4 w-4" />
                     <span>{t('actsPage.uploadSigned')}</span>
@@ -382,7 +373,6 @@ export function ActsPage() {
                       type="file"
                       className="hidden"
                       accept=".pdf,.jpg,.jpeg,.png"
-                      disabled={isViewer}
                       onChange={(e) => {
                         const f = e.target.files?.[0];
                         if (f) onSign(selected.id, f);

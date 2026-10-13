@@ -37,28 +37,10 @@ const SettingsPage = lazyWithRetry(() => import('@/pages/SettingsPage').then((m)
 const RequestDetailPage = lazyWithRetry(() =>
   import('@/pages/RequestDetailPage').then((m) => ({ default: m.RequestDetailPage })),
 );
-const PlatformAdminDashboard = lazyWithRetry(() => import('@/pages/PlatformAdminDashboard'));
 const DealsPage = lazyWithRetry(() => import('@/pages/DealsPage'));
 const QuotesPage = lazyWithRetry(() => import('@/pages/QuotesPage'));
 const HelpPage = lazyWithRetry(() => import('@/pages/HelpPage'));
 const MyRequestsPage = lazyWithRetry(() => import('@/pages/MyRequestsPage'));
-const AdminUsersPage = lazyWithRetry(() => import('@/pages/AdminUsersPage'));
-const AdminKYCPage = lazyWithRetry(() => import('@/pages/AdminKYCPage'));
-const AdminSubscriptionsPage = lazyWithRetry(() => import('@/pages/AdminSubscriptionsPage'));
-const AdminEntitlementsPage = lazyWithRetry(() => import('@/pages/AdminEntitlementsPage'));
-const AdminRoleApplicationsPage = lazyWithRetry(() => import('@/pages/AdminRoleApplicationsPage'));
-const AdminLeadsPage = lazyWithRetry(() => import('@/pages/AdminLeadsPage'));
-const AdminCatalogPage = lazyWithRetry(() => import('@/pages/AdminCatalogPage'));
-const AdminCategoriesPage = lazyWithRetry(() => import('@/pages/AdminCategoriesPage'));
-const AdminEquipmentGroupsPage = lazyWithRetry(() => import('@/pages/AdminEquipmentGroupsPage'));
-const AdminOffersPage = lazyWithRetry(() => import('@/pages/AdminOffersPage'));
-const AdminCompaniesPage = lazyWithRetry(() => import('@/pages/AdminCompaniesPage'));
-const AdminDealsPage = lazyWithRetry(() => import('@/pages/AdminDealsPage'));
-const AdminMasterDataPage = lazyWithRetry(() => import('@/pages/AdminMasterDataPage'));
-const AdminEmailTemplatesPage = lazyWithRetry(() => import('@/pages/AdminEmailTemplatesPage'));
-const AdminOperatorRolesPage = lazyWithRetry(() => import('@/pages/AdminOperatorRolesPage'));
-const AdminAccessLogPage = lazyWithRetry(() => import('@/pages/AdminAccessLogPage'));
-const AdminSupportPage = lazyWithRetry(() => import('@/pages/AdminSupportPage'));
 const ContractsPage = lazyWithRetry(() => import('@/pages/ContractsPage'));
 const InvoicesPage = lazyWithRetry(() => import('@/pages/InvoicesPage'));
 const PaymentsPage = lazyWithRetry(() => import('@/pages/PaymentsPage'));
@@ -78,23 +60,6 @@ const PLAIN_PAGES: Record<string, ComponentType> = {
   'crm-quotes': QuotesPage,
   help: HelpPage,
   'my-requests': MyRequestsPage,
-  'admin-users': AdminUsersPage,
-  'admin-kyc': AdminKYCPage,
-  'admin-subscriptions': AdminSubscriptionsPage,
-  'admin-entitlements': AdminEntitlementsPage,
-  'admin-role-apps': AdminRoleApplicationsPage,
-  'admin-catalog': AdminCatalogPage,
-  'admin-categories': AdminCategoriesPage,
-  'admin-equipment-groups': AdminEquipmentGroupsPage,
-  'admin-offers': AdminOffersPage,
-  'admin-companies': AdminCompaniesPage,
-  'admin-deals': AdminDealsPage,
-  'admin-master-data': AdminMasterDataPage,
-  'admin-email-templates': AdminEmailTemplatesPage,
-  'admin-operator-roles': AdminOperatorRolesPage,
-  'admin-access-log': AdminAccessLogPage,
-  'admin-support': AdminSupportPage,
-  'admin-leads': AdminLeadsPage,
   contracts: ContractsPage,
   invoices: InvoicesPage,
   payments: PaymentsPage,
@@ -108,7 +73,6 @@ const PLAIN_PAGES: Record<string, ComponentType> = {
 
 export interface PageRenderContext {
   page: Page;
-  role: string;
   activeStatus: CompanyStatus;
   navigateTo: (page: Page) => void;
   onNavigate: (target: string) => void;
@@ -142,16 +106,9 @@ function activePageIdFor(page: Page, activeStatus: CompanyStatus): string {
   }
 }
 
-/**
- * Дашборд, корректный для роли: оператору НИКОГДА не показываем покупательский дашборд —
- * именно это делал бы «сырой» default в switch.
- */
+/** Дашборд — и для неизвестного/устаревшего хэша (default в switch). */
 function renderDashboard(ctx: PageRenderContext): ReactNode {
-  return ctx.role === 'ADMIN' ? (
-    <PlatformAdminDashboard onNavigate={ctx.onNavigate} />
-  ) : (
-    <Dashboard onProductClick={ctx.onProductClick} onNavigate={ctx.onNavigate} />
-  );
+  return <Dashboard onProductClick={ctx.onProductClick} onNavigate={ctx.onNavigate} />;
 }
 
 function renderContent(ctx: PageRenderContext): ReactNode {
@@ -226,7 +183,7 @@ function renderContent(ctx: PageRenderContext): ReactNode {
     case 'suppliers':
       return <CounterpartiesPage direction="SUPPLIER" />;
     default:
-      // Неизвестный/устаревший хэш → откат на дашборд, корректный для роли.
+      // Неизвестный/устаревший хэш → откат на дашборд.
       return renderDashboard(ctx);
   }
 }

@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { HSCodeField } from '@/components/Shared/HSCodeField';
 import { CustomsDutiesSheet } from '@/components/Shared/CustomsDutiesSheet';
 
-import type { ProductFormState } from '../admin-catalog/useProductForm';
+import type { ProductFormState } from '@/components/Shared/product-form/useProductForm';
 import { SECTION_IDS } from './anchors';
 
 /**
