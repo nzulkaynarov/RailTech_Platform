@@ -12,9 +12,11 @@ repos:
         args: [--allow-multiple-documents]
       - id: check-toml
       - id: check-json
+        # tsconfig*.json — JSONC (комментарии, запятые в конце), не JSON
+        exclude: tsconfig[^/]*\.json$
       - id: check-merge-conflict
       - id: check-added-large-files
-        args: [--maxkb=1024]
+        args: [--maxkb=2048]  # apps/erp/backend/schema.json (экспорт OpenAPI) ≈ 1,4 МБ
       - id: no-commit-to-branch
         args: [--branch, main]
 

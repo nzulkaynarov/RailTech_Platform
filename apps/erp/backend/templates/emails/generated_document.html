@@ -1,0 +1,25 @@
+{% extends "emails/base.html" %}
+{% load i18n %}
+{% block subject %}{% blocktranslate %}Вам направлен документ {{ document_number }}{% endblocktranslate %}{% endblock %}
+{% block header_hint %}{% translate "Документ" %}{% endblock %}
+{% block content %}
+  <h1 style="margin:0 0 16px 0; font-size:22px; line-height:1.3; color:#111827;">
+    {% translate "Здравствуйте!" %}
+  </h1>
+  <p style="margin:0 0 16px 0;">
+    {% if company_name %}{% blocktranslate %}Компания <strong>{{ company_name }}</strong>{% endblocktranslate %}{% else %}{% translate "Отправитель" %}{% endif %}
+    {% blocktranslate %}направила вам документ <strong>«{{ document_title }}»</strong> ({{ document_number }}).{% endblocktranslate %}
+  </p>
+  <p style="margin:0 0 16px 0;">{% translate "PDF документа приложен к этому письму." %}</p>
+  {% if public_link %}
+  <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0;">
+    <tr><td style="border-radius:8px; background-color:#2563eb;">
+      <a href="{{ public_link }}" style="display:inline-block; padding:12px 24px; font-size:15px; font-weight:600; color:#ffffff; text-decoration:none; border-radius:8px;">{% translate "Открыть документ" %}</a>
+    </td></tr>
+  </table>
+  <p style="margin:16px 0 0 0; font-size:13px; color:#6b7280;">
+    {% translate "Если кнопка не работает, скопируйте ссылку в браузер:" %}<br>
+    <a href="{{ public_link }}" style="color:#2563eb; word-break:break-all;">{{ public_link }}</a>
+  </p>
+  {% endif %}
+{% endblock %}

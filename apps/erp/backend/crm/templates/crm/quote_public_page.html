@@ -1,0 +1,456 @@
+<!doctype html>
+{% load document_format %}
+{% comment %}
+  Wave A — public КП page (client-facing, CLIENT PROJECTION, no login).
+
+  Server-rendered standalone page (NO SPA, NO login). Opened directly in a browser from the
+  emailed link / QR. CONFIDENTIALITY: renders ONLY the client projection (client_projection_items)
+  — never landed_cost / margin / logistics / customs / FX / goods-vs-charges breakout. Context is
+  built by crm.services.documents.public_quote_page_context — the SAME helpers the PDF uses.
+
+  LEGAL HONESTY: «Принять предложение» / «акцепт» is a commercial acceptance with an audit trail,
+  NOT a qualified e-signature (E-IMZO not implemented). The contract is signed later via MANUAL_MODE.
+
+  CSP: script-src 'self' → page JS is an EXTERNAL static file (page_js_url); no inline <script>,
+  no inline event handlers. style-src allows 'unsafe-inline', so the <style> block is fine.
+{% endcomment %}
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>КП {% if quote.number %}№ {{ quote.number }}{% else %}{{ quote.deal_id }}-{{ quote.version }}{% endif %}</title>
+  <style>
+    :root {
+      /* A commercial КП is a document — it renders LIGHT for every recipient regardless of their
+         device dark-mode (benchmark: PandaDoc / Qwilr public proposal links). Auto-dark was dropped:
+         it showed the seller's proposal in colours they never chose and read as "sometimes dark,
+         sometimes light" depending on the client's phone. */
+      color-scheme: light;
+      /* D2 document theme — the SAME accent / secondary tint / font the PDF uses, so the emailed
+         PDF and this public page read as one branded document (not two designs). */
+      --accent: {{ accent|default:"#15294d" }};
+      --accent-contrast: {{ accent_contrast|default:"#ffffff" }};
+      --font-main: {{ font_stack|default:"-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"|safe }};
+      --ink: #20242b; --ink-soft: #3c424c; --muted: #7a828f;
+      --line: #e6e9ef; --panel: {{ secondary|default:"#f7f9fc" }}; --bg: #eef1f5; --card: #ffffff;
+      --success: #15803d; --danger: #b91c1c;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink);
+      font-family: var(--font-main);
+      font-size: 15px; line-height: 1.5; -webkit-text-size-adjust: 100%; }
+    /* D2 layout presets (screen analogues of the print presets — same seller choice, one theme). */
+    body.layout-bold .brand-name { font-size: 26px; }
+    body.layout-bold h1.doc-title { text-transform: uppercase; letter-spacing: .5px; }
+    body.layout-bold .rule { height: 5px; }
+    body.layout-boxed .rule { display: none; }
+    body.layout-boxed .brandbar { border: 1px solid var(--accent); border-radius: 8px; padding: 12px; }
+    body.layout-boxed table.lines thead th { background: transparent; color: var(--accent);
+      border-bottom: 2px solid var(--accent); }
+    body.layout-striped table.lines tbody tr:nth-child(odd) td { background: var(--panel); }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 16px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+      padding: 20px; margin-bottom: 16px; }
+    .brandbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start;
+      justify-content: space-between; }
+    .brand-name { font-size: 22px; font-weight: 700; color: var(--accent); }
+    .brand-meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .brand-logo { max-height: 46px; max-width: 140px; }
+    .doc-id { text-align: right; font-size: 13px; color: var(--ink-soft); }
+    .doc-id .doc-no { font-size: 18px; font-weight: 700; color: var(--accent); }
+    /* Т4 meta block — как в PDF: label:value с линейками. */
+    .doc-id table.meta-grid { margin-left: auto; border-collapse: collapse; margin-top: 6px; }
+    .doc-id table.meta-grid td { font-size: 12px; padding: 3px 0 3px 14px; border-bottom: 1px solid var(--line); text-align: right; color: var(--ink-soft); white-space: nowrap; }
+    .doc-id table.meta-grid td.mk { color: var(--muted); text-align: left; padding-left: 0; }
+    .rule { height: 3px; background: var(--accent); border-radius: 3px; margin: 14px 0 18px; }
+    h1.doc-title { font-size: 18px; color: var(--accent); margin: 0 0 14px; }
+    /* КП-письмо: адресат (ГОСТ) — справа до заголовка, строки по левому краю. */
+    .addressee { margin: 0 0 14px auto; max-width: 46%; text-align: left; font-size: 14px; line-height: 1.5; }
+    .addressee .addr-org { font-weight: 700; }
+    /* D1c: сопроводительный абзац + структурные условия — как в PDF. */
+    .cover-letter { margin: 14px 0 0; font-size: 14px; color: var(--ink-soft); line-height: 1.5; }
+    .cover-letter p { margin: 0 0 6px; }
+    .terms-title { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; color: var(--accent); font-weight: 700; }
+    .terms-grid { width: 100%; border-collapse: collapse; }
+    .terms-grid td { padding: 4px 0; font-size: 13px; vertical-align: top; }
+    .terms-grid td.tk { width: 38%; color: var(--muted); padding-right: 12px; }
+    .terms-grid td.tv { color: var(--ink-soft); }
+    .table-scroll { overflow-x: auto; }
+    table.lines { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 520px; }
+    table.lines thead th { background: var(--accent); color: var(--accent-contrast);
+      padding: 9px 8px; text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .3px; }
+    table.lines tbody td { padding: 9px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .center { text-align: center; white-space: nowrap; }
+    tr.section-row td { background: var(--panel); border-top: 2px solid var(--accent);
+      font-weight: 700; color: var(--accent); text-transform: uppercase; font-size: 12px; letter-spacing: .3px; }
+    tr.section-row td.section-sub { color: var(--ink); text-transform: none; }
+    tr.note-row td { font-style: italic; color: var(--ink-soft); font-size: 13px; }
+    .item-name { font-weight: 600; }
+    .item-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .totals { margin: 16px 0 0 auto; width: 100%; max-width: 340px; }
+    .totals .row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
+    .totals .row.sep { border-top: 1px solid var(--line); }
+    .totals .row.grand { background: var(--accent); color: var(--accent-contrast);
+      font-weight: 700; padding: 10px 12px; border-radius: 8px; margin-top: 6px; font-size: 16px; }
+    .amount-words { margin-top: 10px; font-size: 13px; color: var(--ink-soft); }
+    .amount-words .k { font-weight: 700; color: var(--ink); }
+    .optional-block { margin-top: 18px; }
+    .optional-block h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .5px;
+      color: var(--accent); margin: 0 0 4px; }
+    .optional-hint { font-size: 12px; color: var(--muted); margin: 0 0 8px; }
+    .manager-box { font-size: 14px; color: var(--ink-soft); }
+    .manager-box .k { font-weight: 700; color: var(--ink); }
+    .terms { margin-top: 14px; }
+    .term-box { border-left: 3px solid var(--accent); background: var(--panel);
+      padding: 8px 12px; margin-bottom: 8px; font-size: 13px; color: var(--ink-soft); }
+    .term-box .k { font-weight: 700; color: var(--ink); }
+    .cta-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 12px 18px; font-size: 15px; font-weight: 600; border-radius: 8px; border: 1px solid var(--line);
+      background: var(--card); color: var(--ink); text-decoration: none; cursor: pointer; }
+    .btn:disabled { opacity: .5; cursor: default; }
+    .btn-primary { background: var(--accent); color: var(--accent-contrast); border-color: var(--accent); }
+    .btn-danger { color: var(--danger); border-color: var(--danger); }
+    .panel { margin-top: 14px; border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: var(--panel); }
+    /* Атрибут `hidden` даёт лишь `display:none` НИЗКОГО приоритета, и любое явное правило
+       его перебивает. Так панель действий (#cta — `.cta-row{display:flex}`) оставалась на
+       экране после акцепта: скрипт исправно ставил hidden, а flex его игнорировал, и клиент
+       видел «Отклонить…» под зелёным «Предложение принято» (найдено прогоном глазами 14-08).
+       Правило общее, а не для .cta-row: иначе следующий блок с display наступит на те же грабли. */
+    [hidden] { display: none !important; }
+    label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+    input[type=text], textarea { width: 100%; padding: 10px 12px; font-size: 15px;
+      border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); }
+    /* `input[type=text]` выше по специфичности, чем класс, поэтому крупный шрифт поля кода
+       не применялся НИКОГДА — код набирался тем же мелким шрифтом, что и обычные поля
+       (найдено при замере шрифтов на телефоне 19-08). Поднимаем специфичность до тега. */
+    input[type=text].code-input { letter-spacing: 6px; font-size: 22px; text-align: center; font-variant-numeric: tabular-nums; }
+    .notice { border-radius: 8px; padding: 12px 14px; font-size: 14px; line-height: 1.45; }
+    .notice-warn { border: 1px solid var(--warn, #b45309); background: rgba(180, 83, 9, .07); color: var(--ink); }
+    .msg { margin-top: 10px; font-size: 14px; }
+    .msg.error { color: var(--danger); }
+    .msg.ok { color: var(--success); }
+    .status-box { padding: 16px; border-radius: 10px; text-align: center; }
+    .status-box.ok { background: color-mix(in srgb, var(--success) 12%, transparent); }
+    .status-box.info { background: var(--panel); }
+    .status-box h2 { margin: 0 0 6px; font-size: 18px; }
+    .legal-note { font-size: 12px; color: var(--muted); margin-top: 10px; }
+    .footer { text-align: center; font-size: 12px; color: var(--muted); padding: 8px 0 24px; }
+    .demo-banner { background: color-mix(in srgb, var(--danger) 14%, transparent);
+      color: var(--danger); text-align: center; padding: 8px; border-radius: 8px; font-weight: 600;
+      font-size: 13px; margin-bottom: 12px; }
+
+    /* ── ТЕЛЕФОН: строка позиции вместо таблицы ─────────────────────────────────────────
+       Клиент открывает КП по QR с телефона. Пять колонок в 320–390 px не помещаются:
+       прокрутка у обёртки была (`.table-scroll{overflow-x:auto}`), но на iOS/Android
+       скроллбар оверлейный, и правый край просто обрезался — «Цена за ед.» и «Сумма»
+       уезжали за границу карточки БЕЗ признака, что туда можно доскроллить (замер 19-08:
+       390 px → 204 px скрыто, 320 px → 274 px). Человек читал это как обрезанный документ.
+
+       Паттерн — Qwilr Quote Block (единственный эталон, подтверждённый живым замером:
+       на ≤750 px строка становится flex-контейнером с переносом, ячейки — блоками,
+       описание занимает всю ширину, шапка гасится, скролл-обёртка отключается). PandaDoc
+       здесь анти-эталон: их публичный документ на телефоне не переверстывается вовсе,
+       заявка на адаптивность открыта с 2021-го, а встроенный зум закрыт как «Not Planned».
+
+       ОТКЛОНЕНИЕ ОТ ЭТАЛОНА, осознанное: Qwilr после перестроения оставляет числа без
+       подписей. У нас в строке ДВА денежных значения одного формата (цена за единицу и
+       сумма строки) — без подписи их не различить, а весь смысл починки в том, чтобы
+       клиент видел ИМЕННО цену. Поэтому подписи берём дословно из `<th>` через
+       `data-label` + `::before`. Новых формулировок не вводим.
+
+       Печать не затронута: PDF рисует WeasyPrint по отдельным шаблонам со своим CSS. */
+    @media (max-width: 640px) {
+      .card { padding: 14px; }
+
+      /* Шапка документа: адресат и мета-блок перестают тесниться в половину экрана. */
+      .addressee { max-width: 100%; margin-left: 0; }
+      .doc-id { text-align: left; }
+      .doc-id table.meta-grid { width: 100%; margin-left: 0; }
+      .doc-id table.meta-grid td { padding-left: 8px; }
+
+      /* Таблица позиций → список строк-карточек. */
+      table.lines { min-width: 0; }
+      .table-scroll { overflow-x: visible; }
+      table.lines thead { display: none; }
+      table.lines tbody tr { display: flex; flex-wrap: wrap; align-items: baseline;
+        padding: 10px 0; border-bottom: 1px solid var(--line); }
+      table.lines tbody td { display: block; padding: 2px 0; border-bottom: 0; }
+      table.lines tbody td.cell-no { width: auto; padding-right: 8px; color: var(--muted); }
+      table.lines tbody td.cell-name { flex: 1 1 auto; min-width: 0; }
+      /* Подписанные ячейки идут парами «подпись — значение» под названием позиции. */
+      table.lines tbody td[data-label] { flex: 1 1 100%; display: flex; gap: 10px;
+        justify-content: space-between; text-align: left; white-space: normal; }
+      table.lines tbody td[data-label]::before { content: attr(data-label);
+        color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .3px; }
+      table.lines tbody td.cell-total { font-weight: 700; }
+      /* Раздел: название слева, подытог справа — обе части на одной строке. Заливка и
+         акцентная линия переезжают на СТРОКУ: в режиме flex ячейки занимают только свою
+         ширину, и фон под ними рвался на два пятна с просветом посередине. */
+      table.lines tbody tr.section-row { justify-content: space-between;
+        background: var(--panel); border-top: 2px solid var(--accent); padding: 8px; }
+      table.lines tbody tr.section-row td { flex: 0 1 auto; background: transparent;
+        border-top: 0; padding: 0; }
+      /* Заметка занимает всю ширину. */
+      table.lines tbody tr.note-row td { flex: 1 1 100%; }
+      /* Полосатый макет красит СТРОКУ, а не отдельные ячейки: в режиме flex ячейки
+         перестают быть колонками, и зебра по ним рассыпается на куски. */
+      body.layout-striped table.lines tbody tr:nth-child(odd) { background: var(--panel); }
+      body.layout-striped table.lines tbody tr:nth-child(odd) td { background: transparent; }
+
+      /* Условия поставки: метка над значением вместо двух колонок. */
+      .terms-grid td.tk { display: block; width: auto; padding-right: 0; }
+      .terms-grid td.tv { display: block; }
+
+      /* iOS Safari зумит страницу, если поле ввода мельче 16 px. Ровно на шаге акцепта
+         («код из письма») это выбрасывало клиента из макета. Поле кода не трогаем — у него
+         свои 22 px. */
+      input[type=text]:not(.code-input), textarea { font-size: 16px; }
+    }
+  </style>
+</head>
+<body
+  class="layout-{{ layout_preset|default:'light' }}"
+  data-token="{{ token }}"
+  data-api-base="/api/v1/public/quotes/{{ token }}/"
+  data-recipient-hint="{{ recipient_hint }}">
+  {% with pres_ccy=quote.quote_currency.code|default:"UZS" %}
+  <div class="wrap">
+
+    {% if is_demo %}<div class="demo-banner">ДЕМО — не для коммерческого использования</div>{% endif %}
+
+    <!-- ── Header ── -->
+    <div class="card">
+      <div class="brandbar">
+        <div>
+          {% if seller_logo_url and show_logo %}<img class="brand-logo" src="{{ seller_logo_url }}" alt="logo"><br>{% endif %}
+          <div class="brand-name">{% firstof seller_profile.legal_name seller.name "RailTech B2B" %}</div>
+          <div class="brand-meta">
+            {% if seller_profile.inn %}ИНН {{ seller_profile.inn }}{% elif seller.inn %}ИНН {{ seller.inn }}{% endif %}
+            {% if seller.phone %} · тел. {{ seller.phone }}{% endif %}
+            {% if seller.email %} · {{ seller.email }}{% endif %}
+          </div>
+        </div>
+        <div class="doc-id">
+          <div class="doc-no">КП {% if quote.number %}№ {{ quote.number }}{% else %}{{ quote.deal_id }}-{{ quote.version }}{% endif %}</div>
+          {# Т4 — тот же мета-блок, что в PDF (близнецы): дата/срок/менеджер/контакты в шапке. #}
+          <table class="meta-grid">
+            <tr><td class="mk">Дата</td><td>{{ quote.created_at|date:"d.m.Y" }}</td></tr>
+            {% if quote.valid_until %}<tr><td class="mk">Действительно до</td><td>{{ quote.valid_until|date:"d.m.Y" }}</td></tr>{% endif %}
+            {% if quote.prepared_by %}
+            <tr><td class="mk">Менеджер</td><td>{% firstof quote.prepared_by.get_full_name quote.prepared_by.email %}</td></tr>
+            {% firstof quote.prepared_by.phone seller.phone as meta_phone %}
+            {% if meta_phone %}<tr><td class="mk">Телефон</td><td>{{ meta_phone }}</td></tr>{% endif %}
+            {% if quote.prepared_by.email %}<tr><td class="mk">Email</td><td>{{ quote.prepared_by.email }}</td></tr>{% endif %}
+            {% endif %}
+          </table>
+        </div>
+      </div>
+      <div class="rule"></div>
+      {# КП-письмо (близнец PDF): адресат «куда/кому» ДО заголовка вместо договорных колонок сторон. #}
+      {% if company or contact %}
+      <div class="addressee">
+        {% if company %}
+          <div class="addr-org">{{ company.name }}</div>
+          {% if company.contact_person %}<div>{{ company.contact_person }}</div>{% endif %}
+        {% else %}
+          {% if contact.position %}<div>{{ contact.position }}</div>{% endif %}
+          <div class="addr-org">{{ contact.name }}</div>
+        {% endif %}
+      </div>
+      {% endif %}
+      <h1 class="doc-title">Коммерческое предложение</h1>
+      {# D1c: сопроводительный абзац — тот же, что в PDF (одна anatomy на обеих поверхностях). #}
+      {% if cover_text %}<div class="cover-letter">{{ cover_text|linebreaks }}</div>{% endif %}
+    </div>
+
+    <!-- ── Line items (client projection — NO cost/margin) ── -->
+    <div class="card">
+      <div class="table-scroll">
+        <table class="lines">
+          <thead>
+            <tr>
+              <th style="width:6%">№</th>
+              <th>Наименование</th>
+              <th class="center" style="width:12%">Кол-во</th>
+              {% if show_lead_time and has_line_lead_time %}<th class="center" style="width:12%">Срок / наличие</th>{% endif %}
+              <th class="num" style="width:16%">Цена за ед. без НДС</th>
+              <th class="num" style="width:16%">Сумма без НДС</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in items %}
+              {% if item.display_type == "SECTION" %}
+              <tr class="section-row">
+                <td colspan="{% if show_lead_time and has_line_lead_time %}5{% else %}4{% endif %}">{{ item.imported_raw_name|default:"—" }}</td>
+                <td class="num section-sub">{{ item.section_subtotal|money }}</td>
+              </tr>
+              {% elif item.display_type == "NOTE" %}
+              <tr class="note-row">
+                <td colspan="{% if show_lead_time and has_line_lead_time %}6{% else %}5{% endif %}">{{ item.imported_raw_name }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td class="num cell-no">{{ item.line_no }}</td>
+                <td class="cell-name">
+                  <div class="item-name">{{ item.product.name|default:item.imported_raw_name|default:"—" }}</div>
+                  {% if item.mpn or item.gost_drawing %}
+                  <div class="item-sub">
+                    {% if item.mpn %}Арт.: {{ item.mpn }}{% endif %}
+                    {% if item.mpn and item.gost_drawing %} · {% endif %}
+                    {% if item.gost_drawing %}{{ item.gost_drawing }}{% endif %}
+                  </div>
+                  {% endif %}
+                </td>
+                <td class="center" data-label="Кол-во">{{ item.quantity|qty:item.unit }}</td>
+                {% if show_lead_time and has_line_lead_time %}<td class="center" data-label="Срок / наличие">{% if item.lead_time_days %}до {{ item.lead_time_days }} дн.{% elif quote.effective_delivery_lead_time_days %}до {{ quote.effective_delivery_lead_time_days }} дн.{% else %}В наличии{% endif %}</td>{% endif %}
+                <td class="num" data-label="Цена за ед. без НДС">{{ item.final_price_excl_vat|money }}</td>
+                <td class="num cell-total" data-label="Сумма без НДС">{{ item.line_total|money }}</td>
+              </tr>
+              {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {# D1: same labels/figures as the unified PDF totals block (document_totals). #}
+      <div class="totals">
+        <div class="row sep"><span>Сумма без НДС:</span><span>{{ totals.subtotal|money:pres_ccy }}</span></div>
+        <div class="row"><span>НДС{% if totals.vat_rate %} {{ totals.vat_rate|floatformat:0 }}%{% endif %}:</span><span>{{ totals.vat_amount|money:pres_ccy }}</span></div>
+        <div class="row grand"><span>Итого к оплате:</span><span>{{ totals.total|money:pres_ccy }}</span></div>
+      </div>
+      <div class="amount-words"><span class="k">Сумма прописью:</span> {{ totals.total|money_words:pres_ccy }}</div>
+
+      {% if optional_items %}
+      <div class="optional-block">
+        <h3>Опционально (не входит в итог)</h3>
+        <p class="optional-hint">Позиции ниже предлагаются дополнительно и не включены в сумму «ИТОГО к оплате».</p>
+        <div class="table-scroll">
+          <table class="lines">
+            <thead><tr><th style="width:6%">№</th><th>Наименование</th><th class="center" style="width:12%">Кол-во</th><th class="num" style="width:16%">Цена, {{ pres_ccy }}</th><th class="num" style="width:16%">Сумма, {{ pres_ccy }}</th></tr></thead>
+            <tbody>
+              {% for item in optional_items %}
+              <tr>
+                <td class="num cell-no">{{ forloop.counter }}</td>
+                <td class="cell-name"><div class="item-name">{{ item.product.name|default:item.imported_raw_name|default:"—" }}</div></td>
+                <td class="center" data-label="Кол-во">{{ item.quantity|qty:item.unit }}</td>
+                <td class="num" data-label="Цена, {{ pres_ccy }}">{{ item.final_price_excl_vat|money }}</td>
+                <td class="num cell-total" data-label="Сумма, {{ pres_ccy }}">{{ item.line_total|money }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+
+      {# D1c: структурные «Условия поставки» — тот же build_quote_terms, что в PDF. #}
+      {% if quote_terms %}
+      <div class="terms">
+        <div class="terms-title">Условия поставки</div>
+        <table class="terms-grid">
+          {% for row in quote_terms %}
+          <tr><td class="tk">{{ row.label }}</td><td class="tv">{{ row.value }}</td></tr>
+          {% endfor %}
+        </table>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- ── CTA (Т4: контакты менеджера переехали в мета-блок шапки — дубль убран) ── -->
+    <div class="card">
+      <div id="already-decided" class="panel" {% if is_open %}hidden{% endif %}>
+        <div class="status-box {% if is_approved %}ok{% else %}info{% endif %}">
+          {% if is_approved %}
+            <h2>Предложение принято</h2>
+            <p>Спасибо! Коммерческое предложение принято{% if quote.approved_at %} {{ quote.approved_at|date:"d.m.Y H:i" }}{% endif %}. Договор готовится к подписанию — с вами свяжется менеджер.</p>
+          {% elif is_rejected %}
+            <h2>Предложение возвращено продавцу</h2>
+            <p>Предложение отправлено на доработку — продавец подготовит новую редакцию. Свяжитесь с менеджером, если это ошибка.</p>
+          {% else %}
+            <h2>Действие недоступно</h2>
+            <p>Это предложение сейчас нельзя принять или отклонить онлайн. Свяжитесь с менеджером.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if superseded_by_version %}
+      {% comment %}
+        O2: ссылка ведёт на СТАРУЮ редакцию — предупреждаем до того, как клиент примет цену,
+        которой уже нет. Пометка вычисляется по факту наличия более новой разосланной версии.
+        ВАЖНО: только `{% comment %}`. Однострочный `{#…#}` при переносе строки Django НЕ
+        распознаёт как комментарий и печатает его клиенту — поймано прогоном глазами 18-08.
+      {% endcomment %}
+      <div class="notice notice-warn" role="status" style="margin-top:14px">
+        <strong>Есть более новая редакция.</strong>
+        Продавец выпустил редакцию №{{ superseded_by_version }} этого предложения — запросите у менеджера актуальную ссылку.
+      </div>
+      {% endif %}
+
+      {% if is_open %}
+      <div id="cta" class="cta-row" style="margin-top:14px">
+        <button type="button" class="btn btn-primary" id="btn-accept">Принять предложение</button>
+        <button type="button" class="btn" id="btn-reject">Вернуть на доработку…</button>
+        <a class="btn" href="?export=pdf">Скачать PDF</a>
+        {% if quote.prepared_by.email %}<a class="btn" href="mailto:{{ quote.prepared_by.email }}?subject=Вопрос по КП {{ quote.number }}">Задать вопрос</a>{% endif %}
+      </div>
+
+      <!-- Accept: step-up email code -->
+      <div id="accept-panel" class="panel" hidden>
+        <p>Чтобы принять предложение, подтвердите, что вы получатель: мы отправим код на
+          <strong id="recipient-hint">{{ recipient_hint }}</strong>.</p>
+        <button type="button" class="btn btn-primary" id="btn-send-code">Отправить код</button>
+        <div id="code-entry" hidden style="margin-top:12px">
+          <label for="code">Код из письма</label>
+          <input type="text" id="code" class="code-input" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000">
+          <div class="cta-row" style="margin-top:12px">
+            <button type="button" class="btn btn-primary" id="btn-confirm-accept">Принять предложение</button>
+            <button type="button" class="btn" id="btn-resend-code">Отправить код повторно</button>
+          </div>
+        </div>
+        <div class="msg" id="accept-msg" role="status"></div>
+        <p class="legal-note">«Принять предложение» — коммерческий акцепт оферты с фиксацией в журнале.
+          Это не электронная подпись; договор подписывается отдельно.</p>
+      </div>
+
+      <!-- Reject: required reason -->
+      <div id="reject-panel" class="panel" hidden>
+        <label for="reason">Что поправить в предложении</label>
+        <textarea id="reason" rows="3" placeholder="Например: не подходит срок поставки или нужна другая цена…"></textarea>
+        <div class="cta-row" style="margin-top:12px">
+          <button type="button" class="btn btn-primary" id="btn-confirm-reject">Вернуть продавцу</button>
+          <button type="button" class="btn" id="btn-cancel-reject">Отмена</button>
+        </div>
+        <div class="msg" id="reject-msg" role="status"></div>
+      </div>
+
+      <!-- Success states (revealed by JS) -->
+      <div id="accepted-state" class="panel" hidden>
+        <div class="status-box ok">
+          <h2>Предложение принято</h2>
+          <p id="accepted-detail">Спасибо! Договор готовится к подписанию — с вами свяжется менеджер.</p>
+          <a class="btn" href="?export=pdf" style="margin-top:10px">Скачать PDF</a>
+        </div>
+      </div>
+      {% comment %}
+        Экран после возврата — ДВОЙНИК серверного блока `is_rejected` выше: его показывает скрипт
+        сразу после ответа, не перезагружая страницу. Тексты обязаны совпадать (O1, 18-08:
+        серверный блок переименовали, а этот забыли — клиент видел «Предложение отклонено»
+        там, где действие называется «вернуть на доработку»). Найдено прогоном глазами на проде.
+      {% endcomment %}
+      <div id="rejected-state" class="panel" hidden>
+        <div class="status-box info">
+          <h2>Предложение возвращено продавцу</h2>
+          <p>Мы передали ваш ответ — продавец подготовит новую редакцию. Спасибо.</p>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="footer">Документ сформирован в RailTech B2B</div>
+  </div>
+  {% endwith %}
+  <script src="{{ page_js_url }}" defer></script>
+</body>
+</html>

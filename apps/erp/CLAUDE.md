@@ -5,8 +5,9 @@
 закупщик, логист, финансист; «Администратор» = суперпользователь). Клиент сюда не входит — ему служит
 Cabinet через портальный API этой же ERP. Продукт нейтрален к отрасли и бренду: имя и логотип — настройки.
 
-**Статус документа: заготовка (M0-DOC-01).** Кода в `apps/erp` ещё нет: он копируется из `legacy/b2b`
-в M1-ERP-01 и перестраивается задачами M1-ERP-02…09. Окончательная версия этого файла — **M1-ERP-10**.
+**Статус документа: заготовка (M0-DOC-01), обновлена в M1-ERP-01.** Код скопирован из `legacy/b2b` как есть
+(2026-10-13) и перестраивается задачами M1-ERP-02…09 — до них в коде ещё живут удаляемые слои из §9 и бренд B2B.
+Окончательная версия этого файла — **M1-ERP-10**.
 Всё, что помечено «появится в <ID>», пока не существует — не ищи и не выдумывай.
 
 ## 1. Карта документов — читай в этом порядке
@@ -48,9 +49,9 @@ frontend/  React 18 · TypeScript · Vite · Tailwind CSS 4 · shadcn/ui · Reac
 ```
 
 Версии — как в `legacy/b2b` на момент копирования (M1-ERP-01); обновления — отдельными PR с `make check-erp`.
-Общие сервисы (Postgres, Redis, LiteLLM, Langfuse, RustFS, Caddy) — из `infra/compose` (есть с M0-INF-03; `erp.localhost` пока заглушка Caddy),
-ERP сам их не описывает. Токены дизайна — из `packages/ui-tokens` (появится в M0-INF-05), Tailwind-конфиг ERP читает их.
-Хранилище файлов — RustFS через S3-бэкенд Django (в B2B был FileSystemStorage, MinIO опционально — не переносится).
+Общие сервисы (Postgres, Redis, LiteLLM, Langfuse, RustFS, Caddy) — из `infra/compose` (есть; сервисы `erp-*` добавлены в M1-ERP-01),
+ERP сам их не описывает. Токены дизайна — из `packages/ui-tokens` (есть: `dist/shadcn.css`); подключение в `frontend/src/index.css` — при перестройке UI (M1-ERP-04).
+Хранилище файлов — целевое RustFS через S3-бэкенд Django; после копирования пока FileSystemStorage в томе `erp_media` (перевод — отдельной задачей M1).
 
 ## 4. Структура приложений (ARCHITECTURE §4; имена и одна миграция на приложение — ADR-0006)
 
@@ -74,7 +75,7 @@ ERP сам их не описывает. Токены дизайна — из `p
 валюты, единицы, базисы, курсы). Куда их положить — отдельными приложениями или внутрь `core`/`documents` —
 решает M1-ERP-03; до решения не предполагай.
 
-Планируемые папки (`apps/erp/`, появятся в M1-ERP-01):
+Папки `apps/erp/` сейчас — как в B2B (`backend/<app>/`, `frontend/src/`, `Makefile`, `scripts/`, `pyproject.toml`, `.flake8`); целевая структура после M1-ERP-03:
 
 ```
 backend/<app>/{models/, services/, views/, serializers/, tasks.py, migrations/0001_initial.py, tests/}
@@ -154,15 +155,15 @@ Makefile · .env.example · docs/ (ADR и runbook ERP — M1-ERP-10)
 
 | Команда | Что делает | Появится в |
 |---|---|---|
-| `make check-erp` (из корня) | делегирует в `make -C apps/erp check`: lint + typecheck + unit backend и frontend | M1-ERP-01 |
-| `make -C apps/erp check \| test \| lint \| migrate \| openapi` | проверки, pytest, линтеры, миграции, экспорт OpenAPI internal в `packages/contracts` | M1-ERP-01, `openapi` — M1-ERP-10 |
+| `make check-erp` (из корня) | делегирует в `make -C apps/erp check`: flake8/black/isort, eslint, tsc, i18n, vitest, pytest в контейнере на одноразовых Postgres 17 + Redis | есть (M1-ERP-01) |
+| `make -C apps/erp check \| test \| lint \| migrate \| openapi` | проверки, pytest, линтеры, миграции на стенде, экспорт `backend/schema.json` + типы фронтенда | есть (M1-ERP-01); экспорт в `packages/contracts` — M1-ERP-10 |
 | `make contracts` (из корня) | валидация контракта, генерация типов для ERP/Cabinet и клиента CRM | есть (M0-INF-02) |
-| `make up` (из корня) | весь ансамбль: `erp.localhost` через Caddy, Postgres с базой `erp`, Redis (БД 1 Celery, 2 Channels), LiteLLM, Langfuse, RustFS (бакет `erp`) | есть (M0-INF-03); `erp.localhost` — заглушка до M1-ERP-01 |
+| `make up` (из корня) | весь ансамбль: `erp.localhost` через Caddy → `erp-backend`/`erp-web`, Postgres с базой `erp`, Redis (БД 1 Celery, 2 Channels), LiteLLM, Langfuse, RustFS (бакет `erp`) | есть (M1-ERP-01) |
 | `make logs s=<сервис>` / `make ps` | логи и статус стенда | есть (M0-INF-03) |
 | `make -C apps/erp eval-quick` | платный прогон evals — только с согласия владельца | M1-ERP-06 |
 
-ERP не имеет своего compose: контейнеры `erp-backend`, `erp-worker`, `erp-worker-ai`, `erp-beat`, `erp-frontend`
-добавляются в `infra/compose/base.yml` задачей M1-ERP-01 (образец — сервисы `crm-*`; имена `erp-*`); `.env.example` корня уже содержит `ERP_SECRET_KEY`, `PLATFORM_NAME`, `SUPPORT_EMAIL`, `SERVICE_TOKEN_*`, `WEBHOOK_SECRET`, `PLATFORM_SSO_SECRET`, `ERP_MCP_CONTEXT_KEY`. Миграции на проде — явным шагом после pg_dump-гейта (M5-INF-01).
+ERP не имеет своего compose: контейнеры `erp-backend`, `erp-worker`, `erp-worker-ai`, `erp-beat`, `erp-web`
+описаны в `infra/compose/base.yml` (M1-ERP-01); код бэкенда монтируется в dev, но Daphne/Celery не перезагружаются сами; `.env.example` корня уже содержит `ERP_SECRET_KEY`, `PLATFORM_NAME`, `SUPPORT_EMAIL`, `SERVICE_TOKEN_*`, `WEBHOOK_SECRET`, `PLATFORM_SSO_SECRET`, `ERP_MCP_CONTEXT_KEY`. Миграции на проде — явным шагом после pg_dump-гейта (M5-INF-01).
 Celery не перезагружается сам — после изменения моделей и задач перезапускай воркеры.
 
 ## 9. Чего здесь нет (MIGRATION-MAP §1, удаляется в M1-ERP-02) — не ищи и не воссоздавай

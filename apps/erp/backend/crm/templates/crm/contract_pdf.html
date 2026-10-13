@@ -1,0 +1,246 @@
+{% extends "crm/_document_base.html" %}
+{% load i18n %}
+{% load document_format %}
+{% comment %}
+  Договор поставки — legal document. «Поставщик» = the REAL seller that owns the КП (via
+  document_brand_context); NEVER the platform. Preserves the ПЭП (простая электронная подпись)
+  block with signer identification. The numbered articles are boilerplate contract text (not deal
+  data) — sums, dates, parties and the specification come only from the models. Line «Сумма» =
+  line_total (price × qty). Currency = contract.currency (default UZS).
+{% endcomment %}
+{% block doc_meta %}
+  <div class="doc-no">{% blocktranslate with number=contract.number %}Договор № {{ number }}{% endblocktranslate %}</div>
+  {% with issued=contract.created_at|date:"d.m.Y" %}<div>{% blocktranslate %}от {{ issued }}{% endblocktranslate %}</div>{% endwith %}
+{% endblock %}
+
+{% block doc_title %}{% translate "Договор поставки" %}{% endblock %}
+
+{% comment %}
+  D1 — стороны КРАТКО в шапке (название + ИНН + адрес). Полные реквизиты (банк, р/с, МФО,
+  подписант) — ниже, в §10 «Реквизиты и подписи Сторон», где они юридически и нужны.
+{% endcomment %}
+{% block parties %}
+<table class="parties">
+  <tr>
+    <td>
+      <div class="party">
+        <h3>{% translate "Поставщик" %}</h3>
+        {% if seller or seller_profile %}
+          <div class="pname">{% firstof seller_profile.legal_name seller.name %}</div>
+          {% firstof seller_profile.inn seller.inn as supplier_inn %}
+          {% if supplier_inn %}<p>{% translate "ИНН:" %} {{ supplier_inn }}</p>{% endif %}
+          {% firstof seller_profile.legal_address seller.legal_address as supplier_addr %}
+          {% if supplier_addr %}<p>{{ supplier_addr }}</p>{% endif %}
+        {% else %}
+          <div class="pname">{% translate "Поставщик не указан" %}</div>
+        {% endif %}
+      </div>
+    </td>
+    <td>
+      <div class="party">
+        <h3>{% translate "Покупатель" %}</h3>
+        <div class="pname">{{ company.name }}</div>
+        {% if company.inn %}<p>{% translate "ИНН:" %} {{ company.inn }}</p>{% endif %}
+        {% if company.legal_address %}<p>{{ company.legal_address }}</p>{% endif %}
+      </div>
+    </td>
+  </tr>
+</table>
+{% endblock %}
+
+{% block content %}
+  {% with ccy=contract.currency.code|default:"UZS" %}
+  {% comment %}
+    Преамбула договора (P2, стандарт СНГ): место заключения + дата. «г. Ташкент» — как и
+    остальной юр-бойлерплейт договора (§7 — право Республики Узбекистан), не бизнес-данные.
+  {% endcomment %}
+  <p style="margin:0 0 12pt 0; font-size:9pt; color:var(--ink-soft);">
+    г. Ташкент<span style="float:right;">{{ contract.created_at|date:"d.m.Y" }} г.</span>
+  </p>
+  <div class="legal-article">
+    <h2>1. Предмет договора</h2>
+    <p>Поставщик обязуется передать в собственность Покупателя, а Покупатель — принять и оплатить
+    товары (продукцию) в соответствии со Спецификацией (Приложение № 1), являющейся неотъемлемой
+    частью настоящего Договора.</p>
+  </div>
+
+  <p style="font-weight:700;margin:12pt 0 4pt 0;">{% translate "Приложение № 1. Спецификация" %}</p>
+  <table class="lines">
+    <thead>
+      <tr>
+        <th style="width:6%">{% translate "№" %}</th>
+        <th style="width:46%">{% translate "Наименование" %}</th>
+        <th style="width:12%" class="center">{% translate "Кол-во" %}</th>
+        <th style="width:18%" class="num">{% blocktranslate with currency=ccy %}Цена, {{ currency }}{% endblocktranslate %}</th>
+        <th style="width:18%" class="num">{% blocktranslate with currency=ccy %}Сумма, {{ currency }}{% endblocktranslate %}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+      <tr>
+        <td class="num">{{ forloop.counter }}</td>
+        <td class="item-name">{% if item.product %}{{ item.product.name }}{% else %}{{ item.imported_raw_name }}{% endif %}</td>
+        <td class="center">{{ item.quantity|qty:item.unit }}</td>
+        <td class="num">{{ item.final_price_excl_vat|money }}</td>
+        <td class="num">{{ item.line_total|money }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% include "crm/_totals_block.html" %}
+
+  <div class="legal-article">
+    <h2>2. Цена и порядок расчётов</h2>
+    <p>Общая сумма Договора составляет {{ contract.total_amount|money:ccy }}, включая НДС по ставке
+    {{ quote.vat_rate|floatformat:0 }}%. Цены указаны в {{ ccy }}. Расчёты производятся в безналичной
+    форме на банковский счёт Поставщика, указанный в разделе «Реквизиты сторон», в порядке и в сроки,
+    согласованные Сторонами. Обязательство по оплате считается исполненным с момента поступления
+    денежных средств на счёт Поставщика.</p>
+  </div>
+
+  <div class="legal-article">
+    <h2>3. Сроки и условия поставки</h2>
+    <p>Поставка осуществляется
+    {% if quote.effective_delivery_lead_time_days %}в срок до {{ quote.effective_delivery_lead_time_days }}
+    календарных дней с момента возникновения обязательства по поставке{% else %}в сроки, согласованные
+    Сторонами{% endif %}{% if quote.delivery_basis %} на условиях поставки {{ quote.delivery_basis.code }}{% if quote.delivery_basis.name %} ({{ quote.delivery_basis.name }}){% endif %}{% endif %}.
+    Право собственности на товар и риск случайной гибели переходят к Покупателю в момент передачи
+    товара Покупателю (грузоперевозчику).</p>
+  </div>
+
+  <div class="legal-article">
+    <h2>4. Качество, комплектность и приёмка</h2>
+    {# Формулировка компании либо платформенная (crm.document_wording); linebreaks экранирует. #}
+    {{ wording_contract_acceptance_text|linebreaks }}
+  </div>
+
+  <div class="legal-article">
+    <h2>5. Ответственность сторон</h2>
+    {{ wording_contract_liability_text|linebreaks }}
+  </div>
+
+  <div class="legal-article">
+    <h2>6. Обстоятельства непреодолимой силы (форс-мажор)</h2>
+    <p>Стороны освобождаются от ответственности за частичное или полное неисполнение обязательств,
+    если оно явилось следствием обстоятельств непреодолимой силы, возникших после заключения Договора.
+    Сторона, для которой создалась невозможность исполнения, обязана известить другую Сторону в течение
+    разумного срока.</p>
+  </div>
+
+  <div class="legal-article">
+    <h2>7. Порядок разрешения споров и применимое право</h2>
+    <p>Все споры и разногласия решаются путём переговоров. При недостижении согласия спор передаётся на
+    рассмотрение суда по месту нахождения ответчика в соответствии с законодательством Республики
+    Узбекистан, которое является применимым правом по настоящему Договору.</p>
+  </div>
+
+  <div class="legal-article">
+    <h2>8. Срок действия договора</h2>
+    <p>Договор вступает в силу
+    {% if contract.valid_from %}с {{ contract.valid_from|date:"d.m.Y" }}{% else %}с даты его подписания
+    обеими Сторонами{% endif %} и действует
+    {% if contract.valid_until %}до {{ contract.valid_until|date:"d.m.Y" }}{% else %}до полного исполнения
+    Сторонами своих обязательств{% endif %}.</p>
+  </div>
+
+  <div class="legal-article">
+    <h2>9. Заключительные положения</h2>
+    <p>Договор составлен в двух экземплярах, имеющих равную юридическую силу, по одному для каждой из
+    Сторон. Все изменения и дополнения действительны при их совершении в письменной форме. Стороны
+    признают юридическую силу документов, подписанных простой электронной подписью в рамках
+    согласованного электронного документооборота.</p>
+  </div>
+
+  {% comment %}
+    Особые условия КОМПАНИИ — часть юридического текста, поэтому нумерованный пункт. Печатается
+    только когда заполнены: пустой пункт хуже отсутствующего, документ выглядит недооформленным.
+    Нумерация реквизитов сдвигается ровно на этот случай, без «дыры» в нумерации.
+    ВНИМАНИЕ: `{# … #}` в Django ОДНОСТРОЧНЫЙ — многострочный вариант печатается в документ.
+  {% endcomment %}
+  {% if wording_contract_extra_terms_text %}
+  <div class="legal-article">
+    <h2>10. Особые условия</h2>
+    {{ wording_contract_extra_terms_text|linebreaks }}
+  </div>
+  {% endif %}
+
+  {# А это условия ЭТОГО договора (поле записи), а не компании — разные области, оба нужны. #}
+  {% if contract.notes %}
+  <div class="notes-block"><span class="k">{% translate "Дополнительные условия:" %}</span><br>{{ contract.notes|linebreaks }}</div>
+  {% endif %}
+
+  <div class="legal-article">
+    <h2>{% if wording_contract_extra_terms_text %}11{% else %}10{% endif %}. Реквизиты и подписи Сторон</h2>
+  </div>
+  {% comment %}
+    D1 — полные реквизиты СТОРОН одним блоком (юр.название, ИНН, адрес, банк, р/с, МФО, подписант).
+    Для юрдока обязательны; в шапке-сторонах их сознательно нет (краткость), здесь — полностью.
+  {% endcomment %}
+  <table class="parties" style="margin-bottom:14pt;">
+    <tr>
+      <td>
+        <div class="party">
+          <h3>{% translate "Поставщик" %}</h3>
+          <div class="pname">{% firstof seller_profile.legal_name seller.name _("Поставщик") %}</div>
+          {% firstof seller_profile.inn seller.inn as req_seller_inn %}
+          {% if req_seller_inn %}<p>{% translate "ИНН:" %} {{ req_seller_inn }}</p>{% endif %}
+          {% firstof seller_profile.legal_address seller.legal_address as req_seller_addr %}
+          {% if req_seller_addr %}<p>{% translate "Адрес:" %} {{ req_seller_addr }}</p>{% endif %}
+          {% if seller_profile.bank_details %}<p>{{ seller_profile.bank_details|linebreaksbr }}</p>
+          {% elif seller.bank_account %}<p>{% translate "Р/с:" %} {{ seller.bank_account }}{% if seller.mfo %} · {% translate "МФО:" %} {{ seller.mfo }}{% endif %}</p>{% endif %}
+          {% if seller.phone %}<p>{% translate "Тел.:" %} {{ seller.phone }}</p>{% endif %}
+          {% if seller_profile.signatory_name %}<p>{{ seller_profile.signatory_position|default:_("Подписант") }}: {{ seller_profile.signatory_name }}</p>{% endif %}
+        </div>
+      </td>
+      <td>
+        <div class="party">
+          <h3>{% translate "Покупатель" %}</h3>
+          <div class="pname">{{ company.name|default:_("Покупатель") }}</div>
+          {% if company.inn %}<p>{% translate "ИНН:" %} {{ company.inn }}</p>{% endif %}
+          {% if company.legal_address %}<p>{% translate "Адрес:" %} {{ company.legal_address }}</p>{% endif %}
+          {% if company.bank_account %}<p>{% translate "Р/с:" %} {{ company.bank_account }}{% if company.mfo %} · {% translate "МФО:" %} {{ company.mfo }}{% endif %}</p>{% endif %}
+          {% if company.phone %}<p>{% translate "Тел.:" %} {{ company.phone }}</p>{% endif %}
+        </div>
+      </td>
+    </tr>
+  </table>
+  <table class="signatures">
+    <tr>
+      <td>
+        <div class="sign-box">
+          <div class="role">{% translate "От Поставщика:" %}</div>
+          {% if contract.manager_signer %}
+            {{ contract.manager_signer.get_full_name|default:contract.manager_signer.email }}
+            <div class="sign-line">{% translate "Простая электронная подпись" %} · {{ contract.manager_signed_at|date:"d.m.Y H:i" }}<br>{% translate "Идентификация:" %} {{ contract.manager_signer.email }}</div>
+          {% else %}<div class="sign-line">{% translate "Подпись / дата" %}</div>{% endif %}
+          <div class="seal">{% translate "М.П." %}</div>
+        </div>
+      </td>
+      <td>
+        <div class="sign-box">
+          <div class="role">{% translate "От Покупателя:" %}</div>
+          {% if contract.client_signer %}
+            {{ contract.client_signer.get_full_name|default:contract.client_signer.email }}
+            <div class="sign-line">{% translate "Простая электронная подпись" %} · {{ contract.client_signed_at|date:"d.m.Y H:i" }}<br>{% translate "Идентификация:" %} {{ contract.client_signer.email }}</div>
+          {% else %}<div class="sign-line">{% translate "Подпись / дата" %}</div>{% endif %}
+          <div class="seal">{% translate "М.П." %}</div>
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  {% if contract.manager_signer or contract.client_signer %}
+  <div class="notes-block" style="color:var(--muted);font-size:7.8pt;">
+  {% comment %}
+    Отступ строк ниже — ровно 2 пробела: msgid включает перевод строки и ведущие пробелы, а этот
+    же дисклеймер размечен в blocks/_requisites_and_signatures.html. Разный отступ = ДВЕ записи в
+    каталоге вместо одной, и вторая уедет непереведённой.
+  {% endcomment %}
+  {% blocktranslate %}Документ подписан простой электронной подписью (ПЭП) в соответствии с соглашением сторон об
+  электронном документообороте. Подписант идентифицирован по учётной записи платформы; дата и
+  время подписания зафиксированы системой.{% endblocktranslate %}
+  </div>
+  {% endif %}
+  {% endwith %}
+{% endblock %}

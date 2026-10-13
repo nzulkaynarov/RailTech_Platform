@@ -1,0 +1,27 @@
+# apps/erp — из legacy/b2b/.gitignore, без того, что относилось к корню B2B.
+.env
+*.env
+.venv-tools/
+backend/venv/
+backend/__pycache__/
+**/__pycache__/
+*.pyc
+backend/db.sqlite3
+backend/media/
+backend/static/
+backend/staticfiles/
+backend/htmlcov/
+.pytest_cache/
+.coverage
+coverage.xml
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+frontend/playwright-report/
+frontend/test-results/
+*.local
+*.log
+*.tmp
+.~lock.*
+# Скомпилированные каталоги переводов — производные от .po (генерируются в сборке образа и тестами)
+*.mo

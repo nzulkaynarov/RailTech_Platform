@@ -1,0 +1,25 @@
+{% extends "emails/base.html" %}
+{% load i18n %}
+{% block subject %}{% blocktranslate %}Приглашение в команду {{ company_name }}{% endblocktranslate %}{% endblock %}
+{% block header_hint %}{% translate "Приглашение в команду" %}{% endblock %}
+{% block content %}
+  <h1 style="margin:0 0 16px 0; font-size:22px; line-height:1.3; color:#111827;">
+    {% translate "Вас пригласили в RailTech B2B" %}
+  </h1>
+  <p style="margin:0 0 16px 0;">
+    {% blocktranslate %}Компания <strong>{{ company_name }}</strong> приглашает вас присоединиться к команде
+    на платформе RailTech B2B. Чтобы принять приглашение, установите пароль для своего аккаунта.{% endblocktranslate %}
+  </p>
+  <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0;">
+    <tr><td style="border-radius:8px; background-color:#2563eb;">
+      <a href="{{ setup_url }}" style="display:inline-block; padding:12px 24px; font-size:15px; font-weight:600; color:#ffffff; text-decoration:none; border-radius:8px;">{% translate "Принять приглашение" %}</a>
+    </td></tr>
+  </table>
+  <p style="margin:16px 0 0 0; font-size:13px; color:#6b7280;">
+    {% translate "Если кнопка не работает, скопируйте ссылку в браузер:" %}<br>
+    <a href="{{ setup_url }}" style="color:#2563eb; word-break:break-all;">{{ setup_url }}</a>
+  </p>
+  <p style="margin:24px 0 0 0; font-size:13px; color:#6b7280;">
+    {% translate "Не ожидали приглашения от этой компании? Проигнорируйте письмо." %}
+  </p>
+{% endblock %}

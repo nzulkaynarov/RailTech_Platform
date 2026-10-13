@@ -1,0 +1,68 @@
+{% extends "admin/index.html" %}
+{% load i18n unfold %}
+
+{% comment %}
+  Override of Unfold's default admin index.html.
+
+  Adds a KPI dashboard above the native app_list. Data comes from
+  core.dashboard.dashboard_callback (wired via UNFOLD['DASHBOARD_CALLBACK']
+  in settings.py). Uses Unfold's native `card` and `chart/bar` components —
+  no custom CSS, no inline hex-colors outside the chart dataset palette.
+{% endcomment %}
+
+{% block content %}
+  {% if stats or charts %}
+    <div class="mb-6">
+      {% if stats %}
+        <h2 class="font-semibold mb-3 text-base text-font-important-light dark:text-font-important-dark">
+          {% trans "Ключевые метрики" %}
+        </h2>
+        <div class="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+          {% for stat in stats %}
+            {% component "unfold/components/card.html" with href=stat.link icon=stat.icon %}
+              <div class="text-font-subtle-light dark:text-font-subtle-dark font-medium text-sm">
+                {{ stat.title }}
+              </div>
+              <div class="text-font-important-light dark:text-font-important-dark font-semibold mt-1 text-2xl">
+                {{ stat.metric }}
+              </div>
+            {% endcomponent %}
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {% if charts %}
+        <h2 class="font-semibold mb-3 text-base text-font-important-light dark:text-font-important-dark">
+          {% trans "Аналитика" %}
+        </h2>
+        {% comment %}
+          items-start: отключаем grid stretch, карточки растут по контенту.
+          Card self-class "h-80" даёт фиксированную общую высоту 320px — чарт
+          занимает всё оставшееся место через h-full (для maintainAspectRatio=false).
+        {% endcomment %}
+        <div class="grid gap-4 grid-cols-1 lg:grid-cols-2 mb-6 items-start">
+          {% for chart in charts %}
+            {% component "unfold/components/card.html" with title=chart.title class="h-80" %}
+              {% if chart.empty %}
+                <div class="flex items-center justify-center h-full text-font-subtle-light dark:text-font-subtle-dark text-sm">
+                  {% trans "Пока нет данных для отображения" %}
+                </div>
+              {% else %}
+                <div class="h-full">
+                  {% component "unfold/components/chart/bar.html" with data=chart.data options=chart.options %}
+                  {% endcomponent %}
+                </div>
+              {% endif %}
+            {% endcomponent %}
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <h2 class="font-semibold mb-3 text-base text-font-important-light dark:text-font-important-dark">
+        {% trans "Все разделы" %}
+      </h2>
+    </div>
+  {% endif %}
+
+  {{ block.super }}
+{% endblock %}

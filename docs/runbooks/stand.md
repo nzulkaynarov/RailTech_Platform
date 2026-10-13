@@ -16,7 +16,7 @@ make smoke        # /health трёх доменов → 200
 | Домен | Что отвечает |
 |---|---|
 | `http://crm.localhost` | CRM: SPA (`crm-web`), `/api/*`, `/health`, `/ready` → `crm-api` |
-| `http://erp.localhost` | заглушка до M1-ERP-01: `/health` 200, `/api/*` 503 `ERP_NOT_IMPLEMENTED` |
+| `http://erp.localhost` | ERP (с M1-ERP-01): `/api`, `/admin`, `/ws`, `/static`, `/media`, `/health` → `erp-backend`; остальное → `erp-web` (SPA) |
 | `http://cabinet.localhost` | заглушка до M2-CAB-01: `/health` 200 |
 | `http://langfuse.localhost` | Langfuse (только `make up-obs`) |
 | `http://s3.localhost` | консоль RustFS |
@@ -36,6 +36,7 @@ make smoke        # /health трёх доменов → 200
 | `litellm`, `litellm-seed` | шлюз моделей по алиасам CRM и ERP (`infra/ai/litellm.models.yaml`); ключи провайдеров — только у `litellm` |
 | `docling` | конвертация документов базы знаний CRM |
 | `crm-migrate`, `crm-api`, `crm-worker`, `crm-mcp-*`, `crm-web` | CRM из `apps/crm` (код монтируется, hot reload) |
+| `erp-backend`, `erp-worker`, `erp-worker-ai`, `erp-beat`, `erp-web` | ERP из `apps/erp` (копия B2B, M1-ERP-01): Daphne мигрирует при старте (`AUTO_MIGRATE`), Celery-воркеры, Beat, nginx со сборкой Vite; код бэкенда монтируется, перезапуск руками |
 | `caddy` | три домена |
 | `clickhouse`, `langfuse-worker`, `langfuse-web` | профиль `observability` |
 
@@ -48,6 +49,8 @@ make down               # остановить (данные в volumes оста
 make up-obs             # с Langfuse
 make -C apps/crm migrate  # нет: миграции CRM применяет сервис crm-migrate при каждом make up
 ```
+
+Команды ERP на стенде: `make -C apps/erp migrate | shell | createsuperuser | seed`.
 
 Команды CRM, которым нужен стенд (`seed`, `create-admin`, `kb-demo`, `settings`), пока запускаются через
 compose ансамбля напрямую, например:

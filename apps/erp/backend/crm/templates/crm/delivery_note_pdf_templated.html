@@ -1,0 +1,13 @@
+{% extends "crm/_document_base.html" %}
+{% load i18n %}
+{% comment %}
+  Накладная на отгрузку по шаблону компании (D2b, механика E1). |safe — тело уже собрано.
+{% endcomment %}
+{% block doc_meta %}
+  <div class="doc-no">{% blocktranslate with number=note_number %}Накладная № {{ number }}{% endblocktranslate %}</div>
+  {% if fulfillment.shipped_at %}{% with shipped=fulfillment.shipped_at|date:"d.m.Y" %}<div>{% blocktranslate %}отгружено {{ shipped }}{% endblocktranslate %}</div>{% endwith %}{% endif %}
+{% endblock %}
+{% block doc_title %}{% translate "Накладная на отгрузку" %}{% endblock %}
+{% block content %}
+  <div class="doc-body">{{ body_html|safe }}</div>
+{% endblock %}

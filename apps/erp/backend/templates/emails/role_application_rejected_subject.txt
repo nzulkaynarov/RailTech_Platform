@@ -1,0 +1,1 @@
+{% load i18n %}{% blocktranslate %}RailTech: заявка на роль «{{ requested_type_name }}» отклонена{% endblocktranslate %}

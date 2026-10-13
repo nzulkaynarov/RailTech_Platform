@@ -1,0 +1,106 @@
+# ==============================================================================
+# INF-05/09 — SOURCE of truth for backend deps. Edit HERE (floors/caps + intent),
+# then recompile the hashed lock:
+#   pip-compile --generate-hashes --no-strip-extras requirements.in -o requirements.txt
+# (run in a linux py3.12 env with gcc + libpq-dev; the CI `deps-lock` gate fails
+#  on drift). Never hand-edit requirements.txt — it is generated.
+# ==============================================================================
+
+# Core Django
+Django>=5.2
+djangorestframework>=3.16
+django-cors-headers>=4.9
+django-filter>=25.2
+djangorestframework-simplejwt>=5.5
+
+# ASGI / WebSocket
+daphne>=4.2
+channels>=4.3
+channels-redis>=4.3
+asgiref>=3.11
+
+# Production ASGI server (gunicorn process manager + uvicorn workers)
+# docker-compose.prod.yml runs: gunicorn --worker-class=uvicorn.workers.UvicornWorker core.asgi:application
+gunicorn>=23.0
+uvicorn[standard]>=0.34
+
+# Celery
+celery>=5.6
+django-celery-beat>=2.9
+
+# Database
+# INF-09: psycopg2 (source build) in prod, NOT psycopg2-binary — the binary
+# wheel bundles its own libpq/OpenSSL, which drifts from the OS and dodges
+# security updates. The image builds it from source (Dockerfile builder has
+# gcc + libpq-dev; runtime has libpq5).
+psycopg2>=2.9,<3
+django-db-connection-pool[postgresql]>=1.2.6
+
+# Storage
+django-storages[s3]>=1.14.6
+boto3>=1.42
+whitenoise>=6.12
+
+# Data processing
+# NumPy 2.x ships only x86_64_v2 wheels (popcnt/sse4_*/ssse3 required);
+# the prod VPS is on x86_64_v1, so pin to the last 1.x line.
+# Drop this constraint once the VPS moves to a modern CPU.
+numpy>=1.26,<2
+pandas>=2.2,<2.3
+openpyxl>=3.1.5
+XlsxWriter>=3.2
+
+# PDF
+weasyprint>=68.0
+
+# Redis
+# Cap below 8.0: redis-py 8.0.0 broke Django Channels — it mis-maps the
+# asyncio cancellation of an in-flight blocking BZPOPMIN (normal operation in
+# channels_redis await_many_dispatch) into redis.exceptions.TimeoutError, which
+# bubbles up to uvicorn and drops the WebSocket connection (~every few minutes
+# per idle client). redis-py 7.4.x works correctly with channels_redis 4.3.0.
+# See redis-py issue #4091. Remove the cap once channels_redis supports 8.x.
+redis>=7.4,<8
+
+# Admin
+django-unfold>=0.88
+django-import-export>=4.4
+django-formtools>=2.5
+
+# API docs
+drf-spectacular>=0.29
+
+# Observability — error reporting. No-op unless SENTRY_DSN is set (see core/settings.py).
+sentry-sdk[django]>=2.20
+
+# Audit / history
+django-pghistory>=3.9
+django-pgtrigger>=4.9
+
+# Auth & utils
+python-dotenv>=1.2
+python-dateutil>=2.9
+tzdata>=2026.1
+
+# AI — заявка normalisation (client uploads any file → Claude extracts our schema)
+# Floor raised from >=0.40: every AI feature (sourcing/services_ai.py, crm/services/ai_chat.py,
+# catalog/ai_enrich.py, services_ai_preflight.py) calls messages.create(output_config={'format':
+# {'type':'json_schema',...}}). The old >=0.40 floor predates the Structured-Outputs output_config.format
+# API, so a fresh install could resolve an SDK that silently ignores the schema → unconstrained "dirty"
+# JSON. 0.111 is the version verified working in the container (matches output_config.format). Cap below
+# 1.0 to avoid an unvetted breaking major.
+anthropic>=0.111,<1
+
+# Testing — pytest lives in the base image because the dev container (= prod image
+# + mounted code) runs `make test` / `make test-backend` (pytest --cov) directly.
+pytest>=9.0
+pytest-django>=4.12
+pytest-cov>=4.1
+
+# 2FA (TOTP) — accounts profile security
+pyotp>=2.9
+# Direct import: TOTP secret encryption at rest (accounts/services/two_factor.py).
+# Was transitive-only (daphne→pyopenssl/autobahn); declare what we import.
+cryptography>=45
+qrcode
+greenlet
