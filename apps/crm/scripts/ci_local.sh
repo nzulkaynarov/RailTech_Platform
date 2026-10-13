@@ -83,7 +83,9 @@ stage_lint() {
       --env-file "$envfile" --profile observability --profile backup config -q
   done
   rm -f "$envfile"
-  docker run --rm -v "$ROOT:/repo" -w /repo "$GITLEAKS_IMAGE" git --redact .
+  # История текущей ветки, как в CI (checkout PR), а не все ветки клона: чужие ветки
+  # (другие сессии) проверяются в своих PR.
+  docker run --rm -v "$ROOT:/repo" -w /repo "$GITLEAKS_IMAGE" git --redact --log-opts=HEAD .
 }
 
 stage_integration() {
@@ -198,6 +200,7 @@ killed=$(docker ps -a --filter "label=com.docker.compose.project=railtech" --fil
   --format '{{.Names}}' | while read -r name; do
   [ "$(docker inspect -f '{{.State.OOMKilled}}' "$name")" = true ] \
     && [ "$(docker inspect -f '{{.State.FinishedAt}}' "$name")" \> "$RUN_STARTED" ] && echo "$name"
+  true # без находок цикл вернул бы 1, и с pipefail скрипт вышел бы до итога
 done)
 if [ -n "$killed" ]; then
   echo "⚠ Стенд: Docker остановил по нехватке памяти — $(echo $killed | tr '\n' ' ')"
