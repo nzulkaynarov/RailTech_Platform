@@ -56,4 +56,9 @@ export const Reason = {
   litellm_unavailable: "litellm_unavailable",
   model_key_required: "model_key_required",
   model_in_config: "model_in_config",
+  erp_not_configured: "erp_not_configured",
+  erp_invalid_url: "erp_invalid_url",
+  erp_unauthorized: "erp_unauthorized",
+  erp_unavailable: "erp_unavailable",
+  erp_bad_response: "erp_bad_response",
 } as const;

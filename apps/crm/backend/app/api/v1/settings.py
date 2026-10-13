@@ -17,8 +17,9 @@ router = APIRouter(prefix="/api/v1/settings", tags=["settings"])
 
 Reader = Annotated[Principal, Depends(require("settings", "read"))]
 Writer = Annotated[Principal, Depends(require("settings", "write"))]
-# Профиль бота правится и публикуется в «Подключениях» (`/integrations/telegram/profile`).
-PAGE_KEYS = tuple(key for key in SETTINGS_MODELS if key != "bot_profile")
+# Профиль бота и коннекторы правятся в «Подключениях» (`/integrations/telegram/profile`,
+# `/integrations/erp`), на экране «Настройки» их нет.
+PAGE_KEYS = tuple(key for key in SETTINGS_MODELS if key not in ("bot_profile", "integrations"))
 
 
 @router.get("", response_model=SettingsResponse)

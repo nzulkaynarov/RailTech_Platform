@@ -60,7 +60,15 @@ test("admin sections render and greeting can be changed", async ({ page }) => {
   await page.goto("/audit");
   await expect(page.getByText("Изменил настройки").first()).toBeVisible();
 
+  // Коннектор ERP (M3-CRM-02): вкладка в «Подключениях», секреты только на запись.
+  await page.goto("/integrations?tab=erp");
+  await expect(page.getByRole("heading", { name: "Подключения" })).toBeVisible();
+  await expect(page.getByLabel("Адрес ERP")).toBeVisible();
+  await expect(page.getByLabel("Сервисный токен CRM → ERP")).toHaveValue("");
+  await expect(page.getByRole("button", { name: "Проверить связь" })).toBeVisible();
+
   await page.goto("/system");
   await expect(page.getByRole("heading", { name: "Состояние системы" })).toBeVisible();
   await expect(page.getByText("База данных")).toBeVisible();
+  await expect(page.getByText("ERP (бэк-офис)")).toBeVisible();
 });

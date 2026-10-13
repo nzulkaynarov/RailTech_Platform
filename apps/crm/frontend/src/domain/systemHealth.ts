@@ -49,6 +49,7 @@ export function bySeverity(components: ComponentStatusOut[]): ComponentStatusOut
 const FIX_PATH: Record<string, string> = {
   bot: "/integrations?tab=bot",
   channel: "/integrations?tab=channel",
+  erp: "/integrations?tab=erp",
   backup: "/backups",
   budget: "/spend",
   crm_url: "/settings?section=company",
