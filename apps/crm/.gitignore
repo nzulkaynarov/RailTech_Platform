@@ -42,3 +42,6 @@ reports/
 
 # UI-ревью стенда (скилл ui-review)
 frontend/review-out/
+
+# Логи локального CI (scripts/ci_local.sh)
+.ci-local/
