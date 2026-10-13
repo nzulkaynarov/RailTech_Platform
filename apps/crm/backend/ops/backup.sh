@@ -11,7 +11,7 @@ set -euo pipefail
 BACKUP_DIR="${BACKUP_DIR:-/backups}"
 KEEP_DAYS="${BACKUP_KEEP_DAYS:-14}"
 AT_UTC="${BACKUP_AT_UTC:-22:00}"
-PG_BIN="${PG_BIN:-/usr/lib/postgresql/16/bin}"
+PG_BIN="${PG_BIN:-/usr/lib/postgresql/17/bin}"
 
 log() { printf '{"event":"%s","ts":"%s"}\n' "$1" "$(date -u +%FT%TZ)"; }
 

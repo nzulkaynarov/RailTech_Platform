@@ -39,7 +39,7 @@ jobs:
     timeout-minutes: 45
     services:
       postgres:
-        image: pgvector/pgvector:0.8.7-pg16
+        image: pgvector/pgvector:0.8.7-pg17
         env:
           POSTGRES_DB: railtech_eval
           POSTGRES_USER: railtech

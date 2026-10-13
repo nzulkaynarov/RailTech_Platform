@@ -350,6 +350,8 @@ services:
       timeout: 5s
       retries: 20
 
+  # Healthcheck Langfuse — по process.env.HOSTNAME: Next.js/worker слушают адрес из HOSTNAME (eth0),
+  # на 127.0.0.1 и localhost внутри контейнера — ECONNREFUSED (проверено 2026-10-13).
   langfuse-worker:
     profiles: [observability]
     image: langfuse/langfuse-worker:4.56.0
@@ -396,7 +398,7 @@ services:
         - CMD
         - node
         - -e
-        - "fetch('http://localhost:3030/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+        - "fetch('http://' + process.env.HOSTNAME + ':3030/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
       interval: 15s
       timeout: 5s
       retries: 20
@@ -416,7 +418,7 @@ services:
         - CMD
         - node
         - -e
-        - "fetch('http://localhost:3000/api/public/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+        - "fetch('http://' + process.env.HOSTNAME + ':3000/api/public/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
       interval: 15s
       timeout: 5s
       retries: 20

@@ -41,7 +41,7 @@ x-backend: &backend
 
 services:
   postgres:
-    image: pgvector/pgvector:0.8.7-pg16
+    image: pgvector/pgvector:0.8.7-pg17
     environment:
       POSTGRES_DB: ${POSTGRES_DB:?set in .env}
       POSTGRES_USER: ${POSTGRES_USER:?set in .env}
@@ -100,7 +100,7 @@ services:
 
   # Отдельная БД `litellm` в том же Postgres (ADR-0020): модели и их ключи (шифр LITELLM_SALT_KEY).
   litellm-db-init:
-    image: pgvector/pgvector:0.8.7-pg16
+    image: pgvector/pgvector:0.8.7-pg17
     restart: "no"
     environment:
       PGHOST: postgres
@@ -342,7 +342,7 @@ services:
 
   langfuse-db-init:
     profiles: [observability]
-    image: pgvector/pgvector:0.8.7-pg16
+    image: pgvector/pgvector:0.8.7-pg17
     restart: "no"
     environment:
       PGHOST: postgres
@@ -437,7 +437,7 @@ services:
         - CMD
         - node
         - -e
-        - "fetch('http://localhost:3030/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+        - "fetch('http://' + process.env.HOSTNAME + ':3030/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
       interval: 15s
       timeout: 5s
       retries: 20
@@ -457,7 +457,7 @@ services:
         - CMD
         - node
         - -e
-        - "fetch('http://localhost:3000/api/public/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+        - "fetch('http://' + process.env.HOSTNAME + ':3000/api/public/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
       interval: 15s
       timeout: 5s
       retries: 20

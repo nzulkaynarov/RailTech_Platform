@@ -80,6 +80,12 @@ ps: _compose-check ## Статус контейнеров стенда
 _compose-check:
 	@test -f .env || { echo "Нет .env: выполните make env (создаст из .env.example)"; exit 1; }
 
+# --- Локальный CI (гейт мержа, пока GitHub Actions недоступен — DECISIONS 2026-10-13) ---
+
+.PHONY: ci-local
+ci-local: ## Те же задания, что .github/workflows/ci.yml, на этом компьютере: make ci-local [args="--quick"]
+	./scripts/ci_local.sh $(args)
+
 # --- Хуки --------------------------------------------------------------------------
 
 .PHONY: hooks

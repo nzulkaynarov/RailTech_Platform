@@ -33,7 +33,7 @@
 | Инструменты агентов | MCP-серверы на официальном Python SDK `mcp` (`MCPServer`, бывший FastMCP), транспорт streamable HTTP (stateless, JSON); клиент — `mcp.Client` (ADR-0011) | Три сервера: `kb-mcp`, `crm-mcp`, `docs-mcp` |
 | Шлюз моделей | LiteLLM Proxy (self-hosted) | Алиасы: `dialog-model`, `qualifier-model`, `judge-model`, `embed-model`, `fallback-model` |
 | Модели | Внешние API. Рекомендация: диалог — Anthropic Sonnet-класс; квалификатор/judge — Anthropic Haiku-класс или Google Flash-класс; embeddings — Google Gemini Embedding (мультиязычный, узбекский) или Voyage multilingual | Значения по умолчанию — `infra/litellm.models.yaml` (ADR-0004); текущие модели и ключи ролей — в БД LiteLLM, меняет админ в CRM без рестарта (ADR-0020) |
-| БД | PostgreSQL 16 + pgvector | Одна база для домена, векторов, очереди, чекпоинтов |
+| БД | PostgreSQL 17 + pgvector | Одна база для домена, векторов, очереди, чекпоинтов |
 | Очередь и планировщик | Procrastinate | Задачи на Postgres: события квалификатора, таймеры SLA/снуз/unresponsive, ингест KB, ежедневные отчёты |
 | Файлы | RustFS (S3-совместимый, Apache-2.0; ADR-0009) | Документы клиентов, исходники KB, вложения из Telegram. Код работает только по протоколу S3 |
 | Ингест документов | docling: сервис `docling-serve` (CPU-образ) + `docling-core` HybridChunker в worker (ADR-0011) | PDF/DOCX/PPTX/XLSX/MD/HTML → DoclingDocument → чанки |
@@ -71,7 +71,7 @@
 └─────────────┘           └──────┘         │          │           │
                                            ▼          ▼           ▼
 ┌──────────┐  задачи   ┌─────────────────────────────────────────────────┐   ┌───────┐
-│ worker   │◄─────────►│ PostgreSQL 16 + pgvector                        │   │RustFS │
+│ worker   │◄─────────►│ PostgreSQL 17 + pgvector                        │   │RustFS │
 │Procrast. │           │ домен · векторы · очередь · чекпоинты · casbin  │   └───────┘
 │ +qualif. │           └─────────────────────────────────────────────────┘
 └──────────┘
@@ -86,7 +86,7 @@
 
 | Сервис | Образ/код | Порты (внутр.) | Назначение |
 |---|---|---|---|
-| `postgres` | `pgvector/pgvector:pg16` | 5432 | Все данные |
+| `postgres` | `pgvector/pgvector:pg17` | 5432 | Все данные |
 | `rustfs` (+ `s3-init` — создание бакетов) | `rustfs/rustfs` | 9000/9001 | Файлы (S3) |
 | `litellm` | `ghcr.io/berriai/litellm` | 4000 | Шлюз моделей, ключи провайдеров только здесь |
 | `langfuse` (+ ClickHouse, Redis — внутренние зависимости Langfuse по официальному compose) | `langfuse/langfuse` v4 | 3000 | Трейсинг; на prod — поддомен `langfuse.<домен>` с IP allow-list |

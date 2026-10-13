@@ -37,7 +37,7 @@
 ```
 backend/   Python 3.12 · uv · FastAPI · SQLAlchemy 2 async · Alembic · aiogram 3 · LangGraph · FastMCP · Procrastinate · pycasbin · structlog
 frontend/  React 18 · TypeScript · Vite · Refine · Ant Design · orval (клиент из OpenAPI) · Vitest · Playwright
-infra/     Docker Compose (base/dev/prod) · Caddy · LiteLLM · Langfuse · RustFS (S3) · PostgreSQL 16 + pgvector
+infra/     Docker Compose (base/dev/prod) · Caddy · LiteLLM · Langfuse · RustFS (S3) · PostgreSQL 17 + pgvector
 ```
 
 | Команда | Что делает | Где можно |
