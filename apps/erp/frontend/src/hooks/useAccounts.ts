@@ -197,7 +197,6 @@ export const useArchiveCompany = () => {
     mutationFn: ({ id, reason }: { id: number; reason: string }) => accountsApi.archiveCompany(id, reason),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['companies'] });
-      qc.invalidateQueries({ queryKey: ['admin-queue'] });
     },
   });
 };
@@ -208,7 +207,6 @@ export const useUnarchiveCompany = () => {
     mutationFn: (id: number) => accountsApi.unarchiveCompany(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['companies'] });
-      qc.invalidateQueries({ queryKey: ['admin-queue'] });
     },
   });
 };
@@ -284,8 +282,6 @@ export const useVerifyCompany = () => {
     }) => accountsApi.verifyCompany(companyId, status_code, comment, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['companies'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-queue'] });
-      queryClient.invalidateQueries({ queryKey: ['platform-dashboard'] });
     },
   });
 };
@@ -360,19 +356,15 @@ export const useSubscriptions = (params?: {
 });
 
 export const useMySubscription = () => {
-  // Platform admins have no company → no subscription; the endpoint 403s for them.
-  // The isViewerMode gate alone is racy: right after login the store still holds
-  // the pre-auth defaults (role USER, context BUYER) for one render, AppShell
-  // mounts and the query fires before loadFromAuth flips the flags. Subscriptions
-  // are a seller concern, so idle until the store actually reads SELLER — the
-  // pre-auth default is BUYER, which also closes the race window.
-  const isPlatformAdmin = useUserStore((s) => s.isViewerMode);
+  // Subscriptions are a seller concern, so idle until the store actually reads SELLER —
+  // the pre-auth default is BUYER, which also closes the login race window (AppShell
+  // mounts and the query would fire before loadFromAuth resolves /me).
   const activeStatus = useUserStore((s) => s.activeStatus);
   return useQuery({
     queryKey: ['my-subscription'],
     queryFn: () => accountsApi.getMySubscription(),
     staleTime: 60_000,
-    enabled: !isPlatformAdmin && activeStatus === 'SELLER',
+    enabled: activeStatus === 'SELLER',
   });
 };
 

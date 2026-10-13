@@ -47,7 +47,6 @@
     "retryHint": "Что-то пошло не так. Закройте окно и попробуйте снова."
   },
   "common": {
-    "all": "Все",
     "loading": "Загрузка...",
     "error": "Произошла ошибка",
     "save": "Сохранить",
@@ -68,21 +67,11 @@
     "back": "Назад",
     "backToList": "Назад к списку",
     "saving": "Сохранение...",
-    "approve": "Одобрить",
-    "reject": "Отклонить",
     "revoke": "Отозвать",
-    "activate": "Активировать",
     "confirm": "Подтвердить",
-    "clear": "Очистить",
-    "prev": "Назад",
-    "next": "Далее",
-    "period7d": "7 дней",
-    "period30d": "30 дней",
-    "period90d": "90 дней",
     "members": "Участники",
     "disable": "Отключить",
-    "verify": "Подтвердить",
-    "downloadFailed": "Не удалось скачать файл. Попробуйте ещё раз."
+    "verify": "Подтвердить"
   },
   "auth": {
     "loginTitle": "Вход в кабинет",
@@ -772,250 +761,7 @@
     "hsCodePlaceholder": "напр. 8607 19 100 0"
   },
   "admin": {
-    "dashboard": {
-      "title": "Панель управления",
-      "systemHealth": "Состояние системы",
-      "totalUsers": "Пользователи",
-      "totalProducts": "Товары",
-      "quickAccess": "Быстрый доступ",
-      "recentActivity": "Последние события",
-      "viewAllLogs": "Все события"
-    },
-    "users": {
-      "title": "Персонал",
-      "registry": "Реестр",
-      "description": "Управление доступом и авторизацией",
-      "provision": "Создать пользователя",
-      "searchPlaceholder": "Поиск по имени или email...",
-      "filterByRole": "Фильтр по роли",
-      "allRoles": "Все роли",
-      "noUsersFound": "Пользователи не найдены",
-      "internal": "Внутренний",
-      "editUser": "Редактировать",
-      "deleteUser": "Удалить пользователя",
-      "deleteConfirmation": "Вы уверены, что хотите удалить {{email}}? Это действие нельзя отменить.",
-      "columns": {
-        "user": "Пользователь",
-        "role": "Роль",
-        "company": "Компания",
-        "status": "Статус",
-        "actions": "Действия"
-      }
-    },
-    "profile": {
-      "title": "Мой",
-      "titleHighlight": "Профиль",
-      "subtitle": "Управление личными данными и безопасностью",
-      "personalData": "Личные данные",
-      "security": "Безопасность",
-      "accountVerified": "Аккаунт подтвержден",
-      "fullAccess": "Полный доступ (L4)",
-      "mainData": "Основные данные",
-      "firstName": "Имя",
-      "lastName": "Фамилия",
-      "workEmail": "Рабочий Email",
-      "phone": "Телефон",
-      "saveProfile": "Сохранить профиль",
-      "profileUpdated": "Профиль успешно обновлен!",
-      "profileSaveError": "Ошибка при сохранении профиля",
-      "changePassword": "Изменение пароля",
-      "currentPassword": "Текущий пароль",
-      "newPassword": "Новый пароль",
-      "confirmPassword": "Подтвердите пароль",
-      "updatePassword": "Обновить пароль",
-      "passwordChanged": "Пароль успешно изменен!",
-      "passwordChangeError": "Ошибка при смене пароля",
-      "passwordMismatch": "Пароли не совпадают",
-      "superAdmin": "Super Administrator"
-    },
-    "subscriptions": {
-      "title": "Управление подписками",
-      "description": "Подписки поставщиков на платформе",
-      "activated": "Подписка активирована",
-      "activate": "Активировать",
-      "suspend": "Приостановить",
-      "suspended": "Подписка приостановлена",
-      "statusIsAnAction": "меняется действиями ниже",
-      "new": "Новая подписка",
-      "edit": "Редактировать подписку",
-      "save": "Сохранить",
-      "create": "Создать",
-      "delete": "Удалить",
-      "cancel": "Отмена",
-      "created": "Подписка создана",
-      "updated": "Подписка обновлена",
-      "deleted": "Подписка удалена",
-      "saveFailed": "Не удалось сохранить",
-      "deleteFailed": "Не удалось удалить",
-      "requiredFields": "Укажите компанию, план и тариф",
-      "confirmDelete": "Удалить подписку?",
-      "confirmDeleteDesc": "Подписка компании «{{name}}» будет удалена.",
-      "tabs": {
-        "details": "Детали"
-      },
-      "bulkActivate": "Активировать (bulk)",
-      "bulkSuspend": "Приостановить (bulk)",
-      "bulkSuspendDesc": "Будет приостановлено подписок: {{count}}. Укажите причину — она попадёт в журнал аудита.",
-      "bulkSkippedExpired": "Пропущено просроченных: {{count}} — их возобновляет оплата, а не смена статуса",
-      "bulkResult": "Применено: {{affected}}",
-      "validFromHint": "С {{date}}",
-      "suspendTemplates": {
-        "nonPayment": "Неуплата за последний период",
-        "fraud": "Подозрение в мошенничестве",
-        "other": "Другое (уточнить в комментарии)"
-      },
-      "fields": {
-        "company": "Компания",
-        "monthlyRate": "Месячный тариф",
-        "currency": "Валюта",
-        "validFrom": "Действует с",
-        "validUntil": "Действует до",
-        "notes": "Заметки"
-      },
-      "searchPlaceholder": "Поиск по компании...",
-      "allPlans": "Все планы",
-      "allStatuses": "Все статусы",
-      "stats": {
-        "total": "Всего",
-        "active": "Активных",
-        "trial": "Пробных",
-        "suspended": "Приостановленных"
-      },
-      "table": {
-        "company": "Компания",
-        "plan": "План",
-        "status": "Статус",
-        "rate": "Тариф",
-        "validUntil": "Действует до",
-        "actions": "Действия"
-      },
-      "detail": {
-        "title": "Детали подписки",
-        "companyInfo": "Информация о компании",
-        "inn": "ИНН",
-        "planAndStatus": "План и статус",
-        "billing": "Биллинг",
-        "monthlyRate": "Месячный тариф",
-        "validFrom": "Действует с",
-        "validUntil": "Действует до",
-        "lastPayment": "Последний платёж",
-        "nextPayment": "Следующий платёж",
-        "notes": "Заметки",
-        "noNotes": "Нет заметок",
-        "created": "Создана",
-        "updated": "Обновлена"
-      },
-      "suspendDialog": {
-        "title": "Приостановить подписку?",
-        "description": "Подписка компании «{{name}}» будет приостановлена."
-      }
-    },
-    "roleApps": {
-      "title": "Заявки на роли",
-      "description": "Рассмотрение заявок компаний на новые роли",
-      "approved": "Заявка одобрена",
-      "rejected": "Заявка отклонена",
-      "approve": "Одобрить",
-      "reject": "Отклонить",
-      "approvedLabel": "Одобрено",
-      "rejectedLabel": "Отклонено",
-      "rejectDialog": {
-        "title": "Отклонить заявку",
-        "description": "Укажите причину отклонения заявки от {{company}}",
-        "reason": "Причина отклонения",
-        "reasonPlaceholder": "Опишите причину отклонения...",
-        "confirm": "Отклонить заявку",
-        "cancel": "Отмена"
-      },
-      "requestDocs": "Запросить документы",
-      "docsRequested": "Документы запрошены — заявитель их приложит",
-      "requestDocsDialog": {
-        "title": "Запросить недостающие документы?",
-        "description": "Заявка компании «{{company}}» вернётся заявителю: он приложит документы, и она снова попадёт к вам на рассмотрение. Отклонять её для этого не нужно.",
-        "reason": "Что именно нужно приложить",
-        "confirm": "Запросить"
-      },
-      "rejectTemplates": {
-        "docsInvalid": "Документы нечитабельны или не соответствуют требованиям",
-        "outOfScope": "Заявка не соответствует запрашиваемой роли",
-        "other": "Другое (уточнить в комментарии)"
-      },
-      "confirmApproveTitle": "Одобрить заявку",
-      "confirmApproveDescription": "Компания {{company}} получит роль {{role}}. Для поставщиков автоматически создастся TRIAL-подписка на 30 дней.",
-      "notPending": "Заявка уже рассмотрена",
-      "detail": {
-        "title": "Детали заявки",
-        "companyInfo": "Информация о компании",
-        "inn": "ИНН",
-        "requestedRole": "Запрашиваемая роль",
-        "currentStatus": "Текущий статус",
-        "submittedBy": "Подана",
-        "submittedAt": "Дата подачи",
-        "documents": "Документы",
-        "contractFile": "Договор",
-        "ndaFile": "NDA",
-        "partnershipAgreement": "Партнёрское соглашение",
-        "noDocument": "Не загружен",
-        "download": "Скачать",
-        "review": "Рецензия",
-        "reviewedBy": "Рецензент",
-        "reviewedAt": "Дата рецензии",
-        "reviewNotes": "Комментарий",
-        "noReview": "Ещё не рецензирована"
-      },
-      "stats": {
-        "total": "Всего",
-        "pending": "Ожидают",
-        "approved": "Одобрено",
-        "rejected": "Отклонено"
-      },
-      "table": {
-        "company": "Компания",
-        "requestedType": "Запрашиваемая роль",
-        "status": "Статус",
-        "submittedBy": "Заявитель",
-        "date": "Дата",
-        "actions": "Действия"
-      }
-    },
-    "palette": {
-      "title": "Командная палитра",
-      "description": "Быстрая навигация по админ-панели",
-      "placeholder": "Введите команду или запрос...",
-      "empty": "Ничего не найдено",
-      "triggerHint": "Поиск...",
-      "groups": {
-        "overview": "Обзор",
-        "users": "Пользователи и KYC",
-        "business": "Бизнес-операции",
-        "catalog": "Каталог",
-        "system": "Система"
-      },
-      "entityGroups": {
-        "companies": "Компании",
-        "users": "Пользователи",
-        "deals": "Сделки",
-        "offers": "Предложения",
-        "tickets": "Тикеты"
-      },
-      "placeholderHint": "Введите минимум два символа — найдём сделки, КП, договоры, счета и компании"
-    },
     "support": {
-      "title": "Тикеты поддержки",
-      "description": "Прямой канал связи клиента с администратором",
-      "searchPlaceholder": "Поиск по теме, описанию, email...",
-      "empty": "Тикетов пока нет",
-      "stats": {
-        "total": "Всего",
-        "open": "Открыты",
-        "inProgress": "В работе",
-        "urgent": "Срочные"
-      },
-      "filters": {
-        "allStatuses": "Все статусы",
-        "allPriorities": "Все приоритеты",
-        "allCategories": "Все категории"
-      },
       "status": {
         "OPEN": "Открыт",
         "IN_PROGRESS": "В работе",
@@ -1035,32 +781,6 @@
         "FEATURE": "Пожелание",
         "OTHER": "Другое"
       },
-      "table": {
-        "id": "ID",
-        "subject": "Тема",
-        "status": "Статус",
-        "priority": "Приоритет",
-        "createdAt": "Создан"
-      },
-      "detail": {
-        "title": "Детали тикета",
-        "status": "Статус",
-        "assigned": "Назначен",
-        "unassigned": "Не назначен",
-        "assignToMe": "Назначить на меня",
-        "messages": "Переписка",
-        "noMessages": "Сообщений пока нет",
-        "adminBadge": "админ",
-        "reply": "Ответить",
-        "replyPlaceholder": "Напишите ваш ответ...",
-        "send": "Отправить",
-        "internalNote": "Внутренняя заметка (видна только админам)"
-      },
-      "toast": {
-        "messageSent": "Сообщение отправлено",
-        "statusChanged": "Статус обновлён",
-        "assigned": "Тикет назначен"
-      },
       "userForm": {
         "title": "Связаться с поддержкой",
         "subtitle": "Опишите проблему — мы скоро ответим",
@@ -1076,145 +796,9 @@
         "fab": "Поддержка"
       }
     },
-    "systemSettings": {
-      "title": "Настройки",
-      "titleHighlight": "Системы",
-      "subtitle": "Глобальные параметры платформы и интеграции",
-      "saveNotAvailable": "Сохранение настроек будет доступно в следующей версии. Текущие параметры применяются из серверной конфигурации.",
-      "settingsSaved": "Настройки успешно сохранены!",
-      "saveChanges": "Сохранить изменения",
-      "tabs": {
-        "finance": "Финансы & Налоги",
-        "platform": "Параметры сайта",
-        "security": "Безопасность",
-        "notifications": "Уведомления"
-      },
-      "finance": {
-        "title": "Финансы & НДС",
-        "vatRate": "Ставка НДС (Узбекистан)",
-        "standardMargin": "Стандартная Маржа",
-        "exchangeRate": "Курс USD к UZS (Авто)",
-        "vatWarning": "Изменение налоговой ставки повлияет на расчет Landed Cost во всех новых сделках."
-      },
-      "platform": {
-        "title": "Параметры сайта",
-        "maintenance": "Техническое обслуживание",
-        "maintenanceDesc": "Закрыть публичный доступ на время работ",
-        "platformName": "Название платформы"
-      },
-      "security": {
-        "title": "Безопасность",
-        "twoFactor": "Двухфакторная аутентификация",
-        "twoFactorDesc": "Обязательно для всех менеджеров",
-        "resetSessions": "Сбросить все сессии пользователей"
-      }
-    },
-    "emailTemplates": {
-      "title": "Email-шаблоны",
-      "description": "Управление шаблонами писем. Активный шаблон в базе переопределяет файловый шаблон при отправке.",
-      "new": "Новый шаблон",
-      "create": "Создать",
-      "save": "Сохранить",
-      "delete": "Удалить",
-      "cancel": "Отмена",
-      "created": "Шаблон создан",
-      "saved": "Шаблон сохранён",
-      "deleted": "Шаблон удалён",
-      "keyRequired": "Выберите ключ шаблона",
-      "emptyEditor": "Выберите шаблон слева или создайте новый",
-      "previewAction": "Предпросмотр",
-      "testSendAction": "Тестовая отправка",
-      "statusActive": "Активен",
-      "statusInactive": "Неактивен",
-      "confirmDelete": "Удалить шаблон?",
-      "confirmDeleteDesc": "Шаблон «{{key}}» будет удалён. Отправка вернётся к файловому шаблону.",
-      "stats": {
-        "total": "Всего",
-        "active": "Активных"
-      },
-      "fields": {
-        "key": "Ключ",
-        "keyPlaceholder": "Выберите ключ",
-        "subject": "Тема",
-        "textBody": "Текстовая версия",
-        "htmlBody": "HTML-версия",
-        "htmlHint": "Если пусто — письмо отправляется без HTML-альтернативы.",
-        "availableVariables": "Доступные переменные",
-        "variablesPlaceholder": "Например: {{first_name}}, {{company_name}}, {{link}}",
-        "isActive": "Активен"
-      },
-      "preview": {
-        "title": "Предпросмотр письма",
-        "description": "Шаблон отрендерен с тестовым контекстом. Письмо не отправляется.",
-        "html": "HTML",
-        "text": "Текст",
-        "noHtml": "HTML-версия отсутствует.",
-        "saveFirst": "Сначала сохраните шаблон"
-      },
-      "testSend": {
-        "title": "Тестовая отправка",
-        "description": "Отправить тестовое письмо по этому шаблону на указанный адрес.",
-        "toEmail": "Email получателя",
-        "send": "Отправить",
-        "emailRequired": "Укажите email получателя",
-        "sent": "Письмо отправлено на {{email}}",
-        "failed": "Не удалось отправить письмо"
-      }
-    },
     "leads": {
-      "title": "Лиды",
-      "subtitle": "Входящие заявки с лендинга",
-      "searchPlaceholder": "Поиск по имени, email, компании…",
-      "tabs": {
-        "all": "Все",
-        "new": "Новые",
-        "processed": "Обработанные"
-      },
-      "col": {
-        "name": "Имя",
-        "company": "Компания",
-        "email": "Email",
-        "phone": "Телефон",
-        "created": "Получен",
-        "owner": "Компания-владелец",
-        "status": "Статус"
-      },
-      "status": {
-        "new": "Новый",
-        "processed": "Обработан"
-      },
-      "actions": {
-        "route": "Назначить компании",
-        "reject": "Отклонить (спам/дубль)"
-      },
       "toast": {
-        "routed": "Лид назначен компании — она возьмёт его в работу",
-        "rejected": "Лид отклонён",
         "claimed": "Лид взят в работу — создана сделка #{{id}}"
-      },
-      "empty": {
-        "title": "Лидов пока нет",
-        "description": "Входящие заявки с публичного лендинга появятся здесь"
-      },
-      "queue": "Очередь платформы",
-      "route": {
-        "title": "Назначить лид компании",
-        "description": "«{{name}}» будет передан выбранной компании. Сделку создаст она сама, взяв лид в работу — платформа не действует от её лица.",
-        "company": "Компания",
-        "companyPlaceholder": "Выберите компанию",
-        "similar": "⚠️ Похожих лидов: {{count}}. Убедитесь, что это не дубль — иначе одна заявка уедет в две компании.",
-        "confirm": "Назначить"
-      },
-      "reject": {
-        "title": "Отклонить лид?",
-        "description": "«{{name}}» будет закрыт без создания сделки. Причина сохранится в журнале.",
-        "confirm": "Отклонить"
-      },
-      "detail": {
-        "title": "Лид",
-        "message": "Сообщение",
-        "noMessage": "Без сообщения",
-        "noCompany": "Компания не указана"
       }
     }
   },
@@ -1572,73 +1156,6 @@
       "phone": "Введите номер в формате +998 XX XXX XX XX"
     }
   },
-  "kycManager": {
-    "title": "KYC",
-    "searchPlaceholder": "Поиск по названию или ИНН...",
-    "emptyState": "Нет компаний, соответствующих фильтру",
-    "registryData": "Реквизиты",
-    "physicalAddress": "Юридический адрес",
-    "docRecords": "Документы",
-    "noDocuments": "Документы не загружены",
-    "importDoc": "Загрузить документ",
-    "approveL2": "Подтвердить KYC (L2)",
-    "upgradeL3": "Повысить до партнёра (L3)",
-    "revokeL1": "Отозвать верификацию (L1)",
-    "confirmDeleteDocTitle": "Удалить документ KYC?",
-    "confirmDeleteDocDesc": "Документ будет удалён безвозвратно — это доказательство комплаенса. Действие нельзя отменить.",
-    "revokeHint": "Откат отправит компанию в L1 и лишит доступа к возможностям поставщика. Это действие логируется.",
-    "bulkApproveL2": "Одобрить L2 (bulk)",
-    "bulkApproveDesc": "Уровень L2 будет выдан {{count}} компаниям. Наличие документов не проверяется — политика владельца это разрешает.",
-    "bulkApprovedResult": "Одобрено: {{approved}}, пропущено: {{skipped}}",
-    "accountAge": "Возраст аккаунта",
-    "ageDays_one": "{{count}} день",
-    "ageDays_few": "{{count}} дня",
-    "ageDays_many": "{{count}} дней",
-    "ageDays_other": "{{count}} дн.",
-    "uploadFailure": "Ошибка загрузки документа",
-    "status": {
-      "P_PENDING": "Без заявки",
-      "P_SUBMITTED": "На проверке",
-      "V_VERIFIED_L2": "KYC подтверждён",
-      "V_PARTNER_L3": "Партнёр"
-    },
-    "registryFields": {
-      "taxId": "ИНН",
-      "mfoCode": "МФО",
-      "bankAcc": "Расчётный счёт",
-      "opContact": "Контактное лицо",
-      "email": "Email",
-      "website": "Веб-сайт"
-    },
-    "docTypes": {
-      "charter": "Устав компании",
-      "license": "Лицензия",
-      "passport": "Паспорт директора",
-      "taxCert": "Свид. ИНН",
-      "other": "Другое"
-    },
-    "stats": {
-      "total": "Всего компаний",
-      "pending": "Не подтверждены",
-      "verified": "Верифицированы",
-      "partner": "Партнёры"
-    },
-    "table": {
-      "company": "Компания",
-      "inn": "ИНН",
-      "status": "Статус",
-      "docs": "Документы",
-      "date": "Дата регистрации"
-    },
-    "description": "Управление верификацией компаний и уровнями доверия",
-    "allStatuses": "Все статусы",
-    "verified": "Верификация выполнена",
-    "gapNoDocs": "загруженных документов",
-    "gapNoInn": "указанного ИНН",
-    "approveWithoutEvidence": "⚠️ Компания подтверждается без: {{gaps}}. Это исключение из стандартной проверки — обязательно укажите причину для аудита.",
-    "approveReasonRequired": "Причина (обязательно — подтверждение без проверенных данных)",
-    "bulkWithoutEvidence": "⚠️ Без проверенных данных: {{count}} из выборки ({{names}}). Это исключение — укажите причину для аудита."
-  },
   "breadcrumb": {
     "productDetail": "Детали товара",
     "requestDetail": "Детали заявки"
@@ -1662,22 +1179,6 @@
     "profile": "Профиль",
     "settings": "Настройки",
     "myDocuments": "Документы",
-    "adminUsers": "Пользователи",
-    "adminKyc": "KYC верификация",
-    "adminSubscriptions": "Подписки",
-    "adminEntitlements": "Доступы (опции)",
-    "adminAccessLog": "Журнал доступа",
-    "adminEmailTemplates": "Email-шаблоны",
-    "adminRoleApps": "Заявки на роли",
-    "adminLeads": "Лиды",
-    "adminMasterData": "Справочники",
-    "adminSupport": "Тикеты поддержки",
-    "adminCatalog": "Каталог (админ)",
-    "adminCategories": "Категории (админ)",
-    "adminEquipmentGroups": "Группы оборудования (админ)",
-    "adminOffers": "Предложения поставщиков (админ)",
-    "adminCompanies": "Компании (админ)",
-    "adminDeals": "Сделки (админ)",
     "logistics": "Логистика",
     "purchaseTemplates": "Шаблоны закупок",
     "contracts": "Договоры",
@@ -1689,7 +1190,6 @@
     "mySubscription": "Моя подписка",
     "forgotPassword": "Сброс пароля",
     "resetPassword": "Новый пароль",
-    "adminOperatorRoles": "Роли операторов",
     "hsDirectory": "Справочник ТН ВЭД",
     "catalogReference": "Справочники",
     "myProducts": "Мои товары",
@@ -1714,7 +1214,6 @@
   },
   "companyStatus": {
     "BUYER": "Покупатель",
-    "MANUFACTURER": "Производитель",
     "SELLER": "Продавец"
   },
   "roles": {
@@ -1724,10 +1223,6 @@
     "adminDesc": "Владелец платформы, регулирует всю систему",
     "user": "Пользователь",
     "userDesc": "Работает в рамках своей компании"
-  },
-  "platformAdminShell": {
-    "title": "RailTech · Платформа",
-    "subtitle": "Администратор"
   },
   "companyStatusDesc": {
     "BUYER": "Только запрашивает КП и закупает оборудование",
@@ -1757,22 +1252,6 @@
     "quotes": "Коммерческие предложения",
     "deals": "Сделки",
     "settings": "Настройки",
-    "users": "Пользователи",
-    "kyc": "KYC верификация",
-    "subscriptions": "Подписки",
-    "entitlements": "Доступы (опции)",
-    "roleApplications": "Заявки на роли",
-    "companies": "Компании",
-    "adminDeals": "Сделки (админ)",
-    "adminQuotes": "КП (админ)",
-    "adminContracts": "Договоры (админ)",
-    "masterData": "Справочники",
-    "support": "Тикеты поддержки",
-    "adminCatalog": "Каталог (админ)",
-    "adminCatalogProducts": "Товары",
-    "adminCatalogCategories": "Категории",
-    "adminCatalogGroups": "Группы оборудования",
-    "adminCatalogOffers": "Офферы поставщиков",
     "contracts": "Договоры",
     "invoices": "Счета",
     "payments": "Платежи",
@@ -1780,7 +1259,6 @@
     "fulfillments": "Исполнение",
     "otherDocuments": "Прочие документы",
     "files": "Файлы",
-    "leads": "Лиды",
     "catalogImport": "Загрузка прайса",
     "help": "Помощь",
     "b2bPlatform": "B2B Платформа",
@@ -1791,9 +1269,6 @@
     "mainNavigation": "Основная навигация",
     "secondaryNavigation": "Дополнительная навигация",
     "currencySelector": "Выбор валюты",
-    "emailTemplates": "Email-шаблоны",
-    "operatorRoles": "Роли операторов",
-    "accessLog": "Журнал доступа",
     "fxRateFallback": "Курс валют недоступен — суммы в USD приблизительные",
     "catalogReference": "Справочники",
     "myProducts": "Мои товары"
@@ -1970,7 +1445,6 @@
     "personalInfo": {
       "title": "Личная информация",
       "description": "Обновите свои личные данные",
-      "role": "Роль",
       "saved": "Сохранено!",
       "saveChanges": "Сохранить изменения",
       "saveError": "Ошибка сохранения профиля",
@@ -2105,13 +1579,6 @@
       "density": "Плотность интерфейса"
     },
     "company": {
-      "title": "Управление компанией",
-      "description": "Статусы, пользователи и делегирование прав",
-      "statuses": "Статусы компании",
-      "statusesDesc": "Активные роли на платформе",
-      "pending": "ожидание",
-      "companyInfo": "Информация о компании",
-      "companyInfoDesc": "Наименование и реквизиты",
       "requisitesTitle": "Реквизиты компании",
       "requisitesDescription": "Логотип, контактные данные и юридическая информация",
       "bankTitle": "Банковские реквизиты",
@@ -2273,18 +1740,12 @@
       "dealRef": "Сделка #{{id}}",
       "actions": {
         "sendToClient": "Отправить клиенту",
-        "duplicate": "Дублировать",
-        "forceApprove": "Force-согласовать (админ)"
+        "duplicate": "Дублировать"
       },
       "toast": {
         "sentSuccess": "КП #{{id}} отправлено клиенту",
-        "forceReasonRequired": "Укажите причину force-согласования",
-        "forceApproved": "КП #{{id}} force-согласовано платформенным админом",
         "duplicated": "Создана копия КП #{{id}}"
-      },
-      "confirmForceApprove": "Force-согласование КП (платформенный админ)",
-      "forceApproveHint": "КП #{{id}} будет согласовано принудительно, независимо от текущего статуса. Действие логируется маркером [FORCE_ADMIN] и требует обоснования.",
-      "forceApproveReason": "Причина (обязательна, попадёт в audit-лог)"
+      }
     },
     "clients": {
       "title": "Клиенты",
@@ -2424,100 +1885,8 @@
       "description": "Отслеживание доставок и управление транспортировкой"
     },
     "adminUsers": {
-      "title": "Пользователи компании",
-      "description": "Управление сотрудниками, ролями и делегированием доступа",
-      "stats": {
-        "total": "Всего",
-        "active": "Активные",
-        "staff": "Сотрудники платформы",
-        "inactive": "Неактивные"
-      },
-      "statusLabel": {
-        "active": "Активен",
-        "inactive": "Неактивен"
-      },
-      "table": {
-        "name": "Имя",
-        "email": "Email",
-        "role": "Роль",
-        "status": "Статус",
-        "lastLogin": "Последний вход"
-      },
-      "searchPlaceholder": "Поиск по имени или email...",
-      "noSystemRole": "Без системной роли",
-      "activated": "{{name}} активирован",
-      "deactivated": "{{name}} деактивирован",
-      "joinedHint": "Зарегистрирован: {{date}}",
-      "detail": {
-        "lastLogin": "Последний вход"
-      },
-      "tabs": {
-        "profile": "Профиль",
-        "role": "Системная роль",
-        "memberships": "Компании"
-      },
-      "roleTab": {
-        "explanation": "Системная роль определяет права на уровне платформы. ADMIN — владелец платформы, не привязан ни к одной компании. USER — обычный пользователь, работающий через членство в компаниях.",
-        "systemRole": "Системная роль",
-        "blockedByMembership": "недоступно: юзер состоит в компании"
-      },
-      "memberships": {
-        "existing": "Текущие компании",
-        "empty": "Нет членств",
-        "addNew": "Добавить в компанию",
-        "company": "Компания",
-        "workspaceRole": "Роль в компании",
-        "selectCompanyFirst": "Сначала выберите компанию",
-        "setPrimary": "Сделать основной",
-        "add": "Добавить",
-        "added": "Добавлено в компанию",
-        "removed": "Удалено из компании",
-        "remove": "Исключить из компании",
-        "removeConfirmTitle": "Исключить человека из компании?",
-        "removeConfirmDesc": "Он потеряет доступ к данным компании «{{company}}». Вернуть членство можно, добавив его заново.",
-        "addFailed": "Не удалось добавить",
-        "removeFailed": "Не удалось удалить",
-        "companyAndRoleRequired": "Укажите компанию и роль",
-        "primary": "Основная",
-        "platformAdminTitle": "Platform Admin не привязан к компаниям",
-        "platformAdminDesc": "Чтобы добавить этому пользователю членство, сначала смените системную роль на USER."
-      },
-      "errors": {
-        "ADMIN_ROLE_REQUIRES_NO_MEMBERSHIPS": "ADMIN нельзя выдать юзеру с членствами — сначала удалите членства.",
-        "PLATFORM_ADMIN_CANNOT_JOIN_COMPANY": "Platform Admin не может состоять в компании.",
-        "WORKSPACE_ROLE_NOT_APPLICABLE_TO_COMPANY_TYPE": "Эта роль неприменима к типу компании.",
-        "WORKSPACE_ROLE_NOT_FOUND": "Роль в компании не найдена.",
-        "SYSTEM_ROLE_NOT_FOUND": "Системная роль не найдена.",
-        "COMPANY_AND_WORKSPACE_ROLE_REQUIRED": "Укажите компанию и роль.",
-        "COMPANY_NOT_FOUND": "Компания не найдена.",
-        "MEMBERSHIP_NOT_FOUND": "Членство не найдено.",
-        "ROLE_CODE_REQUIRED": "Укажите код роли.",
-        "CANNOT_DEMOTE_LAST_OPERATOR_MANAGER": "Нельзя снять роль администратора у последнего оператора, управляющего ролями операторов — сначала назначьте другого.",
-        "CANNOT_DEACTIVATE_SOLE_OPERATOR": "Нельзя деактивировать последнего оператора, управляющего ролями операторов — сначала назначьте другого."
-      },
-      "fields": {
-        "email": "Email",
-        "firstName": "Имя",
-        "lastName": "Фамилия",
-        "phone": "Телефон"
-      },
-      "newUser": "Новый пользователь",
-      "create": "Создать",
-      "save": "Сохранить",
-      "delete": "Удалить",
-      "cancel": "Отмена",
-      "saved": "Изменения сохранены",
-      "saveFailed": "Не удалось сохранить",
-      "created": "Пользователь создан",
       "createFailed": "Не удалось создать",
-      "deleted": "Пользователь удалён",
-      "deleteFailed": "Не удалось удалить",
-      "emailRequired": "Укажите email",
-      "confirmDelete": "Удалить пользователя?",
-      "confirmDeleteDesc": "Пользователь {{email}} будет удалён без возможности восстановления.",
-      "confirmDeactivateTitle": "Деактивировать пользователя?",
-      "confirmDeactivateDesc": "Пользователь {{name}} потеряет доступ к платформе.",
-      "deactivateConfirm": "Деактивировать"
+      "deleteFailed": "Не удалось удалить"
     },
     "dealQuote": {
       "title": "Сборка КП",
@@ -2544,300 +1913,27 @@
     "prev": "Назад",
     "next": "Далее",
     "showing": "Показано {{from}}–{{to}} из {{total}}",
-    "columns": "Колонки",
-    "density": "Плотность",
-    "export": "Экспорт",
-    "exportCsv": "Экспорт в CSV",
-    "exportXlsx": "Экспорт в Excel (XLSX)",
-    "empty": "Записей нет",
-    "selected": "Выбрано: {{count}}",
-    "selectAll": "Выбрать все",
-    "shownOf": "Показано {{shown}} из {{total}}",
-    "selectRow": "Выбрать строку",
-    "rowActions": "Действия",
-    "paginationLabel": "{{from}}–{{to}} из {{total}}"
-  },
-  "adminDetail": {
-    "dangerZone": "Опасная зона",
-    "timelineEmpty": "История изменений пуста",
-    "reason": "Причина"
+    "selectRow": "Выбрать строку"
   },
   "confirmDialog": {
     "reason": "Причина",
     "reasonPlaceholder": "Опишите причину действия…",
     "templates": "Выбрать шаблон",
-    "typeToConfirm": "Введите «{{value}}» для подтверждения",
-    "kycLevel": "Уровень KYC"
-  },
-  "adminQueue": {
-    "severity": {
-      "critical": "Срочно",
-      "warning": "Требует внимания",
-      "info": "Инфо"
-    },
-    "kycApproved": "KYC подтверждён",
-    "kycRevoked": "KYC откатан",
-    "subscriptionActivated": "Подписка активирована",
-    "confirm": {
-      "kycApproveTitle": "Подтвердить KYC до L2",
-      "kycApproveDescription": "Компания {{name}} получит статус L2 и полный доступ.",
-      "kycRevokeTitle": "Откатить KYC",
-      "kycRevokeDescription": "Компания {{name}} будет возвращена на L1. Укажите причину — она попадёт в журнал аудита.",
-      "subActivateTitle": "Активировать подписку",
-      "commentOptional": "Комментарий (необязательно)"
-    },
-    "reasonTemplates": {
-      "docsInvalid": "Документы нечитабельны или не соответствуют требованиям",
-      "innMismatch": "Указанный ИНН не совпадает с документами",
-      "other": "Другое (уточнить в комментарии)"
-    }
-  },
-  "adminShortcuts": {
-    "title": "Горячие клавиши",
-    "description": "Ускорьте работу в админке. Нажмите ? чтобы открыть эту подсказку.",
-    "palette": "Открыть командную палитру",
-    "help": "Показать горячие клавиши",
-    "focusSearch": "Фокус на поиск",
-    "goDashboard": "Перейти на дашборд",
-    "goKyc": "KYC",
-    "goCompanies": "Компании",
-    "goUsers": "Пользователи",
-    "goDeals": "Сделки",
-    "goSubscriptions": "Подписки",
-    "goRoleApps": "Заявки на роль",
-    "goSupport": "Поддержка",
-    "tableNav": "Навигация по строкам",
-    "tableOpen": "Открыть выделенную строку",
-    "tableSelect": "Отметить/снять выделение"
-  },
-  "platformAdmin": {
-    "dashboard": {
-      "title": "Командный центр",
-      "subtitle": "Что требует вашего внимания прямо сейчас"
-    },
-    "pulse": {
-      "newCompanies": "Новые компании",
-      "newDeals": "Новые сделки",
-      "signedValue": "Сумма согласованных КП",
-      "mrr": "MRR",
-      "activeSubscriptions": "Активных подписок: {{count}}"
-    },
-    "queue": {
-      "title": "Очередь задач",
-      "emptyTitle": "Всё под контролем",
-      "emptyHint": "Новые задачи появятся здесь автоматически",
-      "filters": {
-        "all": "Все",
-        "kyc_pending": "KYC",
-        "role_application": "Заявки на роль",
-        "subscription_past_due": "Просроченные подписки",
-        "subscription_expiring": "Истекают подписки",
-        "invoice_overdue": "Просроченные счета",
-        "support_urgent": "Срочные тикеты",
-        "supplier_bid_pending": "Предложения поставщиков (ожидают)"
-      }
-    },
-    "activity": {
-      "title": "Последние события",
-      "empty": "Записей нет"
-    },
-    "summary": {
-      "title": "Срезы",
-      "subsExpiring": "Подписки (просрочка/истекают)",
-      "overdueInvoices": "Просроченные счета"
-    }
+    "typeToConfirm": "Введите «{{value}}» для подтверждения"
   },
   "adminMasterData": {
-    "title": "Справочники",
-    "description": "Справочные данные: страны, валюты, единицы измерения, базисы поставки",
-    "new": "Новая запись",
-    "edit": "Редактировать",
-    "nothingFound": "По запросу «{{filter}}» ничего не найдено",
-    "clearFilter": "Сбросить фильтр",
-    "empty": "Записей нет",
-    "save": "Сохранить",
-    "create": "Создать",
-    "delete": "Удалить",
-    "cancel": "Отмена",
-    "actions": "Действия",
-    "yes": "Да",
     "no": "Нет",
-    "created": "Запись создана",
-    "updated": "Запись обновлена",
-    "deleted": "Запись удалена",
-    "saveFailed": "Не удалось сохранить",
-    "deleteFailed": "Не удалось удалить",
-    "requiredFields": "Укажите код и название",
-    "confirmDelete": "Удалить запись?",
-    "confirmDeleteDesc": "Запись «{{code}}» будет удалена.",
-    "confirmDeleteHint": "Строку, которая уже используется в документах, удалить нельзя — её отключают: она исчезает из форм, а история сохраняется.",
-    "showInactive": "Показывать отключённые",
-    "inactiveBadge": "Отключена",
-    "restore": "Включить обратно",
-    "restored": "Строка включена",
-    "tabs": {
-      "countries": "Страны",
-      "currencies": "Валюты",
-      "units": "Единицы измерения",
-      "deliveryBasis": "Базисы поставки"
-    },
-    "fields": {
-      "code": "Код",
-      "name": "Название",
-      "sortOrder": "Порядок",
-      "isActive": "Активно"
-    },
-    "countryFields": {
-      "alpha2": "ISO alpha-2",
-      "vatRate": "Ставка НДС",
-      "isoNumeric": "Цифровой код ISO"
-    },
-    "currencyFields": {
-      "symbol": "Символ"
-    },
-    "stats": {
-      "countries": "Страны",
-      "currencies": "Валюты",
-      "units": "Единицы",
-      "deliveryBases": "Базисы"
-    },
-    "filterPlaceholder": "Поиск по коду или названию"
-  },
-  "adminDeals": {
-    "title": "Сделки (админ)",
-    "description": "Просмотр, принудительная смена стадии и удаление сделок",
-    "searchPlaceholder": "Поиск по названию или компании",
-    "allStages": "Все стадии",
-    "allCompanies": "Все компании",
-    "empty": "Сделки не найдены",
-    "newStage": "Новая стадия",
-    "forceChangeStage": "Принудительно сменить стадию",
-    "stageChanged": "Стадия обновлена",
-    "reason": "Причина",
-    "reasonRequired": "Причина обязательна",
-    "transitionNotAllowed": "Переход запрещён FSM. Укажите корректную стадию.",
-    "closedWonRequiresContract": "Чтобы закрыть сделку как выигранную, нужен подписанный договор",
-    "stageNotFound": "Стадия не найдена",
-    "pickStage": "Выберите целевую стадию",
-    "forceDescription": "Сделка #{{id}} {{title}}. Принудительная смена стадии — действие логируется в аудит.",
-    "apply": "Применить",
-    "delete": "Удалить",
-    "deleted": "Сделка удалена",
-    "deleteFailed": "Не удалось удалить",
-    "cancel": "Отмена",
-    "confirmDelete": "Удалить сделку?",
-    "confirmDeleteDesc": "Сделка #{{id}} будет удалена без возможности восстановления.",
-    "stats": {
-      "total": "Всего",
-      "open": "Открытых",
-      "won": "Выиграно",
-      "lost": "Проиграно"
-    },
-    "table": {
-      "id": "ID",
-      "title": "Название",
-      "company": "Компания",
-      "stage": "Стадия",
-      "value": "Сумма",
-      "actions": "Действия"
-    }
-  },
-  "adminCompanies": {
-    "title": "Компании",
-    "description": "Реестр компаний, редактирование и управление командой",
-    "new": "Новая компания",
-    "edit": "Редактировать компанию",
-    "merge": {
-      "action": "Слить дубли",
-      "title": "Слияние дублей компании",
-      "description": "Влить оффлайн-дубль (по ИНН) в «{{name}}» — контакты, сделки и историю",
-      "empty": "Дублей по ИНН не найдено",
-      "confirm": "Слить",
-      "done": "Дубль влит"
-    },
-    "searchPlaceholder": "Поиск по названию или ИНН",
-    "emptyState": "Компании не найдены",
-    "created": "Компания создана",
-    "updated": "Компания обновлена",
-    "archived": "Компания выведена из оборота",
-    "unarchived": "Компания возвращена в оборот",
-    "archive": {
-      "action": "Архивировать",
-      "restore": "Вернуть в оборот",
-      "tab": "Архивные",
-      "title": "Вывести компанию из оборота?",
-      "description": "«{{name}}» исчезнет из подбора продавцов, справочников и поиска. Сделки, счета и подписанные документы останутся на месте — вернуть компанию можно в любой момент.",
-      "confirm": "Архивировать"
-    },
-    "deleted": "Компания удалена",
-    "requiredFields": "Укажите название и ИНН",
-    "save": "Сохранить",
-    "create": "Создать",
-    "delete": "Удалить",
-    "cancel": "Отмена",
-    "invited": "Приглашение отправлено",
-    "emailRequired": "Укажите email",
-    "confirmDelete": "Удалить компанию?",
-    "confirmDeleteDesc": "Компания «{{name}}» будет удалена. Это возможно только пока у неё нет истории: сделок, КП, документов и участников. Компанию с историей выводят из оборота — она останется в архиве.",
-    "tabs": {
-      "registry": "Реквизиты",
-      "members": "Команда",
-      "files": "Файлы"
-    },
-    "fields": {
-      "name": "Название",
-      "inn": "ИНН",
-      "mfo": "МФО",
-      "bankAccount": "Расчётный счёт",
-      "legalAddress": "Юридический адрес",
-      "contactPerson": "Контактное лицо",
-      "types": "Роли на площадке",
-      "contactInfo": "Контакт (телефон)",
-      "email": "Email",
-      "website": "Сайт"
-    },
-    "members": {
-      "inviteEmail": "Email приглашаемого",
-      "role": "Роль",
-      "roleOwner": "Администратор компании",
-      "roleProcurement": "Закупки",
-      "roleMember": "Участник",
-      "invite": "Пригласить",
-      "current": "Текущая команда",
-      "empty": "Нет участников"
-    },
-    "stats": {
-      "total": "Всего",
-      "members": "Участников"
-    },
-    "table": {
-      "name": "Название",
-      "inn": "ИНН",
-      "kyc": "KYC",
-      "types": "Роли",
-      "created": "Создано"
-    }
+    "deleteFailed": "Не удалось удалить"
   },
   "adminCatalog": {
-    "title": "Каталог · Товары",
-    "description": "Создание, редактирование и публикация товаров PIM",
     "newProduct": "Новый товар",
     "editProduct": "Редактировать товар",
-    "searchPlaceholder": "Поиск по названию, SKU, ГОСТ...",
-    "allDomains": "Все домены",
-    "allStatuses": "Все статусы",
-    "emptyState": "Товары не найдены",
     "created": "Товар создан",
     "updated": "Товар обновлён",
-    "deleted": "Товар удалён",
     "saveFailed": "Не удалось сохранить",
     "nameRequired": "Укажите название",
     "save": "Сохранить",
     "create": "Создать",
-    "delete": "Удалить",
-    "cancel": "Отмена",
-    "confirmDelete": "Удалить товар?",
-    "confirmDeleteDesc": "Товар «{{name}}» будет удалён без возможности восстановления.",
     "fields": {
       "name": "Название",
       "description": "Описание",
@@ -2852,19 +1948,6 @@
       "equipmentGroups": "Группы оборудования",
       "hsCode": "Код ТН ВЭД",
       "ownerCompany": "Компания-владелец"
-    },
-    "stats": {
-      "total": "Всего",
-      "published": "Опубликовано",
-      "draft": "Черновики"
-    },
-    "table": {
-      "sku": "SKU",
-      "name": "Название",
-      "domain": "Домен",
-      "status": "Статус",
-      "manufacturer": "Производитель",
-      "actions": "Действия"
     },
     "media": {
       "images": "Фотографии товара",
@@ -2893,10 +1976,6 @@
       "isActive": "Предложение в продаже",
       "isActiveHint": "Снятое предложение не подставляется в КП и не показывается покупателям. Оно не удаляется — вернуть в продажу можно тем же переключателем."
     },
-    "published": "Товар опубликован",
-    "publish": "Опубликовать",
-    "confirmPublish": "Опубликовать товар?",
-    "confirmPublishDesc": "Товар «{{name}}» станет видимым покупателям в каталоге.",
     "aiEnrich": {
       "title": "Заполнение с ИИ",
       "hint": "ИИ предложит описание, характеристики, категорию, код ТН ВЭД и единицу измерения — вы отметите, что применить.",
@@ -2918,117 +1997,17 @@
     },
     "ownerCompanyRequired": "Выберите компанию-владельца карточки"
   },
-  "adminCategories": {
-    "title": "Каталог · Категории",
-    "description": "Иерархические категории товаров",
-    "new": "Новая категория",
-    "edit": "Редактировать категорию",
-    "emptyState": "Категории не найдены",
-    "created": "Категория создана",
-    "updated": "Категория обновлена",
-    "deleted": "Категория удалена",
-    "saveFailed": "Не удалось сохранить",
-    "nameRequired": "Укажите название",
-    "save": "Сохранить",
-    "create": "Создать",
-    "delete": "Удалить",
-    "cancel": "Отмена",
-    "confirmDelete": "Удалить категорию?",
-    "confirmDeleteDesc": "Категория «{{name}}» будет удалена.",
-    "fields": {
-      "name": "Название",
-      "domainType": "Домен",
-      "parent": "Родительская категория",
-      "sortOrder": "Порядок сортировки"
-    },
-    "stats": {
-      "total": "Всего",
-      "roots": "Корневых"
-    },
-    "table": {
-      "name": "Название",
-      "parent": "Родитель",
-      "order": "Порядок",
-      "actions": "Действия"
-    }
-  },
-  "adminEquipmentGroups": {
-    "title": "Каталог · Группы оборудования",
-    "description": "Иерархия типов оборудования (Домен ж/д техники)",
-    "new": "Новая группа",
-    "edit": "Редактировать группу",
-    "emptyState": "Группы не найдены",
-    "created": "Группа создана",
-    "updated": "Группа обновлена",
-    "deleted": "Группа удалена",
-    "saveFailed": "Не удалось сохранить",
-    "nameRequired": "Укажите название",
-    "save": "Сохранить",
-    "create": "Создать",
-    "delete": "Удалить",
-    "cancel": "Отмена",
-    "confirmDelete": "Удалить группу оборудования?",
-    "confirmDeleteDesc": "«{{name}}» и все её дочерние группы будут удалены.",
-    "fields": {
-      "name": "Название",
-      "parent": "Родительская группа",
-      "description": "Описание",
-      "sortOrder": "Порядок сортировки"
-    },
-    "stats": {
-      "total": "Всего",
-      "roots": "Корневых"
-    },
-    "table": {
-      "path": "Путь",
-      "actions": "Действия"
-    }
-  },
   "adminOffers": {
-    "title": "Каталог · Офферы поставщиков",
-    "description": "Цены, наличие, условия поставки",
-    "new": "Новый оффер",
-    "edit": "Редактировать оффер",
-    "emptyState": "Офферы не найдены",
-    "created": "Оффер создан",
-    "updated": "Оффер обновлён",
-    "deleted": "Оффер удалён",
-    "saveFailed": "Не удалось сохранить",
-    "missingFields": "Заполните товар, поставщика и цену",
-    "save": "Сохранить",
-    "create": "Создать",
-    "delete": "Удалить",
-    "cancel": "Отмена",
-    "yes": "Да",
-    "no": "Нет",
-    "allActive": "Все записи",
-    "confirmDelete": "Удалить оффер?",
-    "confirmDeleteDesc": "Оффер будет удалён.",
     "fields": {
-      "product": "Товар",
-      "supplier": "Поставщик",
       "supplierSku": "Артикул поставщика",
       "basePrice": "Базовая цена",
       "currency": "Валюта",
       "deliveryBasis": "Базис поставки",
       "stockStatus": "Статус наличия",
-      "leadTime": "Срок поставки",
       "minQty": "Мин. заказ",
       "stockQuantity": "Количество на складе",
       "inStockLeadTimeDays": "Срок поставки со склада (дней)",
       "orderLeadTimeDays": "Срок поставки под заказ (дней)"
-    },
-    "stats": {
-      "total": "Всего",
-      "active": "Активных"
-    },
-    "table": {
-      "product": "Товар",
-      "supplier": "Поставщик",
-      "price": "Цена",
-      "status": "Наличие",
-      "active": "Активен",
-      "actions": "Действия"
     },
     "availability": {
       "title": "Наличие и сроки",
@@ -3051,12 +2030,6 @@
     "cancel": "Отменить договор",
     "confirmCancel": "Подтвердите отмену",
     "cancelReason": "Причина отмены",
-    "forceCancel": "Force-отмена (админ)",
-    "forceCancelled": "Договор отменён платформенным админом",
-    "forceCancelReason": "Причина (обязательна, попадёт в audit-лог)",
-    "forceCancelReasonRequired": "Укажите причину force-отмены",
-    "confirmForceCancel": "Force-отмена договора (платформенный админ)",
-    "forceCancelHint": "Будет отменён договор {{number}} независимо от его текущего статуса. Действие логируется маркером [FORCE_ADMIN].",
     "allStatuses": "Все статусы",
     "stats": {
       "total": "Всего",
@@ -3452,7 +2425,6 @@
     "esign": "Ручной режим: подпись — клик в интерфейсе. Юридически значимая электронная подпись (E-IMZO) будет подключена до production-релиза."
   },
   "guards": {
-    "adminRequired": "Раздел доступен только администраторам",
     "kycRequired": "Завершите KYC-верификацию, чтобы работать с этим разделом",
     "notAvailableHere": "Этот раздел недоступен в текущем режиме"
   },
@@ -4118,117 +3090,6 @@
     "preset_slash": "Через слэш",
     "preset_compact": "Компактный"
   },
-  "accessLogPage": {
-    "title": "Журнал доступа",
-    "description": "Кто и что менял в чужих правах и доступах: аварийный доступ, действия за арендатора и административные изменения",
-    "empty": "Записей доступа пока нет",
-    "stats": {
-      "activeBreakGlass": "Активный break-glass",
-      "expiredBreakGlass": "Истёкший аварийный доступ",
-      "forceOverrides": "Override-действия",
-      "adminActions": "Административные действия"
-    },
-    "col": {
-      "event": "Событие",
-      "operator": "Оператор",
-      "entity": "Объект",
-      "reason": "Причина",
-      "when": "Когда"
-    },
-    "badge": {
-      "activeUntil": "Активен до {{time}}",
-      "expired": "Истёк",
-      "override": "Override"
-    }
-  },
-  "adminEntitlements": {
-    "title": "Доступы (опции)",
-    "subtitle": "Платные функции по компаниям — выдать промо, включить демо или отключить. Приложение проверяет has_entitlement(company, feature).",
-    "grant": "Выдать доступ",
-    "edit": "Изменить доступ",
-    "company": "Компания",
-    "companyPlaceholder": "Выберите компанию",
-    "feature": "Функция",
-    "featurePlaceholder": "Выберите функцию",
-    "access": "Доступ",
-    "accessHint": "Включено — работает; Демо — работает, но с водяным знаком и без отправки/экспорта; Выключено — заблокировано.",
-    "credits": "Кредиты",
-    "limit": "Лимит",
-    "expiresAt": "Действует до",
-    "note": "Заметка",
-    "notePlaceholder": "Причина/промо (необязательно)",
-    "granted": "Активно",
-    "notGranted": "Не активно",
-    "allCompanies": "Все компании",
-    "empty": "Нет выданных доступов",
-    "requiredFields": "Заполните компанию, функцию и доступ",
-    "grantedToast": "Доступ выдан",
-    "updated": "Доступ обновлён",
-    "removed": "Доступ удалён",
-    "confirmRemoveTitle": "Удалить доступ?",
-    "confirmRemoveDesc": "Доступ «{{feature}}» для «{{company}}» будет удалён (компания вернётся к базовому правилу подписки)."
-  },
-  "operatorRoles": {
-    "title": "Роли операторов",
-    "description": "Управление платформенными суб-ролями операторов и их правами",
-    "addRole": "Добавить роль",
-    "editRole": "Редактировать роль",
-    "deleteRole": "Удалить роль",
-    "name": "Название",
-    "namePlaceholder": "Например: Офицер KYC",
-    "descriptionField": "Описание",
-    "descriptionPlaceholder": "Кратко опишите назначение роли",
-    "code": "Код",
-    "permissions": "Права",
-    "permissionsHint": "Отметьте действия, доступные операторам с этой ролью",
-    "systemRole": "Системная",
-    "systemRoleReadonly": "Это системная роль — её нельзя изменять или удалять",
-    "operatorCount": "Операторов",
-    "saveRole": "Сохранить роль",
-    "noRoles": "Роли операторов ещё не созданы",
-    "deleteConfirm": "Удалить роль «{{name}}»? Это действие нельзя отменить.",
-    "assignRole": "Роль оператора",
-    "assignHint": "Определяет, какие действия платформы доступны этому оператору",
-    "noOperatorRole": "Без роли оператора",
-    "fullAccessNoLimits": "Полный доступ (без ограничений)",
-    "limitsRemoved": "Ограничения сняты — у оператора полный доступ",
-    "createSuccess": "Роль создана",
-    "updateSuccess": "Роль обновлена",
-    "deleteSuccess": "Роль удалена",
-    "assignSuccess": "Роль оператора назначена",
-    "stats": {
-      "total": "Всего ролей",
-      "system": "Системные"
-    },
-    "errors": {
-      "ONLY_SUPER_OPERATOR_CAN_MANAGE_OPERATORS": "Только супероператор может управлять ролями операторов",
-      "SYSTEM_OPERATOR_ROLE_IMMUTABLE": "Системную роль нельзя изменять или удалять",
-      "ROLE_HAS_OPERATORS_REASSIGN_FIRST": "У роли есть операторы — сначала переназначьте их",
-      "CANNOT_DEMOTE_LAST_OPERATOR": "Нельзя снять роль у последнего оператора платформы",
-      "NOT_A_PLATFORM_OPERATOR": "Пользователь не является платформенным оператором",
-      "ROLE_NAME_TAKEN": "Роль с таким названием уже существует"
-    }
-  },
-  "operatorPermissions": {
-    "users": "Пользователи",
-    "companies": "Компании",
-    "kyc": "KYC",
-    "billing": "Биллинг",
-    "moderation": "Модерация",
-    "platform": "Платформа",
-    "users_view": "Просматривать пользователей",
-    "users_manage": "Управлять пользователями (блокировка, роль)",
-    "companies_view": "Просматривать компании",
-    "companies_manage": "Управлять компаниями",
-    "kyc_view": "Просматривать KYC и документы",
-    "kyc_verify": "Верифицировать KYC (L1→L3)",
-    "billing_view": "Просматривать подписки и счета",
-    "billing_manage": "Управлять подписками и платежами",
-    "moderation_role_applications": "Модерация заявок на роли",
-    "moderation_force_override": "Force-override (сделки, КП, договоры)",
-    "platform_settings": "Системные настройки и справочники",
-    "operators_manage": "Управлять ролями операторов"
-  },
   "activity": {
     "deal": {
       "created": {
@@ -4291,9 +3152,18 @@
         "title": "КП отправлено клиенту",
         "detail": "КП v{{version}} ({{number}})"
       },
-      "approval_your_turn": { "title": "Требуется согласование КП", "detail": "КП #{{number}}: ваша очередь согласовать." },
-      "approval_returned": { "title": "КП возвращён на доработку", "detail": "КП #{{number}} отклонён на согласовании. {{comment}}" },
-      "approval_complete_informed": { "title": "КП согласован", "detail": "КП #{{number}} согласован." },
+      "approval_your_turn": {
+        "title": "Требуется согласование КП",
+        "detail": "КП #{{number}}: ваша очередь согласовать."
+      },
+      "approval_returned": {
+        "title": "КП возвращён на доработку",
+        "detail": "КП #{{number}} отклонён на согласовании. {{comment}}"
+      },
+      "approval_complete_informed": {
+        "title": "КП согласован",
+        "detail": "КП #{{number}} согласован."
+      },
       "accepted": {
         "title": "КП принято клиентом",
         "detail": "КП v{{version}} ({{number}})"

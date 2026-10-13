@@ -5,7 +5,6 @@ import { DocumentActions } from '@/components/Shared/DocumentActions';
 import { RecordPaymentDialog } from '@/components/Billing/RecordPaymentDialog';
 import { useUserStore } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
-import { useIsViewerMode } from '@/hooks/useViewerMode';
 
 export function PaymentsPage() {
   const { t } = useTranslation();
@@ -16,7 +15,6 @@ export function PaymentsPage() {
   // контексту отображения: `activeStatus` — первый тип компании, и посредник, который и
   // покупает, и продаёт, кнопки не видел. Тот же образец, что в DocumentCreateWizard.
   const isBuyer = useUserStore((s) => s.capabilities.can_buy);
-  const isViewer = useIsViewerMode();
   const listParams = useListParams([] as const, { urlKey: 'payments', defaultOrdering: '-paid_at' });
 
   const stats = [
@@ -30,7 +28,7 @@ export function PaymentsPage() {
       icon={<Wallet className="h-5 w-5" />}
       stats={stats}
       statsError={isError}
-      actions={isBuyer ? [{ label: t('recordPayment.cta'), onClick: () => setRecordOpen(true), disabled: isViewer }] : undefined}
+      actions={isBuyer ? [{ label: t('recordPayment.cta'), onClick: () => setRecordOpen(true) }] : undefined}
     >
       <Toolbar
         searchValue={listParams.searchInput}
@@ -55,7 +53,7 @@ export function PaymentsPage() {
                 <EmptyState
                   icon={<Wallet className="h-5 w-5" />}
                   message={t('paymentsPage.emptyState')}
-                  action={isBuyer && !isViewer ? { label: t('recordPayment.cta'), onClick: () => setRecordOpen(true) } : undefined}
+                  action={isBuyer ? { label: t('recordPayment.cta'), onClick: () => setRecordOpen(true) } : undefined}
                 />
               );
             }

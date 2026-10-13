@@ -84,7 +84,6 @@ class DealViewSet(DealAiActionsMixin, DealWorkflowActionsMixin, viewsets.ModelVi
 
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
     # Operator sub-capability for the force-override action (ADR-0004 G1).
-    operator_permissions = {"force_change_stage": "moderation.force_override"}
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
@@ -120,7 +119,7 @@ class DealViewSet(DealAiActionsMixin, DealWorkflowActionsMixin, viewsets.ModelVi
         # keystone — replaces the old see-all leak where seller A saw seller B's
         # buyers' заявки). A dual seller+buyer user in the BUYER context (or a pure
         # buyer) falls through to its own-company scope.
-        if getattr(user, "is_platform_admin", False):
+        if getattr(user, "is_superuser", False):
             return queryset
 
         user_company_ids = list(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
@@ -153,7 +152,7 @@ class DealViewSet(DealAiActionsMixin, DealWorkflowActionsMixin, viewsets.ModelVi
         not be silently dropped — only a platform admin can remove it then
         (checkup 2026-06-10: destroy was open to any member at any stage)."""
         deal = self.get_object()
-        if not request.user.is_platform_admin:
+        if not request.user.is_superuser:
             stage_code = deal.stage.code if deal.stage_id else None
             if stage_code and stage_code != DealStageCode.DRAFT:
                 return Response(
@@ -175,10 +174,8 @@ class DealViewSet(DealAiActionsMixin, DealWorkflowActionsMixin, viewsets.ModelVi
             # creator's DealSellerRouting row (register_new_deal → ensure_creator_seller_routing),
             # so a non-seller would create an orphan nobody — not even themselves — can see.
             # It can never be SENT until a recipient exists (RECIPIENT_REQUIRED).
-            from accounts.services.permissions import is_platform_admin_viewer, primary_seller_company_id
+            from accounts.services.permissions import primary_seller_company_id
 
-            if is_platform_admin_viewer(user):
-                raise PermissionDenied("ADMIN_VIEWER_CANNOT_ACT")
             if not primary_seller_company_id(user):
                 raise PermissionDenied("ONLY_SELLER_CAN_CREATE_CALCULATOR_DRAFT")
             save_kwargs = dict(company=None, contact=None, client=None)
@@ -205,10 +202,8 @@ class DealViewSet(DealAiActionsMixin, DealWorkflowActionsMixin, viewsets.ModelVi
             # Capability guard (server-side, not UI-only): opening a buyer RFQ is a
             # buy-side action — a member without can_buy (e.g. a seller-only member of
             # this company) must be refused here, not merely hidden in the cart UI.
-            from accounts.services.permissions import is_member_of, is_platform_admin_viewer
+            from accounts.services.permissions import is_member_of
 
-            if is_platform_admin_viewer(user):
-                raise PermissionDenied("ADMIN_VIEWER_CANNOT_ACT")
             if not is_member_of(user, primary_company.id, capability="buy"):
                 raise PermissionDenied("ONLY_BUYER_CAN_CREATE_REQUEST")
             save_kwargs = dict(client=user, company=primary_company)

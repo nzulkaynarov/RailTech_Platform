@@ -9,7 +9,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from core.permissions import OperatorScoped
+from core.permissions import IsPlatformAdmin
 from crm.models import Deal
 from crm.serializers import DealDetailSerializer
 from crm.services import force_transition_deal_stage, route_request_to_sellers
@@ -82,12 +82,10 @@ class DealWorkflowActionsMixin:
     @action(detail=True, methods=["get"], url_path="suggested-sellers", pagination_class=None)
     def suggested_sellers(self, request, pk=None):
         """Thin wrapper (Rule 8): read-only seller suggestions for the buyer's routing step."""
-        from accounts.services.permissions import is_member_of, is_platform_admin_viewer
+        from accounts.services.permissions import is_member_of
         from sourcing.services import suggest_sellers_for_deal
 
         deal = self.get_object()
-        if is_platform_admin_viewer(request.user):
-            return Response({"detail": "ADMIN_VIEWER_CANNOT_ACT"}, status=status.HTTP_403_FORBIDDEN)
         if not is_member_of(request.user, deal.company_id, capability="buy"):
             return Response({"detail": "ONLY_BUYER_CAN_ROUTE"}, status=status.HTTP_403_FORBIDDEN)
         return Response(suggest_sellers_for_deal(deal))
@@ -251,7 +249,7 @@ class DealWorkflowActionsMixin:
         detail=True,
         methods=["post"],
         url_path="force-change-stage",
-        permission_classes=[IsAuthenticated, OperatorScoped],
+        permission_classes=[IsAuthenticated, IsPlatformAdmin],
     )
     def force_change_stage(self, request, pk=None):
         deal = self.get_object()

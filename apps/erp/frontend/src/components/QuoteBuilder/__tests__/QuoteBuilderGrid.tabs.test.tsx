@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 
 import { renderWithProviders } from '@/test/renderWithProviders';
 import type { Deal, QuoteItem } from '@/api/crmApi';
-import { QuoteBuilderGrid } from '@/components/Admin/QuoteBuilderGrid';
+import { QuoteBuilderGrid } from '@/components/QuoteBuilder/QuoteBuilderGrid';
 import {
 	useDeal, useQuoteItems, useUpdateQuoteItem, useBulkUpdateQuoteItems, useBulkCreateQuoteItems,
 	useBulkDeleteQuoteItems, useCreateQuoteItem, useDeleteQuoteItem, useSetQuoteDeliveryBasis,
@@ -38,7 +38,7 @@ vi.mock('@/components/CRM/DeliveryBasisSelect', () => ({ DeliveryBasisSelect: ()
 vi.mock('@/components/CRM/QuoteSettingsDialog', () => ({ QuoteSettingsDialog: () => null }));
 vi.mock('@/components/CRM/ReassignProductDialog', () => ({ ReassignProductDialog: () => null }));
 vi.mock('@/components/CRM/GenerateQuoteDialog', () => ({ GenerateQuoteDialog: () => null }));
-vi.mock('@/components/Admin/AICatalogMatchDialog', () => ({ AICatalogMatchDialog: () => null }));
+vi.mock('@/components/QuoteBuilder/AICatalogMatchDialog', () => ({ AICatalogMatchDialog: () => null }));
 vi.mock('@/components/Shared/DocumentActions', () => ({ DocumentActions: () => null }));
 
 const setHook = (hook: unknown, value: unknown) => { (hook as Mock).mockReturnValue(value); };

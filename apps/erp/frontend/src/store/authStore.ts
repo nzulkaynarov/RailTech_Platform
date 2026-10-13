@@ -5,17 +5,10 @@ import { setAccessToken } from '../api/accessToken';
 import { User } from '../api/accountsApi';
 import { queryClient } from '../lib/queryClient';
 
-// Backend SystemRole vocabulary after migration accounts/0010_platform_admin_model.
-// Only ADMIN (Platform Admin — owns the platform, not attached to any company)
-// and USER (everyone else; their actual permissions come from CompanyMember.role
-// = WorkspaceRole within their company). Legacy MANAGER / SALES_MANAGER /
-// ACCOUNT_MANAGER / GUEST / CLIENT no longer exist as SystemRoles — see ADR-0002.
-export type UserRole = 'ADMIN' | 'USER';
 type KYCStatus = 'L1_UNVERIFIED' | 'PROFILE_SUBMITTED' | 'L2_VERIFIED' | 'L3_CONTRACTED' | null;
 
 interface AuthState {
     user: User | null;
-    role: UserRole | null;
     kyc_status: KYCStatus;
     // Access token is held in memory only (see api/accessToken.ts); the refresh
     // token lives in an HttpOnly cookie the server sets — never in JS (F2.1).
@@ -44,7 +37,6 @@ export const useAuthStore = create<AuthState>()(
     persist(
         (set, get) => ({
             user: null,
-            role: null,
             kyc_status: null,
             accessToken: null,
             isLoading: false,
@@ -141,7 +133,6 @@ export const useAuthStore = create<AuthState>()(
                 setAccessToken(null);
                 set({
                     user: null,
-                    role: null,
                     kyc_status: null,
                     accessToken: null,
                     isAuthenticated: false,
@@ -171,19 +162,13 @@ export const useAuthStore = create<AuthState>()(
                     // don't call logout() — that POSTs auth/logout/ needlessly and the interceptor
                     // already handled the redirect for a genuinely expired session.
                     setAccessToken(null);
-                    set({ isAuthenticated: false, user: null, role: null });
+                    set({ isAuthenticated: false, user: null });
                 } finally {
                     set({ isLoading: false });
                 }
             },
 
             setUser: (user: User) => {
-                // Backend returns either 'ADMIN' or 'USER' (see migration 0010);
-                // anything else from older builds is collapsed to 'USER' so the
-                // typed literal never goes undefined downstream.
-                const rawRole = user.role_code ?? '';
-                const role: UserRole = rawRole === 'ADMIN' ? 'ADMIN' : 'USER';
-
                 // Backend returns `primary_company`, frontend expects `company`
                 const apiUser = user as User & { primary_company?: typeof user.company };
                 if (apiUser.primary_company && !user.company) {
@@ -192,7 +177,6 @@ export const useAuthStore = create<AuthState>()(
 
                 set({
                     user,
-                    role,
                     kyc_status: (user.kyc_status as KYCStatus) || null,
                 });
             },
@@ -211,7 +195,6 @@ export const useAuthStore = create<AuthState>()(
             // reload while initAuth() re-mints the access token from the cookie.
             partialize: (state) => ({
                 isAuthenticated: state.isAuthenticated,
-                role: state.role,
                 user: state.user,
             }),
         }

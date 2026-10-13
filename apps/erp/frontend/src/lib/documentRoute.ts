@@ -31,8 +31,6 @@ export interface DocumentRouteInput {
 export interface RouteViewer {
   /** Смотрит продавец (его рабочие места доступны). */
   isSeller: boolean;
-  /** Платформенный оператор: своя навигация, часть бизнес-страниц ему закрыта. */
-  isPlatformAdmin?: boolean;
 }
 
 /** Страницы, умеющие открывать конкретную запись через `?open=<id>`. */
@@ -104,6 +102,5 @@ export function dealCardRoute(dealId: number | null | undefined, viewer: RouteVi
  * `crm-deals`, и покупателя из чата, воронки и обучающего тура выбрасывало на дашборд.
  */
 export function dealsListRoute(viewer: RouteViewer): string {
-  if (viewer.isPlatformAdmin) return 'admin-deals';
   return viewer.isSeller ? 'crm-deals' : 'my-requests';
 }

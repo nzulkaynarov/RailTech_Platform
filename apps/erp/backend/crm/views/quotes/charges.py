@@ -40,7 +40,7 @@ class QuoteChargeViewSet(viewsets.ModelViewSet):
         from accounts.services.permissions import seller_visible_deal_ids
 
         queryset = QuoteCharge.objects.select_related("charge_type", "quote").all()
-        if getattr(user, "is_platform_admin", False):
+        if getattr(user, "is_superuser", False):
             return queryset
         visible_deal_ids = seller_visible_deal_ids(user, self.request)
         if visible_deal_ids is not None:
@@ -81,11 +81,9 @@ class QuoteChargeViewSet(viewsets.ModelViewSet):
     def _assert_seller(self):
         from rest_framework.exceptions import PermissionDenied
 
-        from accounts.services.permissions import can_edit_quote_pricing, is_platform_admin_viewer
+        from accounts.services.permissions import can_edit_quote_pricing
 
         user = self.request.user
-        if is_platform_admin_viewer(user):
-            raise PermissionDenied("ADMIN_VIEWER_CANNOT_ACT")
         if not (getattr(user, "is_superuser", False) or can_edit_quote_pricing(user)):
             raise PermissionDenied("ONLY_SELLER_CAN_BUILD_QUOTE")
 

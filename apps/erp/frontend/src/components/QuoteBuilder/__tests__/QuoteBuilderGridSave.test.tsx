@@ -40,7 +40,7 @@ vi.mock('@/hooks/useMasterData', () => ({
 vi.mock('@/hooks/use-mobile', () => ({ useMediaQuery: () => false }));
 
 // Heavy child surfaces aren't under test here — stub to null so the grid renders in isolation.
-vi.mock('@/components/Admin/AICatalogMatchDialog', () => ({ AICatalogMatchDialog: () => null }));
+vi.mock('@/components/QuoteBuilder/AICatalogMatchDialog', () => ({ AICatalogMatchDialog: () => null }));
 vi.mock('@/components/CRM/GenerateQuoteDialog', () => ({ GenerateQuoteDialog: () => null }));
 vi.mock('@/components/CRM/QuoteSettingsDialog', () => ({ QuoteSettingsDialog: () => null }));
 vi.mock('@/components/CRM/ReassignProductDialog', () => ({ ReassignProductDialog: () => null }));
@@ -53,7 +53,7 @@ vi.mock('sonner', () => ({
 }));
 
 // Import AFTER the mocks are registered.
-import { QuoteBuilderGrid } from '@/components/Admin/QuoteBuilderGrid';
+import { QuoteBuilderGrid } from '@/components/QuoteBuilder/QuoteBuilderGrid';
 
 function makeQuote(): Quote {
 	return {

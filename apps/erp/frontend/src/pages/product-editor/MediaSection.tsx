@@ -3,7 +3,7 @@ import { ImagePlus } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-import { ProductMediaSection } from '../admin-catalog/ProductMediaSection';
+import { ProductMediaSection } from '@/components/Shared/product-form/ProductMediaSection';
 import { SECTION_IDS } from './anchors';
 
 /**

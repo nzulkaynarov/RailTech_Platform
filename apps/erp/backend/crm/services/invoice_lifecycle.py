@@ -58,10 +58,8 @@ def notify_seller_invoice_draft(invoice) -> None:
 def _assert_seller_may_act_on_invoice(invoice, user) -> Optional[str]:
     """Shared seller-side gate for invoice lifecycle actions (issue / cancel): viewer-block,
     seller-role, routing-scope. Returns an error code or None."""
-    from accounts.services import is_platform_admin_viewer, is_seller, seller_company_routed_to_deal
+    from accounts.services import is_seller, seller_company_routed_to_deal
 
-    if is_platform_admin_viewer(user):
-        return "ADMIN_VIEWER_CANNOT_ACT"
     if not (getattr(user, "is_superuser", False) or is_seller(user)):
         return "MEMBER_REQUIRED_FOR_ACTION"
     if not getattr(user, "is_superuser", False) and not seller_company_routed_to_deal(user, invoice.deal_id):

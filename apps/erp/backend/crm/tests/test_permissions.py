@@ -24,7 +24,7 @@ class TestIsPlatformAdmin:
         perm = IsPlatformAdmin()
         user = MagicMock()
         user.is_authenticated = True
-        user.is_platform_admin = False
+        user.is_superuser = False
         request = self._make_request(user)
         assert perm.has_permission(request, None) is False
 
@@ -32,7 +32,7 @@ class TestIsPlatformAdmin:
         perm = IsPlatformAdmin()
         user = MagicMock()
         user.is_authenticated = True
-        user.is_platform_admin = True
+        user.is_superuser = True
         request = self._make_request(user)
         assert perm.has_permission(request, None) is True
 
@@ -68,7 +68,7 @@ class TestIsPlatformAdminOrReadOnly:
         perm = IsPlatformAdminOrReadOnly()
         user = MagicMock()
         user.is_authenticated = True
-        user.is_platform_admin = False
+        user.is_superuser = False
         request = self._make_request(method="POST", user=user)
         assert perm.has_permission(request, None) is False
 
@@ -76,7 +76,7 @@ class TestIsPlatformAdminOrReadOnly:
         perm = IsPlatformAdminOrReadOnly()
         user = MagicMock()
         user.is_authenticated = True
-        user.is_platform_admin = True
+        user.is_superuser = True
         request = self._make_request(method="POST", user=user)
         assert perm.has_permission(request, None) is True
 
@@ -100,7 +100,7 @@ class TestIsCompanyMemberOrPlatformAdmin:
         perm = IsCompanyMemberOrPlatformAdmin()
         user = MagicMock()
         user.is_authenticated = True
-        user.is_platform_admin = True
+        user.is_superuser = True
         request = self._make_request(user)
         assert perm.has_object_permission(request, None, MagicMock()) is True
 
@@ -109,7 +109,7 @@ class TestIsCompanyMemberOrPlatformAdmin:
         company = MagicMock()
         user = MagicMock()
         user.is_authenticated = True
-        user.is_platform_admin = False
+        user.is_superuser = False
         user.memberships.filter.return_value.exists.return_value = True
 
         # A plain company-owning resource (has .company, NOT a routed Deal): spec the
@@ -127,7 +127,7 @@ class TestIsCompanyMemberOrPlatformAdmin:
         company = MagicMock()
         user = MagicMock()
         user.is_authenticated = True
-        user.is_platform_admin = False
+        user.is_superuser = False
         user.memberships.filter.return_value.exists.return_value = False
 
         # Same spec as test_company_member_allowed: this test asserts the company-membership

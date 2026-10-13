@@ -157,13 +157,10 @@ def _run_draft_quote_gates(deal_id: int, actor: CustomUser, *, require_ai_entitl
     """
     from accounts.services.permissions import (
         can_edit_quote_pricing,
-        is_platform_admin_viewer,
         primary_seller_company_id,
         seller_company_routed_to_deal,
     )
 
-    if is_platform_admin_viewer(actor):
-        return None, None, None, "ADMIN_VIEWER_CANNOT_ACT"
     if not (getattr(actor, "is_superuser", False) or can_edit_quote_pricing(actor)):
         return None, None, None, "ONLY_SELLER_CAN_BUILD_QUOTE"
     deal = Deal.objects.filter(pk=deal_id).first()

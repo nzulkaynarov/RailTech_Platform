@@ -6,6 +6,7 @@
 #   scripts/test_backend_local.sh [pytest-аргументы]   запустить (контейнеры поднимаются при необходимости)
 #   scripts/test_backend_local.sh --openapi            экспорт backend/schema.json (как api-contract в CI)
 #   scripts/test_backend_local.sh --migration-check    makemigrations --check и migrate на чистой базе
+#   scripts/test_backend_local.sh --manage <args>      произвольная manage.py-команда (например, makemigrations accounts)
 #   scripts/test_backend_local.sh --down               удалить контейнеры и сеть
 set -euo pipefail
 
@@ -72,6 +73,9 @@ case "${1:-}" in
   --migration-check)
     run_in python manage.py makemigrations --check --dry-run
     run_in python manage.py migrate --noinput ;;
+  --manage)
+    shift
+    run_in python manage.py "$@" ;;
   *)
     # .mo не в git — компилируем, как в CI (тест каталога проверяет реальный перевод).
     run_in sh -c 'find locale -name "*.po" -exec sh -c "msgfmt -o \"\${1%.po}.mo\" \"\$1\"" _ {} \;'

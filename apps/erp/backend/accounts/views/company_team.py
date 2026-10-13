@@ -34,7 +34,7 @@ class CompanyTeamMixin:
     def team(self, request, pk=None):
         company = self.get_object()
         is_member = CompanyMember.objects.filter(user=request.user, company=company).exists()
-        if not (is_member or request.user.is_platform_admin):
+        if not (is_member or request.user.is_superuser):
             raise exceptions.PermissionDenied("You can only view your own team.")
 
         # UserSerializer renders nested memberships + primary_company + types; without
@@ -86,7 +86,7 @@ class CompanyTeamMixin:
         # Authorization (ADR-0005 U2): the team.manage CompanyRole permission (OWNER holds it via
         # the is_system role), or platform staff/superuser. Lets a delegated company admin manage
         # the team, not only the founding OWNER.
-        is_staff = request.user.is_platform_admin
+        is_staff = request.user.is_superuser
         if not is_staff and not member_has_permission(request.user, company.id, "team.manage"):
             return Response({"detail": "ONLY_OWNER_CAN_DISTRIBUTE_CAPABILITIES"}, status=status.HTTP_403_FORBIDDEN)
 
@@ -141,9 +141,9 @@ class CompanyTeamMixin:
         company = self.get_object()
         # Authorization (ADR-0005 Phase E U3): team.manage CompanyRole permission, or platform
         # staff. Mirrors update_member_capabilities / invite (member_has_permission 'team.manage').
-        # The is_platform_admin bypass stays — member_has_permission is True for a superuser but
+        # The is_superuser bypass stays — member_has_permission is True for a superuser but
         # NOT for a non-superuser platform operator.
-        if not request.user.is_platform_admin and not member_has_permission(request.user, company.id, "team.manage"):
+        if not request.user.is_superuser and not member_has_permission(request.user, company.id, "team.manage"):
             return Response({"detail": "ONLY_COMPANY_ADMIN_CAN_CHANGE_ROLES"}, status=status.HTTP_403_FORBIDDEN)
 
         member_id = request.data.get("member_id")
@@ -186,7 +186,7 @@ class CompanyTeamMixin:
         company = self.get_object()
         # Authorization mirrors invite / set_member_role / update_member_capabilities:
         # team.manage CompanyRole permission (delegated company admin), or platform staff.
-        if not request.user.is_platform_admin and not member_has_permission(request.user, company.id, "team.manage"):
+        if not request.user.is_superuser and not member_has_permission(request.user, company.id, "team.manage"):
             return Response({"detail": "ONLY_COMPANY_ADMIN_CAN_MANAGE_TEAM"}, status=status.HTTP_403_FORBIDDEN)
 
         member_id = request.data.get("member_id")
@@ -229,7 +229,7 @@ class CompanyTeamMixin:
     @action(detail=True, methods=["post"], url_path="toggle-member-active")
     def toggle_member_active(self, request, pk=None):
         company = self.get_object()
-        if not request.user.is_platform_admin and not member_has_permission(request.user, company.id, "team.manage"):
+        if not request.user.is_superuser and not member_has_permission(request.user, company.id, "team.manage"):
             return Response({"detail": "ONLY_COMPANY_ADMIN_CAN_MANAGE_TEAM"}, status=status.HTTP_403_FORBIDDEN)
 
         member_id = request.data.get("member_id")
@@ -274,7 +274,7 @@ class CompanyTeamMixin:
 
         # Inviting a member is team management → the team.manage permission (OWNER holds it via
         # the is_system role; a delegated company admin too), or platform staff (ADR-0005 U2).
-        if not request.user.is_platform_admin and not member_has_permission(request.user, company.id, "team.manage"):
+        if not request.user.is_superuser and not member_has_permission(request.user, company.id, "team.manage"):
             return Response({"detail": "ONLY_COMPANY_OWNER_CAN_INVITE"}, status=status.HTTP_403_FORBIDDEN)
 
         email = request.data.get("email")

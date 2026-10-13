@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 
-import type { Draft } from '../admin-catalog/types';
-import type { ProductFormState } from '../admin-catalog/useProductForm';
+import type { Draft } from '@/components/Shared/product-form/types';
+import type { ProductFormState } from '@/components/Shared/product-form/useProductForm';
 import { SECTION_IDS } from './anchors';
 
 interface SpecRow {

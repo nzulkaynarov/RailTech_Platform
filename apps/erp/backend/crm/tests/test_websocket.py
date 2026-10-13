@@ -12,11 +12,10 @@ from unittest.mock import MagicMock
 class TestUserCanAccessDealChat:
     """Tests for crm.services.user_can_access_deal_chat."""
 
-    def _make_user(self, authenticated=True, is_superuser=False, is_platform_admin=False, user_id=1):
+    def _make_user(self, authenticated=True, is_superuser=False, user_id=1):
         user = MagicMock()
         user.is_authenticated = authenticated
         user.is_superuser = is_superuser
-        user.is_platform_admin = is_platform_admin
         user.id = user_id
         user.pk = user_id
         return user
@@ -45,13 +44,6 @@ class TestUserCanAccessDealChat:
         from crm.services import user_can_access_deal_chat
 
         user = self._make_user(is_superuser=True)
-        deal = self._make_deal()
-        assert user_can_access_deal_chat(user, deal) is True
-
-    def test_platform_admin_allowed(self):
-        from crm.services import user_can_access_deal_chat
-
-        user = self._make_user(is_platform_admin=True)
         deal = self._make_deal()
         assert user_can_access_deal_chat(user, deal) is True
 
@@ -95,7 +87,7 @@ class TestSendDealMessage:
         user = MagicMock()
         user.is_authenticated = True
         user.is_superuser = True
-        user.is_platform_admin = True
+        user.is_superuser = True
         user.id = 1
 
         deal = MagicMock()
@@ -113,7 +105,7 @@ class TestSendDealMessage:
         user = MagicMock()
         user.is_authenticated = True
         user.is_superuser = True
-        user.is_platform_admin = True
+        user.is_superuser = True
         user.id = 1
 
         deal = MagicMock()

@@ -40,7 +40,7 @@ def _resolve_seller_company(user):
     активный член SUPPLIER-компании с can_sell — его компания и станет supplier на офферах
     (self-service: supplier НИКОГДА не колонка файла). Не продавец → (None, 403).
     """
-    if getattr(user, "is_platform_admin", False) or user.is_superuser:
+    if getattr(user, "is_superuser", False) or user.is_superuser:
         return None, None
     from accounts.models import CompanyMember
 
@@ -61,7 +61,7 @@ def _resolve_seller_company(user):
 
 def _check_deal_access(user, deal) -> bool:
     """Centralized deal access check to prevent IDOR."""
-    if user.is_platform_admin:
+    if user.is_superuser:
         return True
     if deal.manager_id == user.id:
         return True
@@ -398,7 +398,7 @@ class ImportStatusView(APIView):
 
     def get(self, request, task_id):
         # IDOR protection: verify task ownership via DB (not cache)
-        if not request.user.is_platform_admin:
+        if not request.user.is_superuser:
             task_exists = ImportTask.objects.filter(celery_task_id=task_id, owner=request.user).exists()
             if not task_exists:
                 return Response({"detail": "TASK_ACCESS_DENIED"}, status=status.HTTP_403_FORBIDDEN)

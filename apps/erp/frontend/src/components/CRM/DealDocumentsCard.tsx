@@ -17,10 +17,8 @@ import { useGeneratedDocuments } from '@/hooks/useDocuments';
  * `defaultDealId` so the deal context is fixed. Received (counterparty) documents show a «Получен»
  * badge and are read-only (download / share only) — the same read-only contract as the registry.
  */
-export function DealDocumentsCard({ dealId, isViewer, viewerTip }: {
+export function DealDocumentsCard({ dealId }: {
   dealId: number;
-  isViewer: boolean;
-  viewerTip: string;
 }) {
   const { t } = useTranslation();
   const [createOpen, setCreateOpen] = useState(false);
@@ -38,8 +36,6 @@ export function DealDocumentsCard({ dealId, isViewer, viewerTip }: {
           variant="outline"
           size="sm"
           onClick={() => setCreateOpen(true)}
-          disabled={isViewer}
-          title={isViewer ? viewerTip : undefined}
         >
           <FilePlus className="mr-1.5 h-4 w-4" aria-hidden="true" />
           {t('dealDocuments.create')}

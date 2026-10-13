@@ -380,13 +380,10 @@ def generate_document(company, user: CustomUser, *, template, deal=None, contact
 
     Gates: entitlement (document.generate) and IDOR (deal/contact belong to the
     acting company/user). Returns (document, None) or (None, ERROR_CODE)."""
-    from accounts.services import is_platform_admin_viewer
     from accounts.services.permissions import member_has_permission
 
     from ..models import GeneratedDocument
 
-    if is_platform_admin_viewer(user):
-        return None, "ADMIN_VIEWER_CANNOT_ACT"
     # Producing a branded company document is a build action — gate it on the quote.build CompanyRole
     # permission (§2), mirroring the КП builder. A buy-only member (no quote.build) must not issue
     # letters on the company's letterhead. OWNER/company-admin keeps it via the legacy OWNER fallback.
@@ -455,11 +452,8 @@ def issue_document(document, user: CustomUser) -> Tuple[Optional[object], Option
     off-thread PDF render (ARCH-03) and notify the deal counterparty (II-1/II-2)."""
     import secrets
 
-    from accounts.services import is_platform_admin_viewer
     from accounts.services.permissions import member_has_permission
 
-    if is_platform_admin_viewer(user):
-        return None, "ADMIN_VIEWER_CANNOT_ACT"
     if not _user_owns_document(user, document):
         return None, "DOCUMENT_NOT_FOUND"
     # Issuing freezes the document + produces the deliverable PDF — a build action, gated on
@@ -529,10 +523,7 @@ def _notify_document_issued_to_counterparty(document) -> None:
 @transaction.atomic
 def cancel_document(document, user: CustomUser) -> Tuple[Optional[object], Optional[str]]:
     """DRAFT or ISSUED → CANCELLED. An already-cancelled document raises."""
-    from accounts.services import is_platform_admin_viewer
 
-    if is_platform_admin_viewer(user):
-        return None, "ADMIN_VIEWER_CANNOT_ACT"
     if not _user_owns_document(user, document):
         return None, "DOCUMENT_NOT_FOUND"
     if document.status_code == GeneratedDocumentStatusCode.CANCELLED:
@@ -583,10 +574,7 @@ def revoke_document_public_link(document, user: CustomUser) -> Tuple[Optional[ob
     """Pull an ISSUED document's public no-login link (owner-only). Idempotent — a further public
     open then returns 410 (public_document_gate → DOCUMENT_LINK_REVOKED). Mirrors the КП
     revoke-public-link (Quote.revoke_public_link). Returns (document, None) or (None, ERROR_CODE)."""
-    from accounts.services import is_platform_admin_viewer
 
-    if is_platform_admin_viewer(user):
-        return None, "ADMIN_VIEWER_CANNOT_ACT"
     if not _user_owns_document(user, document):
         return None, "DOCUMENT_NOT_FOUND"
     # Only an ISSUED document that still carries a minted token has a live link to pull.
@@ -649,11 +637,8 @@ def resolve_document_recipient(document, override_email=None):
 def send_document_email(document, user: CustomUser, *, to=None) -> Tuple[Optional[object], Optional[str]]:
     """Email an ISSUED document (public link in the body) to its recipient. Thin: gate → resolve
     recipient → enqueue the off-thread task (ARCH-03). Returns (recipient_email, None) or (None, CODE)."""
-    from accounts.services import is_platform_admin_viewer
     from accounts.services.permissions import member_has_permission
 
-    if is_platform_admin_viewer(user):
-        return None, "ADMIN_VIEWER_CANNOT_ACT"
     if not _user_owns_document(user, document):
         return None, "DOCUMENT_NOT_FOUND"
     # Dispatching the branded document is part of the build/send flow — gate on quote.build (§2),

@@ -297,7 +297,7 @@ class GeneratedDocumentViewSet(viewsets.ModelViewSet):
         qs = GeneratedDocument.objects.select_related(
             "status", "template", "deal", "contact", "created_by", "company"
         ).order_by("-created_at")
-        if not getattr(user, "is_platform_admin", False):
+        if not getattr(user, "is_superuser", False):
             # Own-company documents (all statuses) + ISSUED documents on deals the user reaches as a
             # PARTY — «полученные письма» read-only (II-2). A counterparty never sees another
             # company's DRAFT/CANCELLED. `.distinct()` de-dupes the seller_routings join.
@@ -372,12 +372,9 @@ class GeneratedDocumentViewSet(viewsets.ModelViewSet):
 
     def partial_update(self, request, *args, **kwargs):
         """Edit a DRAFT document's placeholder values (re-render + PDF invalidation)."""
-        from accounts.services import is_platform_admin_viewer
         from crm.services.generated_documents import _user_owns_document
 
         instance = self.get_object()
-        if is_platform_admin_viewer(request.user):
-            return Response({"detail": "ADMIN_VIEWER_CANNOT_ACT"}, status=400)
         # Defence-in-depth (F2-3/MINOR-4): the widened registry queryset now surfaces counterparties'
         # ISSUED documents — only the OWNER may edit (issue/cancel already gate the same way).
         if not _user_owns_document(request.user, instance):

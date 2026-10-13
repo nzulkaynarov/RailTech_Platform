@@ -178,3 +178,51 @@ def test_quote_margin_fx_shown_to_cost_viewer(quote_row):
     data = _serialize_quote_as(privileged, quote)
     for field in ("margin_percent", "fx_snapshot", "fx_manual"):
         assert field in data, f"{field} hidden from a cost viewer at the quote level"
+
+
+# ─── Администратор = is_superuser (M1-ERP-02 волна 1a: операторской плоскости нет) ──────────
+
+
+def _administrator(email="root@s.test"):
+    return CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True, is_superuser=True)
+
+
+def _legacy_admin_role_user(email="legacy-admin@s.test"):
+    """Носитель SystemRole=ADMIN без `is_superuser` и без членства — после M1-ERP-02 это не
+    администратор: прежнее «ADMIN без компании = оператор-наблюдатель» видело себестоимость."""
+    from accounts.models import SystemRole
+
+    role, _ = SystemRole.objects.get_or_create(code="ADMIN", defaults={"name": "Admin", "sort_order": 1})
+    return CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True, role=role)
+
+
+@pytest.mark.django_db
+def test_administrator_sees_item_cost_without_membership(quote_item):
+    _seller_co, item = quote_item
+    data = _serialize_as(_administrator(), item)
+    for field in _COST_FIELDS:
+        assert field in data, f"{field} hidden from the administrator (is_superuser)"
+
+
+@pytest.mark.django_db
+def test_administrator_sees_quote_margin_and_fx(quote_row):
+    _seller_co, quote = quote_row
+    data = _serialize_quote_as(_administrator(), quote)
+    for field in ("margin_percent", "fx_snapshot", "fx_manual"):
+        assert field in data, f"{field} hidden from the administrator at the quote level"
+
+
+@pytest.mark.django_db
+def test_legacy_admin_role_without_superuser_sees_no_item_cost(quote_item):
+    _seller_co, item = quote_item
+    data = _serialize_as(_legacy_admin_role_user(), item)
+    for field in _COST_FIELDS:
+        assert field not in data, f"{field} leaked to SystemRole=ADMIN without is_superuser"
+
+
+@pytest.mark.django_db
+def test_legacy_admin_role_without_superuser_sees_no_quote_margin(quote_row):
+    _seller_co, quote = quote_row
+    data = _serialize_quote_as(_legacy_admin_role_user(), quote)
+    for field in _QUOTE_COST_FIELDS:
+        assert field not in data, f"{field} leaked to SystemRole=ADMIN at the quote level"

@@ -11,9 +11,9 @@
 так же: квалификация отделена от конвертации.
 
 Salesforce ДОПУСКАЕТ и конвертацию лида самим админом — но только при явно названном владельце
-и с отдельным правом. Наш ADR-0002 строже: оператор не создаёт бизнес-объект, принадлежащий
-арендатору. Поэтому гард `is_platform_admin_viewer` в `convert_lead_to_deal` **остаётся** — он
-был прав; недоставало второй половины механики, а не разрешения.
+и с отдельным правом. Здесь лид в работу берёт член компании-получателя (`claim_lead`); маршрутизация
+и отклонение — действия администратора (`is_superuser`, M1-ERP-02). Лиды целиком уходят в CRM
+следующей волной M1-ERP-02.
 """
 
 import logging
@@ -61,7 +61,7 @@ def route_lead_to_company(
     Это МОДЕРАЦИЯ и МАРШРУТИЗАЦИЯ, а не действие от лица арендатора: платформа не создаёт
     сделку и не становится её владельцем — она лишь передаёт запрос тому, кто им займётся.
     """
-    if not getattr(operator, "is_platform_admin", False):
+    if not getattr(operator, "is_superuser", False):
         return None, "PLATFORM_OPERATOR_REQUIRED"
     if company is None:
         return None, "COMPANY_NOT_FOUND"
@@ -100,7 +100,7 @@ def route_lead_to_company(
 @transaction.atomic
 def reject_lead(lead: Lead, operator: CustomUser, reason: str = "") -> Tuple[Optional[Lead], Optional[str]]:
     """Спам или дубль: лид закрывается площадкой с причиной, без создания сделки."""
-    if not getattr(operator, "is_platform_admin", False):
+    if not getattr(operator, "is_superuser", False):
         return None, "PLATFORM_OPERATOR_REQUIRED"
     if lead.is_processed:
         return None, "LEAD_ALREADY_PROCESSED"
@@ -135,10 +135,7 @@ def claim_lead(lead: Lead, actor: CustomUser) -> Tuple[Optional[object], Optiona
     Второй шаг механики: платформа передала запрос, арендатор его принял. Именно здесь
     рождается бизнес-объект, и владелец у него правильный — компания, а не оператор.
     """
-    from accounts.services import is_platform_admin_viewer
 
-    if is_platform_admin_viewer(actor):
-        return None, "ADMIN_VIEWER_CANNOT_ACT"
     if lead.owner_company_id is None:
         return None, "LEAD_NOT_ROUTED"
     if lead.is_processed:

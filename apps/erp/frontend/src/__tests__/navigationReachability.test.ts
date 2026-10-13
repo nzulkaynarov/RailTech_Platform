@@ -35,7 +35,6 @@ interface Persona {
   name: string;
   caps: Capabilities;
   sides: CapableSides;
-  role: string;
   kycStatus: string;
   activeStatus: CompanyStatus;
   statusEntries: CompanyStatusEntry[];
@@ -50,8 +49,6 @@ function capabilities(overrides: Partial<Capabilities> = {}): Capabilities {
     can_send_quotes: false,
     quote_send_is_demo: false,
     permissions: ALL_PERMISSIONS,
-    is_platform_admin: false,
-    operator_permissions: null,
     ...overrides,
   };
 }
@@ -64,7 +61,6 @@ const PERSONAS: Persona[] = [
     name: 'покупатель (KYC пройден)',
     caps: capabilities(),
     sides: { buy: true, sell: false },
-    role: 'USER',
     kycStatus: 'verified',
     activeStatus: 'BUYER',
     statusEntries: [verified('BUYER')],
@@ -73,7 +69,6 @@ const PERSONAS: Persona[] = [
     name: 'продавец (KYC пройден, подписка активна)',
     caps: capabilities({ can_sell: true, can_buy: false, subscription_active: true, can_send_quotes: true }),
     sides: { buy: false, sell: true },
-    role: 'USER',
     kycStatus: 'verified',
     activeStatus: 'SELLER',
     statusEntries: [verified('SELLER')],
@@ -82,7 +77,6 @@ const PERSONAS: Persona[] = [
     name: 'компания с двумя сторонами',
     caps: capabilities({ can_sell: true, subscription_active: true, can_send_quotes: true }),
     sides: { buy: true, sell: true },
-    role: 'USER',
     kycStatus: 'verified',
     activeStatus: 'BUYER',
     statusEntries: [verified('BUYER'), verified('SELLER')],
@@ -91,7 +85,6 @@ const PERSONAS: Persona[] = [
     name: 'новичок до KYC',
     caps: capabilities({ kyc_level: 'L1_UNVERIFIED', permissions: [] }),
     sides: { buy: true, sell: false },
-    role: 'USER',
     kycStatus: 'not_started',
     activeStatus: 'BUYER',
     statusEntries: [],
@@ -110,7 +103,6 @@ const pageTypeOf = (route: string) => route.split('?')[0].split('/')[0];
 function guardFor(persona: Persona, route: string) {
   return evaluatePageGuard({
     pageType: pageTypeOf(route),
-    role: persona.role,
     kycStatus: persona.kycStatus,
     activeStatus: persona.activeStatus,
     statusEntries: persona.statusEntries,
@@ -165,27 +157,4 @@ describe('маршрут «к сделке» достижим той роли, �
     });
   }
 
-  it('оператору — его собственный реестр сделок', () => {
-    expect(dealsListRoute({ isSeller: false, isPlatformAdmin: true })).toBe('admin-deals');
-  });
-});
-
-describe('оператор дотягивается до всего, куда ведут его собственные страницы', () => {
-  // Страницы КП и договоров в операторском плане ссылаются на счёт и на карточку сделки.
-  // Пока эти цели не были в его списке, ссылка на своей же странице вела в отказ.
-  const operator: Persona = {
-    name: 'оператор платформы',
-    caps: capabilities({ is_platform_admin: true }),
-    sides: { buy: false, sell: false },
-    role: 'ADMIN',
-    kycStatus: 'not_started',
-    activeStatus: 'BUYER',
-    statusEntries: [],
-  };
-
-  for (const target of ['crm-quotes', 'contracts', 'invoices', 'request-detail']) {
-    it(target, () => {
-      expect(guardFor(operator, target).action).not.toBe('bounce');
-    });
-  }
 });

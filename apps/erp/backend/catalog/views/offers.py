@@ -47,7 +47,7 @@ class SupplierOfferViewSet(viewsets.ModelViewSet):
         # anonymous callers see nothing here (they get prices via КП quotes, not offers).
         qs = SupplierOffer.objects.select_related("supplier", "product", "currency", "delivery_basis", "stock_status")
         user = self.request.user
-        if user.is_authenticated and user.is_platform_admin:
+        if user.is_authenticated and user.is_superuser:
             return qs
         company_ids = self._seller_company_ids()
         if not company_ids:
@@ -59,7 +59,7 @@ class SupplierOfferViewSet(viewsets.ModelViewSet):
         # body MUST be one of the seller's companies — a competitor's id is rejected
         # (C2 spoofing). Platform admin may create an offer for any supplier.
         user = self.request.user
-        if user.is_platform_admin:
+        if user.is_superuser:
             serializer.save()
             return
         company_ids = self._seller_company_ids()
@@ -80,7 +80,7 @@ class SupplierOfferViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         # Non-admins cannot reassign an offer to another supplier OR another product (audit L2).
         user = self.request.user
-        if user.is_platform_admin:
+        if user.is_superuser:
             serializer.save()
             return
         serializer.save(supplier=serializer.instance.supplier, product=serializer.instance.product)

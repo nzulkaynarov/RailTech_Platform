@@ -70,7 +70,7 @@ def is_company_owner(user: "CustomUser", company: Company) -> bool:
     """
     if not user or not user.is_authenticated:
         return False
-    if getattr(user, "is_superuser", False) or getattr(user, "is_platform_admin", False):
+    if getattr(user, "is_superuser", False) or getattr(user, "is_superuser", False):
         return True
     from .permissions import member_has_permission
 

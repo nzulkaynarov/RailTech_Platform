@@ -74,14 +74,13 @@ class EquipmentGroupViewSet(viewsets.ModelViewSet):
     serializer_class = EquipmentGroupSerializer
     filter_backends = [filters.SearchFilter]
     search_fields = ["name"]
-    operator_permission = "platform.settings"
 
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
             return [permissions.AllowAny()]
-        from core.permissions import OperatorScoped
+        from core.permissions import IsPlatformAdmin
 
-        return [OperatorScoped()]
+        return [IsPlatformAdmin()]
 
 
 @extend_schema_view(
@@ -118,14 +117,13 @@ class CategoryViewSet(viewsets.ModelViewSet):
     search_fields = ["name"]
     # N3: дерево категорий — «справочники» из ADR-0004; пишет только оператор
     # с `platform.settings`, а не любая суб-роль.
-    operator_permission = "platform.settings"
 
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
             return [permissions.AllowAny()]
-        from core.permissions import OperatorScoped
+        from core.permissions import IsPlatformAdmin
 
-        return [OperatorScoped()]
+        return [IsPlatformAdmin()]
 
 
 @extend_schema_view(

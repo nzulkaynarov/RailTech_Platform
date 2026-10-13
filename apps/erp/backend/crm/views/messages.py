@@ -50,8 +50,8 @@ class MessageViewSet(viewsets.ModelViewSet):
         # (parity with DealViewSet/QuoteViewSet). In BUYER context the same user is
         # scoped to its own deals — no cross-tenant chat. Without the see-all branch
         # a seller who isn't the specific deal.manager saw the deal + КП but NOT its
-        # chat. Platform admin is covered by the is_platform_admin branch.
-        if getattr(user, "is_platform_admin", False):
+        # chat. Platform admin is covered by the is_superuser branch.
+        if getattr(user, "is_superuser", False):
             return queryset
         visible_deal_ids = seller_visible_deal_ids(user, self.request)
         if visible_deal_ids is not None:
@@ -125,6 +125,6 @@ class ActivityLogViewSet(viewsets.ReadOnlyModelViewSet):
             return ActivityLog.objects.none()
         user = self.request.user
         queryset = ActivityLog.objects.all().select_related("user")
-        if getattr(user, "is_platform_admin", False):
+        if getattr(user, "is_superuser", False):
             return queryset
         return queryset.filter(user=user)

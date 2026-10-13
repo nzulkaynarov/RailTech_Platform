@@ -15,7 +15,7 @@ from accounts import services
 from accounts.constants import VerificationStatusCode
 from accounts.models import Company
 from accounts.serializers import KYCVerificationSerializer
-from core.permissions import IsPlatformAdmin, OperatorScoped
+from core.permissions import IsPlatformAdmin
 
 
 class CompanyKYCMixin:
@@ -115,7 +115,7 @@ class CompanyKYCMixin:
         detail=False,
         methods=["post"],
         url_path="bulk-verify-kyc",
-        permission_classes=[permissions.IsAuthenticated, OperatorScoped],
+        permission_classes=[permissions.IsAuthenticated, IsPlatformAdmin],
     )
     def bulk_verify_kyc(self, request):
         ids = request.data.get("ids") or []

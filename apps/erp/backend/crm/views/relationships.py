@@ -94,7 +94,7 @@ class RelationshipViewSet(
             .prefetch_related("counterparty_company__contacts")
             .annotate(contacts_count=Count("counterparty_company__contacts", distinct=True))
         )
-        if not (getattr(user, "is_platform_admin", False) or getattr(user, "is_superuser", False)):
+        if not (getattr(user, "is_superuser", False) or getattr(user, "is_superuser", False)):
             my_company_ids = list(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
             queryset = queryset.filter(owner_company_id__in=my_company_ids)
         direction = self.request.query_params.get("direction")

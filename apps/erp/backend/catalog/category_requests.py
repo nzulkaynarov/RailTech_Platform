@@ -47,13 +47,9 @@ def submit_category_request(
     justification: str = "",
 ) -> tuple[object | None, str | None]:
     """Подать обращение. Возвращает `(request, error_code)`."""
-    from accounts.services.permissions import is_platform_admin_viewer
 
     from .models import CategoryRequest
 
-    if is_platform_admin_viewer(user):
-        # Оператор ведёт справочник сам — заявка самому себе бессмысленна (ADR-0002).
-        return None, "ADMIN_VIEWER_CANNOT_ACT"
     cleaned_name = (proposed_name or "").strip()
     if not cleaned_name:
         return None, "CATEGORY_REQUEST_NAME_REQUIRED"

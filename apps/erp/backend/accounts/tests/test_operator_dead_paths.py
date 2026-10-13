@@ -27,7 +27,7 @@ from master_data.models import UnitOfMeasure
 def operator(db):
     admin_role = SystemRole.objects.get(code="ADMIN")
     return CustomUser.objects.create_user(
-        email="op@dead.test", username="op_dead", password="pw", role=admin_role, is_active=True
+        is_superuser=True, email="op@dead.test", username="op_dead", password="pw", role=admin_role, is_active=True
     )
 
 

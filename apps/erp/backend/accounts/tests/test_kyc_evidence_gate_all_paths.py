@@ -271,28 +271,3 @@ def test_unfold_company_form_cannot_write_kyc_level(operator, bare_company):
 
     assert "verification_status" in readonly
     assert "is_verified" in readonly, "денормализованный флаг тоже не поле формы"
-
-
-def test_triage_queue_row_carries_evidence_gaps(operator, bare_company, levels, django_assert_num_queries):
-    """Очередь триажа — пятый путь выдачи уровня, и правила у него те же.
-
-    Пробелы считает СЕРВЕР тем же предикатом (у витрины своего нет), а список компаний не
-    имеет права превратиться в N+1 из-за этого счёта.
-    """
-    from accounts.models import Company
-
-    for index in range(4):
-        Company.objects.create(
-            name=f"Очередь {index}",
-            inn=f"90700010{index}",
-            verification_status=VerificationStatus.objects.get(code="PROFILE_SUBMITTED"),
-        )
-
-    resp = _api(operator).get(reverse("admin-queue"))
-    assert resp.status_code == 200
-
-    rows = [row for row in resp.json()["items"] if row["queue_type"] == "kyc_pending"]
-    assert rows, "очередь обязана показывать компании на проверке"
-    assert all("evidence_gaps" in row for row in rows)
-    mine = next(row for row in rows if row["entity_id"] == bare_company.pk)
-    assert mine["evidence_gaps"] == ["NO_DOCUMENTS"], "ИНН есть, документов нет"

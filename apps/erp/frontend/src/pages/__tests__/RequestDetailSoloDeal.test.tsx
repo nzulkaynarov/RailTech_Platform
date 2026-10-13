@@ -57,7 +57,6 @@ vi.mock('@/store/currencyStore', () => ({
   useCurrencyStore: (selector: (state: { format: (value: number) => string }) => unknown) =>
     selector({ format: (value: number) => `${value} сум` }),
 }));
-vi.mock('@/hooks/useViewerMode', () => ({ useIsViewerMode: () => false }));
 
 // The documents block is the surface under test — render it for real, but stub its data hook and
 // the create wizard so the block shows without pulling in wizard machinery.

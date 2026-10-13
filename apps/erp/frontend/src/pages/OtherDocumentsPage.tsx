@@ -4,7 +4,6 @@ import {
   useGeneratedDocuments, useGeneratedDocument, useIssueDocument, useCancelDocument,
   useUpdateDocumentValues, useSendDocument, useRevokeDocument,
 } from '@/hooks/useDocuments';
-import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { DocumentCreateWizard } from '@/components/Documents/DocumentCreateWizard';
 import { DocumentHtmlPreview } from '@/components/Documents/DocumentHtmlPreview';
 import { DealLink } from '@/components/Shared/DealLink';
@@ -24,8 +23,6 @@ export function OtherDocumentsPage() {
   const issueDocument = useIssueDocument();
   const cancelDocument = useCancelDocument();
   const updateValues = useUpdateDocumentValues();
-  const isViewer = useIsViewerMode();
-  const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
   const [wizardOpen, setWizardOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const selected = useMemo(
@@ -121,7 +118,6 @@ export function OtherDocumentsPage() {
         {
           label: t('documentsHub.create'),
           onClick: () => setWizardOpen(true),
-          disabled: isViewer,
         },
       ]}
     >
@@ -186,8 +182,6 @@ export function OtherDocumentsPage() {
       {selected && (
         <DocumentSheet
           document={selected}
-          isViewer={isViewer}
-          viewerTip={viewerTip}
           busy={issueDocument.isPending || cancelDocument.isPending || updateValues.isPending}
           onClose={() => setSelectedId(null)}
           onIssue={() => onIssue(selected.id)}
@@ -201,8 +195,6 @@ export function OtherDocumentsPage() {
 
 interface DocumentSheetProps {
   document: GeneratedDocument;
-  isViewer: boolean;
-  viewerTip: string;
   busy: boolean;
   onClose: () => void;
   onIssue: () => void;
@@ -211,7 +203,7 @@ interface DocumentSheetProps {
 }
 
 function DocumentSheet({
-  document, isViewer, viewerTip, busy, onClose, onIssue, onCancel, onSaveValues,
+  document, busy, onClose, onIssue, onCancel, onSaveValues,
 }: DocumentSheetProps) {
   const { t } = useTranslation();
   const [values, setValues] = useState<Record<string, string>>(() => ({ ...(document.values ?? {}) }));
@@ -224,7 +216,7 @@ function DocumentSheet({
   const isIssued = document.status_code === 'ISSUED';
   // A received (counterparty-owned) document is strictly read-only: no issue/cancel/value editing.
   const isReceived = document.is_owned === false;
-  const canAct = !isViewer && !isReceived;
+  const canAct = !isReceived;
   // Public share link: the backend builds it from FRONTEND_URL + minted token and only fills it
   // for ISSUED documents (null otherwise), so use it verbatim. Null once revoked (J-b).
   const publicLink = isIssued ? document.public_url : null;
@@ -320,7 +312,7 @@ function DocumentSheet({
                 variant="outline"
                 size="sm"
                 disabled={!canAct || busy}
-                title={canAct ? undefined : viewerTip}
+
                 onClick={onSave}
               >
                 {t('otherDocumentsPage.saveValues')}
@@ -363,7 +355,7 @@ function DocumentSheet({
               <Button
                 variant="outline"
                 disabled={!canAct}
-                title={canAct ? undefined : viewerTip}
+
                 onClick={() => setSendOpen(true)}
               >
                 <Mail className="mr-2 h-4 w-4" />
@@ -375,7 +367,7 @@ function DocumentSheet({
               <Button
                 variant="outline"
                 disabled={!canAct || revoke.isPending}
-                title={canAct ? undefined : viewerTip}
+
                 onClick={onRevoke}
               >
                 <Link2Off className="mr-2 h-4 w-4" />
@@ -386,7 +378,7 @@ function DocumentSheet({
               <p className="text-xs text-muted-foreground">{t('otherDocumentsPage.linkRevokedNote')}</p>
             )}
             {isDraft && !isReceived && (
-              <Button disabled={!canAct || busy} title={canAct ? undefined : viewerTip} onClick={onIssue}>
+              <Button disabled={!canAct || busy} onClick={onIssue}>
                 <Send className="mr-2 h-4 w-4" />
                 {t('otherDocumentsPage.actions.issue')}
               </Button>
@@ -397,7 +389,7 @@ function DocumentSheet({
               <Button
                 variant="outline"
                 disabled={!canAct || busy}
-                title={canAct ? undefined : viewerTip}
+
                 onClick={() => setCancelOpen(true)}
               >
                 <Ban className="mr-2 h-4 w-4" />

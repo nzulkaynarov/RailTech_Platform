@@ -102,7 +102,7 @@ function SidebarNavItem({
     // Radix `asChild` must chain to a single DOM element. Tooltip between
     // CollapsibleTrigger and <Button> breaks the handler forwarding, making
     // the collapsible header unclickable. Tooltip → Collapsible → Button fixes
-    // it — same pattern as PlatformAdminShell.
+    // it.
     return (
       <Tooltip>
         <Collapsible open={disabled ? false : open} onOpenChange={disabled ? undefined : setOpen}>
@@ -227,7 +227,9 @@ export function AppShell(props: AppShellProps) {
 
 function AppShellInner({ children, activePage, onNavigate, onStartTour, fullBleed = false }: AppShellProps) {
   const { t } = useTranslation();
-  const { role, profile, company, capabilities } = useUserStore();
+  const { profile, company, capabilities } = useUserStore();
+  // Роль в компании (CompanyRole) — единственная роль после удаления операторской плоскости.
+  const workspaceRole = useAuthStore((st) => st.user?.workspace_role ?? null);
   const cartCount = useCartCount();
   const { currency, setCurrency, rateIsFallback } = useCurrencyStore();
   const { state } = useSidebar();
@@ -257,8 +259,7 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour, fullBlee
     [capabilities, capableSides, activePage, t],
   );
 
-  // Global document search (Cmd/Ctrl+K) — a company-facing counterpart to the operator
-  // command palette. Documents carry a ready-to-use deep-link `hash`, so the dialog assigns
+  // Global document search (Cmd/Ctrl+K). Documents carry a ready-to-use deep-link `hash`, so the dialog assigns
   // `window.location.hash` directly (App.tsx handleNavigate only accepts clean page ids).
   const [searchOpen, setSearchOpen] = useCommandPaletteState();
   useCommandPaletteShortcut(() => setSearchOpen(true));
@@ -325,11 +326,13 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour, fullBlee
                         <p className="text-sm font-medium leading-none truncate">
                           {profile.firstName ? `${profile.lastName} ${profile.firstName[0]}.` : profile.email}
                         </p>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <Badge variant="outline" className="text-xs px-1 py-0 h-4">
-                            {t(`roles.${role}`)}
-                          </Badge>
-                        </div>
+                        {workspaceRole && (
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <Badge variant="outline" className="text-xs px-1 py-0 h-4">
+                              {t(`workspaceRoles.${workspaceRole}`, { defaultValue: workspaceRole })}
+                            </Badge>
+                          </div>
+                        )}
                       </div>
                       <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     </>
@@ -344,11 +347,13 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour, fullBlee
                       : profile.email}
                   </p>
                   <p className="text-xs text-muted-foreground">{profile.email}</p>
-                  <div className="flex items-center gap-1.5 mt-1.5">
-                    <Badge variant="secondary" className="text-xs">
-                      {t(`roles.${role}`)}
-                    </Badge>
-                  </div>
+                  {workspaceRole && (
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      <Badge variant="secondary" className="text-xs">
+                        {t(`workspaceRoles.${workspaceRole}`, { defaultValue: workspaceRole })}
+                      </Badge>
+                    </div>
+                  )}
                 </div>
 
                 {/* Мобильный дубль вторичных действий шапки: на узком экране правый кластер
