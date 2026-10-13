@@ -160,17 +160,18 @@ B2B), бизнес-настройки — в SPA.
 
 ## 10. Домены, инфраструктура, деплой
 
-- Один VPS: `crm.`, `erp.`, `cabinet.railtech.uz` через Caddy (конфиг из репозитория, как в B2B).
-  Mini App в BotFather указывает на `cabinet.railtech.uz`. Бренд компании в доменах — нормально;
-  продукт внутри нейтрален: имя и логотип — настройки.
-- Один PostgreSQL 17 с базами `crm` и `erp` (pgvector для `crm`); один Redis (раздельные БД);
-  один RustFS с бакетами `crm` и `erp` (факт M0-INF-03: CRM хранит файлы в своих трёх бакетах `kb-sources`,
-  `client-documents`, `tg-attachments` — переименование в один бакет потребовало бы правок кода CRM и
-  отложено; ERP получает бакет `erp`); LiteLLM и Langfuse — общие; бэкапы обеих баз — по runbook CRM.
-- Память: текущий VPS с 1.5 ГБ свободных не вместит второй стек — нужен сервер под оба (ориентир:
-  8 ГБ ОЗУ, 4 vCPU; LiteLLM + Langfuse + два бэкенда + воркеры).
-- Деплой: один workflow на ансамбль с фильтрами по путям; self-hosted runner; миграции ERP после
-  pg_dump-гейта (как в B2B).
+- Два VPS с внутренней сетью (решение владельца 2026-10-13; раскладка — `docs/runbooks/servers.md`):
+  **VPS 1 `app`** (`176.101.56.141`, 4 vCPU, 8 ГБ, NVMe 120 ГБ) — `crm.`, `erp.`, `cabinet.railtech.uz` через
+  Caddy (конфиг из репозитория), оба бэкенда с воркерами, LiteLLM, RustFS, Redis; Langfuse и docling — профилями
+  по очереди (вместе в 8 ГБ не помещаются). **VPS 2 `db`** (`170.168.6.209`, 2 vCPU, 2 ГБ, NVMe 40 ГБ) —
+  PostgreSQL 17 с базами `crm` (pgvector), `erp`, `litellm`, `langfuse`, слушает только внутренний IP; бэкапы
+  `pg_dump` ежедневно в RustFS на VPS 1 и еженедельно во внешнее хранилище. Mini App в BotFather указывает на
+  `cabinet.railtech.uz`. Бренд компании в доменах — нормально; продукт внутри нейтрален: имя и логотип — настройки.
+- Один PostgreSQL 17 (VPS 2) с базами `crm` и `erp`; один Redis (раздельные БД); один RustFS с бакетами CRM и `erp`
+  (факт M0-INF-03: CRM хранит файлы в своих трёх бакетах `kb-sources`, `client-documents`, `tg-attachments` —
+  переименование в один бакет потребовало бы правок кода CRM и отложено); LiteLLM и Langfuse — общие.
+- Деплой: один workflow на ансамбль с фильтрами по путям; образы в GHCR; на VPS 1 — `pull` + `up`, миграции ERP и
+  CRM после pg_dump-гейта (как в B2B); CI — GitHub-hosted после разблокировки биллинга (QUESTIONS Q-10).
 
 ## 11. Биллинг — три разных вопроса
 
