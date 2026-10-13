@@ -8,8 +8,25 @@ import { App as AntApp } from "antd";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { ErpStatusOut, TelegramStatusOut } from "../../api/generated/model";
+import type { ErpStatusOut, SmtpStatusOut, TelegramStatusOut } from "../../api/generated/model";
 import { IntegrationsPage } from "./IntegrationsPage";
+
+const smtp: SmtpStatusOut = {
+  configured: false,
+  host: "",
+  port: 587,
+  security: "starttls",
+  from_email: "",
+  from_name: "",
+  settings_source: "none",
+  username: "",
+  username_source: "none",
+  password_configured: false,
+  password_source: "none",
+  password_last4: null,
+  password_updated_at: null,
+  secrets_enabled: true,
+};
 
 const telegram: TelegramStatusOut = {
   configured: true,
@@ -67,6 +84,10 @@ vi.mock("../../api/integrationQueries", () => ({
     sendTest: mutation(),
   }),
   useErpMutations: () => ({ save: mutation(), check: mutation() }),
+  useSmtpStatus: () => query(smtp),
+  useSmtpMutations: () => ({ save: mutation(), check: mutation(), testSend: mutation() }),
+  useEmailLog: () => query([]),
+  emailLogKey: () => ["/api/v1/integrations/smtp/log"],
 }));
 vi.mock("../../api/templateQueries", () => ({ useBotProfile: () => query(undefined) }));
 
@@ -120,5 +141,19 @@ describe("IntegrationsPage — ERP tab", () => {
     expect(within(panel).getByLabelText("Сервисный токен CRM → ERP")).toHaveValue("");
     expect(within(panel).getByRole("button", { name: "Проверить связь" })).toBeDisabled();
     expect(document.body.textContent).not.toMatch(/[a-z]+_[a-z]+_[a-z]+/);
+  });
+
+  it("renders the «Почта» tab (M3-CRM-08): connector form and the mail journal", () => {
+    renderPage("?tab=smtp");
+    const tab = screen.getByRole("tab", { name: /Почта/ });
+    expect(tab).toHaveAttribute("aria-selected", "true");
+    expect(within(tab).getByText(/не настроено/)).toBeInTheDocument();
+    const panel = screen.getByRole("tabpanel");
+    expect(within(panel).getByLabelText("Сервер SMTP")).toHaveValue("");
+    expect(within(panel).getByLabelText("Пароль SMTP")).toHaveValue("");
+    expect(within(panel).getByRole("button", { name: "Проверить связь" })).toBeDisabled();
+    expect(within(panel).getByRole("heading", { level: 2, name: "Журнал писем" })).toBeVisible();
+    expect(within(panel).getByText("Писем пока нет")).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
   });
 });

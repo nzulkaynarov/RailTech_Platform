@@ -86,6 +86,16 @@ class Settings(BaseSettings):
     # Секрет подписи вебхуков ERP → CRM (CONTRACTS §3, `X-Signature`); приёмник — M3-CRM-04.
     erp_webhook_secret: SecretStr = SecretStr("")
 
+    # Коннектор «Почта» (M3-CRM-08, ADR-0018): SMTP-релей для писем сотрудникам (приглашение,
+    # сброс пароля). Запасной источник: настройки из «Подключений» → «Почта» имеют приоритет.
+    smtp_host: str = ""
+    smtp_port: int = Field(default=587, ge=1, le=65535)
+    smtp_security: Literal["starttls", "ssl", "none"] = "starttls"
+    smtp_username: str = ""
+    smtp_password: SecretStr = SecretStr("")
+    smtp_from_email: str = ""
+    smtp_from_name: str = ""
+
     jwt_secret: SecretStr = SecretStr("")
     access_token_ttl_s: int = Field(default=900, ge=60)
     refresh_token_ttl_days: int = Field(default=30, ge=1)

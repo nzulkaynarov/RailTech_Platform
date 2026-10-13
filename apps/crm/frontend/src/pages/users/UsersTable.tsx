@@ -7,7 +7,12 @@ import { ActionsTitle, RowActions } from "../../components/RowActions";
 import { roleLabel } from "../../domain/labels";
 import { t } from "../../i18n/ru";
 
-type Handlers = { onEdit: (u: UserOut) => void; onReset: (u: UserOut) => void };
+type Handlers = {
+  onEdit: (u: UserOut) => void;
+  onReset: (u: UserOut) => void;
+  onInvite: (u: UserOut) => void;
+  onResetByEmail: (u: UserOut) => void;
+};
 
 const named = (text: string, u: UserOut) => text.replace("{name}", u.full_name);
 
@@ -20,7 +25,7 @@ function TelegramTag({ id }: { id: number | null }) {
   );
 }
 
-function columns({ onEdit, onReset }: Handlers): ColumnsType<UserOut> {
+function columns({ onEdit, onReset, onInvite, onResetByEmail }: Handlers): ColumnsType<UserOut> {
   return [
     {
       title: t.users.fullName,
@@ -65,11 +70,28 @@ function columns({ onEdit, onReset }: Handlers): ColumnsType<UserOut> {
               },
             },
             {
+              key: "invite",
+              label: t.users.invite,
+              disabled: !u.is_active,
+              onClick: () => {
+                onInvite(u);
+              },
+            },
+            {
               key: "reset",
               label: t.users.resetPassword,
               danger: true,
               onClick: () => {
                 onReset(u);
+              },
+            },
+            {
+              key: "reset-email",
+              label: t.users.resetByEmail,
+              danger: true,
+              disabled: !u.is_active,
+              onClick: () => {
+                onResetByEmail(u);
               },
             },
           ]}

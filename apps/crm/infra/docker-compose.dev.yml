@@ -20,6 +20,7 @@ services:
       - ../backend/alembic:/app/alembic:ro
       - ../backend/alembic.ini:/app/alembic.ini:ro
       - ../backend/prompts:/app/prompts:ro
+      - ../backend/templates:/app/templates:ro
       - ../backend/evals:/app/evals:ro
       - ../backend/tests:/app/tests:ro
 

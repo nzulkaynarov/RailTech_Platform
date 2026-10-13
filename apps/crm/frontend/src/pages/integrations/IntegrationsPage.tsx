@@ -1,9 +1,11 @@
-import { App as AntApp, Badge } from "antd";
+import { App as AntApp, Badge, Divider, Flex } from "antd";
 
-import type { ErpStatusOut, TelegramStatusOut } from "../../api/generated/model";
+import type { ErpStatusOut, SmtpStatusOut, TelegramStatusOut } from "../../api/generated/model";
 import {
   useErpMutations,
   useErpStatus,
+  useSmtpMutations,
+  useSmtpStatus,
   useTelegramChannels,
   useTelegramMutations,
   useTelegramStatus,
@@ -13,15 +15,22 @@ import { PageBody } from "../../components/PageBody";
 import { PageHeader } from "../../components/PageHeader";
 import { PageState } from "../../components/PageState";
 import { UrlTabs } from "../../components/UrlTabs";
-import { erpTabStatus, integrationTabStatus, type TabStatus } from "../../domain/integrations";
+import {
+  erpTabStatus,
+  integrationTabStatus,
+  smtpTabStatus,
+  type TabStatus,
+} from "../../domain/integrations";
 import { useApiErrorToast } from "../../hooks/useApiErrorToast";
 import { t } from "../../i18n/ru";
 import { BotProfileCard } from "./BotProfileCard";
 import { ErpCard } from "./ErpCard";
+import { MailLog } from "./MailLog";
+import { SmtpCard } from "./SmtpCard";
 import { TeamChannelCard } from "./TeamChannelCard";
 import { TelegramBotCard } from "./TelegramBotCard";
 
-const TABS = ["bot", "profile", "channel", "erp"] as const;
+const TABS = ["bot", "profile", "channel", "erp", "smtp"] as const;
 
 /** Название вкладки со значком состояния; состояние продублировано текстом для экранного диктора. */
 function TabLabel({ tab, status }: { tab: string; status: TabStatus | null }) {
@@ -35,14 +44,21 @@ function TabLabel({ tab, status }: { tab: string; status: TabStatus | null }) {
   );
 }
 
-function IntegrationTabs({ status, erp }: { status: TelegramStatusOut; erp: ErpStatusOut }) {
+type TabsProps = { status: TelegramStatusOut; erp: ErpStatusOut; smtp: SmtpStatusOut };
+
+function IntegrationTabs({ status, erp, smtp }: TabsProps) {
   const channels = useTelegramChannels();
   const profile = useBotProfile();
   const { message } = AntApp.useApp();
   const onError = useApiErrorToast();
   const mutations = useTelegramMutations(onError);
   const erpMutations = useErpMutations(onError);
-  const state = { ...integrationTabStatus(status, profile.data), erp: erpTabStatus(erp) };
+  const smtpMutations = useSmtpMutations(onError);
+  const state = {
+    ...integrationTabStatus(status, profile.data),
+    erp: erpTabStatus(erp),
+    smtp: smtpTabStatus(smtp),
+  };
   const content = {
     bot: (
       <TelegramBotCard
@@ -98,6 +114,37 @@ function IntegrationTabs({ status, erp }: { status: TelegramStatusOut; erp: ErpS
         }}
       />
     ),
+    smtp: (
+      <Flex vertical gap="middle">
+        <SmtpCard
+          status={smtp}
+          saving={smtpMutations.save.isPending}
+          checking={smtpMutations.check.isPending}
+          testing={smtpMutations.testSend.isPending}
+          checkResult={smtpMutations.check.data ?? null}
+          checkError={smtpMutations.check.error}
+          onSave={(body, done) => {
+            smtpMutations.save.mutate(body, {
+              onSuccess: () => {
+                done();
+                smtpMutations.check.reset();
+                void message.success(t.integrations.smtp.saved);
+              },
+            });
+          }}
+          onCheck={() => {
+            smtpMutations.check.mutate();
+          }}
+          onTestSend={() => {
+            smtpMutations.testSend.mutate(undefined, {
+              onSuccess: () => void message.success(t.integrations.smtp.testQueued),
+            });
+          }}
+        />
+        <Divider />
+        <MailLog />
+      </Flex>
+    ),
   };
   return (
     <UrlTabs
@@ -112,24 +159,27 @@ function IntegrationTabs({ status, erp }: { status: TelegramStatusOut; erp: ErpS
 }
 
 /**
- * «Подключения» (admin): токен бота, профиль бота, канал команды и коннектор ERP (M3-CRM-02)
- * без правки `.env` (аудит 2026-10-12); UX волна 3 — вкладками, вкладка в `?tab=`, состояние —
- * значком во вкладке.
+ * «Подключения» (admin): токен бота, профиль бота, канал команды, коннекторы ERP (M3-CRM-02) и
+ * «Почта» (M3-CRM-08) без правки `.env` (аудит 2026-10-12); UX волна 3 — вкладками, вкладка в
+ * `?tab=`, состояние — значком во вкладке.
  */
 export function IntegrationsPage() {
   const status = useTelegramStatus();
   const erp = useErpStatus();
+  const smtp = useSmtpStatus();
   const query = {
-    isLoading: status.isLoading || erp.isLoading,
-    isError: status.isError || erp.isError,
-    error: status.error ?? erp.error,
-    refetch: () => Promise.all([status.refetch(), erp.refetch()]),
+    isLoading: status.isLoading || erp.isLoading || smtp.isLoading,
+    isError: status.isError || erp.isError || smtp.isError,
+    error: status.error ?? erp.error ?? smtp.error,
+    refetch: () => Promise.all([status.refetch(), erp.refetch(), smtp.refetch()]),
   };
   return (
     <PageBody>
       <PageHeader title={t.page.integrations} />
       <PageState query={query}>
-        {status.data && erp.data ? <IntegrationTabs status={status.data} erp={erp.data} /> : null}
+        {status.data && erp.data && smtp.data ? (
+          <IntegrationTabs status={status.data} erp={erp.data} smtp={smtp.data} />
+        ) : null}
       </PageState>
     </PageBody>
   );

@@ -157,6 +157,13 @@ export const system = {
       base_url: "Адрес ERP",
       erp_service_token_last4: "Сервисный токен (последние 4)",
       erp_webhook_secret_last4: "Секрет вебхуков (последние 4)",
+      smtp_host: "Сервер SMTP",
+      smtp_port: "Порт SMTP",
+      smtp_security: "Шифрование SMTP",
+      smtp_from_email: "Адрес отправителя",
+      smtp_from_name: "Имя отправителя",
+      smtp_username: "Логин SMTP",
+      smtp_password_last4: "Пароль SMTP (последние 4)",
     } as Record<string, string>,
     /** Значения служебных полей — словами. */
     values: {
@@ -173,6 +180,7 @@ export const system = {
       "system:backups": "Резервные копии",
       "integration_secret:telegram_bot_token": "Токен Telegram-бота",
       "integration:erp": "Коннектор ERP",
+      "integration:smtp": "Коннектор «Почта»",
       "export:leads": "Выгрузка лидов",
       "export:clients": "Выгрузка клиентов",
       "export:deals": "Выгрузка сделок",

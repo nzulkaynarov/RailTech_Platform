@@ -61,4 +61,10 @@ export const Reason = {
   erp_unauthorized: "erp_unauthorized",
   erp_unavailable: "erp_unavailable",
   erp_bad_response: "erp_bad_response",
+  smtp_not_configured: "smtp_not_configured",
+  smtp_invalid_host: "smtp_invalid_host",
+  smtp_unavailable: "smtp_unavailable",
+  smtp_auth_failed: "smtp_auth_failed",
+  smtp_tls_failed: "smtp_tls_failed",
+  smtp_rejected: "smtp_rejected",
 } as const;

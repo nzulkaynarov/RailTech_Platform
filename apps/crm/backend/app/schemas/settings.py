@@ -322,14 +322,31 @@ class BudgetSettings(StrictModel):
     providers: ProviderLimitsSettings = Field(default_factory=ProviderLimitsSettings)
 
 
+class SmtpSettings(StrictModel):
+    """Коннектор «Почта» без секретов (M3-CRM-08): SMTP-релей для писем сотрудникам.
+
+    Логин и пароль — `integration_secrets` (`smtp_username`, `smtp_password`). Пустой `host` —
+    настройки из `.env` (`SMTP_*`), иначе коннектора нет: письма не уходят, в журнале
+    `skipped_no_smtp`, пользователю — понятная ошибка `smtp_not_configured`.
+    """
+
+    host: str = Field(default="", max_length=253)
+    port: int = Field(default=587, ge=1, le=65535)
+    # `starttls` — 587 (обычный релей), `ssl` — 465 (SMTPS), `none` — только внутри сети.
+    security: Literal["starttls", "ssl", "none"] = "starttls"
+    from_email: str = Field(default="", max_length=255)
+    from_name: str = Field(default="", max_length=120)
+
+
 class IntegrationsSettings(StrictModel):
     """Коннекторы «Подключений» без секретов (ADR-0018, M3-CRM-02); секреты — `integration_secrets`.
 
-    Правится на экране «Подключения» → «ERP», на экране «Настройки» не показывается.
+    Правится на экране «Подключения» («ERP», «Почта»), на экране «Настройки» не показывается.
     """
 
     # Корень ERP (`https://erp.example.com`); пусто — адрес из `ERP_BASE_URL`, иначе коннектора нет.
     erp_base_url: str = Field(default="", max_length=500)
+    smtp: SmtpSettings = Field(default_factory=SmtpSettings)
 
 
 SETTINGS_MODELS: Final[dict[str, type[BaseModel]]] = {

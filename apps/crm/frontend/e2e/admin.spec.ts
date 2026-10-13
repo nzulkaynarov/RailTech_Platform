@@ -67,6 +67,12 @@ test("admin sections render and greeting can be changed", async ({ page }) => {
   await expect(page.getByLabel("Сервисный токен CRM → ERP")).toHaveValue("");
   await expect(page.getByRole("button", { name: "Проверить связь" })).toBeVisible();
 
+  // Коннектор «Почта» (M3-CRM-08): форма релея, пароль только на запись, журнал писем.
+  await page.goto("/integrations?tab=smtp");
+  await expect(page.getByLabel("Сервер SMTP")).toBeVisible();
+  await expect(page.getByLabel("Пароль SMTP")).toHaveValue("");
+  await expect(page.getByRole("heading", { name: "Журнал писем" })).toBeVisible();
+
   await page.goto("/system");
   await expect(page.getByRole("heading", { name: "Состояние системы" })).toBeVisible();
   await expect(page.getByText("База данных")).toBeVisible();

@@ -185,4 +185,11 @@ def test_reason_values_are_a_stable_contract() -> None:
         "erp_unauthorized",
         "erp_unavailable",
         "erp_bad_response",
+        # Коннектор «Почта» (M3-CRM-08).
+        "smtp_not_configured",
+        "smtp_invalid_host",
+        "smtp_unavailable",
+        "smtp_auth_failed",
+        "smtp_tls_failed",
+        "smtp_rejected",
     }

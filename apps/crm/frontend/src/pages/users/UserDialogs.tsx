@@ -1,4 +1,16 @@
-import { Alert, Form, Input, InputNumber, Modal, Select, Switch, Typography } from "antd";
+import { MailOutlined } from "@ant-design/icons";
+import {
+  Alert,
+  Button,
+  Flex,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  Select,
+  Switch,
+  Typography,
+} from "antd";
 
 import type { UserCreate, UserOut, UserUpdate } from "../../api/generated/model";
 import { useTeam } from "../../api/queries";
@@ -141,11 +153,21 @@ export function EditUserDialog({
   );
 }
 
+/**
+ * Временный пароль показывается один раз; рядом — «Отправить приглашение по почте» (M3-CRM-08):
+ * бэкенд выпустит новый временный пароль и отправит письмо, этот пароль перестанет действовать.
+ */
 export function TemporaryPassword({
   password,
+  email,
+  inviting = false,
+  onInvite,
   onClose,
 }: {
   password: string | null;
+  email?: string;
+  inviting?: boolean;
+  onInvite?: () => void;
   onClose: () => void;
 }) {
   return (
@@ -154,12 +176,24 @@ export function TemporaryPassword({
       title={t.users.temporary}
       onOk={onClose}
       onCancel={onClose}
-      footer={null}
+      okText={t.users.done}
+      cancelButtonProps={{ style: { display: "none" } }}
+      destroyOnHidden
     >
       <Typography.Paragraph copyable code>
         {password}
       </Typography.Paragraph>
       <Alert type="warning" showIcon message={t.users.copy} />
+      {onInvite && email ? (
+        <Flex vertical gap="small" className="mt-md">
+          <Button icon={<MailOutlined aria-hidden />} loading={inviting} onClick={onInvite}>
+            {t.users.invite}
+          </Button>
+          <Typography.Text type="secondary">
+            {t.users.inviteHint.replace("{email}", email)}
+          </Typography.Text>
+        </Flex>
+      ) : null}
     </Modal>
   );
 }

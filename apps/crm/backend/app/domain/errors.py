@@ -62,6 +62,13 @@ class Reason(StrEnum):
     ERP_UNAUTHORIZED = "erp_unauthorized"
     ERP_UNAVAILABLE = "erp_unavailable"
     ERP_BAD_RESPONSE = "erp_bad_response"
+    # Коннектор «Почта» (M3-CRM-08, ADR-0018): SMTP-релей для писем сотрудникам.
+    SMTP_NOT_CONFIGURED = "smtp_not_configured"
+    SMTP_INVALID_HOST = "smtp_invalid_host"
+    SMTP_UNAVAILABLE = "smtp_unavailable"
+    SMTP_AUTH_FAILED = "smtp_auth_failed"
+    SMTP_TLS_FAILED = "smtp_tls_failed"
+    SMTP_REJECTED = "smtp_rejected"
 
 
 class DomainError(Exception):

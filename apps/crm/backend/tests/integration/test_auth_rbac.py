@@ -106,6 +106,12 @@ MATRIX = [
     ("GET", "/api/v1/export/leads.csv?stage=new", None, {"admin"}),
     ("GET", "/api/v1/export/clients.csv", None, {"admin"}),
     ("GET", "/api/v1/export/deals.csv?stage=won", None, {"admin"}),
+    # Коннектор «Почта» (M3-CRM-08): статус, журнал; приглашение без SMTP → 409 (не 401/403).
+    ("GET", "/api/v1/integrations/smtp", None, {"admin"}),
+    ("GET", "/api/v1/integrations/smtp/log?status=sent", None, {"admin"}),
+    ("POST", "/api/v1/integrations/smtp/check", None, {"admin"}),
+    ("POST", "/api/v1/users/{viewer}/invite", None, {"admin"}),
+    ("POST", "/api/v1/users/{viewer}/reset-password/email", None, {"admin"}),
 ]
 
 

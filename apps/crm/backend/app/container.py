@@ -37,8 +37,11 @@ if TYPE_CHECKING:
     from app.services.lead_messenger import LeadMessenger
     from app.services.leads import LeadService
     from app.services.llm_usage import DbUsageRecorder
+    from app.services.mail import MailService
     from app.services.sandbox import SandboxService
     from app.services.setup import SetupService
+    from app.services.smtp_connector import SmtpConnectorService
+    from app.services.user_invites import UserInviteService
     from app.services.users import UserService
 
 
@@ -234,6 +237,43 @@ class Container:
             ),
         )
 
+    @cached_property
+    def mail_service(self) -> "MailService":
+        """Коннектор «Почта» (M3-CRM-08): рендер, журнал `email_log`, отправка задачей очереди."""
+        from app.integrations.smtp import SmtplibTransport
+        from app.services.mail import MailService
+
+        return MailService(
+            self.session_factory,
+            self.secrets_store,
+            SecretCipher.optional(self.settings.secrets_key.get_secret_value()),
+            self.settings,
+            self.settings_service,
+            SmtplibTransport(),
+            _enqueue_email,
+        )
+
+    @cached_property
+    def smtp_connector(self) -> "SmtpConnectorService":
+        from app.security.reauth import LockoutPolicy
+        from app.services.smtp_connector import SmtpConnectorService
+
+        return SmtpConnectorService(
+            self.session_factory,
+            self.settings_service,
+            self.secrets_store,
+            self.mail_service,
+            lockout=LockoutPolicy(
+                self.settings.login_max_failures, self.settings.login_lockout_minutes
+            ),
+        )
+
+    @cached_property
+    def user_invites(self) -> "UserInviteService":
+        from app.services.user_invites import UserInviteService
+
+        return UserInviteService(self.session_factory, self.mail_service, self.settings_service)
+
     async def backoffice_mode(self) -> "BackofficeMode":
         """Режим жизненного цикла (ADR-0022): `erp`, когда коннектор настроен, иначе `local`."""
         return await self.erp_connector.mode()
@@ -306,6 +346,12 @@ async def _enqueue_ingest(document_id: int) -> object:
     from app.tasks.ingest import enqueue_ingest
 
     return await enqueue_ingest(document_id, force=True)
+
+
+async def _enqueue_email(email_log_id: int) -> object:
+    from app.tasks.mail import enqueue_email
+
+    return await enqueue_email(email_log_id)
 
 
 async def _enqueue_extraction(document_id: int) -> object:
