@@ -53,7 +53,7 @@ def merge_products(survivor, duplicate, actor) -> tuple[object | None, str | Non
         return None, "PRODUCT_NOT_YOURS"
     # Платформа сводит карточки РАЗНЫХ продавцов в мастер-запись; продавец — только свои.
     same_owner = survivor.owner_company_id == duplicate.owner_company_id
-    if not same_owner and not getattr(actor, "is_platform_admin", False):
+    if not same_owner and not getattr(actor, "is_superuser", False):
         return None, "MERGE_CROSS_COMPANY_FORBIDDEN"
 
     updated: list[str] = []

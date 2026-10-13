@@ -63,7 +63,7 @@ class ContactViewSet(viewsets.ModelViewSet):
             return Contact.objects.none()
         user = self.request.user
         queryset = Contact.objects.select_related("company")
-        if getattr(user, "is_platform_admin", False) or getattr(user, "is_superuser", False):
+        if getattr(user, "is_superuser", False) or getattr(user, "is_superuser", False):
             return queryset
         return queryset.filter(company__in=seller_clients(user))
 

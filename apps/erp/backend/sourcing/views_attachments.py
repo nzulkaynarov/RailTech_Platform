@@ -73,7 +73,7 @@ class AttachmentViewSet(viewsets.ModelViewSet):
         if params.get("product"):
             qs = qs.filter(product_id=params["product"])
 
-        if user.is_platform_admin:
+        if user.is_superuser:
             return qs
 
         user_company_ids = user.memberships.filter(is_active=True).values("company_id")
@@ -106,7 +106,7 @@ class AttachmentViewSet(viewsets.ModelViewSet):
         from rest_framework.exceptions import PermissionDenied
 
         user = self.request.user
-        if user.is_platform_admin:
+        if user.is_superuser:
             return
 
         user_company_ids = set(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
@@ -166,7 +166,7 @@ class AttachmentViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         user = self.request.user
-        if not (user.is_platform_admin or instance.uploaded_by_id == user.id):
+        if not (user.is_superuser or instance.uploaded_by_id == user.id):
             from rest_framework.exceptions import PermissionDenied
 
             raise PermissionDenied("ONLY_UPLOADER_OR_ADMIN_CAN_DELETE")

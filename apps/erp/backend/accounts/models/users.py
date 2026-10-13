@@ -68,18 +68,6 @@ class CustomUser(AbstractUser):
         verbose_name=_("Системная роль"),
         help_text=_("Глобальная роль: определяет права доступа на всей платформе"),
     )
-    operator_role = models.ForeignKey(
-        "accounts.OperatorRole",
-        on_delete=models.SET_NULL,
-        related_name="operators",
-        null=True,
-        blank=True,
-        verbose_name=_("Роль оператора"),
-        help_text=_(
-            "Гранулярная под-роль платформенного оператора (ADR-0004 G1). "
-            "Имеет смысл только для SystemRole=ADMIN; пусто = полный доступ (Супероператор)."
-        ),
-    )
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username"]
@@ -90,20 +78,6 @@ class CustomUser(AbstractUser):
 
     def __str__(self):
         return self.email
-
-    @property
-    def is_platform_admin(self) -> bool:
-        """
-        Platform Admin — владелец платформы RailTech.
-
-        Инвариант: is_superuser ИЛИ носитель SystemRole='ADMIN' БЕЗ активных
-        членств в компаниях. Видит всё, регулирует платформу целиком.
-        """
-        if self.is_superuser:
-            return True
-        if not self.role or self.role.code != "ADMIN":
-            return False
-        return not self.memberships.filter(is_active=True).exists()
 
     @cached_property
     def primary_company(self):

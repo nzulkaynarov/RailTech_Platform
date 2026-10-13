@@ -170,7 +170,7 @@ def test_companies_are_independent(settings, stub_apply_async):
 def test_platform_admin_is_exempt(settings, stub_apply_async):
     settings.AI_DAILY_JOB_CAP_PER_COMPANY = 3
     admin = _user("platform-admin@x.test")
-    admin.is_superuser = True  # is_platform_admin → True (no memberships)
+    admin.is_superuser = True  # is_superuser → True (no memberships)
     admin.save(update_fields=["is_superuser"])
     _seed_jobs(admin, 10)
 

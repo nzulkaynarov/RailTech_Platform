@@ -49,7 +49,7 @@ def test_regular_member_forbidden(company):
     user = CustomUser.objects.create_user(email="m@x.uz", username="m@x.uz", password="pw", is_active=True)
     CompanyMember.objects.create(user=user, company=company, role=ws, is_active=True)
     resp = _client(user).get(URL)
-    assert resp.status_code == 403  # OperatorScoped — not a platform operator
+    assert resp.status_code == 403  # IsPlatformAdmin — not a superuser
 
 
 def test_choices_endpoint_lists_features_and_access(company):

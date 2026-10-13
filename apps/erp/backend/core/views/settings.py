@@ -59,7 +59,7 @@ class SystemSettingsView(APIView):
     )
     def patch(self, request):
         # Write requires elevated permissions
-        if not (request.user.is_superuser or request.user.is_platform_admin):
+        if not (request.user.is_superuser or request.user.is_superuser):
             from rest_framework.exceptions import PermissionDenied
 
             raise PermissionDenied()

@@ -106,6 +106,7 @@ def world(lookups):
     )
 
     operator = CustomUser.objects.create_user(
+        is_superuser=True,
         email="operator@billpaths.test",
         username="operator@billpaths.test",
         password="x",
@@ -155,13 +156,6 @@ def _issued_invoice(world):
 
 @pytest.mark.django_db
 class TestRecordPaymentGates:
-    def test_platform_admin_viewer_cannot_record(self, world):
-        """Оператор платформы не действует от имени компании (ADR-0002)."""
-        invoice = _issued_invoice(world)
-        result, error = record_payment(invoice.id, actor=world["operator"], amount=Decimal("10"), paid_at=date.today())
-        assert result is None
-        assert error == "ADMIN_VIEWER_CANNOT_ACT"
-
     def test_seller_cannot_record_buyers_payment(self, world):
         """Платёж фиксирует покупательская сторона сделки."""
         invoice = _issued_invoice(world)
@@ -281,12 +275,6 @@ class TestRecordPaymentAccounting:
 
 @pytest.mark.django_db
 class TestGenerateAct:
-    def test_platform_admin_viewer_cannot_issue(self, world):
-        invoice = _issued_invoice(world)
-        result, error = generate_act(invoice.id, actor=world["operator"])
-        assert result is None
-        assert error == "ADMIN_VIEWER_CANNOT_ACT"
-
     def test_buyer_cannot_issue_the_act(self, world):
         """Акт выпускает продавецкая сторона."""
         invoice = _issued_invoice(world)
@@ -334,12 +322,6 @@ class TestSignAct:
         act, error = generate_act(invoice.id, actor=world["seller_user"])
         assert error is None
         return act
-
-    def test_platform_admin_viewer_cannot_sign(self, world):
-        act = self._issued_act(world)
-        result, error = sign_act(act.id, actor=world["operator"])
-        assert result is None
-        assert error == "ADMIN_VIEWER_CANNOT_ACT"
 
     def test_signing_stamps_status_and_time(self, world):
         act = self._issued_act(world)

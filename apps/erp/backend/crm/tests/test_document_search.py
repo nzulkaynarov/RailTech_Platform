@@ -131,7 +131,11 @@ def world(lookups):
     other_user = _member(other_co, "other@ds.test", can_sell=True)
 
     admin_user = CustomUser.objects.create_user(
-        email="admin@ds.test", username="admin@ds.test", password="x", role=SystemRole.objects.get(code="ADMIN")
+        is_superuser=True,
+        email="admin@ds.test",
+        username="admin@ds.test",
+        password="x",
+        role=SystemRole.objects.get(code="ADMIN"),
     )
     nonmember_user = CustomUser.objects.create_user(
         email="nobody@ds.test", username="nobody@ds.test", password="x", role=SystemRole.objects.get(code="USER")

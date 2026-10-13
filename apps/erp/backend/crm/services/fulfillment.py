@@ -84,12 +84,10 @@ def update_fulfillment_status(
 ) -> Tuple[Optional[object], Optional[str]]:
     from django.utils import timezone
 
-    from accounts.services import is_member_of, is_platform_admin_viewer, seller_company_routed_to_deal
+    from accounts.services import is_member_of, seller_company_routed_to_deal
 
     from ..models import Fulfillment, FulfillmentStatus
 
-    if is_platform_admin_viewer(actor):
-        return None, "ADMIN_VIEWER_CANNOT_ACT"
     valid = set(FulfillmentStatusCode.values)
     if status_code not in valid:
         return None, "FULFILLMENT_INVALID_STATUS"

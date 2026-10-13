@@ -96,7 +96,7 @@ def _validate_bulk_item_rows(quote, items_payload, request):
 def bulk_update_quote_items(user, quote_id, items_payload, request):
     """Transactional bulk update of a КП's line items (P0-4). ALL-OR-NOTHING.
 
-    Mirrors the single-item PATCH guards EXACTLY (is_platform_admin_viewer / seller pricing
+    Mirrors the single-item PATCH guards EXACTLY (seller pricing
     capability / seller-routed-to-deal), validates every row with the same QuoteItemSerializer
     (caps included), and — on full success — writes once and recalculates the cascade ONCE
     (recalculate_quote also snapshots QuoteItemHistory, so the audit trail matches the single
@@ -107,11 +107,9 @@ def bulk_update_quote_items(user, quote_id, items_payload, request):
       • guard/global   → (None, "<CODE>", None)
       • per-row invalid→ (None, "QUOTE_ITEMS_BULK_INVALID", [ {id,index,errors}, … ])
     """
-    from accounts.services.permissions import can_edit_quote_pricing, is_platform_admin_viewer, seller_can_access_deal
+    from accounts.services.permissions import can_edit_quote_pricing, seller_can_access_deal
 
     # Guards — IN THE SAME ORDER as QuoteItemViewSet._assert_seller.
-    if is_platform_admin_viewer(user):
-        return None, "ADMIN_VIEWER_CANNOT_ACT", None
     is_superuser = getattr(user, "is_superuser", False)
     if not (is_superuser or can_edit_quote_pricing(user)):
         return None, "ONLY_SELLER_CAN_BUILD_QUOTE", None
@@ -238,7 +236,7 @@ def _validate_bulk_create_rows(quote, items_payload, request):
 def bulk_create_quote_items(user, quote_id, items_payload, request):
     """Transactional bulk create of КП line items (Excel-paste). ALL-OR-NOTHING.
 
-    Mirrors bulk_update_quote_items EXACTLY on guards (is_platform_admin_viewer / seller pricing
+    Mirrors bulk_update_quote_items EXACTLY on guards (seller pricing
     capability / seller-routed-to-deal 404 / frozen КП) and recalc discipline (write every line
     with skip_recalculate, then recalculate_quote ONCE — one cascade, one QuoteItemHistory
     snapshot pass). Every row is validated with the same QuoteItemSerializer as the single-item
@@ -251,11 +249,9 @@ def bulk_create_quote_items(user, quote_id, items_payload, request):
       • guard/global   → (None, "<CODE>", None)
       • per-row invalid→ (None, "QUOTE_ITEMS_BULK_INVALID", [ {index,errors}, … ])
     """
-    from accounts.services.permissions import can_edit_quote_pricing, is_platform_admin_viewer, seller_can_access_deal
+    from accounts.services.permissions import can_edit_quote_pricing, seller_can_access_deal
 
     # Guards — IN THE SAME ORDER as QuoteItemViewSet._assert_seller / bulk_update_quote_items.
-    if is_platform_admin_viewer(user):
-        return None, "ADMIN_VIEWER_CANNOT_ACT", None
     is_superuser = getattr(user, "is_superuser", False)
     if not (is_superuser or can_edit_quote_pricing(user)):
         return None, "ONLY_SELLER_CAN_BUILD_QUOTE", None
@@ -336,11 +332,9 @@ def bulk_delete_quote_items(user, quote_id, item_ids, request):
       • гард/общая     → (None, "<CODE>", None)
       • чужие строки   → (None, "QUOTE_ITEMS_BULK_INVALID", [ {id, errors}, … ])
     """
-    from accounts.services.permissions import can_edit_quote_pricing, is_platform_admin_viewer, seller_can_access_deal
+    from accounts.services.permissions import can_edit_quote_pricing, seller_can_access_deal
 
     # Гарды — В ТОМ ЖЕ ПОРЯДКЕ, что у соседних массовых операций.
-    if is_platform_admin_viewer(user):
-        return None, "ADMIN_VIEWER_CANNOT_ACT", None
     is_superuser = getattr(user, "is_superuser", False)
     if not (is_superuser or can_edit_quote_pricing(user)):
         return None, "ONLY_SELLER_CAN_BUILD_QUOTE", None
@@ -394,11 +388,8 @@ def reassign_quote_item_product(
     product_id: Optional[int],
 ) -> Tuple[Optional[QuoteItem], Optional[str]]:
     """Allow manager to override Smart Match result by picking a different product."""
-    from accounts.services import is_platform_admin_viewer
     from catalog.models import Product
 
-    if is_platform_admin_viewer(actor):
-        return None, "ADMIN_VIEWER_CANNOT_ACT"
     item = QuoteItem.objects.select_for_update().select_related("quote").get(pk=quote_item_id)
     if item.quote.frozen_at:
         return None, "QUOTE_FROZEN_CANNOT_REASSIGN"

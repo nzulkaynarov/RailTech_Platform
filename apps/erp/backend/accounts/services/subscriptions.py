@@ -7,7 +7,7 @@ from django.db.models import QuerySet
 from django.utils import timezone
 
 from ..models import Company, CustomUser, SupplierSubscription
-from .permissions import is_member_of, is_platform_admin_viewer
+from .permissions import is_member_of
 
 logger = logging.getLogger(__name__)
 
@@ -83,8 +83,6 @@ def record_subscription_payment(
         return None, "INVALID_AMOUNT"
 
     if actor is not None:
-        if is_platform_admin_viewer(actor):
-            return None, "ADMIN_VIEWER_CANNOT_ACT"
         if not (
             getattr(actor, "is_superuser", False) or is_member_of(actor, subscription.company_id, capability="sell")
         ):

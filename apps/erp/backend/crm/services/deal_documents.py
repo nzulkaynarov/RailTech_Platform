@@ -53,7 +53,7 @@ def _money(value: Optional[Decimal]) -> str:
 
 
 def _is_admin(user) -> bool:
-    return bool(getattr(user, "is_platform_admin", False))
+    return bool(getattr(user, "is_superuser", False))
 
 
 def viewer_deal_sides(user, deal, request=None) -> dict:
@@ -82,14 +82,10 @@ class DealSideResolver:
     """
 
     def __init__(self, user, request):
-        from accounts.services import is_platform_admin_viewer
         from accounts.services.permissions import seller_visible_deal_ids
 
-        self.is_viewer = bool(user is not None and not getattr(user, "is_anonymous", False)) and (
-            is_platform_admin_viewer(user)
-        )
         anonymous = user is None or getattr(user, "is_anonymous", False)
-        if anonymous or self.is_viewer:
+        if anonymous:
             self.buy_company_ids = set()
             self.routed_deal_ids = set()
             return
@@ -100,8 +96,8 @@ class DealSideResolver:
         self.routed_deal_ids = set(seller_visible_deal_ids(user, request, force=True) or ())
 
     def sides_for(self, deal_id, deal_company_id) -> dict:
-        if self.is_viewer:
-            return {"is_buyer_side": False, "is_seller_side": False, "is_viewer": True}
+        # `is_viewer` остаётся в ответе ради стабильности контракта SPA до волны 1b: плоскости
+        # «оператор-наблюдатель» больше нет (M1-ERP-02), администратор = is_superuser.
         return {
             "is_buyer_side": bool(deal_company_id) and deal_company_id in self.buy_company_ids,
             "is_seller_side": deal_id in self.routed_deal_ids,

@@ -72,12 +72,10 @@ def _viewer_is_buyer(obj, request) -> bool:
 
     Платформенный оператор — наблюдатель (ADR-0002): ни одна из сторон ему не принадлежит.
     """
-    from accounts.services import is_member_of, is_platform_admin_viewer
+    from accounts.services import is_member_of
 
     user = getattr(request, "user", None)
     if user is None or not getattr(user, "is_authenticated", False):
-        return False
-    if is_platform_admin_viewer(user):
         return False
     return bool(obj.company_id) and is_member_of(user, obj.company_id)
 
@@ -92,12 +90,10 @@ def _viewer_can_release(obj, request):
 
     Платформенный оператор — наблюдатель (ADR-0002): он не действует от имени компании.
     """
-    from accounts.services import is_platform_admin_viewer, member_has_permission
+    from accounts.services import member_has_permission
 
     user = getattr(request, "user", None)
     if user is None or not getattr(user, "is_authenticated", False):
-        return False
-    if is_platform_admin_viewer(user):
         return False
     routing = _viewer_routing(obj, request)
     # Возвращать нечего, пока запись никем не взята.
@@ -118,7 +114,7 @@ def _target_sellers_for_viewer(obj, request):
     if user is None or not getattr(user, "is_authenticated", False):
         return []
     as_dicts = [{"id": s.id, "name": s.name} for s in sellers]
-    if getattr(user, "is_platform_admin", False):
+    if getattr(user, "is_superuser", False):
         return as_dicts
     company_ids = set(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
     # Buyer owns the RFQ → sees everyone it fanned out to; a seller sees only itself.

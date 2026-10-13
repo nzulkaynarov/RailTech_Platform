@@ -53,7 +53,7 @@ def resolve_scope(user, request) -> DashboardScope:
     """Определить область видимости по действующему контексту (см. модульный докстринг)."""
     from accounts.services.permissions import seller_acting_company_ids, seller_visible_deal_ids
 
-    is_staff = user.is_platform_admin
+    is_staff = user.is_superuser
     deal_scope = None if is_staff else seller_visible_deal_ids(user, request)
     # Собственные компании действующего продавца — ими ограничивается KPI каталога
     # (аудит E4: раньше считался Product.owner_company и показывал 0).

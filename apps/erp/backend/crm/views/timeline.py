@@ -114,7 +114,7 @@ class TimelineView(APIView):
         from accounts.services.permissions import seller_acting_company_ids, seller_visible_deal_ids
 
         user = request.user
-        if not getattr(user, "is_platform_admin", False) and seller_visible_deal_ids(user, request) is not None:
+        if not getattr(user, "is_superuser", False) and seller_visible_deal_ids(user, request) is not None:
             own = seller_acting_company_ids(user, request) or set()
             logs = logs.filter(Q(seller_company_id__in=own) | Q(seller_company__isnull=True))
         return logs, None
@@ -132,7 +132,7 @@ class TimelineView(APIView):
 
         user = request.user
         base = ActivityLog.objects.filter(company_id=company_id)
-        if getattr(user, "is_platform_admin", False) or getattr(user, "is_superuser", False):
+        if getattr(user, "is_superuser", False) or getattr(user, "is_superuser", False):
             return base
         if user.memberships.filter(company_id=company_id, is_active=True).exists():
             return base

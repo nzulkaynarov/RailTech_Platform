@@ -101,7 +101,7 @@ class AuditedWriteMixin:
     Настройка — три точки:
 
     * `audit_event_prefix` — хвост машинного кода `admin.<prefix>.<created|updated|deleted>`.
-      По нему «Журнал доступа» отбирает ленту (`core/admin_api/break_glass.py`), поэтому
+      По нему отбираются административные записи ленты (`event_code` с префиксом `admin.`), поэтому
       префикс обязателен: запись без кода в журнал не попадает.
     * `audit_action(instance, event)` — человеческая строка-фолбэк для тех, кто читает журнал
       без витрины (Unfold).

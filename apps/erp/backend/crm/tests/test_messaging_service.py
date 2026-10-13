@@ -94,7 +94,7 @@ def world(lookups):
     manager = _user("manager@t.test")
     client = _user("client@t.test")
     superuser = _user("root@t.test", is_superuser=True, is_staff=True)
-    admin_viewer = _user("admin@t.test", role=SystemRole.objects.get(code="ADMIN"))
+    admin_viewer = _user("admin@t.test", role=SystemRole.objects.get(code="ADMIN"), is_superuser=True)
 
     deal = Deal.objects.create(
         title="Chat deal",
@@ -137,7 +137,7 @@ def test_access_superuser_allowed(world):
 
 @pytest.mark.django_db
 def test_access_platform_admin_allowed(world):
-    # role ADMIN + no memberships → is_platform_admin property is True.
+    # role ADMIN + no memberships → is_superuser property is True.
     assert crm_services.user_can_access_deal_chat(world["admin_viewer"], world["deal"]) is True
 
 
@@ -170,13 +170,6 @@ def test_access_unrelated_user_denied(world):
 
 
 # ── send_deal_message ───────────────────────────────────────────────────────
-
-
-@pytest.mark.django_db
-def test_send_platform_admin_viewer_rejected(world):
-    msg, err = crm_services.send_deal_message(world["admin_viewer"], world["deal"], "hi")
-    assert msg is None
-    assert err == "ADMIN_VIEWER_CANNOT_ACT"
 
 
 @pytest.mark.django_db

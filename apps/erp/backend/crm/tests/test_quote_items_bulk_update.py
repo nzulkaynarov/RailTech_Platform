@@ -240,24 +240,6 @@ def test_bulk_update_frozen_quote_rejected(world):
 
 
 @pytest.mark.django_db
-def test_bulk_update_platform_admin_viewer_cannot_act(world):
-    """Platform-admin viewer never acts on behalf of a company — ADMIN_VIEWER_CANNOT_ACT."""
-    admin = CustomUser.objects.create_user(email="op@t.test", username="op@t.test", password="x")
-    admin.role = SystemRole.objects.get(code="ADMIN")
-    admin.save(update_fields=["role"])
-    _deal, quote, items = _quote_with_items(world["buyer_co"], world["seller_co"], [100])
-
-    payload = {
-        "quote": quote.id,
-        "items": [{"id": items[0].id, "frozen_base_price": "150"}],
-    }
-    resp = _api(admin, ctx="").post(BULK_URL, payload, format="json")
-
-    assert resp.status_code == 403
-    assert resp.json()["detail"] == "ADMIN_VIEWER_CANNOT_ACT"
-
-
-@pytest.mark.django_db
 @override_settings(QUOTE_ITEMS_BULK_MAX_ROWS=2)
 def test_bulk_update_batch_over_limit_rejected(world):
     """A batch above the configured cap is refused wholesale (QUOTE_ITEMS_BULK_TOO_LARGE)."""

@@ -33,9 +33,11 @@ def _locmem_channels(settings):
 
 @pytest.fixture
 def platform_admin():
-    """SystemRole=ADMIN, no memberships → is_platform_admin == True."""
+    """Администратор ERP = суперпользователь (M1-ERP-02)."""
     role, _ = SystemRole.objects.get_or_create(code="ADMIN", defaults={"name": "Admin"})
-    return CustomUser.objects.create_user(email="ops@railtech.uz", username="ops@railtech.uz", password="x", role=role)
+    return CustomUser.objects.create_user(
+        email="ops@railtech.uz", username="ops@railtech.uz", password="x", role=role, is_superuser=True
+    )
 
 
 @pytest.fixture

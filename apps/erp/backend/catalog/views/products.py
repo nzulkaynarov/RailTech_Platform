@@ -110,7 +110,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                 "offers__delivery_basis",
             )
         # Non-admins see PUBLISHED + products manufactured by their own company
-        if not (user.is_authenticated and user.is_platform_admin):
+        if not (user.is_authenticated and user.is_superuser):
             from django.db.models import Q
 
             if user.is_authenticated:
@@ -222,7 +222,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if user.is_platform_admin:
+        if user.is_superuser:
             # N3 (дыра №4 аудита): карточка БЕЗ owner_company — ничья, продавец никогда не
             # сможет взять её в работу (can_manage вечно False). Оператор обязан назвать
             # компанию-владельца (SAP: материал всегда в орг-области).
@@ -486,7 +486,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 
         user = request.user
         seller = None
-        if not user.is_platform_admin:
+        if not user.is_superuser:
             membership = user.memberships.filter(is_active=True).in_seller_company().select_related("company").first()
             if membership is None:
                 return Response({"detail": "NO_SELLER_MEMBERSHIP"}, status=status.HTTP_403_FORBIDDEN)

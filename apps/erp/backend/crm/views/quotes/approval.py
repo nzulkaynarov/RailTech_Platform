@@ -15,7 +15,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from core.permissions import OperatorScoped
+from core.permissions import IsPlatformAdmin
 from crm.serializers import QuoteSerializer
 
 
@@ -35,7 +35,6 @@ class QuoteApprovalMixin:
     """
 
     # Operator sub-capability for the force-override action (ADR-0004 G1).
-    operator_permissions = {"force_approve": "moderation.force_override"}
 
     @extend_schema(
         summary="Approve quote",
@@ -76,11 +75,9 @@ class QuoteApprovalMixin:
         the legacy can_buy fallback so only members with an intentional CompanyRole
         assignment pass through this new path (no accidental promotion).
         """
-        from accounts.services.permissions import is_member_of, is_platform_admin_viewer
+        from accounts.services.permissions import is_member_of
         from crm.services._params import has_explicit_company_role_perm
 
-        if is_platform_admin_viewer(user):
-            return Response({"detail": "ADMIN_VIEWER_CANNOT_ACT"}, status=status.HTTP_403_FORBIDDEN)
         company_id = quote.deal.company_id
         if not (
             getattr(user, "is_superuser", False)
@@ -138,7 +135,7 @@ class QuoteApprovalMixin:
         detail=True,
         methods=["post"],
         url_path="force-approve",
-        permission_classes=[IsAuthenticated, OperatorScoped],
+        permission_classes=[IsAuthenticated, IsPlatformAdmin],
     )
     def force_approve(self, request, pk=None):
         """Platform admin force-overrides quote status to APPROVED."""

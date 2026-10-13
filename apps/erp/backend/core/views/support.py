@@ -56,7 +56,7 @@ class SupportTicketMessageSerializer(drf_serializers.ModelSerializer):
         return obj.author.get_full_name() or obj.author.email
 
     def get_author_is_admin(self, obj: SupportTicketMessage) -> bool:
-        return bool(obj.author and obj.author.is_platform_admin)
+        return bool(obj.author and obj.author.is_superuser)
 
 
 class SupportTicketSerializer(drf_serializers.ModelSerializer):
@@ -152,7 +152,7 @@ class SupportTicketViewSet(viewsets.ModelViewSet):
             "assigned_to",
         ).annotate(messages_count_db=Count("messages"))
         user = self.request.user
-        if user.is_platform_admin:
+        if user.is_superuser:
             return qs
         return qs.filter(created_by=user)
 
@@ -168,12 +168,12 @@ class SupportTicketViewSet(viewsets.ModelViewSet):
         serializer.instance = ticket
 
     def perform_update(self, serializer):
-        if not self.request.user.is_platform_admin:
+        if not self.request.user.is_superuser:
             raise PermissionDenied("SUPPORT_ADMIN_ONLY")
         serializer.save()
 
     def perform_destroy(self, instance):
-        if not self.request.user.is_platform_admin:
+        if not self.request.user.is_superuser:
             raise PermissionDenied("SUPPORT_ADMIN_ONLY")
         instance.delete()
 
@@ -219,7 +219,7 @@ class SupportTicketViewSet(viewsets.ModelViewSet):
     def list_messages(self, request, pk=None):
         ticket = self.get_object()
         qs = ticket.messages.select_related("author").order_by("created_at")
-        if not request.user.is_platform_admin:
+        if not request.user.is_superuser:
             qs = qs.filter(is_internal=False)
         serializer = SupportTicketMessageSerializer(qs, many=True)
         return Response(serializer.data)
@@ -237,7 +237,7 @@ class SupportTicketViewSet(viewsets.ModelViewSet):
         if not text:
             raise ValidationError({"text": "SUPPORT_MESSAGE_TEXT_REQUIRED"})
         is_internal = bool(request.data.get("is_internal", False))
-        if is_internal and not request.user.is_platform_admin:
+        if is_internal and not request.user.is_superuser:
             raise PermissionDenied("SUPPORT_INTERNAL_NOTE_ADMIN_ONLY")
         message = services.add_ticket_message(
             ticket=ticket,
@@ -257,7 +257,7 @@ class SupportTicketViewSet(viewsets.ModelViewSet):
     )
     @action(detail=True, methods=["post"], url_path="change-status")
     def change_status(self, request, pk=None):
-        if not request.user.is_platform_admin:
+        if not request.user.is_superuser:
             raise PermissionDenied("SUPPORT_ADMIN_ONLY")
         ticket = self.get_object()
         status_code = request.data.get("status")
@@ -277,7 +277,7 @@ class SupportTicketViewSet(viewsets.ModelViewSet):
     )
     @action(detail=True, methods=["post"], url_path="assign")
     def assign(self, request, pk=None):
-        if not request.user.is_platform_admin:
+        if not request.user.is_superuser:
             raise PermissionDenied("SUPPORT_ADMIN_ONLY")
         ticket = self.get_object()
         from accounts.models import CustomUser
@@ -290,7 +290,7 @@ class SupportTicketViewSet(viewsets.ModelViewSet):
                 assignee = CustomUser.objects.get(pk=assignee_id)
             except CustomUser.DoesNotExist:
                 raise ValidationError({"assigned_to": "SUPPORT_ASSIGNEE_NOT_FOUND"})
-            if not assignee.is_platform_admin:
+            if not assignee.is_superuser:
                 raise ValidationError({"assigned_to": "SUPPORT_ASSIGNEE_NOT_ADMIN"})
         updated = services.assign_ticket(ticket=ticket, assignee=assignee)
         return Response(SupportTicketSerializer(updated).data)

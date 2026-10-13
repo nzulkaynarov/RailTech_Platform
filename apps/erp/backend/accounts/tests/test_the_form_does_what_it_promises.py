@@ -25,7 +25,7 @@ import pytest
 from django.core.cache import cache
 from rest_framework.test import APIClient
 
-from accounts.models import Company, CompanyMember, CompanyType, CustomUser, OperatorRole, SystemRole, WorkspaceRole
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 
 
 def _api(user):
@@ -36,17 +36,12 @@ def _api(user):
 
 @pytest.fixture
 def operator(db):
-    role = OperatorRole.objects.create(
-        code="FORM_OPS",
-        name="Операции",
-        permissions=["users.manage", "users.view", "companies.view", "companies.manage", "platform.settings"],
-    )
     return CustomUser.objects.create_user(
+        is_superuser=True,
         email="ops@form.test",
         username="ops_form",
         password="x",
         role=SystemRole.objects.get(code="ADMIN"),
-        operator_role=role,
         is_active=True,
     )
 

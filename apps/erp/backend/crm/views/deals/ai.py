@@ -47,12 +47,10 @@ class DealAiActionsMixin:
         """Thin wrapper (Rule 8): enqueue the AI-enhanced seller suggestion for the buyer."""
         from django.conf import settings
 
-        from accounts.services.permissions import is_member_of, is_platform_admin_viewer
+        from accounts.services.permissions import is_member_of
         from sourcing.ai_jobs import enqueue_ai_job
 
         deal = self.get_object()
-        if is_platform_admin_viewer(request.user):
-            return Response({"detail": "ADMIN_VIEWER_CANNOT_ACT"}, status=status.HTTP_403_FORBIDDEN)
         if not is_member_of(request.user, deal.company_id, capability="buy"):
             return Response({"detail": "ONLY_BUYER_CAN_ROUTE"}, status=status.HTTP_403_FORBIDDEN)
         if not getattr(settings, "AI_IMPORT_ENABLED", False):

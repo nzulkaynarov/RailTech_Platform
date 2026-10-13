@@ -12,7 +12,7 @@ from rest_framework import mixins, permissions, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from core.permissions import OperatorScoped
+from core.permissions import IsPlatformAdmin
 
 from ..category_requests import approve_category_request, reject_category_request, submit_category_request
 from ..models import Category, CategoryRequest
@@ -94,11 +94,10 @@ class CategoryRequestViewSet(
 ):
     serializer_class = CategoryRequestSerializer
     #: Рассматривает тот же оператор, что ведёт справочник (см. CategoryViewSet).
-    operator_permissions = {"approve": "platform.settings", "reject": "platform.settings"}
 
     def get_permissions(self):
         if self.action in ("approve", "reject"):
-            return [OperatorScoped()]
+            return [IsPlatformAdmin()]
         return [permissions.IsAuthenticated()]
 
     def get_queryset(self):
@@ -106,7 +105,7 @@ class CategoryRequestViewSet(
         queryset = CategoryRequest.objects.select_related(
             "company", "parent", "domain_type", "resulting_category", "requested_by"
         )
-        if not user.is_platform_admin:
+        if not user.is_superuser:
             # Многотенантность: обращения ЧУЖИХ компаний участнику не видны.
             company_ids = list(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
             queryset = queryset.filter(Q(company_id__in=company_ids))

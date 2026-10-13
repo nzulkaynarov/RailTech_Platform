@@ -33,7 +33,7 @@ def world(db):
         is_primary=True,
     )
     operator = CustomUser.objects.create_user(
-        email="operator@support.test", username="support_operator", password="pw", role=admin_role
+        is_superuser=True, email="operator@support.test", username="support_operator", password="pw", role=admin_role
     )
     return {"company": company, "author": author, "operator": operator}
 

@@ -443,7 +443,7 @@ class QuoteLifecycleService:
         # миграция accounts/0010 обеспечивает на данных, — так что на реальных пользователях
         # результат тот же, а расхождение, если оно когда-нибудь возникнет, теперь закрывается
         # отказом, а не тихим допуском.
-        if not getattr(admin_user, "is_platform_admin", False):
+        if not getattr(admin_user, "is_superuser", False):
             return None, "PLATFORM_ADMIN_REQUIRED"
         if not reason.strip():
             return None, "FORCE_REASON_REQUIRED"

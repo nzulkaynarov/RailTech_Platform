@@ -197,7 +197,7 @@ def test_verify_kyc_triggers_auto_populate(lookups):
 # ── admin endpoint ──────────────────────────────────────────────────────────
 
 
-def _admin_api(lookups):
+def _administrator_api(lookups):
     admin = CustomUser.objects.create_user(
         email="pc-op@t.test", username="pc-op@t.test", password="x", is_active=True, is_staff=True, is_superuser=True
     )
@@ -220,7 +220,7 @@ def test_merge_endpoint_admin_only_and_works(lookups):
     assert resp.status_code in (403, 404)
     assert Company.objects.filter(pk=dup.pk).exists()  # untouched
 
-    api = _admin_api(lookups)
+    api = _administrator_api(lookups)
     cand = api.get(f"/api/v1/accounts/companies/{survivor.id}/merge-candidates/")
     assert cand.status_code == 200 and any(row["id"] == dup.id for row in cand.json())
 

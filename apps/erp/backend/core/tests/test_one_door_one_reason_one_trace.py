@@ -38,15 +38,7 @@ from django.db.models import Q
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from accounts.models import (
-    Company,
-    CompanyType,
-    CustomUser,
-    OperatorRole,
-    SupplierSubscription,
-    SystemRole,
-    VerificationStatus,
-)
+from accounts.models import Company, CompanyType, CustomUser, SupplierSubscription, SystemRole, VerificationStatus
 from crm.models import ActivityLog
 
 ACCESS_LOG_FILTER = (
@@ -70,15 +62,12 @@ def _api(user):
 
 @pytest.fixture
 def billing_operator(db):
-    role = OperatorRole.objects.create(
-        code="OD_BILLING", name="Биллинг", permissions=["billing.view", "billing.manage"]
-    )
+    """Администратор ERP = суперпользователь (M1-ERP-02: операторских суб-ролей нет)."""
     return CustomUser.objects.create_user(
         email="billing@onedoor.test",
         username="billing_onedoor",
         password="x",
-        role=SystemRole.objects.get(code="ADMIN"),
-        operator_role=role,
+        is_superuser=True,
         is_active=True,
     )
 
@@ -211,41 +200,38 @@ def test_bulk_suspension_reaches_the_access_log(billing_operator, subscription, 
 
 
 @pytest.fixture
-def support_operator(db):
-    """Оператор «Поддержка» — заведён как ТОЛЬКО ПРОСМОТР, без права модерации."""
-    role = OperatorRole.objects.create(code="OD_SUPPORT", name="Поддержка", permissions=["users.view"])
+def legacy_admin_role_user(db):
+    """Носитель SystemRole=ADMIN без `is_superuser` — после M1-ERP-02 это НЕ администратор:
+    операторской плоскости нет, его выборку сужает `get_queryset` как у любого арендатора."""
     return CustomUser.objects.create_user(
         email="support@onedoor.test",
         username="support_onedoor",
         password="x",
         role=SystemRole.objects.get(code="ADMIN"),
-        operator_role=role,
         is_active=True,
     )
 
 
-def test_an_operator_without_moderation_cannot_read_other_companies_applications(support_operator, seller_company):
-    resp = _api(support_operator).get("/api/v1/accounts/role-applications/")
+def test_a_legacy_admin_role_without_superuser_reads_no_foreign_applications(legacy_admin_role_user, seller_company):
+    resp = _api(legacy_admin_role_user).get("/api/v1/accounts/role-applications/")
 
-    assert resp.status_code == 403
-    assert str(resp.json()["detail"]) == "OPERATOR_PERMISSION_REQUIRED"
+    assert resp.status_code == 200
+    body = resp.json()
+    rows = body.get("results", body) if isinstance(body, dict) else body
+    assert rows == []
 
 
-def test_the_moderator_still_reads_the_registry(db, seller_company):
-    """Обратная сторона: у кого право есть — реестр открыт, экран не сломан."""
-    role = OperatorRole.objects.create(
-        code="OD_MODERATOR", name="Модератор", permissions=["moderation.role_applications"]
-    )
-    moderator = CustomUser.objects.create_user(
+def test_the_administrator_still_reads_the_registry(db, seller_company):
+    """Обратная сторона: администратор (`is_superuser`) видит реестр целиком, экран не сломан."""
+    root = CustomUser.objects.create_user(
         email="moder@onedoor.test",
         username="moder_onedoor",
         password="x",
-        role=SystemRole.objects.get(code="ADMIN"),
-        operator_role=role,
+        is_superuser=True,
         is_active=True,
     )
 
-    assert _api(moderator).get("/api/v1/accounts/role-applications/").status_code == 200
+    assert _api(root).get("/api/v1/accounts/role-applications/").status_code == 200
 
 
 def test_a_tenant_still_sees_their_own_applications(db, seller_company):
@@ -262,13 +248,11 @@ def test_a_tenant_still_sees_their_own_applications(db, seller_company):
 
 @pytest.fixture
 def settings_operator(db):
-    role = OperatorRole.objects.create(code="OD_SETTINGS", name="Настройки", permissions=["platform.settings"])
     return CustomUser.objects.create_user(
         email="settings@onedoor.test",
         username="settings_onedoor",
         password="x",
-        role=SystemRole.objects.get(code="ADMIN"),
-        operator_role=role,
+        is_superuser=True,
         is_active=True,
     )
 

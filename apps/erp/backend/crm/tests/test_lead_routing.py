@@ -24,7 +24,6 @@ from accounts.models import (
     CompanyMember,
     CompanyType,
     CustomUser,
-    OperatorRole,
     SystemRole,
     VerificationStatus,
     WorkspaceRole,
@@ -70,27 +69,21 @@ def world(db):
         is_primary=True,
     )
 
-    router_role = OperatorRole.objects.create(
-        code="LEAD_ROUTER", name="Маршрутизатор", permissions=["leads.view", "leads.route", "companies.view"]
-    )
+    # Администратор ERP = суперпользователь (M1-ERP-02); лиды целиком уходят в CRM следующей волной.
     router = CustomUser.objects.create_user(
         email="router@lead.test",
         username="router_lead",
         password="x",
-        role=SystemRole.objects.get(code="ADMIN"),
-        operator_role=router_role,
+        is_superuser=True,
         is_active=True,
     )
 
-    viewer_role = OperatorRole.objects.create(
-        code="LEAD_VIEWER", name="Поддержка лидов", permissions=["leads.view", "companies.view"]
-    )
+    # Носитель SystemRole=ADMIN без суперпользователя — после M1-ERP-02 не администратор.
     viewer = CustomUser.objects.create_user(
         email="viewer@lead.test",
         username="viewer_lead",
         password="x",
         role=SystemRole.objects.get(code="ADMIN"),
-        operator_role=viewer_role,
         is_active=True,
     )
 
@@ -121,9 +114,7 @@ def _route(user, world, **payload):
 
 
 def test_staff_operator_can_route_a_lead(world):
-    """Тот самый путь, который отказывал ВСЕГДА: штатный оператор без суперправ."""
-    assert world["router"].is_superuser is False
-
+    """Маршрутизация — действие администратора (`is_superuser`)."""
     resp = _route(world["router"], world)
 
     assert resp.status_code == 200, resp.content
@@ -172,7 +163,7 @@ def test_routing_to_an_archived_company_is_refused(world, db):
 
 
 def test_view_only_operator_cannot_route(world):
-    """Право `leads.route`, а не «оператор вообще»."""
+    """Системная роль ADMIN без `is_superuser` — не администратор."""
     resp = _route(world["viewer"], world)
 
     assert resp.status_code == 403
@@ -261,15 +252,15 @@ def test_second_claim_is_refused(world):
     assert resp.json()["detail"] == "LEAD_ALREADY_PROCESSED"
 
 
-def test_operator_still_cannot_create_a_deal_from_a_lead(world):
-    """ADR-0002 остаётся в силе: гард на конвертации оператором НЕ снят — механика
-    изменилась, а не разрешение."""
+def test_administrator_who_is_not_a_member_cannot_claim(world):
+    """Лид принимает в работу член компании-получателя; администратор, не состоящий в ней,
+    получает тот же отказ, что и любой посторонний."""
     _route(world["router"], world)
 
     resp = _api(world["router"]).post(f"/api/v1/crm/leads/{world['lead'].pk}/claim/")
 
     assert resp.status_code == 400
-    assert resp.json()["detail"] == "ADMIN_VIEWER_CANNOT_ACT"
+    assert resp.json()["detail"] == "LEAD_NOT_YOURS"
 
 
 # ── Отклонение и видимость очереди ──────────────────────────────────────────

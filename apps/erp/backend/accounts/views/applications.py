@@ -15,7 +15,7 @@ from accounts.serializers import (
 )
 from accounts.services import member_has_permission
 from core.audit import AuditedWriteMixin
-from core.permissions import OperatorScoped
+from core.permissions import IsPlatformAdmin
 
 
 @extend_schema_view(
@@ -39,21 +39,9 @@ class SupplierSubscriptionViewSet(AuditedWriteMixin, viewsets.ModelViewSet):
     """
 
     serializer_class = SupplierSubscriptionSerializer
-    permission_classes = [permissions.IsAuthenticated, OperatorScoped]
+    permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
     # Operator sub-capability per action (ADR-0004 G1). `mine`/`pay` are member-facing
     # (own IsAuthenticated permission_classes) so they bypass this map.
-    operator_permissions = {
-        "list": "billing.view",
-        "retrieve": "billing.view",
-        "export": "billing.view",
-        "create": "billing.manage",
-        "update": "billing.manage",
-        "partial_update": "billing.manage",
-        "destroy": "billing.manage",
-        "activate": "billing.manage",
-        "suspend": "billing.manage",
-        "bulk_set_status": "billing.manage",
-    }
     filterset_fields = ["plan", "status", "company"]
     search_fields = ["company__name", "company__inn"]
     ordering = ["-created_at"]
@@ -125,7 +113,7 @@ class SupplierSubscriptionViewSet(AuditedWriteMixin, viewsets.ModelViewSet):
     def mine(self, request):
         """GET /api/v1/accounts/subscriptions/mine/ -- subscription of the current user's company."""
         user = request.user
-        if getattr(user, "is_platform_admin", False):
+        if getattr(user, "is_superuser", False):
             return Response(status=status.HTTP_403_FORBIDDEN)
         company_ids = list(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
         if not company_ids:
@@ -298,7 +286,7 @@ class SupplierSubscriptionViewSet(AuditedWriteMixin, viewsets.ModelViewSet):
                 company_id=sub.company_id,
                 level="WARNING" if target == "SUSPENDED" else "SUCCESS",
                 # Без `event_code` запись НЕ ПОПАДАЛА в «Журнал доступа»: он отбирает ленту по
-                # машинному коду `admin.*` (`core/admin_api/break_glass.py`). Одиночная кнопка на
+                # машинному коду `admin.*`. Одиночная кнопка на
                 # той же странице код писала, массовая — нет, и отключение ПАЧКИ продавцов было
                 # видно хуже, чем отключение одного.
                 event_code="admin.subscription.suspended" if target == "SUSPENDED" else "admin.subscription.activated",
@@ -372,21 +360,14 @@ class CompanyRoleApplicationViewSet(viewsets.ModelViewSet):
     # «Поддержку» с пустым набором прав — читала заявки чужих компаний: название, ИНН, e-mail
     # заявителя и приложенные договор с NDA (замер 26-08). Право на чтение чужих документов —
     # такое же право, как право их одобрять.
-    operator_permissions = {
-        "list": "moderation.role_applications",
-        "retrieve": "moderation.role_applications",
-        "approve": "moderation.role_applications",
-        "reject": "moderation.role_applications",
-        "destroy": "moderation.role_applications",
-    }
 
     def get_permissions(self):
         if self.action in self._ADMIN_ONLY_ACTIONS:
-            return [permissions.IsAuthenticated(), OperatorScoped()]
+            return [permissions.IsAuthenticated(), IsPlatformAdmin()]
         # Чтение реестра арендатором остаётся открытым — его выборку сужает `get_queryset`.
         # Гейт нужен ровно тем, кому выборка НЕ сужается, то есть оператору платформы.
-        if self.action in {"list", "retrieve"} and getattr(self.request.user, "is_platform_admin", False):
-            return [permissions.IsAuthenticated(), OperatorScoped()]
+        if self.action in {"list", "retrieve"} and getattr(self.request.user, "is_superuser", False):
+            return [permissions.IsAuthenticated(), IsPlatformAdmin()]
         return [permissions.IsAuthenticated()]
 
     def get_queryset(self):
@@ -396,7 +377,7 @@ class CompanyRoleApplicationViewSet(viewsets.ModelViewSet):
             "company", "requested_type", "submitted_by", "reviewed_by"
         ).order_by("-created_at")
         user = self.request.user
-        if user.is_platform_admin:
+        if user.is_superuser:
             return qs
         # Право — `team.manage` на компании, а не WorkspaceRole OWNER: после ADR-0005 Phase E
         # WorkspaceRole остался слоем ПОДПИСИ и на авторизации не ветвится. Прежняя проверка
@@ -435,7 +416,7 @@ class CompanyRoleApplicationViewSet(viewsets.ModelViewSet):
         user = self.request.user
         requested_raw = self.request.data.get("company")
 
-        if user.is_platform_admin:
+        if user.is_superuser:
             if not requested_raw:
                 raise ValidationError({"detail": "COMPANY_REQUIRED"})
             company = Company.objects.filter(pk=requested_raw).first()
@@ -466,7 +447,7 @@ class CompanyRoleApplicationViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         user = self.request.user
-        if not user.is_platform_admin:
+        if not user.is_superuser:
             app = serializer.instance
             if app.status not in self._APPLICANT_EDITABLE_STATUSES:
                 from rest_framework.exceptions import PermissionDenied
@@ -477,7 +458,7 @@ class CompanyRoleApplicationViewSet(viewsets.ModelViewSet):
         # Так устроен любой цикл «запросили информацию → донесли → снова на проверку»
         # (Stripe verification, Salesforce approval): иначе она молча висит в статусе
         # «нужны документы» и оператор не узнает, что ждать больше нечего.
-        if not user.is_platform_admin and application.status == "DOCUMENTS_REQUIRED":
+        if not user.is_superuser and application.status == "DOCUMENTS_REQUIRED":
             from ..services.applications import missing_application_documents
 
             if not missing_application_documents(application):
@@ -563,16 +544,7 @@ class CompanyEntitlementViewSet(viewsets.ModelViewSet):
     """
 
     serializer_class = CompanyEntitlementSerializer
-    permission_classes = [permissions.IsAuthenticated, OperatorScoped]
-    operator_permissions = {
-        "list": "billing.view",
-        "retrieve": "billing.view",
-        "choices": "billing.view",
-        "create": "billing.manage",
-        "update": "billing.manage",
-        "partial_update": "billing.manage",
-        "destroy": "billing.manage",
-    }
+    permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
     filterset_fields = ["company", "feature_key", "access"]
     search_fields = ["company__name", "company__inn", "feature_key"]
     ordering = ["-updated_at"]

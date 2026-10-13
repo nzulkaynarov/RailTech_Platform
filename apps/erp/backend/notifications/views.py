@@ -4,7 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from core.audit import AuditedWriteMixin
-from core.permissions import OperatorScoped
+from core.permissions import IsPlatformAdmin
 
 from . import services, services_email_templates
 from .models import EmailTemplate, Notification
@@ -46,7 +46,7 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
         user = self.request.user
         # Аудитория видимости: USER-канал — только для не-админов; PLATFORM_ADMIN-канал — только
         # для Platform Admin. Админ НЕ видит клиентские уведомления; USER НЕ видит platform-алёрты.
-        if user.is_platform_admin:
+        if user.is_superuser:
             audience = Notification.AUDIENCE_PLATFORM_ADMIN
         else:
             audience = Notification.AUDIENCE_USER
@@ -110,10 +110,9 @@ class EmailTemplateViewSet(AuditedWriteMixin, viewsets.ModelViewSet):
     # скрыт по праву `platform.settings`, но переход по адресу правом не закрывался, и за скрытой
     # дверью не стояло ничего (прогон 20-08). Тот же образец уже применён в `catalog/views/lookups.py`.
     #
-    # `OperatorScoped` резолвит право по `action`, поэтому кастомные `preview` и `test-send`
+    # `IsPlatformAdmin` резолвит право по `action`, поэтому кастомные `preview` и `test-send`
     # накрываются тем же дефолтом — их открытыми оставлять нельзя.
-    permission_classes = [permissions.IsAuthenticated, OperatorScoped]
-    operator_permission = "platform.settings"
+    permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
 
     #: Активная строка НЕМЕДЛЕННО подменяет файловый шаблон для ВСЕХ получателей платформы:
     #: текст, который увидит каждый арендатор в письме о счёте или об акте. Поле `updated_by`
