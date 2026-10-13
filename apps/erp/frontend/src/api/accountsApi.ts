@@ -177,13 +177,7 @@ export interface User {
 	role_code?: string;
 	role_data?: { code: string; name: string };
 	workspace_role?: string | null;
-	is_platform_admin?: boolean;
 	preferences?: { language?: string; theme?: string };
-	// Platform-operator sub-role (ADR-0004 G1). Only meaningful when
-	// is_platform_admin is true. operator_role is the FK id; operator_role_data
-	// is the denormalized {id, code, name} for display.
-	operator_role?: number | null;
-	operator_role_data?: { id: number; code: string; name: string } | null;
 	memberships?: UserMembership[];
 	kyc_status?: string | null;
 	// Per-membership capabilities from the primary company.

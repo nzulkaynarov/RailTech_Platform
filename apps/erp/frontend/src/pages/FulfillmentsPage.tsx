@@ -26,7 +26,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import { useFulfillments, useUpdateFulfillmentStatus } from '@/hooks/useBilling';
-import { useIsViewerMode } from '@/hooks/useViewerMode';
 import { FulfillmentStatus as FStatusCode } from '@/lib/codes';
 import type { Fulfillment, FulfillmentStatus } from '@/api/fulfillmentApi';
 import { DocumentActions } from '@/components/Shared/DocumentActions';
@@ -62,12 +61,10 @@ export function FulfillmentsPage() {
   const queryParams = statusFilter !== 'all' ? { status: statusFilter } : undefined;
   const { data: list, isLoading, isError, refetch } = useFulfillments(queryParams);
   const updateMut = useUpdateFulfillmentStatus();
-  const isViewer = useIsViewerMode();
   // Продвигает отгрузку продавец, принимает/спорит покупатель — сторону по КАЖДОЙ строке
   // считает сервер (`viewer_can_ship` / `viewer_can_accept`). Прежний вывод из activeStatus
   // брал первый тип компании: посредник, который и покупает, и продаёт, терял половину
   // действий, а на своей же отгрузке видел чужой набор кнопок.
-  const viewerTip = t('apiErrors.ADMIN_VIEWER_CANNOT_ACT');
 
   const stats = useMemo(() => {
     const items = list ?? [];
@@ -161,7 +158,7 @@ export function FulfillmentsPage() {
                 {(list ?? []).map((f) => (
                   <TableRow
                     key={f.id}
-                    {...(f.viewer_can_ship && !isViewer
+                    {...(f.viewer_can_ship
                       ? openableRowProps(() => startEdit(f), `${t('common.open')} #${f.deal}`)
                       : {})}
                   >
@@ -190,8 +187,6 @@ export function FulfillmentsPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => startEdit(f)}
-                          disabled={isViewer}
-                          title={isViewer ? viewerTip : undefined}
                         >
                           {t('fulfillmentPage.updateStatus')}
                         </Button>
@@ -202,16 +197,14 @@ export function FulfillmentsPage() {
                         <div className="flex justify-end gap-1">
                           <Button
                             variant="ghost" size="sm"
-                            disabled={isViewer || updateMut.isPending}
-                            title={isViewer ? viewerTip : undefined}
+                            disabled={updateMut.isPending}
                             onClick={() => setConfirm({ f, status: FStatusCode.ACCEPTED })}
                           >
                             {t('fulfillmentPage.accept')}
                           </Button>
                           <Button
                             variant="ghost" size="sm"
-                            disabled={isViewer || updateMut.isPending}
-                            title={isViewer ? viewerTip : undefined}
+                            disabled={updateMut.isPending}
                             onClick={() => setConfirm({ f, status: FStatusCode.DISPUTED })}
                           >
                             {t('fulfillmentPage.dispute')}
@@ -284,8 +277,7 @@ export function FulfillmentsPage() {
           <SheetFooter>
             <Button
               onClick={submit}
-              disabled={updateMut.isPending || isViewer}
-              title={isViewer ? viewerTip : undefined}
+              disabled={updateMut.isPending}
               className="w-full"
             >
               {t('fulfillmentPage.updateStatus')}

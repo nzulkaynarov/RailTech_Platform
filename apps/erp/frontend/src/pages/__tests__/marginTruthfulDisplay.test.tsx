@@ -4,7 +4,7 @@ import { screen } from '@testing-library/react';
 import { renderWithProviders } from '@/test/renderWithProviders';
 import type { Deal, QuoteItem } from '@/api/crmApi';
 import { RequestDetailPage } from '@/pages/RequestDetailPage';
-import { QuoteBuilderGrid } from '@/components/Admin/QuoteBuilderGrid';
+import { QuoteBuilderGrid } from '@/components/QuoteBuilder/QuoteBuilderGrid';
 import {
   useDeal,
   useChangeDealStage,
@@ -75,7 +75,6 @@ vi.mock('@/store/currencyStore', () => ({
   useCurrencyStore: (selector: (state: { format: (value: number) => string }) => unknown) =>
     selector({ format: (value: number) => `${value} сум` }),
 }));
-vi.mock('@/hooks/useViewerMode', () => ({ useIsViewerMode: () => false }));
 vi.mock('@/hooks/useMasterData', () => ({ useCurrencies: () => ({ data: [{ id: 1, code: 'UZS' }] }) }));
 vi.mock('@/hooks/use-mobile', () => ({ useMediaQuery: () => false }));
 
@@ -94,7 +93,7 @@ vi.mock('@/components/CRM/DeliveryBasisSelect', () => ({ DeliveryBasisSelect: ()
 vi.mock('@/components/CRM/QuoteChargesSection', () => ({ QuoteChargesSection: () => null }));
 vi.mock('@/components/CRM/QuoteSettingsDialog', () => ({ QuoteSettingsDialog: () => null }));
 vi.mock('@/components/CRM/ReassignProductDialog', () => ({ ReassignProductDialog: () => null }));
-vi.mock('@/components/Admin/AICatalogMatchDialog', () => ({ AICatalogMatchDialog: () => null }));
+vi.mock('@/components/QuoteBuilder/AICatalogMatchDialog', () => ({ AICatalogMatchDialog: () => null }));
 vi.mock('@/components/Shared/DocumentActions', () => ({ DocumentActions: () => null }));
 
 const setHook = (hook: unknown, value: unknown) => {

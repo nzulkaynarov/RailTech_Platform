@@ -8,7 +8,7 @@ import { evaluatePageGuard, type PageGuardInput } from '../routes/pageGuard';
 // authStore rehydrates isAuthenticated/user from localStorage while isLoading
 // stays at its default `false`, so App mounts MainApp on the FIRST render —
 // before initAuth()/loadFromAuth() run. At that instant userStore is still at
-// pre-auth DEFAULTS (role 'USER', kycStatus 'not_started', activeStatus 'BUYER',
+// pre-auth DEFAULTS (kycStatus 'not_started', activeStatus 'BUYER',
 // empty statusEntries). The old KYC/context guards enforced against those and
 // bounced a valid deep-link (#request-detail/{id}, #deal-quote/{id}) to
 // #dashboard, clobbering the hash via replaceState. The fix defers all guards
@@ -17,7 +17,6 @@ import { evaluatePageGuard, type PageGuardInput } from '../routes/pageGuard';
 /** Build a guard input with sensible verified-buyer defaults. */
 function input(overrides: Partial<PageGuardInput> & { pageType: string }): PageGuardInput {
   return {
-    role: 'USER',
     kycStatus: 'verified',
     activeStatus: 'BUYER',
     statusEntries: [{ status: 'BUYER', verification: 'verified' }],
@@ -28,7 +27,6 @@ function input(overrides: Partial<PageGuardInput> & { pageType: string }): PageG
 
 /** Pre-auth default store state, as seen on the first render of a cold load. */
 const PRE_AUTH_DEFAULTS: Omit<PageGuardInput, 'pageType'> = {
-  role: 'USER',
   kycStatus: 'not_started',
   activeStatus: 'BUYER',
   statusEntries: [],
@@ -80,9 +78,6 @@ describe('evaluatePageGuard — cold-load deferral (the fix)', () => {
     expect(evaluatePageGuard({ ...PRE_AUTH_DEFAULTS, pageType: 'deal-quote' })).toEqual({ action: 'allow' });
   });
 
-  it('ALLOWS an admin deep link before bootstrap (admin cold load)', () => {
-    expect(evaluatePageGuard({ ...PRE_AUTH_DEFAULTS, pageType: 'admin-users' })).toEqual({ action: 'allow' });
-  });
 });
 
 describe('evaluatePageGuard — valid deep links survive bootstrap', () => {
@@ -144,23 +139,8 @@ describe('evaluatePageGuard — cross-role / role bounces still hold after boots
     });
   });
 
-  it('bounces a non-admin off an admin page (admin guard)', () => {
-    expect(evaluatePageGuard(input({ pageType: 'admin-users' }))).toEqual({ action: 'bounce', reason: 'admin' });
-  });
-
-  it('lets an admin open an admin page', () => {
-    expect(evaluatePageGuard(input({ pageType: 'admin-users', role: 'ADMIN' }))).toEqual({ action: 'allow' });
-  });
-
-  it('lets an admin open an allowlisted moderation surface (contracts)', () => {
-    expect(evaluatePageGuard(input({ pageType: 'contracts', role: 'ADMIN' }))).toEqual({ action: 'allow' });
-  });
-
-  it('bounces an admin off a business page not on its allowlist (crm-deals)', () => {
-    expect(evaluatePageGuard(input({ pageType: 'crm-deals', role: 'ADMIN' }))).toEqual({
-      action: 'bounce',
-      reason: 'context',
-    });
+  it('bounces a stale operator-plane hash (admin-*) like any unknown page (M1-ERP-02)', () => {
+    expect(evaluatePageGuard(input({ pageType: 'admin-users' }))).toEqual({ action: 'bounce', reason: 'context' });
   });
 
   it('bounces an unknown/stale hash to the dashboard (invalid hash → dashboard)', () => {
@@ -195,7 +175,7 @@ describe('pageToHash — точная обратная операция к parse
   });
 
   it('непараметризованные маршруты проходят без изменений', () => {
-    for (const type of ['dashboard', 'crm-deals', 'contracts', 'admin-kyc'] as const) {
+    for (const type of ['dashboard', 'crm-deals', 'contracts', 'invoices'] as const) {
       expect(roundTrip({ type })).toEqual({ type });
     }
   });

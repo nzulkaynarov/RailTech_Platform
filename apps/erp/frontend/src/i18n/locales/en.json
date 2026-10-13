@@ -47,7 +47,6 @@
     "retryHint": "Something went wrong. Please close and try again."
   },
   "common": {
-    "all": "All",
     "loading": "Loading...",
     "error": "An error occurred",
     "save": "Save",
@@ -68,21 +67,11 @@
     "back": "Back",
     "backToList": "Back to list",
     "saving": "Saving...",
-    "approve": "Approve",
-    "reject": "Reject",
     "revoke": "Revoke",
-    "activate": "Activate",
     "confirm": "Confirm",
-    "clear": "Clear",
-    "prev": "Prev",
-    "next": "Next",
-    "period7d": "7 days",
-    "period30d": "30 days",
-    "period90d": "90 days",
     "members": "Members",
     "disable": "Disable",
-    "verify": "Verify",
-    "downloadFailed": "Could not download the file. Please try again."
+    "verify": "Verify"
   },
   "auth": {
     "loginTitle": "Sign in",
@@ -768,250 +757,7 @@
     "hsCodePlaceholder": "e.g. 8607 19 100 0"
   },
   "admin": {
-    "dashboard": {
-      "title": "Admin Dashboard",
-      "systemHealth": "System Health",
-      "totalUsers": "Users",
-      "totalProducts": "Products",
-      "quickAccess": "Quick Access",
-      "recentActivity": "Recent Activity",
-      "viewAllLogs": "View all logs"
-    },
-    "users": {
-      "title": "Personnel",
-      "registry": "Registry",
-      "description": "System Access Control & Authorization Management",
-      "provision": "Provision User",
-      "searchPlaceholder": "Search by name or email...",
-      "filterByRole": "Filter by role",
-      "allRoles": "All Roles",
-      "noUsersFound": "No users found",
-      "internal": "Internal",
-      "editUser": "Edit User",
-      "deleteUser": "Delete User",
-      "deleteConfirmation": "Are you sure you want to permanently delete {{email}}? This action cannot be undone.",
-      "columns": {
-        "user": "User",
-        "role": "Role",
-        "company": "Company",
-        "status": "Status",
-        "actions": "Actions"
-      }
-    },
-    "profile": {
-      "title": "My",
-      "titleHighlight": "Profile",
-      "subtitle": "Manage your personal data and security",
-      "personalData": "Personal Data",
-      "security": "Security",
-      "accountVerified": "Account verified",
-      "fullAccess": "Full access (L4)",
-      "mainData": "Main Data",
-      "firstName": "First name",
-      "lastName": "Last name",
-      "workEmail": "Work Email",
-      "phone": "Phone",
-      "saveProfile": "Save profile",
-      "profileUpdated": "Profile updated successfully!",
-      "profileSaveError": "Failed to save profile",
-      "changePassword": "Change Password",
-      "currentPassword": "Current password",
-      "newPassword": "New password",
-      "confirmPassword": "Confirm password",
-      "updatePassword": "Update password",
-      "passwordChanged": "Password changed successfully!",
-      "passwordChangeError": "Failed to change password",
-      "passwordMismatch": "Passwords do not match",
-      "superAdmin": "Super Administrator"
-    },
-    "subscriptions": {
-      "title": "Subscription Management",
-      "description": "Supplier subscriptions on the platform",
-      "activated": "Subscription activated",
-      "activate": "Activate",
-      "suspend": "Suspend",
-      "suspended": "Subscription suspended",
-      "statusIsAnAction": "changed by the actions below",
-      "new": "New subscription",
-      "edit": "Edit subscription",
-      "save": "Save",
-      "create": "Create",
-      "delete": "Delete",
-      "cancel": "Cancel",
-      "created": "Subscription created",
-      "updated": "Subscription updated",
-      "deleted": "Subscription deleted",
-      "saveFailed": "Failed to save",
-      "deleteFailed": "Failed to delete",
-      "requiredFields": "Company, plan and rate are required",
-      "confirmDelete": "Delete subscription?",
-      "confirmDeleteDesc": "Subscription for \"{{name}}\" will be deleted.",
-      "tabs": {
-        "details": "Details"
-      },
-      "bulkActivate": "Activate (bulk)",
-      "bulkSuspend": "Suspend (bulk)",
-      "bulkSuspendDesc": "{{count}} subscriptions will be suspended. Provide a reason — it will be recorded in the audit log.",
-      "bulkSkippedExpired": "Skipped expired: {{count}} — a payment renews them, not a status change",
-      "bulkResult": "Affected: {{affected}}",
-      "validFromHint": "From {{date}}",
-      "suspendTemplates": {
-        "nonPayment": "Non-payment for the current period",
-        "fraud": "Suspected fraud",
-        "other": "Other (specify in comment)"
-      },
-      "fields": {
-        "company": "Company",
-        "monthlyRate": "Monthly rate",
-        "currency": "Currency",
-        "validFrom": "Valid from",
-        "validUntil": "Valid until",
-        "notes": "Notes"
-      },
-      "searchPlaceholder": "Search by company...",
-      "allPlans": "All plans",
-      "allStatuses": "All statuses",
-      "stats": {
-        "total": "Total",
-        "active": "Active",
-        "trial": "Trial",
-        "suspended": "Suspended"
-      },
-      "table": {
-        "company": "Company",
-        "plan": "Plan",
-        "status": "Status",
-        "rate": "Rate",
-        "validUntil": "Valid Until",
-        "actions": "Actions"
-      },
-      "detail": {
-        "title": "Subscription Details",
-        "companyInfo": "Company Information",
-        "inn": "TIN",
-        "planAndStatus": "Plan & Status",
-        "billing": "Billing",
-        "monthlyRate": "Monthly Rate",
-        "validFrom": "Valid From",
-        "validUntil": "Valid Until",
-        "lastPayment": "Last Payment",
-        "nextPayment": "Next Payment",
-        "notes": "Notes",
-        "noNotes": "No notes",
-        "created": "Created",
-        "updated": "Updated"
-      },
-      "suspendDialog": {
-        "title": "Suspend subscription?",
-        "description": "The subscription for \"{{name}}\" will be suspended."
-      }
-    },
-    "roleApps": {
-      "title": "Role Applications",
-      "description": "Review company role applications",
-      "approved": "Application approved",
-      "rejected": "Application rejected",
-      "approve": "Approve",
-      "reject": "Reject",
-      "approvedLabel": "Approved",
-      "rejectedLabel": "Rejected",
-      "rejectDialog": {
-        "title": "Reject Application",
-        "description": "Provide a reason for rejecting the application from {{company}}",
-        "reason": "Rejection Reason",
-        "reasonPlaceholder": "Describe the reason for rejection...",
-        "confirm": "Reject Application",
-        "cancel": "Cancel"
-      },
-      "requestDocs": "Request documents",
-      "docsRequested": "Documents requested — the applicant will attach them",
-      "requestDocsDialog": {
-        "title": "Request the missing documents?",
-        "description": "The application from \u201c{{company}}\u201d goes back to the applicant: they attach the documents and it returns to your queue. No need to reject it for that.",
-        "reason": "What exactly is missing",
-        "confirm": "Request"
-      },
-      "rejectTemplates": {
-        "docsInvalid": "Documents are unreadable or do not meet requirements",
-        "outOfScope": "Application does not match the requested role",
-        "other": "Other (specify in comment)"
-      },
-      "confirmApproveTitle": "Approve application",
-      "confirmApproveDescription": "Company {{company}} will receive the {{role}} role. Suppliers/Manufacturers get a TRIAL subscription for 30 days automatically.",
-      "notPending": "Application is already reviewed",
-      "detail": {
-        "title": "Application Details",
-        "companyInfo": "Company Information",
-        "inn": "TIN",
-        "requestedRole": "Requested Role",
-        "currentStatus": "Current Status",
-        "submittedBy": "Submitted By",
-        "submittedAt": "Submitted At",
-        "documents": "Documents",
-        "contractFile": "Contract",
-        "ndaFile": "NDA",
-        "partnershipAgreement": "Partnership Agreement",
-        "noDocument": "Not uploaded",
-        "download": "Download",
-        "review": "Review",
-        "reviewedBy": "Reviewed By",
-        "reviewedAt": "Review Date",
-        "reviewNotes": "Review Notes",
-        "noReview": "Not yet reviewed"
-      },
-      "stats": {
-        "total": "Total",
-        "pending": "Pending",
-        "approved": "Approved",
-        "rejected": "Rejected"
-      },
-      "table": {
-        "company": "Company",
-        "requestedType": "Requested Role",
-        "status": "Status",
-        "submittedBy": "Submitted By",
-        "date": "Date",
-        "actions": "Actions"
-      }
-    },
-    "palette": {
-      "title": "Command palette",
-      "description": "Quick navigation across the admin panel",
-      "placeholder": "Type a command or search...",
-      "empty": "No results",
-      "triggerHint": "Search...",
-      "groups": {
-        "overview": "Overview",
-        "users": "Users & KYC",
-        "business": "Business operations",
-        "catalog": "Catalog",
-        "system": "System"
-      },
-      "entityGroups": {
-        "companies": "Companies",
-        "users": "Users",
-        "deals": "Deals",
-        "offers": "Offers",
-        "tickets": "Tickets"
-      },
-      "placeholderHint": "Type at least two characters — we search deals, quotes, contracts, invoices and companies"
-    },
     "support": {
-      "title": "Support Tickets",
-      "description": "Direct client-to-admin support channel",
-      "searchPlaceholder": "Search subject, description, email...",
-      "empty": "No support tickets yet",
-      "stats": {
-        "total": "Total",
-        "open": "Open",
-        "inProgress": "In progress",
-        "urgent": "Urgent"
-      },
-      "filters": {
-        "allStatuses": "All statuses",
-        "allPriorities": "All priorities",
-        "allCategories": "All categories"
-      },
       "status": {
         "OPEN": "Open",
         "IN_PROGRESS": "In progress",
@@ -1031,32 +777,6 @@
         "FEATURE": "Feature request",
         "OTHER": "Other"
       },
-      "table": {
-        "id": "ID",
-        "subject": "Subject",
-        "status": "Status",
-        "priority": "Priority",
-        "createdAt": "Created"
-      },
-      "detail": {
-        "title": "Ticket details",
-        "status": "Status",
-        "assigned": "Assigned to",
-        "unassigned": "Unassigned",
-        "assignToMe": "Assign to me",
-        "messages": "Conversation",
-        "noMessages": "No messages yet",
-        "adminBadge": "admin",
-        "reply": "Reply",
-        "replyPlaceholder": "Write your reply...",
-        "send": "Send",
-        "internalNote": "Internal note (visible only to admins)"
-      },
-      "toast": {
-        "messageSent": "Message sent",
-        "statusChanged": "Status updated",
-        "assigned": "Ticket assigned"
-      },
       "userForm": {
         "title": "Contact Support",
         "subtitle": "Describe your issue and we'll get back to you shortly",
@@ -1072,145 +792,9 @@
         "fab": "Support"
       }
     },
-    "systemSettings": {
-      "title": "System",
-      "titleHighlight": "Settings",
-      "subtitle": "Global platform parameters and integrations",
-      "saveNotAvailable": "Saving settings will be available in the next version. Current parameters are applied from server configuration.",
-      "settingsSaved": "Settings saved successfully!",
-      "saveChanges": "Save changes",
-      "tabs": {
-        "finance": "Finance & Tax",
-        "platform": "Site Settings",
-        "security": "Security",
-        "notifications": "Notifications"
-      },
-      "finance": {
-        "title": "Finance & VAT",
-        "vatRate": "VAT Rate (Uzbekistan)",
-        "standardMargin": "Standard Margin",
-        "exchangeRate": "USD to UZS Rate (Auto)",
-        "vatWarning": "Changing the tax rate will affect Landed Cost calculations for all new deals."
-      },
-      "platform": {
-        "title": "Site Settings",
-        "maintenance": "Maintenance Mode",
-        "maintenanceDesc": "Disable public access during maintenance",
-        "platformName": "Platform Name"
-      },
-      "security": {
-        "title": "Security",
-        "twoFactor": "Two-Factor Authentication",
-        "twoFactorDesc": "Required for all managers",
-        "resetSessions": "Reset all user sessions"
-      }
-    },
-    "emailTemplates": {
-      "title": "Email templates",
-      "description": "Manage email templates. An active DB template overrides the file template at send time.",
-      "new": "New template",
-      "create": "Create",
-      "save": "Save",
-      "delete": "Delete",
-      "cancel": "Cancel",
-      "created": "Template created",
-      "saved": "Template saved",
-      "deleted": "Template deleted",
-      "keyRequired": "Select a template key",
-      "emptyEditor": "Select a template on the left or create a new one",
-      "previewAction": "Preview",
-      "testSendAction": "Test send",
-      "statusActive": "Active",
-      "statusInactive": "Inactive",
-      "confirmDelete": "Delete template?",
-      "confirmDeleteDesc": "Template \"{{key}}\" will be deleted. Sending will fall back to the file template.",
-      "stats": {
-        "total": "Total",
-        "active": "Active"
-      },
-      "fields": {
-        "key": "Key",
-        "keyPlaceholder": "Select a key",
-        "subject": "Subject",
-        "textBody": "Text body",
-        "htmlBody": "HTML body",
-        "htmlHint": "If empty, the email is sent without an HTML alternative.",
-        "availableVariables": "Available variables",
-        "variablesPlaceholder": "e.g. {{first_name}}, {{company_name}}, {{link}}",
-        "isActive": "Active"
-      },
-      "preview": {
-        "title": "Email preview",
-        "description": "Template rendered with sample context. No email is sent.",
-        "html": "HTML",
-        "text": "Text",
-        "noHtml": "No HTML version.",
-        "saveFirst": "Save the template first"
-      },
-      "testSend": {
-        "title": "Test send",
-        "description": "Send a test email using this template to the given address.",
-        "toEmail": "Recipient email",
-        "send": "Send",
-        "emailRequired": "Enter a recipient email",
-        "sent": "Email sent to {{email}}",
-        "failed": "Failed to send the email"
-      }
-    },
     "leads": {
-      "title": "Leads",
-      "subtitle": "Inbound requests from the landing page",
-      "searchPlaceholder": "Search by name, email, company…",
-      "tabs": {
-        "all": "All",
-        "new": "New",
-        "processed": "Processed"
-      },
-      "col": {
-        "name": "Name",
-        "company": "Company",
-        "email": "Email",
-        "phone": "Phone",
-        "created": "Received",
-        "owner": "Owner company",
-        "status": "Status"
-      },
-      "status": {
-        "new": "New",
-        "processed": "Processed"
-      },
-      "actions": {
-        "route": "Assign to a company",
-        "reject": "Reject (spam/duplicate)"
-      },
       "toast": {
-        "routed": "The lead was assigned — the company will take it from here",
-        "rejected": "Lead rejected",
         "claimed": "Lead taken — deal #{{id}} created"
-      },
-      "empty": {
-        "title": "No leads yet",
-        "description": "Inbound requests from the public landing page will show up here"
-      },
-      "queue": "Platform queue",
-      "route": {
-        "title": "Assign the lead to a company",
-        "description": "\u201c{{name}}\u201d will be handed to the selected company. It creates the deal itself by taking the lead — the platform does not act on its behalf.",
-        "company": "Company",
-        "companyPlaceholder": "Pick a company",
-        "similar": "\u26a0\ufe0f Similar leads: {{count}}. Make sure this is not a duplicate — otherwise one request goes to two companies.",
-        "confirm": "Assign"
-      },
-      "reject": {
-        "title": "Reject the lead?",
-        "description": "\u201c{{name}}\u201d will be closed without creating a deal. The reason is kept in the log.",
-        "confirm": "Reject"
-      },
-      "detail": {
-        "title": "Lead",
-        "message": "Message",
-        "noMessage": "No message",
-        "noCompany": "No company given"
       }
     }
   },
@@ -1567,71 +1151,6 @@
       "phone": "Enter a phone in +998 XX XXX XX XX format"
     }
   },
-  "kycManager": {
-    "title": "KYC",
-    "searchPlaceholder": "Search by name or TIN...",
-    "emptyState": "No companies match the current filter",
-    "registryData": "Company details",
-    "physicalAddress": "Legal address",
-    "docRecords": "Documents",
-    "noDocuments": "No documents uploaded",
-    "importDoc": "Upload document",
-    "approveL2": "Approve KYC (L2)",
-    "upgradeL3": "Upgrade to Partner (L3)",
-    "revokeL1": "Revoke verification (L1)",
-    "confirmDeleteDocTitle": "Delete KYC document?",
-    "confirmDeleteDocDesc": "The document will be permanently deleted — it's compliance evidence. This can't be undone.",
-    "revokeHint": "Revoking sends the company back to L1 and removes supplier capabilities. This action is audit-logged.",
-    "bulkApproveL2": "Approve L2 (bulk)",
-    "bulkApproveDesc": "L2 will be granted to {{count}} companies. Document presence is not checked — owner policy allows it.",
-    "bulkApprovedResult": "Approved: {{approved}}, skipped: {{skipped}}",
-    "accountAge": "Account age",
-    "ageDays_one": "{{count}} day",
-    "ageDays_other": "{{count}} days",
-    "uploadFailure": "Document upload failed",
-    "status": {
-      "P_PENDING": "No application",
-      "P_SUBMITTED": "Under review",
-      "V_VERIFIED_L2": "KYC verified",
-      "V_PARTNER_L3": "Partner"
-    },
-    "registryFields": {
-      "taxId": "TIN",
-      "mfoCode": "MFO code",
-      "bankAcc": "Bank account",
-      "opContact": "Contact person",
-      "email": "Email",
-      "website": "Website"
-    },
-    "docTypes": {
-      "charter": "Company Charter",
-      "license": "License",
-      "passport": "Director ID",
-      "taxCert": "Tax Registry Certificate",
-      "other": "Other"
-    },
-    "stats": {
-      "total": "Total companies",
-      "pending": "Not verified",
-      "verified": "Verified",
-      "partner": "Partners"
-    },
-    "table": {
-      "company": "Company",
-      "inn": "TIN",
-      "status": "Status",
-      "docs": "Documents",
-      "date": "Registration date"
-    },
-    "description": "Company identity verification and trust level management",
-    "allStatuses": "All statuses",
-    "verified": "Verification complete",
-    "gapNoDocs": "uploaded documents",
-    "gapNoInn": "a stated tax ID (TIN)",
-    "approveWithoutEvidence": "⚠️ Verifying this company without: {{gaps}}. This is an exception to the standard check — a reason is required for the audit trail.",
-    "approveReasonRequired": "Reason (required — verifying without checked evidence)",
-    "bulkWithoutEvidence": "⚠️ Without checked evidence: {{count}} of the selection ({{names}}). This is an exception — state a reason for the audit trail."
-  },
   "breadcrumb": {
     "productDetail": "Product details",
     "requestDetail": "Request details"
@@ -1655,22 +1174,6 @@
     "profile": "Profile",
     "settings": "Settings",
     "myDocuments": "Documents",
-    "adminUsers": "Users",
-    "adminKyc": "KYC verification",
-    "adminSubscriptions": "Subscriptions",
-    "adminEntitlements": "Entitlements",
-    "adminAccessLog": "Access log",
-    "adminEmailTemplates": "Email templates",
-    "adminRoleApps": "Role Applications",
-    "adminLeads": "Leads",
-    "adminMasterData": "Master Data",
-    "adminSupport": "Support Tickets",
-    "adminCatalog": "Catalog (admin)",
-    "adminCategories": "Categories (admin)",
-    "adminEquipmentGroups": "Equipment Groups (admin)",
-    "adminOffers": "Supplier Offers (admin)",
-    "adminCompanies": "Companies (admin)",
-    "adminDeals": "Deals (admin)",
     "logistics": "Logistics",
     "purchaseTemplates": "Purchase Templates",
     "contracts": "Contracts",
@@ -1682,7 +1185,6 @@
     "mySubscription": "My subscription",
     "forgotPassword": "Reset password",
     "resetPassword": "New password",
-    "adminOperatorRoles": "Operator roles",
     "hsDirectory": "HS classifier",
     "catalogReference": "Reference data",
     "myProducts": "My products",
@@ -1707,7 +1209,6 @@
   },
   "companyStatus": {
     "BUYER": "Buyer",
-    "MANUFACTURER": "Manufacturer",
     "SELLER": "Seller"
   },
   "roles": {
@@ -1717,10 +1218,6 @@
     "adminDesc": "Owner of the platform; governs the whole system",
     "user": "User",
     "userDesc": "Operates within their company"
-  },
-  "platformAdminShell": {
-    "title": "RailTech · Platform",
-    "subtitle": "Administrator"
   },
   "companyStatusDesc": {
     "BUYER": "Only requests quotes and purchases equipment",
@@ -1750,22 +1247,6 @@
     "quotes": "Quotes",
     "deals": "Deals",
     "settings": "Settings",
-    "users": "Users",
-    "kyc": "KYC verification",
-    "subscriptions": "Subscriptions",
-    "entitlements": "Entitlements",
-    "roleApplications": "Role Applications",
-    "companies": "Companies",
-    "adminDeals": "Deals (admin)",
-    "adminQuotes": "Quotes (admin)",
-    "adminContracts": "Contracts (admin)",
-    "masterData": "Master data",
-    "support": "Support tickets",
-    "adminCatalog": "Catalog (admin)",
-    "adminCatalogProducts": "Products",
-    "adminCatalogCategories": "Categories",
-    "adminCatalogGroups": "Equipment groups",
-    "adminCatalogOffers": "Supplier offers",
     "contracts": "Contracts",
     "invoices": "Invoices",
     "payments": "Payments",
@@ -1773,7 +1254,6 @@
     "fulfillments": "Fulfillment",
     "otherDocuments": "Other documents",
     "files": "Files",
-    "leads": "Leads",
     "catalogImport": "Price list upload",
     "help": "Help",
     "b2bPlatform": "B2B Platform",
@@ -1784,9 +1264,6 @@
     "mainNavigation": "Main navigation",
     "secondaryNavigation": "Secondary navigation",
     "currencySelector": "Currency selector",
-    "emailTemplates": "Email templates",
-    "operatorRoles": "Operator roles",
-    "accessLog": "Access log",
     "fxRateFallback": "Exchange rate unavailable — USD amounts are approximate",
     "catalogReference": "Reference data",
     "myProducts": "My products"
@@ -1961,7 +1438,6 @@
     "personalInfo": {
       "title": "Personal Information",
       "description": "Update your personal data",
-      "role": "Role",
       "saved": "Saved!",
       "saveChanges": "Save changes",
       "saveError": "Failed to save profile",
@@ -2096,13 +1572,6 @@
       "density": "Interface density"
     },
     "company": {
-      "title": "Company Management",
-      "description": "Statuses, users, and permission delegation",
-      "statuses": "Company statuses",
-      "statusesDesc": "Active roles on the platform",
-      "pending": "pending",
-      "companyInfo": "Company Information",
-      "companyInfoDesc": "Name and details",
       "requisitesTitle": "Company details",
       "requisitesDescription": "Logo, contact details and legal information",
       "bankTitle": "Bank details",
@@ -2264,18 +1733,12 @@
       "dealRef": "Deal #{{id}}",
       "actions": {
         "sendToClient": "Send to client",
-        "duplicate": "Duplicate",
-        "forceApprove": "Force-approve (admin)"
+        "duplicate": "Duplicate"
       },
       "toast": {
         "sentSuccess": "Quote #{{id}} sent to client",
-        "forceReasonRequired": "Force-approve reason is required",
-        "forceApproved": "Quote #{{id}} force-approved by platform admin",
         "duplicated": "Duplicated quote #{{id}}"
-      },
-      "confirmForceApprove": "Force-approve quote (platform admin)",
-      "forceApproveHint": "Quote #{{id}} will be moved to APPROVED regardless of its current status. The action is audit-logged with [FORCE_ADMIN] marker.",
-      "forceApproveReason": "Reason (required, written to audit log)"
+      }
     },
     "clients": {
       "title": "Clients",
@@ -2415,100 +1878,8 @@
       "description": "Shipment tracking and transportation management"
     },
     "adminUsers": {
-      "title": "Company Users",
-      "description": "Manage employees, roles and access delegation",
-      "stats": {
-        "total": "Total",
-        "active": "Active",
-        "staff": "Platform Staff",
-        "inactive": "Inactive"
-      },
-      "statusLabel": {
-        "active": "Active",
-        "inactive": "Inactive"
-      },
-      "table": {
-        "name": "Name",
-        "email": "Email",
-        "role": "Role",
-        "status": "Status",
-        "lastLogin": "Last login"
-      },
-      "searchPlaceholder": "Search by name or email...",
-      "noSystemRole": "No system role",
-      "activated": "{{name}} activated",
-      "deactivated": "{{name}} deactivated",
-      "joinedHint": "Joined: {{date}}",
-      "detail": {
-        "lastLogin": "Last login"
-      },
-      "tabs": {
-        "profile": "Profile",
-        "role": "System role",
-        "memberships": "Companies"
-      },
-      "roleTab": {
-        "explanation": "System role defines platform-level access. ADMIN is the platform owner — not tied to any company. USER is a regular user who works through company memberships.",
-        "systemRole": "System role",
-        "blockedByMembership": "unavailable: user is in a company"
-      },
-      "memberships": {
-        "existing": "Current companies",
-        "empty": "No memberships",
-        "addNew": "Add to company",
-        "company": "Company",
-        "workspaceRole": "Workspace role",
-        "selectCompanyFirst": "Select company first",
-        "setPrimary": "Set as primary",
-        "add": "Add",
-        "added": "Added to company",
-        "removed": "Removed from company",
-        "remove": "Remove from company",
-        "removeConfirmTitle": "Remove the person from the company?",
-        "removeConfirmDesc": "They will lose access to “{{company}}” data. You can restore the membership by adding them again.",
-        "addFailed": "Failed to add",
-        "removeFailed": "Failed to remove",
-        "companyAndRoleRequired": "Company and role required",
-        "primary": "Primary",
-        "platformAdminTitle": "Platform Admin is not tied to companies",
-        "platformAdminDesc": "To add a membership, first change the system role to USER."
-      },
-      "errors": {
-        "ADMIN_ROLE_REQUIRES_NO_MEMBERSHIPS": "Cannot grant ADMIN to a user with memberships — remove memberships first.",
-        "PLATFORM_ADMIN_CANNOT_JOIN_COMPANY": "Platform Admin cannot join a company.",
-        "WORKSPACE_ROLE_NOT_APPLICABLE_TO_COMPANY_TYPE": "This role is not applicable to the company type.",
-        "WORKSPACE_ROLE_NOT_FOUND": "Workspace role not found.",
-        "SYSTEM_ROLE_NOT_FOUND": "System role not found.",
-        "COMPANY_AND_WORKSPACE_ROLE_REQUIRED": "Company and workspace role are required.",
-        "COMPANY_NOT_FOUND": "Company not found.",
-        "MEMBERSHIP_NOT_FOUND": "Membership not found.",
-        "ROLE_CODE_REQUIRED": "Role code is required.",
-        "CANNOT_DEMOTE_LAST_OPERATOR_MANAGER": "Cannot demote the last operator who can manage operator roles — assign another one first.",
-        "CANNOT_DEACTIVATE_SOLE_OPERATOR": "Cannot deactivate the last operator who can manage operator roles — assign another one first."
-      },
-      "fields": {
-        "email": "Email",
-        "firstName": "First name",
-        "lastName": "Last name",
-        "phone": "Phone"
-      },
-      "newUser": "New user",
-      "create": "Create",
-      "save": "Save",
-      "delete": "Delete",
-      "cancel": "Cancel",
-      "saved": "Changes saved",
-      "saveFailed": "Failed to save",
-      "created": "User created",
       "createFailed": "Failed to create",
-      "deleted": "User deleted",
-      "deleteFailed": "Failed to delete",
-      "emailRequired": "Email is required",
-      "confirmDelete": "Delete user?",
-      "confirmDeleteDesc": "User {{email}} will be permanently deleted.",
-      "confirmDeactivateTitle": "Deactivate user?",
-      "confirmDeactivateDesc": "User {{name}} will lose access to the platform.",
-      "deactivateConfirm": "Deactivate"
+      "deleteFailed": "Failed to delete"
     },
     "dealQuote": {
       "title": "Quote builder",
@@ -2535,300 +1906,27 @@
     "prev": "Prev",
     "next": "Next",
     "showing": "Showing {{from}}–{{to}} of {{total}}",
-    "columns": "Columns",
-    "density": "Density",
-    "export": "Export",
-    "exportCsv": "Export to CSV",
-    "exportXlsx": "Export to Excel (XLSX)",
-    "empty": "No entries",
-    "selected": "Selected: {{count}}",
-    "selectAll": "Select all",
-    "shownOf": "Showing {{shown}} of {{total}}",
-    "selectRow": "Select row",
-    "rowActions": "Actions",
-    "paginationLabel": "{{from}}–{{to}} of {{total}}"
-  },
-  "adminDetail": {
-    "dangerZone": "Danger zone",
-    "timelineEmpty": "No activity yet",
-    "reason": "Reason"
+    "selectRow": "Select row"
   },
   "confirmDialog": {
     "reason": "Reason",
     "reasonPlaceholder": "Describe the reason for this action…",
     "templates": "Choose a template",
-    "typeToConfirm": "Type \"{{value}}\" to confirm",
-    "kycLevel": "KYC level"
-  },
-  "adminQueue": {
-    "severity": {
-      "critical": "Urgent",
-      "warning": "Attention",
-      "info": "Info"
-    },
-    "kycApproved": "KYC approved",
-    "kycRevoked": "KYC revoked",
-    "subscriptionActivated": "Subscription activated",
-    "confirm": {
-      "kycApproveTitle": "Approve KYC to L2",
-      "kycApproveDescription": "Company {{name}} will receive L2 status and full access.",
-      "kycRevokeTitle": "Revoke KYC",
-      "kycRevokeDescription": "Company {{name}} will be reverted to L1. Provide a reason — it will be recorded in the audit log.",
-      "subActivateTitle": "Activate subscription",
-      "commentOptional": "Comment (optional)"
-    },
-    "reasonTemplates": {
-      "docsInvalid": "Documents are unreadable or do not meet requirements",
-      "innMismatch": "INN does not match the documents",
-      "other": "Other (specify in comment)"
-    }
-  },
-  "adminShortcuts": {
-    "title": "Keyboard shortcuts",
-    "description": "Speed up admin work. Press ? to open this cheat sheet.",
-    "palette": "Open command palette",
-    "help": "Show keyboard shortcuts",
-    "focusSearch": "Focus search",
-    "goDashboard": "Go to Dashboard",
-    "goKyc": "KYC",
-    "goCompanies": "Companies",
-    "goUsers": "Users",
-    "goDeals": "Deals",
-    "goSubscriptions": "Subscriptions",
-    "goRoleApps": "Role applications",
-    "goSupport": "Support",
-    "tableNav": "Navigate rows",
-    "tableOpen": "Open focused row",
-    "tableSelect": "Toggle row selection"
-  },
-  "platformAdmin": {
-    "dashboard": {
-      "title": "Command center",
-      "subtitle": "What requires your attention right now"
-    },
-    "pulse": {
-      "newCompanies": "New companies",
-      "newDeals": "New deals",
-      "signedValue": "Quotes signed value",
-      "mrr": "MRR",
-      "activeSubscriptions": "Active subscriptions: {{count}}"
-    },
-    "queue": {
-      "title": "Triage queue",
-      "emptyTitle": "Everything is under control",
-      "emptyHint": "New items will show up here automatically",
-      "filters": {
-        "all": "All",
-        "kyc_pending": "KYC",
-        "role_application": "Role applications",
-        "subscription_past_due": "Subscriptions past due",
-        "subscription_expiring": "Subscriptions expiring",
-        "invoice_overdue": "Overdue invoices",
-        "support_urgent": "Urgent tickets",
-        "supplier_bid_pending": "Pending supplier bids"
-      }
-    },
-    "activity": {
-      "title": "Recent activity",
-      "empty": "No entries"
-    },
-    "summary": {
-      "title": "Overview",
-      "subsExpiring": "Subscriptions (past due/expiring)",
-      "overdueInvoices": "Overdue invoices"
-    }
+    "typeToConfirm": "Type \"{{value}}\" to confirm"
   },
   "adminMasterData": {
-    "title": "Master data",
-    "description": "Reference data: countries, currencies, units of measure, delivery bases",
-    "new": "New entry",
-    "edit": "Edit",
-    "nothingFound": "Nothing found for “{{filter}}”",
-    "clearFilter": "Clear filter",
-    "empty": "No entries",
-    "save": "Save",
-    "create": "Create",
-    "delete": "Delete",
-    "cancel": "Cancel",
-    "actions": "Actions",
-    "yes": "Yes",
     "no": "No",
-    "created": "Entry created",
-    "updated": "Entry updated",
-    "deleted": "Entry deleted",
-    "saveFailed": "Failed to save",
-    "deleteFailed": "Failed to delete",
-    "requiredFields": "Code and name are required",
-    "confirmDelete": "Delete entry?",
-    "confirmDeleteDesc": "Entry \"{{code}}\" will be deleted.",
-    "confirmDeleteHint": "A row already used in documents cannot be deleted — deactivate it instead: it disappears from forms while the history stays.",
-    "showInactive": "Show deactivated",
-    "inactiveBadge": "Deactivated",
-    "restore": "Reactivate",
-    "restored": "Row reactivated",
-    "tabs": {
-      "countries": "Countries",
-      "currencies": "Currencies",
-      "units": "Units",
-      "deliveryBasis": "Delivery basis"
-    },
-    "fields": {
-      "code": "Code",
-      "name": "Name",
-      "sortOrder": "Order",
-      "isActive": "Active"
-    },
-    "countryFields": {
-      "alpha2": "ISO alpha-2",
-      "vatRate": "VAT rate",
-      "isoNumeric": "ISO numeric"
-    },
-    "currencyFields": {
-      "symbol": "Symbol"
-    },
-    "stats": {
-      "countries": "Countries",
-      "currencies": "Currencies",
-      "units": "Units",
-      "deliveryBases": "Bases"
-    },
-    "filterPlaceholder": "Search by code or name"
-  },
-  "adminDeals": {
-    "title": "Deals (admin)",
-    "description": "View, force stage change and delete deals",
-    "searchPlaceholder": "Search by title or company",
-    "allStages": "All stages",
-    "allCompanies": "All companies",
-    "empty": "No deals found",
-    "newStage": "New stage",
-    "forceChangeStage": "Force change stage",
-    "stageChanged": "Stage updated",
-    "reason": "Reason",
-    "reasonRequired": "Reason is required",
-    "transitionNotAllowed": "FSM forbids this transition. Pick a valid stage.",
-    "closedWonRequiresContract": "Moving to CLOSED_WON requires a signed contract",
-    "stageNotFound": "Stage not found",
-    "pickStage": "Pick a target stage",
-    "forceDescription": "Deal #{{id}} {{title}}. Force-override is audit-logged.",
-    "apply": "Apply",
-    "delete": "Delete",
-    "deleted": "Deal deleted",
-    "deleteFailed": "Failed to delete",
-    "cancel": "Cancel",
-    "confirmDelete": "Delete deal?",
-    "confirmDeleteDesc": "Deal #{{id}} will be permanently deleted.",
-    "stats": {
-      "total": "Total",
-      "open": "Open",
-      "won": "Won",
-      "lost": "Lost"
-    },
-    "table": {
-      "id": "ID",
-      "title": "Title",
-      "company": "Company",
-      "stage": "Stage",
-      "value": "Value",
-      "actions": "Actions"
-    }
-  },
-  "adminCompanies": {
-    "title": "Companies",
-    "description": "Company registry, details and team management",
-    "new": "New company",
-    "edit": "Edit company",
-    "merge": {
-      "action": "Merge duplicates",
-      "title": "Merge duplicate company",
-      "description": "Fold an offline duplicate (by TIN) into «{{name}}» — contacts, deals and history",
-      "empty": "No duplicates found by TIN",
-      "confirm": "Merge",
-      "done": "Duplicate merged"
-    },
-    "searchPlaceholder": "Search by name or INN",
-    "emptyState": "No companies found",
-    "created": "Company created",
-    "updated": "Company updated",
-    "archived": "Company removed from circulation",
-    "unarchived": "Company returned to circulation",
-    "archive": {
-      "action": "Archive",
-      "restore": "Return to circulation",
-      "tab": "Archived",
-      "title": "Remove the company from circulation?",
-      "description": "\u201c{{name}}\u201d will disappear from the seller picker, directories and search. Its deals, invoices and signed documents stay in place — you can bring it back at any time.",
-      "confirm": "Archive"
-    },
-    "deleted": "Company deleted",
-    "requiredFields": "Name and INN are required",
-    "save": "Save",
-    "create": "Create",
-    "delete": "Delete",
-    "cancel": "Cancel",
-    "invited": "Invitation sent",
-    "emailRequired": "Email is required",
-    "confirmDelete": "Delete company?",
-    "confirmDeleteDesc": "Company \"{{name}}\" will be deleted. This is only possible while it has no history: deals, quotes, documents or members. A company with history is removed from circulation instead — it stays in the archive.",
-    "tabs": {
-      "registry": "Registry",
-      "members": "Team",
-      "files": "Files"
-    },
-    "fields": {
-      "name": "Name",
-      "inn": "INN",
-      "mfo": "MFO",
-      "bankAccount": "Bank account",
-      "legalAddress": "Legal address",
-      "contactPerson": "Contact person",
-      "types": "Marketplace roles",
-      "contactInfo": "Contact (phone)",
-      "email": "Email",
-      "website": "Website"
-    },
-    "members": {
-      "inviteEmail": "Invitee email",
-      "role": "Role",
-      "roleOwner": "Company Admin",
-      "roleProcurement": "Procurement",
-      "roleMember": "Member",
-      "invite": "Invite",
-      "current": "Current team",
-      "empty": "No members"
-    },
-    "stats": {
-      "total": "Total",
-      "members": "Members"
-    },
-    "table": {
-      "name": "Name",
-      "inn": "INN",
-      "kyc": "KYC",
-      "types": "Types",
-      "created": "Created"
-    }
+    "deleteFailed": "Failed to delete"
   },
   "adminCatalog": {
-    "title": "Catalog · Products",
-    "description": "Create, edit and publish PIM products",
     "newProduct": "New product",
     "editProduct": "Edit product",
-    "searchPlaceholder": "Search by name, SKU, GOST...",
-    "allDomains": "All domains",
-    "allStatuses": "All statuses",
-    "emptyState": "No products found",
     "created": "Product created",
     "updated": "Product updated",
-    "deleted": "Product deleted",
     "saveFailed": "Failed to save",
     "nameRequired": "Name is required",
     "save": "Save",
     "create": "Create",
-    "delete": "Delete",
-    "cancel": "Cancel",
-    "confirmDelete": "Delete product?",
-    "confirmDeleteDesc": "Product \"{{name}}\" will be permanently deleted.",
     "fields": {
       "name": "Name",
       "description": "Description",
@@ -2843,19 +1941,6 @@
       "equipmentGroups": "Equipment groups",
       "hsCode": "HS code",
       "ownerCompany": "Owner company"
-    },
-    "stats": {
-      "total": "Total",
-      "published": "Published",
-      "draft": "Drafts"
-    },
-    "table": {
-      "sku": "SKU",
-      "name": "Name",
-      "domain": "Domain",
-      "status": "Status",
-      "manufacturer": "Manufacturer",
-      "actions": "Actions"
     },
     "media": {
       "images": "Product images",
@@ -2884,10 +1969,6 @@
       "isActive": "Offer on sale",
       "isActiveHint": "A withdrawn offer is not used in quotes and is hidden from buyers. It is not deleted — the same switch puts it back on sale."
     },
-    "published": "Product published",
-    "publish": "Publish",
-    "confirmPublish": "Publish product?",
-    "confirmPublishDesc": "Product \"{{name}}\" will become visible to buyers in the catalog.",
     "aiEnrich": {
       "title": "AI enrichment",
       "hint": "The AI will suggest a description, specifications, category, HS code and unit — you pick what to apply.",
@@ -2909,117 +1990,17 @@
     },
     "ownerCompanyRequired": "Choose the card's owner company"
   },
-  "adminCategories": {
-    "title": "Catalog · Categories",
-    "description": "Hierarchical product categories",
-    "new": "New category",
-    "edit": "Edit category",
-    "emptyState": "No categories found",
-    "created": "Category created",
-    "updated": "Category updated",
-    "deleted": "Category deleted",
-    "saveFailed": "Failed to save",
-    "nameRequired": "Name is required",
-    "save": "Save",
-    "create": "Create",
-    "delete": "Delete",
-    "cancel": "Cancel",
-    "confirmDelete": "Delete category?",
-    "confirmDeleteDesc": "Category \"{{name}}\" will be deleted.",
-    "fields": {
-      "name": "Name",
-      "domainType": "Domain",
-      "parent": "Parent category",
-      "sortOrder": "Sort order"
-    },
-    "stats": {
-      "total": "Total",
-      "roots": "Root-level"
-    },
-    "table": {
-      "name": "Name",
-      "parent": "Parent",
-      "order": "Order",
-      "actions": "Actions"
-    }
-  },
-  "adminEquipmentGroups": {
-    "title": "Catalog · Equipment groups",
-    "description": "Hierarchy of equipment types (railway domain)",
-    "new": "New group",
-    "edit": "Edit group",
-    "emptyState": "No groups found",
-    "created": "Group created",
-    "updated": "Group updated",
-    "deleted": "Group deleted",
-    "saveFailed": "Failed to save",
-    "nameRequired": "Name is required",
-    "save": "Save",
-    "create": "Create",
-    "delete": "Delete",
-    "cancel": "Cancel",
-    "confirmDelete": "Delete equipment group?",
-    "confirmDeleteDesc": "\"{{name}}\" and all descendant groups will be deleted.",
-    "fields": {
-      "name": "Name",
-      "parent": "Parent group",
-      "description": "Description",
-      "sortOrder": "Sort order"
-    },
-    "stats": {
-      "total": "Total",
-      "roots": "Root-level"
-    },
-    "table": {
-      "path": "Path",
-      "actions": "Actions"
-    }
-  },
   "adminOffers": {
-    "title": "Catalog · Supplier offers",
-    "description": "Prices, stock, delivery terms",
-    "new": "New offer",
-    "edit": "Edit offer",
-    "emptyState": "No offers found",
-    "created": "Offer created",
-    "updated": "Offer updated",
-    "deleted": "Offer deleted",
-    "saveFailed": "Failed to save",
-    "missingFields": "Product, supplier and price are required",
-    "save": "Save",
-    "create": "Create",
-    "delete": "Delete",
-    "cancel": "Cancel",
-    "yes": "Yes",
-    "no": "No",
-    "allActive": "All entries",
-    "confirmDelete": "Delete offer?",
-    "confirmDeleteDesc": "The offer will be deleted.",
     "fields": {
-      "product": "Product",
-      "supplier": "Supplier",
       "supplierSku": "Supplier SKU",
       "basePrice": "Base price",
       "currency": "Currency",
       "deliveryBasis": "Delivery basis",
       "stockStatus": "Stock status",
-      "leadTime": "Lead time",
       "minQty": "Min. order",
       "stockQuantity": "Quantity in stock",
       "inStockLeadTimeDays": "In-stock lead time (days)",
       "orderLeadTimeDays": "Order lead time (days)"
-    },
-    "stats": {
-      "total": "Total",
-      "active": "Active"
-    },
-    "table": {
-      "product": "Product",
-      "supplier": "Supplier",
-      "price": "Price",
-      "status": "Stock",
-      "active": "Active",
-      "actions": "Actions"
     },
     "availability": {
       "title": "Availability & lead times",
@@ -3042,12 +2023,6 @@
     "cancel": "Cancel contract",
     "confirmCancel": "Confirm cancel",
     "cancelReason": "Reason",
-    "forceCancel": "Force-cancel (admin)",
-    "forceCancelled": "Contract force-cancelled by platform admin",
-    "forceCancelReason": "Reason (required, written to audit log)",
-    "forceCancelReasonRequired": "Force-cancel reason is required",
-    "confirmForceCancel": "Force-cancel contract (platform admin)",
-    "forceCancelHint": "Contract {{number}} will be cancelled regardless of its current status. The action is audit-logged with [FORCE_ADMIN] marker.",
     "allStatuses": "All statuses",
     "stats": {
       "total": "Total",
@@ -3443,7 +2418,6 @@
     "esign": "Manual mode: click-to-sign. A legally binding e-signature (E-IMZO) will be wired before production release."
   },
   "guards": {
-    "adminRequired": "This section is admin-only",
     "kycRequired": "Finish KYC verification to access this section",
     "notAvailableHere": "This section isn't available in the current mode"
   },
@@ -4105,117 +3079,6 @@
     "preset_slash": "Slash-separated",
     "preset_compact": "Compact"
   },
-  "accessLogPage": {
-    "title": "Access log",
-    "description": "Who changed what in other parties’ rights and access: break-glass, acting for a tenant, and administrative changes",
-    "empty": "No access events yet",
-    "stats": {
-      "activeBreakGlass": "Active break-glass",
-      "expiredBreakGlass": "Expired break-glass",
-      "forceOverrides": "Force-overrides",
-      "adminActions": "Administrative actions"
-    },
-    "col": {
-      "event": "Event",
-      "operator": "Operator",
-      "entity": "Entity",
-      "reason": "Reason",
-      "when": "When"
-    },
-    "badge": {
-      "activeUntil": "Active until {{time}}",
-      "expired": "Expired",
-      "override": "Override"
-    }
-  },
-  "adminEntitlements": {
-    "title": "Entitlements",
-    "subtitle": "Paid features per company — grant a promo, enable demo, or disable. The app gates on has_entitlement(company, feature).",
-    "grant": "Grant access",
-    "edit": "Edit entitlement",
-    "company": "Company",
-    "companyPlaceholder": "Select a company",
-    "feature": "Feature",
-    "featurePlaceholder": "Select a feature",
-    "access": "Access",
-    "accessHint": "Enabled — works; Demo — works but watermarked and send/export gated; Disabled — blocked.",
-    "credits": "Credits",
-    "limit": "Limit",
-    "expiresAt": "Expires",
-    "note": "Note",
-    "notePlaceholder": "Reason / promo (optional)",
-    "granted": "Active",
-    "notGranted": "Inactive",
-    "allCompanies": "All companies",
-    "empty": "No entitlements granted",
-    "requiredFields": "Fill company, feature and access",
-    "grantedToast": "Access granted",
-    "updated": "Entitlement updated",
-    "removed": "Entitlement removed",
-    "confirmRemoveTitle": "Remove entitlement?",
-    "confirmRemoveDesc": "The «{{feature}}» entitlement for «{{company}}» will be removed (the company falls back to its subscription baseline)."
-  },
-  "operatorRoles": {
-    "title": "Operator roles",
-    "description": "Manage platform operator sub-roles and their permissions",
-    "addRole": "Add role",
-    "editRole": "Edit role",
-    "deleteRole": "Delete role",
-    "name": "Name",
-    "namePlaceholder": "e.g. KYC Officer",
-    "descriptionField": "Description",
-    "descriptionPlaceholder": "Briefly describe what this role is for",
-    "code": "Code",
-    "permissions": "Permissions",
-    "permissionsHint": "Tick the actions operators with this role can perform",
-    "systemRole": "System",
-    "systemRoleReadonly": "This is a system role — it cannot be edited or deleted",
-    "operatorCount": "Operators",
-    "saveRole": "Save role",
-    "noRoles": "No operator roles yet",
-    "deleteConfirm": "Delete the role \"{{name}}\"? This action cannot be undone.",
-    "assignRole": "Operator role",
-    "assignHint": "Controls which platform actions this operator can take",
-    "noOperatorRole": "No operator role",
-    "fullAccessNoLimits": "Full access (no limits)",
-    "limitsRemoved": "Limits removed — the operator now has full access",
-    "createSuccess": "Role created",
-    "updateSuccess": "Role updated",
-    "deleteSuccess": "Role deleted",
-    "assignSuccess": "Operator role assigned",
-    "stats": {
-      "total": "Total roles",
-      "system": "System"
-    },
-    "errors": {
-      "ONLY_SUPER_OPERATOR_CAN_MANAGE_OPERATORS": "Only a super operator can manage operator roles",
-      "SYSTEM_OPERATOR_ROLE_IMMUTABLE": "A system role cannot be edited or deleted",
-      "ROLE_HAS_OPERATORS_REASSIGN_FIRST": "This role still has operators — reassign them first",
-      "CANNOT_DEMOTE_LAST_OPERATOR": "Cannot remove the role from the last platform operator",
-      "NOT_A_PLATFORM_OPERATOR": "This user is not a platform operator",
-      "ROLE_NAME_TAKEN": "A role with this name already exists"
-    }
-  },
-  "operatorPermissions": {
-    "users": "Users",
-    "companies": "Companies",
-    "kyc": "KYC",
-    "billing": "Billing",
-    "moderation": "Moderation",
-    "platform": "Platform",
-    "users_view": "View users",
-    "users_manage": "Manage users (block / role)",
-    "companies_view": "View companies",
-    "companies_manage": "Manage companies",
-    "kyc_view": "View KYC & documents",
-    "kyc_verify": "Verify KYC (L1→L3)",
-    "billing_view": "View subscriptions & invoices",
-    "billing_manage": "Manage subscriptions & payments",
-    "moderation_role_applications": "Moderate role applications",
-    "moderation_force_override": "Force-override (deals / quotes / contracts)",
-    "platform_settings": "System settings & master data",
-    "operators_manage": "Manage operator roles"
-  },
   "activity": {
     "deal": {
       "created": {
@@ -4275,9 +3138,18 @@
         "title": "Quote sent to client",
         "detail": "Quote v{{version}} ({{number}})"
       },
-      "approval_your_turn": { "title": "Quote approval needed", "detail": "Quote #{{number}}: it is your turn to approve." },
-      "approval_returned": { "title": "Quote sent back for rework", "detail": "Quote #{{number}} was rejected in approval. {{comment}}" },
-      "approval_complete_informed": { "title": "Quote approved", "detail": "Quote #{{number}} approved." },
+      "approval_your_turn": {
+        "title": "Quote approval needed",
+        "detail": "Quote #{{number}}: it is your turn to approve."
+      },
+      "approval_returned": {
+        "title": "Quote sent back for rework",
+        "detail": "Quote #{{number}} was rejected in approval. {{comment}}"
+      },
+      "approval_complete_informed": {
+        "title": "Quote approved",
+        "detail": "Quote #{{number}} approved."
+      },
       "accepted": {
         "title": "Quote accepted by client",
         "detail": "Quote v{{version}} ({{number}})"

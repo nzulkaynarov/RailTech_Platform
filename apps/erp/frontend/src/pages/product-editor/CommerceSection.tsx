@@ -1,7 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 
-import { OfferSection } from '../admin-catalog/OfferSection';
-import type { ProductFormState } from '../admin-catalog/useProductForm';
+import { OfferSection } from '@/components/Shared/product-form/OfferSection';
+import type { ProductFormState } from '@/components/Shared/product-form/useProductForm';
 import { SECTION_IDS } from './anchors';
 
 /**

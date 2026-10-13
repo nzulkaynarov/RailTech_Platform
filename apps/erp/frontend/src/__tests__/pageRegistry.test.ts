@@ -1,7 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import {
-  ADMIN_PAGES,
-  ADMIN_REACHABLE_PAGES,
   BUYER_PAGES,
   KYC_ALLOWED_PAGES,
   NAVIGABLE_PAGES,
@@ -25,8 +23,6 @@ import {
 // совпадать со снимком, иначе тест падает:
 //   • BUYER_PAGES += `acts` — акт двусторонний, заказчик его принимает (сервер отдаёт ему
 //     `viewer_can_sign`), а страница была продавцовской;
-//   • ADMIN_REACHABLE_PAGES += `invoices`, `request-detail` — с операторских страниц КП и
-//     договоров ведут ссылки именно туда;
 //   • KYC_ALLOWED_PAGES += `my-requests`, `my-subscription` — чек-лист онбординга и баннер
 //     тарифа зовут новичка ровно сюда ДО верификации.
 //   • KYC_ALLOWED_PAGES += страницы номенклатуры — наполнение каталога разрешено до
@@ -35,6 +31,9 @@ import {
 //     новая страница наследует ровно те же свойства, что были у каждого из трёх маршрутов
 //     (продавцовая, до KYC, открывается из меню). Старые идентификаторы остались в реестре
 //     маршрутами-алиасами — иначе закладка `#categories` уехала бы на дашборд.
+//   • M1-ERP-02 (волна 1a): операторская плоскость удалена — 17 страниц `admin-*`,
+//     наборы ADMIN_PAGES / ADMIN_REACHABLE_PAGES и флаги `admin` / `adminReachable` исчезли
+//     из реестра вместе с `PlatformAdminShell` (MIGRATION-MAP §1, ARCHITECTURE §7).
 
 const asSorted = (value: Set<string> | readonly string[]) => [...value].sort();
 
@@ -44,17 +43,6 @@ const asSorted = (value: Set<string> | readonly string[]) => [...value].sort();
 const registry: readonly PageDefinition[] = PAGE_REGISTRY;
 
 describe('реестр страниц: эквивалентность прежним наборам App.tsx', () => {
-  it('ADMIN_PAGES', () => {
-    expect(asSorted(ADMIN_PAGES)).toEqual(
-      asSorted([
-        'admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-entitlements', 'admin-role-apps',
-        'admin-catalog', 'admin-categories', 'admin-equipment-groups', 'admin-offers',
-        'admin-companies', 'admin-deals', 'admin-master-data', 'admin-email-templates',
-        'admin-operator-roles', 'admin-access-log', 'admin-support', 'admin-leads',
-      ]),
-    );
-  });
-
   it('KYC_ALLOWED_PAGES', () => {
     expect(asSorted(KYC_ALLOWED_PAGES)).toEqual(
       asSorted([
@@ -74,19 +62,6 @@ describe('реестр страниц: эквивалентность прежн
         // черновику отбрасывал новичка на дашборд. Порог остался там, где он и есть по
         // смыслу: на ОТПРАВКЕ (сервер, `KYC_REQUIRED_TO_SUBMIT`).
         'request-detail',
-      ]),
-    );
-  });
-
-  it('ADMIN_REACHABLE_PAGES', () => {
-    expect(asSorted(ADMIN_REACHABLE_PAGES)).toEqual(
-      asSorted([
-        'dashboard', 'profile', 'settings', 'help',
-        'admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-entitlements', 'admin-role-apps',
-        'admin-catalog', 'admin-categories', 'admin-equipment-groups', 'admin-offers',
-        'admin-companies', 'admin-deals', 'admin-master-data', 'admin-email-templates',
-        'admin-operator-roles', 'admin-access-log', 'admin-support', 'admin-leads',
-        'crm-quotes', 'contracts', 'invoices', 'request-detail',
       ]),
     );
   });
@@ -132,10 +107,6 @@ describe('реестр страниц: эквивалентность прежн
         'clients', 'suppliers',
         'categories', 'equipment-groups',
         'help', 'my-requests',
-        'admin-users', 'admin-kyc', 'admin-subscriptions', 'admin-entitlements', 'admin-role-apps',
-        'admin-catalog', 'admin-categories', 'admin-equipment-groups', 'admin-offers',
-        'admin-companies', 'admin-deals', 'admin-master-data', 'admin-email-templates',
-        'admin-operator-roles', 'admin-access-log', 'admin-support', 'admin-leads',
         'contracts', 'invoices', 'payments', 'acts', 'fulfillments', 'other-documents', 'company-files',
         'my-subscription', 'catalog-import',
         // + волна A номенклатуры.
@@ -157,9 +128,7 @@ describe('реестр страниц: инварианты', () => {
   });
 
   it('каждая страница достижима хотя бы для одной роли', () => {
-    const orphans = registry.filter(
-      (page) => !page.buyer && !page.seller && !page.admin && !page.adminReachable,
-    );
+    const orphans = registry.filter((page) => !page.buyer && !page.seller);
     expect(orphans.map((page) => page.id)).toEqual([]);
   });
 
@@ -168,12 +137,6 @@ describe('реестр страниц: инварианты', () => {
     // в хэше, нельзя открыть кликом по пункту меню — только адресным переходом.
     for (const id of ['product_detail', 'request-detail', 'deal-quote']) {
       expect(NAVIGABLE_PAGES.has(id)).toBe(false);
-    }
-  });
-
-  it('admin-страница подразумевает достижимость оператором', () => {
-    for (const page of registry.filter((entry) => entry.admin)) {
-      expect(ADMIN_REACHABLE_PAGES.has(page.id)).toBe(true);
     }
   });
 

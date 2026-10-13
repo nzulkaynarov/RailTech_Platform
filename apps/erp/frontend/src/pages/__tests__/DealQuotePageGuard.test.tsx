@@ -19,7 +19,7 @@ vi.mock('@/hooks/useCRM', () => ({
 }));
 
 // The builder is stubbed to a button that flips the dirty signal on demand.
-vi.mock('@/components/Admin/QuoteBuilderGrid', () => ({
+vi.mock('@/components/QuoteBuilder/QuoteBuilderGrid', () => ({
 	QuoteBuilderGrid: ({ onDirtyChange }: { onDirtyChange?: (dirty: boolean) => void }) => (
 		<button type="button" onClick={() => onDirtyChange?.(true)}>make-dirty</button>
 	),

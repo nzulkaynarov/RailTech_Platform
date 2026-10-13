@@ -78,7 +78,6 @@ vi.mock('@/store/currencyStore', () => ({
   useCurrencyStore: (selector: (s: { format: (v: number) => string }) => unknown) =>
     selector({ format: (v: number) => String(v) }),
 }));
-vi.mock('@/hooks/useViewerMode', () => ({ useIsViewerMode: () => false }));
 
 // Heavy children irrelevant to the button under test → inert stubs.
 vi.mock('@/components/Sourcing/DealChatPanel', () => ({ DealChatPanel: () => null }));

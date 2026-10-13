@@ -404,8 +404,7 @@ function RecentDocumentsCard() {
   // Маршрут считаем по стороне зрителя, а не берём готовый хэш от сервера: сервер не знает
   // про гейты SPA, и его ссылка на акт/КП уводила покупателя в отказ (аудит UI, U1).
   const activeStatus = useUserStore((state) => state.activeStatus);
-  const isPlatformAdmin = useUserStore((state) => state.role === 'ADMIN');
-  const viewer = { isSeller: activeStatus === 'SELLER', isPlatformAdmin };
+  const viewer = { isSeller: activeStatus === 'SELLER' };
 
   // A failed fetch reads as an explicit error with a retry — never a silent
   // absence that would look like "no documents yet".

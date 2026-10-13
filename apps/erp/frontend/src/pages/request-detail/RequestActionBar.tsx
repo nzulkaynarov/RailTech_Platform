@@ -24,8 +24,6 @@ export interface RequestActionBarProps {
   canTakeAndPrepare: boolean;
   canSubmitForReview: boolean;
   canEditRequest: boolean;
-  isViewer: boolean;
-  viewerTip: string;
   changeStagePending: boolean;
   claimPending: boolean;
   releasePending: boolean;
@@ -57,7 +55,7 @@ export function RequestActionBar(props: RequestActionBarProps) {
   const {
     quote, isSellerSide, isBuyerSide, isDraft, isSourcing, isCalculating, isQuoteSent, isWon,
     hasQuote, canBuildQuote, canBuildNewVersion, canClaim, canRelease, canTakeAndPrepare, canSubmitForReview,
-    canEditRequest, isViewer, viewerTip, changeStagePending, claimPending, releasePending, takePending,
+    canEditRequest, changeStagePending, claimPending, releasePending, takePending,
     submitReviewPending, sendQuotePending, approvePending, onClaim, onRelease, onTakeAndPrepare,
     onStartSourcing, onStartCalculation, onOpenGenerate, onOpenQuoteBuilder, onSubmitForReview,
     onSendQuote, onApprove, onReject, onOpenContract,
@@ -90,8 +88,7 @@ export function RequestActionBar(props: RequestActionBarProps) {
           <Button
             variant="default"
             onClick={onTakeAndPrepare}
-            disabled={isViewer || takePending}
-            title={isViewer ? viewerTip : undefined}
+            disabled={takePending}
           >
             {takePending
               ? <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
@@ -103,8 +100,7 @@ export function RequestActionBar(props: RequestActionBarProps) {
           <Button
             variant="outline"
             onClick={onClaim}
-            disabled={isViewer || claimPending}
-            title={isViewer ? viewerTip : undefined}
+            disabled={claimPending}
           >
             {claimPending
               ? <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
@@ -118,8 +114,7 @@ export function RequestActionBar(props: RequestActionBarProps) {
           <Button
             variant="ghost"
             onClick={onRelease}
-            disabled={isViewer || releasePending}
-            title={isViewer ? viewerTip : undefined}
+            disabled={releasePending}
           >
             {releasePending
               ? <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
@@ -131,8 +126,7 @@ export function RequestActionBar(props: RequestActionBarProps) {
           <Button
             variant="default"
             onClick={onStartSourcing}
-            disabled={isViewer || changeStagePending}
-            title={isViewer ? viewerTip : undefined}
+            disabled={changeStagePending}
           >
             {t('requestDetailActions.startSourcing')}
           </Button>
@@ -141,8 +135,7 @@ export function RequestActionBar(props: RequestActionBarProps) {
           <Button
             variant="default"
             onClick={onStartCalculation}
-            disabled={isViewer || changeStagePending}
-            title={isViewer ? viewerTip : undefined}
+            disabled={changeStagePending}
           >
             <Calculator className="h-4 w-4 mr-2" />
             {t('requestDetailActions.startCalculation')}
@@ -154,8 +147,6 @@ export function RequestActionBar(props: RequestActionBarProps) {
           <Button
             variant="default"
             onClick={onOpenGenerate}
-            disabled={isViewer}
-            title={isViewer ? viewerTip : undefined}
           >
             <FileText className="h-4 w-4 mr-2" />
             {t('generateQuote.submit')}
@@ -167,8 +158,6 @@ export function RequestActionBar(props: RequestActionBarProps) {
           <Button
             variant="default"
             onClick={onOpenGenerate}
-            disabled={isViewer}
-            title={isViewer ? viewerTip : undefined}
           >
             <FileText className="h-4 w-4 mr-2" />
             {t('requestDetailActions.newQuoteVersion')}
@@ -187,8 +176,7 @@ export function RequestActionBar(props: RequestActionBarProps) {
           <Button
             variant="default"
             onClick={onSubmitForReview}
-            disabled={isViewer || submitReviewPending}
-            title={isViewer ? viewerTip : undefined}
+            disabled={submitReviewPending}
           >
             {submitReviewPending
               ? <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
@@ -202,8 +190,7 @@ export function RequestActionBar(props: RequestActionBarProps) {
           <Button
             variant="default"
             onClick={onSendQuote}
-            disabled={isViewer || sendQuotePending}
-            title={isViewer ? viewerTip : undefined}
+            disabled={sendQuotePending}
           >
             <Send className="h-4 w-4 mr-2" />
             {t('requestDetailActions.sendQuote')}
@@ -215,8 +202,7 @@ export function RequestActionBar(props: RequestActionBarProps) {
               variant="default"
               className="bg-success text-success-foreground hover:bg-success/90"
               onClick={onApprove}
-              disabled={isViewer || approvePending}
-              title={isViewer ? viewerTip : undefined}
+              disabled={approvePending}
             >
               <ThumbsUp className="h-4 w-4 mr-2" />
               {t('requestDetailActions.approveQuote')}
@@ -224,8 +210,6 @@ export function RequestActionBar(props: RequestActionBarProps) {
             <Button
               variant="destructive"
               onClick={onReject}
-              disabled={isViewer}
-              title={isViewer ? viewerTip : undefined}
             >
               <ThumbsDown className="h-4 w-4 mr-2" />
               {t('requestDetailActions.rejectQuote')}
