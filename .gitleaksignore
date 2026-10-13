@@ -1,0 +1,2 @@
+# Ложные срабатывания gitleaks (отпечаток = файл:правило:строка). Секретов в этих местах нет.
+docs/history/2026-10-13-target-architecture-and-migration-map.md:generic-api-key:258

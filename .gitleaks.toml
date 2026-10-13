@@ -1,0 +1,12 @@
+# gitleaks: правила по умолчанию + исключения ансамбля.
+[extend]
+useDefault = true
+
+[allowlist]
+paths = [
+  '''^legacy/''',                 # только чтение, удаляется после M2 (ORCHESTRATOR §3.11)
+  '''(^|/)pnpm-lock\.yaml$''',
+  '''(^|/)package-lock\.json$''',
+  '''(^|/)uv\.lock$''',
+  '''(^|/)\.secrets\.baseline$''',
+]
