@@ -1,0 +1,26 @@
+{
+  "name": "@rt-platform/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Контракт ансамбля RailTech Platform: OpenAPI ERP (internal, portal, integration), схема событий, erp-mcp, SSO-токен; генерация клиентов",
+  "scripts": {
+    "lint:openapi": "redocly lint openapi/erp-internal.yaml openapi/erp-portal.yaml openapi/erp-integration.yaml",
+    "lint:events": "ajv compile --spec=draft2020 -c ajv-formats -s events.schema.json && ajv validate --spec=draft2020 -c ajv-formats -s events.schema.json -d \"examples/events/*.json\"",
+    "lint:mcp": "ajv compile --spec=draft2020 -c ajv-formats -s mcp-tools.schema.json && ajv validate --spec=draft2020 -c ajv-formats -s mcp-tools.schema.json -d mcp-tools.json",
+    "lint": "pnpm lint:openapi && pnpm lint:events && pnpm lint:mcp",
+    "gen:types": "openapi-typescript openapi/erp-internal.yaml -o generated/erp-internal.d.ts && openapi-typescript openapi/erp-portal.yaml -o generated/erp-portal.d.ts && openapi-typescript openapi/erp-integration.yaml -o generated/erp-integration.d.ts",
+    "gen:crm": "orval --config orval.config.ts",
+    "generate": "pnpm gen:types && pnpm gen:crm && prettier --write generated --log-level warn",
+    "check": "pnpm lint && pnpm generate && pnpm typecheck",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@redocly/cli": "2.19.0",
+    "ajv-cli": "5.0.0",
+    "ajv-formats": "3.0.1",
+    "openapi-typescript": "7.13.0",
+    "orval": "8.40.0",
+    "prettier": "3.8.2",
+    "typescript": "5.9.3"
+  }
+}

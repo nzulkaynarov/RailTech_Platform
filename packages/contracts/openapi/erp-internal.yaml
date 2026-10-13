@@ -1,0 +1,246 @@
+openapi: 3.1.0
+info:
+  title: RailTech Platform ERP — Internal API (ERP SPA)
+  version: 0.1.0
+  summary: Пространство `/api/v1/` — вызывает ERP SPA от имени сотрудников бэк-офиса.
+  description: |
+    Версия 0 (M0-INF-02) описывает только то, что входит в контракт ансамбля: здоровье и SSO-переходы
+    сотрудников (`docs/CONTRACTS.md` §6, ADR-0003). Остальной внутренний API ERP (сделки, КП, каталог,
+    снабжение, финансы) экспортируется из кода Django/DRF на M1-ERP-10 и дописывается сюда генератором;
+    он не является частью шва CRM ↔ ERP и меняется вместе с ERP.
+servers:
+  - url: https://erp.railtech.uz/api/v1
+    description: prod
+  - url: http://erp.localhost/api/v1
+    description: стенд ансамбля (infra/compose)
+security:
+  - staffJwt: []
+tags:
+  - name: auth
+  - name: system
+
+paths:
+  /auth/sso/exchange:
+    post:
+      tags: [auth]
+      operationId: exchangeSsoToken
+      summary: Обмен SSO-токена CRM на сессию ERP
+      description: |
+        Принимает одноразовый JWT (`iss=crm`, `aud=erp`, 60 с, `jti` хранится 10 мин), находит или обновляет
+        пользователя, выдаёт пару токенов сотрудника ERP и пишет аудит перехода.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+                  description: SSO-токен по `packages/contracts/sso-token.md`
+              additionalProperties: false
+      responses:
+        '200':
+          description: Сессия ERP выдана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffSession'
+        '401':
+          description: Подпись, `aud`, срок или одноразовость `jti` не прошли
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Пользователь не провижинен в ERP или деактивирован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/sso/token:
+    post:
+      tags: [auth]
+      operationId: issueSsoToken
+      summary: Выдать SSO-токен для перехода в CRM
+      description: Доступно только пользователям, у которых `platform_access` (из провижининга) содержит обе системы.
+      responses:
+        '200':
+          description: Токен на 60 с
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [token, redirect_url]
+                properties:
+                  token:
+                    type: string
+                  redirect_url:
+                    type: string
+                    format: uri
+                    description: 'Точка приёма в CRM, например `https://crm.railtech.uz/sso/exchange`'
+                additionalProperties: false
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: У пользователя нет доступа к CRM
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /me:
+    get:
+      tags: [auth]
+      operationId: getCurrentStaff
+      summary: Текущий сотрудник, роли и права
+      responses:
+        '200':
+          description: Сотрудник
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /health:
+    get:
+      tags: [system]
+      operationId: getHealth
+      summary: Liveness ERP
+      security: []
+      responses:
+        '200':
+          description: Процесс жив
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    const: ok
+                additionalProperties: false
+
+  /ready:
+    get:
+      tags: [system]
+      operationId: getReady
+      summary: Readiness ERP (база, миграции, Redis, очередь)
+      security: []
+      responses:
+        '200':
+          description: Готова принимать трафик
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Readiness'
+        '503':
+          description: Не готова
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Readiness'
+
+components:
+  securitySchemes:
+    staffJwt:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access-токен сотрудника ERP (HS256), выдаётся входом или обменом SSO-токена
+
+  responses:
+    Unauthorized:
+      description: Нет действительного токена сотрудника
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    Error:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: string
+      additionalProperties: false
+
+    StaffRole:
+      type: string
+      description: 'Роли бэк-офиса (DECISIONS 2026-10-13); `admin` = суперпользователь'
+      enum: [admin, estimator, catalog_supply, fulfilment_logistics, finance]
+
+    StaffUser:
+      type: object
+      required: [erp_user_id, crm_user_id, email, name, roles, permissions, platform_access]
+      properties:
+        erp_user_id:
+          type: integer
+          format: int64
+        crm_user_id:
+          type: integer
+          format: int64
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/StaffRole'
+        permissions:
+          type: array
+          items:
+            type: string
+            pattern: '^(quote|contract|finance|catalog|supply)\.[a-z_*]+$'
+        platform_access:
+          type: array
+          description: Системы, доступные сотруднику (решает переключатель в шапке)
+          items:
+            type: string
+            enum: [crm, erp]
+
+    StaffSession:
+      type: object
+      required: [access_token, refresh_token, expires_in, user]
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        expires_in:
+          type: integer
+          minimum: 60
+        user:
+          $ref: '#/components/schemas/StaffUser'
+      additionalProperties: false
+
+    Readiness:
+      type: object
+      required: [status, checks]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        checks:
+          type: object
+          required: [database, migrations, redis, worker]
+          properties:
+            database:
+              type: boolean
+            migrations:
+              type: boolean
+            redis:
+              type: boolean
+            worker:
+              type: boolean
+          additionalProperties: false
+      additionalProperties: false

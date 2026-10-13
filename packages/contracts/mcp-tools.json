@@ -1,0 +1,120 @@
+{
+  "$schema": "./mcp-tools.schema.json",
+  "server": "erp-mcp",
+  "version": "0.1.0",
+  "transport": "streamable-http",
+  "path": "/mcp/erp",
+  "context": {
+    "header": "X-Agent-Context",
+    "description": "Подписанный контекст агента CRM (SPEC CRM §7.1): JSON с claims crm_client_id, erp_company_id, mode (prospect|customer), language, exp; HMAC-SHA256 ключом ERP_MCP_CONTEXT_KEY из окружения, срок 60 с. Инструменты не принимают идентификаторов клиента аргументами: компания берётся только из контекста. Без контекста — 401; чужой клиент — пустой результат.",
+    "claims": {
+      "crm_client_id": "integer",
+      "erp_company_id": "integer|null — null в режиме prospect",
+      "mode": "prospect | customer",
+      "language": "ru | uz | en",
+      "exp": "unix seconds, ≤ now + 60"
+    }
+  },
+  "tools": [
+    {
+      "name": "list_client_deals",
+      "modes": ["customer"],
+      "description": "Сделки клиента со стадией и следующим шагом.",
+      "input_schema": { "type": "object", "properties": {}, "additionalProperties": false },
+      "output": "массив {erp_deal_id, number, title, stage, amount, currency, next_step, updated_at} — как DealListItem в erp-integration.yaml"
+    },
+    {
+      "name": "get_deal_status",
+      "modes": ["customer"],
+      "description": "Стадия сделки, КП, счета, поставки (проекция клиента), акты.",
+      "input_schema": {
+        "type": "object",
+        "required": ["erp_deal_id"],
+        "properties": { "erp_deal_id": { "type": "integer" } },
+        "additionalProperties": false
+      },
+      "output": "Deal из erp-integration.yaml, отфильтрованный по компании контекста; чужая сделка — пусто"
+    },
+    {
+      "name": "get_delivery_status",
+      "modes": ["customer"],
+      "description": "Строки поставки: статус, ожидаемая дата, трек. Без поставщика и цен.",
+      "input_schema": {
+        "type": "object",
+        "required": ["erp_deal_id"],
+        "properties": { "erp_deal_id": { "type": "integer" } },
+        "additionalProperties": false
+      },
+      "output": "массив DeliveryLine"
+    },
+    {
+      "name": "list_client_documents",
+      "modes": ["customer"],
+      "description": "Документы клиента с фильтром по виду и датам.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "kind": { "type": "string", "enum": ["quote", "contract", "invoice", "act", "waybill", "receipt", "other"] },
+          "date_from": { "type": "string", "format": "date" },
+          "date_to": { "type": "string", "format": "date" }
+        },
+        "additionalProperties": false
+      },
+      "output": "массив Document"
+    },
+    {
+      "name": "get_document_link",
+      "modes": ["customer"],
+      "description": "Подписанный URL файла на 10 минут; бот отправляет файл клиенту. Выдача пишется в аудит ERP.",
+      "input_schema": {
+        "type": "object",
+        "required": ["erp_document_id"],
+        "properties": { "erp_document_id": { "type": "integer" } },
+        "additionalProperties": false
+      },
+      "output": "DocumentLink"
+    },
+    {
+      "name": "search_catalog",
+      "modes": ["prospect", "customer"],
+      "description": "Поиск по опубликованному слою каталога. prospect: название, описание, единица. customer: + цена (или «по запросу»), наличие, срок. Цены лиду не называются (DECISIONS 2026-10-13).",
+      "input_schema": {
+        "type": "object",
+        "required": ["query"],
+        "properties": {
+          "query": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "top_k": { "type": "integer", "minimum": 1, "maximum": 20, "default": 5 }
+        },
+        "additionalProperties": false
+      },
+      "output": "массив CatalogItem; в режиме prospect без price/availability/lead_time_days"
+    },
+    {
+      "name": "create_request",
+      "modes": ["customer"],
+      "description": "Заявка в ERP от имени клиента: модель предлагает текст, код решает, что это «запрос» (ORCHESTRATOR §3.4). ERP шлёт CRM событие request.created(source=crm).",
+      "input_schema": {
+        "type": "object",
+        "required": ["summary", "lines"],
+        "properties": {
+          "summary": { "type": "string", "minLength": 1, "maxLength": 5000 },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["text"],
+              "properties": {
+                "text": { "type": "string", "minLength": 1, "maxLength": 1000 },
+                "quantity": { "type": ["string", "null"] },
+                "unit": { "type": ["string", "null"] }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "output": "{erp_request_id, number, status}"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+# Линт OpenAPI (make contracts). Набор recommended; отключено то, что не относится к контракту ансамбля.
+extends:
+  - recommended
+rules:
+  no-unused-components: error
+  security-defined: error
+  no-empty-servers: error
+  no-ambiguous-paths: error
+  # /health и /ready без 4xx — норма для liveness/readiness.
+  operation-4xx-response: off
+  # Сервер erp.localhost — стенд ансамбля (infra/compose), это намеренно.
+  no-server-example.com: off
+  info-license: off
+  operation-description: off
+  tag-description: off
