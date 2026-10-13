@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "event": "request.created",
+  "occurred_at": "2026-10-13T08:00:00+05:00",
+  "erp_company_id": 118,
+  "crm_client_id": 42,
+  "deal": {
+    "erp_deal_id": 905,
+    "number": "D-2026-0905",
+    "title": "Поставка оборудования, партия 1",
+    "stage": "request",
+    "amount": "0.00",
+    "currency": "UZS"
+  },
+  "actor": { "type": "client" },
+  "payload": { "source": "cabinet", "erp_request_id": 77, "summary": "Нужны 20 комплектов, срок — ноябрь" }
+}

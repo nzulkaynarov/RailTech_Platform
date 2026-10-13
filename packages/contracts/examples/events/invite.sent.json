@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "event": "invite.sent",
+  "occurred_at": "2026-10-13T08:01:00+05:00",
+  "erp_company_id": 118,
+  "crm_client_id": 42,
+  "actor": { "type": "system" },
+  "payload": { "channels": ["telegram", "email"], "erp_contact_id": 310, "crm_contact_id": 58 }
+}

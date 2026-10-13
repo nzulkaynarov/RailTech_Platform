@@ -1,0 +1,1217 @@
+openapi: 3.1.0
+info:
+  title: RailTech Platform ERP — Portal API (Cabinet → ERP)
+  version: 0.1.0
+  summary: Пространство `/api/portal/v1/` — вызывает Cabinet SPA от имени клиента.
+  description: |
+    Контракт по `docs/CONTRACTS.md` §4 и ADR-0004 (Cabinet без бэкенда). Версия 0 (M0-INF-02):
+    ERP реализует приложение `portal` (M2-ERP-01…03), Cabinet генерирует типы из этого файла (M2-CAB-01).
+
+    Все ответы отфильтрованы по компании сессии: чужая компания → 404 (негативный тест на каждый эндпоинт).
+    Сессия портала — cookie `HttpOnly`, отдельная от сессий сотрудников. Сотрудники сюда не входят
+    (инвариант ORCHESTRATOR §3.1). Ошибки — `{"detail": "<CODE>"}`.
+servers:
+  - url: https://erp.railtech.uz/api/portal/v1
+    description: prod
+  - url: http://erp.localhost/api/portal/v1
+    description: стенд ансамбля (infra/compose)
+security:
+  - portalSession: []
+tags:
+  - name: auth
+    description: Вход по Telegram initData или magic-link; регистрации «с улицы» нет
+  - name: me
+  - name: requests
+  - name: quotes
+  - name: contracts
+  - name: invoices
+  - name: acts
+  - name: deliveries
+  - name: documents
+  - name: catalog
+    description: Опубликованный слой с ценой и наличием — только здесь (решение владельца 2026-10-13)
+  - name: company
+
+paths:
+  /auth/telegram:
+    post:
+      tags: [auth]
+      operationId: authTelegram
+      summary: Вход из Telegram Mini App
+      description: ERP проверяет подпись `initData` токеном клиентского бота CRM (срок ≤ 5 мин), ищет контакт по `telegram_user_id`, выдаёт сессию портала.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [init_data]
+              properties:
+                init_data:
+                  type: string
+                  description: Строка `window.Telegram.WebApp.initData` как есть
+              additionalProperties: false
+      responses:
+        '200':
+          description: Сессия выдана (cookie `Set-Cookie`)
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+        '401':
+          description: Подпись неверна, срок истёк или контакт не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/magic-link:
+    post:
+      tags: [auth]
+      operationId: requestMagicLink
+      summary: Запросить ссылку для входа по e-mail
+      description: Письмо со ссылкой на 15 минут, одноразовой. Ответ всегда 200, чтобы не раскрывать наличие адреса.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+              additionalProperties: false
+      responses:
+        '200':
+          description: Принято
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/magic/{token}:
+    get:
+      tags: [auth]
+      operationId: exchangeMagicLink
+      summary: Обмен magic-link на сессию
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Сессия выдана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+        '410':
+          description: Ссылка просрочена или уже использована
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      operationId: logout
+      summary: Завершить сессию портала
+      responses:
+        '204':
+          description: Сессия завершена
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /me:
+    get:
+      tags: [me]
+      operationId: getMe
+      summary: Сессия, контакт, компания, права
+      responses:
+        '200':
+          description: Текущий контакт и его компания
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /requests:
+    get:
+      tags: [requests]
+      operationId: listRequests
+      summary: Мои запросы
+      responses:
+        '200':
+          description: Запросы компании
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ClientRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [requests]
+      operationId: createRequest
+      summary: Новый запрос
+      description: Строки свободным текстом и вложения. Создаёт заявку в ERP минуя CRM; CRM получает событие `request.created(source=cabinet)`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientRequestCreate'
+      responses:
+        '201':
+          description: Запрос принят
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /quotes:
+    get:
+      tags: [quotes]
+      operationId: listQuotes
+      summary: Коммерческие предложения
+      responses:
+        '200':
+          description: КП компании (все версии, отправленные клиенту)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/QuoteListItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /quotes/{id}:
+    get:
+      tags: [quotes]
+      operationId: getQuote
+      summary: КП со строками
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: КП
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Quote'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /quotes/{id}/accept:
+    post:
+      tags: [quotes]
+      operationId: acceptQuote
+      summary: Принять КП по коду акцепта
+      description: Договор создаётся автоматически (BUSINESS §4, шаг 6). Требует права `can_act`.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code:
+                  type: string
+                  minLength: 4
+                  maxLength: 12
+              additionalProperties: false
+      responses:
+        '200':
+          description: КП принято
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Quote'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: КП уже принято/отклонено или срок истёк; код неверен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /quotes/{id}/reject:
+    post:
+      tags: [quotes]
+      operationId: rejectQuote
+      summary: Отклонить КП с причиной
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Reason'
+      responses:
+        '200':
+          description: КП отклонено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Quote'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: КП уже в конечном статусе
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /contracts:
+    get:
+      tags: [contracts]
+      operationId: listContracts
+      summary: Договоры
+      responses:
+        '200':
+          description: Договоры компании
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Contract'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /contracts/{id}/sign:
+    post:
+      tags: [contracts]
+      operationId: signContract
+      summary: Подписать договор со стороны клиента
+      description: Простая подпись подтверждением (E-IMZO отложен до пилота, DECISIONS 2026-10-13).
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Подписано клиентом
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contract'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Договор уже подписан или отменён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /invoices:
+    get:
+      tags: [invoices]
+      operationId: listInvoices
+      summary: Счета
+      responses:
+        '200':
+          description: Счета компании
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Invoice'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /acts:
+    get:
+      tags: [acts]
+      operationId: listActs
+      summary: Акты
+      responses:
+        '200':
+          description: Акты компании
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Act'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /acts/{id}/accept:
+    post:
+      tags: [acts]
+      operationId: acceptAct
+      summary: Принять акт
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Акт принят заказчиком
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Act'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Акт уже в конечном статусе
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /acts/{id}/return:
+    post:
+      tags: [acts]
+      operationId: returnAct
+      summary: Вернуть акт с причиной
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Reason'
+      responses:
+        '200':
+          description: Акт возвращён исполнителю
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Act'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Акт уже в конечном статусе
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /deliveries:
+    get:
+      tags: [deliveries]
+      operationId: listDeliveries
+      summary: Поставки по строкам (проекция клиента)
+      responses:
+        '200':
+          description: Строки с статусом, ожидаемой датой и треком — без поставщика и цен
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeliveryLine'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /documents:
+    get:
+      tags: [documents]
+      operationId: listDocuments
+      summary: Документы компании
+      parameters:
+        - name: kind
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/DocumentKind'
+        - name: deal_id
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Документы без файлов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Document'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /documents/{id}/file:
+    get:
+      tags: [documents]
+      operationId: getDocumentFile
+      summary: Файл документа (поток, аудит выдачи)
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Файл
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '202':
+          description: PDF ещё рендерится (M2-ERP-03) — повторить через `Retry-After`
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+                minimum: 1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /catalog:
+    get:
+      tags: [catalog]
+      operationId: listCatalog
+      summary: Опубликованный каталог с ценой и наличием
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 200
+        - name: category_id
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Страница каталога
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /catalog/{id}:
+    get:
+      tags: [catalog]
+      operationId: getCatalogItem
+      summary: Карточка опубликованного слоя
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Карточка без внутреннего слоя (поставщики, себестоимость, остатки по количеству)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /company:
+    get:
+      tags: [company]
+      operationId: getCompany
+      summary: Профиль компании клиента
+      responses:
+        '200':
+          description: Профиль
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Company'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags: [company]
+      operationId: updateCompany
+      summary: Обновить профиль компании
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyUpdate'
+      responses:
+        '200':
+          description: Обновлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Company'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /team:
+    get:
+      tags: [company]
+      operationId: listTeam
+      summary: Команда клиента (контакты компании)
+      responses:
+        '200':
+          description: Контакты компании
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TeamMember'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /team/invite:
+    post:
+      tags: [company]
+      operationId: inviteTeamMember
+      summary: Пригласить коллегу в кабинет
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamInvite'
+      responses:
+        '201':
+          description: Приглашение отправлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamMember'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+components:
+  securitySchemes:
+    portalSession:
+      type: apiKey
+      in: cookie
+      name: portal_session
+      description: Сессия портала (HttpOnly, SameSite=Lax), выдаётся `/auth/telegram` или `/auth/magic/{token}`
+
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+
+  responses:
+    Unauthorized:
+      description: Нет сессии портала
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: У контакта нет права действовать (`can_act = false`)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Объект не найден или принадлежит другой компании
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ValidationError:
+      description: Тело запроса не прошло проверку
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    Error:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: string
+      additionalProperties: false
+
+    Reason:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 2000
+      additionalProperties: false
+
+    Language:
+      type: string
+      enum: [ru, uz, en]
+
+    PreferredChannel:
+      type: string
+      enum: [telegram, email, both]
+
+    Currency:
+      type: string
+      pattern: '^[A-Z]{3}$'
+
+    Amount:
+      type: string
+      pattern: '^-?\d+\.\d{2}$'
+
+    Money:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount:
+          $ref: '#/components/schemas/Amount'
+        currency:
+          $ref: '#/components/schemas/Currency'
+      additionalProperties: false
+
+    Me:
+      type: object
+      required: [contact, company, can_act, auth_method]
+      properties:
+        contact:
+          $ref: '#/components/schemas/TeamMember'
+        company:
+          $ref: '#/components/schemas/Company'
+        can_act:
+          type: boolean
+          description: 'Право «действовать» (принимать КП, подписывать, принимать акты); иначе — только смотреть'
+        auth_method:
+          type: string
+          enum: [telegram, magic_link]
+
+    RequestStatus:
+      type: string
+      enum: [new, in_progress, quoted, closed]
+
+    RequestLineIn:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        quantity:
+          type: [string, 'null']
+          description: Количество как десятичная строка, если известно
+        unit:
+          type: [string, 'null']
+      additionalProperties: false
+
+    AttachmentRef:
+      type: object
+      description: Загруженный файл (заливка — `multipart` на `/documents`, появится с M2-ERP-01)
+      required: [upload_id, name]
+      properties:
+        upload_id:
+          type: string
+        name:
+          type: string
+      additionalProperties: false
+
+    ClientRequestCreate:
+      type: object
+      required: [summary, lines]
+      properties:
+        summary:
+          type: string
+          minLength: 1
+          maxLength: 5000
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/RequestLineIn'
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttachmentRef'
+      additionalProperties: false
+
+    ClientRequest:
+      type: object
+      required: [id, number, status, summary, created_at]
+      properties:
+        id:
+          type: integer
+          format: int64
+        number:
+          type: string
+        status:
+          $ref: '#/components/schemas/RequestStatus'
+        summary:
+          type: string
+        source:
+          type: string
+          enum: [crm, cabinet, erp]
+        deal_id:
+          type: [integer, 'null']
+          format: int64
+        created_at:
+          type: string
+          format: date-time
+
+    QuoteStatus:
+      type: string
+      enum: [sent, viewed, accepted, rejected, expired]
+
+    QuoteListItem:
+      type: object
+      required: [id, number, version, status, total, sent_at]
+      properties:
+        id:
+          type: integer
+          format: int64
+        deal_id:
+          type: integer
+          format: int64
+        number:
+          type: string
+        version:
+          type: integer
+          minimum: 1
+        status:
+          $ref: '#/components/schemas/QuoteStatus'
+        total:
+          $ref: '#/components/schemas/Money'
+        valid_until:
+          type: [string, 'null']
+          format: date
+        sent_at:
+          type: string
+          format: date-time
+
+    QuoteLine:
+      type: object
+      description: Строка КП для клиента — цена продажи без себестоимости и наценки
+      required: [line_no, kind, title]
+      properties:
+        line_no:
+          type: integer
+          minimum: 1
+        kind:
+          type: string
+          enum: [item, section, note, stage]
+        title:
+          type: string
+        description:
+          type: string
+        quantity:
+          type: [string, 'null']
+        unit:
+          type: [string, 'null']
+        unit_price:
+          oneOf:
+            - $ref: '#/components/schemas/Money'
+            - type: 'null'
+        total:
+          oneOf:
+            - $ref: '#/components/schemas/Money'
+            - type: 'null'
+        promised_date:
+          type: [string, 'null']
+          format: date
+
+    Quote:
+      allOf:
+        - $ref: '#/components/schemas/QuoteListItem'
+        - type: object
+          required: [lines, public_url]
+          properties:
+            lines:
+              type: array
+              items:
+                $ref: '#/components/schemas/QuoteLine'
+            public_url:
+              type: string
+              format: uri
+            pdf_document_id:
+              type: [integer, 'null']
+              format: int64
+            rejected_reason:
+              type: [string, 'null']
+
+    ContractStatus:
+      type: string
+      enum: [sent, signed_by_client, signed_by_company, signed, cancelled]
+
+    Contract:
+      type: object
+      required: [id, number, status, deal_id]
+      properties:
+        id:
+          type: integer
+          format: int64
+        deal_id:
+          type: integer
+          format: int64
+        number:
+          type: string
+        status:
+          $ref: '#/components/schemas/ContractStatus'
+        signed_by_client_at:
+          type: [string, 'null']
+          format: date-time
+        signed_by_company_at:
+          type: [string, 'null']
+          format: date-time
+        document_id:
+          type: [integer, 'null']
+          format: int64
+
+    InvoiceStatus:
+      type: string
+      enum: [issued, partially_paid, paid, overdue, cancelled]
+
+    Invoice:
+      type: object
+      required: [id, number, status, total, paid, due_date, deal_id]
+      properties:
+        id:
+          type: integer
+          format: int64
+        deal_id:
+          type: integer
+          format: int64
+        number:
+          type: string
+        status:
+          $ref: '#/components/schemas/InvoiceStatus'
+        total:
+          $ref: '#/components/schemas/Money'
+        paid:
+          $ref: '#/components/schemas/Money'
+        due_date:
+          type: string
+          format: date
+        document_id:
+          type: [integer, 'null']
+          format: int64
+
+    ActStatus:
+      type: string
+      enum: [issued, accepted, returned]
+
+    Act:
+      type: object
+      required: [id, number, status, deal_id, issued_at]
+      properties:
+        id:
+          type: integer
+          format: int64
+        deal_id:
+          type: integer
+          format: int64
+        number:
+          type: string
+        status:
+          $ref: '#/components/schemas/ActStatus'
+        issued_at:
+          type: string
+          format: date-time
+        returned_reason:
+          type: [string, 'null']
+        document_id:
+          type: [integer, 'null']
+          format: int64
+
+    DeliveryStatus:
+      type: string
+      enum: [assembling, in_transit, ready_to_ship, shipped, delivered]
+
+    DeliveryLine:
+      type: object
+      required: [deal_id, line_no, title, status]
+      properties:
+        deal_id:
+          type: integer
+          format: int64
+        line_no:
+          type: integer
+          minimum: 1
+        title:
+          type: string
+        quantity:
+          type: [string, 'null']
+        unit:
+          type: [string, 'null']
+        status:
+          $ref: '#/components/schemas/DeliveryStatus'
+        eta:
+          type: [string, 'null']
+          format: date
+        tracking:
+          type: [string, 'null']
+        shipped_at:
+          type: [string, 'null']
+          format: date-time
+
+    DocumentKind:
+      type: string
+      enum: [quote, contract, invoice, act, waybill, receipt, other]
+
+    Document:
+      type: object
+      required: [id, kind, number, date, title]
+      properties:
+        id:
+          type: integer
+          format: int64
+        deal_id:
+          type: [integer, 'null']
+          format: int64
+        kind:
+          $ref: '#/components/schemas/DocumentKind'
+        number:
+          type: string
+        date:
+          type: string
+          format: date
+        title:
+          type: string
+        file_name:
+          type: string
+        size_bytes:
+          type: integer
+          minimum: 0
+
+    Availability:
+      type: string
+      enum: [in_stock, on_order, expected]
+
+    CatalogItem:
+      type: object
+      required: [id, kind, name, unit, price, availability]
+      properties:
+        id:
+          type: integer
+          format: int64
+        kind:
+          type: string
+          enum: [goods, service]
+        name:
+          type: string
+        description:
+          type: string
+        unit:
+          type: string
+        category:
+          type: [string, 'null']
+        price:
+          oneOf:
+            - $ref: '#/components/schemas/Money'
+            - type: 'null'
+          description: '`null` — «цена по запросу»'
+        availability:
+          $ref: '#/components/schemas/Availability'
+        lead_time_days:
+          type: [integer, 'null']
+          minimum: 0
+        images:
+          type: array
+          items:
+            type: string
+            format: uri
+        attributes:
+          type: array
+          items:
+            type: object
+            required: [name, value]
+            properties:
+              name:
+                type: string
+              value:
+                type: string
+            additionalProperties: false
+
+    CatalogPage:
+      type: object
+      required: [items, page, page_size, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogItem'
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+        total:
+          type: integer
+          minimum: 0
+      additionalProperties: false
+
+    Company:
+      type: object
+      required: [id, name, language]
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        inn:
+          type: [string, 'null']
+        legal_address:
+          type: [string, 'null']
+        bank_details:
+          type: [string, 'null']
+        language:
+          $ref: '#/components/schemas/Language'
+
+    CompanyUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 300
+        inn:
+          type: string
+          maxLength: 20
+        legal_address:
+          type: string
+          maxLength: 500
+        bank_details:
+          type: string
+          maxLength: 1000
+        language:
+          $ref: '#/components/schemas/Language'
+      additionalProperties: false
+
+    TeamMember:
+      type: object
+      required: [id, name, language, preferred_channel, can_act, is_primary]
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        email:
+          type: [string, 'null']
+          format: email
+        phone:
+          type: [string, 'null']
+        has_telegram:
+          type: boolean
+        language:
+          $ref: '#/components/schemas/Language'
+        preferred_channel:
+          $ref: '#/components/schemas/PreferredChannel'
+        can_act:
+          type: boolean
+        is_primary:
+          type: boolean
+        invited_at:
+          type: [string, 'null']
+          format: date-time
+        last_login_at:
+          type: [string, 'null']
+          format: date-time
+
+    TeamInvite:
+      type: object
+      required: [name, language, channels]
+      properties:
+        name:
+          type: string
+          maxLength: 200
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          maxLength: 32
+        language:
+          $ref: '#/components/schemas/Language'
+        can_act:
+          type: boolean
+          default: false
+        channels:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            enum: [email, telegram]
+      additionalProperties: false

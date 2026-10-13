@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "event": "quote.sent",
+  "occurred_at": "2026-10-13T09:15:00+05:00",
+  "erp_company_id": 118,
+  "crm_client_id": 42,
+  "deal": {
+    "erp_deal_id": 905,
+    "number": "D-2026-0905",
+    "title": "Поставка оборудования, партия 1",
+    "stage": "quote_sent",
+    "amount": "125000000.00",
+    "currency": "UZS"
+  },
+  "actor": { "type": "staff", "name": "Расчётчик" },
+  "payload": {
+    "erp_quote_id": 1203,
+    "version": 2,
+    "public_url": "https://cabinet.railtech.uz/q/abc123",
+    "valid_until": "2026-10-27",
+    "total": "125000000.00",
+    "currency": "UZS"
+  }
+}

@@ -1,0 +1,208 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events.schema.json",
+  "title": "События ERP → CRM",
+  "description": "Тело вебхука POST {CRM}/api/v1/integrations/erp/events (docs/CONTRACTS.md §3). Заголовки: X-Event-Id (UUID), X-Event-Type, X-Timestamp, X-Signature: sha256=<HMAC(body, WEBHOOK_SECRET)>. CRM отвечает 200 быстро и обрабатывает асинхронно; повтор с тем же X-Event-Id — 200 без действий. Ретраи ERP: 1, 5, 30 мин, 2, 6, 24 ч; после — журнал с ручным повтором. Новые поля добавляются без смены version; удаление или смена смысла — со сменой.",
+  "type": "object",
+  "required": ["version", "event", "occurred_at", "erp_company_id", "crm_client_id", "actor", "payload"],
+  "properties": {
+    "version": { "type": "integer", "const": 1 },
+    "event": { "$ref": "#/$defs/EventType" },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "erp_company_id": { "type": "integer" },
+    "crm_client_id": { "type": "integer" },
+    "deal": { "$ref": "#/$defs/DealRef" },
+    "actor": { "$ref": "#/$defs/Actor" },
+    "payload": { "type": "object" }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    { "if": { "properties": { "event": { "const": "request.created" } } }, "then": { "required": ["deal"], "properties": { "payload": { "$ref": "#/$defs/RequestCreated" } } } },
+    { "if": { "properties": { "event": { "const": "deal.stage_changed" } } }, "then": { "required": ["deal"], "properties": { "payload": { "$ref": "#/$defs/DealStageChanged" } } } },
+    { "if": { "properties": { "event": { "const": "quote.sent" } } }, "then": { "required": ["deal"], "properties": { "payload": { "$ref": "#/$defs/QuoteSent" } } } },
+    { "if": { "properties": { "event": { "enum": ["quote.viewed", "quote.accepted", "quote.rejected"] } } }, "then": { "required": ["deal"], "properties": { "payload": { "$ref": "#/$defs/QuoteOutcome" } } } },
+    { "if": { "properties": { "event": { "const": "contract.signed" } } }, "then": { "required": ["deal"], "properties": { "payload": { "$ref": "#/$defs/ContractSigned" } } } },
+    { "if": { "properties": { "event": { "enum": ["invoice.issued", "invoice.paid", "invoice.overdue"] } } }, "then": { "required": ["deal"], "properties": { "payload": { "$ref": "#/$defs/InvoiceEvent" } } } },
+    { "if": { "properties": { "event": { "enum": ["delivery.status_changed", "delivery.eta_changed"] } } }, "then": { "required": ["deal"], "properties": { "payload": { "$ref": "#/$defs/DeliveryEvent" } } } },
+    { "if": { "properties": { "event": { "enum": ["act.issued", "act.accepted", "act.returned"] } } }, "then": { "required": ["deal"], "properties": { "payload": { "$ref": "#/$defs/ActEvent" } } } },
+    { "if": { "properties": { "event": { "enum": ["deal.won", "deal.lost"] } } }, "then": { "required": ["deal"], "properties": { "payload": { "$ref": "#/$defs/DealOutcome" } } } },
+    { "if": { "properties": { "event": { "const": "document.created" } } }, "then": { "properties": { "payload": { "$ref": "#/$defs/DocumentCreated" } } } },
+    { "if": { "properties": { "event": { "const": "invite.sent" } } }, "then": { "properties": { "payload": { "$ref": "#/$defs/InviteSent" } } } }
+  ],
+  "$defs": {
+    "EventType": {
+      "type": "string",
+      "enum": [
+        "request.created",
+        "deal.stage_changed",
+        "quote.sent",
+        "quote.viewed",
+        "quote.accepted",
+        "quote.rejected",
+        "contract.signed",
+        "invoice.issued",
+        "invoice.paid",
+        "invoice.overdue",
+        "delivery.status_changed",
+        "delivery.eta_changed",
+        "act.issued",
+        "act.accepted",
+        "act.returned",
+        "deal.won",
+        "deal.lost",
+        "document.created",
+        "invite.sent"
+      ]
+    },
+    "Amount": { "type": "string", "pattern": "^-?\\d+\\.\\d{2}$" },
+    "Currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+    "DealStage": {
+      "type": "string",
+      "enum": ["request", "quoting", "quote_sent", "accepted", "contract", "invoiced", "paid", "fulfilment", "closing", "won", "lost"]
+    },
+    "DealRef": {
+      "type": "object",
+      "required": ["erp_deal_id", "number", "title", "stage", "amount", "currency"],
+      "properties": {
+        "erp_deal_id": { "type": "integer" },
+        "number": { "type": "string" },
+        "title": { "type": "string" },
+        "stage": { "$ref": "#/$defs/DealStage" },
+        "amount": { "$ref": "#/$defs/Amount" },
+        "currency": { "$ref": "#/$defs/Currency" }
+      },
+      "additionalProperties": false
+    },
+    "Actor": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string", "enum": ["system", "staff", "client"] },
+        "name": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "RequestCreated": {
+      "type": "object",
+      "required": ["source"],
+      "properties": {
+        "source": { "type": "string", "enum": ["crm", "cabinet", "erp"] },
+        "erp_request_id": { "type": "integer" },
+        "summary": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "DealStageChanged": {
+      "type": "object",
+      "required": ["from", "to"],
+      "properties": {
+        "from": { "$ref": "#/$defs/DealStage" },
+        "to": { "$ref": "#/$defs/DealStage" },
+        "reason": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "QuoteSent": {
+      "type": "object",
+      "required": ["erp_quote_id", "version", "public_url"],
+      "properties": {
+        "erp_quote_id": { "type": "integer" },
+        "version": { "type": "integer", "minimum": 1 },
+        "public_url": { "type": "string", "format": "uri" },
+        "valid_until": { "type": ["string", "null"], "format": "date" },
+        "total": { "$ref": "#/$defs/Amount" },
+        "currency": { "$ref": "#/$defs/Currency" }
+      },
+      "additionalProperties": false
+    },
+    "QuoteOutcome": {
+      "type": "object",
+      "required": ["erp_quote_id", "version"],
+      "properties": {
+        "erp_quote_id": { "type": "integer" },
+        "version": { "type": "integer", "minimum": 1 },
+        "reason": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "ContractSigned": {
+      "type": "object",
+      "required": ["erp_contract_id", "by"],
+      "properties": {
+        "erp_contract_id": { "type": "integer" },
+        "number": { "type": "string" },
+        "by": { "type": "string", "enum": ["client", "company", "both"] }
+      },
+      "additionalProperties": false
+    },
+    "InvoiceEvent": {
+      "type": "object",
+      "required": ["erp_invoice_id", "number", "amount", "currency", "due_date"],
+      "properties": {
+        "erp_invoice_id": { "type": "integer" },
+        "number": { "type": "string" },
+        "amount": { "$ref": "#/$defs/Amount" },
+        "currency": { "$ref": "#/$defs/Currency" },
+        "due_date": { "type": "string", "format": "date" },
+        "link": { "type": "string", "format": "uri", "description": "Ссылка на счёт в Cabinet" },
+        "erp_document_id": { "type": "integer" }
+      },
+      "additionalProperties": false
+    },
+    "DeliveryEvent": {
+      "type": "object",
+      "required": ["line_summary", "status"],
+      "properties": {
+        "line_summary": { "type": "string", "description": "Краткое описание строк, к которым относится событие" },
+        "line_nos": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
+        "status": { "type": "string", "enum": ["assembling", "in_transit", "ready_to_ship", "shipped", "delivered"] },
+        "eta": { "type": ["string", "null"], "format": "date" },
+        "previous_eta": { "type": ["string", "null"], "format": "date" },
+        "tracking": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "ActEvent": {
+      "type": "object",
+      "required": ["erp_act_id", "number"],
+      "properties": {
+        "erp_act_id": { "type": "integer" },
+        "number": { "type": "string" },
+        "reason": { "type": "string" },
+        "erp_document_id": { "type": "integer" }
+      },
+      "additionalProperties": false
+    },
+    "DealOutcome": {
+      "type": "object",
+      "required": ["amount", "currency"],
+      "properties": {
+        "amount": { "$ref": "#/$defs/Amount" },
+        "currency": { "$ref": "#/$defs/Currency" },
+        "lost_reason": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "DocumentCreated": {
+      "type": "object",
+      "required": ["erp_document_id", "kind", "number"],
+      "properties": {
+        "erp_document_id": { "type": "integer" },
+        "kind": { "type": "string", "enum": ["quote", "contract", "invoice", "act", "waybill", "receipt", "other"] },
+        "number": { "type": "string" },
+        "title": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "InviteSent": {
+      "type": "object",
+      "required": ["channels"],
+      "properties": {
+        "channels": { "type": "array", "minItems": 1, "items": { "type": "string", "enum": ["telegram", "email"] } },
+        "erp_contact_id": { "type": "integer" },
+        "crm_contact_id": { "type": "integer" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

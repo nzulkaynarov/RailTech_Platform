@@ -1,0 +1,1002 @@
+openapi: 3.1.0
+info:
+  title: RailTech Platform ERP — Integration API (CRM → ERP)
+  version: 0.1.0
+  summary: Пространство `/api/integration/v1/` — вызывает только CRM под сервисным токеном.
+  description: |
+    Контракт по `docs/CONTRACTS.md` §0 и §2. Версия 0 (M0-INF-02): форма запросов и ответов, по которой
+    ERP реализует приложение `integration` (M3-ERP-01), а CRM — `services/handoff` и коннектор ERP (M3-CRM-02/03).
+
+    Общие правила (§0): HTTPS, JSON, UTF-8; даты ISO-8601 с часовым поясом; деньги — строка с двумя знаками
+    и код валюты ISO-4217; идентификаторы — целые, непрозрачные для другой стороны. Ошибки ERP — `{"detail": "<CODE>"}`.
+    Все POST принимают `Idempotency-Key`; ERP хранит ключ 7 дней. Идентификатор клиента никогда не
+    приходит от модели.
+  contact:
+    name: RailTech Platform — docs/CONTRACTS.md
+servers:
+  - url: https://erp.railtech.uz/api/integration/v1
+    description: prod
+  - url: http://erp.localhost/api/integration/v1
+    description: стенд ансамбля (infra/compose)
+security:
+  - serviceToken: []
+tags:
+  - name: clients
+    description: Передача клиента из CRM (лид → клиент)
+  - name: contacts
+  - name: companies
+  - name: deals
+  - name: documents
+  - name: catalog
+  - name: users
+    description: Провижининг сотрудников и отзыв сессий (ADR-0003)
+  - name: system
+
+paths:
+  /clients/handoff:
+    post:
+      tags: [clients]
+      operationId: handoffClient
+      summary: Передача клиента из CRM в бэк-офис
+      description: |
+        Создаёт (или находит по `crm_client_id`) компанию-контрагента и контакты, при `create_request: true` —
+        заявку с резюме потребности, отправляет приглашение в Cabinet по указанным каналам.
+        Идемпотентно по `crm_client_id`: повторный вызов возвращает те же идентификаторы и не создаёт дублей.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HandoffRequest'
+      responses:
+        '200':
+          description: Клиент уже передавался — возвращены существующие идентификаторы
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HandoffResponse'
+        '201':
+          description: Компания создана (и заявка, если запрошена)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HandoffResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /contacts/{crm_contact_id}:
+    put:
+      tags: [contacts]
+      operationId: upsertContact
+      summary: Обновление контакта или его Telegram-привязки
+      parameters:
+        - $ref: '#/components/parameters/CrmContactId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactIn'
+      responses:
+        '200':
+          description: Контакт обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contact'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /companies/{erp_company_id}/summary:
+    get:
+      tags: [companies]
+      operationId: getCompanySummary
+      summary: Карточка клиента для CRM
+      parameters:
+        - $ref: '#/components/parameters/ErpCompanyId'
+      responses:
+        '200':
+          description: Открытые сделки, последний документ, дебиторка, ближайшая поставка
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanySummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /companies/{erp_company_id}/deals:
+    get:
+      tags: [deals]
+      operationId: listCompanyDeals
+      summary: Список сделок компании
+      parameters:
+        - $ref: '#/components/parameters/ErpCompanyId'
+      responses:
+        '200':
+          description: Сделки компании
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DealListItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /deals/{erp_deal_id}:
+    get:
+      tags: [deals]
+      operationId: getDeal
+      summary: Сделка (проекция для CRM)
+      parameters:
+        - $ref: '#/components/parameters/ErpDealId'
+      responses:
+        '200':
+          description: Стадия, КП, договор, счета, поставки (проекция клиента), акты
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /deals/{erp_deal_id}/documents:
+    get:
+      tags: [documents]
+      operationId: listDealDocuments
+      summary: Документы сделки
+      parameters:
+        - $ref: '#/components/parameters/ErpDealId'
+      responses:
+        '200':
+          description: Документы без файлов (файл — через `/documents/{id}/link`)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Document'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /documents/{erp_document_id}/link:
+    get:
+      tags: [documents]
+      operationId: getDocumentLink
+      summary: Подписанная ссылка на файл документа
+      description: Ссылка живёт 10 минут; факт выдачи пишется в аудит ERP с `crm_*`-контекстом из заголовков.
+      parameters:
+        - $ref: '#/components/parameters/ErpDocumentId'
+        - name: X-CRM-Context
+          in: header
+          required: false
+          description: 'Контекст выдачи для аудита: JSON `{"crm_client_id": …, "crm_user_id"?: …, "channel": "bot|crm"}`.'
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Ссылка выдана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentLink'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /catalog/search:
+    get:
+      tags: [catalog]
+      operationId: searchCatalog
+      summary: Поиск по опубликованному слою каталога
+      description: |
+        В режиме `lead` — без цен и остатков (бот лиду называет перечень, но не цены). В режиме `client` —
+        с ценой и статусом наличия (решение владельца 2026-10-13: цены и наличие только клиенту).
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+        - name: mode
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/CatalogMode'
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+      responses:
+        '200':
+          description: Найденные позиции опубликованного слоя
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CatalogItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /users/provision:
+    post:
+      tags: [users]
+      operationId: provisionUser
+      summary: Сотрудник из CRM (источник истины по людям — CRM, ADR-0003)
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProvisionUserRequest'
+      responses:
+        '200':
+          description: Пользователь уже существовал — обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProvisionUserResponse'
+        '201':
+          description: Пользователь создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProvisionUserResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /users/{crm_user_id}/sessions:
+    delete:
+      tags: [users]
+      operationId: revokeUserSessions
+      summary: Отзыв всех сессий сотрудника в ERP (при снятии доступа в CRM)
+      parameters:
+        - name: crm_user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Сессии отозваны (в том числе если их не было)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /ai-usage:
+    get:
+      tags: [system]
+      operationId: getAiUsage
+      summary: Расходы ERP на модели по дням (дашборд «Расходы» в CRM, M3-CRM-09)
+      parameters:
+        - name: date_from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Расходы по дням, функциям и моделям
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AiUsageRow'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /health:
+    get:
+      tags: [system]
+      operationId: getIntegrationHealth
+      summary: Здоровье ERP для страницы «Состояние системы» CRM
+      responses:
+        '200':
+          description: ERP жива
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          description: ERP деградировала (миграции не применены или очередь мертва)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+
+components:
+  securitySchemes:
+    serviceToken:
+      type: http
+      scheme: bearer
+      description: Сервисный токен направления `CRM→ERP` из окружения; два активных токена для ротации без простоя.
+
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: UUID запроса; ERP хранит ключ 7 дней и возвращает первый ответ на повтор.
+      schema:
+        type: string
+        format: uuid
+    CrmContactId:
+      name: crm_contact_id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    ErpCompanyId:
+      name: erp_company_id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    ErpDealId:
+      name: erp_deal_id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    ErpDocumentId:
+      name: erp_document_id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+
+  responses:
+    Unauthorized:
+      description: Сервисный токен отсутствует или недействителен
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Объект не найден
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ValidationError:
+      description: Тело запроса не прошло проверку
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    Error:
+      type: object
+      description: 'Формат ошибки ERP: `{"detail": "<CODE>"}`.'
+      required: [detail]
+      properties:
+        detail:
+          type: string
+          examples: [NOT_FOUND, IDEMPOTENCY_CONFLICT, VALIDATION_ERROR]
+      additionalProperties: false
+
+    Language:
+      type: string
+      enum: [ru, uz, en]
+
+    PreferredChannel:
+      type: string
+      description: Предпочитаемый канал контакта (ARCHITECTURE §18)
+      enum: [telegram, email, both]
+
+    Currency:
+      type: string
+      description: Код валюты ISO-4217
+      pattern: '^[A-Z]{3}$'
+      examples: [UZS, USD]
+
+    Amount:
+      type: string
+      description: Денежная сумма — строка с двумя знаками после точки
+      pattern: '^-?\d+\.\d{2}$'
+      examples: ['1250000.00']
+
+    Money:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount:
+          $ref: '#/components/schemas/Amount'
+        currency:
+          $ref: '#/components/schemas/Currency'
+      additionalProperties: false
+
+    ContactIn:
+      type: object
+      required: [crm_contact_id, name, language, is_primary, preferred_channel]
+      properties:
+        crm_contact_id:
+          type: integer
+          format: int64
+        name:
+          type: string
+          maxLength: 200
+        phone:
+          type: string
+          maxLength: 32
+        email:
+          type: string
+          format: email
+        telegram_user_id:
+          type: integer
+          format: int64
+        language:
+          $ref: '#/components/schemas/Language'
+        is_primary:
+          type: boolean
+        preferred_channel:
+          $ref: '#/components/schemas/PreferredChannel'
+      additionalProperties: false
+
+    Contact:
+      allOf:
+        - $ref: '#/components/schemas/ContactIn'
+        - type: object
+          required: [erp_contact_id, erp_company_id]
+          properties:
+            erp_contact_id:
+              type: integer
+              format: int64
+            erp_company_id:
+              type: integer
+              format: int64
+            cabinet_invited_at:
+              type: [string, 'null']
+              format: date-time
+
+    Attachment:
+      type: object
+      description: Вложение из CRM — подписанная ссылка на файл в хранилище CRM, ERP копирует к себе
+      required: [name, url]
+      properties:
+        name:
+          type: string
+        url:
+          type: string
+          format: uri
+        content_type:
+          type: string
+        size_bytes:
+          type: integer
+          minimum: 0
+      additionalProperties: false
+
+    HandoffRequest:
+      type: object
+      required: [crm_client_id, company, contacts, need, owner, consent, create_request, invite]
+      properties:
+        crm_client_id:
+          type: integer
+          format: int64
+        crm_lead_id:
+          type: integer
+          format: int64
+        company:
+          type: object
+          required: [name, language]
+          properties:
+            name:
+              type: string
+              maxLength: 300
+            inn:
+              type: string
+              maxLength: 20
+            segment:
+              type: string
+              maxLength: 100
+            language:
+              $ref: '#/components/schemas/Language'
+          additionalProperties: false
+        contacts:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ContactIn'
+        need:
+          type: object
+          required: [summary]
+          properties:
+            summary:
+              type: string
+              maxLength: 5000
+            product_interest:
+              type: array
+              items:
+                type: string
+            attachments:
+              type: array
+              items:
+                $ref: '#/components/schemas/Attachment'
+          additionalProperties: false
+        owner:
+          type: object
+          description: Ответственный фронт-офиса
+          required: [crm_user_id, name]
+          properties:
+            crm_user_id:
+              type: integer
+              format: int64
+            name:
+              type: string
+          additionalProperties: false
+        consent:
+          type: object
+          required: [given_at, version]
+          properties:
+            given_at:
+              type: string
+              format: date-time
+            version:
+              type: string
+          additionalProperties: false
+        create_request:
+          type: boolean
+          description: Создать заявку из резюме потребности (false — кабинет по приглашению без запроса, ARCHITECTURE §17)
+        invite:
+          type: object
+          required: [channels]
+          properties:
+            channels:
+              type: array
+              items:
+                type: string
+                enum: [telegram, email]
+          additionalProperties: false
+      additionalProperties: false
+
+    HandoffResponse:
+      type: object
+      required: [erp_company_id, invite]
+      properties:
+        erp_company_id:
+          type: integer
+          format: int64
+        erp_request_id:
+          type: [integer, 'null']
+          format: int64
+        invite:
+          type: object
+          required: [sent_via, cabinet_url]
+          properties:
+            sent_via:
+              type: array
+              items:
+                type: string
+                enum: [telegram, email]
+            cabinet_url:
+              type: string
+              format: uri
+          additionalProperties: false
+      additionalProperties: false
+
+    DealStage:
+      type: string
+      description: Стадии сделки ERP (словарь сеется миграцией, M1-ERP-03); значения — стабильные коды
+      enum: [request, quoting, quote_sent, accepted, contract, invoiced, paid, fulfilment, closing, won, lost]
+
+    DealListItem:
+      type: object
+      required: [erp_deal_id, number, title, stage, amount, currency, updated_at]
+      properties:
+        erp_deal_id:
+          type: integer
+          format: int64
+        number:
+          type: string
+        title:
+          type: string
+        stage:
+          $ref: '#/components/schemas/DealStage'
+        amount:
+          $ref: '#/components/schemas/Amount'
+        currency:
+          $ref: '#/components/schemas/Currency'
+        next_step:
+          type: [string, 'null']
+        updated_at:
+          type: string
+          format: date-time
+
+    CompanySummary:
+      type: object
+      required: [erp_company_id, crm_client_id, name, open_deals, receivables]
+      properties:
+        erp_company_id:
+          type: integer
+          format: int64
+        crm_client_id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        open_deals:
+          type: array
+          items:
+            $ref: '#/components/schemas/DealListItem'
+        last_document:
+          oneOf:
+            - $ref: '#/components/schemas/Document'
+            - type: 'null'
+        receivables:
+          $ref: '#/components/schemas/Money'
+        next_delivery:
+          oneOf:
+            - $ref: '#/components/schemas/DeliveryLine'
+            - type: 'null'
+
+    QuoteStatus:
+      type: string
+      enum: [draft, approval, sent, viewed, accepted, rejected, expired]
+
+    QuoteSummary:
+      type: object
+      required: [erp_quote_id, version, status]
+      properties:
+        erp_quote_id:
+          type: integer
+          format: int64
+        version:
+          type: integer
+          minimum: 1
+        status:
+          $ref: '#/components/schemas/QuoteStatus'
+        public_url:
+          type: [string, 'null']
+          format: uri
+        valid_until:
+          type: [string, 'null']
+          format: date
+        total:
+          $ref: '#/components/schemas/Money'
+
+    ContractStatus:
+      type: string
+      enum: [draft, sent, signed_by_client, signed_by_company, signed, cancelled]
+
+    ContractSummary:
+      type: object
+      required: [erp_contract_id, number, status]
+      properties:
+        erp_contract_id:
+          type: integer
+          format: int64
+        number:
+          type: string
+        status:
+          $ref: '#/components/schemas/ContractStatus'
+        signed_at:
+          type: [string, 'null']
+          format: date-time
+
+    InvoiceStatus:
+      type: string
+      enum: [issued, partially_paid, paid, overdue, cancelled]
+
+    InvoiceSummary:
+      type: object
+      required: [erp_invoice_id, number, status, total, due_date]
+      properties:
+        erp_invoice_id:
+          type: integer
+          format: int64
+        number:
+          type: string
+        status:
+          $ref: '#/components/schemas/InvoiceStatus'
+        total:
+          $ref: '#/components/schemas/Money'
+        paid:
+          $ref: '#/components/schemas/Money'
+        due_date:
+          type: string
+          format: date
+
+    DeliveryStatus:
+      type: string
+      description: 'Проекция для клиента (BUSINESS §9): комплектуем / в пути к нам / готово к отгрузке / отгружено'
+      enum: [assembling, in_transit, ready_to_ship, shipped, delivered]
+
+    DeliveryLine:
+      type: object
+      description: Строка поставки в проекции клиента — без поставщика, цен и себестоимости
+      required: [erp_deal_id, line_no, title, status]
+      properties:
+        erp_deal_id:
+          type: integer
+          format: int64
+        line_no:
+          type: integer
+          minimum: 1
+        title:
+          type: string
+        quantity:
+          type: string
+          description: Количество как десятичная строка
+        unit:
+          type: string
+        status:
+          $ref: '#/components/schemas/DeliveryStatus'
+        eta:
+          type: [string, 'null']
+          format: date
+        tracking:
+          type: [string, 'null']
+
+    ActStatus:
+      type: string
+      enum: [issued, accepted, returned]
+
+    ActSummary:
+      type: object
+      required: [erp_act_id, number, status]
+      properties:
+        erp_act_id:
+          type: integer
+          format: int64
+        number:
+          type: string
+        status:
+          $ref: '#/components/schemas/ActStatus'
+        issued_at:
+          type: string
+          format: date-time
+
+    Deal:
+      allOf:
+        - $ref: '#/components/schemas/DealListItem'
+        - type: object
+          required: [erp_company_id, crm_client_id, quotes, contracts, invoices, deliveries, acts]
+          properties:
+            erp_company_id:
+              type: integer
+              format: int64
+            crm_client_id:
+              type: integer
+              format: int64
+            quotes:
+              type: array
+              items:
+                $ref: '#/components/schemas/QuoteSummary'
+            contracts:
+              type: array
+              items:
+                $ref: '#/components/schemas/ContractSummary'
+            invoices:
+              type: array
+              items:
+                $ref: '#/components/schemas/InvoiceSummary'
+            deliveries:
+              type: array
+              items:
+                $ref: '#/components/schemas/DeliveryLine'
+            acts:
+              type: array
+              items:
+                $ref: '#/components/schemas/ActSummary'
+
+    DocumentKind:
+      type: string
+      enum: [quote, contract, invoice, act, waybill, receipt, other]
+
+    Document:
+      type: object
+      required: [erp_document_id, kind, number, date, title, status]
+      properties:
+        erp_document_id:
+          type: integer
+          format: int64
+        erp_deal_id:
+          type: [integer, 'null']
+          format: int64
+        kind:
+          $ref: '#/components/schemas/DocumentKind'
+        number:
+          type: string
+        date:
+          type: string
+          format: date
+        title:
+          type: string
+        status:
+          type: string
+          description: Статус из словаря соответствующего вида документа
+
+    DocumentLink:
+      type: object
+      required: [url, expires_at, file_name, content_type]
+      properties:
+        url:
+          type: string
+          format: uri
+        expires_at:
+          type: string
+          format: date-time
+        file_name:
+          type: string
+        content_type:
+          type: string
+        size_bytes:
+          type: integer
+          minimum: 0
+      additionalProperties: false
+
+    CatalogMode:
+      type: string
+      description: '`lead` — без цен и остатков; `client` — с ценой и наличием'
+      enum: [lead, client]
+
+    Availability:
+      type: string
+      description: 'Наличие как статус (BUSINESS §10.1): в наличии / под заказ / ожидается'
+      enum: [in_stock, on_order, expected]
+
+    CatalogItem:
+      type: object
+      description: Позиция опубликованного слоя. Поля `price`, `availability`, `lead_time_days` присутствуют только в режиме `client` и только если политика карточки — `cabinet`
+      required: [erp_product_id, kind, name, unit]
+      properties:
+        erp_product_id:
+          type: integer
+          format: int64
+        kind:
+          type: string
+          enum: [goods, service]
+        name:
+          type: string
+        description:
+          type: string
+        unit:
+          type: string
+        price:
+          oneOf:
+            - $ref: '#/components/schemas/Money'
+            - type: 'null'
+          description: '`null` — «цена по запросу» (политика `on_request`)'
+        availability:
+          oneOf:
+            - $ref: '#/components/schemas/Availability'
+            - type: 'null'
+        lead_time_days:
+          type: [integer, 'null']
+          minimum: 0
+
+    ProvisionUserRequest:
+      type: object
+      required: [crm_user_id, email, name, role, permissions]
+      properties:
+        crm_user_id:
+          type: integer
+          format: int64
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          type: string
+          description: '`admin` в CRM = суперпользователь ERP; `backoffice` — роли по `permissions`'
+          enum: [admin, backoffice]
+        permissions:
+          type: array
+          description: 'Права бэк-офиса: `quote.*`, `contract.*`, `finance.*`, `catalog.*`, `supply.*` (M1-ERP-05)'
+          items:
+            type: string
+            pattern: '^(quote|contract|finance|catalog|supply)\.[a-z_*]+$'
+        is_active:
+          type: boolean
+          default: true
+      additionalProperties: false
+
+    ProvisionUserResponse:
+      type: object
+      required: [erp_user_id, crm_user_id]
+      properties:
+        erp_user_id:
+          type: integer
+          format: int64
+        crm_user_id:
+          type: integer
+          format: int64
+      additionalProperties: false
+
+    AiUsageRow:
+      type: object
+      required: [date, system, feature, model, calls, cost_usd]
+      properties:
+        date:
+          type: string
+          format: date
+        system:
+          type: string
+          const: erp
+        feature:
+          type: string
+          description: 'Функция ERP: intake, match, draft, enrich, pricelist'
+        model:
+          type: string
+          description: Алиас модели в LiteLLM
+        calls:
+          type: integer
+          minimum: 0
+        input_tokens:
+          type: integer
+          minimum: 0
+        output_tokens:
+          type: integer
+          minimum: 0
+        cost_usd:
+          type: string
+          pattern: '^\d+\.\d{4,6}$'
+      additionalProperties: false
+
+    Health:
+      type: object
+      required: [status, version, migrations_applied, queue_alive, checked_at]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        version:
+          type: string
+          description: Версия ERP (git sha или тег образа)
+        migrations_applied:
+          type: boolean
+        queue_alive:
+          type: boolean
+          description: Celery-воркер отвечает на ping
+        checked_at:
+          type: string
+          format: date-time
+      additionalProperties: false

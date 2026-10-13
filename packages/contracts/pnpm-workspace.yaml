@@ -1,0 +1,7 @@
+# pnpm 11: build-скрипты зависимостей разрешаются явно (supply-chain). Пакет один, workspace без подпакетов.
+packages:
+  - .
+allowBuilds:
+  esbuild: true
+  core-js: false
+  protobufjs: false
