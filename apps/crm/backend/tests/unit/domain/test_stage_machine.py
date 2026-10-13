@@ -93,6 +93,21 @@ def test_same_stage_is_noop(stage: S) -> None:
     assert not decision.changed
 
 
+@pytest.mark.parametrize(("current", "target"), [(c, t) for c in S for t in S if c is not t])
+def test_erp_source_never_moves_the_lead(current: S, target: S) -> None:
+    """ADR-0022: итог сделки из ERP (`deal.won`/`deal.lost`) не меняет стадию лида."""
+    decision = decide(current, target, Src.ERP)
+    assert not decision.allowed
+    assert not decision.changed
+    assert decision.reason == "erp events never move the lead stage"
+
+
+def test_erp_source_has_no_edges_in_the_table() -> None:
+    from app.domain.stage_machine import _ALLOWED
+
+    assert all(Src.ERP not in sources for sources in _ALLOWED.values())
+
+
 @pytest.mark.parametrize(
     ("history", "expected"),
     [

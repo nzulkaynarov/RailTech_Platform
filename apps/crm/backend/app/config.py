@@ -78,6 +78,11 @@ class Settings(BaseSettings):
     # Ключ Fernet для секретов интеграций в БД (токен бота из «Подключений»). Без него — только env.
     secrets_key: SecretStr = SecretStr("")
 
+    # Коннектор «ERP» (ADR-0022, M3-CRM-02): пусто — коннектор не настроен, жизненный цикл в режиме
+    # `local`. Токен из «Подключений» (БД) имеет приоритет над env, как у бота (ADR-0018).
+    erp_base_url: str = ""
+    erp_service_token: SecretStr = SecretStr("")
+
     jwt_secret: SecretStr = SecretStr("")
     access_token_ttl_s: int = Field(default=900, ge=60)
     refresh_token_ttl_days: int = Field(default=30, ge=1)

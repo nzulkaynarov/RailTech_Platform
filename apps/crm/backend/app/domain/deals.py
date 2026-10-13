@@ -75,3 +75,26 @@ def plan_lead_outcome(
         stage=DealStage.LOST,
         lost_reason=lost_reason(reason_code, dictionary),
     )
+
+
+@dataclass(frozen=True, slots=True)
+class ErpOutcome:
+    """Что сделать с зеркалом сделки по событию ERP (ADR-0022, CONTRACTS §3)."""
+
+    stage: DealStage
+    changed: bool
+    lost_reason: str | None
+
+
+def plan_erp_outcome(event: str, current: DealStage, lost_reason_text: str | None) -> ErpOutcome:
+    """`deal.won` → `won`, `deal.lost` → `lost` с причиной текстом ERP (без справочника CRM).
+
+    ERP — источник истины для зеркала: `won` не финал для ERP (переоткрытие там возможно),
+    повтор того же события ничего не меняет. Стадия лида этим не затрагивается.
+    """
+    if event not in ("deal.won", "deal.lost"):
+        raise ValueError(f"not a deal outcome event: {event}")
+    if event == "deal.won":
+        return ErpOutcome(stage=DealStage.WON, changed=current != DealStage.WON, lost_reason=None)
+    reason = (lost_reason_text or "").strip() or OTHER_REASON
+    return ErpOutcome(stage=DealStage.LOST, changed=current != DealStage.LOST, lost_reason=reason)

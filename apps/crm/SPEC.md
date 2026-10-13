@@ -1,6 +1,6 @@
 # RailTech CRM — техническое задание (SPEC)
 
-Версия 2.3 · 2026-10-09 (RustFS — ADR-0009; модели — ADR-0004; docling-serve и MCP SDK — ADR-0011; жизненный цикл без тупиков — ADR-0015; квалификация и цена по правилам — ADR-0016)
+Версия 2.4 · 2026-10-13 (RustFS — ADR-0009; модели — ADR-0004; docling-serve и MCP SDK — ADR-0011; жизненный цикл без тупиков — ADR-0015; квалификация и цена по правилам — ADR-0016; передача в бэк-офис и итог из ERP — ADR-0022, proposed)
 
 Документ описывает, *как* устроена система: архитектура, ядро, данные, агенты, интерфейсы, безопасность, стенды, связи. Порядок реализации — в `PLAN.md`; зачем всё это — в `BUSINESS.md`; правила работы для Claude Code — в `CLAUDE.md`.
 
@@ -318,6 +318,8 @@ settings(key PK, value JSONB, schema_version INT, updated_by, updated_at)
 
 `new → engaged → qualified → handoff → in_progress → won → customer`; боковая: `lost` (выход — новое сообщение лида или «Забрать»); временная: `unresponsive`. Клиент может открыть новую сделку: `customer → in_progress → won|lost → customer` (ADR-0015).
 
+**Ансамбль CRM ↔ ERP (ADR-0022, proposed).** «Передан в бэк-офис» = стадия `customer`. Режим определяет код по факту «коннектор ERP настроен» (`integrations/erp.erp_connector_configured`, `domain/backoffice.py`): без коннектора (`local`) — поведение выше без изменений («Сделать клиентом» из `won`, итог сделки — действия CRM); с коннектором (`erp`) — «Передать в бэк-офис» (та же операция `make_customer`) из `in_progress` | `won` | `customer` с вызовом `POST /clients/handoff` (M3-CRM-03), итог сделки приходит событиями ERP `deal.won`/`deal.lost` в зеркало `deals` (`domain/deals.plan_erp_outcome`), **стадия лида событиями ERP не меняется**; в CRM из `in_progress` остаётся только «Закрыть отказом» (`may_close_locally`). Повторная передача тому же клиенту — идемпотентна (ничего не меняет, ERP не вызывается).
+
 ### 6.2. State machine (`domain/stage_machine.py`)
 
 ```python
@@ -340,6 +342,8 @@ ALLOWED = {
 }
 ```
 Квалификатор может предлагать только `engaged`, `qualified`. Всё остальное отклоняется с записью `rejected_reason`.
+
+Источник `erp` (`TransitionSource.ERP`, ADR-0022) не имеет ни одного ребра: `decide()` отклоняет любой переход из события ERP до обращения к таблице, в `stage_transitions` он не записывается. Из каких стадий разрешена передача в бэк-офис по режиму — `domain/backoffice.HANDOFF_FROM` (`local`: `won`, `customer`; `erp`: `in_progress`, `won`, `customer`), целевая стадия всегда `customer`.
 
 ### 6.3. Score (`domain/scoring.py`)
 
@@ -630,3 +634,4 @@ Refine — оболочка: `authProvider` (cookie JWT), `accessControlProvider
 | 0008 | HMAC-контекст для MCP вместо передачи идентификаторов моделью | 2 |
 | 0009 | S3-хранилище: RustFS вместо MinIO (community-сборки MinIO прекращены) | 0 |
 | 0010 | psycopg 3 — единственный драйвер PostgreSQL | 0 |
+| 0022 | Передача в бэк-офис = `customer`; итог сделки из ERP — в зеркало сделок; без коннектора — прежнее поведение | M3 (ансамбль) |
