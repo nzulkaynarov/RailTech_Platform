@@ -35,8 +35,9 @@ usage() {
 Стенд и его БД не используются; ключи и токен из .env в тесты не попадают.
 Логи — .ci-local/. Итог — таблица и код выхода 1 при любом сбое.
 Что дальше: всё ✔ — можно мержить PR; ✘ — смотрите лог задания в .ci-local/.
-Сборка упала с «cannot allocate memory» — стенду и сборке не хватает памяти Docker Desktop:
-повторите `scripts/ci_local.sh build` или увеличьте память в Settings → Resources.
+Сборка упала с «cannot allocate memory» или стенд остановлен Docker по памяти (итог предупредит) —
+стенду и сборке не хватает памяти Docker Desktop: увеличьте её в Settings → Resources (10–12 ГБ)
+или запускайте при остановленном стенде (make down), затем make up.
 EOF
 }
 
@@ -167,6 +168,7 @@ stage_build() {
   docker run --rm railtech-backup:ci python -m app s3-mirror --help >/dev/null
 }
 
+RUN_STARTED=$(date -u +%Y-%m-%dT%H:%M:%S)
 declare -a RESULT=()
 failed=0
 for s in "${STAGES[@]}"; do
@@ -190,5 +192,17 @@ for s in "${STAGES[@]}"; do
 done
 echo
 printf '%s\n' "${RESULT[@]}"
+# Сборка образов и e2e делят память Docker Desktop со стендом: при нехватке Docker убивает
+# контейнеры стенда (OOM, код 137). Сообщаем прямо, чтобы стенд не остался наполовину лежать.
+killed=$(docker ps -a --filter "label=com.docker.compose.project=railtech" --filter status=exited \
+  --format '{{.Names}}' | while read -r name; do
+  [ "$(docker inspect -f '{{.State.OOMKilled}}' "$name")" = true ] \
+    && [ "$(docker inspect -f '{{.State.FinishedAt}}' "$name")" \> "$RUN_STARTED" ] && echo "$name"
+done)
+if [ -n "$killed" ]; then
+  echo "⚠ Стенд: Docker остановил по нехватке памяти — $(echo $killed | tr '\n' ' ')"
+  echo "  Поднять обратно: make up. Чтобы не повторялось — Docker Desktop → Settings → Resources,"
+  echo "  память 10–12 ГБ, или запускайте scripts/ci_local.sh при остановленном стенде (make down)."
+fi
 [ $failed -eq 0 ] && echo "Локальный CI зелёный — можно мержить." || echo "Есть сбои — смотрите логи выше."
 exit $failed
