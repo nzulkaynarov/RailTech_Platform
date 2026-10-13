@@ -35,17 +35,34 @@ check-cabinet: ## Cabinet: появится с M2-CAB-01; пока кода не
 contracts: ## Валидация packages/contracts и генерация клиентов (M0-INF-02)
 	@if [ -f packages/contracts/Makefile ]; then $(MAKE) -C packages/contracts check; else echo "contracts: packages/contracts ещё не заполнен (M0-INF-02)"; exit 1; fi
 
-# --- Стенд ансамбля (три домена *.localhost; появится с M0-INF-03) -----------------
+# --- Стенд ансамбля: три домена *.localhost (infra/compose, M0-INF-03) ---------------
 
 COMPOSE := docker compose -f $(INFRA)/compose/base.yml -f $(INFRA)/compose/dev.yml --env-file .env
+HTTP_PORT ?= $(shell grep -E '^HTTP_PORT=' .env 2>/dev/null | cut -d= -f2)
+
+.PHONY: env
+env: ## Создать .env из .env.example со случайными секретами (идемпотентно)
+	./$(INFRA)/compose/make-env.sh
 
 .PHONY: up
 up: _compose-check ## Поднять весь ансамбль локально: crm.localhost, erp.localhost, cabinet.localhost
-	$(COMPOSE) up -d --build
+	$(COMPOSE) up -d --build --renew-anon-volumes
+
+.PHONY: up-obs
+up-obs: _compose-check ## То же + Langfuse (профиль observability): langfuse.localhost
+	$(COMPOSE) --profile observability up -d --build --renew-anon-volumes
+
+.PHONY: smoke
+smoke: ## /health трёх доменов через Caddy (порт HTTP_PORT из .env)
+	@port=$${HTTP_PORT:-$(or $(HTTP_PORT),80)}; ok=1; \
+	for host in crm erp cabinet; do \
+	  code=$$(curl -s -o /dev/null -w '%{http_code}' --resolve $$host.localhost:$$port:127.0.0.1 http://$$host.localhost:$$port/health); \
+	  printf '  %-18s /health → %s\n' $$host.localhost $$code; [ "$$code" = 200 ] || ok=0; \
+	done; [ $$ok = 1 ] && echo "smoke: ok" || { echo "smoke: FAIL"; exit 1; }
 
 .PHONY: down
 down: _compose-check ## Остановить стенд ансамбля (volumes сохраняются)
-	$(COMPOSE) down
+	$(COMPOSE) --profile observability down
 
 .PHONY: logs
 logs: _compose-check ## Логи стенда: make logs s=erp
@@ -57,7 +74,7 @@ ps: _compose-check ## Статус контейнеров стенда
 
 .PHONY: _compose-check
 _compose-check:
-	@test -f $(INFRA)/compose/base.yml || { echo "Стенд ансамбля ещё не описан: $(INFRA)/compose/base.yml появится в M0-INF-03. Пока CRM поднимается отдельно: make -C $(CRM) up"; exit 1; }
+	@test -f .env || { echo "Нет .env: выполните make env (создаст из .env.example)"; exit 1; }
 
 # --- Хуки --------------------------------------------------------------------------
 

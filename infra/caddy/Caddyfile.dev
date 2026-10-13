@@ -1,0 +1,62 @@
+# dev: три домена ансамбля на *.localhost без TLS (ARCHITECTURE §10). Браузеры резолвят *.localhost
+# в 127.0.0.1 сами; для curl — `--resolve crm.localhost:80:127.0.0.1` или запись в /etc/hosts.
+# prod-вариант с ACME и security headers — infra/caddy/Caddyfile.prod (M5-INF-01).
+{
+	auto_https off
+}
+
+# ─── CRM — фронт-офис (apps/crm) ───────────────────────────────────────────────────────────
+http://crm.localhost {
+	handle /api/* {
+		reverse_proxy crm-api:8000
+	}
+	handle /telegram/webhook {
+		reverse_proxy crm-api:8000
+	}
+	handle /health {
+		reverse_proxy crm-api:8000
+	}
+	handle /ready {
+		reverse_proxy crm-api:8000
+	}
+	handle {
+		reverse_proxy crm-web:5173
+	}
+}
+
+# ─── ERP — бэк-офис: заготовка до M1-ERP-01 (apps/erp) ─────────────────────────────────────
+http://erp.localhost {
+	handle /health {
+		header Content-Type application/json
+		respond `{"status":"ok","system":"erp","stub":true,"next":"M1-ERP-01"}` 200
+	}
+	handle /api/* {
+		header Content-Type application/json
+		respond `{"detail":"ERP_NOT_IMPLEMENTED"}` 503
+	}
+	handle {
+		header Content-Type "text/plain; charset=utf-8"
+		respond "ERP (erp.localhost) — заготовка. Приложение apps/erp появится на вехе M1 (ORCHESTRATOR §6)." 200
+	}
+}
+
+# ─── Cabinet — кабинет клиента: заготовка до M2-CAB-01 (apps/cabinet) ──────────────────────
+http://cabinet.localhost {
+	handle /health {
+		header Content-Type application/json
+		respond `{"status":"ok","system":"cabinet","stub":true,"next":"M2-CAB-01"}` 200
+	}
+	handle {
+		header Content-Type "text/plain; charset=utf-8"
+		respond "Cabinet (cabinet.localhost) — заготовка. Приложение apps/cabinet появится на вехе M2 (ORCHESTRATOR §6)." 200
+	}
+}
+
+# ─── Служебные интерфейсы (только dev) ─────────────────────────────────────────────────────
+http://langfuse.localhost {
+	reverse_proxy langfuse-web:3000
+}
+
+http://s3.localhost {
+	reverse_proxy rustfs:9001
+}

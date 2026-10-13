@@ -1,0 +1,91 @@
+# dev-стенд ансамбля: hot reload CRM, порты наружу только на 127.0.0.1, без TLS.
+# Порты на хосте задаются в .env (HTTP_PORT, DEV_*_PORT), если заняты другим проектом.
+
+services:
+  postgres:
+    ports: ["127.0.0.1:${DEV_POSTGRES_PORT:-5432}:5432"]
+
+  redis:
+    ports: ["127.0.0.1:${DEV_REDIS_PORT:-6379}:6379"]
+
+  rustfs:
+    environment:
+      RUSTFS_CONSOLE_ENABLE: "true"
+    ports: ["127.0.0.1:${DEV_S3_PORT:-9000}:9000", "127.0.0.1:${DEV_S3_CONSOLE_PORT:-9001}:9001"]
+
+  litellm:
+    ports: ["127.0.0.1:${DEV_LITELLM_PORT:-4000}:4000"]
+
+  crm-migrate:
+    build: { target: dev }
+    volumes: &crm-src
+      - ../../apps/crm/backend/app:/app/app:ro
+      - ../../apps/crm/backend/alembic:/app/alembic:ro
+      - ../../apps/crm/backend/alembic.ini:/app/alembic.ini:ro
+      - ../../apps/crm/backend/prompts:/app/prompts:ro
+      - ../../apps/crm/backend/evals:/app/evals:ro
+      - ../../apps/crm/backend/tests:/app/tests:ro
+
+  litellm-seed:
+    build: { target: dev }
+    volumes:
+      - ../../apps/crm/backend/app:/app/app:ro
+      - ../ai/litellm.models.yaml:/app/litellm.models.yaml:ro
+
+  crm-api:
+    build: { target: dev }
+    command: ["python", "-m", "app", "api", "--reload"]
+    volumes:
+      - ../../apps/crm/backend/app:/app/app:ro
+      - ../../apps/crm/backend/alembic:/app/alembic:ro
+      - ../../apps/crm/backend/alembic.ini:/app/alembic.ini:ro
+      - ../../apps/crm/backend/prompts:/app/prompts:ro
+      - ../../apps/crm/backend/evals:/app/evals:ro
+      - ../../apps/crm/backend/tests:/app/tests:ro
+      - ../../apps/crm/infra/casbin:/app/casbin:ro
+      - ../ai/litellm.models.yaml:/app/litellm.models.yaml:ro
+      - crm_backups:/backups
+    ports: ["127.0.0.1:${DEV_CRM_API_PORT:-8000}:8000"]
+
+  crm-worker:
+    build: { target: dev }
+    volumes: *crm-src
+    restart: unless-stopped
+
+  crm-mcp-kb:
+    build: { target: dev }
+    volumes: *crm-src
+
+  crm-mcp-crm:
+    build: { target: dev }
+    volumes: *crm-src
+
+  crm-mcp-docs:
+    build: { target: dev }
+    volumes: *crm-src
+
+  crm-web:
+    build: { target: dev }
+    restart: unless-stopped
+    environment:
+      VITE_API_PROXY_TARGET: http://crm-api:8000
+    volumes:
+      - ../../apps/crm/frontend:/web
+      - /web/node_modules
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:5173/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+
+  caddy:
+    volumes:
+      - ../caddy/Caddyfile.dev:/etc/caddy/Caddyfile:ro
+    ports: ["${HTTP_PORT:-80}:80"]
+
+  clickhouse:
+    ports: ["127.0.0.1:${DEV_CLICKHOUSE_PORT:-8123}:8123"]
+
+  langfuse-web:
+    ports: ["127.0.0.1:${DEV_LANGFUSE_PORT:-3000}:3000"]

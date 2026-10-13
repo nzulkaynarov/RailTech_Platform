@@ -1,0 +1,433 @@
+# Стенд ансамбля RailTech Platform (ARCHITECTURE §10, ORCHESTRATOR §2): один PostgreSQL 17 с базами
+# `crm` (pgvector) и `erp`, один Redis, один RustFS, LiteLLM + Langfuse, Caddy на три домена.
+# Запуск только через overrides (корневой Makefile):
+#   dev:  make up        (base.yml + dev.yml) — crm.localhost, erp.localhost, cabinet.localhost
+#   prod: make up-prod   (base.yml + prod.yml) — появится в M5-INF-01
+# Langfuse — профиль `observability` (make up-obs). Бэкапы — профиль `backup` (M5-INF-01).
+#
+# Сервисы CRM перенесены из apps/crm/infra/docker-compose.yml с префиксом `crm-`; код и образы — те же.
+# ERP (M1) и Cabinet (M2) пока заглушки в Caddy: erp.localhost и cabinet.localhost отвечают /health 200.
+
+name: rt-platform
+
+x-crm-backend: &crm-backend
+  build:
+    context: ../../apps/crm/backend
+    target: prod
+  # Только нужные backend переменные, без env_file: ключи провайдеров и секреты инфраструктуры
+  # в api/worker не попадают (CRM SPEC §11).
+  environment: &crm-backend-env
+    APP_ENV: ${APP_ENV:-dev}
+    LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    LOG_FORMAT: ${LOG_FORMAT:-json}
+    READY_CHECK_TIMEOUT_S: ${READY_CHECK_TIMEOUT_S:-2}
+    POSTGRES_HOST: postgres
+    POSTGRES_PORT: "5432"
+    POSTGRES_DB: crm
+    POSTGRES_USER: ${POSTGRES_USER}
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    S3_ENDPOINT: http://rustfs:9000
+    S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+    S3_SECRET_KEY: ${S3_SECRET_KEY}
+    LITELLM_BASE_URL: http://litellm:4000
+    LITELLM_API_KEY: ${LITELLM_MASTER_KEY}
+    DOCLING_URL: http://docling:5001
+    DOCLING_API_KEY: ${DOCLING_API_KEY}
+    AGENT_CONTEXT_KEY: ${CRM_AGENT_CONTEXT_KEY}
+    JWT_SECRET: ${CRM_JWT_SECRET}
+    SECRETS_KEY: ${CRM_SECRETS_KEY:-}
+    TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+    TELEGRAM_MODE: ${TELEGRAM_MODE:-polling}
+    TELEGRAM_WEBHOOK_URL: ${TELEGRAM_WEBHOOK_URL:-}
+    TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
+    LANGFUSE_HOST: http://langfuse-web:3000
+    LANGFUSE_PUBLIC_KEY: ${CRM_LANGFUSE_PUBLIC_KEY:-}
+    LANGFUSE_SECRET_KEY: ${CRM_LANGFUSE_SECRET_KEY:-}
+    KB_MCP_URL: http://crm-mcp-kb:8101/mcp
+    CRM_MCP_URL: http://crm-mcp-crm:8102/mcp
+    DOCS_MCP_URL: http://crm-mcp-docs:8103/mcp
+
+services:
+  # ─── Общая инфраструктура ──────────────────────────────────────────────────────────────────
+
+  postgres:
+    image: pgvector/pgvector:0.8.7-pg17
+    environment:
+      # Первичная база контейнера — `crm`; остальные (`erp`, `litellm`, `langfuse`) создаёт db-init.
+      POSTGRES_DB: crm
+      POSTGRES_USER: ${POSTGRES_USER:?set in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      TZ: UTC
+      PGTZ: UTC
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d crm"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Базы ансамбля (ADR-0002: две базы на одной инстанции) + служебные базы LiteLLM и Langfuse.
+  # Идемпотентно: работает и на пустом томе, и на существующем.
+  db-init:
+    image: pgvector/pgvector:0.8.7-pg17
+    restart: "no"
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: crm
+    volumes:
+      - ../db/init-databases.sh:/init-databases.sh:ro
+    command: ["bash", "/init-databases.sh", "crm", "erp", "litellm", "langfuse"]
+    healthcheck:
+      disable: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Один Redis на ансамбль, раздельные БД: 0 — Langfuse (BullMQ), 1 — ERP Celery (M1), 2 — ERP Channels (M1).
+  # CRM Redis не использует (очередь — Procrastinate в Postgres).
+  redis:
+    image: redis:7.4.11
+    command: ["--requirepass", "${REDIS_PASSWORD:?set in .env}", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redis_data:/data
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep -q PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # S3-хранилище файлов — RustFS (CRM ADR-0009). Бакеты CRM как были; `erp` — для ERP (M1).
+  rustfs:
+    image: rustfs/rustfs:1.0.1
+    environment:
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY:?set in .env}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY:?set in .env}
+      RUSTFS_ADDRESS: 0.0.0.0:9000
+      RUSTFS_CONSOLE_ENABLE: "false"
+      RUSTFS_CONSOLE_ADDRESS: 0.0.0.0:9001
+    volumes:
+      - s3_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  s3-init:
+    image: rustfs/rustfs:1.0.1
+    restart: "no"
+    entrypoint: ["sh", "-ec"]
+    command:
+      - >-
+        credentials="$${S3_ACCESS_KEY}:$${S3_SECRET_KEY}";
+        for bucket in $${S3_BUCKETS}; do
+        curl -fsS -o /dev/null --aws-sigv4 "aws:amz:us-east-1:s3"
+        --user "$${credentials}" -X PUT "http://rustfs:9000/$${bucket}";
+        echo "bucket ready: $${bucket}";
+        done
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      # CRM: kb-sources client-documents tg-attachments (app/config.py); Langfuse: langfuse; ERP: erp.
+      S3_BUCKETS: langfuse kb-sources client-documents tg-attachments erp
+    healthcheck:
+      disable: true
+    depends_on:
+      rustfs:
+        condition: service_healthy
+
+  # ─── ИИ: общий шлюз (ADR-0005) ──────────────────────────────────────────────────────────────
+
+  litellm:
+    image: ghcr.io/berriai/litellm:v1.105.0
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?set in .env}
+      # Модели — в БД LiteLLM, меняются из консоли админа CRM без перезапуска (CRM ADR-0020).
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/litellm
+      STORE_MODEL_IN_DB: "True"
+      LITELLM_SALT_KEY: ${LITELLM_SALT_KEY:?set in .env}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    volumes:
+      - ../ai/litellm.config.yaml:/app/config.yaml:ro
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - python3
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://localhost:4000/health/liveliness', timeout=3)
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+  # Алиасы по умолчанию в БД LiteLLM (CRM + ERP): создаёт только отсутствующие (CRM ADR-0020).
+  litellm-seed:
+    <<: *crm-backend
+    command: ["python", "-m", "app", "litellm-seed"]
+    restart: "no"
+    volumes:
+      - ../ai/litellm.models.yaml:/app/litellm.models.yaml:ro
+    healthcheck:
+      disable: true
+    depends_on:
+      litellm:
+        condition: service_healthy
+
+  # Конвертация документов базы знаний CRM (CRM ADR-0011).
+  docling:
+    image: ghcr.io/docling-project/docling-serve-cpu:v1.36.0
+    environment:
+      DOCLING_SERVE_API_KEY: ${DOCLING_API_KEY:?set in .env}
+      DOCLING_SERVE_ENABLE_UI: "false"
+      DOCLING_SERVE_MAX_SYNC_WAIT: "600"
+      DOCLING_SERVE_ENG_LOC_NUM_WORKERS: "1"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://localhost:5001/health', timeout=3)
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+
+  # ─── CRM (apps/crm) ─────────────────────────────────────────────────────────────────────────
+
+  crm-migrate:
+    <<: *crm-backend
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+    healthcheck:
+      disable: true
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+
+  crm-api:
+    <<: *crm-backend
+    command: ["python", "-m", "app", "api"]
+    environment:
+      <<: *crm-backend-env
+      FORWARDED_ALLOW_IPS: "*"
+    volumes:
+      - ../../apps/crm/infra/casbin:/app/casbin:ro
+      - ../ai/litellm.models.yaml:/app/litellm.models.yaml:ro
+      - crm_backups:/backups
+    depends_on: &crm-backend-deps
+      crm-migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      s3-init:
+        condition: service_completed_successfully
+      litellm:
+        condition: service_healthy
+      litellm-seed:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  crm-worker:
+    <<: *crm-backend
+    command: ["python", "-m", "app", "worker"]
+    depends_on:
+      <<: *crm-backend-deps
+      docling:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "procrastinate", "--app=app.tasks.queue.queue", "healthchecks"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
+  crm-mcp-kb:
+    <<: *crm-backend
+    command: ["python", "-m", "app", "mcp", "kb"]
+    depends_on: *crm-backend-deps
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import socket; socket.create_connection(('localhost', 8101), timeout=2)
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  crm-mcp-crm:
+    <<: *crm-backend
+    command: ["python", "-m", "app", "mcp", "crm"]
+    depends_on: *crm-backend-deps
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import socket; socket.create_connection(('localhost', 8102), timeout=2)
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  crm-mcp-docs:
+    <<: *crm-backend
+    command: ["python", "-m", "app", "mcp", "docs"]
+    depends_on: *crm-backend-deps
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import socket; socket.create_connection(('localhost', 8103), timeout=2)
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  crm-web:
+    build:
+      context: ../../apps/crm/frontend
+      target: prod
+    healthcheck:
+      test: ["CMD", "wget", "-Y", "off", "-q", "--spider", "http://localhost:8080/"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  # ─── Вход: Caddy на три домена ──────────────────────────────────────────────────────────────
+
+  caddy:
+    image: caddy:2.11.7-alpine
+    depends_on:
+      crm-api:
+        condition: service_healthy
+      crm-web:
+        condition: service_healthy
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    healthcheck:
+      test: ["CMD", "wget", "-Y", "off", "-q", "--spider", "http://127.0.0.1:2019/config/"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  # ─── Профиль observability: Langfuse v4 ─────────────────────────────────────────────────────
+
+  clickhouse:
+    profiles: [observability]
+    image: clickhouse/clickhouse-server:26.4.5.143
+    user: "101:101"
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?set in .env}
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - clickhouse_logs:/var/log/clickhouse-server
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  langfuse-worker:
+    profiles: [observability]
+    image: langfuse/langfuse-worker:4.56.0
+    depends_on: &langfuse-deps
+      db-init:
+        condition: service_completed_successfully
+      s3-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+    environment: &langfuse-env
+      NEXTAUTH_URL: ${LANGFUSE_URL:-http://langfuse.localhost}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/langfuse
+      SALT: ${LANGFUSE_SALT:?set in .env}
+      ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:?set in .env}
+      TELEMETRY_ENABLED: "false"
+      CLICKHOUSE_MIGRATION_URL: clickhouse://clickhouse:9000
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+      CLICKHOUSE_CLUSTER_ENABLED: "false"
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: ${S3_ACCESS_KEY}
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${S3_SECRET_KEY}
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://rustfs:9000
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
+      LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
+      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: ${S3_ACCESS_KEY}
+      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${S3_SECRET_KEY}
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://rustfs:9000
+      LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_MEDIA_UPLOAD_PREFIX: media/
+      LANGFUSE_S3_BATCH_EXPORT_ENABLED: "false"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_AUTH: ${REDIS_PASSWORD}
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:3030/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  langfuse-web:
+    profiles: [observability]
+    image: langfuse/langfuse:4.56.0
+    depends_on: *langfuse-deps
+    environment:
+      <<: *langfuse-env
+      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:?set in .env}
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: ${LANGFUSE_S3_PUBLIC_ENDPOINT:-http://s3.localhost}
+      LANGFUSE_S3_MEDIA_UPLOAD_INTERNAL_ENDPOINT: http://rustfs:9000
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:3000/api/public/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+volumes:
+  postgres_data:
+  redis_data:
+  s3_data:
+  caddy_data:
+  caddy_config:
+  crm_backups:
+  clickhouse_data:
+  clickhouse_logs:
