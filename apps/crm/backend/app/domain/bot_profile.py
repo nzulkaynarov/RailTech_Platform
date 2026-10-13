@@ -28,8 +28,10 @@ def plan_changes(desired: Values, current: Values) -> list[ProfileChange]:
     """Отличия желаемого профиля от текущего.
 
     Пустое значение по умолчанию (русское) — не трогаем то, что задано в BotFather.
-    Пустое узбекское/английское — убрать отдельный текст языка (Telegram покажет русский);
-    если текст языка совпадает с текущим русским, отдельного текста нет — менять нечего.
+    Пустое узбекское/английское — убрать отдельный текст языка (Telegram покажет русский), но
+    только если он есть: язык без своего текста Telegram отдаёт пустым (имя — проверено на стенде
+    2026-10-13) или, возможно, русским — в обоих случаях менять нечего. Иначе «очистка» шла бы
+    на каждом старте бота, и Telegram блокирует `setMyName` на часы.
     """
     changes: list[ProfileChange] = []
     for field in FIELDS:
@@ -40,6 +42,6 @@ def plan_changes(desired: Values, current: Values) -> list[ProfileChange]:
             if wanted:
                 if wanted != now:
                     changes.append(ProfileChange(field, code, wanted))
-            elif code is not None and now != current_default:
+            elif code is not None and now and now != current_default:
                 changes.append(ProfileChange(field, code, ""))
     return changes
