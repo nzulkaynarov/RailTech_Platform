@@ -12,7 +12,14 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
 from app.domain import system_status as rules
-from app.domain.system_status import AlertRow, BackupFacts, BotFacts, Component, QueueFacts
+from app.domain.system_status import (
+    AlertRow,
+    BackupFacts,
+    BotFacts,
+    Component,
+    ErpFacts,
+    QueueFacts,
+)
 from app.models.system import SystemAlert
 from app.repositories import monitoring as repo
 from app.services import backups as backup_rules
@@ -72,9 +79,17 @@ class SystemStatusService:
         self._backups = backups
 
     async def collect(
-        self, now: datetime, bot: BotFacts | None, *, token_configured: bool
+        self,
+        now: datetime,
+        bot: BotFacts | None,
+        *,
+        token_configured: bool,
+        erp: ErpFacts | None = None,
     ) -> list[Component]:
-        """Единый источник здоровья: «Состояние», индикатор в шапке и чек-лист настройки."""
+        """Единый источник здоровья: «Состояние», индикатор в шапке и чек-лист настройки.
+
+        `erp` — итог кэшированной пробы коннектора (M3-CRM-02); None — коннектор не настроен.
+        """
         report = await self._readiness.check()
         components = rules.dependencies(report.checks, now)
         if report.checks.get("database", False):
@@ -87,6 +102,7 @@ class SystemStatusService:
             components.append(rules.crm_url(cfg.company.crm_base_url, now))
         components.append(rules.bot(bot, self._config.telegram_mode, now))
         components.append(await self._backup(now))
+        components.append(rules.erp(erp or ErpFacts(configured=False), now))
         missing = missing_secrets(self._config, token_elsewhere=token_configured)
         has_key = bool(self._config.secrets_key.get_secret_value())
         components.append(rules.secrets(missing, now, secrets_key=has_key))

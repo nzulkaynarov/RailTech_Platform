@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import type { BotProfileOut, TelegramStatusOut } from "../api/generated/model";
-import { botState, channelLabel, integrationTabStatus } from "./integrations";
+import type { BotProfileOut, ErpStatusOut, TelegramStatusOut } from "../api/generated/model";
+import {
+  botState,
+  channelLabel,
+  erpState,
+  erpTabStatus,
+  integrationTabStatus,
+} from "./integrations";
 
 describe("botState", () => {
   it.each([
@@ -69,5 +75,41 @@ describe("integrationTabStatus", () => {
 
   it.each(cases)("%s", (_name, s, p, [bot, prof, channel]) => {
     expect(integrationTabStatus(s, p)).toEqual({ bot, profile: prof, channel });
+  });
+});
+
+describe("erpState / erpTabStatus", () => {
+  const base: ErpStatusOut = {
+    configured: false,
+    mode: "local",
+    base_url: "",
+    base_url_source: "none",
+    token_configured: false,
+    token_source: "none",
+    token_last4: null,
+    token_updated_at: null,
+    webhook_secret_configured: false,
+    webhook_secret_source: "none",
+    webhook_secret_last4: null,
+    webhook_secret_updated_at: null,
+    secrets_enabled: true,
+  };
+  it.each([
+    ["nothing", base, "notConfigured", "default"],
+    ["url only", { ...base, base_url: "https://erp" }, "partial", "warning"],
+    ["token only", { ...base, token_configured: true, token_source: "env" }, "partial", "warning"],
+    [
+      "both",
+      { ...base, configured: true, mode: "erp", base_url: "https://erp", token_configured: true },
+      "configured",
+      "success",
+    ],
+  ] as const)("%s → %s / %s", (_name, status, state, tab) => {
+    expect(erpState(status)).toBe(state);
+    expect(erpTabStatus(status)).toBe(tab);
+  });
+
+  it("has no badge while the status is loading", () => {
+    expect(erpTabStatus(undefined)).toBeNull();
   });
 });

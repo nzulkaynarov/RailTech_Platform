@@ -24,6 +24,7 @@ logger = structlog.get_logger(__name__)
 MIN_KEY_LENGTH: Final = 32
 TELEGRAM_BOT_TOKEN: Final = "telegram_bot_token"  # noqa: S105 — имя ключа, не секрет
 ERP_SERVICE_TOKEN: Final = "erp_service_token"  # noqa: S105 — имя ключа, не секрет (ADR-0022)
+ERP_WEBHOOK_SECRET: Final = "erp_webhook_secret"  # noqa: S105 — имя ключа, не секрет (M3-CRM-02)
 
 
 class SecretsKeyError(RuntimeError):

@@ -1,7 +1,9 @@
 import { App as AntApp, Badge } from "antd";
 
-import type { TelegramStatusOut } from "../../api/generated/model";
+import type { ErpStatusOut, TelegramStatusOut } from "../../api/generated/model";
 import {
+  useErpMutations,
+  useErpStatus,
   useTelegramChannels,
   useTelegramMutations,
   useTelegramStatus,
@@ -11,14 +13,15 @@ import { PageBody } from "../../components/PageBody";
 import { PageHeader } from "../../components/PageHeader";
 import { PageState } from "../../components/PageState";
 import { UrlTabs } from "../../components/UrlTabs";
-import { integrationTabStatus, type TabStatus } from "../../domain/integrations";
+import { erpTabStatus, integrationTabStatus, type TabStatus } from "../../domain/integrations";
 import { useApiErrorToast } from "../../hooks/useApiErrorToast";
 import { t } from "../../i18n/ru";
 import { BotProfileCard } from "./BotProfileCard";
+import { ErpCard } from "./ErpCard";
 import { TeamChannelCard } from "./TeamChannelCard";
 import { TelegramBotCard } from "./TelegramBotCard";
 
-const TABS = ["bot", "profile", "channel"] as const;
+const TABS = ["bot", "profile", "channel", "erp"] as const;
 
 /** Название вкладки со значком состояния; состояние продублировано текстом для экранного диктора. */
 function TabLabel({ tab, status }: { tab: string; status: TabStatus | null }) {
@@ -32,12 +35,14 @@ function TabLabel({ tab, status }: { tab: string; status: TabStatus | null }) {
   );
 }
 
-function IntegrationTabs({ status }: { status: TelegramStatusOut }) {
+function IntegrationTabs({ status, erp }: { status: TelegramStatusOut; erp: ErpStatusOut }) {
   const channels = useTelegramChannels();
   const profile = useBotProfile();
   const { message } = AntApp.useApp();
-  const mutations = useTelegramMutations(useApiErrorToast());
-  const state = integrationTabStatus(status, profile.data);
+  const onError = useApiErrorToast();
+  const mutations = useTelegramMutations(onError);
+  const erpMutations = useErpMutations(onError);
+  const state = { ...integrationTabStatus(status, profile.data), erp: erpTabStatus(erp) };
   const content = {
     bot: (
       <TelegramBotCard
@@ -72,6 +77,27 @@ function IntegrationTabs({ status }: { status: TelegramStatusOut }) {
         }}
       />
     ),
+    erp: (
+      <ErpCard
+        status={erp}
+        saving={erpMutations.save.isPending}
+        checking={erpMutations.check.isPending}
+        checkResult={erpMutations.check.data ?? null}
+        checkError={erpMutations.check.error}
+        onSave={(body, done) => {
+          erpMutations.save.mutate(body, {
+            onSuccess: () => {
+              done();
+              erpMutations.check.reset();
+              void message.success(t.integrations.erp.saved);
+            },
+          });
+        }}
+        onCheck={() => {
+          erpMutations.check.mutate();
+        }}
+      />
+    ),
   };
   return (
     <UrlTabs
@@ -86,16 +112,24 @@ function IntegrationTabs({ status }: { status: TelegramStatusOut }) {
 }
 
 /**
- * «Подключения» (admin): токен бота, профиль бота и канал команды без правки `.env`
- * (аудит 2026-10-12); UX волна 3 — вкладками, вкладка в `?tab=`, состояние — значком во вкладке.
+ * «Подключения» (admin): токен бота, профиль бота, канал команды и коннектор ERP (M3-CRM-02)
+ * без правки `.env` (аудит 2026-10-12); UX волна 3 — вкладками, вкладка в `?tab=`, состояние —
+ * значком во вкладке.
  */
 export function IntegrationsPage() {
   const status = useTelegramStatus();
+  const erp = useErpStatus();
+  const query = {
+    isLoading: status.isLoading || erp.isLoading,
+    isError: status.isError || erp.isError,
+    error: status.error ?? erp.error,
+    refetch: () => Promise.all([status.refetch(), erp.refetch()]),
+  };
   return (
     <PageBody>
       <PageHeader title={t.page.integrations} />
-      <PageState query={status}>
-        {status.data ? <IntegrationTabs status={status.data} /> : null}
+      <PageState query={query}>
+        {status.data && erp.data ? <IntegrationTabs status={status.data} erp={erp.data} /> : null}
       </PageState>
     </PageBody>
   );

@@ -111,6 +111,7 @@ export const system = {
       queue: "очередь задач",
       budget: "бюджет",
       crm_url: "адрес CRM",
+      erp: "ERP",
     } as Record<string, string>,
   },
   auditUi: {
@@ -153,6 +154,9 @@ export const system = {
       lead_client_cleared: "Лид отвязан от клиента",
       text: "Текст",
       channel_title: "Название канала",
+      base_url: "Адрес ERP",
+      erp_service_token_last4: "Сервисный токен (последние 4)",
+      erp_webhook_secret_last4: "Секрет вебхуков (последние 4)",
     } as Record<string, string>,
     /** Значения служебных полей — словами. */
     values: {
@@ -168,6 +172,7 @@ export const system = {
     objects: {
       "system:backups": "Резервные копии",
       "integration_secret:telegram_bot_token": "Токен Telegram-бота",
+      "integration:erp": "Коннектор ERP",
       "export:leads": "Выгрузка лидов",
       "export:clients": "Выгрузка клиентов",
       "export:deals": "Выгрузка сделок",

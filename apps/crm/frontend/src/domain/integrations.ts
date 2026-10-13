@@ -1,4 +1,4 @@
-import type { BotProfileOut, TelegramStatusOut } from "../api/generated/model";
+import type { BotProfileOut, ErpStatusOut, TelegramStatusOut } from "../api/generated/model";
 
 export type BotState = "running" | "stopped" | "notConfigured" | "failed";
 
@@ -51,4 +51,26 @@ export function integrationTabStatus(
     profile: profileStatus,
     channel: status.channel_id === null ? "warning" : "success",
   };
+}
+
+export type ErpState = "configured" | "partial" | "notConfigured";
+
+/** Коннектор ERP: адрес и токен есть → настроен; только одно из двух → не полностью. */
+export function erpState(
+  status: Pick<ErpStatusOut, "configured" | "base_url" | "token_configured">,
+): ErpState {
+  if (status.configured) return "configured";
+  return status.base_url || status.token_configured ? "partial" : "notConfigured";
+}
+
+export const ERP_STATE_COLOR: Record<ErpState, string> = {
+  configured: "success",
+  partial: "warning",
+  notConfigured: "default",
+};
+
+/** Значок вкладки «ERP»: не настроен — без тревоги (CRM автономна), наполовину — внимание. */
+export function erpTabStatus(status: ErpStatusOut | undefined): TabStatus | null {
+  if (!status) return null;
+  return ERP_STATE_COLOR[erpState(status)] as TabStatus;
 }

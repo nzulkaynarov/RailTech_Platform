@@ -2240,6 +2240,228 @@
         "title": "DryRunRowOut",
         "type": "object"
       },
+      "ErpCheckOut": {
+        "description": "Ответ ERP на `GET /api/integration/v1/health` (схема `Health` контракта) и время ответа.",
+        "properties": {
+          "checked_at": {
+            "format": "date-time",
+            "title": "Checked At",
+            "type": "string"
+          },
+          "latency_ms": {
+            "title": "Latency Ms",
+            "type": "integer"
+          },
+          "migrations_applied": {
+            "title": "Migrations Applied",
+            "type": "boolean"
+          },
+          "queue_alive": {
+            "title": "Queue Alive",
+            "type": "boolean"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "version",
+          "migrations_applied",
+          "queue_alive",
+          "checked_at",
+          "latency_ms"
+        ],
+        "title": "ErpCheckOut",
+        "type": "object"
+      },
+      "ErpConnectorIn": {
+        "additionalProperties": false,
+        "description": "Сохранение коннектора: секрет `None` — оставить прежний; пустой адрес выключает коннектор.",
+        "properties": {
+          "base_url": {
+            "maxLength": 500,
+            "title": "Base Url",
+            "type": "string"
+          },
+          "password": {
+            "format": "password",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "service_token": {
+            "anyOf": [
+              {
+                "format": "password",
+                "maxLength": 512,
+                "minLength": 16,
+                "type": "string",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Service Token"
+          },
+          "webhook_secret": {
+            "anyOf": [
+              {
+                "format": "password",
+                "maxLength": 512,
+                "minLength": 16,
+                "type": "string",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Webhook Secret"
+          }
+        },
+        "required": [
+          "base_url",
+          "password"
+        ],
+        "title": "ErpConnectorIn",
+        "type": "object"
+      },
+      "ErpStatusOut": {
+        "description": "Коннектор «ERP» (M3-CRM-02): значения секретов не возвращаются — только «задан» и `last4`.",
+        "properties": {
+          "base_url": {
+            "title": "Base Url",
+            "type": "string"
+          },
+          "base_url_source": {
+            "enum": [
+              "db",
+              "env",
+              "none"
+            ],
+            "title": "Base Url Source",
+            "type": "string"
+          },
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "mode": {
+            "enum": [
+              "local",
+              "erp"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "secrets_enabled": {
+            "title": "Secrets Enabled",
+            "type": "boolean"
+          },
+          "token_configured": {
+            "title": "Token Configured",
+            "type": "boolean"
+          },
+          "token_last4": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Last4"
+          },
+          "token_source": {
+            "enum": [
+              "db",
+              "env",
+              "none"
+            ],
+            "title": "Token Source",
+            "type": "string"
+          },
+          "token_updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Updated At"
+          },
+          "webhook_secret_configured": {
+            "title": "Webhook Secret Configured",
+            "type": "boolean"
+          },
+          "webhook_secret_last4": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Webhook Secret Last4"
+          },
+          "webhook_secret_source": {
+            "enum": [
+              "db",
+              "env",
+              "none"
+            ],
+            "title": "Webhook Secret Source",
+            "type": "string"
+          },
+          "webhook_secret_updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Webhook Secret Updated At"
+          }
+        },
+        "required": [
+          "configured",
+          "mode",
+          "base_url",
+          "base_url_source",
+          "token_configured",
+          "token_source",
+          "token_last4",
+          "token_updated_at",
+          "webhook_secret_configured",
+          "webhook_secret_source",
+          "webhook_secret_last4",
+          "webhook_secret_updated_at",
+          "secrets_enabled"
+        ],
+        "title": "ErpStatusOut",
+        "type": "object"
+      },
       "ErrorDetails": {
         "additionalProperties": true,
         "description": "Подробности ошибки; кроме описанных полей бывают контекстные (`assigned_user_name`, …).",
@@ -4342,7 +4564,12 @@
           "no_consent",
           "litellm_unavailable",
           "model_key_required",
-          "model_in_config"
+          "model_in_config",
+          "erp_not_configured",
+          "erp_invalid_url",
+          "erp_unauthorized",
+          "erp_unavailable",
+          "erp_bad_response"
         ],
         "title": "Reason",
         "type": "string"
@@ -7673,6 +7900,125 @@
         "summary": "Inbox",
         "tags": [
           "leads"
+        ]
+      }
+    },
+    "/api/v1/integrations/erp": {
+      "get": {
+        "description": "Коннектор «ERP» (ADR-0018, ADR-0022): адрес, откуда взяты секреты, режим жизненного цикла.\n\nЗначения сервисного токена и секрета вебхуков не возвращаются — только «задан» и `last4`.",
+        "operationId": "get_erp_status",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErpStatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Erp Status",
+        "tags": [
+          "integrations"
+        ]
+      },
+      "put": {
+        "description": "Сохранить адрес ERP и секреты (после пароля админа); секрет `null` — оставить прежний.\n\nОшибки: `erp_invalid_url` (422, поле `base_url`), `wrong_password` (422),\n`secrets_key_missing` (409 — секреты нельзя сохранить без `SECRETS_KEY`).",
+        "operationId": "put_erp_connector",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ErpConnectorIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErpStatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Erp Connector",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/api/v1/integrations/erp/check": {
+      "post": {
+        "description": "«Проверить связь»: `GET {base_url}/api/integration/v1/health` с сервисным токеном, 5 с.\n\nОшибки (ADR-0017, `details.reason`): `erp_not_configured` (409), `erp_invalid_url` (422),\n`erp_unauthorized` / `erp_unavailable` / `erp_bad_response` (502).",
+        "operationId": "check_erp_connection",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErpCheckOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Check Erp Connection",
+        "tags": [
+          "integrations"
         ]
       }
     },

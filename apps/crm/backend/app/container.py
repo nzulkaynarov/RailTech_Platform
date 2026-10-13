@@ -22,6 +22,7 @@ from app.security.secrets_store import SecretCipher, SecretsStore
 from app.services.settings import SettingsService
 
 if TYPE_CHECKING:
+    from app.domain.backoffice import BackofficeMode
     from app.services.assist import AssistService
     from app.services.auth import AuthService
     from app.services.backups import BackupService
@@ -29,6 +30,7 @@ if TYPE_CHECKING:
     from app.services.client_contacts import ClientContactService
     from app.services.clients import ClientService
     from app.services.documents import DocumentService
+    from app.services.erp_connector import ErpConnectorService
     from app.services.kb.admin import KbAdminService
     from app.services.kb.ingest import KbIngestService
     from app.services.kb.search import KbSearchService
@@ -211,7 +213,30 @@ class Container:
             self.settings_service,
             self.lead_messenger,
             on_chats_changed=_chats_changed,
+            backoffice_mode=self.backoffice_mode,
         )
+
+    @cached_property
+    def erp_connector(self) -> "ErpConnectorService":
+        """Коннектор «ERP» (M3-CRM-02): адрес и секреты из «Подключений», проба `/health`, кэш."""
+        from app.integrations.erp import HttpxErpProbe
+        from app.security.reauth import LockoutPolicy
+        from app.services.erp_connector import ErpConnectorService
+
+        return ErpConnectorService(
+            self.session_factory,
+            self.settings_service,
+            self.secrets_store,
+            self.settings,
+            HttpxErpProbe(),
+            lockout=LockoutPolicy(
+                self.settings.login_max_failures, self.settings.login_lockout_minutes
+            ),
+        )
+
+    async def backoffice_mode(self) -> "BackofficeMode":
+        """Режим жизненного цикла (ADR-0022): `erp`, когда коннектор настроен, иначе `local`."""
+        return await self.erp_connector.mode()
 
     @cached_property
     def contact_service(self) -> "ClientContactService":

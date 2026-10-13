@@ -53,6 +53,9 @@ import type {
   DocumentOut,
   DocumentUpdate,
   DryRunResponse,
+  ErpCheckOut,
+  ErpConnectorIn,
+  ErpStatusOut,
   ErrorOut,
   EscalationSettings,
   ExportClientsParams,
@@ -3687,6 +3690,302 @@ export function useInbox<TData = Awaited<ReturnType<typeof inbox>>, TError = Err
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getGetErpStatusUrl = () => {
+  return `/api/v1/integrations/erp`;
+};
+
+/**
+ * Коннектор «ERP» (ADR-0018, ADR-0022): адрес, откуда взяты секреты, режим жизненного цикла.
+ *
+ * Значения сервисного токена и секрета вебхуков не возвращаются — только «задан» и `last4`.
+ * @summary Get Erp Status
+ */
+export const getErpStatus = async (options?: Parameters<typeof http>[1]): Promise<ErpStatusOut> => {
+  return http<ErpStatusOut>(getGetErpStatusUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetErpStatusQueryKey = () => {
+  return [`/api/v1/integrations/erp`] as const;
+};
+
+export const getGetErpStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof getErpStatus>>,
+  TError = ErrorType<ErrorOut>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getErpStatus>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetErpStatusQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getErpStatus>>> = ({ signal }) =>
+    getErpStatus({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getErpStatus>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetErpStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getErpStatus>>>;
+export type GetErpStatusQueryError = ErrorType<ErrorOut>;
+
+export function useGetErpStatus<
+  TData = Awaited<ReturnType<typeof getErpStatus>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getErpStatus>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getErpStatus>>,
+          TError,
+          Awaited<ReturnType<typeof getErpStatus>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetErpStatus<
+  TData = Awaited<ReturnType<typeof getErpStatus>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getErpStatus>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getErpStatus>>,
+          TError,
+          Awaited<ReturnType<typeof getErpStatus>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetErpStatus<
+  TData = Awaited<ReturnType<typeof getErpStatus>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getErpStatus>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get Erp Status
+ */
+
+export function useGetErpStatus<
+  TData = Awaited<ReturnType<typeof getErpStatus>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getErpStatus>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetErpStatusQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getPutErpConnectorUrl = () => {
+  return `/api/v1/integrations/erp`;
+};
+
+/**
+ * Сохранить адрес ERP и секреты (после пароля админа); секрет `null` — оставить прежний.
+ *
+ * Ошибки: `erp_invalid_url` (422, поле `base_url`), `wrong_password` (422),
+ * `secrets_key_missing` (409 — секреты нельзя сохранить без `SECRETS_KEY`).
+ * @summary Put Erp Connector
+ */
+export const putErpConnector = async (
+  erpConnectorIn: ErpConnectorIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ErpStatusOut> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ErpStatusOut>(getPutErpConnectorUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(erpConnectorIn),
+  });
+};
+
+export const getPutErpConnectorMutationKey = () => ["putErpConnector"] as const;
+
+export const getPutErpConnectorMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof putErpConnector>>,
+    TError,
+    PutErpConnectorMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof putErpConnector>>,
+  TError,
+  PutErpConnectorMutationVariables,
+  TContext
+> => {
+  const mutationKey = getPutErpConnectorMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof putErpConnector>>,
+    PutErpConnectorMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return putErpConnector(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PutErpConnectorMutationResult = NonNullable<
+  Awaited<ReturnType<typeof putErpConnector>>
+>;
+export type PutErpConnectorMutationBody = ErpConnectorIn;
+export type PutErpConnectorMutationError = ErrorType<ErrorOut>;
+export type PutErpConnectorMutationVariables = { data: ErpConnectorIn };
+
+/**
+ * @summary Put Erp Connector
+ */
+export const usePutErpConnector = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof putErpConnector>>,
+      TError,
+      PutErpConnectorMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof putErpConnector>>,
+  TError,
+  PutErpConnectorMutationVariables,
+  TContext
+> => {
+  return useMutation(getPutErpConnectorMutationOptions(options), queryClient);
+};
+
+export const getCheckErpConnectionUrl = () => {
+  return `/api/v1/integrations/erp/check`;
+};
+
+/**
+ * «Проверить связь»: `GET {base_url}/api/integration/v1/health` с сервисным токеном, 5 с.
+ *
+ * Ошибки (ADR-0017, `details.reason`): `erp_not_configured` (409), `erp_invalid_url` (422),
+ * `erp_unauthorized` / `erp_unavailable` / `erp_bad_response` (502).
+ * @summary Check Erp Connection
+ */
+export const checkErpConnection = async (
+  options?: Parameters<typeof http>[1],
+): Promise<ErpCheckOut> => {
+  return http<ErpCheckOut>(getCheckErpConnectionUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getCheckErpConnectionMutationKey = () => ["checkErpConnection"] as const;
+
+export const getCheckErpConnectionMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof checkErpConnection>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof checkErpConnection>>, TError, void, TContext> => {
+  const mutationKey = getCheckErpConnectionMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof checkErpConnection>>, void> = () => {
+    return checkErpConnection(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CheckErpConnectionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof checkErpConnection>>
+>;
+
+export type CheckErpConnectionMutationError = ErrorType<ErrorOut>;
+
+/**
+ * @summary Check Erp Connection
+ */
+export const useCheckErpConnection = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof checkErpConnection>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof checkErpConnection>>, TError, void, TContext> => {
+  return useMutation(getCheckErpConnectionMutationOptions(options), queryClient);
+};
 
 export const getGetTelegramStatusUrl = () => {
   return `/api/v1/integrations/telegram`;

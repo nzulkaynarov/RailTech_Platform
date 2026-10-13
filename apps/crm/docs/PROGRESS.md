@@ -76,6 +76,7 @@
 | Задача | Что | Статус |
 |---|---|---|
 | M3-CRM-01 | ADR-0022 (`docs/adr/0022-lifecycle-handoff-to-backoffice.md`): «Передан в бэк-офис» = `customer`; режим `local`/`erp` по факту «коннектор ERP настроен» (`integrations/erp.py`, точка расширения); с коннектором передача из `in_progress`, итог `deal.won`/`deal.lost` — в зеркало сделок (`plan_erp_outcome`), стадия лида событиями ERP не меняется (`TransitionSource.ERP` без рёбер); без коннектора — прежнее поведение. Параметризованные тесты обоих режимов, запрещённых переходов и идемпотентности. SPEC 2.4 §6.1/§6.2/§16. Без миграций и вызовов ERP (M3-CRM-03/04) | 🟡 ADR proposed — ждёт `accepted` владельца |
+| M3-CRM-02 | Коннектор «ERP» в «Подключениях» (ADR-0018): адрес (`settings.integrations.erp_base_url`), сервисный токен и секрет вебхуков (`integration_secrets`, Fernet), порядок БД → `.env`; `GET/PUT /api/v1/integrations/erp`, `POST …/erp/check` (`/api/integration/v1/health`, Bearer, 5 с, схема `Health`), ошибки ADR-0017 `erp_*`; пароль + аудит без значений; провайдер режима `Container.backoffice_mode` (коннектор настроен → `erp`); строка «ERP (бэк-офис)» на «Состоянии системы» с кэшем 30 с (не настроен — «нет данных»). Фронт: вкладка «ERP», Vitest с моками хуков, шаг e2e. Тесты: домен, сервис с `respx`, integration-матрица ролей. SPEC 2.5, `.env.example` (`ERP_WEBHOOK_SECRET`), OpenAPI/orval | 🟡 PR `m3/crm-02-erp-connector` — ждёт приёмки глазами на dev |
 
 ## Фаза 0 — детали
 

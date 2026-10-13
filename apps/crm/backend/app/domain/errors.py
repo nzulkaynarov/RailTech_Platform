@@ -56,6 +56,12 @@ class Reason(StrEnum):
     LITELLM_UNAVAILABLE = "litellm_unavailable"
     MODEL_KEY_REQUIRED = "model_key_required"
     MODEL_IN_CONFIG = "model_in_config"
+    # Коннектор «ERP» (M3-CRM-02, ADR-0018): адрес, токен и «Проверить связь».
+    ERP_NOT_CONFIGURED = "erp_not_configured"
+    ERP_INVALID_URL = "erp_invalid_url"
+    ERP_UNAUTHORIZED = "erp_unauthorized"
+    ERP_UNAVAILABLE = "erp_unavailable"
+    ERP_BAD_RESPONSE = "erp_bad_response"
 
 
 class DomainError(Exception):
