@@ -2,8 +2,12 @@
 
 Привязка идентичности к клиенту — только действием менеджера (verified_by/at).
 Без неё бот работает в режиме prospect и документов клиента не видит.
+
+«Сделать клиентом» = «Передать в бэк-офис» (ADR-0022): режим решает `domain/backoffice.py`
+по факту «коннектор ERP настроен»; без коннектора поведение прежнее. Вызов ERP — M3-CRM-03.
 """
 
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from typing import Any
 
@@ -11,6 +15,7 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.domain.backoffice import BackofficeMode, decide_handoff
 from app.domain.errors import (
     ConflictError,
     ForbiddenError,
@@ -42,6 +47,13 @@ logger = structlog.get_logger(__name__)
 CLEARABLE = frozenset({"inn", "segment", "notes", "owner_user_id"})
 EDITABLE = CLEARABLE | {"name", "is_active"}
 
+BackofficeModeProvider = Callable[[], Awaitable[BackofficeMode]]
+
+
+async def local_backoffice() -> BackofficeMode:
+    """Без коннектора ERP (до M3-CRM-02/03) — прежнее поведение."""
+    return BackofficeMode.LOCAL
+
 
 class ClientService:
     def __init__(
@@ -50,12 +62,15 @@ class ClientService:
         settings: SettingsService | None = None,
         messenger: LeadMessenger | None = None,
         on_chats_changed: ChatsChanged | None = None,
+        backoffice_mode: BackofficeModeProvider = local_backoffice,
     ) -> None:
         self._sessions = sessions
         self._settings = settings
         self._messenger = messenger
         # Привязка/отвязка/«Сделать клиентом» меняют меню бота (вариант client) — сразу.
         self._on_chats_changed = on_chats_changed
+        # Режим передачи в бэк-офис (ADR-0022): `integrations/erp.erp_connector_configured`.
+        self._backoffice_mode = backoffice_mode
 
     async def create(self, who: Principal, name: str, inn: str | None, segment: str | None) -> int:
         async with self._sessions() as session, session.begin():
@@ -154,16 +169,23 @@ class ClientService:
     async def make_customer(
         self, who: Principal, lead_id: int, client_id: int | None, new_name: str | None
     ) -> int:
-        """Лид после сделки → клиент: привязка лида и его Telegram, стадия won → customer."""
+        """Лид → клиент («Передан в бэк-офис», ADR-0022): привязка лида и его Telegram, стадия
+        `customer`. Повторная передача тому же клиенту ничего не меняет (идемпотентно)."""
         if client_id is None and not (new_name and new_name.strip()):
             raise ValidationFailedError(
                 "choose a client or enter a new client name", field="client_id"
             )
+        mode = await self._backoffice_mode()
         async with self._sessions() as session, session.begin():
             lead = await session.get(Lead, lead_id, with_for_update=True)
             if lead is None or lead.erased_at is not None:
                 raise NotFoundError("lead not found")
-            if lead.stage not in (Stage.WON, Stage.CUSTOMER):
+            handoff = decide_handoff(
+                Stage(lead.stage),
+                mode,
+                client_changed=client_id is None or lead.client_id != client_id,
+            )
+            if not handoff.allowed:
                 raise InvalidTransitionError(
                     "close the deal (won) first", reason=Reason.DEAL_NOT_CLOSED
                 )
@@ -176,6 +198,8 @@ class ClientService:
                 raise ForbiddenError(
                     "only the lead owner or an admin can do this", reason=Reason.NOT_LEAD_OWNER
                 )
+            if not handoff.changed and client_id is not None:
+                return client_id
             if client_id is None:
                 client = Client(name=(new_name or "").strip(), owner_user_id=who.user_id)
                 session.add(client)
@@ -202,7 +226,7 @@ class ClientService:
                 "lead.make_customer",
                 "lead",
                 lead_id,
-                after={"client_id": client_id},
+                after={"client_id": client_id, "backoffice": handoff.mode.value},
             )
             await events.publish(session, "lead.updated", lead_id=lead_id)
             language = lead.language

@@ -5,11 +5,13 @@ import pytest
 from app.domain.deals import (
     OTHER_REASON,
     DealStage,
+    ErpOutcome,
     OutcomePlan,
     deal_title,
     lost_reason,
     may_edit,
     may_transition,
+    plan_erp_outcome,
     plan_lead_outcome,
 )
 
@@ -94,3 +96,30 @@ def test_deal_title(
 ) -> None:
     got = deal_title(client_name=client, lead_name=lead, product_name=product, lead_id=7)
     assert got == expected
+
+
+@pytest.mark.parametrize(
+    ("event", "current", "reason", "expected"),
+    [
+        ("deal.won", OP, None, ErpOutcome(stage=W, changed=True, lost_reason=None)),
+        ("deal.won", W, None, ErpOutcome(stage=W, changed=False, lost_reason=None)),  # повтор
+        ("deal.won", L, None, ErpOutcome(stage=W, changed=True, lost_reason=None)),
+        ("deal.lost", OP, "Дорого", ErpOutcome(stage=L, changed=True, lost_reason="Дорого")),
+        # Причина — текстом ERP, не из справочника CRM; пусто — «Другое».
+        ("deal.lost", OP, "Ушли к конкуренту", ErpOutcome(L, True, "Ушли к конкуренту")),
+        ("deal.lost", OP, "  ", ErpOutcome(stage=L, changed=True, lost_reason=OTHER_REASON)),
+        ("deal.lost", L, "Дорого", ErpOutcome(stage=L, changed=False, lost_reason="Дорого")),
+        # ERP — источник истины зеркала: «выиграна» не финал для события ERP (ADR-0022).
+        ("deal.lost", W, None, ErpOutcome(stage=L, changed=True, lost_reason=OTHER_REASON)),
+    ],
+)
+def test_plan_erp_outcome(
+    event: str, current: DealStage, reason: str | None, expected: ErpOutcome
+) -> None:
+    assert plan_erp_outcome(event, current, reason) == expected
+
+
+@pytest.mark.parametrize("event", ["deal.stage_changed", "quote.sent", "won", ""])
+def test_plan_erp_outcome_rejects_other_events(event: str) -> None:
+    with pytest.raises(ValueError, match="not a deal outcome event"):
+        plan_erp_outcome(event, OP, None)

@@ -21,6 +21,8 @@ class TransitionSource(StrEnum):
     USER = "user"
     TIMER = "timer"
     SYSTEM = "system"
+    # Событие ERP (ADR-0022): никогда не меняет стадию лида, в `stage_transitions` не пишется.
+    ERP = "erp"
 
 
 class OwnerMode(StrEnum):
