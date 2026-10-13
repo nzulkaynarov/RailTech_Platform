@@ -61,12 +61,16 @@ done
 [ "${ready:-}" = 1 ] || { echo "Контейнеры не поднялись за 30 с: docker logs $PG_NAME / $S3_NAME"; exit 1; }
 
 cd "$ROOT/backend"
-# env -i: переменные .env стенда (ключи моделей, токен бота) не должны попасть в тесты.
+# env -i и явные значения: переменные .env стенда (ключи, токен бота, LiteLLM) не попадают в тесты —
+# настройки читают ещё и ../.env, поэтому каждый секрет перекрыт пустым или одноразовым.
 env -i PATH="$PATH" HOME="$HOME" APP_ENV=test \
   POSTGRES_HOST=127.0.0.1 POSTGRES_PORT="$PG_PORT" POSTGRES_DB=railtech_test \
   POSTGRES_USER=railtech POSTGRES_PASSWORD="$PASS" \
   S3_ENDPOINT="http://127.0.0.1:${S3_PORT}" S3_ACCESS_KEY=railtech S3_SECRET_KEY="$PASS" \
-  TELEGRAM_BOT_TOKEN= TELEGRAM_MODE=disabled TELEGRAM_DRY_RUN=true LITELLM_MASTER_KEY=sk-test \
+  TELEGRAM_BOT_TOKEN= TELEGRAM_WEBHOOK_SECRET= TELEGRAM_MODE=disabled TELEGRAM_DRY_RUN=true \
+  LITELLM_BASE_URL=http://127.0.0.1:9 LITELLM_API_KEY= LITELLM_MASTER_KEY=sk-test \
+  ANTHROPIC_API_KEY= GEMINI_API_KEY= DOCLING_API_KEY= SECRETS_KEY= \
+  JWT_SECRET="$(openssl rand -hex 32)" AGENT_CONTEXT_KEY="$(openssl rand -hex 32)" \
   LANGFUSE_PUBLIC_KEY= LANGFUSE_SECRET_KEY= \
   uv run pytest -m integration -q -p no:cacheprovider "$@" || status=$?
 status="${status:-0}"

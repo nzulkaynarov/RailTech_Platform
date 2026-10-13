@@ -50,11 +50,18 @@ command -v docker >/dev/null && docker info >/dev/null 2>&1 \
   || { echo "Docker не запущен: open -a Docker, затем повторите."; exit 1; }
 mkdir -p "$LOGS"
 
-# Окружение без ключей стенда: явные пустые значения перекрывают ../.env (pydantic env_file).
+# Окружение без ключей стенда. Настройки читают ещё и ../.env (pydantic env_file), поэтому каждый
+# секрет задан явно: пустой или одноразовый, как в CI (`export JWT_SECRET=$(openssl rand -hex 32)`).
+# LiteLLM — на заведомо пустой порт: ни одного вызова модели (платного) из тестов.
+JWT_ONCE=$(openssl rand -hex 32)
+CTX_ONCE=$(openssl rand -hex 32)
 clean_env() {
   env -i PATH="$PATH" HOME="$HOME" APP_ENV=test LOG_FORMAT=console \
-    TELEGRAM_BOT_TOKEN= TELEGRAM_MODE=disabled TELEGRAM_DRY_RUN=true LITELLM_MASTER_KEY=sk-test \
-    ANTHROPIC_API_KEY= GEMINI_API_KEY= LANGFUSE_PUBLIC_KEY= LANGFUSE_SECRET_KEY= "$@"
+    JWT_SECRET="$JWT_ONCE" AGENT_CONTEXT_KEY="$CTX_ONCE" SECRETS_KEY= \
+    TELEGRAM_BOT_TOKEN= TELEGRAM_WEBHOOK_SECRET= TELEGRAM_MODE=disabled TELEGRAM_DRY_RUN=true \
+    LITELLM_BASE_URL=http://127.0.0.1:9 LITELLM_API_KEY= LITELLM_MASTER_KEY=sk-test \
+    ANTHROPIC_API_KEY= GEMINI_API_KEY= DOCLING_API_KEY= S3_ACCESS_KEY= S3_SECRET_KEY= \
+    LANGFUSE_PUBLIC_KEY= LANGFUSE_SECRET_KEY= "$@"
 }
 
 stage_lint() {
@@ -104,7 +111,8 @@ stage_e2e() {
     ! lsof -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1 \
       || { echo "Порт $port занят: lsof -nP -iTCP:$port -sTCP:LISTEN"; return 1; }
   done
-  trap e2e_cleanup RETURN
+  # EXIT, а не RETURN: при сбое `set -e` завершает подоболочку задания, и RETURN не срабатывает.
+  trap e2e_cleanup EXIT
   docker run -d --name "$E2E_PG" -p "127.0.0.1:${E2E_PG_PORT}:5432" -e POSTGRES_DB=railtech_e2e \
     -e POSTGRES_USER=railtech -e POSTGRES_PASSWORD="$PASS" "$PG_IMAGE" >/dev/null
   for _ in $(seq 1 30); do
