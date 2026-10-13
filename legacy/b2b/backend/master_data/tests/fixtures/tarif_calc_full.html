@@ -1,0 +1,718 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div style="width: 100%">
+    <input type="hidden" name="kurs_usd" id="kurs_usd" value="11989.46" />
+    <div class="p-2">Пиво солодовое:в сосудах емкостью 10л или менее:в бутылках</div>
+    <div class="accordion md-accordion border" id="accordionEx" role="tablist" aria-multiselectable="true">
+    <div class="card">
+        <div class="card-header">
+            <h4 class="panel-title">
+                <a data-toggle="collapse" href="#collapse1" class="card-link">
+                    <h5 class="mb-0">
+                        Stavkalar
+                        <div class="fa-pull-right">
+                            <i style="font-size: 24px" class="fas fa-angle-down rotate-icon"></i>
+                        </div>
+                    </h5>
+                </a>
+            </h4>
+        </div>
+        <div id="collapse1" class="panel-collapse collapse show">
+            <div class="card-body" id="clps2-body">
+
+                <table class="table table-sm table-bordered">
+                    <tr class="bg-light">
+                        <td style="vertical-align: middle; text-align: center">Bojxona to'lovlari turi</td>
+                        <td style="vertical-align: middle; text-align: center">Stavka</td>
+                        <td style="vertical-align: middle; text-align: center">Huquqiy asos</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 200px">10: Bojxona yig'imi</td>
+                        <td><div id="sbor">Товар қийматидпн келиб чиқиб, базавий ҳисоблаш миқдорининг 1.0 баробаридан 75.0 баробаригача</div></td>
+                        <td>ПКМ №700 от 09.11.2020г</td>
+                    </tr>
+                    <tr>
+                        <td>20: Bojxona boji</td>
+                        <td><div id="poshlina">30.0 % но не мене 1.0 долл.США/112</div></td>
+                        <td>ПП-4470 от 02.10.2019 г.</td>
+                    </tr>
+                    <tr>
+                        <td>27: Aksiz solig'i</td>
+                        <td><div id="aksiz">Ўрнатилмаган </div></td>
+                        <td>Soliq Kodeksi 289-moddasi</td>
+                    </tr>
+                    
+                    <tr>
+                        <td>29: QQS</td>
+                        <td><div id="nds">12.00 %</div></td>
+                        <td>ЗРУ-812 от 30.12.2022</td>
+                    </tr>
+                </table>
+
+            </div>
+
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h4 class="panel-title">
+                <a data-toggle="collapse" href="#collapse2" class="card-link">
+                    <h5 class="input-label">
+                        Hujjatlar
+                        <div class="fa-pull-right">
+                            <i style="font-size: 24px" class="fas fa-angle-down rotate-icon"></i>
+                        </div>
+                    </h5>
+                </a>
+            </h4>
+        </div>
+        <div id="collapse2" class="panel-collapse collapse show">
+            <div class="card-body">
+
+                <table class="table  table-bordered">
+                    <thead class="bg-light">
+                    <tr>
+                        <th>Tashkilot nomi</th>
+                        <th>Hujjat nomi</th>
+                        <th>Huquqiy asos</th>
+                        <th>Hujjat turi</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    
+
+
+                    <tr>
+                        <td>Ўзбекистон техник жиҳатдан тартибга солиш агентлиги</td>
+                        <td>Мувофиқлик сертификати</td>
+                        <td><a target="_blank1" href="https://lex.uz/docs/5249376">ПКМ-43 30.01.2021</a></td>
+                        <td>Сертификат</td>
+                    </tr>
+
+                    
+
+
+                    <tr>
+                        <td>Ўзбекистон Республикаси Давлат Санитария-Эпидемиология Назорат Маркази</td>
+                        <td>Санитария-эпидемиологик хулоса</td>
+                        <td><a target="_blank1" href="https://lex.uz/uz/docs/5249376">ПКМ-43 30.01.2021</a></td>
+                        <td>Заключения</td>
+                    </tr>
+
+                    
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h4 class="panel-title">
+                <a data-toggle="collapse" href="#collapse3" class="card-link">
+                    <h5 class="mb-0">
+                        Kalkulyator
+                        <div class="fa-pull-right">
+                            <i style="font-size: 24px" class="fas fa-angle-down rotate-icon"></i>
+                        </div>
+                    </h5>
+
+                </a>
+            </h4>
+        </div>
+        <div id="collapse3" class="panel-collapse collapse show">
+            <div class="card-body">
+
+                <div class="calc-box">
+                    <div class="form-row mb-2">
+                        <div class="col-4">
+                            <div class="input-group input-group-sm">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text">0.00</span>
+                                </div>
+                                <input type="text" class="form-control form-control-sm" id="total_cost" onblur="tam_stoim()"
+                                       placeholder="Tovarning umumiy qiymati"
+                                >
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="md-form md-outline mt-0 mb-0 calc-select-wrap">
+                                <select class="mdb-select md-form md-outline" name="skv1" id="skv1" onchange="kurs_skv1()" searchable="Поиск...">
+                                    <option value="" disabled selected>СКВ</option>
+                                    
+                                    <option value="156">156 - Юань ренминби</option>
+                                    
+                                    <option value="971">971 - Афгани</option>
+                                    
+                                    <option value="012">012 - Алжирский динар</option>
+                                    
+                                    <option value="032">032 - Аргентинское песо</option>
+                                    
+                                    <option value="051">051 - Армянский драм</option>
+                                    
+                                    <option value="036">036 - Австралийский доллар</option>
+                                    
+                                    <option value="944">944 - Азербайджанский манат</option>
+                                    
+                                    <option value="048">048 - Бахрейнский динар</option>
+                                    
+                                    <option value="050">050 - Бангладешская така</option>
+                                    
+                                    <option value="764">764 - Бат</option>
+                                    
+                                    <option value="933">933 - Белорусский рубль</option>
+                                    
+                                    <option value="975">975 - Болгарский лев</option>
+                                    
+                                    <option value="986">986 - Бразильский реал</option>
+                                    
+                                    <option value="096">096 - Брунейский доллар</option>
+                                    
+                                    <option value="208">208 - Датская крона</option>
+                                    
+                                    <option value="784">784 - Дирхам ОАЭ</option>
+                                    
+                                    <option value="840">840 - Доллар США</option>
+                                    
+                                    <option value="704">704 - Донг</option>
+                                    
+                                    <option value="818">818 - Египетский фунт</option>
+                                    
+                                    <option value="978">978 - Евро</option>
+                                    
+                                    <option value="608">608 - Филиппинское песо</option>
+                                    
+                                    <option value="826">826 - Фунт стерлингов</option>
+                                    
+                                    <option value="344">344 - Гонгконгский доллар</option>
+                                    
+                                    <option value="980">980 - Гривна</option>
+                                    
+                                    <option value="981">981 - Грузинский лари</option>
+                                    
+                                    <option value="392">392 - Иена</option>
+                                    
+                                    <option value="356">356 - Индийская рупия</option>
+                                    
+                                    <option value="400">400 - Иорданский динар</option>
+                                    
+                                    <option value="368">368 - Иракский динар</option>
+                                    
+                                    <option value="364">364 - Иранский риал</option>
+                                    
+                                    <option value="352">352 - Исландская крона</option>
+                                    
+                                    <option value="886">886 - Йеменский риал</option>
+                                    
+                                    <option value="124">124 - Канадский доллар</option>
+                                    
+                                    <option value="634">634 - Катарский риал</option>
+                                    
+                                    <option value="398">398 - Казахстанский тенге</option>
+                                    
+                                    <option value="417">417 - Киргизский сом</option>
+                                    
+                                    <option value="192">192 - Кубинское песо</option>
+                                    
+                                    <option value="414">414 - Кувейтский динар</option>
+                                    
+                                    <option value="418">418 - Лаосский кип</option>
+                                    
+                                    <option value="422">422 - Ливанский фунт</option>
+                                    
+                                    <option value="434">434 - Ливийский динар</option>
+                                    
+                                    <option value="458">458 - Малайзийский ринггит</option>
+                                    
+                                    <option value="504">504 - Марокканский дирхам</option>
+                                    
+                                    <option value="484">484 - Мексиканское песо</option>
+                                    
+                                    <option value="498">498 - Молдавский лей</option>
+                                    
+                                    <option value="496">496 - Монгольский тугpик</option>
+                                    
+                                    <option value="104">104 - Мьянманский кьят</option>
+                                    
+                                    <option value="578">578 - Норвежская крона</option>
+                                    
+                                    <option value="554">554 - Новозеландский доллар</option>
+                                    
+                                    <option value="376">376 - Новый израильский шекель</option>
+                                    
+                                    <option value="934">934 - Новый туркменский манат</option>
+                                    
+                                    <option value="512">512 - Оманский риал</option>
+                                    
+                                    <option value="586">586 - Пакистанская рупия</option>
+                                    
+                                    <option value="116">116 - Риель</option>
+                                    
+                                    <option value="643">643 - Российский рубль</option>
+                                    
+                                    <option value="946">946 - Румынский лей</option>
+                                    
+                                    <option value="360">360 - Рупия</option>
+                                    
+                                    <option value="710">710 - Рэнд</option>
+                                    
+                                    <option value="682">682 - Саудовский риял</option>
+                                    
+                                    <option value="941">941 - Сербский динар</option>
+                                    
+                                    <option value="702">702 - Сингапурский доллар</option>
+                                    
+                                    <option value="760">760 - Сирийский фунт</option>
+                                    
+                                    <option value="972">972 - Сомони</option>
+                                    
+                                    <option value="938">938 - Суданский фунт</option>
+                                    
+                                    <option value="960">960 - СДР</option>
+                                    
+                                    <option value="788">788 - Тунисский динар</option>
+                                    
+                                    <option value="949">949 - Турецкая лира</option>
+                                    
+                                    <option value="858">858 - Уругвайское песо</option>
+                                    
+                                    <option value="860">860 - Узбекский сум</option>
+                                    
+                                    <option value="928">928 - Венесуэльский боливар</option>
+                                    
+                                    <option value="348">348 - Венгерский форинт</option>
+                                    
+                                    <option value="410">410 - Вона Республики Корея</option>
+                                    
+                                    <option value="985">985 - Злотый</option>
+                                    
+                                    <option value="752">752 - Шведская крона</option>
+                                    
+                                    <option value="756">756 - Швейцарский франк</option>
+                                    
+                                    <option value="203">203 - Чешская крона</option>
+                                    
+                                </select>
+                                <label class="mdb-main-label d-none" for="skv1">СКВ</label>
+                            </div>
+                        </div>
+                        <div class="col-2">
+                            <div class="input-group input-group-sm">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text">Курс</span>
+                                </div>
+                                <input class="form-control form-control-sm" id="kurs_skv1" onblur="tam_stoim()" placeholder="Курс СКВ">
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="input-group input-group-sm">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text">в 112.</span>
+                                </div>
+                                <input class="form-control form-control-sm" id="kolvo_ed" onblur="stoim_byul()" placeholder="Tovar miqdori">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-row form-group">
+                        <div class="col-4">
+                            <div class="input-group input-group-sm">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text">0.00</span>
+                                </div>
+                                <input class="form-control form-control-sm" id="trans_rasxod" onblur="tam_stoim()" placeholder="Transport harajatlari">
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="md-form md-outline mt-0 mb-0 calc-select-wrap">
+                                <select class="mdb-select md-form md-outline" name="skv2" id="skv2" onchange="kurs_skv2()" searchable="Поиск...">
+                                    <option value="" disabled selected>СКВ</option>
+                                    
+                                    <option value="156">156 - Юань ренминби</option>
+                                    
+                                    <option value="971">971 - Афгани</option>
+                                    
+                                    <option value="012">012 - Алжирский динар</option>
+                                    
+                                    <option value="032">032 - Аргентинское песо</option>
+                                    
+                                    <option value="051">051 - Армянский драм</option>
+                                    
+                                    <option value="036">036 - Австралийский доллар</option>
+                                    
+                                    <option value="944">944 - Азербайджанский манат</option>
+                                    
+                                    <option value="048">048 - Бахрейнский динар</option>
+                                    
+                                    <option value="050">050 - Бангладешская така</option>
+                                    
+                                    <option value="764">764 - Бат</option>
+                                    
+                                    <option value="933">933 - Белорусский рубль</option>
+                                    
+                                    <option value="975">975 - Болгарский лев</option>
+                                    
+                                    <option value="986">986 - Бразильский реал</option>
+                                    
+                                    <option value="096">096 - Брунейский доллар</option>
+                                    
+                                    <option value="208">208 - Датская крона</option>
+                                    
+                                    <option value="784">784 - Дирхам ОАЭ</option>
+                                    
+                                    <option value="840">840 - Доллар США</option>
+                                    
+                                    <option value="704">704 - Донг</option>
+                                    
+                                    <option value="818">818 - Египетский фунт</option>
+                                    
+                                    <option value="978">978 - Евро</option>
+                                    
+                                    <option value="608">608 - Филиппинское песо</option>
+                                    
+                                    <option value="826">826 - Фунт стерлингов</option>
+                                    
+                                    <option value="344">344 - Гонгконгский доллар</option>
+                                    
+                                    <option value="980">980 - Гривна</option>
+                                    
+                                    <option value="981">981 - Грузинский лари</option>
+                                    
+                                    <option value="392">392 - Иена</option>
+                                    
+                                    <option value="356">356 - Индийская рупия</option>
+                                    
+                                    <option value="400">400 - Иорданский динар</option>
+                                    
+                                    <option value="368">368 - Иракский динар</option>
+                                    
+                                    <option value="364">364 - Иранский риал</option>
+                                    
+                                    <option value="352">352 - Исландская крона</option>
+                                    
+                                    <option value="886">886 - Йеменский риал</option>
+                                    
+                                    <option value="124">124 - Канадский доллар</option>
+                                    
+                                    <option value="634">634 - Катарский риал</option>
+                                    
+                                    <option value="398">398 - Казахстанский тенге</option>
+                                    
+                                    <option value="417">417 - Киргизский сом</option>
+                                    
+                                    <option value="192">192 - Кубинское песо</option>
+                                    
+                                    <option value="414">414 - Кувейтский динар</option>
+                                    
+                                    <option value="418">418 - Лаосский кип</option>
+                                    
+                                    <option value="422">422 - Ливанский фунт</option>
+                                    
+                                    <option value="434">434 - Ливийский динар</option>
+                                    
+                                    <option value="458">458 - Малайзийский ринггит</option>
+                                    
+                                    <option value="504">504 - Марокканский дирхам</option>
+                                    
+                                    <option value="484">484 - Мексиканское песо</option>
+                                    
+                                    <option value="498">498 - Молдавский лей</option>
+                                    
+                                    <option value="496">496 - Монгольский тугpик</option>
+                                    
+                                    <option value="104">104 - Мьянманский кьят</option>
+                                    
+                                    <option value="578">578 - Норвежская крона</option>
+                                    
+                                    <option value="554">554 - Новозеландский доллар</option>
+                                    
+                                    <option value="376">376 - Новый израильский шекель</option>
+                                    
+                                    <option value="934">934 - Новый туркменский манат</option>
+                                    
+                                    <option value="512">512 - Оманский риал</option>
+                                    
+                                    <option value="586">586 - Пакистанская рупия</option>
+                                    
+                                    <option value="116">116 - Риель</option>
+                                    
+                                    <option value="643">643 - Российский рубль</option>
+                                    
+                                    <option value="946">946 - Румынский лей</option>
+                                    
+                                    <option value="360">360 - Рупия</option>
+                                    
+                                    <option value="710">710 - Рэнд</option>
+                                    
+                                    <option value="682">682 - Саудовский риял</option>
+                                    
+                                    <option value="941">941 - Сербский динар</option>
+                                    
+                                    <option value="702">702 - Сингапурский доллар</option>
+                                    
+                                    <option value="760">760 - Сирийский фунт</option>
+                                    
+                                    <option value="972">972 - Сомони</option>
+                                    
+                                    <option value="938">938 - Суданский фунт</option>
+                                    
+                                    <option value="960">960 - СДР</option>
+                                    
+                                    <option value="788">788 - Тунисский динар</option>
+                                    
+                                    <option value="949">949 - Турецкая лира</option>
+                                    
+                                    <option value="858">858 - Уругвайское песо</option>
+                                    
+                                    <option value="860">860 - Узбекский сум</option>
+                                    
+                                    <option value="928">928 - Венесуэльский боливар</option>
+                                    
+                                    <option value="348">348 - Венгерский форинт</option>
+                                    
+                                    <option value="410">410 - Вона Республики Корея</option>
+                                    
+                                    <option value="985">985 - Злотый</option>
+                                    
+                                    <option value="752">752 - Шведская крона</option>
+                                    
+                                    <option value="756">756 - Швейцарский франк</option>
+                                    
+                                    <option value="203">203 - Чешская крона</option>
+                                    
+                                </select>
+                                <label class="mdb-main-label d-none" for="skv2">СКВ</label>
+                            </div>
+                        </div>
+                        <div class="col-2">
+                            <div class="input-group input-group-sm">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text">Курс</span>
+                                </div>
+                                <input class="form-control form-control-sm" id="kurs_skv2" onblur="tam_stoim()"  placeholder="Курс СКВ">
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="input-group input-group-sm">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text">в л.</span>
+                                </div>
+                                <input class="form-control form-control-sm" id="kolvo" placeholder="Tovar miqdori">
+                                <input type="hidden" class="value1" id="unit2"  value="112">
+                                <script>
+                                    if ($('#unit2').val()==""){
+                                        $('#kolvo').disabled = true;
+                                    }
+                                </script>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="mb-1 pl-1" id="obyom_dvigatel" style="display: none">
+                            <div class="input-group input-group-sm">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text">объем двигателя куб.см</span>
+                                </div>
+                                <input class="value3" id="obyom" value=""   placeholder="объем двигателя">
+                            </div>
+                            <input type="hidden" class="value1" id="type_rate"  value="1">
+                            <script>
+                                if($('#type_rate').val()=="2"){
+                                    $('#obyom_dvigatel').css({'display': ''});
+                                }
+                            </script>
+                        </div>
+                    </div>
+                    <H5 class="mt-lg-1 ml-2">Bojxona ko'rigi uchun to'lovlarni hisoblash</H5>
+                    <div class="form-row">
+                        <div class="col-3">
+                            <div class="md-form md-outline input-with-post-icon">
+                                <i class="fas fa-clock  input-prefix"></i>
+                                <input type="text" name="time1" id="urochni" class="form-control form-control-lg" value="0">
+                                <label class="active" for="urochni">Ish vaqtida</label>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="md-form md-outline input-with-post-icon">
+                                <i class="fas fa-clock  input-prefix"></i>
+                                <input type="text" name="time2" id="neurochni" class="form-control form-control-lg" value="0">
+                                <label class="active" for="neurochni">Ish vaqtidan tashqarida</label>
+                            </div>
+                        </div>
+
+
+
+                    </div>
+                    <div class="form-row">
+                        <div class="col-4">
+                            <div class="md-form md-outline">
+
+                                <input type="text" id="stoim_byul" class="form-control form-control-lg" value="0.0" readonly />
+                                <label class="active" for="stoim_byul">Tovarning byulleten bo'yicha narxi</label>
+                                <input type="hidden" id="byul_stoim"  value="0.0">
+
+                            </div>
+                        </div>
+
+                        <div class="col-4">
+                            <div class="md-form md-outline">
+
+                                <input type="text" id="stoim_sdelki" class="form-control form-control-lg" value="0.0" readonly/>
+                                <label class="active"  for="stoim_sdelki">Tovarning bitimga asosan narxi</label>
+
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="md-form md-outline">
+
+                                <input type="text"  id="tam_stoim" class="form-control form-control-lg" value="0.0" readonly/>
+                                <label class="active" for="tam_stoim">Dastlabki bojxona qiymati</label>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="col-12 mt-2" align="right">
+                            <button class="btn btn-sm btn-primary" onclick="showResult()"><i class="fa fa-calculator"></i>&nbsp;
+                                Hisoblash
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-row mt-lg-2" id="calc_result">
+
+                    </div>
+
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h4 class="panel-title">
+                <a data-toggle="collapse" href="#collapse4" class="card-link">
+                    <h5 class="mb-0">
+                        Qo'shimcha harajatlar
+                        <div class="fa-pull-right">
+                            <i style="font-size: 24px" class="fas fa-angle-down rotate-icon"></i>
+                        </div>
+                    </h5>
+
+                </a>
+            </h4>
+        </div>
+        <div id="collapse4" class="panel-collapse collapse">
+            <div class="card-body">
+
+                
+
+                <div class="row">
+
+                    <div class="col-md-12 col-sm-12 ">
+                        <table  class="table  table-bordered" style="width: 100%">
+                            <thead class="bg-light">
+                            <tr>
+                                <th>№</th>
+                                <th>Tashkilot nomi</th>
+                                <th>Hujjat nomi</th>
+                                <th>Xizmat nomi</th>
+                                <th>O'lchov birligi</th>
+                                <th>Xizmat narxi</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            
+                                <tr><td colspan="6" align="center">Hech qanday ma'lumot topilmadi</td></tr>
+                            
+                            </tbody>
+                            <tfoot>
+
+                            </tfoot>
+                        </table>
+
+
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+    </div>
+</div>
+
+
+<script language="JavaScript">
+
+    (function () {
+        function initCalcMaterialSelects() {
+            ['#skv1', '#skv2'].forEach(function (selector) {
+                var $select = $(selector);
+                if (!$select.length) {
+                    return;
+                }
+                var $parentWrapper = $select.parent('.select-wrapper');
+                if ($parentWrapper.length) {
+                    $parentWrapper.find('input.select-dropdown').off();
+                    $parentWrapper.find('input.select-dropdown').remove();
+                    $parentWrapper.find('ul.dropdown-content.select-dropdown').remove();
+                    $select.unwrap();
+                }
+                if ($select.data('select-id')) {
+                    $select.removeData('select-id');
+                }
+                $select.materialSelect();
+            });
+        }
+
+        $(function () {
+            initCalcMaterialSelects();
+        });
+    })();
+
+    jQuery('#total_cost').inputmask({ 'alias' : 'decimal', rightAlign: true, 'groupSeparator': ' ','autoGroup': true });
+    jQuery('#trans_rasxod').inputmask({ 'alias' : 'decimal', rightAlign: true, 'groupSeparator': ' ','autoGroup': true });
+    jQuery('#kolvo').inputmask({ 'alias' : 'decimal', rightAlign: true, 'groupSeparator': ' ','autoGroup': true });
+    jQuery('#kolvo_ed').inputmask({ 'alias' : 'decimal', rightAlign: true, 'groupSeparator': ' ','autoGroup': true });
+    jQuery('#kurs_skv1').inputmask({ 'alias' : 'decimal', rightAlign: true, 'groupSeparator': ' ','autoGroup': true });
+    jQuery('#kurs_skv2').inputmask({ 'alias' : 'decimal', rightAlign: true, 'groupSeparator': ' ','autoGroup': true });
+    jQuery('#tam_stoim').inputmask({ 'alias' : 'decimal', rightAlign: true, 'groupSeparator': ' ','autoGroup': true });
+    jQuery('#stoim_sdelki').inputmask({ 'alias' : 'decimal', rightAlign: true, 'groupSeparator': ' ','autoGroup': true });
+    jQuery('#stoim_byul').inputmask({ 'alias' : 'decimal', rightAlign: true, 'groupSeparator': ' ','autoGroup': true });
+    jQuery('#obyom').inputmask({ 'alias' : 'decimal', rightAlign: true, 'groupSeparator': ' ','autoGroup': true });
+    jQuery('#urochni').inputmask({ 'alias' : 'decimal', rightAlign: true, 'groupSeparator': ' ','autoGroup': true });
+    jQuery('#neurochni').inputmask({ 'alias' : 'decimal', rightAlign: true, 'groupSeparator': ' ','autoGroup': true });
+</script>
+
+
+
+

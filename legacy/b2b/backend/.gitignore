@@ -1,0 +1,12 @@
+*.pyc
+__pycache__/
+venv/
+env/
+db.sqlite3
+.env
+media/
+static/
+celerybeat-schedule.db
+
+# generated КП/document preview artifacts (do not commit)
+_*.pdf

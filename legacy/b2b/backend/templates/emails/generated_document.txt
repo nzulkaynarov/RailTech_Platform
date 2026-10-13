@@ -1,0 +1,9 @@
+{% load i18n %}{% translate "Здравствуйте!" %}
+
+{% if company_name %}{% blocktranslate %}Компания {{ company_name }}{% endblocktranslate %}{% else %}{% translate "Отправитель" %}{% endif %} {% blocktranslate %}направила вам документ «{{ document_title }}» ({{ document_number }}).{% endblocktranslate %}
+{% if public_link %}
+{% translate "Открыть и скачать документ можно по ссылке (без регистрации):" %}
+{{ public_link }}
+{% endif %}
+{% translate "С уважением," %}
+{% translate "команда RailTech" %}

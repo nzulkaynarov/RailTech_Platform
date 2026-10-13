@@ -1,0 +1,79 @@
+<!doctype html>
+{% comment %}
+Public, unauthenticated view of an ISSUED generated document (letter/report), opened from an
+emailed link. Shows the frozen rendered_html snapshot (already sanitised at generation — no cost
+data on a generated document) plus a «Скачать PDF» button. Self-contained, Russian, matching the
+public КП page styling. NB: rendered_html is a trusted server-side snapshot (sanitize_template_html
+ran at generation), so autoescape is disabled ONLY for that field.
+{% endcomment %}
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ document.title|default:document.number }}</title>
+  <style>
+    :root {
+      /* client-facing document — always light, never auto-dark by device (benchmark: PandaDoc/Qwilr; see quote_public_page.html) */
+      color-scheme: light;
+      /* D2 document theme — same accent / font the issuing company's PDF uses, so the online
+         document carries the seller's brand instead of a platform-blue button (one theme). */
+      --accent: {{ accent|default:"#15294d" }};
+      --accent-contrast: {{ accent_contrast|default:"#ffffff" }};
+      --font-main: {{ font_stack|default:"-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"|safe }};
+      --bg: #f3f4f6; --ink: #111827; --ink-soft: #4b5563; --card: #ffffff; --line: #e6e9ef;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh;
+      font-family: var(--font-main);
+      background: var(--bg); color: var(--ink); padding: 24px;
+    }
+    .wrap { max-width: 820px; margin: 0 auto; }
+    .bar {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-logo { max-height: 40px; max-width: 120px; }
+    .brand-name { font-size: 18px; font-weight: 700; color: var(--accent); }
+    .meta { font-size: 13px; color: var(--ink-soft); }
+    .meta strong { color: var(--ink); }
+    .btn {
+      display: inline-block; padding: 10px 20px; font-size: 15px; font-weight: 600;
+      color: var(--accent-contrast); background: var(--accent); border: 0; border-radius: 8px;
+      text-decoration: none; cursor: pointer;
+    }
+    .doc {
+      background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 40px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+    }
+    .doc img { max-width: 100%; }
+    /* Тело документа рисует АВТОР в редакторе шаблонов, и таблицу он вставить может.
+       Широкая таблица распирала бы всю страницу вбок; прокручиваем её ВНУТРИ карточки —
+       второй паттерн Qwilr (для произвольных, не прайсовых таблиц). Перестраивать её в
+       карточки, как в публичном КП, нельзя: колонки здесь произвольные и подписей нет. */
+    .doc table { display: block; overflow-x: auto; max-width: 100%; }
+    /* Телефон: 128 px отступов (24 у body + 40 у карточки с двух сторон) съедали треть
+       экрана — на 360 px под содержимое оставалось ~232 px. */
+    @media (max-width: 640px) {
+      body { padding: 12px; }
+      .doc { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="bar">
+      <div class="brand">
+        {% if seller_logo_url and show_logo %}<img class="brand-logo" src="{{ seller_logo_url }}" alt="logo">{% endif %}
+        <div>
+          <div class="brand-name">{% firstof seller_profile.legal_name seller.name company.name "RailTech B2B" %}</div>
+          <div class="meta">Документ <strong>{{ document.number }}</strong></div>
+        </div>
+      </div>
+      <a class="btn" href="{{ download_url }}">Скачать PDF</a>
+    </div>
+    <article class="doc">{% autoescape off %}{{ document.rendered_html }}{% endautoescape %}</article>
+  </main>
+</body>
+</html>

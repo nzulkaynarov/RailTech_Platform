@@ -1,0 +1,68 @@
+{% load i18n %}
+{% comment %}
+  Хвост договора одним блоком ({{doc.requisites_and_signatures}}): статья «Реквизиты и подписи
+  Сторон» (номер сдвигается, когда есть «Особые условия»), полные реквизиты обеих сторон и
+  ПЭП-подписи. Это то, что делает договор документом, — правится положение, не содержимое.
+{% endcomment %}
+<div class="legal-article">
+  <h2>{% blocktranslate with no=article_no %}{{ no }}. Реквизиты и подписи Сторон{% endblocktranslate %}</h2>
+</div>
+<table class="parties" style="margin-bottom:14pt;">
+  <tr>
+    <td>
+      <div class="party">
+        <h3>{% translate "Поставщик" %}</h3>
+        <div class="pname">{% translate "Поставщик" as fallback_seller_name %}{% firstof seller_profile.legal_name seller.name fallback_seller_name %}</div>
+        {% firstof seller_profile.inn seller.inn as req_seller_inn %}
+        {% if req_seller_inn %}<p>{% translate "ИНН:" %} {{ req_seller_inn }}</p>{% endif %}
+        {% firstof seller_profile.legal_address seller.legal_address as req_seller_addr %}
+        {% if req_seller_addr %}<p>{% translate "Адрес:" %} {{ req_seller_addr }}</p>{% endif %}
+        {% if seller_profile.bank_details %}<p>{{ seller_profile.bank_details|linebreaksbr }}</p>
+        {% elif seller.bank_account %}<p>{% translate "Р/с:" %} {{ seller.bank_account }}{% if seller.mfo %} · {% translate "МФО:" %} {{ seller.mfo }}{% endif %}</p>{% endif %}
+        {% if seller.phone %}<p>{% translate "Тел.:" %} {{ seller.phone }}</p>{% endif %}
+        {% if seller_profile.signatory_name %}<p>{% translate "Подписант" as default_signatory %}{{ seller_profile.signatory_position|default:default_signatory }}: {{ seller_profile.signatory_name }}</p>{% endif %}
+      </div>
+    </td>
+    <td>
+      <div class="party">
+        <h3>{% translate "Покупатель" %}</h3>
+        <div class="pname">{% translate "Покупатель" as fallback_buyer_name %}{{ company.name|default:fallback_buyer_name }}</div>
+        {% if company.inn %}<p>{% translate "ИНН:" %} {{ company.inn }}</p>{% endif %}
+        {% if company.legal_address %}<p>{% translate "Адрес:" %} {{ company.legal_address }}</p>{% endif %}
+        {% if company.bank_account %}<p>{% translate "Р/с:" %} {{ company.bank_account }}{% if company.mfo %} · {% translate "МФО:" %} {{ company.mfo }}{% endif %}</p>{% endif %}
+        {% if company.phone %}<p>{% translate "Тел.:" %} {{ company.phone }}</p>{% endif %}
+      </div>
+    </td>
+  </tr>
+</table>
+<table class="signatures">
+  <tr>
+    <td>
+      <div class="sign-box">
+        <div class="role">{% translate "От Поставщика:" %}</div>
+        {% if contract.manager_signer %}
+          {{ contract.manager_signer.get_full_name|default:contract.manager_signer.email }}
+          <div class="sign-line">{% translate "Простая электронная подпись" %} · {{ contract.manager_signed_at|date:"d.m.Y H:i" }}<br>{% translate "Идентификация:" %} {{ contract.manager_signer.email }}</div>
+        {% else %}<div class="sign-line">{% translate "Подпись / дата" %}</div>{% endif %}
+        <div class="seal">{% translate "М.П." %}</div>
+      </div>
+    </td>
+    <td>
+      <div class="sign-box">
+        <div class="role">{% translate "От Покупателя:" %}</div>
+        {% if contract.client_signer %}
+          {{ contract.client_signer.get_full_name|default:contract.client_signer.email }}
+          <div class="sign-line">{% translate "Простая электронная подпись" %} · {{ contract.client_signed_at|date:"d.m.Y H:i" }}<br>{% translate "Идентификация:" %} {{ contract.client_signer.email }}</div>
+        {% else %}<div class="sign-line">{% translate "Подпись / дата" %}</div>{% endif %}
+        <div class="seal">{% translate "М.П." %}</div>
+      </div>
+    </td>
+  </tr>
+</table>
+{% if contract.manager_signer or contract.client_signer %}
+<div class="notes-block" style="color:var(--muted);font-size:7.8pt;">
+  {% blocktranslate %}Документ подписан простой электронной подписью (ПЭП) в соответствии с соглашением сторон об
+  электронном документообороте. Подписант идентифицирован по учётной записи платформы; дата и
+  время подписания зафиксированы системой.{% endblocktranslate %}
+</div>
+{% endif %}

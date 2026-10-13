@@ -1,0 +1,47 @@
+# ==============================================================================
+# ЛОКАЛЬНАЯ разработка (gitignored, автоподхватывается `docker compose` / `make up`).
+# Добавляет локальный Postgres 17 (`db`) — прод/стейджинг используют явные
+# `-f docker-compose.yml -f docker-compose.prod.yml` и этот файл не загружают.
+# Восстановлен 2026-07-06 (кросс-машинный handoff: файл в gitignore).
+# ==============================================================================
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: railtech_db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-railtech}
+      POSTGRES_USER: ${POSTGRES_USER:-railtech}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-railtech}
+    # Loopback-only — как и остальные порты в базовом compose
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-railtech} -d ${POSTGRES_DB:-railtech}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - railtech
+    restart: unless-stopped
+
+  backend:
+    depends_on:
+      db:
+        condition: service_healthy
+
+  celery-worker:
+    depends_on:
+      db:
+        condition: service_healthy
+
+  celery-beat:
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+    driver: local

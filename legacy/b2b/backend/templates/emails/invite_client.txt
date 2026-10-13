@@ -1,0 +1,13 @@
+{% load i18n %}{% if contact_name %}{% blocktranslate %}Здравствуйте, {{ contact_name }}!{% endblocktranslate %}{% else %}{% translate "Здравствуйте!" %}{% endif %}
+
+{% blocktranslate %}Компания «{{ company_name }}» приглашает вас зарегистрироваться на платформе
+RailTech B2B. Регистрация подтянет уже накопленную историю
+взаимодействий — заявки, КП и переписку — под ваш аккаунт.{% endblocktranslate %}
+
+{% translate "Чтобы зарегистрироваться, перейдите по ссылке:" %}
+
+{{ invite_url }}
+
+{% translate "Если вы не ожидали это приглашение, просто проигнорируйте письмо." %}
+
+— {% translate "Команда RailTech B2B" %}

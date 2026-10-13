@@ -1,0 +1,215 @@
+<mxfile host="app.diagrams.net" modified="2026-04-18T00:00:00.000Z" agent="RailTech-SJM-audit" version="24.0.0">
+  <diagram name="Before-After Comparison" id="comparison">
+    <mxGraphModel dx="2400" dy="1400" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1900" pageHeight="2720" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="RailTech SaaS B2B — Before/After Audit Comparison (16 findings)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="40" y="10" width="1800" height="40" as="geometry" /></mxCell>
+        <mxCell id="h_idx"    value="#"          style="rounded=0;whiteSpace=wrap;html=1;fillColor=#333333;strokeColor=#111111;fontColor=#ffffff;fontSize=12;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="30" y="38" width="70" height="30" as="geometry" /></mxCell>
+        <mxCell id="h_topic"  value="Тема"       style="rounded=0;whiteSpace=wrap;html=1;fillColor=#333333;strokeColor=#111111;fontColor=#ffffff;fontSize=12;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="110" y="38" width="270" height="30" as="geometry" /></mxCell>
+        <mxCell id="h_before" value="БЫЛО (audit 2026-04-18 утро)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#333333;strokeColor=#111111;fontColor=#ffffff;fontSize=12;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="390" y="38" width="430" height="30" as="geometry" /></mxCell>
+        <mxCell id="h_after"  value="СТАЛО (current HEAD 6652840)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#333333;strokeColor=#111111;fontColor=#ffffff;fontSize=12;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="830" y="38" width="450" height="30" as="geometry" /></mxCell>
+        <mxCell id="h_status" value="Статус"     style="rounded=0;whiteSpace=wrap;html=1;fillColor=#333333;strokeColor=#111111;fontColor=#ffffff;fontSize=12;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="1700" y="38" width="120" height="30" as="geometry" /></mxCell>
+        <mxCell id="r0_idx" value="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="30" y="70" width="70" height="115" as="geometry" /></mxCell>
+        <mxCell id="r0_t" value="Хардкод CompanyType=&#x27;CLIENT&#x27; при онбординге" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;;align=left;verticalAlign=top;fontStyle=1" vertex="1" parent="1"><mxGeometry x="110" y="70" width="270" height="115" as="geometry" /></mxCell>
+        <mxCell id="r0_b" value="services.py:86 — company_type_code=&#x27;CLIENT&#x27;
+хардкод. Buyer/Seller/MFG выбрать
+при регистрации было нельзя." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="390" y="70" width="430" height="115" as="geometry" /></mxCell>
+        <mxCell id="r0_a" value="services.py:91 + views.py:464 —
+company_type приходит с формы:
+.get(&#x27;company_type&#x27;, &#x27;CLIENT&#x27;)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="830" y="70" width="450" height="115" as="geometry" /></mxCell>
+        <mxCell id="r0_s" value="FIXED" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#82b366;strokeColor=#5a8b49;fontColor=#ffffff;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="1700" y="70" width="120" height="115" as="geometry" /></mxCell>
+        <mxCell id="r1_idx" value="2" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="30" y="190" width="70" height="115" as="geometry" /></mxCell>
+        <mxCell id="r1_t" value="Нет REST approve/reject CompanyRoleApplication" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;;align=left;verticalAlign=top;fontStyle=1" vertex="1" parent="1"><mxGeometry x="110" y="190" width="270" height="115" as="geometry" /></mxCell>
+        <mxCell id="r1_b" value="Только @superuser_only_action в Unfold
+(accounts/admin.py:294). React-страница
+фактически read-only." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="390" y="190" width="430" height="115" as="geometry" /></mxCell>
+        <mxCell id="r1_a" value="views.py:616 POST /role-applications/{id}/approve/
+views.py:634 .../reject/
++ AdminRoleApplicationsPage UI с диалогами" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="830" y="190" width="450" height="115" as="geometry" /></mxCell>
+        <mxCell id="r1_s" value="FIXED" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#82b366;strokeColor=#5a8b49;fontColor=#ffffff;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="1700" y="190" width="120" height="115" as="geometry" /></mxCell>
+        <mxCell id="r2_idx" value="3" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="30" y="310" width="70" height="115" as="geometry" /></mxCell>
+        <mxCell id="r2_t" value="Нет email/нотификации после KYC approve" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;;align=left;verticalAlign=top;fontStyle=1" vertex="1" parent="1"><mxGeometry x="110" y="310" width="270" height="115" as="geometry" /></mxCell>
+        <mxCell id="r2_b" value="services.py:220 «# TODO: hook for
+pghistory event / notification when
+triggers wired». Клиент не знал." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="390" y="310" width="430" height="115" as="geometry" /></mxCell>
+        <mxCell id="r2_a" value="services.py:232 _send_kyc_status_email
++ services.py:265 _create_kyc_notification
+(вызываются из verify_company_kyc)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="830" y="310" width="450" height="115" as="geometry" /></mxCell>
+        <mxCell id="r2_s" value="FIXED" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#82b366;strokeColor=#5a8b49;fontColor=#ffffff;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="1700" y="310" width="120" height="115" as="geometry" /></mxCell>
+        <mxCell id="r3_idx" value="4" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="30" y="430" width="70" height="115" as="geometry" /></mxCell>
+        <mxCell id="r3_t" value="CONTRACT_SIGNED — фиктивный статус" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;;align=left;verticalAlign=top;fontStyle=1" vertex="1" parent="1"><mxGeometry x="110" y="430" width="270" height="115" as="geometry" /></mxCell>
+        <mxCell id="r3_b" value="Нет Contract-модели, нет PDF, нет
+e-sign. Deal просто получал статус." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="390" y="430" width="430" height="115" as="geometry" /></mxCell>
+        <mxCell id="r3_a" value="models.py:603 class Contract + статус-FSM
+DRAFT→PENDING_CLIENT→PENDING_MANAGER→SIGNED
+views.py:988 generate-from-quote,
+.../sign-client/, .../sign-manager/,
+.../upload-signed/ + PDF-шаблон
++ STAGE_REQUIRES_SIGNED_CONTRACT guard
+(services.py:338 — CLOSED_WON требует SIGNED)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="830" y="430" width="450" height="115" as="geometry" /></mxCell>
+        <mxCell id="r3_s" value="FIXED" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#82b366;strokeColor=#5a8b49;fontColor=#ffffff;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="1700" y="430" width="120" height="115" as="geometry" /></mxCell>
+        <mxCell id="r4_idx" value="5" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="30" y="550" width="70" height="115" as="geometry" /></mxCell>
+        <mxCell id="r4_t" value="Quote.valid_until не enforced Celery" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;;align=left;verticalAlign=top;fontStyle=1" vertex="1" parent="1"><mxGeometry x="110" y="550" width="270" height="115" as="geometry" /></mxCell>
+        <mxCell id="r4_b" value="Поле есть, но никакой задачи
+не помечала истёкшие КП." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="390" y="550" width="430" height="115" as="geometry" /></mxCell>
+        <mxCell id="r4_a" value="ПО-ПРЕЖНЕМУ НЕТ задачи
+expire_quotes в crm/tasks.py.
+Поле фигурирует в моделях,
+на runtime не проверяется." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="830" y="550" width="450" height="115" as="geometry" /></mxCell>
+        <mxCell id="r4_s" value="OPEN" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d79b00;strokeColor=#aa7900;fontColor=#ffffff;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="1700" y="550" width="120" height="115" as="geometry" /></mxCell>
+        <mxCell id="r5_idx" value="6" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="30" y="670" width="70" height="115" as="geometry" /></mxCell>
+        <mxCell id="r5_t" value="Нет payment-контура (invoice, act, payment)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;;align=left;verticalAlign=top;fontStyle=1" vertex="1" parent="1"><mxGeometry x="110" y="670" width="270" height="115" as="geometry" /></mxCell>
+        <mxCell id="r5_b" value="CLAUDE.md:294 «payments not implemented».
+После CLOSED_WON — пустота." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="390" y="670" width="430" height="115" as="geometry" /></mxCell>
+        <mxCell id="r5_a" value="Новые модели + ViewSets:
+• Invoice models.py:687
+• InvoiceItem :749
+• Payment :771 (BANK_TRANSFER/CARD/CASH)
+• Act :811 (FSM + 2 подписи)
+PDF-шаблоны (WeasyPrint)
+Endpoints: generate-from-contract,
+record-payment, generate-act, sign" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="830" y="670" width="450" height="115" as="geometry" /></mxCell>
+        <mxCell id="r5_s" value="FIXED" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#82b366;strokeColor=#5a8b49;fontColor=#ffffff;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="1700" y="670" width="120" height="115" as="geometry" /></mxCell>
+        <mxCell id="r6_idx" value="7" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="30" y="790" width="70" height="115" as="geometry" /></mxCell>
+        <mxCell id="r6_t" value="SupplierSubscription не гейтит фичи" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;;align=left;verticalAlign=top;fontStyle=1" vertex="1" parent="1"><mxGeometry x="110" y="790" width="270" height="115" as="geometry" /></mxCell>
+        <mxCell id="r6_b" value="is_active не проверяется ни одним
+ViewSet. Любая фирма работает
+без оплаты." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="390" y="790" width="430" height="115" as="geometry" /></mxCell>
+        <mxCell id="r6_a" value="Subscription-сервисы добавлены:
+check_and_expire_subscriptions,
+record_subscription_payment,
+ensure_trial_subscription (30 дней).
+НО permission-class
+IsSubscriptionActive ОТСУТСТВУЕТ —
+фичи всё ещё не гейтятся." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="830" y="790" width="450" height="115" as="geometry" /></mxCell>
+        <mxCell id="r6_s" value="OPEN" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d79b00;strokeColor=#aa7900;fontColor=#ffffff;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="1700" y="790" width="120" height="115" as="geometry" /></mxCell>
+        <mxCell id="r7_idx" value="8" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="30" y="910" width="70" height="115" as="geometry" /></mxCell>
+        <mxCell id="r7_t" value="Lead → Deal не автоматизировано" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;;align=left;verticalAlign=top;fontStyle=1" vertex="1" parent="1"><mxGeometry x="110" y="910" width="270" height="115" as="geometry" /></mxCell>
+        <mxCell id="r7_b" value="crm/admin.py:198 только ставит
+flag is_processed=True." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="390" y="910" width="430" height="115" as="geometry" /></mxCell>
+        <mxCell id="r7_a" value="crm/services.py:458 convert_lead_to_deal
++ views.py:955 POST /leads/{id}/convert/
+auto-resolves company по email,
+creates Deal, marks processed, ActivityLog" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="830" y="910" width="450" height="115" as="geometry" /></mxCell>
+        <mxCell id="r7_s" value="FIXED" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#82b366;strokeColor=#5a8b49;fontColor=#ffffff;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="1700" y="910" width="120" height="115" as="geometry" /></mxCell>
+        <mxCell id="r8_idx" value="9" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="30" y="1030" width="70" height="115" as="geometry" /></mxCell>
+        <mxCell id="r8_t" value="make_staff не назначает SystemRole" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;;align=left;verticalAlign=top;fontStyle=1" vertex="1" parent="1"><mxGeometry x="110" y="1030" width="270" height="115" as="geometry" /></mxCell>
+        <mxCell id="r8_b" value="services.py:185 выставлял только
+is_staff=True. role оставалась GUEST." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="390" y="1030" width="430" height="115" as="geometry" /></mxCell>
+        <mxCell id="r8_a" value="services.py:189 users.update(is_staff=True,
+role=SALES_MANAGER) + новый REST:
+views.py:355 POST /users/{id}/change-role/
+{ &#x27;role&#x27;: &#x27;ACCOUNT_MANAGER&#x27; | ... }" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="830" y="1030" width="450" height="115" as="geometry" /></mxCell>
+        <mxCell id="r8_s" value="FIXED" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#82b366;strokeColor=#5a8b49;fontColor=#ffffff;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="1700" y="1030" width="120" height="115" as="geometry" /></mxCell>
+        <mxCell id="r9_idx" value="10" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="30" y="1150" width="70" height="115" as="geometry" /></mxCell>
+        <mxCell id="r9_t" value="Поставщик не может котировать RFQ" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;;align=left;verticalAlign=top;fontStyle=1" vertex="1" parent="1"><mxGeometry x="110" y="1150" width="270" height="115" as="geometry" /></mxCell>
+        <mxCell id="r9_b" value="Quote создавал только Manager.
+Seller был пассивен." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="390" y="1150" width="430" height="115" as="geometry" /></mxCell>
+        <mxCell id="r9_a" value="Новые модели:
+• SupplierBid models.py:908
+  (DRAFT→SUBMITTED→ACCEPTED→REJECTED)
+• SupplierBidItem :954
++ ViewSet views.py:1181
++ новая стадия RFQ_OPEN в FSM
++ страница SupplierBids в AppShell" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="830" y="1150" width="450" height="115" as="geometry" /></mxCell>
+        <mxCell id="r9_s" value="FIXED" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#82b366;strokeColor=#5a8b49;fontColor=#ffffff;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="1700" y="1150" width="120" height="115" as="geometry" /></mxCell>
+        <mxCell id="r10_idx" value="11" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="30" y="1270" width="70" height="115" as="geometry" /></mxCell>
+        <mxCell id="r10_t" value="Smart Match threshold 0.3 + нет re-match UI" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;;align=left;verticalAlign=top;fontStyle=1" vertex="1" parent="1"><mxGeometry x="110" y="1270" width="270" height="115" as="geometry" /></mxCell>
+        <mxCell id="r10_b" value="Захардкожен 0.3 → false positives.
+Re-match UI / endpoint отсутствует." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="390" y="1270" width="430" height="115" as="geometry" /></mxCell>
+        <mxCell id="r10_a" value="threshold повышен до 0.45 и сделан
+конфигурируемым (ENV + SystemSetting).
+НО re-match REST-endpoint и UI
+ПО-ПРЕЖНЕМУ ОТСУТСТВУЮТ." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="830" y="1270" width="450" height="115" as="geometry" /></mxCell>
+        <mxCell id="r10_s" value="PARTIAL" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d6b656;strokeColor=#a99133;fontColor=#ffffff;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="1700" y="1270" width="120" height="115" as="geometry" /></mxCell>
+        <mxCell id="r11_idx" value="12" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="30" y="1390" width="70" height="115" as="geometry" /></mxCell>
+        <mxCell id="r11_t" value="Celery import лимит 5000 строк / 600 с" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;;align=left;verticalAlign=top;fontStyle=1" vertex="1" parent="1"><mxGeometry x="110" y="1390" width="270" height="115" as="geometry" /></mxCell>
+        <mxCell id="r11_b" value="MAX_EXCEL_ROWS=5000, timeout 600s.
+Крупные файлы падали." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="390" y="1390" width="430" height="115" as="geometry" /></mxCell>
+        <mxCell id="r11_a" value="НЕ ТРОНУТО — tasks.py:16 всё ещё
+MAX_EXCEL_ROWS=5000. Чанкованный
+импорт не реализован." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="830" y="1390" width="450" height="115" as="geometry" /></mxCell>
+        <mxCell id="r11_s" value="OPEN" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d79b00;strokeColor=#aa7900;fontColor=#ffffff;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="1700" y="1390" width="120" height="115" as="geometry" /></mxCell>
+        <mxCell id="r12_idx" value="13" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="30" y="1510" width="70" height="115" as="geometry" /></mxCell>
+        <mxCell id="r12_t" value="Терминалы CLOSED_WON/LOST без reopen" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;;align=left;verticalAlign=top;fontStyle=1" vertex="1" parent="1"><mxGeometry x="110" y="1510" width="270" height="115" as="geometry" /></mxCell>
+        <mxCell id="r12_b" value="ALLOWED_STAGE_TRANSITIONS={
+  ..., &#x27;CLOSED_WON&#x27;: [],
+  &#x27;CLOSED_LOST&#x27;: [] }" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="390" y="1510" width="430" height="115" as="geometry" /></mxCell>
+        <mxCell id="r12_a" value="services.py:332-333:
+&#x27;CLOSED_WON&#x27;: [&#x27;CONTRACT_SIGNED&#x27;],
+&#x27;CLOSED_LOST&#x27;: [&#x27;CALCULATING&#x27;,&#x27;SOURCING&#x27;]
++ комментарий для редких legit кейсов.
+Добавлен RFQ_OPEN в DRAFT/KYC_PENDING." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="830" y="1510" width="450" height="115" as="geometry" /></mxCell>
+        <mxCell id="r12_s" value="FIXED" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#82b366;strokeColor=#5a8b49;fontColor=#ffffff;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="1700" y="1510" width="120" height="115" as="geometry" /></mxCell>
+        <mxCell id="r13_idx" value="14" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="30" y="1630" width="70" height="115" as="geometry" /></mxCell>
+        <mxCell id="r13_t" value="Нет post-sale workflow" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;;align=left;verticalAlign=top;fontStyle=1" vertex="1" parent="1"><mxGeometry x="110" y="1630" width="270" height="115" as="geometry" /></mxCell>
+        <mxCell id="r13_b" value="После CLOSED_WON — ничего. Нет
+invoice, нет fulfillment, нет reconcile." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="390" y="1630" width="430" height="115" as="geometry" /></mxCell>
+        <mxCell id="r13_a" value="• Fulfillment модель :865
+  PENDING→SHIPPED→IN_TRANSIT→DELIVERED→
+  ACCEPTED/DISPUTED (1:1 с Deal)
+• Авто-триггер: transition_deal_stage
+  services.py:419 запускает
+  auto_invoice_on_closed_won.delay()
+• tasks.py:176 создаёт Fulfillment +
+  Invoice + Act
+• FulfillmentViewSet views.py:1149
+• check_overdue_deliveries scheduled" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="830" y="1630" width="450" height="115" as="geometry" /></mxCell>
+        <mxCell id="r13_s" value="FIXED" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#82b366;strokeColor=#5a8b49;fontColor=#ffffff;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="1700" y="1630" width="120" height="115" as="geometry" /></mxCell>
+        <mxCell id="r14_idx" value="15" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="30" y="1750" width="70" height="115" as="geometry" /></mxCell>
+        <mxCell id="r14_t" value="BUYER не видит меню «Сделки»" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;;align=left;verticalAlign=top;fontStyle=1" vertex="1" parent="1"><mxGeometry x="110" y="1750" width="270" height="115" as="geometry" /></mxCell>
+        <mxCell id="r14_b" value="AppShell.tsx:105 — Deals скрыты
+для role=CLIENT. Покупатель не
+видел свою же сделку." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="390" y="1750" width="430" height="115" as="geometry" /></mxCell>
+        <mxCell id="r14_a" value="AppShell.tsx:106 — Deals теперь
+в базовом меню BUYER.
+Backend queryset фильтрует по
+company_id in memberships
+→ клиент видит только свои." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="830" y="1750" width="450" height="115" as="geometry" /></mxCell>
+        <mxCell id="r14_s" value="FIXED" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#82b366;strokeColor=#5a8b49;fontColor=#ffffff;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="1700" y="1750" width="120" height="115" as="geometry" /></mxCell>
+        <mxCell id="r15_idx" value="16" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="30" y="1870" width="70" height="115" as="geometry" /></mxCell>
+        <mxCell id="r15_t" value="Дубль Unfold ↔ React Admin (ADR 0001)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=10;fontStyle=1;align=center;;align=left;verticalAlign=top;fontStyle=1" vertex="1" parent="1"><mxGeometry x="110" y="1870" width="270" height="115" as="geometry" /></mxCell>
+        <mxCell id="r15_b" value="Критические действия доступны только
+в Unfold: verify_kyc, approve_application,
+make_staff, mark_closed_lost,
+publish_products. React Admin был
+читалкой." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="390" y="1870" width="430" height="115" as="geometry" /></mxCell>
+        <mxCell id="r15_a" value="Реализованы 11 React-страниц:
+Users, Companies, KYC, RoleApps,
+Deals, Catalog, Categories, Groups,
+Offers, Subscriptions, MasterData
++ REST-endpoints для всех критических
+actions (verify-kyc, change-role,
+change-stage, approve/reject app).
+Unfold остался read-only инспектором
+согласно ADR 0001." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="830" y="1870" width="450" height="115" as="geometry" /></mxCell>
+        <mxCell id="r15_s" value="FIXED" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#82b366;strokeColor=#5a8b49;fontColor=#ffffff;fontSize=10;fontStyle=1;align=center;" vertex="1" parent="1"><mxGeometry x="1700" y="1870" width="120" height="115" as="geometry" /></mxCell>
+        <mxCell id="summary" value="ИТОГО 16 НАЙДЕННЫХ ПУНКТОВ:
+  ✅ Полностью исправлено: 13 (81%)
+  🟡 Частично исправлено:  1 (6%)  — #11 (Smart Match: threshold OK, re-match UI нет)
+  🟠 Остались открытыми:   2 (13%) — #5 quote expiry, #7 subscription gating, #12 Excel 5000 rows*
+
+* #12 формально OPEN, но по факту не изменён — лимит остался 5000 строк.
+
+ИСТОРИЧЕСКАЯ FSM СДЕЛКИ РАСШИРЕНА: добавлена стадия RFQ_OPEN (bid-flow для Supplier),
+терминалы CLOSED_WON/LOST теперь reopenable, guard STAGE_REQUIRES_SIGNED_CONTRACT
+привязал CLOSED_WON к наличию подписанного контракта.
+" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f0f7ff;strokeColor=#4a6fa5;fontSize=11;fontStyle=1;align=left;verticalAlign=top;" vertex="1" parent="1"><mxGeometry x="40" y="2020" width="1800" height="200" as="geometry" /></mxCell>
+        <mxCell id="nf_title" value="НОВЫЕ ВОЗМОЖНОСТИ, появившиеся в процессе устранения тупиков:" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontStyle=1;;fontSize=14" vertex="1" parent="1"><mxGeometry x="40" y="2240" width="1800" height="30" as="geometry" /></mxCell>
+        <mxCell id="nf_0" value="KYC Levels L1→L2→L3 с авто-email и in-app нотификацией&#10;&#10;accounts/services.py:198-277" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b0d9b1;strokeColor=#5a8b49;fontSize=10;align=left;verticalAlign=top;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="40" y="2280" width="850" height="60" as="geometry" /></mxCell>
+        <mxCell id="nf_1" value="Contract FSM с двухсторонним e-sign (client + manager)&#10;&#10;crm/models.py:603-684 + views.py:988-1034" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b0d9b1;strokeColor=#5a8b49;fontSize=10;align=left;verticalAlign=top;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="40" y="2350" width="850" height="60" as="geometry" /></mxCell>
+        <mxCell id="nf_2" value="STAGE_REQUIRES_SIGNED_CONTRACT — guard перехода в CLOSED_WON&#10;&#10;crm/services.py:338" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b0d9b1;strokeColor=#5a8b49;fontSize=10;align=left;verticalAlign=top;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="40" y="2420" width="850" height="60" as="geometry" /></mxCell>
+        <mxCell id="nf_3" value="Invoice / Payment / Act — полный post-sale контур&#10;&#10;crm/models.py:687-862 + views.py:1046-1147" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b0d9b1;strokeColor=#5a8b49;fontSize=10;align=left;verticalAlign=top;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="40" y="2490" width="850" height="60" as="geometry" /></mxCell>
+        <mxCell id="nf_4" value="Fulfillment tracking с auto-триггером на CLOSED_WON&#10;&#10;crm/models.py:865-901 + tasks.py:176" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b0d9b1;strokeColor=#5a8b49;fontSize=10;align=left;verticalAlign=top;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="40" y="2560" width="850" height="60" as="geometry" /></mxCell>
+        <mxCell id="nf_5" value="SupplierBid — поставщик котирует RFQ (+ стадия RFQ_OPEN в FSM)&#10;&#10;crm/models.py:908-975 + services.py:324-325" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b0d9b1;strokeColor=#5a8b49;fontSize=10;align=left;verticalAlign=top;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="40" y="2630" width="850" height="60" as="geometry" /></mxCell>
+        <mxCell id="nf_6" value="convert_lead_to_deal с auto-resolve компании по email&#10;&#10;crm/services.py:458 + views.py:955" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b0d9b1;strokeColor=#5a8b49;fontSize=10;align=left;verticalAlign=top;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="940" y="2280" width="850" height="60" as="geometry" /></mxCell>
+        <mxCell id="nf_7" value="POST /users/{id}/change-role/ + корректный assign_sales_manager_role&#10;&#10;accounts/views.py:355 + services.py:189" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b0d9b1;strokeColor=#5a8b49;fontSize=10;align=left;verticalAlign=top;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="940" y="2350" width="850" height="60" as="geometry" /></mxCell>
+        <mxCell id="nf_8" value="Smart Match threshold конфигурируем (ENV + SystemSetting, default 0.45)&#10;&#10;sourcing/services.py:9" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b0d9b1;strokeColor=#5a8b49;fontSize=10;align=left;verticalAlign=top;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="940" y="2420" width="850" height="60" as="geometry" /></mxCell>
+        <mxCell id="nf_9" value="check_overdue_deliveries — scheduled alert по просрочке доставки&#10;&#10;crm/tasks.py" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b0d9b1;strokeColor=#5a8b49;fontSize=10;align=left;verticalAlign=top;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="940" y="2490" width="850" height="60" as="geometry" /></mxCell>
+        <mxCell id="nf_10" value="Message cold-storage (S3 JSONL, 90-day cutoff)&#10;&#10;crm/tasks.py (archive_old_messages)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b0d9b1;strokeColor=#5a8b49;fontSize=10;align=left;verticalAlign=top;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="940" y="2560" width="850" height="60" as="geometry" /></mxCell>
+        <mxCell id="nf_11" value="AdminCompaniesPage, AdminDealsPage, AdminMasterDataPage — новые React-админки&#10;&#10;frontend/src/pages/Admin*Page.tsx" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b0d9b1;strokeColor=#5a8b49;fontSize=10;align=left;verticalAlign=top;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="940" y="2630" width="850" height="60" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
