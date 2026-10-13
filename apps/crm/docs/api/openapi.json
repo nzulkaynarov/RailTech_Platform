@@ -2240,6 +2240,141 @@
         "title": "DryRunRowOut",
         "type": "object"
       },
+      "EmailLogItem": {
+        "description": "Строка журнала писем; тела письма (временного пароля) в журнале нет.",
+        "properties": {
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "lang": {
+            "title": "Lang",
+            "type": "string"
+          },
+          "requested_by": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested By"
+          },
+          "sent_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent At"
+          },
+          "status": {
+            "enum": [
+              "queued",
+              "sent",
+              "failed",
+              "skipped_no_smtp"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "subject": {
+            "title": "Subject",
+            "type": "string"
+          },
+          "template": {
+            "title": "Template",
+            "type": "string"
+          },
+          "to_email": {
+            "title": "To Email",
+            "type": "string"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          }
+        },
+        "required": [
+          "id",
+          "to_email",
+          "subject",
+          "template",
+          "lang",
+          "status",
+          "error",
+          "attempts",
+          "user_id",
+          "requested_by",
+          "created_at",
+          "sent_at"
+        ],
+        "title": "EmailLogItem",
+        "type": "object"
+      },
+      "EmailQueuedOut": {
+        "description": "Письмо поставлено в очередь: номер строки журнала, адрес получателя, статус.",
+        "properties": {
+          "email_log_id": {
+            "title": "Email Log Id",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "queued",
+              "sent",
+              "failed",
+              "skipped_no_smtp"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "to_email": {
+            "title": "To Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email_log_id",
+          "to_email",
+          "status"
+        ],
+        "title": "EmailQueuedOut",
+        "type": "object"
+      },
       "ErpCheckOut": {
         "description": "Ответ ERP на `GET /api/integration/v1/health` (схема `Health` контракта) и время ответа.",
         "properties": {
@@ -4686,6 +4821,12 @@
           "erp_unauthorized",
           "erp_unavailable",
           "erp_bad_response",
+          "smtp_not_configured",
+          "smtp_invalid_host",
+          "smtp_unavailable",
+          "smtp_auth_failed",
+          "smtp_tls_failed",
+          "smtp_rejected",
           "lead_exists",
           "client_exists",
           "contact_required",
@@ -5383,6 +5524,225 @@
           "share"
         ],
         "title": "SlaStat",
+        "type": "object"
+      },
+      "SmtpCheckOut": {
+        "description": "Итог «Проверить связь»: приветствие сервера, выполнен ли вход, время ответа.",
+        "properties": {
+          "authenticated": {
+            "title": "Authenticated",
+            "type": "boolean"
+          },
+          "latency_ms": {
+            "title": "Latency Ms",
+            "type": "integer"
+          },
+          "server": {
+            "title": "Server",
+            "type": "string"
+          }
+        },
+        "required": [
+          "server",
+          "authenticated",
+          "latency_ms"
+        ],
+        "title": "SmtpCheckOut",
+        "type": "object"
+      },
+      "SmtpConnectorIn": {
+        "additionalProperties": false,
+        "description": "Сохранение коннектора: логин/пароль `None` — оставить прежние; пустой хост выключает.",
+        "properties": {
+          "from_email": {
+            "default": "",
+            "maxLength": 255,
+            "title": "From Email",
+            "type": "string"
+          },
+          "from_name": {
+            "default": "",
+            "maxLength": 120,
+            "title": "From Name",
+            "type": "string"
+          },
+          "host": {
+            "maxLength": 253,
+            "title": "Host",
+            "type": "string"
+          },
+          "password": {
+            "format": "password",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "port": {
+            "default": 587,
+            "maximum": 65535.0,
+            "minimum": 1.0,
+            "title": "Port",
+            "type": "integer"
+          },
+          "security": {
+            "default": "starttls",
+            "enum": [
+              "starttls",
+              "ssl",
+              "none"
+            ],
+            "title": "Security",
+            "type": "string"
+          },
+          "smtp_password": {
+            "anyOf": [
+              {
+                "format": "password",
+                "maxLength": 512,
+                "minLength": 1,
+                "type": "string",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Smtp Password"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          }
+        },
+        "required": [
+          "host",
+          "password"
+        ],
+        "title": "SmtpConnectorIn",
+        "type": "object"
+      },
+      "SmtpStatusOut": {
+        "description": "Коннектор «Почта» (M3-CRM-08): пароль не возвращается — только «задан» и `last4`.",
+        "properties": {
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "from_email": {
+            "title": "From Email",
+            "type": "string"
+          },
+          "from_name": {
+            "title": "From Name",
+            "type": "string"
+          },
+          "host": {
+            "title": "Host",
+            "type": "string"
+          },
+          "password_configured": {
+            "title": "Password Configured",
+            "type": "boolean"
+          },
+          "password_last4": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password Last4"
+          },
+          "password_source": {
+            "enum": [
+              "db",
+              "env",
+              "none"
+            ],
+            "title": "Password Source",
+            "type": "string"
+          },
+          "password_updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password Updated At"
+          },
+          "port": {
+            "title": "Port",
+            "type": "integer"
+          },
+          "secrets_enabled": {
+            "title": "Secrets Enabled",
+            "type": "boolean"
+          },
+          "security": {
+            "enum": [
+              "starttls",
+              "ssl",
+              "none"
+            ],
+            "title": "Security",
+            "type": "string"
+          },
+          "settings_source": {
+            "enum": [
+              "db",
+              "env",
+              "none"
+            ],
+            "title": "Settings Source",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          },
+          "username_source": {
+            "enum": [
+              "db",
+              "env",
+              "none"
+            ],
+            "title": "Username Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "configured",
+          "host",
+          "port",
+          "security",
+          "from_email",
+          "from_name",
+          "settings_source",
+          "username",
+          "username_source",
+          "password_configured",
+          "password_source",
+          "password_last4",
+          "password_updated_at",
+          "secrets_enabled"
+        ],
+        "title": "SmtpStatusOut",
         "type": "object"
       },
       "Snooze": {
@@ -8274,6 +8634,239 @@
           }
         ],
         "summary": "Check Erp Connection",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/api/v1/integrations/smtp": {
+      "get": {
+        "description": "Коннектор «Почта» (M3-CRM-08, ADR-0018): релей SMTP для писем сотрудникам.\n\nПароль SMTP не возвращается — только «задан», источник и `last4`. Коннектор «настроен» =\nесть хост и адрес отправителя (из «Подключений», иначе `SMTP_*` в `.env`).",
+        "operationId": "get_smtp_status",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SmtpStatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Smtp Status",
+        "tags": [
+          "integrations"
+        ]
+      },
+      "put": {
+        "description": "Сохранить релей и секреты (после пароля админа); логин/пароль `null` — оставить прежние.\n\nОшибки: `smtp_invalid_host` (422, поле `host`), `invalid_email` (422, `from_email`),\n`wrong_password` (422), `secrets_key_missing` (409 — секреты не сохранить без `SECRETS_KEY`).",
+        "operationId": "put_smtp_connector",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SmtpConnectorIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SmtpStatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Smtp Connector",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/api/v1/integrations/smtp/check": {
+      "post": {
+        "description": "«Проверить связь»: соединение, EHLO, STARTTLS/SMTPS и AUTH без отправки письма, 10 с.\n\nОшибки (ADR-0017, `details.reason`): `smtp_not_configured` (409), `smtp_invalid_host` (422),\n`smtp_unavailable` / `smtp_tls_failed` / `smtp_auth_failed` (502).",
+        "operationId": "check_smtp_connection",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SmtpCheckOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Check Smtp Connection",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/api/v1/integrations/smtp/log": {
+      "get": {
+        "description": "Журнал писем сотрудникам: последние `limit`, фильтр по статусу; тел писем в журнале нет.",
+        "operationId": "list_email_log",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "queued",
+                    "sent",
+                    "failed",
+                    "skipped_no_smtp"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EmailLogItem"
+                  },
+                  "title": "Response List Email Log",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Email Log",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/api/v1/integrations/smtp/test-send": {
+      "post": {
+        "description": "Тестовое письмо на адрес самого администратора — через журнал и очередь, как настоящее.\n\nОшибки: `smtp_not_configured` (409), `secrets_key_missing` (409). Итог доставки — в журнале.",
+        "operationId": "send_smtp_test",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailQueuedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Send Smtp Test",
         "tags": [
           "integrations"
         ]
@@ -11975,6 +12568,54 @@
         ]
       }
     },
+    "/api/v1/users/{user_id}/invite": {
+      "post": {
+        "description": "Пригласить по почте (M3-CRM-08): новый временный пароль и письмо через коннектор «Почта».\n\nБез коннектора — 409 `smtp_not_configured`, пароль не меняется (выдайте его вручную,\nкак прежде); без `SECRETS_KEY` — 409 `secrets_key_missing`. Итог доставки — в журнале писем.",
+        "operationId": "invite_user",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "title": "User Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailQueuedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Invite User",
+        "tags": [
+          "users"
+        ]
+      }
+    },
     "/api/v1/users/{user_id}/reset-password": {
       "post": {
         "operationId": "reset_password",
@@ -12017,6 +12658,54 @@
           }
         ],
         "summary": "Reset Password",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/users/{user_id}/reset-password/email": {
+      "post": {
+        "description": "Сбросить пароль и отправить временный по почте (M3-CRM-08); сессии завершаются.\n\nБез коннектора — 409 `smtp_not_configured`, пароль не меняется.",
+        "operationId": "reset_password_by_email",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "title": "User Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailQueuedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reset Password By Email",
         "tags": [
           "users"
         ]

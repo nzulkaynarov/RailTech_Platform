@@ -4,6 +4,7 @@ from app.models import (  # noqa: F401
     auth,
     clients,
     deals,
+    email,
     integrations,
     kb,
     leads,

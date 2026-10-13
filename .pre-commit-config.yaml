@@ -48,3 +48,5 @@ repos:
         language: system
         entry: bash -c 'cd apps/crm/frontend && pnpm exec eslint --max-warnings=0 --no-warn-ignored "${@#apps/crm/frontend/}"' --
         files: ^apps/crm/frontend/.*\.(ts|tsx|js)$
+        # Клиент orval в eslint-ignore: явная передача этих файлов даёт warning «File ignored».
+        exclude: ^apps/crm/frontend/src/api/generated/

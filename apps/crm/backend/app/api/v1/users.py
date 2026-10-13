@@ -5,7 +5,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status
 
 from app.api.deps import ContainerDep, require
+from app.api.v1.integrations import queued_out
 from app.schemas.auth import PasswordReset, UserCreate, UserCreated, UserOut, UserUpdate
+from app.schemas.integrations import EmailQueuedOut
 from app.security.principal import Principal
 from app.services.users import UserPatch, UserView
 
@@ -68,3 +70,24 @@ async def update_user(
 async def reset_password(user_id: int, who: Writer, container: ContainerDep) -> PasswordReset:
     password = await container.user_service.reset_password(who.actor, user_id)
     return PasswordReset(temporary_password=password)
+
+
+@router.post("/{user_id}/invite", response_model=EmailQueuedOut)
+async def invite_user(user_id: int, who: Writer, container: ContainerDep) -> EmailQueuedOut:
+    """Пригласить по почте (M3-CRM-08): новый временный пароль и письмо через коннектор «Почта».
+
+    Без коннектора — 409 `smtp_not_configured`, пароль не меняется (выдайте его вручную,
+    как прежде); без `SECRETS_KEY` — 409 `secrets_key_missing`. Итог доставки — в журнале писем.
+    """
+    return queued_out(await container.user_invites.invite(who.actor, user_id))
+
+
+@router.post("/{user_id}/reset-password/email", response_model=EmailQueuedOut)
+async def reset_password_by_email(
+    user_id: int, who: Writer, container: ContainerDep
+) -> EmailQueuedOut:
+    """Сбросить пароль и отправить временный по почте (M3-CRM-08); сессии завершаются.
+
+    Без коннектора — 409 `smtp_not_configured`, пароль не меняется.
+    """
+    return queued_out(await container.user_invites.reset_password_email(who.actor, user_id))

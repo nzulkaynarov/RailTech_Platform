@@ -145,6 +145,14 @@ h3.section-label.ant-typography {
 .m-0 {
   margin: 0;
 }
+.mt-md {
+  margin-top: var(--ant-margin);
+}
+/* Заголовок раздела внутри вкладки (h2 после h1 страницы) — размером с подзаголовок. */
+.section-title.ant-typography {
+  margin: 0;
+  font-size: var(--ant-font-size-lg);
+}
 .row-actions {
   display: inline-flex;
   align-items: center;

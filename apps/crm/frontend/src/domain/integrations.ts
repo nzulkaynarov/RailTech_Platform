@@ -1,4 +1,9 @@
-import type { BotProfileOut, ErpStatusOut, TelegramStatusOut } from "../api/generated/model";
+import type {
+  BotProfileOut,
+  ErpStatusOut,
+  SmtpStatusOut,
+  TelegramStatusOut,
+} from "../api/generated/model";
 
 export type BotState = "running" | "stopped" | "notConfigured" | "failed";
 
@@ -74,3 +79,36 @@ export function erpTabStatus(status: ErpStatusOut | undefined): TabStatus | null
   if (!status) return null;
   return ERP_STATE_COLOR[erpState(status)] as TabStatus;
 }
+
+export type SmtpState = "configured" | "partial" | "notConfigured";
+
+/** Коннектор «Почта» (M3-CRM-08): хост и отправитель есть → настроен; одно из двух → не полностью. */
+export function smtpState(
+  status: Pick<SmtpStatusOut, "configured" | "host" | "from_email">,
+): SmtpState {
+  if (status.configured) return "configured";
+  return status.host || status.from_email ? "partial" : "notConfigured";
+}
+
+export const SMTP_STATE_COLOR: Record<SmtpState, string> = ERP_STATE_COLOR;
+
+/** Значок вкладки «Почта»: без коннектора — без тревоги (пароль выдаётся вручную, Q-010). */
+export function smtpTabStatus(status: SmtpStatusOut | undefined): TabStatus | null {
+  if (!status) return null;
+  return SMTP_STATE_COLOR[smtpState(status)] as TabStatus;
+}
+
+/** Цвет строки журнала писем по статусу (`email_log.status`). */
+export const EMAIL_STATUS_COLOR: Record<string, string> = {
+  queued: "processing",
+  sent: "success",
+  failed: "error",
+  skipped_no_smtp: "warning",
+};
+
+/** Типовой порт по способу шифрования — подсказка при смене селектора, не правило. */
+export const SMTP_DEFAULT_PORT: Record<SmtpStatusOut["security"], number> = {
+  starttls: 587,
+  ssl: 465,
+  none: 25,
+};

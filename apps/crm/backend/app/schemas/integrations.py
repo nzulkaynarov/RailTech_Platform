@@ -92,3 +92,74 @@ class ErpCheckOut(BaseModel):
     queue_alive: bool
     checked_at: datetime
     latency_ms: int
+
+
+Source = Literal["db", "env", "none"]
+EmailStatus = Literal["queued", "sent", "failed", "skipped_no_smtp"]
+
+
+class SmtpStatusOut(BaseModel):
+    """Коннектор «Почта» (M3-CRM-08): пароль не возвращается — только «задан» и `last4`."""
+
+    configured: bool
+    host: str
+    port: int
+    security: Literal["starttls", "ssl", "none"]
+    from_email: str
+    from_name: str
+    settings_source: Source
+    username: str
+    username_source: Source
+    password_configured: bool
+    password_source: Source
+    password_last4: str | None
+    password_updated_at: datetime | None
+    secrets_enabled: bool
+
+
+class SmtpConnectorIn(BaseModel):
+    """Сохранение коннектора: логин/пароль `None` — оставить прежние; пустой хост выключает."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    host: str = Field(max_length=253)
+    port: int = Field(default=587, ge=1, le=65535)
+    security: Literal["starttls", "ssl", "none"] = "starttls"
+    from_email: str = Field(default="", max_length=255)
+    from_name: str = Field(default="", max_length=120)
+    username: str | None = Field(default=None, max_length=255)
+    smtp_password: SecretStr | None = Field(default=None, min_length=1, max_length=512)
+    password: SecretStr = Field(min_length=1, max_length=256)
+
+
+class SmtpCheckOut(BaseModel):
+    """Итог «Проверить связь»: приветствие сервера, выполнен ли вход, время ответа."""
+
+    server: str
+    authenticated: bool
+    latency_ms: int
+
+
+class EmailLogItem(BaseModel):
+    """Строка журнала писем; тела письма (временного пароля) в журнале нет."""
+
+    id: int
+    to_email: str
+    subject: str
+    template: str
+    lang: str
+    status: EmailStatus
+    error: str | None
+    attempts: int
+    user_id: int | None
+    requested_by: int | None
+    created_at: datetime
+    sent_at: datetime | None
+
+
+class EmailQueuedOut(BaseModel):
+    """Письмо поставлено в очередь: номер строки журнала, адрес получателя, статус."""
+
+    email_log_id: int
+    to_email: str
+    status: EmailStatus

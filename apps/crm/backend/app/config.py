@@ -86,6 +86,15 @@ class Settings(BaseSettings):
     # Секрет подписи вебхуков ERP → CRM (CONTRACTS §3, `X-Signature`); приёмник — M3-CRM-04.
     erp_webhook_secret: SecretStr = SecretStr("")
 
+    # Коннектор «Почта» (M3-CRM-08, ADR-0018): SMTP-релей для писем сотрудникам (приглашение,
+    # сброс пароля). Запасной источник: настройки из «Подключений» → «Почта» имеют приоритет.
+    smtp_host: str = ""
+    smtp_port: int = Field(default=587, ge=1, le=65535)
+    smtp_security: Literal["starttls", "ssl", "none"] = "starttls"
+    smtp_username: str = ""
+    smtp_password: SecretStr = SecretStr("")
+    smtp_from_email: str = ""
+    smtp_from_name: str = ""
     # Origin страницы входа Cabinet, откуда вызывается публичная форма «Запрос»
     # (`POST /api/v1/leads/web`, M3-CRM-05): `https://cabinet.railtech.uz`; несколько — через
     # запятую. Пусто — CORS для формы не включён (только same-origin).

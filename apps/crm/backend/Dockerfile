@@ -33,6 +33,7 @@ FROM deps AS prod
 COPY --chown=app:app alembic.ini ./
 COPY --chown=app:app alembic ./alembic
 COPY --chown=app:app prompts ./prompts
+COPY --chown=app:app templates ./templates
 COPY --chown=app:app app ./app
 USER app
 EXPOSE 8000
