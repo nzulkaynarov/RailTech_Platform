@@ -393,7 +393,7 @@ services:
 
   langfuse-worker:
     profiles: [observability]
-    image: langfuse/langfuse-worker:4.55.0
+    image: langfuse/langfuse-worker:4.56.0
     depends_on: &langfuse-deps
       langfuse-db-init:
         condition: service_completed_successfully
