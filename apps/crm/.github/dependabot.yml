@@ -27,9 +27,12 @@ updates:
     directories: [/backend, /frontend]
     schedule: { interval: weekly, day: monday, timezone: Asia/Tashkent }
     # Node — только LTS; переход на следующую LTS делаем вручную.
+    # Python — 3.12, как в SPEC §2 и `requires-python` (pyproject); смена версии — вручную, с ADR.
     ignore:
       - dependency-name: node
         update-types: [version-update:semver-major]
+      - dependency-name: python
+        update-types: [version-update:semver-major, version-update:semver-minor]
 
   - package-ecosystem: docker-compose
     directory: /infra
