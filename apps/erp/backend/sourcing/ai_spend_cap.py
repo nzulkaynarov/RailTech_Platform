@@ -106,7 +106,7 @@ def _capped_company_ids(user) -> list:
     """Компании, чей дневной бюджет тратит этот пользователь. Пусто = лимита к нему нет:
     платформенный оператор действует не от имени тенанта, а пользователь без активного
     членства — не тот вектор злоупотребления, ради которого потолок вводился."""
-    if getattr(user, "is_platform_admin", False):
+    if getattr(user, "is_superuser", False):
         return []
     return list(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
 

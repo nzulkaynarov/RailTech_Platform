@@ -40,7 +40,7 @@ def _user_company_ids(user) -> list:
 
 
 def _is_admin(user) -> bool:
-    return bool(getattr(user, "is_platform_admin", False))
+    return bool(getattr(user, "is_superuser", False))
 
 
 def _recent_quotes(user, request, limit: int) -> List[dict]:

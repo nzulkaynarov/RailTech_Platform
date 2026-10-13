@@ -11,17 +11,8 @@ import pytest
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyRole,
-    CompanyType,
-    CustomUser,
-    OperatorRole,
-    SystemRole,
-    WorkspaceRole,
-)
-from catalog.models import Category, Product, ProductStatus
+from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, CustomUser, SystemRole, WorkspaceRole
+from catalog.models import Product, ProductStatus
 
 pytestmark = pytest.mark.django_db
 
@@ -97,29 +88,11 @@ def test_publish_requires_catalog_publish_not_just_manage(world):
     assert publish_error != "PRODUCT_NOT_YOURS"
 
 
-def test_support_operator_is_view_only_for_products_and_taxonomy(world):
-    """SUPPORT «только просмотр» больше не удаляет товары и не правит дерево категорий."""
-    admin_role, _ = SystemRole.objects.get_or_create(code="ADMIN", defaults={"name": "Администратор"})
-    support = CustomUser.objects.create_user(
-        email="support@n3.test", username="support@n3.test", password="pw", role=admin_role
-    )
-    support.operator_role = OperatorRole.objects.get(code="SUPPORT")
-    support.save(update_fields=["operator_role"])
-    client = _client_for(support)
-    category = Category.objects.first()
-
-    assert client.get("/api/v1/catalog/products/").status_code == 200  # чтение свободно
-    assert (
-        client.patch(f"/api/v1/catalog/products/{world['card'].pk}/", {"name": "x"}, format="json").status_code == 403
-    )
-    assert client.delete(f"/api/v1/catalog/categories/{category.pk}/").status_code == 403
-
-
 def test_operator_card_requires_owner_company(world):
     """Оператор не может родить «ничью» карточку — её никогда не заберёт продавец."""
     admin_role, _ = SystemRole.objects.get_or_create(code="ADMIN", defaults={"name": "Администратор"})
     operator = CustomUser.objects.create_user(
-        email="operator@n3.test", username="operator@n3.test", password="pw", role=admin_role
+        is_superuser=True, email="operator@n3.test", username="operator@n3.test", password="pw", role=admin_role
     )
     client = _client_for(operator)
 

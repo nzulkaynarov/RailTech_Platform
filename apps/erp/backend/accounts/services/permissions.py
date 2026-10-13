@@ -103,61 +103,15 @@ def primary_seller_company_id(user: "CustomUser") -> Optional[int]:
     return membership.company_id if membership else None
 
 
-def is_platform_admin_viewer(user: "CustomUser") -> bool:
-    """Platform Admin acting on platform-level — never acts on behalf of a company.
-
-    `is_superuser` is intentionally *excluded*: superuser is the DBA emergency
-    bypass and must be able to fix any business record, even on behalf of a
-    company. Migration accounts/0010_platform_admin_model removes any
-    CompanyMember rows for users with SystemRole.ADMIN, so admin-viewer equals
-    "role.code == 'ADMIN' and not is_superuser".
-
-    Kept as a function because business services use the error code
-    `ADMIN_VIEWER_CANNOT_ACT`, which conveys intent better than a generic
-    "member required" when a platform admin tries to act for a company.
-    """
-    if not user or not user.is_authenticated:
-        return False
-    if getattr(user, "is_superuser", False):
-        return False
-    role_code = getattr(getattr(user, "role", None), "code", None)
-    return role_code == "ADMIN"
-
-
-def operator_has_permission(user: "CustomUser", perm: str) -> bool:
-    """Platform-operator sub-capability check (ADR-0004 G1) — THE operator enforcement point.
-
-    Mirrors `member_has_permission` but PLATFORM-scoped (no company_id): it gates which
-    platform-staff actions an operator may take, not tenant operations.
-
-      * superuser → always (DBA emergency bypass, parity with the other guards)
-      * not a platform operator at all (`is_platform_admin` False) → never
-      * operator with no `operator_role` assigned → full access (backward-compatible:
-        the legacy single ADMIN == SUPER_OPERATOR; granular restriction is opt-in once a
-        narrower role is assigned, so an un-migrated/new admin is never accidentally locked out)
-      * otherwise → the assigned OperatorRole's permission set
-    """
-    if not user or not user.is_authenticated:
-        return False
-    if getattr(user, "is_superuser", False):
-        return True
-    if not getattr(user, "is_platform_admin", False):
-        return False
-    op_role = getattr(user, "operator_role", None)
-    if op_role is None:
-        return True
-    return op_role.has_perm(perm)
-
-
 def can_view_quote_costs(user: "CustomUser") -> bool:
     """True if the viewer may see КП cost/margin fields (base price, logistics, customs,
-    margin, landed cost, charges). Superuser / platform-admin always; otherwise a member of
+    margin, landed cost, charges). Administrator (`is_superuser`) always; otherwise a member of
     a SELLER company who holds the `quote.view_cost_margin` permission. This is the sensitive
     gate that replaces the blanket "any seller sees cost" — a restricted seller-team role
     (e.g. Наблюдатель) no longer sees margin."""
     if not user or not user.is_authenticated:
         return False
-    if getattr(user, "is_superuser", False) or is_platform_admin_viewer(user):
+    if getattr(user, "is_superuser", False):
         return True
     seller_company_ids = (
         user.memberships.filter(is_active=True).in_seller_company().values_list("company_id", flat=True).distinct()
@@ -169,12 +123,12 @@ def can_view_quote_costs_for(user: "CustomUser", quote) -> bool:
     """Per-quote cost/margin gate (audit C1). `can_view_quote_costs` answers "may this user
     EVER see cost?"; this also requires the quote to belong to the viewer's OWN company —
     on a deal routed to competing sellers A and B, A must not read B's КП cost/margin.
-    Superuser / platform-admin see all; an unclaimed (prepared_by=None) request quote carries
+    Administrator (`is_superuser`) sees all; an unclaimed (prepared_by=None) request quote carries
     no real cost yet and is owned by whichever seller builds it.
     """
     if not can_view_quote_costs(user):
         return False
-    if getattr(user, "is_superuser", False) or is_platform_admin_viewer(user):
+    if getattr(user, "is_superuser", False):
         return True
     prepared_by_id = getattr(quote, "prepared_by_id", None)
     if prepared_by_id is None:
@@ -245,7 +199,7 @@ def acting_context(request) -> str:
 def seller_sees_all_deals(user: "CustomUser", request) -> bool:
     """Whether this request should receive the cross-company seller queryset.
 
-    True for a platform admin (always), or a seller acting in a SELLER/MANUFACTURER
+    True for the administrator (`is_superuser`, always), or a seller acting in a SELLER/MANUFACTURER
     context. A seller acting in the BUYER context is scoped to its own company —
     this is what stops a dual seller+buyer user from seeing other buyers' заявки
     while purchasing. SECURITY NOTE: this only ever NARROWS access — it never
@@ -254,7 +208,7 @@ def seller_sees_all_deals(user: "CustomUser", request) -> bool:
     A missing header defaults to seller-see-all to preserve non-SPA API clients;
     the SPA always sends the header.
     """
-    if getattr(user, "is_platform_admin", False):
+    if getattr(user, "is_superuser", False):
         return True
     if not is_seller(user):
         return False
@@ -268,9 +222,9 @@ def seller_company_ids(user: "CustomUser") -> list:
     Used to scope SELLER-side billing visibility to documents OWNED by the user's seller company
     (via the doc's quote.seller_company) rather than to every routed deal — the fix for a losing
     co-routed seller seeing the winner's contract/invoice/act on a shared multi-seller deal
-    (ADR-0003 §5 hidden competition). Empty for non-sellers / platform admins.
+    (ADR-0003 §5 hidden competition). Empty for non-sellers / the administrator.
     """
-    if getattr(user, "is_platform_admin", False):
+    if getattr(user, "is_superuser", False):
         return []
     return list(
         user.memberships.filter(is_active=True, can_sell=True).in_seller_company().values_list("company_id", flat=True)
@@ -284,7 +238,7 @@ def seller_visible_deal_ids(user: "CustomUser", request, *, force: bool = False)
     the multi-seller confidentiality boundary that replaces the old see-all leak.
 
     Returns None when the user is NOT a routing-scoped seller — the caller then
-    applies platform-admin see-all (check `is_platform_admin` first) or the
+    applies administrator see-all (check `is_superuser` first) or the
     buyer-company scope. A seller acting in the BUYER context also gets None, so a
     dual seller+buyer user is scoped to its own company while purchasing.
 
@@ -296,7 +250,7 @@ def seller_visible_deal_ids(user: "CustomUser", request, *, force: bool = False)
     seller still never sees an unrelated buyer's deals. Default False keeps every
     existing caller's behaviour unchanged.
     """
-    if getattr(user, "is_platform_admin", False):
+    if getattr(user, "is_superuser", False):
         return None
     if not is_seller(user):
         return None
@@ -403,7 +357,7 @@ def seller_acting_company_ids(user: "CustomUser", request):
     else None. Used to scope quote querysets to the seller's OWN КП — on a deal routed to
     competing sellers, each must see only the quotes their own company prepared (audit H1).
     """
-    if getattr(user, "is_platform_admin", False):
+    if getattr(user, "is_superuser", False):
         return None
     if not is_seller(user):
         return None
@@ -416,12 +370,12 @@ def seller_acting_company_ids(user: "CustomUser", request):
 
 def can_edit_quote_pricing(user: "CustomUser") -> bool:
     """True if the user may WRITE КП pricing (price/margin/logistics/customs/charges).
-    Superuser / platform-admin always; otherwise a member of a SELLER company holding the
+    Administrator (`is_superuser`) always; otherwise a member of a SELLER company holding the
     `quote.edit_pricing` permission. `can_sell` defaults True, so without this a view-only
     CompanyRole (Наблюдатель) could still tamper with pricing (audit H2)."""
     if not user or not user.is_authenticated:
         return False
-    if getattr(user, "is_superuser", False) or is_platform_admin_viewer(user):
+    if getattr(user, "is_superuser", False):
         return True
     seller_company_ids = (
         user.memberships.filter(is_active=True).in_seller_company().values_list("company_id", flat=True).distinct()

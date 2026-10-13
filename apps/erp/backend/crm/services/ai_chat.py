@@ -21,7 +21,7 @@ import logging
 from django.conf import settings
 
 from accounts.models import CustomUser
-from accounts.services.permissions import is_platform_admin_viewer, seller_company_routed_to_deal
+from accounts.services.permissions import seller_company_routed_to_deal
 
 from ..models import Deal
 from .messaging import user_can_access_deal_chat
@@ -127,10 +127,6 @@ def suggest_chat_reply(deal_id: int, requesting_user: CustomUser) -> dict:
     # Role gate (audit M6): the draft is written in the SELLER's voice. Only an actor on
     # the deal's routed SELLER side with sell capability may author it — otherwise the
     # buyer (a chat participant) would draft a reply to themselves and burn a paid call.
-    # A platform-admin viewer oversees but never authors a company's commercial docs
-    # (ADR-0002 / ADMIN_VIEWER_CANNOT_ACT).
-    if is_platform_admin_viewer(requesting_user):
-        return {"draft": ""}
     if not seller_company_routed_to_deal(requesting_user, deal.pk):
         return {"draft": ""}
 

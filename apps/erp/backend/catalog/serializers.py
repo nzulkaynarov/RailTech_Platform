@@ -189,7 +189,7 @@ class _CostGateMixin:
         user = getattr(self.context.get("request"), "user", None)
         if not (user is not None and getattr(user, "is_authenticated", False)):
             return False
-        if getattr(user, "is_superuser", False) or getattr(user, "is_platform_admin", False):
+        if getattr(user, "is_superuser", False) or getattr(user, "is_superuser", False):
             return True
         owner_id = getattr(obj, "owner_company_id", None)
         return bool(owner_id and owner_id in self._viewer_company_ids())

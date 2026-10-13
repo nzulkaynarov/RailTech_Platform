@@ -26,7 +26,6 @@ from accounts.models import (
     CompanyMember,
     CompanyType,
     CustomUser,
-    OperatorRole,
     SupplierSubscription,
     SystemRole,
     VerificationStatus,
@@ -63,15 +62,12 @@ def world(db):
         is_primary=True,
         can_sell=True,
     )
-    role = OperatorRole.objects.create(
-        code="SUSPEND_BILLING", name="Биллинг", permissions=["billing.view", "billing.manage"]
-    )
     operator = CustomUser.objects.create_user(
+        is_superuser=True,
         email="operator@suspend.test",
         username="operator_suspend",
         password="x",
         role=SystemRole.objects.get(code="ADMIN"),
-        operator_role=role,
         is_active=True,
     )
     subscription = SupplierSubscription.objects.create(

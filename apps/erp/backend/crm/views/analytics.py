@@ -63,7 +63,7 @@ class TimeToFirstQuoteView(APIView):
         from accounts.services.permissions import seller_acting_company_ids
         from crm.services.metrics import time_to_first_quote_stats
 
-        is_staff = getattr(request.user, "is_platform_admin", False)
+        is_staff = getattr(request.user, "is_superuser", False)
         # Platform admin → whole platform (None). A seller → only their OWN company's КП (never a
         # competitor's). A pure buyer has no seller companies → empty scope → zero sample.
         seller_company_ids = None if is_staff else list(seller_acting_company_ids(request.user, request) or [])

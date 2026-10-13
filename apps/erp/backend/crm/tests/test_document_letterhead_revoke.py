@@ -218,16 +218,6 @@ def test_non_owner_cannot_revoke(world):
     assert document.public_token_revoked is False
 
 
-def test_platform_admin_viewer_cannot_revoke(world):
-    document = _issue(world)
-    viewer = CustomUser.objects.create_user(email="viewer@ops.test", username="viewer@ops.test", password="x")
-    viewer.role = SystemRole.objects.get(code="ADMIN")
-    viewer.save(update_fields=["role"])
-
-    _, err = crm_services.revoke_document_public_link(document, viewer)
-    assert err == "ADMIN_VIEWER_CANNOT_ACT"
-
-
 def test_revoke_draft_has_no_active_link(world):
     seller_co, seller_user = world["seller_co"], world["seller_user"]
     draft, _ = crm_services.generate_document(

@@ -30,9 +30,9 @@ def _lookup_write_permissions(view):
     """
     if getattr(view, "action", None) in ("list", "retrieve"):
         return [permissions.AllowAny()]
-    from core.permissions import OperatorScoped
+    from core.permissions import IsPlatformAdmin
 
-    return [OperatorScoped()]
+    return [IsPlatformAdmin()]
 
 
 LOOKUP_CACHE_TTL = 60 * 10  # 10 min — справочники меняются редко
@@ -149,9 +149,9 @@ class _ActiveOnlyListMixin:
         request = getattr(self, "request", None)
         if request is None or str(request.query_params.get("include_inactive", "")) not in ("1", "true", "True"):
             return False
-        from core.permissions import OperatorScoped
+        from core.permissions import IsPlatformAdmin
 
-        return OperatorScoped().has_permission(request, self)
+        return IsPlatformAdmin().has_permission(request, self)
 
 
 @extend_schema_view(
@@ -170,7 +170,6 @@ class CountryViewSet(_CachedLookupListMixin, _GuardedDestroyMixin, _ActiveOnlyLi
     # `permission_classes` здесь НЕ указан намеренно: его полностью перекрывает
     # `get_permissions` ниже. Оставленная строка врала бы читателю о реальном правиле доступа.
     pagination_class = None
-    operator_permission = "platform.settings"
 
     def get_permissions(self):
         return _lookup_write_permissions(self)
@@ -192,7 +191,6 @@ class CurrencyViewSet(_CachedLookupListMixin, _GuardedDestroyMixin, _ActiveOnlyL
     # `permission_classes` здесь НЕ указан намеренно: его полностью перекрывает
     # `get_permissions` ниже. Оставленная строка врала бы читателю о реальном правиле доступа.
     pagination_class = None
-    operator_permission = "platform.settings"
 
     def get_permissions(self):
         return _lookup_write_permissions(self)
@@ -214,7 +212,6 @@ class UnitOfMeasureViewSet(_CachedLookupListMixin, _GuardedDestroyMixin, _Active
     # `permission_classes` здесь НЕ указан намеренно: его полностью перекрывает
     # `get_permissions` ниже. Оставленная строка врала бы читателю о реальном правиле доступа.
     pagination_class = None
-    operator_permission = "platform.settings"
 
     def get_permissions(self):
         return _lookup_write_permissions(self)
@@ -236,7 +233,6 @@ class DeliveryBasisViewSet(_CachedLookupListMixin, _GuardedDestroyMixin, _Active
     # `permission_classes` здесь НЕ указан намеренно: его полностью перекрывает
     # `get_permissions` ниже. Оставленная строка врала бы читателю о реальном правиле доступа.
     pagination_class = None
-    operator_permission = "platform.settings"
 
     def get_permissions(self):
         return _lookup_write_permissions(self)

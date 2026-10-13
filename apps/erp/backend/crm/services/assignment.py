@@ -59,10 +59,8 @@ def claim_deal(deal_id: int, actor: CustomUser) -> Tuple[Optional[Deal], Optiona
     """A routed seller-team member claims THEIR company's copy of the заявка (pull from the queue).
     Per-company claim-lock: select_for_update on the routing row serialises concurrent claims so two
     members of the same company can't both win; a different company's claim is independent."""
-    from accounts.services import is_platform_admin_viewer, is_seller, seller_company_routed_to_deal
+    from accounts.services import is_seller, seller_company_routed_to_deal
 
-    if is_platform_admin_viewer(actor):
-        return None, "ADMIN_VIEWER_CANNOT_ACT"
     if not (is_seller(actor) and seller_company_routed_to_deal(actor, deal_id)):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
     routing = (
@@ -96,10 +94,8 @@ def claim_deal(deal_id: int, actor: CustomUser) -> Tuple[Optional[Deal], Optiona
 def release_deal(deal_id: int, actor: CustomUser) -> Tuple[Optional[Deal], Optional[str]]:
     """Return the actor's OWN company's copy to that company's shared queue — the current owner, or
     an admin with team.manage on that seller company. Never touches a competitor seller's routing."""
-    from accounts.services import is_platform_admin_viewer, member_has_permission
+    from accounts.services import member_has_permission
 
-    if is_platform_admin_viewer(actor):
-        return None, "ADMIN_VIEWER_CANNOT_ACT"
     routings = list(
         DealSellerRouting.objects.select_for_update()
         .select_related("deal")
@@ -141,10 +137,8 @@ def assign_deal(deal_id: int, actor: CustomUser, assignee_id: int) -> Tuple[Opti
     """A company admin (team.manage on a routed seller company) assigns the deal to a member of THAT
     SAME company. Scoped per routing — an admin can neither assign on a competitor's routing nor
     assign to a member outside their own company."""
-    from accounts.services import is_platform_admin_viewer, member_has_permission
+    from accounts.services import member_has_permission
 
-    if is_platform_admin_viewer(actor):
-        return None, "ADMIN_VIEWER_CANNOT_ACT"
     assignee = CustomUser.objects.filter(pk=assignee_id).first()
     if assignee is None:
         return None, "ASSIGNEE_NOT_FOUND"

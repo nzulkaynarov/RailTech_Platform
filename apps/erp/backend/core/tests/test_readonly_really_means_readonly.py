@@ -183,17 +183,16 @@ def test_lookup_code_cannot_be_renamed_through_the_api(db):
     переставали срабатывать (Rule 2 — логика сравнивается по коду)."""
     from rest_framework.test import APIClient
 
-    from accounts.models import OperatorRole, SystemRole
+    from accounts.models import SystemRole
     from master_data.models import UnitOfMeasure
 
     unit = UnitOfMeasure.objects.create(code="PROBE_UOM", name="Проба", sort_order=900)
-    role = OperatorRole.objects.create(code="LOOKUP_ADMIN", name="Справочники", permissions=["platform.settings"])
     operator = CustomUser.objects.create_user(
+        is_superuser=True,
         email="lookups@readonly.test",
         username="lookups_readonly",
         password="x",
         role=SystemRole.objects.get(code="ADMIN"),
-        operator_role=role,
         is_active=True,
     )
     client = APIClient()
@@ -213,16 +212,15 @@ def test_a_new_lookup_still_sets_its_code(db):
     """Обратная сторона: завести НОВЫЙ код можно — закрыто только переписывание старого."""
     from rest_framework.test import APIClient
 
-    from accounts.models import OperatorRole, SystemRole
+    from accounts.models import SystemRole
     from master_data.models import UnitOfMeasure
 
-    role = OperatorRole.objects.create(code="LOOKUP_ADMIN2", name="Справочники", permissions=["platform.settings"])
     operator = CustomUser.objects.create_user(
+        is_superuser=True,
         email="lookups2@readonly.test",
         username="lookups2_readonly",
         password="x",
         role=SystemRole.objects.get(code="ADMIN"),
-        operator_role=role,
         is_active=True,
     )
     client = APIClient()

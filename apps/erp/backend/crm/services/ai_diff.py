@@ -289,11 +289,11 @@ def user_can_view_quote_diff(user: CustomUser, quote: Quote) -> bool:
     company routed to the deal. Reuses the accounts permission helpers — no bespoke
     membership logic here.
     """
-    from accounts.services.permissions import is_platform_admin_viewer, seller_company_routed_to_deal
+    from accounts.services.permissions import seller_company_routed_to_deal
 
     if not user or not user.is_authenticated:
         return False
-    if user.is_superuser or is_platform_admin_viewer(user):
+    if user.is_superuser:
         return True
 
     deal = quote.deal

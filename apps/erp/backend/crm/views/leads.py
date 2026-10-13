@@ -6,7 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.permissions import OperatorScoped
+from core.permissions import IsPlatformAdmin
 from crm import services as crm_services
 from crm.models import ActivityLog, Lead
 from crm.serializers import LeadSerializer
@@ -77,16 +77,7 @@ class LeadViewSet(viewsets.ModelViewSet):
     """
 
     serializer_class = LeadSerializer
-    permission_classes = [IsAuthenticated, OperatorScoped]
-    operator_permissions = {
-        "list": "leads.view",
-        "retrieve": "leads.view",
-        "create": "leads.route",
-        "update": "leads.route",
-        "partial_update": "leads.route",
-        "route": "leads.route",
-        "reject": "leads.route",
-    }
+    permission_classes = [IsAuthenticated, IsPlatformAdmin]
     http_method_names = ["get", "post", "patch", "put", "head", "options"]
     queryset = Lead.objects.select_related("owner_company", "converted_deal").order_by("-created_at")
 
@@ -97,14 +88,14 @@ class LeadViewSet(viewsets.ModelViewSet):
     _MEMBER_ALLOWED_ACTIONS = {"list", "retrieve", "claim"}
 
     def get_permissions(self):
-        if self.action in self._MEMBER_ALLOWED_ACTIONS and not getattr(self.request.user, "is_platform_admin", False):
+        if self.action in self._MEMBER_ALLOWED_ACTIONS and not getattr(self.request.user, "is_superuser", False):
             return [IsAuthenticated()]
         return super().get_permissions()
 
     def get_queryset(self):
         queryset = super().get_queryset()
         user = self.request.user
-        if getattr(user, "is_platform_admin", False):
+        if getattr(user, "is_superuser", False):
             return queryset
         # Член компании видит ТОЛЬКО назначенные ей лиды: очередь площадки — не его дело.
         return queryset.filter(owner_company__members__user=user, owner_company__members__is_active=True).distinct()

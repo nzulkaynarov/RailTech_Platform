@@ -29,7 +29,7 @@ def scope_quotes_for_viewer(quotes_qs, user, request):
     diverge and leak a competitor's КП (prices/totals/margin/PDF) on a multi-seller deal."""
     from accounts.services.permissions import seller_acting_company_ids, seller_visible_deal_ids
 
-    if getattr(user, "is_platform_admin", False):
+    if getattr(user, "is_superuser", False):
         return quotes_qs
     if seller_visible_deal_ids(user, request) is not None:
         seller_ids = seller_acting_company_ids(user, request) or set()
@@ -214,7 +214,7 @@ def can_send_quote_to_client(actor, quote) -> bool:
     mid-rollout. Client-facing send stays additionally gated by the paid-seller subscription
     (assert_seller_can_operate) and the quote.send entitlement in send_to_client.
     """
-    if getattr(actor, "is_superuser", False) or getattr(actor, "is_platform_admin", False):
+    if getattr(actor, "is_superuser", False) or getattr(actor, "is_superuser", False):
         return True
     company_id = _quote_owner_company_id(quote)
     if not company_id:

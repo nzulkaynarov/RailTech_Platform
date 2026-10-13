@@ -53,13 +53,11 @@ def generate_contract_from_quote(
     notes: str = "",
 ) -> Tuple[Optional["Contract"], Optional[str]]:  # noqa: F821
     """Create a Contract tied to an approved Quote, render its PDF."""
-    from accounts.services import assert_seller_can_operate, is_platform_admin_viewer, is_seller
+    from accounts.services import assert_seller_can_operate, is_seller
     from accounts.services.permissions import seller_company_routed_to_deal
 
     from ..models import Contract
 
-    if actor is not None and is_platform_admin_viewer(actor):
-        return None, "ADMIN_VIEWER_CANNOT_ACT"
     # Generating the contract (from the approved КП) is a seller-side action.
     if actor is not None and not (getattr(actor, "is_superuser", False) or is_seller(actor)):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
@@ -270,11 +268,11 @@ def viewer_can_sign_client(user, contract) -> bool:
     dual buy+sell company regardless of which context it landed in (review fix), and never drifts
     from what the backend actually permits.
     """
-    from accounts.services import is_member_of, is_platform_admin_viewer
+    from accounts.services import is_member_of
 
     from ._params import has_explicit_company_role_perm
 
-    if user is None or getattr(user, "is_anonymous", False) or is_platform_admin_viewer(user):
+    if user is None or getattr(user, "is_anonymous", False):
         return False
     company_id = contract.deal.company_id
     return is_member_of(user, company_id, capability="buy") or has_explicit_company_role_perm(
@@ -286,11 +284,11 @@ def viewer_can_sign_manager(user, contract) -> bool:
     """Seller-side signing capability for THIS contract, bound to deal routing (a seller can only
     sign contracts on deals routed to its company — audit H3), independent of page context. Shared
     by sign_contract_by_manager and the serializer hint."""
-    from accounts.services import is_platform_admin_viewer, is_seller, seller_company_routed_to_deal
+    from accounts.services import is_seller, seller_company_routed_to_deal
 
     from ._params import has_explicit_company_role_perm
 
-    if user is None or getattr(user, "is_anonymous", False) or is_platform_admin_viewer(user):
+    if user is None or getattr(user, "is_anonymous", False):
         return False
     seller_memberships = user.memberships.filter(is_active=True).in_seller_company().only("company_id")
     has_sign_perm = any(has_explicit_company_role_perm(user, m.company_id, "contract.sign") for m in seller_memberships)
@@ -325,13 +323,9 @@ def sign_contract_by_client(
     """
     from django.utils import timezone
 
-    from accounts.services import is_platform_admin_viewer
-
     from ..models import Contract
 
     contract = Contract.objects.select_for_update().select_related("deal").get(pk=contract_id)
-    if is_platform_admin_viewer(client_user):
-        return None, "ADMIN_VIEWER_CANNOT_ACT"
     # Buyer-side capability via the shared predicate (legacy can_buy OR explicit contract.sign
     # CompanyRole) — same source of truth as the serializer's sign hint.
     if not (getattr(client_user, "is_superuser", False) or viewer_can_sign_client(client_user, contract)):
@@ -372,13 +366,11 @@ def sign_contract_by_manager(
     """
     from django.utils import timezone
 
-    from accounts.services import assert_seller_can_operate, is_platform_admin_viewer
+    from accounts.services import assert_seller_can_operate
 
     from ..models import Contract
 
     contract = Contract.objects.select_for_update().select_related("deal").get(pk=contract_id)
-    if is_platform_admin_viewer(manager_user):
-        return None, "ADMIN_VIEWER_CANNOT_ACT"
     # Seller-side capability via the shared predicate: (legacy is_seller OR explicit contract.sign
     # CompanyRole) AND bound to THIS deal's routing (a seller can't sign a competitor's contract by
     # enumerating ids — audit H3). Same source of truth as the serializer's sign hint.
@@ -477,12 +469,9 @@ def _notify_contract_signed(contract) -> None:
 def cancel_contract(
     contract_id: int, actor: CustomUser, reason: str = ""
 ) -> Tuple[Optional["Contract"], Optional[str]]:  # noqa: F821
-    from accounts.services import is_platform_admin_viewer
 
     from ..models import Contract
 
-    if is_platform_admin_viewer(actor):
-        return None, "ADMIN_VIEWER_CANNOT_ACT"
     contract = Contract.objects.select_for_update().get(pk=contract_id)
     if contract.status_code == ContractStatusCode.SIGNED:
         return None, "CONTRACT_SIGNED_CANNOT_CANCEL"

@@ -24,16 +24,10 @@ def can_manage(user, product, *, permission: str = "catalog.manage") -> bool:
 
     Продавец: членство владельца + пермишен CompanyRole (`catalog.manage` для правок,
     `catalog.publish` для публикации; legacy-фолбэк без роли — в member_has_permission).
-    Оператор: только суб-роль с `moderation.force_override` — SUPPORT «только просмотр»
-    не публикует и не правит чужие карточки (ADR-0004). Superuser — DBA-эскалация.
+    Администратор (`is_superuser`) — всегда.
     """
     if getattr(user, "is_superuser", False):
         return True
-    if getattr(user, "is_platform_admin", False):
-        from accounts.constants import OperatorPermission
-        from accounts.services.permissions import operator_has_permission
-
-        return operator_has_permission(user, OperatorPermission.MODERATION_FORCE_OVERRIDE)
     owner_id = getattr(product, "owner_company_id", None)
     if not owner_id:
         return False
@@ -48,7 +42,7 @@ def _seller_kyc_verified(product, actor) -> bool:
     Оператор и суперпользователь проверке не подлежат: они публикуют не от своего имени,
     а в порядке модерации (`moderation.force_override`), и собственной компании у них нет.
     """
-    if getattr(actor, "is_superuser", False) or getattr(actor, "is_platform_admin", False):
+    if getattr(actor, "is_superuser", False) or getattr(actor, "is_superuser", False):
         return True
     owner_id = getattr(product, "owner_company_id", None)
     if not owner_id:

@@ -12,15 +12,7 @@ from decimal import Decimal
 
 import pytest
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SystemRole,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, VerificationStatus, WorkspaceRole
 from crm.models import ChargeTemplate, ChargeType, Deal, DealStage, Quote, QuoteCharge, QuoteItem, QuoteStatus
 from crm.services.charges import reorder_quote_charges, set_quote_delivery_basis
 from master_data.models import Country, DeliveryBasis
@@ -124,16 +116,6 @@ def _charge_codes(quote) -> set:
 
 @pytest.mark.django_db
 class TestSetDeliveryBasisGates:
-    def test_platform_admin_viewer_cannot_act(self, world):
-        """Оператор платформы — наблюдатель (ADR-0002): он не действует от имени компании."""
-        admin_role = SystemRole.objects.get_or_create(code="ADMIN", defaults={"name": "Admin", "sort_order": 10})[0]
-        operator = CustomUser.objects.create_user(
-            email="op@charges.test", username="charges_op", password="pw", is_active=True, role=admin_role
-        )
-        quote, error = set_quote_delivery_basis(world["quote"].id, world["exw"].id, operator)
-        assert quote is None
-        assert error == "ADMIN_VIEWER_CANNOT_ACT"
-
     def test_buyer_cannot_build_quote(self, world):
         quote, error = set_quote_delivery_basis(world["quote"].id, world["exw"].id, world["buyer"])
         assert quote is None
@@ -221,15 +203,6 @@ class TestReorderQuoteCharges:
             quote=world["quote"], charge_type=world["insurance"], amount=Decimal("20.00"), sort_order=1
         )
         return first, second
-
-    def test_platform_admin_viewer_cannot_act(self, world):
-        admin_role = SystemRole.objects.get_or_create(code="ADMIN", defaults={"name": "Admin", "sort_order": 10})[0]
-        operator = CustomUser.objects.create_user(
-            email="op2@charges.test", username="charges_op2", password="pw", is_active=True, role=admin_role
-        )
-        quote, error = reorder_quote_charges(world["quote"].id, [], operator)
-        assert quote is None
-        assert error == "ADMIN_VIEWER_CANNOT_ACT"
 
     def test_buyer_cannot_reorder(self, world):
         quote, error = reorder_quote_charges(world["quote"].id, [], world["buyer"])

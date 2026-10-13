@@ -123,7 +123,7 @@ def _resolve_expected(user, request, quote_id, contract_id):
     records on a deal owned by one of their active company memberships."""
     from crm.models import Contract, Quote
 
-    is_admin = getattr(user, "is_platform_admin", False)
+    is_admin = getattr(user, "is_superuser", False)
     company_ids = list(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
 
     if contract_id:

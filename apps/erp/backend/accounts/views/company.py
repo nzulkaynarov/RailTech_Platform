@@ -24,7 +24,7 @@ from accounts.services.permissions import member_has_permission
 from accounts.views.company_documents import CompanyDocumentsMixin
 from accounts.views.company_kyc import CompanyKYCMixin
 from accounts.views.company_team import CompanyTeamMixin
-from core.permissions import OperatorScoped
+from core.permissions import IsPlatformAdmin
 
 
 @extend_schema_view(
@@ -76,34 +76,10 @@ class CompanyViewSet(CompanyKYCMixin, CompanyDocumentsMixin, CompanyTeamMixin, v
         .order_by("-created_at")
     )
     serializer_class = CompanySerializer
-    permission_classes = [permissions.IsAuthenticated, OperatorScoped]
+    permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
     # Operator sub-capability per admin-only action (ADR-0004 G1). Member-facing actions
     # (see _MEMBER_ALLOWED_ACTIONS) bypass this via get_permissions; unmapped admin actions
     # fall back to the coarse platform-operator gate.
-    operator_permissions = {
-        "list": "companies.view",
-        "retrieve": "companies.view",
-        "export": "companies.view",
-        "create": "companies.manage",
-        "update": "companies.manage",
-        "partial_update": "companies.manage",
-        "destroy": "companies.manage",
-        "archive": "companies.manage",
-        "unarchive": "companies.manage",
-        "verify_kyc": "kyc.verify",
-        "bulk_verify_kyc": "kyc.verify",
-        # SEC (audit #8): team-management actions are member-facing (own in-action OWNER
-        # check) AND reachable by a platform operator. Without an explicit mapping,
-        # OperatorScoped._required_permission returns None → any operator (even a narrow
-        # SUPPORT with only *.view) passed the gate and could invite members / reassign
-        # roles / grant can_sell on ANY tenant. Require users.manage so a narrow role is
-        # refused (non-operator members still reach these via _MEMBER_ALLOWED_ACTIONS).
-        "invite": "users.manage",
-        "set_member_role": "users.manage",
-        "update_member_capabilities": "users.manage",
-        "remove_member": "users.manage",
-        "toggle_member_active": "users.manage",
-    }
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = {
         "verification_status__code": ["exact"],
@@ -198,9 +174,9 @@ class CompanyViewSet(CompanyKYCMixin, CompanyDocumentsMixin, CompanyTeamMixin, v
     def get_permissions(self):
         # Member-facing actions (own-company self-service / OWNER team management) carry their
         # own in-action authz and must NOT hit the operator gate — BUT only for non-operators.
-        # A platform OPERATOR calling these still goes through OperatorScoped so a narrow role
+        # A platform OPERATOR calling these still goes through IsPlatformAdmin so a narrow role
         # (e.g. SUPPORT) cannot edit company data via update/partial_update (escalation fix).
-        if self.action in self._MEMBER_ALLOWED_ACTIONS and not getattr(self.request.user, "is_platform_admin", False):
+        if self.action in self._MEMBER_ALLOWED_ACTIONS and not getattr(self.request.user, "is_superuser", False):
             return [permissions.IsAuthenticated()]
         return super().get_permissions()
 
@@ -238,7 +214,7 @@ class CompanyViewSet(CompanyKYCMixin, CompanyDocumentsMixin, CompanyTeamMixin, v
 
     def _assert_member_or_admin(self, company):
         user = self.request.user
-        if user.is_platform_admin:
+        if user.is_superuser:
             return
         if not CompanyMember.objects.filter(
             user=user,
@@ -249,7 +225,7 @@ class CompanyViewSet(CompanyKYCMixin, CompanyDocumentsMixin, CompanyTeamMixin, v
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
-        if not request.user.is_platform_admin:
+        if not request.user.is_superuser:
             # Check if user is a member of this company
             membership = CompanyMember.objects.filter(user=request.user, company=instance).exists()
             if not membership:
@@ -263,7 +239,7 @@ class CompanyViewSet(CompanyKYCMixin, CompanyDocumentsMixin, CompanyTeamMixin, v
         read_only_fields still protect KYC verdicts (verification_status /
         is_verified / trust_score) from any non-admin write."""
         user = self.request.user
-        if user.is_platform_admin:
+        if user.is_superuser:
             return
         # ADR-0005 Phase E U3: gate on the CompanyRole permission, not the legacy OWNER
         # WorkspaceRole. member_has_permission's legacy fallback still grants a company_role-less
