@@ -66,6 +66,7 @@ services:
 
   crm-web:
     build: { target: dev }
+    restart: unless-stopped
     environment:
       VITE_API_PROXY_TARGET: http://crm-api:8000
     volumes:
