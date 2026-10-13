@@ -445,7 +445,7 @@ services:
 
   langfuse-web:
     profiles: [observability]
-    image: langfuse/langfuse:4.55.0
+    image: langfuse/langfuse:4.56.0
     depends_on: *langfuse-deps
     environment:
       <<: *langfuse-env
