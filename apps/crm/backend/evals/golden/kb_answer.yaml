@@ -1,0 +1,119 @@
+# Ответ есть в демо-KB (evals/fixtures/kb). Числа в ответе — только из фрагментов.
+- id: kb-ru-pos-timeline
+  category: kb_answer
+  language: ru
+  message: Сколько времени занимает подключение касс к 1С для одного магазина?
+  need_summary: интеграция касс с 1С для магазина
+  expect:
+    actions: [answer]
+    reply_language: ru
+    kb_document: RT-POS Интеграция — интеграция касс с 1С
+    must_include_any: ["3", "5"]
+
+- id: kb-ru-pos-equipment
+  category: kb_answer
+  language: ru
+  message: Какие онлайн-кассы вы поддерживаете для интеграции с 1С?
+  need_summary: интеграция касс с 1С
+  expect:
+    actions: [answer]
+    reply_language: ru
+    kb_document: RT-POS Интеграция — интеграция касс с 1С
+    must_include_any: ["АТОЛ", "Штрих", "Эвотор"]
+
+- id: kb-ru-pos-price-not-public
+  category: kb_answer
+  language: ru
+  message: Сколько стоит интеграция касс с 1С?
+  need_summary: интеграция касс с 1С
+  expect:
+    actions: [answer]
+    reply_language: ru
+    kb_document: RT-POS Интеграция — интеграция касс с 1С
+    must_include_any: ["менеджер"]
+
+- id: kb-ru-track-update-interval
+  category: kb_answer
+  language: ru
+  message: Как часто обновляется местоположение вагона в RT-Track?
+  need_summary: мониторинг вагонов
+  expect:
+    actions: [answer]
+    reply_language: ru
+    kb_document: RT-Track — мониторинг вагонов и контейнеров
+    must_include_any: ["15"]
+
+- id: kb-ru-track-geography
+  category: kb_answer
+  language: ru
+  message: В каких странах работает мониторинг вагонов?
+  need_summary: мониторинг вагонов
+  expect:
+    actions: [answer]
+    reply_language: ru
+    kb_document: RT-Track — мониторинг вагонов и контейнеров
+    must_include_any: ["Казахстан", "Кыргызстан"]
+
+- id: kb-ru-company-warranty
+  category: kb_answer
+  language: ru
+  message: Какая гарантия на работы по внедрению?
+  need_summary: внедрение
+  expect:
+    actions: [answer]
+    reply_language: ru
+    kb_document: RailTech — как мы работаем
+    must_include_any: ["6"]
+
+- id: kb-ru-clarify-early-stage
+  category: kb_answer
+  language: ru
+  message: Как у вас устроена оплата по договору?
+  stage: new
+  expect:
+    actions: [answer]
+    reply_language: ru
+    kb_document: RailTech — как мы работаем
+    must_include_any: ["перевод", "сум"]
+
+- id: kb-uz-track-install
+  category: kb_answer
+  language: uz
+  message: Treker vagonga qancha vaqtda o'rnatiladi?
+  need_summary: vagon kuzatish
+  expect:
+    actions: [answer]
+    reply_language: uz
+    kb_document: RT-Track — vagon va konteynerlarni kuzatish
+    must_include_any: ["30"]
+
+- id: kb-uz-track-connect
+  category: kb_answer
+  language: uz
+  message: Yangi mijozni ulash qancha vaqt oladi?
+  need_summary: vagon kuzatish
+  expect:
+    actions: [answer]
+    reply_language: uz
+    must_include_any: ["2"]
+
+- id: kb-en-pos-timeline
+  category: kb_answer
+  language: en
+  message: How long does it take to connect cash registers to 1C for a single store?
+  need_summary: POS integration with 1C
+  expect:
+    actions: [answer]
+    reply_language: en
+    kb_document: RT-POS Интеграция — интеграция касс с 1С
+    must_include_any: ["3", "5"]
+
+- id: kb-en-track-packages
+  category: kb_answer
+  language: en
+  message: Do you have temperature sensors for refrigerated containers?
+  need_summary: rail container tracking
+  expect:
+    actions: [answer]
+    reply_language: en
+    kb_document: RT-Track — мониторинг вагонов и контейнеров

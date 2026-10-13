@@ -1,0 +1,91 @@
+/* Цвета, размеры и тени — только токены темы (`--ant-*`, app/theme.ts, cssVar). */
+.chat-thread {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ant-margin-sm);
+  height: 100%;
+}
+.chat-list {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 60vh;
+  padding: var(--ant-padding-xs);
+  background: var(--ant-color-fill-quaternary);
+  border-radius: var(--ant-border-radius-lg);
+}
+.chat-row {
+  display: flex;
+  margin: var(--ant-margin-xs) 0;
+}
+.chat-own {
+  justify-content: flex-end;
+}
+.chat-bubble {
+  max-width: 80%;
+  padding: var(--ant-padding-xs) var(--ant-padding-sm);
+  border-radius: var(--ant-border-radius-lg);
+  background: var(--ant-color-bg-container);
+  box-shadow: var(--ant-box-shadow-tertiary);
+}
+.chat-bot {
+  background: var(--ant-color-primary-bg);
+}
+.chat-manager {
+  background: var(--ant-color-success-bg);
+}
+.chat-system {
+  background: var(--ant-color-warning-bg);
+}
+.chat-meta {
+  font-size: var(--ant-font-size-sm);
+}
+.chat-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.chat-reply {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ant-margin-xxs);
+  width: 100%;
+}
+.chat-reply-row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--ant-margin-xs);
+}
+/* Телефон: лента прокручивается внутри, как в мессенджерах, — имя лида, «Забрать» и вкладки
+   остаются на экране; поле ответа закреплено внизу. */
+@media (max-width: 767px) {
+  .chat-list {
+    max-height: 55vh;
+  }
+  .chat-reply {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    padding: var(--ant-padding-xs) 0;
+    background: var(--ant-color-bg-layout);
+  }
+}
+
+/* ИИ-помощь у поля ответа (Q-019): кнопки переносятся на узком экране. */
+.chat-assist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ant-margin-xxs);
+  min-width: 0;
+}
+
+/* «Шаблоны» и ИИ-помощь в одну строку; на узком экране — переносятся. */
+.chat-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--ant-margin-xs);
+  min-width: 0;
+}
+.chat-templates {
+  min-width: 160px;
+  max-width: 100%;
+}

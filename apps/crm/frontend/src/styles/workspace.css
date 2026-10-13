@@ -1,0 +1,98 @@
+/* Рабочее место менеджера: входящие, список и карточка лида (дизайн-аудит 2026-10-11, волна B).
+   Цвета и отступы — только токены темы (`--ant-*`). */
+
+/* Цели касания ≥ 44 px на телефоне (WCAG 2.5.5, отчёт 2). */
+@media (max-width: 575px) {
+  .touch-target.ant-btn,
+  .lead-actions .ant-btn {
+    min-height: 44px;
+  }
+}
+
+/* Шапка карточки лида: стадия и ответственный рядом с именем. */
+.lead-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ant-margin-xs);
+  margin-top: var(--ant-margin-xs);
+}
+
+/* Сводка лида в шапке (UX волна 2): `Descriptions` на всю ширину, причины передачи — ниже. */
+.lead-meta .lead-facts {
+  flex: 1 1 100%;
+}
+.lead-banner {
+  margin-top: var(--ant-margin-sm);
+}
+
+/* Входящие: строка передачи — имя и приоритет, ниже причина · стадия · ожидание. */
+.inbox-item-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ant-margin-xs);
+}
+.inbox-hot {
+  border-inline-start: 3px solid var(--ant-color-error);
+  padding-inline-start: var(--ant-padding-xs);
+}
+/* Строка списка открывает краткую сводку лида справа (UX волна 2). */
+.inbox-row,
+.lead-row {
+  cursor: pointer;
+}
+.inbox-row:hover {
+  background: var(--ant-color-fill-quaternary);
+}
+/* Строка в фокусе клавиатуры (Enter открывает сводку) и выбранная строка при сводке справа. */
+.inbox-row:focus-visible {
+  outline-offset: -2px;
+}
+.inbox-row-selected,
+.inbox-row-selected:hover {
+  background: var(--ant-control-item-bg-active);
+}
+/* Входящие на широком экране: список и сводка прокручиваются каждый в своей панели antd `Splitter`,
+   поэтому сводка видна рядом с любой строкой длинного списка. Высота — видимая часть окна
+   под шапкой приложения, заголовком страницы и вкладками. */
+.inbox-split {
+  height: calc(100dvh - 220px);
+  min-height: 360px;
+}
+.inbox-need.ant-typography {
+  margin-bottom: 0;
+}
+
+/* Список лидов карточками на телефоне. */
+.lead-card-list .ant-list-item {
+  display: block;
+}
+.lead-card-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ant-margin-xs);
+}
+
+/* Предупреждение над полем в диалоге действия с лидом. */
+.dialog-alert {
+  margin-bottom: var(--ant-margin-sm);
+}
+
+.dialog-field {
+  margin-bottom: var(--ant-margin-sm);
+}
+
+/* Сводка лида панелью справа: кнопки «Открыть карточку · Забрать» всегда внизу панели,
+   прокручивается только содержимое. */
+.lead-preview-pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.lead-preview-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}

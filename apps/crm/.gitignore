@@ -1,0 +1,47 @@
+# Секреты и локальное окружение
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Node
+node_modules/
+dist/
+coverage/
+*.local
+
+# Разное
+.DS_Store
+.idea/
+.vscode/
+*.log
+.claude/settings.local.json
+
+# Playwright
+frontend/test-results/
+frontend/playwright-report/
+backend/evals/reports/
+
+# Выгрузки диалогов для разметки (рабочие данные, не в git)
+reports/
+
+# Рабочие копии агентов Claude Code
+.claude/worktrees/
+
+# UI-ревью стенда (скилл ui-review)
+frontend/review-out/
+
+# Логи локального CI (scripts/ci_local.sh)
+.ci-local/

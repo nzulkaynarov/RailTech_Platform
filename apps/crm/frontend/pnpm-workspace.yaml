@@ -1,0 +1,4 @@
+# Настройки pnpm 10 (поле "pnpm" в package.json больше не читается).
+# Закрытие high в path-to-regexp до обновления зависимостей (Фаза 8, job audit).
+overrides:
+  "path-to-regexp@>=8.0.0 <8.4.0": "8.4.2"

@@ -1,0 +1,49 @@
+# Обновления зависимостей (SPEC §11). Мажорные версии — отдельными PR,
+# минорные/патчи сгруппированы, чтобы не засорять очередь.
+version: 2
+updates:
+  - package-ecosystem: uv
+    directory: /backend
+    schedule: { interval: weekly, day: monday, timezone: Asia/Tashkent }
+    groups:
+      python-minor:
+        update-types: [minor, patch]
+    # Procrastinate обновляется вручную вместе с миграцией схемы (ADR-0006).
+    ignore:
+      - dependency-name: procrastinate
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule: { interval: weekly, day: monday, timezone: Asia/Tashkent }
+    groups:
+      npm-minor:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly, day: monday, timezone: Asia/Tashkent }
+
+  - package-ecosystem: docker
+    directories: [/backend, /frontend]
+    schedule: { interval: weekly, day: monday, timezone: Asia/Tashkent }
+    # Node — только LTS; переход на следующую LTS делаем вручную.
+    # Python — 3.12, как в SPEC §2 и `requires-python` (pyproject); смена версии — вручную, с ADR.
+    ignore:
+      - dependency-name: node
+        update-types: [version-update:semver-major]
+      - dependency-name: python
+        update-types: [version-update:semver-major, version-update:semver-minor]
+
+  - package-ecosystem: docker-compose
+    directory: /infra
+    schedule: { interval: weekly, day: monday, timezone: Asia/Tashkent }
+    # Redis и ClickHouse нужны только Langfuse: версии — как в его официальном compose,
+    # обновляем вместе с Langfuse (redis:7, clickhouse 25.x на 2026-10-09).
+    ignore:
+      - dependency-name: redis
+        update-types: [version-update:semver-major]
+      - dependency-name: clickhouse/clickhouse-server
+
+  - package-ecosystem: pre-commit
+    directory: /
+    schedule: { interval: monthly, timezone: Asia/Tashkent }

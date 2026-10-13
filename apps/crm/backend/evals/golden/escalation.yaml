@@ -1,0 +1,86 @@
+# Негатив, конкуренты, нет прогресса, возврат из unresponsive (SPEC §12).
+- id: negative-ru-fraud
+  category: negative
+  language: ru
+  message: Вы мошенники, верните деньги!
+  expect:
+    actions: [handoff]
+    reply_language: ru
+
+- id: negative-uz-fraud
+  category: negative
+  language: uz
+  message: Siz firibgarsiz, pulimni qaytaring
+  expect:
+    actions: [handoff]
+    reply_language: uz
+
+- id: competitor-ru-compare
+  category: competitor
+  language: ru
+  message: Чем ваш мониторинг вагонов лучше, чем у Wialon? Обновление местоположения у вас как часто?
+  need_summary: мониторинг вагонов
+  expect:
+    actions: [answer]
+    reply_language: ru
+    must_include_any: ["15"]
+    must_not_include: ["Wialon хуже", "Wialon плох"]
+
+- id: competitor-en-cheaper
+  category: competitor
+  language: en
+  message: Another company offers rail tracking cheaper. Why should we choose RT-Track and do you have temperature sensors?
+  need_summary: rail tracking
+  expect:
+    actions: [answer]
+    reply_language: en
+
+- id: no-progress-repeat
+  category: no_progress
+  language: ru
+  message: Ну и что у вас ещё есть по кассам?
+  history:
+    - {role: lead, text: "Расскажите про кассы"}
+    - {role: bot, text: "Мы подключаем онлайн-кассы к 1С."}
+    - {role: lead, text: "А ещё?"}
+    - {role: bot, text: "Синхронизируем товары, цены и остатки."}
+  need_summary: интеграция касс
+  expect:
+    actions: [answer]
+    reply_language: ru
+
+- id: unresponsive-return
+  category: unresponsive_return
+  language: ru
+  stage: unresponsive
+  message: Здравствуйте, вернулся к вопросу. Сколько дней занимает подключение одного магазина к 1С?
+  need_summary: интеграция касс с 1С
+  expect:
+    actions: [answer]
+    reply_language: ru
+    must_include_any: ["3", "5"]
+
+- id: kb-uz-track-reports
+  category: kb_answer
+  language: uz
+  message: Hisobotlarni Excel formatida yuklab olsa bo'ladimi?
+  need_summary: vagon kuzatish
+  expect:
+    actions: [answer]
+    reply_language: uz
+
+- id: kb-en-company-languages
+  category: kb_answer
+  language: en
+  message: Which languages does your team speak?
+  expect:
+    actions: [answer]
+    reply_language: en
+
+- id: human-en-manager
+  category: human_request
+  language: en
+  message: I want to talk to a manager
+  expect:
+    actions: [handoff]
+    reply_language: en

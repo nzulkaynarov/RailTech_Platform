@@ -1,0 +1,170 @@
+# Eval-gate (SPEC §12, PLAN Фаза 7): golden-набор диалога + квалификатора на реальных
+# моделях через LiteLLM. ПЛАТНО (~150 вызовов): запускается только вручную — меткой
+# `run-evals` на PR (снимается после прогона) или кнопкой Run workflow. На обычный пуш
+# в PR с изменениями ИИ — только напоминание, без вызовов моделей. Потолок — EVAL_MAX_USD.
+
+name: Eval gate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+    paths:
+      - backend/prompts/**
+      - backend/app/agents/**
+      - backend/app/domain/triggers.py
+      - backend/app/domain/scoring.py
+      - backend/app/domain/qualifier_decision.py
+      - backend/evals/**
+      - infra/litellm.config.yaml
+      - .github/workflows/eval-gate.yml
+  workflow_dispatch:
+
+concurrency:
+  group: eval-gate-${{ github.ref }}
+  # Не обрывать платный прогон на середине: деньги потрачены, отчёта нет.
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  UV_VERSION: "0.13.0"
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  eval:
+    name: Eval gate (golden)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.7-pg16
+        env:
+          POSTGRES_DB: railtech_eval
+          POSTGRES_USER: railtech
+          POSTGRES_PASSWORD: ci-only-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U railtech -d railtech_eval"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      APP_ENV: test
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: railtech_eval
+      POSTGRES_USER: railtech
+      POSTGRES_PASSWORD: ci-only-password
+      S3_ENDPOINT: http://localhost:9000
+      S3_ACCESS_KEY: railtech
+      S3_SECRET_KEY: ci-only-password
+      LITELLM_BASE_URL: http://localhost:4000
+      DOCLING_URL: http://localhost:5001
+      EVAL_REPORT_DIR: ${{ github.workspace }}/eval-reports
+      EVAL_MAX_USD: "2"
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+      LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+      LANGFUSE_HOST: ${{ secrets.LANGFUSE_HOST || 'http://localhost:3000' }}
+    steps:
+      - name: Секреты моделей заданы и запуск разрешён?
+        id: secrets
+        env:
+          REQUESTED: ${{ github.event_name == 'workflow_dispatch' || (github.event.action == 'labeled' && github.event.label.name == 'run-evals') }}
+        run: |
+          if [ "$REQUESTED" != "true" ]; then
+            echo "::notice::Evals платные и не запускались. Нужен прогон — добавьте PR метку run-evals (docs/runbooks/eval-gate.md)."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          elif [ -z "$ANTHROPIC_API_KEY" ] || [ -z "$GEMINI_API_KEY" ]; then
+            echo "::warning::ANTHROPIC_API_KEY/GEMINI_API_KEY не заданы — eval-gate пропущен (docs/runbooks/eval-gate.md)"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v7
+        if: steps.secrets.outputs.ready == 'true'
+      - name: LiteLLM, docling, RustFS
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          export LITELLM_MASTER_KEY="sk-$(openssl rand -hex 16)"
+          echo "LITELLM_API_KEY=$LITELLM_MASTER_KEY" >> "$GITHUB_ENV"
+          echo "::add-mask::$LITELLM_MASTER_KEY"
+          docker run -d --name litellm -p 4000:4000 \
+            -e LITELLM_MASTER_KEY -e ANTHROPIC_API_KEY -e GEMINI_API_KEY \
+            -v "$PWD/infra/litellm.config.yaml:/app/config.yaml:ro" \
+            ghcr.io/berriai/litellm:v1.104.2 --config /app/config.yaml --port 4000
+          docker run -d --name docling -p 5001:5001 \
+            -e DOCLING_SERVE_ENABLE_UI=false -e DOCLING_SERVE_MAX_SYNC_WAIT=600 \
+            ghcr.io/docling-project/docling-serve-cpu:v1.36.0
+          docker run -d --name rustfs -p 9000:9000 \
+            -e RUSTFS_ACCESS_KEY=railtech -e RUSTFS_SECRET_KEY=ci-only-password \
+            -e RUSTFS_ADDRESS=0.0.0.0:9000 rustfs/rustfs:1.0.1
+          wait_for() {
+            for i in $(seq 1 90); do curl -fsS "$1" > /dev/null && return 0; sleep 2; done
+            docker logs "$2" | tail -n 50; return 1
+          }
+          wait_for http://localhost:4000/health/liveliness litellm
+          wait_for http://localhost:5001/health docling
+          wait_for http://localhost:9000/health rustfs
+      - uses: astral-sh/setup-uv@v7
+        if: steps.secrets.outputs.ready == 'true'
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - name: Миграции и демо-KB
+        if: steps.secrets.outputs.ready == 'true'
+        working-directory: backend
+        run: |
+          uv sync --frozen
+          uv run alembic upgrade head
+          for bucket in kb-sources client-documents tg-attachments; do
+            curl -fsS -o /dev/null --aws-sigv4 "aws:amz:us-east-1:s3" \
+              --user "$S3_ACCESS_KEY:$S3_SECRET_KEY" -X PUT "http://localhost:9000/$bucket"
+          done
+          uv run python -m app kb-demo
+      - name: Evals (pytest -m eval)
+        id: eval
+        if: steps.secrets.outputs.ready == 'true'
+        working-directory: backend
+        run: uv run pytest -m eval evals -p no:cacheprovider -q
+      - name: Сводка
+        if: always() && steps.secrets.outputs.ready == 'true'
+        run: |
+          python3 scripts/eval_report.py "$EVAL_REPORT_DIR" > eval-report.md || echo "Отчёт не сформирован — см. лог шага Evals." > eval-report.md
+          cat eval-report.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Комментарий в PR
+        if: always() && steps.secrets.outputs.ready == 'true' && github.event_name == 'pull_request'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require("fs");
+            const marker = "<!-- eval-gate -->";
+            const body = `${marker}\n${fs.readFileSync("eval-report.md", "utf8")}`;
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner, repo, issue_number,
+            });
+            const mine = comments.find((c) => c.body?.startsWith(marker));
+            if (mine) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: mine.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
+      - name: Снять метку run-evals (повторный прогон — снова поставить метку)
+        if: always() && github.event.action == 'labeled' && github.event.label.name == 'run-evals'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            await github.rest.issues.removeLabel({
+              ...context.repo, issue_number: context.issue.number, name: "run-evals",
+            }).catch(() => {});
+      - uses: actions/upload-artifact@v7
+        if: always() && steps.secrets.outputs.ready == 'true'
+        with:
+          name: eval-reports
+          path: eval-reports
+          retention-days: 30

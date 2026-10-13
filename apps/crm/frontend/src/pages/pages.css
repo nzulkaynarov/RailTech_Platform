@@ -1,0 +1,156 @@
+/* Раскладка страниц. Цвета и отступы — токены темы (`--ant-*`, app/theme.ts, cssVar). */
+.page-center {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--ant-padding);
+  background: var(--ant-color-bg-layout);
+}
+.auth-card {
+  width: 100%;
+  max-width: 380px;
+}
+.auth-alert {
+  margin-bottom: var(--ant-margin);
+}
+/* Карточка лида на планшете (md–lg): переписка и вкладки друг под другом.
+   От lg — antd `Splitter` (`.lead-split`), см. LeadDetailPage. */
+.lead-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--ant-margin);
+}
+/* Панели antd `Splitter` (карточка лида, Входящие): зазор между карточкой и разделителем. */
+.split-start {
+  padding-inline-end: var(--ant-margin-xs);
+}
+.split-end {
+  padding-inline-start: var(--ant-margin-xs);
+}
+.inbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--ant-margin);
+}
+.filters {
+  margin-bottom: var(--ant-margin);
+}
+/* PageHeader без внешнего отступа: расстояние до контента задаёт PageBody (единый ритм 16 px).
+   Переходное правило: страницы, ещё не обёрнутые в PageBody (заголовок — прямой потомок
+   контента), сохраняют отступ 16 px; внутри PageBody и Space-обёрток — 0 (было 32 px).
+   Убрать вместе с последней страницей без PageBody. */
+.page-header {
+  margin: 0;
+}
+:not(.page-body):not(.ant-space-item) > .page-header {
+  margin-bottom: var(--ant-margin);
+}
+.page-back {
+  display: inline-block;
+  margin-bottom: var(--ant-margin-xs);
+}
+/* h1 страницы визуально — размер h4 (иерархия заголовков WCAG 1.3.1 без смены вида). */
+h1.page-title.ant-typography {
+  margin: 0;
+  font-size: var(--ant-font-size-heading-4);
+  line-height: var(--ant-line-height-heading-4);
+}
+.page-body {
+  width: 100%;
+}
+.app-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ant-margin-xs);
+  color: var(--ant-color-text-heading);
+  font-weight: 700;
+  font-size: var(--ant-font-size-lg);
+  text-decoration: none;
+}
+/* h1 внутри antd Result — оформление заголовка Result, а не браузерного h1. */
+.result-heading {
+  margin: 0;
+  font: inherit;
+  color: inherit;
+}
+h1.page-title.auth-title {
+  margin-bottom: var(--ant-margin);
+}
+
+/* «Назад» слева, навигация по очереди (карточка лида) справа — одной строкой. */
+.page-nav-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--ant-margin-xs);
+}
+.queue-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ant-margin-xs);
+  margin-bottom: var(--ant-margin-xs);
+}
+
+/* Сайдбар (app/AppSider.tsx): группы по задачам, счётчик справа от подписи. */
+.app-sider-title {
+  display: flex;
+  align-items: center;
+  height: 64px;
+  padding: 0 var(--ant-padding);
+}
+/* Сайдбар высотой в экран: меню прокручивается само, кнопка сворачивания antd (48 px) всегда внизу
+   и не ложится поверх пунктов, когда меню админа длиннее экрана. */
+.app-sider.ant-layout-sider {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  align-self: flex-start;
+}
+.app-sider .ant-layout-sider-children {
+  height: calc(100vh - 48px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.app-nav.ant-menu {
+  border-inline-end: none !important;
+}
+.app-nav .ant-menu-item-group-title {
+  font-size: var(--ant-font-size-sm);
+  color: var(--ant-color-text-secondary);
+}
+.nav-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ant-margin-xs);
+}
+.nav-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ant-menu-inline-collapsed .nav-count {
+  display: none;
+}
+
+/* Переключатель режима: выбранный сегмент залит основным цветом — режим виден сразу. */
+.mode-switch .ant-segmented-item-selected {
+  background: var(--ant-color-primary);
+  color: var(--ant-color-text-light-solid);
+}
+.mode-banner {
+  margin-bottom: var(--ant-margin);
+}
+
+/* Телефон: кнопка «Фильтры (n)» по ширине текста, поля в нижней панели — во всю ширину. */
+.filters-button {
+  align-self: flex-start;
+}
+.drawer-filters > * {
+  width: 100% !important;
+}
+/* Лиды: форма «Ещё фильтры» в Popover (UX волна 2). */
+.more-filters {
+  width: 300px;
+}

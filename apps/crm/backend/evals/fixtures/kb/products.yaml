@@ -1,0 +1,10 @@
+# Демо-продукты RailTech (выдуманные, для evals и dev-стенда; PLAN Фаза 1, задача 6).
+- key: pos-integration
+  name: RT-POS Интеграция
+  description: Интеграция онлайн-касс с 1С и учётными системами для розницы.
+- key: rail-tracking
+  name: RT-Track
+  description: Мониторинг вагонов и контейнеров в реальном времени.
+- key: company
+  name: О компании
+  description: Общая информация о RailTech, порядок работы и поддержка.
