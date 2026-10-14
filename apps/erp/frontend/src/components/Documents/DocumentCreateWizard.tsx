@@ -19,7 +19,6 @@ import { RecordPaymentDialog } from '@/components/Billing/RecordPaymentDialog';
 import { useDocumentTemplates, useGenerateDocument } from '@/hooks/useDocuments';
 import { useDeals, useContacts, useDeal } from '@/hooks/useCRM';
 import { useCreateInvoiceDraft } from '@/hooks/useBilling';
-import { useUserStore } from '@/store/userStore';
 import { translateApiError } from '@/lib/apiError';
 import type { DocumentTemplate } from '@/api/documentsApi';
 
@@ -52,11 +51,8 @@ const NONE = '__none__';
  */
 export function DocumentCreateWizard({ open, onOpenChange, defaultDealId }: DocumentCreateWizardProps) {
   const { t } = useTranslation();
-  // Gate document types on the member's CAPABILITIES, not the display context: `activeStatus`
-  // defaults to BUYER (the manual context switcher was retired, ADR-0005), so a seller opening the
-  // hub would otherwise never see КП/инвойс/акт. A dual-capability company sees both sides.
-  const canSell = useUserStore((s) => s.capabilities.can_sell);
-  const canBuy = useUserStore((s) => s.capabilities.can_buy);
+  // Все виды документов — бэк-офиса (M1-ERP-02 волна 3: сторон «покупатель / продавец» нет).
+  // Право на конкретное действие (КП, счёт, акт, фиксация оплаты) проверяет сервер.
 
   const [step, setStep] = useState<Step>('type');
   // The КП and payment flows hand off to a dedicated dialog rendered alongside the wizard.
@@ -78,7 +74,7 @@ export function DocumentCreateWizard({ open, onOpenChange, defaultDealId }: Docu
 
   const { data: templates, isLoading: templatesLoading } = useDocumentTemplates();
   // Выбор сделки в мастере: без полного списка по 21-й сделке нельзя выставить документ.
-  const { data: deals } = useDeals(undefined, { fetchAll: true });
+  const { data: deals } = useDeals({ fetchAll: true });
   const { data: contacts } = useContacts();
   const generate = useGenerateDocument();
   const createInvoice = useCreateInvoiceDraft();
@@ -185,27 +181,27 @@ export function DocumentCreateWizard({ open, onOpenChange, defaultDealId }: Docu
   }
 
   const typeOptions: Array<{
-    type: DocType; icon: React.ReactNode; label: string; hint: string; show: boolean;
+    type: DocType; icon: React.ReactNode; label: string; hint: string;
   }> = [
     {
       type: 'letter', icon: <Mail className="h-5 w-5" aria-hidden="true" />,
-      label: t('documentsHub.types.letter'), hint: t('documentsHub.types.letterHint'), show: true,
+      label: t('documentsHub.types.letter'), hint: t('documentsHub.types.letterHint'),
     },
     {
       type: 'quote', icon: <FileText className="h-5 w-5" aria-hidden="true" />,
-      label: t('documentsHub.types.quote'), hint: t('documentsHub.types.quoteHint'), show: canSell,
+      label: t('documentsHub.types.quote'), hint: t('documentsHub.types.quoteHint'),
     },
     {
       type: 'invoice', icon: <Receipt className="h-5 w-5" aria-hidden="true" />,
-      label: t('documentsHub.types.invoice'), hint: t('documentsHub.types.invoiceHint'), show: canSell,
+      label: t('documentsHub.types.invoice'), hint: t('documentsHub.types.invoiceHint'),
     },
     {
       type: 'act', icon: <ScrollText className="h-5 w-5" aria-hidden="true" />,
-      label: t('documentsHub.types.act'), hint: t('documentsHub.types.actHint'), show: canSell,
+      label: t('documentsHub.types.act'), hint: t('documentsHub.types.actHint'),
     },
     {
       type: 'payment', icon: <Wallet className="h-5 w-5" aria-hidden="true" />,
-      label: t('documentsHub.types.payment'), hint: t('documentsHub.types.paymentHint'), show: canBuy,
+      label: t('documentsHub.types.payment'), hint: t('documentsHub.types.paymentHint'),
     },
   ];
 
@@ -233,7 +229,7 @@ export function DocumentCreateWizard({ open, onOpenChange, defaultDealId }: Docu
 
           {step === 'type' && (
             <div className="mt-2 space-y-2">
-              {typeOptions.filter((o) => o.show).map((option) => (
+              {typeOptions.map((option) => (
                 <Button
                   key={option.type}
                   type="button"

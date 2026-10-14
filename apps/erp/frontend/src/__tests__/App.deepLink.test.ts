@@ -1,35 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { parseHashToPage, pageToHash, type Page } from '../routes/hashRoute';
-import { evaluatePageGuard, type PageGuardInput } from '../routes/pageGuard';
+import { evaluatePageGuard } from '../routes/pageGuard';
 
 // WP-4 — cold-load deep-link regression guard.
 //
-// Root cause under test: on a cold load with a persisted valid session,
-// authStore rehydrates isAuthenticated/user from localStorage while isLoading
-// stays at its default `false`, so App mounts MainApp on the FIRST render —
-// before initAuth()/loadFromAuth() run. At that instant userStore is still at
-// pre-auth DEFAULTS (activeStatus 'BUYER', empty statusEntries). The old
-// context guard enforced against those and
-// bounced a valid deep-link (#request-detail/{id}, #deal-quote/{id}) to
-// #dashboard, clobbering the hash via replaceState. The fix defers all guards
-// until bootstrap (`bootstrapped`, i.e. userStore.screen === 'main').
-
-/** Build a guard input with sensible buyer defaults. */
-function input(overrides: Partial<PageGuardInput> & { pageType: string }): PageGuardInput {
-  return {
-    activeStatus: 'BUYER',
-    statusEntries: [{ status: 'BUYER' }],
-    bootstrapped: true,
-    ...overrides,
-  };
-}
-
-/** Pre-auth default store state, as seen on the first render of a cold load. */
-const PRE_AUTH_DEFAULTS: Omit<PageGuardInput, 'pageType'> = {
-  activeStatus: 'BUYER',
-  statusEntries: [],
-  bootstrapped: false,
-};
+// Раньше гейт страниц проверял контекст «покупатель / продавец» и на холодной загрузке
+// (до /me) отбрасывал валидный deep-link (#request-detail/{id}, #deal-quote/{id}) на
+// #dashboard. В M1-ERP-02 волне 3 контекст удалён: гейт отбрасывает только неизвестный хэш,
+// поэтому валидный deep-link открывается всегда — и до, и после загрузки /me.
 
 describe('parseHashToPage', () => {
   it('parses a parameterised request-detail deep link', () => {
@@ -44,9 +22,9 @@ describe('parseHashToPage', () => {
     expect(parseHashToPage('#product_detail/ABC-1')).toEqual({ type: 'product_detail', productId: 'ABC-1' });
   });
 
-  it('falls back to the list page for a bare/invalid request-detail hash', () => {
-    expect(parseHashToPage('#request-detail')).toEqual({ type: 'my-requests' });
-    expect(parseHashToPage('#request-detail/notanumber')).toEqual({ type: 'my-requests' });
+  it('falls back to the deals list for a bare/invalid request-detail hash', () => {
+    expect(parseHashToPage('#request-detail')).toEqual({ type: 'crm-deals' });
+    expect(parseHashToPage('#request-detail/notanumber')).toEqual({ type: 'crm-deals' });
   });
 
   it('falls back to crm-deals for an invalid deal-quote id', () => {
@@ -63,73 +41,28 @@ describe('parseHashToPage', () => {
   });
 });
 
-describe('evaluatePageGuard — cold-load deferral (the fix)', () => {
-  it('ALLOWS a request-detail deep link before bootstrap (does not bounce on defaults)', () => {
-    expect(evaluatePageGuard({ ...PRE_AUTH_DEFAULTS, pageType: 'request-detail' })).toEqual({ action: 'allow' });
+describe('evaluatePageGuard — deep links of the back office', () => {
+  it('opens request-detail and deal-quote deep links', () => {
+    expect(evaluatePageGuard('request-detail')).toEqual({ action: 'allow' });
+    expect(evaluatePageGuard('deal-quote')).toEqual({ action: 'allow' });
   });
 
-  it('ALLOWS a deal-quote deep link before bootstrap (seller cold load)', () => {
-    // Before the fix this bounced on context (default BUYER + empty statusEntries →
-    // deal-quote ∉ BUYER_PAGES).
-    expect(evaluatePageGuard({ ...PRE_AUTH_DEFAULTS, pageType: 'deal-quote' })).toEqual({ action: 'allow' });
-  });
-
-});
-
-describe('evaluatePageGuard — valid deep links survive bootstrap', () => {
-  it('opens request-detail for a buyer', () => {
-    expect(evaluatePageGuard(input({ pageType: 'request-detail' }))).toEqual({ action: 'allow' });
-  });
-
-  it('opens request-detail for a seller', () => {
-    expect(
-      evaluatePageGuard(
-        input({ pageType: 'request-detail', activeStatus: 'SELLER', statusEntries: [{ status: 'SELLER' }] }),
-      ),
-    ).toEqual({ action: 'allow' });
-  });
-
-  it('opens deal-quote for a seller', () => {
-    expect(
-      evaluatePageGuard(
-        input({ pageType: 'deal-quote', activeStatus: 'SELLER', statusEntries: [{ status: 'SELLER' }] }),
-      ),
-    ).toEqual({ action: 'allow' });
-  });
-});
-
-describe('evaluatePageGuard — cross-role / role bounces still hold after bootstrap', () => {
-  it('bounces a pure buyer off a seller-only page (deal-quote)', () => {
-    expect(evaluatePageGuard(input({ pageType: 'deal-quote' }))).toEqual({ action: 'bounce', reason: 'context' });
-  });
-
-  it('adopts the seller context for a dual buyer+seller hitting a seller page', () => {
-    expect(
-      evaluatePageGuard(
-        input({
-          pageType: 'deal-quote',
-          activeStatus: 'BUYER',
-          statusEntries: [
-            { status: 'BUYER' },
-            { status: 'SELLER' },
-          ],
-        }),
-      ),
-    ).toEqual({ action: 'adopt', context: 'SELLER' });
-  });
-
-  it('has no company-verification gate: documents open on context alone (M1-ERP-02)', () => {
-    // Раньше договоры отбрасывали компанию без подтверждённого уровня проверки на дашборд.
-    // Проверки клиентов в ERP нет — доступ решает контекст, действия ограничивает право роли.
-    expect(evaluatePageGuard(input({ pageType: 'contracts' }))).toEqual({ action: 'allow' });
+  it('has no company-verification or buyer/seller gate: documents open for every employee', () => {
+    // Проверки клиентов в ERP нет (волна 1c), сторон нет (волна 3) — действия ограничивает право роли.
+    expect(evaluatePageGuard('contracts')).toEqual({ action: 'allow' });
+    expect(evaluatePageGuard('acts')).toEqual({ action: 'allow' });
   });
 
   it('bounces a stale operator-plane hash (admin-*) like any unknown page (M1-ERP-02)', () => {
-    expect(evaluatePageGuard(input({ pageType: 'admin-users' }))).toEqual({ action: 'bounce', reason: 'context' });
+    expect(evaluatePageGuard('admin-users')).toEqual({ action: 'bounce', reason: 'unknown' });
+  });
+
+  it('bounces a stale buyer hash (#my-requests) — the page moved to Cabinet (M1-ERP-02 wave 3)', () => {
+    expect(evaluatePageGuard('my-requests')).toEqual({ action: 'bounce', reason: 'unknown' });
   });
 
   it('bounces an unknown/stale hash to the dashboard (invalid hash → dashboard)', () => {
-    expect(evaluatePageGuard(input({ pageType: 'totally-bogus-page' }))).toEqual({ action: 'bounce', reason: 'context' });
+    expect(evaluatePageGuard('totally-bogus-page')).toEqual({ action: 'bounce', reason: 'unknown' });
   });
 });
 
@@ -138,8 +71,8 @@ describe('evaluatePageGuard — cross-role / role bounces still hold after boots
 // `pageToHash` подставлял идентификатор только для `product_detail`; `request-detail`
 // и `deal-quote` уходили в историю голыми. Назад/вперёд это не ломало (страница едет
 // в `history.state`), но обновление страницы, закладка или отправленная коллеге ссылка
-// уводили с карточки сделки на список заявок. Прямые присвоения `window.location.hash`
-// (корзина, очередь согласования, уведомления) номер всегда клали — расходился ровно
+// уводили с карточки сделки на список сделок. Прямые присвоения `window.location.hash`
+// (очередь согласования, уведомления) номер всегда клали — расходился ровно
 // путь через `navigateTo`, то есть кнопка «Назад» из билдера КП.
 describe('pageToHash — точная обратная операция к parseHashToPage', () => {
   const roundTrip = (page: Page) => parseHashToPage(`#${pageToHash(page)}`);
@@ -173,12 +106,12 @@ describe('parseHashToPage — голые параметризованные ма
     expect(parseHashToPage('#deal-quote')).toEqual({ type: 'crm-deals' });
   });
 
-  it('#request-detail без номера откатывается на список заявок', () => {
-    expect(parseHashToPage('#request-detail')).toEqual({ type: 'my-requests' });
+  it('#request-detail без номера откатывается на список сделок', () => {
+    expect(parseHashToPage('#request-detail')).toEqual({ type: 'crm-deals' });
   });
 
   it('нечисловой номер откатывается так же, как отсутствующий', () => {
     expect(parseHashToPage('#deal-quote/abc')).toEqual({ type: 'crm-deals' });
-    expect(parseHashToPage('#request-detail/abc')).toEqual({ type: 'my-requests' });
+    expect(parseHashToPage('#request-detail/abc')).toEqual({ type: 'crm-deals' });
   });
 });

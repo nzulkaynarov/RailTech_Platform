@@ -2,8 +2,8 @@ import { useMemo } from 'react';
 import { useNow } from '@/hooks/useNow';
 import { useTranslation } from 'react-i18next';
 import {
-  ClipboardCheck, PenLine, FileWarning, FileClock, FileCheck2, FilePlus2, Wallet, ScrollText,
-  Truck, PackageCheck, AlertTriangle, type LucideIcon,
+  ClipboardCheck, PenLine, FileWarning, FileClock, FilePlus2, Wallet, ScrollText,
+  Truck, AlertTriangle, type LucideIcon,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -14,15 +14,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useDeals, useQuotes, useMyApprovalQueue, useDealStages } from '@/hooks/useCRM';
 import { useContracts, useInvoices, useActs, useFulfillments } from '@/hooks/useBilling';
 import { useCurrencyStore } from '@/store/currencyStore';
-import { useUserStore } from '@/store/userStore';
-import { dealsListRoute } from '@/lib/documentRoute';
+import { DEALS_LIST_ROUTE } from '@/lib/documentRoute';
 import { dealStageLabelKey } from '@/lib/codes';
 import type { DashboardStats } from '@/api/dashboardApi';
 
 // ── Urgency signals are derived from real data and compared BY CODE (FSM canon),
 //    never by translated name and never by an arbitrary time threshold. ────────
 
-// A buyer RFQ sits in these stages until the seller answers it with a КП (shared lib/waiting).
 // Quote statuses that are still "in flight" (a КП that has expired here must be re-issued).
 const ACTIVE_QUOTE_STATUSES = ['DRAFT', 'PENDING_TRADE_REVIEW', 'PENDING_APPROVAL', 'READY_TO_SEND', 'SENT'];
 
@@ -135,14 +133,12 @@ function AttentionGrid({ items, onNavigate, state }: {
   );
 }
 
-/** SELLER — "what blocks me now": approvals, contracts to sign, RFQs without a КП, expired КП. */
-export function SellerAttentionStrip({ onNavigate }: { onNavigate: (p: string) => void }) {
+/** Back office — "what blocks me now": approvals, contracts to sign, RFQs without a КП, expired КП. */
+export function AttentionStrip({ onNavigate }: { onNavigate: (p: string) => void }) {
   const { t } = useTranslation();
   const approvalsQuery = useMyApprovalQueue();
   const contractsQuery = useContracts({ status: 'PENDING_MANAGER' });
-  // ЯВНЫЙ продавцовый скоуп: дашборд общий для обеих ролей, глобальный контекст на нём — BUYER,
-  // и без этого продавец не видел собственных заявок в своей же полосе внимания (03-08).
-  const dealsQuery = useDeals('SELLER');
+  const dealsQuery = useDeals();
   const quotesQuery = useQuotes();
   const { data: approvals } = approvalsQuery;
   const { data: pendingContracts } = contractsQuery;
@@ -153,9 +149,9 @@ export function SellerAttentionStrip({ onNavigate }: { onNavigate: (p: string) =
   // «Заявки без КП» — по СОСТОЯНИЮ КП, а не по факту его существования.
   //
   // Ресерч 2026-07-28 заменил счёт «только по стадии» на «стадия И нет active_quote», но заявка
-  // покупателя ФИЗИЧЕСКИ ХРАНИТСЯ в DRAFT-КП, поэтому `!active_quote` не бывает истинным ни для
+  // клиента ФИЗИЧЕСКИ ХРАНИТСЯ в DRAFT-КП, поэтому `!active_quote` не бывает истинным ни для
   // одной отправленной заявки — плитка стала показывать 0 ВСЕГДА (проход глазами 03-08).
-  // Признак «продавец ещё не работал» = КП в черновике и без денег (см. `needsQuoteWork`).
+  // Признак «бэк-офис ещё не работал» = КП в черновике и без денег (см. `needsQuoteWork`).
   const rfqQueue = (deals ?? []).filter(needsQuoteWork);
   const rfqsNeedingKp = rfqQueue.length;
   // W3 aging-counter (Bitrix24): сколько ждёт самая старая заявка из этой же выборки.
@@ -199,7 +195,7 @@ function isOverdue(dueDate: string | null): boolean {
   return new Date(dueDate).getTime() < today.getTime();
 }
 
-export function PostContractStrip({ side, onNavigate }: { side: 'seller' | 'buyer'; onNavigate: (p: string) => void }) {
+export function PostContractStrip({ onNavigate }: { onNavigate: (p: string) => void }) {
   const { t } = useTranslation();
   const invoicesQuery = useInvoices(undefined);
   const actsQuery = useActs({ status: 'ISSUED' });
@@ -216,39 +212,22 @@ export function PostContractStrip({ side, onNavigate }: { side: 'seller' | 'buye
   const inTransit = (fulfillments ?? []).filter(
     (shipment) => shipment.status === 'SHIPPED' || shipment.status === 'IN_TRANSIT',
   );
-  const delivered = (fulfillments ?? []).filter((shipment) => shipment.status === 'DELIVERED');
-  // Акт двусторонний (G2): выпустивший его подтвердить не может, сервер отдаёт это в
-  // `viewer_can_sign`. Заказчику показываем то, что ждёт ЕГО приёмки, исполнителю — сколько
-  // выпущенных актов висит на другой стороне.
-  const actsAwaitingMe = (acts ?? []).filter((act) => act.viewer_can_sign);
 
-  const items: AttentionItem[] = side === 'seller'
-    ? [
-      { icon: FilePlus2, label: t('dashboardPage.attn.invoicesToIssue'), count: drafts.length, tone: 'warning', page: 'invoices' },
-      {
-        icon: Wallet,
-        label: t('dashboardPage.attn.awaitingPayment'),
-        count: awaitingPayment.length,
-        tone: 'warning',
-        page: 'invoices',
-        hint: overdueCount ? t('dashboardPage.attn.overdueInvoices', { count: overdueCount }) : null,
-      },
-      { icon: ScrollText, label: t('dashboardPage.attn.actsAwaitingAcceptance'), count: (acts ?? []).length, tone: 'warning', page: 'acts' },
-      { icon: Truck, label: t('dashboardPage.attn.inTransit'), count: inTransit.length, tone: 'warning', page: 'fulfillments' },
-    ]
-    : [
-      {
-        icon: Wallet,
-        label: t('dashboardPage.attn.invoicesToPay'),
-        count: awaitingPayment.length,
-        tone: 'warning',
-        page: 'invoices',
-        hint: overdueCount ? t('dashboardPage.attn.overdueInvoices', { count: overdueCount }) : null,
-      },
-      { icon: ScrollText, label: t('dashboardPage.attn.actsToAccept'), count: actsAwaitingMe.length, tone: 'destructive', page: 'acts' },
-      { icon: Truck, label: t('dashboardPage.attn.awaitingDelivery'), count: inTransit.length, tone: 'warning', page: 'fulfillments' },
-      { icon: PackageCheck, label: t('dashboardPage.attn.toAccept'), count: delivered.length, tone: 'destructive', page: 'fulfillments' },
-    ];
+  // Акт двусторонний (G2): исполнитель видит, сколько выпущенных актов ждёт приёмки клиентом
+  // (клиент принимает или возвращает акт в Cabinet).
+  const items: AttentionItem[] = [
+    { icon: FilePlus2, label: t('dashboardPage.attn.invoicesToIssue'), count: drafts.length, tone: 'warning', page: 'invoices' },
+    {
+      icon: Wallet,
+      label: t('dashboardPage.attn.awaitingPayment'),
+      count: awaitingPayment.length,
+      tone: 'warning',
+      page: 'invoices',
+      hint: overdueCount ? t('dashboardPage.attn.overdueInvoices', { count: overdueCount }) : null,
+    },
+    { icon: ScrollText, label: t('dashboardPage.attn.actsAwaitingAcceptance'), count: (acts ?? []).length, tone: 'warning', page: 'acts' },
+    { icon: Truck, label: t('dashboardPage.attn.inTransit'), count: inTransit.length, tone: 'warning', page: 'fulfillments' },
+  ];
 
   // Блок скрывается, когда деньги ещё не пошли, — но только если данные ДЕЙСТВИТЕЛЬНО
   // приехали. Сбой загрузки выглядел ровно как «нулей нет, блок не нужен».
@@ -260,24 +239,6 @@ export function PostContractStrip({ side, onNavigate }: { side: 'seller' | 'buye
       <AttentionGrid items={items} onNavigate={onNavigate} state={state} />
     </div>
   );
-}
-
-/** BUYER — "what needs my decision": КП to review, contracts to sign. */
-export function BuyerAttentionStrip({ onNavigate }: { onNavigate: (p: string) => void }) {
-  const { t } = useTranslation();
-  const quotesQuery = useQuotes();
-  const contractsQuery = useContracts({ status: 'PENDING_CLIENT' });
-  const { data: quotes } = quotesQuery;
-  const { data: pendingContracts } = contractsQuery;
-  const state = gridState([quotesQuery, contractsQuery]);
-
-  const kpToReview = (quotes ?? []).filter((q) => q.status_code === 'SENT').length;
-
-  const items: AttentionItem[] = [
-    { icon: FileCheck2, label: t('dashboardPage.attn.reviewKp'), count: kpToReview, tone: 'warning', page: 'my-requests' },
-    { icon: PenLine, label: t('dashboardPage.attn.signContract'), count: (pendingContracts ?? []).length, tone: 'warning', page: 'contracts' },
-  ];
-  return <AttentionGrid items={items} onNavigate={onNavigate} state={state} />;
 }
 
 // Chart-token classes as literals so Tailwind's JIT keeps them. Cycled per stage.
@@ -293,10 +254,6 @@ const FUNNEL_COLORS = [
  *  Data-driven (no hardcoded stage list); a click drills into that stage on the deals page. */
 export function PipelineFunnel({ onNavigate }: { onNavigate: (p: string) => void }) {
   const { t } = useTranslation();
-  // Воронка стоит и на дашборде ПОКУПАТЕЛЯ — клик по сегменту вёл его в очередь продавца,
-  // куда гейт не пускает. Маршрут теперь по стороне зрителя (U1).
-  const activeStatus = useUserStore((state) => state.activeStatus);
-  const viewer = { isSeller: activeStatus === 'SELLER' };
   const dealsQuery = useDeals();
   const stagesQuery = useDealStages();
   const { data: deals } = dealsQuery;
@@ -365,7 +322,7 @@ export function PipelineFunnel({ onNavigate }: { onNavigate: (p: string) => void
             <button
               key={s.code}
               type="button"
-              onClick={() => onNavigate(dealsListRoute(viewer))}
+              onClick={() => onNavigate(DEALS_LIST_ROUTE)}
               className="flex items-center gap-2 text-left"
             >
               <span className={cn('h-2.5 w-2.5 shrink-0 rounded-sm', FUNNEL_COLORS[i % FUNNEL_COLORS.length])} aria-hidden="true" />
@@ -380,23 +337,16 @@ export function PipelineFunnel({ onNavigate }: { onNavigate: (p: string) => void
 }
 
 /** Compact, low-ink metric strip — replaces the 4-card KPI grid. Real data from the dashboard stats. */
-export function MetricStrip({ stats, role }: { stats: DashboardStats | null; role: 'seller' | 'buyer' }) {
+export function MetricStrip({ stats }: { stats: DashboardStats | null }) {
   const { t } = useTranslation();
   const formatCurrency = useCurrencyStore((s) => s.format);
 
-  const metrics =
-    role === 'seller'
-      ? [
-          { label: t('dashboardPage.kpi.dealsVolume'), value: formatCurrency(stats?.deals_volume ?? 0) },
-          { label: t('dashboardPage.kpi.activeRequests'), value: String(stats?.active_requests ?? 0) },
-          { label: t('dashboardPage.kpi.catalogItems'), value: String(stats?.catalog_items ?? 0) },
-          { label: t('dashboardPage.kpi.clients'), value: String(stats?.clients_count ?? 0) },
-        ]
-      : [
-          { label: t('dashboardPage.kpi.activeRequests'), value: String(stats?.active_requests ?? 0) },
-          { label: t('dashboardPage.kpi.quotesReceived'), value: String(stats?.quotes_received ?? 0) },
-          { label: t('dashboardPage.kpi.completed'), value: String(stats?.deals_completed ?? 0) },
-        ];
+  const metrics = [
+    { label: t('dashboardPage.kpi.dealsVolume'), value: formatCurrency(stats?.deals_volume ?? 0) },
+    { label: t('dashboardPage.kpi.activeRequests'), value: String(stats?.active_requests ?? 0) },
+    { label: t('dashboardPage.kpi.catalogItems'), value: String(stats?.catalog_items ?? 0) },
+    { label: t('dashboardPage.kpi.clients'), value: String(stats?.clients_count ?? 0) },
+  ];
 
   return (
     <Card>

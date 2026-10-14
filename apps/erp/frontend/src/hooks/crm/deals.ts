@@ -1,6 +1,6 @@
 /**
- * Сделки и заявки: список/карточка, создание и правка, маршрутизация продавцам (R1/R3),
- * взятие в работу и освобождение, этапы воронки и статусы КП.
+ * Сделки и заявки: список/карточка, создание, взятие в работу и освобождение, этапы воронки и
+ * статусы КП. Маршрутизация заявки продавцам (R1/R3) удалена в M1-ERP-02 волна 3: продавец один.
  *
  * Вынесено из useCRM.ts при распиле (727 строк, 39 правок). Домены зеркалят пакет
  * `@/api/crm`. Путь `@/hooks/useCRM` сохранён барьером — его импортируют 41 файл.
@@ -9,12 +9,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { crmApi, QuoteItem } from '../../api/crmApi';
 
-export const useDeals = (context?: 'BUYER' | 'SELLER', opts?: { fetchAll?: boolean }) => useQuery({
-  // Скоуп входит в ключ кэша: иначе покупательская и продавцовая выборки затирали бы друг друга.
-  // `fetchAll` — тоже часть ключа: полный список и первая страница это РАЗНЫЕ данные, и без
+export const useDeals = (opts?: { fetchAll?: boolean }) => useQuery({
+  // `fetchAll` — часть ключа: полный список и первая страница это РАЗНЫЕ данные, и без
   // этого виджет дашборда и реестр делили бы один кэш, отдавая друг другу свои двадцать строк.
-  queryKey: ['deals', { context: context ?? null, fetchAll: opts?.fetchAll ?? false }],
-  queryFn: () => crmApi.getDeals(context, opts),
+  queryKey: ['deals', { fetchAll: opts?.fetchAll ?? false }],
+  queryFn: () => crmApi.getDeals(opts),
 });
 
 export const useDeal = (id: number) => useQuery({
@@ -36,7 +35,7 @@ export const useDealDocuments = (dealId: number) => useQuery({
 
 export interface QuoteItemsFilterParams {
   /** Позиции ОДНОГО КП. Билдер обязан спрашивать именно так: у сделки бывает несколько
-   *  документов (контейнер строк заявки покупателя и КП продавца), и фильтр по сделке
+   *  документов (контейнер строк заявки клиента и КП), и фильтр по сделке
    *  смешивает их в одну таблицу. */
   quote?: number;
   deal_id?: number;
@@ -46,7 +45,7 @@ export interface QuoteItemsFilterParams {
 export const useQuoteItems = (params?: QuoteItemsFilterParams) => useQuery({
   queryKey: ['quote-items', params],
   queryFn: () => crmApi.getQuoteItems(params),
-  // Запрос БЕЗ единого фильтра вернул бы все позиции, видимые продавцу, — чужие строки
+  // Запрос БЕЗ единого фильтра вернул бы все позиции компании — чужие строки
   // в чужой таблице. Пока вызывающий не знает, ЧТО именно грузит (активный КП ещё не
   // приехал), запроса нет: пустой результат честнее случайного.
   enabled: Boolean(params && (params.quote || params.deal_id)),
@@ -85,41 +84,6 @@ export const useCreateDeal = () => {
       crmApi.createDeal(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deals'] });
-    },
-  });
-};
-
-// ── Multi-seller routing ─────────────────────────────────────────────────
-// Active SUPPLIER companies — the buyer's "route to seller(s)" picker source.
-export const useDealSuppliers = () => useQuery({
-  queryKey: ['deal-suppliers'],
-  queryFn: crmApi.getDealSuppliers,
-  staleTime: 5 * 60_000,
-});
-
-/** R1 — предложенные продавцы для заявки (только когда пикер открыт). */
-export const useSuggestedSellers = (dealId: number, enabled: boolean) => useQuery({
-  queryKey: ['suggested-sellers', dealId],
-  queryFn: () => crmApi.getSuggestedSellers(dealId),
-  enabled,
-  staleTime: 60_000,
-});
-
-// R3: buyer opts into an AI-enhanced pass (async 202/poll); merged into the picker on the client.
-export const useSuggestSellersAi = () => useMutation({
-  mutationFn: (dealId: number) => crmApi.suggestSellersAi(dealId),
-});
-
-// Buyer routes a DRAFT RFQ to seller companies. Invalidate the deals list and
-// the specific deal detail (key ['deals', id]) so target_sellers_data refreshes.
-export const useRouteDeal = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ dealId, sellerCompanyIds }: { dealId: number; sellerCompanyIds: number[] }) =>
-      crmApi.routeDeal(dealId, sellerCompanyIds),
-    onSuccess: (_data, { dealId }) => {
-      queryClient.invalidateQueries({ queryKey: ['deals'] });
-      queryClient.invalidateQueries({ queryKey: ['deals', dealId] });
     },
   });
 };

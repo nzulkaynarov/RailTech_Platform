@@ -19,9 +19,10 @@ export function useHasCompanyPermission(permission: string): boolean {
 }
 
 /**
- * Wave B2 (auto-claim) — true when the acting seller is effectively the only member who can claim
- * routed work, so «Взять в работу» is pure noise (claim routes work between teammates; with one it
- * routes nothing). Drives HIDING the claim button, never a business gate — the backend still owns
+ * Wave B2 (auto-claim) — true when the company effectively has only one member who can claim
+ * work, so «Взять в работу» is pure noise (claim distributes work between teammates; with one it
+ * distributes nothing). Имя флага (`is_solo_seller`) — поле бэкенда /me, переименуется вместе
+ * с ролями бэк-офиса (M1-ERP-05). Drives HIDING the claim button, never a business gate — the backend still owns
  * claim/assignment. Reads the OPTIONAL `capabilities.is_solo_seller` flag the backend (B1) surfaces
  * on /me; while it is undefined this returns false and claim keeps its prior behaviour.
  */

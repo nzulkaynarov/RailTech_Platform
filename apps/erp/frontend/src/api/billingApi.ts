@@ -48,12 +48,7 @@ export interface Invoice {
   notes: string;
   items: InvoiceItem[];
   payments: Payment[];
-  /**
-   * Сторона зрителя ПО ЭТОМУ счёту, посчитанная сервером (образец — viewer_can_sign_* у
-   * договора). Заменяет вывод роли из activeStatus: тот брал первый тип компании, из-за чего
-   * посредник, который и покупает, и продаёт, терял половину действий.
-   */
-  viewer_can_pay: boolean;
+  /** Может ли зритель управлять счётом (выпуск, акт, аннулирование) — считает сервер. */
   viewer_can_manage: boolean;
   /** O3: у продавца заполнены банковские реквизиты — иначе счёт нечем оплатить. */
   seller_bank_details_ready?: boolean;
@@ -176,12 +171,6 @@ export interface Act {
   signed_file: string | null;
   signed_file_url: string | null;
   /**
-   * Двусторонний акт (G2): выпускает исполнитель, принимает ЗАКАЗЧИК. Подсказки адресные —
-   * выпустившей стороне «принять собственный акт» не предлагается.
-   */
-  viewer_can_sign: boolean;
-  viewer_can_reject: boolean;
-  /**
    * Действия ВЫПУСТИВШЕЙ стороны (A4). Считает сервер: `remind` дополнительно гаснет на сутки
    * после напоминания, `cancel` — после того как акт согласован обеими сторонами.
    */
@@ -214,23 +203,6 @@ export const actsApi = {
     return response.data;
   },
   downloadPdf: (id: number) => downloadFile(`crm/acts/${id}/download-pdf/`, `RailTech_Act_${id}.pdf`),
-  sign: async (id: number, signedFile?: File) => {
-    if (signedFile) {
-      const formData = new FormData();
-      formData.append('signed_file', signedFile);
-      const response = await apiClient.post<Act>(`crm/acts/${id}/sign/`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      return response.data;
-    }
-    const response = await apiClient.post<Act>(`crm/acts/${id}/sign/`);
-    return response.data;
-  },
-  // Второй шаг двустороннего цикла: заказчик возвращает акт с причиной (обязательной).
-  reject: async (id: number, reason: string) => {
-    const response = await apiClient.post<Act>(`crm/acts/${id}/reject/`, { reason });
-    return response.data;
-  },
   // Повтор приглашения заказчику (не новый вид письма). Сервер откажет
   // ACT_REMINDER_TOO_SOON, если с прошлого напоминания не прошли сутки.
   remind: async (id: number) => {

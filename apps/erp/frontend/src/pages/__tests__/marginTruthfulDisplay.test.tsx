@@ -8,12 +8,7 @@ import { QuoteBuilderGrid } from '@/components/QuoteBuilder/QuoteBuilderGrid';
 import {
   useDeal,
   useChangeDealStage,
-  useApproveQuote,
-  useRejectQuote,
   useSendQuoteToClient,
-  useUpdateRequestMeta,
-  usePreflightCheck,
-  useQuoteRequestDiff,
   useQuoteItems,
   useUpdateQuoteItem,
   useBulkUpdateQuoteItems,
@@ -46,12 +41,7 @@ vi.mock('@/hooks/useCRM', () => ({
   // проверки — отдаём пустой результат, чтобы блок молчал.
   useDealDocuments: vi.fn(() => ({ data: undefined, isLoading: false })),
   useChangeDealStage: vi.fn(),
-  useApproveQuote: vi.fn(),
-  useRejectQuote: vi.fn(),
   useSendQuoteToClient: vi.fn(),
-  useUpdateRequestMeta: vi.fn(),
-  usePreflightCheck: vi.fn(),
-  useQuoteRequestDiff: vi.fn(),
   useQuoteItems: vi.fn(),
   useUpdateQuoteItem: vi.fn(),
   useBulkUpdateQuoteItems: vi.fn(),
@@ -69,7 +59,8 @@ vi.mock('@/hooks/useCRM', () => ({
 
 // Page context: seller sees the margin column; a plain currency formatter keeps assertions simple.
 vi.mock('@/store/userStore', () => ({
-  useUserStore: (selector: (state: { activeStatus: string }) => unknown) => selector({ activeStatus: 'SELLER' }),
+  useUserStore: (selector: (state: { capabilities: { permissions: string[] } }) => unknown) =>
+    selector({ capabilities: { permissions: [] } }),
 }));
 vi.mock('@/store/currencyStore', () => ({
   useCurrencyStore: (selector: (state: { format: (value: number) => string }) => unknown) =>
@@ -81,11 +72,7 @@ vi.mock('@/hooks/use-mobile', () => ({ useMediaQuery: () => false }));
 // Heavy children are irrelevant to the margin surface under test — stub them to null.
 vi.mock('@/components/CRM/DealTimeline', () => ({ DealTimeline: () => null }));
 vi.mock('@/components/CRM/DealDocumentsCard', () => ({ DealDocumentsCard: () => null }));
-vi.mock('@/components/CRM/CoverageCheck', () => ({ CoverageCheck: () => null }));
-vi.mock('@/components/CRM/RejectQuoteDialog', () => ({ RejectQuoteDialog: () => null }));
 vi.mock('@/components/Shared/ConfirmActionDialog', () => ({ ConfirmActionDialog: () => null }));
-vi.mock('@/components/CRM/RequestItemsEditor', () => ({ RequestItemsEditor: () => null }));
-vi.mock('@/components/CRM/PreflightWarnings', () => ({ PreflightWarnings: () => null }));
 vi.mock('@/components/CRM/GenerateQuoteDialog', () => ({ GenerateQuoteDialog: () => null }));
 vi.mock('@/components/CRM/QuoteApprovalChain', () => ({ QuoteApprovalChain: () => null }));
 vi.mock('@/components/CRM/DeliveryBasisSelect', () => ({ DeliveryBasisSelect: () => null }));
@@ -109,8 +96,6 @@ const pageDeal = {
   stage_name: 'Расчёт',
   company_name: 'ООО Магистраль',
   client_name: 'ООО Магистраль',
-  can_edit_request: false,
-  target_sellers_data: [],
   quotes: [],
   active_quote: {
     id: 100,
@@ -216,12 +201,7 @@ describe('WP-7 truthful margin display', () => {
     vi.clearAllMocks();
     [
       useChangeDealStage,
-      useApproveQuote,
-      useRejectQuote,
       useSendQuoteToClient,
-      useUpdateRequestMeta,
-      usePreflightCheck,
-      useQuoteRequestDiff,
       useUpdateQuoteItem,
       useBulkUpdateQuoteItems,
       useBulkCreateQuoteItems,

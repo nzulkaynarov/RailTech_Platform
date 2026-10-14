@@ -52,7 +52,6 @@ function makeInvoice(id: number, status: Invoice['status'], dueDate: string | nu
     notes: '',
     items: [],
     payments: [],
-    viewer_can_pay: true,
     viewer_can_manage: true,
     created_at: '2026-07-01T10:00:00Z',
     updated_at: '2026-07-01T10:00:00Z',
@@ -72,15 +71,13 @@ function makeFulfillment(id: number, status: Fulfillment['status']): Fulfillment
     tracking_number: '',
     carrier: '',
     viewer_can_ship: true,
-    viewer_can_accept: true,
     notes: '',
     created_at: '2026-07-01T10:00:00Z',
     updated_at: '2026-07-01T10:00:00Z',
   };
 }
 
-/** `canSign` — серверная подсказка «этот акт ждёт МОЕЙ приёмки» (выпустившему она false). */
-function makeAct(id: number, canSign = true): Act {
+function makeAct(id: number): Act {
   return {
     id,
     deal: id,
@@ -95,8 +92,6 @@ function makeAct(id: number, canSign = true): Act {
     pdf_url: null,
     signed_file: null,
     signed_file_url: null,
-    viewer_can_sign: canSign,
-    viewer_can_reject: canSign,
     viewer_can_remind: false,
     viewer_can_cancel: false,
     viewer_can_reissue: false,
@@ -135,7 +130,7 @@ describe('PostContractStrip', () => {
     listActs.mockResolvedValue([]);
     listFulfillments.mockResolvedValue([]);
 
-    const { container } = renderWithProviders(<PostContractStrip side="seller" onNavigate={vi.fn()} />);
+    const { container } = renderWithProviders(<PostContractStrip onNavigate={vi.fn()} />);
 
     // Блок исчезает только когда данные ПРИЕХАЛИ и все нули; до этого висит скелет.
     await waitFor(() => expect(container).toBeEmptyDOMElement());
@@ -148,13 +143,13 @@ describe('PostContractStrip', () => {
     listActs.mockRejectedValue(new Error('boom'));
     listFulfillments.mockRejectedValue(new Error('boom'));
 
-    renderWithProviders(<PostContractStrip side="seller" onNavigate={vi.fn()} />);
+    renderWithProviders(<PostContractStrip onNavigate={vi.fn()} />);
 
     expect(await screen.findByText('Не удалось загрузить данные')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Повторить' })).toBeInTheDocument();
   });
 
-  it('продавцу показывает счета к выставлению, ожидание оплаты, акты и поставки', async () => {
+  it('бэк-офису показывает счета к выставлению, ожидание оплаты, акты и поставки', async () => {
     listInvoices.mockResolvedValue([
       makeInvoice(1, 'DRAFT', null),
       makeInvoice(2, 'ISSUED', '2026-12-31'),
@@ -164,12 +159,12 @@ describe('PostContractStrip', () => {
     listActs.mockResolvedValue([makeAct(9)]);
     listFulfillments.mockResolvedValue([makeFulfillment(5, 'SHIPPED'), makeFulfillment(6, 'ACCEPTED')]);
 
-    renderWithProviders(<PostContractStrip side="seller" onNavigate={vi.fn()} />);
+    renderWithProviders(<PostContractStrip onNavigate={vi.fn()} />);
 
     expect(within(await findTile('Счета к выставлению')).getByText('1')).toBeInTheDocument();
     // ISSUED + PARTIAL ждут денег; PAID уже нет.
     expect(within(await findTile('Ждут оплаты')).getByText('2')).toBeInTheDocument();
-    // Акт выпустил сам продавец, принимает заказчик — плитка считает, сколько висит на нём.
+    // Акт выпустил бэк-офис, принимает клиент — плитка считает, сколько висит на нём.
     expect(within(await findTile('Акты ждут приёмки')).getByText('1')).toBeInTheDocument();
     // ACCEPTED — уже не «в пути».
     expect(within(await findTile('Поставки в пути')).getByText('1')).toBeInTheDocument();
@@ -183,26 +178,11 @@ describe('PostContractStrip', () => {
     listActs.mockResolvedValue([]);
     listFulfillments.mockResolvedValue([]);
 
-    renderWithProviders(<PostContractStrip side="seller" onNavigate={vi.fn()} />);
+    renderWithProviders(<PostContractStrip onNavigate={vi.fn()} />);
 
     const tile = await findTile('Ждут оплаты');
     expect(within(tile).getByText('2')).toBeInTheDocument();
     expect(within(tile).getByText('1 просрочен')).toBeInTheDocument();
-  });
-
-  it('покупателю показывает акты, ждущие ЕГО приёмки, и молчит о чужих', async () => {
-    // Акт двусторонний (G2): страница актов открыта обеим сторонам, но плитка считает только
-    // то, что ждёт решения зрителя — сервер говорит это в `viewer_can_sign`.
-    listInvoices.mockResolvedValue([makeInvoice(1, 'ISSUED', null)]);
-    listActs.mockResolvedValue([makeAct(9), makeAct(10, false)]);
-    listFulfillments.mockResolvedValue([makeFulfillment(5, 'DELIVERED')]);
-
-    renderWithProviders(<PostContractStrip side="buyer" onNavigate={vi.fn()} />);
-
-    expect(await screen.findByText('Счета к оплате')).toBeInTheDocument();
-    expect(within(await findTile('Ждут приёмки')).getByText('1')).toBeInTheDocument();
-    expect(within(await findTile('Акты на приёмку')).getByText('1')).toBeInTheDocument();
-    expect(screen.queryByText('Акты ждут приёмки')).not.toBeInTheDocument();
   });
 
   it('клик по плитке ведёт на её страницу', async () => {
@@ -211,7 +191,7 @@ describe('PostContractStrip', () => {
     listActs.mockResolvedValue([]);
     listFulfillments.mockResolvedValue([]);
 
-    renderWithProviders(<PostContractStrip side="seller" onNavigate={onNavigate} />);
+    renderWithProviders(<PostContractStrip onNavigate={onNavigate} />);
 
     (await findTile('Счета к выставлению')).click();
     await waitFor(() => expect(onNavigate).toHaveBeenCalledWith('invoices'));

@@ -1,6 +1,5 @@
 import axios from 'axios';
 import i18n from '@/i18n';
-import { useUserStore } from '@/store/userStore';
 import { getAccessToken, setAccessToken } from './accessToken';
 
 const BASE_ENV_URL = import.meta.env.VITE_API_URL || '';
@@ -23,29 +22,6 @@ apiClient.interceptors.request.use((config) => {
 	if (token) {
 		config.headers.Authorization = `Bearer ${token}`;
 	}
-	return config;
-});
-
-// Declare the workspace context the user is currently acting in (BUYER / SELLER
-// / MANUFACTURER). The backend scopes data to it: a dual seller+buyer user in
-// BUYER context sees only its own company's deals, not every buyer's заявка.
-// This only ever NARROWS access — never grants more than the user's memberships.
-apiClient.interceptors.request.use((config) => {
-	try {
-		// Always emit a concrete context, defaulting to the NARROWER 'BUYER' — a null/absent
-		// header must never let the backend fall back to a wider (seller) scope for the SPA
-		// (ADR-0005 Phase C guard: the header may only narrow). is_seller() still gates the
-		// real boundary server-side, so this is defense-in-depth, not the primary control.
-		// Явно заданный вызывающим контекст НЕ перетираем: продавцовым виджетам дашборда нужен
-		// SELLER-скоуп независимо от `activeStatus`. Дашборд — общая для обеих ролей страница,
-		// поэтому контекст на ней остаётся дефолтным BUYER, и плитки продавца («Заявки без КП»,
-		// «КП на утверждении») считались по ПОКУПАТЕЛЬСКОЙ выборке — у компании, которая и
-		// покупает и продаёт, они молчали (проход глазами 03-08). Сужение это по-прежнему, не
-		// расширение: `is_seller()` на сервере остаётся настоящей границей.
-		if (!config.headers['X-Active-Context']) {
-			config.headers['X-Active-Context'] = useUserStore.getState().activeStatus || 'BUYER';
-		}
-	} catch { /* noop */ }
 	return config;
 });
 

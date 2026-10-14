@@ -8,11 +8,7 @@ import ru from '@/i18n/locales/ru.json';
 import {
   useDeal,
   useChangeDealStage,
-  useApproveQuote,
-  useRejectQuote,
   useSendQuoteToClient,
-  useUpdateRequestMeta,
-  useQuoteRequestDiff,
   useClaimDeal,
   useReleaseDeal,
   useTakeAndPrepareQuote,
@@ -37,21 +33,17 @@ vi.mock('@/hooks/useCRM', () => ({
   // проверки — отдаём пустой результат, чтобы блок молчал.
   useDealDocuments: vi.fn(() => ({ data: undefined, isLoading: false })),
   useChangeDealStage: vi.fn(),
-  useApproveQuote: vi.fn(),
-  useRejectQuote: vi.fn(),
   useSendQuoteToClient: vi.fn(),
-  useUpdateRequestMeta: vi.fn(),
-  usePreflightCheck: vi.fn(),
-  useQuoteRequestDiff: vi.fn(),
   useClaimDeal: vi.fn(),
   useReleaseDeal: vi.fn(),
   useTakeAndPrepareQuote: vi.fn(),
   useSubmitQuoteForReview: vi.fn(),
 }));
 
-// SELLER context; a solo deal has no capabilities.is_solo_seller in this fixture (undefined → false).
+// A solo deal has no capabilities.is_solo_seller in this fixture (undefined → false).
 vi.mock('@/store/userStore', () => ({
-  useUserStore: (selector: (state: { activeStatus: string }) => unknown) => selector({ activeStatus: 'SELLER' }),
+  useUserStore: (selector: (state: { capabilities: { permissions: string[] } }) => unknown) =>
+    selector({ capabilities: { permissions: [] } }),
 }));
 vi.mock('@/store/currencyStore', () => ({
   useCurrencyStore: (selector: (state: { format: (value: number) => string }) => unknown) =>
@@ -66,11 +58,8 @@ vi.mock('@/components/Shared/DocumentActions', () => ({ DocumentActions: () => n
 
 // Heavy siblings irrelevant to this surface → inert stubs.
 vi.mock('@/components/CRM/DealTimeline', () => ({ DealTimeline: () => null }));
-vi.mock('@/components/CRM/CoverageCheck', () => ({ CoverageCheck: () => null }));
-vi.mock('@/components/CRM/RejectQuoteDialog', () => ({ RejectQuoteDialog: () => null }));
 vi.mock('@/components/Shared/ConfirmActionDialog', () => ({ ConfirmActionDialog: () => null }));
 vi.mock('@/components/CRM/GenerateQuoteDialog', () => ({ GenerateQuoteDialog: () => null }));
-vi.mock('@/components/CRM/BuyerAcceptedPanel', () => ({ BuyerAcceptedPanel: () => null }));
 
 const setHook = (hook: unknown, value: unknown) => { (hook as Mock).mockReturnValue(value); };
 const mkMutation = () => ({ mutate: vi.fn(), mutateAsync: vi.fn().mockResolvedValue(undefined), isPending: false });
@@ -86,8 +75,6 @@ const soloDeal = {
   stage_code: 'SOURCING',
   stage_name: 'Подбор',
   assigned_to: 7,
-  can_edit_request: false,
-  target_sellers_data: [],
   quotes: [],
   active_quote: {
     id: 500,
@@ -130,8 +117,8 @@ describe('RequestDetailPage — seller SOLO deal (company === null)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     [
-      useChangeDealStage, useApproveQuote, useRejectQuote, useSendQuoteToClient,
-      useUpdateRequestMeta, useQuoteRequestDiff, useClaimDeal, useReleaseDeal, useTakeAndPrepareQuote,
+      useChangeDealStage, useSendQuoteToClient,
+      useClaimDeal, useReleaseDeal, useTakeAndPrepareQuote,
       useSubmitQuoteForReview,
     ].forEach((hook) => setHook(hook, mkMutation()));
     setHook(useDeal, { data: soloDeal, isLoading: false, isError: false, refetch: vi.fn() });

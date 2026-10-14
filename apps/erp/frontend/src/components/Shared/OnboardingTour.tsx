@@ -1,7 +1,6 @@
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { cn } from "@/lib/utils"
-import { useUserStore } from "@/store/userStore"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
@@ -26,37 +25,22 @@ const stepIcons = [Package, FileSpreadsheet, Calculator, Rocket, BarChart3]
 /** Tour steps map 1:1 to a page id the user is taught about.
  * Keeping this in the component (not i18n) because it's structural, not text. */
 const stepTargets: (string | null)[] = [
-  'products',        // step 0 — Catalog
+  'my-products',     // step 0 — Catalog (back-office registry)
   null,              // step 1 — Excel import now lives inline in the request flow; no standalone page to deep-link
-  'crm-quotes',      // step 2 — Quotes builder (продавцовская, см. sellerOnlyStep ниже)
-  'crm-deals',       // step 3 — Deals pipeline (продавцовская)
+  'crm-quotes',      // step 2 — Quotes builder
+  'crm-deals',       // step 3 — Deals pipeline
   null,              // step 4 — (analytics page cut in Move 1; step shows its blurb, no nav)
 ]
-
-/**
- * Шаги 2 и 3 ведут на рабочие места ПРОДАВЦА. Тур запускается кнопкой в шапке у всех, и
- * покупателя эти шаги выбрасывали на дашборд (аудит UI, U1). Для покупателя подменяем цель
- * на его собственный аналог: очередь КП → его заявки, очередь сделок → его заявки.
- */
-const BUYER_STEP_FALLBACK: Record<string, string> = {
-  'crm-quotes': 'my-requests',
-  'crm-deals': 'my-requests',
-}
 
 export function OnboardingTour({ open, onClose, onNavigate }: OnboardingTourProps) {
   const { t } = useTranslation()
   const [currentStep, setCurrentStep] = useState(0)
-  const isSeller = useUserStore((state) => state.activeStatus) === 'SELLER'
 
   if (!open) return null
 
   const StepIcon = stepIcons[currentStep]
   const isLastStep = currentStep === stepIcons.length - 1
-  const declaredTarget = stepTargets[currentStep]
-  // Покупателю продавцовские шаги подменяем на его аналог — иначе «Перейти» ведёт в отказ.
-  const stepTarget = declaredTarget && !isSeller
-    ? (BUYER_STEP_FALLBACK[declaredTarget] ?? declaredTarget)
-    : declaredTarget
+  const stepTarget = stepTargets[currentStep]
 
   function handleNext() {
     if (isLastStep) {

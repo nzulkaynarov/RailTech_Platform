@@ -31,11 +31,6 @@ vi.mock('@/hooks/useBilling', () => ({
   useCreateInvoiceDraft: () => ({ mutateAsync: inv.mutateAsync, isPending: false }),
 }));
 
-vi.mock('@/store/userStore', () => ({
-  useUserStore: (selector: (s: { capabilities: { can_sell: boolean; can_buy: boolean } }) => unknown) =>
-    selector({ capabilities: { can_sell: true, can_buy: false } }),
-}));
-
 // The КП and payment hand-off dialogs pull in their own hook trees — stub them out.
 vi.mock('@/components/CRM/NewQuoteDialog', () => ({ NewQuoteDialog: () => null }));
 vi.mock('@/components/Billing/RecordPaymentDialog', () => ({ RecordPaymentDialog: () => null }));

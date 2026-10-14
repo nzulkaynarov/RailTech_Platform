@@ -8,7 +8,6 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { UserPlus, Loader2 } from 'lucide-react';
 
-import { useUserStore } from '@/store/userStore';
 import { useInviteMember, useWorkspaceRoles } from '@/hooks/useAccounts';
 import { workspaceRoleLabelKey } from '@/lib/codes';
 import { Button } from '@/components/ui/button';
@@ -30,13 +29,10 @@ interface TeamInviteFormProps {
 
 export function TeamInviteForm({ companyId, onInvited }: TeamInviteFormProps) {
   const { t } = useTranslation();
-  const activeStatus = useUserStore((s) => s.activeStatus);
-
-  // Map frontend CompanyStatus → backend CompanyType code for workspace-role filter
-  const companyTypeForRoles =
-    activeStatus === 'BUYER' ? 'CLIENT' : 'SUPPLIER';
-
-  const { data: workspaceRoles = [] } = useWorkspaceRoles(companyTypeForRoles);
+  // Роли команды бэк-офиса: компания-владелец ERP — исполнитель (тип SUPPLIER в справочнике
+  // ролей B2B). Покупательский набор ролей (CLIENT) ушёл вместе с контекстом покупателя
+  // (M1-ERP-02 волна 3); собственный справочник ролей бэк-офиса — M1-ERP-05.
+  const { data: workspaceRoles = [] } = useWorkspaceRoles('SUPPLIER');
   const inviteMut = useInviteMember();
 
   const availableWorkspaceRoles = useMemo(

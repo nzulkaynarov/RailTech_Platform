@@ -8,13 +8,13 @@
  * дизейблит) то, что не выдано (мировой стандарт: Budibase/Oso). Гейтинг здесь = только UX;
  * бэкенд-enforcement (member_has_permission) остаётся независимым.
  *
- * `side` сохраняет текущий контекст-свитчер Покупатель↔Продавец как фильтр (Phase C сольёт
- * shell и уберёт свитчер). Цели (`id`) указывают на СУЩЕСТВУЮЩИЕ страницы — мы унифицируем
- * навигацию, не переписываем страницы.
+ * ERP — бэк-офис одной компании (M1-ERP-02 волна 3): стороны «покупатель / продавец» в меню
+ * больше нет — все пункты принадлежат бэк-офису, видимость решает только право роли (`requires`).
+ * Покупательские пункты («Мои заявки», «Поставщики», витрина «Каталог») ушли в Cabinet.
  */
 import {
-  LayoutDashboard, Package, ClipboardList, Handshake,
-  FileText, Boxes, Settings, HelpCircle, Users, Truck,
+  LayoutDashboard, Handshake,
+  FileText, Boxes, Settings, HelpCircle, Users,
 } from 'lucide-react';
 import type { Capabilities } from '@/store/userStore';
 
@@ -23,24 +23,10 @@ export interface NavRequirement {
   anyPerm?: string[];     // member must hold AT LEAST ONE of these company permissions
 }
 
-type Side = 'buy' | 'sell' | 'both';
-
-/**
- * The sides a company is CAPABLE of (a BUYER entry → buy; a SUPPLIER/MANUFACTURER entry → sell). Phase C unifies the shell: nav visibility
- * follows capability (a dual company sees BOTH sides at once), replacing the old
- * Покупатель↔Продавец switcher that showed one transient side at a time. The
- * active data-context (X-Active-Context header) now follows the PAGE, not a toggle.
- */
-export interface CapableSides {
-  buy: boolean;
-  sell: boolean;
-}
-
 export interface NavNodeDef {
   labelKey: string;
   id?: string;            // page hash (leaf)
   icon?: React.ReactNode;
-  side?: Side;            // which context shows it (default 'both')
   requires?: NavRequirement;
   children?: NavNodeDef[];
 }
@@ -54,7 +40,7 @@ export interface ResolvedNavItem {
   children?: ResolvedNavChild[];
 }
 
-/** True if `caps` satisfies a node's requirement (a buyer/seller capability check, NOT security). */
+/** True if `caps` satisfies a node's requirement (UX only, NOT security — the backend enforces). */
 function meetsRequirement(req: NavRequirement | undefined, caps: Capabilities): boolean {
   if (!req) return true;
   // Perm-gate only when we actually HAVE permission data — an empty list means "unknown"
@@ -65,12 +51,6 @@ function meetsRequirement(req: NavRequirement | undefined, caps: Capabilities): 
   return true;
 }
 
-function sideAllowed(side: Side | undefined, sides: CapableSides): boolean {
-  if (!side || side === 'both') return true;
-  if (side === 'buy') return sides.buy;
-  return sides.sell;
-}
-
 /**
  * The canonical tenant nav (object-based). Targets reference existing pages; grouping +
  * `requires` are the unification. Direction (Полученные/Отправленные) is a page-level filter.
@@ -78,26 +58,20 @@ function sideAllowed(side: Side | undefined, sides: CapableSides): boolean {
 export const TENANT_NAV: NavNodeDef[] = [
   { labelKey: 'shell.dashboard', id: 'dashboard', icon: <LayoutDashboard className="h-4 w-4" /> },
 
-  // Сделки — в unified shell обе стороны видны сразу у dual-компании, поэтому у них
-  // РАЗНЫЕ ярлыки: закупочная сторона → «Мои заявки», продающая → «Сделки» (CRM).
-  { labelKey: 'shell.myRequests', id: 'my-requests', icon: <ClipboardList className="h-4 w-4" />, side: 'buy', requires: { anyPerm: ['request.create', 'quote.approve'] } },
-  { labelKey: 'shell.deals', id: 'crm-deals', icon: <Handshake className="h-4 w-4" />, side: 'sell', requires: { anyPerm: ['quote.build', 'quote.send'] } },
+  // Сделки — очередь запросов клиентов, карточка сделки, билдер КП.
+  { labelKey: 'shell.deals', id: 'crm-deals', icon: <Handshake className="h-4 w-4" />, requires: { anyPerm: ['quote.build', 'quote.send'] } },
 
-  // Книга контрагентов (CRM Phase B) — симметрична: продающая сторона видит «Клиентов»,
-  // закупочная — «Поставщиков».
-  { labelKey: 'counterparties.title.clients', id: 'clients', icon: <Users className="h-4 w-4" />, side: 'sell' },
-  { labelKey: 'counterparties.title.suppliers', id: 'suppliers', icon: <Truck className="h-4 w-4" />, side: 'buy' },
+  // Книга клиентов (CRM Phase B).
+  { labelKey: 'counterparties.title.clients', id: 'clients', icon: <Users className="h-4 w-4" /> },
 
-  // Документы — КП · Договоры · Счета · Акты (фильтр направления — на самих страницах).
+  // Документы — КП · Договоры · Счета · Оплаты · Акты · Отгрузка (со стороны исполнителя).
   {
     labelKey: 'shell.documents', icon: <FileText className="h-4 w-4" />,
     children: [
-      { labelKey: 'shell.quotes', id: 'crm-quotes', side: 'sell', requires: { anyPerm: ['quote.build', 'quote.send'] } },
+      { labelKey: 'shell.quotes', id: 'crm-quotes', requires: { anyPerm: ['quote.build', 'quote.send'] } },
       { labelKey: 'shell.contracts', id: 'contracts' },
       { labelKey: 'shell.invoices', id: 'invoices' },
       { labelKey: 'shell.payments', id: 'payments' },
-      // Акт двусторонний: заказчик его принимает или возвращает. Пункт без `side` — как у
-      // договоров, счетов и отгрузок; список сужен видимостью на бэкенде (U1).
       { labelKey: 'shell.acts', id: 'acts' },
       { labelKey: 'shell.fulfillments', id: 'fulfillments' },
       { labelKey: 'shell.otherDocuments', id: 'other-documents' },
@@ -105,15 +79,10 @@ export const TENANT_NAV: NavNodeDef[] = [
     ],
   },
 
-  // Номенклатура — Товары · Справочники (Клиенты — Phase F). Покупатель видит каталог read-only.
-  { labelKey: 'shell.catalog', id: 'products', icon: <Package className="h-4 w-4" />, side: 'buy' },
+  // Товары — Мои товары · Загрузка прайса · Справочники.
   {
-    labelKey: 'shell.nomenclatureSection', icon: <Boxes className="h-4 w-4" />, side: 'sell',
+    labelKey: 'shell.nomenclatureSection', icon: <Boxes className="h-4 w-4" />,
     requires: { anyPerm: ['catalog.manage', 'catalog.publish'] },
-    // Целевая структура аудита §5.1: «Товары → Мои товары / Загрузка прайса / Справочники».
-    // «Номенклатуры» в трёх смыслах больше нет: раздел назван по объекту, единственный
-    // «Каталог» — витрина покупателя (верхний пункт side: buy). Дубль «Каталога» у компании,
-    // которая и покупает, и продаёт, ушёл вместе с этим. Старые хэши живы алиасами.
     children: [
       { labelKey: 'shell.myProducts', id: 'my-products' },
       { labelKey: 'shell.catalogImport', id: 'catalog-import' },
@@ -132,23 +101,22 @@ export const TENANT_BOTTOM_NAV: NavNodeDef[] = [
 type TFn = (key: string) => string;
 
 /**
- * Resolve a nav definition into rendered items for the active context, HIDING anything the
+ * Resolve a nav definition into rendered items, HIDING anything the
  * user's capabilities don't satisfy. Empty parent groups (all children hidden) are dropped.
  */
 export function buildNavigation(
   defs: NavNodeDef[],
   caps: Capabilities,
-  sides: CapableSides,
   activePage: string,
   t: TFn,
 ): ResolvedNavItem[] {
   const items: ResolvedNavItem[] = [];
   for (const def of defs) {
-    if (!sideAllowed(def.side, sides) || !meetsRequirement(def.requires, caps)) continue;
+    if (!meetsRequirement(def.requires, caps)) continue;
 
     if (def.children) {
       const children: ResolvedNavChild[] = def.children
-        .filter((child) => sideAllowed(child.side, sides) && meetsRequirement(child.requires, caps))
+        .filter((child) => meetsRequirement(child.requires, caps))
         .map((child) => ({ label: t(child.labelKey), id: child.id as string, active: activePage === child.id }));
       if (children.length === 0) continue; // never render an empty group
       items.push({ label: t(def.labelKey), icon: def.icon, children });

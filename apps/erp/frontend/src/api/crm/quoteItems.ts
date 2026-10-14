@@ -74,21 +74,4 @@ export const quoteItemsApi = {
 		const response = await apiClient.get<PaginatedResponse<Product>>(url);
 		return response.data.results;
 	},
-	importExcelToDeal: async (dealId: number, file: File, useAI = false) => {
-		const formData = new FormData();
-		formData.append('file', file);
-		if (useAI) formData.append('use_ai', 'true');
-		const response = await apiClient.post<{ message: string, task_id: string }>(
-			`sourcing/import-deal/${dealId}/`,
-			formData,
-			{
-				headers: {
-					'Content-Type': 'multipart/form-data',
-				},
-			}
-		);
-		return response.data;
-	},
-	// sellerCompany = the private lane (which routed seller's thread). A seller omits it —
-	// the backend scopes to its own lane; a buyer on a multi-seller deal must pass it (audit #4).
 };

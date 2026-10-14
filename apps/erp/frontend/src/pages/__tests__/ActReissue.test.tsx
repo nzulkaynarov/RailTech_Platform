@@ -35,8 +35,6 @@ function makeAct(overrides: Partial<Act>): Act {
     pdf_url: null,
     signed_file: null,
     signed_file_url: null,
-    viewer_can_sign: false,
-    viewer_can_reject: false,
     viewer_can_remind: false,
     viewer_can_cancel: true,
     viewer_can_reissue: true,

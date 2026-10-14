@@ -2,8 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 
 import {
-  SellerAttentionStrip,
-  BuyerAttentionStrip,
+  AttentionStrip,
   PipelineFunnel,
   MetricStrip,
 } from '../DashboardWidgets';
@@ -11,7 +10,6 @@ import { crmApi, type Deal, type Quote } from '@/api/crmApi';
 import { contractsApi, type Contract, type ContractStatus } from '@/api/contractsApi';
 import type { DashboardStats } from '@/api/dashboardApi';
 import { renderWithProviders } from '@/test/renderWithProviders';
-import { useUserStore } from '@/store/userStore';
 
 // Mock at the API-client layer: the widgets' real react-query hooks
 // (useDeals/useQuotes/useMyApprovalQueue/useDealStages/useContracts) run
@@ -78,7 +76,6 @@ function makeContract(id: number, status: ContractStatus): Contract {
     manager_signer: null,
     manager_signer_name: null,
     manager_signed_at: null,
-    viewer_can_sign_client: false,
     viewer_can_sign_manager: false,
     valid_from: null,
     valid_until: null,
@@ -105,7 +102,7 @@ beforeEach(() => {
   vi.mocked(contractsApi.list).mockReset().mockResolvedValue([]);
 });
 
-describe('SellerAttentionStrip', () => {
+describe('AttentionStrip', () => {
   it('derives urgency counts by stage/status CODE (never by translated name)', async () => {
     // 3 of 5 deals sit in PRE_KP stages (RFQ_OPEN / SOURCING / CALCULATING).
     vi.mocked(crmApi.getDeals).mockResolvedValue([
@@ -129,7 +126,7 @@ describe('SellerAttentionStrip', () => {
     ]);
     vi.mocked(contractsApi.list).mockResolvedValue([makeContract(30, 'PENDING_MANAGER')]);
 
-    renderWithProviders(<SellerAttentionStrip onNavigate={vi.fn()} />);
+    renderWithProviders(<AttentionStrip onNavigate={vi.fn()} />);
 
     // Labels resolve from the real ru.json; counts are code-derived.
     await waitFor(async () =>
@@ -138,14 +135,14 @@ describe('SellerAttentionStrip', () => {
     expect(within(await findTile('Истёкшие КП')).getByText('2')).toBeInTheDocument();
     expect(within(await findTile('КП на утверждении')).getByText('2')).toBeInTheDocument();
     expect(within(await findTile('Договоры на подписи')).getByText('1')).toBeInTheDocument();
-    // Seller strip asks for contracts pending the MANAGER signature (code, not name).
+    // The strip asks for contracts pending the MANAGER (back-office) signature (code, not name).
     expect(contractsApi.list).toHaveBeenCalledWith({ status: 'PENDING_MANAGER' });
   });
 
   it('navigates to the owning page when an active tile is clicked', async () => {
     vi.mocked(crmApi.getDeals).mockResolvedValue([makeDeal(1, 'RFQ_OPEN')]);
     const onNavigate = vi.fn();
-    renderWithProviders(<SellerAttentionStrip onNavigate={onNavigate} />);
+    renderWithProviders(<AttentionStrip onNavigate={onNavigate} />);
 
     const tile = await findTile('Заявки без КП');
     await waitFor(() => expect(tile).toBeEnabled());
@@ -155,7 +152,7 @@ describe('SellerAttentionStrip', () => {
 
   it('disables tiles with a zero count so they cannot navigate', async () => {
     const onNavigate = vi.fn();
-    renderWithProviders(<SellerAttentionStrip onNavigate={onNavigate} />);
+    renderWithProviders(<AttentionStrip onNavigate={onNavigate} />);
 
     const tile = await findTile('Заявки без КП');
     expect(tile).toBeDisabled();
@@ -164,37 +161,7 @@ describe('SellerAttentionStrip', () => {
   });
 });
 
-describe('BuyerAttentionStrip', () => {
-  it('counts only SENT quotes as "КП к рассмотрению" and asks for PENDING_CLIENT contracts', async () => {
-    vi.mocked(crmApi.getQuotes).mockResolvedValue([
-      makeQuote(1, 'SENT', null),
-      makeQuote(2, 'SENT', null),
-      makeQuote(3, 'DRAFT', null),
-      makeQuote(4, 'ACCEPTED', null),
-    ]);
-    vi.mocked(contractsApi.list).mockResolvedValue([makeContract(9, 'PENDING_CLIENT')]);
-    const onNavigate = vi.fn();
-
-    renderWithProviders(<BuyerAttentionStrip onNavigate={onNavigate} />);
-
-    await waitFor(async () =>
-      expect(within(await findTile('КП к рассмотрению')).getByText('2')).toBeInTheDocument(),
-    );
-    expect(within(await findTile('Договоры на подписи')).getByText('1')).toBeInTheDocument();
-    expect(contractsApi.list).toHaveBeenCalledWith({ status: 'PENDING_CLIENT' });
-
-    fireEvent.click(await findTile('КП к рассмотрению'));
-    expect(onNavigate).toHaveBeenCalledWith('my-requests');
-  });
-});
-
 describe('PipelineFunnel', () => {
-  // Воронка читает контекст пользователя, а стор глобальный — возвращаем покупателя,
-  // иначе роль, выставленная одним тестом, утечёт в следующий.
-  beforeEach(() => {
-    useUserStore.setState({ activeStatus: 'BUYER' });
-  });
-
   it('renders stages in backend order, omits empty stages, and drills into deals', async () => {
     // DT5: the DB `name` is translated-at-rest (RU-only), so the funnel must label by
     // CODE via DEAL_STAGE_LABEL_KEY. Sentinel names below deliberately differ from the
@@ -231,22 +198,7 @@ describe('PipelineFunnel', () => {
     if (!legendEntry) throw new Error('no legend button');
     expect(within(legendEntry).getByText('2')).toBeInTheDocument();
     fireEvent.click(legendEntry);
-    // Воронка входит и в покупательский дашборд, а очередь сделок — рабочее место продавца.
-    // Раньше здесь стояла константа `crm-deals`, и покупателя из воронки выбрасывало на дашборд.
-    expect(onNavigate).toHaveBeenCalledWith('my-requests');
-  });
-
-  it('продавца та же воронка ведёт в его очередь сделок', async () => {
-    useUserStore.setState({ activeStatus: 'SELLER' });
-    vi.mocked(crmApi.getDealStages).mockResolvedValue([{ code: 'RFQ_OPEN', name: 'Заявка открыта' }]);
-    vi.mocked(crmApi.getDeals).mockResolvedValue([makeDeal(1, 'RFQ_OPEN')]);
-    const onNavigate = vi.fn();
-
-    renderWithProviders(<PipelineFunnel onNavigate={onNavigate} />);
-
-    const legendEntry = (await screen.findByText('Заявка открыта')).closest('button');
-    if (!legendEntry) throw new Error('no legend button');
-    fireEvent.click(legendEntry);
+    // Клик по сегменту ведёт в очередь сделок бэк-офиса.
     expect(onNavigate).toHaveBeenCalledWith('crm-deals');
   });
 
@@ -294,8 +246,8 @@ describe('MetricStrip', () => {
     deals_completed: 3,
   };
 
-  it('shows the seller metric set with localized labels', () => {
-    renderWithProviders(<MetricStrip stats={stats} role="seller" />);
+  it('shows the back-office metric set with localized labels', () => {
+    renderWithProviders(<MetricStrip stats={stats} />);
 
     expect(screen.getByText('Объём сделок')).toBeInTheDocument();
     const activeRequestsMetric = screen.getByText('Активные заявки').parentElement;
@@ -303,25 +255,14 @@ describe('MetricStrip', () => {
     expect(within(activeRequestsMetric).getByText('4')).toBeInTheDocument();
     expect(screen.getByText('120')).toBeInTheDocument(); // catalog items
     expect(screen.getByText('7')).toBeInTheDocument(); // clients
-    // Buyer-only metric is absent from the seller strip.
+    // The former buyer-only metric is gone together with the buyer dashboard (M1-ERP-02 wave 3).
     expect(screen.queryByText('КП получено')).not.toBeInTheDocument();
   });
 
-  it('shows the buyer metric set', () => {
-    renderWithProviders(<MetricStrip stats={stats} role="buyer" />);
-
-    expect(screen.getByText('Активные заявки')).toBeInTheDocument();
-    expect(screen.getByText('КП получено')).toBeInTheDocument();
-    expect(screen.getByText('Завершено')).toBeInTheDocument();
-    expect(screen.getByText('5')).toBeInTheDocument(); // quotes received
-    expect(screen.getByText('3')).toBeInTheDocument(); // completed
-    expect(screen.queryByText('Объём сделок')).not.toBeInTheDocument();
-  });
-
   it('renders zeros when stats have not loaded yet', () => {
-    renderWithProviders(<MetricStrip stats={null} role="buyer" />);
+    renderWithProviders(<MetricStrip stats={null} />);
 
-    // Three buyer metrics, all falling back to 0.
+    // Three count metrics fall back to 0 (the volume metric renders as money).
     expect(screen.getAllByText('0')).toHaveLength(3);
   });
 });

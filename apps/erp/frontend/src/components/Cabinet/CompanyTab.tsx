@@ -7,12 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
 
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 
-import { useUserStore, companyStatusLabels } from '@/store/userStore';
+import { useUserStore } from '@/store/userStore';
 import { useHasCompanyPermission } from '@/hooks/useCapabilities';
 import { accountsApi, type Company } from '@/api/accountsApi';
 import { toast } from 'sonner';
@@ -26,7 +25,7 @@ import { CountrySelect } from '@/components/Shared/CountrySelect';
  */
 export function CompanyTab() {
   const { t } = useTranslation();
-  const { company, activeStatus, updateCompany } = useUserStore();
+  const { company, updateCompany } = useUserStore();
   // ADR-0005 U2: editing the company profile is gated on the CompanyRole `settings.edit`
   // permission (useHasCompanyPermission keeps the legacy OWNER fallback), mirroring the backend's
   // member_has_permission('settings.edit') in CompanyViewSet._assert_owner_or_admin. A delegated
@@ -166,19 +165,6 @@ export function CompanyTab() {
                 <p className="text-xs text-muted-foreground">{t('profile.companyInfo.iso9001Help')}</p>
               </div>
               <Switch id="iso9001" checked={cForm.has_iso9001} onCheckedChange={(v) => setCForm({ ...cForm, has_iso9001: v })} disabled={!canEdit} />
-            </div>
-          </div>
-
-          <Separator />
-
-          <div className="space-y-2">
-            <Label>{t('profile.companyInfo.platformStatuses')}</Label>
-            <div className="flex flex-wrap gap-2">
-              {company.statusEntries.map((entry) => (
-                <Badge key={entry.status} variant={entry.status === activeStatus ? 'default' : 'outline'}>
-                  {t(companyStatusLabels[entry.status])}
-                </Badge>
-              ))}
             </div>
           </div>
         </CardContent>

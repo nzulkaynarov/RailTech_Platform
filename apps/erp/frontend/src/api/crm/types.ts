@@ -255,27 +255,11 @@ export interface Quote {
 	updated_at?: string;
 }
 
-// A seller company an RFQ is routed to (multi-seller routing). Minimal shape —
-// id + display name — used both for the routing picker and the "Routed to" line.
-export interface SellerCompanyRef {
-	id: number;
-	name: string;
-}
-
-/** R1 — предложенный продавец: сколько позиций заявки он может закрыть (наш confidence). */
-export interface SuggestedSeller {
-	company_id: number;
-	name: string;
-	matched_lines: number;
-	total_lines: number;
-}
-
 /**
  * Цепочка документов сделки — ответ `GET crm/deals/{id}/documents/` (F1, «карточка как хаб»).
  *
- * Сторону зрителя и подсказку следующего шага считает СЕРВЕР: клиентский `activeStatus` —
- * это первый тип компании, из-за чего компания, которая и покупает, и продаёт, теряла
- * продавцовские действия. Здесь обе стороны могут быть истинны одновременно.
+ * Подсказку следующего шага считает СЕРВЕР (`for_viewer` — ход бэк-офиса; шаги клиента —
+ * подписать, оплатить, принять — показываются как ожидание: клиент делает их в Cabinet).
  */
 export type DealDocumentStepCode =
 	| 'SIGN_CONTRACT'
@@ -305,7 +289,6 @@ export interface DealHubContract {
 	client_signed_at: string | null;
 	manager_signed_at: string | null;
 	is_fully_signed: boolean;
-	viewer_can_sign_client: boolean;
 	viewer_can_sign_manager: boolean;
 }
 
@@ -351,7 +334,6 @@ export interface DealDocumentHub {
 	fulfillment: DealHubFulfillment | null;
 	payments_count: number;
 	payments_total: string;
-	viewer: { is_buyer_side: boolean; is_seller_side: boolean };
 	next_step: DealDocumentStep | null;
 }
 
@@ -373,17 +355,6 @@ export interface Deal {
 	 * не выводит право сам, иначе кнопка появлялась бы там, где действие откажет (U1).
 	 */
 	viewer_can_release?: boolean;
-	/**
-	 * Сторона зрителя относительно ЭТОЙ сделки — считает СЕРВЕР.
-	 *
-	 * Одна и та же компания в одной сделке продавец, в другой покупатель, поэтому сторона —
-	 * свойство ЗАПИСИ, а не сессии. Фронт выводил её из `activeStatus` (= первый тип компании),
-	 * и у компании с типами CLIENT+SUPPLIER продавец видел покупательскую карточку своей же
-	 * заявки без кнопок подготовки КП. Бенчмарк: GitHub `viewerCan*`, Salesforce
-	 * `UserRecordAccess` — клиент роль читает, а не вычисляет.
-	 */
-	viewer_is_seller?: boolean;
-	viewer_is_buyer?: boolean;
 	stage?: number | null;
 	stage_code?: string;
 	stage_name?: string;
@@ -392,9 +363,6 @@ export interface Deal {
 	notes?: string;
 	active_quote?: Quote | null;
 	quotes?: Quote[];
-	can_edit_request?: boolean;
-	// Seller companies this RFQ is routed to (read-only; populated by routeDeal).
-	target_sellers_data?: SellerCompanyRef[];
 	/** O4: исполнение закрыто целиком (оплата + поставка + акт) — не то же, что «сделка выиграна». */
 	execution_complete?: boolean;
 	created_at: string;
@@ -430,41 +398,6 @@ export interface TimelineEntry {
 	contact_id: number | null;
 }
 
-// ─── CRM Phase B — counterparty relationship book («Книга контрагентов») ──
-// Direction/stage/source are stable DB codes (Rule 2: compare by code, translate for display).
-export type RelationshipDirection = 'CLIENT' | 'SUPPLIER';
-export type RelationshipStage = 'PROSPECT' | 'ACTIVE' | 'DORMANT' | 'LOST';
-export type RelationshipSource = 'LEAD' | 'OFFLINE_CREATED' | 'INBOUND_RFQ' | 'SELF_REGISTERED';
-
-/** Account summary embedded in a relationship edge (nested read, flat write pattern). */
-export interface RelationshipCounterparty {
-	id: number;
-	name: string;
-	inn: string | null;
-	// INN as stated by the book owner for an offline (unregistered) counterparty.
-	stated_inn: string;
-	is_registered: boolean;
-	// The counterparty's primary contact — the CB-invite target (Phase D); null if none.
-	primary_contact_id: number | null;
-}
-
-export interface Relationship {
-	id: number;
-	direction: RelationshipDirection;
-	stage: RelationshipStage;
-	source: RelationshipSource;
-	counterparty: RelationshipCounterparty;
-	owner_member: number | null;
-	owner_member_name: string;
-	contacts_count: number;
-	first_interaction_at: string | null;
-	last_interaction_at: string | null;
-	deals_count: number;
-	won_count: number;
-	// Decimal string — total_incl_vat of won deals, UZS-канон.
-	gmv: string;
-	created_at: string;
-}
 
 /** Contact of a company in the team's own client book. */
 export interface Contact {
