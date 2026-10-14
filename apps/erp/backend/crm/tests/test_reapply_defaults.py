@@ -20,7 +20,6 @@ from accounts.models import (
     CompanyType,
     CustomUser,
     SupplierSubscription,
-    VerificationStatus,
     WorkspaceRole,
 )
 from crm.models import Deal, DealSellerRouting, DealStage, Quote, QuoteStatus
@@ -39,7 +38,6 @@ def lookups(db):
     Currency.objects.get_or_create(code="UZS", defaults={"name": "Sum", "sort_order": 10})
     Currency.objects.get_or_create(code="USD", defaults={"name": "Dollar", "sort_order": 20})
     DeliveryBasis.objects.get_or_create(code="EXW", defaults={"name": "Ex Works", "sort_order": 10})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
 
 
 @pytest.fixture
@@ -47,7 +45,6 @@ def seller_company(lookups):
     company = Company.objects.create(
         name="Seller LLC",
         inn="7700000101",
-        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
     )
     company.types.add(
         CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})[0]

@@ -1,4 +1,4 @@
-"""Contact (офлайн-клиенты, Deal.contact) и ClientInvite (CB-invite)."""
+"""Contact (офлайн-клиенты, Deal.contact)."""
 
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -53,50 +53,3 @@ class Contact(models.Model):
 
     def __str__(self):
         return f"{self.name} — {self.company.name}"
-
-
-class ClientInvite(models.Model):
-    """A seller's invitation for an OFFLINE client to register and CLAIM its existing Company
-    (CRM Phase D, spec-remaining-2026-07-07 §2.4).
-
-    Turns the seller's offline book into registered platform users WITHOUT creating a duplicate:
-    the invited person registers and, instead of a brand-new company, is attached to the existing
-    `company` (which flips is_registered=True). Stateful + one-time: the raw token lives only in
-    the emailed link; we store its sha256 hash for lookup, audit, and single-use enforcement.
-    """
-
-    company = models.ForeignKey(
-        "accounts.Company",
-        on_delete=models.CASCADE,
-        related_name="client_invites",
-        verbose_name=_("Приглашаемая компания"),
-    )
-    contact = models.ForeignKey(
-        "accounts.Contact",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="invites",
-        verbose_name=_("Контакт"),
-    )
-    created_by = models.ForeignKey(
-        "accounts.CustomUser",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="sent_client_invites",
-        verbose_name=_("Кем приглашён"),
-    )
-    email = models.EmailField(verbose_name=_("Email приглашения"))
-    token_hash = models.CharField(max_length=64, unique=True, db_index=True, verbose_name=_("Хэш токена"))
-    expires_at = models.DateTimeField(verbose_name=_("Истекает"))
-    accepted_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Принято"))
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        verbose_name = _("Приглашение клиента")
-        verbose_name_plural = _("Приглашения клиентов")
-        ordering = ["-created_at"]
-
-    def __str__(self):
-        return f"ClientInvite → {self.email} ({self.company_id})"

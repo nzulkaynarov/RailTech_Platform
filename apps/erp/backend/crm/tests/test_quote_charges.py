@@ -11,7 +11,7 @@ from decimal import Decimal
 
 import pytest
 
-from accounts.models import Company, CompanyType, CustomUser, VerificationStatus
+from accounts.models import Company, CompanyType, CustomUser
 from crm.models import ChargeType, Deal, DealStage, Quote, QuoteCharge, QuoteItem, QuoteStatus
 from master_data.models import Country
 
@@ -21,13 +21,12 @@ def quote(db):
     DealStage.objects.get_or_create(code="DRAFT", defaults={"name": "DRAFT", "sort_order": 10})
     QuoteStatus.objects.get_or_create(code="DRAFT", defaults={"name": "DRAFT", "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
-    vs = VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})[0]
     uz = Country.objects.get_or_create(code="UZ", defaults={"name": "Uzbekistan", "sort_order": 10})[0]
 
     user = CustomUser.objects.create_user(
         email="charge.buyer@example.com", username="charge_buyer", password="pw", is_active=True
     )
-    company = Company.objects.create(name="Charge LLC", inn="9900000099", verification_status=vs)
+    company = Company.objects.create(name="Charge LLC", inn="9900000099")
     company.types.add(CompanyType.objects.get(code="CLIENT"))
     deal = Deal.objects.create(
         title="Charge Deal", company=company, client=user, stage=DealStage.objects.get(code="DRAFT")

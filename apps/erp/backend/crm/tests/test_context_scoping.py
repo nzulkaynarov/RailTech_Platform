@@ -10,7 +10,7 @@ import pytest
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import Company, CompanyMember, CompanyType, CustomUser, VerificationStatus, WorkspaceRole
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
 from crm.models import Deal, DealStage
 
 
@@ -19,7 +19,6 @@ def lookups(db):
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2"})
     DealStage.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})
 
 
@@ -48,15 +47,14 @@ def _client(user, ctx=None):
 
 @pytest.fixture
 def world(lookups):
-    l2 = VerificationStatus.objects.get(code="L2_VERIFIED")
     draft = DealStage.objects.get(code="DRAFT")
     # A dual seller+buyer (SUPPLIER company, can_sell + can_buy) and its own deal.
-    seller_co = Company.objects.create(name="Seller Co", inn="S1", verification_status=l2)
+    seller_co = Company.objects.create(name="Seller Co", inn="S1")
     seller_co.types.add(CompanyType.objects.get(code="SUPPLIER"))
     dual = _member(seller_co, "dual@t.test", can_sell=True, can_buy=True)
     own_deal = Deal.objects.create(title="own", company=seller_co, client=dual, stage=draft)
     # A separate buyer with its own заявка.
-    buyer_co = Company.objects.create(name="Buyer Co", inn="B1", verification_status=l2)
+    buyer_co = Company.objects.create(name="Buyer Co", inn="B1")
     buyer_co.types.add(CompanyType.objects.get(code="CLIENT"))
     buyer = _member(buyer_co, "buyer@t.test", can_sell=False, can_buy=True)
     other_deal = Deal.objects.create(title="other", company=buyer_co, client=buyer, stage=draft)
@@ -153,7 +151,7 @@ def test_seller_retrieves_own_company_less_deal_in_buyer_context(world):
     buyer-company scope. RETRIEVE of that SPECIFIC deal must still succeed in the default BUYER
     context (routing resolved via force=True), while a NON-party seller still 404s — no leak.
     Regression guard for the request-detail / КП-builder 404 on solo deals."""
-    from accounts.models import Company, CompanyType, VerificationStatus
+    from accounts.models import Company, CompanyType
     from crm.models import Deal, DealSellerRouting, DealStage
 
     draft = DealStage.objects.get(code="DRAFT")
@@ -168,8 +166,7 @@ def test_seller_retrieves_own_company_less_deal_in_buyer_context(world):
     assert solo.id not in _ids(_client(world["dual"], ctx="BUYER").get("/api/v1/crm/deals/"))
 
     # A different seller NOT routed to this deal cannot open it (confidentiality preserved).
-    l2 = VerificationStatus.objects.get(code="L2_VERIFIED")
-    other_co = Company.objects.create(name="Other Seller", inn="S9", verification_status=l2)
+    other_co = Company.objects.create(name="Other Seller", inn="S9")
     other_co.types.add(CompanyType.objects.get(code="SUPPLIER"))
     intruder = _member(other_co, "intruder@t.test", can_sell=True, can_buy=False)
     for ctx in ("BUYER", "SELLER"):

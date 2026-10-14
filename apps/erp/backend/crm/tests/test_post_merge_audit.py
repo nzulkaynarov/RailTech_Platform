@@ -13,16 +13,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyRole,
-    CompanyType,
-    CustomUser,
-    SystemRole,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import Deal, DealSellerRouting, DealStage
 from crm.serializers import DealListSerializer
 from crm.services.assignment import assign_deal, claim_deal, release_deal
@@ -58,7 +49,6 @@ def lookups(db):
         DealStage.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     SystemRole.objects.get_or_create(code="USER", defaults={"name": "User", "sort_order": 10})
     from notifications.models import NotificationType
 
@@ -66,9 +56,7 @@ def lookups(db):
 
 
 def _company(name, inn, type_code):
-    c = Company.objects.create(
-        name=name, inn=inn, verification_status=VerificationStatus.objects.get(code="L2_VERIFIED")
-    )
+    c = Company.objects.create(name=name, inn=inn)
     c.types.add(CompanyType.objects.get(code=type_code))
     return c
 

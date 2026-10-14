@@ -68,8 +68,8 @@ def scene(lookups):
     ActivityLog.objects.create(action="Сделка создана", deal=deal_a, company=buyer_co)
     ActivityLog.objects.create(action="КП отправлено клиенту", deal=deal_a, company=buyer_co)
     ActivityLog.objects.create(action="Сделка создана", deal=deal_b, company=buyer_co)
-    # Company-scoped event with NO deal (e.g. KYC) — sellers must not see it.
-    ActivityLog.objects.create(action="KYC: подтверждение", company=buyer_co)
+    # Company-scoped event with NO deal (e.g. archiving) — sellers must not see it.
+    ActivityLog.objects.create(action="Компания архивирована", company=buyer_co)
     return locals()
 
 
@@ -116,12 +116,12 @@ def test_unrouted_seller_gets_403_on_deal_timeline(scene):
 def test_member_sees_own_company_full_history(scene):
     resp = _api(scene["buyer"]).get(f"/api/v1/crm/timeline/?company_id={scene['buyer_co'].id}")
     assert resp.status_code == 200
-    assert len(resp.json()) == 4  # both deals + the no-deal KYC event
+    assert len(resp.json()) == 4  # both deals + the no-deal company event
 
 
 def test_routed_seller_sees_only_own_deals_slice(scene):
     """Multi-seller confidentiality: seller A sees buyer-company events ONLY for deals routed
-    to A — not B's deal, not company-internal (no-deal) events like KYC."""
+    to A — not B's deal, not company-internal (no-deal) events like archiving."""
     resp = _api(scene["seller_a"], ctx="SELLER").get(f"/api/v1/crm/timeline/?company_id={scene['buyer_co'].id}")
     assert resp.status_code == 200
     entries = resp.json()

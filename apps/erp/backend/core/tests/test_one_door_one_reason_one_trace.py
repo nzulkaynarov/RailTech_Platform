@@ -13,10 +13,7 @@
   что удалили, ни кем.
 * **45.** Массовая приостановка писала запись БЕЗ `event_code`, а «Журнал доступа» отбирает
   ленту по машинному коду `admin.*` — отключение ПАЧКИ продавцов было видно хуже, чем одного.
-* **35.** `list`/`retrieve` реестра заявок на роль не были отображены в `operator_permissions`,
-  а выборка оператора платформы не скоупится ничем: любая суб-роль, включая «Поддержку» с
-  пустым набором прав, читала заявки чужих компаний — название, ИНН, e-mail заявителя и
-  приложенные договор с NDA.
+* **35.** (Реестр заявок на роль — удалён вместе с заявками в M1-ERP-02 волна 1c.)
 * **21.** Правки справочников и шаблонов писем не оставляли следа вовсе, хотя печатаются в
   документах и письмах ВСЕХ арендаторов.
 * **117.** «Пометить прочитанными» — единственное массовое действие админки без
@@ -38,7 +35,7 @@ from django.db.models import Q
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from accounts.models import Company, CompanyType, CustomUser, SupplierSubscription, SystemRole, VerificationStatus
+from accounts.models import Company, CompanyType, CustomUser, SupplierSubscription
 from crm.models import ActivityLog
 
 ACCESS_LOG_FILTER = (
@@ -78,7 +75,6 @@ def seller_company(db):
     company = Company.objects.create(
         name="Продавец одной двери",
         inn="908500001",
-        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
     )
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
     return company
@@ -194,53 +190,6 @@ def test_bulk_suspension_reaches_the_access_log(billing_operator, subscription, 
     bulk = ActivityLog.objects.filter(action__icontains="Bulk")
     assert bulk.exists()
     assert ActivityLog.objects.filter(ACCESS_LOG_FILTER, pk__in=bulk.values("pk")).count() == bulk.count()
-
-
-# ── 35. Реестр чужих заявок закрыт правом ───────────────────────────────────
-
-
-@pytest.fixture
-def legacy_admin_role_user(db):
-    """Носитель SystemRole=ADMIN без `is_superuser` — после M1-ERP-02 это НЕ администратор:
-    операторской плоскости нет, его выборку сужает `get_queryset` как у любого арендатора."""
-    return CustomUser.objects.create_user(
-        email="support@onedoor.test",
-        username="support_onedoor",
-        password="x",
-        role=SystemRole.objects.get(code="ADMIN"),
-        is_active=True,
-    )
-
-
-def test_a_legacy_admin_role_without_superuser_reads_no_foreign_applications(legacy_admin_role_user, seller_company):
-    resp = _api(legacy_admin_role_user).get("/api/v1/accounts/role-applications/")
-
-    assert resp.status_code == 200
-    body = resp.json()
-    rows = body.get("results", body) if isinstance(body, dict) else body
-    assert rows == []
-
-
-def test_the_administrator_still_reads_the_registry(db, seller_company):
-    """Обратная сторона: администратор (`is_superuser`) видит реестр целиком, экран не сломан."""
-    root = CustomUser.objects.create_user(
-        email="moder@onedoor.test",
-        username="moder_onedoor",
-        password="x",
-        is_superuser=True,
-        is_active=True,
-    )
-
-    assert _api(root).get("/api/v1/accounts/role-applications/").status_code == 200
-
-
-def test_a_tenant_still_sees_their_own_applications(db, seller_company):
-    """Гейт поставлен ОПЕРАТОРУ, а не арендатору: его выборку и так сужает `get_queryset`."""
-    member = CustomUser.objects.create_user(
-        email="tenant@onedoor.test", username="tenant_onedoor", password="x", is_active=True
-    )
-
-    assert _api(member).get("/api/v1/accounts/role-applications/").status_code == 200
 
 
 # ── 21. Справочники и шаблоны писем оставляют след ──────────────────────────

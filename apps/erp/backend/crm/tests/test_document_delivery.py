@@ -15,15 +15,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.constants import FeatureKey
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SystemRole,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from accounts.services.entitlements import grant_entitlement
 from crm import services as crm_services
 from crm.models import Deal, DealSellerRouting, DealStage, DocumentTemplateKind, GeneratedDocumentStatus
@@ -40,7 +32,6 @@ def lookups(db):
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     SystemRole.objects.get_or_create(code="USER", defaults={"name": "User", "sort_order": 10})
     NotificationType.objects.get_or_create(code="INFO", defaults={"name": "Info", "sort_order": 10})
 
@@ -296,7 +287,7 @@ def test_deal_filter(world):
 def test_corouted_competitor_cannot_see_document(world):
     """MAJOR-1: a seller co-routed to the SAME deal must NOT see a competitor's ISSUED document
     (hidden competition, ADR-0003) — nor obtain its secret public link."""
-    from accounts.models import CompanyMember, CompanyType, VerificationStatus  # noqa: F401
+    from accounts.models import CompanyMember, CompanyType  # noqa: F401
 
     competitor_co = _company("Competitor Seller", "C1", "SUPPLIER")
     competitor_user = _member(competitor_co, "competitor@doc.test", can_sell=True)

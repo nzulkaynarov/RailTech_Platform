@@ -162,10 +162,10 @@ def test_emaillog_redacts_setup_reset_tokens():
 
 def _make_template():
     return EmailTemplate.objects.create(
-        key="kyc_verified",
-        subject="KYC {{ company_name }}",
-        html_body="<p>{{ company_name }} verified</p>",
-        text_body="{{ company_name }} verified",
+        key="invite_member",
+        subject="Invite {{ company_name }}",
+        html_body="<p>{{ company_name }} invited</p>",
+        text_body="{{ company_name }} invited",
         is_active=True,
     )
 
@@ -179,9 +179,9 @@ def test_preview_renders_without_sending(platform_admin):
     resp = client.post(url, {}, format="json")
     assert resp.status_code == 200, resp.content
     data = resp.json()
-    assert data["subject"].startswith("KYC ")
-    assert "verified" in data["text_body"]
-    assert "verified" in data["html_body"]
+    assert data["subject"].startswith("Invite ")
+    assert "invited" in data["text_body"]
+    assert "invited" in data["html_body"]
     # Nothing sent, nothing logged.
     assert len(mail.outbox) == 0
     assert not EmailLog.objects.exists()
@@ -211,7 +211,7 @@ def test_test_send_delivers_and_writes_email_log(platform_admin):
     assert len(mail.outbox) == 1
     assert mail.outbox[0].to == ["qa@example.com"]
     log = EmailLog.objects.get(pk=body["email_log_id"])
-    assert log.template == "kyc_verified"
+    assert log.template == "invite_member"
     assert log.to_emails == ["qa@example.com"]
 
 

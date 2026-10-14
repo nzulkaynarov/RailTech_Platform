@@ -19,12 +19,7 @@ from accounts.services.entitlements import (
 
 @pytest.fixture
 def company(db):
-    # KYC-verified (L2) so the subscription/entitlement assertions below exercise the billing gate,
-    # not the seller KYC floor (which is tested separately in test_send_export_require_kyc).
-    from accounts.models import VerificationStatus
-
-    l2 = VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})[0]
-    return Company.objects.create(name="Acme", inn="1234500001", verification_status=l2)
+    return Company.objects.create(name="Acme", inn="1234500001")
 
 
 def _operational_sub(company):
@@ -59,14 +54,14 @@ def test_no_subscription_no_send(company):
     assert quote_send_entitled(company.id) is False  # build is free; send is not
 
 
-def test_send_export_require_kyc(db):
-    """ADR-0006 Phase E seller floor «без KYC только демо»: a subscribed but UNVERIFIED seller still
-    can't send/export a real КП — the entitlement layer grants it, the KYC floor blocks the output."""
-    unverified = Company.objects.create(name="NoKYC", inn="1234500099")  # no verification_status
-    _operational_sub(unverified)
-    assert has_entitlement(unverified.id, FeatureKey.QUOTE_SEND) is True  # subscription grants the feature
-    assert quote_send_entitled(unverified.id) is False  # ...but no KYC → not sendable
-    assert quote_export_entitled(unverified.id) is False
+def test_subscription_alone_unlocks_send_and_export(db):
+    """The KYC floor in front of the paid output was removed in M1-ERP-02 wave 1c: a subscribed
+    seller sends and exports a real КП — no verification level is consulted."""
+    seller = Company.objects.create(name="Subscribed", inn="1234500099")
+    _operational_sub(seller)
+    assert has_entitlement(seller.id, FeatureKey.QUOTE_SEND) is True
+    assert quote_send_entitled(seller.id) is True
+    assert quote_export_entitled(seller.id) is True
 
 
 def test_explicit_disable_overrides_subscription(company):

@@ -7,7 +7,7 @@ kept whole here rather than fractured into render/approval mixins. Under the pro
 500-line file limit (DT3), the leaf, side-effect-free helpers are split into siblings:
 
   * ``lifecycle_gates`` — the pure render / send / submit precondition checks
-    (KYC-floor / entitlement / loss-prevention / below-floor policy in ONE place).
+    (entitlement / loss-prevention / below-floor policy in ONE place).
   * ``lifecycle_audit`` — the timeline events + client notification emitted on send.
 
 The class methods orchestrate: fetch → gate → mutate → side-effect. ``compute_quote_economics``
@@ -74,9 +74,8 @@ class QuoteLifecycleService:
         seller_company = assert_renderable(quote)
         # Shared branding bundle (issuing company + its document profile + logo) — the same
         # shape every document feeds the base template. Watermark «ДЕМО» whenever the seller
-        # cannot commercially SEND this КП (explicit DEMO grant, no operational subscription,
-        # OR — ADR-0006 Phase E — no KYC). Building/previewing stays free; only a fully verified
-        # + subscribed seller gets a clean, sendable document.
+        # cannot commercially SEND this КП (explicit DEMO grant or no operational subscription).
+        # Building/previewing stays free; only a subscribed seller gets a clean, sendable document.
         from accounts.services.entitlements import quote_send_entitled
         from crm.services.documents import (
             brand_context_for_pdf,
@@ -167,7 +166,7 @@ class QuoteLifecycleService:
             "deal__company", "deal__client", "deal__contact", "deal__stage", "status"
         ).get(pk=quote_id)
 
-        # Send preconditions (status / recipient / claim / KYC-floor / entitlement) — the
+        # Send preconditions (status / recipient / claim / entitlement) — the
         # full guard rationale lives in lifecycle_gates.assert_sendable. Returns the issuing
         # seller company (used for КП-number minting below).
         seller_company = assert_sendable(quote, sent_by_user)

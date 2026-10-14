@@ -1,5 +1,5 @@
 """SEC audit #7 — the generic change-stage endpoint must not be a parallel path around
-submit_request's KYC/capability gates, nor let a co-routed seller close a shared deal.
+submit_request's capability gate, nor let a co-routed seller close a shared deal.
 
 Self-contained fixtures (not shared with test_ms_routing.py) so this file never conflicts
 with other sec-PRs appending to the routing suite.
@@ -68,25 +68,26 @@ def world(lookups):
 
 
 @pytest.mark.django_db
-def test_change_stage_gates_unverified_buyer_and_seller(world):
-    """change-stage must not bypass submit_request's KYC + buyer-capability gates for
-    DRAFT→RFQ_OPEN."""
+def test_change_stage_gates_seller_but_not_buyer(world):
+    """change-stage must not bypass submit_request's buyer-capability gate for DRAFT→RFQ_OPEN.
+    The KYC floor in front of it was removed in M1-ERP-02 wave 1c: the buyer passes."""
     draft = DealStage.objects.get(code="DRAFT")
     deal = Deal.objects.create(title="Draft RFQ", company=world["buyer_co"], stage=draft)
     DealSellerRouting.objects.create(deal=deal, seller_company=world["sb_co"])
-
-    buyer_user = _buyer("buyer7@cs.test", world["buyer_co"])
-    r = _api(buyer_user, ctx="BUYER").post(
-        f"/api/v1/crm/deals/{deal.id}/change-stage/", {"stage_code": "RFQ_OPEN"}, format="json"
-    )
-    assert r.status_code == 403, r.content
-    assert r.json()["detail"] == "KYC_REQUIRED_TO_SUBMIT"
 
     r2 = _api(world["sb_user"]).post(
         f"/api/v1/crm/deals/{deal.id}/change-stage/", {"stage_code": "RFQ_OPEN"}, format="json"
     )
     assert r2.status_code == 403
     assert r2.json()["detail"] == "ONLY_BUYER_CAN_SUBMIT_REQUEST"
+
+    buyer_user = _buyer("buyer7@cs.test", world["buyer_co"])
+    r = _api(buyer_user, ctx="BUYER").post(
+        f"/api/v1/crm/deals/{deal.id}/change-stage/", {"stage_code": "RFQ_OPEN"}, format="json"
+    )
+    # The user gate passes; what answers now is the FSM's own data guard (an empty заявка).
+    assert r.status_code == 422, r.content
+    assert r.json()["detail"] == "REQUEST_HAS_NO_ITEMS"
 
 
 @pytest.mark.django_db

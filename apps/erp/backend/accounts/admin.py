@@ -11,19 +11,7 @@ from unfold.forms import UserChangeForm, UserCreationForm  # noqa: F401
 from core.admin_mixins import ReadOnlyInspectionMixin, superuser_only_action
 
 from . import services
-from .models import (
-    Company,
-    CompanyMember,
-    CompanyRoleApplication,
-    CompanyType,
-    CustomUser,
-    KYCDocType,
-    KYCDocument,
-    SupplierSubscription,
-    SystemRole,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from .models import Company, CompanyMember, CompanyType, CustomUser, SupplierSubscription, SystemRole, WorkspaceRole
 from .resources import CompanyResource, UserResource
 
 admin.site.unregister(Group)
@@ -105,22 +93,12 @@ class CompanyMemberInline(TabularInline):
     autocomplete_fields = ["company", "role", "user"]
 
 
-class KYCDocumentInline(TabularInline):
-    model = KYCDocument
-    extra = 0
-    show_change_link = True
-    tab = True
-    fields = ["doc_type", "file", "original_filename", "uploaded_at"]
-    readonly_fields = ["uploaded_at", "original_filename"]
-    autocomplete_fields = ["doc_type"]
-
-
 # ────────────────────────────────────────────
 # Lookups
 # ────────────────────────────────────────────
 
 
-@admin.register(SystemRole, WorkspaceRole, CompanyType, VerificationStatus, KYCDocType)
+@admin.register(SystemRole, WorkspaceRole, CompanyType)
 class LookupAdmin(ModelAdmin):
     list_display = ["name", "code", "sort_order", "is_active"]
     list_editable = ["sort_order", "is_active"]
@@ -227,87 +205,24 @@ class CompanyAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelAdmin):
     resource_classes = [CompanyResource]
     import_form_class = ImportForm
     export_form_class = ExportForm
-    list_display = ("name", "inn", "status_badge", "types_display", "country", "created_at")
-    list_filter = ("verification_status", "types", "country")
+    list_display = ("name", "inn", "types_display", "country", "created_at")
+    list_filter = ("types", "country")
     list_filter_submit = True
     search_fields = ("name", "inn")
     list_per_page = 25
-    list_select_related = ("verification_status", "country")
-    inlines = [CompanyMemberInline, KYCDocumentInline]
-    autocomplete_fields = ["verification_status", "country", "types"]
-    # Business actions moved to React Admin — this action kept ONLY as emergency
-    # engineering escape-hatch (superuser-only). Use /admin/kyc/ in React SPA instead.
-    actions = ["verify_kyc"]
+    list_select_related = ("country",)
+    inlines = [CompanyMemberInline]
+    autocomplete_fields = ["country", "types"]
     warn_unsaved_form = True
-
-    # Уровень KYC — БИЗНЕС-действие с обязательным следом, а не поле формы. В инженерной
-    # админке оно правилось обычным «Сохранить»: суперпользователь ставил L2_VERIFIED мимо
-    # сервиса, без обоснования и без единой строки в журнале — при том что pre-save сигнал
-    # всё равно слал владельцам письмо о смене статуса, то есть уведомление приходило о
-    # выдаче, следа которой не существует. Поле закрыто ДЛЯ ВСЕХ, включая суперпользователя:
-    # выдаёт уровень панель оператора, а здесь остаётся аварийное действие `verify_kyc`,
-    # которое идёт через сервис (ADR-0001: Unfold — инженерам, бизнес-операции — в React
-    # Admin). Найдено скептиком при проверке волны «гейт обоснования», 24-08.
-    KYC_STATE_FIELDS = ("verification_status", "is_verified")
-
-    def get_readonly_fields(self, request, obj=None):
-        readonly = list(super().get_readonly_fields(request, obj))
-        if obj is None:
-            # На создании поля ещё нет смысла: новая компания рождается неверифицированной.
-            return readonly
-        for field in self.KYC_STATE_FIELDS:
-            if field not in readonly:
-                readonly.append(field)
-        return readonly
 
     def get_queryset(self, request):
         # Prefetch M2M `types` so types_display() doesn't issue 1 query per row.
         return super().get_queryset(request).prefetch_related("types")
 
-    @display(
-        description=_("Статус KYC"),
-        label={
-            "Не верифицирован": "danger",
-            "Профиль на проверке": "warning",
-            "KYC подтверждён": "success",
-            "Договор заключён": "info",
-            "Отклонён": "danger",
-        },
-    )
-    def status_badge(self, obj):
-        return obj.verification_status.name if obj.verification_status else "—"
-
     @display(description=_("Роли"))
     def types_display(self, obj):
         types = obj.types.all()
         return ", ".join(t.name for t in types) if types else "—"
-
-    @superuser_only_action(_("[Emergency] Подтвердить KYC (L2)"))
-    def verify_kyc(self, request, queryset):
-        # Обоснование теперь ЕСТЬ: у аварийного действия появился экран подтверждения, и поле
-        # причины на нём обязательное. Прежний комментарий здесь говорил обратное («у действия
-        # Django нет формы») и был верен ровно до появления этого экрана — политика владельца
-        # (уровень без документов разрешён с предупреждением и обоснованием) исполняется теперь
-        # и в аварийном люке, а не только в панели оператора.
-        from core.admin_mixins import EMERGENCY_REASON_FIELD
-
-        reason = (request.POST.get(EMERGENCY_REASON_FIELD) or "").strip()
-        approved, skipped = services.bulk_verify_kyc(queryset, request.user, level_code="L2_VERIFIED", reason=reason)
-        if skipped:
-            # `skipped` — список СЛОВАРЕЙ {company_id, name, error}; строковый join по нему
-            # падал в TypeError, то есть аварийное действие ломалось ровно в тот момент, когда
-            # ему было что сказать оператору (найдено 24-08 при простановке гейта обоснования).
-            self.message_user(
-                request,
-                _(
-                    "Не подтверждено (%(names)s). Выдать уровень без документов можно из панели "
-                    "оператора — там записывается обоснование."
-                )
-                % {"names": ", ".join(f"{item['name']}: {item['error']}" for item in skipped)},
-                level="warning",
-            )
-        if approved:
-            self.message_user(request, _("%(count)d компаний подтверждено.") % {"count": approved})
 
     fieldsets = (
         (
@@ -315,7 +230,7 @@ class CompanyAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelAdmin):
             {
                 "fields": (
                     ("name", "inn"),
-                    ("verification_status", "country"),
+                    "country",
                     "types",
                 ),
             },
@@ -339,121 +254,7 @@ class CompanyAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelAdmin):
                 "fields": (("bank_account", "mfo"),),
             },
         ),
-        (
-            _("KYC"),
-            {
-                "classes": ["tab"],
-                "fields": ("kyc_notes",),
-            },
-        ),
     )
-
-
-@admin.register(KYCDocument)
-class KYCDocumentAdmin(ModelAdmin):
-    list_display = ("company", "doc_type", "original_filename", "uploaded_at")
-    list_filter = ("doc_type",)
-    list_filter_submit = True
-    search_fields = ("company__name", "original_filename")
-    autocomplete_fields = ["company", "doc_type"]
-    readonly_fields = ["uploaded_at", "original_filename"]
-    list_per_page = 25
-    list_select_related = ("company", "doc_type")
-    show_full_result_count = False
-
-    fieldsets = (
-        (
-            None,
-            {
-                "fields": (
-                    ("company", "doc_type"),
-                    ("file", "original_filename"),
-                    "uploaded_at",
-                ),
-            },
-        ),
-    )
-
-
-# ────────────────────────────────────────────
-# Role Applications
-# ────────────────────────────────────────────
-
-
-@admin.register(CompanyRoleApplication)
-class CompanyRoleApplicationAdmin(ReadOnlyInspectionMixin, ModelAdmin):
-    list_display = ("company", "requested_type", "app_status", "submitted_by", "reviewed_by", "created_at")
-    list_filter = ("status", "requested_type", "created_at")
-    list_filter_submit = True
-    search_fields = ("company__name", "company__inn")
-    autocomplete_fields = ["company", "requested_type", "submitted_by", "reviewed_by"]
-    readonly_fields = ("created_at", "updated_at")
-    list_per_page = 25
-    list_select_related = ("company", "requested_type", "submitted_by", "reviewed_by")
-    actions = ["approve_application", "reject_application"]
-    warn_unsaved_form = True
-
-    @display(
-        description=_("Статус"),
-        label={
-            "На рассмотрении": "warning",
-            "Требуются документы": "info",
-            "Ожидание оплаты": "info",
-            "Одобрено": "success",
-            "Отклонено": "danger",
-        },
-    )
-    def app_status(self, obj):
-        return obj.get_status_display()
-
-    fieldsets = (
-        (
-            None,
-            {
-                "fields": (
-                    ("company", "requested_type"),
-                    ("status", "submitted_by"),
-                ),
-            },
-        ),
-        (
-            _("Документы"),
-            {
-                "classes": ["tab"],
-                "fields": (
-                    "contract_file",
-                    "nda_file",
-                    "partnership_agreement",
-                ),
-            },
-        ),
-        (
-            _("Рассмотрение"),
-            {
-                "classes": ["tab"],
-                "fields": (
-                    ("reviewed_by", "reviewed_at"),
-                    "review_notes",
-                    ("created_at", "updated_at"),
-                ),
-            },
-        ),
-    )
-
-    @superuser_only_action(_("[Emergency] Одобрить (с проверкой документов)"))
-    def approve_application(self, request, queryset):
-        approved, errors = services.bulk_approve_role_applications(queryset, request.user)
-        if errors:
-            self.message_user(request, "\n".join(errors), level="warning")
-        if approved:
-            self.message_user(request, _("%(count)d заявок одобрено.") % {"count": approved})
-
-    @superuser_only_action(_("[Emergency] Отклонить"))
-    def reject_application(self, request, queryset):
-        rejected, errors = services.bulk_reject_role_applications(queryset, request.user)
-        if errors:
-            self.message_user(request, "\n".join(errors), level="warning")
-        self.message_user(request, _("%(count)d заявок отклонено.") % {"count": rejected})
 
 
 # ────────────────────────────────────────────

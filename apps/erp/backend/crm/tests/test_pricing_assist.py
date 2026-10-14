@@ -10,7 +10,7 @@ from decimal import Decimal
 import pytest
 from django.utils import timezone
 
-from accounts.models import Company, CompanyMember, CompanyType, CustomUser, VerificationStatus, WorkspaceRole
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
 from catalog.models import Product, SupplierOffer
 from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteStatus
 from crm.services.pricing_assist import suggest_line_pricing, suggest_pricing_for_products, suggest_quote_pricing
@@ -19,7 +19,6 @@ from master_data.models import Currency
 
 @pytest.fixture
 def base(db):
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
     usd = Currency.objects.get_or_create(code="USD", defaults={"name": "USD", "symbol": "$", "sort_order": 10})[0]
     QuoteStatus.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})

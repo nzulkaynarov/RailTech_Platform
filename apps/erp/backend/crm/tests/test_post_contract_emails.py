@@ -25,7 +25,6 @@ from accounts.models import (
     CustomUser,
     SupplierSubscription,
     SystemRole,
-    VerificationStatus,
     WorkspaceRole,
 )
 from crm.constants import DEFAULT_INVOICE_DUE_DAYS
@@ -49,7 +48,6 @@ def lookups(db):
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     for code, name in (("CLIENT", "Client"), ("SUPPLIER", "Supplier")):
         CompanyType.objects.get_or_create(code=code, defaults={"name": name, "sort_order": 10})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     for code in ("USER", "ADMIN"):
         SystemRole.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
     DealStage.objects.get_or_create(code="CLOSED_WON", defaults={"name": "Won", "sort_order": 80})
@@ -71,7 +69,6 @@ def _company(name, inn, type_code):
     company = Company.objects.create(
         name=name,
         inn=inn,
-        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
         # O3: продавец с платёжными реквизитами — иначе `issue_invoice` не выпустит счёт (он неоплатен).
         bank_account="20208000900001234567",
         mfo="00443",

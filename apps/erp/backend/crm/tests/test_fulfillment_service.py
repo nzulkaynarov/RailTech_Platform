@@ -20,15 +20,7 @@ import datetime
 
 import pytest
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SystemRole,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm import services as crm_services
 from crm.constants import DealStageCode, FulfillmentStatusCode
 from crm.models import (
@@ -63,7 +55,6 @@ def lookups(db):
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     SystemRole.objects.get_or_create(code="USER", defaults={"name": "User", "sort_order": 10})
     SystemRole.objects.get_or_create(code="ADMIN", defaults={"name": "Admin", "sort_order": 20})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
 
 
 def _member(company, email, *, can_sell=False, can_buy=False):
@@ -83,16 +74,15 @@ def _member(company, email, *, can_sell=False, can_buy=False):
 @pytest.fixture
 def world(lookups):
     """A buyer company with a can_buy member + deal, and a can_sell seller company."""
-    l2 = VerificationStatus.objects.get(code="L2_VERIFIED")
-    buyer_co = Company.objects.create(name="Buyer Co", inn="B100", verification_status=l2)
+    buyer_co = Company.objects.create(name="Buyer Co", inn="B100")
     buyer_co.types.add(CompanyType.objects.get(code="CLIENT"))
     buyer = _member(buyer_co, "buyer@t.test", can_buy=True)
 
-    seller_co = Company.objects.create(name="Seller Co", inn="S100", verification_status=l2)
+    seller_co = Company.objects.create(name="Seller Co", inn="S100")
     seller_co.types.add(CompanyType.objects.get(code="SUPPLIER"))
     seller = _member(seller_co, "seller@t.test", can_sell=True)
 
-    other_seller_co = Company.objects.create(name="Other Seller Co", inn="S200", verification_status=l2)
+    other_seller_co = Company.objects.create(name="Other Seller Co", inn="S200")
     other_seller_co.types.add(CompanyType.objects.get(code="SUPPLIER"))
     other_seller = _member(other_seller_co, "other-seller@t.test", can_sell=True)
 

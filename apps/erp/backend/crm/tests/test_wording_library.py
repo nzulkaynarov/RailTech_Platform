@@ -22,7 +22,6 @@ from accounts.models import (
     CustomUser,
     SupplierSubscription,
     SystemRole,
-    VerificationStatus,
     WorkspaceRole,
 )
 from crm.models import CompanyWordingVariant, ContractStatus, Deal, DealSellerRouting, DealStage, Quote, QuoteStatus
@@ -38,7 +37,6 @@ def lookups(db):
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     SystemRole.objects.get_or_create(code="USER", defaults={"name": "User", "sort_order": 10})
     for code in ("DRAFT", "CONTRACT_SIGNED"):
         DealStage.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
@@ -50,13 +48,9 @@ def lookups(db):
 
 @pytest.fixture
 def world(lookups):
-    buyer_co = Company.objects.create(
-        name="Buyer W", inn="B904", verification_status=VerificationStatus.objects.get(code="L2_VERIFIED")
-    )
+    buyer_co = Company.objects.create(name="Buyer W", inn="B904")
     buyer_co.types.add(CompanyType.objects.get(code="CLIENT"))
-    seller_co = Company.objects.create(
-        name="Seller W", inn="S904", verification_status=VerificationStatus.objects.get(code="L2_VERIFIED")
-    )
+    seller_co = Company.objects.create(name="Seller W", inn="S904")
     seller_co.types.add(CompanyType.objects.get(code="SUPPLIER"))
     seller_user = CustomUser.objects.create_user(email="s@word.test", username="s@word.test", password="x")
     CompanyMember.objects.create(

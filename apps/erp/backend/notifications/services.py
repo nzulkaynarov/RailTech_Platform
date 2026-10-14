@@ -37,7 +37,7 @@ def notify_platform_admins(
     Создаёт broadcast-уведомление для всех Platform Admin (audience=PLATFORM_ADMIN, user=NULL).
 
     Используется для операционных алёртов платформы: failed payments, expired subscriptions,
-    stuck Celery tasks, KYC queue growing и т.п. Обычные пользователи этот канал НЕ видят.
+    stuck Celery tasks и т.п. Обычные пользователи этот канал НЕ видят.
     """
     from .models import NotificationType
 

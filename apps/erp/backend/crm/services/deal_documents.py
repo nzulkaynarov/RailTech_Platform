@@ -442,7 +442,7 @@ def deal_document_hub(deal, user, request) -> dict:
         "payments_count": len(payments),
         "payments_total": _money(sum((payment.amount for payment in payments), Decimal("0"))),
         # Сторона зрителя ПО ЭТОЙ сделке. Это не полное право на действие: сервис,
-        # выполняющий действие, дополнительно проверит подписку, KYC и стадию — и честно
+        # выполняющий действие, дополнительно проверит подписку и стадию — и честно
         # откажет бизнес-кодом. Клиенту эти флаги нужны, чтобы не показывать чужих кнопок.
         "viewer": sides,
         "next_step": _next_step(

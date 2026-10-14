@@ -3,23 +3,14 @@
 Public API re-exported so existing import paths keep working.
 """
 
-from .applications import (
-    approve_role_application,
-    bulk_approve_role_applications,
-    bulk_reject_role_applications,
-    missing_application_documents,
-    reject_role_application,
-    request_application_documents,
-)
 from .auth import (
     change_user_password,
-    create_pending_user,
     reset_password,
     revoke_user_refresh_tokens,
     send_password_reset_email,
     verify_and_setup_password,
 )
-from .clients import accept_client_invite, create_offline_client, find_client_company, send_client_invite
+from .clients import create_offline_client, find_client_company
 from .company_lifecycle import archive_company, can_delete_company, company_history_holders, unarchive_company
 from .company_settings import get_company_settings, update_company_settings
 from .document_profile import (
@@ -37,7 +28,6 @@ from .entitlements import (
     quote_export_entitled,
     quote_send_entitled,
 )
-from .kyc import bulk_verify_kyc, delete_kyc_document, kyc_evidence_gaps, upload_kyc_document, verify_company_kyc
 from .members import (
     add_company_member,
     can_delete_user,
@@ -49,7 +39,6 @@ from .members import (
     set_member_workspace_role,
     toggle_user_active,
 )
-from .merge import auto_populate_history, find_offline_duplicates, merge_companies
 from .permissions import (
     acting_context,
     assert_seller_can_operate,
@@ -65,7 +54,6 @@ from .permissions import (
     seller_sees_all_deals,
     seller_visible_deal_ids,
 )
-from .profile import submit_company_profile
 from .roles import (
     assign_role_to_member,
     create_company_role,
@@ -85,13 +73,7 @@ from .subscriptions import (
 __all__ = [
     "acting_context",
     "add_company_member",
-    "approve_role_application",
-    "missing_application_documents",
-    "request_application_documents",
     "assert_seller_can_operate",
-    "bulk_approve_role_applications",
-    "bulk_reject_role_applications",
-    "bulk_verify_kyc",
     "change_subscription_status",
     "change_user_password",
     "can_delete_user",
@@ -107,8 +89,6 @@ __all__ = [
     "is_demo",
     "quote_export_entitled",
     "quote_send_entitled",
-    "create_pending_user",
-    "delete_kyc_document",
     "ensure_trial_subscription",
     "expired_subscription_ids",
     "get_company_settings",
@@ -126,29 +106,19 @@ __all__ = [
     "seller_visible_deal_ids",
     "record_subscription_payment",
     "suspend_subscription",
-    "reject_role_application",
     "remove_company_member",
     "reset_password",
     "revoke_user_refresh_tokens",
     "send_password_reset_email",
     "set_member_workspace_role",
-    "submit_company_profile",
     "toggle_user_active",
-    "upload_kyc_document",
     "verify_and_setup_password",
     "archive_company",
     "can_delete_company",
     "company_history_holders",
-    "kyc_evidence_gaps",
     "unarchive_company",
-    "verify_company_kyc",
-    "accept_client_invite",
-    "auto_populate_history",
     "create_offline_client",
     "find_client_company",
-    "find_offline_duplicates",
-    "merge_companies",
-    "send_client_invite",
     "can_edit_quote_pricing",
     "member_has_permission",
     "seller_acting_company_ids",

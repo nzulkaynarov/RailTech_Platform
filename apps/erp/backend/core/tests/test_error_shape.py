@@ -10,7 +10,7 @@ Intentionally OUT of scope (different, non-HTTP contracts):
   ``crm/tasks.py`` likewise return result dicts, not HTTP responses),
 - WebSocket message payloads (``crm/consumers.py``),
 - service-layer ``(obj, error_code)`` return tuples and per-item report fields
-  inside 200 success bodies (e.g. ``bulk_verify_kyc``'s ``skipped[].error``).
+  inside 200 success bodies (e.g. a bulk action's ``skipped[].error``).
 
 The scan therefore covers only view-layer modules — the files that build HTTP
 Response objects — and is a plain source grep so it stays green regardless of

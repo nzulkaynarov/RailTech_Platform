@@ -4,7 +4,7 @@ Company creation wizard — 4-step form for django admin.
 Steps:
   1. Requisites: name, INN, country, logo
   2. Contacts: address, phone, email, bank details
-  3. Role: company types, verification status
+  3. Role: company types
   4. Members: add owner (existing user or create new)
 """
 
@@ -24,8 +24,7 @@ from formtools.wizard.views import SessionWizardView
 
 from master_data.models import Country
 
-from .constants import VerificationStatusCode
-from .models import Company, CompanyMember, CompanyType, CustomUser, VerificationStatus, WorkspaceRole
+from .models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
 
 logger = logging.getLogger(__name__)
 
@@ -124,28 +123,6 @@ class Step3RoleForm(forms.Form):
             "Производитель — OEM."
         ),
     )
-    # Мастер ЗАВОДИТ арендатора, а не верифицирует его: выдача L2+ — отдельное действие с
-    # обоснованием и следом в журнале (политика владельца 2026-06-03, сервис
-    # `verify_company_kyc`). Раньше здесь можно было выбрать любой уровень, включая
-    # L2_VERIFIED, и компания рождалась подтверждённой без документов, без причины и без
-    # единой строки аудита. Оставлены только уровни ДО верификации.
-    verification_status = forms.ModelChoiceField(
-        queryset=VerificationStatus.objects.filter(
-            code__in=[VerificationStatusCode.L1_UNVERIFIED, VerificationStatusCode.PROFILE_SUBMITTED]
-        ),
-        label=_("Статус верификации"),
-        required=False,
-        help_text=_(
-            "Начальный статус KYC. По умолчанию — не верифицирован. "
-            "Подтверждение уровня L2 и выше выдаётся в панели оператора: там записывается обоснование."
-        ),
-    )
-    kyc_notes = forms.CharField(
-        widget=forms.Textarea(attrs={"rows": 3}),
-        required=False,
-        label=_("Заметки по KYC"),
-        help_text=_("Внутренние комментарии (не видны клиенту)"),
-    )
 
 
 class Step4MembersForm(forms.Form):
@@ -202,10 +179,9 @@ class CompanyWizardView(SessionWizardView):
         # Вход в админку и СОЗДАНИЕ АРЕНДАТОРА — разные вещи, и Django ровно так их разделяет.
         #
         # Гейт двери (волна 20-08) пускает сюда суперпользователя ИЛИ члена `system_engineers`.
-        # Этого мало: мастер заводит компанию и сразу проставляет ей `verification_status`, то
-        # есть уровень KYC. Прогон 20-08 показал, что член группы БЕЗ ЕДИНОГО модельного права
-        # (`get_all_permissions() == []`) проходил мастер до конца и создавал арендатора с
-        # выставленным KYC. Модельное право — тот самый второй ключ.
+        # Этого мало: прогон 20-08 показал, что член группы БЕЗ ЕДИНОГО модельного права
+        # (`get_all_permissions() == []`) проходил мастер до конца и создавал арендатора.
+        # Модельное право — тот самый второй ключ.
         if not request.user.has_perm("accounts.add_company"):
             raise PermissionDenied
         return super().dispatch(request, *args, **kwargs)
@@ -238,8 +214,6 @@ class CompanyWizardView(SessionWizardView):
             website=data.get("website", ""),
             bank_account=data.get("bank_account", ""),
             mfo=data.get("mfo", ""),
-            verification_status=data.get("verification_status"),
-            kyc_notes=data.get("kyc_notes", ""),
         )
 
         # Set company types
@@ -277,7 +251,7 @@ class CompanyWizardView(SessionWizardView):
         if created:
             user.set_unusable_password()
             user.save()
-            # Send setup-password email (same flow as registration)
+            # Send setup-password email (same flow as a team invitation)
             token = default_token_generator.make_token(user)
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             base_url = getattr(settings, "FRONTEND_URL", "http://localhost:5173")

@@ -111,7 +111,7 @@ def test_reverse_relations_are_not_declared_readonly(engineer, db):
     readonly = _readonly_for(Company, engineer, company)
 
     assert "members" not in readonly
-    assert "kyc_documents" not in readonly
+    assert "contacts" not in readonly
 
 
 # ── 62. Шаблоны писем под тем же режимом ────────────────────────────────────
@@ -128,7 +128,7 @@ def test_email_template_body_is_readonly_for_an_engineer(engineer, db):
 
 
 def test_email_template_cannot_be_deleted_by_an_engineer(engineer, db):
-    template = EmailTemplate.objects.create(key="kyc_verified", subject="Тема", html_body="<p>текст</p>")
+    template = EmailTemplate.objects.create(key="reset_password", subject="Тема", html_body="<p>текст</p>")
     model_admin = admin.site._registry[EmailTemplate]
 
     assert model_admin.has_delete_permission(_Request(engineer), obj=template) is False

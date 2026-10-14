@@ -28,7 +28,6 @@ from accounts.models import (
     CustomUser,
     SupplierSubscription,
     SystemRole,
-    VerificationStatus,
     WorkspaceRole,
 )
 from crm.models import Contract, ContractStatus, Deal, DealStage, Invoice, InvoiceStatus, Quote, QuoteStatus
@@ -107,7 +106,6 @@ def lookups(db):
         InvoiceStatus.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     Country.objects.get_or_create(code="UZ", defaults={"name": "Uzbekistan", "sort_order": 10})
     Currency.objects.get_or_create(code="USD", defaults={"name": "US Dollar", "symbol": "$", "sort_order": 10})
     SystemRole.objects.get_or_create(code="USER", defaults={"name": "User", "sort_order": 10})
@@ -122,7 +120,6 @@ def buyer_company(lookups):
     company = Company.objects.create(
         name="Buyer Co",
         inn="1110000001",
-        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
     )
     company.types.add(CompanyType.objects.get(code="CLIENT"))
     return company
@@ -133,7 +130,6 @@ def seller_company(lookups):
     company = Company.objects.create(
         name="Seller Co",
         inn="2220000001",
-        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
     )
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
     return company
@@ -695,7 +691,6 @@ def test_claim_deal_non_routed_seller_denied(lookups, buyer_company, seller_comp
     other_co = Company.objects.create(
         name="Unrouted Seller",
         inn="9990000009",
-        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
     )
     other_co.types.add(CompanyType.objects.get(code="SUPPLIER"))
     outsider = _make_user("unrouted_seller@s.test")

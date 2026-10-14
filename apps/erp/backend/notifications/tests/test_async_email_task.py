@@ -1,4 +1,6 @@
-"""SEC-tail: auth emails (setup-password, reset) dispatch off-thread via Celery.
+"""SEC-tail: auth emails (reset) dispatch off-thread via Celery.
+
+(The self-registration setup-link case left with registration in M1-ERP-02 wave 1c.)
 
 Pins that:
   * the ``send_transactional_email`` task is a thin wrapper that forwards to the
@@ -46,25 +48,6 @@ def test_task_tolerates_missing_user_id():
     assert mocked.call_count == 2
     for _, kwargs in mocked.call_args_list:
         assert kwargs["user"] is None
-
-
-@pytest.mark.django_db
-def test_registration_enqueues_setup_email_not_inline():
-    """create_pending_user must enqueue the task, never call send_templated_email inline."""
-    from accounts.services.auth import create_pending_user
-
-    with (
-        patch("accounts.services.auth.send_transactional_email.delay") as delayed,
-        patch("notifications.emails.send_templated_email") as inline,
-    ):
-        user, error = create_pending_user("newbie@example.com", "New", "Bie")
-    assert error is None and user is not None
-    inline.assert_not_called()
-    delayed.assert_called_once()
-    args, kwargs = delayed.call_args
-    assert args[0] == "setup_password"
-    assert args[2] == ["newbie@example.com"]
-    assert kwargs["user_id"] == user.pk
 
 
 @pytest.mark.django_db

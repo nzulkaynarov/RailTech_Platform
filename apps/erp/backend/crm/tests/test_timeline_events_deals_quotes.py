@@ -13,15 +13,13 @@ from django.utils import timezone
 
 @pytest.fixture
 def lookups(db):
-    from accounts.models import CompanyType, VerificationStatus, WorkspaceRole
+    from accounts.models import CompanyType, WorkspaceRole
     from crm.models import DealStage, QuoteStatus
 
     for code in ["DRAFT", "RFQ_OPEN"]:
         DealStage.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
     for code in ["CLIENT", "SUPPLIER"]:
         CompanyType.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 1})
-    for code, rank in [("L1_UNVERIFIED", 0), ("L2_VERIFIED", 2)]:
-        VerificationStatus.objects.get_or_create(code=code, defaults={"name": code, "sort_order": rank})
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     for code, rank in [("DRAFT", 1), ("SENT", 50), ("EXPIRED", 60)]:
         QuoteStatus.objects.get_or_create(code=code, defaults={"name": code, "sort_order": rank})

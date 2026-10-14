@@ -49,7 +49,7 @@ class TimelineEntrySerializer(serializers.ModelSerializer):
     summary="Counterparty / deal activity timeline",
     description=(
         "Chronological business events (deal opened, КП sent/accepted/rejected, contract signed, "
-        "payments, messages, KYC) linked to a deal or a counterparty company. Pass deal_id OR "
+        "payments) linked to a deal or a counterparty company. Pass deal_id OR "
         "company_id. Scoping: a deal timeline needs access to the deal (member of the client "
         "company, routed seller, or platform admin); a company timeline shows a member their own "
         "company's history, while a routed seller sees only events on deals visible to them."

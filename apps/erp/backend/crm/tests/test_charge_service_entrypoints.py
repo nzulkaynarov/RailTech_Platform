@@ -12,7 +12,7 @@ from decimal import Decimal
 
 import pytest
 
-from accounts.models import Company, CompanyMember, CompanyType, CustomUser, VerificationStatus, WorkspaceRole
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
 from crm.models import ChargeTemplate, ChargeType, Deal, DealStage, Quote, QuoteCharge, QuoteItem, QuoteStatus
 from crm.services.charges import reorder_quote_charges, set_quote_delivery_basis
 from master_data.models import Country, DeliveryBasis
@@ -33,12 +33,9 @@ def world(db):
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
-    verified = VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})[
-        0
-    ]
     uzbekistan = Country.objects.get_or_create(code="UZ", defaults={"name": "Uzbekistan", "sort_order": 10})[0]
 
-    seller_company = Company.objects.create(name="Продавец", inn="1000000001", verification_status=verified)
+    seller_company = Company.objects.create(name="Продавец", inn="1000000001")
     seller_company.types.add(CompanyType.objects.get(code="SUPPLIER"))
     seller = CustomUser.objects.create_user(
         email="seller@charges.test", username="charges_seller", password="pw", is_active=True
@@ -52,7 +49,7 @@ def world(db):
         can_sell=True,
     )
 
-    buyer_company = Company.objects.create(name="Покупатель", inn="2000000002", verification_status=verified)
+    buyer_company = Company.objects.create(name="Покупатель", inn="2000000002")
     buyer_company.types.add(CompanyType.objects.get(code="CLIENT"))
     buyer = CustomUser.objects.create_user(
         email="buyer@charges.test", username="charges_buyer", password="pw", is_active=True

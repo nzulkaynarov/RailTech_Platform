@@ -160,19 +160,19 @@ def _owner_ids_for_products(product_ids) -> set:
     """PUBLISHED seller owner-company ids for the given products — only sellers a buyer can
     actually invite.
 
-    The KYC filter is load-bearing, not defensive: the recipient picker lists only verified
-    sellers, while the suggestion pre-checks the companies it returns. Suggesting an unverified
-    seller therefore pre-selected a company that had NO row in the picker — invisible to the
-    buyer, impossible to un-check, and still sent to routing. Same set as the picker
-    (accounts/views/company.py `suppliers`), so suggestion ⊆ picker by construction.
+    The seller filter is load-bearing, not defensive: the recipient picker lists only active
+    sellers, while the suggestion pre-checks the companies it returns. Suggesting anything else
+    pre-selected a company that had NO row in the picker — invisible to the buyer, impossible to
+    un-check, and still sent to routing. Same set as the picker (accounts/views/company.py
+    `suppliers`), so suggestion ⊆ picker by construction.
     """
     if not product_ids:
         return set()
-    from accounts.models import verified_seller_company_q
+    from accounts.models.company.core import active_company_q, seller_company_q
 
     owner_ids = (
         Product.objects.filter(
-            verified_seller_company_q("owner_company"),
+            seller_company_q("owner_company") & active_company_q("owner_company"),
             id__in=product_ids,
             status__code="PUBLISHED",
         )

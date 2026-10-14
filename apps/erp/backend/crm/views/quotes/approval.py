@@ -21,7 +21,7 @@ from crm.serializers import QuoteSerializer
 
 def _chain_error_response(error):
     """Map a КП approval-chain service error code to an HTTP response."""
-    forbidden = {"ROLE_NOT_PERMITTED", "QUOTE_SEND_NOT_ENTITLED", "SELLER_KYC_REQUIRED"}
+    forbidden = {"ROLE_NOT_PERMITTED", "QUOTE_SEND_NOT_ENTITLED"}
     http_status = status.HTTP_403_FORBIDDEN if error in forbidden else status.HTTP_400_BAD_REQUEST
     return Response({"detail": error}, status=http_status)
 

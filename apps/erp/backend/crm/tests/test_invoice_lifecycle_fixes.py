@@ -26,7 +26,6 @@ from accounts.models import (
     CustomUser,
     SupplierSubscription,
     SystemRole,
-    VerificationStatus,
     WorkspaceRole,
 )
 from crm.models import (
@@ -53,7 +52,6 @@ def lookups(db):
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     SystemRole.objects.get_or_create(code="USER", defaults={"name": "User", "sort_order": 10})
     SystemRole.objects.get_or_create(code="ADMIN", defaults={"name": "Admin", "sort_order": 20})
     for code in ("DRAFT", "CONTRACT_SIGNED", "CLOSED_WON"):
@@ -68,11 +66,10 @@ def lookups(db):
     FulfillmentStatus.objects.get_or_create(code="PENDING", defaults={"name": "Pending", "sort_order": 10})
 
 
-def _company(name, inn, type_code, *, kyc=None):
+def _company(name, inn, type_code):
     company = Company.objects.create(
         name=name,
         inn=inn,
-        verification_status=(VerificationStatus.objects.get(code=kyc) if kyc else None),
         # O3: продавец с платёжными реквизитами — иначе `issue_invoice` не выпустит счёт (он неоплатен).
         bank_account="20208000900001234567",
         mfo="00443",
@@ -109,12 +106,12 @@ def _ids(resp):
 
 @pytest.fixture
 def world(lookups):
-    """A buyer, a routed seller (KYC L2 + operational subscription), an UNRELATED seller, and a
+    """A buyer, a routed seller (operational subscription), an UNRELATED seller, and a
     signed-contract deal ready to be invoiced."""
-    buyer_co = _company("Buyer Co", "B901", "CLIENT", kyc="L2_VERIFIED")
+    buyer_co = _company("Buyer Co", "B901", "CLIENT")
     buyer_user = _member(buyer_co, "buyer@invfix.test", can_buy=True)
 
-    seller_co = _company("Seller Co", "S901", "SUPPLIER", kyc="L2_VERIFIED")
+    seller_co = _company("Seller Co", "S901", "SUPPLIER")
     seller_user = _member(seller_co, "seller@invfix.test", can_sell=True)
     SupplierSubscription.objects.create(
         company=seller_co,
@@ -123,7 +120,7 @@ def world(lookups):
         valid_until=timezone.localdate() + timedelta(days=30),
     )
 
-    other_co = _company("Other Seller Co", "O901", "SUPPLIER", kyc="L2_VERIFIED")
+    other_co = _company("Other Seller Co", "O901", "SUPPLIER")
     other_user = _member(other_co, "other@invfix.test", can_sell=True)
 
     deal = Deal.objects.create(title="Inv deal", company=buyer_co, stage=DealStage.objects.get(code="CONTRACT_SIGNED"))

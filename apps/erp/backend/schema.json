@@ -3,7 +3,7 @@
     "info": {
         "title": "RailTech B2B API",
         "version": "1.0.0",
-        "description": "B2B marketplace API for railway equipment procurement in Uzbekistan. Supports deal lifecycle management, quoting, product catalog (PIM), KYC verification, Excel imports, and real-time notifications via WebSocket.",
+        "description": "B2B marketplace API for railway equipment procurement in Uzbekistan. Supports deal lifecycle management, quoting, product catalog (PIM), Excel imports, and real-time notifications via WebSocket.",
         "contact": {
             "name": "RailTech API Support",
             "email": "api@railtech.com"
@@ -16,7 +16,7 @@
         "/api/v1/accounts/companies/": {
             "get": {
                 "operationId": "accounts_companies_list",
-                "description": "Returns all companies with KYC documents and members. Manager/Admin only.",
+                "description": "Returns all companies with their members. Manager/Admin only.",
                 "summary": "List companies",
                 "parameters": [
                     {
@@ -56,13 +56,6 @@
                     {
                         "in": "query",
                         "name": "types__code",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "in": "query",
-                        "name": "verification_status__code",
                         "schema": {
                             "type": "string"
                         }
@@ -374,53 +367,10 @@
                 }
             }
         },
-        "/api/v1/accounts/companies/{id}/delete-document/{doc_id}/": {
-            "delete": {
-                "operationId": "accounts_companies_delete_document_destroy",
-                "description": "Delete a specific KYC document by its ID from a company.",
-                "summary": "Delete KYC document",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "doc_id",
-                        "schema": {
-                            "type": "string",
-                            "pattern": "^[0-9]+$"
-                        },
-                        "required": true
-                    },
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Компания.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "Accounts"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "No response body"
-                    },
-                    "404": {
-                        "description": "Document not found"
-                    }
-                }
-            }
-        },
         "/api/v1/accounts/companies/{id}/delete-logo/": {
             "delete": {
                 "operationId": "accounts_companies_delete_logo_destroy",
-                "description": "CRUD operations for companies.\n\nIncludes KYC verification, document upload, team management, and member invitations.",
+                "description": "CRUD operations for companies.\n\nIncludes logo / document-profile settings, team management, and member invitations.",
                 "summary": "Delete company logo",
                 "parameters": [
                     {
@@ -660,49 +610,6 @@
                 }
             }
         },
-        "/api/v1/accounts/companies/{id}/download-document/{doc_id}/": {
-            "get": {
-                "operationId": "accounts_companies_download_document_retrieve",
-                "description": "Stream a KYC document for review. Works with both MinIO and local storage (prod has no MinIO, so the raw /media URL 404s — this authenticated stream is the only path).",
-                "summary": "Download a KYC document",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "doc_id",
-                        "schema": {
-                            "type": "string",
-                            "pattern": "^[0-9]+$"
-                        },
-                        "required": true
-                    },
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Компания.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "Accounts"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "File stream"
-                    },
-                    "404": {
-                        "description": "Not found"
-                    }
-                }
-            }
-        },
         "/api/v1/accounts/companies/{id}/invite/": {
             "post": {
                 "operationId": "accounts_companies_invite_create",
@@ -763,91 +670,6 @@
                     },
                     "403": {
                         "description": "Not authorized"
-                    }
-                }
-            }
-        },
-        "/api/v1/accounts/companies/{id}/merge/": {
-            "post": {
-                "operationId": "accounts_companies_merge_create",
-                "description": "Platform Admin: fold an OFFLINE duplicate (its contacts, deals, activity, relationship edges) into this surviving company (CRM Phase C). Body: {duplicate_id, reason?}.",
-                "summary": "Merge a duplicate offline company into this one",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Компания.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "Accounts"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "duplicate_id": {
-                                        "type": "integer"
-                                    },
-                                    "reason": {
-                                        "type": "string"
-                                    }
-                                },
-                                "required": [
-                                    "duplicate_id"
-                                ]
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "{merged: true}"
-                    },
-                    "400": {
-                        "description": "error code"
-                    }
-                }
-            }
-        },
-        "/api/v1/accounts/companies/{id}/merge-candidates/": {
-            "get": {
-                "operationId": "accounts_companies_merge_candidates_retrieve",
-                "description": "Platform Admin: offline placeholder companies whose stated INN matches this company's canonical INN — candidates to fold in via merge (CRM Phase C).",
-                "summary": "Duplicate offline companies (merge candidates)",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Компания.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "Accounts"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "List of {id, name, stated_inn, is_registered}"
                     }
                 }
             }
@@ -1126,13 +948,6 @@
                         "schema": {
                             "type": "string"
                         }
-                    },
-                    {
-                        "in": "query",
-                        "name": "verification_status__code",
-                        "schema": {
-                            "type": "string"
-                        }
                     }
                 ],
                 "tags": [
@@ -1220,7 +1035,7 @@
         "/api/v1/accounts/companies/{id}/unarchive/": {
             "post": {
                 "operationId": "accounts_companies_unarchive_create",
-                "description": "CRUD operations for companies.\n\nIncludes KYC verification, document upload, team management, and member invitations.",
+                "description": "CRUD operations for companies.\n\nIncludes logo / document-profile settings, team management, and member invitations.",
                 "summary": "Return an archived company to circulation",
                 "parameters": [
                     {
@@ -1335,63 +1150,6 @@
                 }
             }
         },
-        "/api/v1/accounts/companies/{id}/upload-document/": {
-            "post": {
-                "operationId": "accounts_companies_upload_document_create",
-                "description": "Upload a KYC document for company verification. Supports multipart file upload.",
-                "summary": "Upload KYC document",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Компания.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "Accounts"
-                ],
-                "requestBody": {
-                    "content": {
-                        "multipart/form-data": {
-                            "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "file": {
-                                        "type": "string",
-                                        "format": "binary"
-                                    },
-                                    "doc_type": {
-                                        "type": "string",
-                                        "default": "OTHER"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/KYCDocument"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            }
-        },
         "/api/v1/accounts/companies/{id}/upload-logo/": {
             "post": {
                 "operationId": "accounts_companies_upload_logo_create",
@@ -1445,87 +1203,14 @@
                 }
             }
         },
-        "/api/v1/accounts/companies/{id}/verify-kyc/": {
-            "post": {
-                "operationId": "accounts_companies_verify_kyc_create",
-                "description": "Update KYC verification status for a company. Pass a VerificationStatus code (e.g. 'L2_VERIFIED') and optional comment.",
-                "summary": "Verify company KYC",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Компания.",
-                        "required": true
-                    }
-                ],
+        "/api/v1/accounts/companies/export/": {
+            "get": {
+                "operationId": "accounts_companies_export_retrieve",
+                "description": "Export filtered companies list as CSV or XLSX (format=csv|xlsx).",
+                "summary": "Export companies",
                 "tags": [
                     "Accounts"
                 ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/KYCVerificationRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/KYCVerificationRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/KYCVerificationRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Status updated successfully"
-                    },
-                    "400": {
-                        "description": "Validation error or business rule violation"
-                    }
-                }
-            }
-        },
-        "/api/v1/accounts/companies/bulk-verify-kyc/": {
-            "post": {
-                "operationId": "accounts_companies_bulk_verify_kyc_create",
-                "description": "CRUD operations for companies.\n\nIncludes KYC verification, document upload, team management, and member invitations.",
-                "tags": [
-                    "accounts"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/CompanyRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/CompanyRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/CompanyRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
                 "security": [
                     {
                         "jwtAuth": []
@@ -1545,31 +1230,11 @@
                 }
             }
         },
-        "/api/v1/accounts/companies/export/": {
-            "get": {
-                "operationId": "accounts_companies_export_retrieve",
-                "description": "Platform Admin: verify KYC for multiple companies in one request.",
-                "summary": "Bulk verify KYC",
-                "tags": [
-                    "Accounts"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "approved count + skipped"
-                    }
-                }
-            }
-        },
         "/api/v1/accounts/companies/suppliers/": {
             "get": {
                 "operationId": "accounts_companies_suppliers_retrieve",
-                "description": "Minimal directory of verified SUPPLIER / MANUFACTURER companies a buyer can invite to an RFQ. Available to any authenticated member — returns only id, name and INN, NOT the full admin company record (no KYC internals).",
-                "summary": "List verified suppliers (for RFQ invitations)",
+                "description": "Minimal directory of active SUPPLIER companies a buyer can invite to an RFQ. Available to any authenticated member — returns only id, name and INN, NOT the full admin company record.",
+                "summary": "List suppliers (for RFQ invitations)",
                 "tags": [
                     "Accounts"
                 ],
@@ -2173,40 +1838,6 @@
                 }
             }
         },
-        "/api/v1/accounts/contacts/{id}/invite/": {
-            "post": {
-                "operationId": "accounts_contacts_invite_create",
-                "description": "CRM Phase D: email this contact an invite to register and CLAIM its existing offline company (no duplicate). Throttled per user.",
-                "summary": "Invite an offline client to register",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Контакт.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "Client Base"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "{invited: true}"
-                    },
-                    "400": {
-                        "description": "error code"
-                    }
-                }
-            }
-        },
         "/api/v1/accounts/me/": {
             "get": {
                 "operationId": "accounts_me_retrieve",
@@ -2257,497 +1888,6 @@
                             }
                         },
                         "description": ""
-                    }
-                }
-            }
-        },
-        "/api/v1/accounts/role-applications/": {
-            "get": {
-                "operationId": "accounts_role_applications_list",
-                "description": "Returns all company role applications. Filterable by status, type, company.",
-                "summary": "List role applications",
-                "parameters": [
-                    {
-                        "in": "query",
-                        "name": "company",
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "name": "page",
-                        "required": false,
-                        "in": "query",
-                        "description": "A page number within the paginated result set.",
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "name": "page_size",
-                        "required": false,
-                        "in": "query",
-                        "description": "Number of results to return per page.",
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "in": "query",
-                        "name": "requested_type",
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "name": "search",
-                        "required": false,
-                        "in": "query",
-                        "description": "A search term.",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "in": "query",
-                        "name": "status",
-                        "schema": {
-                            "type": "string",
-                            "title": "Статус",
-                            "enum": [
-                                "APPROVED",
-                                "DOCUMENTS_REQUIRED",
-                                "PAYMENT_REQUIRED",
-                                "PENDING",
-                                "REJECTED"
-                            ]
-                        },
-                        "description": "Текущий статус рассмотрения заявки\n\n* `PENDING` - На рассмотрении\n* `DOCUMENTS_REQUIRED` - Требуются документы\n* `PAYMENT_REQUIRED` - Ожидание оплаты\n* `APPROVED` - Одобрено\n* `REJECTED` - Отклонено"
-                    }
-                ],
-                "tags": [
-                    "Accounts"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/PaginatedCompanyRoleApplicationList"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            },
-            "post": {
-                "operationId": "accounts_role_applications_create",
-                "description": "Submit a new role application for a company.",
-                "summary": "Create role application",
-                "tags": [
-                    "Accounts"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/CompanyRoleApplicationRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/CompanyRoleApplicationRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/CompanyRoleApplicationRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/CompanyRoleApplication"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            }
-        },
-        "/api/v1/accounts/role-applications/{id}/": {
-            "get": {
-                "operationId": "accounts_role_applications_retrieve",
-                "description": "Company role applications:\n  - Admin: full CRUD + approve/reject across all companies.\n  - Company OWNER: may list/create/update only their own company's applications.",
-                "summary": "Get role application details",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Заявка на роль компании.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "Accounts"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/CompanyRoleApplication"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            },
-            "put": {
-                "operationId": "accounts_role_applications_update",
-                "description": "Company role applications:\n  - Admin: full CRUD + approve/reject across all companies.\n  - Company OWNER: may list/create/update only their own company's applications.",
-                "summary": "Update role application",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Заявка на роль компании.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "Accounts"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/CompanyRoleApplicationRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/CompanyRoleApplicationRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/CompanyRoleApplicationRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/CompanyRoleApplication"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            },
-            "patch": {
-                "operationId": "accounts_role_applications_partial_update",
-                "description": "Company role applications:\n  - Admin: full CRUD + approve/reject across all companies.\n  - Company OWNER: may list/create/update only their own company's applications.",
-                "summary": "Partially update role application",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Заявка на роль компании.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "Accounts"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedCompanyRoleApplicationRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedCompanyRoleApplicationRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedCompanyRoleApplicationRequest"
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/CompanyRoleApplication"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            },
-            "delete": {
-                "operationId": "accounts_role_applications_destroy",
-                "description": "Company role applications:\n  - Admin: full CRUD + approve/reject across all companies.\n  - Company OWNER: may list/create/update only their own company's applications.",
-                "summary": "Delete role application",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Заявка на роль компании.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "Accounts"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "No response body"
-                    }
-                }
-            }
-        },
-        "/api/v1/accounts/role-applications/{id}/approve/": {
-            "post": {
-                "operationId": "accounts_role_applications_approve_create",
-                "description": "Approve a pending role application. Adds the requested CompanyType to the company.",
-                "summary": "Approve role application",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Заявка на роль компании.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "Accounts"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/CompanyRoleApplicationRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/CompanyRoleApplicationRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/CompanyRoleApplicationRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/CompanyRoleApplication"
-                                }
-                            }
-                        },
-                        "description": ""
-                    },
-                    "400": {
-                        "description": "Already processed"
-                    }
-                }
-            }
-        },
-        "/api/v1/accounts/role-applications/{id}/reject/": {
-            "post": {
-                "operationId": "accounts_role_applications_reject_create",
-                "description": "Reject a pending role application with an optional reason.",
-                "summary": "Reject role application",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Заявка на роль компании.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "Accounts"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/RejectRequestRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/RejectRequestRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/RejectRequestRequest"
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/CompanyRoleApplication"
-                                }
-                            }
-                        },
-                        "description": ""
-                    },
-                    "400": {
-                        "description": "Already processed"
-                    }
-                }
-            }
-        },
-        "/api/v1/accounts/role-applications/{id}/request-documents/": {
-            "post": {
-                "operationId": "accounts_role_applications_request_documents_create",
-                "description": "Статус DOCUMENTS_REQUIRED был в модели с самого начала, но поставить его было нечем: в меню строки жили только «Одобрить» и «Отклонить», и оператору оставалось закрыть путь целиком. Эталон — Stripe verification «information needed» и Salesforce «Request more info».",
-                "summary": "Request the missing documents instead of rejecting",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Заявка на роль компании.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "Accounts"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/RequestApplicationDocsRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/RequestApplicationDocsRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/RequestApplicationDocsRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/CompanyRoleApplication"
-                                }
-                            }
-                        },
-                        "description": ""
-                    },
-                    "400": {
-                        "description": "ROLE_APPLICATION_CANNOT_REQUEST_DOCS"
                     }
                 }
             }
@@ -5303,50 +4443,6 @@
                 }
             }
         },
-        "/api/v1/auth/register/": {
-            "post": {
-                "operationId": "auth_register_create",
-                "description": "Register a new user by email. Always returns 201 with the same neutral body so the response never reveals whether the email already has an account (anti-enumeration, P2): a free email gets a setup link, an existing active account gets a sign-in/recover email, a pending one gets the setup link re-sent — all indistinguishable in status, body, and timing.",
-                "summary": "Register new user",
-                "tags": [
-                    "Auth"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/RegisterInterestRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/RegisterInterestRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/RegisterInterestRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    },
-                    {}
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Verification email sent (neutral — see description)"
-                    },
-                    "400": {
-                        "description": "Validation error (malformed request only)"
-                    }
-                }
-            }
-        },
         "/api/v1/auth/reset-password/": {
             "post": {
                 "operationId": "auth_reset_password_create",
@@ -5448,7 +4544,7 @@
         "/api/v1/auth/setup-password/": {
             "post": {
                 "operationId": "auth_setup_password_create",
-                "description": "Set a password for a newly registered user. Requires the uid and token from the verification email link. Activates the user account.",
+                "description": "Set the first password of an invited user (team invitation or an account created by an administrator). Requires the uid and token from the email link. Activates the account.",
                 "summary": "Setup password",
                 "tags": [
                     "Auth"
@@ -5485,49 +4581,6 @@
                     },
                     "400": {
                         "description": "Invalid or expired token"
-                    }
-                }
-            }
-        },
-        "/api/v1/auth/submit-profile/": {
-            "post": {
-                "operationId": "auth_submit_profile_create",
-                "description": "Minimal onboarding after registration. Creates a new Buyer (CLIENT) company and makes the user its OWNER. INN and selling are deferred.",
-                "summary": "Submit company profile",
-                "tags": [
-                    "Auth"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/SubmitProfileRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/SubmitProfileRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/SubmitProfileRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Profile submitted successfully"
-                    },
-                    "400": {
-                        "description": "Validation error"
                     }
                 }
             }
@@ -7687,7 +6740,7 @@
         "/api/v1/catalog/products/{id}/unpublish/": {
             "post": {
                 "operationId": "catalog_products_unpublish_create",
-                "description": "Снимает карточку с витрины: PUBLISHED → DRAFT (Shopify: Active → Draft двусторонне). Право то же, что у публикации; KYC не требуется — снятие уменьшает экспозицию.",
+                "description": "Снимает карточку с витрины: PUBLISHED → DRAFT (Shopify: Active → Draft двусторонне). Право то же, что у публикации.",
                 "summary": "Unpublish a product (owner)",
                 "parameters": [
                     {
@@ -15822,7 +14875,7 @@
         "/api/v1/crm/timeline/": {
             "get": {
                 "operationId": "crm_timeline_list",
-                "description": "Chronological business events (deal opened, КП sent/accepted/rejected, contract signed, payments, messages, KYC) linked to a deal or a counterparty company. Pass deal_id OR company_id. Scoping: a deal timeline needs access to the deal (member of the client company, routed seller, or platform admin); a company timeline shows a member their own company's history, while a routed seller sees only events on deals visible to them.",
+                "description": "Chronological business events (deal opened, КП sent/accepted/rejected, contract signed, payments) linked to a deal or a counterparty company. Pass deal_id OR company_id. Scoping: a deal timeline needs access to the deal (member of the client company, routed seller, or platform admin); a company timeline shows a member their own company's history, while a routed seller sees only events on deals visible to them.",
                 "summary": "Counterparty / deal activity timeline",
                 "parameters": [
                     {
@@ -18398,7 +17451,7 @@
             },
             "Act": {
                 "type": "object",
-                "description": "Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.\n\nЗачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,\nкоторая одновременно покупает и продаёт, не видела продавцовских кнопок: «Сформировать\nакт» пряталась за `!isBuyer`, и у dual-компании с порядком типов [CLIENT, SUPPLIER]\nкнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`\nу договора.\n\nПоля-подсказки НЕ являются полным правом: подписку, KYC и стадию проверит сервис,\nвыполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку\nкнопок чужой стороны.",
+                "description": "Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.\n\nЗачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,\nкоторая одновременно покупает и продаёт, не видела продавцовских кнопок: «Сформировать\nакт» пряталась за `!isBuyer`, и у dual-компании с порядком типов [CLIENT, SUPPLIER]\nкнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`\nу договора.\n\nПоля-подсказки НЕ являются полным правом: подписку и стадию проверит сервис,\nвыполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку\nкнопок чужой стороны.",
                 "properties": {
                     "id": {
                         "type": "integer",
@@ -18586,7 +17639,7 @@
             },
             "ActRequest": {
                 "type": "object",
-                "description": "Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.\n\nЗачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,\nкоторая одновременно покупает и продаёт, не видела продавцовских кнопок: «Сформировать\nакт» пряталась за `!isBuyer`, и у dual-компании с порядком типов [CLIENT, SUPPLIER]\nкнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`\nу договора.\n\nПоля-подсказки НЕ являются полным правом: подписку, KYC и стадию проверит сервис,\nвыполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку\nкнопок чужой стороны.",
+                "description": "Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.\n\nЗачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,\nкоторая одновременно покупает и продаёт, не видела продавцовских кнопок: «Сформировать\nакт» пряталась за `!isBuyer`, и у dual-компании с порядком типов [CLIENT, SUPPLIER]\nкнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`\nу договора.\n\nПоля-подсказки НЕ являются полным правом: подписку и стадию проверит сервис,\nвыполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку\nкнопок чужой стороны.",
                 "properties": {
                     "deal": {
                         "type": "integer",
@@ -19487,27 +18540,6 @@
                             }
                         ]
                     },
-                    "verification_status": {
-                        "type": "integer",
-                        "readOnly": true,
-                        "nullable": true,
-                        "title": "Статус верификации",
-                        "description": "Текущий статус KYC-проверки компании"
-                    },
-                    "verification_status_name": {
-                        "type": "string",
-                        "readOnly": true
-                    },
-                    "verification_status_code": {
-                        "type": "string",
-                        "readOnly": true
-                    },
-                    "is_verified": {
-                        "type": "boolean",
-                        "readOnly": true,
-                        "title": "Верифицирован",
-                        "description": "Компания прошла базовую проверку RailTech"
-                    },
                     "has_iso9001": {
                         "type": "boolean",
                         "title": "ISO 9001",
@@ -19597,13 +18629,6 @@
                         "readOnly": true,
                         "title": "Дата регистрации"
                     },
-                    "kyc_documents": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/KYCDocument"
-                        },
-                        "readOnly": true
-                    },
                     "user_count": {
                         "type": "integer",
                         "readOnly": true
@@ -19651,14 +18676,9 @@
                     "delete_blocker",
                     "id",
                     "is_active",
-                    "is_verified",
-                    "kyc_documents",
                     "name",
                     "trust_score",
-                    "user_count",
-                    "verification_status",
-                    "verification_status_code",
-                    "verification_status_name"
+                    "user_count"
                 ]
             },
             "CompanyDocumentProfile": {
@@ -20400,188 +19420,6 @@
                     "name",
                     "updated_at"
                 ]
-            },
-            "CompanyRoleApplication": {
-                "type": "object",
-                "properties": {
-                    "id": {
-                        "type": "integer",
-                        "readOnly": true
-                    },
-                    "company": {
-                        "type": "integer",
-                        "readOnly": true,
-                        "title": "Компания",
-                        "description": "Организация, подавшая заявку"
-                    },
-                    "company_name": {
-                        "type": "string",
-                        "readOnly": true
-                    },
-                    "company_inn": {
-                        "type": "string",
-                        "readOnly": true
-                    },
-                    "requested_type": {
-                        "type": "integer",
-                        "title": "Запрашиваемая роль",
-                        "description": "Роль, на которую подаётся заявка (SUPPLIER или MANUFACTURER)"
-                    },
-                    "requested_type_name": {
-                        "type": "string",
-                        "readOnly": true
-                    },
-                    "requested_type_code": {
-                        "type": "string",
-                        "readOnly": true
-                    },
-                    "status": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/CompanyRoleApplicationStatusEnum"
-                            }
-                        ],
-                        "readOnly": true,
-                        "title": "Статус",
-                        "description": "Текущий статус рассмотрения заявки\n\n* `PENDING` - На рассмотрении\n* `DOCUMENTS_REQUIRED` - Требуются документы\n* `PAYMENT_REQUIRED` - Ожидание оплаты\n* `APPROVED` - Одобрено\n* `REJECTED` - Отклонено"
-                    },
-                    "status_display": {
-                        "type": "string",
-                        "readOnly": true
-                    },
-                    "submitted_by": {
-                        "type": "integer",
-                        "readOnly": true,
-                        "nullable": true,
-                        "title": "Подал заявку",
-                        "description": "Пользователь, инициировавший заявку"
-                    },
-                    "submitted_by_email": {
-                        "type": "string",
-                        "readOnly": true
-                    },
-                    "contract_file": {
-                        "type": "string",
-                        "format": "uri",
-                        "nullable": true,
-                        "title": "Договор",
-                        "description": "Подписанный договор (обязательно для SUPPLIER)"
-                    },
-                    "nda_file": {
-                        "type": "string",
-                        "format": "uri",
-                        "nullable": true,
-                        "title": "NDA",
-                        "description": "Соглашение о неразглашении (обязательно для SUPPLIER)"
-                    },
-                    "partnership_agreement": {
-                        "type": "string",
-                        "format": "uri",
-                        "nullable": true,
-                        "title": "Договор о партнёрстве",
-                        "description": "Партнёрское соглашение (обязательно для MANUFACTURER)"
-                    },
-                    "reviewed_by": {
-                        "type": "integer",
-                        "readOnly": true,
-                        "nullable": true,
-                        "title": "Рассмотрел",
-                        "description": "Администратор, рассмотревший заявку"
-                    },
-                    "reviewed_by_email": {
-                        "type": "string",
-                        "readOnly": true
-                    },
-                    "review_notes": {
-                        "type": "string",
-                        "readOnly": true,
-                        "title": "Комментарий",
-                        "description": "Внутренний комментарий администратора"
-                    },
-                    "reviewed_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "readOnly": true,
-                        "nullable": true,
-                        "title": "Дата рассмотрения"
-                    },
-                    "created_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "readOnly": true,
-                        "title": "Дата подачи"
-                    },
-                    "updated_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "readOnly": true,
-                        "title": "Дата обновления"
-                    }
-                },
-                "required": [
-                    "company",
-                    "company_inn",
-                    "company_name",
-                    "created_at",
-                    "id",
-                    "requested_type",
-                    "requested_type_code",
-                    "requested_type_name",
-                    "review_notes",
-                    "reviewed_at",
-                    "reviewed_by",
-                    "reviewed_by_email",
-                    "status",
-                    "status_display",
-                    "submitted_by",
-                    "submitted_by_email",
-                    "updated_at"
-                ]
-            },
-            "CompanyRoleApplicationRequest": {
-                "type": "object",
-                "properties": {
-                    "requested_type": {
-                        "type": "integer",
-                        "title": "Запрашиваемая роль",
-                        "description": "Роль, на которую подаётся заявка (SUPPLIER или MANUFACTURER)"
-                    },
-                    "contract_file": {
-                        "type": "string",
-                        "format": "binary",
-                        "nullable": true,
-                        "title": "Договор",
-                        "description": "Подписанный договор (обязательно для SUPPLIER)"
-                    },
-                    "nda_file": {
-                        "type": "string",
-                        "format": "binary",
-                        "nullable": true,
-                        "title": "NDA",
-                        "description": "Соглашение о неразглашении (обязательно для SUPPLIER)"
-                    },
-                    "partnership_agreement": {
-                        "type": "string",
-                        "format": "binary",
-                        "nullable": true,
-                        "title": "Договор о партнёрстве",
-                        "description": "Партнёрское соглашение (обязательно для MANUFACTURER)"
-                    }
-                },
-                "required": [
-                    "requested_type"
-                ]
-            },
-            "CompanyRoleApplicationStatusEnum": {
-                "enum": [
-                    "PENDING",
-                    "DOCUMENTS_REQUIRED",
-                    "PAYMENT_REQUIRED",
-                    "APPROVED",
-                    "REJECTED"
-                ],
-                "type": "string",
-                "description": "* `PENDING` - На рассмотрении\n* `DOCUMENTS_REQUIRED` - Требуются документы\n* `PAYMENT_REQUIRED` - Ожидание оплаты\n* `APPROVED` - Одобрено\n* `REJECTED` - Отклонено"
             },
             "CompanyRoleRequest": {
                 "type": "object",
@@ -22134,7 +20972,7 @@
                     "key": {
                         "type": "string",
                         "title": "Ключ",
-                        "description": "Совпадает с именем файлового шаблона: 'setup_password', 'kyc_verified', 'quote_sent', …",
+                        "description": "Совпадает с именем файлового шаблона: 'setup_password', 'invite_member', 'quote_sent', …",
                         "maxLength": 100,
                         "pattern": "^[-a-zA-Z0-9_]+$"
                     },
@@ -22216,7 +21054,7 @@
                         "type": "string",
                         "minLength": 1,
                         "title": "Ключ",
-                        "description": "Совпадает с именем файлового шаблона: 'setup_password', 'kyc_verified', 'quote_sent', …",
+                        "description": "Совпадает с именем файлового шаблона: 'setup_password', 'invite_member', 'quote_sent', …",
                         "maxLength": 100,
                         "pattern": "^[-a-zA-Z0-9_]+$"
                     },
@@ -22383,7 +21221,7 @@
             },
             "Fulfillment": {
                 "type": "object",
-                "description": "Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.\n\nЗачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,\nкоторая одновременно покупает и продаёт, не видела продавцовских кнопок: «Сформировать\nакт» пряталась за `!isBuyer`, и у dual-компании с порядком типов [CLIENT, SUPPLIER]\nкнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`\nу договора.\n\nПоля-подсказки НЕ являются полным правом: подписку, KYC и стадию проверит сервис,\nвыполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку\nкнопок чужой стороны.",
+                "description": "Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.\n\nЗачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,\nкоторая одновременно покупает и продаёт, не видела продавцовских кнопок: «Сформировать\nакт» пряталась за `!isBuyer`, и у dual-компании с порядком типов [CLIENT, SUPPLIER]\nкнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`\nу договора.\n\nПоля-подсказки НЕ являются полным правом: подписку и стадию проверит сервис,\nвыполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку\nкнопок чужой стороны.",
                 "properties": {
                     "id": {
                         "type": "integer",
@@ -22468,7 +21306,7 @@
             },
             "FulfillmentRequest": {
                 "type": "object",
-                "description": "Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.\n\nЗачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,\nкоторая одновременно покупает и продаёт, не видела продавцовских кнопок: «Сформировать\nакт» пряталась за `!isBuyer`, и у dual-компании с порядком типов [CLIENT, SUPPLIER]\nкнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`\nу договора.\n\nПоля-подсказки НЕ являются полным правом: подписку, KYC и стадию проверит сервис,\nвыполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку\nкнопок чужой стороны.",
+                "description": "Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.\n\nЗачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,\nкоторая одновременно покупает и продаёт, не видела продавцовских кнопок: «Сформировать\nакт» пряталась за `!isBuyer`, и у dual-компании с порядком типов [CLIENT, SUPPLIER]\nкнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`\nу договора.\n\nПоля-подсказки НЕ являются полным правом: подписку и стадию проверит сервис,\nвыполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку\nкнопок чужой стороны.",
                 "properties": {
                     "deal": {
                         "type": "integer",
@@ -22721,7 +21559,7 @@
             },
             "Invoice": {
                 "type": "object",
-                "description": "Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.\n\nЗачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,\nкоторая одновременно покупает и продаёт, не видела продавцовских кнопок: «Сформировать\nакт» пряталась за `!isBuyer`, и у dual-компании с порядком типов [CLIENT, SUPPLIER]\nкнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`\nу договора.\n\nПоля-подсказки НЕ являются полным правом: подписку, KYC и стадию проверит сервис,\nвыполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку\nкнопок чужой стороны.",
+                "description": "Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.\n\nЗачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,\nкоторая одновременно покупает и продаёт, не видела продавцовских кнопок: «Сформировать\nакт» пряталась за `!isBuyer`, и у dual-компании с порядком типов [CLIENT, SUPPLIER]\nкнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`\nу договора.\n\nПоля-подсказки НЕ являются полным правом: подписку и стадию проверит сервис,\nвыполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку\nкнопок чужой стороны.",
                 "properties": {
                     "id": {
                         "type": "integer",
@@ -22935,7 +21773,7 @@
             },
             "InvoiceRequest": {
                 "type": "object",
-                "description": "Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.\n\nЗачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,\nкоторая одновременно покупает и продаёт, не видела продавцовских кнопок: «Сформировать\nакт» пряталась за `!isBuyer`, и у dual-компании с порядком типов [CLIENT, SUPPLIER]\nкнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`\nу договора.\n\nПоля-подсказки НЕ являются полным правом: подписку, KYC и стадию проверит сервис,\nвыполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку\nкнопок чужой стороны.",
+                "description": "Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.\n\nЗачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,\nкоторая одновременно покупает и продаёт, не видела продавцовских кнопок: «Сформировать\nакт» пряталась за `!isBuyer`, и у dual-компании с порядком типов [CLIENT, SUPPLIER]\nкнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`\nу договора.\n\nПоля-подсказки НЕ являются полным правом: подписку и стадию проверит сервис,\nвыполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку\nкнопок чужой стороны.",
                 "properties": {
                     "deal": {
                         "type": "integer",
@@ -22983,91 +21821,6 @@
                 },
                 "required": [
                     "deal"
-                ]
-            },
-            "KYCDocument": {
-                "type": "object",
-                "properties": {
-                    "id": {
-                        "type": "integer",
-                        "readOnly": true
-                    },
-                    "doc_type": {
-                        "type": "integer",
-                        "title": "Тип документа",
-                        "description": "Вид документа из справочника (устав, лицензия, паспорт)"
-                    },
-                    "doc_type_code": {
-                        "type": "string",
-                        "readOnly": true
-                    },
-                    "doc_type_display": {
-                        "type": "string",
-                        "readOnly": true
-                    },
-                    "file": {
-                        "type": "string",
-                        "format": "uri",
-                        "title": "Файл",
-                        "description": "Загруженный скан документа (хранится в приватном хранилище)"
-                    },
-                    "original_filename": {
-                        "type": "string",
-                        "readOnly": true,
-                        "title": "Оригинальное имя файла",
-                        "description": "Имя файла, загруженного пользователем"
-                    },
-                    "uploaded_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "readOnly": true,
-                        "title": "Дата загрузки"
-                    }
-                },
-                "required": [
-                    "doc_type",
-                    "doc_type_code",
-                    "doc_type_display",
-                    "file",
-                    "id",
-                    "original_filename",
-                    "uploaded_at"
-                ]
-            },
-            "KYCDocumentRequest": {
-                "type": "object",
-                "properties": {
-                    "doc_type": {
-                        "type": "integer",
-                        "title": "Тип документа",
-                        "description": "Вид документа из справочника (устав, лицензия, паспорт)"
-                    },
-                    "file": {
-                        "type": "string",
-                        "format": "binary",
-                        "title": "Файл",
-                        "description": "Загруженный скан документа (хранится в приватном хранилище)"
-                    }
-                },
-                "required": [
-                    "doc_type",
-                    "file"
-                ]
-            },
-            "KYCVerificationRequest": {
-                "type": "object",
-                "properties": {
-                    "status_code": {
-                        "type": "string",
-                        "minLength": 1,
-                        "description": "Code from VerificationStatus (e.g. 'L2_VERIFIED')"
-                    },
-                    "comment": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "status_code"
                 ]
             },
             "KindEnum": {
@@ -23704,37 +22457,6 @@
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/Company"
-                        }
-                    }
-                }
-            },
-            "PaginatedCompanyRoleApplicationList": {
-                "type": "object",
-                "required": [
-                    "count",
-                    "results"
-                ],
-                "properties": {
-                    "count": {
-                        "type": "integer",
-                        "example": 123
-                    },
-                    "next": {
-                        "type": "string",
-                        "nullable": true,
-                        "format": "uri",
-                        "example": "http://api.example.org/accounts/?page=4"
-                    },
-                    "previous": {
-                        "type": "string",
-                        "nullable": true,
-                        "format": "uri",
-                        "example": "http://api.example.org/accounts/?page=2"
-                    },
-                    "results": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/CompanyRoleApplication"
                         }
                     }
                 }
@@ -24740,37 +23462,6 @@
                     }
                 }
             },
-            "PatchedCompanyRoleApplicationRequest": {
-                "type": "object",
-                "properties": {
-                    "requested_type": {
-                        "type": "integer",
-                        "title": "Запрашиваемая роль",
-                        "description": "Роль, на которую подаётся заявка (SUPPLIER или MANUFACTURER)"
-                    },
-                    "contract_file": {
-                        "type": "string",
-                        "format": "binary",
-                        "nullable": true,
-                        "title": "Договор",
-                        "description": "Подписанный договор (обязательно для SUPPLIER)"
-                    },
-                    "nda_file": {
-                        "type": "string",
-                        "format": "binary",
-                        "nullable": true,
-                        "title": "NDA",
-                        "description": "Соглашение о неразглашении (обязательно для SUPPLIER)"
-                    },
-                    "partnership_agreement": {
-                        "type": "string",
-                        "format": "binary",
-                        "nullable": true,
-                        "title": "Договор о партнёрстве",
-                        "description": "Партнёрское соглашение (обязательно для MANUFACTURER)"
-                    }
-                }
-            },
             "PatchedCompanyRoleRequest": {
                 "type": "object",
                 "description": "A company-defined role with its permission set (the access matrix).",
@@ -25186,7 +23877,7 @@
                         "type": "string",
                         "minLength": 1,
                         "title": "Ключ",
-                        "description": "Совпадает с именем файлового шаблона: 'setup_password', 'kyc_verified', 'quote_sent', …",
+                        "description": "Совпадает с именем файлового шаблона: 'setup_password', 'invite_member', 'quote_sent', …",
                         "maxLength": 100,
                         "pattern": "^[-a-zA-Z0-9_]+$"
                     },
@@ -25241,7 +23932,7 @@
             },
             "PatchedInvoiceRequest": {
                 "type": "object",
-                "description": "Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.\n\nЗачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,\nкоторая одновременно покупает и продаёт, не видела продавцовских кнопок: «Сформировать\nакт» пряталась за `!isBuyer`, и у dual-компании с порядком типов [CLIENT, SUPPLIER]\nкнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`\nу договора.\n\nПоля-подсказки НЕ являются полным правом: подписку, KYC и стадию проверит сервис,\nвыполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку\nкнопок чужой стороны.",
+                "description": "Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.\n\nЗачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,\nкоторая одновременно покупает и продаёт, не видела продавцовских кнопок: «Сформировать\nакт» пряталась за `!isBuyer`, и у dual-компании с порядком типов [CLIENT, SUPPLIER]\nкнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`\nу договора.\n\nПоля-подсказки НЕ являются полным правом: подписку и стадию проверит сервис,\nвыполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку\nкнопок чужой стороны.",
                 "properties": {
                     "deal": {
                         "type": "integer",
@@ -25923,7 +24614,7 @@
                     "status": {
                         "allOf": [
                             {
-                                "$ref": "#/components/schemas/SupplierSubscriptionStatusEnum"
+                                "$ref": "#/components/schemas/StatusEnum"
                             }
                         ],
                         "title": "Статус",
@@ -26289,7 +24980,7 @@
             },
             "PrimaryCompanyLight": {
                 "type": "object",
-                "description": "Lightweight company serializer for embedding into UserSerializer.primary_company.\nAvoids nested kyc_documents/members/types — saves 4-5 SQL queries per request.",
+                "description": "Lightweight company serializer for embedding into UserSerializer.primary_company.\nAvoids nested members/types — saves several SQL queries per request.",
                 "properties": {
                     "id": {
                         "type": "integer",
@@ -26317,25 +25008,6 @@
                             }
                         ]
                     },
-                    "verification_status": {
-                        "type": "integer",
-                        "nullable": true,
-                        "title": "Статус верификации",
-                        "description": "Текущий статус KYC-проверки компании"
-                    },
-                    "verification_status_name": {
-                        "type": "string",
-                        "readOnly": true
-                    },
-                    "verification_status_code": {
-                        "type": "string",
-                        "readOnly": true
-                    },
-                    "is_verified": {
-                        "type": "boolean",
-                        "title": "Верифицирован",
-                        "description": "Компания прошла базовую проверку RailTech"
-                    },
                     "country": {
                         "type": "integer",
                         "nullable": true,
@@ -26358,14 +25030,12 @@
                 "required": [
                     "company_types",
                     "id",
-                    "name",
-                    "verification_status_code",
-                    "verification_status_name"
+                    "name"
                 ]
             },
             "PrimaryCompanyLightRequest": {
                 "type": "object",
-                "description": "Lightweight company serializer for embedding into UserSerializer.primary_company.\nAvoids nested kyc_documents/members/types — saves 4-5 SQL queries per request.",
+                "description": "Lightweight company serializer for embedding into UserSerializer.primary_company.\nAvoids nested members/types — saves several SQL queries per request.",
                 "properties": {
                     "name": {
                         "type": "string",
@@ -26389,17 +25059,6 @@
                                 "maxLength": 0
                             }
                         ]
-                    },
-                    "verification_status": {
-                        "type": "integer",
-                        "nullable": true,
-                        "title": "Статус верификации",
-                        "description": "Текущий статус KYC-проверки компании"
-                    },
-                    "is_verified": {
-                        "type": "boolean",
-                        "title": "Верифицирован",
-                        "description": "Компания прошла базовую проверку RailTech"
                     },
                     "country": {
                         "type": "integer",
@@ -28301,39 +26960,6 @@
                     "paid_at"
                 ]
             },
-            "RegisterInterestRequest": {
-                "type": "object",
-                "properties": {
-                    "email": {
-                        "type": "string",
-                        "format": "email",
-                        "minLength": 1
-                    },
-                    "first_name": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 150
-                    },
-                    "last_name": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 150
-                    },
-                    "phone": {
-                        "type": "string",
-                        "minLength": 1,
-                        "description": "Uzbekistan format: +998XXXXXXXXX",
-                        "pattern": "^\\+998\\d{9}$",
-                        "maxLength": 20
-                    }
-                },
-                "required": [
-                    "email",
-                    "first_name",
-                    "last_name",
-                    "phone"
-                ]
-            },
             "RejectActRequest": {
                 "type": "object",
                 "properties": {
@@ -28347,16 +26973,6 @@
                 ]
             },
             "RejectQuoteRequestRequest": {
-                "type": "object",
-                "properties": {
-                    "reason": {
-                        "type": "string",
-                        "minLength": 1,
-                        "default": ""
-                    }
-                }
-            },
-            "RejectRequestRequest": {
                 "type": "object",
                 "properties": {
                     "reason": {
@@ -28545,18 +27161,6 @@
                 },
                 "required": [
                     "member_id"
-                ]
-            },
-            "RequestApplicationDocsRequest": {
-                "type": "object",
-                "properties": {
-                    "reason": {
-                        "type": "string",
-                        "minLength": 1
-                    }
-                },
-                "required": [
-                    "reason"
                 ]
             },
             "ResetPasswordRequest": {
@@ -28822,6 +27426,17 @@
                 "type": "string",
                 "description": "* `PROSPECT` - Проспект\n* `ACTIVE` - Активный\n* `DORMANT` - Спящий\n* `LOST` - Потерян"
             },
+            "StatusEnum": {
+                "enum": [
+                    "TRIAL",
+                    "ACTIVE",
+                    "PAST_DUE",
+                    "SUSPENDED",
+                    "CANCELLED"
+                ],
+                "type": "string",
+                "description": "* `TRIAL` - Пробный период\n* `ACTIVE` - Активна\n* `PAST_DUE` - Просрочена\n* `SUSPENDED` - Приостановлена\n* `CANCELLED` - Отменена"
+            },
             "StockStatus": {
                 "type": "object",
                 "properties": {
@@ -28846,30 +27461,6 @@
                     "code",
                     "id",
                     "name"
-                ]
-            },
-            "SubmitProfileRequest": {
-                "type": "object",
-                "properties": {
-                    "companyName": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 255
-                    },
-                    "position": {
-                        "type": "string",
-                        "minLength": 1,
-                        "description": "Free-text job title, e.g. 'Директор по закупкам'",
-                        "maxLength": 120
-                    },
-                    "invite": {
-                        "type": "string",
-                        "default": ""
-                    }
-                },
-                "required": [
-                    "companyName",
-                    "position"
                 ]
             },
             "SuggestedSellerItem": {
@@ -29184,7 +27775,7 @@
                     "status": {
                         "allOf": [
                             {
-                                "$ref": "#/components/schemas/SupplierSubscriptionStatusEnum"
+                                "$ref": "#/components/schemas/StatusEnum"
                             }
                         ],
                         "title": "Статус",
@@ -29303,7 +27894,7 @@
                     "status": {
                         "allOf": [
                             {
-                                "$ref": "#/components/schemas/SupplierSubscriptionStatusEnum"
+                                "$ref": "#/components/schemas/StatusEnum"
                             }
                         ],
                         "title": "Статус",
@@ -29359,17 +27950,6 @@
                 "required": [
                     "company"
                 ]
-            },
-            "SupplierSubscriptionStatusEnum": {
-                "enum": [
-                    "TRIAL",
-                    "ACTIVE",
-                    "PAST_DUE",
-                    "SUSPENDED",
-                    "CANCELLED"
-                ],
-                "type": "string",
-                "description": "* `TRIAL` - Пробный период\n* `ACTIVE` - Активна\n* `PAST_DUE` - Просрочена\n* `SUSPENDED` - Приостановлена\n* `CANCELLED` - Отменена"
             },
             "SystemRoleLookup": {
                 "type": "object",
@@ -29830,11 +28410,6 @@
                         "nullable": true,
                         "readOnly": true
                     },
-                    "kyc_status": {
-                        "type": "string",
-                        "nullable": true,
-                        "readOnly": true
-                    },
                     "is_platform_admin": {
                         "type": "boolean",
                         "readOnly": true
@@ -29885,7 +28460,6 @@
                     "id",
                     "is_2fa_enabled",
                     "is_platform_admin",
-                    "kyc_status",
                     "last_login",
                     "memberships",
                     "primary_company",
@@ -30010,11 +28584,11 @@
     "tags": [
         {
             "name": "Auth",
-            "description": "Registration, password setup, JWT tokens"
+            "description": "Login, password setup by invitation, JWT tokens"
         },
         {
             "name": "Accounts",
-            "description": "Users, companies, KYC, team management"
+            "description": "Users, companies, team management"
         },
         {
             "name": "Catalog",

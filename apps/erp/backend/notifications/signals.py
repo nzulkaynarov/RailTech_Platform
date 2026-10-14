@@ -5,7 +5,6 @@ from django.db import transaction
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
-from accounts.models import Company
 from crm.constants import DealStageCode
 from crm.models import Deal
 
@@ -165,43 +164,3 @@ def notify_deal_stage_change(sender, instance, **kwargs):
     # is assigned in the single-seller model, so this is their only signal).
     if new_stage and new_stage.code == DealStageCode.RFQ_OPEN:
         _notify_seller_team(instance, info_type)
-
-
-@receiver(pre_save, sender=Company)
-def notify_kyc_status_change(sender, instance, **kwargs):
-    """Notify company members when KYC status changes."""
-    if not instance.pk:
-        return
-
-    try:
-        old_company = Company.objects.get(pk=instance.pk)
-    except Company.DoesNotExist:
-        return
-
-    if old_company.verification_status_id != instance.verification_status_id:
-        info_type = NotificationType.objects.filter(code="SUCCESS").first()
-        new_status_name = instance.verification_status.name if instance.verification_status else "N/A"
-
-        # Notify all company members
-        member_user_ids = instance.members.filter(is_active=True).values_list("user_id", flat=True)
-        notifications = [
-            Notification(
-                user_id=uid,
-                type=info_type,
-                title="Статус верификации обновлён",
-                message=f"Статус вашей компании: {new_status_name}",
-                link="/cabinet/profile",
-                event_code="company.kyc_status_changed",
-                # Имя параметра — level_code, а не status_code: у клиента разные словари для
-                # уровней KYC и статусов отгрузки, и одноимённый параметр печатал бы уровень
-                # из словаря отгрузок (то есть кодом).
-                event_params={
-                    "level_code": instance.verification_status.code if instance.verification_status_id else "",
-                },
-            )
-            for uid in member_user_ids
-        ]
-        if notifications:
-            created = Notification.objects.bulk_create(notifications)
-            for notif in created:
-                push_notification_ws(notif)

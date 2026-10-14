@@ -21,7 +21,6 @@ from accounts.models import (
     CustomUser,
     SupplierSubscription,
     SystemRole,
-    VerificationStatus,
     WorkspaceRole,
 )
 from crm.models import (
@@ -49,7 +48,6 @@ def lookups(db):
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     SystemRole.objects.get_or_create(code="USER", defaults={"name": "User", "sort_order": 10})
     for code in ("DRAFT", "CONTRACT_SIGNED", "CLOSED_WON"):
         DealStage.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
@@ -71,7 +69,6 @@ def world(lookups):
     buyer_co = Company.objects.create(
         name="Buyer Co",
         inn="B901",
-        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
         # O3: продавец с платёжными реквизитами — иначе `issue_invoice` не выпустит счёт (он неоплатен).
         bank_account="20208000900001234567",
         mfo="00443",
@@ -80,7 +77,6 @@ def world(lookups):
     seller_co = Company.objects.create(
         name="Seller Co",
         inn="S901",
-        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
         # O3: продавец с платёжными реквизитами — иначе `issue_invoice` не выпустит счёт (он неоплатен).
         bank_account="20208000900001234567",
         mfo="00443",

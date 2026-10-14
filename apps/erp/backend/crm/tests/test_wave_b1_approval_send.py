@@ -28,7 +28,6 @@ from accounts.models import (
     CompanyType,
     CustomUser,
     SupplierSubscription,
-    VerificationStatus,
     WorkspaceRole,
 )
 from crm.models import ActivityLog, Deal, DealStage, Quote, QuoteStatus
@@ -54,7 +53,6 @@ def lookups(db):
         DealStage.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     Country.objects.get_or_create(code="UZ", defaults={"name": "Uzbekistan", "sort_order": 10})
 
 
@@ -80,11 +78,10 @@ def _sub(company):
     )
 
 
-def _seller_company(name, inn, *, kyc=False):
+def _seller_company(name, inn):
     company = Company.objects.create(
         name=name,
         inn=inn,
-        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED") if kyc else None,
     )
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
     _sub(company)
@@ -95,7 +92,7 @@ def _seller_company(name, inn, *, kyc=False):
 def solo(lookups):
     """A one-person seller: the sole member holds the is_system admin role (every permission,
     incl. quote.build + quote.approve_final) — so they are both submitter AND the only approver."""
-    company = _seller_company("Solo LLC", "7700000010", kyc=True)
+    company = _seller_company("Solo LLC", "7700000010")
     admin_role = CompanyRole.objects.create(company=company, name="Администратор компании", is_system=True)
     owner = _user("owner@solo.test")
     _member(company, owner, workspace_role="OWNER", company_role=admin_role)
@@ -106,7 +103,7 @@ def solo(lookups):
 def two_person(lookups):
     """A two-person seller: SALES (quote.build only, submits) + HEAD (is_system, approves).
     The head is a DIFFERENT user than the submitter → a genuine cross-person chain."""
-    company = _seller_company("Duo LLC", "7700000011", kyc=True)
+    company = _seller_company("Duo LLC", "7700000011")
     admin_role = CompanyRole.objects.create(company=company, name="Администратор компании", is_system=True)
     sales_role = CompanyRole.objects.create(company=company, name="Продажи", permissions=[Permission.QUOTE_BUILD.value])
     sales = _user("sales@duo.test")
@@ -117,9 +114,7 @@ def two_person(lookups):
 
 
 def _client_co(lookups):
-    company = Company.objects.create(
-        name="Buyer LLC", inn="6600000010", verification_status=VerificationStatus.objects.get(code="L2_VERIFIED")
-    )
+    company = Company.objects.create(name="Buyer LLC", inn="6600000010")
     company.types.add(CompanyType.objects.get(code="CLIENT"))
     return company
 
@@ -280,9 +275,9 @@ def test_preview_endpoint_returns_shape(two_person):
 
 
 def _sendable_quote(default_validity_days):
-    """A READY_TO_SEND КП owned by a KYC+subscribed seller, with a registered-client recipient
+    """A READY_TO_SEND КП owned by a subscribed seller, with a registered-client recipient
     and a deal already in CALCULATING (so send can advance it to QUOTE_SENT)."""
-    company = _seller_company("Ready Seller LLC", "7700000012", kyc=True)
+    company = _seller_company("Ready Seller LLC", "7700000012")
     if default_validity_days is not None:
         CompanySettings.objects.create(company=company, default_offer_validity_days=default_validity_days)
     else:

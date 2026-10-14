@@ -13,15 +13,7 @@ F4  accepting a promote-invite backfills `deal.client` on the contact's historic
 import pytest
 from rest_framework.test import APIClient
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SystemRole,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from accounts.services import create_offline_client
 from crm.models import Deal, DealSellerRouting, DealStage, Quote, QuoteStatus
 
@@ -35,7 +27,6 @@ def lookups(db):
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     SystemRole.objects.get_or_create(code="USER", defaults={"name": "User", "sort_order": 10})
-    VerificationStatus.objects.get_or_create(code="PROFILE_SUBMITTED", defaults={"name": "Sub", "sort_order": 10})
     QuoteStatus.objects.get_or_create(code="DRAFT", defaults={"name": "Черновик", "sort_order": 10})
     QuoteStatus.objects.get_or_create(code="READY_TO_SEND", defaults={"name": "Готово", "sort_order": 40})
 
@@ -270,45 +261,3 @@ def test_f3_client_display_name_prefers_company_then_contact(offline_deal):
     deal.save(update_fields=["company"])
     quote.refresh_from_db()
     assert _quote_client_display_name(quote) == "Ivan"
-
-
-# ── F4: promote-invite backfills historical deals ───────────────────────────
-
-
-def test_f4_invite_acceptance_backfills_client_on_historical_deals(offline_deal):
-    from accounts.services.clients import _hash_invite_token, send_client_invite
-    from accounts.services.profile import submit_company_profile
-
-    seller, _seller_company, deal = offline_deal
-    assert deal.client_id is None
-
-    invite, err = send_client_invite(seller=seller, contact_id=deal.contact_id)
-    assert err is None
-    token = "raw-token-for-f4"
-    invite.token_hash = _hash_invite_token(token)
-    invite.save(update_fields=["token_hash"])
-
-    invitee = CustomUser.objects.create_user(
-        email="ivan@off.test", username="ivan@off.test", password="x", is_active=True
-    )
-    _user, err = submit_company_profile(invitee, company_name="ignored", invite_token=token)
-    assert err is None
-
-    deal.refresh_from_db()
-    assert deal.client_id == invitee.id, "the newly-registered client cannot see the КП sent earlier"
-
-
-def test_f4_backfill_never_repoints_a_deal_that_already_has_a_client(offline_deal):
-    from crm.services.deals import link_registered_client_to_contact_deals
-
-    _seller, _company, deal = offline_deal
-    incumbent = CustomUser.objects.create_user(email="incumbent@t.test", username="incumbent@t.test", password="x")
-    deal.client = incumbent
-    deal.save(update_fields=["client"])
-
-    newcomer = CustomUser.objects.create_user(email="newcomer@t.test", username="newcomer@t.test", password="x")
-    updated = link_registered_client_to_contact_deals(deal.contact_id, newcomer)
-
-    assert updated == 0
-    deal.refresh_from_db()
-    assert deal.client_id == incumbent.id
