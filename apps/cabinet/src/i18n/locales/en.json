@@ -28,11 +28,81 @@
     "home": "Home",
     "loading": "Loading…",
     "error": "Something went wrong",
-    "comingSoon": "This screen arrives in the next cabinet update",
     "notFoundTitle": "Page not found",
     "notFoundText": "There is no such page, or it belongs to another company.",
     "viewOnly": "View only: actions are available to a contact with approval rights",
-    "close": "Close"
+    "close": "Close",
+    "cancel": "Cancel",
+    "save": "Save",
+    "all": "All",
+    "actions": "Actions",
+    "loadFailed": "Could not load",
+    "reasonRequired": "Give a reason — without it the provider will not know what to fix.",
+    "dealNumber": "Deal #{{id}}",
+    "noDeal": "No deal yet"
+  },
+  "status": {
+    "request": {
+      "new": "New",
+      "in_progress": "In progress",
+      "quoted": "Quoted",
+      "closed": "Closed"
+    },
+    "quote": {
+      "sent": "Awaiting decision",
+      "viewed": "Viewed",
+      "accepted": "Accepted",
+      "rejected": "Rejected",
+      "expired": "Expired"
+    },
+    "contract": {
+      "sent": "Awaiting signature",
+      "signed_by_client": "Signed by you",
+      "signed_by_company": "Awaiting your signature",
+      "signed": "Signed by both parties",
+      "cancelled": "Cancelled"
+    },
+    "invoice": {
+      "issued": "To pay",
+      "partially_paid": "Partially paid",
+      "paid": "Paid",
+      "overdue": "Overdue",
+      "cancelled": "Cancelled"
+    },
+    "act": {
+      "issued": "Awaiting acceptance",
+      "accepted": "Accepted",
+      "returned": "Returned"
+    },
+    "delivery": {
+      "assembling": "Being assembled",
+      "in_transit": "In transit",
+      "ready_to_ship": "Ready to ship",
+      "shipped": "Shipped",
+      "delivered": "Delivered"
+    },
+    "availability": {
+      "in_stock": "In stock",
+      "on_order": "On order",
+      "expected": "Expected"
+    }
+  },
+  "documents": {
+    "download": "Download",
+    "downloadNamed": "Download: {{name}}",
+    "preparing": "Preparing the document…",
+    "preparingLive": "The document “{{name}}” is being prepared — it will download as soon as it is ready",
+    "stillPreparing": "The document is still being prepared. Try downloading it in a minute.",
+    "notIssued": "File not issued yet",
+    "kinds": {
+      "quote": "Quotes",
+      "contract": "Contracts",
+      "invoice": "Invoices",
+      "act": "Acts",
+      "waybill": "Waybills",
+      "receipt": "Payment documents",
+      "other": "Other"
+    }
   },
   "languages": {
     "label": "Language",
@@ -104,77 +174,317 @@
       "title": "Requests",
       "new": "New request",
       "emptyTitle": "No requests yet",
-      "emptyText": "Your requests and their status will appear here: new, in progress, quoted, closed."
+      "emptyText": "Your requests and their status will appear here: new, in progress, quoted, closed.",
+      "columns": {
+        "request": "Request",
+        "status": "Status",
+        "created": "Created",
+        "deal": "Deal"
+      }
     },
     "requestNew": {
       "title": "New request",
-      "emptyTitle": "The request form will appear here",
-      "emptyText": "Free-text lines and attachments — the request goes straight to the back office."
+      "summary": "What you need",
+      "summaryHint": "Describe the task in your own words: what, how much and by when.",
+      "summaryRequired": "Describe what you need — at least one sentence.",
+      "prefillSummary": "I need a catalog item: {{name}}",
+      "lines": "Items or stages",
+      "linesHint": "List items or work in free text — exact part numbers are not required. Empty lines are not sent.",
+      "lineText": "Line {{n}}",
+      "lineTextPlaceholder": "For example: bearing 6205-2RS",
+      "quantity": "Quantity",
+      "unit": "Unit",
+      "unitPlaceholder": "pcs, m, h…",
+      "quantityInvalid": "Quantity must be a positive number, e.g. 12 or 2.5.",
+      "addLine": "Add line",
+      "removeLine": "Remove line {{n}}",
+      "attachmentsLater": "For now send specifications and drawings to your manager — file upload to the cabinet is coming later.",
+      "submit": "Send request",
+      "sent": "Request {{number}} sent",
+      "viewOnlyTitle": "Requests can be created by a contact with approval rights",
+      "viewOnlyText": "Ask a colleague with this right or your manager to send the request."
     },
     "requestDetail": {
-      "title": "Request #{{id}}",
-      "emptyTitle": "Request details",
-      "emptyText": "Request lines, attachments and status — the full history of the request will appear here."
+      "title": "Request {{number}}",
+      "created": "Created",
+      "source": "Source",
+      "deal": "Deal",
+      "quotes": "Quotes for this request",
+      "backToList": "Back to requests",
+      "sources": {
+        "cabinet": "You, in the cabinet",
+        "manager": "Via your manager"
+      },
+      "next": {
+        "new": "Request received — a manager will pick it up.",
+        "in_progress": "We are preparing a quote.",
+        "quoted": "The quote is ready — open it below.",
+        "closed": "The request is closed."
+      }
     },
     "quotes": {
       "title": "Quotes",
       "emptyTitle": "No quotes yet",
-      "emptyText": "As soon as the manager sends a quote it will appear here — accept or reject it right from the cabinet."
+      "emptyText": "As soon as the manager sends a quote it will appear here — accept or reject it right from the cabinet.",
+      "numberVersion": "{{number}} · version {{version}}",
+      "awaiting_one": "{{count}} quote awaits your decision",
+      "awaiting_other": "{{count}} quotes await your decision",
+      "columns": {
+        "quote": "Quote",
+        "status": "Status",
+        "total": "Total",
+        "validUntil": "Valid until",
+        "sent": "Sent",
+        "deal": "Deal"
+      }
     },
     "quoteDetail": {
-      "title": "Quote #{{id}}",
-      "emptyTitle": "Quote details",
-      "emptyText": "Lines, total, validity; accept with a code or reject with a reason."
+      "title": "Quote {{number}}",
+      "version": "Version {{version}}",
+      "total": "Total",
+      "validUntil": "Valid until",
+      "sent": "Sent",
+      "deal": "Deal",
+      "lines": "Quote contents",
+      "stage": "Stage",
+      "grandTotal": "Total",
+      "columns": {
+        "title": "Item / stage",
+        "quantity": "Qty",
+        "price": "Price",
+        "total": "Amount",
+        "date": "Due"
+      },
+      "accept": "Accept",
+      "reject": "Reject",
+      "acceptTitle": "Accept quote {{number}}",
+      "acceptText": "Total {{total}}. Enter the confirmation code from the message that came with the quote. Once accepted, the contract is drawn up automatically.",
+      "code": "Confirmation code",
+      "codeHint": "The code came in the bot message or e-mail together with the quote.",
+      "codeTooShort": "The code is at least {{min}} characters long.",
+      "acceptConfirm": "Accept quote",
+      "acceptedToast": "Quote {{number}} accepted",
+      "acceptedTitle": "Quote accepted",
+      "acceptedPending": "The contract is being drawn up — it will appear under “Contracts”, where you can sign it.",
+      "acceptedReadyToSign": "Contract {{number}} is ready — sign it under “Contracts”.",
+      "acceptedContract": "Contract {{number}} is in place.",
+      "toContracts": "Go to contracts",
+      "rejectTitle": "Reject quote {{number}}",
+      "rejectText": "Tell us what did not fit — the manager will take it into account in the next version.",
+      "rejectReason": "Reason",
+      "rejectPlaceholder": "For example: the delivery time does not work for us",
+      "rejectConfirm": "Reject quote",
+      "rejectedToast": "Quote {{number}} rejected",
+      "rejectedTitle": "Quote rejected",
+      "rejectedReason": "Reason: {{reason}}",
+      "expiredTitle": "The quote has expired",
+      "expiredText": "It can no longer be accepted. Ask your manager to update the offer.",
+      "backToList": "Back to quotes"
     },
     "contracts": {
       "title": "Contracts",
       "emptyTitle": "No contracts yet",
-      "emptyText": "A contract is created automatically once a quote is accepted; you can sign it here."
+      "emptyText": "A contract is created automatically once a quote is accepted; you can sign it here.",
+      "awaiting_one": "{{count}} contract awaits your signature",
+      "awaiting_other": "{{count}} contracts await your signature",
+      "columns": {
+        "contract": "Contract",
+        "status": "Status",
+        "client": "Client signature",
+        "company": "Provider signature",
+        "deal": "Deal"
+      },
+      "notSigned": "Not yet",
+      "sign": "Sign",
+      "signNamed": "Sign contract {{number}}",
+      "signTitle": "Sign contract {{number}}",
+      "signText": "By signing you confirm, on behalf of your company, that you agree to the contract terms. The signature is recorded with your name and time.",
+      "signConfirm": "Sign contract",
+      "signedClient": "Contract {{number}} signed. Waiting for the provider to sign.",
+      "signedBoth": "Contract {{number}} is signed by both parties."
     },
     "invoices": {
       "title": "Invoices",
       "emptyTitle": "No invoices yet",
-      "emptyText": "Issued invoices, payments and due dates will appear here."
+      "emptyText": "Issued invoices, payments and due dates will appear here.",
+      "toPay": "To pay",
+      "nothingToPay": "All paid",
+      "overdueTitle": "Overdue",
+      "noOverdue": "None",
+      "overdueCount_one": "{{count}} invoice overdue",
+      "overdueCount_other": "{{count}} invoices overdue",
+      "overdueDays_one": "{{count}} day overdue",
+      "overdueDays_other": "{{count}} days overdue",
+      "columns": {
+        "invoice": "Invoice",
+        "status": "Status",
+        "total": "Total",
+        "paid": "Paid",
+        "remaining": "Balance",
+        "due": "Due date",
+        "deal": "Deal"
+      }
     },
     "acts": {
       "title": "Acts",
       "emptyTitle": "No acts yet",
-      "emptyText": "Acts for completed deliveries and services: accept or return with a reason."
+      "emptyText": "Acts for completed deliveries and services: accept or return with a reason.",
+      "awaiting_one": "{{count}} act awaits your acceptance",
+      "awaiting_other": "{{count}} acts await your acceptance",
+      "columns": {
+        "act": "Act",
+        "status": "Status",
+        "issued": "Issued",
+        "deal": "Deal"
+      },
+      "returnedReason": "Returned: {{reason}}",
+      "accept": "Accept",
+      "acceptNamed": "Accept act {{number}}",
+      "acceptTitle": "Accept act {{number}}",
+      "acceptText": "You confirm that the delivery or work under this act is complete and you have no claims.",
+      "acceptConfirm": "Accept act",
+      "acceptedToast": "Act {{number}} accepted",
+      "return": "Return",
+      "returnNamed": "Return act {{number}}",
+      "returnTitle": "Return act {{number}}",
+      "returnText": "The act goes back to the provider for correction. Describe what is wrong.",
+      "returnReason": "Reason for return",
+      "returnPlaceholder": "For example: the serial number is missing",
+      "returnConfirm": "Return act",
+      "returnedToast": "Act {{number}} returned to the provider"
     },
     "deliveries": {
       "title": "Deliveries",
       "emptyTitle": "No deliveries yet",
-      "emptyText": "Status per line, expected date and tracking number."
+      "emptyText": "Status per line, expected date and tracking number.",
+      "progress": "{{done}} of {{total}} delivered",
+      "eta": "Expected {{date}}",
+      "etaUnknown": "Date to be confirmed",
+      "shippedAt": "Shipped {{date}}",
+      "tracking": "Tracking"
     },
     "documents": {
       "title": "Documents",
       "emptyTitle": "No documents yet",
-      "emptyText": "Quotes, contracts, invoices, acts and waybills — download them from here."
+      "emptyText": "Quotes, contracts, invoices, acts and waybills — download them from here.",
+      "emptyKindTitle": "No documents of this kind",
+      "emptyKindText": "Choose another kind or show all documents.",
+      "showAll": "Show all",
+      "filter": "Document kind",
+      "columns": {
+        "document": "Document",
+        "kind": "Kind",
+        "date": "Date",
+        "size": "Size",
+        "deal": "Deal"
+      }
     },
     "catalog": {
       "title": "Catalog",
       "emptyTitle": "The catalog is empty",
-      "emptyText": "Published goods and services with price and availability."
+      "emptyText": "Published goods and services with price and availability.",
+      "search": "Search the catalog",
+      "searchPlaceholder": "Name, category…",
+      "searchSubmit": "Search",
+      "clear": "Clear search",
+      "categories": "Categories",
+      "results": "Catalog items",
+      "found_one": "{{count}} item found",
+      "found_other": "{{count}} items found",
+      "notFoundTitle": "Nothing found",
+      "notFoundText": "Change the search or describe what you need in a new request — the manager will find it.",
+      "reset": "Reset filters",
+      "askInRequest": "Describe in a request",
+      "priceOnRequest": "Price on request",
+      "leadTime_one": "lead time {{count}} day",
+      "leadTime_other": "lead time {{count}} days",
+      "pagination": "Catalog pages",
+      "prev": "Previous",
+      "next": "Next",
+      "page": "Page {{page}} of {{pages}}",
+      "kinds": {
+        "goods": "Goods",
+        "service": "Service"
+      }
     },
     "catalogItem": {
-      "title": "Catalog item #{{id}}",
-      "emptyTitle": "Item details",
-      "emptyText": "Description, specifications, price and availability."
+      "description": "Description",
+      "attributes": "Specifications",
+      "photos": "Photos",
+      "photoAlt": "{{name}}, photo {{n}}",
+      "unit": "Unit: {{unit}}",
+      "priceOnRequestHint": "Send a request — the manager will reply with a quote with price and lead time.",
+      "request": "Request",
+      "backToList": "Back to catalog"
     },
     "company": {
       "title": "Company",
-      "emptyTitle": "Company profile",
-      "emptyText": "Name, tax ID, legal address and bank details."
+      "edit": "Edit",
+      "notSet": "Not set",
+      "saved": "Company profile saved",
+      "nameRequired": "Enter the company name.",
+      "toTeam": "Team",
+      "fields": {
+        "name": "Name",
+        "inn": "Tax ID (INN)",
+        "legalAddress": "Legal address",
+        "bankDetails": "Bank details",
+        "language": "Language of documents and e-mails"
+      }
     },
     "team": {
       "title": "Team",
-      "emptyTitle": "Team",
-      "emptyText": "Colleagues with cabinet access and inviting new ones."
+      "emptyTitle": "No one in the team yet",
+      "emptyText": "Invite colleagues so they can see the company’s requests, quotes and documents.",
+      "invite": "Invite a colleague",
+      "you": "You",
+      "primary": "Primary contact",
+      "email": "E-mail",
+      "phone": "Phone",
+      "telegram": "Telegram",
+      "telegramLinked": "Connected",
+      "telegramNotLinked": "Not connected",
+      "rights": "Rights",
+      "canAct": "Can approve",
+      "viewOnly": "View only",
+      "lastLogin": "Last sign-in",
+      "invitedAt": "Invited {{date}}, not signed in yet",
+      "neverLoggedIn": "Not signed in yet",
+      "rightsHint": "Your manager can change a colleague’s rights or the primary contact.",
+      "inviteTitle": "Invite a colleague",
+      "inviteText": "Your colleague will get an invitation to the cabinet through the selected channels.",
+      "inviteConfirm": "Send invitation",
+      "invited": "Invitation for {{name}} sent",
+      "fields": {
+        "name": "Full name",
+        "email": "E-mail",
+        "phone": "Phone",
+        "channels": "Where to send the invitation",
+        "language": "Invitation language",
+        "canAct": "Can approve",
+        "canActHint": "Accept quotes, sign contracts, accept acts, create requests. Without it — view only."
+      },
+      "channels": {
+        "email": "By e-mail",
+        "telegram": "In Telegram (by phone number)"
+      },
+      "problems": {
+        "name": "Enter a name.",
+        "channels": "Choose at least one channel.",
+        "email": "Enter a valid e-mail.",
+        "phone": "Enter the phone number in international format."
+      }
     },
     "deal": {
       "title": "Deal #{{id}}",
-      "emptyTitle": "Deal card",
-      "emptyText": "The quote, contract, invoices, acts and deliveries for this deal will be gathered here."
+      "requests": "Request",
+      "quotes": "Quotes",
+      "contracts": "Contract",
+      "invoices": "Invoices",
+      "acts": "Acts",
+      "deliveries": "Delivery",
+      "documents": "Documents",
+      "toRequests": "Go to requests"
     }
   },
   "apiErrors": {
@@ -187,9 +497,13 @@
     "INVALID_INIT_DATA": "Telegram did not confirm the sign-in. Open the cabinet from the bot again.",
     "CONTACT_NOT_FOUND": "Contact not found. Ask your manager to invite you to the cabinet.",
     "MAGIC_LINK_EXPIRED": "The sign-in link has expired or was already used.",
-    "QUOTE_FINALIZED": "The quote was already accepted, rejected or has expired.",
-    "ACT_FINALIZED": "The act was already accepted or returned.",
-    "CONTRACT_FINALIZED": "The contract was already signed or cancelled.",
-    "QUOTE_CODE_INVALID": "The confirmation code is incorrect."
+    "QUOTE_FINALIZED": "The quote was already accepted or rejected — refresh the page.",
+    "ACT_FINALIZED": "The act was already accepted or returned — refresh the page.",
+    "CONTRACT_FINALIZED": "The contract was already signed or cancelled — refresh the page.",
+    "QUOTE_CODE_INVALID": "The confirmation code is incorrect. Check the code in the message with the quote.",
+    "QUOTE_EXPIRED": "The quote has expired and can no longer be accepted. Ask your manager to update the offer.",
+    "REASON_REQUIRED": "Give a reason.",
+    "INN_INVALID": "The tax ID has 9 to 14 digits.",
+    "TEAM_MEMBER_EXISTS": "A colleague with this e-mail is already in the team."
   }
 }

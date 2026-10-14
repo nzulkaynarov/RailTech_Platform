@@ -6,10 +6,10 @@
 SPA ходит в ERP `/api/portal/v1/*`, всё, что он показывает, сделал ERP; всё, что клиент делает, исполняет ERP.
 Тот же SPA открывается как Telegram Mini App бота CRM и как сайт `cabinet.railtech.uz`.
 
-**Статус: оболочка готова (M2-CAB-01, 2026-10-14).** Есть маршруты, вход (Mini App / magic-link), тема Telegram,
-i18n ru/uz/en, мок портального API; экраны разделов — заглушки до **M2-CAB-02**, форма «Я новый клиент» и
+**Статус: оболочка (M2-CAB-01) и экраны разделов (M2-CAB-02) готовы, 2026-10-14.** Есть маршруты, вход (Mini App /
+magic-link), тема Telegram, i18n ru/uz/en, все экраны §4 с действиями клиента; форма «Я новый клиент» и
 «Написать менеджеру» — **M2-CAB-03**. Портального API в ERP ещё нет (M2-ERP-01) — разработка идёт против мока
-из контракта. Устройство и запуск — `README.md` рядом.
+из контракта; недостающее в контракте — QUESTIONS Q-14…Q-17 (обходы описаны там). Устройство и запуск — `README.md` рядом.
 
 ## 1. Карта документов — читай в этом порядке
 
@@ -53,21 +53,22 @@ Telegram Web App SDK (initData, themeParams, start_param, MainButton/BackButton 
 
 ## 4. Экраны (ARCHITECTURE §5, M2-CAB-02) и откуда они из `legacy/b2b/frontend/src`
 
-| Экран | Портальный API | Источник в B2B |
-|---|---|---|
-| Запросы, «Новый запрос» (строки свободным текстом + вложения) | `GET/POST /requests` | `pages/MyRequestsPage.tsx`, `pages/RequestDetailPage.tsx` (покупательская часть) |
-| КП: список, карточка, принять (код) / отклонить (причина) | `GET /quotes`, `GET /quotes/{id}`, `POST …/accept`, `POST …/reject` | `pages/QuotesPage.tsx`, `components/CRM/BuyerAcceptedPanel.tsx`, `components/CRM/RejectQuoteDialog.tsx` |
-| Публичная страница акцепта КП (по ссылке из бота/письма) | страница в `portal` ERP, 202 + PDF (M2-ERP-03) | `backend/crm/views/documents_public.py`, `templates/public/quote_generating.html`; в Cabinet — свой экран по той же ссылке |
-| Договоры, подписать | `GET /contracts`, `POST /contracts/{id}/sign` | `pages/ContractsPage.tsx` |
-| Счета (платежи — внутри счёта; отдельного `/payments` в контракте нет) | `GET /invoices` | `pages/InvoicesPage.tsx` |
-| Акты: принять / вернуть с причиной | `GET /acts`, `POST /acts/{id}/accept`, `POST …/return` | `pages/ActsPage.tsx`, `components/Billing/RejectActDialog.tsx` |
-| Поставки по строкам: статус, ожидаемая дата, трек | `GET /deliveries` | `pages/FulfillmentsPage.tsx` (как основа; статусы — проекция ERP, M4-ERP-04) |
-| Документы, скачать | `GET /documents`, `GET /documents/{id}/file` | `pages/CompanyFilesPage.tsx` |
-| Компания и команда клиента, приглашение коллеги | `GET/PUT /company`, `GET /team`, `POST /team/invite` | `pages/SettingsPage.tsx` (разделы профиль и команда), `components/Settings/` |
-| Каталог с ценами и наличием (решение владельца: только здесь) | `GET /catalog`, `GET /catalog/{id}` | `pages/ProductDetail.tsx` как основа карточки; список — новый экран |
-| Страница входа (веб): «Войти» / «Я новый клиент» | `POST /auth/magic-link`; форма → лид CRM `web` | новое (M2-CAB-01, M2-CAB-03) |
+| Экран | Портальный API | Источник в B2B | В Cabinet (M2-CAB-02) |
+|---|---|---|---|
+| Запросы, «Новый запрос» (суть + строки свободным текстом с количеством/единицей; вложений нет до загрузки файлов в контракте — Q-14) | `GET/POST /requests` | `pages/MyRequestsPage.tsx`, `pages/RequestDetailPage.tsx` (покупательская часть) | `src/pages/requests.tsx`: список, карточка из списка (строк в контракте нет — Q-16), форма с проверкой количества |
+| КП: список, карточка, принять (код) / отклонить (причина) | `GET /quotes`, `GET /quotes/{id}`, `POST …/accept`, `POST …/reject` | `pages/QuotesPage.tsx`, `components/CRM/BuyerAcceptedPanel.tsx`, `components/CRM/RejectQuoteDialog.tsx` | `src/pages/quotes.tsx`: строки (позиции/разделы/заметки/этапы), итог, срок, обещанные даты; «срок истёк» по `valid_until`; после акцепта — панель «договор формируется / готов» |
+| Публичная страница акцепта КП (по ссылке из бота/письма) | страница в `portal` ERP, 202 + PDF (M2-ERP-03) | `backend/crm/views/documents_public.py`, `templates/public/quote_generating.html`; в Cabinet — свой экран по той же ссылке | deep-link `quote_<id>` ведёт в карточку КП |
+| Договоры, подписать | `GET /contracts`, `POST /contracts/{id}/sign` | `pages/ContractsPage.tsx` | `src/pages/billing.tsx`: подписи обеих сторон, «Подписать» с подтверждением |
+| Счета (платежи — внутри счёта; отдельного `/payments` в контракте нет) | `GET /invoices` | `pages/InvoicesPage.tsx` | `src/pages/billing.tsx`: сумма, оплачено, остаток, срок, просрочка из `due_date`, «к оплате» по валютам |
+| Акты: принять / вернуть с причиной | `GET /acts`, `POST /acts/{id}/accept`, `POST …/return` | `pages/ActsPage.tsx`, `components/Billing/RejectActDialog.tsx` | `src/pages/billing.tsx` |
+| Поставки по строкам: статус, ожидаемая дата, трек | `GET /deliveries` | `pages/FulfillmentsPage.tsx` (как основа; статусы — проекция ERP, M4-ERP-04) | `src/pages/deliveries.tsx`: группы по сделке, «доставлено N из M» |
+| Документы, скачать | `GET /documents`, `GET /documents/{id}/file` | `pages/CompanyFilesPage.tsx` | `src/pages/deliveries.tsx` (`DocumentsPage`): фильтр по виду в `?kind=`, 202 + `Retry-After` — «документ готовится» (`lib/download.ts`) |
+| Компания и команда клиента, приглашение коллеги | `GET/PUT /company`, `GET /team`, `POST /team/invite` | `pages/SettingsPage.tsx` (разделы профиль и команда), `components/Settings/` | `src/pages/company.tsx`: в `PUT` — только изменённые поля; приглашение с каналами e-mail/Telegram |
+| Каталог с ценами и наличием (решение владельца: только здесь) | `GET /catalog`, `GET /catalog/{id}` | `pages/ProductDetail.tsx` как основа карточки; список — новый экран | `src/pages/catalog.tsx`: поиск/категории/страница в URL; категории — обход Q-15; «Запросить» → новый запрос с позицией |
+| Сделка (deep-link бота `deal_<id>`) | списки выше по `deal_id` | — | `src/pages/deal.tsx` (своего `GET /deals/{id}` нет — Q-16) |
+| Страница входа (веб): «Войти» / «Я новый клиент» | `POST /auth/magic-link`; форма → лид CRM `web` | новое (M2-CAB-01, M2-CAB-03) | M2-CAB-01; форма — M2-CAB-03 |
 
-- Адаптивная таблица КП и любых списков — `components/ResponsiveDataTable.tsx` из B2B (карточки на мобильном, строки доступны с клавиатуры).
+- Общие части экранов: `components/ResponsiveList.tsx` (по образцу B2B `ResponsiveDataTable`: таблица от `lg`, карточки ниже, одна раскладка по media-запросу, строка — ссылка), `StatusBadge` (`lib/status.ts`: код → `status.<сущность>.<код>` и тон токена), `QueryStates` (скелетоны, ошибка `detail` → `apiErrors.*` + «Повторить»), `EmptyState`, `ActionDialog` / `ReasonDialog` (ошибка ERP остаётся в диалоге), `DocumentButton`, `Details`. Форматирование — только `lib/format.ts` (`formatMoney`, `formatDate`, `formatDateTime`, `formatQuantity`, `formatFileSize`, суммы в копейках `BigInt`). Данные — хуки `src/api/queries.ts`.
 - Оболочка — своя, не `AppShell` ERP: без боковой навигации бэк-офиса, нижняя навигация / простое меню под телефон; в Mini App — без шапки входа и без дублирования кнопок Telegram.
 - Осторожно с именами: папка B2B `components/Cabinet/` — это разделы Settings Hub (профиль, 2FA, реквизиты, нумерация), а не кабинет клиента. Переносить оттуда только профиль компании и команду; 2FA, нумерация, шаблоны, формулировки — в ERP.
 - Корзина B2B (`store/cartStore.ts`) не переносится без решения: «Новый запрос» по контракту — свободные строки и вложения; «нет нужной позиции» → свободная строка (MIGRATION-MAP).
@@ -121,5 +122,8 @@ Mini App локально: эмуляция через `#tgWebAppData=…` ил�
 ## 9. Открытые точки для M2 (не решать молча)
 
 - Сессия портала — **решено (M2-CAB-01, по рекомендации, DECISIONS):** `/api/portal/*` проксируется Caddy с домена Cabinet на ERP, cookie same-origin (`SameSite=Lax` по контракту), CORS не нужен. ERP в M2-ERP-01 должен принимать Host `cabinet.*` (`ALLOWED_HOSTS`) и не требовать CSRF-токен Django для портальной сессии (или выдать его способом, доступным SPA).
-- Коды ошибок `detail` портала (`UNAUTHORIZED`, `INVALID_INIT_DATA`, `MAGIC_LINK_EXPIRED`, `QUOTE_FINALIZED`…) — предположение Cabinet в моке и словарях; ERP закрепляет перечень в контракте в M2-ERP-01, Cabinet подстраивает `apiErrors.*`.
+- Коды ошибок `detail` портала (`UNAUTHORIZED`, `INVALID_INIT_DATA`, `MAGIC_LINK_EXPIRED`, `QUOTE_FINALIZED`, `QUOTE_EXPIRED`, `QUOTE_CODE_INVALID`…) — предположение Cabinet в моке и словарях (полный перечень — QUESTIONS Q-17); ERP закрепляет перечень в контракте в M2-ERP-01, Cabinet подстраивает `apiErrors.*`.
+- Недостающее в контракте после M2-CAB-02 (агенту ERP, обходы — в QUESTIONS): загрузка файлов для вложений запроса (Q-14), id и справочник категорий каталога (Q-15), строки запроса и номер сделки для клиента (Q-16). Снять обходы сразу после правки контракта.
+- Тёмная тема Mini App: статусные токены переопределены в `src/index.css` (`.dark`) до тёмных токенов в `packages/ui-tokens`; контраст `button_color` самого Telegram проверяется на M2-QA-01.
+- Скачивание в Mini App: файл сохраняется через `<a download>` (blob); поведение в webview Telegram на iOS/Android проверить на M2-QA-01 (при проблеме — `WebApp.downloadFile`, Bot API 8.0, но ему нужна ссылка без cookie).
 - Имя бота — `VITE_BOT_USERNAME` (в ансамбле `TELEGRAM_BOT_USERNAME`). URL CRM для формы лида — переменная сборки M2-CAB-03.

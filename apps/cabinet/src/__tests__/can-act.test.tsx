@@ -17,6 +17,7 @@ describe('can_act', () => {
     renderApp('/requests');
     await screen.findByRole('heading', { level: 1, name: 'Запросы' });
     expect(screen.queryByRole('link', { name: 'Новый запрос' })).not.toBeInTheDocument();
-    expect(screen.getByRole('status')).toHaveTextContent('Только просмотр');
+    const banner = await screen.findByText(/Только просмотр: действия доступны/);
+    expect(banner.closest('[role="status"]')).not.toBeNull();
   });
 });

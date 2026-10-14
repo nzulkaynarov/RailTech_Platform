@@ -19,8 +19,8 @@ export function renderApp(path = '/') {
 }
 
 /** Сессия портала «уже есть» (cookie) — как после входа по magic-link. */
-export function signedIn(role: 'actor' | 'viewer' = 'actor') {
-  setMockSession({ role, auth_method: 'magic_link' });
+export function signedIn(role: 'actor' | 'viewer' = 'actor', dataset: 'demo' | 'empty' = 'demo') {
+  setMockSession({ role, auth_method: 'magic_link', dataset });
 }
 
 /** Открыть как Mini App: SDK Telegram с подписанным `initData`. */

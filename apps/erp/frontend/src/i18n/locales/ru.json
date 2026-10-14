@@ -3009,12 +3009,6 @@
         "detail": "Акт {{number}} по сделке #{{deal_id}}: заказчику отправлено напоминание"
       }
     },
-    "subscription": {
-      "paid": {
-        "title": "Оплата подписки",
-        "detail": "Подписка компании {{company_name}}: +{{months}} мес, сумма {{amount}}. Действует до {{valid_until}}."
-      }
-    },
     "company": {
       "merged": {
         "title": "Слияние дубля компании",
@@ -3054,30 +3048,6 @@
         "operator_role_changed": {
           "title": "Операторская роль изменена",
           "detail": "{{email}}: {{before}} → {{after}}"
-        }
-      },
-      "entitlement": {
-        "granted": {
-          "title": "Право выдано",
-          "detail": "{{company_name}} · {{feature_key}}"
-        },
-        "changed": {
-          "title": "Право изменено",
-          "detail": "{{company_name}} · {{feature_key}}"
-        },
-        "revoked": {
-          "title": "Право отозвано",
-          "detail": "{{company_name}} · {{feature_key}}"
-        }
-      },
-      "subscription": {
-        "suspended": {
-          "title": "Подписка приостановлена",
-          "detail": "{{company_name}}"
-        },
-        "activated": {
-          "title": "Подписка активирована",
-          "detail": "{{company_name}}"
         }
       },
       "lead": {
@@ -3384,10 +3354,6 @@
     "act.signed": {
       "title": "Акт подписан",
       "message": "Акт {{number}} по сделке #{{deal_id}} подписан"
-    },
-    "subscription.suspended": {
-      "title": "Подписка приостановлена",
-      "message": "{{company_name}}: часть функций продавца недоступна. {{reason}}"
     },
     "act.rejected": {
       "title": "Акт отклонён заказчиком",

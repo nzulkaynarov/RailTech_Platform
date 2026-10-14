@@ -28,11 +28,81 @@
     "home": "Bosh sahifaga",
     "loading": "Yuklanmoqda…",
     "error": "Xatolik yuz berdi",
-    "comingSoon": "Bu ekran kabinetning keyingi yangilanishida paydo boʻladi",
     "notFoundTitle": "Sahifa topilmadi",
     "notFoundText": "Bunday sahifa yoʻq yoki u boshqa kompaniyaga tegishli.",
     "viewOnly": "Faqat koʻrish: amallar tasdiqlash huquqiga ega kontaktga ochiq",
-    "close": "Yopish"
+    "close": "Yopish",
+    "cancel": "Bekor qilish",
+    "save": "Saqlash",
+    "all": "Hammasi",
+    "actions": "Amallar",
+    "loadFailed": "Yuklab boʻlmadi",
+    "reasonRequired": "Sababini koʻrsating — usiz ijrochi nimani tuzatishni tushunmaydi.",
+    "dealNumber": "Bitim №{{id}}",
+    "noDeal": "Hali bitimsiz"
+  },
+  "status": {
+    "request": {
+      "new": "Yangi",
+      "in_progress": "Ishda",
+      "quoted": "Taklif bor",
+      "closed": "Yopilgan"
+    },
+    "quote": {
+      "sent": "Qaror kutilmoqda",
+      "viewed": "Koʻrilgan",
+      "accepted": "Qabul qilingan",
+      "rejected": "Rad etilgan",
+      "expired": "Muddati tugagan"
+    },
+    "contract": {
+      "sent": "Imzo kutilmoqda",
+      "signed_by_client": "Siz imzolagansiz",
+      "signed_by_company": "Sizning imzongiz kutilmoqda",
+      "signed": "Tomonlar imzolagan",
+      "cancelled": "Bekor qilingan"
+    },
+    "invoice": {
+      "issued": "Toʻlash kerak",
+      "partially_paid": "Qisman toʻlangan",
+      "paid": "Toʻlangan",
+      "overdue": "Muddati oʻtgan",
+      "cancelled": "Bekor qilingan"
+    },
+    "act": {
+      "issued": "Qabul kutilmoqda",
+      "accepted": "Qabul qilingan",
+      "returned": "Qaytarilgan"
+    },
+    "delivery": {
+      "assembling": "Butlanmoqda",
+      "in_transit": "Yoʻlda",
+      "ready_to_ship": "Joʻnatishga tayyor",
+      "shipped": "Joʻnatilgan",
+      "delivered": "Yetkazilgan"
+    },
+    "availability": {
+      "in_stock": "Mavjud",
+      "on_order": "Buyurtma asosida",
+      "expected": "Kutilmoqda"
+    }
+  },
+  "documents": {
+    "download": "Yuklab olish",
+    "downloadNamed": "Yuklab olish: {{name}}",
+    "preparing": "Hujjat tayyorlanmoqda…",
+    "preparingLive": "«{{name}}» hujjati tayyorlanmoqda — tayyor boʻlishi bilan yuklab olamiz",
+    "stillPreparing": "Hujjat hali tayyorlanmoqda. Bir daqiqadan soʻng yuklab koʻring.",
+    "notIssued": "Fayl hali chiqarilmagan",
+    "kinds": {
+      "quote": "Takliflar",
+      "contract": "Shartnomalar",
+      "invoice": "Hisob-fakturalar",
+      "act": "Dalolatnomalar",
+      "waybill": "Yuk xatlari",
+      "receipt": "Toʻlov hujjatlari",
+      "other": "Boshqa"
+    }
   },
   "languages": {
     "label": "Til",
@@ -104,77 +174,317 @@
       "title": "Soʻrovlar",
       "new": "Yangi soʻrov",
       "emptyTitle": "Hozircha soʻrovlar yoʻq",
-      "emptyText": "Bu yerda soʻrovlaringiz va ularning holati koʻrinadi: yangi, ishda, taklif bor, yopilgan."
+      "emptyText": "Bu yerda soʻrovlaringiz va ularning holati koʻrinadi: yangi, ishda, taklif bor, yopilgan.",
+      "columns": {
+        "request": "Soʻrov",
+        "status": "Holat",
+        "created": "Yaratilgan",
+        "deal": "Bitim"
+      }
     },
     "requestNew": {
       "title": "Yangi soʻrov",
-      "emptyTitle": "Soʻrov shakli shu yerda paydo boʻladi",
-      "emptyText": "Erkin matnli qatorlar va ilovalar — soʻrov toʻgʻridan-toʻgʻri bek-ofisga yuboriladi."
+      "summary": "Nima kerak",
+      "summaryHint": "Vazifani oʻz soʻzlaringiz bilan yozing: nima, qancha va qaysi muddatga.",
+      "summaryRequired": "Nima kerakligini hech boʻlmaganda bir jumla bilan yozing.",
+      "prefillSummary": "Katalogdagi pozitsiya kerak: {{name}}",
+      "lines": "Pozitsiyalar yoki bosqichlar",
+      "linesHint": "Pozitsiyalar yoki ishlarni erkin matnda sanab oʻting — aniq artikul shart emas. Boʻsh qatorlar yuborilmaydi.",
+      "lineText": "{{n}}-qator",
+      "lineTextPlaceholder": "Masalan: 6205-2RS podshipnik",
+      "quantity": "Miqdor",
+      "unit": "Birlik",
+      "unitPlaceholder": "dona, m, soat…",
+      "quantityInvalid": "Miqdor — musbat son, masalan 12 yoki 2,5.",
+      "addLine": "Qator qoʻshish",
+      "removeLine": "{{n}}-qatorni oʻchirish",
+      "attachmentsLater": "Spetsifikatsiya va chizmalarni hozircha menejerga yuboring — kabinetga fayl yuklash keyinroq paydo boʻladi.",
+      "submit": "Soʻrovni yuborish",
+      "sent": "{{number}} soʻrovi yuborildi",
+      "viewOnlyTitle": "Soʻrovni tasdiqlash huquqiga ega kontakt yarata oladi",
+      "viewOnlyText": "Bu huquqqa ega hamkasbingiz yoki menejerdan soʻrov yuborishni soʻrang."
     },
     "requestDetail": {
-      "title": "Soʻrov №{{id}}",
-      "emptyTitle": "Soʻrov kartochkasi",
-      "emptyText": "Soʻrov qatorlari, ilovalar va holat — soʻrov boʻyicha butun tarix shu yerda koʻrinadi."
+      "title": "{{number}} soʻrovi",
+      "created": "Yaratilgan",
+      "source": "Qayerdan",
+      "deal": "Bitim",
+      "quotes": "Soʻrov boʻyicha takliflar",
+      "backToList": "Soʻrovlar roʻyxatiga",
+      "sources": {
+        "cabinet": "Siz — kabinetda",
+        "manager": "Menejer orqali"
+      },
+      "next": {
+        "new": "Soʻrov qabul qilindi — menejer uni ishga oladi.",
+        "in_progress": "Tijorat taklifini tayyorlayapmiz.",
+        "quoted": "Taklif tayyor — uni quyida oching.",
+        "closed": "Soʻrov yopilgan."
+      }
     },
     "quotes": {
       "title": "Tijorat takliflari",
       "emptyTitle": "Hozircha takliflar yoʻq",
-      "emptyText": "Menejer taklif yuborishi bilan u shu yerda paydo boʻladi — kabinetdan qabul qilish yoki rad etish mumkin."
+      "emptyText": "Menejer taklif yuborishi bilan u shu yerda paydo boʻladi — kabinetdan qabul qilish yoki rad etish mumkin.",
+      "numberVersion": "{{number}} · {{version}}-versiya",
+      "awaiting_one": "{{count}} ta taklif qaroringizni kutmoqda",
+      "awaiting_other": "{{count}} ta taklif qaroringizni kutmoqda",
+      "columns": {
+        "quote": "Taklif",
+        "status": "Holat",
+        "total": "Summa",
+        "validUntil": "Amal qiladi",
+        "sent": "Yuborilgan",
+        "deal": "Bitim"
+      }
     },
     "quoteDetail": {
-      "title": "Taklif №{{id}}",
-      "emptyTitle": "Taklif kartochkasi",
-      "emptyText": "Qatorlar, summa, amal qilish muddati; kod bilan qabul qilish yoki sabab bilan rad etish."
+      "title": "{{number}} taklifi",
+      "version": "{{version}}-versiya",
+      "total": "Jami",
+      "validUntil": "Amal qiladi",
+      "sent": "Yuborilgan",
+      "deal": "Bitim",
+      "lines": "Taklif tarkibi",
+      "stage": "Bosqich",
+      "grandTotal": "Jami",
+      "columns": {
+        "title": "Pozitsiya / bosqich",
+        "quantity": "Miqdor",
+        "price": "Narx",
+        "total": "Summa",
+        "date": "Muddat"
+      },
+      "accept": "Qabul qilish",
+      "reject": "Rad etish",
+      "acceptTitle": "{{number}} taklifini qabul qilish",
+      "acceptText": "Summa {{total}}. Taklif bilan kelgan xabardagi tasdiqlash kodini kiriting. Qabul qilingach shartnoma avtomatik tuziladi.",
+      "code": "Tasdiqlash kodi",
+      "codeHint": "Kod taklif bilan birga bot xabarida yoki xatda kelgan.",
+      "codeTooShort": "Kod kamida {{min}} belgidan iborat.",
+      "acceptConfirm": "Taklifni qabul qilish",
+      "acceptedToast": "{{number}} taklifi qabul qilindi",
+      "acceptedTitle": "Taklif qabul qilindi",
+      "acceptedPending": "Shartnoma tayyorlanmoqda — u «Shartnomalar» boʻlimida paydo boʻladi, uni oʻsha yerda imzolash mumkin.",
+      "acceptedReadyToSign": "{{number}} shartnomasi tayyor — uni «Shartnomalar» boʻlimida imzolang.",
+      "acceptedContract": "{{number}} shartnomasi rasmiylashtirilgan.",
+      "toContracts": "Shartnomalarga",
+      "rejectTitle": "{{number}} taklifini rad etish",
+      "rejectText": "Nima toʻgʻri kelmaganini yozing — menejer buni yangi versiyada hisobga oladi.",
+      "rejectReason": "Sabab",
+      "rejectPlaceholder": "Masalan: yetkazib berish muddati toʻgʻri kelmaydi",
+      "rejectConfirm": "Taklifni rad etish",
+      "rejectedToast": "{{number}} taklifi rad etildi",
+      "rejectedTitle": "Taklif rad etilgan",
+      "rejectedReason": "Sabab: {{reason}}",
+      "expiredTitle": "Taklifning amal qilish muddati tugagan",
+      "expiredText": "Uni endi qabul qilib boʻlmaydi. Menejerdan taklifni yangilashni soʻrang.",
+      "backToList": "Takliflar roʻyxatiga"
     },
     "contracts": {
       "title": "Shartnomalar",
       "emptyTitle": "Hozircha shartnomalar yoʻq",
-      "emptyText": "Shartnoma taklif qabul qilingach avtomatik yaratiladi; uni shu yerda imzolash mumkin."
+      "emptyText": "Shartnoma taklif qabul qilingach avtomatik yaratiladi; uni shu yerda imzolash mumkin.",
+      "awaiting_one": "{{count}} ta shartnoma imzoingizni kutmoqda",
+      "awaiting_other": "{{count}} ta shartnoma imzoingizni kutmoqda",
+      "columns": {
+        "contract": "Shartnoma",
+        "status": "Holat",
+        "client": "Mijoz imzosi",
+        "company": "Ijrochi imzosi",
+        "deal": "Bitim"
+      },
+      "notSigned": "Hali yoʻq",
+      "sign": "Imzolash",
+      "signNamed": "{{number}} shartnomasini imzolash",
+      "signTitle": "{{number}} shartnomasini imzolash",
+      "signText": "Imzolab, kompaniya nomidan shartnoma shartlariga roziligingizni tasdiqlaysiz. Imzo ismingiz va vaqt bilan qayd etiladi.",
+      "signConfirm": "Shartnomani imzolash",
+      "signedClient": "{{number}} shartnomasi imzolandi. Ijrochi imzosi kutilmoqda.",
+      "signedBoth": "{{number}} shartnomasi ikki tomon tomonidan imzolandi."
     },
     "invoices": {
       "title": "Hisob-fakturalar",
       "emptyTitle": "Hozircha hisob-fakturalar yoʻq",
-      "emptyText": "Berilgan hisob-fakturalar, toʻlovlar va muddatlar shu yerda koʻrinadi."
+      "emptyText": "Berilgan hisob-fakturalar, toʻlovlar va muddatlar shu yerda koʻrinadi.",
+      "toPay": "Toʻlash kerak",
+      "nothingToPay": "Hammasi toʻlangan",
+      "overdueTitle": "Muddati oʻtgan",
+      "noOverdue": "Yoʻq",
+      "overdueCount_one": "{{count}} ta hisob-faktura muddati oʻtgan",
+      "overdueCount_other": "{{count}} ta hisob-faktura muddati oʻtgan",
+      "overdueDays_one": "{{count}} kun kechikkan",
+      "overdueDays_other": "{{count}} kun kechikkan",
+      "columns": {
+        "invoice": "Hisob-faktura",
+        "status": "Holat",
+        "total": "Summa",
+        "paid": "Toʻlangan",
+        "remaining": "Qoldiq",
+        "due": "Toʻlov muddati",
+        "deal": "Bitim"
+      }
     },
     "acts": {
       "title": "Dalolatnomalar",
       "emptyTitle": "Hozircha dalolatnomalar yoʻq",
-      "emptyText": "Bajarilgan yetkazib berish va xizmatlar boʻyicha dalolatnomalar: qabul qilish yoki sabab bilan qaytarish."
+      "emptyText": "Bajarilgan yetkazib berish va xizmatlar boʻyicha dalolatnomalar: qabul qilish yoki sabab bilan qaytarish.",
+      "awaiting_one": "{{count}} ta dalolatnoma qabulingizni kutmoqda",
+      "awaiting_other": "{{count}} ta dalolatnoma qabulingizni kutmoqda",
+      "columns": {
+        "act": "Dalolatnoma",
+        "status": "Holat",
+        "issued": "Berilgan",
+        "deal": "Bitim"
+      },
+      "returnedReason": "Qaytarilgan: {{reason}}",
+      "accept": "Qabul qilish",
+      "acceptNamed": "{{number}} dalolatnomasini qabul qilish",
+      "acceptTitle": "{{number}} dalolatnomasini qabul qilish",
+      "acceptText": "Dalolatnoma boʻyicha yetkazib berish yoki ishlar bajarilganini va eʼtirozlar yoʻqligini tasdiqlaysiz.",
+      "acceptConfirm": "Dalolatnomani qabul qilish",
+      "acceptedToast": "{{number}} dalolatnomasi qabul qilindi",
+      "return": "Qaytarish",
+      "returnNamed": "{{number}} dalolatnomasini qaytarish",
+      "returnTitle": "{{number}} dalolatnomasini qaytarish",
+      "returnText": "Dalolatnoma tuzatish uchun ijrochiga qaytadi. Nima notoʻgʻri ekanini yozing.",
+      "returnReason": "Qaytarish sababi",
+      "returnPlaceholder": "Masalan: seriya raqami koʻrsatilmagan",
+      "returnConfirm": "Dalolatnomani qaytarish",
+      "returnedToast": "{{number}} dalolatnomasi ijrochiga qaytarildi"
     },
     "deliveries": {
       "title": "Yetkazib berish",
       "emptyTitle": "Hozircha yetkazib berish yoʻq",
-      "emptyText": "Har bir qator boʻyicha holat, kutilayotgan sana va kuzatuv raqami."
+      "emptyText": "Har bir qator boʻyicha holat, kutilayotgan sana va kuzatuv raqami.",
+      "progress": "{{total}} tadan {{done}} tasi yetkazildi",
+      "eta": "Kutilmoqda: {{date}}",
+      "etaUnknown": "Sana aniqlanmoqda",
+      "shippedAt": "Joʻnatilgan: {{date}}",
+      "tracking": "Kuzatuv raqami"
     },
     "documents": {
       "title": "Hujjatlar",
       "emptyTitle": "Hozircha hujjatlar yoʻq",
-      "emptyText": "Takliflar, shartnomalar, hisob-fakturalar, dalolatnomalar va yuk xatlari — shu yerdan yuklab olish mumkin."
+      "emptyText": "Takliflar, shartnomalar, hisob-fakturalar, dalolatnomalar va yuk xatlari — shu yerdan yuklab olish mumkin.",
+      "emptyKindTitle": "Bu turdagi hujjatlar yoʻq",
+      "emptyKindText": "Boshqa turni tanlang yoki barcha hujjatlarni koʻrsating.",
+      "showAll": "Hammasini koʻrsatish",
+      "filter": "Hujjat turi",
+      "columns": {
+        "document": "Hujjat",
+        "kind": "Turi",
+        "date": "Sana",
+        "size": "Hajmi",
+        "deal": "Bitim"
+      }
     },
     "catalog": {
       "title": "Katalog",
       "emptyTitle": "Katalog boʻsh",
-      "emptyText": "Narxi va mavjudligi bilan eʼlon qilingan tovarlar va xizmatlar."
+      "emptyText": "Narxi va mavjudligi bilan eʼlon qilingan tovarlar va xizmatlar.",
+      "search": "Katalog boʻyicha qidiruv",
+      "searchPlaceholder": "Nomi, toifa…",
+      "searchSubmit": "Topish",
+      "clear": "Qidiruvni tozalash",
+      "categories": "Toifalar",
+      "results": "Katalog pozitsiyalari",
+      "found_one": "{{count}} ta pozitsiya topildi",
+      "found_other": "{{count}} ta pozitsiya topildi",
+      "notFoundTitle": "Hech narsa topilmadi",
+      "notFoundText": "Qidiruvni oʻzgartiring yoki nima kerakligini yangi soʻrovda yozing — menejer tanlab beradi.",
+      "reset": "Filtrlarni tozalash",
+      "askInRequest": "Soʻrovda yozish",
+      "priceOnRequest": "Narxi soʻrov boʻyicha",
+      "leadTime_one": "muddat {{count}} kun",
+      "leadTime_other": "muddat {{count}} kun",
+      "pagination": "Katalog sahifalari",
+      "prev": "Orqaga",
+      "next": "Oldinga",
+      "page": "{{pages}} dan {{page}}-sahifa",
+      "kinds": {
+        "goods": "Tovar",
+        "service": "Xizmat"
+      }
     },
     "catalogItem": {
-      "title": "Katalog pozitsiyasi №{{id}}",
-      "emptyTitle": "Pozitsiya kartochkasi",
-      "emptyText": "Tavsif, xususiyatlar, narx va mavjudlik."
+      "description": "Tavsif",
+      "attributes": "Xususiyatlar",
+      "photos": "Suratlar",
+      "photoAlt": "{{name}}, {{n}}-surat",
+      "unit": "Birlik: {{unit}}",
+      "priceOnRequestHint": "Soʻrov yuboring — menejer narx va muddat bilan taklif yuboradi.",
+      "request": "Soʻrash",
+      "backToList": "Katalogga"
     },
     "company": {
       "title": "Kompaniya",
-      "emptyTitle": "Kompaniya profili",
-      "emptyText": "Nomi, STIR, yuridik manzil va rekvizitlar."
+      "edit": "Tahrirlash",
+      "notSet": "Koʻrsatilmagan",
+      "saved": "Kompaniya profili saqlandi",
+      "nameRequired": "Kompaniya nomini koʻrsating.",
+      "toTeam": "Jamoa",
+      "fields": {
+        "name": "Nomi",
+        "inn": "STIR",
+        "legalAddress": "Yuridik manzil",
+        "bankDetails": "Bank rekvizitlari",
+        "language": "Hujjatlar va xatlar tili"
+      }
     },
     "team": {
       "title": "Jamoa",
-      "emptyTitle": "Jamoa",
-      "emptyText": "Kabinetga kirish huquqiga ega hamkasblar va yangilarini taklif qilish."
+      "emptyTitle": "Jamoada hozircha hech kim yoʻq",
+      "emptyText": "Hamkasblaringizni taklif qiling — ular kompaniyaning soʻrovlari, takliflari va hujjatlarini koʻradi.",
+      "invite": "Hamkasbni taklif qilish",
+      "you": "Siz",
+      "primary": "Asosiy kontakt",
+      "email": "E-mail",
+      "phone": "Telefon",
+      "telegram": "Telegram",
+      "telegramLinked": "Ulangan",
+      "telegramNotLinked": "Ulanmagan",
+      "rights": "Huquqlar",
+      "canAct": "Tasdiqlay oladi",
+      "viewOnly": "Faqat koʻrish",
+      "lastLogin": "Oxirgi kirish",
+      "invitedAt": "{{date}} da taklif qilingan, hali kirmagan",
+      "neverLoggedIn": "Hali kirmagan",
+      "rightsHint": "Hamkasbning huquqlarini yoki asosiy kontaktni menejeringiz oʻzgartirishi mumkin.",
+      "inviteTitle": "Hamkasbni taklif qilish",
+      "inviteText": "Hamkasb kabinetga taklifnomani tanlangan kanallar orqali oladi.",
+      "inviteConfirm": "Taklifnoma yuborish",
+      "invited": "{{name}} uchun taklifnoma yuborildi",
+      "fields": {
+        "name": "Ism va familiya",
+        "email": "E-mail",
+        "phone": "Telefon",
+        "channels": "Taklifnomani qayerga yuborish",
+        "language": "Taklifnoma tili",
+        "canAct": "Tasdiqlay oladi",
+        "canActHint": "Takliflarni qabul qilish, shartnomalarni imzolash, dalolatnomalarni qabul qilish, soʻrov yaratish. Busiz — faqat koʻrish."
+      },
+      "channels": {
+        "email": "E-mail orqali",
+        "telegram": "Telegram orqali (telefon raqami boʻyicha)"
+      },
+      "problems": {
+        "name": "Ismni koʻrsating.",
+        "channels": "Kamida bitta kanalni tanlang.",
+        "email": "Toʻgʻri e-mail koʻrsating.",
+        "phone": "Telefonni xalqaro formatda koʻrsating."
+      }
     },
     "deal": {
       "title": "Bitim №{{id}}",
-      "emptyTitle": "Bitim kartochkasi",
-      "emptyText": "Ushbu bitim boʻyicha taklif, shartnoma, hisob-fakturalar, dalolatnomalar va yetkazib berish shu yerda jamlanadi."
+      "requests": "Soʻrov",
+      "quotes": "Takliflar",
+      "contracts": "Shartnoma",
+      "invoices": "Hisob-fakturalar",
+      "acts": "Dalolatnomalar",
+      "deliveries": "Yetkazib berish",
+      "documents": "Hujjatlar",
+      "toRequests": "Soʻrovlarga"
     }
   },
   "apiErrors": {
@@ -187,9 +497,13 @@
     "INVALID_INIT_DATA": "Telegram kirishni tasdiqlamadi. Kabinetni botdan qayta oching.",
     "CONTACT_NOT_FOUND": "Kontakt topilmadi. Menejerdan sizni kabinetga taklif qilishni soʻrang.",
     "MAGIC_LINK_EXPIRED": "Kirish havolasi muddati tugagan yoki allaqachon ishlatilgan.",
-    "QUOTE_FINALIZED": "Taklif allaqachon qabul qilingan, rad etilgan yoki muddati tugagan.",
-    "ACT_FINALIZED": "Dalolatnoma allaqachon qabul qilingan yoki qaytarilgan.",
-    "CONTRACT_FINALIZED": "Shartnoma allaqachon imzolangan yoki bekor qilingan.",
-    "QUOTE_CODE_INVALID": "Tasdiqlash kodi notoʻgʻri."
+    "QUOTE_FINALIZED": "Taklif allaqachon qabul qilingan yoki rad etilgan — sahifani yangilang.",
+    "ACT_FINALIZED": "Dalolatnoma allaqachon qabul qilingan yoki qaytarilgan — sahifani yangilang.",
+    "CONTRACT_FINALIZED": "Shartnoma allaqachon imzolangan yoki bekor qilingan — sahifani yangilang.",
+    "QUOTE_CODE_INVALID": "Tasdiqlash kodi notoʻgʻri. Taklif bilan kelgan xabardagi kodni tekshiring.",
+    "QUOTE_EXPIRED": "Taklifning amal qilish muddati tugagan — uni endi qabul qilib boʻlmaydi. Menejerdan taklifni yangilashni soʻrang.",
+    "REASON_REQUIRED": "Sababini koʻrsating.",
+    "INN_INVALID": "STIR — 9 dan 14 tagacha raqam.",
+    "TEAM_MEMBER_EXISTS": "Bunday e-mailli hamkasb jamoada allaqachon bor."
   }
 }

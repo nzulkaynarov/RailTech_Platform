@@ -2997,12 +2997,6 @@
         "detail": "Act {{number}} for deal #{{deal_id}}: the customer was reminded"
       }
     },
-    "subscription": {
-      "paid": {
-        "title": "Subscription paid",
-        "detail": "Subscription for {{company_name}}: +{{months}} mo, amount {{amount}}. Valid until {{valid_until}}."
-      }
-    },
     "company": {
       "merged": {
         "title": "Duplicate company merged",
@@ -3042,30 +3036,6 @@
         "operator_role_changed": {
           "title": "Operator role changed",
           "detail": "{{email}}: {{before}} → {{after}}"
-        }
-      },
-      "entitlement": {
-        "granted": {
-          "title": "Entitlement granted",
-          "detail": "{{company_name}} · {{feature_key}}"
-        },
-        "changed": {
-          "title": "Entitlement changed",
-          "detail": "{{company_name}} · {{feature_key}}"
-        },
-        "revoked": {
-          "title": "Entitlement revoked",
-          "detail": "{{company_name}} · {{feature_key}}"
-        }
-      },
-      "subscription": {
-        "suspended": {
-          "title": "Subscription suspended",
-          "detail": "{{company_name}}"
-        },
-        "activated": {
-          "title": "Subscription activated",
-          "detail": "{{company_name}}"
         }
       },
       "lead": {
@@ -3364,10 +3334,6 @@
     "act.signed": {
       "title": "Act signed",
       "message": "Act {{number}} on deal #{{deal_id}} has been signed"
-    },
-    "subscription.suspended": {
-      "title": "Subscription suspended",
-      "message": "{{company_name}}: some seller features are unavailable. {{reason}}"
     },
     "act.rejected": {
       "title": "Act rejected by the customer",

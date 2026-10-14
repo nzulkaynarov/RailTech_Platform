@@ -598,187 +598,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/accounts/subscriptions/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List subscriptions
-         * @description Returns all supplier subscriptions. Filterable by plan, status, company.
-         */
-        get: operations["accounts_subscriptions_list"];
-        put?: never;
-        /**
-         * Create subscription
-         * @description Create a new supplier subscription.
-         */
-        post: operations["accounts_subscriptions_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/accounts/subscriptions/{id}/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get subscription details
-         * @description CRUD + status actions for supplier subscriptions.
-         *     Admin/Manager only.
-         */
-        get: operations["accounts_subscriptions_retrieve"];
-        /**
-         * Update subscription
-         * @description CRUD + status actions for supplier subscriptions.
-         *     Admin/Manager only.
-         */
-        put: operations["accounts_subscriptions_update"];
-        post?: never;
-        /**
-         * Delete subscription
-         * @description CRUD + status actions for supplier subscriptions.
-         *     Admin/Manager only.
-         */
-        delete: operations["accounts_subscriptions_destroy"];
-        options?: never;
-        head?: never;
-        /**
-         * Partially update subscription
-         * @description CRUD + status actions for supplier subscriptions.
-         *     Admin/Manager only.
-         */
-        patch: operations["accounts_subscriptions_partial_update"];
-        trace?: never;
-    };
-    "/api/v1/accounts/subscriptions/{id}/activate/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Activate subscription
-         * @description Set subscription status to ACTIVE.
-         */
-        post: operations["accounts_subscriptions_activate_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/accounts/subscriptions/{id}/pay/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Record subscription payment -- extends validity and activates
-         * @description CRUD + status actions for supplier subscriptions.
-         *     Admin/Manager only.
-         */
-        post: operations["accounts_subscriptions_pay_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/accounts/subscriptions/{id}/suspend/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Suspend subscription
-         * @description Set subscription status to SUSPENDED.
-         */
-        post: operations["accounts_subscriptions_suspend_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/accounts/subscriptions/bulk-set-status/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Bulk set subscription status
-         * @description Platform Admin: apply a target status (ACTIVE | SUSPENDED) to multiple subscriptions.
-         */
-        post: operations["accounts_subscriptions_bulk_set_status_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/accounts/subscriptions/export/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Export subscriptions
-         * @description Export filtered subscriptions as CSV or XLSX.
-         */
-        get: operations["accounts_subscriptions_export_retrieve"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/accounts/subscriptions/mine/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * My subscription
-         * @description Returns the SupplierSubscription of the caller's primary company, if any. Available to any authenticated user with can_sell capability on a SUPPLIER/MANUFACTURER company. Platform admin viewers see 204.
-         */
-        get: operations["accounts_subscriptions_mine_retrieve"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/accounts/system-roles/": {
         parameters: {
             query?: never;
@@ -1281,101 +1100,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/entitlements/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List company entitlements
-         * @description Platform-admin CRUD of feature entitlements — the monetization control plane (ADR-0006 §3).
-         *
-         *     Lets an operator grant a promo, put a company in DEMO, or DISABLE a feature; the app gates on
-         *     `has_entitlement(company, FeatureKey)`. Gated by the billing operator capability (G1).
-         */
-        get: operations["admin_entitlements_list"];
-        put?: never;
-        /**
-         * Grant a company entitlement
-         * @description Platform-admin CRUD of feature entitlements — the monetization control plane (ADR-0006 §3).
-         *
-         *     Lets an operator grant a promo, put a company in DEMO, or DISABLE a feature; the app gates on
-         *     `has_entitlement(company, FeatureKey)`. Gated by the billing operator capability (G1).
-         */
-        post: operations["admin_entitlements_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/entitlements/{id}/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get entitlement
-         * @description Platform-admin CRUD of feature entitlements — the monetization control plane (ADR-0006 §3).
-         *
-         *     Lets an operator grant a promo, put a company in DEMO, or DISABLE a feature; the app gates on
-         *     `has_entitlement(company, FeatureKey)`. Gated by the billing operator capability (G1).
-         */
-        get: operations["admin_entitlements_retrieve"];
-        /**
-         * Update entitlement
-         * @description Platform-admin CRUD of feature entitlements — the monetization control plane (ADR-0006 §3).
-         *
-         *     Lets an operator grant a promo, put a company in DEMO, or DISABLE a feature; the app gates on
-         *     `has_entitlement(company, FeatureKey)`. Gated by the billing operator capability (G1).
-         */
-        put: operations["admin_entitlements_update"];
-        post?: never;
-        /**
-         * Revoke (delete) entitlement
-         * @description Platform-admin CRUD of feature entitlements — the monetization control plane (ADR-0006 §3).
-         *
-         *     Lets an operator grant a promo, put a company in DEMO, or DISABLE a feature; the app gates on
-         *     `has_entitlement(company, FeatureKey)`. Gated by the billing operator capability (G1).
-         */
-        delete: operations["admin_entitlements_destroy"];
-        options?: never;
-        head?: never;
-        /**
-         * Patch entitlement
-         * @description Platform-admin CRUD of feature entitlements — the monetization control plane (ADR-0006 §3).
-         *
-         *     Lets an operator grant a promo, put a company in DEMO, or DISABLE a feature; the app gates on
-         *     `has_entitlement(company, FeatureKey)`. Gated by the billing operator capability (G1).
-         */
-        patch: operations["admin_entitlements_partial_update"];
-        trace?: never;
-    };
-    "/api/v1/admin/entitlements/choices/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Feature-key + access-state option lists for the entitlement form
-         * @description Backend-driven option lists for the admin form — the FE never hard-codes the FeatureKey
-         *     or access enums; adding a feature key here surfaces it in the UI with no frontend change.
-         */
-        get: operations["admin_entitlements_choices_retrieve"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/analytics/page-stats/": {
         parameters: {
             query?: never;
@@ -1405,7 +1129,7 @@ export interface paths {
         };
         /**
          * Platform admin dashboard metrics
-         * @description Aggregate metrics for Platform Admin dashboard: users, companies, deals, subscriptions, pending attention counters, recent activity. Platform Admin only.
+         * @description Aggregate metrics for Platform Admin dashboard: users, companies, deals, pending attention counters, recent activity. Platform Admin only.
          */
         get: operations["analytics_platform_dashboard_retrieve"];
         put?: never;
@@ -3686,7 +3410,7 @@ export interface paths {
         put?: never;
         /**
          * W2 одна кнопка: взять заявку в работу и подготовить КП
-         * @description One-click-quotation (утв. spec-inbound-rfq W2): claim + переход стадии в CALCULATING + предзаполненный черновик КП со строками заявки. Продавец с ai.draft получает 202 {task_id, mode:'ai'} (существующий draft_quote job — AI-матч и цены, поллинг sourcing/ai-status/); без entitlement — 200 {quote_id, mode:'quote'} синхронно (копия строк + точный ГОСТ/MPN-матч + цены из своих офферов, без AI). Идемпотентно: существующий КП компании переиспользуется, повторный клик в AI-режиме возвращает уже идущий task_id (кредит не списывается дважды).
+         * @description One-click-quotation (утв. spec-inbound-rfq W2): claim + переход стадии в CALCULATING + предзаполненный черновик КП со строками заявки. При включённом ИИ — 202 {task_id, mode:'ai'} (существующий draft_quote job — AI-матч и цены, поллинг sourcing/ai-status/); при выключенном — 200 {quote_id, mode:'quote'} синхронно (копия строк + точный ГОСТ/MPN-матч + цены из своих офферов, без AI). Идемпотентно: существующий КП компании переиспользуется, повторный клик в AI-режиме возвращает уже идущий task_id (задача не ставится дважды).
          */
         post: operations["crm_deals_take_and_prepare_create"];
         delete?: never;
@@ -3961,13 +3685,13 @@ export interface paths {
         };
         /**
          * @description Rendered documents registry. List/retrieve are company-scoped; generation and
-         *     status transitions run in services (entitlement + IDOR + viewer gates).
+         *     status transitions run in services (permission + IDOR + viewer gates).
          */
         get: operations["crm_generated_documents_list"];
         put?: never;
         /**
          * @description Rendered documents registry. List/retrieve are company-scoped; generation and
-         *     status transitions run in services (entitlement + IDOR + viewer gates).
+         *     status transitions run in services (permission + IDOR + viewer gates).
          */
         post: operations["crm_generated_documents_create"];
         delete?: never;
@@ -3985,7 +3709,7 @@ export interface paths {
         };
         /**
          * @description Rendered documents registry. List/retrieve are company-scoped; generation and
-         *     status transitions run in services (entitlement + IDOR + viewer gates).
+         *     status transitions run in services (permission + IDOR + viewer gates).
          */
         get: operations["crm_generated_documents_retrieve"];
         put?: never;
@@ -4009,7 +3733,7 @@ export interface paths {
         /**
          * Cancel a document
          * @description Rendered documents registry. List/retrieve are company-scoped; generation and
-         *     status transitions run in services (entitlement + IDOR + viewer gates).
+         *     status transitions run in services (permission + IDOR + viewer gates).
          */
         post: operations["crm_generated_documents_cancel_create"];
         delete?: never;
@@ -4028,7 +3752,7 @@ export interface paths {
         /**
          * Download the document PDF (202 + enqueue if not ready)
          * @description Rendered documents registry. List/retrieve are company-scoped; generation and
-         *     status transitions run in services (entitlement + IDOR + viewer gates).
+         *     status transitions run in services (permission + IDOR + viewer gates).
          */
         get: operations["crm_generated_documents_download_pdf_retrieve"];
         put?: never;
@@ -4051,7 +3775,7 @@ export interface paths {
         /**
          * Issue a draft document (freeze + render PDF)
          * @description Rendered documents registry. List/retrieve are company-scoped; generation and
-         *     status transitions run in services (entitlement + IDOR + viewer gates).
+         *     status transitions run in services (permission + IDOR + viewer gates).
          */
         post: operations["crm_generated_documents_issue_create"];
         delete?: never;
@@ -4092,7 +3816,7 @@ export interface paths {
         /**
          * Email an issued document to its recipient (public link in body)
          * @description Rendered documents registry. List/retrieve are company-scoped; generation and
-         *     status transitions run in services (entitlement + IDOR + viewer gates).
+         *     status transitions run in services (permission + IDOR + viewer gates).
          */
         post: operations["crm_generated_documents_send_email_create"];
         delete?: never;
@@ -4113,7 +3837,7 @@ export interface paths {
         /**
          * Generate a document from a template
          * @description Rendered documents registry. List/retrieve are company-scoped; generation and
-         *     status transitions run in services (entitlement + IDOR + viewer gates).
+         *     status transitions run in services (permission + IDOR + viewer gates).
          */
         post: operations["crm_generated_documents_generate_create"];
         delete?: never;
@@ -6136,13 +5860,6 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
-         * @description * `ENABLED` - Включено
-         *     * `DISABLED` - Выключено
-         *     * `DEMO` - Демо
-         * @enum {string}
-         */
-        AccessEnum: "ENABLED" | "DISABLED" | "DEMO";
-        /**
          * @description Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.
          *
          *     Зачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,
@@ -6958,73 +6675,6 @@ export interface components {
              * Format: date-time
              */
             readonly updated_at: string;
-        };
-        /** @description Platform-admin view/CRUD of a company's feature entitlements (ADR-0006 Move 4 monetization). */
-        CompanyEntitlement: {
-            readonly id: number;
-            /** Компания */
-            company: number;
-            readonly company_name: string;
-            readonly company_inn: string;
-            /**
-             * Ключ функции
-             * @description Стабильный код функции (accounts.constants.FeatureKey), напр. quote.send
-             */
-            feature_key: string;
-            /** Доступ */
-            access?: components["schemas"]["AccessEnum"];
-            readonly access_display: string;
-            /**
-             * Лимит
-             * @description Потолок использования (пусто — без лимита)
-             */
-            limit?: number | null;
-            /**
-             * Кредиты
-             * @description Расходуемый баланс (пусто — неприменимо)
-             */
-            credits?: number | null;
-            /**
-             * Действует до
-             * Format: date-time
-             */
-            expires_at?: string | null;
-            /** Заметка */
-            note?: string;
-            readonly is_granted: boolean;
-            /** Format: date-time */
-            readonly created_at: string;
-            /** Format: date-time */
-            readonly updated_at: string;
-        };
-        /** @description Platform-admin view/CRUD of a company's feature entitlements (ADR-0006 Move 4 monetization). */
-        CompanyEntitlementRequest: {
-            /** Компания */
-            company: number;
-            /**
-             * Ключ функции
-             * @description Стабильный код функции (accounts.constants.FeatureKey), напр. quote.send
-             */
-            feature_key: string;
-            /** Доступ */
-            access?: components["schemas"]["AccessEnum"];
-            /**
-             * Лимит
-             * @description Потолок использования (пусто — без лимита)
-             */
-            limit?: number | null;
-            /**
-             * Кредиты
-             * @description Расходуемый баланс (пусто — неприменимо)
-             */
-            credits?: number | null;
-            /**
-             * Действует до
-             * Format: date-time
-             */
-            expires_at?: string | null;
-            /** Заметка */
-            note?: string;
         };
         /** @description Lightweight company serializer for nested use — no extra queries. */
         CompanyLight: {
@@ -8715,21 +8365,6 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["CategoryRequest"][];
         };
-        PaginatedCompanyEntitlementList: {
-            /** @example 123 */
-            count: number;
-            /**
-             * Format: uri
-             * @example http://api.example.org/accounts/?page=4
-             */
-            next?: string | null;
-            /**
-             * Format: uri
-             * @example http://api.example.org/accounts/?page=2
-             */
-            previous?: string | null;
-            results: components["schemas"]["CompanyEntitlement"][];
-        };
         PaginatedCompanyList: {
             /** @example 123 */
             count: number;
@@ -9000,21 +8635,6 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["SupplierOffer"][];
         };
-        PaginatedSupplierSubscriptionList: {
-            /** @example 123 */
-            count: number;
-            /**
-             * Format: uri
-             * @example http://api.example.org/accounts/?page=4
-             */
-            next?: string | null;
-            /**
-             * Format: uri
-             * @example http://api.example.org/accounts/?page=2
-             */
-            previous?: string | null;
-            results: components["schemas"]["SupplierSubscription"][];
-        };
         PaginatedUserList: {
             /** @example 123 */
             count: number;
@@ -9246,35 +8866,6 @@ export interface components {
              * @description Печатать курс ЦБ (FX-базис) на клиентском КП. По умолчанию скрыто — клиент видит цену в сумах.
              */
             show_fx_note?: boolean;
-        };
-        /** @description Platform-admin view/CRUD of a company's feature entitlements (ADR-0006 Move 4 monetization). */
-        PatchedCompanyEntitlementRequest: {
-            /** Компания */
-            company?: number;
-            /**
-             * Ключ функции
-             * @description Стабильный код функции (accounts.constants.FeatureKey), напр. quote.send
-             */
-            feature_key?: string;
-            /** Доступ */
-            access?: components["schemas"]["AccessEnum"];
-            /**
-             * Лимит
-             * @description Потолок использования (пусто — без лимита)
-             */
-            limit?: number | null;
-            /**
-             * Кредиты
-             * @description Расходуемый баланс (пусто — неприменимо)
-             */
-            credits?: number | null;
-            /**
-             * Действует до
-             * Format: date-time
-             */
-            expires_at?: string | null;
-            /** Заметка */
-            note?: string;
         };
         PatchedCompanyRequest: {
             /**
@@ -10178,73 +9769,6 @@ export interface components {
              */
             is_active?: boolean;
         };
-        PatchedSupplierSubscriptionRequest: {
-            /**
-             * Компания
-             * @description Компания-поставщик (одна подписка на компанию)
-             */
-            company?: number;
-            /**
-             * Тарифный план
-             * @description Базовый, Стандартный или Премиум
-             *
-             *     * `BASIC` - Базовый
-             *     * `STANDARD` - Стандартный
-             *     * `PREMIUM` - Премиум
-             */
-            plan?: components["schemas"]["PlanEnum"];
-            /**
-             * Статус
-             * @description Текущее состояние подписки
-             *
-             *     * `TRIAL` - Пробный период
-             *     * `ACTIVE` - Активна
-             *     * `PAST_DUE` - Просрочена
-             *     * `SUSPENDED` - Приостановлена
-             *     * `CANCELLED` - Отменена
-             */
-            status?: components["schemas"]["StatusEnum"];
-            /**
-             * Ежемесячная стоимость
-             * Format: decimal
-             * @description Сумма ежемесячного платежа
-             */
-            monthly_rate?: string;
-            /**
-             * Валюта
-             * @description Валюта расчётов
-             */
-            currency?: number | null;
-            /**
-             * Действует с
-             * Format: date
-             * @description Дата начала действия подписки
-             */
-            valid_from?: string | null;
-            /**
-             * Действует до
-             * Format: date
-             * @description Дата окончания (обычно конец календарного года)
-             */
-            valid_until?: string | null;
-            /**
-             * Последний платёж
-             * Format: date
-             * @description Дата последнего успешного платежа
-             */
-            last_payment_date?: string | null;
-            /**
-             * Следующий платёж
-             * Format: date
-             * @description Дата ожидаемого следующего платежа
-             */
-            next_payment_date?: string | null;
-            /**
-             * Заметки
-             * @description Внутренние заметки администратора
-             */
-            notes?: string;
-        };
         PatchedSystemSettingRequest: {
             /**
              * Ставка НДС (%)
@@ -10387,13 +9911,6 @@ export interface components {
              */
             proof_file?: string | null;
         };
-        /**
-         * @description * `BASIC` - Базовый
-         *     * `STANDARD` - Стандартный
-         *     * `PREMIUM` - Премиум
-         * @enum {string}
-         */
-        PlanEnum: "BASIC" | "STANDARD" | "PREMIUM";
         /**
          * @description Вход формы «Новый пользователь» в операторской панели.
          *
@@ -11769,15 +11286,6 @@ export interface components {
          * @enum {string}
          */
         StageEnum: "PROSPECT" | "ACTIVE" | "DORMANT" | "LOST";
-        /**
-         * @description * `TRIAL` - Пробный период
-         *     * `ACTIVE` - Активна
-         *     * `PAST_DUE` - Просрочена
-         *     * `SUSPENDED` - Приостановлена
-         *     * `CANCELLED` - Отменена
-         * @enum {string}
-         */
-        StatusEnum: "TRIAL" | "ACTIVE" | "PAST_DUE" | "SUSPENDED" | "CANCELLED";
         StockStatus: {
             readonly id: number;
             /**
@@ -11964,163 +11472,6 @@ export interface components {
         SupplierPickerItem: {
             id: number;
             name: string;
-        };
-        SupplierSubscription: {
-            readonly id: number;
-            /**
-             * Компания
-             * @description Компания-поставщик (одна подписка на компанию)
-             */
-            company: number;
-            readonly company_name: string;
-            readonly company_inn: string;
-            /**
-             * Тарифный план
-             * @description Базовый, Стандартный или Премиум
-             *
-             *     * `BASIC` - Базовый
-             *     * `STANDARD` - Стандартный
-             *     * `PREMIUM` - Премиум
-             */
-            plan?: components["schemas"]["PlanEnum"];
-            readonly plan_display: string;
-            /**
-             * Статус
-             * @description Текущее состояние подписки
-             *
-             *     * `TRIAL` - Пробный период
-             *     * `ACTIVE` - Активна
-             *     * `PAST_DUE` - Просрочена
-             *     * `SUSPENDED` - Приостановлена
-             *     * `CANCELLED` - Отменена
-             */
-            status?: components["schemas"]["StatusEnum"];
-            readonly status_display: string;
-            /**
-             * Ежемесячная стоимость
-             * Format: decimal
-             * @description Сумма ежемесячного платежа
-             */
-            monthly_rate?: string;
-            /**
-             * Валюта
-             * @description Валюта расчётов
-             */
-            currency?: number | null;
-            readonly currency_code: string;
-            /**
-             * Действует с
-             * Format: date
-             * @description Дата начала действия подписки
-             */
-            valid_from?: string | null;
-            /**
-             * Действует до
-             * Format: date
-             * @description Дата окончания (обычно конец календарного года)
-             */
-            valid_until?: string | null;
-            /**
-             * Последний платёж
-             * Format: date
-             * @description Дата последнего успешного платежа
-             */
-            last_payment_date?: string | null;
-            /**
-             * Следующий платёж
-             * Format: date
-             * @description Дата ожидаемого следующего платежа
-             */
-            next_payment_date?: string | null;
-            /**
-             * Заметки
-             * @description Внутренние заметки администратора
-             */
-            notes?: string;
-            /** Причина приостановки */
-            readonly suspended_reason: string;
-            /**
-             * Приостановлена
-             * Format: date-time
-             */
-            readonly suspended_at: string | null;
-            /**
-             * Дата создания
-             * Format: date-time
-             */
-            readonly created_at: string;
-            /**
-             * Дата обновления
-             * Format: date-time
-             */
-            readonly updated_at: string;
-        };
-        SupplierSubscriptionRequest: {
-            /**
-             * Компания
-             * @description Компания-поставщик (одна подписка на компанию)
-             */
-            company: number;
-            /**
-             * Тарифный план
-             * @description Базовый, Стандартный или Премиум
-             *
-             *     * `BASIC` - Базовый
-             *     * `STANDARD` - Стандартный
-             *     * `PREMIUM` - Премиум
-             */
-            plan?: components["schemas"]["PlanEnum"];
-            /**
-             * Статус
-             * @description Текущее состояние подписки
-             *
-             *     * `TRIAL` - Пробный период
-             *     * `ACTIVE` - Активна
-             *     * `PAST_DUE` - Просрочена
-             *     * `SUSPENDED` - Приостановлена
-             *     * `CANCELLED` - Отменена
-             */
-            status?: components["schemas"]["StatusEnum"];
-            /**
-             * Ежемесячная стоимость
-             * Format: decimal
-             * @description Сумма ежемесячного платежа
-             */
-            monthly_rate?: string;
-            /**
-             * Валюта
-             * @description Валюта расчётов
-             */
-            currency?: number | null;
-            /**
-             * Действует с
-             * Format: date
-             * @description Дата начала действия подписки
-             */
-            valid_from?: string | null;
-            /**
-             * Действует до
-             * Format: date
-             * @description Дата окончания (обычно конец календарного года)
-             */
-            valid_until?: string | null;
-            /**
-             * Последний платёж
-             * Format: date
-             * @description Дата последнего успешного платежа
-             */
-            last_payment_date?: string | null;
-            /**
-             * Следующий платёж
-             * Format: date
-             * @description Дата ожидаемого следующего платежа
-             */
-            next_payment_date?: string | null;
-            /**
-             * Заметки
-             * @description Внутренние заметки администратора
-             */
-            notes?: string;
         };
         /** @description Response shape for the SystemRole lookup feed ({code, name}). */
         SystemRoleLookup: {
@@ -13561,338 +12912,6 @@ export interface operations {
             };
         };
     };
-    accounts_subscriptions_list: {
-        parameters: {
-            query?: {
-                company?: number;
-                /** @description A page number within the paginated result set. */
-                page?: number;
-                /** @description Number of results to return per page. */
-                page_size?: number;
-                /**
-                 * @description Базовый, Стандартный или Премиум
-                 *
-                 *     * `BASIC` - Базовый
-                 *     * `STANDARD` - Стандартный
-                 *     * `PREMIUM` - Премиум
-                 */
-                plan?: "BASIC" | "PREMIUM" | "STANDARD";
-                /** @description A search term. */
-                search?: string;
-                /**
-                 * @description Текущее состояние подписки
-                 *
-                 *     * `TRIAL` - Пробный период
-                 *     * `ACTIVE` - Активна
-                 *     * `PAST_DUE` - Просрочена
-                 *     * `SUSPENDED` - Приостановлена
-                 *     * `CANCELLED` - Отменена
-                 */
-                status?: "ACTIVE" | "CANCELLED" | "PAST_DUE" | "SUSPENDED" | "TRIAL";
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PaginatedSupplierSubscriptionList"];
-                };
-            };
-        };
-    };
-    accounts_subscriptions_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SupplierSubscriptionRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["SupplierSubscriptionRequest"];
-                "multipart/form-data": components["schemas"]["SupplierSubscriptionRequest"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SupplierSubscription"];
-                };
-            };
-        };
-    };
-    accounts_subscriptions_retrieve: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Подписка поставщика. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SupplierSubscription"];
-                };
-            };
-        };
-    };
-    accounts_subscriptions_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Подписка поставщика. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SupplierSubscriptionRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["SupplierSubscriptionRequest"];
-                "multipart/form-data": components["schemas"]["SupplierSubscriptionRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SupplierSubscription"];
-                };
-            };
-        };
-    };
-    accounts_subscriptions_destroy: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Подписка поставщика. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No response body */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    accounts_subscriptions_partial_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Подписка поставщика. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["PatchedSupplierSubscriptionRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["PatchedSupplierSubscriptionRequest"];
-                "multipart/form-data": components["schemas"]["PatchedSupplierSubscriptionRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SupplierSubscription"];
-                };
-            };
-        };
-    };
-    accounts_subscriptions_activate_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Подписка поставщика. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SupplierSubscriptionRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["SupplierSubscriptionRequest"];
-                "multipart/form-data": components["schemas"]["SupplierSubscriptionRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SupplierSubscription"];
-                };
-            };
-        };
-    };
-    accounts_subscriptions_pay_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Подписка поставщика. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SupplierSubscriptionRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["SupplierSubscriptionRequest"];
-                "multipart/form-data": components["schemas"]["SupplierSubscriptionRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SupplierSubscription"];
-                };
-            };
-        };
-    };
-    accounts_subscriptions_suspend_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Подписка поставщика. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SupplierSubscriptionRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["SupplierSubscriptionRequest"];
-                "multipart/form-data": components["schemas"]["SupplierSubscriptionRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SupplierSubscription"];
-                };
-            };
-        };
-    };
-    accounts_subscriptions_bulk_set_status_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": {
-                    ids: number[];
-                    /** @enum {string} */
-                    status: "ACTIVE" | "SUSPENDED";
-                    reason?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description affected count */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    accounts_subscriptions_export_retrieve: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SupplierSubscription"];
-                };
-            };
-        };
-    };
-    accounts_subscriptions_mine_retrieve: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SupplierSubscription"];
-                };
-            };
-            /** @description No subscription for this user's company */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Platform admin viewer cannot own a subscription */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     accounts_system_roles_list: {
         parameters: {
             query?: {
@@ -14661,183 +13680,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-        };
-    };
-    admin_entitlements_list: {
-        parameters: {
-            query?: {
-                /**
-                 * @description * `ENABLED` - Включено
-                 *     * `DISABLED` - Выключено
-                 *     * `DEMO` - Демо
-                 */
-                access?: "DEMO" | "DISABLED" | "ENABLED";
-                company?: number;
-                feature_key?: string;
-                /** @description A page number within the paginated result set. */
-                page?: number;
-                /** @description Number of results to return per page. */
-                page_size?: number;
-                /** @description A search term. */
-                search?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PaginatedCompanyEntitlementList"];
-                };
-            };
-        };
-    };
-    admin_entitlements_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CompanyEntitlementRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["CompanyEntitlementRequest"];
-                "multipart/form-data": components["schemas"]["CompanyEntitlementRequest"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CompanyEntitlement"];
-                };
-            };
-        };
-    };
-    admin_entitlements_retrieve: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Право доступа компании. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CompanyEntitlement"];
-                };
-            };
-        };
-    };
-    admin_entitlements_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Право доступа компании. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CompanyEntitlementRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["CompanyEntitlementRequest"];
-                "multipart/form-data": components["schemas"]["CompanyEntitlementRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CompanyEntitlement"];
-                };
-            };
-        };
-    };
-    admin_entitlements_destroy: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Право доступа компании. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No response body */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    admin_entitlements_partial_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Право доступа компании. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["PatchedCompanyEntitlementRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["PatchedCompanyEntitlementRequest"];
-                "multipart/form-data": components["schemas"]["PatchedCompanyEntitlementRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CompanyEntitlement"];
-                };
-            };
-        };
-    };
-    admin_entitlements_choices_retrieve: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CompanyEntitlement"];
-                };
             };
         };
     };
@@ -15919,7 +14761,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Company not entitled to AI enrichment (AI_FEATURE_NOT_ENTITLED) */
+            /** @description No catalog.manage role permission (ROLE_NOT_PERMITTED) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -18207,7 +17049,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Not a routed seller / not entitled */
+            /** @description Not a routed seller */
             403: {
                 headers: {
                     [name: string]: unknown;

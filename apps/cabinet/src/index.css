@@ -18,3 +18,17 @@
     @apply bg-background font-sans text-foreground antialiased;
   }
 }
+
+/* Тёмная тема Mini App (`colorScheme: dark`, src/telegram/theme.ts): статусные токены светлой темы на тёмном
+   фоне Telegram не держат контраст AA. Светлые оттенки той же палитры — до тёмных токенов в packages/ui-tokens
+   (M2-CAB-02, DECISIONS). `--destructive` Telegram перекрывает своим `destructive_text_color`, если он есть. */
+.dark {
+  --success: #73d13d;
+  --success-foreground: #141414;
+  --warning: #ffc53d;
+  --warning-foreground: #141414;
+  --info: #69b1ff;
+  --info-foreground: #141414;
+  --destructive: #ff7875;
+  --destructive-foreground: #141414;
+}
