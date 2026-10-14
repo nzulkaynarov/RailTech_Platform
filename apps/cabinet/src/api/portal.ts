@@ -56,11 +56,13 @@ async function readErrorCode(response: Response): Promise<string> {
   return `HTTP_${response.status}`;
 }
 
-export async function portalRequest<T>(
+type Method = 'GET' | 'POST' | 'PUT';
+
+async function send(
   path: string,
-  { method = 'GET', body }: { method?: 'GET' | 'POST' | 'PUT'; body?: unknown } = {},
-): Promise<T> {
-  const headers: Record<string, string> = { Accept: 'application/json' };
+  { method = 'GET', body, accept = 'application/json' }: { method?: Method; body?: unknown; accept?: string },
+): Promise<Response> {
+  const headers: Record<string, string> = { Accept: accept };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (method === 'POST') headers['Idempotency-Key'] = newIdempotencyKey();
 
@@ -77,9 +79,27 @@ export async function portalRequest<T>(
   }
 
   if (!response.ok) throw new PortalApiError(response.status, await readErrorCode(response));
+  return response;
+}
+
+export async function portalRequest<T>(
+  path: string,
+  { method = 'GET', body }: { method?: Method; body?: unknown } = {},
+): Promise<T> {
+  const response = await send(path, { method, body });
   if (response.status === 204) return undefined as T;
   const text = await response.text();
   return (text ? JSON.parse(text) : undefined) as T;
+}
+
+/** Строка запроса из параметров; пустые значения не передаются. */
+function toQuery(params: Record<string, string | number | null | undefined>): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null && value !== '') search.set(key, String(value));
+  }
+  const text = search.toString();
+  return text ? `?${text}` : '';
 }
 
 type JsonBody<Op> = Op extends { requestBody: { content: { 'application/json': infer B } } } ? B : never;
@@ -107,3 +127,107 @@ export function logout(): Promise<void> {
 export function getMe(): Promise<Me> {
   return portalRequest<Me>('/me');
 }
+
+// --- разделы кабинета (M2-CAB-02) ----------------------------------------------------------
+
+type QueryOf<Op> = Op extends { parameters: { query?: infer Q } } ? NonNullable<Q> : never;
+
+export type Money = Schemas['Money'];
+export type ClientRequest = Schemas['ClientRequest'];
+export type ClientRequestCreate = Schemas['ClientRequestCreate'];
+export type RequestLineIn = Schemas['RequestLineIn'];
+export type QuoteListItem = Schemas['QuoteListItem'];
+export type Quote = Schemas['Quote'];
+export type QuoteLine = Schemas['QuoteLine'];
+export type Contract = Schemas['Contract'];
+export type Invoice = Schemas['Invoice'];
+export type Act = Schemas['Act'];
+export type DeliveryLine = Schemas['DeliveryLine'];
+export type PortalDocument = Schemas['Document'];
+export type DocumentKind = Schemas['DocumentKind'];
+export type CatalogItem = Schemas['CatalogItem'];
+export type CatalogPage = Schemas['CatalogPage'];
+export type CatalogQuery = QueryOf<paths['/catalog']['get']>;
+export type DocumentsQuery = QueryOf<paths['/documents']['get']>;
+export type Company = Schemas['Company'];
+export type CompanyUpdate = Schemas['CompanyUpdate'];
+export type TeamMember = Schemas['TeamMember'];
+export type TeamInvite = Schemas['TeamInvite'];
+
+export const listRequests = () => portalRequest<ClientRequest[]>('/requests');
+export function createRequest(body: JsonBody<paths['/requests']['post']>): Promise<ClientRequest> {
+  return portalRequest<ClientRequest>('/requests', { method: 'POST', body });
+}
+
+export const listQuotes = () => portalRequest<QuoteListItem[]>('/quotes');
+export const getQuote = (id: number) => portalRequest<Quote>(`/quotes/${id}`);
+export function acceptQuote(id: number, code: string): Promise<Quote> {
+  const body: JsonBody<paths['/quotes/{id}/accept']['post']> = { code };
+  return portalRequest<Quote>(`/quotes/${id}/accept`, { method: 'POST', body });
+}
+export function rejectQuote(id: number, reason: string): Promise<Quote> {
+  const body: JsonBody<paths['/quotes/{id}/reject']['post']> = { reason };
+  return portalRequest<Quote>(`/quotes/${id}/reject`, { method: 'POST', body });
+}
+
+export const listContracts = () => portalRequest<Contract[]>('/contracts');
+export const signContract = (id: number) => portalRequest<Contract>(`/contracts/${id}/sign`, { method: 'POST' });
+
+export const listInvoices = () => portalRequest<Invoice[]>('/invoices');
+
+export const listActs = () => portalRequest<Act[]>('/acts');
+export const acceptAct = (id: number) => portalRequest<Act>(`/acts/${id}/accept`, { method: 'POST' });
+export function returnAct(id: number, reason: string): Promise<Act> {
+  const body: JsonBody<paths['/acts/{id}/return']['post']> = { reason };
+  return portalRequest<Act>(`/acts/${id}/return`, { method: 'POST', body });
+}
+
+export const listDeliveries = () => portalRequest<DeliveryLine[]>('/deliveries');
+
+export const listDocuments = (params: DocumentsQuery = {}) =>
+  portalRequest<PortalDocument[]>(`/documents${toQuery(params)}`);
+
+/**
+ * Файл документа: 200 — содержимое; 202 — PDF ещё рендерится, повторить через `Retry-After`
+ * секунд (контракт, M2-ERP-03). Опрос и сохранение — `lib/download.ts`.
+ */
+export type DocumentFile =
+  | { state: 'ready'; blob: Blob; fileName: string | null }
+  | { state: 'pending'; retryAfterSeconds: number };
+
+export const DEFAULT_RETRY_AFTER_SECONDS = 2;
+
+export async function getDocumentFile(id: number): Promise<DocumentFile> {
+  const response = await send(`/documents/${id}/file`, { accept: 'application/pdf, application/octet-stream' });
+  if (response.status === 202) {
+    const header = Number(response.headers.get('Retry-After'));
+    return { state: 'pending', retryAfterSeconds: header >= 1 ? header : DEFAULT_RETRY_AFTER_SECONDS };
+  }
+  return {
+    state: 'ready',
+    blob: await response.blob(),
+    fileName: fileNameFrom(response.headers.get('Content-Disposition')),
+  };
+}
+
+function fileNameFrom(disposition: string | null): string | null {
+  if (!disposition) return null;
+  const encoded = /filename\*=UTF-8''([^;]+)/i.exec(disposition);
+  if (encoded) {
+    try {
+      return decodeURIComponent(encoded[1]);
+    } catch {
+      // Битое кодирование — берём простое имя ниже.
+    }
+  }
+  return /filename="?([^";]+)"?/i.exec(disposition)?.[1] ?? null;
+}
+
+export const listCatalog = (params: CatalogQuery = {}) => portalRequest<CatalogPage>(`/catalog${toQuery(params)}`);
+export const getCatalogItem = (id: number) => portalRequest<CatalogItem>(`/catalog/${id}`);
+
+export const getCompany = () => portalRequest<Company>('/company');
+export const updateCompany = (body: CompanyUpdate) => portalRequest<Company>('/company', { method: 'PUT', body });
+export const listTeam = () => portalRequest<TeamMember[]>('/team');
+export const inviteTeamMember = (body: TeamInvite) =>
+  portalRequest<TeamMember>('/team/invite', { method: 'POST', body });

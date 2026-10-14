@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
-import { afterAll, afterEach, beforeAll, beforeEach } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, vi } from 'vitest';
 
 import i18n from '@/i18n';
 import { resetMockPortal } from '@/mocks/handlers';
@@ -50,7 +50,14 @@ if (!window.matchMedia) {
 
 beforeAll(() => portalServer.listen({ onUnhandledRequest: 'error' }));
 
+/**
+ * «Сегодня» фикстур — 2026-10-14 в Ташкенте: просрочка счетов и срок действия КП считаются от него.
+ * Подменяется только `Date` — таймеры настоящие (MSW, React Query, анимации Radix).
+ */
+const FIXTURE_NOW = new Date('2026-10-14T12:00:00+05:00');
+
 beforeEach(async () => {
+  vi.useFakeTimers({ toFake: ['Date'], now: FIXTURE_NOW });
   window.localStorage.clear();
   window.sessionStorage.clear();
   resetMockPortal();
@@ -65,7 +72,25 @@ beforeEach(async () => {
 afterEach(() => {
   cleanup();
   portalServer.resetHandlers();
+  portalServer.events.removeAllListeners();
+  vi.useRealTimers();
 });
+
+// Radix Checkbox меряет себя через ResizeObserver, которого в jsdom нет.
+if (!('ResizeObserver' in window)) {
+  class ResizeObserverStub {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  Object.defineProperty(window, 'ResizeObserver', { value: ResizeObserverStub, configurable: true, writable: true });
+  Object.defineProperty(globalThis, 'ResizeObserver', { value: ResizeObserverStub, configurable: true, writable: true });
+}
+
+// Сохранение файла: в jsdom нет object URL и навигации по ссылке-скачиванию.
+window.URL.createObjectURL = vi.fn(() => 'blob:cabinet-test');
+window.URL.revokeObjectURL = vi.fn();
+HTMLAnchorElement.prototype.click = vi.fn();
 
 afterAll(() => portalServer.close());
 

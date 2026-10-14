@@ -3,23 +3,13 @@ import type { RouteObject } from 'react-router-dom';
 import { AppShell } from '@/components/shell/AppShell';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { ProfilePage } from '@/pages/ProfilePage';
-import {
-  ActsPage,
-  CatalogItemPage,
-  CatalogPage,
-  CompanyPage,
-  ContractsPage,
-  DealPage,
-  DeliveriesPage,
-  DocumentsPage,
-  InvoicesPage,
-  QuoteDetailPage,
-  QuotesPage,
-  RequestDetailPage,
-  RequestNewPage,
-  RequestsPage,
-  TeamPage,
-} from '@/pages/SectionPages';
+import { ActsPage, ContractsPage, InvoicesPage } from '@/pages/billing';
+import { CatalogItemPage, CatalogPage } from '@/pages/catalog';
+import { CompanyPage, TeamPage } from '@/pages/company';
+import { DealPage } from '@/pages/deal';
+import { DeliveriesPage, DocumentsPage } from '@/pages/deliveries';
+import { QuoteDetailPage, QuotesPage } from '@/pages/quotes';
+import { RequestDetailPage, RequestNewPage, RequestsPage } from '@/pages/requests';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { LoginSentPage } from '@/pages/auth/LoginSentPage';
 import { MagicLinkPage } from '@/pages/auth/MagicLinkPage';
@@ -29,7 +19,7 @@ import { HomeRedirect, RequireSession, WebOnly } from './guards';
 /**
  * Маршруты Cabinet. Публичные (`/login`, `/login/sent`, `/new-client`) — только в вебе;
  * `/auth/magic/:token` — ссылка из письма; всё остальное — за сессией портала в оболочке.
- * Экраны разделов — ARCHITECTURE §5 (данные — M2-CAB-02).
+ * Экраны разделов — ARCHITECTURE §5 (M2-CAB-02), по файлу на домен в `src/pages/`.
  */
 export const routes: RouteObject[] = [
   {

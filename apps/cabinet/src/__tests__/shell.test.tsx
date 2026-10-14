@@ -48,7 +48,7 @@ describe('оболочка кабинета', () => {
     expect(router.state.location.pathname).toBe('/acts');
   });
 
-  it('у каждого раздела есть экран с заголовком и пустым состоянием', async () => {
+  it('у каждого раздела есть экран с заголовком', async () => {
     signedIn();
     const { router } = renderApp('/requests');
     await screen.findByRole('heading', { level: 1, name: 'Запросы' });
@@ -63,8 +63,8 @@ describe('оболочка кабинета', () => {
       '/company': 'Компания',
       '/team': 'Команда',
       '/requests/new': 'Новый запрос',
-      '/quotes/301': 'КП №301',
-      '/catalog/1001': 'Позиция каталога №1001',
+      '/quotes/301': 'КП KP-2026-0042',
+      '/catalog/1001': 'Подшипник 6205-2RS',
       '/deals/42': 'Сделка №42',
     };
     for (const [path, title] of Object.entries(titles)) {
