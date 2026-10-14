@@ -13,12 +13,11 @@
    лимитом по-прежнему получает `/me` 200.
 """
 
-from types import SimpleNamespace
-
 import pytest
+from ai.services.enrich import _accepted_category_id, _accepted_uom_code, enrich_product
+from ai.testing import install_fake_gateway
 
 from accounts.models import Company, CompanyMember, CustomUser, WorkspaceRole
-from catalog.ai_enrich import _accepted_category_id, _accepted_uom_code, enrich_product
 from catalog.field_candidates import category_candidates, uom_candidates
 from catalog.models import Category, DomainType
 from master_data.models import UnitOfMeasure
@@ -145,23 +144,8 @@ def test_inactive_categories_are_not_offered():
 
 
 def _stub_client(monkeypatch, payload, captured=None):
-    """Подменяет платный вызов Claude ответом `payload`; в `captured` кладёт kwargs запроса."""
-    text = __import__("json").dumps(payload)
-    response = SimpleNamespace(
-        content=[SimpleNamespace(type="text", text=text)],
-        stop_reason="end_turn",
-        usage=SimpleNamespace(input_tokens=1, output_tokens=1),
-    )
-
-    def _create(**kwargs):
-        if captured is not None:
-            captured.append(kwargs)
-        return response
-
-    monkeypatch.setattr(
-        "catalog.ai_enrich._client",
-        lambda: SimpleNamespace(messages=SimpleNamespace(create=_create)),
-    )
+    """Подменяет вызов модели (фейковый шлюз LiteLLM) ответом `payload`; в `captured` — тела запросов."""
+    install_fake_gateway(monkeypatch, sink=captured).reply_json(payload)
 
 
 @pytest.mark.django_db
@@ -191,7 +175,7 @@ def test_enrich_proposes_verified_category_and_uom(settings, monkeypatch):
     # Текстовая подсказка никуда не делась — она запасной вариант, когда ничего не подошло.
     assert result["suggested_category_hint"] == "Тормозное оборудование"
     # Кандидаты действительно ушли в промпт: без списка выбирать не из чего.
-    prompt = captured[0]["messages"][0]["content"][0]["text"]
+    prompt = captured[0]["messages"][1]["content"][0]["text"]
     assert f"{category.id} — Тормозное оборудование" in prompt
     assert "H87 — шт." in prompt
 
@@ -249,7 +233,7 @@ def test_enrich_survives_empty_lookups(settings, monkeypatch):
     assert result["category_id"] is None
     assert result["uom_code"] == ""
     assert result["description"].startswith("Болт")
-    prompt = captured[0]["messages"][0]["content"][0]["text"]
+    prompt = captured[0]["messages"][1]["content"][0]["text"]
     assert "Кандидаты категории" not in prompt
     assert "Единицы измерения" not in prompt
 

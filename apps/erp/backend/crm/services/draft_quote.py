@@ -111,7 +111,7 @@ def _resolve_ai_catalog_matches(request_items, resolved: dict) -> Tuple[int, lis
         for src in pending
     ]
     try:
-        from sourcing.services_ai import match_lines_to_catalog
+        from ai.services.matching import match_lines_to_catalog
 
         matches = match_lines_to_catalog(lines)
     except Exception as exc:  # noqa: BLE001 — an AI/API failure must never break the (already useful) draft

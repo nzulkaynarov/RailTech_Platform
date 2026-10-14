@@ -1,0 +1,19 @@
+{
+  "_comment": "Записанные ответы ранжирования (форма rank_candidates) для офлайн-тестов оценщика.",
+  "exact-name-ru": [
+    {"line_index": 0, "name_canonical": "", "candidates": [
+      {"product_id": 101, "name": "Подшипник шариковый 6205-2RS", "sku": "BRG-6205", "confidence": 0.93, "reason": "тот же типоразмер"},
+      {"product_id": 102, "name": "Подшипник шариковый 6305", "sku": "BRG-6305", "confidence": 0.21, "reason": "другой типоразмер"}
+    ]}
+  ],
+  "latin-to-cyrillic": [
+    {"line_index": 0, "name_canonical": "Кабель ВВГ 3x2,5", "candidates": [
+      {"product_id": 202, "name": "Кабель ВВГнг 3x2,5", "sku": "", "confidence": 0.88, "reason": "сечение совпадает"}
+    ]}
+  ],
+  "nothing-fits": [],
+  "two-lines-independent": [
+    {"line_index": 0, "name_canonical": "", "candidates": [{"product_id": 701, "name": "Бумага офисная А4 80 г/м², 500 л.", "sku": "", "confidence": 0.9, "reason": "А4"}]},
+    {"line_index": 1, "name_canonical": "", "candidates": [{"product_id": 704, "name": "Ручка гелевая чёрная 0,5 мм", "sku": "", "confidence": 0.86, "reason": "гелевая чёрная"}]}
+  ]
+}

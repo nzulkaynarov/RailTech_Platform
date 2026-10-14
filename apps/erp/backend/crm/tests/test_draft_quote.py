@@ -17,8 +17,8 @@ from master_data.models import Currency
 
 @pytest.fixture(autouse=True)
 def _disable_ai_by_default(settings):
-    # Local dev has ANTHROPIC_API_KEY → AI_IMPORT_ENABLED=True, which would make the exact-match
-    # tests fire REAL Claude calls on their unmatched lines. Default AI OFF here; the fuzzy tests
+    # A stand with LITELLM_API_KEY → AI_IMPORT_ENABLED=True, which would make the exact-match
+    # tests reach the model gateway on their unmatched lines. Default AI OFF here; the fuzzy tests
     # opt back in and mock the matcher.
     settings.AI_IMPORT_ENABLED = False
 
@@ -197,7 +197,7 @@ def test_ai_fuzzy_match_binds_high_confidence(scene, settings, monkeypatch):
     koloda = _koloda(scene)
     settings.AI_IMPORT_ENABLED = True
     settings.AI_DRAFT_MATCH_CONFIDENCE = 0.9
-    monkeypatch.setattr("sourcing.services_ai.match_lines_to_catalog", _fake_match(koloda, 0.95))
+    monkeypatch.setattr("ai.services.matching.match_lines_to_catalog", _fake_match(koloda, 0.95))
 
     quote, err, prefilled = generate_draft_quote(scene["deal"].id, scene["seller_user"])
     assert err is None
@@ -212,7 +212,7 @@ def test_ai_fuzzy_match_below_threshold_not_bound(scene, settings, monkeypatch):
     koloda = _koloda(scene, priced=False)
     settings.AI_IMPORT_ENABLED = True
     settings.AI_DRAFT_MATCH_CONFIDENCE = 0.9
-    monkeypatch.setattr("sourcing.services_ai.match_lines_to_catalog", _fake_match(koloda, 0.5))
+    monkeypatch.setattr("ai.services.matching.match_lines_to_catalog", _fake_match(koloda, 0.5))
 
     quote, err, _ = generate_draft_quote(scene["deal"].id, scene["seller_user"])
     assert err is None

@@ -65,7 +65,7 @@ run_in() {
     -e CELERY_BROKER_URL="redis://${RD}:6379/1" \
     -e CELERY_RESULT_BACKEND="redis://${RD}:6379/1" \
     -e EMAIL_BACKEND=django.core.mail.backends.locmem.EmailBackend \
-    -e ANTHROPIC_API_KEY= \
+    -e LITELLM_API_KEY= \
     -v "$ROOT/backend:/app" -w /app "$IMAGE" "$@"
 }
 

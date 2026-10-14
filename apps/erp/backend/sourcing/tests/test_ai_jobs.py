@@ -153,7 +153,7 @@ def test_dispatch_match(monkeypatch):
         seen.update(lines=lines, domain_code=domain_code, top_k=top_k)
         return [{"line_index": 0, "candidates": []}]
 
-    monkeypatch.setattr("sourcing.services_ai.match_lines_to_catalog", _fake_match)
+    monkeypatch.setattr("ai.services.matching.match_lines_to_catalog", _fake_match)
     result = run_ai_job("match", {"lines": [{"name": "x"}], "domain_code": "RW", "top_k": 5})
     assert result == {"matches": [{"line_index": 0, "candidates": []}]}
     assert seen == {"lines": [{"name": "x"}], "domain_code": "RW", "top_k": 5}
@@ -164,7 +164,7 @@ def test_dispatch_preflight(monkeypatch):
     from sourcing.tasks_ai import run_ai_job
 
     monkeypatch.setattr(
-        "sourcing.services_ai_preflight.pre_flight_check",
+        "ai.services.preflight.pre_flight_check",
         lambda lines, domain_code=None: [{"line_index": 0, "issue": "vague"}],
     )
     result = run_ai_job("preflight", {"lines": [{"name": "x"}], "domain_code": None})
@@ -192,9 +192,9 @@ def test_dispatch_extract(monkeypatch):
         seen.update(content=content, filename=filename)
         return {"total": "100.00", "currency_code": "UZS"}
 
-    monkeypatch.setattr("sourcing.services_ai_extract.extract_document_fields", _fake_extract)
+    monkeypatch.setattr("ai.services.documents.extract_document_fields", _fake_extract)
     monkeypatch.setattr(
-        "sourcing.services_ai_extract.reconcile",
+        "ai.services.documents.reconcile",
         lambda extracted, expected_total, expected_currency: {"ok": True, "mismatches": []},
     )
     file_key = _stage_extract_file(b"%PDF-1.4 stub")
@@ -227,7 +227,7 @@ def test_dispatch_extract_failure_returns_error_code_and_cleans_up(monkeypatch):
     def _boom(content, filename):
         raise RuntimeError("AI_IMPORT_DISABLED")
 
-    monkeypatch.setattr("sourcing.services_ai_extract.extract_document_fields", _boom)
+    monkeypatch.setattr("ai.services.documents.extract_document_fields", _boom)
     file_key = _stage_extract_file(b"x")
     payload = {"file_key": file_key, "filename": "doc.pdf"}
     assert run_ai_job("extract", payload) == {"error": "AI_EXTRACT_FAILED"}
@@ -239,7 +239,7 @@ def test_dispatch_compose(monkeypatch):
     from sourcing.tasks_ai import run_ai_job
 
     monkeypatch.setattr(
-        "sourcing.services_ai_conversational.build_request_from_text",
+        "ai.services.compose.build_request_from_text",
         lambda text, domain_code=None: {"items": [{"name": "Болт М12"}]},
     )
     assert run_ai_job("compose", {"text": "болты", "domain_code": None}) == {"items": [{"name": "Болт М12"}]}
@@ -250,7 +250,7 @@ def test_dispatch_enrich(monkeypatch):
     from sourcing.tasks_ai import run_ai_job
 
     monkeypatch.setattr(
-        "catalog.ai_enrich.enrich_product",
+        "ai.services.enrich.enrich_product",
         lambda name, domain_code=None, mpn=None, gost=None: {"description": "Колодка"},
     )
     result = run_ai_job("enrich", {"name": "Колодка", "domain_code": None, "mpn": None, "gost": None})

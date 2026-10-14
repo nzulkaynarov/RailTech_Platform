@@ -9,8 +9,7 @@
 """
 
 import pytest
-
-from catalog.ai_enrich import _accepted_hs_code
+from ai.services.enrich import _accepted_hs_code
 
 CANDIDATES = [
     {"code": "8482100000", "name": "Подшипники шариковые прочие"},

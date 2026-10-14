@@ -104,6 +104,10 @@ services:
       - ../../apps/erp/backend:/app
     restart: unless-stopped
 
+  erp-ai-gateway:
+    volumes:
+      - ../../apps/erp/backend:/app
+
   caddy:
     volumes:
       - ../caddy/Caddyfile.dev:/etc/caddy/Caddyfile:ro

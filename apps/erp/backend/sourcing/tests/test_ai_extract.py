@@ -1,6 +1,6 @@
 """AI #6 contract/invoice extraction — code-side reconciliation flags money mismatches.
 
-The Claude client is stubbed (no paid/nondeterministic calls). We assert the deterministic
+The LiteLLM gateway is faked (ai.testing.FakeGateway) (no paid/nondeterministic calls). We assert the deterministic
 trusted side: the `reconcile` helper recomputes the comparison in Decimal and flags a total
 mismatch, a foreign/unknown currency and an expired document — never trusting LLM numbers.
 """
@@ -12,15 +12,6 @@ from types import SimpleNamespace
 import pytest
 
 from master_data.models import Currency
-
-
-def _stub_response(payload):
-    text = __import__("json").dumps(payload)
-    return SimpleNamespace(
-        content=[SimpleNamespace(type="text", text=text)],
-        stop_reason="end_turn",
-        usage=SimpleNamespace(input_tokens=1, output_tokens=1),
-    )
 
 
 @pytest.mark.django_db
@@ -114,11 +105,10 @@ def test_extract_document_fields_disabled_raises(settings):
 
 
 @pytest.mark.django_db
-def test_extract_document_fields_parses_stubbed_model(settings, monkeypatch):
-    """Stub the Claude client; assert the structured shape is normalised (upper currency,
+def test_extract_document_fields_parses_stubbed_model(fake_gateway):
+    """Fake gateway; assert the structured shape is normalised (upper currency,
     bounded strings) — the model output is treated as untrusted OCR, parsed in code."""
-    settings.AI_IMPORT_ENABLED = True
-    fake = _stub_response(
+    fake_gateway.reply_json(
         {
             "total": "1234567.89",
             "currency_code": "usd",  # lower-cased by the model → normalised to USD
@@ -126,10 +116,6 @@ def test_extract_document_fields_parses_stubbed_model(settings, monkeypatch):
             "bank_details": "Bank X, acct 123",
             "line_totals": [{"description": "Болт М12", "line_total": "100.00"}],
         }
-    )
-    monkeypatch.setattr(
-        "sourcing.services_ai_extract._client",
-        lambda: SimpleNamespace(messages=SimpleNamespace(create=lambda **kw: fake)),
     )
     from sourcing.services_ai_extract import extract_document_fields
 
@@ -139,6 +125,22 @@ def test_extract_document_fields_parses_stubbed_model(settings, monkeypatch):
     assert fields["valid_until"] == "2030-01-01"
     assert len(fields["line_totals"]) == 1
     assert fields["line_totals"][0]["description"] == "Болт М12"
+    body = fake_gateway.last_body
+    assert body["model"] == "intake-model"
+    # PDF едет блоком `file` в сообщении пользователя, а не в системном промпте; документ не
+    # копируется в Langfuse (mask_input).
+    assert body["messages"][1]["content"][0]["type"] == "file"
+    assert body["metadata"]["mask_input"] is True
+
+
+@pytest.mark.django_db
+def test_extract_document_fields_gateway_down_raises_code(fake_gateway):
+    """Шлюз недоступен — стабильный код для обработчика задачи (AI_EXTRACT_FAILED), не 500."""
+    fake_gateway.reply_transport_error()
+    from sourcing.services_ai_extract import extract_document_fields
+
+    with pytest.raises(RuntimeError, match="AI_GATEWAY_UNAVAILABLE"):
+        extract_document_fields(b"%PDF-1.4 fake", "contract.pdf")
 
 
 @pytest.mark.django_db
@@ -149,10 +151,9 @@ def test_extract_endpoint_guards(settings, monkeypatch):
     from django.core.files.uploadedfile import SimpleUploadedFile
     from rest_framework.test import APIClient
 
-    import sourcing.services_ai_extract as ext
     from accounts.models import CustomUser
 
-    monkeypatch.setattr(ext, "_client", lambda: pytest.fail("paid call reached on a guarded extract path"))
+    # Корневой conftest блокирует транспорт шлюза: дошедший до модели guarded-путь упадёт.
     user = CustomUser.objects.create_user(email="dx@x.test", username="dx@x.test", password="pw", is_active=True)
     client = APIClient()
     client.force_authenticate(user)

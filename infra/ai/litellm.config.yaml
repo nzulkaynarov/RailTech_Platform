@@ -9,6 +9,16 @@
 # `metadata: {tags: ["system=crm|erp", "feature=<функция>", "model=<алиас>"]}` — прокси пишет их в
 # `LiteLLM_SpendLogs.request_tags` (нужна БД, `DATABASE_URL`; `disable_spend_logs` не включать).
 # CRM читает журнал `GET /spend/logs/v2` мастер-ключом и показывает «Расходы» по ансамблю.
+#
+# ERP (M1-ERP-06, apps/erp/backend/ai/services/gateway.py): ходит СВОИМ виртуальным ключом (alias `erp`,
+# значение ERP_LITELLM_API_KEY), который регистрирует `manage.py ai_gateway_sync` (сервис erp-ai-gateway):
+# - `max_budget` + `budget_duration: 1d` — дневной бюджет ERP в USD (ERP_AI_DAILY_BUDGET_USD, сутки UTC);
+#   превышение → ответ `budget_exceeded` → в ERP код AI_BUDGET_EXCEEDED;
+# - `metadata.logging` = колбэк Langfuse ключа: трейсы ERP пишет сам шлюз (`trace_name` erp.<функция>,
+#   `session_id`/`trace_id` = id задачи ERP, `trace_user_id` = сотрудник); вызовы CRM этим ключом не идут;
+# - `models` — только intake/match/draft/enrich-model и fallback-model.
+# Здесь, в конфиге, ничего из этого не задаётся: бюджет ключа и колбэк живут в БД LiteLLM (OSS-функции;
+# бюджет по тегам и колбэки команды из конфига — enterprise/не применяются к ключу без команды).
 # model_list здесь НЕ задаётся: модель из конфига с тем же алиасом стала бы второй
 # deployment в группе балансировки, а не заменой, и не редактируется через API (ADR-0020).
 
@@ -28,7 +38,7 @@ router_settings:
   fallbacks:
     - dialog-model: [fallback-model]
     - qualifier-model: [fallback-model]
-    # ERP (M1-ERP-06): запасная модель та же, бюджет на день по системе — M3-CRM-09.
+    # ERP (M1-ERP-06): запасная модель та же; бюджет ERP на день — бюджет ключа `erp` (см. шапку).
     - intake-model: [fallback-model]
     - match-model: [fallback-model]
     - draft-model: [fallback-model]
