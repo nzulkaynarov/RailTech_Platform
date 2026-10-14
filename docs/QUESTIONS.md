@@ -4,7 +4,7 @@
 
 Q-1…Q-9 решены — см. `DECISIONS.md`.
 
-## Q-10 · Биллинг GitHub Actions (только владелец)
+## Q-10 · Биллинг GitHub Actions (только владелец) — **решено 2026-10-14: владелец обновил подписку GitHub; минуты расходуются экономно, см. DECISIONS**
 
 **Контекст.** Первый прогон workflow на `main` (run 38381096602) упал без единого шага: «The job was not started because recent account payments have failed or your spending limit needs to be increased». Это настройка аккаунта GitHub, агент её изменить не может. Пока так — CI на GitHub не работает, гейт мержа — `make ci-local`.
 

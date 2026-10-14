@@ -42,8 +42,8 @@
 `packages/contracts/openapi/erp-portal.yaml` до появления портального API в ERP. Тесты: 209, axe 0.
 
 **Инфраструктура** — `make up` поднимает весь ансамбль на `crm.`, `erp.`, `cabinet.localhost` (на машине владельца
-порт 8088), PostgreSQL 17, Redis, RustFS, LiteLLM, Langfuse (`make up-obs`), Caddy. `make ci-local` — гейт мержа,
-пока GitHub Actions заблокирован биллингом (Q-10).
+порт 8088), PostgreSQL 17, Redis, RustFS, LiteLLM, Langfuse (`make up-obs`), Caddy. Гейт мержа — `make ci-local` локально
+и зелёный `CI ok` в PR (GitHub Actions работает с 2026-10-14; минуты экономим: только не-черновые PR, без прогона на push в `main`).
 
 ## 3. Что делать дальше (порядок)
 
@@ -69,8 +69,8 @@
 
 ## 5. Что нужно от владельца
 
-`docs/OWNER-CHECKLIST.md`. Главное: разблокировать GitHub Actions (Billing & plans, Q-10) и после зелёного прогона
-включить защиту `main` с проверкой `ci-ok`; к M5 — внутренние IP обоих VPS, SSH-ключ деплоя, DNS A-записи,
+`docs/OWNER-CHECKLIST.md`. Главное: после первого зелёного прогона CI
+включить защиту `main` с проверкой `ci-ok` (Actions разблокирован 2026-10-14, Q-10); к M5 — внутренние IP обоих VPS, SSH-ключ деплоя, DNS A-записи,
 внешнее хранилище бэкапов, логотип и e-mail поддержки.
 
 ## 6. Особенности рабочего места владельца
