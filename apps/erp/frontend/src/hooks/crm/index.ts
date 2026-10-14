@@ -11,4 +11,4 @@ export * from './collab';
 export * from './quotes';
 export * from './charges';
 export * from './quoteLifecycle';
-export * from './leadsAi';
+export * from './ai';

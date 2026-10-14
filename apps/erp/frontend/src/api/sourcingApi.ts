@@ -10,7 +10,6 @@ export interface Attachment {
   uploaded_by_email: string | null;
   uploaded_at: string;
   deal?: number | null;
-  message?: number | null;
   quote?: number | null;
   company?: number | null;
   product?: number | null;
@@ -18,7 +17,7 @@ export interface Attachment {
 
 export const sourcingApi = {
   listAttachments: async (params: {
-    deal?: number; message?: number; quote?: number; company?: number; product?: number;
+    deal?: number; quote?: number; company?: number; product?: number;
   }): Promise<Attachment[]> => {
     const response = await apiClient.get<PaginatedResponse<Attachment>>('sourcing/attachments/', { params });
     return response.data.results;
@@ -43,7 +42,7 @@ export const sourcingApi = {
     return all;
   },
   uploadAttachment: async (
-    parent: { deal?: number; message?: number; quote?: number; company?: number; product?: number },
+    parent: { deal?: number; quote?: number; company?: number; product?: number },
     file: File,
   ): Promise<Attachment> => {
     const formData = new FormData();

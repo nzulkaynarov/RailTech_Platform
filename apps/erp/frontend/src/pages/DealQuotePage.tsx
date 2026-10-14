@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { ArrowLeft, Calculator, FileText, Send, FileSignature, AlertTriangle, MessageSquare, ChevronDown, Plus, Wand2 } from 'lucide-react';
+import { ArrowLeft, Calculator, FileText, Send, FileSignature, AlertTriangle, MessageSquare, Paperclip, ChevronDown, Plus, Wand2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/StatusBadge';
@@ -21,7 +21,7 @@ import { QuoteApprovalChain } from '@/components/CRM/QuoteApprovalChain';
 import { QuoteSendGateBanner } from '@/components/CRM/QuoteSendGateBanner';
 import { SendQuoteDialog } from '@/components/CRM/SendQuoteDialog';
 import { QuoteSentPanel } from '@/components/CRM/QuoteSentPanel';
-import { DealChatPanel } from '@/components/Sourcing/DealChatPanel';
+import { DealAttachmentsPanel } from '@/components/Sourcing/DealAttachmentsPanel';
 import { GenerateContractDialog } from '@/components/CRM/GenerateContractDialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { QuoteStatus, DealStage, DEAL_STAGE_LABEL_KEY } from '@/lib/codes';
@@ -57,7 +57,7 @@ export function DealQuotePage({ dealId, onBack, onNavigate }: DealQuotePageProps
   // Single Deal-workspace (#3b): the buyer's request context lives ON the builder
   // screen, so a seller prices the КП without bouncing back to the deal page. The
   // ask (deal.notes) collapses to one line by default; the full thread opens in a slide-over.
-  const [chatOpen, setChatOpen] = useState(false);
+  const [filesOpen, setFilesOpen] = useState(false);
   const [noteExpanded, setNoteExpanded] = useState(false);
   // WP-D navigation guard: the builder reports unsaved line edits up here so leaving the
   // workspace (the Back button) prompts a confirm instead of silently dropping the changes.
@@ -166,9 +166,9 @@ export function DealQuotePage({ dealId, onBack, onNavigate }: DealQuotePageProps
           {quote && <QuoteApprovalChain quote={quote} />}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setChatOpen(true)}>
-            <MessageSquare className="mr-2 h-4 w-4" />
-            {t('pages.dealQuote.openChat')}
+          <Button variant="outline" size="sm" onClick={() => setFilesOpen(true)}>
+            <Paperclip className="mr-2 h-4 w-4" />
+            {t('dealAttachments.title')}
           </Button>
           {canContract && (
             <Button size="sm" variant="outline" onClick={() => setContractOpen(true)}>
@@ -305,14 +305,14 @@ export function DealQuotePage({ dealId, onBack, onNavigate }: DealQuotePageProps
         </div>
       )}
 
-      {/* Buyer thread — slide-over so the seller never leaves the builder to reply. */}
-      <Sheet open={chatOpen} onOpenChange={setChatOpen}>
+      {/* Вложения сделки — slide-over, чтобы не уходить из конструктора КП. Переписка с клиентом — в CRM. */}
+      <Sheet open={filesOpen} onOpenChange={setFilesOpen}>
         <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
           <SheetHeader className="border-b px-4 py-3">
-            <SheetTitle>{t('pages.dealQuote.contextTitle')}</SheetTitle>
+            <SheetTitle>{t('dealAttachments.title')}</SheetTitle>
           </SheetHeader>
-          <div className="min-h-0 flex-1 overflow-hidden p-4">
-            <DealChatPanel dealId={dealId} />
+          <div className="min-h-0 flex-1 overflow-y-auto p-4">
+            <DealAttachmentsPanel dealId={dealId} label="" />
           </div>
         </SheetContent>
       </Sheet>

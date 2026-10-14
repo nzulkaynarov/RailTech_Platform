@@ -255,18 +255,6 @@ export interface Quote {
 	updated_at?: string;
 }
 
-export interface Message {
-	id: number;
-	deal: number;
-	seller_company?: number | null;   // the private seller lane (audit #4); null = deal-level
-	sender: number;
-	sender_name: string;
-	text: string;
-	message_type?: string;
-	timestamp: string;
-	is_me: boolean;
-}
-
 // A seller company an RFQ is routed to (multi-seller routing). Minimal shape —
 // id + display name — used both for the routing picker and the "Routed to" line.
 export interface SellerCompanyRef {
@@ -363,7 +351,7 @@ export interface DealDocumentHub {
 	fulfillment: DealHubFulfillment | null;
 	payments_count: number;
 	payments_total: string;
-	viewer: { is_buyer_side: boolean; is_seller_side: boolean; is_viewer: boolean };
+	viewer: { is_buyer_side: boolean; is_seller_side: boolean };
 	next_step: DealDocumentStep | null;
 }
 
@@ -440,25 +428,6 @@ export interface TimelineEntry {
 	deal_id: number | null;
 	company_id: number | null;
 	contact_id: number | null;
-}
-
-export interface Lead {
-	id?: number;
-	name: string;
-	company?: string;
-	phone: string;
-	email: string;
-	message?: string;
-	is_processed?: boolean;
-	created_at?: string;
-	/** Кому назначен лид. Пусто — он ещё в общей очереди платформы (Salesforce Lead Queue). */
-	owner_company?: number | null;
-	owner_company_name?: string;
-	assigned_at?: string | null;
-	/** Сделка, в которую компания превратила лид. До 24-08 связи не было вовсе — только текст в notes. */
-	converted_deal?: number | null;
-	converted_at?: string | null;
-	rejection_reason?: string;
 }
 
 // ─── CRM Phase B — counterparty relationship book («Книга контрагентов») ──

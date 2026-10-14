@@ -79,7 +79,6 @@ vi.mock('@/hooks/useMasterData', () => ({ useCurrencies: () => ({ data: [{ id: 1
 vi.mock('@/hooks/use-mobile', () => ({ useMediaQuery: () => false }));
 
 // Heavy children are irrelevant to the margin surface under test — stub them to null.
-vi.mock('@/components/Sourcing/DealChatPanel', () => ({ DealChatPanel: () => null }));
 vi.mock('@/components/CRM/DealTimeline', () => ({ DealTimeline: () => null }));
 vi.mock('@/components/CRM/DealDocumentsCard', () => ({ DealDocumentsCard: () => null }));
 vi.mock('@/components/CRM/CoverageCheck', () => ({ CoverageCheck: () => null }));
