@@ -166,9 +166,15 @@ def test_match_disabled_returns_empty(products, settings):
 
 
 @pytest.mark.django_db
-def test_endpoint_guards(products, settings, monkeypatch):
+def test_endpoint_guards(products, settings, monkeypatch, grant):
     settings.AI_IMPORT_ENABLED = True
+    from accounts.models import Company, CompanyMember, CompanyType, WorkspaceRole
+
     user = CustomUser.objects.create_user(email="m@x.test", username="m@x.test", password="pw", is_active=True)
+    own = Company.objects.create(name="Своя", inn="7702000001")
+    own.types.add(CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "S"})[0])
+    CompanyMember.objects.create(user=user, company=own, role=WorkspaceRole.objects.get(code="MEMBER"), is_primary=True)
+    grant(user, "quote.build")  # M1-ERP-05: подбор по каталогу — право роли расчёта
     client = APIClient()
     client.force_authenticate(user)
     # missing lines → 400

@@ -45,13 +45,16 @@ def scene(db):
     QuoteItem.objects.create(quote=request_quote, product=product, quantity=5)
     QuoteItem.objects.create(quote=request_quote, quantity=2, imported_raw_name="Тормозная колодка")
 
-    role = CompanyRole.objects.create(company=seller, name="Менеджер", permissions=["quote.edit_pricing"])
+    # M1-ERP-05: права — только из ролей; расчётчик сцены ведёт сделку и строит КП.
+    role = CompanyRole.objects.create(
+        company=seller, name="Менеджер", permissions=["quote.edit_pricing", "quote.build", "deal.manage"]
+    )
     ws = WorkspaceRole.objects.get_or_create(code="SALES_MANAGER", defaults={"name": "SM", "sort_order": 10})[0]
 
     def _member(email):
         user = CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
         CompanyMember.objects.create(
-            user=user, company=seller, role=ws, company_role=role, is_active=True, is_primary=True, can_sell=True
+            user=user, company=seller, role=ws, company_roles=[role], is_active=True, is_primary=True, can_sell=True
         )
         return user
 

@@ -355,4 +355,4 @@ def test_exhausted_limit_does_not_forbid_anything_in_me(settings):
     assert caps["ai_daily_remaining"] == 0  # не отрицательное число
     assert caps["ai_daily_cap"] == 2
     # Остальные способности не тронуты — исчерпанный лимит ничего не выключает.
-    assert "permissions" in caps and "can_buy" in caps
+    assert "permissions" in caps and "is_solo_team" in caps

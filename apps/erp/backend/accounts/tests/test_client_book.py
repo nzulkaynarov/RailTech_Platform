@@ -15,7 +15,7 @@ from accounts.services.clients import create_offline_client
 
 
 @pytest.fixture
-def scene(db):
+def scene(db, grant):
     owner_role = WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})[0]
     client_type = CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})[0]
     seller_type = CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})[0]
@@ -32,8 +32,10 @@ def scene(db):
         )
         return user
 
+    staff = member(own_company, "rs@t.test", can_sell=True)
+    grant(staff, "deal.manage")  # книга клиентов — право роли «Вести запросы и сделки» (M1-ERP-05)
     return {
-        "staff": member(own_company, "rs@t.test", can_sell=True),
+        "staff": staff,
         "teammate": member(own_company, "rt@t.test", can_sell=True),
         "buyer": member(buyer_company, "rb@t.test", can_buy=True),
     }

@@ -10,7 +10,7 @@ from rest_framework import serializers, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from core.permissions import IsCompanyMemberOrPlatformAdmin
+from core.permissions import IsCompanyMemberOrPlatformAdmin, RoleGatedViewMixin
 from crm.models import ChargeTemplate, ChargeType, QuoteCharge, QuoteStatus
 from crm.serializers import ChargeTemplateSerializer, ChargeTypeSerializer, QuoteChargeSerializer
 
@@ -22,12 +22,19 @@ from .items import _assert_staff_may_write_quote
     create=extend_schema(summary="Add КП-level expense item / discount", tags=["CRM"]),
     destroy=extend_schema(summary="Remove КП-level expense item / discount", tags=["CRM"]),
 )
-class QuoteChargeViewSet(viewsets.ModelViewSet):
+class QuoteChargeViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     """CRUD for КП-level expense items / discounts (UBL document AllowanceCharge).
 
     Building the cost breakdown is a SELLER action (mirrors QuoteItemViewSet):
     only the seller team / superuser may write; the buyer never sees these rows.
     """
+
+    required_permissions = {
+        "create": "quote.edit_pricing",
+        "update": "quote.edit_pricing",
+        "partial_update": "quote.edit_pricing",
+        "destroy": "quote.edit_pricing",
+    }
 
     serializer_class = QuoteChargeSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
@@ -117,13 +124,20 @@ class ChargeTypeViewSet(viewsets.ReadOnlyModelViewSet):
     create=extend_schema(summary="Add a charge template", tags=["CRM"]),
     destroy=extend_schema(summary="Remove a charge template", tags=["CRM"]),
 )
-class ChargeTemplateViewSet(viewsets.ModelViewSet):
+class ChargeTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     """Company-Admin manages their own per-Incoterm charge templates (org-admin zone).
 
     Scoped to the requester's seller company — they never see or touch another
     tenant's templates, nor the platform's global defaults (those are the fallback
     applied automatically when a company has no template for a basis).
     """
+
+    required_permissions = {
+        "create": "settings.charge_templates",
+        "update": "settings.charge_templates",
+        "partial_update": "settings.charge_templates",
+        "destroy": "settings.charge_templates",
+    }
 
     serializer_class = ChargeTemplateSerializer
     permission_classes = [IsAuthenticated]
@@ -146,12 +160,8 @@ class ChargeTemplateViewSet(viewsets.ModelViewSet):
         # and would otherwise collapse into the generic denial below.
         if not company_id:
             raise PermissionDenied("NO_SELLER_COMPANY")
-        # ADR-0005 Phase E U3: gate on the charge_templates.manage CompanyRole permission instead of
-        # the legacy OWNER WorkspaceRole. A company_role-less OWNER still passes (OWNER-role fallback
-        # branch); a company_role-less non-OWNER stays denied (charge_templates.manage ∈ _ADMIN_PERMS
-        # → fallback False, so can_sell does not leak template management). An OWNER on a restricted
-        # CompanyRole is governed by that role — intended U3 supersession.
-        if not member_has_permission(user, company_id, "charge_templates.manage"):
+        # Право роли `settings.charge_templates` (M1-ERP-05: только роли, без вывода из должности).
+        if not member_has_permission(user, company_id, "settings.charge_templates"):
             raise PermissionDenied("ONLY_COMPANY_ADMIN_CAN_MANAGE_TEMPLATES")
 
     def get_queryset(self):

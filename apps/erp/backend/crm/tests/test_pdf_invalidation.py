@@ -17,6 +17,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
+from accounts.services.roles import ensure_default_company_roles
 from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteStatus
 from crm.services import QuoteCalculationService
 
@@ -37,6 +38,7 @@ def seller_world(db):
         is_active=True,
         is_primary=True,
         can_sell=True,
+        company_roles=[ensure_default_company_roles(company)["HEAD"]],
     )
     deal = Deal.objects.create(title="PDF deal", company=None, stage=DealStage.objects.get(code="CALCULATING"))
     quote = Quote.objects.create(

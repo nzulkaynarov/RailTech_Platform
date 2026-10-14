@@ -22,7 +22,7 @@ PRODUCTS_URL = "/api/v1/catalog/products/"
 
 
 @pytest.fixture
-def world(db):
+def world(db, settings, grant):
     for code, name in (("DRAFT", "Черновик"), ("PUBLISHED", "Опубликован"), ("ARCHIVED", "Архив")):
         ProductStatus.objects.get_or_create(code=code, defaults={"name": name, "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Поставщик", "sort_order": 20})
@@ -43,14 +43,8 @@ def world(db):
     CompanyMember.objects.create(
         user=seller_user, company=seller, role=owner_role, is_active=True, is_primary=True, can_sell=True
     )
-
-    # Вторая компания-продавец со своим владельцем — снятие и архив своих карточек.
-    pending = Company.objects.create(name="ООО Вторая витрина", inn="9600000002")
-    pending.types.add(CompanyType.objects.get(code="SUPPLIER"))
-    pending_user = CustomUser.objects.create_user(email="pending@r2.test", username="pending@r2.test", password="pw")
-    CompanyMember.objects.create(
-        user=pending_user, company=pending, role=owner_role, is_active=True, is_primary=True, can_sell=True
-    )
+    settings.OWN_COMPANY_ID = seller.id  # своя компания; «чужая» ниже — не сотрудники (M1-ERP-05)
+    grant(seller_user, "CATALOG_SUPPLY")  # права сотрудника — только из ролей
 
     # Чужая компания — для PRODUCT_NOT_YOURS и смеси в bulk_archive.
     other = Company.objects.create(name="ООО Чужие", inn="9600000003")
@@ -69,8 +63,6 @@ def world(db):
     return {
         "seller": seller,
         "seller_user": seller_user,
-        "pending": pending,
-        "pending_user": pending_user,
         "other": other,
         "stranger": stranger,
         "deal": deal,
@@ -169,23 +161,23 @@ def test_restore_refuses_a_card_that_is_not_archived(world):
 # ── Публикация, снятие и архив — по правам роли, без верификации компании ───────────────
 
 
-def test_any_seller_publishes_unpublishes_and_archives_its_own_cards(world):
-    """KYC удалён (M1-ERP-02 волна 1c): компания-владелец публикует полную карточку, снимает её с
-    витрины и убирает в архив по правам своей роли — без порога верификации."""
-    published = _card(world, company=world["pending"], status_code="PUBLISHED", **_complete_kwargs(world))
+def test_seller_publishes_unpublishes_and_archives_its_own_cards(world):
+    """KYC удалён (M1-ERP-02 волна 1c): своя компания публикует полную карточку, снимает её с
+    витрины и убирает в архив по правам роли («Каталог и закупки») — без порога верификации."""
+    published = _card(world, status_code="PUBLISHED", **_complete_kwargs(world))
 
-    draft = _card(world, company=world["pending"], **_complete_kwargs(world))
-    _, publish_error = publish_product(draft, world["pending_user"])
+    draft = _card(world, **_complete_kwargs(world))
+    _, publish_error = publish_product(draft, world["seller_user"])
     assert publish_error is None
     draft.refresh_from_db()
     assert draft.status.code == "PUBLISHED"
 
-    _, error = unpublish_product(published, world["pending_user"])
+    _, error = unpublish_product(published, world["seller_user"])
     assert error is None
     published.refresh_from_db()
     assert published.status.code == "DRAFT"
 
-    _, error = archive_product(published, world["pending_user"])
+    _, error = archive_product(published, world["seller_user"])
     assert error is None
     published.refresh_from_db()
     assert published.status.code == "ARCHIVED"

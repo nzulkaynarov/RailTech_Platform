@@ -50,8 +50,7 @@ class CompanyTeamMixin:
                     queryset=CompanyMember.objects.select_related(
                         "company__country",
                         "role",
-                        "company_role",
-                    ).prefetch_related("company__types"),
+                    ).prefetch_related("company__types", "company_roles"),
                 ),
             )
             .distinct()

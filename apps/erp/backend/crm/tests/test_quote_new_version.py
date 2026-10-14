@@ -15,7 +15,7 @@ from crm.models import Deal, DealStage, QuoteStatus
 
 
 @pytest.fixture
-def world(db):
+def world(db, grant):
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
@@ -27,6 +27,7 @@ def world(db):
     CompanyMember.objects.create(
         user=staff, company=own, role=WorkspaceRole.objects.get(code="OWNER"), is_active=True, is_primary=True
     )
+    grant(staff, "quote.build", "quote.edit_pricing")
     buyer_co = Company.objects.create(name="Buyer Co", inn="C100")
     buyer_co.types.add(CompanyType.objects.get(code="CLIENT"))
     return {"staff": staff, "buyer_co": buyer_co}

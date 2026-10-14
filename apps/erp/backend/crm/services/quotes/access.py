@@ -9,11 +9,9 @@ per-seller visibility scope — removed in M1-ERP-02 wave 3.) Depends only on th
 from decimal import Decimal
 from typing import Optional
 
-from accounts.constants import WorkspaceRoleCode
 from accounts.models import Company
 from crm.constants import QuoteStatusCode
 from crm.models import Quote
-from crm.services._params import has_explicit_company_role_perm
 
 from ._shared import _quote_owner_company_id
 
@@ -154,25 +152,6 @@ def compute_default_valid_until(company: Optional[Company]):
     return timezone.localdate() + timedelta(days=settings_row.default_offer_validity_days)
 
 
-def _has_legacy_send_role(actor, company_id: int) -> bool:
-    """Transitional bridge (ADR-0005 Phase E U3): a member NOT yet migrated to a CompanyRole
-    (company_role IS NULL) keeps send iff their legacy WorkspaceRole was OWNER or SALES_MANAGER —
-    EXACTLY the pre-U3 gate, but scoped to un-migrated members only. This deliberately does NOT
-    honour the bare can_sell capability (which defaults True), so a company_role-less member with
-    a non-sales WorkspaceRole is not auto-granted a client-facing send. Dies once every member has
-    a CompanyRole (invite / add_company_member seed one)."""
-    membership = (
-        actor.memberships.filter(company_id=company_id, is_active=True, company_role__isnull=True)
-        .select_related("role")
-        .first()
-    )
-    return bool(
-        membership
-        and membership.role
-        and membership.role.code in {WorkspaceRoleCode.OWNER, WorkspaceRoleCode.SALES_MANAGER}
-    )
-
-
 def can_send_quote_to_client(actor, quote) -> bool:
     """Who may push an internally-approved КП out to the client.
 
@@ -181,19 +160,17 @@ def can_send_quote_to_client(actor, quote) -> bool:
     ADR-0002: the seller team builds AND sends its own quotes; sending is no longer
     platform-admin-only. The READY_TO_SEND status guard stays in send_to_client.
 
-    ADR-0005 Phase E U3: gated on the INTENTIONAL quote.send CompanyRole permission
-    (has_explicit_company_role_perm — fail-closed, no legacy can_sell auto-grant, so a member's
-    default capability flag never promotes them to send a binding КП; mirrors the sibling
-    client-facing gates contract.sign / payment.record). `_has_legacy_send_role` bridges members
-    not yet migrated to a CompanyRole so no existing OWNER/SALES_MANAGER seller loses send
-    mid-rollout.
+    M1-ERP-05: право роли `quote.send` (объединение ролей сотрудника), без выводов из должности
+    или флага `can_sell`.
     """
-    if getattr(actor, "is_superuser", False) or getattr(actor, "is_superuser", False):
+    from accounts.services.permissions import member_has_permission
+
+    if getattr(actor, "is_superuser", False):
         return True
     company_id = _quote_owner_company_id(quote)
     if not company_id:
         return False
-    return has_explicit_company_role_perm(actor, company_id, "quote.send") or _has_legacy_send_role(actor, company_id)
+    return member_has_permission(actor, company_id, "quote.send")
 
 
 def can_duplicate_quote(actor, quote) -> bool:

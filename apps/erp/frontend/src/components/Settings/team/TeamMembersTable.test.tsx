@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import { TeamMembersTable } from './TeamMembersTable';
 import type { CompanyRole, User, UserMembership } from '@/api/accountsApi';
@@ -8,19 +9,17 @@ import { renderWithProviders } from '@/test/renderWithProviders';
 // Presentational component — data arrives via props (the parent owns the queries),
 // so no API mocking is needed here.
 
-type MembershipFixture = UserMembership & { company_role?: number | null };
-
 function makeMember(
   id: number,
   email: string,
   firstName: string,
-  companyRoleId: number | null,
+  roleIds: number[],
   isActive = true,
 ): User {
-  const membership: MembershipFixture = {
+  const membership: UserMembership = {
     id: 100 + id,
     company: 1,
-    company_role: companyRoleId,
+    company_roles: roleIds,
   };
   return {
     id,
@@ -35,12 +34,14 @@ function makeMember(
 }
 
 const ROLES: CompanyRole[] = [
-  { id: 7, name: 'Менеджер КП', permissions: ['quote.build'], is_system: false, member_count: 1 } as CompanyRole,
+  { id: 7, code: '', name: 'Менеджер КП', permissions: ['quote.build'], is_system: false, member_count: 1 },
+  { id: 8, code: 'FINANCE', name: 'Финансы', permissions: ['finance.invoice'], is_system: true, member_count: 1 },
+  { id: 9, code: 'HEAD', name: 'Руководитель', permissions: ['team.manage'], is_system: true, member_count: 0 },
 ];
 
 const TEAM: User[] = [
-  makeMember(1, 'owner@acme.uz', 'Владелец', 7),
-  makeMember(2, 'sales@acme.uz', 'Продавец', null),
+  makeMember(1, 'owner@acme.uz', 'Владелец', [7, 8]),
+  makeMember(2, 'sales@acme.uz', 'Продавец', []),
 ];
 
 const baseProps = {
@@ -48,7 +49,7 @@ const baseProps = {
   companyId: 1,
   companyRoles: ROLES,
   currentUserId: 1,
-  onAssignRole: vi.fn(),
+  onAssignRoles: vi.fn(),
   assignPending: false,
 };
 
@@ -63,20 +64,29 @@ describe('TeamMembersTable', () => {
     expect(screen.getAllByText('(Это вы)').length).toBeGreaterThanOrEqual(1);
   });
 
-  it('shows read-only role badges without team.manage', () => {
+  it('shows every role of a member as a badge, read-only without team.manage (M1-ERP-05)', () => {
     renderWithProviders(<TeamMembersTable {...baseProps} canManageTeam={false} />);
-    // Assigned role resolves to its name; unassigned shows «Без роли». No editors.
+    // Несколько ролей — несколько бейджей; системная роль — имя по коду из i18n; без ролей — «Без ролей».
     expect(screen.getAllByText('Менеджер КП').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('Без роли').length).toBeGreaterThanOrEqual(1);
-    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Финансы').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Без ролей').length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByLabelText(/Выбрать роли/)).not.toBeInTheDocument();
   });
 
-  it('offers the role editor for OTHER members with team.manage', () => {
+  it('offers the multi-role picker for OTHER members with team.manage', () => {
     renderWithProviders(<TeamMembersTable {...baseProps} canManageTeam />);
-    // One combobox per representation (desktop + mobile) for the non-self member only;
-    // self keeps the read-only badge («Менеджер КП»).
-    expect(screen.getAllByRole('combobox').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('Менеджер КП').length).toBeGreaterThanOrEqual(1);
+    // Picker only for the non-self member (desktop + mobile representations); self keeps badges.
+    expect(screen.getAllByLabelText('Выбрать роли: Продавец').length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByLabelText('Выбрать роли: Владелец')).not.toBeInTheDocument();
+  });
+
+  it('toggling a role sends the WHOLE new set of role ids', async () => {
+    const onAssignRoles = vi.fn();
+    const user = userEvent.setup();
+    renderWithProviders(<TeamMembersTable {...baseProps} canManageTeam onAssignRoles={onAssignRoles} />);
+    await user.click(screen.getAllByLabelText('Выбрать роли: Продавец')[0]);
+    await user.click(await screen.findByRole('menuitemcheckbox', { name: 'Руководитель' }));
+    expect(onAssignRoles).toHaveBeenCalledWith(102, [9]);
   });
 
   it('shows the empty state for a team without members', () => {
@@ -86,8 +96,8 @@ describe('TeamMembersTable', () => {
 
   it('renders the REAL status — active and disabled (P8)', () => {
     const team: User[] = [
-      makeMember(1, 'owner@acme.uz', 'Владелец', 7, true),
-      makeMember(2, 'off@acme.uz', 'Отключённый', null, false),
+      makeMember(1, 'owner@acme.uz', 'Владелец', [7], true),
+      makeMember(2, 'off@acme.uz', 'Отключённый', [], false),
     ];
     renderWithProviders(
       <TeamMembersTable {...baseProps} team={team} canManageTeam={false} />,

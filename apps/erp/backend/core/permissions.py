@@ -34,42 +34,12 @@ class IsPlatformAdminOrReadOnly(BasePermission):
         return bool(user.is_superuser)
 
 
-class IsSellerCatalogManager(BasePermission):
-    """
-    Запись — участнику компании-продавца с правом роли `catalog.manage`; администратор
-    (`is_superuser`) — всегда. Чтение свободно.
-
-    До M1-ERP-02 (волна 2) здесь стоял гейт «активная подписка поставщика»; монетизация
-    платформы удалена — действие решают права роли.
-    """
-
-    message = "ROLE_NOT_PERMITTED"
-
-    def has_permission(self, request, view):
-        user = request.user
-        if request.method in SAFE_METHODS:
-            return True
-        if not (user and user.is_authenticated):
-            return False
-        if user.is_superuser:
-            return True
-        from accounts.constants import Permission
-        from accounts.services.permissions import member_has_permission
-
-        seller_company_ids = (
-            user.memberships.filter(is_active=True).in_seller_company().values_list("company_id", flat=True)
-        )
-        return any(member_has_permission(user, cid, Permission.CATALOG_MANAGE) for cid in seller_company_ids)
-
-
 class IsProductManagerOrAdmin(BasePermission):
     """
     Product edit rights (N3: слой прав `catalog.manage` теперь ДЕЙСТВУЮЩИЙ, а не декоративный):
       - Администратор (`is_superuser`): полный доступ.
-      - Seller: членство владельца + `catalog.manage` из CompanyRole (до N3 код проверялся
-        только меню — «Наблюдатель» не видел «Номенклатуру», но правил карточки по прямому
-        API). Legacy-фолбэк без CompanyRole сохраняется в member_has_permission
-        (OWNER → всё; иначе can_sell).
+      - Сотрудник: право роли `catalog.manage` в компании-владельце карточки (M1-ERP-05 — только
+        роли, без выводов из должности OWNER и флага can_sell).
     """
 
     message = "PRODUCT_OF_ANOTHER_COMPANY"
@@ -165,3 +135,98 @@ class IsCompanyMemberOrPlatformAdmin(BasePermission):
             return user.memberships.filter(company=target_company, is_active=True).exists()
 
         return False
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Декларативный гейт прав бэк-офиса (M1-ERP-05)
+#
+# Каждый эндпоинт мутации объявляет код права в `required_permissions` вьюхи: для ViewSet —
+# по имени действия (`create`, `partial_update`, `send_to_client`…), для APIView — по методу
+# (`POST`, `PATCH`…). Значение — код права, кортеж кодов («хотя бы одно»), или маркер:
+#   ADMIN_ONLY     — только администратор (`is_superuser`); остальным 403 PLATFORM_ADMIN_REQUIRED;
+#   SELF_SERVICE   — любой вошедший действует над СВОИМ (профиль, аватар); владение проверяет вьюха;
+#   BUYER_ONLY     — шаг покупателя (акцепт КП, подпись за клиента…): сотруднику 403
+#                    ROLE_NOT_PERMITTED, покупательскому аккаунту — дальше, решает сервис.
+# Гейт работает в `check_permissions` — ДО поиска объекта, поэтому отказ не зависит от того,
+# существует ли объект (и не раскрывает этого). Сервисы проверяют те же коды тем же
+# `member_has_permission` — гейт единообразный порог, а не вторая логика.
+#
+# Покупательский аккаунт (участник компании-клиента, до M2-ERP-01) проходит гейт только на
+# действиях из `buyer_actions` вьюхи — дальше его права решает сервис (`buyer_access`). На всех
+# остальных мутациях бэк-офиса он получает 403 ROLE_NOT_PERMITTED.
+# ──────────────────────────────────────────────────────────────────────────
+
+ADMIN_ONLY = "@admin"
+SELF_SERVICE = "@self"
+BUYER_ONLY = "@buyer"
+GATE_MARKERS = frozenset({ADMIN_ONLY, SELF_SERVICE, BUYER_ONLY})
+ROLE_NOT_PERMITTED = "ROLE_NOT_PERMITTED"
+
+
+def required_permission_key(view, request):
+    """Ключ правила для запроса: имя действия ViewSet или HTTP-метод APIView."""
+    return getattr(view, "action", None) or request.method
+
+
+def _has_handler(view, request) -> bool:
+    """Есть ли у вьюхи обработчик метода (ViewSet — действие в `action_map`, APIView — метод)."""
+    method = request.method.lower()
+    if method not in getattr(view, "http_method_names", ()):
+        return False
+    if hasattr(view, "action_map"):
+        return getattr(view, "action", None) is not None
+    return hasattr(view, method)
+
+
+def required_permission_for(view, request):
+    """Объявленное правило для мутации (или None для безопасного метода)."""
+    if request.method in SAFE_METHODS or not _has_handler(view, request):
+        return None  # метод без обработчика — ответит DRF (405), не роль
+    rules = getattr(view, "required_permissions", None) or {}
+    key = required_permission_key(view, request)
+    if key not in rules:
+        # Мутация без объявленного права закрыта (fail-closed): тест матрицы ролей не даст
+        # такому эндпоинту появиться, а если появился — он не открыт молча.
+        return ROLE_NOT_PERMITTED
+    return rules[key]
+
+
+class HasRolePermission(BasePermission):
+    """DRF-разрешение по `required_permissions` вьюхи (см. блок выше)."""
+
+    message = ROLE_NOT_PERMITTED
+
+    def has_permission(self, request, view):
+        rule = required_permission_for(view, request)
+        user = request.user
+        if rule is None or not (user and user.is_authenticated):
+            return True  # безопасный метод или аноним — решает IsAuthenticated (401), не роль
+        if user.is_superuser or rule == SELF_SERVICE:
+            return True
+        if rule == ADMIN_ONLY:
+            self.message = IsPlatformAdmin.message
+            return False
+        from accounts.services.permissions import is_seller, staff_has_permission
+
+        if is_seller(user):
+            return rule not in (BUYER_ONLY, ROLE_NOT_PERMITTED) and staff_has_permission(user, rule)
+        return required_permission_key(view, request) in getattr(view, "buyer_actions", ())
+
+
+class RoleGatedViewMixin:
+    """Подмешивается ПЕРВЫМ во вьюху с мутациями: гейт прав срабатывает до остальных
+    `permission_classes` и до `get_object()`, даже если вьюха переопределяет `get_permissions`.
+
+    Объявления на вьюхе:
+      `required_permissions = {"create": "deal.manage", "approve": BUYER_ONLY, ...}`
+      `buyer_actions = {"create", "approve"}` — переходно до M2-ERP-01.
+    """
+
+    required_permissions: dict = {}
+    buyer_actions: frozenset = frozenset()
+
+    def check_permissions(self, request):
+        gate = HasRolePermission()
+        if not gate.has_permission(request, self):
+            self.permission_denied(request, message=gate.message, code=gate.message)
+        super().check_permissions(request)

@@ -1,7 +1,7 @@
 """Role/access model: the SELLER builds & owns the КП, the BUYER receives & approves it.
 
 Locks down the inverted-ownership "каша" the audit found (2026-06-10):
-  * building a Quote/КП is a seller (can_sell) action — was open to any authed user
+  * building a Quote/КП is a back-office action (role permission quote.build, M1-ERP-05) — was open to any authed user
     and effectively allowed the buyer (deal.company) while excluding the seller;
   * the seller sees buyer заявки/quotes to build them;
   * approve/reject require buyer can_buy (a КП approval = CONTRACT_SIGNED commitment).
@@ -14,6 +14,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
+from accounts.services.roles import ensure_default_company_roles
 from crm.models import ContractStatus, Deal, DealStage, Quote, QuoteStatus
 
 pytestmark = pytest.mark.django_db
@@ -58,7 +59,9 @@ def seller(lookups):
     """The single seller (SUPPLIER, can_sell)."""
     company = Company.objects.create(name="Acme Seller LLC", inn="7700000001")
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
-    return _member(company, "seller@rt.test", can_sell=True), company
+    user = _member(company, "seller@rt.test", can_sell=True)
+    user.memberships.get(company=company).company_roles.add(ensure_default_company_roles(company)["HEAD"])
+    return user, company
 
 
 @pytest.fixture
@@ -108,7 +111,8 @@ def test_buyer_cannot_build_quote(seller, buyer, deal):
     buyer_user, _ = buyer
     resp = _api(buyer_user).post("/api/v1/crm/quotes/", {"deal": deal.id}, format="json")
     assert resp.status_code == 403
-    assert resp.data["detail"] == "ONLY_SELLER_CAN_BUILD_QUOTE"
+    # M1-ERP-05: покупательский аккаунт упирается в гейт ролей раньше сервиса.
+    assert resp.data["detail"] == "ROLE_NOT_PERMITTED"
     assert not Quote.objects.filter(deal=deal).exists()
 
 
@@ -152,7 +156,8 @@ def test_seller_cannot_approve_quote(seller, deal):
     quote = _quote(deal, status_code="SENT", prepared_by=seller_user)
     resp = _api(seller_user).post(f"/api/v1/crm/quotes/{quote.id}/approve/")
     assert resp.status_code == 403
-    assert resp.data["detail"] == "MEMBER_REQUIRED_FOR_ACTION"
+    # Акцепт КП — шаг покупателя (BUYER_ONLY): сотруднику отказывает гейт ролей.
+    assert resp.data["detail"] == "ROLE_NOT_PERMITTED"
 
 
 def test_buyer_without_can_buy_cannot_approve(buyer, deal):

@@ -35,11 +35,11 @@ export const useDeleteCompanyRole = () => {
   });
 };
 
-export const useAssignMemberRole = () => {
+export const useAssignMemberRoles = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: { member_id: number; role_id: number }) =>
-      accountsApi.assignMemberRole(payload),
+    mutationFn: (payload: { member_id: number; role_ids: number[] }) =>
+      accountsApi.assignMemberRoles(payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['company-team'] });
       qc.invalidateQueries({ queryKey: ['company-roles'] });

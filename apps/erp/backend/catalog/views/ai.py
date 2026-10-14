@@ -15,6 +15,8 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
+from core.permissions import RoleGatedViewMixin
+
 
 @extend_schema(
     summary="AI enrich: draft PIM product fields (advisory)",
@@ -45,8 +47,12 @@ from rest_framework.views import APIView
     },
     tags=["Catalog"],
 )
-class ProductEnrichView(APIView):
+class ProductEnrichView(RoleGatedViewMixin, APIView):
     """AI-assisted draft of catalog product fields for sellers (AI #2)."""
+
+    required_permissions = {
+        "POST": "catalog.manage",
+    }
 
     permission_classes = [IsAuthenticated]
     throttle_classes = [ScopedRateThrottle]

@@ -9,7 +9,7 @@ import { Users, Shield, Loader2 } from 'lucide-react';
 
 import { useAuthStore } from '@/store/authStore';
 import { useHasCompanyPermission } from '@/hooks/useCapabilities';
-import { useCompanyTeam, useCompanyRoles, useAssignMemberRole } from '@/hooks/useAccounts';
+import { useCompanyTeam, useCompanyRoles, useAssignMemberRoles } from '@/hooks/useAccounts';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 
@@ -23,17 +23,16 @@ export function CompanyTeamSettings() {
   const { user } = useAuthStore();
 
   const companyId = user?.company?.id ?? user?.primary_company?.id ?? null;
-  // U2: team management gated on the team.manage PERMISSION (delegated company admin), not OWNER.
+  // Управление командой — право роли `team.manage` (M1-ERP-05); администратор (is_superuser) — всё.
   const canManageTeam = useHasCompanyPermission('team.manage');
 
   const { data: team = [], isLoading, refetch } = useCompanyTeam(companyId);
   const { data: companyRoles = [] } = useCompanyRoles(companyId ?? undefined);
-  const assignMut = useAssignMemberRole();
+  const assignMut = useAssignMemberRoles();
 
-  async function handleAssignCompanyRole(memberId: number, roleIdStr: string) {
-    const roleId = parseInt(roleIdStr, 10);
+  async function handleAssignRoles(memberId: number, roleIds: number[]) {
     try {
-      await assignMut.mutateAsync({ member_id: memberId, role_id: roleId });
+      await assignMut.mutateAsync({ member_id: memberId, role_ids: roleIds });
       toast.success(t('team.rolesSection.assignSuccess'));
     } catch (err) {
       toast.error(resolveRoleError(err, t, 'common.error'));
@@ -71,7 +70,7 @@ export function CompanyTeamSettings() {
             companyRoles={companyRoles}
             canManageTeam={canManageTeam}
             currentUserId={user?.id}
-            onAssignRole={handleAssignCompanyRole}
+            onAssignRoles={handleAssignRoles}
             assignPending={assignMut.isPending}
           />
         </CardContent>

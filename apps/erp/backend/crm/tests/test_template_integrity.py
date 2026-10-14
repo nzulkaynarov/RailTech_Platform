@@ -14,6 +14,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
+from accounts.services.roles import ensure_default_company_roles
 from crm.models import DocumentTemplate, DocumentTemplateKind
 from crm.services.document_blocks import REQUIRED_TEMPLATE_BLOCKS, company_template_for, missing_required_blocks
 
@@ -40,7 +41,12 @@ def _seller(email="owner@integrity.test"):
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
     user = CustomUser.objects.create_user(email=email, username=email, password="x")
     CompanyMember.objects.create(
-        user=user, company=company, role=WorkspaceRole.objects.get(code="OWNER"), is_active=True, is_primary=True
+        user=user,
+        company=company,
+        role=WorkspaceRole.objects.get(code="OWNER"),
+        is_active=True,
+        is_primary=True,
+        company_roles=[ensure_default_company_roles(company)["HEAD"]],
     )
     client = APIClient()
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user).access_token}")

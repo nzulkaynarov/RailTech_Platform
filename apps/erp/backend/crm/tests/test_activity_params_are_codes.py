@@ -70,7 +70,10 @@ def test_approval_step_writes_participation_code(lookups):
 
     seller = Company.objects.create(name="Продавец ООО", inn="7000000004")
     seller.types.add(CompanyType.objects.get(code="SUPPLIER"))
-    admin_role = CompanyRole.objects.create(company=seller, name="Администратор компании", is_system=True)
+    # M1-ERP-05: финальный согласующий — держатель quote.approve_final (роль «Руководитель»).
+    admin_role = CompanyRole.objects.create(
+        company=seller, name="Руководитель", permissions=[Permission.QUOTE_APPROVE_FINAL.value]
+    )
     sales_role = CompanyRole.objects.create(company=seller, name="Продажи", permissions=[Permission.QUOTE_BUILD.value])
     sales_user = _user("sales@codes.test")
     head_user = _user("head@codes.test")
@@ -79,7 +82,7 @@ def test_approval_step_writes_participation_code(lookups):
             user=user,
             company=seller,
             role=WorkspaceRole.objects.get(code=workspace),
-            company_role=role,
+            company_roles=[role],
             is_primary=True,
             is_active=True,
         )

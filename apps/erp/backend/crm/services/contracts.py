@@ -255,36 +255,25 @@ def viewer_can_sign_client(user, contract) -> bool:
     dual buy+sell company regardless of which context it landed in (review fix), and never drifts
     from what the backend actually permits.
     """
-    from accounts.services import is_member_of
-
-    from ._params import has_explicit_company_role_perm
+    from accounts.services.buyer_access import buyer_has_permission
 
     if user is None or getattr(user, "is_anonymous", False):
         return False
-    company_id = contract.deal.company_id
-    return is_member_of(user, company_id, capability="buy") or has_explicit_company_role_perm(
-        user, company_id, "contract.sign"
-    )
+    return buyer_has_permission(user, contract.deal.company_id, "contract.sign")
 
 
 def viewer_can_sign_manager(user, contract) -> bool:
-    """Seller-side signing capability for THIS contract: own-company staff (the seller of every
-    deal is the own company) who either keep the legacy `can_sell` member flag or hold an explicit
-    `contract.sign` CompanyRole permission — a member with neither (e.g. can_sell switched off, no
-    role) must not sign a binding document. Independent of page context. Shared by
-    sign_contract_by_manager and the serializer hint."""
-    from accounts.services import primary_seller_company_id
-
-    from ._params import has_explicit_company_role_perm
+    """Подпись договора от своей компании: сотрудник с правом роли `contract.sign` (M1-ERP-05 —
+    без вывода из флага `can_sell`). Один источник для `sign_contract_by_manager` и подсказки
+    сериализатора."""
+    from accounts.services import member_has_permission, primary_seller_company_id
 
     if user is None or getattr(user, "is_anonymous", False):
         return False
     own_company_id = primary_seller_company_id(user)
     if own_company_id is None:
         return False
-    if user.memberships.filter(company_id=own_company_id, is_active=True, can_sell=True).exists():
-        return True
-    return has_explicit_company_role_perm(user, own_company_id, "contract.sign")
+    return member_has_permission(user, own_company_id, "contract.sign")
 
 
 def _rerender_pdf_after_signature(contract) -> None:

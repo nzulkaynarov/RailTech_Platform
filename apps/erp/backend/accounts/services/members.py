@@ -41,13 +41,11 @@ def invite_workspace_member(company: Company, email: str, role_code: str) -> Tup
     user.save()
 
     member = CompanyMember.objects.create(user=user, company=company, role=w_role, is_primary=True)
-    # Give the invited member a starting CompanyRole mapped from their WorkspaceRole, so the G4
-    # access matrix governs them from day one (not the can_sell/can_buy fallback). The company
-    # admin can re-assign later in «Команда и доступы».
-    from .roles import default_company_role_for
+    # Сотрудник своей компании приходит со стартовыми ролями по должности приглашения (M1-ERP-05);
+    # набор ролей правится в «Команде и ролях».
+    from .roles import grant_default_roles
 
-    member.company_role = default_company_role_for(company, role_code)
-    member.save(update_fields=["company_role"])
+    grant_default_roles(member, role_code)
 
     token = default_token_generator.make_token(user)
     uid = urlsafe_base64_encode(force_bytes(user.pk))
@@ -284,41 +282,31 @@ def add_company_member(
             company=company,
             defaults={"role": role, "is_primary": is_primary, "is_active": True},
         )
-    # Seed the permission-engine CompanyRole exactly like invite_workspace_member
-    # does, so this operator path stops minting permission-less
-    # company_role=NULL members (which the G4 permission engine can only serve via the
-    # shrinking legacy fallback). Only when missing — never clobber an admin's custom
-    # role assignment on a re-add.
-    if membership.company_role_id is None:
-        from .roles import default_company_role_for
+    # Стартовые роли — как у приглашения; при повторном добавлении назначенные вручную не трогаем.
+    from .roles import grant_default_roles
 
-        membership.company_role = default_company_role_for(company, workspace_role_code)
-        membership.save(update_fields=["company_role"])
+    grant_default_roles(membership, workspace_role_code)
     return membership, None
 
 
 def _admin_floor_q() -> "Q":
-    """The never-orphan admin floor as ONE reusable predicate (ADR-0005 Phase E U3).
+    """«Администратор» компании-КЛИЕНТА для инварианта never-orphan — должность OWNER (покупательский
+    аккаунт, до M2-ERP-01).
 
-    A member counts as a company admin if they hold the immutable is_system
-    «Администратор компании» CompanyRole — the SAME floor `roles.py` enforces on
-    CompanyRole reassignment — OR, during the WorkspaceRole→CompanyRole transition,
-    they are an un-migrated legacy OWNER (company_role IS NULL). The legacy clause is
-    what keeps never-orphan protecting tenants whose members predate the 0030 backfill:
-    without it, deleting/deactivating the sole legacy OWNER (whose admin rights come
-    from member_has_permission's OWNER fallback) would silently orphan the company.
-    Unifying every never-orphan check on this predicate removes the two-definitions
-    divergence window the deprecation ADR called out.
+    У своей компании такого пола нет (M1-ERP-05): администратор бэк-офиса — `is_superuser`, а
+    инвариант «≥ 1 активный администратор» держит CRM как источник истины по людям
+    (ARCHITECTURE §7). Поэтому `company_active_admins` своей компании пуст и не блокирует снятие
+    или отключение сотрудников.
     """
-    return Q(company_role__is_system=True) | Q(company_role__isnull=True, role__code=WorkspaceRoleCode.OWNER)
+    return Q(role__code=WorkspaceRoleCode.OWNER)
 
 
 def company_active_admins(company: Company):
-    """The company's irreducible admin set for the never-orphan invariant.
+    """Неснимаемые администраторы компании-клиента (never-orphan); для своей компании — пусто."""
+    from core.tenant import own_company_id
 
-    See `_admin_floor_q` for the unified definition. Used by remove_company_member,
-    set_member_workspace_role and toggle_user_active — all share this one query.
-    """
+    if company.pk == own_company_id():
+        return CompanyMember.objects.none()
     return CompanyMember.objects.filter(_admin_floor_q(), company=company, is_active=True)
 
 
@@ -351,11 +339,9 @@ def set_member_workspace_role(
 
     Invariants:
       - role must exist and be applicable to the company's type(s);
-      - never-orphan: if this member is the company's SOLE admin (unified floor,
-        see `_admin_floor_q`) and the new WorkspaceRole would strip their admin
-        standing, refuse → CANNOT_DEMOTE_LAST_COMPANY_ADMIN (transfer first). A
-        member on the is_system CompanyRole keeps admin standing regardless of the
-        WorkspaceRole label, so relabeling them is never blocked.
+      - never-orphan (компания-клиент, до M2-ERP-01): единственного OWNER нельзя понизить —
+        CANNOT_DEMOTE_LAST_COMPANY_ADMIN (сначала передать). У своей компании должность доступа
+        не даёт (права — роли бэк-офиса), и запрета нет.
     """
     role = WorkspaceRole.objects.filter(code=role_code).first()
     if not role:
@@ -371,9 +357,7 @@ def set_member_workspace_role(
     currently_admin = (
         membership.is_active and company_active_admins(membership.company).filter(pk=membership.pk).exists()
     )
-    would_stay_admin = bool(
-        (membership.company_role_id and membership.company_role.is_system) or role.code == WorkspaceRoleCode.OWNER
-    )
+    would_stay_admin = role.code == WorkspaceRoleCode.OWNER
     if currently_admin and not would_stay_admin:
         other_admins = company_active_admins(membership.company).exclude(pk=membership.pk)
         if not other_admins.exists():

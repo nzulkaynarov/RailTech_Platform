@@ -33,13 +33,32 @@ def _user(email):
     return CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
 
 
+def _staff_user(email):
+    """Сотрудник своей компании с правом `quote.build` — подбор по каталогу закрыт гейтом ролей
+    (M1-ERP-05)."""
+    from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, WorkspaceRole
+
+    company = Company.objects.create(name="Своя", inn="7701000001")
+    company.types.add(CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "S"})[0])
+    user = _user(email)
+    role = CompanyRole.objects.create(company=company, name="Расчёт-тест", permissions=["quote.build"])
+    CompanyMember.objects.create(
+        user=user,
+        company=company,
+        role=WorkspaceRole.objects.get(code="MEMBER"),
+        is_primary=True,
+        company_roles=[role],
+    )
+    return user
+
+
 # ── (a) enqueue: 202 + AIJob row owned by the caller (row FIRST, then publish) ──
 
 
 @pytest.mark.django_db
 def test_enqueue_creates_owned_aijob_and_returns_202(settings, stub_apply_async):
     settings.AI_IMPORT_ENABLED = True
-    user = _user("aijob-owner@x.test")
+    user = _staff_user("aijob-owner@x.test")
     client = APIClient()
     client.force_authenticate(user)
 
@@ -62,7 +81,7 @@ def test_enqueue_publish_failure_removes_row_and_returns_500(settings, monkeypat
     from kombu.exceptions import OperationalError
 
     settings.AI_IMPORT_ENABLED = True
-    user = _user("aijob-broker-down@x.test")
+    user = _staff_user("aijob-broker-down@x.test")
 
     def _boom(*args, **kwargs):
         raise OperationalError("broker unreachable")

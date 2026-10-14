@@ -12,7 +12,7 @@ from master_data.models import Currency
 
 
 @pytest.fixture
-def two_sellers(db):
+def two_sellers(db, settings, grant):
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 10})
     owner_role = WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})[0]
     usd = Currency.objects.get_or_create(code="USD", defaults={"name": "USD", "symbol": "$"})[0]
@@ -28,6 +28,10 @@ def two_sellers(db):
 
     co_a, seller_a = make_seller("Seller A", "7000000001", "a@s.test")
     co_b, seller_b = make_seller("Seller B", "7000000002", "b@s.test")
+    # Продавец один — своя компания A (M1-ERP-05); B — посторонняя компания-поставщик, её участник
+    # не сотрудник бэк-офиса. Права сотрудника — из ролей.
+    settings.OWN_COMPANY_ID = co_a.id
+    grant(seller_a, "CATALOG_SUPPLY")
 
     # Separate products so the (product, supplier) unique constraint doesn't interfere
     # with the reassignment-guard test.

@@ -297,37 +297,25 @@ def record_payment(
 
     from decimal import Decimal as D
 
-    from accounts.services import is_member_of
-
     from ..models import Invoice, Payment
 
     try:
         invoice = Invoice.objects.select_for_update().select_related("deal").get(pk=invoice_id)
     except Invoice.DoesNotExist:
         return None, "NOT_FOUND"
-    # Actor-guard: platform-admin viewer cannot execute business actions.
-    # Payment is recorded by the buyer side of the deal -- must be member w/ can_buy.
-    # Additive guard (defense-in-depth): legacy can_buy capability OR explicit
-    # payment.record CompanyRole permission. has_explicit_company_role_perm skips
-    # the legacy can_buy fallback so only members with an intentional CompanyRole
-    # assignment pass through this new path (no accidental promotion).
-    from ._params import has_explicit_company_role_perm
+    # Оплату фиксирует бэк-офис: сотрудник своей компании с правом роли `finance.payment`
+    # (M1-ERP-05). Покупательская ветка (участник компании-клиента) — до M2-ERP-01.
+    from accounts.services.buyer_access import buyer_has_permission
 
     if not (
-        getattr(actor, "is_superuser", False)
-        or is_member_of(actor, invoice.deal.company_id, capability="buy")
-        or has_explicit_company_role_perm(actor, invoice.deal.company_id, "payment.record")
+        getattr(actor, "is_superuser", False) or buyer_has_permission(actor, invoice.deal.company_id, "payment.record")
     ):
-        # Back office (M1-ERP-02 wave 3): the seller is the own company, so incoming payments are
-        # recorded by its staff — gated on the INTENTIONAL `payment.record` CompanyRole permission
-        # (fail-closed, no legacy can_buy auto-grant; same discipline as quote.send / contract.sign).
-        # The buyer branch above stays for the portal until M2-ERP-01.
-        from accounts.services import primary_seller_company_id
+        from accounts.services import member_has_permission, primary_seller_company_id
 
         own_company_id = primary_seller_company_id(actor)
         if own_company_id is None:
             return None, "MEMBER_REQUIRED_FOR_ACTION"
-        if not has_explicit_company_role_perm(actor, own_company_id, "payment.record"):
+        if not member_has_permission(actor, own_company_id, "finance.payment"):
             return None, "ROLE_NOT_PERMITTED"
     if invoice.status_code in {InvoiceStatusCode.CANCELLED}:
         return None, "INVOICE_CANCELLED"

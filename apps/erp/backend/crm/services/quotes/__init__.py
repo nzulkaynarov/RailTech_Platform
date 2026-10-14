@@ -28,7 +28,6 @@ from ._shared import (
 )
 from .access import (
     _EXPIRED_STATUS_CODE,
-    _has_legacy_send_role,
     apply_company_quote_defaults,
     approval_queue_for,
     can_duplicate_quote,
@@ -72,7 +71,6 @@ __all__ = [
     "can_duplicate_quote",
     "duplicate_quote",
     "can_send_quote_to_client",
-    "_has_legacy_send_role",
     "approval_queue_for",
     "public_quote_gate",
     "_EXPIRED_STATUS_CODE",

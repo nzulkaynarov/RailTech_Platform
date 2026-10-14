@@ -47,12 +47,15 @@ def scene(db):
     QuoteItem.objects.create(quote=request_quote, product=product, quantity=5)
     QuoteItem.objects.create(quote=request_quote, quantity=2, imported_raw_name="Тормозная колодка")
 
-    # Seller member who may build КП (quote.edit_pricing) — primary, can_sell.
-    role = CompanyRole.objects.create(company=seller, name="Менеджер", permissions=["quote.edit_pricing"])
+    # Seller member who may build КП: эндпоинт требует quote.build (гейт M1-ERP-05), сервис —
+    # quote.edit_pricing (обе есть у роли «Расчёт»).
+    role = CompanyRole.objects.create(
+        company=seller, name="Менеджер", permissions=["quote.build", "quote.edit_pricing"]
+    )
     ws = WorkspaceRole.objects.get_or_create(code="SALES_MANAGER", defaults={"name": "SM", "sort_order": 10})[0]
     seller_user = CustomUser.objects.create_user(email="s@s.uz", username="s@s.uz", password="pw", is_active=True)
     CompanyMember.objects.create(
-        user=seller_user, company=seller, role=ws, company_role=role, is_active=True, is_primary=True, can_sell=True
+        user=seller_user, company=seller, role=ws, company_roles=[role], is_active=True, is_primary=True, can_sell=True
     )
     return locals()
 
@@ -66,7 +69,7 @@ def _outsider(email, inn):
     ws = WorkspaceRole.objects.get(code="SALES_MANAGER")
     user = CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
     CompanyMember.objects.create(
-        user=user, company=company, role=ws, company_role=role, is_active=True, is_primary=True, can_sell=True
+        user=user, company=company, role=ws, company_roles=[role], is_active=True, is_primary=True, can_sell=True
     )
     return user
 
@@ -108,7 +111,7 @@ def test_ai_draft_needs_no_paid_plan(scene):
     ws = WorkspaceRole.objects.get(code="SALES_MANAGER")
     member = CustomUser.objects.create_user(email="s2@s.uz", username="s2@s.uz", password="pw", is_active=True)
     CompanyMember.objects.create(
-        user=member, company=scene["seller"], role=ws, company_role=scene["role"], is_active=True, can_sell=True
+        user=member, company=scene["seller"], role=ws, company_roles=[scene["role"]], is_active=True, can_sell=True
     )
     quote, err, _ = generate_draft_quote(scene["deal"].id, member)
     assert err is None
@@ -281,8 +284,9 @@ def test_endpoint_gate_error_short_circuits_before_enqueue(scene, monkeypatch):
     client = APIClient()
     client.force_authenticate(member)
     response = client.post(f"/api/v1/crm/deals/{scene['deal'].id}/generate-draft-quote/", {}, format="json")
+    # M1-ERP-05: участник компании-клиента отсекается гейтом ролей до сервиса.
     assert response.status_code == 403
-    assert response.json() == {"detail": "ONLY_SELLER_CAN_BUILD_QUOTE"}
+    assert response.json() == {"detail": "ROLE_NOT_PERMITTED"}
 
 
 def test_draft_quote_handler_serializes_deal_with_pdf_quote(scene):

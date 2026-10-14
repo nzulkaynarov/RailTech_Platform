@@ -1233,7 +1233,7 @@
         "/api/v1/accounts/company-roles/": {
             "get": {
                 "operationId": "accounts_company_roles_list",
-                "description": "CRUD for a company's own roles. Scoped to the requester's company; writes need\nthe `team.manage` permission. Platform admins manage roles via Django Unfold.",
+                "description": "Роли бэк-офиса своей компании (M1-ERP-05): системные шаблоны + свои; запись — `team.manage`.",
                 "parameters": [
                     {
                         "name": "page",
@@ -1286,7 +1286,7 @@
             },
             "post": {
                 "operationId": "accounts_company_roles_create",
-                "description": "CRUD for a company's own roles. Scoped to the requester's company; writes need\nthe `team.manage` permission. Platform admins manage roles via Django Unfold.",
+                "description": "Роли бэк-офиса своей компании (M1-ERP-05): системные шаблоны + свои; запись — `team.manage`.",
                 "tags": [
                     "accounts"
                 ],
@@ -1332,7 +1332,7 @@
         "/api/v1/accounts/company-roles/{id}/": {
             "get": {
                 "operationId": "accounts_company_roles_retrieve",
-                "description": "CRUD for a company's own roles. Scoped to the requester's company; writes need\nthe `team.manage` permission. Platform admins manage roles via Django Unfold.",
+                "description": "Роли бэк-офиса своей компании (M1-ERP-05): системные шаблоны + свои; запись — `team.manage`.",
                 "parameters": [
                     {
                         "in": "path",
@@ -1367,7 +1367,7 @@
             },
             "put": {
                 "operationId": "accounts_company_roles_update",
-                "description": "CRUD for a company's own roles. Scoped to the requester's company; writes need\nthe `team.manage` permission. Platform admins manage roles via Django Unfold.",
+                "description": "Роли бэк-офиса своей компании (M1-ERP-05): системные шаблоны + свои; запись — `team.manage`.",
                 "parameters": [
                     {
                         "in": "path",
@@ -1422,7 +1422,7 @@
             },
             "patch": {
                 "operationId": "accounts_company_roles_partial_update",
-                "description": "CRUD for a company's own roles. Scoped to the requester's company; writes need\nthe `team.manage` permission. Platform admins manage roles via Django Unfold.",
+                "description": "Роли бэк-офиса своей компании (M1-ERP-05): системные шаблоны + свои; запись — `team.manage`.",
                 "parameters": [
                     {
                         "in": "path",
@@ -1476,7 +1476,7 @@
             },
             "delete": {
                 "operationId": "accounts_company_roles_destroy",
-                "description": "CRUD for a company's own roles. Scoped to the requester's company; writes need\nthe `team.manage` permission. Platform admins manage roles via Django Unfold.",
+                "description": "Роли бэк-офиса своей компании (M1-ERP-05): системные шаблоны + свои; запись — `team.manage`.",
                 "parameters": [
                     {
                         "in": "path",
@@ -1506,8 +1506,8 @@
         "/api/v1/accounts/company-roles/assign/": {
             "post": {
                 "operationId": "accounts_company_roles_assign_create",
-                "description": "CRUD for a company's own roles. Scoped to the requester's company; writes need\nthe `team.manage` permission. Platform admins manage roles via Django Unfold.",
-                "summary": "Assign a company role to a member",
+                "description": "Роли бэк-офиса своей компании (M1-ERP-05): системные шаблоны + свои; запись — `team.manage`.",
+                "summary": "Set a member's back-office roles (replaces the whole set; permissions are the union)",
                 "tags": [
                     "Accounts"
                 ],
@@ -1515,17 +1515,17 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/CompanyRoleRequest"
+                                "$ref": "#/components/schemas/AssignCompanyRolesRequest"
                             }
                         },
                         "application/x-www-form-urlencoded": {
                             "schema": {
-                                "$ref": "#/components/schemas/CompanyRoleRequest"
+                                "$ref": "#/components/schemas/AssignCompanyRolesRequest"
                             }
                         },
                         "multipart/form-data": {
                             "schema": {
-                                "$ref": "#/components/schemas/CompanyRoleRequest"
+                                "$ref": "#/components/schemas/AssignCompanyRolesRequest"
                             }
                         }
                     },
@@ -1541,7 +1541,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/CompanyRole"
+                                    "$ref": "#/components/schemas/AssignedCompanyRoles"
                                 }
                             }
                         },
@@ -4133,6 +4133,7 @@
         "/api/v1/catalog/category-requests/{id}/": {
             "get": {
                 "operationId": "catalog_category_requests_retrieve",
+                "description": "Подмешивается ПЕРВЫМ во вьюху с мутациями: гейт прав срабатывает до остальных\n`permission_classes` и до `get_object()`, даже если вьюха переопределяет `get_permissions`.\n\nОбъявления на вьюхе:\n  `required_permissions = {\"create\": \"deal.manage\", \"approve\": BUYER_ONLY, ...}`\n  `buyer_actions = {\"create\", \"approve\"}` — переходно до M2-ERP-01.",
                 "summary": "Get category request",
                 "parameters": [
                     {
@@ -9613,7 +9614,7 @@
         "/api/v1/crm/generated-documents/": {
             "get": {
                 "operationId": "crm_generated_documents_list",
-                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (permission + IDOR + viewer gates).",
+                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (permission + IDOR + viewer gates).\n\nСырого `POST generated-documents/` нет (снят в M1-ERP-05 по тесту матрицы ролей): документ\nрождается только через `generate/` — сервис с проверкой права и IDOR; голый ModelViewSet\nпозволял записать строку в обход сервиса (и падал 500 без компании).",
                 "parameters": [
                     {
                         "name": "search",
@@ -9648,36 +9649,12 @@
                         "description": ""
                     }
                 }
-            },
-            "post": {
-                "operationId": "crm_generated_documents_create",
-                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (permission + IDOR + viewer gates).",
-                "tags": [
-                    "crm"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/GeneratedDocument"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
             }
         },
         "/api/v1/crm/generated-documents/{id}/": {
             "get": {
                 "operationId": "crm_generated_documents_retrieve",
-                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (permission + IDOR + viewer gates).",
+                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (permission + IDOR + viewer gates).\n\nСырого `POST generated-documents/` нет (снят в M1-ERP-05 по тесту матрицы ролей): документ\nрождается только через `generate/` — сервис с проверкой права и IDOR; голый ModelViewSet\nпозволял записать строку в обход сервиса (и падал 500 без компании).",
                 "parameters": [
                     {
                         "in": "path",
@@ -9749,7 +9726,7 @@
         "/api/v1/crm/generated-documents/{id}/cancel/": {
             "post": {
                 "operationId": "crm_generated_documents_cancel_create",
-                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (permission + IDOR + viewer gates).",
+                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (permission + IDOR + viewer gates).\n\nСырого `POST generated-documents/` нет (снят в M1-ERP-05 по тесту матрицы ролей): документ\nрождается только через `generate/` — сервис с проверкой права и IDOR; голый ModelViewSet\nпозволял записать строку в обход сервиса (и падал 500 без компании).",
                 "summary": "Cancel a document",
                 "parameters": [
                     {
@@ -9787,7 +9764,7 @@
         "/api/v1/crm/generated-documents/{id}/download-pdf/": {
             "get": {
                 "operationId": "crm_generated_documents_download_pdf_retrieve",
-                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (permission + IDOR + viewer gates).",
+                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (permission + IDOR + viewer gates).\n\nСырого `POST generated-documents/` нет (снят в M1-ERP-05 по тесту матрицы ролей): документ\nрождается только через `generate/` — сервис с проверкой права и IDOR; голый ModelViewSet\nпозволял записать строку в обход сервиса (и падал 500 без компании).",
                 "summary": "Download the document PDF (202 + enqueue if not ready)",
                 "parameters": [
                     {
@@ -9825,7 +9802,7 @@
         "/api/v1/crm/generated-documents/{id}/issue/": {
             "post": {
                 "operationId": "crm_generated_documents_issue_create",
-                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (permission + IDOR + viewer gates).",
+                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (permission + IDOR + viewer gates).\n\nСырого `POST generated-documents/` нет (снят в M1-ERP-05 по тесту матрицы ролей): документ\nрождается только через `generate/` — сервис с проверкой права и IDOR; голый ModelViewSet\nпозволял записать строку в обход сервиса (и падал 500 без компании).",
                 "summary": "Issue a draft document (freeze + render PDF)",
                 "parameters": [
                     {
@@ -9901,7 +9878,7 @@
         "/api/v1/crm/generated-documents/{id}/send-email/": {
             "post": {
                 "operationId": "crm_generated_documents_send_email_create",
-                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (permission + IDOR + viewer gates).",
+                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (permission + IDOR + viewer gates).\n\nСырого `POST generated-documents/` нет (снят в M1-ERP-05 по тесту матрицы ролей): документ\nрождается только через `generate/` — сервис с проверкой права и IDOR; голый ModelViewSet\nпозволял записать строку в обход сервиса (и падал 500 без компании).",
                 "summary": "Email an issued document to its recipient (public link in body)",
                 "parameters": [
                     {
@@ -9961,7 +9938,7 @@
         "/api/v1/crm/generated-documents/generate/": {
             "post": {
                 "operationId": "crm_generated_documents_generate_create",
-                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (permission + IDOR + viewer gates).",
+                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (permission + IDOR + viewer gates).\n\nСырого `POST generated-documents/` нет (снят в M1-ERP-05 по тесту матрицы ролей): документ\nрождается только через `generate/` — сервис с проверкой права и IDOR; голый ModelViewSet\nпозволял записать строку в обход сервиса (и падал 500 без компании).",
                 "summary": "Generate a document from a template",
                 "tags": [
                     "CRM"
@@ -16148,6 +16125,24 @@
                     "reason"
                 ]
             },
+            "AssignCompanyRolesRequest": {
+                "type": "object",
+                "properties": {
+                    "member_id": {
+                        "type": "integer"
+                    },
+                    "role_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "required": [
+                    "member_id",
+                    "role_ids"
+                ]
+            },
             "AssignDealRequestRequest": {
                 "type": "object",
                 "properties": {
@@ -16157,6 +16152,24 @@
                 },
                 "required": [
                     "assignee_id"
+                ]
+            },
+            "AssignedCompanyRoles": {
+                "type": "object",
+                "properties": {
+                    "member_id": {
+                        "type": "integer"
+                    },
+                    "role_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "required": [
+                    "member_id",
+                    "role_ids"
                 ]
             },
             "Attachment": {
@@ -17290,14 +17303,23 @@
                         "type": "string",
                         "readOnly": true
                     },
-                    "company_role": {
-                        "type": "integer",
-                        "nullable": true,
-                        "title": "Роль (с правами)",
-                        "description": "Роль компании с набором прав; назначается администратором компании"
+                    "company_roles": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer",
+                            "title": "Роли (с правами)"
+                        },
+                        "readOnly": true,
+                        "title": "Роли (с правами)",
+                        "description": "Роли бэк-офиса; права складываются"
                     },
-                    "company_role_name": {
-                        "type": "string",
+                    "company_roles_data": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        },
+                        "description": "Роли участника (M1-ERP-05: несколько, права складываются); `code` — у системных.",
                         "readOnly": true
                     },
                     "is_primary": {
@@ -17330,7 +17352,8 @@
                 "required": [
                     "company",
                     "company_name",
-                    "company_role_name",
+                    "company_roles",
+                    "company_roles_data",
                     "id",
                     "joined_at",
                     "role",
@@ -17357,12 +17380,6 @@
                         "type": "integer",
                         "title": "Роль в компании",
                         "description": "Функциональная роль внутри рабочего пространства"
-                    },
-                    "company_role": {
-                        "type": "integer",
-                        "nullable": true,
-                        "title": "Роль (с правами)",
-                        "description": "Роль компании с набором прав; назначается администратором компании"
                     },
                     "is_primary": {
                         "type": "boolean",
@@ -17538,6 +17555,13 @@
                         "readOnly": true,
                         "title": "Компания"
                     },
+                    "code": {
+                        "type": "string",
+                        "readOnly": true,
+                        "default": "",
+                        "title": "Код",
+                        "description": "Код системной роли (BackofficeRoleCode); пусто у ролей, созданных компанией"
+                    },
                     "name": {
                         "type": "string",
                         "title": "Название роли",
@@ -17550,8 +17574,8 @@
                     "is_system": {
                         "type": "boolean",
                         "readOnly": true,
-                        "title": "Системная (Администратор компании)",
-                        "description": "Полноправная роль администратора компании — нельзя удалить/урезать"
+                        "title": "Системная",
+                        "description": "Роль-шаблон бэк-офиса — имя и права не меняются, удалить нельзя"
                     },
                     "member_count": {
                         "type": "integer",
@@ -17570,6 +17594,7 @@
                     }
                 },
                 "required": [
+                    "code",
                     "company",
                     "created_at",
                     "id",

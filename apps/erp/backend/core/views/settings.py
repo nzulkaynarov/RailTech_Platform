@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.models import SystemSetting
+from core.permissions import ADMIN_ONLY, RoleGatedViewMixin
 
 # ──────────────────────────────────────────────────────────────────────────
 # System Settings (singleton)
@@ -32,11 +33,16 @@ class SystemSettingSerializer(drf_serializers.ModelSerializer):
         read_only_fields = ["updated_at"]
 
 
-class SystemSettingsView(APIView):
+class SystemSettingsView(RoleGatedViewMixin, APIView):
     """
     GET  /api/v1/system-settings/ — read current settings (any authenticated user)
     PATCH /api/v1/system-settings/ — update settings (administrator = superuser only)
     """
+
+    required_permissions = {
+        "PATCH": ADMIN_ONLY,
+        "PUT": ADMIN_ONLY,
+    }
 
     permission_classes = [IsAuthenticated]
 

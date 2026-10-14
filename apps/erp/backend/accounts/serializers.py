@@ -146,8 +146,18 @@ class CompanyRoleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CompanyRole
-        fields = ["id", "company", "name", "permissions", "is_system", "member_count", "created_at", "updated_at"]
-        read_only_fields = ["company", "is_system", "created_at", "updated_at"]
+        fields = [
+            "id",
+            "company",
+            "code",
+            "name",
+            "permissions",
+            "is_system",
+            "member_count",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["company", "code", "is_system", "created_at", "updated_at"]
 
     def get_member_count(self, obj) -> int | None:
         return getattr(obj, "member_count", None) if hasattr(obj, "member_count") else obj.members.count()
@@ -158,7 +168,7 @@ class CompanyMemberSerializer(serializers.ModelSerializer):
     role_name = serializers.CharField(source="role.name", read_only=True)
     role_code = serializers.CharField(source="role.code", read_only=True)
     company_name = serializers.CharField(source="company.name", read_only=True)
-    company_role_name = serializers.CharField(source="company_role.name", read_only=True)
+    company_roles_data = serializers.SerializerMethodField()
 
     class Meta:
         model = CompanyMember
@@ -171,13 +181,21 @@ class CompanyMemberSerializer(serializers.ModelSerializer):
             "role",
             "role_code",
             "role_name",
-            "company_role",
-            "company_role_name",
+            "company_roles",
+            "company_roles_data",
             "is_primary",
             "is_active",
             "can_sell",
             "can_buy",
             "joined_at",
+        ]
+        read_only_fields = ["company_roles"]
+
+    def get_company_roles_data(self, obj) -> list[dict]:
+        """Роли участника (M1-ERP-05: несколько, права складываются); `code` — у системных."""
+        return [
+            {"id": role.id, "code": role.code, "name": role.name, "is_system": role.is_system}
+            for role in obj.company_roles.all()
         ]
 
 
@@ -418,10 +436,6 @@ class MeSerializer(serializers.ModelSerializer):
     role_code = serializers.CharField(source="role.code", read_only=True)
     role_data = serializers.SerializerMethodField()
     workspace_role = serializers.SerializerMethodField()
-    # Per-membership flags for the primary company. Frontend uses these to
-    # filter the BUYER/SELLER/MANUFACTURER context-switcher.
-    can_sell = serializers.SerializerMethodField()
-    can_buy = serializers.SerializerMethodField()
     is_superuser = serializers.BooleanField(read_only=True)
     # ADR-0005 (unified nav, Phase B): ONE explicit capability object the frontend's
     # buildNavigation() reads to render/gate the single nav from — instead of re-deriving it
@@ -447,8 +461,6 @@ class MeSerializer(serializers.ModelSerializer):
             "role_data",
             "workspace_role",
             "is_superuser",
-            "can_sell",
-            "can_buy",
             "capabilities",
             "is_2fa_enabled",
             "is_active",
@@ -476,63 +488,54 @@ class MeSerializer(serializers.ModelSerializer):
         membership = self._primary_membership(obj)
         return membership.role.code if (membership and membership.role) else None
 
-    def get_can_sell(self, obj):
-        membership = self._primary_membership(obj)
-        return bool(membership and membership.can_sell)
+    def get_capabilities(self, obj) -> dict:
+        """Что пользователю можно в бэк-офисе — для скрытия и блокировки UI (M1-ERP-05).
 
-    def get_can_buy(self, obj):
-        membership = self._primary_membership(obj)
-        # If no primary membership (e.g. platform super-admin before seed),
-        # default to True so UI isn't accidentally locked down.
-        return bool(membership.can_buy) if membership else True
-
-    def get_capabilities(self, obj):
-        """Consolidated effective-capability object (ADR-0005). `permissions` are the member's
-        effective CompanyRole permission codes — is_system role → ALL_PERMISSIONS (mirrors
-        CompanyRole.has_perm's short-circuit, so a perm added later isn't wrongly missing for an
-        existing company admin). Drives the unified nav's per-item `requires` gates."""
-        from accounts.services import is_seller, primary_seller_company_id
+        `permissions` — действующие коды прав: объединение ролей сотрудника своей компании,
+        у администратора (`is_superuser`) — весь каталог. Истина — на сервере (гейт эндпоинтов и
+        сервисы проверяют те же коды). `is_solo_team` — в команде один человек, ведущий запросы
+        (`deal.manage`): «Взять в работу» тогда — шум, SPA её прячет."""
+        from accounts.services.permissions import primary_seller_company_id, staff_permissions
         from sourcing.ai_spend_cap import ai_daily_usage
 
-        from .constants import ALL_PERMISSIONS
-
-        membership = self._primary_membership(obj)
-        permissions = []
-        if membership and getattr(membership, "company_role", None):
-            role = membership.company_role
-            permissions = list(ALL_PERMISSIONS) if role.is_system else list(role.permissions or [])
-        seller_company_id = primary_seller_company_id(obj)
         ai_usage = ai_daily_usage(obj)
-        # `can_sell` здесь — «пользователь на стороне ПРОДАВЦА», ровно как это понимает авторизация
-        # (`is_seller`: сотрудник компании-владельца, продавец один — M1-ERP-02 волна 3).
-        # Плоское поле `can_sell` выше по сериализатору — флаг УЧАСТНИКА; он по умолчанию True у
-        # любого члена, поэтому SPA показывала продавцовские поверхности члену чисто покупательской
-        # компании (аудит UI 2026-07-30). Две правды свелись в одну.
+        own_company_id = primary_seller_company_id(obj)
         return {
-            "can_buy": self.get_can_buy(obj),
-            "can_sell": is_seller(obj),
-            "is_solo_seller": self._is_solo_seller(seller_company_id),
-            # R4 §7.4: ОСТАТОК дневного лимита ИИ — информация, а не гейт. Механизм потолка уже
-            # есть (sourcing/ai_spend_cap.py), не хватало видимости: пользователь узнавал о лимите,
-            # только упёршись в 429 посреди работы. Ни одна кнопка от этих полей не выключается —
-            # запрещает по-прежнему ТОЛЬКО enqueue_ai_job. cap/remaining = null — БЕЗЛИМИТ
-            # (отключённый потолок, администратор), это отличимо от «осталось 0».
+            "permissions": sorted(staff_permissions(obj)),
+            # Роли сотрудника в своей компании — подпись в шапке («Расчёт», «Финансы»…); системные
+            # SPA переводит по `code`. У администратора без членства — пусто (SPA пишет «Администратор»).
+            "roles": self._own_roles(obj, own_company_id),
+            "is_solo_team": self._is_solo_team(own_company_id),
+            # R4 §7.4: остаток дневного лимита ИИ — информация, а не гейт; cap/remaining = null —
+            # безлимит (потолок выключен, администратор).
             "ai_daily_used": ai_usage["used"],
             "ai_daily_cap": ai_usage["cap"],
             "ai_daily_remaining": ai_usage["remaining"],
-            "permissions": permissions,
         }
 
     @staticmethod
-    def _is_solo_seller(seller_company_id) -> bool:
-        """True when the seller company has exactly one active member with sell capability —
-        the case where deal-claim is meaningless noise (Wave B). False for no seller context or
-        any multi-seller team (claim still routes work there)."""
-        if not seller_company_id:
+    def _own_roles(user, own_company_id) -> list:
+        if not own_company_id:
+            return []
+        from accounts.models import CompanyRole
+
+        roles = CompanyRole.objects.filter(
+            company_id=own_company_id, members__user=user, members__is_active=True
+        ).order_by("name")
+        return [{"code": role.code, "name": role.name, "is_system": role.is_system} for role in roles]
+
+    @staticmethod
+    def _is_solo_team(own_company_id) -> bool:
+        """True, когда в своей компании ровно один активный сотрудник с правом `deal.manage` —
+        распределять заявки не между кем. False без своей компании и в команде из нескольких."""
+        if not own_company_id:
             return False
         from accounts.models import CompanyMember
 
-        return CompanyMember.objects.filter(company_id=seller_company_id, is_active=True, can_sell=True).count() == 1
+        holders = CompanyMember.objects.filter(
+            company_id=own_company_id, is_active=True, company_roles__permissions__contains=["deal.manage"]
+        )
+        return holders.values("pk").distinct().count() == 1
 
 
 class SetupPasswordSerializer(serializers.Serializer):

@@ -8,7 +8,7 @@ import { accountsApi } from '@/api/accountsApi';
 
 /**
  * Settings Hub PR 3 — CompanyTab grouped into two cards (requisites / bank): single-PATCH
- * save, OWNER / settings.edit gating. The company-verification card and the INN lock that
+ * save, settings.edit gating (M1-ERP-05: право роли, должность OWNER ничего не даёт). The company-verification card and the INN lock that
  * hung on it are gone (M1-ERP-02) — ERP does not verify counterparties.
  */
 
@@ -88,7 +88,7 @@ const detailResponse = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  userStoreRef.state = makeUserState();
+  userStoreRef.state = makeUserState({}, ['settings.edit']);
   authStoreRef.workspaceRole = 'OWNER';
   vi.mocked(accountsApi.getCompanyDetail).mockResolvedValue(detailResponse);
   vi.mocked(accountsApi.updateCompany).mockResolvedValue(detailResponse);
@@ -111,7 +111,7 @@ describe('CompanyTab (settings hub PR 3 grouping)', () => {
     expect(screen.getByDisplayValue('00014')).toBeInTheDocument();
     expect(accountsApi.getCompanyDetail).toHaveBeenCalledWith(7);
 
-    // OWNER sees the save action; INN is editable.
+    // settings.edit holder sees the save action; INN is editable.
     expect(screen.getByRole('button', { name: /Сохранить данные/ })).toBeInTheDocument();
     expect(screen.getByDisplayValue('123456789')).toBeEnabled();
   });
@@ -133,8 +133,8 @@ describe('CompanyTab (settings hub PR 3 grouping)', () => {
     expect(payload).toEqual(expect.objectContaining({ name: 'ООО Рельсы', mfo: '00014', inn: '123456789' }));
   });
 
-  it('renders read-only for a plain non-OWNER member (no save, inputs disabled, hint shown)', async () => {
-    authStoreRef.workspaceRole = 'SALES_MANAGER';
+  it('renders read-only without settings.edit — even for the OWNER position (no save, inputs disabled, hint shown)', async () => {
+    userStoreRef.state = makeUserState();
     renderWithProviders(<CompanyTab />);
 
     await waitFor(() => {

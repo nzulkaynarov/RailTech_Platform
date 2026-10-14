@@ -132,7 +132,7 @@ def _issued_invoice(world):
 @pytest.mark.django_db
 class TestRecordPaymentGates:
     def test_staff_without_payment_permission_cannot_record_payment(self, world):
-        """Бэк-офис фиксирует оплату только по явному праву роли `payment.record`: сотрудник
+        """Бэк-офис фиксирует оплату только по явному праву роли `finance.payment`: сотрудник
         своей компании без него получает ROLE_NOT_PERMITTED, и платёж не записывается."""
         invoice = _issued_invoice(world)
         result, error = record_payment(
@@ -143,10 +143,12 @@ class TestRecordPaymentGates:
         assert not Payment.objects.filter(invoice=invoice).exists()
 
     def test_staff_with_payment_permission_records_payment(self, world):
-        """Финансист своей компании (явная роль с `payment.record`) фиксирует поступление."""
+        """Финансист своей компании (явная роль с `finance.payment`) фиксирует поступление."""
         invoice = _issued_invoice(world)
-        finance = CompanyRole.objects.create(company=world["seller_co"], name="Финансы", permissions=["payment.record"])
-        CompanyMember.objects.filter(user=world["seller_user"], company=world["seller_co"]).update(company_role=finance)
+        finance = CompanyRole.objects.create(
+            company=world["seller_co"], name="Финансы", permissions=["finance.payment"]
+        )
+        CompanyMember.objects.get(user=world["seller_user"], company=world["seller_co"]).company_roles.set([finance])
         payment, error = record_payment(
             invoice.id, actor=world["seller_user"], amount=Decimal("10"), paid_at=date.today()
         )

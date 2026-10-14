@@ -5,6 +5,7 @@ from rest_framework.test import APIClient
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
 from accounts.services import create_offline_client
+from accounts.services.roles import ensure_default_company_roles
 from crm.models import Deal, DealStage
 
 
@@ -15,7 +16,15 @@ def _seller(email, inn):
     co = Company.objects.create(name=f"Seller {email}", inn=inn)
     co.types.add(supplier)
     u = CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
-    CompanyMember.objects.create(user=u, company=co, role=owner, is_active=True, can_sell=True, is_primary=True)
+    CompanyMember.objects.create(
+        user=u,
+        company=co,
+        role=owner,
+        is_active=True,
+        can_sell=True,
+        is_primary=True,
+        company_roles=[ensure_default_company_roles(co)["CALCULATION"]],
+    )
     return u
 
 
@@ -49,7 +58,12 @@ def test_teammate_opens_deal_for_the_teams_contact(seller_with_client):
     own = seller.memberships.get().company
     teammate = CustomUser.objects.create_user(email="mate@s.test", username="mate@s.test", password="pw")
     CompanyMember.objects.create(
-        user=teammate, company=own, role=WorkspaceRole.objects.get(code="OWNER"), is_active=True, can_sell=True
+        user=teammate,
+        company=own,
+        role=WorkspaceRole.objects.get(code="OWNER"),
+        is_active=True,
+        can_sell=True,
+        company_roles=[ensure_default_company_roles(own)["CALCULATION"]],
     )
     c = APIClient()
     c.force_authenticate(teammate)

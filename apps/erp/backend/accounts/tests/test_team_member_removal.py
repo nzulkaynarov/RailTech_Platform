@@ -30,7 +30,7 @@ def _admin_member(company, email):
     )
     user = CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
     membership = CompanyMember.objects.create(
-        user=user, company=company, role=_owner_role(), company_role=admin_role, is_active=True
+        user=user, company=company, role=_owner_role(), company_roles=[admin_role], is_active=True
     )
     return user, membership
 
@@ -40,7 +40,7 @@ def _plain_member(company, email):
     role = CompanyRole.objects.create(company=company, name="Продажи", permissions=["quote.send"])
     user = CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
     membership = CompanyMember.objects.create(
-        user=user, company=company, role=_member_role(), company_role=role, is_active=True
+        user=user, company=company, role=_member_role(), company_roles=[role], is_active=True
     )
     return user, membership
 
@@ -176,7 +176,7 @@ def test_deactivate_sole_admin_by_delegate_blocked(company):
         email="hr@acme.test", username="hr@acme.test", password="pw", is_active=True
     )
     CompanyMember.objects.create(
-        user=delegate_user, company=company, role=_member_role(), company_role=delegate_role, is_active=True
+        user=delegate_user, company=company, role=_member_role(), company_roles=[delegate_role], is_active=True
     )
 
     resp = _client(delegate_user).post(

@@ -41,33 +41,35 @@ def _user(email):
     return CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
 
 
-def _member(company, user, *, workspace_role=None, company_role=None):
+def _member(company, user, *, workspace_role=None, company_roles=()):
     return CompanyMember.objects.create(
         user=user,
         company=company,
         role=WorkspaceRole.objects.get(code=workspace_role) if workspace_role else None,
-        company_role=company_role,
+        company_roles=list(company_roles),
         is_primary=True,
         is_active=True,
-        can_sell=False,  # explicit: permissions come from company_role, not the legacy flag
+        can_sell=False,  # explicit: permissions come from the roles, not the legacy flag
     )
 
 
 @pytest.fixture
 def seller(lookups):
     """Seller with a SALES_MANAGER (builds/submits, no approval rights) and a HEAD
-    (company-admin role → quote.approve_final)."""
+    (system role «Руководитель» → quote.approve_final)."""
+    from accounts.services.roles import ensure_default_company_roles
+
     company = Company.objects.create(name="Seller LLC", inn="7700000001")
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
-    admin_role = CompanyRole.objects.create(company=company, name="Администратор компании", is_system=True)
+    admin_role = ensure_default_company_roles(company)["HEAD"]
     sales_role = CompanyRole.objects.create(company=company, name="Продажи", permissions=[Permission.QUOTE_BUILD.value])
 
     sales_user = _user("sales@seller.test")
-    _member(company, sales_user, workspace_role="SALES_MANAGER", company_role=sales_role)
+    _member(company, sales_user, workspace_role="SALES_MANAGER", company_roles=[sales_role])
     head_user = _user("head@seller.test")
-    # Neutral workspace role (not OWNER/SALES_MANAGER) → cannot submit; approval rights come
-    # purely from the is-system company role (quote.approve_final).
-    _member(company, head_user, workspace_role="MEMBER", company_role=admin_role)
+    # Neutral workspace role (not OWNER/SALES_MANAGER); approval rights come purely from the
+    # «Руководитель» role (quote.approve_final).
+    _member(company, head_user, workspace_role="MEMBER", company_roles=[admin_role])
     return {"company": company, "sales": sales_user, "head": head_user, "admin_role": admin_role}
 
 
@@ -156,7 +158,7 @@ def test_reviewer_then_head(seller, deal):
         company=seller["company"], name="ВЭД", permissions=[Permission.QUOTE_REVIEW.value]
     )
     reviewer = _user("ved@seller.test")
-    _member(seller["company"], reviewer, workspace_role="MEMBER", company_role=reviewer_role)
+    _member(seller["company"], reviewer, workspace_role="MEMBER", company_roles=[reviewer_role])
 
     quote = _quote(deal, prepared_by=seller["sales"])
     QLS.submit_for_review(quote.id, seller["sales"])
@@ -175,21 +177,20 @@ def test_reviewer_then_head(seller, deal):
 
 def test_submit_gate_requires_quote_build_permission(seller, deal):
     """ADR-0005 Phase E U3 Step 2: the submit gate is now the quote.build CompanyRole permission,
-    not the SALES_MANAGER WorkspaceRole. A member whose CompanyRole omits quote.build (and no
-    can_sell fallback) is denied."""
+    not the SALES_MANAGER WorkspaceRole. A member whose roles omit quote.build is denied."""
     quote = _quote(deal, prepared_by=seller["sales"])
-    noperm_role = CompanyRole.objects.create(company=seller["company"], name="Наблюдатель", permissions=[])
+    noperm_role = CompanyRole.objects.create(company=seller["company"], name="Без прав", permissions=[])
     noperm_user = _user("noperm@seller.test")
-    _member(seller["company"], noperm_user, workspace_role="MEMBER", company_role=noperm_role)
+    _member(seller["company"], noperm_user, workspace_role="MEMBER", company_roles=[noperm_role])
     _, err = QLS.submit_for_review(quote.id, noperm_user)
     assert err == "ROLE_NOT_PERMITTED" and _status(quote) == "DRAFT"
 
 
-def test_submit_allowed_for_is_system_admin(seller, deal):
-    """The company admin (is_system CompanyRole) holds every permission incl. quote.build, so under
-    the permission model they may submit — a deliberate widening vs the old SALES_MANAGER-only gate."""
+def test_submit_allowed_for_head_role(seller, deal):
+    """«Руководитель» holds every back-office permission incl. quote.build, so under the permission
+    model they may submit — a deliberate widening vs the old SALES_MANAGER-only gate."""
     quote = _quote(deal, prepared_by=seller["sales"])
-    _, err = QLS.submit_for_review(quote.id, seller["head"])  # head = MEMBER workspace + is_system role
+    _, err = QLS.submit_for_review(quote.id, seller["head"])  # head = MEMBER workspace + HEAD role
     assert err is None
 
 

@@ -23,6 +23,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
+from accounts.services.roles import ensure_default_company_roles
 from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteStatus
 from crm.serializers import QuoteItemSerializer
 from crm.services.documents import client_optional_items, client_projection_items
@@ -54,6 +55,7 @@ def _seller(name, inn, email):
         is_active=True,
         is_primary=True,
         can_sell=True,
+        company_roles=[ensure_default_company_roles(company)["HEAD"]],
     )
     return user, company
 

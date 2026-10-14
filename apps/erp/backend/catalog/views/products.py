@@ -5,6 +5,8 @@ from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
+from core.permissions import RoleGatedViewMixin
+
 from ..filters import StableOrderingFilter
 from ..models import Product, ProductDocument, ProductImage
 from ..serializers import ProductDocumentSerializer, ProductImageSerializer, ProductListSerializer, ProductSerializer
@@ -59,7 +61,7 @@ def catalog_ai_gate(user):
     partial_update=extend_schema(summary="Partially update product", tags=["Catalog"]),
     destroy=extend_schema(summary="Delete product", tags=["Catalog"]),
 )
-class ProductViewSet(viewsets.ModelViewSet):
+class ProductViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     """
     CRUD for PIM products.
 
@@ -76,6 +78,27 @@ class ProductViewSet(viewsets.ModelViewSet):
     reference-table probes behind `completeness` once per page via `CompletenessContext`,
     so the query count is flat in page_size (guarded by tests/test_r1_list_contract.py).
     """
+
+    required_permissions = {
+        "create": "catalog.manage",
+        "update": "catalog.manage",
+        "partial_update": "catalog.manage",
+        "destroy": "catalog.manage",
+        "archive": "catalog.manage",
+        "restore": "catalog.manage",
+        "bulk_archive": "catalog.manage",
+        "merge": "catalog.manage",
+        "upload_document": "catalog.manage",
+        "upload_image": "catalog.manage",
+        "delete_document": "catalog.manage",
+        "delete_image": "catalog.manage",
+        "hs_apply": "catalog.manage",
+        "hs_classify": "catalog.manage",
+        "publish": "catalog.publish",
+        "unpublish": "catalog.publish",
+        "bulk_publish": "catalog.publish",
+        "hs_lookup": ("catalog.manage", "quote.build"),
+    }
 
     serializer_class = ProductSerializer
 

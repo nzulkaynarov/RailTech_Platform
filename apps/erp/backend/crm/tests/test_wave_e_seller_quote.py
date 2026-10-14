@@ -15,6 +15,7 @@ from rest_framework.test import APIClient
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from accounts.services import create_offline_client
+from accounts.services.roles import ensure_default_company_roles
 from crm.models import Deal, DealStage, Quote, QuoteStatus
 
 
@@ -30,7 +31,7 @@ def lookups(db):
 
 
 def _seller(email, inn):
-    """A seller-team user: OWNER of a SUPPLIER company, can_sell."""
+    """A seller-team user: OWNER of a SUPPLIER company with the «Руководитель» role (M1-ERP-05)."""
     company = Company.objects.create(name=f"Seller {inn}", inn=inn)
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
     user = CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
@@ -41,6 +42,7 @@ def _seller(email, inn):
         is_active=True,
         is_primary=True,
         can_sell=True,
+        company_roles=[ensure_default_company_roles(company)["HEAD"]],
     )
     return user, company
 
@@ -138,7 +140,12 @@ def test_f1_teammate_sees_and_builds_on_the_offline_deal(offline_deal):
     _seller_a, company, deal = offline_deal
     teammate = CustomUser.objects.create_user(email="f1-mate@s.test", username="f1-mate@s.test", password="pw")
     CompanyMember.objects.create(
-        user=teammate, company=company, role=WorkspaceRole.objects.get(code="OWNER"), is_active=True, can_sell=True
+        user=teammate,
+        company=company,
+        role=WorkspaceRole.objects.get(code="OWNER"),
+        is_active=True,
+        can_sell=True,
+        company_roles=[ensure_default_company_roles(company)["CALCULATION"]],
     )
     api = _api(teammate)
     assert api.get(f"/api/v1/crm/deals/{deal.id}/").status_code == 200
@@ -159,7 +166,8 @@ def test_f1_outsider_cannot_see_or_build_on_the_offline_deal(offline_deal):
     assert api.get(f"/api/v1/crm/deals/{deal.id}/").status_code == 404
     resp = api.post("/api/v1/crm/quotes/", {"deal": deal.id}, format="json")
     assert resp.status_code == 403
-    assert resp.json()["detail"] == "ONLY_SELLER_CAN_BUILD_QUOTE"
+    # M1-ERP-05: не сотрудник своей компании — отказ гейта ролей.
+    assert resp.json()["detail"] == "ROLE_NOT_PERMITTED"
 
 
 # ── F3: the company-less calculator draft ───────────────────────────────────
@@ -222,7 +230,7 @@ def test_f3_outsider_cannot_reach_company_less_draft(calculator_draft):
     assert api.get(f"/api/v1/crm/deals/{deal.id}/").status_code == 404
     assert api.post(f"/api/v1/crm/deals/{deal.id}/claim/").status_code in (400, 403)
     resp = api.post("/api/v1/crm/quotes/", {"deal": deal.id}, format="json")
-    assert resp.status_code == 403 and resp.json()["detail"] == "ONLY_SELLER_CAN_BUILD_QUOTE"
+    assert resp.status_code == 403 and resp.json()["detail"] == "ROLE_NOT_PERMITTED"
 
 
 def test_f3_unrelated_buyer_cannot_reach_company_less_draft(calculator_draft):

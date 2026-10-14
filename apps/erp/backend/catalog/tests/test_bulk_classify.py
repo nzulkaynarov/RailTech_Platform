@@ -19,17 +19,19 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture
-def world(db):
+def world(db, grant):
     ProductStatus.objects.get_or_create(code="DRAFT", defaults={"name": "Черновик", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Поставщик", "sort_order": 20})
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     HSCode.objects.create(code="848210", name="Подшипники шариковые", level=6)
     HSCode.objects.create(code="8482100000", name="Подшипники шариковые прочие", level=10)
     company = Company.objects.create(name="ООО Классификация", inn="9700000001")
+    company.types.add(CompanyType.objects.get(code="SUPPLIER"))
     user = CustomUser.objects.create_user(email="c@bulk.test", username="c@bulk.test", password="pw")
     CompanyMember.objects.create(
         user=user, company=company, role=WorkspaceRole.objects.get(code="OWNER"), is_active=True, is_primary=True
     )
+    grant(user, "HEAD")  # M1-ERP-05: права сотрудника — только из ролей
     client = APIClient()
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user).access_token}")
     return {"company": company, "user": user, "client": client}

@@ -116,7 +116,7 @@ def assert_user_may_change_stage(deal: Deal, actor: Optional[CustomUser], target
     (a) a non-buyer moving DRAFT→RFQ_OPEN would skip submit_request's buy-capability gate —
         submitting the request is the client's action (Cabinet, M2-ERP-01);
     (b) on the back-office side moving a deal through the pipeline is part of building the
-        КП, so the staff member needs the `quote.build` role permission (a view-only role —
+        сделки, so the staff member needs the `deal.manage` role permission (a view-only role —
         e.g. Наблюдатель — sees the deal but cannot move it).
     Returns an error code or None. superuser/internal (actor=None) bypass."""
     if actor is None or getattr(actor, "is_superuser", False):
@@ -129,7 +129,7 @@ def assert_user_may_change_stage(deal: Deal, actor: Optional[CustomUser], target
     if is_buyer_side:
         return None
     own_company_id = primary_seller_company_id(actor)
-    if not (own_company_id and member_has_permission(actor, own_company_id, "quote.build")):
+    if not (own_company_id and member_has_permission(actor, own_company_id, "deal.manage")):
         return "ROLE_NOT_PERMITTED"
     return None
 

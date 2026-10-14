@@ -76,7 +76,7 @@ def _may_manage_queue(actor: CustomUser) -> bool:
     if getattr(actor, "is_superuser", False):
         return True
     company_id = primary_seller_company_id(actor)
-    return bool(company_id) and member_has_permission(actor, company_id, "team.manage")
+    return bool(company_id) and member_has_permission(actor, company_id, "deal.assign")
 
 
 @transaction.atomic

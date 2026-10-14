@@ -66,11 +66,12 @@ def _template(company, user, body="<p>{{deal.title}}</p>"):
 
 
 @pytest.fixture
-def world(lookups):
+def world(lookups, grant):
     """Own-company staff issue a document on a buyer-owned deal; a buyer of ANOTHER client company
     has nothing to do with it."""
     seller_co = _company("Own Co", "S1", "SUPPLIER")
     seller_user = _member(seller_co, "seller@doc.test", can_sell=True)
+    grant(seller_user, "HEAD")  # M1-ERP-05: права сотрудника — только из ролей
 
     buyer_co = _company("Buyer Co", "B1", "CLIENT")
     buyer_user = _member(buyer_co, "buyer@doc.test", can_buy=True)
@@ -241,8 +242,9 @@ def test_buyer_does_not_see_foreign_draft(world):
 def test_buyer_cannot_cancel_received_document(world):
     document = _issue(world)
     resp = _api(world["buyer_user"]).post(f"/api/v1/crm/generated-documents/{document.id}/cancel/")
-    assert resp.status_code == 400
-    assert resp.json()["detail"] == "DOCUMENT_NOT_FOUND"
+    # M1-ERP-05: отмена документа — право бэк-офиса `deal.manage`; покупателя отсекает гейт ролей.
+    assert resp.status_code == 403
+    assert resp.json()["detail"] == "ROLE_NOT_PERMITTED"
     document.refresh_from_db()
     assert document.status_code == "ISSUED"
 

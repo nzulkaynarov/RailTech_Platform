@@ -49,7 +49,7 @@ def scene(db):
     ws = WorkspaceRole.objects.get_or_create(code="SALES_MANAGER", defaults={"name": "SM", "sort_order": 10})[0]
     seller_user = CustomUser.objects.create_user(email="tm@s.uz", username="tm@s.uz", password="pw", is_active=True)
     CompanyMember.objects.create(
-        user=seller_user, company=seller, role=ws, company_role=role, is_active=True, is_primary=True, can_sell=True
+        user=seller_user, company=seller, role=ws, company_roles=[role], is_active=True, is_primary=True, can_sell=True
     )
     return locals()
 

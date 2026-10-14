@@ -10,7 +10,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from core.permissions import IsCompanyMemberOrPlatformAdmin
+from core.permissions import ADMIN_ONLY, BUYER_ONLY, IsCompanyMemberOrPlatformAdmin, RoleGatedViewMixin
 from crm.constants import DealStageCode
 from crm.models import Deal, DealStage, Quote, QuoteItem
 from crm.serializers import DealDetailSerializer, DealListSerializer, QuoteItemSerializer
@@ -53,13 +53,44 @@ from .workflow import DealWorkflowActionsMixin
     partial_update=extend_schema(summary="Partially update deal", tags=["CRM"]),
     destroy=extend_schema(summary="Delete deal", tags=["CRM"]),
 )
-class DealViewSet(DealAiActionsMixin, DealWorkflowActionsMixin, viewsets.ModelViewSet):
+class DealViewSet(RoleGatedViewMixin, DealAiActionsMixin, DealWorkflowActionsMixin, viewsets.ModelViewSet):
     """
     CRUD for deals (the core CRM entity).
 
     Deal lifecycle: DRAFT -> KYC_PENDING -> SOURCING -> CALCULATING ->
     QUOTE_SENT -> CONTRACT_SIGNED -> CLOSED_WON / CLOSED_LOST.
     """
+
+    required_permissions = {
+        "create": "deal.manage",
+        "update": "deal.manage",
+        "partial_update": "deal.manage",
+        "destroy": "deal.manage",
+        "claim": "deal.manage",
+        "release": "deal.manage",
+        "change_stage": "deal.manage",
+        "assign": "deal.assign",
+        "force_change_stage": ADMIN_ONLY,
+        "generate_draft_quote": "quote.edit_pricing",
+        "take_and_prepare": "quote.edit_pricing",
+        "add_request_item": BUYER_ONLY,
+        "add_request_items": BUYER_ONLY,
+        "submit_request": BUYER_ONLY,
+        "update_request_meta": BUYER_ONLY,
+    }
+    buyer_actions = frozenset(
+        {
+            "create",
+            "update",
+            "partial_update",
+            "destroy",
+            "change_stage",
+            "add_request_item",
+            "add_request_items",
+            "submit_request",
+            "update_request_meta",
+        }
+    )  # до M2-ERP-01
 
     def get_serializer_class(self):
         if self.action == "list":

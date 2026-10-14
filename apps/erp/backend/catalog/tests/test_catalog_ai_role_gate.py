@@ -1,9 +1,10 @@
 """Catalog AI tools (PIM enrich) are gated by the catalog.manage ROLE permission.
 
 M1-ERP-02 wave 2 removed the paid ai.enrich entitlement (subscription / per-company grant): the
-enrich endpoint is now open to whoever runs the catalog — a seller member holding catalog.manage
-(or the legacy OWNER fallback) — and refused with ROLE_NOT_PERMITTED otherwise, with nothing
-enqueued. extract / compose stay ungated by the catalog role.
+enrich endpoint is now open to whoever runs the catalog — a staff member holding catalog.manage
+(M1-ERP-05: only from roles, no OWNER fallback) — and refused with ROLE_NOT_PERMITTED otherwise,
+with nothing enqueued. extract is gated by the КП/contract roles, not the catalog role; compose is a
+buyer step (до M2-ERP-01).
 
 The Celery publish is stubbed; these assert the synchronous gate only.
 """
@@ -42,7 +43,7 @@ def _seller_user(email, company, *, permissions=None):
     if permissions is not None:
         company_role = CompanyRole.objects.create(company=company, name=f"Роль {email}", permissions=permissions)
     CompanyMember.objects.create(
-        user=user, company=company, role=owner_role, is_active=True, can_sell=True, company_role=company_role
+        user=user, company=company, role=owner_role, is_active=True, can_sell=True, company_roles=[company_role]
     )
     return user
 
@@ -69,7 +70,8 @@ def test_enrich_for_catalog_manager_passes_without_any_plan(settings, stub_apply
 
 
 @pytest.mark.django_db
-def test_enrich_for_legacy_owner_passes(settings, stub_apply_async):
+def test_enrich_for_owner_without_role_is_forbidden(settings, stub_apply_async):
+    """M1-ERP-05: должность OWNER без роли прав не даёт."""
     settings.AI_IMPORT_ENABLED = True
     company = _seller_company("7200000002")
     user = _seller_user("owner@x.test", company)
@@ -78,8 +80,9 @@ def test_enrich_for_legacy_owner_passes(settings, stub_apply_async):
 
     response = _enrich(client)
 
-    assert response.status_code == 202
-    assert len(stub_apply_async) == 1
+    assert response.status_code == 403
+    assert response.json() == {"detail": "ROLE_NOT_PERMITTED"}
+    assert stub_apply_async == []
 
 
 @pytest.mark.django_db
@@ -116,27 +119,34 @@ def test_enrich_for_buyer_side_member_is_forbidden(settings, stub_apply_async):
 
 
 @pytest.mark.django_db
-def test_compose_is_not_catalog_gated(settings, stub_apply_async):
-    """compose reaches the enqueue — no 403 wall in front of it."""
+def test_compose_is_a_buyer_step(settings, stub_apply_async):
+    """compose (сборка заявки покупателем) — шаг покупателя (BUYER_ONLY, до M2-ERP-01): покупательский
+    аккаунт доходит до постановки в очередь, сотрудник бэк-офиса — 403 ROLE_NOT_PERMITTED."""
     settings.AI_IMPORT_ENABLED = True
-    company = _seller_company("7200000005")
-    user = _seller_user("compose@x.test", company)
+    buyer_company = _seller_company("7200000005", type_code="CLIENT")
+    buyer = _seller_user("compose@x.test", buyer_company)
     client = APIClient()
-    client.force_authenticate(user)
+    client.force_authenticate(buyer)
 
     response = client.post("/api/v1/sourcing/compose-request/", {"text": "нужны тормозные колодки"}, format="json")
 
     assert response.status_code == 202
     assert len(stub_apply_async) == 1
 
+    staff = _seller_user("staff@x.test", _seller_company("7200000007"), permissions=["catalog.manage"])
+    client.force_authenticate(staff)
+    response = client.post("/api/v1/sourcing/compose-request/", {"text": "x"}, format="json")
+    assert response.status_code == 403
+    assert response.json() == {"detail": "ROLE_NOT_PERMITTED"}
+
 
 @pytest.mark.django_db
 def test_extract_is_not_catalog_gated(settings, stub_apply_async):
-    """extract has no catalog gate: the user passes the gate stage and only trips the
-    reference-resolution guard (404 REFERENCE_NOT_FOUND) — NEVER a 403 wall."""
+    """extract has no catalog gate: a staff member with quote.build (или contract.manage) passes the
+    gate and only trips the reference-resolution guard (404 REFERENCE_NOT_FOUND) — NEVER a 403 wall."""
     settings.AI_IMPORT_ENABLED = True
     company = _seller_company("7200000006")
-    user = _seller_user("extract@x.test", company)
+    user = _seller_user("extract@x.test", company, permissions=["quote.build"])
     client = APIClient()
     client.force_authenticate(user)
 

@@ -17,6 +17,7 @@ import pytest
 from rest_framework.test import APIRequestFactory
 
 from accounts.models import Company, CompanyMember, CompanySettings, CompanyType, CustomUser, SystemRole, WorkspaceRole
+from accounts.services.roles import ensure_default_company_roles
 from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteStatus
 from crm.serializers.quote import QuoteEconomicsSerializer, QuoteSerializer
 from crm.services.quotes import QuoteCalculationService, compute_quote_economics
@@ -65,6 +66,7 @@ def _seller(name, inn, email):
         is_active=True,
         is_primary=True,
         can_sell=True,
+        company_roles=[ensure_default_company_roles(company)["HEAD"]],
     )
     return user, company
 
@@ -195,13 +197,13 @@ def test_economics_is_none_for_viewer_without_cost_visibility(world):
     This is why the schema marks the OBJECT nullable rather than its individual fields."""
     from accounts.models import CompanyRole
 
-    restricted_role = CompanyRole.objects.create(company=world["seller_co"], name="Наблюдатель", permissions=[])
+    restricted_role = CompanyRole.objects.create(company=world["seller_co"], name="Без прав", permissions=[])
     restricted = CustomUser.objects.create_user(email="econ-viewer@t.test", username="econ-viewer@t.test", password="x")
     CompanyMember.objects.create(
         user=restricted,
         company=world["seller_co"],
         role=WorkspaceRole.objects.get(code="OWNER"),
-        company_role=restricted_role,
+        company_roles=[restricted_role],
         is_active=True,
         can_sell=True,
     )

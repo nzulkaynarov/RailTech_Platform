@@ -11,6 +11,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from core.permissions import RoleGatedViewMixin
 from crm import services as crm_services
 from crm.models import CompanyWordingVariant
 from crm.serializers.documents import CompanyWordingVariantSerializer
@@ -18,8 +19,15 @@ from crm.services import wording_variants as wording_service
 
 
 @extend_schema(tags=["CRM"])
-class WordingVariantViewSet(viewsets.ModelViewSet):
+class WordingVariantViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     """Библиотека согласованных формулировок компании (E4, playbook-канон)."""
+
+    required_permissions = {
+        "create": "settings.edit",
+        "update": "settings.edit",
+        "partial_update": "settings.edit",
+        "destroy": "settings.edit",
+    }
 
     serializer_class = CompanyWordingVariantSerializer
     permission_classes = [IsAuthenticated]

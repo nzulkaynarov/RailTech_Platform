@@ -1,7 +1,8 @@
-"""Never-orphan invariant: a company must always keep ≥1 active admin (OWNER).
+"""Never-orphan invariant: a CLIENT company must always keep ≥1 active admin (OWNER).
 
-The OWNER workspace role (display label «Администратор компании») is the party
-accountable for billing; removing the last one would orphan the company.
+Покупательский аккаунт (до M2-ERP-01): должность OWNER — ответственный компании-клиента; снять
+последнего нельзя. У своей компании такого пола нет (M1-ERP-05): администратор бэк-офиса —
+`is_superuser`, инвариант «≥ 1 администратора» держит CRM (ARCHITECTURE §7).
 """
 
 import pytest
@@ -12,13 +13,11 @@ from accounts.services import remove_company_member, set_member_workspace_role
 
 @pytest.fixture
 def company_with_admin(db):
-    CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 10})
-    owner_role = WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})[0]
-    manager_role = WorkspaceRole.objects.get_or_create(
-        code="SALES_MANAGER", defaults={"name": "Sales Manager", "sort_order": 20}
-    )[0]
+    CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
+    owner_role = WorkspaceRole.objects.get(code="OWNER")
+    manager_role = WorkspaceRole.objects.get(code="PROCUREMENT_MANAGER")
     company = Company.objects.create(name="Acme LLC", inn="9911223344")
-    company.types.add(CompanyType.objects.get(code="SUPPLIER"))
+    company.types.add(CompanyType.objects.get(code="CLIENT"))
     admin_user = CustomUser.objects.create_user(email="admin1@acme.test", username="admin1@acme.test", password="pw")
     admin = CompanyMember.objects.create(user=admin_user, company=company, role=owner_role, is_active=True)
     return company, admin, owner_role, manager_role
@@ -80,7 +79,7 @@ def test_can_demote_admin_after_promoting_another(company_with_admin):
     assert e1 is None
     result, error = set_member_workspace_role(admin, manager_role.code)
     assert error is None
-    assert result.role.code == "SALES_MANAGER"
+    assert result.role.code == "PROCUREMENT_MANAGER"
 
 
 @pytest.mark.django_db
@@ -130,41 +129,66 @@ def test_can_deactivate_admin_when_another_exists(company_with_admin):
     assert error is None and result is not None
 
 
-# ─── add_company_member seeds a CompanyRole (ADR-0005 Phase E U3) ────────────
+# ─── своя компания: пола администраторов нет, роли бэк-офиса (M1-ERP-05) ─────────
+
+
+@pytest.fixture
+def own_company(db):
+    company = Company.objects.create(name="Own LLC", inn="9911223355")
+    company.types.add(CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier"})[0])
+    user = CustomUser.objects.create_user(email="own-owner@acme.test", username="own-owner@acme.test", password="pw")
+    owner = CompanyMember.objects.create(
+        user=user, company=company, role=WorkspaceRole.objects.get(code="OWNER"), is_active=True
+    )
+    return company, owner
 
 
 @pytest.mark.django_db
-def test_add_company_member_seeds_company_role(company_with_admin):
-    """The operator add-membership path must seed a CompanyRole (like invite), so
-    it stops minting permission-less company_role=NULL members that the permission engine can only
-    serve via the shrinking legacy fallback."""
+def test_own_company_has_no_admin_floor(own_company):
+    """Единственного OWNER своей компании можно снять: администратор бэк-офиса — is_superuser."""
+    _company, owner = own_company
+    result, error = remove_company_member(owner)
+    assert error is None and result is True
+
+
+@pytest.mark.django_db
+def test_add_company_member_grants_starting_roles(own_company):
+    """Операторское добавление в свою компанию выдаёт стартовые роли по должности (как приглашение)."""
     from accounts.services import add_company_member
 
-    company, _admin, _owner_role, _manager_role = company_with_admin
+    company, _owner = own_company
     user = CustomUser.objects.create_user(email="added@acme.test", username="added@acme.test", password="pw")
 
     membership, error = add_company_member(user, company, "SALES_MANAGER")
 
     assert error is None
-    assert membership.company_role_id is not None
-    # SALES_MANAGER derives «Менеджер по продажам», which carries quote.send.
-    assert membership.company_role.has_perm("quote.send")
+    assert list(membership.company_roles.values_list("code", flat=True)) == ["CALCULATION"]
+    assert any(role.has_perm("quote.send") for role in membership.company_roles.all())
 
 
 @pytest.mark.django_db
-def test_add_company_member_preserves_existing_company_role_on_readd(company_with_admin):
-    """Re-adding an existing member must NOT clobber a custom CompanyRole the admin assigned."""
+def test_add_company_member_preserves_existing_roles_on_readd(own_company):
+    """Повторное добавление не перетирает роли, назначенные вручную."""
     from accounts.models import CompanyRole
     from accounts.services import add_company_member
 
-    company, _admin, _owner_role, _manager_role = company_with_admin
+    company, _owner = own_company
     user = CustomUser.objects.create_user(email="readd@acme.test", username="readd@acme.test", password="pw")
     membership, _ = add_company_member(user, company, "SALES_MANAGER")
     custom = CompanyRole.objects.create(company=company, name="Custom Sender", permissions=["quote.send"])
-    membership.company_role = custom
-    membership.save(update_fields=["company_role"])
+    membership.company_roles.set([custom])
 
     again, error = add_company_member(user, company, "SALES_MANAGER")
 
     assert error is None
-    assert again.company_role_id == custom.id  # untouched
+    assert list(again.company_roles.all()) == [custom]  # untouched
+
+
+@pytest.mark.django_db
+def test_add_member_to_client_company_grants_no_backoffice_roles(company_with_admin):
+    from accounts.services import add_company_member
+
+    company, _admin, _owner_role, _manager_role = company_with_admin
+    user = CustomUser.objects.create_user(email="buyer2@acme.test", username="buyer2@acme.test", password="pw")
+    membership, error = add_company_member(user, company, "PROCUREMENT_MANAGER")
+    assert error is None and not membership.company_roles.exists()

@@ -141,6 +141,9 @@ export interface UserMembership {
 	role?: number | null;
 	role_code?: string;
 	role_name?: string;
+	/** Роли бэк-офиса участника (M1-ERP-05). */
+	company_roles?: number[];
+	company_roles_data?: { id: number; code: string; name: string; is_system: boolean }[];
 	is_primary?: boolean;
 	is_active?: boolean;
 }
@@ -157,6 +160,8 @@ export interface User {
 	role_code?: string;
 	role_data?: { code: string; name: string };
 	workspace_role?: string | null;
+	/** Администратор ERP («Администратор» в CRM): все права без ролей (M1-ERP-05). */
+	is_superuser?: boolean;
 	preferences?: { language?: string; theme?: string };
 	memberships?: UserMembership[];
 	company?: Company;
@@ -503,8 +508,9 @@ export const accountsApi = {
 	deleteCompanyRole: async (id: number) => {
 		await apiClient.delete(`accounts/company-roles/${id}/`);
 	},
-	assignMemberRole: async (payload: { member_id: number; role_id: number }) => {
-		const response = await apiClient.post<{ id: number; company_role: number | null }>(
+	/** Полный набор ролей сотрудника (M1-ERP-05: несколько ролей, права складываются). */
+	assignMemberRoles: async (payload: { member_id: number; role_ids: number[] }) => {
+		const response = await apiClient.post<{ member_id: number; role_ids: number[] }>(
 			'accounts/company-roles/assign/',
 			payload,
 		);
@@ -521,6 +527,8 @@ export const accountsApi = {
 
 export interface CompanyRole {
 	id: number;
+	/** Код системной роли (`BackofficeRoleCode`: CALCULATION, HEAD…); пусто у своих ролей. */
+	code: string;
 	name: string;
 	permissions: string[];
 	is_system: boolean;

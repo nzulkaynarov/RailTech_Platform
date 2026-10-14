@@ -58,6 +58,7 @@ import { NotificationCenter } from '@/components/Layout/NotificationCenter';
 import { DocumentSearchDialog } from '@/components/Layout/DocumentSearchDialog';
 import { useCommandPaletteShortcut, useCommandPaletteState } from '@/components/Layout/useCommandPalette';
 import { sidebarDefaultOpen } from './sidebarDefaultOpen';
+import { roleDisplayName } from '@/components/Settings/team/roleErrors';
 
 /* ─── Types ─────────────────────────────────────────────────────────── */
 
@@ -222,16 +223,20 @@ export function AppShell(props: AppShellProps) {
 function AppShellInner({ children, activePage, onNavigate, onStartTour, fullBleed = false }: AppShellProps) {
   const { t } = useTranslation();
   const { profile, company, capabilities } = useUserStore();
-  // Роль в компании (CompanyRole) — единственная роль после удаления операторской плоскости.
-  const workspaceRole = useAuthStore((st) => st.user?.workspace_role ?? null);
+  // Подпись роли в шапке — роли бэк-офиса (M1-ERP-05), а не должность приглашения; администратор
+  // (is_superuser) без ролей — «Администратор».
+  const isSuperuser = useAuthStore((st) => st.user?.is_superuser === true);
+  const roleNames = (capabilities.roles ?? []).map((role) => roleDisplayName(role, t));
+  const roleLabel = roleNames.length > 0
+    ? roleNames.join(', ')
+    : isSuperuser ? t('team.rolesSection.administrator') : null;
   const { currency, setCurrency, rateIsFallback } = useCurrencyStore();
   const { state } = useSidebar();
   const sidebarCollapsed = state === 'collapsed';
   // E2: Header flex shrinking — left container (min-w-0) allows company name truncation,
   // right container (flex-shrink-0) protects action icons from clipping at 1366px.
-  // ADR-0005: ONE config-driven nav, filtered by the role's permissions. Items the user can't
-  // access are HIDDEN (not greyed) — e.g. without `quote.build`/`quote.send` «Сделки» simply
-  // isn't shown. No disabled-state gating. Сторон «покупатель / продавец» нет (M1-ERP-02 в. 3).
+  // ADR-0005: ONE config-driven nav, filtered by the role's permissions. Реестры видны всем
+  // сотрудникам (просмотр открыт), пункты-инструменты без права СКРЫТЫ (M1-ERP-05).
   const navigation = useMemo(
     () => buildNavigation(TENANT_NAV, capabilities, activePage, t),
     [capabilities, activePage, t],
@@ -305,10 +310,10 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour, fullBlee
                         <p className="text-sm font-medium leading-none truncate">
                           {profile.firstName ? `${profile.lastName} ${profile.firstName[0]}.` : profile.email}
                         </p>
-                        {workspaceRole && (
-                          <div className="flex items-center gap-1 mt-0.5">
-                            <Badge variant="outline" className="text-xs px-1 py-0 h-4">
-                              {t(`workspaceRoles.${workspaceRole}`, { defaultValue: workspaceRole })}
+                        {roleLabel && (
+                          <div className="flex items-center gap-1 mt-0.5 min-w-0">
+                            <Badge variant="outline" className="text-xs px-1 py-0 h-4 max-w-full truncate">
+                              {roleLabel}
                             </Badge>
                           </div>
                         )}
@@ -326,11 +331,19 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour, fullBlee
                       : profile.email}
                   </p>
                   <p className="text-xs text-muted-foreground">{profile.email}</p>
-                  {workspaceRole && (
-                    <div className="flex items-center gap-1.5 mt-1.5">
-                      <Badge variant="secondary" className="text-xs">
-                        {t(`workspaceRoles.${workspaceRole}`, { defaultValue: workspaceRole })}
-                      </Badge>
+                  {(roleNames.length > 0 || isSuperuser) && (
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                      {roleNames.length > 0 ? (
+                        roleNames.map((name) => (
+                          <Badge key={name} variant="secondary" className="text-xs">
+                            {name}
+                          </Badge>
+                        ))
+                      ) : (
+                        <Badge variant="secondary" className="text-xs">
+                          {t('team.rolesSection.administrator')}
+                        </Badge>
+                      )}
                     </div>
                   )}
                 </div>

@@ -4,7 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from core.audit import AuditedWriteMixin
-from core.permissions import IsPlatformAdmin
+from core.permissions import ADMIN_ONLY, IsPlatformAdmin, RoleGatedViewMixin
 
 from . import services, services_email_templates
 from .models import EmailTemplate, Notification
@@ -91,13 +91,22 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
     partial_update=extend_schema(summary="Patch email template", tags=["Admin"]),
     destroy=extend_schema(summary="Delete email template", tags=["Admin"]),
 )
-class EmailTemplateViewSet(AuditedWriteMixin, viewsets.ModelViewSet):
+class EmailTemplateViewSet(RoleGatedViewMixin, AuditedWriteMixin, viewsets.ModelViewSet):
     """Platform-Operator CRUD for DB-editable email templates.
 
     An active row here overrides the file template of the same key when
     `notifications.emails.send_templated_email` renders. Thin wrapper — preview
     and test-send delegate to `services_email_templates`.
     """
+
+    required_permissions = {
+        "create": ADMIN_ONLY,
+        "update": ADMIN_ONLY,
+        "partial_update": ADMIN_ONLY,
+        "destroy": ADMIN_ONLY,
+        "preview": ADMIN_ONLY,
+        "test_send": ADMIN_ONLY,
+    }
 
     queryset = EmailTemplate.objects.all()
     serializer_class = EmailTemplateSerializer

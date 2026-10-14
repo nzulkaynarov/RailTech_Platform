@@ -33,7 +33,7 @@ def tenant(db):
         user=user,
         company=company,
         role=owner_role,
-        company_role=admin_company_role,
+        company_roles=[admin_company_role],
         is_active=True,
         is_primary=True,
     )

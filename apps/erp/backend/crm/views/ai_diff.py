@@ -19,6 +19,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
+from core.permissions import RoleGatedViewMixin
 from crm.models import Quote
 from crm.services import user_can_view_quote_diff
 
@@ -45,8 +46,13 @@ from crm.services import user_can_view_quote_diff
     },
     tags=["CRM"],
 )
-class QuoteRequestDiffView(APIView):
+class QuoteRequestDiffView(RoleGatedViewMixin, APIView):
     """AI #3 — coverage/diff of a КП vs its request (read-only, assistive)."""
+
+    required_permissions = {
+        "POST": "quote.build",
+    }
+    buyer_actions = frozenset({"POST"})  # до M2-ERP-01
 
     permission_classes = [IsAuthenticated]
     throttle_classes = [ScopedRateThrottle]

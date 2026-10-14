@@ -80,7 +80,7 @@ def test_split_no_offer_is_single_zero():
 
 
 @pytest.fixture
-def seller_quote(db):
+def seller_quote(db, grant):
     from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
     from crm.constants import QuoteStatusCode
     from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteStatus
@@ -104,6 +104,7 @@ def seller_quote(db):
     CompanyMember.objects.create(
         user=seller, company=seller_co, role=sales_role, is_active=True, is_primary=True, can_sell=True
     )
+    grant(seller, "CALCULATION")
 
     product = Product.objects.create(name="Колодка", owner_company=seller_co, status=pub)
     SupplierOffer.objects.create(

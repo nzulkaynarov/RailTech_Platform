@@ -793,13 +793,13 @@
     "emailPlaceholder": "Employee email",
     "inviteSuccess": "User {{email}} has been invited.",
     "inviteError": "Failed to send invitation.",
-    "inviteHint": "Assign a company role to control what each member can do; you can change it any time below.",
-    "ownerOnly": "Only the company Admin can invite new employees.",
-    "companyRole": "Company role",
-    "noRole": "No role",
+    "inviteHint": "The position chosen at invite sets the starting roles; you can change roles in the table any time.",
+    "ownerOnly": "Members are invited by someone with “Manage team & roles” or by the administrator.",
+    "companyRole": "Roles",
+    "noRole": "No roles",
     "rolesSection": {
-      "title": "Company Roles",
-      "subtitle": "Create roles with permission sets and assign them to team members",
+      "title": "Back-office roles",
+      "subtitle": "A role is a set of permissions. A member can hold several roles — permissions and queues add up. The administrator (from CRM) can do everything without roles.",
       "addRole": "Add role",
       "editRole": "Edit role",
       "deleteRole": "Delete role",
@@ -810,36 +810,53 @@
       "memberCount_other": "{{count}} members",
       "systemBadge": "System",
       "roleName": "Role name",
-      "roleNamePlaceholder": "E.g. Logistics, Procurement Manager",
+      "roleNamePlaceholder": "E.g. Senior estimator",
       "permissions": "Permissions",
       "noPermissions": "No permissions",
       "saveRole": "Save role",
       "createSuccess": "Role created",
       "updateSuccess": "Role updated",
       "deleteSuccess": "Role deleted",
-      "assignSuccess": "Role assigned",
-      "systemRoleReadonly": "System roles cannot be edited or deleted.",
+      "assignSuccess": "Member roles updated",
+      "systemRoleReadonly": "System role: its permissions are defined by the platform and cannot change. Need a different set — create your own role.",
       "noRoles": "No roles yet. Create the first role.",
-      "permissionsHint": "Tick what a member with this role may do. Grant sensitive actions (cost & margin, pricing, payments, contract signing, export, team management) deliberately.",
+      "permissionsHint": "Tick what a member with this role can do. Viewing is open to every staff member; grant sensitive actions (cost and margin, prices, payments, signing contracts, export, team) deliberately.",
       "groups": {
-        "sales": "Sales / Quotes",
-        "procurement": "Procurement",
+        "deals": "Requests & deals",
+        "quotes": "Quotes",
+        "contracts": "Contracts",
         "catalog": "Catalog",
-        "company": "Company admin",
+        "supply": "Supply",
+        "fulfillment": "Fulfillment & logistics",
+        "finance": "Finance",
+        "settings": "Settings & team",
         "data": "Data"
       },
       "errors": {
-        "onlyTeamManager": "Only a company administrator can manage roles.",
-        "systemImmutable": "The system «Company administrator» role cannot be changed or deleted.",
+        "onlyTeamManager": "Roles are managed by a member with “Manage team & roles” or by the administrator.",
+        "systemImmutable": "A system role cannot be changed or deleted — create your own role.",
         "roleHasMembers": "Reassign the members of this role to another role first.",
-        "lastAdmin": "This is the last company administrator. Transfer admin to another member first, then change this member's role.",
         "memberNotFound": "Member not found.",
         "roleNotFound": "Role not found.",
         "nameRequired": "Role name is required.",
         "nameTaken": "A role with this name already exists.",
         "unknownPermission": "An unknown permission was selected.",
-        "companyMismatch": "This role belongs to a different company."
-      }
+        "companyMismatch": "This role belongs to a different company.",
+        "cannotDropOwnTeamManage": "You cannot remove team management from yourself — no one but the administrator could manage roles then.",
+        "roleIdsRequired": "No roles were sent."
+      },
+      "systemRoles": {
+        "CALCULATION": "Quoting",
+        "CATALOG_SUPPLY": "Catalog & purchasing",
+        "FULFILLMENT": "Fulfillment & logistics",
+        "FINANCE": "Finance",
+        "HEAD": "Head",
+        "VIEWER": "Viewer"
+      },
+      "rolesLabel": "Roles",
+      "chooseRoles": "Choose roles",
+      "viewRole": "Role permissions",
+      "administrator": "Administrator"
     }
   },
   "company": {
@@ -1355,58 +1372,72 @@
         "roleResponsibilities": "Roles & Responsibilities"
       },
       "roleResponsibilities": {
-        "intro": "Platform roles live on three layers: SystemRole (platform: ADMIN / USER), WorkspaceRole (role inside a company), and per-member capabilities can_sell / can_buy. See ADR-0002 for the canonical reference.",
-        "does": "What it does",
-        "doesNot": "What it does NOT do",
-        "escalation": "Escalation: employee → company OWNER → Platform Admin → Platform Engineer. Don't escalate to the engineer before checking the React Admin loop (KYC, subscriptions, role applications).",
-        "platformEngineer": {
-          "title": "Platform Engineer (is_superuser)",
-          "summary": "Technical owner. Works via Django Unfold (/admin/) and terminal. Superuser bypasses every commercial check — DBA escape hatch.",
+        "intro": "In the back office a member has one or more roles; their permissions add up. Any staff member can view deals, documents and the catalog; acting depends on role permissions. The administrator (from CRM) can do everything.",
+        "does": "What they do",
+        "doesNot": "What they do NOT do",
+        "escalation": "Missing a permission — the button is hidden or the server answers “Not enough permissions”. Ask a member with “Manage team & roles” (usually the Head) to grant a role, or the administrator in CRM.",
+        "administrator": {
+          "title": "Administrator",
+          "summary": "The CRM “Administrator” is the ERP superuser: every permission without roles.",
           "does": [
-            "Deployment, DB migrations, Celery Beat schedule",
-            "Master data CRUD: currencies, countries, units, DeliveryBasis, WorkspaceRole",
-            "Assigning SystemRole ADMIN / USER via Django shell or React Admin",
-            "Emergency data fixes via Unfold (temporarily removing ReadOnlyInspectionMixin)",
-            "Seed: init_superadmin, core_seed",
-            "Viewing ActivityLog, QuoteItemHistory, pghistory"
+            "Platform system settings (VAT, rate, name, 2FA)",
+            "Companies, reference data, emergency actions"
           ],
-          "doesNot": "Does not work with clients, deals, contracts — that's the domain of commercial company staff."
+          "doesNot": "People are added and removed in CRM — ERP receives staff from there."
         },
-        "platformAdmin": {
-          "title": "Platform Admin (SystemRole.ADMIN)",
-          "summary": "Moderates the platform: users, companies, KYC, subscriptions, role applications. Invariant: cannot be a CompanyMember — admins have no commercial stake in any deal. Works in PlatformAdminShell inside the SPA.",
+        "calculation": {
+          "title": "Quoting",
+          "summary": "Customer requests, quotes and their review, contract drafting.",
           "does": [
-            "Users: create, edit, change SystemRole, toggle-active, delete",
-            "Companies: registry, edit details, invite members into other companies",
-            "KYC verification: L1→L2→L3, revoke",
-            "SELLER / MANUFACTURER subscriptions: create, activate, suspend, renew, record payment",
-            "Role applications SUPPLIER / MANUFACTURER: approve / reject",
-            "Force-change Deal stage / Force-approve Quote / Force-cancel Contract (reason required, audit-logged with [FORCE_ADMIN])",
-            "SystemSettings: VAT / margin / exchange rate / maintenance / 2FA"
+            "Handles requests: takes them, moves stages, prepares deal documents",
+            "Builds quotes, edits prices and cost lines, sees cost and margin",
+            "Sends quotes to the client, reviews quotes, prepares contracts"
           ],
-          "doesNot": "Does not perform technical deploy / migrations. Cannot become a CompanyMember. Does not buy, sell, sign or pay on behalf of any company — backend refuses with ADMIN_VIEWER_CANNOT_ACT."
+          "doesNot": "Does not sign contracts for the company or give final quote approval — that is the Head."
         },
-        "supplierTeam": {
-          "title": "SUPPLIER / MANUFACTURER team (WorkspaceRoles inside the seller company)",
-          "summary": "SystemRole is USER for everyone. Actual rights come from WorkspaceRole + can_sell / can_buy. Requires an operational subscription (TRIAL or ACTIVE).",
+        "catalogSupply": {
+          "title": "Catalog & purchasing",
+          "summary": "Product and service cards, publishing, suppliers and their offers.",
           "does": [
-            "OWNER — runs the team, distributes can_sell / can_buy, pays the subscription, invites team members",
-            "SALES_MANAGER — submits SupplierBid, builds and sends Quote, signs Contract, client chat, sales analytics (only if can_sell)",
-            "Logistics — runs shipping and acceptance on a won deal (delivery, tracking number)",
-            "CONTRACT_MANAGER (MANUFACTURER) — signs manufacturer contracts, owns the contract flow",
-            "FOREIGN_TRADE_SPECIALIST (MANUFACTURER) — foreign trade and export documentation"
+            "Maintains and publishes cards, uploads price lists",
+            "Maintains suppliers and their offers (prices, lead times)"
           ],
-          "doesNot": "Does not touch other companies. Does not moderate the platform. Does not perform buyer-side actions on behalf of a CLIENT."
+          "doesNot": "Does not send quotes or issue invoices."
         },
-        "clientTeam": {
-          "title": "CLIENT team (WorkspaceRoles inside the buyer company)",
-          "summary": "SystemRole is USER for everyone. No subscription required — any KYC-verified CLIENT can buy.",
+        "fulfillment": {
+          "title": "Fulfillment & logistics",
+          "summary": "Shipments, delivery notes, acceptance acts.",
           "does": [
-            "OWNER — company profile, KYC, invites, capabilities",
-            "PROCUREMENT_MANAGER — creates RFQs, imports Excel requests, evaluates SupplierBid (if can_buy)",
-            "BUYER_MANAGER — runs deals, chats with sellers, records payments, accepts Fulfillment deliveries"
+            "Tracks shipment statuses and delivery notes",
+            "Issues, reissues and cancels acts, reminds about acceptance"
           ],
-          "doesNot": "Does not see or interfere with other companies. Does not perform seller-side operations (submit bid, offer CRUD)."
+          "doesNot": "Does not accept a delivery or an act for the client — that is the client's step in the cabinet."
+        },
+        "finance": {
+          "title": "Finance",
+          "summary": "Customer invoices and payments.",
+          "does": [
+            "Issues, edits and cancels invoices",
+            "Records payments, sees margin, exports data"
+          ],
+          "doesNot": "Does not change quote prices."
+        },
+        "head": {
+          "title": "Head",
+          "summary": "Every back-office action and the final quote approval.",
+          "does": [
+            "Gives final quote approval, signs contracts for the company, assigns owners",
+            "Manages team and roles, company details, templates and numbering"
+          ],
+          "doesNot": "Does not change platform system settings — that is the administrator."
+        },
+        "viewer": {
+          "title": "Viewer",
+          "summary": "View only: sees deals, documents and the catalog.",
+          "does": [
+            "Views everything the back office sees"
+          ],
+          "doesNot": "Changes nothing."
         }
       },
       "quickActions": {
@@ -2047,7 +2078,7 @@
     "QUOTE_BELOW_COST": "Quote is below landed cost — selling at a loss. Raise the price or margin.",
     "FX_RATE_MISSING": "No FX rate for a line currency — cost not computed. Set the rate in quote settings.",
     "NO_REQUEST_LINES": "The request has no lines to draft a quote from.",
-    "PLATFORM_ADMIN_REQUIRED": "This action is restricted to platform administrators",
+    "PLATFORM_ADMIN_REQUIRED": "This action is restricted to the administrator",
     "FORCE_REASON_REQUIRED": "Force-action requires a mandatory reason (written to the audit log)",
     "QUOTE_STATUS_NOT_FOUND": "Quote status not found in the lookup table",
     "PLATFORM_ADMIN_CANNOT_JOIN_COMPANY": "A platform administrator cannot join a company — admins have no commercial stake in any deal",
@@ -2215,33 +2246,26 @@
     "FOREIGN_TRADE_SPECIALIST": "Foreign-trade specialist"
   },
   "permissions": {
-    "quote.build": "Build quotes",
-    "quote.send": "Send quotes to clients",
-    "quote.view_cost_margin": "View cost & margin",
-    "quote.edit_pricing": "Edit pricing & discounts",
-    "request.create": "Create requests",
-    "quote.approve": "Approve / reject quotes",
-    "contract.sign": "Sign contracts",
-    "payment.record": "Record payments",
-    "catalog.manage": "Manage catalog & offers",
-    "catalog.publish": "Publish products",
-    "team.manage": "Manage team & roles",
-    "settings.edit": "Edit company settings",
-    "charge_templates.manage": "Manage charge templates",
-    "data.export": "Export data",
+    "deal_manage": "Handle requests & deals",
+    "deal_assign": "Assign the owner",
     "quote_build": "Build quotes",
-    "quote_send": "Send quotes to client",
+    "quote_edit_pricing": "Edit prices, discounts & cost lines",
     "quote_view_cost_margin": "See cost & margin",
-    "quote_edit_pricing": "Edit prices & discounts",
-    "request_create": "Create requests",
-    "quote_approve": "Approve / reject quotes",
-    "contract_sign": "Sign contracts",
-    "payment_record": "Record payments",
-    "catalog_manage": "Manage catalog & offers",
-    "catalog_publish": "Publish products",
+    "quote_send": "Send quotes to the client",
+    "quote_review": "Review quotes",
+    "quote_approve_final": "Give final quote approval",
+    "contract_manage": "Prepare contracts",
+    "contract_sign": "Sign contracts for the company",
+    "catalog_manage": "Maintain the catalog",
+    "catalog_publish": "Publish items",
+    "supply_manage": "Maintain suppliers & their offers",
+    "fulfillment_manage": "Handle shipments & delivery notes",
+    "fulfillment_act": "Issue acceptance acts",
+    "finance_invoice": "Issue customer invoices",
+    "finance_payment": "Record payments",
+    "settings_edit": "Edit company details, templates & numbering",
+    "settings_charge_templates": "Maintain quote cost-line templates",
     "team_manage": "Manage team & roles",
-    "settings_edit": "Edit company settings",
-    "charge_templates_manage": "Manage charge templates",
     "data_export": "Export data"
   },
   "quoteStatuses": {

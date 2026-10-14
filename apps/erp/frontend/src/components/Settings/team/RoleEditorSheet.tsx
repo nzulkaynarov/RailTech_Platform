@@ -1,6 +1,6 @@
 /**
- * Create/edit sheet for per-tenant CompanyRoles (ADR-0004 G4). Moved verbatim from the
- * former monolithic Cabinet/CompanyTeamSettings.tsx (spec PR 4 package split); logic unchanged.
+ * Роль бэк-офиса: создание, правка своей роли и просмотр (системная роль или нет `team.manage`) —
+ * каталог прав по разделам (M1-ERP-05).
  */
 import { FormEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -22,15 +22,17 @@ import {
   SheetFooter,
 } from '@/components/ui/sheet';
 
-import { permLabelKey, resolveRoleError } from './roleErrors';
+import { permLabelKey, resolveRoleError, roleDisplayName } from './roleErrors';
 
 interface RoleSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editingRole: CompanyRole | null;
+  /** Только просмотр: системная роль или у сотрудника нет `team.manage`. */
+  readOnly?: boolean;
 }
 
-export function RoleEditorSheet({ open, onOpenChange, editingRole }: RoleSheetProps) {
+export function RoleEditorSheet({ open, onOpenChange, editingRole, readOnly = false }: RoleSheetProps) {
   const { t } = useTranslation();
   const { data: permissionGroups = [] } = usePermissionCatalog();
   const createMut = useCreateCompanyRole();
@@ -51,7 +53,7 @@ export function RoleEditorSheet({ open, onOpenChange, editingRole }: RoleSheetPr
   if (syncedFor.open !== open || syncedFor.role !== editingRole) {
     setSyncedFor({ open, role: editingRole });
     if (open) {
-      setName(editingRole?.name ?? '');
+      setName(editingRole ? roleDisplayName(editingRole, t) : '');
       setSelectedPerms(new Set(editingRole?.permissions ?? []));
     }
   }
@@ -92,17 +94,22 @@ export function RoleEditorSheet({ open, onOpenChange, editingRole }: RoleSheetPr
       <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader className="pb-4">
           <SheetTitle>
-            {isEdit ? t('team.rolesSection.editRole') : t('team.rolesSection.addRole')}
+            {readOnly
+              ? t('team.rolesSection.viewRole')
+              : isEdit
+                ? t('team.rolesSection.editRole')
+                : t('team.rolesSection.addRole')}
           </SheetTitle>
         </SheetHeader>
 
-        {isSystemRole ? (
-          <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/40 p-4 mx-4">
+        {isSystemRole && (
+          <div className="mx-4 mb-4 flex items-center gap-3 rounded-xl border border-border bg-muted/40 p-4">
             <Lock className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
             <p className="text-sm text-muted-foreground">{t('team.rolesSection.systemRoleReadonly')}</p>
           </div>
-        ) : (
-          <form id="role-editor-form" onSubmit={handleSubmit} className="px-4 space-y-6">
+        )}
+        <form id="role-editor-form" onSubmit={handleSubmit} className="px-4 space-y-6">
+          <fieldset disabled={readOnly} className="space-y-6">
             <div className="space-y-1.5">
               <Label htmlFor="role-name">{t('team.rolesSection.roleName')}</Label>
               <Input
@@ -145,6 +152,7 @@ export function RoleEditorSheet({ open, onOpenChange, editingRole }: RoleSheetPr
                               <Checkbox
                                 id={`perm-${perm.code}`}
                                 checked={selectedPerms.has(perm.code)}
+                                disabled={readOnly}
                                 onCheckedChange={() => togglePerm(perm.code)}
                               />
                               <span className="text-sm text-foreground">{t(permLabelKey(perm.code), { defaultValue: perm.label })}</span>
@@ -158,10 +166,10 @@ export function RoleEditorSheet({ open, onOpenChange, editingRole }: RoleSheetPr
                 </div>
               )}
             </div>
-          </form>
-        )}
+          </fieldset>
+        </form>
 
-        {isSystemRole ? (
+        {readOnly ? (
           <SheetFooter className="gap-2 pt-4">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               {t('common.close')}

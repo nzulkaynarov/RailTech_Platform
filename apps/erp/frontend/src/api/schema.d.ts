@@ -383,16 +383,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * @description CRUD for a company's own roles. Scoped to the requester's company; writes need
-         *     the `team.manage` permission. Platform admins manage roles via Django Unfold.
-         */
+        /** @description Роли бэк-офиса своей компании (M1-ERP-05): системные шаблоны + свои; запись — `team.manage`. */
         get: operations["accounts_company_roles_list"];
         put?: never;
-        /**
-         * @description CRUD for a company's own roles. Scoped to the requester's company; writes need
-         *     the `team.manage` permission. Platform admins manage roles via Django Unfold.
-         */
+        /** @description Роли бэк-офиса своей компании (M1-ERP-05): системные шаблоны + свои; запись — `team.manage`. */
         post: operations["accounts_company_roles_create"];
         delete?: never;
         options?: never;
@@ -407,28 +401,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * @description CRUD for a company's own roles. Scoped to the requester's company; writes need
-         *     the `team.manage` permission. Platform admins manage roles via Django Unfold.
-         */
+        /** @description Роли бэк-офиса своей компании (M1-ERP-05): системные шаблоны + свои; запись — `team.manage`. */
         get: operations["accounts_company_roles_retrieve"];
-        /**
-         * @description CRUD for a company's own roles. Scoped to the requester's company; writes need
-         *     the `team.manage` permission. Platform admins manage roles via Django Unfold.
-         */
+        /** @description Роли бэк-офиса своей компании (M1-ERP-05): системные шаблоны + свои; запись — `team.manage`. */
         put: operations["accounts_company_roles_update"];
         post?: never;
-        /**
-         * @description CRUD for a company's own roles. Scoped to the requester's company; writes need
-         *     the `team.manage` permission. Platform admins manage roles via Django Unfold.
-         */
+        /** @description Роли бэк-офиса своей компании (M1-ERP-05): системные шаблоны + свои; запись — `team.manage`. */
         delete: operations["accounts_company_roles_destroy"];
         options?: never;
         head?: never;
-        /**
-         * @description CRUD for a company's own roles. Scoped to the requester's company; writes need
-         *     the `team.manage` permission. Platform admins manage roles via Django Unfold.
-         */
+        /** @description Роли бэк-офиса своей компании (M1-ERP-05): системные шаблоны + свои; запись — `team.manage`. */
         patch: operations["accounts_company_roles_partial_update"];
         trace?: never;
     };
@@ -442,9 +424,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Assign a company role to a member
-         * @description CRUD for a company's own roles. Scoped to the requester's company; writes need
-         *     the `team.manage` permission. Platform admins manage roles via Django Unfold.
+         * Set a member's back-office roles (replaces the whole set; permissions are the union)
+         * @description Роли бэк-офиса своей компании (M1-ERP-05): системные шаблоны + свои; запись — `team.manage`.
          */
         post: operations["accounts_company_roles_assign_create"];
         delete?: never;
@@ -1485,7 +1466,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get category request */
+        /**
+         * Get category request
+         * @description Подмешивается ПЕРВЫМ во вьюху с мутациями: гейт прав срабатывает до остальных
+         *     `permission_classes` и до `get_object()`, даже если вьюха переопределяет `get_permissions`.
+         *
+         *     Объявления на вьюхе:
+         *       `required_permissions = {"create": "deal.manage", "approve": BUYER_ONLY, ...}`
+         *       `buyer_actions = {"create", "approve"}` — переходно до M2-ERP-01.
+         */
         get: operations["catalog_category_requests_retrieve"];
         put?: never;
         post?: never;
@@ -3521,14 +3510,14 @@ export interface paths {
         /**
          * @description Rendered documents registry. List/retrieve are company-scoped; generation and
          *     status transitions run in services (permission + IDOR + viewer gates).
+         *
+         *     Сырого `POST generated-documents/` нет (снят в M1-ERP-05 по тесту матрицы ролей): документ
+         *     рождается только через `generate/` — сервис с проверкой права и IDOR; голый ModelViewSet
+         *     позволял записать строку в обход сервиса (и падал 500 без компании).
          */
         get: operations["crm_generated_documents_list"];
         put?: never;
-        /**
-         * @description Rendered documents registry. List/retrieve are company-scoped; generation and
-         *     status transitions run in services (permission + IDOR + viewer gates).
-         */
-        post: operations["crm_generated_documents_create"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3545,6 +3534,10 @@ export interface paths {
         /**
          * @description Rendered documents registry. List/retrieve are company-scoped; generation and
          *     status transitions run in services (permission + IDOR + viewer gates).
+         *
+         *     Сырого `POST generated-documents/` нет (снят в M1-ERP-05 по тесту матрицы ролей): документ
+         *     рождается только через `generate/` — сервис с проверкой права и IDOR; голый ModelViewSet
+         *     позволял записать строку в обход сервиса (и падал 500 без компании).
          */
         get: operations["crm_generated_documents_retrieve"];
         put?: never;
@@ -3569,6 +3562,10 @@ export interface paths {
          * Cancel a document
          * @description Rendered documents registry. List/retrieve are company-scoped; generation and
          *     status transitions run in services (permission + IDOR + viewer gates).
+         *
+         *     Сырого `POST generated-documents/` нет (снят в M1-ERP-05 по тесту матрицы ролей): документ
+         *     рождается только через `generate/` — сервис с проверкой права и IDOR; голый ModelViewSet
+         *     позволял записать строку в обход сервиса (и падал 500 без компании).
          */
         post: operations["crm_generated_documents_cancel_create"];
         delete?: never;
@@ -3588,6 +3585,10 @@ export interface paths {
          * Download the document PDF (202 + enqueue if not ready)
          * @description Rendered documents registry. List/retrieve are company-scoped; generation and
          *     status transitions run in services (permission + IDOR + viewer gates).
+         *
+         *     Сырого `POST generated-documents/` нет (снят в M1-ERP-05 по тесту матрицы ролей): документ
+         *     рождается только через `generate/` — сервис с проверкой права и IDOR; голый ModelViewSet
+         *     позволял записать строку в обход сервиса (и падал 500 без компании).
          */
         get: operations["crm_generated_documents_download_pdf_retrieve"];
         put?: never;
@@ -3611,6 +3612,10 @@ export interface paths {
          * Issue a draft document (freeze + render PDF)
          * @description Rendered documents registry. List/retrieve are company-scoped; generation and
          *     status transitions run in services (permission + IDOR + viewer gates).
+         *
+         *     Сырого `POST generated-documents/` нет (снят в M1-ERP-05 по тесту матрицы ролей): документ
+         *     рождается только через `generate/` — сервис с проверкой права и IDOR; голый ModelViewSet
+         *     позволял записать строку в обход сервиса (и падал 500 без компании).
          */
         post: operations["crm_generated_documents_issue_create"];
         delete?: never;
@@ -3652,6 +3657,10 @@ export interface paths {
          * Email an issued document to its recipient (public link in body)
          * @description Rendered documents registry. List/retrieve are company-scoped; generation and
          *     status transitions run in services (permission + IDOR + viewer gates).
+         *
+         *     Сырого `POST generated-documents/` нет (снят в M1-ERP-05 по тесту матрицы ролей): документ
+         *     рождается только через `generate/` — сервис с проверкой права и IDOR; голый ModelViewSet
+         *     позволял записать строку в обход сервиса (и падал 500 без компании).
          */
         post: operations["crm_generated_documents_send_email_create"];
         delete?: never;
@@ -3673,6 +3682,10 @@ export interface paths {
          * Generate a document from a template
          * @description Rendered documents registry. List/retrieve are company-scoped; generation and
          *     status transitions run in services (permission + IDOR + viewer gates).
+         *
+         *     Сырого `POST generated-documents/` нет (снят в M1-ERP-05 по тесту матрицы ролей): документ
+         *     рождается только через `generate/` — сервис с проверкой права и IDOR; голый ModelViewSet
+         *     позволял записать строку в обход сервиса (и падал 500 без компании).
          */
         post: operations["crm_generated_documents_generate_create"];
         delete?: never;
@@ -5842,8 +5855,16 @@ export interface components {
         ArchiveCompanyRequest: {
             reason: string;
         };
+        AssignCompanyRolesRequest: {
+            member_id: number;
+            role_ids: number[];
+        };
         AssignDealRequestRequest: {
             assignee_id: number;
+        };
+        AssignedCompanyRoles: {
+            member_id: number;
+            role_ids: number[];
         };
         Attachment: {
             readonly id: number;
@@ -6525,11 +6546,14 @@ export interface components {
             readonly role_code: string;
             readonly role_name: string;
             /**
-             * Роль (с правами)
-             * @description Роль компании с набором прав; назначается администратором компании
+             * Роли (с правами)
+             * @description Роли бэк-офиса; права складываются
              */
-            company_role?: number | null;
-            readonly company_role_name: string;
+            readonly company_roles: number[];
+            /** @description Роли участника (M1-ERP-05: несколько, права складываются); `code` — у системных. */
+            readonly company_roles_data: {
+                [key: string]: unknown;
+            }[];
             /**
              * Основная компания
              * @description Основное рабочее пространство пользователя
@@ -6572,11 +6596,6 @@ export interface components {
              * @description Функциональная роль внутри рабочего пространства
              */
             role: number;
-            /**
-             * Роль (с правами)
-             * @description Роль компании с набором прав; назначается администратором компании
-             */
-            company_role?: number | null;
             /**
              * Основная компания
              * @description Основное рабочее пространство пользователя
@@ -6672,6 +6691,12 @@ export interface components {
             readonly id: number;
             /** Компания */
             readonly company: number;
+            /**
+             * Код
+             * @description Код системной роли (BackofficeRoleCode); пусто у ролей, созданных компанией
+             * @default
+             */
+            readonly code: string;
             /** Название роли */
             name: string;
             /**
@@ -6680,8 +6705,8 @@ export interface components {
              */
             permissions?: unknown;
             /**
-             * Системная (Администратор компании)
-             * @description Полноправная роль администратора компании — нельзя удалить/урезать
+             * Системная
+             * @description Роль-шаблон бэк-офиса — имя и права не меняются, удалить нельзя
              */
             readonly is_system: boolean;
             readonly member_count: number | null;
@@ -12326,9 +12351,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CompanyRoleRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["CompanyRoleRequest"];
-                "multipart/form-data": components["schemas"]["CompanyRoleRequest"];
+                "application/json": components["schemas"]["AssignCompanyRolesRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["AssignCompanyRolesRequest"];
+                "multipart/form-data": components["schemas"]["AssignCompanyRolesRequest"];
             };
         };
         responses: {
@@ -12337,7 +12362,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CompanyRole"];
+                    "application/json": components["schemas"]["AssignedCompanyRoles"];
                 };
             };
         };
@@ -17015,25 +17040,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GeneratedDocument"][];
-                };
-            };
-        };
-    };
-    crm_generated_documents_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GeneratedDocument"];
                 };
             };
         };

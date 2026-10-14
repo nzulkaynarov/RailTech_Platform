@@ -17,6 +17,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
+from accounts.services.roles import ensure_default_company_roles
 from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteStatus
 from master_data.models import Currency
 
@@ -45,6 +46,7 @@ def _seller(name, inn, email):
         is_active=True,
         is_primary=True,
         can_sell=True,
+        company_roles=[ensure_default_company_roles(company)["HEAD"]],
     )
     return user, company
 
@@ -165,7 +167,7 @@ def test_outsider_is_refused(world, lookups):
     resp = _api(stranger).post(BULK_URL, {"quote": quote.id, "items": [items[0].id]}, format="json")
 
     assert resp.status_code == 403
-    assert resp.json()["detail"] == "ONLY_SELLER_CAN_BUILD_QUOTE"
+    assert resp.json()["detail"] == "ROLE_NOT_PERMITTED"  # гейт роли (M1-ERP-05)
     assert QuoteItem.objects.filter(quote=quote).count() == 2
 
 
