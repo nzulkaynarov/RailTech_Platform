@@ -33,7 +33,6 @@ def _ctx(**over):
         "seller": SimpleNamespace(name="ООО «Продавец»", inn="456", legal_address="", phone="", email=""),
         "seller_profile": None,
         "seller_logo_url": None,
-        "is_demo": False,
     }
     ctx.update(over)
     return ctx

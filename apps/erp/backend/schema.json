@@ -1892,607 +1892,6 @@
                 }
             }
         },
-        "/api/v1/accounts/subscriptions/": {
-            "get": {
-                "operationId": "accounts_subscriptions_list",
-                "description": "Returns all supplier subscriptions. Filterable by plan, status, company.",
-                "summary": "List subscriptions",
-                "parameters": [
-                    {
-                        "in": "query",
-                        "name": "company",
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "name": "page",
-                        "required": false,
-                        "in": "query",
-                        "description": "A page number within the paginated result set.",
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "name": "page_size",
-                        "required": false,
-                        "in": "query",
-                        "description": "Number of results to return per page.",
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "in": "query",
-                        "name": "plan",
-                        "schema": {
-                            "type": "string",
-                            "title": "Тарифный план",
-                            "enum": [
-                                "BASIC",
-                                "PREMIUM",
-                                "STANDARD"
-                            ]
-                        },
-                        "description": "Базовый, Стандартный или Премиум\n\n* `BASIC` - Базовый\n* `STANDARD` - Стандартный\n* `PREMIUM` - Премиум"
-                    },
-                    {
-                        "name": "search",
-                        "required": false,
-                        "in": "query",
-                        "description": "A search term.",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "in": "query",
-                        "name": "status",
-                        "schema": {
-                            "type": "string",
-                            "title": "Статус",
-                            "enum": [
-                                "ACTIVE",
-                                "CANCELLED",
-                                "PAST_DUE",
-                                "SUSPENDED",
-                                "TRIAL"
-                            ]
-                        },
-                        "description": "Текущее состояние подписки\n\n* `TRIAL` - Пробный период\n* `ACTIVE` - Активна\n* `PAST_DUE` - Просрочена\n* `SUSPENDED` - Приостановлена\n* `CANCELLED` - Отменена"
-                    }
-                ],
-                "tags": [
-                    "Accounts"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/PaginatedSupplierSubscriptionList"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            },
-            "post": {
-                "operationId": "accounts_subscriptions_create",
-                "description": "Create a new supplier subscription.",
-                "summary": "Create subscription",
-                "tags": [
-                    "Accounts"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/SupplierSubscriptionRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/SupplierSubscriptionRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/SupplierSubscriptionRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SupplierSubscription"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            }
-        },
-        "/api/v1/accounts/subscriptions/{id}/": {
-            "get": {
-                "operationId": "accounts_subscriptions_retrieve",
-                "description": "CRUD + status actions for supplier subscriptions.\nAdmin/Manager only.",
-                "summary": "Get subscription details",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Подписка поставщика.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "Accounts"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SupplierSubscription"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            },
-            "put": {
-                "operationId": "accounts_subscriptions_update",
-                "description": "CRUD + status actions for supplier subscriptions.\nAdmin/Manager only.",
-                "summary": "Update subscription",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Подписка поставщика.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "Accounts"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/SupplierSubscriptionRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/SupplierSubscriptionRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/SupplierSubscriptionRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SupplierSubscription"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            },
-            "patch": {
-                "operationId": "accounts_subscriptions_partial_update",
-                "description": "CRUD + status actions for supplier subscriptions.\nAdmin/Manager only.",
-                "summary": "Partially update subscription",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Подписка поставщика.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "Accounts"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedSupplierSubscriptionRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedSupplierSubscriptionRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedSupplierSubscriptionRequest"
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SupplierSubscription"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            },
-            "delete": {
-                "operationId": "accounts_subscriptions_destroy",
-                "description": "CRUD + status actions for supplier subscriptions.\nAdmin/Manager only.",
-                "summary": "Delete subscription",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Подписка поставщика.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "Accounts"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "No response body"
-                    }
-                }
-            }
-        },
-        "/api/v1/accounts/subscriptions/{id}/activate/": {
-            "post": {
-                "operationId": "accounts_subscriptions_activate_create",
-                "description": "Set subscription status to ACTIVE.",
-                "summary": "Activate subscription",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Подписка поставщика.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "Accounts"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/SupplierSubscriptionRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/SupplierSubscriptionRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/SupplierSubscriptionRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SupplierSubscription"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            }
-        },
-        "/api/v1/accounts/subscriptions/{id}/pay/": {
-            "post": {
-                "operationId": "accounts_subscriptions_pay_create",
-                "description": "CRUD + status actions for supplier subscriptions.\nAdmin/Manager only.",
-                "summary": "Record subscription payment -- extends validity and activates",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Подписка поставщика.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "Accounts"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/SupplierSubscriptionRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/SupplierSubscriptionRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/SupplierSubscriptionRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SupplierSubscription"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            }
-        },
-        "/api/v1/accounts/subscriptions/{id}/suspend/": {
-            "post": {
-                "operationId": "accounts_subscriptions_suspend_create",
-                "description": "Set subscription status to SUSPENDED.",
-                "summary": "Suspend subscription",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Подписка поставщика.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "Accounts"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/SupplierSubscriptionRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/SupplierSubscriptionRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/SupplierSubscriptionRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SupplierSubscription"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            }
-        },
-        "/api/v1/accounts/subscriptions/bulk-set-status/": {
-            "post": {
-                "operationId": "accounts_subscriptions_bulk_set_status_create",
-                "description": "Platform Admin: apply a target status (ACTIVE | SUSPENDED) to multiple subscriptions.",
-                "summary": "Bulk set subscription status",
-                "tags": [
-                    "Accounts"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "ids": {
-                                        "type": "array",
-                                        "items": {
-                                            "type": "integer"
-                                        }
-                                    },
-                                    "status": {
-                                        "type": "string",
-                                        "enum": [
-                                            "ACTIVE",
-                                            "SUSPENDED"
-                                        ]
-                                    },
-                                    "reason": {
-                                        "type": "string"
-                                    }
-                                },
-                                "required": [
-                                    "ids",
-                                    "status"
-                                ]
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "affected count"
-                    }
-                }
-            }
-        },
-        "/api/v1/accounts/subscriptions/export/": {
-            "get": {
-                "operationId": "accounts_subscriptions_export_retrieve",
-                "description": "Export filtered subscriptions as CSV or XLSX.",
-                "summary": "Export subscriptions",
-                "tags": [
-                    "Accounts"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SupplierSubscription"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            }
-        },
-        "/api/v1/accounts/subscriptions/mine/": {
-            "get": {
-                "operationId": "accounts_subscriptions_mine_retrieve",
-                "description": "Returns the SupplierSubscription of the caller's primary company, if any. Available to any authenticated user with can_sell capability on a SUPPLIER/MANUFACTURER company. Platform admin viewers see 204.",
-                "summary": "My subscription",
-                "tags": [
-                    "Accounts"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SupplierSubscription"
-                                }
-                            }
-                        },
-                        "description": ""
-                    },
-                    "204": {
-                        "description": "No subscription for this user's company"
-                    },
-                    "403": {
-                        "description": "Platform admin viewer cannot own a subscription"
-                    }
-                }
-            }
-        },
         "/api/v1/accounts/system-roles/": {
             "get": {
                 "operationId": "accounts_system_roles_list",
@@ -3826,340 +3225,6 @@
                 }
             }
         },
-        "/api/v1/admin/entitlements/": {
-            "get": {
-                "operationId": "admin_entitlements_list",
-                "description": "Platform-admin CRUD of feature entitlements — the monetization control plane (ADR-0006 §3).\n\nLets an operator grant a promo, put a company in DEMO, or DISABLE a feature; the app gates on\n`has_entitlement(company, FeatureKey)`. Gated by the billing operator capability (G1).",
-                "summary": "List company entitlements",
-                "parameters": [
-                    {
-                        "in": "query",
-                        "name": "access",
-                        "schema": {
-                            "type": "string",
-                            "title": "Доступ",
-                            "enum": [
-                                "DEMO",
-                                "DISABLED",
-                                "ENABLED"
-                            ]
-                        },
-                        "description": "* `ENABLED` - Включено\n* `DISABLED` - Выключено\n* `DEMO` - Демо"
-                    },
-                    {
-                        "in": "query",
-                        "name": "company",
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "in": "query",
-                        "name": "feature_key",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "page",
-                        "required": false,
-                        "in": "query",
-                        "description": "A page number within the paginated result set.",
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "name": "page_size",
-                        "required": false,
-                        "in": "query",
-                        "description": "Number of results to return per page.",
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "name": "search",
-                        "required": false,
-                        "in": "query",
-                        "description": "A search term.",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "tags": [
-                    "Accounts"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/PaginatedCompanyEntitlementList"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            },
-            "post": {
-                "operationId": "admin_entitlements_create",
-                "description": "Platform-admin CRUD of feature entitlements — the monetization control plane (ADR-0006 §3).\n\nLets an operator grant a promo, put a company in DEMO, or DISABLE a feature; the app gates on\n`has_entitlement(company, FeatureKey)`. Gated by the billing operator capability (G1).",
-                "summary": "Grant a company entitlement",
-                "tags": [
-                    "Accounts"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/CompanyEntitlementRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/CompanyEntitlementRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/CompanyEntitlementRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/CompanyEntitlement"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            }
-        },
-        "/api/v1/admin/entitlements/{id}/": {
-            "get": {
-                "operationId": "admin_entitlements_retrieve",
-                "description": "Platform-admin CRUD of feature entitlements — the monetization control plane (ADR-0006 §3).\n\nLets an operator grant a promo, put a company in DEMO, or DISABLE a feature; the app gates on\n`has_entitlement(company, FeatureKey)`. Gated by the billing operator capability (G1).",
-                "summary": "Get entitlement",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Право доступа компании.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "Accounts"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/CompanyEntitlement"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            },
-            "put": {
-                "operationId": "admin_entitlements_update",
-                "description": "Platform-admin CRUD of feature entitlements — the monetization control plane (ADR-0006 §3).\n\nLets an operator grant a promo, put a company in DEMO, or DISABLE a feature; the app gates on\n`has_entitlement(company, FeatureKey)`. Gated by the billing operator capability (G1).",
-                "summary": "Update entitlement",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Право доступа компании.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "Accounts"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/CompanyEntitlementRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/CompanyEntitlementRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/CompanyEntitlementRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/CompanyEntitlement"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            },
-            "patch": {
-                "operationId": "admin_entitlements_partial_update",
-                "description": "Platform-admin CRUD of feature entitlements — the monetization control plane (ADR-0006 §3).\n\nLets an operator grant a promo, put a company in DEMO, or DISABLE a feature; the app gates on\n`has_entitlement(company, FeatureKey)`. Gated by the billing operator capability (G1).",
-                "summary": "Patch entitlement",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Право доступа компании.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "Accounts"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedCompanyEntitlementRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedCompanyEntitlementRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedCompanyEntitlementRequest"
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/CompanyEntitlement"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            },
-            "delete": {
-                "operationId": "admin_entitlements_destroy",
-                "description": "Platform-admin CRUD of feature entitlements — the monetization control plane (ADR-0006 §3).\n\nLets an operator grant a promo, put a company in DEMO, or DISABLE a feature; the app gates on\n`has_entitlement(company, FeatureKey)`. Gated by the billing operator capability (G1).",
-                "summary": "Revoke (delete) entitlement",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Право доступа компании.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "Accounts"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "No response body"
-                    }
-                }
-            }
-        },
-        "/api/v1/admin/entitlements/choices/": {
-            "get": {
-                "operationId": "admin_entitlements_choices_retrieve",
-                "description": "Backend-driven option lists for the admin form — the FE never hard-codes the FeatureKey\nor access enums; adding a feature key here surfaces it in the UI with no frontend change.",
-                "summary": "Feature-key + access-state option lists for the entitlement form",
-                "tags": [
-                    "Accounts"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/CompanyEntitlement"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            }
-        },
         "/api/v1/analytics/page-stats/": {
             "get": {
                 "operationId": "analytics_page_stats_retrieve",
@@ -4183,7 +3248,7 @@
         "/api/v1/analytics/platform-dashboard/": {
             "get": {
                 "operationId": "analytics_platform_dashboard_retrieve",
-                "description": "Aggregate metrics for Platform Admin dashboard: users, companies, deals, subscriptions, pending attention counters, recent activity. Platform Admin only.",
+                "description": "Aggregate metrics for Platform Admin dashboard: users, companies, deals, pending attention counters, recent activity. Platform Admin only.",
                 "summary": "Platform admin dashboard metrics",
                 "tags": [
                     "Analytics"
@@ -6025,7 +5090,7 @@
                         "description": "Missing or too-long name"
                     },
                     "403": {
-                        "description": "Company not entitled to AI enrichment (AI_FEATURE_NOT_ENTITLED)"
+                        "description": "No catalog.manage role permission (ROLE_NOT_PERMITTED)"
                     },
                     "503": {
                         "description": "AI enrichment disabled"
@@ -10018,7 +9083,7 @@
                         "description": "No request lines"
                     },
                     "403": {
-                        "description": "Not a routed seller / not entitled"
+                        "description": "Not a routed seller"
                     },
                     "404": {
                         "description": "Deal not found"
@@ -10291,7 +9356,7 @@
         "/api/v1/crm/deals/{id}/take-and-prepare/": {
             "post": {
                 "operationId": "crm_deals_take_and_prepare_create",
-                "description": "One-click-quotation (утв. spec-inbound-rfq W2): claim + переход стадии в CALCULATING + предзаполненный черновик КП со строками заявки. Продавец с ai.draft получает 202 {task_id, mode:'ai'} (существующий draft_quote job — AI-матч и цены, поллинг sourcing/ai-status/); без entitlement — 200 {quote_id, mode:'quote'} синхронно (копия строк + точный ГОСТ/MPN-матч + цены из своих офферов, без AI). Идемпотентно: существующий КП компании переиспользуется, повторный клик в AI-режиме возвращает уже идущий task_id (кредит не списывается дважды).",
+                "description": "One-click-quotation (утв. spec-inbound-rfq W2): claim + переход стадии в CALCULATING + предзаполненный черновик КП со строками заявки. При включённом ИИ — 202 {task_id, mode:'ai'} (существующий draft_quote job — AI-матч и цены, поллинг sourcing/ai-status/); при выключенном — 200 {quote_id, mode:'quote'} синхронно (копия строк + точный ГОСТ/MPN-матч + цены из своих офферов, без AI). Идемпотентно: существующий КП компании переиспользуется, повторный клик в AI-режиме возвращает уже идущий task_id (задача не ставится дважды).",
                 "summary": "W2 одна кнопка: взять заявку в работу и подготовить КП",
                 "parameters": [
                     {
@@ -11050,7 +10115,7 @@
         "/api/v1/crm/generated-documents/": {
             "get": {
                 "operationId": "crm_generated_documents_list",
-                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (entitlement + IDOR + viewer gates).",
+                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (permission + IDOR + viewer gates).",
                 "parameters": [
                     {
                         "name": "search",
@@ -11088,7 +10153,7 @@
             },
             "post": {
                 "operationId": "crm_generated_documents_create",
-                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (entitlement + IDOR + viewer gates).",
+                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (permission + IDOR + viewer gates).",
                 "tags": [
                     "crm"
                 ],
@@ -11114,7 +10179,7 @@
         "/api/v1/crm/generated-documents/{id}/": {
             "get": {
                 "operationId": "crm_generated_documents_retrieve",
-                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (entitlement + IDOR + viewer gates).",
+                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (permission + IDOR + viewer gates).",
                 "parameters": [
                     {
                         "in": "path",
@@ -11186,7 +10251,7 @@
         "/api/v1/crm/generated-documents/{id}/cancel/": {
             "post": {
                 "operationId": "crm_generated_documents_cancel_create",
-                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (entitlement + IDOR + viewer gates).",
+                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (permission + IDOR + viewer gates).",
                 "summary": "Cancel a document",
                 "parameters": [
                     {
@@ -11224,7 +10289,7 @@
         "/api/v1/crm/generated-documents/{id}/download-pdf/": {
             "get": {
                 "operationId": "crm_generated_documents_download_pdf_retrieve",
-                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (entitlement + IDOR + viewer gates).",
+                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (permission + IDOR + viewer gates).",
                 "summary": "Download the document PDF (202 + enqueue if not ready)",
                 "parameters": [
                     {
@@ -11262,7 +10327,7 @@
         "/api/v1/crm/generated-documents/{id}/issue/": {
             "post": {
                 "operationId": "crm_generated_documents_issue_create",
-                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (entitlement + IDOR + viewer gates).",
+                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (permission + IDOR + viewer gates).",
                 "summary": "Issue a draft document (freeze + render PDF)",
                 "parameters": [
                     {
@@ -11338,7 +10403,7 @@
         "/api/v1/crm/generated-documents/{id}/send-email/": {
             "post": {
                 "operationId": "crm_generated_documents_send_email_create",
-                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (entitlement + IDOR + viewer gates).",
+                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (permission + IDOR + viewer gates).",
                 "summary": "Email an issued document to its recipient (public link in body)",
                 "parameters": [
                     {
@@ -11398,7 +10463,7 @@
         "/api/v1/crm/generated-documents/generate/": {
             "post": {
                 "operationId": "crm_generated_documents_generate_create",
-                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (entitlement + IDOR + viewer gates).",
+                "description": "Rendered documents registry. List/retrieve are company-scoped; generation and\nstatus transitions run in services (permission + IDOR + viewer gates).",
                 "summary": "Generate a document from a template",
                 "tags": [
                     "CRM"
@@ -17440,15 +16505,6 @@
     },
     "components": {
         "schemas": {
-            "AccessEnum": {
-                "enum": [
-                    "ENABLED",
-                    "DISABLED",
-                    "DEMO"
-                ],
-                "type": "string",
-                "description": "* `ENABLED` - Включено\n* `DISABLED` - Выключено\n* `DEMO` - Демо"
-            },
             "Act": {
                 "type": "object",
                 "description": "Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.\n\nЗачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,\nкоторая одновременно покупает и продаёт, не видела продавцовских кнопок: «Сформировать\nакт» пряталась за `!isBuyer`, и у dual-компании с порядком типов [CLIENT, SUPPLIER]\nкнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`\nу договора.\n\nПоля-подсказки НЕ являются полным правом: подписку и стадию проверит сервис,\nвыполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку\nкнопок чужой стороны.",
@@ -18861,154 +17917,6 @@
                     "logo",
                     "logo_url",
                     "updated_at"
-                ]
-            },
-            "CompanyEntitlement": {
-                "type": "object",
-                "description": "Platform-admin view/CRUD of a company's feature entitlements (ADR-0006 Move 4 monetization).",
-                "properties": {
-                    "id": {
-                        "type": "integer",
-                        "readOnly": true
-                    },
-                    "company": {
-                        "type": "integer",
-                        "title": "Компания"
-                    },
-                    "company_name": {
-                        "type": "string",
-                        "readOnly": true
-                    },
-                    "company_inn": {
-                        "type": "string",
-                        "readOnly": true
-                    },
-                    "feature_key": {
-                        "type": "string",
-                        "title": "Ключ функции",
-                        "description": "Стабильный код функции (accounts.constants.FeatureKey), напр. quote.send",
-                        "maxLength": 64
-                    },
-                    "access": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/AccessEnum"
-                            }
-                        ],
-                        "title": "Доступ"
-                    },
-                    "access_display": {
-                        "type": "string",
-                        "readOnly": true
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 0,
-                        "nullable": true,
-                        "title": "Лимит",
-                        "description": "Потолок использования (пусто — без лимита)"
-                    },
-                    "credits": {
-                        "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 0,
-                        "nullable": true,
-                        "title": "Кредиты",
-                        "description": "Расходуемый баланс (пусто — неприменимо)"
-                    },
-                    "expires_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "nullable": true,
-                        "title": "Действует до"
-                    },
-                    "note": {
-                        "type": "string",
-                        "title": "Заметка",
-                        "maxLength": 255
-                    },
-                    "is_granted": {
-                        "type": "boolean",
-                        "readOnly": true
-                    },
-                    "created_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "readOnly": true
-                    },
-                    "updated_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "readOnly": true
-                    }
-                },
-                "required": [
-                    "access_display",
-                    "company",
-                    "company_inn",
-                    "company_name",
-                    "created_at",
-                    "feature_key",
-                    "id",
-                    "is_granted",
-                    "updated_at"
-                ]
-            },
-            "CompanyEntitlementRequest": {
-                "type": "object",
-                "description": "Platform-admin view/CRUD of a company's feature entitlements (ADR-0006 Move 4 monetization).",
-                "properties": {
-                    "company": {
-                        "type": "integer",
-                        "title": "Компания"
-                    },
-                    "feature_key": {
-                        "type": "string",
-                        "minLength": 1,
-                        "title": "Ключ функции",
-                        "description": "Стабильный код функции (accounts.constants.FeatureKey), напр. quote.send",
-                        "maxLength": 64
-                    },
-                    "access": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/AccessEnum"
-                            }
-                        ],
-                        "title": "Доступ"
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 0,
-                        "nullable": true,
-                        "title": "Лимит",
-                        "description": "Потолок использования (пусто — без лимита)"
-                    },
-                    "credits": {
-                        "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 0,
-                        "nullable": true,
-                        "title": "Кредиты",
-                        "description": "Расходуемый баланс (пусто — неприменимо)"
-                    },
-                    "expires_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "nullable": true,
-                        "title": "Действует до"
-                    },
-                    "note": {
-                        "type": "string",
-                        "title": "Заметка",
-                        "maxLength": 255
-                    }
-                },
-                "required": [
-                    "company",
-                    "feature_key"
                 ]
             },
             "CompanyLight": {
@@ -22399,37 +21307,6 @@
                     }
                 }
             },
-            "PaginatedCompanyEntitlementList": {
-                "type": "object",
-                "required": [
-                    "count",
-                    "results"
-                ],
-                "properties": {
-                    "count": {
-                        "type": "integer",
-                        "example": 123
-                    },
-                    "next": {
-                        "type": "string",
-                        "nullable": true,
-                        "format": "uri",
-                        "example": "http://api.example.org/accounts/?page=4"
-                    },
-                    "previous": {
-                        "type": "string",
-                        "nullable": true,
-                        "format": "uri",
-                        "example": "http://api.example.org/accounts/?page=2"
-                    },
-                    "results": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/CompanyEntitlement"
-                        }
-                    }
-                }
-            },
             "PaginatedCompanyList": {
                 "type": "object",
                 "required": [
@@ -22988,37 +21865,6 @@
                     }
                 }
             },
-            "PaginatedSupplierSubscriptionList": {
-                "type": "object",
-                "required": [
-                    "count",
-                    "results"
-                ],
-                "properties": {
-                    "count": {
-                        "type": "integer",
-                        "example": 123
-                    },
-                    "next": {
-                        "type": "string",
-                        "nullable": true,
-                        "format": "uri",
-                        "example": "http://api.example.org/accounts/?page=4"
-                    },
-                    "previous": {
-                        "type": "string",
-                        "nullable": true,
-                        "format": "uri",
-                        "example": "http://api.example.org/accounts/?page=2"
-                    },
-                    "results": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/SupplierSubscription"
-                        }
-                    }
-                }
-            },
             "PaginatedUserList": {
                 "type": "object",
                 "required": [
@@ -23291,58 +22137,6 @@
                         "type": "boolean",
                         "title": "Показывать курс ЦБ в КП",
                         "description": "Печатать курс ЦБ (FX-базис) на клиентском КП. По умолчанию скрыто — клиент видит цену в сумах."
-                    }
-                }
-            },
-            "PatchedCompanyEntitlementRequest": {
-                "type": "object",
-                "description": "Platform-admin view/CRUD of a company's feature entitlements (ADR-0006 Move 4 monetization).",
-                "properties": {
-                    "company": {
-                        "type": "integer",
-                        "title": "Компания"
-                    },
-                    "feature_key": {
-                        "type": "string",
-                        "minLength": 1,
-                        "title": "Ключ функции",
-                        "description": "Стабильный код функции (accounts.constants.FeatureKey), напр. quote.send",
-                        "maxLength": 64
-                    },
-                    "access": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/AccessEnum"
-                            }
-                        ],
-                        "title": "Доступ"
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 0,
-                        "nullable": true,
-                        "title": "Лимит",
-                        "description": "Потолок использования (пусто — без лимита)"
-                    },
-                    "credits": {
-                        "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 0,
-                        "nullable": true,
-                        "title": "Кредиты",
-                        "description": "Расходуемый баланс (пусто — неприменимо)"
-                    },
-                    "expires_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "nullable": true,
-                        "title": "Действует до"
-                    },
-                    "note": {
-                        "type": "string",
-                        "title": "Заметка",
-                        "maxLength": 255
                     }
                 }
             },
@@ -24594,80 +23388,6 @@
                     }
                 }
             },
-            "PatchedSupplierSubscriptionRequest": {
-                "type": "object",
-                "properties": {
-                    "company": {
-                        "type": "integer",
-                        "title": "Компания",
-                        "description": "Компания-поставщик (одна подписка на компанию)"
-                    },
-                    "plan": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/PlanEnum"
-                            }
-                        ],
-                        "title": "Тарифный план",
-                        "description": "Базовый, Стандартный или Премиум\n\n* `BASIC` - Базовый\n* `STANDARD` - Стандартный\n* `PREMIUM` - Премиум"
-                    },
-                    "status": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/StatusEnum"
-                            }
-                        ],
-                        "title": "Статус",
-                        "description": "Текущее состояние подписки\n\n* `TRIAL` - Пробный период\n* `ACTIVE` - Активна\n* `PAST_DUE` - Просрочена\n* `SUSPENDED` - Приостановлена\n* `CANCELLED` - Отменена"
-                    },
-                    "monthly_rate": {
-                        "type": "string",
-                        "format": "decimal",
-                        "pattern": "^-?\\d{0,10}(?:\\.\\d{0,2})?$",
-                        "title": "Ежемесячная стоимость",
-                        "description": "Сумма ежемесячного платежа"
-                    },
-                    "currency": {
-                        "type": "integer",
-                        "nullable": true,
-                        "title": "Валюта",
-                        "description": "Валюта расчётов"
-                    },
-                    "valid_from": {
-                        "type": "string",
-                        "format": "date",
-                        "nullable": true,
-                        "title": "Действует с",
-                        "description": "Дата начала действия подписки"
-                    },
-                    "valid_until": {
-                        "type": "string",
-                        "format": "date",
-                        "nullable": true,
-                        "title": "Действует до",
-                        "description": "Дата окончания (обычно конец календарного года)"
-                    },
-                    "last_payment_date": {
-                        "type": "string",
-                        "format": "date",
-                        "nullable": true,
-                        "title": "Последний платёж",
-                        "description": "Дата последнего успешного платежа"
-                    },
-                    "next_payment_date": {
-                        "type": "string",
-                        "format": "date",
-                        "nullable": true,
-                        "title": "Следующий платёж",
-                        "description": "Дата ожидаемого следующего платежа"
-                    },
-                    "notes": {
-                        "type": "string",
-                        "title": "Заметки",
-                        "description": "Внутренние заметки администратора"
-                    }
-                }
-            },
             "PatchedSystemSettingRequest": {
                 "type": "object",
                 "properties": {
@@ -24915,15 +23635,6 @@
                     "paid_at",
                     "reference"
                 ]
-            },
-            "PlanEnum": {
-                "enum": [
-                    "BASIC",
-                    "STANDARD",
-                    "PREMIUM"
-                ],
-                "type": "string",
-                "description": "* `BASIC` - Базовый\n* `STANDARD` - Стандартный\n* `PREMIUM` - Премиум"
             },
             "PlatformUserCreateRequest": {
                 "type": "object",
@@ -27426,17 +26137,6 @@
                 "type": "string",
                 "description": "* `PROSPECT` - Проспект\n* `ACTIVE` - Активный\n* `DORMANT` - Спящий\n* `LOST` - Потерян"
             },
-            "StatusEnum": {
-                "enum": [
-                    "TRIAL",
-                    "ACTIVE",
-                    "PAST_DUE",
-                    "SUSPENDED",
-                    "CANCELLED"
-                ],
-                "type": "string",
-                "description": "* `TRIAL` - Пробный период\n* `ACTIVE` - Активна\n* `PAST_DUE` - Просрочена\n* `SUSPENDED` - Приостановлена\n* `CANCELLED` - Отменена"
-            },
             "StockStatus": {
                 "type": "object",
                 "properties": {
@@ -27737,218 +26437,6 @@
                 "required": [
                     "id",
                     "name"
-                ]
-            },
-            "SupplierSubscription": {
-                "type": "object",
-                "properties": {
-                    "id": {
-                        "type": "integer",
-                        "readOnly": true
-                    },
-                    "company": {
-                        "type": "integer",
-                        "title": "Компания",
-                        "description": "Компания-поставщик (одна подписка на компанию)"
-                    },
-                    "company_name": {
-                        "type": "string",
-                        "readOnly": true
-                    },
-                    "company_inn": {
-                        "type": "string",
-                        "readOnly": true
-                    },
-                    "plan": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/PlanEnum"
-                            }
-                        ],
-                        "title": "Тарифный план",
-                        "description": "Базовый, Стандартный или Премиум\n\n* `BASIC` - Базовый\n* `STANDARD` - Стандартный\n* `PREMIUM` - Премиум"
-                    },
-                    "plan_display": {
-                        "type": "string",
-                        "readOnly": true
-                    },
-                    "status": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/StatusEnum"
-                            }
-                        ],
-                        "title": "Статус",
-                        "description": "Текущее состояние подписки\n\n* `TRIAL` - Пробный период\n* `ACTIVE` - Активна\n* `PAST_DUE` - Просрочена\n* `SUSPENDED` - Приостановлена\n* `CANCELLED` - Отменена"
-                    },
-                    "status_display": {
-                        "type": "string",
-                        "readOnly": true
-                    },
-                    "monthly_rate": {
-                        "type": "string",
-                        "format": "decimal",
-                        "pattern": "^-?\\d{0,10}(?:\\.\\d{0,2})?$",
-                        "title": "Ежемесячная стоимость",
-                        "description": "Сумма ежемесячного платежа"
-                    },
-                    "currency": {
-                        "type": "integer",
-                        "nullable": true,
-                        "title": "Валюта",
-                        "description": "Валюта расчётов"
-                    },
-                    "currency_code": {
-                        "type": "string",
-                        "readOnly": true
-                    },
-                    "valid_from": {
-                        "type": "string",
-                        "format": "date",
-                        "nullable": true,
-                        "title": "Действует с",
-                        "description": "Дата начала действия подписки"
-                    },
-                    "valid_until": {
-                        "type": "string",
-                        "format": "date",
-                        "nullable": true,
-                        "title": "Действует до",
-                        "description": "Дата окончания (обычно конец календарного года)"
-                    },
-                    "last_payment_date": {
-                        "type": "string",
-                        "format": "date",
-                        "nullable": true,
-                        "title": "Последний платёж",
-                        "description": "Дата последнего успешного платежа"
-                    },
-                    "next_payment_date": {
-                        "type": "string",
-                        "format": "date",
-                        "nullable": true,
-                        "title": "Следующий платёж",
-                        "description": "Дата ожидаемого следующего платежа"
-                    },
-                    "notes": {
-                        "type": "string",
-                        "title": "Заметки",
-                        "description": "Внутренние заметки администратора"
-                    },
-                    "suspended_reason": {
-                        "type": "string",
-                        "readOnly": true,
-                        "title": "Причина приостановки"
-                    },
-                    "suspended_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "readOnly": true,
-                        "nullable": true,
-                        "title": "Приостановлена"
-                    },
-                    "created_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "readOnly": true,
-                        "title": "Дата создания"
-                    },
-                    "updated_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "readOnly": true,
-                        "title": "Дата обновления"
-                    }
-                },
-                "required": [
-                    "company",
-                    "company_inn",
-                    "company_name",
-                    "created_at",
-                    "currency_code",
-                    "id",
-                    "plan_display",
-                    "status_display",
-                    "suspended_at",
-                    "suspended_reason",
-                    "updated_at"
-                ]
-            },
-            "SupplierSubscriptionRequest": {
-                "type": "object",
-                "properties": {
-                    "company": {
-                        "type": "integer",
-                        "title": "Компания",
-                        "description": "Компания-поставщик (одна подписка на компанию)"
-                    },
-                    "plan": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/PlanEnum"
-                            }
-                        ],
-                        "title": "Тарифный план",
-                        "description": "Базовый, Стандартный или Премиум\n\n* `BASIC` - Базовый\n* `STANDARD` - Стандартный\n* `PREMIUM` - Премиум"
-                    },
-                    "status": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/StatusEnum"
-                            }
-                        ],
-                        "title": "Статус",
-                        "description": "Текущее состояние подписки\n\n* `TRIAL` - Пробный период\n* `ACTIVE` - Активна\n* `PAST_DUE` - Просрочена\n* `SUSPENDED` - Приостановлена\n* `CANCELLED` - Отменена"
-                    },
-                    "monthly_rate": {
-                        "type": "string",
-                        "format": "decimal",
-                        "pattern": "^-?\\d{0,10}(?:\\.\\d{0,2})?$",
-                        "title": "Ежемесячная стоимость",
-                        "description": "Сумма ежемесячного платежа"
-                    },
-                    "currency": {
-                        "type": "integer",
-                        "nullable": true,
-                        "title": "Валюта",
-                        "description": "Валюта расчётов"
-                    },
-                    "valid_from": {
-                        "type": "string",
-                        "format": "date",
-                        "nullable": true,
-                        "title": "Действует с",
-                        "description": "Дата начала действия подписки"
-                    },
-                    "valid_until": {
-                        "type": "string",
-                        "format": "date",
-                        "nullable": true,
-                        "title": "Действует до",
-                        "description": "Дата окончания (обычно конец календарного года)"
-                    },
-                    "last_payment_date": {
-                        "type": "string",
-                        "format": "date",
-                        "nullable": true,
-                        "title": "Последний платёж",
-                        "description": "Дата последнего успешного платежа"
-                    },
-                    "next_payment_date": {
-                        "type": "string",
-                        "format": "date",
-                        "nullable": true,
-                        "title": "Следующий платёж",
-                        "description": "Дата ожидаемого следующего платежа"
-                    },
-                    "notes": {
-                        "type": "string",
-                        "title": "Заметки",
-                        "description": "Внутренние заметки администратора"
-                    }
-                },
-                "required": [
-                    "company"
                 ]
             },
             "SystemRoleLookup": {

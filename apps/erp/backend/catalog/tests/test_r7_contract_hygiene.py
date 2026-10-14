@@ -23,15 +23,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyRole,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, CustomUser, WorkspaceRole
 from catalog.models import Product, ProductStatus, SupplierOffer
 from catalog.serializers import ProductListSerializer, ProductSerializer
 from master_data.models import Currency
@@ -64,7 +56,6 @@ def seller_world(db):
 
     company = Company.objects.create(name="ООО Р7", inn="9700000001")
     company.types.add(supplier_type)
-    SupplierSubscription.objects.create(company=company)  # TRIAL без срока → операционная
 
     company_role = CompanyRole.objects.create(company=company, name="Каталог", permissions=["catalog.manage"])
     user = CustomUser.objects.create_user(email="seller@r7.test", username="seller@r7.test", password="pw")

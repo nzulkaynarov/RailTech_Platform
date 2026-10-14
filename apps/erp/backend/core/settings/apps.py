@@ -124,11 +124,6 @@ UNFOLD = {
                         "icon": "add_business",
                         "link": "/admin/accounts/company/wizard/",
                     },
-                    {
-                        "title": _("Подписки поставщиков"),
-                        "icon": "credit_card",
-                        "link": "/admin/accounts/suppliersubscription/",
-                    },
                 ],
             },
             {

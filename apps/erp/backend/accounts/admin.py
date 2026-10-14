@@ -8,10 +8,9 @@ from unfold.contrib.import_export.forms import ExportForm, ImportForm
 from unfold.decorators import display
 from unfold.forms import UserChangeForm, UserCreationForm  # noqa: F401
 
-from core.admin_mixins import ReadOnlyInspectionMixin, superuser_only_action
+from core.admin_mixins import ReadOnlyInspectionMixin
 
-from . import services
-from .models import Company, CompanyMember, CompanyType, CustomUser, SupplierSubscription, SystemRole, WorkspaceRole
+from .models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from .resources import CompanyResource, UserResource
 
 admin.site.unregister(Group)
@@ -255,114 +254,3 @@ class CompanyAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelAdmin):
             },
         ),
     )
-
-
-# ────────────────────────────────────────────
-# Subscriptions
-# ────────────────────────────────────────────
-
-
-@admin.register(SupplierSubscription)
-class SupplierSubscriptionAdmin(ReadOnlyInspectionMixin, ModelAdmin):
-    list_display = ("company", "plan_badge", "sub_status", "monthly_rate", "currency", "valid_until")
-    list_filter = ("plan", "status")
-    list_filter_submit = True
-    search_fields = ("company__name", "company__inn")
-    autocomplete_fields = ["company", "currency"]
-    readonly_fields = ("created_at", "updated_at")
-    list_per_page = 25
-    list_select_related = ("company", "currency")
-    actions = ["activate_subscription", "suspend_subscription"]
-    warn_unsaved_form = True
-
-    @display(
-        description=_("План"),
-        label={"Базовый": "info", "Стандартный": "warning", "Премиум": "success"},
-    )
-    def plan_badge(self, obj):
-        return obj.get_plan_display()
-
-    @display(
-        description=_("Статус"),
-        label={
-            "Пробный период": "info",
-            "Активна": "success",
-            "Просрочена": "danger",
-            "Приостановлена": "warning",
-            "Отменена": "danger",
-        },
-    )
-    def sub_status(self, obj):
-        return obj.get_status_display()
-
-    fieldsets = (
-        (
-            None,
-            {
-                "fields": (
-                    "company",
-                    ("plan", "status"),
-                ),
-            },
-        ),
-        (
-            _("Биллинг"),
-            {
-                "classes": ["tab"],
-                "fields": (
-                    ("monthly_rate", "currency"),
-                    ("valid_from", "valid_until"),
-                    ("last_payment_date", "next_payment_date"),
-                ),
-            },
-        ),
-        (
-            _("Заметки"),
-            {
-                "classes": ["tab"],
-                "fields": (
-                    "notes",
-                    ("created_at", "updated_at"),
-                ),
-            },
-        ),
-    )
-
-    @superuser_only_action(_("[Emergency] Активировать"))
-    def activate_subscription(self, request, queryset):
-        # Просроченную подписку статусом не воскрешают — сервис их пропустит, а инженер
-        # должен узнать об этом, а не считать пропуск успехом.
-        expired = services.expired_subscription_ids(queryset)
-        updated = services.change_subscription_status(queryset, "ACTIVE")
-        if expired:
-            self.message_user(
-                request,
-                _("Пропущено просроченных: %(count)d — их возобновляет оплата, а не статус.") % {"count": len(expired)},
-                level="warning",
-            )
-        self.message_user(request, _("%(count)d активировано.") % {"count": updated})
-
-    @superuser_only_action(_("[Emergency] Приостановить"))
-    def suspend_subscription(self, request, queryset):
-        # Через сервис ПОШТУЧНО, а не `update()` пачкой: приостановка обязана дойти до
-        # арендатора письмом и уведомлением. Дверей было две — операторская панель звала сервис
-        # и оповещала, аварийный люк писал статус напрямую и молчал. Одна механика, а не две.
-        from core.admin_mixins import EMERGENCY_REASON_FIELD
-
-        reason = (request.POST.get(EMERGENCY_REASON_FIELD) or "").strip()
-        suspended, already = 0, 0
-        for subscription in queryset:
-            # НЕ `_, error = ...`: `_` здесь — gettext, и распаковка в него делает перевод
-            # невызываемым. Ловушка тихая: падает не присваивание, а первый же `_( )` ниже.
-            _row, error = services.suspend_subscription(subscription, actor=request.user, reason=reason)
-            if error:
-                already += 1
-            else:
-                suspended += 1
-        if already:
-            self.message_user(
-                request,
-                _("Пропущено уже приостановленных: %(count)d.") % {"count": already},
-                level="warning",
-            )
-        self.message_user(request, _("%(count)d приостановлено.") % {"count": suspended})

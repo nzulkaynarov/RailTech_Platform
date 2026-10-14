@@ -13,23 +13,13 @@ co-routed seller, because the winner's docs ARE owner-anchored».
 («скрытая конкуренция», ADR-0003 §5), а не косметика.
 """
 
-from datetime import timedelta
 from decimal import Decimal
 
 import pytest
-from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    SystemRole,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import (
     Contract,
     ContractStatus,
@@ -67,12 +57,6 @@ def _seller(name, inn, email):
         is_active=True,
         is_primary=True,
         can_sell=True,
-    )
-    SupplierSubscription.objects.create(
-        company=company,
-        plan="PREMIUM",
-        status="ACTIVE",
-        valid_until=timezone.localdate() + timedelta(days=30),
     )
     return user, company
 

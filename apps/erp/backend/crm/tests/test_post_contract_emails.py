@@ -18,15 +18,7 @@ from unittest.mock import patch
 import pytest
 from django.utils import timezone
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    SystemRole,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.constants import DEFAULT_INVOICE_DUE_DAYS
 from crm.models import (
     Contract,
@@ -97,9 +89,6 @@ def world(lookups):
     buyer_user = _member(buyer_co, "buyer@g3.test", can_buy=True)
     seller_co = _company("Seller G3", "S100", "SUPPLIER")
     seller_user = _member(seller_co, "seller@g3.test", can_sell=True)
-    SupplierSubscription.objects.create(
-        company=seller_co, plan="PREMIUM", status="ACTIVE", valid_until=timezone.localdate() + timedelta(days=30)
-    )
 
     deal = Deal.objects.create(title="G3 deal", company=buyer_co, stage=DealStage.objects.get(code="CLOSED_WON"))
     DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)

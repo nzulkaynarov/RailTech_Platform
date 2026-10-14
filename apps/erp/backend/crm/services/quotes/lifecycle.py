@@ -7,7 +7,7 @@ kept whole here rather than fractured into render/approval mixins. Under the pro
 500-line file limit (DT3), the leaf, side-effect-free helpers are split into siblings:
 
   * ``lifecycle_gates`` — the pure render / send / submit precondition checks
-    (entitlement / loss-prevention / below-floor policy in ONE place).
+    (loss-prevention / below-floor policy in ONE place).
   * ``lifecycle_audit`` — the timeline events + client notification emitted on send.
 
 The class methods orchestrate: fetch → gate → mutate → side-effect. ``compute_quote_economics``
@@ -73,10 +73,7 @@ class QuoteLifecycleService:
 
         seller_company = assert_renderable(quote)
         # Shared branding bundle (issuing company + its document profile + logo) — the same
-        # shape every document feeds the base template. Watermark «ДЕМО» whenever the seller
-        # cannot commercially SEND this КП (explicit DEMO grant or no operational subscription).
-        # Building/previewing stays free; only a subscribed seller gets a clean, sendable document.
-        from accounts.services.entitlements import quote_send_entitled
+        # shape every document feeds the base template.
         from crm.services.documents import (
             brand_context_for_pdf,
             client_optional_items,
@@ -101,7 +98,7 @@ class QuoteLifecycleService:
                 "cover_text": extras["cover_text"],
                 "quote_terms": extras["quote_terms"],
                 # Governance: a КП is an OFFER only once frozen on send. Until then (draft or
-                # internally-approved-but-unsent) the PDF carries a «ЧЕРНОВИК» watermark, so a copy
+                # internally-approved-but-unsent) the PDF carries a «ЧЕРНОВИК» stamp, so a copy
                 # leaked out-of-band cannot pass as a binding offer (matches send_to_client policy).
                 "is_draft": quote.frozen_at is None,
                 # Only surface the per-line «Срок» column when at least one line actually carries a
@@ -124,9 +121,7 @@ class QuoteLifecycleService:
                 "public_quote_qr": public_quote_qr(quote),
                 # brand_context_for_pdf: inline the logo as a data: URI — WeasyPrint can't resolve
                 # the relative /media/… URL prod storage yields (broken-image box on every PDF).
-                **brand_context_for_pdf(
-                    document_brand_context(seller_company, is_demo=not quote_send_entitled(seller_company.id))
-                ),
+                **brand_context_for_pdf(document_brand_context(seller_company)),
             },
         )
 
@@ -166,7 +161,7 @@ class QuoteLifecycleService:
             "deal__company", "deal__client", "deal__contact", "deal__stage", "status"
         ).get(pk=quote_id)
 
-        # Send preconditions (status / recipient / claim / entitlement) — the
+        # Send preconditions (status / recipient / claim) — the
         # full guard rationale lives in lifecycle_gates.assert_sendable. Returns the issuing
         # seller company (used for КП-number minting below).
         seller_company = assert_sendable(quote, sent_by_user)
@@ -215,7 +210,7 @@ class QuoteLifecycleService:
         quote.status = sent_status
         quote.frozen_at = timezone.now()
         # Drop any cached pre-send render. A «Предпросмотр PDF» seconds before sending caches a
-        # DRAFT PDF («ЧЕРНОВИК» watermark, placeholder number «{deal}-{v}») — and send_quote_email
+        # DRAFT PDF («ЧЕРНОВИК» stamp, placeholder number «{deal}-{v}») — and send_quote_email
         # only renders when pdf_file is EMPTY, so that stale draft would be emailed to the client
         # and served on the public link (prod incident 2026-07-26: КП RFQ-0726RT-01 delivered as
         # «КП № 27-1 / ЧЕРНОВИК»). The send re-mints the document identity (№, frozen prices), so

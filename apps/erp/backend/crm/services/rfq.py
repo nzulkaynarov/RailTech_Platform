@@ -2,8 +2,7 @@
 
 ADR-0006 module split: the buyer's request lifecycle (build draft line items → route to seller(s)
 → submit DRAFT→RFQ_OPEN) is a SEPARATE, always-free module from the paid КП/quoting engine in
-`quotes.py`. It's a leaf: no dependency on the pricing/economics/approval engine, so the paid КП
-feature can be gated/toggled as an entitlement without touching the free заявка path.
+`quotes.py`. It's a leaf: no dependency on the pricing/economics/approval engine.
 """
 
 from django.db import models, transaction

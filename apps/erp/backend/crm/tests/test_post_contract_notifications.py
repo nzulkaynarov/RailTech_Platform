@@ -15,15 +15,7 @@ from decimal import Decimal
 import pytest
 from django.utils import timezone
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    SystemRole,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import (
     Act,
     ActStatus,
@@ -92,9 +84,6 @@ def chain(lookups):
     buyer_user = _member(buyer_co, "buyer@notify.test", can_buy=True)
     seller_co = _company("Seller Notify", "S600", "SUPPLIER")
     seller_user = _member(seller_co, "seller@notify.test", can_sell=True)
-    SupplierSubscription.objects.create(
-        company=seller_co, plan="PREMIUM", status="ACTIVE", valid_until=timezone.localdate() + timedelta(days=30)
-    )
 
     deal = Deal.objects.create(title="Notify deal", company=buyer_co, stage=DealStage.objects.get(code="CLOSED_WON"))
     DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)

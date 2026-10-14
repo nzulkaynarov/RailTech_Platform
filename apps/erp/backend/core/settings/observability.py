@@ -37,7 +37,7 @@ def _email_channel(prefix: str, *, default_from: str) -> dict:
 
 
 EMAIL_CHANNELS = {
-    # Setup-password, invitations, documents, subscription alerts.
+    # Setup-password, invitations, documents.
     "transactional": _email_channel("TX", default_from=DEFAULT_FROM_EMAIL),
     # Digests, campaigns, broadcasts. Not used yet — reserved.
     "marketing": _email_channel(

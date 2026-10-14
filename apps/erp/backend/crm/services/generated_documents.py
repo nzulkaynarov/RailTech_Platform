@@ -1,7 +1,7 @@
 """«Документы 2.0» services — template CRUD + document generation lifecycle.
 
 Rule 8: all business logic (sanitisation, placeholder resolution, snapshotting,
-numbering, PDF dispatch, status transitions, entitlement/IDOR gates) lives here;
+numbering, PDF dispatch, status transitions, permission/IDOR gates) lives here;
 the ViewSets are thin wrappers. Placeholder substitution / sanitisation is delegated
 to crm.services.document_placeholders (SSTI-safe flat replacement).
 """
@@ -13,9 +13,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from accounts.constants import FeatureKey
 from accounts.models import CustomUser
-from accounts.services.entitlements import has_entitlement
 
 from ..constants import GeneratedDocumentStatusCode
 from .document_placeholders import (
@@ -57,7 +55,6 @@ _BRAND_PROFILE_FIELDS = (
 )
 _BRAND_SCALAR_FIELDS = (
     "seller_logo_url",
-    "is_demo",
     "show_logo",
     "show_lead_time",
     "show_fx_note",
@@ -378,7 +375,7 @@ def _build_context(company, user, deal, contact) -> PlaceholderContext:
 def generate_document(company, user: CustomUser, *, template, deal=None, contact=None, title=None):
     """Render a template into a DRAFT GeneratedDocument (immutable snapshot).
 
-    Gates: entitlement (document.generate) and IDOR (deal/contact belong to the
+    Gates: quote.build permission and IDOR (deal/contact belong to the
     acting company/user). Returns (document, None) or (None, ERROR_CODE)."""
     from accounts.services.permissions import member_has_permission
 
@@ -389,8 +386,6 @@ def generate_document(company, user: CustomUser, *, template, deal=None, contact
     # letters on the company's letterhead. OWNER/company-admin keeps it via the legacy OWNER fallback.
     if not member_has_permission(user, company.id, "quote.build"):
         return None, "ROLE_NOT_PERMITTED"
-    if not has_entitlement(company.id, FeatureKey.DOCUMENT_GENERATE):
-        return None, "SUBSCRIPTION_REQUIRED"
     if deal is not None and not _user_can_access_deal(user, deal):
         return None, "DEAL_NOT_FOUND"
     if contact is not None and not _user_can_access_contact(user, contact, deal):
@@ -460,10 +455,6 @@ def issue_document(document, user: CustomUser) -> Tuple[Optional[object], Option
     # quote.build like generation (§2). Checked for the OWNING company (owner-gate already passed).
     if not member_has_permission(user, document.company_id, "quote.build"):
         return None, "ROLE_NOT_PERMITTED"
-    # Re-check entitlement at issue time (A4/m4): a subscription may have lapsed after the DRAFT was
-    # created, and issuing is what produces the deliverable PDF.
-    if not has_entitlement(document.company_id, FeatureKey.DOCUMENT_GENERATE):
-        return None, "SUBSCRIPTION_REQUIRED"
     if document.status_code != GeneratedDocumentStatusCode.DRAFT:
         return None, "DOCUMENT_ALREADY_ISSUED"
     from .documents import document_brand_context

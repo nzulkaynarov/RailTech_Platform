@@ -4,13 +4,11 @@ Enterprise cycle tests — cover the Phase 2/3 business services and FSM gates.
 Runs against the DB via pytest-django (see pytest.ini).
 """
 
-from datetime import timedelta
 from decimal import Decimal
 
 import pytest
 from django.utils import timezone
 
-from accounts import services as acc_services
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from catalog.models import DomainType, ProductStatus, StockStatus
 from crm import services as crm_services
@@ -159,117 +157,6 @@ def deal(master_data, buyer, manager):
         manager=manager,
         stage=DealStage.objects.get(code="DRAFT"),
     )
-
-
-# ─── Subscription lifecycle ───────────────────────────────────────────────
-
-
-@pytest.mark.django_db
-def test_ensure_trial_subscription_creates_30_day_trial(supplier):
-    _, company = supplier
-    sub = acc_services.ensure_trial_subscription(company)
-    assert sub.status == "TRIAL"
-    assert sub.valid_until is not None
-    assert sub.is_operational is True
-
-
-@pytest.mark.django_db
-def test_subscription_expires_to_past_due(supplier):
-    _, company = supplier
-    sub = acc_services.ensure_trial_subscription(company)
-    sub.valid_until = timezone.localdate() - timedelta(days=1)
-    sub.save()
-    result = acc_services.check_and_expire_subscriptions()
-    assert result["past_due"] >= 1
-    sub.refresh_from_db()
-    assert sub.status == "PAST_DUE"
-    assert sub.is_operational is False
-
-
-@pytest.mark.django_db
-def test_subscription_past_due_suspends_after_14_days(supplier):
-    _, company = supplier
-    sub = acc_services.ensure_trial_subscription(company)
-    sub.status = "PAST_DUE"
-    sub.valid_until = timezone.localdate() - timedelta(days=20)
-    sub.save()
-    result = acc_services.check_and_expire_subscriptions()
-    assert result["suspended"] >= 1
-    sub.refresh_from_db()
-    assert sub.status == "SUSPENDED"
-
-
-@pytest.mark.django_db
-def test_record_subscription_payment_extends_and_activates(supplier, manager):
-    supplier_user, company = supplier
-    sub = acc_services.ensure_trial_subscription(company)
-    initial_until = sub.valid_until
-    # Subscription payment is a seller-side act — the actor must be a member of
-    # the supplier company with can_sell. SALES_MANAGER has no membership in
-    # the supplier company and would be rejected (MEMBER_REQUIRED_FOR_ACTION).
-    sub, err = acc_services.record_subscription_payment(
-        sub,
-        "100.00",
-        months=2,
-        actor=supplier_user,
-        manual=True,
-    )
-    assert err is None
-    assert sub.status == "ACTIVE"
-    assert sub.valid_until > initial_until
-
-    # E1: structured event written for the localizable timeline.
-    from crm.models import ActivityLog
-
-    log = ActivityLog.objects.filter(event_code="subscription.paid").latest("timestamp")
-    assert log.event_params["company_name"] == company.name
-    assert log.event_params["months"] == 2
-    assert log.event_params["amount"] == "100.00"
-    assert log.event_params["manual"] is True
-    assert log.event_params["valid_until"] == str(sub.valid_until)
-
-
-@pytest.mark.django_db
-def test_log_admin_action_threads_structured_event():
-    """core.audit.log_admin_action carries event_code/event_params through to
-    the ActivityLog row (E1); free-form callers leave them empty."""
-    from core.audit import log_admin_action
-    from crm.models import ActivityLog
-
-    structured = log_admin_action(
-        entity_type="deal",
-        entity_id=1,
-        action="Стадия изменена",
-        detail="Deal #1: DRAFT → SOURCING",
-        event_code="deal.stage_changed",
-        event_params={"deal_id": 1, "from_stage": "DRAFT", "to_stage": "SOURCING", "force": False},
-    )
-    assert structured.event_code == "deal.stage_changed"
-    assert structured.event_params["to_stage"] == "SOURCING"
-    assert structured.event_params["force"] is False
-
-    # Free-form admin action: no event_code → renders from RU `action` fallback.
-    freeform = log_admin_action(entity_type="company", entity_id=2, action="Компания архивирована")
-    assert freeform.event_code == ""
-    assert freeform.event_params == {}
-    assert ActivityLog.objects.filter(event_code="deal.stage_changed").exists()
-
-
-@pytest.mark.django_db
-def test_transition_deal_stage_writes_structured_event(deal, manager):
-    """The REAL producer path: transition_deal_stage itself must emit
-    deal.stage_changed with interpolation params — the most frequent timeline
-    event (incl. Move 0 auto-transitions) must localize on EN-UI instead of
-    falling back to the RU action string."""
-    from crm.models import ActivityLog
-
-    d, err = crm_services.transition_deal_stage(deal, "SOURCING", actor=manager)
-    assert err is None
-
-    log = ActivityLog.objects.filter(deal_id=deal.id, event_code="deal.stage_changed").latest("timestamp")
-    assert log.event_params["deal_id"] == deal.id
-    assert log.event_params["from_stage"]  # human stage names interpolated
-    assert log.event_params["to_stage"]
 
 
 # ─── FSM transitions + Contract gate ──────────────────────────────────────

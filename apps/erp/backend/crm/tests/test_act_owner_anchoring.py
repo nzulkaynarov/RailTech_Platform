@@ -13,23 +13,13 @@
 docs ARE owner-anchored»), — как и в #463 у отгрузки, оно не выполняется для одной модели.
 """
 
-from datetime import timedelta
 from decimal import Decimal
 
 import pytest
-from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    SystemRole,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import (
     Deal,
     DealSellerRouting,
@@ -83,15 +73,6 @@ def _member(company, email, *, can_sell=False, can_buy=False):
     return user
 
 
-def _subscribe(company):
-    SupplierSubscription.objects.create(
-        company=company,
-        plan="PREMIUM",
-        status="ACTIVE",
-        valid_until=timezone.localdate() + timedelta(days=30),
-    )
-
-
 def _api(user, ctx="SELLER"):
     client = APIClient()
     client.credentials(
@@ -110,11 +91,9 @@ def act_on_manual_invoice(lookups):
 
     winner_co = _company("Winner", "S800", "SUPPLIER")
     winner_user = _member(winner_co, "winner@act.test", can_sell=True)
-    _subscribe(winner_co)
 
     loser_co = _company("Loser", "S801", "SUPPLIER")
     loser_user = _member(loser_co, "loser@act.test", can_sell=True)
-    _subscribe(loser_co)
 
     deal = Deal.objects.create(
         title="Manual act deal", company=buyer_co, stage=DealStage.objects.get(code="CLOSED_WON")

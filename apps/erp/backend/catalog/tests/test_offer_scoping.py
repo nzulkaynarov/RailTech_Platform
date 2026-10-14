@@ -6,7 +6,7 @@ from decimal import Decimal
 import pytest
 from rest_framework.test import APIClient
 
-from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SupplierSubscription, WorkspaceRole
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
 from catalog.models import Product, ProductStatus, SupplierOffer
 from master_data.models import Currency
 
@@ -22,7 +22,6 @@ def two_sellers(db):
     def make_seller(name, inn, email):
         company = Company.objects.create(name=name, inn=inn)
         company.types.add(supplier_type)
-        SupplierSubscription.objects.create(company=company)  # TRIAL + no expiry → operational
         user = CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
         CompanyMember.objects.create(user=user, company=company, role=owner_role, is_active=True, can_sell=True)
         return company, user

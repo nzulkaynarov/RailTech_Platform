@@ -9,21 +9,13 @@ Self-contained fixtures (mirrors test_billing_visibility.py): tests run with --n
 every lookup code the flow asserts on is seeded here.
 """
 
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
 
 import pytest
 from django.utils import timezone
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    SystemRole,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import (
     ActStatus,
     Contract,
@@ -90,19 +82,13 @@ def _member(company, email, *, can_sell=False, can_buy=False):
 
 @pytest.fixture
 def world(lookups):
-    """A buyer, a seller (operational subscription so it may issue/cancel), routed to a
+    """A buyer, a seller (may issue/cancel), routed to a
     signed-contract deal. Returns the actors + the DRAFT-able invoice's building blocks."""
     buyer_co = _company("Buyer Co", "B900", "CLIENT")
     buyer_user = _member(buyer_co, "buyer@inv.test", can_buy=True)
 
     seller_co = _company("Seller Co", "S900", "SUPPLIER")
     seller_user = _member(seller_co, "seller@inv.test", can_sell=True)
-    SupplierSubscription.objects.create(
-        company=seller_co,
-        plan="PREMIUM",
-        status="ACTIVE",
-        valid_until=timezone.localdate() + timedelta(days=30),
-    )
     deal = Deal.objects.create(title="Inv deal", company=buyer_co, stage=DealStage.objects.get(code="CONTRACT_SIGNED"))
     DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)
     quote = Quote.objects.create(

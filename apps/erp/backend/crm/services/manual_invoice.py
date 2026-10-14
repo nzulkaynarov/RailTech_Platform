@@ -27,14 +27,12 @@ _PENNY = Decimal("0.01")
 
 def _seller_gate_for_deal(actor, deal_id) -> Optional[str]:
     """Seller-side gate for creating a manual invoice on a deal (no invoice exists yet, so the
-    invoice-scoped ``_assert_seller_may_act_on_invoice`` can't be reused): viewer-block, seller-role,
-    paid-seller subscription, and routing-scope to THIS deal. Returns an error code or None."""
-    from accounts.services import assert_seller_can_operate, is_seller, seller_company_routed_to_deal
+    invoice-scoped ``_assert_seller_may_act_on_invoice`` can't be reused): seller-role and
+    routing-scope to THIS deal. Returns an error code or None."""
+    from accounts.services import is_seller, seller_company_routed_to_deal
 
     if not (getattr(actor, "is_superuser", False) or is_seller(actor)):
         return "MEMBER_REQUIRED_FOR_ACTION"
-    if sub_err := assert_seller_can_operate(actor):
-        return sub_err
     if not getattr(actor, "is_superuser", False) and not seller_company_routed_to_deal(actor, deal_id):
         return "MEMBER_REQUIRED_FOR_ACTION"
     return None

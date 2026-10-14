@@ -12,7 +12,6 @@ context header, while KEEPING the seller side confined to ROUTED deals only
 (hidden competition, ADR-0003 §5): a seller never sees an unrelated buyer's docs.
 """
 
-from datetime import timedelta
 from decimal import Decimal
 
 import pytest
@@ -20,15 +19,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    SystemRole,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import (
     Act,
     ActStatus,
@@ -115,19 +106,13 @@ def _ids(resp):
 
 @pytest.fixture
 def world(lookups):
-    """A buyer, a routed seller (operational subscription so it can also
+    """A buyer, a routed seller (so it can also
     sign), an UNRELATED seller (routed elsewhere), a platform admin, a non-member."""
     buyer_co = _company("Buyer Co", "B100", "CLIENT")
     buyer_user = _member(buyer_co, "buyer@bill.test", can_buy=True)
 
     seller_co = _company("Seller Co", "S100", "SUPPLIER")
     seller_user = _member(seller_co, "seller@bill.test", can_sell=True)
-    SupplierSubscription.objects.create(
-        company=seller_co,
-        plan="PREMIUM",
-        status="ACTIVE",
-        valid_until=timezone.localdate() + timedelta(days=30),
-    )
 
     # A competing seller — a real seller (is_seller True) but NOT routed to our deal.
     other_co = _company("Other Seller Co", "O100", "SUPPLIER")

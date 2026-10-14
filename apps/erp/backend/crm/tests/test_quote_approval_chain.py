@@ -6,22 +6,12 @@ Same order = parallel; the head is always last. act_on_step advances the chain;
 recall pulls it back. DRAFT → PENDING_APPROVAL → (steps approved) → READY_TO_SEND.
 """
 
-from datetime import timedelta
 from decimal import Decimal
 
 import pytest
-from django.utils import timezone
 
 from accounts.constants import Permission
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyRole,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, CustomUser, WorkspaceRole
 from crm.models import ActivityLog, Deal, DealStage, Quote, QuoteStatus
 from crm.models.approvals import StepParticipation, StepStatus
 from crm.services.approvals import act_on_step, recall_quote
@@ -66,12 +56,9 @@ def _member(company, user, *, workspace_role=None, company_role=None):
 @pytest.fixture
 def seller(lookups):
     """Seller with a SALES_MANAGER (builds/submits, no approval rights) and a HEAD
-    (company-admin role → quote.approve_final). Operational subscription so send is allowed."""
+    (company-admin role → quote.approve_final)."""
     company = Company.objects.create(name="Seller LLC", inn="7700000001")
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
-    SupplierSubscription.objects.create(
-        company=company, plan="PREMIUM", status="ACTIVE", valid_until=timezone.localdate() + timedelta(days=365)
-    )
     admin_role = CompanyRole.objects.create(company=company, name="Администратор компании", is_system=True)
     sales_role = CompanyRole.objects.create(company=company, name="Продажи", permissions=[Permission.QUOTE_BUILD.value])
 

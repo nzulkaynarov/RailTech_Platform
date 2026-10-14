@@ -9,7 +9,6 @@ from rest_framework.permissions import IsAdminUser
 from rest_framework.routers import DefaultRouter
 
 from accounts.views import (
-    CompanyEntitlementViewSet,
     CompanyRoleViewSet,
     CompanyTypeViewSet,
     CompanyViewSet,
@@ -24,7 +23,6 @@ from accounts.views import (
     SessionListView,
     SessionsRevokeOthersView,
     SetupPasswordView,
-    SupplierSubscriptionViewSet,
     SystemRoleViewSet,
     TOTPDisableView,
     TOTPLoginView,
@@ -143,8 +141,6 @@ router.register(r"accounts/companies", CompanyViewSet)
 # CRM Phase B — offline-client contacts (seller team's own book).
 router.register(r"accounts/contacts", ContactViewSet, basename="contact")
 router.register(r"accounts/users", UserViewSet)
-router.register(r"accounts/subscriptions", SupplierSubscriptionViewSet, basename="subscription")
-router.register(r"admin/entitlements", CompanyEntitlementViewSet, basename="entitlement")
 router.register(r"accounts/system-roles", SystemRoleViewSet, basename="systemrole")
 router.register(r"accounts/workspace-roles", WorkspaceRoleViewSet, basename="workspacerole")
 router.register(r"accounts/company-types", CompanyTypeViewSet, basename="companytype")

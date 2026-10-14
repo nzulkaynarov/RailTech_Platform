@@ -12,8 +12,7 @@
   (`event_code` с префиксом `admin.`), а свободные записи сервисов его не несут. Инженер правил
   данные арендаторов, и увидеть это можно было в трёх разных местах или нигде.
 
-Плюс к тому аварийная приостановка подписки шла мимо оповещения арендатора: панель оператора
-звала сервис и слала письмо, аварийный люк писал статус сырым `update()` и молчал.
+(Аварийные действия над подписками удалены вместе с монетизацией в M1-ERP-02 волна 2.)
 
 Чиним в ОДНОМ месте — обёртке `superuser_only_action`, а не в девяти обработчиках.
 
@@ -21,14 +20,11 @@
 подтверждении KYC компаний; KYC удалён в M1-ERP-02 волна 1c).
 """
 
-from datetime import timedelta
-
 import pytest
 from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 from django.urls import reverse
-from django.utils import timezone
 
-from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SupplierSubscription, WorkspaceRole
+from accounts.models import Company, CustomUser
 from crm.models import ActivityLog, Deal, DealStage
 
 
@@ -198,57 +194,3 @@ def test_a_non_superuser_is_still_refused(client, db, deals):
     for deal in deals:
         assert _stage(deal) == "DRAFT"
     assert not ActivityLog.objects.filter(event_code__startswith="admin.emergency.").exists()
-
-
-# ── Аварийная приостановка доходит до арендатора ────────────────────────────
-
-
-def test_emergency_suspension_notifies_the_tenant(client, engineer, db, django_capture_on_commit_callbacks):
-    """Дверей было две: панель оператора звала сервис и слала письмо, аварийный люк писал
-    статус сырым `update()` и молчал."""
-    from notifications.models import EmailLog
-
-    CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
-    company = Company.objects.create(
-        name="Отключаемый через люк",
-        inn="908200100",
-    )
-    company.types.add(CompanyType.objects.get(code="SUPPLIER"))
-    # Письмо адресуется человеку, а не компании: без владельца отправлять его некому, и тест
-    # был бы зелёным на сломанном коде ровно по этой причине.
-    WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
-    owner = CustomUser.objects.create_user(
-        email="owner@emergency.test", username="owner_emergency", password="x", is_active=True
-    )
-    CompanyMember.objects.create(
-        user=owner,
-        company=company,
-        role=WorkspaceRole.objects.get(code="OWNER"),
-        is_active=True,
-        is_primary=True,
-        can_sell=True,
-    )
-    subscription = SupplierSubscription.objects.create(
-        company=company,
-        plan="PREMIUM",
-        status="ACTIVE",
-        valid_until=timezone.localdate() + timedelta(days=90),
-    )
-    client.force_login(engineer)
-    before = EmailLog.objects.count()
-
-    with django_capture_on_commit_callbacks(execute=True):
-        client.post(
-            reverse("admin:accounts_suppliersubscription_changelist"),
-            {
-                "action": "suspend_subscription",
-                ACTION_CHECKBOX_NAME: [str(subscription.pk)],
-                "_emergency_confirmed": "1",
-                "_emergency_reason": "Инцидент INC-43",
-            },
-        )
-
-    subscription.refresh_from_db()
-    assert subscription.status == "SUSPENDED"
-    assert subscription.suspended_reason == "Инцидент INC-43", "причина обязана дойти до арендатора"
-    assert EmailLog.objects.count() > before, "письмо уходит и из аварийного люка"

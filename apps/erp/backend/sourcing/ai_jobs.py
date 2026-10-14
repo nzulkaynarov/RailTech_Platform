@@ -30,7 +30,7 @@ def enqueue_ai_job(feature: str, payload: dict, user) -> Response:
 
     Ordering matters: the ownership row is created FIRST with a pre-generated task id, then
     the task is published under that id — so a failed row insert means nothing was queued
-    (no orphaned paid LLM call / credit spend the user could never poll). If the publish
+    (no orphaned paid LLM call the user could never poll). If the publish
     itself fails, the dangling row is removed before returning 500.
 
     Security audit #13: a per-company daily safety cap is enforced HERE — the single choke

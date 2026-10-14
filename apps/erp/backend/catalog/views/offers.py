@@ -88,14 +88,8 @@ class SupplierOfferViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
             return [permissions.AllowAny()]
-        # Write: (platform admin OR supplier with operational subscription) AND, for a
+        # Write: (administrator OR seller with the catalog.manage role permission) AND, for a
         # specific offer, ownership of that offer's supplier company (object-level).
-        from core.permissions import IsOfferSupplierOrAdmin, IsPlatformAdmin, IsSupplierWithActiveSubscription
+        from core.permissions import IsOfferSupplierOrAdmin, IsSellerCatalogManager
 
-        class _ManagerOrOperationalSupplier(permissions.BasePermission):
-            def has_permission(self, request, view):
-                return IsPlatformAdmin().has_permission(
-                    request, view
-                ) or IsSupplierWithActiveSubscription().has_permission(request, view)
-
-        return [permissions.IsAuthenticated(), _ManagerOrOperationalSupplier(), IsOfferSupplierOrAdmin()]
+        return [permissions.IsAuthenticated(), IsSellerCatalogManager(), IsOfferSupplierOrAdmin()]

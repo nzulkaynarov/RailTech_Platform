@@ -58,7 +58,6 @@ def public_quote_page_context(quote) -> dict:
     PDF renders: `client_projection_items` / `client_optional_items` (charges distributed into
     per-line delivered prices, NO cost/margin/charges breakout) + the seller branding bundle.
     """
-    from accounts.services.entitlements import quote_send_entitled
     from crm.services.quotes._shared import _quote_seller_company
 
     seller_company = _quote_seller_company(quote)
@@ -80,9 +79,6 @@ def public_quote_page_context(quote) -> dict:
         # поставки» and 3-line VAT totals (one shared builder), so the QR «оригинал» never
         # looks poorer than the attached PDF.
         **quote_document_extras(quote, seller_company),
-        **document_brand_context(
-            seller_company,
-            is_demo=bool(seller_company) and not quote_send_entitled(seller_company.id),
-        ),
+        **document_brand_context(seller_company),
     }
     return context

@@ -1,14 +1,12 @@
 """«Документы 2.0» — generation lifecycle: snapshot immutability, DRAFT-only edit +
-PDF invalidation, issue/cancel transitions, entitlement + IDOR gates.
+PDF invalidation, issue/cancel transitions, IDOR gates.
 
 Self-contained lookup seeding (CI runs --nomigrations)."""
 
 import pytest
 from django.core.files.base import ContentFile
 
-from accounts.constants import FeatureKey
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
-from accounts.services.entitlements import grant_entitlement
 from crm import services as crm_services
 from crm.models import DealStage, DocumentTemplateKind, GeneratedDocumentStatus
 
@@ -50,18 +48,17 @@ def _template(company, user, body="<p>{{deal.title}} — {{today}}</p>"):
 
 
 @pytest.fixture
-def entitled_world(lookups):
+def world(lookups):
     company = _company("Seller", "S1")
     user = _member(company, "s@t.uz")
-    grant_entitlement(company.id, FeatureKey.DOCUMENT_GENERATE)
     return company, user
 
 
 # ── Generation + snapshot immutability ───────────────────────────────────────
 
 
-def test_generate_creates_draft_snapshot(entitled_world):
-    company, user = entitled_world
+def test_generate_creates_draft_snapshot(world):
+    company, user = world
     deal = _deal(company, "Поставка рельсов")
     document, err = crm_services.generate_document(company, user, template=_template(company, user), deal=deal)
     assert err is None
@@ -71,8 +68,8 @@ def test_generate_creates_draft_snapshot(entitled_world):
     assert document.number
 
 
-def test_snapshot_does_not_drift_when_source_changes(entitled_world):
-    company, user = entitled_world
+def test_snapshot_does_not_drift_when_source_changes(world):
+    company, user = world
     deal = _deal(company, "Старое название")
     document, _ = crm_services.generate_document(company, user, template=_template(company, user), deal=deal)
     deal.title = "Новое название"
@@ -85,8 +82,8 @@ def test_snapshot_does_not_drift_when_source_changes(entitled_world):
 # ── DRAFT-only edit + PDF invalidation ───────────────────────────────────────
 
 
-def test_update_values_only_draft_and_invalidates_pdf(entitled_world):
-    company, user = entitled_world
+def test_update_values_only_draft_and_invalidates_pdf(world):
+    company, user = world
     deal = _deal(company, "T")
     document, _ = crm_services.generate_document(company, user, template=_template(company, user), deal=deal)
     document.pdf_file.save("stale.pdf", ContentFile(b"%PDF-old"), save=True)
@@ -98,8 +95,8 @@ def test_update_values_only_draft_and_invalidates_pdf(entitled_world):
     assert "перекрыто" in updated.rendered_html
 
 
-def test_update_values_rejected_after_issue(entitled_world):
-    company, user = entitled_world
+def test_update_values_rejected_after_issue(world):
+    company, user = world
     deal = _deal(company, "T")
     document, _ = crm_services.generate_document(company, user, template=_template(company, user), deal=deal)
     crm_services.issue_document(document, user)
@@ -111,8 +108,8 @@ def test_update_values_rejected_after_issue(entitled_world):
 # ── Status transitions ───────────────────────────────────────────────────────
 
 
-def test_issue_transitions_draft_to_issued(entitled_world):
-    company, user = entitled_world
+def test_issue_transitions_draft_to_issued(world):
+    company, user = world
     deal = _deal(company, "T")
     document, _ = crm_services.generate_document(company, user, template=_template(company, user), deal=deal)
     issued, err = crm_services.issue_document(document, user)
@@ -121,8 +118,8 @@ def test_issue_transitions_draft_to_issued(entitled_world):
     assert issued.issued_at is not None
 
 
-def test_double_issue_rejected(entitled_world):
-    company, user = entitled_world
+def test_double_issue_rejected(world):
+    company, user = world
     deal = _deal(company, "T")
     document, _ = crm_services.generate_document(company, user, template=_template(company, user), deal=deal)
     crm_services.issue_document(document, user)
@@ -131,8 +128,8 @@ def test_double_issue_rejected(entitled_world):
     assert err == "DOCUMENT_ALREADY_ISSUED"
 
 
-def test_cancel_then_recancel_rejected(entitled_world):
-    company, user = entitled_world
+def test_cancel_then_recancel_rejected(world):
+    company, user = world
     deal = _deal(company, "T")
     document, _ = crm_services.generate_document(company, user, template=_template(company, user), deal=deal)
     cancelled, err = crm_services.cancel_document(document, user)
@@ -142,20 +139,11 @@ def test_cancel_then_recancel_rejected(entitled_world):
     assert err2 == "DOCUMENT_ALREADY_CANCELLED"
 
 
-# ── Gates: entitlement + IDOR ────────────────────────────────────────────────
+# ── Gates: IDOR ───────────────────────────────────────────────────────────
 
 
-def test_generate_requires_entitlement(lookups):
-    company = _company("NoSub", "N1")  # no grant_entitlement
-    user = _member(company, "n@t.uz")
-    deal = _deal(company, "T")
-    document, err = crm_services.generate_document(company, user, template=_template(company, user), deal=deal)
-    assert document is None
-    assert err == "SUBSCRIPTION_REQUIRED"
-
-
-def test_generate_rejects_foreign_deal_idor(entitled_world):
-    company, user = entitled_world
+def test_generate_rejects_foreign_deal_idor(world):
+    company, user = world
     other = _company("Other", "O1")
     _member(other, "o@t.uz")  # у чужой компании есть свой участник; тест проверяет доступ ИЗ company
     foreign_deal = _deal(other, "Чужая сделка")
@@ -167,9 +155,9 @@ def test_generate_rejects_foreign_deal_idor(entitled_world):
 # ── A4 hardening regressions ─────────────────────────────────────────────────
 
 
-def test_draft_rerender_uses_body_snapshot_not_live_template(entitled_world):
+def test_draft_rerender_uses_body_snapshot_not_live_template(world):
     """A4/M2: editing the template AFTER generation must not rewrite an existing draft."""
-    company, user = entitled_world
+    company, user = world
     deal = _deal(company, "T")
     template = _template(company, user, body="<p>Здравствуйте, {{company.name}}!</p>")
     document, _ = crm_services.generate_document(company, user, template=template, deal=deal)
@@ -183,9 +171,9 @@ def test_draft_rerender_uses_body_snapshot_not_live_template(entitled_world):
     assert "ВЗЛОМ" not in updated.rendered_html
 
 
-def test_update_values_rejects_unknown_keys(entitled_world):
+def test_update_values_rejects_unknown_keys(world):
     """A4/m6: only known snapshot placeholder codes may be set."""
-    company, user = entitled_world
+    company, user = world
     deal = _deal(company, "T")
     document, _ = crm_services.generate_document(company, user, template=_template(company, user), deal=deal)
     updated, err = crm_services.update_document_values(document, {"evil.injected": "x", "system.secret": "y"})
@@ -194,21 +182,9 @@ def test_update_values_rejects_unknown_keys(entitled_world):
     assert "system.secret" not in updated.values
 
 
-def test_issue_rechecks_entitlement(entitled_world):
-    """A4/m4: a lapsed subscription can't issue a draft created while subscribed."""
-    from accounts.services.entitlements import grant_entitlement
-
-    company, user = entitled_world
-    deal = _deal(company, "T")
-    document, _ = crm_services.generate_document(company, user, template=_template(company, user), deal=deal)
-    grant_entitlement(company.id, FeatureKey.DOCUMENT_GENERATE, access="DISABLED")
-    _, err = crm_services.issue_document(document, user)
-    assert err == "SUBSCRIPTION_REQUIRED"
-
-
-def test_cancel_clears_pdf(entitled_world):
+def test_cancel_clears_pdf(world):
     """A4/m7: a cancelled document must not keep a downloadable PDF."""
-    company, user = entitled_world
+    company, user = world
     deal = _deal(company, "T")
     document, _ = crm_services.generate_document(company, user, template=_template(company, user), deal=deal)
     document.pdf_file.save("doc.pdf", ContentFile(b"%PDF-x"), save=True)

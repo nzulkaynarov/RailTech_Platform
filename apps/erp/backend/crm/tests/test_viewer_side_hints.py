@@ -12,25 +12,15 @@ SPA выводила роль из `activeStatus` — это ПЕРВЫЙ тип
   * не стоят по запросу на строку (N+1 на реестре).
 """
 
-from datetime import timedelta
 from decimal import Decimal
 
 import pytest
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
-from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    SystemRole,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import (
     Contract,
     ContractStatus,
@@ -145,9 +135,6 @@ def dual_company_world(lookups):
     (первый тип) прятал продавцовскую половину интерфейса.
     """
     dual_co = _company("Dual Trading", "D900", "CLIENT", "SUPPLIER")
-    SupplierSubscription.objects.create(
-        company=dual_co, plan="PREMIUM", status="ACTIVE", valid_until=timezone.localdate() + timedelta(days=30)
-    )
     dual_user = _member(dual_co, "dual@sides.test", can_sell=True, can_buy=True)
 
     # Сделка, где dual-компания ПОКУПАЕТ (владелец сделки) и сама же разослана как продавец.

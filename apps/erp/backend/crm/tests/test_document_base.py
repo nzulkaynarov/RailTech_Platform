@@ -17,7 +17,7 @@ def _brand(seller):
     profile = CompanyDocumentProfile.objects.create(
         company=seller, legal_name="ООО «Бренд Тест»", inn="3009998887", accent_color="#0a7d55"
     )
-    return {"seller": seller, "seller_profile": profile, "seller_logo_url": None, "is_demo": False}
+    return {"seller": seller, "seller_profile": profile, "seller_logo_url": None}
 
 
 @pytest.mark.django_db

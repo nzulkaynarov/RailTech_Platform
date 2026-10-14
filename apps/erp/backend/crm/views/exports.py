@@ -34,17 +34,6 @@ def handle_quote_export(request, quote):
     # whole export. `export_format` sidesteps DRF's reserved parameter entirely.
     export_format = (request.query_params.get("export_format") or "pdf").lower()
     include_costs = export_format in ("xlsx", "csv") and can_view_quote_costs_for(request.user, quote)
-    # MONETIZATION GATE (ADR-0006 Move 4): the SELLER's data export (xlsx/csv with cost/margin) is a
-    # paid feature — gate it on quote.export. The client PDF and a buyer's client-safe export stay free
-    # (never block the buyer's own document). An operational subscription grants quote.export by baseline;
-    # demo/unsubscribed can't export cost data. Superuser = platform escalation, bypasses.
-    if include_costs and not getattr(request.user, "is_superuser", False):
-        from accounts.services import quote_export_entitled
-        from crm.services.quotes import _quote_owner_company_id
-
-        owner_company_id = _quote_owner_company_id(quote)
-        if not quote_export_entitled(owner_company_id):
-            return Response({"detail": "QUOTE_EXPORT_NOT_ENTITLED"}, status=status.HTTP_403_FORBIDDEN)
     try:
         # ARCH-03 tail: the КП PDF is rendered by WeasyPrint, which must NEVER run inline in the
         # ASGI request thread. Mirror the download-pdf action — stream the persisted (frozen-on-send)
