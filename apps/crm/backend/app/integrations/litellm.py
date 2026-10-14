@@ -15,7 +15,14 @@ from pydantic import AnyHttpUrl
 
 from app.config import Settings
 from app.domain.embedding_profile import ACTIVE_PROFILE, EmbeddingProfile, l2_normalize
-from app.integrations.llm_usage import COST_HEADER, Purpose, UsageEvent, UsageSink, parse_cost
+from app.integrations.llm_usage import (
+    COST_HEADER,
+    Purpose,
+    UsageEvent,
+    UsageSink,
+    gateway_body,
+    parse_cost,
+)
 
 Alias = Literal["dialog-model", "qualifier-model", "judge-model", "fallback-model"]
 EMBED_ALIAS: Final = "embed-model"
@@ -76,7 +83,10 @@ class Embedder:
 
     async def _embed(self, inputs: list[str], purpose: Purpose) -> list[list[float]]:
         raw = await self._client.embeddings.with_raw_response.create(
-            model=EMBED_ALIAS, input=inputs, dimensions=self._profile.dimensions
+            model=EMBED_ALIAS,
+            input=inputs,
+            dimensions=self._profile.dimensions,
+            extra_body=gateway_body(purpose, EMBED_ALIAS),
         )
         response = raw.parse()
         if self._usage is not None:

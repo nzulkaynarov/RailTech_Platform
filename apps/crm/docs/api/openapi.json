@@ -77,6 +77,294 @@
         "title": "ActionResult",
         "type": "object"
       },
+      "AiBudgetOverrun": {
+        "properties": {
+          "cost_usd": {
+            "title": "Cost Usd",
+            "type": "number"
+          },
+          "daily_usd": {
+            "title": "Daily Usd",
+            "type": "number"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "system": {
+            "title": "System",
+            "type": "string"
+          }
+        },
+        "required": [
+          "system",
+          "day",
+          "cost_usd",
+          "daily_usd"
+        ],
+        "title": "AiBudgetOverrun",
+        "type": "object"
+      },
+      "AiSpendReport": {
+        "properties": {
+          "date_from": {
+            "format": "date",
+            "title": "Date From",
+            "type": "string"
+          },
+          "date_to": {
+            "format": "date",
+            "title": "Date To",
+            "type": "string"
+          },
+          "erp_connected": {
+            "description": "ERP ходит в шлюз: есть строки `system=erp` за период",
+            "title": "Erp Connected",
+            "type": "boolean"
+          },
+          "fetched_at": {
+            "format": "date-time",
+            "title": "Fetched At",
+            "type": "string"
+          },
+          "group": {
+            "enum": [
+              "day",
+              "system",
+              "feature",
+              "model"
+            ],
+            "title": "Group",
+            "type": "string"
+          },
+          "overruns": {
+            "items": {
+              "$ref": "#/components/schemas/AiBudgetOverrun"
+            },
+            "title": "Overruns",
+            "type": "array"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/AiSpendRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "systems": {
+            "items": {
+              "$ref": "#/components/schemas/AiSystemBudget"
+            },
+            "title": "Systems",
+            "type": "array"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/AiSpendTotals"
+          },
+          "truncated": {
+            "description": "Журнал LiteLLM отдал не все строки (потолок выборки)",
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "date_from",
+          "date_to",
+          "group",
+          "timezone",
+          "rows",
+          "totals",
+          "systems",
+          "overruns",
+          "erp_connected",
+          "truncated",
+          "fetched_at"
+        ],
+        "title": "AiSpendReport",
+        "type": "object"
+      },
+      "AiSpendRow": {
+        "properties": {
+          "by_system": {
+            "items": {
+              "$ref": "#/components/schemas/AiSpendSystemCost"
+            },
+            "title": "By System",
+            "type": "array"
+          },
+          "calls": {
+            "description": "Строк журнала LiteLLM (вызовов), включая неуспешные",
+            "title": "Calls",
+            "type": "integer"
+          },
+          "cost_usd": {
+            "title": "Cost Usd",
+            "type": "number"
+          },
+          "failed_calls": {
+            "title": "Failed Calls",
+            "type": "integer"
+          },
+          "fallback_calls": {
+            "description": "Деградации: успешные вызовы через fallback-model",
+            "title": "Fallback Calls",
+            "type": "integer"
+          },
+          "input_tokens": {
+            "title": "Input Tokens",
+            "type": "integer"
+          },
+          "key": {
+            "description": "День `YYYY-MM-DD`, система, функция или алиас — по `group`",
+            "title": "Key",
+            "type": "string"
+          },
+          "output_tokens": {
+            "title": "Output Tokens",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "key",
+          "calls",
+          "failed_calls",
+          "input_tokens",
+          "output_tokens",
+          "cost_usd",
+          "fallback_calls",
+          "by_system"
+        ],
+        "title": "AiSpendRow",
+        "type": "object"
+      },
+      "AiSpendSystemCost": {
+        "properties": {
+          "calls": {
+            "title": "Calls",
+            "type": "integer"
+          },
+          "cost_usd": {
+            "title": "Cost Usd",
+            "type": "number"
+          },
+          "system": {
+            "description": "`crm`, `erp` или `other` — вызов без тега системы",
+            "title": "System",
+            "type": "string"
+          }
+        },
+        "required": [
+          "system",
+          "cost_usd",
+          "calls"
+        ],
+        "title": "AiSpendSystemCost",
+        "type": "object"
+      },
+      "AiSpendTotals": {
+        "properties": {
+          "calls": {
+            "title": "Calls",
+            "type": "integer"
+          },
+          "cost_usd": {
+            "title": "Cost Usd",
+            "type": "number"
+          },
+          "failed_calls": {
+            "title": "Failed Calls",
+            "type": "integer"
+          },
+          "fallback_calls": {
+            "title": "Fallback Calls",
+            "type": "integer"
+          },
+          "input_tokens": {
+            "title": "Input Tokens",
+            "type": "integer"
+          },
+          "output_tokens": {
+            "title": "Output Tokens",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "calls",
+          "failed_calls",
+          "input_tokens",
+          "output_tokens",
+          "cost_usd",
+          "fallback_calls"
+        ],
+        "title": "AiSpendTotals",
+        "type": "object"
+      },
+      "AiSystemBudget": {
+        "properties": {
+          "connected": {
+            "description": "За период есть вызовы с тегом этой системы",
+            "title": "Connected",
+            "type": "boolean"
+          },
+          "daily_usd": {
+            "description": "Бюджет на день; 0 — без лимита",
+            "title": "Daily Usd",
+            "type": "number"
+          },
+          "days_over": {
+            "description": "Дней периода с расходом ≥ бюджета",
+            "title": "Days Over",
+            "type": "integer"
+          },
+          "fallback_calls": {
+            "title": "Fallback Calls",
+            "type": "integer"
+          },
+          "over_today": {
+            "title": "Over Today",
+            "type": "boolean"
+          },
+          "period_calls": {
+            "title": "Period Calls",
+            "type": "integer"
+          },
+          "period_usd": {
+            "title": "Period Usd",
+            "type": "number"
+          },
+          "system": {
+            "title": "System",
+            "type": "string"
+          },
+          "today_calls": {
+            "title": "Today Calls",
+            "type": "integer"
+          },
+          "today_usd": {
+            "title": "Today Usd",
+            "type": "number"
+          }
+        },
+        "required": [
+          "system",
+          "daily_usd",
+          "today_usd",
+          "today_calls",
+          "over_today",
+          "period_usd",
+          "period_calls",
+          "fallback_calls",
+          "days_over",
+          "connected"
+        ],
+        "title": "AiSystemBudget",
+        "type": "object"
+      },
       "Assign": {
         "properties": {
           "user_id": {
@@ -4833,7 +5121,8 @@
           "form_token_invalid",
           "form_too_fast",
           "form_token_expired",
-          "rate_limited"
+          "rate_limited",
+          "ai_spend_period"
         ],
         "title": "Reason",
         "type": "string"
@@ -6521,6 +6810,101 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/admin/ai-spend": {
+      "get": {
+        "description": "Расходы на ИИ всего ансамбля из журнала LiteLLM (`/spend/logs/v2`), кэш 60 с.\n\nВызовы, токены и USD по дням, системам (`system=crm|erp`), функциям и моделям; бюджет на день\nпо системе и дни превышения; деградации — вызовы, обслуженные `fallback-model`. Период — до\n90 дней, не в будущем (`422 ai_spend_period`); шлюз недоступен — `502 litellm_unavailable`.",
+        "operationId": "get_ai_spend",
+        "parameters": [
+          {
+            "description": "Первый день (Ташкент); по умолчанию to − 29",
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Первый день (Ташкент); по умолчанию to − 29",
+              "title": "From"
+            }
+          },
+          {
+            "description": "Последний день (Ташкент); по умолчанию сегодня",
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Последний день (Ташкент); по умолчанию сегодня",
+              "title": "To"
+            }
+          },
+          {
+            "description": "Измерение рядов `rows`",
+            "in": "query",
+            "name": "group",
+            "required": false,
+            "schema": {
+              "default": "day",
+              "description": "Измерение рядов `rows`",
+              "enum": [
+                "day",
+                "system",
+                "feature",
+                "model"
+              ],
+              "title": "Group",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSpendReport"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Ai Spend",
+        "tags": [
+          "spend"
+        ]
+      }
+    },
     "/api/v1/audit": {
       "get": {
         "operationId": "list_audit",

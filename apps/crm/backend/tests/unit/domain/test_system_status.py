@@ -212,3 +212,37 @@ def test_erp(facts: ErpFacts, status: str, fragment: str) -> None:
     assert (component.key, component.status) == ("erp", status)
     assert fragment in component.reason
     assert "Error" not in component.reason
+
+
+@pytest.mark.parametrize(
+    ("facts", "status", "reason"),
+    [
+        (None, "unknown", "Журнал расходов шлюза моделей недоступен"),
+        (
+            [rules.AiBudgetFacts("crm", 0.42, 2.0), rules.AiBudgetFacts("erp", 0.0, 1.0)],
+            "ok",
+            "CRM 0.42/2.00 USD, ERP 0.00/1.00 USD",
+        ),
+        (
+            [rules.AiBudgetFacts("crm", 0.5, 2.0), rules.AiBudgetFacts("erp", 1.2, 1.0)],
+            "warn",
+            "Бюджет превышен: ERP. CRM 0.50/2.00 USD, ERP 1.20/1.00 USD",
+        ),
+        (
+            [
+                rules.AiBudgetFacts("crm", 0.5, 0.0),
+                rules.AiBudgetFacts("erp", 0.0, 1.0),
+                rules.AiBudgetFacts("other", 0.0, 0.0),
+            ],
+            "ok",
+            "CRM 0.50 USD (без лимита), ERP 0.00/1.00 USD",
+        ),
+    ],
+)
+def test_ai_budget(facts: list[rules.AiBudgetFacts] | None, status: str, reason: str) -> None:
+    """M3-CRM-09: «Бюджет ИИ сегодня: CRM x/y USD, ERP x/y USD»; превышение ERP видно в CRM."""
+    component = rules.ai_budget(facts, NOW)
+    assert (component.key, component.title) == ("ai_budget", "Бюджет ИИ сегодня")
+    assert component.status == status
+    assert component.reason.startswith(reason)
+    assert component.reason == reason or facts is None

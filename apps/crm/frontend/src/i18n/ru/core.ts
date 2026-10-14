@@ -237,6 +237,7 @@ export const core = {
     form_too_fast: "Слишком быстро — проверьте поля и отправьте ещё раз",
     form_token_expired: "Форма устарела — обновите страницу и отправьте ещё раз",
     rate_limited: "Слишком много запросов — попробуйте позже",
+    ai_spend_period: "Период — не длиннее 90 дней и не в будущем",
   } as Record<string, string>,
   common: {
     colleague: "коллега",

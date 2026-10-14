@@ -1,0 +1,196 @@
+{
+  "_recorded": "LiteLLM ghcr.io/berriai/litellm:v1.105.0, GET /spend/logs/v2?start_date=2026-10-14 00:00:00&end_date=2026-10-15 00:00:00&page=1&page_size=1000&sort_by=startTime&sort_order=asc, master key; disposable proxy with mock_response models (no paid calls). Rows trimmed to the fields CRM reads. Calls: crm dialog, crm dialog served by fallback-model, crm kb-search embedding, erp intake routed by router fallbacks to fallback-model, untagged call, erp intake failure with disable_fallbacks.",
+  "page": {
+    "total": 6,
+    "page": 1,
+    "page_size": 1000,
+    "total_pages": 1,
+    "total_is_capped": false,
+    "data": [
+      {
+        "request_id": "chatcmpl-5a105bc1-41c6-41bb-808f-dfc39ecd1d04",
+        "call_type": "acompletion",
+        "spend": 1.35e-05,
+        "total_tokens": 30,
+        "prompt_tokens": 10,
+        "completion_tokens": 20,
+        "startTime": "2026-10-14T02:42:51.759+00:00",
+        "endTime": "2026-10-14T02:42:51.769+00:00",
+        "model": "openai/gpt-4o-mini",
+        "model_group": "dialog-model",
+        "custom_llm_provider": "openai",
+        "request_tags": [
+          "system=crm",
+          "feature=dialog",
+          "model=dialog-model",
+          "User-Agent: AsyncOpenAI",
+          "User-Agent: AsyncOpenAI/Python 3.28.0"
+        ],
+        "status": "success",
+        "metadata": {
+          "status": null,
+          "original_model_group": "dialog-model",
+          "attempted_fallbacks": 0,
+          "error_information": null
+        }
+      },
+      {
+        "request_id": "chatcmpl-ed3f7092-fccf-4546-a74a-cffc821f4dc2",
+        "call_type": "acompletion",
+        "spend": 1.35e-05,
+        "total_tokens": 30,
+        "prompt_tokens": 10,
+        "completion_tokens": 20,
+        "startTime": "2026-10-14T02:42:51.823+00:00",
+        "endTime": "2026-10-14T02:42:51.829+00:00",
+        "model": "openai/gpt-4o-mini",
+        "model_group": "fallback-model",
+        "custom_llm_provider": "openai",
+        "request_tags": [
+          "system=crm",
+          "feature=dialog",
+          "model=fallback-model",
+          "User-Agent: AsyncOpenAI",
+          "User-Agent: AsyncOpenAI/Python 3.28.0"
+        ],
+        "status": "success",
+        "metadata": {
+          "status": null,
+          "original_model_group": "fallback-model",
+          "attempted_fallbacks": 0,
+          "error_information": null
+        }
+      },
+      {
+        "request_id": "027b3507-6bed-4dc1-a84d-6f8253e4829f",
+        "call_type": "aembedding",
+        "spend": 2e-07,
+        "total_tokens": 0,
+        "prompt_tokens": 10,
+        "completion_tokens": 0,
+        "startTime": "2026-10-14T02:42:51.863+00:00",
+        "endTime": "2026-10-14T02:42:51.865+00:00",
+        "model": "openai/text-embedding-3-small",
+        "model_group": "embed-model",
+        "custom_llm_provider": "openai",
+        "request_tags": [
+          "system=crm",
+          "feature=kb-search",
+          "model=embed-model",
+          "User-Agent: AsyncOpenAI",
+          "User-Agent: AsyncOpenAI/Python 3.28.0"
+        ],
+        "status": "success",
+        "metadata": {
+          "status": null,
+          "original_model_group": "embed-model",
+          "attempted_fallbacks": 0,
+          "error_information": null
+        }
+      },
+      {
+        "request_id": "chatcmpl-d9cd0793-fa13-4319-9bdf-f6740f4d73d2",
+        "call_type": "acompletion",
+        "spend": 1.35e-05,
+        "total_tokens": 30,
+        "prompt_tokens": 10,
+        "completion_tokens": 20,
+        "startTime": "2026-10-14T02:42:51.910+00:00",
+        "endTime": "2026-10-14T02:42:51.911+00:00",
+        "model": "openai/gpt-4o-mini",
+        "model_group": "fallback-model",
+        "custom_llm_provider": "openai",
+        "request_tags": [
+          "system=erp",
+          "feature=intake",
+          "model=intake-model",
+          "User-Agent: AsyncOpenAI",
+          "User-Agent: AsyncOpenAI/Python 3.28.0"
+        ],
+        "status": "success",
+        "metadata": {
+          "status": null,
+          "original_model_group": "intake-model",
+          "attempted_fallbacks": 1,
+          "error_information": null
+        }
+      },
+      {
+        "request_id": "chatcmpl-a1941957-6278-4975-b650-62a099375e48",
+        "call_type": "acompletion",
+        "spend": 1.35e-05,
+        "total_tokens": 30,
+        "prompt_tokens": 10,
+        "completion_tokens": 20,
+        "startTime": "2026-10-14T02:42:51.934+00:00",
+        "endTime": "2026-10-14T02:42:51.935+00:00",
+        "model": "openai/gpt-4o-mini",
+        "model_group": "dialog-model",
+        "custom_llm_provider": "openai",
+        "request_tags": [
+          "User-Agent: AsyncOpenAI",
+          "User-Agent: AsyncOpenAI/Python 3.28.0"
+        ],
+        "status": "success",
+        "metadata": {
+          "status": null,
+          "original_model_group": "dialog-model",
+          "attempted_fallbacks": 0,
+          "error_information": null
+        }
+      },
+      {
+        "request_id": "c6195264-238e-499d-82b0-23eab8cfda4b",
+        "call_type": "acompletion",
+        "spend": 0.0,
+        "total_tokens": 8,
+        "prompt_tokens": 8,
+        "completion_tokens": 0,
+        "startTime": "2026-10-14T02:43:12.432+00:00",
+        "endTime": "2026-10-14T02:43:12.474+00:00",
+        "model": "openai/gpt-4o-mini",
+        "model_group": "intake-model",
+        "custom_llm_provider": "openai",
+        "request_tags": [
+          "system=erp",
+          "feature=intake",
+          "model=intake-model",
+          "User-Agent: AsyncOpenAI",
+          "User-Agent: AsyncOpenAI/Python 3.28.0"
+        ],
+        "status": "failure",
+        "metadata": {
+          "status": "failure",
+          "original_model_group": "intake-model",
+          "attempted_fallbacks": 0,
+          "error_information": {
+            "error_code": "500",
+            "error_class": "InternalServerError"
+          }
+        }
+      }
+    ]
+  },
+  "bad_request": {
+    "status": 400,
+    "body": {
+      "error": {
+        "message": "Start date and end date are required",
+        "type": "bad_request",
+        "param": "None",
+        "code": "400"
+      }
+    }
+  },
+  "unauthorized": {
+    "status": 401,
+    "body": {
+      "error": {
+        "message": "Authentication Error, Invalid proxy server token passed.",
+        "type": "token_not_found_in_db",
+        "param": "key",
+        "code": "401"
+      }
+    }
+  }
+}

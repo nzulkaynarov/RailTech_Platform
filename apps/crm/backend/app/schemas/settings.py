@@ -317,6 +317,10 @@ class BudgetSettings(StrictModel):
     # Ниже жёсткого потолка Anthropic ($3, infra/litellm.config.yaml): диалог уходит на fallback-model
     # раньше, чем провайдер начнёт отклонять запросы (решение владельца Q-008, 2026-10-12).
     daily_usd: float = Field(default=2.0, ge=0)
+    # Бюджет ERP на день (M3-CRM-09): тот же шлюз LiteLLM, вызовы с тегом `system=erp`. CRM его
+    # не применяет — показывает расход против лимита на «Расходах» и «Состоянии системы».
+    # $1: вместе с CRM ($2) — ровно жёсткий потолок Anthropic $3 (по рекомендации, 2026-10-14).
+    erp_daily_usd: float = Field(default=1.0, ge=0)
     fallback_model_enabled: bool = True
     # Сверх лимита провайдера диалог → fallback-model (если его провайдер в лимите), иначе — отказ.
     providers: ProviderLimitsSettings = Field(default_factory=ProviderLimitsSettings)
