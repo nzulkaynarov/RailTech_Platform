@@ -17,6 +17,8 @@ REST_FRAMEWORK = {
     # выпадающих списках — справочники целиком (например, все компании-поставщики на
     # `/catalog/offers/` анониму). Документация API — Swagger/Redoc по схеме.
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+    # Неприемлемый `Accept` (браузер на публичной странице КП) — JSON, а не 406.
+    "DEFAULT_CONTENT_NEGOTIATION_CLASS": "core.negotiation.JSONFallbackContentNegotiation",
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
         "rest_framework.filters.SearchFilter",

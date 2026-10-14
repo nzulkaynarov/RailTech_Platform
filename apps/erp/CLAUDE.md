@@ -142,7 +142,8 @@ Makefile · .env.example · docs/ (ADR и runbook ERP — M1-ERP-10)
   предложений (`in_stock` / `expected` / `on_order`), количество наружу не уходит.
 - **Сторож**: `catalog/tests/test_published_layer.py` обходит все GET-маршруты анонимом и покупательским
   аккаунтом и ищет метки внутреннего слоя — новый эндпоинт с утечкой роняет его. API отдаёт только JSON
-  (`DEFAULT_RENDERER_CLASSES`): Browsable API раскрывал справочники в формах.
+  (`DEFAULT_RENDERER_CLASSES`): Browsable API раскрывал справочники в формах; неприемлемый `Accept` → JSON, не 406
+  (`core/negotiation.py` — публичные страницы КП и документов сами отдают HTML по `Accept`).
 
 ## 6. Роли бэк-офиса (ARCHITECTURE §7, §9; BUSINESS §11; M1-ERP-05 — сделано)
 
