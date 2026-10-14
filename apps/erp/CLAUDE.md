@@ -124,6 +124,26 @@ Makefile · .env.example · docs/ (ADR и runbook ERP — M1-ERP-10)
 - Frontend: Vitest + Testing Library + jsdom, рендер через провайдеры с настоящим `ru.json`.
 - Контрактные тесты по OpenAPI из `packages/contracts`; расхождение схемы и сгенерированного — красный CI.
 
+### Каталог в два слоя (M1-ERP-07 — сделано)
+
+- **Внутренний слой** — `Product` + `SupplierOffer` (поставщики, закупочные цены, артикулы поставщиков, остатки
+  количеством, спрос, ТН ВЭД). Читают только сотрудники: `ProductViewSet` и `SupplierOfferViewSet` на любом
+  чтении — `core.permissions.IsBackOfficeStaff` (`BACKOFFICE_ONLY`).
+- **Опубликованный слой** — только `catalog/published.py`: `project(product, mode="lead"|"client")` собирает
+  `CatalogItem` контракта портала **белым списком** (`CATALOG_ITEM_KEYS`), `project_many()` — пачкой,
+  `published_products()` — queryset без N+1. Портал (M2-ERP-01), интеграционный поиск и `erp-mcp` (M3) отдают
+  каталог только через него; режим `lead` — без цены, наличия и срока.
+- **Политика**: на карточке `price_visibility` (`cabinet` / `on_request` / пусто = политика компании),
+  `list_price` + `list_price_currency` (цена-витрина, не себестоимость), `fulfillment_policy` у услуг
+  (`fixed` / `milestones` / `time`; у товара пусто, нормализует `Product.save`). Политика компании —
+  `CompanySettings.catalog_price_visibility` (умолчание «по запросу») и `catalog_publish_threshold` (умолчание
+  100 %), читает `catalog/policy.py` без создания строки настроек. Полнота требует цену-витрину только при
+  видимости `cabinet`; публикация — полнота ≥ порога и есть имя. Наличие — статус и срок из действующих
+  предложений (`in_stock` / `expected` / `on_order`), количество наружу не уходит.
+- **Сторож**: `catalog/tests/test_published_layer.py` обходит все GET-маршруты анонимом и покупательским
+  аккаунтом и ищет метки внутреннего слоя — новый эндпоинт с утечкой роняет его. API отдаёт только JSON
+  (`DEFAULT_RENDERER_CLASSES`): Browsable API раскрывал справочники в формах.
+
 ## 6. Роли бэк-офиса (ARCHITECTURE §7, §9; BUSINESS §11; M1-ERP-05 — сделано)
 
 Каталог прав — `accounts.constants.Permission` (21 код, разделы `PERMISSION_GROUPS`); роль — `accounts.CompanyRole`

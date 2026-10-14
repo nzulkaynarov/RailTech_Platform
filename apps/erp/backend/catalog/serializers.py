@@ -1,4 +1,4 @@
-from drf_spectacular.utils import extend_schema_serializer
+from drf_spectacular.utils import extend_schema_field, extend_schema_serializer
 from rest_framework import serializers
 
 from accounts.models import Company
@@ -153,6 +153,38 @@ class SupplierOfferSerializer(serializers.ModelSerializer):
         return attrs
 
 
+# --- Published layer (M1-ERP-07) ---
+
+
+class _MoneySerializer(serializers.Serializer):
+    amount = serializers.CharField()
+    currency = serializers.CharField()
+
+
+class _AttributeSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    value = serializers.CharField()
+
+
+class PublishedCatalogItemSerializer(serializers.Serializer):
+    """Схема OpenAPI проекции `catalog.published.project` (контракт портала `CatalogItem`).
+
+    Только для документации: данные собирает `project()` белым списком, не этот класс.
+    """
+
+    id = serializers.IntegerField()
+    kind = serializers.ChoiceField(choices=["goods", "service"])
+    name = serializers.CharField()
+    description = serializers.CharField()
+    unit = serializers.CharField()
+    category = serializers.CharField(allow_null=True)
+    price = _MoneySerializer(allow_null=True, required=False)
+    availability = serializers.ChoiceField(choices=["in_stock", "on_order", "expected"], required=False)
+    lead_time_days = serializers.IntegerField(allow_null=True, required=False)
+    images = serializers.ListField(child=serializers.CharField())
+    attributes = _AttributeSerializer(many=True)
+
+
 # --- Main Product Serializer (PIM) ---
 
 
@@ -230,6 +262,44 @@ class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
     base_price = serializers.SerializerMethodField()
     base_price_currency = serializers.SerializerMethodField()
 
+    # ── Опубликованный слой (M1-ERP-07) ───────────────────────────────────────
+    list_price_currency_code = serializers.CharField(
+        source="list_price_currency.code", read_only=True, allow_null=True, default=None
+    )
+    price_visibility_effective = serializers.SerializerMethodField()
+    price_visibility_default = serializers.SerializerMethodField()
+    client_preview = serializers.SerializerMethodField()
+
+    def _policy(self, obj):
+        from catalog.policy import policy_for
+
+        cache = self.__dict__.setdefault("_policy_cache", {})
+        if obj.owner_company_id not in cache:
+            cache[obj.owner_company_id] = policy_for(obj.owner_company_id)
+        return cache[obj.owner_company_id]
+
+    def get_price_visibility_effective(self, obj) -> str:
+        """Видимость цены с учётом политики компании — то, что реально увидит клиент."""
+        from catalog.policy import effective_price_visibility
+
+        return effective_price_visibility(obj, self._policy(obj))
+
+    def get_price_visibility_default(self, obj) -> str:
+        """Политика каталога компании — подпись варианта «как в политике каталога» в форме."""
+        return self._policy(obj).price_visibility
+
+    @extend_schema_field(PublishedCatalogItemSerializer)
+    def get_client_preview(self, obj) -> dict:
+        """«Так карточку видит клиент» — та же проекция, что отдаёт портал (`catalog.published`).
+
+        Сотрудник видит превью прямо в карточке и не гадает, что из внутреннего слоя уйдёт
+        наружу: ровно ничего, кроме этих полей.
+        """
+        from catalog.constants import MODE_CLIENT
+        from catalog.published import project
+
+        return project(obj, mode=MODE_CLIENT, policy=self._policy(obj), request=self.context.get("request"))
+
     class Meta:
         model = Product
         fields = [
@@ -268,6 +338,14 @@ class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
             "stock_status",
             "base_price",
             "base_price_currency",
+            "fulfillment_policy",
+            "price_visibility",
+            "price_visibility_effective",
+            "price_visibility_default",
+            "list_price",
+            "list_price_currency",
+            "list_price_currency_code",
+            "client_preview",
             "created_at",
             "updated_at",
         ]
@@ -289,6 +367,13 @@ class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
             from catalog.services import find_or_create_manufacturer
 
             attrs["brand"] = find_or_create_manufacturer(str(raw_brand_name))
+        # Цена-витрина без валюты — не цена (Money = amount + currency). Проверяем итог с учётом
+        # уже сохранённого: PATCH может прислать одно из двух полей.
+        instance = self.instance
+        list_price = attrs.get("list_price", getattr(instance, "list_price", None))
+        currency = attrs.get("list_price_currency", getattr(instance, "list_price_currency", None))
+        if list_price is not None and currency is None:
+            raise serializers.ValidationError({"list_price_currency": "LIST_PRICE_CURRENCY_REQUIRED"})
         return attrs
 
     def get_status_name(self, obj) -> str | None:

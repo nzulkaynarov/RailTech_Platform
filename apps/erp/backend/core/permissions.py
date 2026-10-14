@@ -77,6 +77,27 @@ class IsProductManagerOrAdmin(BasePermission):
         return member_has_permission(user, owner_id, Permission.CATALOG_MANAGE)
 
 
+class IsBackOfficeStaff(BasePermission):
+    """Сотрудник бэк-офиса (активный участник своей компании) или администратор.
+
+    Каталог бэк-офиса несёт внутренний слой (поставщики, себестоимость, спрос, ТН ВЭД) — он не
+    для клиента и не для анонима (M1-ERP-07). Клиент видит каталог только опубликованным слоем
+    (`catalog.published`) через портал и бота.
+    """
+
+    message = "BACKOFFICE_ONLY"
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not (user and user.is_authenticated):
+            return False
+        if user.is_superuser:
+            return True
+        from accounts.services.permissions import is_seller
+
+        return is_seller(user)
+
+
 class IsOfferSupplierOrAdmin(BasePermission):
     """Object-level guard for SupplierOffer writes (C2 tenant isolation):
       - Администратор (`is_superuser`): full access.

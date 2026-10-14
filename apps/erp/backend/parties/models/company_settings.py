@@ -1,7 +1,10 @@
 """CompanySettings — машинные настройки компании (payment_terms_days и т.п.)."""
 
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+
+from catalog.constants import DEFAULT_PUBLISH_THRESHOLD, PriceVisibility
 
 
 class CompanySettings(models.Model):
@@ -98,6 +101,21 @@ class CompanySettings(models.Model):
         default=25,
         verbose_name=_("Целевая маржа (%)"),
         help_text=_("Желаемая валовая маржа (на цене) — зелёная зона в конструкторе КП."),
+    )
+
+    # ── Политики каталога (M1-ERP-07, ARCHITECTURE §7) ────────────────────────
+    catalog_price_visibility = models.CharField(
+        max_length=16,
+        choices=PriceVisibility.choices,
+        default=PriceVisibility.ON_REQUEST,
+        verbose_name=_("Видимость цен каталога по умолчанию"),
+        help_text=_("Для карточек без своей политики: цена в кабинете клиента или «по запросу»."),
+    )
+    catalog_publish_threshold = models.PositiveSmallIntegerField(
+        default=DEFAULT_PUBLISH_THRESHOLD,
+        validators=[MinValueValidator(1), MaxValueValidator(100)],
+        verbose_name=_("Порог публикации (%)"),
+        help_text=_("Минимальная полнота карточки, при которой её можно опубликовать."),
     )
 
     # ── Document numbering scheme ──────────────────────────────────────────────

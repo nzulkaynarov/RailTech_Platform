@@ -38,6 +38,11 @@ export function CompletenessRail({
               <Progress value={completeness.percent} className="h-2" />
               <span className="text-sm font-medium tabular-nums">{completeness.percent}%</span>
             </div>
+            {completeness.threshold != null && completeness.threshold < 100 && (
+              <p className="text-xs text-muted-foreground">
+                {t('productEditor.completeness.threshold', { percent: completeness.threshold })}
+              </p>
+            )}
             {completeness.missing.length === 0 ? (
               <p className="flex items-center gap-1.5 text-sm text-success">
                 <CheckCircle2 className="size-4 shrink-0" aria-hidden="true" />
