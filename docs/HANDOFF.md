@@ -78,4 +78,4 @@
 - Docker Desktop: 12 ГБ памяти, подсеть VM закреплена `VpnkitCIDR: 192.168.65.0/24` (иначе после перезапуска движок
   недоступен); старые стенды `railtech`, `infra`, `railtech_saas_b2b` остановлены с `restart=no`.
 - После `git pull` с правкой `infra/caddy/Caddyfile.dev` — `make caddy-reload`.
-- Бэкенд-тесты ERP идут в контейнерах `rt-erp-test-*` (`apps/erp/scripts/test_backend_local.sh`), по одному прогону за раз.
+- Бэкенд-тесты ERP идут в контейнерах `rt-erp-test-*` (`apps/erp/scripts/test_backend_local.sh`), по одному прогону на набор; параллельной сессии — свой набор `ERP_TEST_NS=<имя>`.
