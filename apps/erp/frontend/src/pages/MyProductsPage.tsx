@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'; import { useTranslation } from 'react-i18next'; import { Boxes, Loader2, PackagePlus, Plus, SearchX, ShieldAlert, Upload } from 'lucide-react'; import { toast } from 'sonner'; import { useQueryClient } from '@tanstack/react-query';  import { Badge } from '@/components/ui/badge'; import { Button } from '@/components/ui/button'; import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; import { Checkbox } from '@/components/ui/checkbox'; import { Skeleton } from '@/components/ui/skeleton'; import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'; import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable'; import { Pager, Toolbar } from '@/components/DataTable';
+import { useEffect, useMemo, useState } from 'react'; import { useTranslation } from 'react-i18next'; import { Boxes, Loader2, PackagePlus, Plus, SearchX, Upload } from 'lucide-react'; import { toast } from 'sonner'; import { useQueryClient } from '@tanstack/react-query';  import { Badge } from '@/components/ui/badge'; import { Button } from '@/components/ui/button'; import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; import { Checkbox } from '@/components/ui/checkbox'; import { Skeleton } from '@/components/ui/skeleton'; import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'; import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable'; import { Pager, Toolbar } from '@/components/DataTable';
 import { useListParams } from '@/components/DataTable/listParams';
 import { useDraftState } from '@/hooks/useDraftState';
 import { ErrorState } from '@/pages/shared/PageShell';
-import { useCatalogPublishGate } from '@/hooks/useCatalogPublishGate';
 import { getDomainLabelKey } from '@/config/domainConfig';
 import { useBulkArchiveProducts, useBulkPublishProducts, useDomainTypes, useProductsPage } from '@/hooks/useCatalog';
 import { extractApiErrorCode, translateApiError } from '@/lib/apiError';
@@ -84,7 +83,6 @@ export function MyProductsPage({
 
   // Наполнять можно до верификации, публиковать — нет. Предупреждаем ЗАРАНЕЕ (Amazon Seller
   // Central); на снятие с публикации / архив / восстановление гейт НЕ распространяется.
-  const publishGate = useCatalogPublishGate();
   const publishMany = useBulkPublishProducts();
   const archiveMany = useBulkArchiveProducts();
   const classify = useHsClassify(() => setSelected(new Set()));
@@ -257,27 +255,6 @@ export function MyProductsPage({
         </div>
       </div>
 
-      {/* Порог верификации назван ЗАРАНЕЕ и не выглядит поломкой (Amazon Seller Central). */}
-      {publishGate.blocked && isDraftLike && (
-        <Card className="border-warning/40 bg-warning/5">
-          <CardContent className="flex items-start gap-3 py-4">
-            <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-warning" aria-hidden="true" />
-            <div className="flex flex-col gap-1">
-              <p className="text-sm font-medium">{t('nomenclature.kycGateTitle')}</p>
-              <p className="text-sm text-muted-foreground">{t('nomenclature.kycGateHint')}</p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="ml-auto shrink-0"
-              onClick={() => { window.location.hash = 'settings?section=company'; }}
-            >
-              {t('nomenclature.kycGateCta')}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
       <div className="flex flex-wrap items-center gap-2">
         <Tabs
           value={tab}
@@ -323,8 +300,7 @@ export function MyProductsPage({
         {publishableSelected.length > 0 && (
           <Button
             size="sm"
-            title={publishGate.blocked ? t('nomenclature.publishNeedsKyc') : undefined}
-            disabled={publishMany.isPending || publishGate.blocked}
+            disabled={publishMany.isPending}
             onClick={() =>
               publishMany.mutate(
                 publishableSelected.map((p) => p.id),

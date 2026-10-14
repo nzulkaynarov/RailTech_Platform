@@ -11,31 +11,21 @@ import { Badge } from '@/components/ui/badge';
 
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
 
 import { useUserStore, companyStatusLabels } from '@/store/userStore';
 import { useHasCompanyPermission } from '@/hooks/useCapabilities';
-import { accountsApi, type KYCDocument, type Company } from '@/api/accountsApi';
-import { kycDocTypeLabelKey } from '@/lib/codes';
+import { accountsApi, type Company } from '@/api/accountsApi';
 import { toast } from 'sonner';
 import { ImageUpload } from '@/components/Shared/ImageUpload';
-import { FileUpload } from '@/components/Shared/FileUpload';
 import { CountrySelect } from '@/components/Shared/CountrySelect';
 
 /**
- * Company section of the Settings Hub (spec PR 3): one form grouped into three cards —
- * requisites / bank / KYC documents. Logic, gating and API calls are unchanged from the
- * pre-redesign single-card version; one save action persists requisites + bank (single PATCH).
+ * Company section of the Settings Hub (spec PR 3): one form grouped into two cards —
+ * requisites / bank; one save action persists both (single PATCH). There is no company
+ * verification card any more (M1-ERP-02): ERP does not verify counterparties.
  */
 export function CompanyTab() {
   const { t } = useTranslation();
-  // `doc_type_display` is the Russian-only lookup name — fallback for an unknown code.
-  const docTypeLabel = (doc: KYCDocument): string => {
-    const key = kycDocTypeLabelKey(doc.doc_type_code);
-    return key ? t(key) : doc.doc_type_display || '';
-  };
   const { company, activeStatus, updateCompany } = useUserStore();
   // ADR-0005 U2: editing the company profile is gated on the CompanyRole `settings.edit`
   // permission (useHasCompanyPermission keeps the legacy OWNER fallback), mirroring the backend's
@@ -44,15 +34,9 @@ export function CompanyTab() {
   // edit instead of seeing a dead read-only form.
   const canEditCompany = useHasCompanyPermission('settings.edit');
   const canEdit = canEditCompany;
-  // INN is locked once KYC is verified — it becomes a checked legal identifier.
-  const innLocked = company.kycStatus === 'verified';
-
 
   const companyId = company.id;
   const [savingCompany, setSavingCompany] = useState(false);
-  const [docs, setDocs] = useState<KYCDocument[]>([]);
-  const [loadingDocs, setLoadingDocs] = useState(false);
-  const [docType, setDocType] = useState<string>('OTHER');
   const [cForm, setCForm] = useState({
     name: company.name, inn: company.inn, contact_person: '', phone: '', email: '',
     website: '', legal_address: '', bank_account: '', mfo: '',
@@ -63,11 +47,8 @@ export function CompanyTab() {
   // Pull the full record so every editable field is populated, not blanked.
   useEffect(() => {
     if (!companyId) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- императивная догрузка полной карточки компании (внешний вызов). Правильный ремонт — useQuery, отдельной задачей
-    setLoadingDocs(true);
     accountsApi.getCompanyDetail(companyId)
       .then((c) => {
-        setDocs(c.kyc_documents ?? []);
         setCForm({
           name: c.name ?? '', inn: c.inn ?? '', contact_person: c.contact_person ?? '',
           phone: c.phone ?? '', email: c.email ?? '', website: c.website ?? '',
@@ -75,13 +56,8 @@ export function CompanyTab() {
           mfo: c.mfo ?? '', country: c.country ?? '', has_iso9001: !!c.has_iso9001,
         });
       })
-      .catch(() => toast.error(t('profile.companyInfo.docsLoadError')))
-      .finally(() => setLoadingDocs(false));
+      .catch(() => toast.error(t('profile.companyInfo.docsLoadError')));
   }, [companyId, t]);
-
-  const kycBadge = company.kycStatus === 'verified'
-    ? { variant: 'default' as const, label: t('profile.companyInfo.kycVerified'), className: '' }
-    : { variant: 'secondary' as const, label: t('profile.companyInfo.kycPending'), className: 'text-warning' };
 
   const handleSaveCompany = async () => {
     if (!companyId) {
@@ -101,8 +77,8 @@ export function CompanyTab() {
         mfo: cForm.mfo,
         country: cForm.country === '' ? null : Number(cForm.country),
         has_iso9001: cForm.has_iso9001,
+        inn: cForm.inn,
       };
-      if (!innLocked) payload.inn = cForm.inn;
       await accountsApi.updateCompany(companyId, payload);
       updateCompany({ name: cForm.name });
       toast.success(t('profile.companyInfo.saved'));
@@ -123,18 +99,6 @@ export function CompanyTab() {
     if (!companyId) return;
     await accountsApi.deleteCompanyLogo(companyId);
     updateCompany({ logoUrl: null });
-  };
-
-  const handleDocUpload = async (file: File) => {
-    if (!companyId) throw new Error('NO_COMPANY');
-    const doc = await accountsApi.uploadDocument(companyId, file, docType);
-    setDocs(prev => [doc, ...prev]);
-  };
-
-  const handleDocRemove = async (id: string | number) => {
-    if (!companyId) return;
-    await accountsApi.deleteDocument(companyId, Number(id));
-    setDocs(prev => prev.filter(d => d.id !== id));
   };
 
   return (
@@ -165,7 +129,7 @@ export function CompanyTab() {
             </div>
             <div className="space-y-2">
               <Label>{t('profile.companyInfo.inn')}</Label>
-              <Input value={cForm.inn} onChange={(e) => setCForm({ ...cForm, inn: e.target.value })} disabled={!canEdit || innLocked} />
+              <Input value={cForm.inn} onChange={(e) => setCForm({ ...cForm, inn: e.target.value })} disabled={!canEdit} />
             </div>
             <div className="space-y-2">
               <Label>{t('profile.companyInfo.contactPerson')}</Label>
@@ -213,7 +177,6 @@ export function CompanyTab() {
               {company.statusEntries.map((entry) => (
                 <Badge key={entry.status} variant={entry.status === activeStatus ? 'default' : 'outline'}>
                   {t(companyStatusLabels[entry.status])}
-                  {entry.verification === 'pending' && ` (${t('profile.companyInfo.pendingVerification')})`}
                 </Badge>
               ))}
             </div>
@@ -255,61 +218,6 @@ export function CompanyTab() {
           {t('profile.companyInfo.contactAdmin')}
         </p>
       )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{t('settings.company.kycTitle')}</CardTitle>
-          <CardDescription>{t('settings.company.kycDescription')}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-3">
-            <Label>{t('profile.companyInfo.kycStatus')}:</Label>
-            <Badge variant={kycBadge.variant} className={kycBadge.className}>{kycBadge.label}</Badge>
-          </div>
-
-          {companyId && (
-            <>
-              <Separator />
-              <div className="space-y-4">
-                <div className="space-y-2 max-w-xs">
-                  <Label htmlFor="doc-type-select">{t('company.docTypeLabel')}</Label>
-                  <Select value={docType} onValueChange={setDocType}>
-                    <SelectTrigger id="doc-type-select">
-                      <SelectValue placeholder={t('company.docTypes.OTHER')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="CHARTER">{t('company.docTypes.CHARTER')}</SelectItem>
-                      <SelectItem value="LICENSE">{t('company.docTypes.LICENSE')}</SelectItem>
-                      <SelectItem value="PASSPORT">{t('company.docTypes.PASSPORT')}</SelectItem>
-                      <SelectItem value="TAX_CERT">{t('company.docTypes.TAX_CERT')}</SelectItem>
-                      <SelectItem value="BANK_REF">{t('company.docTypes.BANK_REF')}</SelectItem>
-                      <SelectItem value="OTHER">{t('company.docTypes.OTHER')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">{t('profile.companyInfo.kycDocuments')}</Label>
-                  <FileUpload
-                    className="mt-2"
-                    disabled={loadingDocs}
-                    files={docs.map(d => ({
-                      id: d.id,
-                      name: docTypeLabel(d)
-                        ? `${docTypeLabel(d)} — ${d.original_filename}`
-                        : d.original_filename,
-                      url: d.file ?? null,
-                      uploaded_at: d.uploaded_at,
-                    }))}
-                    onUpload={handleDocUpload}
-                    onRemove={handleDocRemove}
-                    description={t('profile.companyInfo.kycDocumentsHelp')}
-                  />
-                </div>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }

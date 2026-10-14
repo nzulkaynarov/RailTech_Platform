@@ -31,7 +31,7 @@ const sizeStyles: Record<BadgeSize, string> = {
   md: 'px-2.5 py-1 text-xs',
 };
 
-/** Unified status badge for stock, deal stages, KYC, etc. */
+/** Unified status badge for stock, deal stages, etc. */
 export const StatusBadge: React.FC<StatusBadgeProps> = ({
   label,
   variant = 'neutral',

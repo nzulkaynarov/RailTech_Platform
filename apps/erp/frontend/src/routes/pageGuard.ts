@@ -1,5 +1,5 @@
 /**
- * Единое решение о доступе к странице (KYC → контекст).
+ * Единое решение о доступе к странице (контекст покупателя/продавца).
  *
  * Вынесено ЧИСТОЙ функцией, чтобы её можно было покрыть юнит-тестами и чтобы три
  * исторически раздельных guard-эффекта опирались на один источник правды. Наборы страниц
@@ -8,25 +8,27 @@
  *
  * `bootstrapped` — несущий вход для починки cold-load deep-link: пока `loadFromAuth`
  * не разрешил реальные capabilities (сигнал — `screen === 'main'`), стор держит
- * ПРЕД-авторизационные ДЕФОЛТЫ: kycStatus 'not_started', activeStatus 'BUYER',
- * пустые statusEntries. Применение гейтов к ним на холодном deep-link (`#request-detail/3`,
- * `#deal-quote/7`) ошибочно провалило бы проверки KYC/контекста и отбросило страницу на
- * #dashboard (затерев хэш через replaceState). Поэтому пока `!bootstrapped` — РАЗРЕШАЕМ
+ * ПРЕД-авторизационные ДЕФОЛТЫ: activeStatus 'BUYER', пустые statusEntries. Применение
+ * гейтов к ним на холодном deep-link (`#request-detail/3`, `#deal-quote/7`) ошибочно
+ * провалило бы проверку контекста и отбросило страницу на #dashboard (затерев хэш через
+ * replaceState). Поэтому пока `!bootstrapped` — РАЗРЕШАЕМ
  * (откладываем); эффект перезапустится, когда capabilities приедут, и применит гейты
  * ровно как раньше.
+ *
+ * Порога верификации компании больше нет (M1-ERP-02): проверки клиентов в ERP нет, действия
+ * ограничивает право роли — его держит бэкенд, а меню прячет недоступное (`config/navigation`).
  */
 
-import { BUYER_PAGES, KYC_ALLOWED_PAGES, SELLER_PAGES } from '@/config/pageRegistry';
+import { BUYER_PAGES, SELLER_PAGES } from '@/config/pageRegistry';
 import type { CompanyStatus, CompanyStatusEntry } from '@/store/userStore';
 
 export type PageGuardDecision =
   | { action: 'allow' }
   | { action: 'adopt'; context: CompanyStatus }
-  | { action: 'bounce'; reason: 'kyc' | 'context' };
+  | { action: 'bounce'; reason: 'context' };
 
 export interface PageGuardInput {
   pageType: string;
-  kycStatus: string;
   activeStatus: CompanyStatus;
   statusEntries: CompanyStatusEntry[];
   bootstrapped: boolean;
@@ -46,22 +48,17 @@ export function pageContextOf(pageType: string): CompanyStatus | null {
 }
 
 export function evaluatePageGuard(input: PageGuardInput): PageGuardDecision {
-  const { pageType, kycStatus, activeStatus, statusEntries, bootstrapped } = input;
+  const { pageType, activeStatus, statusEntries, bootstrapped } = input;
 
   // Откладывание гейтов на холодной загрузке (см. блок-комментарий выше): никогда не
   // применяем их к пред-авторизационным дефолтам, иначе валидный deep-link будет затёрт.
   if (!bootstrapped) return { action: 'allow' };
 
-  // Порог KYC: ниже L2 — только dashboard/profile/settings/help + чтение каталога.
-  if (kycStatus !== 'verified' && !KYC_ALLOWED_PAGES.has(pageType)) {
-    return { action: 'bounce', reason: 'kyc' };
-  }
-
   // Контекст, выводимый из страницы (ADR-0005 Phase C): страница, уникальная для ДРУГОЙ
-  // подтверждённой capability пользователя, переключает контекст, а не отбрасывает.
+  // capability пользователя, переключает контекст, а не отбрасывает.
   const pageCtx = pageContextOf(pageType);
   const hasContext = (candidate: CompanyStatus) =>
-    statusEntries.some((entry) => entry.status === candidate && entry.verification === 'verified');
+    statusEntries.some((entry) => entry.status === candidate);
   if (pageCtx && pageCtx !== activeStatus && hasContext(pageCtx)) {
     return { action: 'adopt', context: pageCtx };
   }

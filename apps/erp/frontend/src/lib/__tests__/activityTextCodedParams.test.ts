@@ -63,30 +63,7 @@ describe('кодовые параметры журнала', () => {
     expect(activityDetail(t(), i18n, entry)).toBe('Step approved (Head of unit)');
   });
 
-  it('уровни KYC печатаются по коду', () => {
-    const entry = {
-      event_code: 'company.kyc_verified',
-      event_params: {
-        company_name: 'UTY',
-        from_status: 'Не верифицирован',
-        to_status: 'KYC подтверждён (L2)',
-        from_status_code: 'L1_UNVERIFIED',
-        to_status_code: 'L2_VERIFIED',
-      },
-      action: 'KYC: подтверждение',
-      detail: 'UTY: Не верифицирован → KYC подтверждён (L2)',
-    };
-
-    expect(activityDetail(t(), i18n, entry)).toBe('UTY: Unverified → KYC verified (L2)');
-  });
-
-  it('роль компании печатается по коду и в заголовке, и в подробностях', () => {
-    const approved = {
-      event_code: 'company.role_application_approved',
-      event_params: { company_name: 'UTY', role_name: 'Поставщик', role_code: 'SUPPLIER' },
-      action: 'Заявка на роль одобрена',
-      detail: 'UTY → Поставщик',
-    };
+  it('роль компании печатается по коду', () => {
     const added = {
       event_code: 'company.role_added',
       event_params: { role_code: 'SUPPLIER', application_id: 4 },
@@ -94,7 +71,6 @@ describe('кодовые параметры журнала', () => {
       detail: 'Одобрена заявка #4',
     };
 
-    expect(activityDetail(t(), i18n, approved)).toBe('UTY → Supplier');
     expect(activityTitle(t(), i18n, added)).toBe('Role added: Supplier');
   });
 
@@ -140,13 +116,13 @@ describe('кодовые параметры журнала', () => {
     // Лента уведомлений была ВТОРОЙ копией механики: починка регионального тега в журнале её
     // не затронула. Теперь обе ходят в `eventText.ts`, и `en-US` резолвится одинаково.
     const entry = {
-      event_code: 'company.kyc_status_changed',
-      event_params: { level_code: 'L2_VERIFIED' },
-      title: 'Статус верификации обновлён',
-      message: 'Статус вашей компании: KYC подтверждён (L2)',
+      event_code: 'deal.stage_changed',
+      event_params: { deal_id: 9, stage_code: 'QUOTE_SENT' },
+      title: 'Статус сделки изменён',
+      message: 'Сделка #9 перешла в стадию: КП отправлено',
     };
 
-    expect(notificationMessage(t(), i18n, entry)).toBe('Your company status: KYC verified (L2)');
+    expect(notificationMessage(t(), i18n, entry)).toBe('Deal #9 moved to stage: Quote Sent');
   });
 
   it('незнакомый код не затирает имя', () => {

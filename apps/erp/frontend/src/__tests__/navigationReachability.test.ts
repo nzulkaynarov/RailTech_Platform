@@ -35,14 +35,12 @@ interface Persona {
   name: string;
   caps: Capabilities;
   sides: CapableSides;
-  kycStatus: string;
   activeStatus: CompanyStatus;
   statusEntries: CompanyStatusEntry[];
 }
 
 function capabilities(overrides: Partial<Capabilities> = {}): Capabilities {
   return {
-    kyc_level: 'L2_VERIFIED',
     can_buy: true,
     can_sell: false,
     subscription_active: false,
@@ -53,41 +51,37 @@ function capabilities(overrides: Partial<Capabilities> = {}): Capabilities {
   };
 }
 
-const verified = (status: CompanyStatus): CompanyStatusEntry => ({ status, verification: 'verified' });
+const entry = (status: CompanyStatus): CompanyStatusEntry => ({ status });
 
 /** Роли, под которыми снята матрица доступа в аудите. */
 const PERSONAS: Persona[] = [
   {
-    name: 'покупатель (KYC пройден)',
+    name: 'покупатель',
     caps: capabilities(),
     sides: { buy: true, sell: false },
-    kycStatus: 'verified',
     activeStatus: 'BUYER',
-    statusEntries: [verified('BUYER')],
+    statusEntries: [entry('BUYER')],
   },
   {
-    name: 'продавец (KYC пройден, подписка активна)',
+    name: 'продавец (подписка активна)',
     caps: capabilities({ can_sell: true, can_buy: false, subscription_active: true, can_send_quotes: true }),
     sides: { buy: false, sell: true },
-    kycStatus: 'verified',
     activeStatus: 'SELLER',
-    statusEntries: [verified('SELLER')],
+    statusEntries: [entry('SELLER')],
   },
   {
     name: 'компания с двумя сторонами',
     caps: capabilities({ can_sell: true, subscription_active: true, can_send_quotes: true }),
     sides: { buy: true, sell: true },
-    kycStatus: 'verified',
     activeStatus: 'BUYER',
-    statusEntries: [verified('BUYER'), verified('SELLER')],
+    statusEntries: [entry('BUYER'), entry('SELLER')],
   },
   {
-    name: 'новичок до KYC',
-    caps: capabilities({ kyc_level: 'L1_UNVERIFIED', permissions: [] }),
+    name: 'сотрудник без прав роли (список прав ещё не пришёл)',
+    caps: capabilities({ permissions: [] }),
     sides: { buy: true, sell: false },
-    kycStatus: 'not_started',
     activeStatus: 'BUYER',
-    statusEntries: [],
+    statusEntries: [entry('BUYER')],
   },
 ];
 
@@ -103,7 +97,6 @@ const pageTypeOf = (route: string) => route.split('?')[0].split('/')[0];
 function guardFor(persona: Persona, route: string) {
   return evaluatePageGuard({
     pageType: pageTypeOf(route),
-    kycStatus: persona.kycStatus,
     activeStatus: persona.activeStatus,
     statusEntries: persona.statusEntries,
     // Гейты применяем ПОСЛЕ бутстрапа: до него guard намеренно всё разрешает (холодный
@@ -124,7 +117,7 @@ describe('каждый пункт меню ведёт на страницу, д�
 describe('маршрут документа достижим стороне, которой документ показан', () => {
   const KINDS: DocumentKind[] = ['quote', 'contract', 'invoice', 'act', 'payment', 'fulfillment', 'generated'];
 
-  for (const persona of PERSONAS.filter((p) => p.kycStatus === 'verified')) {
+  for (const persona of PERSONAS) {
     it(persona.name, () => {
       const viewer = { isSeller: persona.sides.sell };
       const unreachable = KINDS
@@ -150,7 +143,7 @@ describe('маршрут документа достижим стороне, к�
 });
 
 describe('маршрут «к сделке» достижим той роли, которой его предлагают', () => {
-  for (const persona of PERSONAS.filter((p) => p.kycStatus === 'verified')) {
+  for (const persona of PERSONAS) {
     it(persona.name, () => {
       const route = dealsListRoute({ isSeller: persona.sides.sell });
       expect(guardFor(persona, route).action).not.toBe('bounce');

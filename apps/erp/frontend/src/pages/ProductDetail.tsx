@@ -20,7 +20,6 @@ import {
   useProduct, usePublishProduct, useUnpublishProduct, useArchiveProduct, useRestoreProduct,
 } from '@/hooks/useCatalog';
 import { useHasCompanyPermission } from '@/hooks/useCapabilities';
-import { useCatalogPublishGate } from '@/hooks/useCatalogPublishGate';
 import { useCartStore } from '@/store/cartStore';
 import { formatMoney } from '@/utils/decimal';
 import { useUserStore } from '@/store/userStore';
@@ -57,7 +56,6 @@ export function ProductDetail({ productId, onBack, onProductEdit }: ProductDetai
   const viewerCompanyId = useAuthStore((s) => s.user?.company?.id);
   const canManage = useHasCompanyPermission('catalog.manage');
   const canPublish = useHasCompanyPermission('catalog.publish');
-  const publishGate = useCatalogPublishGate();
   const publishMut = usePublishProduct();
   const unpublishMut = useUnpublishProduct();
   const archiveMut = useArchiveProduct();
@@ -145,7 +143,7 @@ export function ProductDetail({ productId, onBack, onProductEdit }: ProductDetai
     toast.error(extractApiErrorCode(err) ? translateApiError(err) : t(fallbackKey));
 
   // «Опубликовать» — только DRAFT с достигнутой полнотой; при неполноте кнопка скрыта
-  // (дозаполнение живёт в редакторе). KYC-гейт — disabled с подсказкой, как в реестре.
+  // (дозаполнение живёт в редакторе).
   const showPublish = canPublish && statusCode === 'DRAFT' && Boolean(product.completeness?.is_publishable);
   const showOwnerActions = isOwner && (canManage || canPublish);
 
@@ -221,8 +219,7 @@ export function ProductDetail({ productId, onBack, onProductEdit }: ProductDetai
                   <Button
                     size="sm"
                     className="gap-1.5"
-                    disabled={actionPending || publishGate.blocked}
-                    title={publishGate.blocked ? t('nomenclature.publishNeedsKyc') : undefined}
+                    disabled={actionPending}
                     onClick={() =>
                       publishMut.mutate(product.id, {
                         onSuccess: actionSuccess(t('nomenclature.published', { name: product.name })),

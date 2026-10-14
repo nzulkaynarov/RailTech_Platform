@@ -59,7 +59,7 @@ interface NotificationCenterProps {
 // `deal` id the backend already sends — instead of the generic /crm/deals *list* the
 // legacy `link` field encoded (which dropped the user with no way to find the document
 // the alert was about). Returns a hash route for deal notifications, or a plain AppShell
-// page id for the rest (profile / KYC). Seller lands in the КП builder, buyer in the
+// page id for the rest (e.g. profile). Seller lands in the КП builder, buyer in the
 // request detail — both show the deal's documents in context.
 function notificationTarget(n: Notification, activeStatus: string): { hash?: string; page?: string } {
     const isSeller = activeStatus === 'SELLER';

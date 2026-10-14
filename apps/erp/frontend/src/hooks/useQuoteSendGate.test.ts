@@ -16,7 +16,6 @@ import type { Capabilities } from '@/store/userStore';
  */
 
 const BASE: Capabilities = {
-  kyc_level: 'L2_VERIFIED',
   can_buy: true,
   can_sell: true,
   subscription_active: true,
@@ -46,12 +45,6 @@ describe('причина отказа в отправке КП', () => {
     const result = gate({ can_send_quotes: false, subscription_active: false });
 
     expect(result.reason).toBe('subscription');
-  });
-
-  it('KYC важнее обоих: без уровня разговор о подписке преждевременен', () => {
-    const result = gate({ kyc_level: 'L1_UNVERIFIED', can_send_quotes: false, quote_send_blocked_by_operator: true });
-
-    expect(result.reason).toBe('kyc');
   });
 
   it('DEMO не подменяется запретом платформы', () => {

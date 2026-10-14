@@ -7,7 +7,7 @@ import { Train, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -23,11 +23,10 @@ type LoginFormData = z.infer<ReturnType<typeof createLoginSchema>>;
 
 interface LoginPageProps {
     onNavigate?: (target: string) => void;
-    onRegister?: () => void;
     onForgotPassword?: () => void;
 }
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, onRegister, onForgotPassword }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, onForgotPassword }) => {
     const { t } = useTranslation();
     const { login, isLoading } = useAuthStore();
     const [showPassword, setShowPassword] = useState(false);
@@ -274,13 +273,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, onRegister, on
                             </Form>
                         )}
                     </CardContent>
-
-                    <CardFooter className="flex-col border-t pt-6">
-                        <p className="text-muted-foreground text-sm">{t('auth.newCompany')}</p>
-                        <Button variant="link" className="mt-1" onClick={onRegister}>
-                            {t('auth.registerLink')} →
-                        </Button>
-                    </CardFooter>
                 </Card>
             </div>
         </div>

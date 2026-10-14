@@ -1,12 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Archive, ArchiveRestore, EyeOff, Send, ShieldAlert } from 'lucide-react';
+import { Archive, ArchiveRestore, EyeOff, Send } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useHasCompanyPermission } from '@/hooks/useCapabilities';
-import { useCatalogPublishGate } from '@/hooks/useCatalogPublishGate';
 import {
   useArchiveProduct, usePublishProduct, useRestoreProduct, useUnpublishProduct,
 } from '@/hooks/useCatalog';
@@ -18,8 +17,7 @@ import { SECTION_IDS } from './anchors';
 /**
  * Секция «Действия» — жизненный цикл карточки по ПРАВАМ, а не по роли (D9, ADR-0005):
  * `catalog.publish` → опубликовать/снять, `catalog.manage` → архив/восстановление.
- * Кнопки без права СКРЫТЫ, не задизейблены. KYC-гейт публикации — интерфейсная
- * подсказка (`useCatalogPublishGate`), авторитетная проверка живёт на сервере.
+ * Кнопки без права СКРЫТЫ, не задизейблены; авторитетная проверка живёт на сервере.
  * При неполноте «Опубликовать» disabled и перечисляет недостающее — тем же словарём
  * кодов, что рейка полноты.
  */
@@ -28,7 +26,6 @@ export function ActionsSection({ product }: { product: Product }) {
   const queryClient = useQueryClient();
   const canPublish = useHasCompanyPermission('catalog.publish');
   const canManage = useHasCompanyPermission('catalog.manage');
-  const publishGate = useCatalogPublishGate();
   const publishMut = usePublishProduct();
   const unpublishMut = useUnpublishProduct();
   const archiveMut = useArchiveProduct();
@@ -70,8 +67,7 @@ export function ActionsSection({ product }: { product: Product }) {
               <Button
                 size="sm"
                 className="gap-1.5"
-                disabled={pending || publishGate.blocked || publishBlockedByCompleteness}
-                title={publishGate.blocked ? t('nomenclature.publishNeedsKyc') : undefined}
+                disabled={pending || publishBlockedByCompleteness}
                 onClick={() => run(() => publishMut.mutateAsync(product.id), 'productEditor.actions.published')}
               >
                 <Send className="size-4" aria-hidden="true" />
@@ -119,15 +115,6 @@ export function ActionsSection({ product }: { product: Product }) {
             <p className="text-xs text-muted-foreground">
               {t('productEditor.actions.publishBlocked', { fields: missingText })}
             </p>
-          )}
-          {showPublish && publishGate.blocked && (
-            <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 p-3">
-              <ShieldAlert className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" />
-              <div className="space-y-0.5">
-                <p className="text-sm font-medium">{t('nomenclature.kycGateTitle')}</p>
-                <p className="text-sm text-muted-foreground">{t('nomenclature.kycGateHint')}</p>
-              </div>
-            </div>
           )}
         </CardContent>
       </Card>

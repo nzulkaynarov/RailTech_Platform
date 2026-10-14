@@ -266,48 +266,6 @@ export const useToggleMemberActive = () => {
   });
 };
 
-export const useVerifyCompany = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      companyId,
-      status_code,
-      comment,
-      reason,
-    }: {
-      companyId: number;
-      status_code: string;
-      comment?: string;
-      reason?: string;
-    }) => accountsApi.verifyCompany(companyId, status_code, comment, reason),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['companies'] });
-    },
-  });
-};
-
-export const useUploadDocument = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ companyId, file, docType }: { companyId: number; file: File; docType: string }) =>
-      accountsApi.uploadDocument(companyId, file, docType),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['companies'] });
-    },
-  });
-};
-
-export const useDeleteDocument = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ companyId, docId }: { companyId: number; docId: number }) =>
-      accountsApi.deleteDocument(companyId, docId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['companies'] });
-    },
-  });
-};
-
 export const useUploadCompanyLogo = () => {
   const qc = useQueryClient();
   return useMutation({
@@ -415,76 +373,5 @@ export const useDeleteSubscription = () => {
   return useMutation({
     mutationFn: (id: number) => accountsApi.deleteSubscription(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['subscriptions'] }),
-  });
-};
-
-// ─── Role Applications ─────────────────────────────────────────────────
-
-export const useCompanyTypes = () => useQuery({
-  queryKey: ['company-types'],
-  queryFn: () => accountsApi.getCompanyTypes(),
-  staleTime: 30 * 60_000,
-});
-
-export const useRoleApplications = (params?: {
-  search?: string;
-  status?: string;
-  requested_type?: string;
-  ordering?: string;
-  fetchAll?: boolean;
-}) => useQuery({
-  queryKey: ['roleApplications', params],
-  queryFn: () => accountsApi.getRoleApplications(params),
-});
-
-export const useApproveRoleApplication = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: number) => accountsApi.approveRoleApplication(id),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['roleApplications'] }); },
-  });
-};
-
-export const useRejectRoleApplication = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, reason }: { id: number; reason?: string }) =>
-      accountsApi.rejectRoleApplication(id, reason),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['roleApplications'] }); },
-  });
-};
-
-/**
- * ОТКРЫТЫЙ ВОПРОС ВЛАДЕЛЬЦУ, а не забытый код (аудит UI 2026-07-30, §3.2).
- *
- * Операторская страница модерации заявок на смену роли компании работает, а подать такую
- * заявку неоткуда: экрана нет. Это не «недоведённая архитектура», которую можно доделать
- * проводкой — это полноценная новая форма, то есть новая функция. Хук оставлен намеренно:
- * когда решение будет принято, подключать его не придётся заново.
- */
-export const useUpdateRoleApplication = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Parameters<typeof accountsApi.updateRoleApplicationDocuments>[1] }) =>
-      accountsApi.updateRoleApplicationDocuments(id, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['roleApplications'] }),
-  });
-};
-
-export const useRequestRoleApplicationDocuments = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, reason }: { id: number; reason: string }) =>
-      accountsApi.requestRoleApplicationDocuments(id, reason),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['roleApplications'] }),
-  });
-};
-
-export const useCreateRoleApplication = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data: Parameters<typeof accountsApi.createRoleApplication>[0]) =>
-      accountsApi.createRoleApplication(data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['roleApplications'] }),
   });
 };

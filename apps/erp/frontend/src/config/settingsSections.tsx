@@ -17,9 +17,8 @@
  * теперь считает сервер тем же предикатом, что и авторизация (`is_seller`: членство с can_sell И
  * компания типа SUPPLIER/MANUFACTURER), поэтому местная поправка на тип компании больше не нужна.
  * Раньше плоский флаг участника показывал seller-секции OWNER'у CLIENT-only компании.
- * Требования verified нет — свежий продавец настраивает документы до KYC.
  *
- * UX-гейтинг only — backend enforcement (member_has_permission / KYC / entitlements) независим.
+ * UX-гейтинг only — backend enforcement (member_has_permission / entitlements) независим.
  */
 import type { Capabilities } from '@/store/userStore';
 
@@ -105,7 +104,7 @@ const SECTION_RULES: SectionRule[] = [
   // ── account ──
   { def: { key: 'profile', labelKey: 'profile.tabs.personal', group: 'account' }, visible: () => true },
   { def: { key: 'security', labelKey: 'profile.tabs.security', group: 'account' }, visible: () => true },
-  // ── company ── ТОЛЬКО юр.реквизиты компании (CompanyTab): название/ИНН/банк/KYC — идентичность,
+  // ── company ── ТОЛЬКО юр.реквизиты компании (CompanyTab): название/ИНН/банк — идентичность,
   // не внешний вид. PDF-бланк/бренд переехал в группу «documents» (решение владельца 27-07).
   {
     def: { key: 'company', labelKey: 'settings.tabs.company', group: 'company' },

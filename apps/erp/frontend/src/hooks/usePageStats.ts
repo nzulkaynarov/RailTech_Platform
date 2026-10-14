@@ -31,11 +31,3 @@ export const useSearchDocuments = (query: string, limit = 8) => {
     gcTime: 5 * 60_000,
   });
 };
-
-export const usePlatformDashboard = () => useQuery({
-  queryKey: ['platform-dashboard'],
-  queryFn: dashboardApi.getPlatformDashboard,
-  staleTime: 30_000,
-  gcTime: 5 * 60_000,
-  refetchInterval: 60_000,
-});

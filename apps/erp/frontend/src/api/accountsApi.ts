@@ -11,24 +11,10 @@ export interface Session {
 	is_current: boolean;
 }
 
-export interface KYCDocument {
-	id: number;
-	doc_type: number;
-	/** Stable lookup CODE (CHARTER / LICENSE / ...) — map to a localized label. */
-	doc_type_code: string;
-	/** Russian-only lookup `.name` — presentation fallback for an unknown code. */
-	doc_type_display: string;
-	file?: string | null;
-	original_filename: string;
-	uploaded_at: string;
-}
-
 export interface Company {
 	id: number;
 	name: string;
 	inn: string;
-	verification_status: number | string;
-	verification_status_code?: string;
 	/** Компания в обороте. `false` — архивирована: скрыта из подбора, история сохранена. */
 	is_active?: boolean;
 	archived_at?: string | null;
@@ -36,8 +22,6 @@ export interface Company {
 	/** Способность объявлена ЗАРАНЕЕ (Salesforce `deletable`) — кнопка не должна гарантированно падать. */
 	can_delete?: boolean;
 	delete_blocker?: string | null;
-	verification_status_name?: string;
-	is_verified?: boolean;
 	has_iso9001?: boolean;
 	trust_score?: number;
 	bank_account?: string;
@@ -53,9 +37,7 @@ export interface Company {
 	website?: string;
 	email?: string;
 	logo?: string | null;
-	kyc_notes?: string;
 	created_at?: string;
-	kyc_documents?: KYCDocument[];
 	company_types?: string[];
 	/** Запись типов компании — по КОДАМ (Rule 2). Читается через `company_types`. */
 	types?: string[];
@@ -179,7 +161,6 @@ export interface User {
 	workspace_role?: string | null;
 	preferences?: { language?: string; theme?: string };
 	memberships?: UserMembership[];
-	kyc_status?: string | null;
 	// Per-membership capabilities from the primary company.
 	// OWNER distributes these inside the team; frontend filters
 	// the context switcher so a member with can_sell=false does not see
@@ -208,7 +189,6 @@ function normalizeUser(u: User): User {
 
 export interface CompanyFilterParams {
 	search?: string;
-	verification_status?: string;
 	// Backend filterset key for company type (e.g. 'SUPPLIER'); compared by CODE.
 	'types__code'?: string;
 	ordering?: string;
@@ -277,18 +257,6 @@ export const accountsApi = {
 	deleteCompany: async (id: number) => {
 		await apiClient.delete(`accounts/companies/${id}/`);
 	},
-	verifyCompany: async (id: number, statusCode: string, comment?: string, reason?: string) => {
-		const response = await apiClient.post(
-			`accounts/companies/${id}/verify-kyc/`,
-			{ status_code: statusCode, comment, reason },
-		);
-		return response.data;
-	},
-	// CRM Phase D — invite an offline client's contact to register and claim its company.
-	inviteContact: async (contactId: number) => {
-		const response = await apiClient.post<{ invited: boolean }>(`accounts/contacts/${contactId}/invite/`);
-		return response.data;
-	},
 	// CRM Phase C — offline placeholder companies matching this company's INN, and the merge.
 	getMergeCandidates: async (id: number) => {
 		const response = await apiClient.get<{ id: number; name: string; stated_inn: string; is_registered: boolean }[]>(
@@ -302,20 +270,6 @@ export const accountsApi = {
 			{ duplicate_id: duplicateId, reason },
 		);
 		return response.data;
-	},
-	uploadDocument: async (companyId: number, file: File, docType: string) => {
-		const formData = new FormData();
-		formData.append('file', file);
-		formData.append('doc_type', docType);
-		const response = await apiClient.post<KYCDocument>(
-			`accounts/companies/${companyId}/upload-document/`,
-			formData,
-			{ headers: { 'Content-Type': 'multipart/form-data' } }
-		);
-		return response.data;
-	},
-	deleteDocument: async (companyId: number, docId: number) => {
-		await apiClient.delete(`accounts/companies/${companyId}/delete-document/${docId}/`);
 	},
 	uploadCompanyLogo: async (companyId: number, file: File) => {
 		const formData = new FormData();
@@ -422,10 +376,6 @@ export const accountsApi = {
 		const response = await apiClient.post<User>(`accounts/companies/${companyId}/invite/`, data);
 		return response.data;
 	},
-	registerInterest: async (data: { email: string; first_name: string; last_name: string; phone: string }) => {
-		const response = await apiClient.post<{ message: string; email: string }>('auth/register/', data);
-		return response.data;
-	},
 	setupPassword: async (data: { uid: string; token: string; password: string }) => {
 		const response = await apiClient.post<{ message: string; user: User }>('auth/setup-password/', data);
 		return response.data.user;
@@ -437,15 +387,6 @@ export const accountsApi = {
 	resetPassword: async (data: { uid: string; token: string; password: string }) => {
 		const response = await apiClient.post<{ message: string; email: string }>('auth/reset-password/', data);
 		return response.data;
-	},
-	submitProfile: async (data: { companyName: string; position: string; invite?: string }) => {
-		const response = await apiClient.post<{ message: string; user: User }>('auth/submit-profile/', {
-			companyName: data.companyName,
-			position: data.position,
-			// CRM Phase D — a CB-invite token claims an existing offline company instead of a new one.
-			...(data.invite ? { invite: data.invite } : {}),
-		});
-		return response.data.user;
 	},
 	// Admin specific endpoints
 	getUsers: async (params?: UserFilterParams) => {
@@ -658,89 +599,6 @@ export const accountsApi = {
 		const response = await apiClient.get<{ groups: PermissionGroup[] }>('accounts/permissions/');
 		return response.data.groups;
 	},
-
-	// ─── Role Applications (admin + owner self-service) ────────────────
-	// Справочник типов компании — из него выбирается запрашиваемая роль.
-	getCompanyTypes: async () => {
-		const response = await apiClient.get<{ id: number; code: string; name: string }[]>('accounts/company-types/');
-		return response.data;
-	},
-	// Заявки на роль — очередь модерации: непросмотренная 21-я заявка висит без ответа, а
-	// счётчик «На рассмотрении» на вкладке показывает неправду.
-	getRoleApplications: async (params?: {
-		search?: string;
-		status?: string;
-		requested_type?: string;
-		ordering?: string;
-		fetchAll?: boolean;
-	}) => {
-		if (params?.fetchAll) {
-			const query = { ...params };
-			delete query.fetchAll;
-			return fetchAllPages<RoleApplication>('accounts/role-applications/', query);
-		}
-		const response = await apiClient.get<PaginatedResponse<RoleApplication>>(
-			'accounts/role-applications/',
-			{ params },
-		);
-		return response.data.results;
-	},
-	createRoleApplication: async (data: {
-		company: number;
-		requested_type: number;
-		contract_file?: File | null;
-		nda_file?: File | null;
-		partnership_agreement?: File | null;
-	}) => {
-		const formData = new FormData();
-		formData.append('company', String(data.company));
-		formData.append('requested_type', String(data.requested_type));
-		if (data.contract_file) formData.append('contract_file', data.contract_file);
-		if (data.nda_file) formData.append('nda_file', data.nda_file);
-		if (data.partnership_agreement) formData.append('partnership_agreement', data.partnership_agreement);
-		const response = await apiClient.post<RoleApplication>(
-			'accounts/role-applications/',
-			formData,
-			{ headers: { 'Content-Type': 'multipart/form-data' } },
-		);
-		return response.data;
-	},
-	/** Догрузить недостающие документы в СВОЮ заявку (статус DOCUMENTS_REQUIRED).
-	 *  Сервер после этого возвращает её в очередь на рассмотрение. */
-	updateRoleApplicationDocuments: async (
-		id: number,
-		data: { contract_file?: File | null; nda_file?: File | null; partnership_agreement?: File | null },
-	) => {
-		const formData = new FormData();
-		if (data.contract_file) formData.append('contract_file', data.contract_file);
-		if (data.nda_file) formData.append('nda_file', data.nda_file);
-		if (data.partnership_agreement) formData.append('partnership_agreement', data.partnership_agreement);
-		const response = await apiClient.patch<RoleApplication>(
-			`accounts/role-applications/${id}/`,
-			formData,
-			{ headers: { 'Content-Type': 'multipart/form-data' } },
-		);
-		return response.data;
-	},
-	/** Оператор просит недостающее вместо отказа (Stripe «information needed»). */
-	requestRoleApplicationDocuments: async (id: number, reason: string) => {
-		const response = await apiClient.post<RoleApplication>(
-			`accounts/role-applications/${id}/request-documents/`,
-			{ reason },
-		);
-		return response.data;
-	},
-	approveRoleApplication: async (id: number) => {
-		const response = await apiClient.post<RoleApplication>(`accounts/role-applications/${id}/approve/`);
-		return response.data;
-	},
-	rejectRoleApplication: async (id: number, reason?: string) => {
-		const response = await apiClient.post<RoleApplication>(
-			`accounts/role-applications/${id}/reject/`,
-			reason ? { reason } : {},
-		);
-		return response.data;
-	},
 };
 
 // ─── Types ──────────────────────────────────────────────────────────────
@@ -787,27 +645,4 @@ export interface PermissionGroup {
 	key: string;
 	label: string;
 	permissions: PermissionDef[];
-}
-
-export interface RoleApplication {
-	id: number;
-	company: number;
-	company_name: string;
-	company_inn: string;
-	requested_type: number;
-	requested_type_name: string;
-	requested_type_code: string;
-	status: string;
-	status_display: string;
-	submitted_by: number | null;
-	submitted_by_email: string | null;
-	contract_file: string | null;
-	nda_file: string | null;
-	partnership_agreement: string | null;
-	reviewed_by: number | null;
-	reviewed_by_email: string | null;
-	review_notes: string;
-	reviewed_at: string | null;
-	created_at: string;
-	updated_at: string;
 }

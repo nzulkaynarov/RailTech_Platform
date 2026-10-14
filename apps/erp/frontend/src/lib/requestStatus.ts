@@ -1,7 +1,7 @@
 import { DealStage } from '@/lib/codes';
 
 /**
- * Buyer-facing request status — collapses the 9 internal deal stages into the
+ * Buyer-facing request status — collapses the 8 internal deal stages into the
  * handful a buyer actually cares about (the rest are seller-internal workflow).
  * World-standard RFQ status model (Draft → Awaiting quote → Quote received →
  * Confirmed → Completed/Cancelled), à la Ariba / Amazon Business / Alibaba RFQ.
@@ -18,7 +18,6 @@ type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
 
 const STAGE_TO_BUYER: Record<string, BuyerStatusKey> = {
   [DealStage.DRAFT]: 'draft',
-  [DealStage.KYC_PENDING]: 'awaiting',
   [DealStage.RFQ_OPEN]: 'awaiting',
   [DealStage.SOURCING]: 'awaiting',
   [DealStage.CALCULATING]: 'awaiting',

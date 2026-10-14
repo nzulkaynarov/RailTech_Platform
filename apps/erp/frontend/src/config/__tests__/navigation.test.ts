@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import {
-  isKycVerified,
   buildNavigation,
   TENANT_NAV,
   type CapableSides,
@@ -11,7 +10,6 @@ const t = (key: string) => key;
 
 function caps(overrides: Partial<Capabilities> = {}): Capabilities {
   return {
-    kyc_level: null,
     can_buy: true,
     can_sell: true,
     subscription_active: false,
@@ -26,52 +24,21 @@ function leafIds(items: ReturnType<typeof buildNavigation>): string[] {
   return items.filter((item) => item.id).map((item) => item.id as string);
 }
 
-describe('isKycVerified', () => {
-  it('treats the seeded L2 code as verified', () => {
-    expect(isKycVerified('L2_VERIFIED')).toBe(true);
+describe('buildNavigation — no company-verification tier (M1-ERP-02)', () => {
+  const buyer: CapableSides = { buy: true, sell: false };
+
+  it('shows the buyer work surfaces without any verification level', () => {
+    // Раньше покупатель без подтверждённого уровня проверки видел только Главную и Каталог.
+    // Проверки клиентов в ERP нет: пункт решают сторона и права роли.
+    const items = buildNavigation(TENANT_NAV, caps(), buyer, 'dashboard', t);
+    expect(leafIds(items)).toEqual(['dashboard', 'my-requests', 'suppliers', 'products']);
+    const documents = items.find((item) => item.label === 'shell.documents');
+    expect(documents?.children?.map((child) => child.id)).toContain('contracts');
   });
 
-  it('treats the seeded top-tier code L3_CONTRACTED as verified (bug fix — was L3_VERIFIED)', () => {
-    expect(isKycVerified('L3_CONTRACTED')).toBe(true);
-  });
-
-  it('does NOT treat the phantom L3_VERIFIED as verified (no such seeded code)', () => {
-    expect(isKycVerified('L3_VERIFIED')).toBe(false);
-  });
-
-  it('treats pre-KYC / unknown levels as unverified', () => {
-    expect(isKycVerified('L1_UNVERIFIED')).toBe(false);
-    expect(isKycVerified('PROFILE_SUBMITTED')).toBe(false);
-    expect(isKycVerified(null)).toBe(false);
-    expect(isKycVerified(undefined)).toBe(false);
-  });
-});
-
-describe('buildNavigation — ADR-0005 tier T0 (KYC pending)', () => {
-  const t0Buyer: CapableSides = { buy: true, sell: false };
-
-  it('shows only Главная + Каталог for a KYC-pending buyer (catalog-read only)', () => {
-    const items = buildNavigation(
-      TENANT_NAV,
-      caps({ kyc_level: 'L1_UNVERIFIED' }),
-      t0Buyer,
-      'dashboard',
-      t,
-    );
-    // Everything except dashboard + catalog-read (products) must be hidden pre-KYC —
-    // matches App.tsx KYC_ALLOWED_PAGES so nothing is shown-then-bounced.
-    expect(leafIds(items)).toEqual(['dashboard', 'products']);
-  });
-
-  it('reveals kyc-gated items once the company reaches L3_CONTRACTED', () => {
-    const items = buildNavigation(
-      TENANT_NAV,
-      caps({ kyc_level: 'L3_CONTRACTED' }),
-      t0Buyer,
-      'dashboard',
-      t,
-    );
-    // A verified buyer now sees the buyer request surface that kyc:true had hidden.
-    expect(leafIds(items)).toContain('my-requests');
+  it('still hides a permission-gated item when the role lacks the permission', () => {
+    const items = buildNavigation(TENANT_NAV, caps({ permissions: ['catalog.manage'] }), buyer, 'dashboard', t);
+    expect(leafIds(items)).not.toContain('my-requests');
+    expect(leafIds(items)).toContain('suppliers');
   });
 });
