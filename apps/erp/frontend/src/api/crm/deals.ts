@@ -10,7 +10,7 @@ import { runAiJob } from '@/lib/aiJob';
 import { apiClient } from '../client';
 import { fetchAllPages } from '../fetchAllPages';
 import { PaginatedResponse } from '../types';
-import type { ChargeTemplate, Deal, DealDocumentHub, Lead, QuoteItem, QuoteItemDisplayType, SellerCompanyRef, SuggestedSeller, TimeToFirstQuoteStats } from './types';
+import type { ChargeTemplate, Deal, DealDocumentHub, QuoteItem, QuoteItemDisplayType, SellerCompanyRef, SuggestedSeller, TimeToFirstQuoteStats } from './types';
 
 export const dealsApi = {
 	/**
@@ -159,28 +159,5 @@ export const dealsApi = {
 	deleteChargeTemplate: async (id: number) => {
 		await apiClient.delete(`crm/charge-templates/${id}/`);
 	},
-	// Лиды — очередь обработки: страница печатает «Новых N» по этому же списку и пейджера не
-	// имеет. Первая страница вместо всего списка означала, что 21-й лид не обработает никто и
-	// счётчик про него не скажет.
-	listLeads: async () => fetchAllPages<Lead>('crm/leads/'),
-	/** Оператор НАЗНАЧАЕТ лид компании (Salesforce lead assignment) — сделку он не создаёт. */
-	routeLead: async (leadId: number, companyId: number, reason: string) => {
-		const response = await apiClient.post<Lead>(`crm/leads/${leadId}/route/`, {
-			company_id: companyId,
-			reason,
-		});
-		return response.data;
-	},
-	/** Спам или дубль: лид закрывается площадкой с причиной, сделка не создаётся. */
-	rejectLead: async (leadId: number, reason: string) => {
-		const response = await apiClient.post<Lead>(`crm/leads/${leadId}/reject/`, { reason });
-		return response.data;
-	},
-	/** Компания берёт назначенный ей лид в работу — и становится владельцем сделки. */
-	claimLead: async (leadId: number) => {
-		const response = await apiClient.post<{ deal_id: number; stage: string }>(`crm/leads/${leadId}/claim/`);
-		return response.data;
-	},
-
 	// ─── Quote item re-match ─────────────────────────────────
 };

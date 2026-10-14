@@ -80,7 +80,6 @@ vi.mock('@/store/currencyStore', () => ({
 }));
 
 // Heavy children irrelevant to the button under test → inert stubs.
-vi.mock('@/components/Sourcing/DealChatPanel', () => ({ DealChatPanel: () => null }));
 vi.mock('@/components/CRM/DealTimeline', () => ({ DealTimeline: () => null }));
 vi.mock('@/components/CRM/DealDocumentsCard', () => ({ DealDocumentsCard: () => null }));
 vi.mock('@/components/CRM/GenerateQuoteDialog', () => ({ GenerateQuoteDialog: () => null }));

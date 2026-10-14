@@ -760,48 +760,6 @@
     },
     "hsCodePlaceholder": "напр. 8607 19 100 0"
   },
-  "admin": {
-    "support": {
-      "status": {
-        "OPEN": "Открыт",
-        "IN_PROGRESS": "В работе",
-        "RESOLVED": "Решён",
-        "CLOSED": "Закрыт"
-      },
-      "priority": {
-        "LOW": "Низкий",
-        "NORMAL": "Обычный",
-        "HIGH": "Высокий",
-        "URGENT": "Срочный"
-      },
-      "category": {
-        "BUG": "Ошибка",
-        "QUESTION": "Вопрос",
-        "BILLING": "Оплата/биллинг",
-        "FEATURE": "Пожелание",
-        "OTHER": "Другое"
-      },
-      "userForm": {
-        "title": "Связаться с поддержкой",
-        "subtitle": "Опишите проблему — мы скоро ответим",
-        "subject": "Тема",
-        "subjectPlaceholder": "Краткая суть вопроса",
-        "description": "Описание",
-        "descriptionPlaceholder": "Опишите как можно подробнее...",
-        "category": "Категория",
-        "priority": "Приоритет",
-        "submit": "Создать тикет",
-        "cancel": "Отмена",
-        "success": "Тикет создан — мы скоро свяжемся с вами",
-        "fab": "Поддержка"
-      }
-    },
-    "leads": {
-      "toast": {
-        "claimed": "Лид взят в работу — создана сделка #{{id}}"
-      }
-    }
-  },
   "timeline": {
     "title": "История"
   },
@@ -899,17 +857,6 @@
     "profile": "Профиль",
     "myCompany": "Моя компания",
     "inn": "ИНН"
-  },
-  "chat": {
-    "title": "Сообщения",
-    "description": "Переписка с контрагентами",
-    "emptyState": "Начните обсуждение по этой сделке",
-    "send": "Отправить",
-    "connectionLost": "Соединение потеряно. Переподключение...",
-    "connected": "Подключено",
-    "noMessages": "Нет сообщений",
-    "noMessagesHint": "Сообщения появятся когда начнётся переписка по сделкам",
-    "moreMessages": "ещё"
   },
   "errors": {
     "network": "Ошибка сети. Проверьте подключение к интернету.",
@@ -1186,7 +1133,6 @@
     "payments": "Платежи",
     "acts": "Акты",
     "fulfillments": "Исполнение",
-    "leads": "Лиды",
     "mySubscription": "Моя подписка",
     "forgotPassword": "Сброс пароля",
     "resetPassword": "Новый пароль",
@@ -1423,8 +1369,6 @@
     },
     "buyer": {
       "days": "дн",
-      "incomingLeads": "Входящие запросы",
-      "claimLead": "Взять в работу",
       "recentRequests": "Последние заявки",
       "requestNumber": "№",
       "date": "Дата",
@@ -1610,21 +1554,6 @@
     "documents": {
       "inheritedFromCompany": "Данные наследуются из профиля компании"
     }
-  },
-  "dealChat": {
-    "pickSeller": "Выберите продавца",
-    "pickSellerHint": "Выберите продавца, чтобы открыть приватный чат",
-    "tabs": {
-      "chat": "Чат",
-      "documents": "Документы"
-    },
-    "placeholder": "Написать сообщение...",
-    "loadError": "Не удалось загрузить сообщения",
-    "sendError": "Не удалось отправить сообщение",
-    "suggestEmpty": "ИИ не предложил черновик ответа.",
-    "suggestReply": "Черновик ответа (ИИ)",
-    "suggestDisabled": "ИИ-помощник сейчас недоступен.",
-    "suggestError": "Не удалось получить черновик ответа."
   },
   "tour": {
     "skip": "Пропустить",
@@ -1895,8 +1824,6 @@
       "noQuoteSellerHint": "Подготовьте КП одним нажатием (заявка + позиции подтянутся) или создайте пустое КП вручную.",
       "notFound": "Сделка не найдена",
       "buyerNote": "Что просит покупатель",
-      "openChat": "Чат с покупателем",
-      "contextTitle": "Заявка и переписка",
       "calculatorDraft": "Черновик без клиента",
       "calculatorDraftHint": "Получателя можно выбрать позже — перед отправкой КП система попросит указать клиента.",
       "stageBadgeHint": "Этап сделки"
@@ -2385,10 +2312,6 @@
     "approveQuote": {
       "title": "Одобрить это КП?",
       "description": "Одобрение принимает предложение продавца и переводит сделку к договору. Действие необратимо."
-    },
-    "convertLead": {
-      "title": "Преобразовать лид в сделку?",
-      "description": "Из «{{name}}» будет создана новая сделка, а лид помечен как обработанный."
     }
   },
   "rematchDialog": {
@@ -2642,8 +2565,6 @@
     "FSM_TRANSITION_NOT_ALLOWED": "Такой переход между этапами запрещён правилами FSM",
     "DEAL_STAGE_NOT_FOUND": "Стадия сделки не найдена",
     "DEAL_DELETE_ONLY_DRAFT": "Удалить можно только сделку в статусе «Черновик» — активную сделку убирает администратор платформы",
-    "LEAD_ALREADY_PROCESSED": "Лид уже обработан",
-    "LEAD_NO_CLIENT_COMPANY": "Не найдена компания-клиент для email лида",
     "QUOTE_FROZEN_CANNOT_REASSIGN": "Нельзя переназначить продукт в замороженном КП",
     "PRODUCT_NOT_FOUND": "Товар не найден",
     "REGISTRATION_FIELDS_REQUIRED": "Заполните email, имя и фамилию",
@@ -2672,8 +2593,6 @@
     "PERMISSION_DENIED": "Нет доступа к этому объекту",
     "PRODUCT_OF_ANOTHER_COMPANY": "Товар принадлежит другой компании",
     "OFFER_OF_ANOTHER_COMPANY": "Предложение принадлежит другой компании",
-    "LEAD_NOT_ROUTED": "Лид ещё не назначен компании — взять его в работу нельзя",
-    "LEAD_NOT_YOURS": "Лид назначен другой компании",
     "PLATFORM_OPERATOR_REQUIRED": "Действие доступно только оператору платформы",
     "COMPANY_ARCHIVED": "Компания выведена из оборота — назначить ей работу нельзя",
     "COMPANY_HAS_HISTORY": "У компании есть история — удалить нельзя. Выведите её из оборота: подбор и справочники её забудут, а документы сохранятся",
@@ -2799,8 +2718,7 @@
   "dealAttachments": {
     "title": "Вложения сделки",
     "sourceTag": "Исходник заявки",
-    "description": "Excel-спецификации, чертежи, доп. документы",
-    "noDeal": "Сделка не выбрана"
+    "description": "Excel-спецификации, чертежи, доп. документы"
   },
   "workspaceRoles": {
     "OWNER": "Администратор компании",
@@ -3104,10 +3022,6 @@
         "title": "Force: стадия изменена",
         "detail": "Сделка #{{deal_id}}: {{from_stage}} → {{to_stage}}"
       },
-      "chat_message": {
-        "title": "Сообщение в чате сделки",
-        "detail": "{{preview}}"
-      },
       "claimed": {
         "title": "Заявка взята в работу",
         "detail": "{{actor_email}} взял заявку #{{deal_id}}"
@@ -3226,20 +3140,6 @@
         "detail": "КП v{{version}}"
       }
     },
-    "lead": {
-      "claimed": {
-        "title": "Лид взят в работу",
-        "detail": "Лид #{{lead_id}} → сделка #{{deal_id}}"
-      },
-      "converted": {
-        "title": "Lead конвертирован в сделку",
-        "detail": "Лид #{{lead_id}} → сделка #{{deal_id}}"
-      },
-      "received": {
-        "title": "Новый лид с сайта",
-        "detail": "Получен запрос от {{name}} ({{email}}) через лендинг."
-      }
-    },
     "contract": {
       "created": {
         "title": "Создан договор",
@@ -3282,12 +3182,6 @@
       "created_manual": {
         "title": "Счёт создан вручную (черновик)",
         "detail": "Счёт {{number}} по сделке #{{deal_id}} (без договора)"
-      }
-    },
-    "support": {
-      "ticket_status_changed": {
-        "title": "Изменён статус обращения",
-        "detail": "{{from}} → {{to}}"
       }
     },
     "payment": {
@@ -3857,10 +3751,6 @@
     "document.received": {
       "title": "Получен документ",
       "message": "По сделке #{{deal_id}} вам направлен документ {{number}}"
-    },
-    "support.ticket_created": {
-      "title": "Новый тикет поддержки",
-      "message": "Тикет #{{ticket_id}}: {{subject}}"
     },
     "catalog.category_requested": {
       "title": "Запрошена новая категория",

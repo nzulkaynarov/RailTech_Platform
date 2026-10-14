@@ -65,7 +65,6 @@ vi.mock('@/components/Documents/DocumentCreateWizard', () => ({ DocumentCreateWi
 vi.mock('@/components/Shared/DocumentActions', () => ({ DocumentActions: () => null }));
 
 // Heavy siblings irrelevant to this surface → inert stubs.
-vi.mock('@/components/Sourcing/DealChatPanel', () => ({ DealChatPanel: () => null }));
 vi.mock('@/components/CRM/DealTimeline', () => ({ DealTimeline: () => null }));
 vi.mock('@/components/CRM/CoverageCheck', () => ({ CoverageCheck: () => null }));
 vi.mock('@/components/CRM/RejectQuoteDialog', () => ({ RejectQuoteDialog: () => null }));
