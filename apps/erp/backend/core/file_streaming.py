@@ -4,7 +4,7 @@ CRITICAL for prod: production runs WITHOUT MinIO (local FileSystemStorage), and
 Django does NOT serve private MEDIA paths (only public avatars/logos via a regex;
 `static()` is a no-op when DEBUG=False). So `file_field.url` (= /media/<private>)
 returns 404 on prod. Every private document (contract/invoice/act PDF, signed
-scan, KYC document) must therefore be downloaded through an authenticated view
+scan, company document) must therefore be downloaded through an authenticated view
 that streams the bytes from whatever storage backend is configured — this works
 identically with MinIO and with local storage. Mirrors the КП download_pdf action.
 """

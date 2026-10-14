@@ -8,16 +8,7 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    KYCDocType,
-    SupplierSubscription,
-    SystemRole,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, SupplierSubscription, SystemRole, WorkspaceRole
 from catalog.models import DomainType, ProductStatus, StockStatus
 from crm.models import DealStage, QuoteStatus
 from master_data.models import Currency
@@ -134,29 +125,6 @@ class Command(BaseCommand):
         for code, name in company_types:
             _seed(CompanyType, code, name=name)
 
-        # ─── 8. Типы KYC документов ───
-        kyc_doc_types = [
-            ("CHARTER", "Устав"),
-            ("LICENSE", "Лицензия"),
-            ("PASSPORT", "Паспорт руководителя"),
-            ("TAX_CERT", "Свидетельство ИНН"),
-            ("BANK_REF", "Банковская справка"),
-            ("OTHER", "Прочий документ"),
-        ]
-        for code, name in kyc_doc_types:
-            _seed(KYCDocType, code, name=name)
-
-        # ─── 9. Статусы верификации ───
-        v_statuses = [
-            ("L1_UNVERIFIED", "Не верифицирован"),
-            ("PROFILE_SUBMITTED", "Профиль на проверке"),
-            ("L2_VERIFIED", "KYC подтверждён"),
-            ("L3_CONTRACTED", "Договор заключён"),
-            ("REJECTED", "Отклонён"),
-        ]
-        for code, name in v_statuses:
-            _seed(VerificationStatus, code, name=name)
-
         # ─── 10. Типы доменов каталога ───
         domains = [
             ("RAILWAY_MACHINERY", "Ж/Д техника и запчасти", "ЖД"),
@@ -263,10 +231,9 @@ class Command(BaseCommand):
                 DomainKeyword.objects.get_or_create(keyword=kw, defaults={"domain_type": dom})
 
         # ─── 17. Компании из seed_data.json ───
+        # Статус верификации в seed_data.json — наследие KYC (удалён в M1-ERP-02 волна 1c),
+        # игнорируется.
         for company_data in seed_data.get("companies", []):
-            vs = None
-            if company_data.get("verification_status"):
-                vs = VerificationStatus.objects.filter(code=company_data["verification_status"]).first()
             company_obj, _ = Company.objects.get_or_create(
                 inn=company_data["inn"],
                 defaults={
@@ -274,7 +241,6 @@ class Command(BaseCommand):
                     "legal_address": company_data.get("legal_address", ""),
                     "contact_person": company_data.get("contact_person", ""),
                     "email": company_data.get("email", ""),
-                    "verification_status": vs,
                 },
             )
             # Assign CompanyType(s) — WITHOUT this a seeded company has empty types

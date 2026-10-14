@@ -101,11 +101,10 @@ def test_import_export_permission_codes_are_set():
 
 def test_user_resource_never_carries_privilege_fields():
     """XLSX не должен раздавать системную роль и доступ в админку."""
-    from accounts.resources import CompanyResource, UserResource
+    from accounts.resources import UserResource
 
     user_fields = set(UserResource.Meta.fields)
     assert not user_fields & {"role", "is_staff", "is_superuser"}, user_fields
-    assert "verification_status" not in set(CompanyResource.Meta.fields)
 
 
 def test_seeds_do_not_hand_out_staff_flag():

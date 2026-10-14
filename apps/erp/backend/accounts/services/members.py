@@ -207,7 +207,7 @@ def change_user_role(
       - USER можно выдать любому юзеру.
 
     `actor` — кто меняет. Выдача роли ADMIN делает человека оператором платформы: он
-    начинает видеть чужие компании, KYC и деньги. До 20-08 это не оставляло следа —
+    начинает видеть чужие компании и деньги. До 20-08 это не оставляло следа —
     в журнале доступа не было ни строки о том, кто и когда выдал платформенные права.
     """
     if not role_code:
@@ -284,8 +284,8 @@ def add_company_member(
             company=company,
             defaults={"role": role, "is_primary": is_primary, "is_active": True},
         )
-    # Seed the permission-engine CompanyRole exactly like invite_workspace_member /
-    # submit_company_profile do, so this operator path stops minting permission-less
+    # Seed the permission-engine CompanyRole exactly like invite_workspace_member
+    # does, so this operator path stops minting permission-less
     # company_role=NULL members (which the G4 permission engine can only serve via the
     # shrinking legacy fallback). Only when missing — never clobber an admin's custom
     # role assignment on a re-add.
@@ -329,7 +329,7 @@ def remove_company_member(
     Remove a member, enforcing the never-orphan invariant.
 
     A company must ALWAYS keep at least one active admin — the party accountable
-    for KYC/billing. Removing the last one would orphan the company, so it's
+    for billing. Removing the last one would orphan the company, so it's
     refused; the admin role must be transferred first. "Admin" is the unified
     is_system / legacy-OWNER floor (see `_admin_floor_q`).
     """
@@ -396,7 +396,7 @@ def toggle_user_active(
         return None, "CANNOT_DEACTIVATE_SELF"
     # Never-orphan (audit L3): deactivating the user disables their account platform-wide; if
     # they are the SOLE active admin of any company, that company would be left with no admin
-    # (no one to manage team/KYC/billing). Block — transfer ownership first. "Admin" is the
+    # (no one to manage team/billing). Block — transfer ownership first. "Admin" is the
     # unified is_system / legacy-OWNER floor (see `_admin_floor_q`), matching every other check.
     if user.is_active:  # about to deactivate
         admin_memberships = CompanyMember.objects.filter(_admin_floor_q(), user=user, is_active=True).select_related(

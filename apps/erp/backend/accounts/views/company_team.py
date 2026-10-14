@@ -48,7 +48,6 @@ class CompanyTeamMixin:
                 Prefetch(
                     "memberships",
                     queryset=CompanyMember.objects.select_related(
-                        "company__verification_status",
                         "company__country",
                         "role",
                         "company_role",

@@ -247,7 +247,7 @@ class DealViewSet(DealAiActionsMixin, DealWorkflowActionsMixin, viewsets.ModelVi
             )
 
         # SEC (audit #7): user-initiated gate — this generic endpoint must not be a parallel
-        # path around submit_request's KYC/capability gates, nor let a co-routed seller close
+        # path around submit_request's capability gate, nor let a co-routed seller close
         # the shared deal. (Internal auto-transitions call the service directly, ungated.)
         from crm.services.deals import assert_user_may_change_stage
 

@@ -12,16 +12,7 @@ import pytest
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyRole,
-    CompanyType,
-    CustomUser,
-    SystemRole,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, CustomUser, SystemRole, WorkspaceRole
 
 
 @pytest.fixture
@@ -30,7 +21,6 @@ def lookups(db):
     WorkspaceRole.objects.get_or_create(code="MEMBER", defaults={"name": "Member", "sort_order": 90})
     SystemRole.objects.get_or_create(code="USER", defaults={"name": "User", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     # Master data so a ChargeTemplate payload validates and reaches the perform_create auth gate.
     from crm.models.lookups import ChargeType
     from master_data.models import DeliveryBasis

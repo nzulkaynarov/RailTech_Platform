@@ -12,7 +12,7 @@ the fixture routes the deal to the seller company explicitly.
 
 import pytest
 
-from accounts.models import Company, CompanyMember, CompanyType, CustomUser, VerificationStatus, WorkspaceRole
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
 from crm.models import Deal, DealSellerRouting, DealStage
 from notifications.models import Notification, NotificationType
 
@@ -22,7 +22,6 @@ def lookups(db):
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2"})
     DealStage.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})
     DealStage.objects.get_or_create(code="RFQ_OPEN", defaults={"name": "RFQ", "sort_order": 20})
     NotificationType.objects.get_or_create(code="INFO", defaults={"name": "Info"})

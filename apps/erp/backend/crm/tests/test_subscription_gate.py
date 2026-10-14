@@ -11,15 +11,7 @@ from datetime import timedelta
 import pytest
 from django.utils import timezone
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SupplierSubscription, WorkspaceRole
 from accounts.services import assert_seller_can_operate
 from crm import services as crm_services
 from crm.models import Quote
@@ -30,19 +22,13 @@ def lookups(db):
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
 
 
-def _seller_user(email="seller@gate.test", *, with_subscription, operational=True, kyc=True):
-    """A SUPPLIER-company OWNER with can_sell, optionally with a subscription.
-
-    KYC-verified (L2) by default so these tests exercise the SUBSCRIPTION half of the gate;
-    pass kyc=False to exercise the seller KYC floor (ADR-0006 Phase E).
-    """
+def _seller_user(email="seller@gate.test", *, with_subscription, operational=True):
+    """A SUPPLIER-company OWNER with can_sell, optionally with a subscription."""
     company = Company.objects.create(
         name=f"Seller {email}",
         inn=email,
-        verification_status=(VerificationStatus.objects.get(code="L2_VERIFIED") if kyc else None),
     )
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
     user = CustomUser.objects.create_user(email=email, username=email, password="x")
@@ -81,13 +67,6 @@ def test_seller_with_operational_subscription_passes(lookups):
 def test_seller_with_past_due_subscription_is_blocked(lookups):
     user, _ = _seller_user(email="pastdue@gate.test", with_subscription=True, operational=False)
     assert assert_seller_can_operate(user) == "SUBSCRIPTION_REQUIRED"
-
-
-def test_seller_without_kyc_is_blocked(lookups):
-    """ADR-0006 Phase E seller floor «без KYC только демо»: an unverified seller is blocked with a
-    distinct SELLER_KYC_REQUIRED code — even if they somehow hold a subscription (checked first)."""
-    user, _ = _seller_user(email="nokyc@gate.test", with_subscription=True, operational=True, kyc=False)
-    assert assert_seller_can_operate(user) == "SELLER_KYC_REQUIRED"
 
 
 def test_superuser_bypasses_subscription_gate(db):
@@ -143,7 +122,7 @@ def _deal_with_quote(seller_company):
 def test_generate_contract_blocks_unrouted_seller(lookups):
     _, routed_co = _seller_user(email="routed@gate.test", with_subscription=True)
     _, quote = _deal_with_quote(routed_co)
-    # A different subscribed + KYC seller NOT routed to this deal must be blocked.
+    # A different subscribed seller NOT routed to this deal must be blocked.
     other_user, _ = _seller_user(email="other@gate.test", with_subscription=True)
     contract, err = crm_services.generate_contract_from_quote(quote.id, actor=other_user)
     assert contract is None

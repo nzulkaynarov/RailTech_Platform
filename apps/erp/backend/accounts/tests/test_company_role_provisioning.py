@@ -1,31 +1,43 @@
 """U1: new tenants must get the default CompanyRoles + a mapped company_role per member.
 
-Before the fix, only migration 0023 seeded roles — companies registered later had an empty
+Before the fix, only migration 0023 seeded roles — companies created later had an empty
 access matrix and members fell through to the can_sell/can_buy fallback (G4 bypassed).
+Self-onboarding (`submit_company_profile`) was removed in M1-ERP-02 wave 1c; the tenant here is
+set up the way the back office does it — company + OWNER + `ensure_default_company_roles`.
 """
 
 import pytest
 
 from accounts.constants import COMPANY_ADMIN_ROLE_NAME, ROLE_TEMPLATES
-from accounts.models import CompanyMember, CompanyType, CustomUser, SystemRole, VerificationStatus, WorkspaceRole
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from accounts.services.members import invite_workspace_member
-from accounts.services.profile import submit_company_profile
+from accounts.services.roles import ensure_default_company_roles
 
 
 @pytest.fixture
 def lookups(db):
-    VerificationStatus.objects.get_or_create(code="PROFILE_SUBMITTED", defaults={"name": "Submitted", "sort_order": 5})
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 1})
     WorkspaceRole.objects.get_or_create(code="SALES_MANAGER", defaults={"name": "Sales", "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 1})
     SystemRole.objects.get_or_create(code="USER", defaults={"name": "User", "sort_order": 2})
 
 
+def _found_company(founder, company_name):
+    """A CLIENT company whose founder is OWNER with the immutable «Администратор компании» role."""
+    company = Company.objects.create(name=company_name)
+    company.types.add(CompanyType.objects.get(code="CLIENT"))
+    member = CompanyMember.objects.create(
+        user=founder, company=company, role=WorkspaceRole.objects.get(code="OWNER"), is_primary=True
+    )
+    member.company_role = ensure_default_company_roles(company)[COMPANY_ADMIN_ROLE_NAME]
+    member.save(update_fields=["company_role"])
+    return company
+
+
 @pytest.mark.django_db
-def test_registration_seeds_default_roles_and_owner_admin(lookups):
+def test_new_company_gets_default_roles_and_owner_admin(lookups):
     user = CustomUser.objects.create_user(email="founder@t.test", username="founder@t.test", password="pw")
-    result, err = submit_company_profile(user, company_name="Fresh Tenant LLC")
-    assert err is None
+    _found_company(user, "Fresh Tenant LLC")
 
     member = CompanyMember.objects.get(user=user)
     company = member.company
@@ -40,7 +52,7 @@ def test_registration_seeds_default_roles_and_owner_admin(lookups):
 @pytest.mark.django_db
 def test_invite_assigns_mapped_company_role(lookups):
     founder = CustomUser.objects.create_user(email="f2@t.test", username="f2@t.test", password="pw")
-    submit_company_profile(founder, company_name="Inviter LLC")
+    _found_company(founder, "Inviter LLC")
     company = CompanyMember.objects.get(user=founder).company
 
     invited, err = invite_workspace_member(company, "sales@t.test", "SALES_MANAGER")
@@ -59,7 +71,7 @@ def test_company_config_gate_allows_delegated_admin_not_regular_member(lookups):
     from accounts.services.document_profile import is_company_owner
 
     founder = CustomUser.objects.create_user(email="own@t.test", username="own@t.test", password="pw")
-    submit_company_profile(founder, company_name="Deleg LLC")
+    _found_company(founder, "Deleg LLC")
     company = CompanyMember.objects.get(user=founder).company
     member_ws = WorkspaceRole.objects.get_or_create(code="MEMBER", defaults={"name": "Member", "sort_order": 50})[0]
 
@@ -85,11 +97,12 @@ def test_me_capabilities_object(lookups):
     from accounts.serializers import MeSerializer
 
     founder = CustomUser.objects.create_user(email="caps@t.test", username="caps@t.test", password="pw")
-    submit_company_profile(founder, company_name="Caps LLC")
+    _found_company(founder, "Caps LLC")
     caps = MeSerializer(founder).data["capabilities"]
 
     assert caps["can_buy"] is True  # CLIENT company, default can_buy
     # OWNER holds the is_system admin role → ALL_PERMISSIONS (mirrors CompanyRole.has_perm)
     assert set(caps["permissions"]) == set(ALL_PERMISSIONS)
     assert caps["is_platform_admin"] is False  # переходный алиас is_superuser (M1-ERP-02)
-    assert "kyc_level" in caps and "subscription_active" in caps
+    assert "subscription_active" in caps
+    assert not any(key.startswith("kyc") for key in caps)  # KYC удалён (M1-ERP-02 волна 1c)

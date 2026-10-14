@@ -14,7 +14,7 @@ import pytest
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import Company, CompanyMember, CompanyType, CustomUser, VerificationStatus, WorkspaceRole
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
 from crm.models import ChargeType, Deal, DealSellerRouting, DealStage, Quote, QuoteCharge, QuoteItem, QuoteStatus
 from crm.services import duplicate_quote
 from master_data.models import Country
@@ -30,11 +30,10 @@ def scenario(db):
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
-    vs = VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})[0]
     uz = Country.objects.get_or_create(code="UZ", defaults={"name": "Uzbekistan", "sort_order": 10})[0]
 
     def _seller(name, inn):
-        co = Company.objects.create(name=name, inn=inn, verification_status=vs)
+        co = Company.objects.create(name=name, inn=inn)
         co.types.add(CompanyType.objects.get(code="SUPPLIER"))
         user = CustomUser.objects.create_user(email=f"{inn}@s.test", username=f"{inn}@s.test", password="pw")
         CompanyMember.objects.create(

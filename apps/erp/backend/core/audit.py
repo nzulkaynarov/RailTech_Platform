@@ -10,11 +10,11 @@ Usage:
     from core.audit import log_admin_action
     log_admin_action(
         entity_type='company', entity_id=company.id,
-        action='KYC approved to L2',
-        detail=f'{company.name}: PROFILE_SUBMITTED → L2_VERIFIED',
+        action='Компания архивирована',
+        detail=f'{company.name}: в обороте → архив',
         actor=request.user, reason=reason,
-        before={'verification_status': 'PROFILE_SUBMITTED'},
-        after={'verification_status': 'L2_VERIFIED'},
+        before={'is_active': True},
+        after={'is_active': False},
     )
 """
 

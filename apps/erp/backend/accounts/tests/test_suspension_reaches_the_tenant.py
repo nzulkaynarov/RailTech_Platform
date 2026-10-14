@@ -8,7 +8,7 @@
 подписка» — причина отключения была ему недоступна вовсе.
 
 Эталон — Stripe: сообщение об ограничении адресовано тому, кого ограничили, и называет
-причину. Механика писем и уведомлений здесь копируется с KYC — отправка отложена до
+причину. Механика писем и уведомлений здесь та же, что была у KYC — отправка отложена до
 `on_commit`, чтобы письмо не ушло при откате.
 
 Скептик поправил находку: «баннер называет ЧУЖУЮ причину» не подтвердилось — баннер просто
@@ -28,7 +28,6 @@ from accounts.models import (
     CustomUser,
     SupplierSubscription,
     SystemRole,
-    VerificationStatus,
     WorkspaceRole,
 )
 from notifications.models import EmailLog, Notification
@@ -48,7 +47,6 @@ def world(db):
     company = Company.objects.create(
         name="Отключаемый продавец",
         inn="908000001",
-        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
     )
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
     owner = CustomUser.objects.create_user(
@@ -120,7 +118,7 @@ def test_the_reason_is_visible_to_the_tenant_itself(world, django_capture_on_com
 
 def test_the_reason_is_not_a_form_field(world, django_capture_on_commit_callbacks):
     """Приостановка — действие с оповещением, а не поле: иначе причина проставлялась бы
-    молча и адресат ничего не узнал бы (тот же класс, что архив компании и уровень KYC)."""
+    молча и адресат ничего не узнал бы (тот же класс, что архив компании)."""
     with django_capture_on_commit_callbacks(execute=True):
         _suspend(world, reason="настоящая причина")
 

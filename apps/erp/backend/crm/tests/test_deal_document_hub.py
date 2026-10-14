@@ -25,7 +25,6 @@ from accounts.models import (
     CustomUser,
     SupplierSubscription,
     SystemRole,
-    VerificationStatus,
     WorkspaceRole,
 )
 from crm.models import (
@@ -55,7 +54,6 @@ def lookups(db):
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     for code, name in (("CLIENT", "Client"), ("SUPPLIER", "Supplier")):
         CompanyType.objects.get_or_create(code=code, defaults={"name": name, "sort_order": 10})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     for code in ("USER", "ADMIN"):
         SystemRole.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
     for code in ("DRAFT", "CONTRACT_SIGNED", "CLOSED_WON"):
@@ -72,9 +70,7 @@ def lookups(db):
 
 
 def _company(name, inn, *type_codes):
-    company = Company.objects.create(
-        name=name, inn=inn, verification_status=VerificationStatus.objects.get(code="L2_VERIFIED")
-    )
+    company = Company.objects.create(name=name, inn=inn)
     for code in type_codes:
         company.types.add(CompanyType.objects.get(code=code))
     return company

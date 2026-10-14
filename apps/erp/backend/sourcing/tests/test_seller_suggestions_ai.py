@@ -15,7 +15,7 @@ import pytest
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import Company, CompanyMember, CompanyType, CustomUser, VerificationStatus, WorkspaceRole
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
 from catalog.models import Product
 from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteStatus
 from sourcing.services import suggest_sellers_for_deal, suggest_sellers_for_deal_ai
@@ -32,15 +32,8 @@ def world(db):
     published = status_model.objects.get_or_create(code="PUBLISHED", defaults={"name": "Published", "sort_order": 1})[0]
     draft_status = status_model.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 2})[0]
 
-    verified = VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})[
-        0
-    ]
-    unverified = VerificationStatus.objects.get_or_create(
-        code="L1_UNVERIFIED", defaults={"name": "L1", "sort_order": 10}
-    )[0]
-
-    def _seller(name, inn, verification=verified):
-        company = Company.objects.create(name=name, inn=inn, verification_status=verification)
+    def _seller(name, inn, is_active=True):
+        company = Company.objects.create(name=name, inn=inn, is_active=is_active)
         company.types.add(CompanyType.objects.get(code="SUPPLIER"))
         return company
 
@@ -53,11 +46,11 @@ def world(db):
     # Черновой товар — его продавец не должен всплыть ни через триграм, ни через ИИ.
     hidden = _seller("ООО Черновик", "3500000003")
     hidden_product = Product.objects.create(name="Подкладка КБ-65", owner_company=hidden, status=draft_status)
-    # Непроверенный продавец с ОПУБЛИКОВАННЫМ товаром — пикер его не показывает,
+    # Архивный продавец с ОПУБЛИКОВАННЫМ товаром — пикер его не показывает,
     # значит и подсказка не имеет права его предлагать (иначе невидимый предвыбор).
-    unverified_seller = _seller("ООО Непроверенный", "3500000004", verification=unverified)
-    unverified_product = Product.objects.create(
-        name="Рельс Р50 ГОСТ 7174", owner_company=unverified_seller, status=published
+    archived_seller = _seller("ООО Архивный", "3500000004", is_active=False)
+    archived_product = Product.objects.create(
+        name="Рельс Р50 ГОСТ 7174", owner_company=archived_seller, status=published
     )
 
     buyer_company = Company.objects.create(name="ООО Покупатель", inn="7700000019")
@@ -192,20 +185,20 @@ def test_ai_candidate_on_draft_product_never_suggests_its_seller(world, monkeypa
 
 
 @pytest.mark.django_db
-def test_unverified_seller_is_never_suggested_by_trigram(world):
-    """Пикер показывает только KYC-верифицированных; подсказка обязана совпадать с ним,
-    иначе непроверенная компания попадала в предвыбор БЕЗ видимой строки — покупатель её
-    не видит, снять не может, а маршрутизация её получает."""
+def test_archived_seller_is_never_suggested_by_trigram(world):
+    """Пикер показывает только активных продавцов; подсказка обязана совпадать с ним,
+    иначе компания попадала в предвыбор БЕЗ видимой строки — покупатель её не видит,
+    снять не может, а маршрутизация её получает."""
     deal = _freetext_deal(world, "рельс р50")
 
-    assert all(row["name"] != "ООО Непроверенный" for row in suggest_sellers_for_deal(deal))
+    assert all(row["name"] != "ООО Архивный" for row in suggest_sellers_for_deal(deal))
 
 
 @pytest.mark.django_db
-def test_unverified_seller_is_never_suggested_by_ai(world, monkeypatch):
-    """То же правило для AI-ветки: ИИ не должен становиться обходом KYC-гейта."""
+def test_archived_seller_is_never_suggested_by_ai(world, monkeypatch):
+    """То же правило для AI-ветки: ИИ не должен становиться обходом фильтра пикера."""
     deal = _freetext_deal(world, "relsy P50 zzz")
-    _stub_ai(monkeypatch, product_ids=[world["unverified_product"].id])
+    _stub_ai(monkeypatch, product_ids=[world["archived_product"].id])
 
     assert suggest_sellers_for_deal_ai(deal) == []
 

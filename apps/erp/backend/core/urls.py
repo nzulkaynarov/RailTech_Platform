@@ -10,7 +10,6 @@ from rest_framework.routers import DefaultRouter
 
 from accounts.views import (
     CompanyEntitlementViewSet,
-    CompanyRoleApplicationViewSet,
     CompanyRoleViewSet,
     CompanyTypeViewSet,
     CompanyViewSet,
@@ -21,12 +20,10 @@ from accounts.views import (
     LogoutView,
     MeView,
     PermissionCatalogView,
-    RegisterView,
     ResetPasswordView,
     SessionListView,
     SessionsRevokeOthersView,
     SetupPasswordView,
-    SubmitProfileView,
     SupplierSubscriptionViewSet,
     SystemRoleViewSet,
     TOTPDisableView,
@@ -148,7 +145,6 @@ router.register(r"accounts/contacts", ContactViewSet, basename="contact")
 router.register(r"accounts/users", UserViewSet)
 router.register(r"accounts/subscriptions", SupplierSubscriptionViewSet, basename="subscription")
 router.register(r"admin/entitlements", CompanyEntitlementViewSet, basename="entitlement")
-router.register(r"accounts/role-applications", CompanyRoleApplicationViewSet, basename="roleapplication")
 router.register(r"accounts/system-roles", SystemRoleViewSet, basename="systemrole")
 router.register(r"accounts/workspace-roles", WorkspaceRoleViewSet, basename="workspacerole")
 router.register(r"accounts/company-types", CompanyTypeViewSet, basename="companytype")
@@ -170,11 +166,9 @@ urlpatterns = (
         path("admin/accounts/company/wizard/", CompanyWizardView.as_view(WIZARD_FORMS), name="company-wizard"),
         path("admin/", admin.site.urls),
         path("api/v1/", include(router.urls)),
-        path("api/v1/auth/register/", RegisterView.as_view(), name="register"),
         path("api/v1/auth/setup-password/", SetupPasswordView.as_view(), name="setup-password"),
         path("api/v1/auth/forgot-password/", ForgotPasswordView.as_view(), name="forgot-password"),
         path("api/v1/auth/reset-password/", ResetPasswordView.as_view(), name="reset-password"),
-        path("api/v1/auth/submit-profile/", SubmitProfileView.as_view(), name="submit-profile"),
         path("api/v1/auth/logout/", LogoutView.as_view(), name="logout"),
         path("api/v1/auth/ws-ticket/", WsTicketView.as_view(), name="ws-ticket"),
         path(
@@ -287,7 +281,7 @@ urlpatterns = (
     # see Docs/dev/ops/vps-cpu-constraints.md) storage falls back to FileSystemStorage,
     # but Django doesn't serve MEDIA with DEBUG=False — so uploads saved but never
     # displayed. This whitelists ONLY public display-asset prefixes; private files
-    # (companies/*/kyc, companies/*/documents, deals/**, sourcing/imports, temp)
+    # (companies/*/documents, deals/**, sourcing/imports, temp)
     # never match and stay unreachable via /media (served only through auth views).
     + [
         re_path(

@@ -36,17 +36,6 @@ def test_forgot_password_throttled_per_target_email():
 
 @override_settings(CACHES=LOCMEM)
 @pytest.mark.django_db
-def test_register_throttled_per_ip():
-    """register = 5/hour per IP: the 6th signup attempt from one IP is rejected."""
-    client = APIClient()
-    for i in range(5):
-        client.post("/api/v1/auth/register/", {"email": f"new{i}@example.com"}, format="json")
-    blocked = client.post("/api/v1/auth/register/", {"email": "new6@example.com"}, format="json")
-    assert blocked.status_code == 429
-
-
-@override_settings(CACHES=LOCMEM)
-@pytest.mark.django_db
 def test_login_throttled_per_ip():
     """login = 10/min per IP: brute-force is capped (11th attempt → 429)."""
     client = APIClient()

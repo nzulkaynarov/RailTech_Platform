@@ -9,7 +9,6 @@ Docs/old/specs/client-base-design-2026-06-24.md.
 import logging
 from typing import Optional, Tuple
 
-from django.conf import settings
 from django.db import transaction
 
 from ..models import Company, CompanyType, Contact, CustomUser
@@ -78,13 +77,13 @@ def create_offline_client(
         return None, "CONTACT_NEEDS_EMAIL_OR_PHONE"
 
     # Soft de-dup WITHIN the seller's own book only (convenience; not a hard gate).
-    # Cross-tenant duplicates are allowed and reconciled by the admin at KYC.
+    # Cross-tenant duplicates are allowed (stated_inn is not unique).
     company = find_client_company(seller, inn=inn, name=company_name)
     company_created = False
     if company is None:
         company = Company.objects.create(
             name=company_name,
-            stated_inn=inn,  # NOT the unique `inn` — cross-tenant dups allowed pre-KYC
+            stated_inn=inn,  # NOT the unique `inn` — cross-tenant dups allowed
             is_registered=False,  # rep-created, no platform login yet
         )
         client_type = CompanyType.objects.filter(code="CLIENT").first()
@@ -125,86 +124,3 @@ def create_offline_client(
         )
 
     return {"company": company, "contact": contact, "company_created": company_created}, None
-
-
-CLIENT_INVITE_TTL_DAYS = 14
-
-
-def _hash_invite_token(token: str) -> str:
-    import hashlib
-
-    return hashlib.sha256(token.encode()).hexdigest()
-
-
-def send_client_invite(*, seller: CustomUser, contact_id: int) -> Tuple[Optional[object], Optional[str]]:
-    """Invite an offline client's contact to register and CLAIM its existing Company (Phase D).
-
-    Turns the seller's offline book into registered users without a duplicate. Returns
-    (ClientInvite, None) or (None, error_code). Scoped: the contact must be in the seller's OWN
-    book, its company still offline, and the contact reachable by email.
-    """
-    import secrets
-    from datetime import timedelta
-
-    from django.utils import timezone
-
-    from notifications.emails import EmailDeliveryError, email_brand, send_templated_email
-
-    from ..models import ClientInvite, Contact
-
-    contact = Contact.objects.filter(pk=contact_id).select_related("company").first()
-    if contact is None:
-        return None, "CONTACT_NOT_FOUND"
-    if not seller_clients(seller).filter(pk=contact.company_id).exists():
-        return None, "CONTACT_NOT_IN_YOUR_BOOK"
-    if contact.company.is_registered:
-        return None, "COMPANY_ALREADY_REGISTERED"
-    if not contact.email:
-        return None, "CONTACT_HAS_NO_EMAIL"
-    if CustomUser.objects.filter(email__iexact=contact.email).exists():
-        return None, "USER_EMAIL_ALREADY_EXISTS"
-
-    token = secrets.token_urlsafe(32)
-    invite = ClientInvite.objects.create(
-        company=contact.company,
-        contact=contact,
-        created_by=seller,
-        email=contact.email,
-        token_hash=_hash_invite_token(token),
-        expires_at=timezone.now() + timedelta(days=CLIENT_INVITE_TTL_DAYS),
-    )
-    invite_url = f"{settings.FRONTEND_URL}/register?invite={token}"
-    try:
-        send_templated_email(
-            "invite_client",
-            {
-                "company_name": contact.company.name,
-                "contact_name": contact.name,
-                "invite_url": invite_url,
-                # D1e white-label: the inviting seller's brand opens the email.
-                **email_brand(contact.company),
-            },
-            to=[contact.email],
-            channel="transactional",
-            user=seller,
-        )
-    except EmailDeliveryError:
-        invite.delete()
-        return None, "EMAIL_SEND_FAILED"
-    return invite, None
-
-
-def accept_client_invite(user: CustomUser, token: str):
-    """Resolve a raw invite token to its live ClientInvite (unused, unexpired, company still
-    offline). Returns (invite, None) or (None, error_code). Does NOT mutate — the caller
-    (submit_company_profile) performs the claim inside its own transaction."""
-    from django.utils import timezone
-
-    from ..models import ClientInvite
-
-    invite = ClientInvite.objects.filter(token_hash=_hash_invite_token(token or "")).select_related("company").first()
-    if invite is None or invite.accepted_at is not None or invite.expires_at <= timezone.now():
-        return None, "CLIENT_INVITE_INVALID"
-    if invite.company.is_registered:
-        return None, "COMPANY_ALREADY_REGISTERED"
-    return invite, None

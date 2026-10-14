@@ -5,16 +5,14 @@ The seller team's client-base contacts: scoped strictly to companies in the team
 service (Rule 8: search-before-create de-dup, reachability guard).
 """
 
-from drf_spectacular.utils import OpenApiResponse, extend_schema
+from drf_spectacular.utils import extend_schema
 from rest_framework import serializers, status, viewsets
-from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.throttling import ScopedRateThrottle
 
 from accounts.models import Contact
 from accounts.services import create_offline_client
-from accounts.services.clients import seller_clients, send_client_invite
+from accounts.services.clients import seller_clients
 
 
 class ContactSerializer(serializers.ModelSerializer):
@@ -75,21 +73,3 @@ class ContactViewSet(viewsets.ModelViewSet):
         if error_code:
             return Response({"detail": error_code}, status=status.HTTP_400_BAD_REQUEST)
         return Response(ContactSerializer(result["contact"]).data, status=status.HTTP_201_CREATED)
-
-    @extend_schema(
-        summary="Invite an offline client to register",
-        description="CRM Phase D: email this contact an invite to register and CLAIM its existing "
-        "offline company (no duplicate). Throttled per user.",
-        request=None,
-        responses={200: OpenApiResponse(description="{invited: true}"), 400: OpenApiResponse(description="error code")},
-        tags=["Client Base"],
-    )
-    @action(detail=True, methods=["post"], throttle_classes=[ScopedRateThrottle])
-    def invite(self, request, pk=None):
-        _invite, error = send_client_invite(seller=request.user, contact_id=pk)
-        if error:
-            code = status.HTTP_404_NOT_FOUND if error == "CONTACT_NOT_FOUND" else status.HTTP_400_BAD_REQUEST
-            return Response({"detail": error}, status=code)
-        return Response({"invited": True})
-
-    invite.throttle_scope = "client_invite"

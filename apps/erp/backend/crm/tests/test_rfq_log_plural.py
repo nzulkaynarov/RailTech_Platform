@@ -71,15 +71,13 @@ def test_pluralize_negative_uses_absolute_value():
 
 @pytest.fixture
 def rfq_lookups(db):
-    from accounts.models import CompanyType, VerificationStatus, WorkspaceRole
+    from accounts.models import CompanyType, WorkspaceRole
     from crm.models import DealStage, QuoteStatus
 
     for code in ["DRAFT", "RFQ_OPEN"]:
         DealStage.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
     for code in ["CLIENT", "SUPPLIER"]:
         CompanyType.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 1})
-    for code, rank in [("L1_UNVERIFIED", 0), ("L2_VERIFIED", 2)]:
-        VerificationStatus.objects.get_or_create(code=code, defaults={"name": code, "sort_order": rank})
     WorkspaceRole.objects.get_or_create(code="MEMBER", defaults={"name": "Member", "sort_order": 50})
     QuoteStatus.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 1})
 
@@ -104,12 +102,11 @@ def _make_buyer(company):
     return user
 
 
-def _make_company(name, type_code, status_code="L2_VERIFIED"):
-    from accounts.models import Company, CompanyType, VerificationStatus
+def _make_company(name, type_code):
+    from accounts.models import Company, CompanyType
 
     company = Company.objects.create(
         name=name,
-        verification_status=VerificationStatus.objects.get(code=status_code),
     )
     company.types.add(CompanyType.objects.get(code=type_code))
     return company

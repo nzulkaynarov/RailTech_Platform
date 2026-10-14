@@ -144,15 +144,10 @@ class PageStatsView(APIView):
 
     @staticmethod
     def _get_client_stats() -> dict:
-        """Aggregate company/client verification statistics — single query via aggregate()."""
+        """Aggregate company/client statistics — single query via aggregate()."""
         from accounts.models import Company
 
-        return Company.objects.aggregate(
-            total=Count("id"),
-            verified=Count("id", filter=Q(verification_status__code="L2_VERIFIED")),
-            awaiting_kyc=Count("id", filter=Q(verification_status__code="PROFILE_SUBMITTED")),
-            unverified=Count("id", filter=Q(verification_status__code="L1_UNVERIFIED")),
-        )
+        return Company.objects.aggregate(total=Count("id"))
 
     @staticmethod
     def _get_catalog_stats() -> dict:
@@ -249,11 +244,7 @@ class PlatformDashboardView(APIView):
         company_stats = self._get_company_stats()
         deal_stats = self._get_deal_dashboard_stats()
         subscription_stats = self._get_subscription_stats(now, soon)
-        attention = self._get_attention_counters(
-            company_stats["pending_kyc"],
-            subscription_stats,
-            now,
-        )
+        attention = self._get_attention_counters(subscription_stats, now)
 
         data = {
             "users": user_stats,
@@ -286,15 +277,10 @@ class PlatformDashboardView(APIView):
 
     @staticmethod
     def _get_company_stats() -> dict:
-        """Aggregate company counts by type and KYC status — 2 queries."""
+        """Aggregate company counts by type — 2 queries."""
         from accounts.models import Company
 
-        # Main aggregation (1 query) — counts by KYC status
-        main_stats = Company.objects.aggregate(
-            total=Count("id"),
-            pending_kyc=Count("id", filter=Q(verification_status__code="PROFILE_SUBMITTED")),
-            verified=Count("id", filter=Q(verification_status__code__in=["L2_VERIFIED", "L3_CONTRACTED"])),
-        )
+        total = Company.objects.count()
         # By-type breakdown via values().annotate() — 1 query for all types
         type_counts = dict(
             Company.objects.filter(
@@ -305,14 +291,12 @@ class PlatformDashboardView(APIView):
             .values_list("types__code", "count")
         )
         return {
-            "total": main_stats["total"],
+            "total": total,
             "by_type": {
                 "BUYER": type_counts.get("CLIENT", 0),
                 "SELLER": type_counts.get("SUPPLIER", 0),
                 "MANUFACTURER": type_counts.get("MANUFACTURER", 0),
             },
-            "pending_kyc": main_stats["pending_kyc"],
-            "verified": main_stats["verified"],
         }
 
     @staticmethod
@@ -365,21 +349,15 @@ class PlatformDashboardView(APIView):
         )
 
     @staticmethod
-    def _get_attention_counters(companies_pending_kyc: int, subscription_stats: dict, now) -> dict:
+    def _get_attention_counters(subscription_stats: dict, now) -> dict:
         """Compute pending-attention badge counters for the sidebar."""
-        from accounts.models import CompanyRoleApplication
         from crm.models import Invoice
 
-        role_apps_pending = CompanyRoleApplication.objects.filter(
-            status__in=["PENDING", "DOCUMENTS_REQUIRED", "PAYMENT_REQUIRED"],
-        ).count()
         overdue_invoices = Invoice.objects.filter(
             status__code__in=["ISSUED", "PARTIAL", "OVERDUE"],
             due_date__lt=now.date(),
         ).count()
         return {
-            "kyc": companies_pending_kyc,
-            "role_applications": role_apps_pending,
             "subscriptions_past_due": subscription_stats["past_due"],
             "subscriptions_expiring_7d": subscription_stats["expiring_7d"],
             "overdue_invoices": overdue_invoices,

@@ -6,7 +6,7 @@ from django.db.models import Count, Q, Sum
 from django.utils import translation
 from django.utils.translation import gettext_lazy as _
 
-from accounts.models import Company, CompanyRoleApplication, CustomUser
+from accounts.models import Company, CustomUser
 from crm.models import Deal, Quote, QuoteItem
 
 # Dashboard payload is recomputed every DASHBOARD_CACHE_TTL seconds.
@@ -94,19 +94,10 @@ def _compute_dashboard_payload() -> dict:
     pipeline_value = quote_agg["pipeline"] or 0
     total_quotes = quote_agg["total"]
 
-    # Company table: KYC-pending + total, in one aggregate.
-    company_agg = Company.objects.aggregate(
-        pending=Count("id", filter=Q(verification_status__code="PROFILE_SUBMITTED")),
-        total=Count("id"),
-    )
-    kyc_pending = company_agg["pending"]
-    total_companies = company_agg["total"]
+    total_companies = Company.objects.count()
 
     # Single-metric tables (distinct models → distinct queries; can't merge across tables).
     active_deals = Deal.objects.exclude(stage__code__in=["CLOSED_WON", "CLOSED_LOST"]).count()
-    role_apps_pending = CompanyRoleApplication.objects.filter(
-        status__in=["PENDING", "DOCUMENTS_REQUIRED", "PAYMENT_REQUIRED"]
-    ).count()
     sourcing_backlog = QuoteItem.objects.filter(product__isnull=True).count()
     managers_count = CustomUser.objects.filter(role__code="ADMIN").count()
     productivity = round(total_quotes / managers_count, 1) if managers_count > 0 else 0
@@ -145,18 +136,6 @@ def _compute_dashboard_payload() -> dict:
                 "metric": total_companies,
                 "icon": "domain",
                 "link": "/admin/accounts/company/",
-            },
-            {
-                "title": _("Ожидают KYC"),
-                "metric": kyc_pending,
-                "icon": "verified_user",
-                "link": "/admin/accounts/company/?verification_status__code__exact=PROFILE_SUBMITTED",
-            },
-            {
-                "title": _("Заявки на роли"),
-                "metric": role_apps_pending,
-                "icon": "assignment",
-                "link": "/admin/accounts/companyroleapplication/?status__exact=PENDING",
             },
             {
                 "title": _("Нераспознанные позиции"),

@@ -29,7 +29,6 @@ from accounts.models import (
     CompanyType,
     CustomUser,
     SupplierSubscription,
-    VerificationStatus,
     WorkspaceRole,
 )
 from crm.models import Deal, DealStage, Quote, QuoteStatus
@@ -55,7 +54,6 @@ def lookups(db):
         DealStage.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     Country.objects.get_or_create(code="UZ", defaults={"name": "Uzbekistan", "sort_order": 10})
 
 
@@ -93,9 +91,7 @@ def seller(lookups):
 
 @pytest.fixture
 def deal(seller, lookups):
-    client_company = Company.objects.create(
-        name="Заказчик", inn="908700002", verification_status=VerificationStatus.objects.get(code="L2_VERIFIED")
-    )
+    client_company = Company.objects.create(name="Заказчик", inn="908700002")
     client_company.types.add(CompanyType.objects.get(code="CLIENT"))
     return Deal.objects.create(
         title="Сделка согласований",

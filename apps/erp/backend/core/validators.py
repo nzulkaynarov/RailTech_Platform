@@ -115,8 +115,8 @@ def content_matches_extension(header: bytes, ext: str) -> bool:
 def assert_content_matches_extension(file, label="File"):
     """Magic-byte-only guard on a Django UploadedFile — content must match its extension.
 
-    For callers that keep their OWN extension/size allowlist (e.g. KYC has a stricter list
-    than `validate_document_upload`) but still need anti-spoofing. Raises ValidationError.
+    For callers that keep their OWN extension/size allowlist (stricter than
+    `validate_document_upload`) but still need anti-spoofing. Raises ValidationError.
     """
     ext = os.path.splitext(file.name)[1].lower()
     _check_magic_bytes(file, ext, label)

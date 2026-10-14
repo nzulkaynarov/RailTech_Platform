@@ -11,15 +11,7 @@ import pytest
 from django.utils import timezone
 
 from accounts import services as acc_services
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SystemRole,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from catalog.models import DomainType, ProductStatus, StockStatus
 from crm import services as crm_services
 from crm.models import (
@@ -44,9 +36,6 @@ def master_data(db):
     """Load the lookup tables needed by every test."""
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
-    VerificationStatus.objects.get_or_create(code="L1_UNVERIFIED", defaults={"name": "L1", "sort_order": 10})
-    VerificationStatus.objects.get_or_create(code="PROFILE_SUBMITTED", defaults={"name": "Submitted", "sort_order": 20})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     SystemRole.objects.get_or_create(code="USER", defaults={"name": "User", "sort_order": 10})
     SystemRole.objects.get_or_create(code="ADMIN", defaults={"name": "Platform Admin", "sort_order": 0})
@@ -97,7 +86,6 @@ def buyer(master_data):
     company = Company.objects.create(
         name="T Buyer LLC",
         inn="1000000001",
-        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
         # O3: продавец с платёжными реквизитами — иначе `issue_invoice` не выпустит счёт (он неоплатен).
         bank_account="20208000900001234567",
         mfo="00443",
@@ -126,7 +114,6 @@ def supplier(master_data):
     company = Company.objects.create(
         name="T Supplier LLC",
         inn="2000000002",
-        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
         # O3: продавец с платёжными реквизитами — иначе `issue_invoice` не выпустит счёт (он неоплатен).
         bank_account="20208000900001234567",
         mfo="00443",
@@ -262,7 +249,7 @@ def test_log_admin_action_threads_structured_event():
     assert structured.event_params["force"] is False
 
     # Free-form admin action: no event_code → renders from RU `action` fallback.
-    freeform = log_admin_action(entity_type="company", entity_id=2, action="KYC approved to L2")
+    freeform = log_admin_action(entity_type="company", entity_id=2, action="Компания архивирована")
     assert freeform.event_code == ""
     assert freeform.event_params == {}
     assert ActivityLog.objects.filter(event_code="deal.stage_changed").exists()

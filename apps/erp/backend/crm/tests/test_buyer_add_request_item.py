@@ -8,15 +8,7 @@ field in and cover the mpn-based dedup it enables.
 
 import pytest
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SystemRole,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import Deal, DealStage, QuoteStatus
 from crm.services.rfq import buyer_add_request_item
 
@@ -27,7 +19,6 @@ def lookups(db):
     DealStage.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})
     QuoteStatus.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     SystemRole.objects.get_or_create(code="USER", defaults={"name": "User", "sort_order": 10})
 
@@ -37,9 +28,7 @@ def deal(lookups):
     buyer = CustomUser.objects.create_user(
         email="add.buyer@example.com", username="add_buyer", password="pw", is_active=True
     )
-    company = Company.objects.create(
-        name="Add Buyer LLC", inn="7700000099", verification_status=VerificationStatus.objects.get(code="L2_VERIFIED")
-    )
+    company = Company.objects.create(name="Add Buyer LLC", inn="7700000099")
     company.types.add(CompanyType.objects.get(code="CLIENT"))
     # OWNER membership; can_buy defaults to True (see CompanyMember model).
     CompanyMember.objects.create(

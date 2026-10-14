@@ -87,8 +87,8 @@ UNFOLD = {
     "SIDEBAR": {
         "show_search": True,
         # True = показывать fallback "All applications" в конце sidebar.
-        # Обеспечивает доступ ко всем orphan-моделям (SystemRole, VerificationStatus,
-        # KYCDocType и т.п.), которых нет в явной навигации выше. Инженер не
+        # Обеспечивает доступ ко всем orphan-моделям (SystemRole и т.п.), которых нет
+        # в явной навигации выше. Инженер не
         # должен помнить прямые URL, чтобы добраться до любого лукапа.
         "show_all_applications": True,
         "navigation": [
@@ -125,16 +125,10 @@ UNFOLD = {
                         "link": "/admin/accounts/company/wizard/",
                     },
                     {
-                        "title": _("Заявки на роли"),
-                        "icon": "assignment",
-                        "link": "/admin/accounts/companyroleapplication/",
-                    },
-                    {
                         "title": _("Подписки поставщиков"),
                         "icon": "credit_card",
                         "link": "/admin/accounts/suppliersubscription/",
                     },
-                    {"title": _("KYC документы"), "icon": "verified_user", "link": "/admin/accounts/kycdocument/"},
                 ],
             },
             {
@@ -189,12 +183,6 @@ UNFOLD = {
                     },
                     {"title": _("Роли в команде"), "icon": "badge", "link": "/admin/accounts/workspacerole/"},
                     {"title": _("Типы компаний"), "icon": "category", "link": "/admin/accounts/companytype/"},
-                    {
-                        "title": _("Статусы верификации"),
-                        "icon": "verified",
-                        "link": "/admin/accounts/verificationstatus/",
-                    },
-                    {"title": _("Типы KYC-документов"), "icon": "description", "link": "/admin/accounts/kycdoctype/"},
                     {"title": _("Этапы сделки"), "icon": "timeline", "link": "/admin/crm/dealstage/"},
                     {"title": _("Статусы КП"), "icon": "flag", "link": "/admin/crm/quotestatus/"},
                     {"title": _("Домены каталога"), "icon": "widgets", "link": "/admin/catalog/domaintype/"},

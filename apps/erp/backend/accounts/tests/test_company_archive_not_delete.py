@@ -20,15 +20,7 @@ import pytest
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SystemRole,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 
 
 @pytest.fixture
@@ -48,7 +40,6 @@ def company(db):
     return Company.objects.create(
         name="Пустая компания",
         inn="907500001",
-        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
     )
 
 
@@ -223,7 +214,6 @@ def archived_seller(db, operator):
     seller = Company.objects.create(
         name="Архивный продавец",
         inn="907500010",
-        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
     )
     seller.types.add(CompanyType.objects.get(code="SUPPLIER"))
     archive_company(seller, operator, reason="ушёл с рынка")
@@ -238,7 +228,6 @@ def test_archived_seller_disappears_from_the_buyer_picker(archived_seller, db):
     buyer = Company.objects.create(
         name="Покупатель пикера",
         inn="907500011",
-        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
     )
     buyer.types.add(CompanyType.objects.get(code="CLIENT"))
     CompanyMember.objects.create(
@@ -257,7 +246,6 @@ def test_archived_seller_disappears_from_the_buyer_picker(archived_seller, db):
 
 def test_archived_company_is_out_of_the_seller_queryset(archived_seller):
     assert archived_seller.pk not in set(Company.objects.sellers().values_list("id", flat=True))
-    assert archived_seller.pk not in set(Company.objects.verified_sellers().values_list("id", flat=True))
     assert archived_seller.pk in set(Company.objects.archived().values_list("id", flat=True))
 
 
@@ -303,8 +291,8 @@ def test_capability_is_declared_before_the_button_is_drawn(operator, company, db
 
 
 def test_archive_state_is_not_a_form_field(operator, company):
-    """Архив — действие со следом, а не поле: обычный PATCH его не ставит (иначе повторилась
-    бы дыра «уровень KYC правился обычным Save»)."""
+    """Архив — действие со следом, а не поле: обычный PATCH его не ставит (иначе статус
+    правился бы обычным Save мимо журнала)."""
     resp = _api(operator).patch(f"/api/v1/accounts/companies/{company.pk}/", {"is_active": False}, format="json")
 
     assert resp.status_code == 200

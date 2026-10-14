@@ -400,16 +400,10 @@ def submit_request(user: CustomUser, deal: Deal) -> Deal:
     """
     from rest_framework.exceptions import PermissionDenied, ValidationError
 
-    from accounts.services.kyc import company_kyc_verified
     from accounts.services.permissions import is_member_of
 
     if not is_member_of(user, deal.company_id, capability="buy"):
         raise PermissionDenied("ONLY_BUYER_CAN_SUBMIT_REQUEST")
-    # ADR-0006 Phase E — KYC floor: «после KYC = минимум». Browsing + building a DRAFT заявка is
-    # free, but SUBMITTING it to sellers requires a KYC-verified (L2+) company. This is the first
-    # real backend gate on verification (it was FE-cosmetic only — the Layer-0 gap).
-    if not company_kyc_verified(deal.company_id):
-        raise PermissionDenied("KYC_REQUIRED_TO_SUBMIT")
     if (deal.stage.code if deal.stage_id else None) != DealStageCode.DRAFT:
         raise ValidationError({"detail": "REQUEST_ALREADY_SUBMITTED"})
 

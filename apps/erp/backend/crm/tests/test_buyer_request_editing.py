@@ -16,15 +16,7 @@ import pytest
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SystemRole,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteStatus
 
 
@@ -32,7 +24,6 @@ from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteStatus
 def lookups(db):
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     SystemRole.objects.get_or_create(code="USER", defaults={"name": "User", "sort_order": 10})
     for code in ("DRAFT", "RFQ_OPEN", "SOURCING", "CALCULATING"):
         DealStage.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
@@ -42,9 +33,7 @@ def lookups(db):
 
 @pytest.fixture
 def buyer_request(lookups):
-    company = Company.objects.create(
-        name="Buyer Edit Co", inn="B500", verification_status=VerificationStatus.objects.get(code="L2_VERIFIED")
-    )
+    company = Company.objects.create(name="Buyer Edit Co", inn="B500")
     company.types.add(CompanyType.objects.get(code="CLIENT"))
     user = CustomUser.objects.create_user(email="editor@req.test", username="editor@req.test", password="x")
     CompanyMember.objects.create(
