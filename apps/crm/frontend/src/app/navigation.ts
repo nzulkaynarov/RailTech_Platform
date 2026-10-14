@@ -23,6 +23,7 @@ export type NavKey =
   | "integrations"
   | "models"
   | "system"
+  | "external-services"
   | "backups"
   | "audit";
 
@@ -35,7 +36,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     key: "admin",
     title: t.navGroup.admin,
-    items: ["users", "integrations", "models", "system", "backups", "audit"],
+    items: ["users", "integrations", "models", "system", "external-services", "backups", "audit"],
   },
 ];
 

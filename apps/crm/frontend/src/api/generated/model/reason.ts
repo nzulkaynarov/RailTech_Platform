@@ -76,4 +76,6 @@ export const Reason = {
   rate_limited: "rate_limited",
   consent_required: "consent_required",
   ai_spend_period: "ai_spend_period",
+  service_not_switchable: "service_not_switchable",
+  telegram_paused: "telegram_paused",
 } as const;

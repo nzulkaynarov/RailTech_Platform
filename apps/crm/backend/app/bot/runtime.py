@@ -1,7 +1,8 @@
 """Запуск клиентского бота: long polling (dev) или webhook (prod) — SPEC §9.2, §13.
 
 Апдейт проходит: IdempotencyMiddleware (`tg_updates`) → RateLimitMiddleware →
-ClientStatusMiddleware (меню и номер по статусу, Q-011/Q-020) → обработчики
+MaintenanceMiddleware (выключатель Telegram, ADR-0024) → ClientStatusMiddleware
+(меню и номер по статусу, Q-011/Q-020) → обработчики
 `app/bot/client_handlers.py`, затем `app/bot/handlers.py`. В режиме webhook API отвечает Telegram
 сразу, а апдейт обрабатывается в фоне.
 """
@@ -17,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bot import channel, chat_member, client_handlers, commands, handlers
 from app.bot.errors import ErrorReplier
+from app.bot.maintenance import MaintenanceMiddleware, Paused
 from app.bot.middlewares import IdempotencyMiddleware, RateLimitMiddleware
 from app.bot.profile import ProfilePublish, publish_profile
 from app.bot.status import ClientStatusMiddleware
@@ -41,6 +43,7 @@ def build_dispatcher(
     leads: LeadService | None = None,
     rbac: Rbac | None = None,
     client_bot: ClientBotService | None = None,
+    telegram_paused: Paused | None = None,
 ) -> Dispatcher:
     dispatcher = Dispatcher(
         conversation=conversation,
@@ -54,6 +57,11 @@ def build_dispatcher(
     )
     dispatcher.update.outer_middleware(IdempotencyMiddleware(sessions))
     dispatcher.message.outer_middleware(RateLimitMiddleware(settings.get))
+    if telegram_paused is not None:
+        # Выключатель Telegram (ADR-0024): «технические работы» вместо диалога.
+        maintenance = MaintenanceMiddleware(telegram_paused, settings.get)
+        dispatcher.message.outer_middleware(maintenance)
+        dispatcher.callback_query.outer_middleware(maintenance)
     status = ClientStatusMiddleware()
     dispatcher.message.outer_middleware(status)
     dispatcher.callback_query.outer_middleware(status)

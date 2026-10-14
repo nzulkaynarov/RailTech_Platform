@@ -26,6 +26,7 @@ export const core = {
     integrations: "Подключения",
     templates: "Шаблоны ответов",
     system: "Состояние системы",
+    "external-services": "Внешние сервисы",
     profile: "Профиль",
     logout: "Выйти",
     changePassword: "Сменить пароль",
@@ -239,6 +240,9 @@ export const core = {
     rate_limited: "Слишком много запросов — попробуйте позже",
     consent_required: "Нужно согласие на обработку персональных данных",
     ai_spend_period: "Период — не длиннее 90 дней и не в будущем",
+    service_not_switchable: "Выключить нельзя: {detail}",
+    telegram_paused:
+      "Telegram выключен вручную в «Внешних сервисах» — сообщение не отправлено. Включите Telegram и повторите",
   } as Record<string, string>,
   common: {
     colleague: "коллега",
@@ -272,6 +276,7 @@ export const core = {
     integrations: "Подключения",
     templates: "Шаблоны ответов",
     system: "Состояние системы",
+    "external-services": "Внешние сервисы",
     inbox: "Входящие",
     profile: "Профиль",
     login: "Вход",

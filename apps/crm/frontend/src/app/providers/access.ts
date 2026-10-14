@@ -28,6 +28,7 @@ const RESOURCE_MAP: Record<string, [string, string]> = {
   backups: ["backups", "read"],
   integrations: ["integrations", "read"],
   system: ["system", "read"],
+  "external-services": ["external_services", "read"],
   profile: ["self", "read"],
 };
 const ADMIN_SECTIONS = new Set([
@@ -42,6 +43,7 @@ const ADMIN_SECTIONS = new Set([
   "backups",
   "integrations",
   "system",
+  "external-services",
 ]);
 
 /**

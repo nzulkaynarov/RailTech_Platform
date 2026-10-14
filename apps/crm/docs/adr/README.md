@@ -28,3 +28,4 @@
 | [0021](0021-data-layer-orval-tanstack.md) | Единый слой данных фронта — хуки TanStack Query из orval; Refine — оболочка | accepted | 9 |
 | [0022](0022-lifecycle-handoff-to-backoffice.md) | «Передан в бэк-офис» = `customer`; итог сделки приходит из ERP в зеркало сделок; без коннектора — прежнее поведение (в ORCHESTRATOR/CONTRACTS назван «ADR-0021 CRM») | accepted | M3 |
 | [0023](0023-smtp-connector-and-email-log.md) | Коннектор «Почта»: SMTP-релей для писем сотрудникам (`smtplib` в потоке, очередь), журнал `email_log`, тело письма шифртекстом до отправки | accepted (по рекомендации) | M3 |
+| [0024](0024-external-services-center.md) | Центр внешних сервисов: реестр, фоновые проверки без платных вызовов, журнал инцидентов, оповещения с антиспамом, выключатели (вендор — `model_group_alias` LiteLLM) | accepted (по рекомендации) | M3 |

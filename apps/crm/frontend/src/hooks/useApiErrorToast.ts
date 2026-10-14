@@ -12,9 +12,11 @@ function reasonText(error: ApiError): string | null {
   if (!text) return null;
   const name = error.details["assigned_user_name"];
   const cause = error.details["telegram_error"];
+  const detail = error.details["detail"];
   return text
     .replace("{name}", typeof name === "string" && name ? name : t.common.colleague)
-    .replace("{error}", typeof cause === "string" && cause ? cause : t.common.none);
+    .replace("{error}", typeof cause === "string" && cause ? cause : t.common.none)
+    .replace("{detail}", typeof detail === "string" && detail ? detail : t.common.none);
 }
 
 /**

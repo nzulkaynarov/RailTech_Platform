@@ -215,6 +215,11 @@ services:
   worker:
     <<: *backend
     command: ["python", "-m", "app", "worker"]
+    # Центр внешних сервисов (ADR-0024): воркер проверяет хранилище бэкапов (только чтение) и
+    # берёт алиасы моделей по умолчанию, когда шлюз недоступен.
+    volumes:
+      - ./litellm.models.yaml:/app/litellm.models.yaml:ro
+      - backups:/backups:ro
     depends_on:
       <<: *backend-deps
       docling:

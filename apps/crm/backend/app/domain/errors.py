@@ -81,6 +81,9 @@ class Reason(StrEnum):
     CONSENT_REQUIRED = "consent_required"
     # «Расходы» по ансамблю (M3-CRM-09): период журнала LiteLLM — не длиннее 90 дней, без будущего.
     AI_SPEND_PERIOD = "ai_spend_period"
+    # Центр внешних сервисов (M3-CRM-12, ADR-0024): выключатель недоступен; Telegram на паузе.
+    SERVICE_NOT_SWITCHABLE = "service_not_switchable"
+    TELEGRAM_PAUSED = "telegram_paused"
 
 
 class DomainError(Exception):

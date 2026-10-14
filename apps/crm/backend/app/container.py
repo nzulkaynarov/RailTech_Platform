@@ -14,11 +14,14 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app import db
 from app.config import Settings, get_settings
+from app.domain.errors import ConflictError, Reason
 from app.integrations.docling import DoclingClient
 from app.integrations.litellm import Embedder, make_client
+from app.integrations.litellm_admin import LiteLLMAdmin
 from app.integrations.litellm_catalog import ModelCatalog
 from app.integrations.s3 import ObjectStorage
 from app.security.secrets_store import SecretCipher, SecretsStore
+from app.services.service_switches import SwitchBoard
 from app.services.settings import SettingsService
 
 if TYPE_CHECKING:
@@ -32,6 +35,9 @@ if TYPE_CHECKING:
     from app.services.clients import ClientService
     from app.services.documents import DocumentService
     from app.services.erp_connector import ErpConnectorService
+    from app.services.external_services.checks import ExternalChecks
+    from app.services.external_services.switches import SwitchService
+    from app.services.external_services.view import ExternalServicesView
     from app.services.kb.admin import KbAdminService
     from app.services.kb.ingest import KbIngestService
     from app.services.kb.search import KbSearchService
@@ -51,6 +57,12 @@ if TYPE_CHECKING:
 class Container:
     settings: Settings
 
+    def __post_init__(self) -> None:
+        from app.integrations import langfuse
+
+        # Выключатель «Langfuse» (ADR-0024): трейсы не пишутся, пока сервис выключен вручную.
+        langfuse.set_gate(lambda: self.switch_board.peek("langfuse"))
+
     @cached_property
     def engine(self) -> AsyncEngine:
         return db.create_engine(self.settings)
@@ -66,6 +78,50 @@ class Container:
     @cached_property
     def model_catalog(self) -> ModelCatalog:
         return ModelCatalog(self.settings.litellm_base_url, self.settings.litellm_api_key)
+
+    @cached_property
+    def litellm_admin(self) -> LiteLLMAdmin:
+        return LiteLLMAdmin(self.settings.litellm_base_url, self.settings.litellm_api_key)
+
+    @cached_property
+    def switch_board(self) -> SwitchBoard:
+        """Выключатели внешних сервисов (ADR-0024): кэш 10 с в каждом процессе."""
+        return SwitchBoard(self.session_factory)
+
+    @cached_property
+    def external_switches(self) -> "SwitchService":
+        from app.security.reauth import LockoutPolicy
+        from app.services.external_services.switches import SwitchService
+
+        return SwitchService(
+            self.session_factory,
+            self.litellm_admin,
+            self.model_catalog,
+            self.mail_service,
+            self.switch_board,
+            lockout=LockoutPolicy(
+                self.settings.login_max_failures, self.settings.login_lockout_minutes
+            ),
+        )
+
+    @cached_property
+    def external_view(self) -> "ExternalServicesView":
+        from app.services.external_services.view import ExternalServicesView
+
+        return ExternalServicesView(
+            self.session_factory,
+            self.model_catalog,
+            self.settings_service,
+            self.switch_board,
+            defaults=self.settings.litellm_models_path,
+        )
+
+    @cached_property
+    def external_checks(self) -> "ExternalChecks":
+        """Центр внешних сервисов (M3-CRM-12): пробы, инциденты, оповещения."""
+        from app.services.external_services.wiring import build_checks
+
+        return build_checks(self)
 
     @cached_property
     def usage_recorder(self) -> "DbUsageRecorder":
@@ -273,7 +329,11 @@ class Container:
             self.settings_service,
             SmtplibTransport(),
             _enqueue_email,
+            paused=self._mail_paused,
         )
+
+    async def _mail_paused(self) -> bool:
+        return await self.switch_board.is_disabled("mail")
 
     @cached_property
     def smtp_connector(self) -> "SmtpConnectorService":
@@ -331,8 +391,12 @@ class Container:
         """Клиент Bot API для исходящих сообщений с действующим токеном (БД или env); None — нет.
 
         Токен перечитывается при каждом вызове: смена в «Подключениях» действует и в воркере.
+        Telegram выключен вручную (центр внешних сервисов, ADR-0024) — None: исходящие на паузе.
         """
         from app.integrations.telegram import resolve_token
+
+        if await self.switch_board.is_disabled("telegram"):
+            return None
 
         token, _ = await resolve_token(self.secrets_store, self.settings)
         if not token:
@@ -358,6 +422,8 @@ class CurrentBotSender:
         self._container = container
 
     async def send_message(self, chat_id: int, text: str) -> Any:
+        if await self._container.switch_board.is_disabled("telegram"):
+            raise ConflictError("telegram is paused", reason=Reason.TELEGRAM_PAUSED)
         bot = await self._container.telegram_bot()
         if bot is None:
             raise RuntimeError("telegram bot token is not configured")

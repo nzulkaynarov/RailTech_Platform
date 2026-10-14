@@ -78,7 +78,9 @@ class RateLimitMiddleware(BaseMiddleware):
         return await handler(event, data)
 
 
-async def _record_silenced(event: Message, data: dict[str, Any]) -> None:
+async def _record_silenced(
+    event: Message, data: dict[str, Any], meta: dict[str, Any] | None = None
+) -> None:
     """Бот промолчал, но сообщение лида сохраняется: менеджер увидит его в CRM."""
     conversation = data.get("conversation")
     user = event.from_user
@@ -95,7 +97,7 @@ async def _record_silenced(event: Message, data: dict[str, Any]) -> None:
         attachments=attachments,
     )
     try:
-        await conversation.record_lead_message(inc, meta={"rate_limited": True})
+        await conversation.record_lead_message(inc, meta=meta or {"rate_limited": True})
     except Exception:
         logger.exception("tg_rate_limited_record_failed", tg_user_id=user.id)
 

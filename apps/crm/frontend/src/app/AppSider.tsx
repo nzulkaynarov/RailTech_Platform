@@ -4,6 +4,7 @@ import {
   BookOutlined,
   CloudServerOutlined,
   DashboardOutlined,
+  DeploymentUnitOutlined,
   DollarOutlined,
   ExperimentOutlined,
   FundOutlined,
@@ -46,6 +47,7 @@ const ICONS: Record<NavKey, ReactNode> = {
   integrations: <ApiOutlined />,
   models: <ExperimentOutlined />,
   system: <HeartOutlined />,
+  "external-services": <DeploymentUnitOutlined />,
   backups: <CloudServerOutlined />,
   audit: <AuditOutlined />,
 };

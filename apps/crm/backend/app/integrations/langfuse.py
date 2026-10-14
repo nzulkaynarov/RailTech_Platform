@@ -2,9 +2,12 @@
 
 Если ключи не заданы — все функции работают как no-op (dev без профиля
 observability). Персональные данные маскируются (`security/pii.py`).
+
+Выключатель «Langfuse» в центре внешних сервисов (ADR-0024): процесс ставит `set_gate()`; пока
+сервис выключен вручную, `client()` отдаёт None и трейсы не пишутся.
 """
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager, nullcontext
 from functools import lru_cache
 from typing import Any
@@ -13,8 +16,27 @@ from app.config import get_settings
 from app.security.pii import langfuse_mask
 
 
-@lru_cache
+def _never() -> bool:
+    return False
+
+
+_GATE: list[Callable[[], bool]] = [_never]
+
+
+def set_gate(switched_off: Callable[[], bool]) -> None:
+    """Источник «Langfuse выключен вручную» для процесса (контейнер зависимостей)."""
+    _GATE[0] = switched_off
+
+
 def client() -> Any | None:
+    lf = _client()
+    if lf is None or _GATE[0]():
+        return None
+    return lf
+
+
+@lru_cache
+def _client() -> Any | None:
     settings = get_settings()
     if not settings.langfuse_public_key or not settings.langfuse_secret_key.get_secret_value():
         return None

@@ -237,3 +237,30 @@ h3.section-label.ant-typography {
   margin: 0;
   padding-inline-start: var(--ant-padding-md);
 }
+
+/* «Внешние сервисы» (M3-CRM-12): карточки одной высоты в ряду, заголовок карточки — h3. */
+.service-card {
+  height: 100%;
+}
+h3.service-title.ant-typography {
+  margin: 0;
+  font-size: var(--ant-font-size-lg);
+  line-height: var(--ant-line-height-lg);
+}
+.service-intro.ant-typography {
+  margin: 0;
+}
+.service-meta.ant-typography {
+  font-size: var(--ant-font-size-sm);
+}
+/* Текст ошибки сервиса — длинные коды и адреса переносятся, а не растягивают экран. */
+.service-error {
+  overflow-wrap: anywhere;
+}
+.service-phone-row {
+  width: 100%;
+  min-width: 0;
+}
+.summary-tag {
+  margin-inline-end: 0;
+}

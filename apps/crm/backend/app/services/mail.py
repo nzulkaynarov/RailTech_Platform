@@ -6,6 +6,10 @@ Procrastinate (`tasks/mail.py` → `deliver()`), чтобы медленный �
 («Настройте коннектор «Почта»»). Тело письма содержит временный пароль, поэтому до отправки лежит
 в журнале только шифртекстом (`SECRETS_KEY`) и стирается после отправки или последней попытки.
 Рассылки клиентам этим сервисом не делаются (ARCHITECTURE §18).
+
+Выключатель «Почта» в центре внешних сервисов (ADR-0024) — пауза очереди: письмо остаётся в
+журнале `queued` (тело шифртекстом) и не ставится в очередь, воркер `queued` не отправляет;
+`resume_queued()` при включении ставит ожидающие письма в очередь заново.
 """
 
 from collections.abc import Awaitable, Callable, Mapping
@@ -30,6 +34,11 @@ logger = structlog.get_logger(__name__)
 MAX_ATTEMPTS: Final = 3
 LOG_LIMIT: Final = 50
 Enqueue = Callable[[int], Awaitable[object]]
+Paused = Callable[[], Awaitable[bool]]
+
+
+async def _never_paused() -> bool:
+    return False
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,6 +69,7 @@ class MailService:
         enqueue: Enqueue,
         *,
         max_attempts: int = MAX_ATTEMPTS,
+        paused: Paused = _never_paused,
     ) -> None:
         self._sessions = sessions
         self._store = store
@@ -69,6 +79,7 @@ class MailService:
         self._transport = transport
         self._enqueue = enqueue
         self._max_attempts = max_attempts
+        self._paused = paused
 
     @property
     def transport(self) -> SmtpTransport:
@@ -126,6 +137,9 @@ class MailService:
             raise ConflictError("SECRETS_KEY is not set", reason=Reason.SECRETS_KEY_MISSING)
         row.body_ciphertext = self._cipher.encrypt(rendered.body)
         view = await self._insert(row)
+        if await self._paused():
+            logger.info("email_held_paused", template=template, email_log_id=view.id)
+            return view
         try:
             await self._enqueue(view.id)
         except Exception as exc:
@@ -141,6 +155,9 @@ class MailService:
         Возвращает True, если письмо ушло; False — нечего отправлять (не `queued`).
         Исключение `SmtpProbeError` пробрасывается, пока остаются попытки.
         """
+        if await self._paused():
+            logger.info("email_delivery_paused", email_log_id=email_log_id)
+            return False
         async with self._sessions() as session:
             row = await session.get(EmailLog, email_log_id)
             if row is None or row.status != "queued":
@@ -179,6 +196,21 @@ class MailService:
         await self._finish(email_log_id, "sent", None, attempts=attempt, clear_body=True)
         logger.info("email_sent", email_log_id=email_log_id)
         return True
+
+    async def resume_queued(self) -> int:
+        """После паузы: письма `queued` с телом — снова в очередь. Возвращает их число."""
+        async with self._sessions() as session:
+            ids = (
+                await session.scalars(
+                    select(EmailLog.id)
+                    .where(EmailLog.status == "queued", EmailLog.body_ciphertext.is_not(None))
+                    .order_by(EmailLog.id)
+                )
+            ).all()
+        for email_log_id in ids:
+            await self._enqueue(email_log_id)
+        logger.info("email_queue_resumed", count=len(ids))
+        return len(ids)
 
     async def list_log(
         self, status: str | None = None, limit: int = LOG_LIMIT

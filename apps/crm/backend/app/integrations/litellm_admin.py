@@ -1,5 +1,10 @@
 """API управления моделями LiteLLM (ADR-0020): `/model/info`, `/model/new`, `/model/delete`.
 
+Центр внешних сервисов (ADR-0024, проверено на v1.105.0): `/provider/budgets` — расход и потолок
+провайдера (`provider_budget_config`); `/router/settings` и `/config/update` с
+`router_settings.model_group_alias` — перенаправление алиасов на запасную модель без перезапуска
+(значение целиком принадлежит CRM); `/model/block`/`/model/unblock` — остановка deployment из БД.
+
 Проверено на v1.104.2 (ADR-0020 «Проверка»): модели из БД прокси применяются без перезапуска,
 ключи шифруются `LITELLM_SALT_KEY` и не возвращаются `/model/info`; запись с тем же алиасом
 становится второй deployment в группе (не заменой) — поэтому замена = «создать новую, удалить
@@ -99,6 +104,29 @@ def parse_deployments(payload: Mapping[str, Any]) -> list[Deployment]:
     return out
 
 
+@dataclass(frozen=True, slots=True)
+class ProviderBudget:
+    spend: float
+    limit: float | None
+
+
+def parse_budgets(payload: Mapping[str, Any]) -> dict[str, ProviderBudget]:
+    providers = payload.get("providers")
+    out: dict[str, ProviderBudget] = {}
+    if not isinstance(providers, dict):
+        return out
+    for name, item in providers.items():
+        if not isinstance(item, dict):
+            continue
+        spend = item.get("spend")
+        limit = item.get("budget_limit")
+        out[str(name)] = ProviderBudget(
+            spend=float(spend) if isinstance(spend, int | float) else 0.0,
+            limit=float(limit) if isinstance(limit, int | float) else None,
+        )
+    return out
+
+
 class LiteLLMAdmin:
     def __init__(self, base_url: AnyHttpUrl, master_key: SecretStr, timeout_s: float = 10.0):
         self._base = str(base_url).rstrip("/")
@@ -120,6 +148,38 @@ class LiteLLMAdmin:
 
     async def delete(self, model_id: str) -> None:
         await self._call("POST", "/model/delete", {"id": model_id})
+
+    async def provider_budgets(self) -> dict[str, ProviderBudget]:
+        """Провайдер → расход и потолок за период; без `provider_budget_config` — пусто."""
+        try:
+            payload = await self._call("GET", "/provider/budgets", None)
+        except LiteLLMAdminError as exc:
+            if exc.status is not None and exc.status < 500 and exc.status not in (401, 403):
+                return {}
+            if exc.status == 500 and "provider budget config" in exc.detail.lower():
+                return {}
+            raise
+        return parse_budgets(payload)
+
+    async def router_aliases(self) -> dict[str, str]:
+        """Текущий `model_group_alias` роутера (`GET /router/settings` → `current_values`)."""
+        payload = await self._call("GET", "/router/settings", None)
+        current = payload.get("current_values")
+        aliases = current.get("model_group_alias") if isinstance(current, dict) else None
+        if not isinstance(aliases, dict):
+            return {}
+        return {str(k): str(v) for k, v in aliases.items() if isinstance(v, str)}
+
+    async def set_router_aliases(self, aliases: Mapping[str, str]) -> None:
+        """Заменить `model_group_alias` целиком; применяется сразу и хранится в БД прокси."""
+        body = {"router_settings": {"model_group_alias": dict(aliases)}}
+        await self._call("POST", "/config/update", body)
+
+    async def block(self, model_id: str) -> None:
+        await self._call("POST", "/model/block", {"model_id": model_id})
+
+    async def unblock(self, model_id: str) -> None:
+        await self._call("POST", "/model/unblock", {"model_id": model_id})
 
     async def _call(self, method: str, path: str, body: object) -> dict[str, Any]:
         headers = {"Authorization": f"Bearer {self._key.get_secret_value()}"}

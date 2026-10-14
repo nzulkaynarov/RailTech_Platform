@@ -155,6 +155,8 @@ export const labelsRu = {
     "export.leads": "Выгрузил лидов в CSV",
     "export.clients": "Выгрузил клиентов в CSV",
     "export.deals": "Выгрузил сделки в CSV",
+    "external_service.disable": "Выключил внешний сервис вручную",
+    "external_service.enable": "Включил внешний сервис",
   } as Dict,
   entity: {
     lead: "Лид",
@@ -174,6 +176,7 @@ export const labelsRu = {
     export: "Выгрузка",
     integration_secret: "Подключение",
     integration: "Подключение",
+    external_service: "Внешний сервис",
   } as Dict,
   actor: { system: "Система", bot: "Бот", user: "Сотрудник" } as Dict,
 };

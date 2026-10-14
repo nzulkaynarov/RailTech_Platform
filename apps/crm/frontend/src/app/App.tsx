@@ -28,6 +28,8 @@ import { HomeRedirect } from "./HomeRedirect";
 import { KbPage } from "../pages/kb/KbPage";
 import { SettingsPage } from "../pages/settings/SettingsPage";
 import { SystemPage } from "../pages/system/SystemPage";
+import { ExternalServiceDetailPage } from "../pages/external-services/ExternalServiceDetailPage";
+import { ExternalServicesPage } from "../pages/external-services/ExternalServicesPage";
 import { LeadDetailPage } from "../pages/lead-detail/LeadDetailPage";
 import { LeadsPage } from "../pages/leads/LeadsPage";
 import { ChangePasswordPage } from "../pages/login/ChangePasswordPage";
@@ -68,6 +70,12 @@ const resources = [
   { name: "integrations", list: "/integrations", meta: { label: t.nav.integrations } },
   { name: "models", list: "/models", meta: { label: t.nav.models } },
   { name: "system", list: "/system", meta: { label: t.nav.system } },
+  {
+    name: "external-services",
+    list: "/external-services",
+    show: "/external-services/:key",
+    meta: { label: t.nav["external-services"] },
+  },
   { name: "backups", list: "/backups", meta: { label: t.nav.backups } },
   { name: "audit", list: "/audit", meta: { label: t.nav.audit } },
   { name: "profile", list: "/profile", meta: { label: t.nav.profile } },
@@ -234,6 +242,22 @@ export function App() {
                   element={
                     <RouteGuard resource="system">
                       <SystemPage />
+                    </RouteGuard>
+                  }
+                />
+                <Route
+                  path="/external-services"
+                  element={
+                    <RouteGuard resource="external-services">
+                      <ExternalServicesPage />
+                    </RouteGuard>
+                  }
+                />
+                <Route
+                  path="/external-services/:key"
+                  element={
+                    <RouteGuard resource="external-services">
+                      <ExternalServiceDetailPage />
                     </RouteGuard>
                   }
                 />
