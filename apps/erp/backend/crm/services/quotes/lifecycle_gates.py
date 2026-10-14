@@ -17,7 +17,7 @@ resolves economics here (no test patches the render path).
 import logging
 from typing import Optional, Tuple
 
-from accounts.services.permissions import routed_seller_company_id
+from accounts.services.permissions import primary_seller_company_id
 from crm.constants import QuoteStatusCode
 
 from ._shared import _quote_owner_company_id, _quote_seller_company, resolve_quote_recipient
@@ -148,7 +148,7 @@ def resolve_submit_company(quote, actor) -> Tuple[Optional[int], Optional[str]]:
 
     - already-claimed КП → the preparer's company;
     - unclaimed buyer-request КП → the submitter MAY claim it, but ONLY if they are a
-      can_sell seller routed to THIS deal. Anchoring prepared_by before this check let any
+      member of the own company (the seller of every deal). Anchoring prepared_by before this check let any
       authenticated user (even a buyer) hijack the КП + drive its approval chain
       cross-tenant, and the write committed even on a rejected call.
 
@@ -162,7 +162,7 @@ def resolve_submit_company(quote, actor) -> Tuple[Optional[int], Optional[str]]:
         if not company_id:
             return None, "NO_QUOTE_COMPANY"
     else:
-        company_id = routed_seller_company_id(actor, quote.deal_id)
+        company_id = primary_seller_company_id(actor)
         if not company_id:
             return None, "ROLE_NOT_PERMITTED"
 

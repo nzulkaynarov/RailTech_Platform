@@ -22,40 +22,7 @@ class AiDraftThrottle(UserRateThrottle):
 
 
 class DealAiActionsMixin:
-    """AI-подбор продавцов и AI-черновик КП."""
-
-    @extend_schema(
-        summary="AI-enhance seller routing suggestions",
-        description=(
-            "R3: enqueue an AI-enhanced version of `suggested-sellers` (202 + task_id; poll "
-            "sourcing/ai-status). Free-text заявка lines the trigram matcher missed are resolved "
-            "in ONE bilingual LLM call so misspellings / synonyms / Latin script still route. "
-            "Buyer-gated and subject to the daily AI cap; the buyer still confirms the list "
-            "(AI never binds). 503 AI_DISABLED when AI is off (the sync suggested-sellers stays)."
-        ),
-        request=None,
-        responses={
-            202: OpenApiResponse(description="Enqueued — poll ai-status; result carries `sellers`"),
-            403: OpenApiResponse(description="ADMIN_VIEWER_CANNOT_ACT / ONLY_BUYER_CAN_ROUTE"),
-            429: OpenApiResponse(description="AI_DAILY_CAP_REACHED"),
-            503: OpenApiResponse(description="AI_DISABLED"),
-        },
-        tags=["CRM"],
-    )
-    @action(detail=True, methods=["post"], url_path="suggest-sellers-ai", pagination_class=None)
-    def suggest_sellers_ai(self, request, pk=None):
-        """Thin wrapper (Rule 8): enqueue the AI-enhanced seller suggestion for the buyer."""
-        from django.conf import settings
-
-        from accounts.services.permissions import is_member_of
-        from sourcing.ai_jobs import enqueue_ai_job
-
-        deal = self.get_object()
-        if not is_member_of(request.user, deal.company_id, capability="buy"):
-            return Response({"detail": "ONLY_BUYER_CAN_ROUTE"}, status=status.HTTP_403_FORBIDDEN)
-        if not getattr(settings, "AI_IMPORT_ENABLED", False):
-            return Response({"detail": "AI_DISABLED"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-        return enqueue_ai_job("suggest_sellers", {"deal_id": deal.id}, request.user)
+    """AI-черновик КП."""
 
     @extend_schema(
         summary="Generate a pre-filled draft КП from the buyer request (AI moat / speed)",
@@ -69,7 +36,7 @@ class DealAiActionsMixin:
         responses={
             202: OpenApiResponse(description="AI draft job queued, task_id returned"),
             400: OpenApiResponse(description="No request lines"),
-            403: OpenApiResponse(description="Not a routed seller"),
+            403: OpenApiResponse(description="Not own-company staff"),
             404: OpenApiResponse(description="Deal not found"),
         },
         tags=["CRM"],

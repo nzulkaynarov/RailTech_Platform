@@ -173,35 +173,6 @@ class CompanyViewSet(CompanyDocumentsMixin, CompanyTeamMixin, viewsets.ModelView
             return [permissions.IsAuthenticated()]
         return super().get_permissions()
 
-    @extend_schema(
-        summary="List suppliers (for RFQ invitations)",
-        description=(
-            "Minimal directory of active SUPPLIER companies a buyer can invite to an RFQ. "
-            "Available to any authenticated member — returns only id, name and INN, NOT the "
-            "full admin company record."
-        ),
-        responses={200: OpenApiResponse(description="List of {id, name, inn}")},
-        tags=["Accounts"],
-    )
-    @action(
-        detail=False,
-        methods=["get"],
-        url_path="suppliers",
-        permission_classes=[permissions.IsAuthenticated],
-        pagination_class=None,
-    )
-    def suppliers(self, request):
-        """Buyer-facing supplier directory for the open-RFQ invite flow.
-
-        Deliberately narrow (id/name/inn) and capped to active sellers, so the full
-        company list — protected by IsPlatformAdmin — stays admin-only. This is the same set
-        the routing suggestion uses (sourcing.services), so a suggested seller is always a
-        seller the buyer can actually see and un-check here. (KYC verification was removed
-        in M1-ERP-02 wave 1c — counterparties are created by the back office.)
-        """
-        suppliers = Company.objects.sellers().order_by("name").values("id", "name", "inn")
-        return Response(list(suppliers))
-
     def _assert_member_or_admin(self, company):
         user = self.request.user
         if user.is_superuser:

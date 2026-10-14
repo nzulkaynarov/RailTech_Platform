@@ -1,15 +1,10 @@
 """WP-1 (P0-1) — billing documents are visible to BOTH sides of a deal.
 
-Regression: a member of a SELLER company routed to a deal (DealSellerRouting) could
-not see that deal's contract / invoice / act / payment / fulfillment when the SPA
-context defaulted to BUYER (X-Active-Context: BUYER) — e.g. after landing from the
-dashboard. The billing viewsets called ``seller_visible_deal_ids(user, request)``,
-which returns None outside a SELLER context, so the seller fell into the
-buyer-own-company branch and saw zero of its routed deals' billing records.
-
-The fix UNIONS the two scopes in every billing get_queryset, independent of the
-context header, while KEEPING the seller side confined to ROUTED deals only
-(hidden competition, ADR-0003 §5): a seller never sees an unrelated buyer's docs.
+The seller of every deal is the own company (BUSINESS §3.3, M1-ERP-02 wave 3): its staff see every
+contract / invoice / act / payment / fulfillment; the buyer side (buyer accounts until M2-ERP-01)
+sees its own company's deals only; an outsider sees nothing. The original regression — a seller
+landing in the BUYER context of the SPA saw zero billing records — is gone together with the
+context header: visibility depends only on who the user is.
 """
 
 from decimal import Decimal
@@ -26,7 +21,6 @@ from crm.models import (
     Contract,
     ContractStatus,
     Deal,
-    DealSellerRouting,
     DealStage,
     Fulfillment,
     FulfillmentStatus,
@@ -89,12 +83,9 @@ def _member(company, email, *, can_sell=False, can_buy=False):
     return user
 
 
-def _api(user, ctx=None):
+def _api(user):
     client = APIClient()
-    creds = {"HTTP_AUTHORIZATION": f"Bearer {RefreshToken.for_user(user).access_token}"}
-    if ctx:
-        creds["HTTP_X_ACTIVE_CONTEXT"] = ctx
-    client.credentials(**creds)
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user).access_token}")
     return client
 
 
@@ -106,17 +97,17 @@ def _ids(resp):
 
 @pytest.fixture
 def world(lookups):
-    """A buyer, a routed seller (so it can also
-    sign), an UNRELATED seller (routed elsewhere), a platform admin, a non-member."""
+    """A buyer, own-company staff (so it can also sign), an outsider from another client company,
+    a platform admin, a non-member."""
     buyer_co = _company("Buyer Co", "B100", "CLIENT")
     buyer_user = _member(buyer_co, "buyer@bill.test", can_buy=True)
 
-    seller_co = _company("Seller Co", "S100", "SUPPLIER")
+    seller_co = _company("Own Co", "S100", "SUPPLIER")
     seller_user = _member(seller_co, "seller@bill.test", can_sell=True)
 
-    # A competing seller — a real seller (is_seller True) but NOT routed to our deal.
-    other_co = _company("Other Seller Co", "O100", "SUPPLIER")
-    other_user = _member(other_co, "other@bill.test", can_sell=True)
+    # An outsider — a member of ANOTHER client company: neither staff nor this deal's buyer.
+    other_co = _company("Other Client Co", "O100", "CLIENT")
+    other_user = _member(other_co, "other@bill.test", can_buy=True)
 
     # Platform admin: SystemRole ADMIN with NO active membership → is_superuser.
     admin_user = CustomUser.objects.create_user(
@@ -155,12 +146,10 @@ def _quote(deal):
 
 @pytest.fixture
 def billing_docs(world):
-    """A deal owned by the buyer and ROUTED to the seller, with one of every billing
-    document. Returns {doc_type: id}."""
+    """A deal owned by the buyer, with one of every billing document. Returns {doc_type: id}."""
     deal = Deal.objects.create(
         title="Billed deal", company=world["buyer_co"], stage=DealStage.objects.get(code="DRAFT")
     )
-    DealSellerRouting.objects.create(deal=deal, seller_company=world["seller_co"])
     quote = _quote(deal)
 
     contract = Contract.objects.create(
@@ -198,91 +187,73 @@ def billing_docs(world):
     }
 
 
-# ── 1. Regression: routed seller sees the contract in BUYER context ───────────
-
-
-def test_routed_seller_sees_contract_in_buyer_context_regression(world, billing_docs):
-    """The reported bug: from the dashboard the SPA context defaults to BUYER, yet a
-    routed seller must still see the deal's contract (previously it saw none)."""
-    resp = _api(world["seller_user"], "BUYER").get(_ENDPOINTS["contract"])
-    assert resp.status_code == 200
-    assert billing_docs["contract"] in _ids(resp)
-
-
-def test_routed_seller_sees_contract_in_seller_context(world, billing_docs):
-    """Control: the seller also sees it in its native SELLER context (unchanged)."""
-    resp = _api(world["seller_user"], "SELLER").get(_ENDPOINTS["contract"])
-    assert resp.status_code == 200
-    assert billing_docs["contract"] in _ids(resp)
-
-
-# ── 2. Buyer sees its own contract in either context ──────────────────────────
-
-
-def test_buyer_sees_own_contract_in_both_contexts(world, billing_docs):
-    for ctx in ("BUYER", "SELLER", None):
-        resp = _api(world["buyer_user"], ctx).get(_ENDPOINTS["contract"])
-        assert resp.status_code == 200
-        assert billing_docs["contract"] in _ids(resp), f"buyer lost own contract at ctx={ctx}"
-
-
-# ── 3 & 4. Both sides see EVERY billing doc; an unrelated seller sees none ─────
+# ── 1. Own-company staff see every billing doc; the buyer sees its own deal's ──
 
 
 @pytest.mark.parametrize("doc_type", _DOC_TYPES)
-def test_both_sides_see_billing_doc_in_both_contexts(world, billing_docs, doc_type):
-    """The core union: buyer AND routed seller see contract/invoice/payment/act/
-    fulfillment regardless of the X-Active-Context header."""
+def test_staff_and_buyer_see_billing_doc(world, billing_docs, doc_type):
     doc_id = billing_docs[doc_type]
-    url = _ENDPOINTS[doc_type]
     for viewer_key in ("seller_user", "buyer_user"):
-        for ctx in ("BUYER", "SELLER", None):
-            resp = _api(world[viewer_key], ctx).get(url)
-            assert resp.status_code == 200
-            assert doc_id in _ids(resp), f"{doc_type} not visible to {viewer_key} ctx={ctx}"
+        resp = _api(world[viewer_key]).get(_ENDPOINTS[doc_type])
+        assert resp.status_code == 200
+        assert doc_id in _ids(resp), f"{doc_type} not visible to {viewer_key}"
+
+
+def test_staff_see_billing_of_every_client(world, billing_docs):
+    """Single seller: a contract on ANOTHER client's deal is the same company's document."""
+    other_deal = Deal.objects.create(
+        title="Other client deal", company=world["other_co"], stage=DealStage.objects.get(code="DRAFT")
+    )
+    other_contract = Contract.objects.create(
+        deal=other_deal,
+        quote=_quote(other_deal),
+        number="CT-BILL-002",
+        status=ContractStatus.objects.get(code="SIGNED"),
+        total_amount=Decimal("1"),
+    )
+    staff_ids = _ids(_api(world["seller_user"]).get(_ENDPOINTS["contract"]))
+    assert {billing_docs["contract"], other_contract.id} <= staff_ids
+    # …while each buyer sees only its own company's contract.
+    assert other_contract.id not in _ids(_api(world["buyer_user"]).get(_ENDPOINTS["contract"]))
+
+
+# ── 2. An outsider sees none ──────────────────────────────────────────────────
 
 
 @pytest.mark.parametrize("doc_type", _DOC_TYPES)
-def test_unrelated_seller_never_sees_billing_doc(world, billing_docs, doc_type):
-    """Hidden competition (ADR-0003 §5): a seller NOT routed to the deal (and not a
-    member of its buyer company) sees none of its billing docs, in any context."""
-    doc_id = billing_docs[doc_type]
-    url = _ENDPOINTS[doc_type]
-    for ctx in ("BUYER", "SELLER", None):
-        resp = _api(world["other_user"], ctx).get(url)
-        assert resp.status_code == 200
-        assert doc_id not in _ids(resp), f"{doc_type} leaked to unrelated seller ctx={ctx}"
+def test_outsider_never_sees_billing_doc(world, billing_docs, doc_type):
+    """A member of another client company (not staff, not this deal's buyer) sees none."""
+    resp = _api(world["other_user"]).get(_ENDPOINTS[doc_type])
+    assert resp.status_code == 200
+    assert billing_docs[doc_type] not in _ids(resp), f"{doc_type} leaked to an outsider"
 
 
-# ── 5. Platform admin sees all; a non-member sees nothing ─────────────────────
+# ── 3. Platform admin sees all; a non-member sees nothing ─────────────────────
 
 
 def test_platform_admin_sees_all_billing_docs(world, billing_docs):
     for doc_type, url in _ENDPOINTS.items():
-        resp = _api(world["admin_user"], "BUYER").get(url)
+        resp = _api(world["admin_user"]).get(url)
         assert resp.status_code == 200
         assert billing_docs[doc_type] in _ids(resp), f"admin cannot see {doc_type}"
 
 
 def test_non_member_sees_no_billing_docs(world, billing_docs):
     for doc_type, url in _ENDPOINTS.items():
-        for ctx in ("BUYER", "SELLER", None):
-            resp = _api(world["nonmember_user"], ctx).get(url)
-            assert resp.status_code == 200
-            assert billing_docs[doc_type] not in _ids(resp), f"non-member saw {doc_type} ctx={ctx}"
+        resp = _api(world["nonmember_user"]).get(url)
+        assert resp.status_code == 200
+        assert billing_docs[doc_type] not in _ids(resp), f"non-member saw {doc_type}"
 
 
-# ── 6. E2E: routed seller signs the contract from the (BUYER-context) dashboard ─
+# ── 4. E2E: staff signs the contract from the registry and the deal closes ────
 
 
-def test_routed_seller_signs_contract_from_buyer_context_closes_deal(world):
-    """Acceptance: the seller opens «Контракты» from the dashboard (BUYER context),
-    sees the client-signed contract in the list, signs it, and the deal auto-closes
-    as CLOSED_WON (contract fully signed → _finalize_if_signed dispatch)."""
+def test_staff_signs_contract_from_registry_closes_deal(world):
+    """Acceptance: the staff member opens «Контракты», sees the client-signed contract, signs it,
+    and the deal auto-closes as CLOSED_WON (contract fully signed → _finalize_if_signed)."""
     deal = Deal.objects.create(
         title="Sign deal", company=world["buyer_co"], stage=DealStage.objects.get(code="CONTRACT_SIGNED")
     )
-    DealSellerRouting.objects.create(deal=deal, seller_company=world["seller_co"])
     quote = _quote(deal)
     quote.prepared_by = world["seller_user"]
     quote.save(update_fields=["prepared_by"])
@@ -297,13 +268,11 @@ def test_routed_seller_signs_contract_from_buyer_context_closes_deal(world):
         client_signed_at=timezone.now(),
     )
 
-    seller_client = _api(world["seller_user"], "BUYER")
-    # It must appear in the list even though the SPA context is BUYER (the regression).
+    seller_client = _api(world["seller_user"])
     listed = seller_client.get(_ENDPOINTS["contract"])
     assert listed.status_code == 200
-    assert contract.id in _ids(listed), "routed seller cannot see the contract to sign it"
+    assert contract.id in _ids(listed), "staff cannot see the contract to sign it"
 
-    # Sign as the seller-side manager (action is IsAuthenticated; service binds to routing).
     signed = seller_client.post(f"/api/v1/crm/contracts/{contract.id}/sign-manager/")
     assert signed.status_code == 200, signed.content
 
@@ -313,26 +282,19 @@ def test_routed_seller_signs_contract_from_buyer_context_closes_deal(world):
     assert deal.stage.code == "CLOSED_WON"
 
 
-# ── 7. Object-level parity: DETAIL retrieve works for a routed seller in BUYER ──
-# context too. WP-1 fixed the LIST get_queryset; the object permission
-# (core/permissions.py IsCompanyMemberOrPlatformAdmin → seller_can_access_deal) was
-# still context-gated, so GET /contracts/{id}/ and the PDF downloads 403'd off the
-# X-Active-Context header. Fixed centrally with force=True (routing boundary kept).
+# ── 5. Object-level parity: DETAIL retrieve ───────────────────────────────────
 
 
-def test_routed_seller_retrieves_contract_detail_in_buyer_context(world, billing_docs):
-    """A routed seller can OPEN (detail retrieve) the contract it sees in the list,
-    even under BUYER context — so the ContractsPage panel / PDF download don't 403."""
+def test_staff_retrieves_contract_detail(world, billing_docs):
+    """Staff can OPEN (detail retrieve) the contract it sees in the list — so the ContractsPage
+    panel / PDF download don't 403."""
     url = f"{_ENDPOINTS['contract']}{billing_docs['contract']}/"
-    resp = _api(world["seller_user"], "BUYER").get(url)
+    resp = _api(world["seller_user"]).get(url)
     assert resp.status_code == 200
     assert resp.json()["id"] == billing_docs["contract"]
 
 
-@pytest.mark.parametrize("ctx", ["BUYER", "SELLER", None])
-def test_unrelated_seller_cannot_retrieve_contract_detail(world, billing_docs, ctx):
-    """Routing boundary preserved at the object level: a seller NOT routed to the
-    deal never reaches the contract detail, in any context (403/404, never 200)."""
+def test_outsider_cannot_retrieve_contract_detail(world, billing_docs):
     url = f"{_ENDPOINTS['contract']}{billing_docs['contract']}/"
-    resp = _api(world["other_user"], ctx).get(url)
-    assert resp.status_code in (403, 404), f"unrelated seller reached contract detail ctx={ctx}"
+    resp = _api(world["other_user"]).get(url)
+    assert resp.status_code in (403, 404), "outsider reached contract detail"

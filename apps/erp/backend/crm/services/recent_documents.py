@@ -5,9 +5,8 @@ Aggregates the newest КП (Quote), контракты (Contract), инвойс�
 the SPA the «единая станция документов» feeling. Read-only.
 
 Company-scoping is IDENTICAL to each type's own ViewSet, so this feed can never surface a document
-the viewer couldn't already open — in particular the hidden-competition boundary (ADR-0003 §5) is
-preserved: a routed seller never sees a CO-ROUTED competitor's contract/invoice/act, nor another
-company's DRAFT сгенерированный документ. The scoping helpers are REUSED (not re-derived) to keep
+the viewer couldn't already open: own-company staff (the single seller) see everything, a buyer
+account only its own company's documents and never another company's DRAFT. The scoping helpers are REUSED (not re-derived) to keep
 this feed from drifting away from the canonical querysets.
 
 ВАЖНО: маршрут SPA этот фид НЕ отдаёт. Раньше в каждой строке лежало готовое поле `hash`
@@ -39,23 +38,21 @@ def _user_company_ids(user) -> list:
     return list(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
 
 
-def _is_admin(user) -> bool:
-    return bool(getattr(user, "is_superuser", False))
+def _sees_all(user) -> bool:
+    """Администратор и сотрудник компании-владельца (продавец один) видят все документы."""
+    from accounts.services.permissions import sees_all_deals
+
+    return sees_all_deals(user)
 
 
 def _recent_quotes(user, request, limit: int) -> List[dict]:
     """КП visible to the viewer — same scope as QuoteViewSet.get_queryset."""
-    from accounts.services.permissions import seller_visible_deal_ids
+    from accounts.services.permissions import sees_all_deals
     from crm.models import Quote
-    from crm.services.quotes import scope_quotes_for_viewer
 
     qs = Quote.objects.select_related("deal", "status").order_by("-created_at")
-    if not _is_admin(user):
-        visible_deal_ids = seller_visible_deal_ids(user, request)
-        if visible_deal_ids is not None:
-            qs = scope_quotes_for_viewer(qs.filter(deal_id__in=visible_deal_ids), user, request)
-        else:
-            qs = qs.filter(deal__company_id__in=_user_company_ids(user))
+    if not sees_all_deals(user):
+        qs = qs.filter(deal__company_id__in=_user_company_ids(user))
     return [
         {
             "type": "quote",
@@ -75,10 +72,8 @@ def _recent_contracts(user, request, limit: int) -> List[dict]:
     from crm.views.billing import _billing_visibility_q
 
     qs = Contract.objects.select_related("status").order_by("-created_at")
-    if not _is_admin(user):
-        qs = qs.filter(
-            _billing_visibility_q(user, request, deal_path="deal", seller_path="quote__seller_company_id")
-        ).distinct()
+    if not _sees_all(user):
+        qs = qs.filter(_billing_visibility_q(user, request, deal_path="deal")).distinct()
     return [
         {
             "type": "contract",
@@ -99,12 +94,12 @@ def _recent_invoices(user, request, limit: int) -> List[dict]:
 
     from crm.constants import InvoiceStatusCode
     from crm.models import Invoice
-    from crm.views.billing import _invoice_seller_side_q
+    from crm.views.billing import _seller_side_q
 
     qs = Invoice.objects.select_related("status").order_by("-created_at")
-    if not _is_admin(user):
+    if not _sees_all(user):
         buyer_q = Q(deal__company_id__in=_user_company_ids(user))
-        seller_side_q = _invoice_seller_side_q(user, request)
+        seller_side_q = _seller_side_q(user)
         visibility_q = buyer_q if seller_side_q is None else (buyer_q | seller_side_q)
         draft_gate = ~Q(status__code=InvoiceStatusCode.DRAFT)
         if seller_side_q is not None:
@@ -129,12 +124,8 @@ def _recent_acts(user, request, limit: int) -> List[dict]:
     from crm.views.billing import _billing_visibility_q
 
     qs = Act.objects.select_related("status").order_by("-created_at")
-    if not _is_admin(user):
-        qs = qs.filter(
-            _billing_visibility_q(
-                user, request, deal_path="deal", seller_path="invoice__contract__quote__seller_company_id"
-            )
-        ).distinct()
+    if not _sees_all(user):
+        qs = qs.filter(_billing_visibility_q(user, request, deal_path="deal")).distinct()
     return [
         {
             "type": "act",
@@ -158,7 +149,7 @@ def _recent_generated(user, request, limit: int) -> List[dict]:
     from crm.services.generated_documents import party_visible_document_q
 
     qs = GeneratedDocument.objects.select_related("status").order_by("-created_at")
-    if not _is_admin(user):
+    if not getattr(user, "is_superuser", False):  # как GeneratedDocumentViewSet: чужой DRAFT не виден и сотруднику
         qs = qs.filter(Q(company_id__in=_user_company_ids(user)) | party_visible_document_q(user)).distinct()
     return [
         {
@@ -179,12 +170,12 @@ def _recent_receipts(user, request, limit: int) -> List[dict]:
     from django.db.models import Q
 
     from crm.models import Payment
-    from crm.views.billing import _invoice_seller_side_q
+    from crm.views.billing import _seller_side_q
 
     qs = Payment.objects.exclude(receipt_number="").select_related("invoice").order_by("-created_at")
-    if not _is_admin(user):
+    if not _sees_all(user):
         buyer_q = Q(invoice__deal__company_id__in=_user_company_ids(user))
-        seller_q = _invoice_seller_side_q(user, request)
+        seller_q = _seller_side_q(user)
         if seller_q is not None:
             # Префиксуем пути Q счёта путём платежа (invoice__…).
             from crm.models import Invoice
@@ -214,9 +205,9 @@ def _recent_delivery_notes(user, request, limit: int) -> List[dict]:
     from crm.views.billing import _seller_side_q
 
     qs = Fulfillment.objects.filter(shipped_at__isnull=False).select_related("deal", "status").order_by("-shipped_at")
-    if not _is_admin(user):
+    if not _sees_all(user):
         buyer_q = Q(deal__company_id__in=_user_company_ids(user))
-        seller_q = _seller_side_q(user, request, deal_path="deal", seller_path="contract__quote__seller_company_id")
+        seller_q = _seller_side_q(user)
         qs = qs.filter(buyer_q if seller_q is None else (buyer_q | seller_q)).distinct()
     return [
         {

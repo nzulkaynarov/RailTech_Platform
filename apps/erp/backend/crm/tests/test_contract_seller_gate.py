@@ -1,8 +1,8 @@
 """Seller-side gate on contract generation — after the platform monetisation was removed.
 
-M1-ERP-02 wave 2 removed the paid-seller subscription gate (`SUBSCRIPTION_REQUIRED`): a seller
-team acts by its role and its routing to the deal, not by a paid plan. What stays: the actor
-must be on the seller side, and bound to THIS deal's routing (SEC audit #1).
+M1-ERP-02 wave 2 removed the paid-seller subscription gate (`SUBSCRIPTION_REQUIRED`); wave 3 removed
+the per-deal seller routing. What stays: the actor must be own-company staff — the seller of every
+deal (SEC audit #1: nobody else materialises or reads a contract).
 """
 
 import pytest
@@ -54,21 +54,20 @@ def test_buyer_side_member_cannot_generate_a_contract(lookups):
     assert err == "MEMBER_REQUIRED_FOR_ACTION"
 
 
-# ── SEC audit #1: routing bind — an unrouted seller can't touch the contract ──
+# ── SEC audit #1: only own-company staff touch the contract ──
 
 
 def _deal_with_quote(seller_company):
-    """A buyer deal ROUTED to seller_company, carrying a DRAFT quote."""
+    """A buyer deal carrying a DRAFT quote."""
     from decimal import Decimal
 
-    from crm.models import Deal, DealSellerRouting, DealStage, QuoteStatus
+    from crm.models import Deal, DealStage, QuoteStatus
 
     DealStage.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})
     QuoteStatus.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})
     buyer = Company.objects.create(name="Buyer sec1", inn=f"b{seller_company.id}")
     buyer.types.add(CompanyType.objects.get(code="CLIENT"))
     deal = Deal.objects.create(title="D", company=buyer, stage=DealStage.objects.get(code="DRAFT"))
-    DealSellerRouting.objects.create(deal=deal, seller_company=seller_company)
     quote = Quote.objects.create(
         deal=deal,
         version=1,
@@ -80,20 +79,20 @@ def _deal_with_quote(seller_company):
     return deal, quote
 
 
-def test_generate_contract_blocks_unrouted_seller(lookups):
-    _, routed_co = _seller_user(email="routed@gate.test")
-    _, quote = _deal_with_quote(routed_co)
-    # A different seller NOT routed to this deal must be blocked.
-    other_user, _ = _seller_user(email="other@gate.test")
+def test_generate_contract_blocks_outsider(lookups):
+    _, own_co = _seller_user(email="staff@gate.test")
+    _, quote = _deal_with_quote(own_co)
+    # A can_sell member of ANOTHER (client) company is not staff → blocked.
+    other_user, _ = _seller_user(email="other@gate.test", company_type="CLIENT")
     contract, err = crm_services.generate_contract_from_quote(quote.id, actor=other_user)
     assert contract is None
     assert err == "MEMBER_REQUIRED_FOR_ACTION"
 
 
-def test_generate_contract_allows_routed_seller_past_bind(lookups):
-    routed_user, routed_co = _seller_user(email="routed2@gate.test")
-    _, quote = _deal_with_quote(routed_co)
-    # Routed seller clears the bind → reaches the status check (DRAFT quote, not APPROVED/SENT).
-    contract, err = crm_services.generate_contract_from_quote(quote.id, actor=routed_user)
+def test_generate_contract_allows_staff_past_the_gate(lookups):
+    staff_user, own_co = _seller_user(email="staff2@gate.test")
+    _, quote = _deal_with_quote(own_co)
+    # Staff clear the gate → reach the status check (DRAFT quote, not APPROVED/SENT).
+    contract, err = crm_services.generate_contract_from_quote(quote.id, actor=staff_user)
     assert contract is None
     assert err == "CONTRACT_NEEDS_APPROVAL"

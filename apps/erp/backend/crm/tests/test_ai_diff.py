@@ -18,7 +18,7 @@ import pytest
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
 from catalog.models import Product
-from crm.models import Deal, DealSellerRouting, DealStage, Quote, QuoteItem, QuoteStatus
+from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteStatus
 from master_data.models import Currency
 
 
@@ -82,7 +82,6 @@ def _make_world():
         client=buyer,
         stage=DealStage.objects.get(code="SOURCING"),
     )
-    DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)
 
     quote = Quote.objects.create(
         deal=deal,

@@ -54,24 +54,14 @@ def generate_contract_from_quote(
 ) -> Tuple[Optional["Contract"], Optional[str]]:  # noqa: F821
     """Create a Contract tied to an approved Quote, render its PDF."""
     from accounts.services import is_seller
-    from accounts.services.permissions import seller_company_routed_to_deal
 
     from ..models import Contract
 
-    # Generating the contract (from the approved КП) is a seller-side action.
+    # Generating the contract (from the approved КП) is a seller-side action — own-company staff
+    # (superuser/internal actor=None bypass).
     if actor is not None and not (getattr(actor, "is_superuser", False) or is_seller(actor)):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
     quote = Quote.objects.select_related("deal__company", "status", "quote_currency").get(pk=quote_id)
-
-    # SEC (audit #1): bind the actor to THIS deal's routing before reading/creating the
-    # contract — like sign_contract_by_manager. Without this any subscribed seller could
-    # enumerate quote_id and read a competitor's contract (pricing/winner/bank details) or
-    # materialize one on the live deal + spam both parties. superuser/internal (actor=None)
-    # bypass; a routed seller passes.
-    if actor is not None and not (
-        getattr(actor, "is_superuser", False) or seller_company_routed_to_deal(actor, quote.deal_id)
-    ):
-        return None, "MEMBER_REQUIRED_FOR_ACTION"
 
     if not quote.status or quote.status.code not in {QuoteStatusCode.APPROVED, QuoteStatusCode.SENT}:
         return None, "CONTRACT_NEEDS_APPROVAL"
@@ -278,18 +268,23 @@ def viewer_can_sign_client(user, contract) -> bool:
 
 
 def viewer_can_sign_manager(user, contract) -> bool:
-    """Seller-side signing capability for THIS contract, bound to deal routing (a seller can only
-    sign contracts on deals routed to its company — audit H3), independent of page context. Shared
-    by sign_contract_by_manager and the serializer hint."""
-    from accounts.services import is_seller, seller_company_routed_to_deal
+    """Seller-side signing capability for THIS contract: own-company staff (the seller of every
+    deal is the own company) who either keep the legacy `can_sell` member flag or hold an explicit
+    `contract.sign` CompanyRole permission — a member with neither (e.g. can_sell switched off, no
+    role) must not sign a binding document. Independent of page context. Shared by
+    sign_contract_by_manager and the serializer hint."""
+    from accounts.services import primary_seller_company_id
 
     from ._params import has_explicit_company_role_perm
 
     if user is None or getattr(user, "is_anonymous", False):
         return False
-    seller_memberships = user.memberships.filter(is_active=True).in_seller_company().only("company_id")
-    has_sign_perm = any(has_explicit_company_role_perm(user, m.company_id, "contract.sign") for m in seller_memberships)
-    return (is_seller(user) or has_sign_perm) and seller_company_routed_to_deal(user, contract.deal_id)
+    own_company_id = primary_seller_company_id(user)
+    if own_company_id is None:
+        return False
+    if user.memberships.filter(company_id=own_company_id, is_active=True, can_sell=True).exists():
+        return True
+    return has_explicit_company_role_perm(user, own_company_id, "contract.sign")
 
 
 def _rerender_pdf_after_signature(contract) -> None:
@@ -366,9 +361,8 @@ def sign_contract_by_manager(
     from ..models import Contract
 
     contract = Contract.objects.select_for_update().select_related("deal").get(pk=contract_id)
-    # Seller-side capability via the shared predicate: (legacy is_seller OR explicit contract.sign
-    # CompanyRole) AND bound to THIS deal's routing (a seller can't sign a competitor's contract by
-    # enumerating ids — audit H3). Same source of truth as the serializer's sign hint.
+    # Seller-side capability via the shared predicate (own-company staff). Same source of truth
+    # as the serializer's sign hint.
     if not (getattr(manager_user, "is_superuser", False) or viewer_can_sign_manager(manager_user, contract)):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
     if contract.status_code not in {

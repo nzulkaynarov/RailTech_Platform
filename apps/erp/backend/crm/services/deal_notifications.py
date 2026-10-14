@@ -25,18 +25,19 @@ def buyer_team_user_ids(deal) -> List[int]:
 
 
 def seller_team_user_ids(deal) -> List[int]:
-    """Активные продающие члены компаний, которым разослана эта сделка."""
+    """Активные продающие сотрудники компании-владельца — продавца любой сделки (BUSINESS §3.3)."""
     from accounts.models import CustomUser
+    from core.tenant import own_company_id
 
-    seller_company_ids = list(deal.seller_routings.values_list("seller_company_id", flat=True))
-    if not seller_company_ids:
+    company_id = own_company_id()
+    if not company_id:
         return []
     return list(
         CustomUser.objects.filter(
             is_active=True,
             memberships__is_active=True,
             memberships__can_sell=True,
-            memberships__company_id__in=seller_company_ids,
+            memberships__company_id=company_id,
         )
         .values_list("id", flat=True)
         .distinct()

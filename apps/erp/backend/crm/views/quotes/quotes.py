@@ -83,26 +83,19 @@ class QuoteViewSet(QuoteApprovalMixin, OptimisticLockingMixin, viewsets.ModelVie
                 "items__frozen_currency",
             )
         )
-        from accounts.services.permissions import seller_visible_deal_ids
-        from crm.services.quotes import scope_quotes_for_viewer
+        from accounts.services.permissions import sees_all_deals
 
-        # Seller building КП across buyer заявки sees every quote — but only in a
-        # seller context. In BUYER context the same user is scoped to its own deals.
-        if getattr(user, "is_superuser", False):
+        # Administrator and own-company staff (the single seller) see every КП.
+        if sees_all_deals(user):
             return queryset
-        visible_deal_ids = seller_visible_deal_ids(user, self.request)
-        if visible_deal_ids is not None:
-            # Own КП only — a seller must not read a competitor's quote on a shared deal
-            # (audit H1/#2). Shared helper = the same boundary the deal-nested prefetch uses.
-            return scope_quotes_for_viewer(queryset.filter(deal_id__in=visible_deal_ids), user, self.request)
         # Buyer sees only quotes on their own company's deals.
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return queryset.filter(deal__company_id__in=user_company_ids)
 
     def perform_create(self, serializer):
-        """Building a КП is a SELLER action: only a can_sell member (or superuser)
-        may create one, and the server stamps prepared_by = the seller building it
-        (anchoring the КП-owning company + approval chain). Auto-increments version."""
+        """Building a КП is a SELLER action: only own-company staff with the pricing permission
+        (or superuser) may create one, and the server stamps prepared_by = the staff member building
+        it (anchoring the КП-owning company + approval chain). Auto-increments version."""
         from rest_framework.exceptions import PermissionDenied
 
         from accounts.services.permissions import can_edit_quote_pricing
@@ -111,18 +104,6 @@ class QuoteViewSet(QuoteApprovalMixin, OptimisticLockingMixin, viewsets.ModelVie
         if not (getattr(user, "is_superuser", False) or can_edit_quote_pricing(user)):
             raise PermissionDenied("ONLY_SELLER_CAN_BUILD_QUOTE")
         deal = serializer.validated_data.get("deal")
-        # SEC (audit #6): `deal` comes straight from the request body and bypasses the scoped
-        # get_queryset, so bind it to the seller's routing — like QuoteItem/QuoteCharge create
-        # (_assert_seller_owns_quote_deal). Without this a seller with pricing capability could
-        # POST a rogue КП onto ANY deal id (incl. a competitor's), and version=max+1 makes it the
-        # deal's active_quote → the buyer's total flips to 0 and the deal is polluted for the
-        # legitimately-routed seller. Superuser bypasses; platform-admin already refused above.
-        from accounts.services.permissions import seller_can_access_deal
-
-        if deal is not None and not (
-            getattr(user, "is_superuser", False) or seller_can_access_deal(user, self.request, deal.id)
-        ):
-            raise PermissionDenied("NO_ACCESS_TO_DEAL")
         version = (deal.quotes.aggregate(max_v=Max("version"))["max_v"] or 0) + 1 if deal else 1
         # A brand-new КП always starts the approval chain at DRAFT. Without this the
         # status FK stays NULL → QuoteApprovalChain renders no actions and the seller

@@ -77,9 +77,7 @@ def deal(buyer, seller):
     )
     # Multi-seller routing: this RFQ is routed to RailTech (the seller) — that is
     # what grants the seller team visibility now (replaces the old see-all).
-    from crm.models import DealSellerRouting
 
-    DealSellerRouting.objects.create(deal=d, seller_company=seller_co)
     return d
 
 

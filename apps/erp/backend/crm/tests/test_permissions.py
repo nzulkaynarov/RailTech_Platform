@@ -1,6 +1,6 @@
 """Tests for CRM-related permissions and access control logic."""
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from core.permissions import IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin, IsPlatformAdminOrReadOnly
 
@@ -104,7 +104,11 @@ class TestIsCompanyMemberOrPlatformAdmin:
         request = self._make_request(user)
         assert perm.has_object_permission(request, None, MagicMock()) is True
 
-    def test_company_member_allowed(self):
+    # The staff branch (`is_seller` → `core.tenant.own_company_id`) reads the DB. These are pure
+    # unit tests of the company-membership branch, so «no own company yet» is patched in and the
+    # staff branch stays inert (a mock user's memberships would otherwise answer anything).
+    @patch("core.tenant.own_company_id", return_value=None)
+    def test_company_member_allowed(self, _own_company_id):
         perm = IsCompanyMemberOrPlatformAdmin()
         company = MagicMock()
         user = MagicMock()
@@ -112,17 +116,15 @@ class TestIsCompanyMemberOrPlatformAdmin:
         user.is_superuser = False
         user.memberships.filter.return_value.exists.return_value = True
 
-        # A plain company-owning resource (has .company, NOT a routed Deal): spec the
-        # mock so hasattr(obj, "seller_routings"/"deal_id"/"quote") is False and the
-        # seller-routing branch stays inert — this test asserts the company-membership
-        # grant, not the seller path (which reaches the ORM under force=True).
+        # A plain company-owning resource: this test asserts the company-membership grant.
         obj = MagicMock(spec=["company"])
         obj.company = company
 
         request = self._make_request(user)
         assert perm.has_object_permission(request, None, obj) is True
 
-    def test_non_member_denied(self):
+    @patch("core.tenant.own_company_id", return_value=None)
+    def test_non_member_denied(self, _own_company_id):
         perm = IsCompanyMemberOrPlatformAdmin()
         company = MagicMock()
         user = MagicMock()
@@ -130,10 +132,8 @@ class TestIsCompanyMemberOrPlatformAdmin:
         user.is_superuser = False
         user.memberships.filter.return_value.exists.return_value = False
 
-        # Same spec as test_company_member_allowed: this test asserts the company-membership
-        # DENIAL, so the seller-routing branch must stay inert. Without the spec the branch
-        # runs, and whether it short-circuits depends on the exact ORM call chain inside
-        # is_seller() — which made the test pass by accident rather than by intent.
+        # Same setup as test_company_member_allowed: this test asserts the company-membership
+        # DENIAL; the staff branch is inert (no own company), so the denial is by intent.
         obj = MagicMock(spec=["company"])
         obj.company = company
 

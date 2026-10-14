@@ -3,7 +3,8 @@
 Covers: the anonymous public document view (ISSUED-only gate: 404 on DRAFT/CANCELLED, 410 on
 revoked/expired); the send-email action (ISSUED + ownership gate); the issue→counterparty
 Notification (and none on a solo deal); the widened registry queryset (buyer sees a received ISSUED
-document read-only, cannot cancel it, a competing seller never sees it); the ?deal= filter.
+document read-only, cannot cancel it, a member of another client company or an outsider never
+sees it); the ?deal= filter. The seller is the own company (single seller, M1-ERP-02 wave 3).
 
 Self-contained lookup seeding (CI runs --nomigrations)."""
 
@@ -16,7 +17,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm import services as crm_services
-from crm.models import Deal, DealSellerRouting, DealStage, DocumentTemplateKind, GeneratedDocumentStatus
+from crm.models import Deal, DealStage, DocumentTemplateKind, GeneratedDocumentStatus
 from notifications.models import Notification, NotificationType
 
 
@@ -66,18 +67,18 @@ def _template(company, user, body="<p>{{deal.title}}</p>"):
 
 @pytest.fixture
 def world(lookups):
-    """Seller (routed) issues a document on a buyer-owned deal; a competing seller is routed nowhere."""
-    seller_co = _company("Seller Co", "S1", "SUPPLIER")
+    """Own-company staff issue a document on a buyer-owned deal; a buyer of ANOTHER client company
+    has nothing to do with it."""
+    seller_co = _company("Own Co", "S1", "SUPPLIER")
     seller_user = _member(seller_co, "seller@doc.test", can_sell=True)
 
     buyer_co = _company("Buyer Co", "B1", "CLIENT")
     buyer_user = _member(buyer_co, "buyer@doc.test", can_buy=True)
 
-    other_co = _company("Other Seller", "O1", "SUPPLIER")
-    other_user = _member(other_co, "other@doc.test", can_sell=True)
+    other_co = _company("Other Client", "O1", "CLIENT")
+    other_user = _member(other_co, "other@doc.test", can_buy=True)
 
     deal = Deal.objects.create(company=buyer_co, stage=DealStage.objects.get(code="DRAFT"), title="Поставка")
-    DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)
 
     return {
         "seller_co": seller_co,
@@ -212,7 +213,6 @@ def test_issue_notifies_counterparty(world):
 def test_issue_solo_deal_notifies_nobody(world):
     """A deal with no counterparty company (solo/offline) has no one to notify."""
     solo_deal = Deal.objects.create(company=None, stage=DealStage.objects.get(code="DRAFT"), title="Solo")
-    DealSellerRouting.objects.create(deal=solo_deal, seller_company=world["seller_co"])
     _issue(world, deal=solo_deal)
     assert Notification.objects.count() == 0
 
@@ -255,7 +255,7 @@ def test_owner_document_is_owned_true(world):
     assert rows[document.id]["public_url"]
 
 
-def test_competing_seller_does_not_see(world):
+def test_buyer_of_another_company_does_not_see(world):
     document = _issue(world)
     resp = _api(world["other_user"]).get("/api/v1/crm/generated-documents/")
     assert document.id not in {row["id"] for row in resp.json()}
@@ -269,7 +269,6 @@ def test_deal_filter(world):
     other_deal = Deal.objects.create(
         company=world["buyer_co"], stage=DealStage.objects.get(code="DRAFT"), title="Другая"
     )
-    DealSellerRouting.objects.create(deal=other_deal, seller_company=world["seller_co"])
     _issue(world, deal=other_deal)
 
     resp = _api(world["seller_user"]).get(f"/api/v1/crm/generated-documents/?deal={world['deal'].id}")
@@ -281,24 +280,28 @@ def test_deal_filter(world):
 # ── F2-3 security regressions ────────────────────────────────────────────────
 
 
-def test_corouted_competitor_cannot_see_document(world):
-    """MAJOR-1: a seller co-routed to the SAME deal must NOT see a competitor's ISSUED document
-    (hidden competition, ADR-0003) — nor obtain its secret public link."""
-    from accounts.models import CompanyMember, CompanyType  # noqa: F401
+def test_outsider_cannot_see_document_nor_its_link(world):
+    """MAJOR-1: a user who is neither own-company staff nor the deal's buyer must NOT see the ISSUED
+    document — nor obtain its secret public link."""
+    outsider = CustomUser.objects.create_user(email="outsider@doc.test", username="outsider@doc.test", password="x")
 
-    competitor_co = _company("Competitor Seller", "C1", "SUPPLIER")
-    competitor_user = _member(competitor_co, "competitor@doc.test", can_sell=True)
-    DealSellerRouting.objects.create(deal=world["deal"], seller_company=competitor_co)  # same deal
-
-    document = _issue(world)  # issued by seller_co (world's seller)
-    rows = _api(competitor_user).get("/api/v1/crm/generated-documents/").json()
+    document = _issue(world)  # issued by the own company
+    rows = _api(outsider).get("/api/v1/crm/generated-documents/").json()
     ids = {row["id"] for row in rows}
-    assert document.id not in ids  # competitor cannot see it
+    assert document.id not in ids
     assert all(row.get("public_url") != document.public_url or document.public_url is None for row in rows)
 
 
+def test_staff_colleague_sees_the_issued_document(world):
+    """Single seller: a teammate of the issuer (own-company staff) sees the company's document."""
+    colleague = _member(world["seller_co"], "colleague@doc.test", can_sell=True)
+    document = _issue(world)
+    ids = {row["id"] for row in _api(colleague).get("/api/v1/crm/generated-documents/").json()}
+    assert document.id in ids
+
+
 def test_buyer_on_deal_sees_sellers_issued_document(world):
-    """Sanity companion to MAJOR-1: the BUYER (deal owner) DOES see the seller's ISSUED letter."""
+    """Sanity companion to MAJOR-1: the BUYER (deal owner) DOES see the own company's ISSUED letter."""
     document = _issue(world)
     ids = {row["id"] for row in _api(world["buyer_user"]).get("/api/v1/crm/generated-documents/").json()}
     assert document.id in ids

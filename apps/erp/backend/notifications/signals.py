@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 def notify_new_rfq_by_email(deal, user_ids, *, assigned: bool = False) -> None:
     """W1 (spec-inbound-rfq): the instant-assign-notification email — the seller must learn
     about a new заявка even OFFLINE (the in-app bell reaches only who is logged in; the B2B
-    median first response of 42h is lost exactly here). One task PER RECIPIENT — routed
-    companies are competitors, their addresses must never share one message. Enqueued
+    median first response of 42h is lost exactly here). One task PER RECIPIENT — addresses
+    never share one message. Enqueued
     on_commit (never announce a заявка a rollback would erase); a broker outage must not
     break the stage transition — log and move on."""
     from accounts.models import CustomUser
@@ -68,18 +68,19 @@ def _seller_user_ids_for_companies(company_ids) -> set:
     )
 
 
-def _routed_seller_user_ids(deal) -> set:
-    """Active can_sell members of the seller companies this deal was ROUTED to (DealSellerRouting)."""
-    return _seller_user_ids_for_companies(deal.seller_routings.values_list("seller_company_id", flat=True))
+def _own_staff_user_ids() -> set:
+    """Active can_sell staff of the own company — the seller of every deal (BUSINESS §3.3)."""
+    from core.tenant import own_company_id
+
+    company_id = own_company_id()
+    return _seller_user_ids_for_companies([company_id] if company_id else [])
 
 
 def _notify_seller_team(deal, info_type):
-    """Alert ONLY the seller teams this заявка was ROUTED to (DealSellerRouting), deep-linking to
-    the specific deal — not a fan-out to the whole seller pool (ADR-0006 Move 2). Fires on the
-    RFQ_OPEN transition, by which point routing is set. A заявка lands in the routed company's
-    shared work-queue; a member then CLAIMS it (crm.services.assignment) — that's the targeted,
-    quiet, scalable signal, replacing the noisy whole-pool blast that linked to a generic list."""
-    seller_user_ids = _routed_seller_user_ids(deal)
+    """Alert the back-office team about a new заявка, deep-linking to the specific deal (ADR-0006
+    Move 2). Fires on the RFQ_OPEN transition. The заявка lands in the team's shared work-queue; a
+    member then CLAIMS it (crm.services.assignment)."""
+    seller_user_ids = _own_staff_user_ids()
     if not seller_user_ids:
         return
     company_name = deal.company.name if deal.company else ""

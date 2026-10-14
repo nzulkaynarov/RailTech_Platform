@@ -1,5 +1,5 @@
-"""Client base (Phase 1+2): seller-created offline clients — Company(is_registered=False)
-+ primary Contact, scoped to the seller's OWN book (not global). See clients.py."""
+"""Client base (Phase 1+2): staff-created offline clients — Company(is_registered=False)
++ primary Contact, in the own company's book (the team's book; not global). See clients.py."""
 
 import pytest
 from django.core.exceptions import ValidationError
@@ -58,20 +58,35 @@ def test_dedupes_within_own_book_by_inn_and_email(seller):
 
 
 @pytest.mark.django_db
-def test_other_seller_does_not_see_or_reuse_first_sellers_client(seller):
-    """Confidentiality + per-book scoping: a different seller creating the same INN gets
-    a SEPARATE record (cross-tenant dups are allowed)."""
+def test_teammate_reuses_the_teams_client_and_outsider_is_refused(seller):
+    """The book belongs to the own company: a colleague creating the same INN reuses the SAME
+    record (search-before-create within the team's book); a non-staff user cannot create clients."""
     r1, _ = create_offline_client(
         seller=seller, company_name="Shared RealCo", contact_name="A", email="a@s.test", inn="305999000"
     )
-    seller_b = _make_seller("rep@sellerB.test", "700000002")
-    r2, _ = create_offline_client(
-        seller=seller_b, company_name="Shared RealCo", contact_name="B", email="b@s.test", inn="305999000"
+    own = seller.memberships.get().company
+    teammate = CustomUser.objects.create_user(email="mate@sellerA.test", username="mate@sellerA.test", password="pw")
+    CompanyMember.objects.create(
+        user=teammate, company=own, role=WorkspaceRole.objects.get(code="OWNER"), is_active=True, can_sell=True
     )
-    assert r1["company"].id != r2["company"].id  # separate private records
+    r2, _ = create_offline_client(
+        seller=teammate, company_name="Shared RealCo", contact_name="B", email="b@s.test", inn="305999000"
+    )
+    assert r1["company"].id == r2["company"].id  # one team book, no duplicate
     assert seller_clients(seller).count() == 1
-    assert seller_clients(seller_b).count() == 1
-    assert r2["company"] not in seller_clients(seller)  # B's client invisible to A
+    assert seller_clients(teammate).count() == 1
+
+    outsider_co = Company.objects.create(name="Outsider", inn="700000002")
+    outsider_co.types.add(CompanyType.objects.get(code="CLIENT"))
+    outsider = CustomUser.objects.create_user(email="rep@other.test", username="rep@other.test", password="pw")
+    CompanyMember.objects.create(
+        user=outsider, company=outsider_co, role=WorkspaceRole.objects.get(code="OWNER"), is_active=True, can_sell=True
+    )
+    result, err = create_offline_client(
+        seller=outsider, company_name="Shared RealCo", contact_name="C", email="c@s.test", inn="305999000"
+    )
+    assert result is None and err == "ONLY_SELLER_CAN_CREATE_CLIENTS"
+    assert seller_clients(outsider).count() == 0  # the team's client is invisible to an outsider
 
 
 @pytest.mark.django_db

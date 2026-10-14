@@ -143,28 +143,13 @@ class IsCompanyMemberOrPlatformAdmin(BasePermission):
         if user.is_superuser:
             return True
 
-        # Seller team (can_sell): a seller may act on a CRM object IFF its deal is
-        # ROUTED to one of their seller companies (multi-seller confidentiality —
-        # replaces the old see-all where any seller could read any buyer's
-        # deal/quote/chat). If not routed, fall through to the buyer-membership
-        # check, so a dual seller+buyer can still reach their own buyer company's
-        # objects while purchasing.
-        # force=True: object access is context-INDEPENDENT (mirrors WP-1's list scope
-        # for billing docs) — a routed seller who landed in the BUYER context must be
-        # able to open/download the contract it can already see in the list. Routing
-        # boundary preserved, so this never widens access to an unrelated deal.
-        from accounts.services.permissions import is_seller, seller_can_access_deal
+        # Staff of the own company — the seller of every deal (BUSINESS §3.3) — may reach any
+        # CRM object; what they may DO is decided by role permissions in the services. Everyone
+        # else (buyer accounts until M2-ERP-01) falls through to the company-membership check.
+        from accounts.services.permissions import is_seller
 
         if is_seller(user):
-            deal_id = None
-            if hasattr(obj, "seller_routings"):  # obj is a Deal
-                deal_id = obj.pk
-            elif hasattr(obj, "deal_id"):  # Quote / Invoice / Contract / Act
-                deal_id = obj.deal_id
-            elif hasattr(obj, "quote"):  # QuoteItem
-                deal_id = obj.quote.deal_id
-            if deal_id is not None and seller_can_access_deal(user, request, deal_id, force=True):
-                return True
+            return True
 
         target_company = None
         if hasattr(obj, "company"):

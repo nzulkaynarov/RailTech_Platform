@@ -5,9 +5,12 @@ SPA выводила роль из `activeStatus` — это ПЕРВЫЙ тип
 `!isBuyer` и не показывалась никогда, хотя бэкенд действие разрешал. Образец правильного
 решения уже был рядом — `viewer_can_sign_client/manager` у договора.
 
+С M1-ERP-02 волна 3 сторона продавца — это сотрудник своей компании (продавец один), сторона
+покупателя — участник компании-клиента сделки; заголовка контекста SPA больше нет.
+
 Здесь проверяется, что подсказки:
-  * приходят по КАЖДОЙ стороне независимо (dual-компания получает обе);
-  * не зависят от заголовка активного контекста SPA;
+  * приходят по КАЖДОЙ стороне независимо (сотрудник, который одновременно участник
+    компании-клиента сделки, получает обе);
   * учитывают статус документа (по оплаченному счёту платить не предлагают);
   * не стоят по запросу на строку (N+1 на реестре).
 """
@@ -25,7 +28,6 @@ from crm.models import (
     Contract,
     ContractStatus,
     Deal,
-    DealSellerRouting,
     DealStage,
     Fulfillment,
     FulfillmentStatus,
@@ -82,12 +84,9 @@ def _member(company, email, *, can_sell=False, can_buy=False):
     return user
 
 
-def _api(user, ctx=None):
+def _api(user):
     client = APIClient()
-    creds = {"HTTP_AUTHORIZATION": f"Bearer {RefreshToken.for_user(user).access_token}"}
-    if ctx:
-        creds["HTTP_X_ACTIVE_CONTEXT"] = ctx
-    client.credentials(**creds)
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user).access_token}")
     return client
 
 
@@ -97,9 +96,8 @@ def _rows(resp):
 
 
 def _make_chain(buyer_co, seller_co, *, invoice_status="ISSUED", title="Deal"):
-    """Сделка покупателя buyer_co, разосланная seller_co, с подписанным договором и счётом."""
+    """Сделка покупателя buyer_co с КП продавца seller_co, подписанным договором и счётом."""
     deal = Deal.objects.create(title=title, company=buyer_co, stage=DealStage.objects.get(code="CLOSED_WON"))
-    DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)
     quote = Quote.objects.create(
         deal=deal,
         version=1,
@@ -137,7 +135,7 @@ def dual_company_world(lookups):
     dual_co = _company("Dual Trading", "D900", "CLIENT", "SUPPLIER")
     dual_user = _member(dual_co, "dual@sides.test", can_sell=True, can_buy=True)
 
-    # Сделка, где dual-компания ПОКУПАЕТ (владелец сделки) и сама же разослана как продавец.
+    # Сделка, где dual-компания — и клиент (владелец сделки), и продавец (своя компания ERP).
     chain = _make_chain(dual_co, dual_co, title="Dual own deal")
     return {"user": dual_user, "company": dual_co, **chain}
 
@@ -150,15 +148,6 @@ def test_dual_company_gets_both_sides_on_an_invoice(dual_company_world):
 
     assert row["viewer_can_manage"] is True, "продавцовская половина потеряна — это и был баг"
     assert row["viewer_can_pay"] is True, "покупательская половина потеряна"
-
-
-@pytest.mark.parametrize("ctx", ["BUYER", "SELLER", None])
-def test_side_hints_ignore_the_active_context_header(dual_company_world, ctx):
-    """Подсказка описывает отношение к сделке, а не то, на какой вкладке пользователь."""
-    resp = _api(dual_company_world["user"], ctx).get(INVOICES_URL)
-    row = next(r for r in _rows(resp) if r["id"] == dual_company_world["invoice"].id)
-    assert row["viewer_can_manage"] is True, f"ctx={ctx} повлиял на сторону"
-    assert row["viewer_can_pay"] is True, f"ctx={ctx} повлиял на сторону"
 
 
 def test_pure_buyer_is_not_offered_seller_actions(lookups):
@@ -194,7 +183,7 @@ def test_fulfillment_sides_split_ship_and_accept(lookups):
         deal=chain["deal"], contract=chain["contract"], status=FulfillmentStatus.objects.get(code="DELIVERED")
     )
 
-    seller_row = _rows(_api(seller_user, "SELLER").get(FULFILLMENTS_URL))[0]
+    seller_row = _rows(_api(seller_user).get(FULFILLMENTS_URL))[0]
     assert seller_row["viewer_can_ship"] is True
     assert seller_row["viewer_can_accept"] is False
 

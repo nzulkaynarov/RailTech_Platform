@@ -38,7 +38,6 @@ def log_admin_action(
     company_id: Optional[int] = None,
     contact_id: Optional[int] = None,
     deal_id: Optional[int] = None,
-    seller_company_id: Optional[int] = None,
     event_code: str = "",
     event_params: Optional[dict[str, Any]] = None,
 ):
@@ -60,15 +59,6 @@ def log_admin_action(
     """
     from crm.models import ActivityLog
 
-    # SEC (audit #4): tag the seller lane so the «История» feed scopes per-lane. If not given
-    # explicitly, derive it from a seller actor's routed company on this deal — a buyer/system
-    # actor stays NULL (deal-level event, visible to all parties). One place auto-tags every
-    # seller-authored deal event (КП sent/accepted, stage, chat) without touching each caller.
-    if seller_company_id is None and deal_id and actor is not None:
-        from accounts.services.permissions import routed_seller_company_id
-
-        seller_company_id = routed_seller_company_id(actor, deal_id)
-
     return ActivityLog.objects.create(
         action=action[:255],
         detail=detail,
@@ -85,7 +75,6 @@ def log_admin_action(
         company_id=company_id,
         contact_id=contact_id,
         deal_id=deal_id,
-        seller_company_id=seller_company_id,
     )
 
 

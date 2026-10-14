@@ -1,6 +1,6 @@
 """Contract sign-side hints (review MEDIUM fix): the viewer's signable side is derived from their
-relationship to the contract's deal — NOT the SPA page context. A dual buy+sell company gets the
-correct button regardless of the context it landed in, and the hint never drifts from what
+relationship to the contract's deal — NOT the SPA page context: the buyer side signs as client,
+own-company staff (the single seller) sign as manager, and the hint never drifts from what
 sign_contract_by_* actually authorizes (shared predicates)."""
 
 from decimal import Decimal
@@ -8,7 +8,7 @@ from decimal import Decimal
 import pytest
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
-from crm.models import Contract, ContractStatus, Deal, DealSellerRouting, DealStage, Quote, QuoteStatus
+from crm.models import Contract, ContractStatus, Deal, DealStage, Quote, QuoteStatus
 from crm.services.contracts import viewer_can_sign_client, viewer_can_sign_manager
 
 pytestmark = pytest.mark.django_db
@@ -25,7 +25,7 @@ def contract_world(db):
 
     buyer = Company.objects.create(name="Buyer LLC", inn="6600000001")
     buyer.types.add(CompanyType.objects.get(code="CLIENT"))
-    seller = Company.objects.create(name="Seller LLC", inn="3000000001")
+    seller = Company.objects.create(name="Own LLC", inn="3000000001")
     seller.types.add(CompanyType.objects.get(code="SUPPLIER"))
 
     def member(co, email, **caps):
@@ -39,7 +39,6 @@ def contract_world(db):
     seller_user = member(seller, "s@t.test", can_sell=True)
 
     deal = Deal.objects.create(title="D", company=buyer, stage=DealStage.objects.get(code="CONTRACT_SIGNED"))
-    DealSellerRouting.objects.create(deal=deal, seller_company=seller)
     quote = Quote.objects.create(
         deal=deal,
         version=1,
@@ -61,7 +60,7 @@ def test_buyer_can_sign_client_not_manager(contract_world):
     assert viewer_can_sign_manager(u, c) is False
 
 
-def test_routed_seller_can_sign_manager_not_client(contract_world):
+def test_staff_can_sign_manager_not_client(contract_world):
     u, c = contract_world["seller_user"], contract_world["contract"]
     assert viewer_can_sign_manager(u, c) is True
     assert viewer_can_sign_client(u, c) is False
@@ -74,10 +73,11 @@ def test_unrelated_user_signs_neither_side(contract_world):
     assert viewer_can_sign_manager(stranger, c) is False
 
 
-def test_seller_not_routed_to_deal_cannot_sign_manager(contract_world):
-    """Routing binding (audit H3): a seller on ANOTHER deal cannot sign this contract."""
-    other = Company.objects.create(name="Other Seller", inn="3000000009")
-    other.types.add(CompanyType.objects.get(code="SUPPLIER"))
+def test_outsider_with_sell_flag_cannot_sign_manager(contract_world):
+    """Audit H3: a can_sell member of ANOTHER company (not own-company staff) cannot sign the
+    seller side of this contract — the side is staff of the own company, not the membership flag."""
+    other = Company.objects.create(name="Other Client", inn="3000000009")
+    other.types.add(CompanyType.objects.get(code="CLIENT"))
     other_user = CustomUser.objects.create_user(email="o@t.test", username="o@t.test", password="pw")
     CompanyMember.objects.create(
         user=other_user, company=other, role=WorkspaceRole.objects.get(code="OWNER"), is_active=True, can_sell=True
@@ -90,8 +90,8 @@ def test_serializer_exposes_side_independent_of_context(contract_world):
 
     from crm.serializers import ContractSerializer
 
-    # Seller viewing in the (wrong) BUYER page context still gets the manager-sign hint.
-    request = APIRequestFactory().get("/", HTTP_X_ACTIVE_CONTEXT="BUYER")
+    # Own-company staff get the manager-sign hint — the side is computed by the server.
+    request = APIRequestFactory().get("/")
     request.user = contract_world["seller_user"]
     data = ContractSerializer(contract_world["contract"], context={"request": request}).data
     assert data["viewer_can_sign_manager"] is True

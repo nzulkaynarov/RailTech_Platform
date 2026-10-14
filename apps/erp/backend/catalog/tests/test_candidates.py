@@ -16,7 +16,7 @@ import pytest
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
 from catalog.candidates import capture_quote_lines, ensure_candidate_for_line, find_existing_card
 from catalog.models import Product, ProductStatus
-from crm.models import Deal, DealSellerRouting, DealStage, Quote, QuoteItem, QuoteStatus
+from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteStatus
 
 pytestmark = pytest.mark.django_db
 
@@ -38,7 +38,6 @@ def world(db):
         user=user, company=seller, role=WorkspaceRole.objects.get(code="OWNER"), is_active=True, is_primary=True
     )
     deal = Deal.objects.create(title="Заявка N", company=buyer, stage=DealStage.objects.get(code="RFQ_OPEN"))
-    DealSellerRouting.objects.create(deal=deal, seller_company=seller)
     quote = Quote.objects.create(
         deal=deal,
         version=1,

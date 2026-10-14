@@ -27,13 +27,11 @@ _PENNY = Decimal("0.01")
 
 def _seller_gate_for_deal(actor, deal_id) -> Optional[str]:
     """Seller-side gate for creating a manual invoice on a deal (no invoice exists yet, so the
-    invoice-scoped ``_assert_seller_may_act_on_invoice`` can't be reused): seller-role and
-    routing-scope to THIS deal. Returns an error code or None."""
-    from accounts.services import is_seller, seller_company_routed_to_deal
+    invoice-scoped ``_assert_seller_may_act_on_invoice`` can't be reused): own-company staff.
+    Returns an error code or None."""
+    from accounts.services import is_seller
 
     if not (getattr(actor, "is_superuser", False) or is_seller(actor)):
-        return "MEMBER_REQUIRED_FOR_ACTION"
-    if not getattr(actor, "is_superuser", False) and not seller_company_routed_to_deal(actor, deal_id):
         return "MEMBER_REQUIRED_FOR_ACTION"
     return None
 
@@ -76,7 +74,7 @@ def create_manual_invoice(
 
     from django.utils import timezone
 
-    from accounts.services.permissions import routed_seller_company_id
+    from core.tenant import own_company_id
 
     from ..models import Deal, Invoice, InvoiceItem, Quote
     from .billing import _istatus, _next_invoice_number
@@ -101,30 +99,20 @@ def create_manual_invoice(
         if source_quote is None:
             return None, "NOT_FOUND"
         # The КП must belong to THIS deal (a seller can't pull a foreign deal's КП onto this
-        # invoice — the routing gate above already bound the actor to `deal_id`).
+        # invoice).
         if source_quote.deal_id != deal.id:
             return None, "QUOTE_DEAL_MISMATCH"
 
     if source_quote is None and not manual_lines:
         return None, "INVOICE_NO_LINES"
 
-    # Confidentiality (ADR-0003 hidden competition): a PURE-manual invoice (no source КП) has no
-    # owner anchor, so on a MULTI-seller-routed deal it would fall to the routed-deal visibility
-    # and a co-routed competitor could see it. A multi-seller deal always has a КП (that is how a
-    # seller got routed), so require one there — ownership then resolves through the КП and the
-    # invoice is competitor-hidden like any other. Single-seller deals: a pure-manual счёт is fine.
-    if source_quote is None:
-        routed_seller_count = deal.seller_routings.values("seller_company_id").distinct().count()
-        if routed_seller_count > 1:
-            return None, "MANUAL_INVOICE_REQUIRES_QUOTE_MULTISELLER"
-
     # Presentation currency = the КП's quote_currency (UZS by rule); NULL for a pure-manual счёт
     # (PDF/serializer fall back to UZS). NEVER a line's frozen COST currency (the B1 bug).
     currency = source_quote.quote_currency if source_quote else None
     vat_rate = (source_quote.vat_rate if source_quote else Decimal("0")) / Decimal("100")
 
-    # Seller company = the actor's routing target for this deal → its number prefix + counter.
-    seller_company_id = routed_seller_company_id(actor, deal_id)
+    # Seller company = the own company (the seller of every deal) → its number prefix + counter.
+    seller_company_id = own_company_id()
     from accounts.models import Company
 
     seller_company = Company.objects.filter(pk=seller_company_id).first() if seller_company_id else None

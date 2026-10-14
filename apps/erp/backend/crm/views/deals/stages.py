@@ -8,14 +8,6 @@ from rest_framework.response import Response
 
 from crm.models import DealStage
 
-# Экшены, открывающие ОДНУ конкретную сделку (read-only). Видимость у них шире списочной:
-# продавец вправе открыть сделку, где он покупатель, и наоборот. Раньше это условие было
-# записано литералом `self.action == "retrieve"` в двух местах get_queryset, поэтому КАЖДЫЙ
-# новый detail-экшен молча получал списочный скоуп и отдавал 404 там, где retrieve отдаёт 200.
-# Набор намеренно ограничен читающими экшенами: расширять скоуп пишущим — менять границу
-# безопасности.
-SINGLE_DEAL_READ_ACTIONS = frozenset({"retrieve", "documents"})
-
 
 class DealStageLookupSerializer(drf_serializers.Serializer):
     """Response shape for the DealStage lookup feed ({code, name})."""

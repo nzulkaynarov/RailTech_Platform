@@ -1,15 +1,13 @@
 """КП visibility, permission gates and public-link reachability.
 
 Read-side / gate helpers split out of the monolithic ``crm/services/quotes.py``
-(ARCH refactor) — behaviour unchanged: the hidden-competition queryset scope, the
-company-defaults pre-fill, the send-permission gate, the approval-queue query and the
-public no-login link gate. Depends only on the leaf ``_shared`` helpers.
+(ARCH refactor): the company-defaults pre-fill, the send-permission gate, the approval-queue
+query and the public no-login link gate. (Every КП belongs to the own company, so there is no
+per-seller visibility scope — removed in M1-ERP-02 wave 3.) Depends only on the leaf ``_shared`` helpers.
 """
 
 from decimal import Decimal
 from typing import Optional
-
-from django.db import models
 
 from accounts.constants import WorkspaceRoleCode
 from accounts.models import Company
@@ -18,29 +16,6 @@ from crm.models import Quote
 from crm.services._params import has_explicit_company_role_perm
 
 from ._shared import _quote_owner_company_id
-
-
-def scope_quotes_for_viewer(quotes_qs, user, request):
-    """Restrict a Quote queryset to what the viewer may see — the SINGLE source of the
-    hidden-competition boundary (audit #2). A seller acting in a seller context sees only
-    quotes prepared by their OWN seller companies (or unassigned drafts); a platform admin
-    and a buyer in own-deal context see all. Used by BOTH QuoteViewSet.get_queryset AND the
-    deal-nested `quotes`/`active_quote` prefetch (DealViewSet), so the two surfaces cannot
-    diverge and leak a competitor's КП (prices/totals/margin/PDF) on a multi-seller deal."""
-    from accounts.services.permissions import seller_acting_company_ids, seller_visible_deal_ids
-
-    if getattr(user, "is_superuser", False):
-        return quotes_qs
-    if seller_visible_deal_ids(user, request) is not None:
-        seller_ids = seller_acting_company_ids(user, request) or set()
-        return quotes_qs.filter(
-            models.Q(
-                prepared_by__memberships__company_id__in=seller_ids,
-                prepared_by__memberships__is_active=True,
-            )
-            | models.Q(prepared_by__isnull=True)
-        ).distinct()
-    return quotes_qs
 
 
 def apply_company_quote_defaults(quote: Quote, company: Optional[Company]) -> Quote:
@@ -227,9 +202,8 @@ def can_duplicate_quote(actor, quote) -> bool:
     Duplicating BUILDS a new draft КП, so it is gated exactly like building — the superuser
     (platform escalation), or a member of the КП-owning company (the preparer's seller company)
     holding the ``quote.build`` CompanyRole permission. ``member_has_permission`` scopes to that
-    owning company, which is BOTH the routing bind and the IDOR guard: a foreign seller (member
-    of a different company, even one co-routed to the same deal) is not a member of the owning
-    company → denied. A platform-admin VIEWER (SystemRole.ADMIN, no membership) is likewise
+    owning company, which is the IDOR guard: a member of a different company is not a member of
+    the owning company → denied. A platform-admin VIEWER (SystemRole.ADMIN, no membership) is likewise
     denied — creating a КП is a business action they must not perform (ADMIN_VIEWER_CANNOT_ACT).
     """
     from accounts.services.permissions import member_has_permission
