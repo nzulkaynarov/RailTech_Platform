@@ -43,7 +43,7 @@ def _api(user):
 
 
 @pytest.fixture
-def world(db):
+def world(db, grant):
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     for code, name in (("CLIENT", "Client"), ("SUPPLIER", "Supplier")):
         CompanyType.objects.get_or_create(code=code, defaults={"name": name, "sort_order": 10})
@@ -69,6 +69,7 @@ def world(db):
     buyer_user = member(buyer_co, "buyer@a4.test", can_buy=True, can_sell=False)
     seller_co = company("Seller A4", "S400", "SUPPLIER")
     seller_user = member(seller_co, "seller@a4.test", can_sell=True, can_buy=False)
+    grant(seller_user, "fulfillment.act")
 
     deal = Deal.objects.create(title="A4 deal", company=buyer_co, stage=DealStage.objects.get(code="CLOSED_WON"))
     quote = Quote.objects.create(
@@ -144,11 +145,12 @@ def test_reminder_is_allowed_again_after_the_cooldown(world):
 
 
 def test_customer_cannot_remind_itself(world):
-    """Напоминает тот, кто ЖДЁТ ответа. Заказчику напоминать некому — ход его собственный."""
+    """Напоминает тот, кто ЖДЁТ ответа. Заказчику напоминать некому — ход его собственный.
+    M1-ERP-05: напоминание — право бэк-офиса `fulfillment.act`, покупатель отсекается гейтом."""
     resp = _api(world["buyer_user"]).post(f"/api/v1/crm/acts/{world['act'].id}/remind/")
 
-    assert resp.status_code == 400
-    assert resp.json()["detail"] == "ACT_ISSUER_SIDE_REQUIRED"
+    assert resp.status_code == 403
+    assert resp.json()["detail"] == "ROLE_NOT_PERMITTED"
 
 
 def test_no_reminder_for_a_settled_act(world):
@@ -203,8 +205,9 @@ def test_customer_cannot_cancel_the_act(world):
         f"/api/v1/crm/acts/{world['act'].id}/cancel/", {"reason": "не хочу"}, format="json"
     )
 
-    assert resp.status_code == 400
-    assert resp.json()["detail"] == "ACT_ISSUER_SIDE_REQUIRED"
+    # M1-ERP-05: аннулирование — право бэк-офиса `fulfillment.act`; покупателя отсекает гейт.
+    assert resp.status_code == 403
+    assert resp.json()["detail"] == "ROLE_NOT_PERMITTED"
 
 
 def test_a_settled_act_cannot_be_cancelled(world):

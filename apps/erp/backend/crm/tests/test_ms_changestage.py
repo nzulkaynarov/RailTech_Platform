@@ -24,13 +24,13 @@ def lookups(db):
         DealStage.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
 
 
-def _member(company, email, *, company_role=None, can_sell=False, can_buy=False):
+def _member(company, email, *, company_roles=(), can_sell=False, can_buy=False):
     user = CustomUser.objects.create_user(email=email, username=email, password="x")
     CompanyMember.objects.create(
         user=user,
         company=company,
         role=WorkspaceRole.objects.get(code="OWNER"),
-        company_role=company_role,
+        company_roles=list(company_roles),
         is_active=True,
         is_primary=True,
         can_sell=can_sell,
@@ -54,9 +54,10 @@ def world(lookups):
     other_co = Company.objects.create(name="Other Client", inn="C200")
     other_co.types.add(CompanyType.objects.get(code="CLIENT"))
     viewer_role = CompanyRole.objects.create(company=own, name="Наблюдатель", permissions=[])
+    manager_role = CompanyRole.objects.create(company=own, name="Сделки", permissions=["deal.manage"])
     return dict(
-        staff=_member(own, "sa@cs.test", can_sell=True),  # legacy OWNER → every permission
-        observer=_member(own, "obs@cs.test", company_role=viewer_role, can_sell=True),
+        staff=_member(own, "sa@cs.test", company_roles=[manager_role], can_sell=True),
+        observer=_member(own, "obs@cs.test", company_roles=[viewer_role], can_sell=True),
         outsider=_member(other_co, "out@cs.test", can_sell=True),
         buyer_co=buyer_co,
     )
@@ -86,7 +87,7 @@ def test_change_stage_gates_staff_but_not_buyer(world):
 
 @pytest.mark.django_db
 def test_staff_with_permission_may_decline_the_deal(world):
-    """No «shared deal» any more: staff holding quote.build closes the deal as lost."""
+    """No «shared deal» any more: staff holding deal.manage closes the deal as lost."""
     deal = Deal.objects.create(title="RFQ", company=world["buyer_co"], stage=DealStage.objects.get(code="RFQ_OPEN"))
     r = _change_stage(world["staff"], deal, "CLOSED_LOST")
     assert r.status_code == 200, r.content

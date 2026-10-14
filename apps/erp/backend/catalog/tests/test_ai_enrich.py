@@ -10,12 +10,12 @@ from types import SimpleNamespace
 import pytest
 from rest_framework.test import APIClient
 
-from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
+from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, CustomUser, WorkspaceRole
 
 
 def _seller_user(email):
-    """A can_sell OWNER of a SUPPLIER company — passes the catalog.manage role gate (legacy OWNER
-    fallback), so enrich reaches the enqueue."""
+    """Сотрудник своей компании с ролью, дающей `catalog.manage` (M1-ERP-05) — проходит гейт,
+    и обогащение доходит до постановки в очередь."""
     supplier_type = CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 10})[
         0
     ]
@@ -23,7 +23,10 @@ def _seller_user(email):
     company = Company.objects.create(name="Enrich Seller", inn="7100000001")
     company.types.add(supplier_type)
     user = CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
-    CompanyMember.objects.create(user=user, company=company, role=owner_role, is_active=True, can_sell=True)
+    role = CompanyRole.objects.create(company=company, name="Каталог", permissions=["catalog.manage"])
+    CompanyMember.objects.create(
+        user=user, company=company, role=owner_role, is_active=True, can_sell=True, company_roles=[role]
+    )
     return user
 
 

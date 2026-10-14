@@ -1,8 +1,8 @@
 """Оплату фиксирует бэк-офис (M1-ERP-02 волна 3, поручение координатора).
 
 Продавец любой сделки — своя компания (BUSINESS §3.3), поэтому входящий платёж по счёту клиенту
-проводит её сотрудник с правом финансов `payment.record` — явным правом роли (fail-closed, как у
-`quote.send` / `contract.sign`: флаг участника `can_buy` по умолчанию True и права не даёт).
+проводит её сотрудник с правом роли `finance.payment` (M1-ERP-05; флаг участника `can_buy` права
+сотруднику не даёт).
 Покупательская ветка (участник компании-клиента с `can_buy`) остаётся для портала до M2-ERP-01.
 
 Матрица на эндпоинте `POST /crm/invoices/{id}/record-payment/`:
@@ -44,7 +44,7 @@ def world(db):
             user=user,
             company=company_obj,
             role=WorkspaceRole.objects.get(code="MEMBER"),
-            company_role=role,
+            company_roles=[role],
             is_active=True,
             is_primary=True,
         )
@@ -76,7 +76,7 @@ def world(db):
     invoice.save(update_fields=["status"])
     return {
         "invoice": invoice,
-        "finance": member(own, "finance@own.test", ["payment.record"]),
+        "finance": member(own, "finance@own.test", ["finance.payment"]),
         "sales": member(own, "sales@own.test", ["quote.build", "quote.send"]),
         "stranger": member(stranger_co, "stranger@other.test", ["payment.record"]),
     }

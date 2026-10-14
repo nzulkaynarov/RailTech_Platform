@@ -149,10 +149,10 @@ def test_assign_writes_event_code_and_assignee(rfq_lookups):
     seller_company = _make_company("Seller Co", "SUPPLIER")
     deal = Deal.objects.create(title="RFQ", company=buyer_company, stage=DealStage.objects.get(code="RFQ_OPEN"))
 
-    # Admin with team.manage on the seller company assigns to a teammate.
-    admin_role = CompanyRole.objects.create(company=seller_company, name="Admin", permissions=["team.manage"])
+    # Staff member with deal.assign (M1-ERP-05) assigns the deal to a teammate.
+    admin_role = CompanyRole.objects.create(company=seller_company, name="Admin", permissions=["deal.assign"])
     admin = _make_member(seller_company, "seller_admin@s.test", can_sell=True)
-    admin.memberships.filter(company=seller_company).update(company_role=admin_role)
+    admin.memberships.get(company=seller_company).company_roles.add(admin_role)
     assignee = _make_member(seller_company, "seller_assignee@s.test", can_sell=True)
 
     _, err = assign_deal(deal.id, admin, assignee.id)

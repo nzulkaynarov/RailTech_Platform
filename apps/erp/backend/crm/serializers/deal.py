@@ -83,7 +83,7 @@ def _viewer_can_release(obj, request):
     if obj.assigned_to_id == user.id or getattr(user, "is_superuser", False):
         return True
     company_id = primary_seller_company_id(user)
-    return bool(company_id) and member_has_permission(user, company_id, "team.manage")
+    return bool(company_id) and member_has_permission(user, company_id, "deal.assign")
 
 
 class DealListSerializer(serializers.ModelSerializer):

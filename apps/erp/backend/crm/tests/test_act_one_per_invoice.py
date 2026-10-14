@@ -32,7 +32,7 @@ def _api(user):
 
 
 @pytest.fixture
-def world(db):
+def world(db, grant):
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     for code, name in (("CLIENT", "Client"), ("SUPPLIER", "Supplier")):
         CompanyType.objects.get_or_create(code=code, defaults={"name": name, "sort_order": 10})
@@ -58,6 +58,7 @@ def world(db):
     buyer_user = member(buyer_co, "buyer@one-act.test", can_buy=True, can_sell=False)
     seller_co = company("Seller ONE", "S900", "SUPPLIER")
     seller_user = member(seller_co, "seller@one-act.test", can_sell=True, can_buy=False)
+    grant(seller_user, "HEAD")
 
     deal = Deal.objects.create(title="One act deal", company=buyer_co, stage=DealStage.objects.get(code="CLOSED_WON"))
     quote = Quote.objects.create(
@@ -188,8 +189,9 @@ def test_customer_cannot_reissue(world):
 
     resp = _api(world["buyer_user"]).post(f"/api/v1/crm/acts/{act.id}/reissue/")
 
-    assert resp.status_code == 400
-    assert resp.json()["detail"] == "ACT_ISSUER_SIDE_REQUIRED"
+    # M1-ERP-05: переоформление акта — право бэк-офиса `fulfillment.act`, покупателя отсекает гейт.
+    assert resp.status_code == 403
+    assert resp.json()["detail"] == "ROLE_NOT_PERMITTED"
 
 
 def test_issued_act_cannot_be_reissued(world):

@@ -24,7 +24,7 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture
-def world(db):
+def world(db, grant):
     for code, name in (("DRAFT", "Черновик"), ("PUBLISHED", "Опубликован"), ("ARCHIVED", "В архиве")):
         ProductStatus.objects.get_or_create(code=code, defaults={"name": name, "sort_order": 10})
     QuoteStatus.objects.get_or_create(code="DRAFT", defaults={"name": "Черновик", "sort_order": 10})
@@ -36,6 +36,7 @@ def world(db):
     CompanyMember.objects.create(
         user=user, company=seller, role=WorkspaceRole.objects.get(code="OWNER"), is_active=True, is_primary=True
     )
+    grant(user, "HEAD")  # M1-ERP-05: права сотрудника — только из ролей
     return {"seller": seller, "user": user}
 
 

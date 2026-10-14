@@ -1,80 +1,110 @@
-"""Company role (Role+Permission-set) management — Rule 8 service layer.
+"""Роли бэк-офиса (Role + набор прав) — сервисный слой (M1-ERP-05).
 
-The company admin (team.manage) creates/edits company-scoped roles and assigns them to
-members. The system "Company administrator" role is immutable. See
-Docs/old/specs/rbac-roles-design-2026-06-25.md.
+Системные роли-шаблоны (`BackofficeRoleCode`, BUSINESS §11) сеются для своей компании и не
+меняются; свои роли создаёт сотрудник с правом `team.manage`. Сотруднику можно выдать
+несколько ролей — права складываются. «Администратор» — не роль, а `is_superuser`.
 """
 
-from typing import Optional, Tuple
+from typing import Iterable, List, Optional, Tuple
 
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Case, Count, IntegerField, Value, When
 
-from ..constants import ALL_PERMISSIONS, COMPANY_ADMIN_ROLE_NAME, ROLE_TEMPLATES
+from ..constants import ALL_PERMISSIONS, ROLE_TEMPLATES, BackofficeRoleCode, Permission
 from ..models import CompanyMember, CompanyRole, CustomUser
 from .permissions import member_has_permission
 
-# Legacy WorkspaceRole.code → default CompanyRole template name (mirror of migration 0023's
-# ROLE_MAP, kept as the runtime source so a member invited by WorkspaceRole gets a sane
-# starting CompanyRole). Unknown codes → «Наблюдатель» (no permissions).
-_WORKSPACE_TO_ROLE = {
-    "OWNER": COMPANY_ADMIN_ROLE_NAME,
-    "DIRECTOR": COMPANY_ADMIN_ROLE_NAME,
-    "SALES_MANAGER": "Менеджер по продажам",
-    "LOGIST": "Менеджер по продажам",
-    "CONTRACT_MANAGER": "Менеджер по продажам",
-    "FOREIGN_TRADE_SPECIALIST": "Менеджер по продажам",
-    "PROCUREMENT_MANAGER": "Менеджер закупок",
-    "BUYER_MANAGER": "Менеджер закупок",
+# Должность приглашения (WorkspaceRole) → стартовые роли бэк-офиса. Должность доступа не даёт —
+# это только подсказка, с какими ролями человек приходит; поправить можно в «Команде и ролях».
+_WORKSPACE_TO_ROLES = {
+    "OWNER": [BackofficeRoleCode.HEAD],
+    "DIRECTOR": [BackofficeRoleCode.HEAD],
+    "SALES_MANAGER": [BackofficeRoleCode.CALCULATION],
+    "CONTRACT_MANAGER": [BackofficeRoleCode.CALCULATION],
+    "FOREIGN_TRADE_SPECIALIST": [BackofficeRoleCode.CALCULATION],
+    "PROCUREMENT_MANAGER": [BackofficeRoleCode.CATALOG_SUPPLY],
+    "LOGIST": [BackofficeRoleCode.FULFILLMENT],
+    "ACCOUNTANT": [BackofficeRoleCode.FINANCE],
 }
 
 
+def _is_own_company(company_id) -> bool:
+    from core.tenant import own_company_id
+
+    return bool(company_id) and company_id == own_company_id()
+
+
 def ensure_default_company_roles(company) -> dict:
-    """Seed the starting CompanyRole templates for a company (idempotent), returning
-    {name: CompanyRole}. Migration 0023 seeded only companies existing at migration time —
-    tenants registered AFTER it had NO roles, so the assign dropdown was empty and the G4
-    permission engine was silently bypassed (every member fell to the can_sell/can_buy
-    fallback). Call this on every company creation so new tenants match the seeded ones."""
+    """Системные роли своей компании (идемпотентно), `{code: CompanyRole}`.
+
+    Права системной роли всегда равны шаблону в коде (`ROLE_TEMPLATES`): новый код права,
+    добавленный в шаблон, доезжает до роли при следующем вызове. Роль компании с тем же именем,
+    но без кода, становится системной (так миграция приняла старые «Финансы» и «Наблюдатель»).
+    """
     roles = {}
-    for name, perms in ROLE_TEMPLATES.items():
-        roles[name] = CompanyRole.objects.get_or_create(
-            company=company,
-            name=name,
-            defaults={"permissions": list(perms), "is_system": name == COMPANY_ADMIN_ROLE_NAME},
-        )[0]
+    for code, label in BackofficeRoleCode.choices:
+        perms = list(ROLE_TEMPLATES[code])
+        role = CompanyRole.objects.filter(company=company, code=code).first()
+        if role is None:
+            role = CompanyRole.objects.filter(company=company, name=label, code="").first()
+        if role is None:
+            role = CompanyRole.objects.create(company=company, code=code, name=label, permissions=perms, is_system=True)
+        elif role.code != code or role.permissions != perms or not role.is_system:
+            role.code, role.permissions, role.is_system = code, perms, True
+            role.save(update_fields=["code", "permissions", "is_system", "updated_at"])
+        roles[code] = role
     return roles
 
 
-def default_company_role_for(company, workspace_role_code: str) -> CompanyRole:
-    """The seeded CompanyRole a member with this WorkspaceRole should start with (seeding the
-    company's default roles first if needed)."""
+def default_roles_for(company, workspace_role_code: str) -> List[CompanyRole]:
+    """Стартовые роли нового сотрудника своей компании по должности приглашения; для компании-
+    клиента — пусто (покупательский аккаунт живёт по `buyer_access` до M2-ERP-01)."""
+    if not _is_own_company(company.id):
+        return []
     roles = ensure_default_company_roles(company)
-    name = _WORKSPACE_TO_ROLE.get(workspace_role_code, "Наблюдатель")
-    return roles.get(name) or roles[COMPANY_ADMIN_ROLE_NAME]
+    codes = _WORKSPACE_TO_ROLES.get(workspace_role_code, [BackofficeRoleCode.VIEWER])
+    return [roles[code] for code in codes]
 
 
-def _seller_or_admin_company_ids(user: "CustomUser") -> list:
-    return list(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
+def grant_default_roles(membership: CompanyMember, workspace_role_code: str) -> None:
+    """Выдать стартовые роли, если у участника ещё нет ни одной (повторное добавление не трогает
+    роли, назначенные вручную)."""
+    if membership.company_roles.exists():
+        return
+    roles = default_roles_for(membership.company, workspace_role_code)
+    if roles:
+        membership.company_roles.add(*roles)
 
 
 def list_roles_for_user(user: "CustomUser"):
-    """Roles of the requester's OWN companies only (confidentiality)."""
-    ids = _seller_or_admin_company_ids(user)
-    if not ids:
+    """Роли своей компании (системные — первыми). Только сотрудникам и администратору."""
+    from core.tenant import own_company
+
+    company = own_company()
+    if company is None or not (user.is_superuser or user.memberships.filter(company=company, is_active=True).exists()):
         return CompanyRole.objects.none()
+    ensure_default_company_roles(company)
+    # Системные — в порядке BUSINESS §11 (Расчёт → … → Наблюдатель), затем свои по имени.
+    template_order = Case(
+        *[When(code=code, then=Value(index)) for index, code in enumerate(BackofficeRoleCode.values)],
+        default=Value(len(BackofficeRoleCode.values)),
+        output_field=IntegerField(),
+    )
     return (
-        CompanyRole.objects.filter(company_id__in=ids)
-        .annotate(member_count=Count("members"))
-        .order_by("-is_system", "name")
+        CompanyRole.objects.filter(company=company)
+        .annotate(member_count=Count("members", distinct=True), template_order=template_order)
+        .order_by("template_order", "name")
     )
 
 
 def _can_manage(user, company_id) -> bool:
-    return member_has_permission(user, company_id, "team.manage")
+    return member_has_permission(user, company_id, Permission.TEAM_MANAGE)
 
 
 def _validate_perms(permissions) -> Tuple[Optional[list], Optional[str]]:
-    perms = list(permissions or [])
+    if not isinstance(permissions, (list, tuple)):
+        return None, "UNKNOWN_PERMISSION_CODE"
+    perms = list(dict.fromkeys(permissions))
     if any(p not in ALL_PERMISSIONS for p in perms):
         return None, "UNKNOWN_PERMISSION_CODE"
     return perms, None
@@ -82,6 +112,8 @@ def _validate_perms(permissions) -> Tuple[Optional[list], Optional[str]]:
 
 @transaction.atomic
 def create_company_role(user, company_id, name, permissions) -> Tuple[Optional[CompanyRole], Optional[str]]:
+    if not _is_own_company(company_id):
+        return None, "ROLE_COMPANY_MISMATCH"
     if not _can_manage(user, company_id):
         return None, "ONLY_TEAM_MANAGER_CAN_MANAGE_ROLES"
     name = (name or "").strip()
@@ -107,7 +139,10 @@ def update_company_role(user, role: CompanyRole, name, permissions) -> Tuple[Opt
     perms, err = _validate_perms(permissions)
     if err:
         return None, err
-    role.name = (name or role.name).strip()
+    new_name = (name or role.name).strip()
+    if CompanyRole.objects.filter(company_id=role.company_id, name__iexact=new_name).exclude(pk=role.pk).exists():
+        return None, "ROLE_NAME_TAKEN"
+    role.name = new_name
     role.permissions = perms
     role.save(update_fields=["name", "permissions", "updated_at"])
     return role, None
@@ -125,31 +160,38 @@ def delete_company_role(user, role: CompanyRole) -> Optional[str]:
     return None
 
 
+def _parse_role_ids(role_ids) -> Optional[List[int]]:
+    if not isinstance(role_ids, (list, tuple)):
+        return None
+    try:
+        return list(dict.fromkeys(int(rid) for rid in role_ids))
+    except (TypeError, ValueError):
+        return None
+
+
 @transaction.atomic
-def assign_role_to_member(user, member_id, role_id) -> Tuple[Optional[CompanyMember], Optional[str]]:
-    member = CompanyMember.objects.filter(pk=member_id).select_related("company", "company_role").first()
+def set_member_roles(user, member_id, role_ids: Iterable) -> Tuple[Optional[CompanyMember], Optional[str]]:
+    """Заменить набор ролей сотрудника своей компании (`role_ids` — полный новый набор).
+
+    Защита от тупика: нельзя снять с самого себя `team.manage` — иначе управлять командой стало бы
+    некому, кроме администратора (суперпользователя из CRM)."""
+    ids = _parse_role_ids(role_ids)
+    if ids is None:
+        return None, "ROLE_IDS_REQUIRED"
+    member = CompanyMember.objects.filter(pk=member_id).select_related("company").first()
     if member is None:
         return None, "MEMBER_NOT_FOUND"
+    if not _is_own_company(member.company_id):
+        return None, "ROLE_COMPANY_MISMATCH"
     if not _can_manage(user, member.company_id):
         return None, "ONLY_TEAM_MANAGER_CAN_MANAGE_ROLES"
-    role = CompanyRole.objects.filter(pk=role_id).first()
-    if role is None:
+    roles = list(CompanyRole.objects.filter(pk__in=ids))
+    if len(roles) != len(ids):
         return None, "ROLE_NOT_FOUND"
-    if role.company_id != member.company_id:
+    if any(role.company_id != member.company_id for role in roles):
         return None, "ROLE_COMPANY_MISMATCH"
-    # Never-orphan invariant (ADR-0004 / ADR-0005 U3): a company must always keep ≥1 active
-    # admin. Reassigning to a non-system role drops this member from the admin floor, so block
-    # when they are the company's SOLE admin. The floor is the UNIFIED predicate (members.
-    # _admin_floor_q): is_system CompanyRole OR an un-migrated legacy OWNER (company_role IS
-    # NULL). Checking only is_system here missed a sole legacy OWNER — reassigning them to a
-    # permission-less role orphaned the company (they lose the OWNER permission fallback and no
-    # longer count as admin under either clause).
-    if not role.is_system:
-        from .members import company_active_admins
-
-        admins = company_active_admins(member.company)
-        if admins.filter(pk=member.pk).exists() and not admins.exclude(pk=member.pk).exists():
-            return None, "CANNOT_DEMOTE_LAST_COMPANY_ADMIN"
-    member.company_role = role
-    member.save(update_fields=["company_role"])
+    keeps_team_manage = any(role.has_perm(Permission.TEAM_MANAGE) for role in roles)
+    if member.user_id == user.pk and not user.is_superuser and not keeps_team_manage:
+        return None, "CANNOT_DROP_OWN_TEAM_MANAGE"
+    member.company_roles.set(roles)
     return member, None

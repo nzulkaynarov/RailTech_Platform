@@ -15,7 +15,7 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture
-def contract_world(db):
+def contract_world(db, grant):
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 20})
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
@@ -37,6 +37,7 @@ def contract_world(db):
 
     buyer_user = member(buyer, "b@t.test", can_buy=True)
     seller_user = member(seller, "s@t.test", can_sell=True)
+    grant(seller_user, "contract.sign")  # M1-ERP-05: подпись от компании — право роли, не флаг can_sell
 
     deal = Deal.objects.create(title="D", company=buyer, stage=DealStage.objects.get(code="CONTRACT_SIGNED"))
     quote = Quote.objects.create(
@@ -64,6 +65,16 @@ def test_staff_can_sign_manager_not_client(contract_world):
     u, c = contract_world["seller_user"], contract_world["contract"]
     assert viewer_can_sign_manager(u, c) is True
     assert viewer_can_sign_client(u, c) is False
+
+
+def test_staff_without_contract_sign_cannot_sign_manager(contract_world):
+    """M1-ERP-05: флаг `can_sell` подписи не даёт — только право роли `contract.sign`."""
+    seller = contract_world["seller_co"]
+    user = CustomUser.objects.create_user(email="calc@t.test", username="calc@t.test", password="pw")
+    CompanyMember.objects.create(
+        user=user, company=seller, role=WorkspaceRole.objects.get(code="OWNER"), is_active=True, can_sell=True
+    )
+    assert viewer_can_sign_manager(user, contract_world["contract"]) is False
 
 
 def test_unrelated_user_signs_neither_side(contract_world):

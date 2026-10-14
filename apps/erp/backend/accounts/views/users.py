@@ -12,7 +12,7 @@ from rest_framework.response import Response
 from accounts import services
 from accounts.models import Company, CompanyMember, CustomUser
 from accounts.serializers import PlatformUserCreateSerializer, SelfUpdateSerializer, UserSerializer
-from core.permissions import IsPlatformAdmin
+from core.permissions import ADMIN_ONLY, SELF_SERVICE, IsPlatformAdmin, RoleGatedViewMixin
 
 
 @extend_schema_view(
@@ -27,12 +27,29 @@ from core.permissions import IsPlatformAdmin
     ),
     destroy=extend_schema(summary="Delete user", description="Delete a user. Admin only.", tags=["Accounts"]),
 )
-class UserViewSet(viewsets.ModelViewSet):
+class UserViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     """
     CRUD operations for users (Admin only).
 
     Includes password change, profile update, and user activation/deactivation.
     """
+
+    required_permissions = {
+        "create": ADMIN_ONLY,
+        "update": ADMIN_ONLY,
+        "partial_update": ADMIN_ONLY,
+        "destroy": ADMIN_ONLY,
+        "toggle_active": ADMIN_ONLY,
+        "change_role": ADMIN_ONLY,
+        "add_membership": ADMIN_ONLY,
+        "remove_membership": ADMIN_ONLY,
+        "change_password": SELF_SERVICE,
+        "update_me": SELF_SERVICE,
+        "upload_avatar": SELF_SERVICE,
+        "delete_avatar": SELF_SERVICE,
+        "upload_avatar_for": SELF_SERVICE,
+        "delete_avatar_for": SELF_SERVICE,
+    }
 
     queryset = (
         CustomUser.objects.all()
@@ -344,8 +361,7 @@ class UserViewSet(viewsets.ModelViewSet):
                     queryset=CompanyMember.objects.select_related(
                         "company__country",
                         "role",
-                        "company_role",  # capabilities.permissions reads the member's CompanyRole
-                    ).prefetch_related("company__types"),
+                    ).prefetch_related("company__types", "company_roles"),
                 ),
             )
             .filter(pk=request.user.pk)

@@ -21,6 +21,7 @@ from accounts.models import (
     SystemRole,
     WorkspaceRole,
 )
+from accounts.services.roles import ensure_default_company_roles
 from crm.models import CompanyWordingVariant, ContractStatus, Deal, DealStage, Quote, QuoteStatus
 from crm.services.contracts import generate_contract_from_quote
 from crm.services.document_blocks import contract_block_values
@@ -57,6 +58,7 @@ def world(lookups):
         is_active=True,
         is_primary=True,
         can_sell=True,
+        company_roles=[ensure_default_company_roles(seller_co)["HEAD"]],
     )
     deal = Deal.objects.create(title="W deal", company=buyer_co, stage=DealStage.objects.get(code="DRAFT"))
     quote = Quote.objects.create(
@@ -172,7 +174,7 @@ def test_variant_crud_is_company_scoped_via_api(world):
     # Чужая компания не видит вариантов продавца.
     outsider = CustomUser.objects.create_user(email="o@word.test", username="o@word.test", password="x")
     other_co = Company.objects.create(name="Другая", inn="S906")
-    other_co.types.add(CompanyType.objects.get(code="SUPPLIER"))
+    other_co.types.add(CompanyType.objects.get(code="CLIENT"))  # не сотрудник своей компании
     CompanyMember.objects.create(
         user=outsider,
         company=other_co,

@@ -8,9 +8,10 @@
  * дизейблит) то, что не выдано (мировой стандарт: Budibase/Oso). Гейтинг здесь = только UX;
  * бэкенд-enforcement (member_has_permission) остаётся независимым.
  *
- * ERP — бэк-офис одной компании (M1-ERP-02 волна 3): стороны «покупатель / продавец» в меню
- * больше нет — все пункты принадлежат бэк-офису, видимость решает только право роли (`requires`).
- * Покупательские пункты («Мои заявки», «Поставщики», витрина «Каталог») ушли в Cabinet.
+ * ERP — бэк-офис одной компании. Роли бэк-офиса (M1-ERP-05): ПРОСМОТР открыт любому сотруднику
+ * (роль «Наблюдатель» видит всё, BUSINESS §11), поэтому разделы-реестры видны всем; `requires`
+ * прячет только пункты-инструменты, которые без права бессмысленны (загрузка прайса —
+ * `catalog.manage`). Кнопки действий внутри страниц прячутся по своим кодам прав.
  */
 import {
   LayoutDashboard, Handshake,
@@ -43,9 +44,8 @@ export interface ResolvedNavItem {
 /** True if `caps` satisfies a node's requirement (UX only, NOT security — the backend enforces). */
 function meetsRequirement(req: NavRequirement | undefined, caps: Capabilities): boolean {
   if (!req) return true;
-  // Perm-gate only when we actually HAVE permission data — an empty list means "unknown"
-  // (old /me payload, or a member pre-backfill) → don't over-hide; the backend still enforces.
-  if (req.anyPerm && req.anyPerm.length > 0 && caps.permissions.length > 0) {
+  // Пустой список прав = прав нет (M1-ERP-05: «Наблюдатель»), а не «неизвестно».
+  if (req.anyPerm && req.anyPerm.length > 0) {
     if (!req.anyPerm.some((perm) => caps.permissions.includes(perm))) return false;
   }
   return true;
@@ -59,7 +59,7 @@ export const TENANT_NAV: NavNodeDef[] = [
   { labelKey: 'shell.dashboard', id: 'dashboard', icon: <LayoutDashboard className="h-4 w-4" /> },
 
   // Сделки — очередь запросов клиентов, карточка сделки, билдер КП.
-  { labelKey: 'shell.deals', id: 'crm-deals', icon: <Handshake className="h-4 w-4" />, requires: { anyPerm: ['quote.build', 'quote.send'] } },
+  { labelKey: 'shell.deals', id: 'crm-deals', icon: <Handshake className="h-4 w-4" /> },
 
   // Книга клиентов (CRM Phase B).
   { labelKey: 'counterparties.title.clients', id: 'clients', icon: <Users className="h-4 w-4" /> },
@@ -68,7 +68,7 @@ export const TENANT_NAV: NavNodeDef[] = [
   {
     labelKey: 'shell.documents', icon: <FileText className="h-4 w-4" />,
     children: [
-      { labelKey: 'shell.quotes', id: 'crm-quotes', requires: { anyPerm: ['quote.build', 'quote.send'] } },
+      { labelKey: 'shell.quotes', id: 'crm-quotes' },
       { labelKey: 'shell.contracts', id: 'contracts' },
       { labelKey: 'shell.invoices', id: 'invoices' },
       { labelKey: 'shell.payments', id: 'payments' },
@@ -82,10 +82,9 @@ export const TENANT_NAV: NavNodeDef[] = [
   // Товары — Мои товары · Загрузка прайса · Справочники.
   {
     labelKey: 'shell.nomenclatureSection', icon: <Boxes className="h-4 w-4" />,
-    requires: { anyPerm: ['catalog.manage', 'catalog.publish'] },
     children: [
       { labelKey: 'shell.myProducts', id: 'my-products' },
-      { labelKey: 'shell.catalogImport', id: 'catalog-import' },
+      { labelKey: 'shell.catalogImport', id: 'catalog-import', requires: { anyPerm: ['catalog.manage'] } },
       { labelKey: 'shell.catalogReference', id: 'catalog-reference' },
     ],
   },

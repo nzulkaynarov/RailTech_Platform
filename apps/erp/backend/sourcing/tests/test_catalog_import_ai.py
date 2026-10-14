@@ -65,8 +65,9 @@ def lookups(db):
 
 @pytest.fixture
 def seller_user(db):
-    """can_sell-член SUPPLIER-компании — та же авторизация, что у штатного import-catalog."""
-    from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
+    """Сотрудник своей компании с правом роли `catalog.manage` — та же авторизация, что у штатного
+    import-catalog (M1-ERP-05)."""
+    from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, CustomUser, WorkspaceRole
 
     supplier_type = CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier"})[0]
     owner_role = WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner"})[0]
@@ -75,7 +76,10 @@ def seller_user(db):
     user = CustomUser.objects.create_user(
         email="ai-import-seller@x.test", username="ai-import-seller@x.test", password="pw", is_active=True
     )
-    CompanyMember.objects.create(user=user, company=company, role=owner_role, is_active=True, can_sell=True)
+    role = CompanyRole.objects.create(company=company, name="Каталог", permissions=["catalog.manage"])
+    CompanyMember.objects.create(
+        user=user, company=company, role=owner_role, is_active=True, can_sell=True, company_roles=[role]
+    )
     return user, company
 
 
@@ -259,7 +263,8 @@ def test_view_requires_seller_membership(settings, user_factory):
     response = client.post("/api/v1/sourcing/import-catalog-ai/", {"file": upload}, format="multipart")
 
     assert response.status_code == 403
-    assert response.json()["detail"] == "NOT_A_SELLER_MEMBER"
+    # M1-ERP-05: не сотрудник своей компании — отказ гейта ролей до вьюхи.
+    assert response.json()["detail"] == "ROLE_NOT_PERMITTED"
 
 
 @pytest.mark.django_db

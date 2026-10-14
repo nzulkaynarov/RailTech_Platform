@@ -28,9 +28,20 @@ def _seller_company(name, inn, prefix=""):
 
 
 def _owner(company, email):
+    """Сотрудник своей компании с ролью «Руководитель» (M1-ERP-05: права — только из ролей)."""
+    from accounts.services.roles import ensure_default_company_roles
+
     ws = WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})[0]
     user = CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
-    CompanyMember.objects.create(user=user, company=company, role=ws, is_primary=True, is_active=True, can_sell=True)
+    CompanyMember.objects.create(
+        user=user,
+        company=company,
+        role=ws,
+        is_primary=True,
+        is_active=True,
+        can_sell=True,
+        company_roles=[ensure_default_company_roles(company)["HEAD"]],
+    )
     return user
 
 

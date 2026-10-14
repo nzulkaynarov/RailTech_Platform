@@ -13,7 +13,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from core.permissions import IsCompanyMemberOrPlatformAdmin
+from core.permissions import IsCompanyMemberOrPlatformAdmin, RoleGatedViewMixin
 from crm import services as crm_services
 from crm.models import QuoteItem
 from crm.serializers import QuoteItemSerializer
@@ -50,8 +50,21 @@ def _assert_staff_may_write_quote(request, quote):
     partial_update=extend_schema(summary="Partially update quote item", tags=["CRM"]),
     destroy=extend_schema(summary="Delete quote item", tags=["CRM"]),
 )
-class QuoteItemViewSet(viewsets.ModelViewSet):
+class QuoteItemViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     """CRUD for quote line items (products, quantities, pricing)."""
+
+    # Позиции КП несут цены — правка позиций = `quote.edit_pricing` (как `_assert_seller` и bulk-сервисы).
+    required_permissions = {
+        "create": "quote.edit_pricing",
+        "update": "quote.edit_pricing",
+        "partial_update": "quote.edit_pricing",
+        "destroy": "quote.edit_pricing",
+        "bulk_create": "quote.edit_pricing",
+        "bulk_delete": "quote.edit_pricing",
+        "bulk_update": "quote.edit_pricing",
+        "reassign_product": "quote.edit_pricing",
+    }
+    buyer_actions = frozenset({"update", "partial_update", "destroy"})  # до M2-ERP-01
 
     serializer_class = QuoteItemSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]

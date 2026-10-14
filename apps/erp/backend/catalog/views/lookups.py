@@ -5,6 +5,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import filters, permissions, viewsets
 
+from core.permissions import ADMIN_ONLY, RoleGatedViewMixin
+
 from ..models import Category, DomainType, ProductStatus, StockStatus
 from ..serializers import (
     CategorySerializer,
@@ -58,13 +60,20 @@ class DomainTypeViewSet(viewsets.ReadOnlyModelViewSet):
 )
 @method_decorator(vary_on_headers("Accept-Language"), name="list")
 @method_decorator(cache_page(LOOKUP_CACHE_TTL), name="list")
-class CategoryViewSet(viewsets.ModelViewSet):
+class CategoryViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     """
     CRUD for product categories.
 
     Public read access; write operations require Admin role.
     Filterable by domain_type__code.
     """
+
+    required_permissions = {
+        "create": ADMIN_ONLY,
+        "update": ADMIN_ONLY,
+        "partial_update": ADMIN_ONLY,
+        "destroy": ADMIN_ONLY,
+    }
 
     queryset = Category.objects.select_related("domain_type").all()
     serializer_class = CategorySerializer

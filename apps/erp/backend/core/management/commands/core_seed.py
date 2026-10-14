@@ -268,17 +268,11 @@ class Command(BaseCommand):
                             "is_active": True,
                         },
                     )
-                    # Роль КОМПАНИИ (не WorkspaceRole) — источник прав в `capabilities.permissions`,
-                    # по которым строится меню (ADR-0005). Сид её не ставил, и свежий локальный
-                    # стенд получался НЕПРИГОДНЫМ: у демо-продавца и демо-покупателя приходил
-                    # пустой список прав, меню не рисовало ни одного пункта, и проверить роль
-                    # глазами было нельзя вовсе. Боевые пути (саморегистрация `submit_profile`,
-                    # приглашение `invite_workspace_member`) роль проставляют — расходился только
-                    # dev-сид. Тот же сервис, что и на боевых путях, поэтому набор прав совпадает.
-                    if member.company_role_id is None:
-                        from accounts.services.roles import default_company_role_for
+                    # Роли бэк-офиса — источник прав в `capabilities.permissions` (M1-ERP-05). Тот же
+                    # сервис, что у приглашения: стартовые роли по должности, только у сотрудников
+                    # своей компании (покупательский демо-аккаунт живёт без ролей до M2-ERP-01).
+                    from accounts.services.roles import grant_default_roles
 
-                        member.company_role = default_company_role_for(company, ws_role.code)
-                        member.save(update_fields=["company_role"])
+                    grant_default_roles(member, ws_role.code)
 
         self.stdout.write(self.style.SUCCESS("Справочники загружены!"))

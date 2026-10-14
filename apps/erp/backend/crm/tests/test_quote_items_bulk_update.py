@@ -17,6 +17,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
+from accounts.services.roles import ensure_default_company_roles
 from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteItemHistory, QuoteStatus
 
 BULK_URL = "/api/v1/crm/quote-items/bulk-update/"
@@ -36,8 +37,7 @@ def _seller(name, inn, email):
     company = Company.objects.create(name=name, inn=inn)
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
     user = CustomUser.objects.create_user(email=email, username=email, password="x")
-    # OWNER WorkspaceRole with no CompanyRole → member_has_permission legacy fallback grants
-    # quote.edit_pricing, i.e. can_edit_quote_pricing == True (same as the builder in prod).
+    # Роль «Руководитель» → quote.build + quote.edit_pricing (M1-ERP-05: права только из ролей).
     CompanyMember.objects.create(
         user=user,
         company=company,
@@ -45,6 +45,7 @@ def _seller(name, inn, email):
         is_active=True,
         is_primary=True,
         can_sell=True,
+        company_roles=[ensure_default_company_roles(company)["HEAD"]],
     )
     return user, company
 
@@ -227,7 +228,7 @@ def test_bulk_update_outsider_is_refused(world):
     resp = _api(other_user).post(BULK_URL, payload, format="json")
 
     assert resp.status_code == 403
-    assert resp.json()["detail"] == "ONLY_SELLER_CAN_BUILD_QUOTE"
+    assert resp.json()["detail"] == "ROLE_NOT_PERMITTED"  # гейт роли (M1-ERP-05)
     items[0].refresh_from_db()
     assert items[0].frozen_base_price == Decimal("100")
 

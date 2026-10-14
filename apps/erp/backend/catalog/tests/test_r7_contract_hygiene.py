@@ -57,13 +57,15 @@ def seller_world(db):
     company = Company.objects.create(name="ООО Р7", inn="9700000001")
     company.types.add(supplier_type)
 
-    company_role = CompanyRole.objects.create(company=company, name="Каталог", permissions=["catalog.manage"])
+    company_role = CompanyRole.objects.create(
+        company=company, name="Каталог", permissions=["catalog.manage", "supply.manage"]
+    )  # офферы поставщиков — supply.manage (M1-ERP-05)
     user = CustomUser.objects.create_user(email="seller@r7.test", username="seller@r7.test", password="pw")
     CompanyMember.objects.create(
         user=user,
         company=company,
         role=workspace_role,
-        company_role=company_role,
+        company_roles=[company_role],
         is_active=True,
         is_primary=True,
         can_sell=True,

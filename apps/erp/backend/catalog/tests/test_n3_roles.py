@@ -46,7 +46,7 @@ def _member(world, email, permissions):
         user=user,
         company=world["company"],
         role=world["workspace_role"],
-        company_role=role,
+        company_roles=[role],
         is_active=True,
         is_primary=True,
     )

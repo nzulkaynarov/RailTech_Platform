@@ -118,7 +118,7 @@ def _seller_user(company):
         user=user,
         company=company,
         role=workspace_role,
-        company_role=role,
+        company_roles=[role],
         is_primary=True,
         is_active=True,
         can_sell=True,

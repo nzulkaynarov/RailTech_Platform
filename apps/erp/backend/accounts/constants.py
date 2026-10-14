@@ -25,84 +25,130 @@ class WorkspaceRoleCode(models.TextChoices):
 
 
 class Permission(models.TextChoices):
-    """Company-level capability codes — the checkboxes a company admin ticks on a role.
-    World-standard Role+Permission-set model (replaces the raw can_sell/can_buy toggles).
-    Sensitive-first: cost/margin visibility, money, signing, exports, team management."""
+    """Права бэк-офиса — галочки роли (M1-ERP-05; паттерн ERPNext «Role + Role Permission» /
+    Odoo «группы доступа»). Права складываются: у сотрудника несколько ролей, действует
+    объединение (BUSINESS §11 «очереди складываются»). «Администратор» — `is_superuser`, ему всё.
 
-    # Sales / КП
+    Чтение открыто любому сотруднику своей компании (роль «Наблюдатель» = ни одного права);
+    коды ниже — это ДЕЙСТВИЯ. Каждый эндпоинт мутации объявляет свой код
+    (`core.permissions.RoleGatedViewMixin.required_permissions`), сервисы проверяют тот же код
+    через `accounts.services.permissions.member_has_permission`."""
+
+    # Запросы и сделки
+    DEAL_MANAGE = "deal.manage", "Вести запросы и сделки"
+    DEAL_ASSIGN = "deal.assign", "Назначать ответственного"
+    # КП
     QUOTE_BUILD = "quote.build", "Строить КП"
-    QUOTE_SEND = "quote.send", "Отправлять КП клиенту"
+    QUOTE_EDIT_PRICING = "quote.edit_pricing", "Менять цены, скидки и статьи расходов"
     QUOTE_VIEW_COST_MARGIN = "quote.view_cost_margin", "Видеть себестоимость и маржу"
-    QUOTE_EDIT_PRICING = "quote.edit_pricing", "Менять цены и скидки"
-    # Internal КП approval chain (NEW — distinct from quote.approve, which is the BUYER's
-    # accept/reject). quote.review = intermediate approver; quote.approve_final = the mandatory
-    # final approver («руководитель»). The company admin role carries both by default.
-    QUOTE_REVIEW = "quote.review", "Согласовывать КП (промежуточно)"
-    QUOTE_APPROVE_FINAL = "quote.approve_final", "Финально утверждать КП (руководитель)"
-    # Procurement / Buyer
-    REQUEST_CREATE = "request.create", "Создавать заявки"
-    QUOTE_APPROVE = "quote.approve", "Принимать/отклонять КП"
-    CONTRACT_SIGN = "contract.sign", "Подписывать контракты"
-    PAYMENT_RECORD = "payment.record", "Проводить платежи"
-    # Catalog
-    CATALOG_MANAGE = "catalog.manage", "Управлять каталогом и офферами"
-    CATALOG_PUBLISH = "catalog.publish", "Публиковать товары"
-    # Company admin
+    QUOTE_SEND = "quote.send", "Отправлять КП клиенту"
+    # Внутреннее согласование КП: промежуточный согласующий и обязательный финальный
+    # («руководитель»). Акцепт КП клиентом — не право бэк-офиса (Cabinet / публичная ссылка).
+    QUOTE_REVIEW = "quote.review", "Согласовывать КП"
+    QUOTE_APPROVE_FINAL = "quote.approve_final", "Финально утверждать КП"
+    # Договоры
+    CONTRACT_MANAGE = "contract.manage", "Готовить договоры"
+    CONTRACT_SIGN = "contract.sign", "Подписывать договоры от компании"
+    # Каталог
+    CATALOG_MANAGE = "catalog.manage", "Вести каталог"
+    CATALOG_PUBLISH = "catalog.publish", "Публиковать карточки"
+    # Снабжение (M4 добавит заказы поставщикам и приёмку)
+    SUPPLY_MANAGE = "supply.manage", "Вести поставщиков и их предложения"
+    # Исполнение и логистика
+    FULFILLMENT_MANAGE = "fulfillment.manage", "Вести отгрузки и накладные"
+    FULFILLMENT_ACT = "fulfillment.act", "Оформлять акты"
+    # Финансы
+    FINANCE_INVOICE = "finance.invoice", "Выставлять счета клиентам"
+    FINANCE_PAYMENT = "finance.payment", "Фиксировать оплаты"
+    # Настройки и команда
+    SETTINGS_EDIT = "settings.edit", "Менять реквизиты, шаблоны и нумерацию"
+    SETTINGS_CHARGE_TEMPLATES = "settings.charge_templates", "Вести шаблоны статей расходов КП"
     TEAM_MANAGE = "team.manage", "Управлять командой и ролями"
-    SETTINGS_EDIT = "settings.edit", "Менять настройки компании"
-    CHARGE_TEMPLATES_MANAGE = "charge_templates.manage", "Управлять шаблонами статей"
-    # Data
+    # Данные
     DATA_EXPORT = "data.export", "Экспортировать данные"
 
 
-# Grouping for the settings UI (the checkbox sections).
+# Разделы редактора роли (порядок = порядок на экране; подписи — i18n по ключу раздела).
 PERMISSION_GROUPS = {
-    "sales": [
+    "deals": [Permission.DEAL_MANAGE, Permission.DEAL_ASSIGN],
+    "quotes": [
         Permission.QUOTE_BUILD,
-        Permission.QUOTE_SEND,
-        Permission.QUOTE_VIEW_COST_MARGIN,
         Permission.QUOTE_EDIT_PRICING,
+        Permission.QUOTE_VIEW_COST_MARGIN,
+        Permission.QUOTE_SEND,
         Permission.QUOTE_REVIEW,
         Permission.QUOTE_APPROVE_FINAL,
     ],
-    "procurement": [
-        Permission.REQUEST_CREATE,
-        Permission.QUOTE_APPROVE,
-        Permission.CONTRACT_SIGN,
-        Permission.PAYMENT_RECORD,
-    ],
+    "contracts": [Permission.CONTRACT_MANAGE, Permission.CONTRACT_SIGN],
     "catalog": [Permission.CATALOG_MANAGE, Permission.CATALOG_PUBLISH],
-    "company": [Permission.TEAM_MANAGE, Permission.SETTINGS_EDIT, Permission.CHARGE_TEMPLATES_MANAGE],
+    "supply": [Permission.SUPPLY_MANAGE],
+    "fulfillment": [Permission.FULFILLMENT_MANAGE, Permission.FULFILLMENT_ACT],
+    "finance": [Permission.FINANCE_INVOICE, Permission.FINANCE_PAYMENT],
+    "settings": [Permission.SETTINGS_EDIT, Permission.SETTINGS_CHARGE_TEMPLATES, Permission.TEAM_MANAGE],
     "data": [Permission.DATA_EXPORT],
 }
 
 ALL_PERMISSIONS = [p.value for p in Permission]
 
-# Seeded default role templates (starting points; a company can clone/rename/edit).
-# The "Company administrator" template is the immutable full-rights role (never-orphan).
-COMPANY_ADMIN_ROLE_NAME = "Администратор компании"
+
+class BackofficeRoleCode(models.TextChoices):
+    """Коды ролей-шаблонов бэк-офиса (BUSINESS §11). Сеются миграцией accounts/0003 и
+    `ensure_default_company_roles` для своей компании; системные — имя и права не меняются,
+    своя роль собирается кнопкой «Новая роль». Код стабилен, имя на экране — i18n по коду."""
+
+    CALCULATION = "CALCULATION", "Расчёт"
+    CATALOG_SUPPLY = "CATALOG_SUPPLY", "Каталог и закупки"
+    FULFILLMENT = "FULFILLMENT", "Исполнение и логистика"
+    FINANCE = "FINANCE", "Финансы"
+    HEAD = "HEAD", "Руководитель"
+    VIEWER = "VIEWER", "Наблюдатель"
+
+
+P = Permission
 ROLE_TEMPLATES = {
-    COMPANY_ADMIN_ROLE_NAME: ALL_PERMISSIONS,
-    "Менеджер по продажам": [
-        Permission.QUOTE_BUILD.value,
-        Permission.QUOTE_SEND.value,
-        Permission.QUOTE_VIEW_COST_MARGIN.value,
-        Permission.QUOTE_EDIT_PRICING.value,
-        Permission.CATALOG_MANAGE.value,
+    BackofficeRoleCode.CALCULATION: [
+        P.DEAL_MANAGE,
+        P.QUOTE_BUILD,
+        P.QUOTE_EDIT_PRICING,
+        P.QUOTE_VIEW_COST_MARGIN,
+        P.QUOTE_SEND,
+        P.QUOTE_REVIEW,
+        P.CONTRACT_MANAGE,
     ],
-    "Менеджер закупок": [
-        Permission.REQUEST_CREATE.value,
-        Permission.QUOTE_APPROVE.value,
-        Permission.CONTRACT_SIGN.value,
-        Permission.PAYMENT_RECORD.value,
+    BackofficeRoleCode.CATALOG_SUPPLY: [
+        P.CATALOG_MANAGE,
+        P.CATALOG_PUBLISH,
+        P.SUPPLY_MANAGE,
+        P.QUOTE_VIEW_COST_MARGIN,
     ],
-    "Финансы": [
-        Permission.PAYMENT_RECORD.value,
-        Permission.QUOTE_VIEW_COST_MARGIN.value,
-        Permission.DATA_EXPORT.value,
-    ],
-    "Наблюдатель": [],
+    BackofficeRoleCode.FULFILLMENT: [P.FULFILLMENT_MANAGE, P.FULFILLMENT_ACT],
+    BackofficeRoleCode.FINANCE: [P.FINANCE_INVOICE, P.FINANCE_PAYMENT, P.QUOTE_VIEW_COST_MARGIN, P.DATA_EXPORT],
+    # Руководитель: финальное утверждение и все действия бэк-офиса (BUSINESS §11, M1-ERP-05).
+    BackofficeRoleCode.HEAD: list(Permission),
+    BackofficeRoleCode.VIEWER: [],
 }
+ROLE_TEMPLATES = {code.value: [p.value for p in perms] for code, perms in ROLE_TEMPLATES.items()}
+del P
+
+# Коды прав до M1-ERP-05 → новые коды (миграция accounts/0003 переписывает CompanyRole.permissions).
+# `supply.manage` и `deal.manage` добавляются держателям прежних прав, которые их покрывали:
+# офферы поставщиков жили под `catalog.manage`, смена стадии и документы сделки — под `quote.build`.
+LEGACY_PERMISSION_RENAMES = {
+    "payment.record": ["finance.payment"],
+    "charge_templates.manage": ["settings.charge_templates"],
+    "catalog.manage": ["catalog.manage", "supply.manage"],
+    "quote.build": ["quote.build", "deal.manage"],
+}
+
+
+class BuyerPermission(models.TextChoices):
+    """Права ПОКУПАТЕЛЬСКОГО аккаунта (участник компании-клиента) — переходно до M2-ERP-01:
+    после него клиент действует только в Cabinet через портальный API, и этот класс удаляется.
+    В каталог прав бэк-офиса не входят; проверяются `accounts.services.buyer_access`."""
+
+    REQUEST_CREATE = "request.create", "Создавать заявки"
+    QUOTE_APPROVE = "quote.approve", "Принимать / отклонять КП"
+    CONTRACT_SIGN = "contract.sign", "Подписывать договоры"
 
 
 class SystemRoleCode(models.TextChoices):

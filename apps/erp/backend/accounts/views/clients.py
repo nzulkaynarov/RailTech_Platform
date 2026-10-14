@@ -13,6 +13,7 @@ from rest_framework.response import Response
 from accounts.models import Contact
 from accounts.services import create_offline_client
 from accounts.services.clients import seller_clients
+from core.permissions import RoleGatedViewMixin
 
 
 class ContactSerializer(serializers.ModelSerializer):
@@ -48,9 +49,16 @@ class OfflineClientCreateSerializer(serializers.Serializer):
 
 
 @extend_schema(tags=["Client Base"])
-class ContactViewSet(viewsets.ModelViewSet):
+class ContactViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     """Contacts of the seller team's OWN client book. Create = «завести офлайн-клиента»
     (company + contact in one step, via the service). No delete — history stays."""
+
+    required_permissions = {
+        "create": "deal.manage",
+        "update": "deal.manage",
+        "partial_update": "deal.manage",
+        "destroy": "deal.manage",
+    }
 
     serializer_class = ContactSerializer
     permission_classes = [IsAuthenticated]

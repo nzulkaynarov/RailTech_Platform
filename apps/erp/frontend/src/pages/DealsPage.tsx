@@ -2,7 +2,7 @@ import { useState } from 'react'; import { useTranslation } from 'react-i18next'
 import { useListParams, applyListParams } from '@/components/DataTable/listParams';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useDeals, useDealStages, useClaimDeal, useReleaseDeal } from '@/hooks/useCRM';
-import { useIsSoloSeller } from '@/hooks/useCapabilities';
+import { useIsSoloTeam } from '@/hooks/useCapabilities';
 import { DEAL_STAGE_LABEL_KEY } from '@/lib/codes';
 import { translateApiError } from '@/lib/apiError';
 import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
@@ -28,7 +28,7 @@ export function DealsPage() {
   const releaseMut = useReleaseDeal();
   // Wave B2 (auto-claim): a solo team has no one to hand work to, so «Взять в работу» is
   // noise — hide it. Multi-member companies keep claim (it still distributes the queue). UI-only.
-  const isSoloSeller = useIsSoloSeller();
+  const isSoloTeam = useIsSoloTeam();
 
   // Second in-funnel path to «взять в работу» (Kanban is the first): a team member pulls an
   // unowned deal from the company queue (`assigned_to == null`); hidden for already-owned deals.
@@ -38,7 +38,7 @@ export function DealsPage() {
   const stageLabel = (code: string | undefined, fallback: string | undefined) =>
     code && DEAL_STAGE_LABEL_KEY[code] ? t(DEAL_STAGE_LABEL_KEY[code]) : (fallback ?? '');
 
-  const canClaim = (deal: Deal) => deal.assigned_to == null && !isSoloSeller;
+  const canClaim = (deal: Deal) => deal.assigned_to == null && !isSoloTeam;
   const handleClaim = (dealId: number) => {
     claimMut.mutate(dealId, {
       onSuccess: () => toast.success(t('dealsKanban.claimed')),

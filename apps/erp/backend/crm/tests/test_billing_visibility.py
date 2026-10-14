@@ -248,7 +248,7 @@ def test_non_member_sees_no_billing_docs(world, billing_docs):
 # ── 4. E2E: staff signs the contract from the registry and the deal closes ────
 
 
-def test_staff_signs_contract_from_registry_closes_deal(world):
+def test_staff_signs_contract_from_registry_closes_deal(world, grant):
     """Acceptance: the staff member opens «Контракты», sees the client-signed contract, signs it,
     and the deal auto-closes as CLOSED_WON (contract fully signed → _finalize_if_signed)."""
     deal = Deal.objects.create(
@@ -268,6 +268,7 @@ def test_staff_signs_contract_from_registry_closes_deal(world):
         client_signed_at=timezone.now(),
     )
 
+    grant(world["seller_user"], "contract.sign")  # M1-ERP-05: подпись от компании — право роли
     seller_client = _api(world["seller_user"])
     listed = seller_client.get(_ENDPOINTS["contract"])
     assert listed.status_code == 200

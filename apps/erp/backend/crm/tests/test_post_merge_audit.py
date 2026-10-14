@@ -26,12 +26,12 @@ def _user(email):
     return CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
 
 
-def _member(user, company, *, company_role=None, can_sell=True, can_buy=False):
+def _member(user, company, *, company_roles=(), can_sell=True, can_buy=False):
     return CompanyMember.objects.create(
         user=user,
         company=company,
         role=_ws("MEMBER"),
-        company_role=company_role,
+        company_roles=list(company_roles),
         is_active=True,
         can_sell=can_sell,
         can_buy=can_buy,
@@ -39,7 +39,10 @@ def _member(user, company, *, company_role=None, can_sell=True, can_buy=False):
 
 
 def _team_manager_role(company):
-    return CompanyRole.objects.create(company=company, name="Админ", permissions=["team.manage", "settings.edit"])
+    # Распределение очереди — право `deal.assign` (M1-ERP-05; до него — team.manage).
+    return CompanyRole.objects.create(
+        company=company, name="Админ", permissions=["team.manage", "settings.edit", "deal.assign"]
+    )
 
 
 @pytest.fixture
@@ -71,13 +74,13 @@ def scenario(lookups):
     member = _user("member@own.uz")
     _member(member, own)
     admin = _user("admin@own.uz")
-    _member(admin, own, company_role=_team_manager_role(own))
+    _member(admin, own, company_roles=[_team_manager_role(own)])
     colleague = _user("colleague@own.uz")
     _member(colleague, own)
     buyer_user = _user("buyer@buyer.uz")
     _member(buyer_user, buyer, can_sell=False, can_buy=True)
     outsider = _user("outsider@other.uz")
-    _member(outsider, other_client, company_role=_team_manager_role(other_client))
+    _member(outsider, other_client, company_roles=[_team_manager_role(other_client)])
 
     return SimpleNamespace(
         deal=deal,
@@ -139,7 +142,7 @@ def test_team_admin_can_release_member_claim(scenario):
     assert err is None and _owner_id(scenario.deal) is None
 
 
-def test_colleague_without_team_manage_cannot_release(scenario):
+def test_colleague_without_deal_assign_cannot_release(scenario):
     claim_deal(scenario.deal.id, scenario.member)
     _, err = release_deal(scenario.deal.id, scenario.colleague)
     assert err == "MEMBER_REQUIRED_FOR_ACTION"
@@ -147,7 +150,7 @@ def test_colleague_without_team_manage_cannot_release(scenario):
 
 
 def test_outsider_admin_cannot_release(scenario):
-    """`team.manage` in ANOTHER company gives nothing over the back-office queue."""
+    """`deal.assign` in ANOTHER company gives nothing over the back-office queue."""
     claim_deal(scenario.deal.id, scenario.member)
     _, err = release_deal(scenario.deal.id, scenario.outsider)
     assert err is not None
@@ -209,7 +212,7 @@ def test_release_hint_matches_service_for_every_actor(scenario):
     actors = {
         "владелец записи": scenario.member,
         "админ своей компании": scenario.admin,
-        "коллега без team.manage": scenario.colleague,
+        "коллега без deal.assign": scenario.colleague,
         "посторонний админ": scenario.outsider,
         "покупатель": scenario.buyer_user,
     }

@@ -8,6 +8,8 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
+from core.permissions import BUYER_ONLY, RoleGatedViewMixin
+
 
 @extend_schema(
     summary="AI semantic match: заявка lines → catalog products",
@@ -33,8 +35,12 @@ from rest_framework.views import APIView
     },
     tags=["Sourcing"],
 )
-class MatchCatalogView(APIView):
+class MatchCatalogView(RoleGatedViewMixin, APIView):
     """AI-assisted matching of free-text заявка lines to catalog.Product (roadmap #1)."""
+
+    required_permissions = {
+        "POST": "quote.build",
+    }
 
     permission_classes = [IsAuthenticated]
     throttle_classes = [ScopedRateThrottle]
@@ -84,8 +90,13 @@ class MatchCatalogView(APIView):
     },
     tags=["Sourcing"],
 )
-class PreflightCheckView(APIView):
+class PreflightCheckView(RoleGatedViewMixin, APIView):
     """AI advisory pre-submit quality check of buyer заявка lines (AI #7)."""
+
+    required_permissions = {
+        "POST": BUYER_ONLY,
+    }
+    buyer_actions = frozenset({"POST"})  # до M2-ERP-01
 
     permission_classes = [IsAuthenticated]
     throttle_classes = [ScopedRateThrottle]
@@ -174,8 +185,12 @@ def _resolve_expected(user, request, quote_id, contract_id):
     },
     tags=["Sourcing"],
 )
-class DocumentExtractView(APIView):
+class DocumentExtractView(RoleGatedViewMixin, APIView):
     """AI #6 — extract a contract/invoice PDF and reconcile it vs the КП/Contract in code."""
+
+    required_permissions = {
+        "POST": ("contract.manage", "quote.build"),
+    }
 
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser]
@@ -268,8 +283,12 @@ class DocumentExtractView(APIView):
     },
     tags=["Sourcing"],
 )
-class QuoteImportFileView(APIView):
+class QuoteImportFileView(RoleGatedViewMixin, APIView):
     """Q2 — seller-scoped file import of КП line items (mirrors DocumentExtractView staging)."""
+
+    required_permissions = {
+        "POST": "quote.build",
+    }
 
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser]

@@ -7,6 +7,7 @@ platform-admin viewers are refused on every mutation via the services.
 
 from django.db.models import ProtectedError, Q
 from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
+from rest_framework import mixins
 from rest_framework import serializers as drf_serializers
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -16,6 +17,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 
 from core.file_streaming import stream_file_field
+from core.permissions import RoleGatedViewMixin
 from crm import services as crm_services
 from crm.models import DocumentTemplate, GeneratedDocument
 from crm.serializers import DocumentTemplateSerializer, GeneratedDocumentSerializer
@@ -61,10 +63,19 @@ def _brand_preview_field():
     )
 
 
-class DocumentTemplateViewSet(viewsets.ModelViewSet):
+class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     """Company template library. Read = own templates + platform samples («скопировать
     к себе»); write is gated on the `settings.edit` CompanyRole permission and limited
     to the caller's own company (never samples, never another tenant)."""
+
+    required_permissions = {
+        "create": "settings.edit",
+        "update": "settings.edit",
+        "partial_update": "settings.edit",
+        "destroy": "settings.edit",
+        "copy": "settings.edit",
+        "preview": "settings.edit",
+    }
 
     serializer_class = DocumentTemplateSerializer
     permission_classes = [IsAuthenticated]
@@ -271,9 +282,28 @@ class DocumentTemplateViewSet(viewsets.ModelViewSet):
         )
 
 
-class GeneratedDocumentViewSet(viewsets.ModelViewSet):
+class GeneratedDocumentViewSet(
+    RoleGatedViewMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
     """Rendered documents registry. List/retrieve are company-scoped; generation and
-    status transitions run in services (permission + IDOR + viewer gates)."""
+    status transitions run in services (permission + IDOR + viewer gates).
+
+    Сырого `POST generated-documents/` нет (снят в M1-ERP-05 по тесту матрицы ролей): документ
+    рождается только через `generate/` — сервис с проверкой права и IDOR; голый ModelViewSet
+    позволял записать строку в обход сервиса (и падал 500 без компании)."""
+
+    required_permissions = {
+        "partial_update": "deal.manage",
+        "generate": "deal.manage",
+        "cancel": "deal.manage",
+        "issue": "deal.manage",
+        "revoke_public_link": "deal.manage",
+        "send_email": "deal.manage",
+    }
 
     serializer_class = GeneratedDocumentSerializer
     permission_classes = [IsAuthenticated]

@@ -11,9 +11,10 @@ additively alongside the legacy capability flags (defense-in-depth):
 
 Each guard is tested in three modes:
     WITH perm  → member that has the CompanyRole permission — PASSES
-    WITHOUT perm → member that lacks the permission AND the legacy flag — DENIED
-    Legacy path → member with the legacy flag but no CompanyRole assigned — PASSES
-                  (backward compat, migration period)
+    WITHOUT perm → member that lacks the permission — DENIED
+    Legacy path → own-company staff: the WorkspaceRole / can_sell fallback is GONE (M1-ERP-05 —
+                  no role, no permission); buyer accounts of a CLIENT company keep the can_buy
+                  path until M2-ERP-01 (accounts.services.buyer_access).
 """
 
 from decimal import Decimal
@@ -45,12 +46,12 @@ def _make_user(email):
     )
 
 
-def _make_member(user, company, *, company_role=None, can_sell=True, can_buy=True, is_primary=False):
+def _make_member(user, company, *, roles=(), can_sell=True, can_buy=True, is_primary=False):
     return CompanyMember.objects.create(
         user=user,
         company=company,
         role=_ws("MEMBER"),
-        company_role=company_role,
+        company_roles=list(roles),
         is_primary=is_primary,
         is_active=True,
         can_sell=can_sell,
@@ -192,14 +193,14 @@ def test_quote_send_with_explicit_perm_passes(lookups, seller_company, deal):
     quote = _ready_to_send_quote(deal, prepared_by=seller)
     # Grant the permission via CompanyRole.
     crole = CompanyRole.objects.create(company=seller_company, name="Sender", permissions=["quote.send"])
-    seller.memberships.filter(company=seller_company).update(company_role=crole)
+    seller.memberships.get(company=seller_company).company_roles.add(crole)
 
     assert can_send_quote_to_client(seller, quote) is True
 
 
 @pytest.mark.django_db
-def test_quote_send_without_perm_or_legacy_flag_denied(lookups, seller_company, deal):
-    """Member WITHOUT quote.send perm AND without the legacy SALES_MANAGER role is denied."""
+def test_quote_send_without_perm_denied(lookups, seller_company, deal):
+    """Member WITHOUT quote.send perm is denied."""
     seller = _make_user("send_without@seller.test")
     # can_sell=False removes legacy fallback; no CompanyRole means no explicit perm.
     _make_member(seller, seller_company, can_sell=False, is_primary=True)
@@ -209,8 +210,8 @@ def test_quote_send_without_perm_or_legacy_flag_denied(lookups, seller_company, 
 
 
 @pytest.mark.django_db
-def test_quote_send_legacy_sales_manager_role_passes(lookups, seller_company, deal):
-    """Legacy SALES_MANAGER WorkspaceRole (no CompanyRole) continues to work."""
+def test_quote_send_legacy_sales_manager_role_no_longer_grants_send(lookups, seller_company, deal):
+    """M1-ERP-05: the SALES_MANAGER WorkspaceRole without a role carrying quote.send is denied."""
     seller = _make_user("send_legacy@seller.test")
     # Set up the legacy workspace role directly (no CompanyRole assigned).
     ws_sales = WorkspaceRole.objects.get_or_create(
@@ -227,7 +228,7 @@ def test_quote_send_legacy_sales_manager_role_passes(lookups, seller_company, de
     )
     quote = _ready_to_send_quote(deal, prepared_by=seller)
 
-    assert can_send_quote_to_client(seller, quote) is True
+    assert can_send_quote_to_client(seller, quote) is False
 
 
 @pytest.mark.django_db
@@ -236,9 +237,7 @@ def test_quote_send_perm_without_legacy_ws_role_passes(lookups, seller_company, 
     seller = _make_user("send_perm_only@seller.test")
     crole = CompanyRole.objects.create(company=seller_company, name="QuoteSender", permissions=["quote.send"])
     # Use MEMBER workspace role — no legacy SALES_MANAGER — but has the CompanyRole perm.
-    member = _make_member(seller, seller_company, can_sell=False, is_primary=True)
-    member.company_role = crole
-    member.save()
+    _make_member(seller, seller_company, roles=[crole], can_sell=False, is_primary=True)
     quote = _ready_to_send_quote(deal, prepared_by=seller)
 
     assert can_send_quote_to_client(seller, quote) is True
@@ -246,10 +245,8 @@ def test_quote_send_perm_without_legacy_ws_role_passes(lookups, seller_company, 
 
 @pytest.mark.django_db
 def test_quote_send_null_company_role_non_sales_with_can_sell_denied(lookups, seller_company, deal):
-    """ADR-0005 Phase E U3 regression guard: a company_role=NULL member with a NON-sales legacy
-    WorkspaceRole (LOGIST) and the DEFAULT can_sell=True must NOT be auto-granted client-facing
-    send. The gate keys on the intentional quote.send permission (or the OWNER/SALES_MANAGER legacy
-    bridge), never the bare can_sell capability — mirrors contract.sign / payment.record."""
+    """A role-less member with a NON-sales WorkspaceRole (LOGIST) and the DEFAULT can_sell=True must
+    NOT be granted client-facing send: only the quote.send role permission counts."""
     seller = _make_user("send_logist@seller.test")
     ws_logist = WorkspaceRole.objects.get_or_create(code="LOGIST", defaults={"name": "Logist", "sort_order": 30})[0]
     CompanyMember.objects.create(
@@ -260,15 +257,15 @@ def test_quote_send_null_company_role_non_sales_with_can_sell_denied(lookups, se
         is_active=True,
         can_sell=True,
         can_buy=True,
-    )  # company_role stays NULL — the un-migrated shape the add-membership path used to create
+    )  # no roles at all
     quote = _ready_to_send_quote(deal, prepared_by=seller)
 
     assert can_send_quote_to_client(seller, quote) is False
 
 
 @pytest.mark.django_db
-def test_quote_send_legacy_owner_role_passes(lookups, seller_company, deal):
-    """Legacy OWNER WorkspaceRole (no CompanyRole) retains send via the transitional bridge."""
+def test_quote_send_legacy_owner_role_no_longer_grants_send(lookups, seller_company, deal):
+    """M1-ERP-05: the OWNER WorkspaceRole without roles is denied (the transitional bridge is gone)."""
     seller = _make_user("send_owner@seller.test")
     ws_owner = WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})[0]
     CompanyMember.objects.create(
@@ -282,7 +279,7 @@ def test_quote_send_legacy_owner_role_passes(lookups, seller_company, deal):
     )
     quote = _ready_to_send_quote(deal, prepared_by=seller)
 
-    assert can_send_quote_to_client(seller, quote) is True
+    assert can_send_quote_to_client(seller, quote) is False
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -300,8 +297,7 @@ def test_contract_client_sign_with_perm_passes(lookups, buyer_company, seller_co
     buyer = _make_user("csign_buyer_perm@b.test")
     crole = CompanyRole.objects.create(company=buyer_company, name="Signer", permissions=["contract.sign"])
     buyer_member = _make_member(buyer, buyer_company, can_buy=False, is_primary=True)
-    buyer_member.company_role = crole
-    buyer_member.save()
+    buyer_member.company_roles.add(crole)
 
     contract = _pending_client_contract(deal, quote)
     result, err = sign_contract_by_client(contract.id, buyer)
@@ -359,8 +355,7 @@ def test_contract_manager_sign_with_perm_passes(lookups, buyer_company, seller_c
     crole = CompanyRole.objects.create(company=seller_company, name="ContractManager", permissions=["contract.sign"])
     # can_sell=True is required so the seller-side checks can locate the company.
     seller_member = _make_member(seller, seller_company, can_sell=True, is_primary=True)
-    seller_member.company_role = crole
-    seller_member.save()
+    seller_member.company_roles.add(crole)
 
     quote = _sent_quote(deal, prepared_by=seller)
     # Need PENDING_MANAGER status for manager to sign (client already signed).
@@ -380,9 +375,7 @@ def test_contract_manager_sign_with_perm_passes(lookups, buyer_company, seller_c
 def test_contract_manager_sign_without_perm_denied(lookups, buyer_company, seller_company, deal):
     """Seller member WITHOUT contract.sign perm AND without legacy capability is denied.
 
-    can_sell=False removes the is_seller() path; can_buy=False removes the legacy
-    fallback in member_has_permission (which derives contract.sign from can_buy).
-    A member with neither flag nor an explicit CompanyRole perm should be refused.
+    No role carrying contract.sign → refused (flags no longer matter for staff).
     """
     seller = _make_user("msign_seller_noperm@s.test")
     # Both flags off: no legacy path, no CompanyRole → neither check passes.
@@ -402,8 +395,8 @@ def test_contract_manager_sign_without_perm_denied(lookups, buyer_company, selle
 
 
 @pytest.mark.django_db
-def test_contract_manager_sign_legacy_can_sell_passes(lookups, buyer_company, seller_company, deal):
-    """Legacy can_sell=True (no CompanyRole) continues to work for manager sign."""
+def test_contract_manager_sign_legacy_can_sell_no_longer_grants_sign(lookups, buyer_company, seller_company, deal):
+    """M1-ERP-05: can_sell=True without a role carrying contract.sign no longer signs for the company."""
     seller = _make_user("msign_seller_legacy@s.test")
     _make_member(seller, seller_company, can_sell=True, is_primary=True)
 
@@ -416,8 +409,8 @@ def test_contract_manager_sign_legacy_can_sell_passes(lookups, buyer_company, se
         total_amount=Decimal("112"),
     )
     result, err = sign_contract_by_manager(contract.id, seller)
-    assert err is None, f"Expected success, got error: {err}"
-    assert result is not None
+    assert err == "MEMBER_REQUIRED_FOR_ACTION"
+    assert result is None
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -437,8 +430,7 @@ def test_record_payment_with_perm_passes(lookups, buyer_company, seller_company,
     buyer = _make_user("pay_buyer_perm@b.test")
     crole = CompanyRole.objects.create(company=buyer_company, name="Finance", permissions=["payment.record"])
     buyer_member = _make_member(buyer, buyer_company, can_buy=False, is_primary=True)
-    buyer_member.company_role = crole
-    buyer_member.save()
+    buyer_member.company_roles.add(crole)
 
     from django.utils import timezone
 
@@ -521,8 +513,7 @@ def test_approve_quote_with_perm_passes(lookups, buyer_company, seller_company, 
     buyer = _make_user("approve_buyer_perm@b.test")
     crole = CompanyRole.objects.create(company=buyer_company, name="Approver", permissions=["quote.approve"])
     buyer_member = _make_member(buyer, buyer_company, can_buy=False, is_primary=True)
-    buyer_member.company_role = crole
-    buyer_member.save()
+    buyer_member.company_roles.add(crole)
 
     result = QuoteLifecycleService.approve_quote(quote.id, buyer)
     assert result is not None
@@ -583,7 +574,8 @@ def test_send_kp_from_rfq_open_advances_deal_not_stuck(lookups, buyer_company, s
     advance the deal to QUOTE_SENT. Previously the FSM error (RFQ_OPEN→QUOTE_SENT is illegal)
     was swallowed → КП marked SENT + emailed while the deal stuck in RFQ_OPEN forever."""
     seller = _make_user("send_rfq_seller@s.test")
-    _make_member(seller, seller_company, can_sell=True, is_primary=True)
+    sender = CompanyRole.objects.create(company=seller_company, name="Sender", permissions=["quote.send"])
+    _make_member(seller, seller_company, roles=[sender], can_sell=True, is_primary=True)
 
     deal.stage = DealStage.objects.get(code="RFQ_OPEN")  # real post-submit_request state
     # A deal that reached RFQ_OPEN through submit_request ALWAYS has a buyer behind it; the bare

@@ -37,12 +37,14 @@ from .permissions import (
     member_has_permission,
     primary_seller_company_id,
     sees_all_deals,
+    staff_permissions,
 )
 from .roles import (
-    assign_role_to_member,
     create_company_role,
     delete_company_role,
+    ensure_default_company_roles,
     list_roles_for_user,
+    set_member_roles,
     update_company_role,
 )
 
@@ -79,7 +81,9 @@ __all__ = [
     "find_client_company",
     "can_edit_quote_pricing",
     "member_has_permission",
-    "assign_role_to_member",
+    "set_member_roles",
+    "ensure_default_company_roles",
+    "staff_permissions",
     "create_company_role",
     "delete_company_role",
     "list_roles_for_user",

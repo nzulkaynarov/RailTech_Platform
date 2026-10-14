@@ -1,10 +1,12 @@
 import logging
 from typing import Optional
 
-from ..constants import WorkspaceRoleCode
+from ..constants import ALL_PERMISSIONS
 from ..models import CustomUser
 
 logger = logging.getLogger(__name__)
+
+_CATALOG = frozenset(ALL_PERMISSIONS)
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -39,46 +41,58 @@ def is_member_of(user: "CustomUser", company_id: int, *, capability: Optional[st
     return True
 
 
-_SELL_PERMS = {
-    "quote.build",
-    "quote.send",
-    "quote.view_cost_margin",
-    "quote.edit_pricing",
-    "catalog.manage",
-    "catalog.publish",
-}
-_BUY_PERMS = {"request.create", "quote.approve", "contract.sign", "payment.record"}
-_ADMIN_PERMS = {"team.manage", "settings.edit", "charge_templates.manage"}
+def staff_permissions(user: "CustomUser") -> frozenset:
+    """Действующие права сотрудника бэк-офиса — объединение прав всех его ролей в своей компании.
+
+    Администратор (`is_superuser`) — весь каталог прав. Не сотрудник своей компании (покупательский
+    аккаунт, пользователь без компании) — пусто. Никаких выводов из должности OWNER или флагов
+    `can_sell`/`can_buy` (сняты в M1-ERP-05): нет роли — нет права. Коды вне каталога
+    (`accounts.constants.Permission`) отбрасываются.
+    """
+    if not user or not user.is_authenticated:
+        return frozenset()
+    if getattr(user, "is_superuser", False):
+        return frozenset(ALL_PERMISSIONS)
+    from core.tenant import own_company_id
+
+    company_id = own_company_id()
+    if company_id is None:
+        return frozenset()
+    from ..models import CompanyRole
+
+    role_permissions = CompanyRole.objects.filter(
+        company_id=company_id, members__user=user, members__company_id=company_id, members__is_active=True
+    ).values_list("permissions", flat=True)
+    granted = {code for permissions in role_permissions for code in (permissions or [])}
+    return frozenset(granted & _CATALOG)
+
+
+def staff_has_permission(user: "CustomUser", perm) -> bool:
+    """Есть ли у сотрудника бэк-офиса право `perm` (или хотя бы одно из набора `perm`)."""
+    granted = staff_permissions(user)
+    if isinstance(perm, (tuple, list, set, frozenset)):
+        return any(code in granted for code in perm)
+    return perm in granted
 
 
 def member_has_permission(user: "CustomUser", company_id: int, perm: str) -> bool:
-    """Company Role+Permission-set check (rbac-roles-design-2026-06-25).
+    """Право пользователя действовать от имени компании `company_id` (M1-ERP-05).
 
-    Superuser → always. Active member with a `company_role` → its permission set.
-    Until a member is migrated to a CompanyRole, fall back to deriving the permission
-    from the legacy OWNER role + can_sell/can_buy flags, so nothing breaks mid-rollout.
+    Администратор (`is_superuser`) — всегда. Своя компания — объединение прав ролей сотрудника
+    (`staff_permissions`). Компания-клиент — покупательский аккаунт, правила до M2-ERP-01
+    изолированы в `accounts.services.buyer_access`.
     """
-    if not user or not user.is_authenticated:
+    if not user or not user.is_authenticated or not company_id:
         return False
     if getattr(user, "is_superuser", False):
         return True
-    membership = (
-        user.memberships.filter(company_id=company_id, is_active=True).select_related("company_role", "role").first()
-    )
-    if membership is None:
-        return False
-    if membership.company_role_id:
-        return membership.company_role.has_perm(perm)
-    # Legacy fallback (no CompanyRole assigned yet).
-    if membership.role_id and getattr(membership.role, "code", None) == WorkspaceRoleCode.OWNER:
-        return True
-    if perm in _ADMIN_PERMS:
-        return False
-    if perm in _SELL_PERMS:
-        return bool(membership.can_sell)
-    if perm in _BUY_PERMS:
-        return bool(membership.can_buy)
-    return bool(membership.can_sell or membership.can_buy)  # e.g. data.export
+    from core.tenant import own_company_id
+
+    if company_id == own_company_id():
+        return staff_has_permission(user, perm)
+    from .buyer_access import buyer_has_permission
+
+    return buyer_has_permission(user, company_id, perm)
 
 
 def is_seller(user: "CustomUser") -> bool:
@@ -86,7 +100,7 @@ def is_seller(user: "CustomUser") -> bool:
 
     Сторона «продавец» больше не выводится из флага `can_sell`, типа компании или заголовка
     контекста: продавец один, и это своя компания. Что сотруднику можно делать, решают права
-    роли (`member_has_permission`). Имя функции историческое — переименование в M1-ERP-03.
+    роли (`member_has_permission`). Имя функции историческое (продавец один — своя компания).
     """
     if not user or not user.is_authenticated:
         return False

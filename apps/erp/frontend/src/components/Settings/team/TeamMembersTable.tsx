@@ -10,9 +10,9 @@
  */
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { CheckCircle2, XCircle, UserCheck, UserX, Trash2 } from 'lucide-react';
+import { CheckCircle2, XCircle, UserCheck, UserX, Trash2, ChevronDown } from 'lucide-react';
 
-import type { CompanyRole, User, UserMembership } from '@/api/accountsApi';
+import type { CompanyRole, User } from '@/api/accountsApi';
 import { useRemoveMember, useToggleMemberActive } from '@/hooks/useAccounts';
 import { translateApiError } from '@/lib/apiError';
 import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable';
@@ -30,12 +30,15 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from '@/components/ui/select';
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+
+import { roleDisplayName } from './roleErrors';
 
 interface TeamMembersTableProps {
   team: User[];
@@ -44,7 +47,8 @@ interface TeamMembersTableProps {
   /** team.manage permission (U2 — delegated company admin, not OWNER-only). */
   canManageTeam: boolean;
   currentUserId: number | undefined;
-  onAssignRole: (memberId: number, roleIdStr: string) => void;
+  /** Полный новый набор ролей сотрудника (M1-ERP-05: несколько ролей, права складываются). */
+  onAssignRoles: (memberId: number, roleIds: number[]) => void;
   assignPending: boolean;
 }
 
@@ -52,7 +56,7 @@ interface TeamMembersTableProps {
 interface MemberRow {
   member: User;
   memberId: number;
-  currentCompanyRoleId: number | null;
+  roleIds: number[];
   isSelf: boolean;
   canEdit: boolean;
   /** Real membership/account status (P8) — false for invited-but-not-activated / disabled. */
@@ -60,7 +64,7 @@ interface MemberRow {
   displayName: string;
 }
 
-type MemberExt = User & { membership_id?: number; company_role?: number | null };
+type MemberExt = User & { membership_id?: number };
 
 function toMemberRow(
   member: User,
@@ -72,9 +76,7 @@ function toMemberRow(
   const myMembership =
     member.memberships?.find((m) => m.company === companyId) ?? member.memberships?.[0];
   const memberId = myMembership?.id ?? extMember.membership_id ?? extMember.id;
-  const currentCompanyRoleId: number | null =
-    (myMembership as (UserMembership & { company_role?: number | null }) | undefined)
-      ?.company_role ?? extMember.company_role ?? null;
+  const roleIds: number[] = myMembership?.company_roles ?? [];
   const isSelf = member.id === currentUserId;
   // Real status (P8): the account-level is_active the backend returns per member.
   // Absent (older payloads) → treat as active so we never show a false «disabled».
@@ -82,7 +84,7 @@ function toMemberRow(
   return {
     member,
     memberId,
-    currentCompanyRoleId,
+    roleIds,
     isSelf,
     canEdit: canManageTeam && !isSelf,
     isActive,
@@ -201,8 +203,76 @@ function MemberRowActions({
   );
 }
 
+/** Роли сотрудника: бейджи; с `team.manage` — меню с галочками (несколько ролей на человека). */
+function MemberRolesCell({
+  memberId, roleIds, companyRoles, canEdit, displayName, onAssignRoles, assignPending,
+}: {
+  memberId: number;
+  roleIds: number[];
+  companyRoles: CompanyRole[];
+  canEdit: boolean;
+  displayName: string;
+  onAssignRoles: (memberId: number, roleIds: number[]) => void;
+  assignPending: boolean;
+}) {
+  const { t } = useTranslation();
+  const assigned = companyRoles.filter((role) => roleIds.includes(role.id));
+  const badges = assigned.length === 0 ? (
+    <Badge variant="outline">{t('team.noRole')}</Badge>
+  ) : (
+    assigned.map((role) => (
+      <Badge key={role.id} variant="secondary" className="font-normal">
+        {roleDisplayName(role, t)}
+      </Badge>
+    ))
+  );
+
+  if (!canEdit || companyRoles.length === 0) {
+    return <div className="flex flex-wrap gap-1">{badges}</div>;
+  }
+
+  function toggle(roleId: number, checked: boolean) {
+    const next = checked ? [...roleIds, roleId] : roleIds.filter((id) => id !== roleId);
+    onAssignRoles(memberId, next);
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      {badges}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1 px-2 text-xs"
+            disabled={assignPending}
+            aria-label={`${t('team.rolesSection.chooseRoles')}: ${displayName}`}
+          >
+            {t('team.rolesSection.chooseRoles')}
+            <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-64">
+          <DropdownMenuLabel>{t('team.rolesSection.rolesLabel')}</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {companyRoles.map((role) => (
+            <DropdownMenuCheckboxItem
+              key={role.id}
+              checked={roleIds.includes(role.id)}
+              onCheckedChange={(checked) => toggle(role.id, checked === true)}
+              onSelect={(event) => event.preventDefault()}
+            >
+              {roleDisplayName(role, t)}
+            </DropdownMenuCheckboxItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
+
 export function TeamMembersTable({
-  team, companyId, companyRoles, canManageTeam, currentUserId, onAssignRole, assignPending,
+  team, companyId, companyRoles, canManageTeam, currentUserId, onAssignRoles, assignPending,
 }: TeamMembersTableProps) {
   const { t } = useTranslation();
 
@@ -241,32 +311,17 @@ export function TeamMembersTable({
     {
       id: 'companyRole',
       header: t('team.companyRole'),
-      cell: ({ memberId, currentCompanyRoleId, canEdit }) =>
-        canEdit && companyRoles.length > 0 ? (
-          <Select
-            value={currentCompanyRoleId !== null ? String(currentCompanyRoleId) : ''}
-            onValueChange={(val) => onAssignRole(memberId, val)}
-            disabled={assignPending}
-          >
-            <SelectTrigger className="w-52" aria-label={t('team.companyRole')}>
-              <SelectValue placeholder={t('team.noRole')} />
-            </SelectTrigger>
-            <SelectContent>
-              {companyRoles.map((cr) => (
-                <SelectItem key={cr.id} value={String(cr.id)}>
-                  {cr.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : (
-          <Badge variant="outline">
-            {currentCompanyRoleId
-              ? (companyRoles.find((cr) => cr.id === currentCompanyRoleId)?.name ??
-                t('team.companyRole'))
-              : t('team.noRole')}
-          </Badge>
-        ),
+      cell: ({ memberId, roleIds, canEdit, displayName }) => (
+        <MemberRolesCell
+          memberId={memberId}
+          roleIds={roleIds}
+          companyRoles={companyRoles}
+          canEdit={canEdit}
+          displayName={displayName}
+          onAssignRoles={onAssignRoles}
+          assignPending={assignPending}
+        />
+      ),
     },
     {
       id: 'status',

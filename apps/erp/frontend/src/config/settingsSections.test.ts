@@ -18,9 +18,14 @@ function makeCapabilities(overrides: Partial<Capabilities> = {}): Capabilities {
   };
 }
 
+// Администратор ERP (is_superuser): в /me весь каталог прав (M1-ERP-05).
+const ALL_PERMISSIONS = ['settings.edit', 'settings.charge_templates', 'team.manage', 'quote.build'];
+const ADMIN: Partial<SettingsGateInput> = { isSuperuser: true, capabilities: { permissions: ALL_PERMISSIONS } };
+const HEAD: Partial<SettingsGateInput> = { capabilities: { permissions: ALL_PERMISSIONS } };
+
 function makeGate(overrides: Partial<SettingsGateInput> = {}): SettingsGateInput {
   return {
-    isOwner: false,
+    isSuperuser: false,
     capabilities: makeCapabilities(),
     ...overrides,
   };
@@ -31,10 +36,9 @@ function sectionKeys(input: SettingsGateInput): string[] {
 }
 
 describe('buildSettingsSections — S1 гейтинг = правда сохранения (spec-settings-reorg-2026-07-23)', () => {
-  it('OWNER компании: все tenant-секции (группа documents: branding/doc-templates/numbering; +platform); дефолт=profile', () => {
-    // M1-ERP-02: операторской плоскости нет; platform-секция (НДС/курс/имя/2FA) до ролей
-    // бэк-офиса (M1-ERP-05) открыта OWNER'у как «Администратору».
-    const gate = makeGate({ isOwner: true, capabilities: makeCapabilities() });
+  it('администратор (is_superuser): все секции (группа documents: branding/doc-templates/numbering; +platform); дефолт=profile', () => {
+    // M1-ERP-05: platform-секция (НДС/курс/имя/2FA) — только администратор.
+    const gate = makeGate(ADMIN);
     expect(sectionKeys(gate)).toEqual([
       'profile', 'security', 'company', 'branding', 'doc-templates', 'numbering',
       'defaults', 'templates', 'team', 'platform',
@@ -42,8 +46,20 @@ describe('buildSettingsSections — S1 гейтинг = правда сохра�
     expect(defaultSettingsSection()).toBe('profile');
   });
 
-  it('сторон нет (M1-ERP-02 волна 3): у OWNER бланк, нумерация, дефолты и статьи расхода видны всегда', () => {
-    const gate = makeGate({ isOwner: true });
+  it('«Руководитель» (все права, не администратор): всё, кроме platform', () => {
+    const gate = makeGate(HEAD);
+    expect(sectionKeys(gate)).toEqual([
+      'profile', 'security', 'company', 'branding', 'doc-templates', 'numbering',
+      'defaults', 'templates', 'team',
+    ]);
+  });
+
+  it('должность OWNER больше ничего не открывает: без прав — только profile/security/team', () => {
+    expect(sectionKeys(makeGate())).toEqual(['profile', 'security', 'team']);
+  });
+
+  it('сторон нет (M1-ERP-02 волна 3): у администратора бланк, нумерация, дефолты и статьи расхода видны всегда', () => {
+    const gate = makeGate(ADMIN);
     for (const key of ['branding', 'numbering', 'defaults', 'templates']) {
       expect(sectionKeys(gate)).toContain(key);
     }
@@ -55,7 +71,7 @@ describe('buildSettingsSections — S1 гейтинг = правда сохра�
     expect(defaultSettingsSection()).toBe('profile');
   });
 
-  it('settings.edit-делегат (без OWNER): company/branding/doc-templates/numbering/defaults — но НЕ templates(charge) и НЕ platform', () => {
+  it('settings.edit-делегат: company/branding/doc-templates/numbering/defaults — но НЕ templates(charge) и НЕ platform', () => {
     const gate = makeGate({
       capabilities: makeCapabilities({ permissions: ['settings.edit'] }),
     });
@@ -69,7 +85,7 @@ describe('buildSettingsSections — S1 гейтинг = правда сохра�
 
   it('charge-делегат (charge_templates.manage): profile/security/templates/team — БЕЗ мёртвых company-секций (фикс тупиков)', () => {
     const gate = makeGate({
-      capabilities: makeCapabilities({ permissions: ['charge_templates.manage'] }),
+      capabilities: makeCapabilities({ permissions: ['settings.charge_templates'] }),
     });
     expect(sectionKeys(gate)).toEqual(['profile', 'security', 'templates', 'team']);
     // именно эти company/documents-секции больше НЕ показываются как заглушки:
@@ -79,13 +95,13 @@ describe('buildSettingsSections — S1 гейтинг = правда сохра�
     expect(defaultSettingsSection()).toBe('profile');
   });
 
-  it('гейт-хелперы: точное право открывает свою секцию, OWNER открывает все', () => {
-    const owner = makeGate({ isOwner: true });
+  it('гейт-хелперы: точное право открывает свою секцию, администратор — все', () => {
+    const owner = makeGate(ADMIN);
     expect(hasSettingsEdit(owner)).toBe(true);
     expect(hasChargeManage(owner)).toBe(true);
     expect(hasTeamManage(owner)).toBe(true);
 
-    const chargeOnly = makeGate({ capabilities: makeCapabilities({ permissions: ['charge_templates.manage'] }) });
+    const chargeOnly = makeGate({ capabilities: makeCapabilities({ permissions: ['settings.charge_templates'] }) });
     expect(hasChargeManage(chargeOnly)).toBe(true);
     expect(hasSettingsEdit(chargeOnly)).toBe(false);
     expect(hasTeamManage(chargeOnly)).toBe(false);
@@ -99,11 +115,11 @@ describe('buildSettingsSections — S1 гейтинг = правда сохра�
 
   it('ни у одной роли список не пуст, profile всегда первый, дефолт всегда видим', () => {
     const roleMatrix: SettingsGateInput[] = [
-      makeGate({ isOwner: true, capabilities: makeCapabilities() }),
-      makeGate({ isOwner: true }),
+      makeGate(ADMIN),
+      makeGate(ADMIN),
       makeGate(),
       makeGate({ capabilities: makeCapabilities({ permissions: ['settings.edit'] }) }),
-      makeGate({ capabilities: makeCapabilities({ permissions: ['charge_templates.manage'] }) }),
+      makeGate({ capabilities: makeCapabilities({ permissions: ['settings.charge_templates'] }) }),
     ];
     for (const gate of roleMatrix) {
       const keys = sectionKeys(gate);
@@ -116,7 +132,7 @@ describe('buildSettingsSections — S1 гейтинг = правда сохра�
 
 describe('buildSettingsSections — S2 группировка', () => {
   it('каждая секция несёт корректный group-ключ', () => {
-    const gate = makeGate({ isOwner: true, capabilities: makeCapabilities() });
+    const gate = makeGate(ADMIN);
     const byKey = new Map(buildSettingsSections(gate).map((section) => [section.key, section.group]));
     expect(byKey.get('profile')).toBe('account');
     expect(byKey.get('security')).toBe('account');
@@ -132,13 +148,13 @@ describe('buildSettingsSections — S2 группировка', () => {
   });
 
   it('platform-секция в группе platform', () => {
-    const gate = makeGate({ isOwner: true });
+    const gate = makeGate(ADMIN);
     const platform = buildSettingsSections(gate).find((section) => section.key === 'platform');
     expect(platform?.group).toBe('platform');
   });
 
   it('группы идут в порядке account→company→documents→sales→team→platform (первое появление)', () => {
-    const gate = makeGate({ isOwner: true, capabilities: makeCapabilities() });
+    const gate = makeGate(ADMIN);
     const groupOrder: string[] = [];
     for (const section of buildSettingsSections(gate)) {
       if (!groupOrder.includes(section.group)) groupOrder.push(section.group);
