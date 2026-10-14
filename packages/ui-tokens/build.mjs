@@ -173,3 +173,10 @@ if (process.argv.includes("--no-crm")) {
   writeFileSync(crmTarget, antdTs);
   console.log(`dist/ готов; CRM: ${crmTarget}`);
 }
+
+// Копия для Cabinet (M2-CAB-01): образ cabinet-web собирается с контекстом apps/cabinet, без packages/.
+const cabinetTarget = resolve(here, "../../apps/cabinet/src/styles/tokens.generated.css");
+if (!process.argv.includes("--no-cabinet")) {
+  writeFileSync(cabinetTarget, shadcnCss);
+  console.log(`Cabinet: ${cabinetTarget}`);
+}

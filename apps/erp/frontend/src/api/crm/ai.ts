@@ -132,21 +132,6 @@ export const aiApi = {
 		});
 	},
 
-	// ─── AI #4 deal-chat reply assist ────────────────────────
-	// POST a deal id → a professional reply DRAFT built from the recent chat history.
-	// The draft fills the input for the user to review/edit before sending (never
-	// auto-sent). Empty draft when no conversation / no access; may 503 AI_DISABLED.
-	// ARCH-01: 202 + task_id, resolved via the ai-status poll (same return shape).
-	suggestChatReply: async (dealId: number) => {
-		return runAiJob<{ draft: string }>(async () => {
-			const response = await apiClient.post<{ task_id: string }>(
-				`crm/deals/${dealId}/suggest-reply/`,
-				{},
-			);
-			return response.data;
-		});
-	},
-
 	// ─── AI #3 «КП vs заявка» coverage / diff ────────────────
 	// GET a received КП id → deterministic coverage facts (uncovered lines) plus,
 	// when AI is on, semantic discrepancies (non-equivalent substitution, ignored

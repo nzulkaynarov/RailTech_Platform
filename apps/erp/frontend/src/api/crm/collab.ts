@@ -1,5 +1,5 @@
 /**
- * Совместная работа вокруг сделки: чат, статус фоновых задач, выгрузки, лента активности,
+ * Совместная работа вокруг сделки: статус фоновых задач, выгрузки, лента активности,
  * таймлайн, книга контрагентов и офлайн-клиенты.
  *
  * Вынесено из crmApi.ts при распиле (1179 строк, 56 правок — самый горячий файл проекта).
@@ -8,26 +8,9 @@
 
 import { apiClient } from '../client';
 import { PaginatedResponse } from '../types';
-import type { Contact, Message, OfflineClientPayload, Relationship, RelationshipDirection, RelationshipStage, TimelineEntry } from './types';
+import type { Contact, OfflineClientPayload, Relationship, RelationshipDirection, RelationshipStage, TimelineEntry } from './types';
 
 export const collabApi = {
-	getMessages: async (dealId: number, sellerCompany?: number | null) => {
-		const laneQ = sellerCompany != null ? `&seller_company=${sellerCompany}` : '';
-		const response = await apiClient.get<PaginatedResponse<Message>>(`crm/messages/?deal_id=${dealId}${laneQ}`);
-		return response.data.results;
-	},
-	getRecentMessages: async () => {
-		const response = await apiClient.get<PaginatedResponse<Message>>('crm/messages/?ordering=-timestamp&page_size=20');
-		return response.data.results;
-	},
-	sendMessage: async (dealId: number, text: string, sellerCompany?: number | null) => {
-		const response = await apiClient.post<Message>('crm/messages/', {
-			deal: dealId,
-			text,
-			...(sellerCompany != null ? { seller_company: sellerCompany } : {}),
-		});
-		return response.data;
-	},
 	getTaskStatus: async (taskId: string) => {
 		const response = await apiClient.get<{
 			task_id: string;

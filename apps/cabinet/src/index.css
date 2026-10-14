@@ -1,0 +1,20 @@
+@import "tailwindcss";
+/* Токены ансамбля: копия packages/ui-tokens/dist/shadcn.css (make tokens; сверка — make -C apps/cabinet tokens-check).
+   Копия, а не путь в packages/: образ Cabinet собирается с контекстом apps/cabinet. */
+@import "./styles/tokens.generated.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+  }
+}

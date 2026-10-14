@@ -78,18 +78,6 @@ export const StepParticipation = {
 export const approvalParticipationLabelKey = (code: string | undefined | null): string =>
   code && code in StepParticipation ? `approvalParticipation.${code}` : '';
 
-/** `SupportTicket.status` CODEs (core.models STATUS_CHOICES). Mirrors `admin.support.status.*`. */
-export const SupportTicketStatus = {
-  OPEN: 'OPEN',
-  IN_PROGRESS: 'IN_PROGRESS',
-  RESOLVED: 'RESOLVED',
-  CLOSED: 'CLOSED',
-} as const;
-
-/** Resolve a support-ticket-status label key from a code, `''` when unknown. */
-export const supportTicketStatusLabelKey = (code: string | undefined | null): string =>
-  code && code in SupportTicketStatus ? `admin.support.status.${code}` : '';
-
 export const QuoteStatus = {
   DRAFT: 'DRAFT',
   PENDING_TRADE_REVIEW: 'PENDING_TRADE_REVIEW',

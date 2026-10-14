@@ -28,11 +28,11 @@ check-erp: ## ERP: появится с M1-ERP-01; пока кода нет — �
 	@if [ -f $(ERP)/Makefile ]; then $(MAKE) -C $(ERP) check; else echo "check-erp: $(ERP) ещё без кода (M1-ERP-01) — пропуск"; fi
 
 .PHONY: check-cabinet
-check-cabinet: ## Cabinet: появится с M2-CAB-01; пока кода нет — пропуск
+check-cabinet: ## Cabinet: eslint, tsc, i18n ru/uz/en, токены, типы портала, vitest + axe (apps/cabinet/Makefile)
 	@if [ -f $(CABINET)/Makefile ]; then $(MAKE) -C $(CABINET) check; else echo "check-cabinet: $(CABINET) ещё без кода (M2-CAB-01) — пропуск"; fi
 
 .PHONY: tokens
-tokens: ## Токены дизайна: tokens.json → dist/ и apps/crm/frontend/src/app/tokens.generated.ts (M0-INF-05)
+tokens: ## Токены дизайна: tokens.json → dist/, копии в apps/crm (tokens.generated.ts) и apps/cabinet (tokens.generated.css)
 	$(MAKE) -C packages/ui-tokens build
 
 .PHONY: contracts
@@ -63,6 +63,10 @@ smoke: ## /health трёх доменов через Caddy (порт HTTP_PORT �
 	  code=$$(curl -sL -o /dev/null -w '%{http_code}' --resolve $$host.localhost:$$port:127.0.0.1 http://$$host.localhost:$$port/health); \
 	  printf '  %-18s /health → %s\n' $$host.localhost $$code; [ "$$code" = 200 ] || ok=0; \
 	done; [ $$ok = 1 ] && echo "smoke: ok" || { echo "smoke: FAIL"; exit 1; }
+
+.PHONY: caddy-reload
+caddy-reload: _compose-check ## Пересоздать Caddy после правки infra/caddy/Caddyfile.dev (bind-mount файла не видит замену файла git'ом)
+	$(COMPOSE) up -d --force-recreate --no-deps caddy
 
 .PHONY: down
 down: _compose-check ## Остановить стенд ансамбля (volumes сохраняются)

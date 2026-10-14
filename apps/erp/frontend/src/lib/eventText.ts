@@ -5,7 +5,6 @@ import {
   companyTypeLabelKey,
   dealStageLabelKey,
   kycLevelLabelKey,
-  supportTicketStatusLabelKey,
 } from './codes';
 
 /**
@@ -60,7 +59,7 @@ export function renderable(i18n: I18nType, key: string, params: Record<string, u
  *
  * `param` — что заполняем (это имя стоит в шаблоне); `source` — откуда берём код. Они
  * совпадают, когда сервер и раньше присылал код, а подпись к нему просто не подбиралась
- * (обращения в поддержку, статус отгрузки). Нет кода (СТАРЫЕ строки) или код неизвестен —
+ * (статус отгрузки). Нет кода (СТАРЫЕ строки) или код неизвестен —
  * значение остаётся как было: лента ничего не теряет.
  */
 const CODED_PARAMS: ReadonlyArray<{ param: string; source: string; labelKey: (code: string) => string }> = [
@@ -74,9 +73,6 @@ const CODED_PARAMS: ReadonlyArray<{ param: string; source: string; labelKey: (co
   { param: 'field', source: 'field', labelKey: contractWordingFieldLabelKey },
   // Стандартная редакция пункта договора — не пользовательский заголовок, а состояние.
   { param: 'variant', source: 'variant_code', labelKey: (code) => (code === 'STANDARD' ? 'contractsPage.wording.standard' : '') },
-  // Имена `from`/`to` принадлежат единственному событию — смене статуса обращения.
-  { param: 'from', source: 'from', labelKey: supportTicketStatusLabelKey },
-  { param: 'to', source: 'to', labelKey: supportTicketStatusLabelKey },
   // Уведомления: сервер шлёт код прямо в параметре с тем же именем.
   { param: 'stage_code', source: 'stage_code', labelKey: dealStageLabelKey },
   { param: 'status_code', source: 'status_code', labelKey: (code) => `fulfillmentPage.status.${code}` },

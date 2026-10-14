@@ -98,18 +98,6 @@ describe('кодовые параметры журнала', () => {
     expect(activityTitle(t(), i18n, added)).toBe('Role added: Supplier');
   });
 
-  it('статус обращения в поддержку приходил кодом — теперь к нему подбирается подпись', () => {
-    const entry = {
-      event_code: 'support.ticket_status_changed',
-      event_params: { from: 'OPEN', to: 'RESOLVED' },
-      action: 'Изменён статус обращения',
-      detail: 'OPEN → RESOLVED',
-    };
-
-    expect(activityDetail(t(), i18n, entry)).toContain('Resolved');
-    expect(activityDetail(t(), i18n, entry)).not.toContain('RESOLVED');
-  });
-
   it('СТАРАЯ строка без кода не ломается — печатается тем, что было записано', () => {
     const legacy = {
       event_code: 'deal.stage_changed',

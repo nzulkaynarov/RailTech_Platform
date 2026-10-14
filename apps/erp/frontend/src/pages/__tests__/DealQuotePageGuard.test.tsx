@@ -26,7 +26,6 @@ vi.mock('@/components/QuoteBuilder/QuoteBuilderGrid', () => ({
 }));
 vi.mock('@/components/CRM/QuoteApprovalChain', () => ({ QuoteApprovalChain: () => null }));
 vi.mock('@/components/CRM/GenerateQuoteDialog', () => ({ GenerateQuoteDialog: () => null }));
-vi.mock('@/components/Sourcing/DealChatPanel', () => ({ DealChatPanel: () => null }));
 vi.mock('@/components/CRM/GenerateContractDialog', () => ({ GenerateContractDialog: () => null }));
 // Wave B2 — the unified send composer + post-send panel are stubbed; this spec is only the nav guard.
 vi.mock('@/components/CRM/SendQuoteDialog', () => ({ SendQuoteDialog: () => null }));

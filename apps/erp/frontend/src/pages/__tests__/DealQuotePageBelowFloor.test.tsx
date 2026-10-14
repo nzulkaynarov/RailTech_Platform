@@ -47,7 +47,6 @@ vi.mock('@/components/QuoteBuilder/QuoteBuilderGrid', () => ({ QuoteBuilderGrid:
 vi.mock('@/components/CRM/GenerateQuoteDialog', () => ({ GenerateQuoteDialog: () => null }));
 vi.mock('@/components/CRM/QuoteApprovalChain', () => ({ QuoteApprovalChain: () => null }));
 vi.mock('@/components/CRM/QuoteSendGateBanner', () => ({ QuoteSendGateBanner: () => null }));
-vi.mock('@/components/Sourcing/DealChatPanel', () => ({ DealChatPanel: () => null }));
 vi.mock('@/components/CRM/GenerateContractDialog', () => ({ GenerateContractDialog: () => null }));
 
 vi.mock('sonner', () => ({
