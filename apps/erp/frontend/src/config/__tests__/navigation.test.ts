@@ -20,10 +20,9 @@ function allIds(items: ReturnType<typeof buildNavigation>): string[] {
     .filter((id): id is string => Boolean(id));
 }
 
-describe('buildNavigation — back office of one company (M1-ERP-02 wave 3)', () => {
-  it('shows the back-office work surfaces without any buyer/seller side', () => {
-    // Сторон «покупатель / продавец» нет: пункт решает только право роли. Пустой список прав =
-    // «неизвестно» — меню ничего не прячет (сервер всё равно решает).
+describe('buildNavigation — back office of one company (M1-ERP-05 roles)', () => {
+  it('shows every register to a viewer without permissions (reading is open to all staff)', () => {
+    // «Наблюдатель» (пустой список прав) видит все реестры: просмотр открыт любому сотруднику.
     const items = buildNavigation(TENANT_NAV, caps(), 'dashboard', t);
     expect(leafIds(items)).toEqual(['dashboard', 'crm-deals', 'clients']);
     const documents = items.find((item) => item.label === 'shell.documents');
@@ -39,9 +38,11 @@ describe('buildNavigation — back office of one company (M1-ERP-02 wave 3)', ()
     }
   });
 
-  it('still hides a permission-gated item when the role lacks the permission', () => {
-    const items = buildNavigation(TENANT_NAV, caps({ permissions: ['catalog.manage'] }), 'dashboard', t);
-    expect(leafIds(items)).not.toContain('crm-deals');
-    expect(allIds(items)).toContain('my-products');
+  it('hides a tool page when the role lacks its permission (price upload needs catalog.manage)', () => {
+    const viewer = allIds(buildNavigation(TENANT_NAV, caps(), 'dashboard', t));
+    expect(viewer).toContain('my-products');
+    expect(viewer).not.toContain('catalog-import');
+    const catalog = allIds(buildNavigation(TENANT_NAV, caps({ permissions: ['catalog.manage'] }), 'dashboard', t));
+    expect(catalog).toContain('catalog-import');
   });
 });

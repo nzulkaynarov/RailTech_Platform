@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Calculator, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { QuoteStatus, DealStage } from '@/lib/codes';
-import { useIsSoloSeller } from '@/hooks/useCapabilities';
+import { useIsSoloTeam } from '@/hooks/useCapabilities';
 import {
   useDeal, useChangeDealStage, useSendQuoteToClient,
   useClaimDeal, useReleaseDeal, useTakeAndPrepareQuote, useSubmitQuoteForReview,
@@ -48,7 +48,7 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
   const releaseMut = useReleaseDeal();
   const takeMut = useTakeAndPrepareQuote();
   const submitReviewMut = useSubmitQuoteForReview();
-  const isSoloSeller = useIsSoloSeller();
+  const isSoloTeam = useIsSoloTeam();
 
   if (isLoading && !deal) return <LoadingSkeleton />;
   // A failed fetch (404 / no-access / network) must read as an error with a way out — not a bare
@@ -92,7 +92,7 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
   // The client rejected the КП → offer a primary "new version" action (perform_create auto-increments).
   const canBuildNewVersion = deal.active_quote?.status_code === QuoteStatus.REJECTED;
   // Wave B2 (auto-claim): a solo team has no queue to hand out, so hide «Взять в работу» entirely.
-  const canClaim = deal.assigned_to == null && !isSoloSeller;
+  const canClaim = deal.assigned_to == null && !isSoloTeam;
   // Право на возврат считает СЕРВЕР (владелец записи ИЛИ team.manage) — фронт его не выводит.
   const canRelease = !!deal.viewer_can_release;
   const openQuoteBuilder = () => { window.location.hash = `deal-quote/${deal.id}`; };

@@ -12,6 +12,8 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
+from core.permissions import RoleGatedViewMixin
+
 from .models import ImportTask
 from .tasks import process_catalog_import, process_excel_import
 
@@ -94,11 +96,16 @@ def _check_deal_access(user, deal) -> bool:
     },
     tags=["Sourcing"],
 )
-class ExcelImportView(APIView):
+class ExcelImportView(RoleGatedViewMixin, APIView):
     """Endpoint for deal-specific excel imports.
     Both clients (for own deals) and managers can import.
     Deal access is verified inside the view via _check_deal_access.
     """
+
+    required_permissions = {
+        "POST": "deal.manage",
+    }
+    buyer_actions = frozenset({"POST"})  # до M2-ERP-01
 
     parser_classes = [MultiPartParser]
     permission_classes = [IsAuthenticated]
@@ -227,7 +234,7 @@ class ExcelImportView(APIView):
     },
     tags=["Sourcing"],
 )
-class CatalogImportView(APIView):
+class CatalogImportView(RoleGatedViewMixin, APIView):
     """Bulk supplier catalog import.
 
     Accessible to (a) platform admin and (b) any authenticated user who is an
@@ -235,6 +242,10 @@ class CatalogImportView(APIView):
     Task actor is captured in ImportTask.owner so admin can trace who uploaded
     what.
     """
+
+    required_permissions = {
+        "POST": "catalog.manage",
+    }
 
     parser_classes = [MultiPartParser]
     permission_classes = [IsAuthenticated]
@@ -320,11 +331,15 @@ AI_CATALOG_EXTENSIONS = ("xlsx", "pdf", "png", "jpg", "jpeg")
     },
     tags=["Sourcing"],
 )
-class ImportCatalogAiView(APIView):
+class ImportCatalogAiView(RoleGatedViewMixin, APIView):
     """R5b — зеркало CatalogImportView для произвольных файлов (staging как у extract-document).
 
     Дневной предохранитель расхода ИИ применяется внутри enqueue_ai_job.
     """
+
+    required_permissions = {
+        "POST": "catalog.manage",
+    }
 
     parser_classes = [MultiPartParser]
     permission_classes = [IsAuthenticated]

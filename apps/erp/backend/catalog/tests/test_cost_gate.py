@@ -12,7 +12,7 @@ from master_data.models import Currency
 
 
 @pytest.fixture
-def owned_product(db):
+def owned_product(db, grant):
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
     owner_role = WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})[0]
@@ -22,6 +22,7 @@ def owned_product(db):
     seller_co.types.add(CompanyType.objects.get(code="SUPPLIER"))
     seller = CustomUser.objects.create_user(email="cs@s.test", username="cs@s.test", password="pw", is_active=True)
     CompanyMember.objects.create(user=seller, company=seller_co, role=owner_role, is_active=True, can_sell=True)
+    grant(seller, "CATALOG_SUPPLY")  # M1-ERP-05: права сотрудника — только из ролей
 
     buyer = CustomUser.objects.create_user(email="cb@b.test", username="cb@b.test", password="pw", is_active=True)
 

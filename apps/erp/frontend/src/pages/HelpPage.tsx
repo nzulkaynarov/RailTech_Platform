@@ -2,7 +2,9 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
-import { HelpCircle, FileText, MessageSquare, Mail, ChevronDown, Wrench, ShieldCheck, Factory, Store } from 'lucide-react';
+import {
+  HelpCircle, FileText, MessageSquare, Mail, ChevronDown, ShieldCheck, Calculator, Boxes, Truck, Wallet, Crown, Eye,
+} from 'lucide-react';
 import { PageShell } from './shared/PageShell';
 
 export function HelpPage() {
@@ -10,12 +12,16 @@ export function HelpPage() {
 
   const roles: Array<{
     icon: React.ReactNode;
-    key: 'platformEngineer' | 'platformAdmin' | 'supplierTeam' | 'clientTeam';
+    key: 'administrator' | 'calculation' | 'catalogSupply' | 'fulfillment' | 'finance' | 'head' | 'viewer';
   }> = [
-    { icon: <Wrench className="h-4 w-4" />, key: 'platformEngineer' },
-    { icon: <ShieldCheck className="h-4 w-4" />, key: 'platformAdmin' },
-    { icon: <Factory className="h-4 w-4" />, key: 'supplierTeam' },
-    { icon: <Store className="h-4 w-4" />, key: 'clientTeam' },
+    // Роли бэк-офиса M1-ERP-05 (BUSINESS §11) + администратор (суперпользователь из CRM).
+    { icon: <Calculator className="h-4 w-4" />, key: 'calculation' },
+    { icon: <Boxes className="h-4 w-4" />, key: 'catalogSupply' },
+    { icon: <Truck className="h-4 w-4" />, key: 'fulfillment' },
+    { icon: <Wallet className="h-4 w-4" />, key: 'finance' },
+    { icon: <Crown className="h-4 w-4" />, key: 'head' },
+    { icon: <Eye className="h-4 w-4" />, key: 'viewer' },
+    { icon: <ShieldCheck className="h-4 w-4" />, key: 'administrator' },
   ];
 
   const categories = [

@@ -36,7 +36,18 @@ def _member(company, email, *, role_code="OWNER"):
     CompanyMember.objects.create(
         user=user, company=company, role=WorkspaceRole.objects.get(code=role_code), is_active=True, is_primary=True
     )
+    if role_code == "OWNER":
+        _grant_head(user, company)
     return user
+
+
+def _grant_head(user, company):
+    """M1-ERP-05: права сотрудника — только из ролей; прежний OWNER = роль «Руководитель»."""
+    from accounts.services.roles import ensure_default_company_roles
+
+    CompanyMember.objects.get(user=user, company=company).company_roles.add(
+        ensure_default_company_roles(company)["HEAD"]
+    )
 
 
 def _api(user):

@@ -14,6 +14,25 @@ import pytest
 from master_data.models import Currency
 
 
+def _staff(email, permissions=("quote.build",)):
+    """Сотрудник своей компании с правом роли (M1-ERP-05: эндпоинт разбора документа — для
+    `contract.manage` / `quote.build`)."""
+    from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, CustomUser, WorkspaceRole
+
+    company = Company.objects.create(name="Своя", inn=f"77{abs(hash(email)) % 10**7:07d}")
+    company.types.add(CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "S"})[0])
+    user = CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
+    role = CompanyRole.objects.create(company=company, name="Роль", permissions=list(permissions))
+    CompanyMember.objects.create(
+        user=user,
+        company=company,
+        role=WorkspaceRole.objects.get(code="MEMBER"),
+        is_primary=True,
+        company_roles=[role],
+    )
+    return user
+
+
 @pytest.mark.django_db
 def test_reconcile_flags_total_mismatch():
     """Document total ≠ КП total → TOTAL_MISMATCH, computed in code with Decimal."""
@@ -151,10 +170,8 @@ def test_extract_endpoint_guards(settings, monkeypatch):
     from django.core.files.uploadedfile import SimpleUploadedFile
     from rest_framework.test import APIClient
 
-    from accounts.models import CustomUser
-
     # Корневой conftest блокирует транспорт шлюза: дошедший до модели guarded-путь упадёт.
-    user = CustomUser.objects.create_user(email="dx@x.test", username="dx@x.test", password="pw", is_active=True)
+    user = _staff("dx@x.test")
     client = APIClient()
     client.force_authenticate(user)
     url = "/api/v1/sourcing/extract-document/"
@@ -184,11 +201,10 @@ def test_extract_endpoint_enqueues_202(settings, monkeypatch):
     from django.core.files.uploadedfile import SimpleUploadedFile
     from rest_framework.test import APIClient
 
-    from accounts.models import CustomUser
     from sourcing.models import AIJob
 
     settings.AI_IMPORT_ENABLED = True
-    user = CustomUser.objects.create_user(email="dx202@x.test", username="dx202@x.test", password="pw", is_active=True)
+    user = _staff("dx202@x.test")
     client = APIClient()
     client.force_authenticate(user)
 

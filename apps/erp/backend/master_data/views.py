@@ -7,6 +7,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
 from core.audit import AuditedWriteMixin
+from core.permissions import ADMIN_ONLY, RoleGatedViewMixin
 
 from .models import Country, Currency, DeliveryBasis, HSCode, UnitOfMeasure
 from .serializers import CountrySerializer, CurrencySerializer, DeliveryBasisSerializer, UnitOfMeasureSerializer
@@ -162,8 +163,17 @@ class _ActiveOnlyListMixin:
     partial_update=extend_schema(summary="Partially update country", tags=["Master Data"]),
     destroy=extend_schema(summary="Delete country", tags=["Master Data"]),
 )
-class CountryViewSet(_CachedLookupListMixin, _GuardedDestroyMixin, _ActiveOnlyListMixin, viewsets.ModelViewSet):
+class CountryViewSet(
+    RoleGatedViewMixin, _CachedLookupListMixin, _GuardedDestroyMixin, _ActiveOnlyListMixin, viewsets.ModelViewSet
+):
     """CRUD for countries (read: public; write: admin)."""
+
+    required_permissions = {
+        "create": ADMIN_ONLY,
+        "update": ADMIN_ONLY,
+        "partial_update": ADMIN_ONLY,
+        "destroy": ADMIN_ONLY,
+    }
 
     queryset = Country.objects.all().order_by("sort_order", "name")
     serializer_class = CountrySerializer
@@ -183,8 +193,17 @@ class CountryViewSet(_CachedLookupListMixin, _GuardedDestroyMixin, _ActiveOnlyLi
     partial_update=extend_schema(summary="Partially update currency", tags=["Master Data"]),
     destroy=extend_schema(summary="Delete currency", tags=["Master Data"]),
 )
-class CurrencyViewSet(_CachedLookupListMixin, _GuardedDestroyMixin, _ActiveOnlyListMixin, viewsets.ModelViewSet):
+class CurrencyViewSet(
+    RoleGatedViewMixin, _CachedLookupListMixin, _GuardedDestroyMixin, _ActiveOnlyListMixin, viewsets.ModelViewSet
+):
     """CRUD for currencies (read: public; write: admin)."""
+
+    required_permissions = {
+        "create": ADMIN_ONLY,
+        "update": ADMIN_ONLY,
+        "partial_update": ADMIN_ONLY,
+        "destroy": ADMIN_ONLY,
+    }
 
     queryset = Currency.objects.all().order_by("sort_order", "code")
     serializer_class = CurrencySerializer
@@ -204,8 +223,17 @@ class CurrencyViewSet(_CachedLookupListMixin, _GuardedDestroyMixin, _ActiveOnlyL
     partial_update=extend_schema(summary="Partially update unit", tags=["Master Data"]),
     destroy=extend_schema(summary="Delete unit", tags=["Master Data"]),
 )
-class UnitOfMeasureViewSet(_CachedLookupListMixin, _GuardedDestroyMixin, _ActiveOnlyListMixin, viewsets.ModelViewSet):
+class UnitOfMeasureViewSet(
+    RoleGatedViewMixin, _CachedLookupListMixin, _GuardedDestroyMixin, _ActiveOnlyListMixin, viewsets.ModelViewSet
+):
     """CRUD for units of measure (read: public; write: admin)."""
+
+    required_permissions = {
+        "create": ADMIN_ONLY,
+        "update": ADMIN_ONLY,
+        "partial_update": ADMIN_ONLY,
+        "destroy": ADMIN_ONLY,
+    }
 
     queryset = UnitOfMeasure.objects.all().order_by("sort_order", "code")
     serializer_class = UnitOfMeasureSerializer
@@ -225,8 +253,17 @@ class UnitOfMeasureViewSet(_CachedLookupListMixin, _GuardedDestroyMixin, _Active
     partial_update=extend_schema(summary="Partially update delivery basis", tags=["Master Data"]),
     destroy=extend_schema(summary="Delete delivery basis", tags=["Master Data"]),
 )
-class DeliveryBasisViewSet(_CachedLookupListMixin, _GuardedDestroyMixin, _ActiveOnlyListMixin, viewsets.ModelViewSet):
+class DeliveryBasisViewSet(
+    RoleGatedViewMixin, _CachedLookupListMixin, _GuardedDestroyMixin, _ActiveOnlyListMixin, viewsets.ModelViewSet
+):
     """CRUD for delivery basis terms (Incoterms). Read: public; write: admin."""
+
+    required_permissions = {
+        "create": ADMIN_ONLY,
+        "update": ADMIN_ONLY,
+        "partial_update": ADMIN_ONLY,
+        "destroy": ADMIN_ONLY,
+    }
 
     queryset = DeliveryBasis.objects.all().order_by("sort_order", "code")
     serializer_class = DeliveryBasisSerializer

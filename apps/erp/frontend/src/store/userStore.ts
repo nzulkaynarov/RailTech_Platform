@@ -6,11 +6,11 @@ import { useThemeStore } from './themeStore';
  * Single source the unified nav engine (config/navigation.tsx) reads to render/gate items. */
 export interface Capabilities {
   permissions: string[];
-  /** Wave B2 (auto-claim) — true when the company effectively has ONE member with claim rights,
-   * so «Взять в работу» is noise (there is no one to hand work between). OPTIONAL: undefined →
-   * the claim button keeps its prior behaviour. UI-gating only — claim/assignment stays
-   * authoritative server-side. See useIsSoloSeller. */
-  is_solo_seller?: boolean;
+  /** Роли бэк-офиса сотрудника (M1-ERP-05) — подпись в шапке; системные переводятся по `code`. */
+  roles?: { code: string; name: string; is_system: boolean }[];
+  /** Wave B2 (auto-claim) — в команде один сотрудник с `deal.manage`, «Взять в работу» — шум.
+   * Только скрытие кнопки; распределение решает сервер. См. useIsSoloTeam. */
+  is_solo_team?: boolean;
   /**
    * Дневной расход ИИ. Не гейт, а ИНФОРМАЦИЯ рядом с кнопкой ИИ: потолок живёт на сервере
    * (429 `AI_DAILY_CAP_REACHED`) как защита бюджета, не как тариф. Новых блокировок нет —
@@ -111,9 +111,8 @@ export const useUserStore = create<UserState>((set) => ({
         }
       }
 
-      // ERP — бэк-офис одной компании (M1-ERP-02 волна 3): сторон «покупатель / продавец» и
-      // заголовка рабочего контекста в запросах больше нет. Действия ограничивает право роли из /me;
-      // пустой список прав = «неизвестно» (меню ничего не прячет, сервер всё равно решает).
+      // ERP — бэк-офис одной компании: действия ограничивают права ролей из /me (M1-ERP-05);
+      // пустой список прав = прав нет (роль «Наблюдатель»): читать можно, действовать — нет.
       const userPayload = authState.user as { capabilities?: Capabilities };
       const capabilities: Capabilities = userPayload.capabilities ?? { permissions: [] };
 

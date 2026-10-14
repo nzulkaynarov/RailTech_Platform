@@ -21,6 +21,7 @@ from django.utils import timezone
 
 from accounts.constants import Permission
 from accounts.models import Company, CompanyMember, CompanyRole, CompanySettings, CompanyType, CustomUser, WorkspaceRole
+from accounts.services.roles import ensure_default_company_roles
 from crm.models import ActivityLog, Deal, DealStage, Quote, QuoteStatus
 from crm.models.approvals import StepParticipation, StepStatus, StepTrigger
 from crm.services.approvals import preview_approval_chain
@@ -51,15 +52,15 @@ def _user(email):
     return CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
 
 
-def _member(company, user, *, workspace_role="MEMBER", company_role=None):
+def _member(company, user, *, workspace_role="MEMBER", company_roles=None):
     return CompanyMember.objects.create(
         user=user,
         company=company,
         role=WorkspaceRole.objects.get(code=workspace_role) if workspace_role else None,
-        company_role=company_role,
+        company_roles=company_roles or [],
         is_primary=True,
         is_active=True,
-        can_sell=False,  # permissions come from company_role, not the legacy flag
+        can_sell=False,  # permissions come from the roles, not the legacy flag
     )
 
 
@@ -74,26 +75,26 @@ def _seller_company(name, inn):
 
 @pytest.fixture
 def solo(lookups):
-    """A one-person seller: the sole member holds the is_system admin role (every permission,
+    """A one-person seller: the sole member holds the «Руководитель» role (every permission,
     incl. quote.build + quote.approve_final) — so they are both submitter AND the only approver."""
     company = _seller_company("Solo LLC", "7700000010")
-    admin_role = CompanyRole.objects.create(company=company, name="Администратор компании", is_system=True)
+    admin_role = ensure_default_company_roles(company)["HEAD"]
     owner = _user("owner@solo.test")
-    _member(company, owner, workspace_role="OWNER", company_role=admin_role)
+    _member(company, owner, workspace_role="OWNER", company_roles=[admin_role])
     return {"company": company, "owner": owner}
 
 
 @pytest.fixture
 def two_person(lookups):
-    """A two-person seller: SALES (quote.build only, submits) + HEAD (is_system, approves).
+    """A two-person seller: SALES (quote.build only, submits) + HEAD («Руководитель», approves).
     The head is a DIFFERENT user than the submitter → a genuine cross-person chain."""
     company = _seller_company("Duo LLC", "7700000011")
-    admin_role = CompanyRole.objects.create(company=company, name="Администратор компании", is_system=True)
+    admin_role = ensure_default_company_roles(company)["HEAD"]
     sales_role = CompanyRole.objects.create(company=company, name="Продажи", permissions=[Permission.QUOTE_BUILD.value])
     sales = _user("sales@duo.test")
-    _member(company, sales, workspace_role="SALES_MANAGER", company_role=sales_role)
+    _member(company, sales, workspace_role="SALES_MANAGER", company_roles=[sales_role])
     head = _user("head@duo.test")
-    _member(company, head, workspace_role="MEMBER", company_role=admin_role)
+    _member(company, head, workspace_role="MEMBER", company_roles=[admin_role])
     return {"company": company, "sales": sales, "head": head}
 
 
@@ -267,8 +268,8 @@ def _sendable_quote(default_validity_days):
     else:
         CompanySettings.objects.create(company=company)
     seller_user = _user("seller@ready.test")
-    admin_role = CompanyRole.objects.create(company=company, name="Администратор компании", is_system=True)
-    _member(company, seller_user, workspace_role="OWNER", company_role=admin_role)
+    admin_role = ensure_default_company_roles(company)["HEAD"]
+    _member(company, seller_user, workspace_role="OWNER", company_roles=[admin_role])
 
     buyer_user = _user("buyer@ready.test")
     client_co = _client_co(None)

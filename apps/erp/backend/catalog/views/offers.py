@@ -3,6 +3,8 @@ from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import permissions, viewsets
 from rest_framework.exceptions import PermissionDenied
 
+from core.permissions import RoleGatedViewMixin
+
 from ..models import SupplierOffer
 from ..serializers import SupplierOfferSerializer
 
@@ -23,12 +25,19 @@ from ..serializers import SupplierOfferSerializer
     partial_update=extend_schema(summary="Partially update supplier offer", tags=["Catalog"]),
     destroy=extend_schema(summary="Delete supplier offer", tags=["Catalog"]),
 )
-class SupplierOfferViewSet(viewsets.ModelViewSet):
+class SupplierOfferViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     """
     CRUD for supplier offers (pricing, stock, delivery terms).
 
     Public read access (active only); write operations require Manager/Admin role.
     """
+
+    required_permissions = {
+        "create": "supply.manage",
+        "update": "supply.manage",
+        "partial_update": "supply.manage",
+        "destroy": "supply.manage",
+    }
 
     serializer_class = SupplierOfferSerializer
     filter_backends = [DjangoFilterBackend]
@@ -88,8 +97,8 @@ class SupplierOfferViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
             return [permissions.AllowAny()]
-        # Write: (administrator OR seller with the catalog.manage role permission) AND, for a
-        # specific offer, ownership of that offer's supplier company (object-level).
-        from core.permissions import IsOfferSupplierOrAdmin, IsSellerCatalogManager
+        # Запись: право роли `supply.manage` (гейт RoleGatedViewMixin выше) И, для конкретного
+        # предложения, членство в компании-поставщике этого предложения (уровень объекта).
+        from core.permissions import IsOfferSupplierOrAdmin
 
-        return [permissions.IsAuthenticated(), IsSellerCatalogManager(), IsOfferSupplierOrAdmin()]
+        return [permissions.IsAuthenticated(), IsOfferSupplierOrAdmin()]

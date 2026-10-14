@@ -22,7 +22,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from core.optimistic_locking import OptimisticLockingMixin
-from core.permissions import IsCompanyMemberOrPlatformAdmin
+from core.permissions import ADMIN_ONLY, BUYER_ONLY, IsCompanyMemberOrPlatformAdmin, RoleGatedViewMixin
 from crm import services as crm_services
 from crm.constants import QuoteStatusCode
 from crm.models import Quote, QuoteStatus
@@ -47,7 +47,7 @@ from crm.views.quotes.approval import QuoteApprovalMixin, _chain_error_response
     partial_update=extend_schema(summary="Partially update quote", tags=["CRM"]),
     destroy=extend_schema(summary="Delete quote", tags=["CRM"]),
 )
-class QuoteViewSet(QuoteApprovalMixin, OptimisticLockingMixin, viewsets.ModelViewSet):
+class QuoteViewSet(RoleGatedViewMixin, QuoteApprovalMixin, OptimisticLockingMixin, viewsets.ModelViewSet):
     """
     CRUD for quotes (commercial proposals).
 
@@ -56,6 +56,29 @@ class QuoteViewSet(QuoteApprovalMixin, OptimisticLockingMixin, viewsets.ModelVie
     (The approve/reject/force-approve and approval-chain actions come from
     ``QuoteApprovalMixin`` — the ``operator_permissions`` map lives there too.)
     """
+
+    # Создание и правка КП (ставка НДС, валюта, срок) — `quote.edit_pricing`: ровно то, что проверяют
+    # perform_create/perform_update; остальной жизненный цикл — `quote.build`.
+    required_permissions = {
+        "create": "quote.edit_pricing",
+        "update": "quote.edit_pricing",
+        "partial_update": "quote.edit_pricing",
+        "destroy": "quote.build",
+        "duplicate": "quote.build",
+        "generate_pdf": "quote.build",
+        "recall": "quote.build",
+        "set_delivery_basis": "quote.build",
+        "submit_for_review": "quote.build",
+        "revoke_public_link": "quote.build",
+        "apply_defaults": "quote.edit_pricing",
+        "charges_reorder": "quote.edit_pricing",
+        "send_to_client": "quote.send",
+        "approval_act": ("quote.review", "quote.approve_final"),
+        "approve": BUYER_ONLY,
+        "reject": BUYER_ONLY,
+        "force_approve": ADMIN_ONLY,
+    }
+    buyer_actions = frozenset({"approve", "reject"})  # до M2-ERP-01
 
     serializer_class = QuoteSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]

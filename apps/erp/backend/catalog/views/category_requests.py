@@ -12,7 +12,7 @@ from rest_framework import mixins, permissions, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from core.permissions import IsPlatformAdmin
+from core.permissions import ADMIN_ONLY, IsPlatformAdmin, RoleGatedViewMixin
 
 from ..category_requests import approve_category_request, reject_category_request, submit_category_request
 from ..models import Category, CategoryRequest
@@ -87,11 +87,18 @@ class CategoryRequestReviewSerializer(serializers.Serializer):
     retrieve=extend_schema(summary="Get category request", tags=["Catalog"]),
 )
 class CategoryRequestViewSet(
+    RoleGatedViewMixin,
     mixins.CreateModelMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     viewsets.GenericViewSet,
 ):
+    required_permissions = {
+        "create": "catalog.manage",
+        "approve": ADMIN_ONLY,
+        "reject": ADMIN_ONLY,
+    }
+
     serializer_class = CategoryRequestSerializer
     #: Рассматривает тот же оператор, что ведёт справочник (см. CategoryViewSet).
 

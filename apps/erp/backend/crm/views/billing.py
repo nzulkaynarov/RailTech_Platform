@@ -10,7 +10,7 @@ from rest_framework.response import Response
 
 from core.file_streaming import stream_file_field
 from core.optimistic_locking import OptimisticLockingMixin
-from core.permissions import IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin
+from core.permissions import ADMIN_ONLY, BUYER_ONLY, IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin, RoleGatedViewMixin
 from crm import services as crm_services
 from crm.constants import DEFAULT_INVOICE_DUE_DAYS, InvoiceStatusCode
 from crm.models import Act, Contract, Fulfillment, Invoice, Payment
@@ -110,8 +110,23 @@ def _billing_visibility_q(user, request, *, deal_path):
     return buyer_q | seller_q
 
 
-class ContractViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
+class ContractViewSet(RoleGatedViewMixin, OptimisticLockingMixin, viewsets.ModelViewSet):
     """Contracts -- generated from approved quotes, double-signed."""
+
+    required_permissions = {
+        "create": "contract.manage",
+        "update": "contract.manage",
+        "partial_update": "contract.manage",
+        "destroy": "contract.manage",
+        "generate_from_quote": "contract.manage",
+        "select_wording": "contract.manage",
+        "upload_signed": "contract.manage",
+        "cancel": ADMIN_ONLY,
+        "force_cancel": ADMIN_ONLY,
+        "sign_manager": "contract.sign",
+        "sign_client": BUYER_ONLY,
+    }
+    buyer_actions = frozenset({"sign_client"})  # до M2-ERP-01
 
     serializer_class = ContractSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
@@ -271,6 +286,7 @@ class ContractViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
 
 
 class InvoiceViewSet(
+    RoleGatedViewMixin,
     OptimisticLockingMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
@@ -286,6 +302,20 @@ class InvoiceViewSet(
     `update` оставлен: им правят черновик (due_date / notes), и он уже загейчен
     на DRAFT ниже — фронтенд использует именно его.
     """
+
+    required_permissions = {
+        "create": "finance.invoice",
+        "update": "finance.invoice",
+        "partial_update": "finance.invoice",
+        "destroy": "finance.invoice",
+        "create_manual": "finance.invoice",
+        "generate_from_contract": "finance.invoice",
+        "cancel": "finance.invoice",
+        "issue": "finance.invoice",
+        "generate_act": "fulfillment.act",
+        "record_payment": "finance.payment",
+    }
+    buyer_actions = frozenset({"record_payment"})  # до M2-ERP-01
 
     serializer_class = InvoiceSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
@@ -506,13 +536,22 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
         return _stream_or_render_pdf(self.get_object())
 
 
-class ActViewSet(viewsets.ReadOnlyModelViewSet):
+class ActViewSet(RoleGatedViewMixin, viewsets.ReadOnlyModelViewSet):
     """Акты — только чтение плюс сервисные экшены ниже (Rule 8).
 
     Выпуск — через `invoices/{id}/generate-act/` (там же проверяется роутинг
     продавца, аудит H4), подпись — через `acts/{id}/sign/`. Сырые create/update/
     destroy обходили обе проверки и позволяли проставить номер, статус и даты руками.
     """
+
+    required_permissions = {
+        "cancel": "fulfillment.act",
+        "reissue": "fulfillment.act",
+        "remind": "fulfillment.act",
+        "sign": BUYER_ONLY,
+        "reject": BUYER_ONLY,
+    }
+    buyer_actions = frozenset({"sign", "reject"})  # до M2-ERP-01
 
     serializer_class = ActSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
@@ -646,12 +685,17 @@ class ActViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(ActSerializer(act, context=self.get_serializer_context()).data)
 
 
-class FulfillmentViewSet(viewsets.ReadOnlyModelViewSet):
+class FulfillmentViewSet(RoleGatedViewMixin, viewsets.ReadOnlyModelViewSet):
     """Отгрузки — только чтение плюс экшен `update-status` (Rule 8).
 
     Сырой CRUD позволял, среди прочего, проставить или сбросить `contract` —
     привязку к владельцу, от которой зависит видимость записи для продавца.
     """
+
+    required_permissions = {
+        "update_status": "fulfillment.manage",
+    }
+    buyer_actions = frozenset({"update_status"})  # до M2-ERP-01
 
     serializer_class = FulfillmentSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]

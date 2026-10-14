@@ -27,22 +27,22 @@ HEAD_ORDER = 100  # the руководитель is always the last (highest-ord
 
 # ── helpers ────────────────────────────────────────────────────────────────
 def _members_with_permission(company_id: int, perm: str) -> list:
-    members = CompanyMember.objects.filter(company_id=company_id, is_active=True).select_related(
-        "user", "company_role", "role"
+    """Активные участники компании с правом `perm` — объединение их ролей (M1-ERP-05), одним
+    запросом с prefetch, без похода в `member_has_permission` на каждого."""
+    members = (
+        CompanyMember.objects.filter(company_id=company_id, is_active=True, user__isnull=False)
+        .select_related("user", "role")
+        .prefetch_related("company_roles")
     )
-    return [m for m in members if m.user_id and member_has_permission(m.user, company_id, perm)]
+    return [m for m in members if any(role.has_perm(perm) for role in m.company_roles.all())]
 
 
 def _fallback_head(company_id: int) -> Optional[CompanyMember]:
-    """Never-orphan head fallback (ADR-0005 Phase E U3): if no quote.approve_final holder is
-    found, fall back to the company's immutable admin (is_system «Администратор компании») — the
-    never-orphan floor, which always carries quote.approve_final. No WorkspaceRole read. Returns
-    None only for an admin-less company (a state never-orphan prevents); the caller logs that."""
-    return (
-        CompanyMember.objects.filter(company_id=company_id, is_active=True, company_role__is_system=True)
-        .select_related("user")
-        .first()
-    )
+    """Запасного «администратора компании» больше нет (M1-ERP-05): финальный согласующий — держатель
+    `quote.approve_final` (роль «Руководитель»), администратор бэк-офиса — `is_superuser`. Без
+    держателя шаг руководителя остаётся без исполнителя (вызывающий пишет предупреждение), и
+    утвердить КП может администратор."""
+    return None
 
 
 def _notify_user(
@@ -422,7 +422,7 @@ def _member_display(member) -> str:
 
 def _preview_step(member, participation: str, trigger: str, submitter_user_id: Optional[int]) -> dict:
     """Project a would-be approver into the read-only preview shape (no QuoteApprovalStep row)."""
-    role = getattr(member, "company_role", None)
+    roles = list(member.company_roles.all()) if member is not None else []
     return {
         "participation": participation,
         "participation_label": str(_PARTICIPATION_LABELS.get(participation, participation)),
@@ -431,7 +431,7 @@ def _preview_step(member, participation: str, trigger: str, submitter_user_id: O
         "member_id": getattr(member, "id", None),
         "user_id": getattr(member, "user_id", None),
         "name": _member_display(member),
-        "role": role.name if role is not None else "",
+        "role": ", ".join(role.name for role in roles),
         "is_assigned": member is not None,
         "is_submitter": member is not None and member.user_id == submitter_user_id,
     }

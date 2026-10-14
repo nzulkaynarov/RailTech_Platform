@@ -155,8 +155,9 @@ def test_the_issuer_cannot_accept_its_own_act(act_world):
     стороны, иначе документ ничего не подтверждает."""
     resp = _api(act_world["seller_user"]).post(f"/api/v1/crm/acts/{act_world['act'].id}/sign/")
 
-    assert resp.status_code == 400, resp.content
-    assert resp.json()["detail"] == "ACT_ACCEPTOR_SIDE_REQUIRED"
+    # M1-ERP-05: приёмка — шаг покупателя (BUYER_ONLY), сотрудника отсекает гейт ролей.
+    assert resp.status_code == 403, resp.content
+    assert resp.json()["detail"] == "ROLE_NOT_PERMITTED"
     act_world["act"].refresh_from_db()
     assert act_world["act"].status_code == "ISSUED", "акт закрыт выпустившей стороной"
 

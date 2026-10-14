@@ -68,22 +68,12 @@ class QuoteApprovalMixin:
 
     @staticmethod
     def _assert_buyer_can_buy(user, quote):
-        """Return a 403 Response if `user` may not act as the deal's buyer, else None.
-
-        Additive guard (defense-in-depth): legacy can_buy capability OR explicit
-        quote.approve CompanyRole permission. has_explicit_company_role_perm skips
-        the legacy can_buy fallback so only members with an intentional CompanyRole
-        assignment pass through this new path (no accidental promotion).
-        """
-        from accounts.services.permissions import is_member_of
-        from crm.services._params import has_explicit_company_role_perm
+        """Return a 403 Response if `user` may not act as the deal's buyer, else None
+        (покупательский аккаунт — до M2-ERP-01, `accounts.services.buyer_access`)."""
+        from accounts.services.buyer_access import buyer_has_permission
 
         company_id = quote.deal.company_id
-        if not (
-            getattr(user, "is_superuser", False)
-            or is_member_of(user, company_id, capability="buy")
-            or has_explicit_company_role_perm(user, company_id, "quote.approve")
-        ):
+        if not (getattr(user, "is_superuser", False) or buyer_has_permission(user, company_id, "quote.approve")):
             return Response({"detail": "MEMBER_REQUIRED_FOR_ACTION"}, status=status.HTTP_403_FORBIDDEN)
         return None
 

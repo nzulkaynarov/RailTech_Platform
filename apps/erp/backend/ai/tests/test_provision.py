@@ -15,7 +15,11 @@ class FakeAdmin:
 
     def __call__(self, method, url, master_key, body=None):
         self.requests.append((method, url, body))
-        assert master_key == "sk-master"
+        if method == "GET":
+            # Проверка существования — самим ключом ERP и без ключа в адресе.
+            assert (url.endswith("/key/info"), master_key) == (True, SPEC.key)
+        else:
+            assert master_key == "sk-master"
         if method == "GET":
             return AdminResponse(200, {"info": {"key_alias": "erp"}}) if self.exists else AdminResponse(404, {})
         if self.fail:

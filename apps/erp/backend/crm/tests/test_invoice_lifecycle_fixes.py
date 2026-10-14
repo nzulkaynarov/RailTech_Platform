@@ -104,6 +104,10 @@ def world(lookups):
 
     seller_co = _company("Seller Co", "S901", "SUPPLIER")
     seller_user = _member(seller_co, "seller@invfix.test", can_sell=True)
+    # M1-ERP-05: права сотрудника — только из ролей («Руководитель» — все действия бэк-офиса).
+    from accounts.services.roles import ensure_default_company_roles
+
+    seller_user.memberships.get(company=seller_co).company_roles.add(ensure_default_company_roles(seller_co)["HEAD"])
 
     other_co = _company("Other Client Co", "O901", "CLIENT")
     other_user = _member(other_co, "other@invfix.test", can_sell=True, can_buy=True)

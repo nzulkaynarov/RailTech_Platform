@@ -13,7 +13,8 @@ const ROLE_ERROR_KEYS: Record<string, string> = {
   ONLY_TEAM_MANAGER_CAN_MANAGE_ROLES: 'team.rolesSection.errors.onlyTeamManager',
   SYSTEM_ROLE_IMMUTABLE: 'team.rolesSection.errors.systemImmutable',
   ROLE_HAS_MEMBERS_REASSIGN_FIRST: 'team.rolesSection.errors.roleHasMembers',
-  CANNOT_DEMOTE_LAST_COMPANY_ADMIN: 'team.rolesSection.errors.lastAdmin',
+  CANNOT_DROP_OWN_TEAM_MANAGE: 'team.rolesSection.errors.cannotDropOwnTeamManage',
+  ROLE_IDS_REQUIRED: 'team.rolesSection.errors.roleIdsRequired',
   MEMBER_NOT_FOUND: 'team.rolesSection.errors.memberNotFound',
   ROLE_NOT_FOUND: 'team.rolesSection.errors.roleNotFound',
   ROLE_NAME_REQUIRED: 'team.rolesSection.errors.nameRequired',
@@ -29,6 +30,17 @@ const ROLE_ERROR_KEYS: Record<string, string> = {
  */
 export function permLabelKey(code: string): string {
   return `permissions.${code.replace(/\./g, '_')}`;
+}
+
+/** Имя роли на экране: системная — перевод по коду (`systemRoles.<CODE>`), своя — как названа. */
+export function roleDisplayName(
+  role: { code?: string; name: string; is_system?: boolean },
+  translate: TFunction,
+): string {
+  if (role.is_system && role.code) {
+    return translate(`team.rolesSection.systemRoles.${role.code}`, { defaultValue: role.name });
+  }
+  return role.name;
 }
 
 /** Resolve a thrown axios error to a localized, human-readable message. */

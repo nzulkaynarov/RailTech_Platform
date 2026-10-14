@@ -22,7 +22,7 @@ from accounts.serializers import CompanySerializer
 from accounts.services.permissions import member_has_permission
 from accounts.views.company_documents import CompanyDocumentsMixin
 from accounts.views.company_team import CompanyTeamMixin
-from core.permissions import IsPlatformAdmin
+from core.permissions import ADMIN_ONLY, IsPlatformAdmin, RoleGatedViewMixin
 
 
 @extend_schema_view(
@@ -57,12 +57,49 @@ from core.permissions import IsPlatformAdmin
         tags=["Accounts"],
     ),
 )
-class CompanyViewSet(CompanyDocumentsMixin, CompanyTeamMixin, viewsets.ModelViewSet):
+class CompanyViewSet(RoleGatedViewMixin, CompanyDocumentsMixin, CompanyTeamMixin, viewsets.ModelViewSet):
     """
     CRUD operations for companies.
 
     Includes logo / document-profile settings, team management, and member invitations.
     """
+
+    required_permissions = {
+        "create": ADMIN_ONLY,
+        "destroy": ADMIN_ONLY,
+        "archive": ADMIN_ONLY,
+        "unarchive": ADMIN_ONLY,
+        "update": "settings.edit",
+        "partial_update": "settings.edit",
+        "upload_logo": "settings.edit",
+        "delete_logo": "settings.edit",
+        "document_profile": "settings.edit",
+        "document_profile_preview": "settings.edit",
+        "upload_document_profile_logo": "settings.edit",
+        "company_settings": "settings.edit",
+        "invite": "team.manage",
+        "remove_member": "team.manage",
+        "set_member_role": "team.manage",
+        "toggle_member_active": "team.manage",
+        "update_member_capabilities": "team.manage",
+    }
+    buyer_actions = frozenset(
+        {
+            "update",
+            "partial_update",
+            "upload_logo",
+            "delete_logo",
+            "document_profile",
+            "document_profile_preview",
+            "upload_document_profile_logo",
+            "company_settings",
+            "invite",
+            "remove_member",
+            "set_member_role",
+            "toggle_member_active",
+            "update_member_capabilities",
+        }
+    )  # до M2-ERP-01
 
     queryset = (
         Company.objects.select_related("country")
@@ -202,13 +239,8 @@ class CompanyViewSet(CompanyDocumentsMixin, CompanyTeamMixin, viewsets.ModelView
         user = self.request.user
         if user.is_superuser:
             return
-        # ADR-0005 Phase E U3: gate on the CompanyRole permission, not the legacy OWNER
-        # WorkspaceRole. member_has_permission's legacy fallback still grants a company_role-less
-        # OWNER (the OWNER-role branch returns True for any perm), so an un-migrated OWNER keeps
-        # access; a delegated admin holding settings.edit now passes too (the point of the engine).
-        # A company_role-less NON-OWNER stays denied (settings.edit ∈ _ADMIN_PERMS → fallback False).
-        # An OWNER deliberately reassigned to a restricted CompanyRole is governed by that role —
-        # the intended U3 supersession, not an accidental lockout.
+        # Сотрудник своей компании — право роли `settings.edit` (M1-ERP-05); владелец компании-
+        # клиента — покупательские правила `buyer_access` (до M2-ERP-01).
         if not member_has_permission(user, company.id, "settings.edit"):
             raise exceptions.PermissionDenied("ONLY_COMPANY_OWNER_OR_ADMIN")
 

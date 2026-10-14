@@ -40,7 +40,7 @@ vi.mock('@/hooks/useCRM', () => ({
   useSubmitQuoteForReview: vi.fn(),
 }));
 
-// A solo deal has no capabilities.is_solo_seller in this fixture (undefined → false).
+// A solo deal has no capabilities.is_solo_team in this fixture (undefined → false).
 vi.mock('@/store/userStore', () => ({
   useUserStore: (selector: (state: { capabilities: { permissions: string[] } }) => unknown) =>
     selector({ capabilities: { permissions: [] } }),

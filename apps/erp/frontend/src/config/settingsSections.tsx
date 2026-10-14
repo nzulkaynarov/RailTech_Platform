@@ -6,8 +6,8 @@
  * дизейблятся.
  *
  * S1 — ПОКАЗ-ГЕЙТ = ПРАВДА СОХРАНЕНИЯ (фикс тупиков): раньше все company-секции показывались по
- * ШИРОКОМУ canEditCompanySettings (isOwner || settings.edit || charge_templates.manage), но
- * сохраняли по УЗКОМУ праву → делегат с одним charge_templates.manage видел 6 секций, работал в 1,
+ * ШИРОКОМУ canEditCompanySettings (любое company-право), но
+ * сохраняли по УЗКОМУ праву → делегат с одним правом статей расхода видел 6 секций, работал в 1,
  * остальные 5 — мёртвые заглушки. Теперь каждой секции гейт = точное право, которое её РЕАЛЬНО
  * сохраняет (hasSettingsEdit для company/documents/defaults/numbering/doc-templates; hasChargeManage
  * только для templates=статей расхода; hasTeamManage внутри секции team). Это устранение трения,
@@ -53,27 +53,27 @@ export interface SettingsSectionDef {
 
 /** Inputs the gate needs — mirrors what SettingsPage already reads from the stores. */
 export interface SettingsGateInput {
-  /** WorkspaceRole OWNER of the company (authStore user.workspace_role). */
-  isOwner: boolean;
+  /** Администратор ERP (`is_superuser`, «Администратор» в CRM) — системные настройки платформы. */
+  isSuperuser: boolean;
   /** Consolidated /me capabilities (userStore) — permissions drive the gates. */
   capabilities: Capabilities;
 }
 
 /**
- * S1 гейт-хелперы — каждый = точное право, которое РЕАЛЬНО сохраняет секцию.
- * Fallback на isOwner (OWNER всегда имеет все company-права; на случай старого /me payload).
+ * S1 гейт-хелперы — каждый = точное право, которое РЕАЛЬНО сохраняет секцию (M1-ERP-05: только
+ * права ролей из /me; у администратора в /me весь каталог прав).
  */
 /** settings.edit — редактирует профиль компании, документы, дефолты, нумерацию, шаблоны писем. */
 export function hasSettingsEdit(input: SettingsGateInput): boolean {
-  return input.isOwner || input.capabilities.permissions.includes('settings.edit');
+  return input.capabilities.permissions.includes('settings.edit');
 }
-/** charge_templates.manage — редактирует ТОЛЬКО статьи расхода КП (секция templates). */
+/** settings.charge_templates — редактирует ТОЛЬКО статьи расхода КП (секция templates). */
 export function hasChargeManage(input: SettingsGateInput): boolean {
-  return input.isOwner || input.capabilities.permissions.includes('charge_templates.manage');
+  return input.capabilities.permissions.includes('settings.charge_templates');
 }
 /** team.manage — управляет составом команды и ролями (действия внутри секции team). */
 export function hasTeamManage(input: SettingsGateInput): boolean {
-  return input.isOwner || input.capabilities.permissions.includes('team.manage');
+  return input.capabilities.permissions.includes('team.manage');
 }
 
 /**
@@ -131,10 +131,9 @@ const SECTION_RULES: SectionRule[] = [
   },
   // ── team ── (виден всем; действия управления внутри гейтятся hasTeamManage).
   { def: { key: 'team', labelKey: 'settings.tabs.team', group: 'team' }, visible: () => true },
-  // ── platform ── SystemSettings (НДС, курс, имя платформы, 2FA). Раньше — только операторская
-  // плоскость; после её удаления (M1-ERP-02) до появления ролей бэк-офиса (M1-ERP-05) открыто
-  // OWNER'у как «Администратору». Сервер остаётся источником истины на PATCH.
-  { def: { key: 'platform', labelKey: 'settings.tabs.platform', group: 'platform' }, visible: (input) => input.isOwner },
+  // ── platform ── SystemSettings (НДС, курс, имя платформы, 2FA) — только администратор
+  // (`is_superuser`, M1-ERP-05); сервер (PATCH system-settings) — тоже только он.
+  { def: { key: 'platform', labelKey: 'settings.tabs.platform', group: 'platform' }, visible: (input) => input.isSuperuser },
 ];
 
 /** Видимые секции для пользователя — скрытие, не дизейбл (ADR-0005). */

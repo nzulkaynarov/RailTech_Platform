@@ -95,7 +95,9 @@ def key_settings(spec: KeySpec) -> dict:
 def sync_erp_key(base_url: str, master_key: str, spec: KeySpec) -> str:
     """Создать или обновить ключ ERP. Возвращает `created` / `updated`; ошибка API — RuntimeError."""
     base = base_url.rstrip("/")
-    info = _admin_request("GET", f"{base}/key/info?key={spec.key}", master_key)
+    # Есть ли ключ — спрашиваем им самим (`/key/info` без параметра отдаёт вызывающий ключ):
+    # ключ не попадает в адрес запроса, а значит и в журналы прокси и клиента.
+    info = _admin_request("GET", f"{base}/key/info", spec.key)
     exists = info.status_code == 200 and bool((info.payload or {}).get("info"))
     body = {"key": spec.key, **key_settings(spec)}
     path, outcome = ("/key/update", "updated") if exists else ("/key/generate", "created")

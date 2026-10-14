@@ -24,7 +24,7 @@ from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, Cu
 from core.tenant import own_company, own_company_id
 from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteStatus
 
-MANAGER_PERMISSIONS = ["quote.build", "quote.edit_pricing", "quote.view_cost_margin"]
+MANAGER_PERMISSIONS = ["deal.manage", "quote.build", "quote.edit_pricing", "quote.view_cost_margin"]
 
 
 @pytest.fixture
@@ -52,7 +52,7 @@ def _member(company, email, *, permissions=None, is_active=True, **flags):
         user=user,
         company=company,
         role=WorkspaceRole.objects.get(code="MEMBER"),
-        company_role=role,
+        company_roles=[role],
         is_active=is_active,
         is_primary=True,
         **flags,
@@ -177,7 +177,8 @@ def test_staff_without_permission_cannot_edit_the_quote(world):
         f"/api/v1/crm/quote-items/{item.id}/", {"frozen_base_price": "1"}, format="json"
     )
     assert denied.status_code == 403
-    assert denied.json()["detail"] == "ONLY_SELLER_CAN_BUILD_QUOTE"
+    # M1-ERP-05: без права роли отказывает гейт эндпоинта (до сервиса) единым кодом.
+    assert denied.json()["detail"] == "ROLE_NOT_PERMITTED"
 
 
 @pytest.mark.parametrize("who", ["former", "outsider"])

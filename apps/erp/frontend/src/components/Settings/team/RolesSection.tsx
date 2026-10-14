@@ -1,14 +1,14 @@
 /**
- * Company roles list + CRUD entry points (ADR-0004 G4). Moved from the former monolithic
- * Cabinet/CompanyTeamSettings.tsx (spec PR 4 package split); the raw <Table> is replaced
- * by ResponsiveDataTable (repo convention) — logic unchanged.
+ * Роли бэк-офиса (M1-ERP-05): системные шаблоны (BUSINESS §11 — имя по коду, только просмотр) и
+ * свои роли компании; создание и правка — у сотрудника с `team.manage`.
  */
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Shield, Loader2, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Shield, Loader2, Plus, Pencil, Trash2, Eye } from 'lucide-react';
 
 import { useCompanyRoles, useDeleteCompanyRole } from '@/hooks/useAccounts';
+import { useHasCompanyPermission } from '@/hooks/useCapabilities';
 import type { CompanyRole } from '@/api/accountsApi';
 import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable';
 import { Button } from '@/components/ui/button';
@@ -27,12 +27,13 @@ import {
 } from '@/components/ui/alert-dialog';
 
 import { RoleEditorSheet } from './RoleEditorSheet';
-import { permLabelKey, resolveRoleError } from './roleErrors';
+import { permLabelKey, resolveRoleError, roleDisplayName } from './roleErrors';
 
 export function RolesSection() {
   const { t } = useTranslation();
   const { data: companyRoles = [], isLoading } = useCompanyRoles();
   const deleteMut = useDeleteCompanyRole();
+  const canManage = useHasCompanyPermission('team.manage');
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<CompanyRole | null>(null);
@@ -63,7 +64,7 @@ export function RolesSection() {
       mobileTitle: true,
       cell: (role) => (
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-foreground">{role.name}</span>
+          <span className="text-sm font-semibold text-foreground">{roleDisplayName(role, t)}</span>
           {role.is_system && (
             <Badge variant="secondary" className="text-xs">
               {t('team.rolesSection.systemBadge')}
@@ -83,7 +84,7 @@ export function RolesSection() {
         ) : (
           <div className="flex flex-wrap gap-1">
             {role.permissions.slice(0, 3).map((perm) => (
-              <Badge key={perm} variant="outline" className="text-xs font-normal">
+              <Badge key={perm} variant="outline" className="max-w-full truncate text-xs font-normal">
                 {t(permLabelKey(perm), { defaultValue: perm })}
               </Badge>
             ))}
@@ -116,11 +117,17 @@ export function RolesSection() {
             size="icon"
             className="h-8 w-8"
             onClick={() => openEdit(role)}
-            aria-label={t('team.rolesSection.editRole')}
+            aria-label={
+              canManage && !role.is_system ? t('team.rolesSection.editRole') : t('team.rolesSection.viewRole')
+            }
           >
-            <Pencil className="h-4 w-4" aria-hidden="true" />
+            {canManage && !role.is_system ? (
+              <Pencil className="h-4 w-4" aria-hidden="true" />
+            ) : (
+              <Eye className="h-4 w-4" aria-hidden="true" />
+            )}
           </Button>
-          {!role.is_system && (
+          {canManage && !role.is_system && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button
@@ -139,7 +146,7 @@ export function RolesSection() {
                     {t('team.rolesSection.deleteRole')}
                   </AlertDialogTitle>
                   <AlertDialogDescription>
-                    {t('team.rolesSection.deleteConfirm', { name: role.name })}
+                    {t('team.rolesSection.deleteConfirm', { name: roleDisplayName(role, t) })}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -172,10 +179,12 @@ export function RolesSection() {
             {t('team.rolesSection.subtitle')}
           </p>
         </div>
-        <Button size="sm" onClick={openCreate}>
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          {t('team.rolesSection.addRole')}
-        </Button>
+        {canManage && (
+          <Button size="sm" onClick={openCreate}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            {t('team.rolesSection.addRole')}
+          </Button>
+        )}
       </div>
 
       {isLoading ? (
@@ -202,6 +211,7 @@ export function RolesSection() {
         open={sheetOpen}
         onOpenChange={setSheetOpen}
         editingRole={editingRole}
+        readOnly={!canManage || (editingRole?.is_system ?? false)}
       />
     </div>
   );

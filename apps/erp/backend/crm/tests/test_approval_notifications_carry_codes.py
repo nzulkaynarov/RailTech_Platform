@@ -51,12 +51,12 @@ def _user(email):
     return CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
 
 
-def _member(company, user, *, workspace_role, company_role):
+def _member(company, user, *, workspace_role, company_roles):
     return CompanyMember.objects.create(
         user=user,
         company=company,
         role=WorkspaceRole.objects.get(code=workspace_role),
-        company_role=company_role,
+        company_roles=company_roles,
         is_primary=True,
         is_active=True,
         can_sell=False,
@@ -67,12 +67,15 @@ def _member(company, user, *, workspace_role, company_role):
 def seller(lookups):
     company = Company.objects.create(name="Продавец согласований", inn="908700001")
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
-    admin_role = CompanyRole.objects.create(company=company, name="Администратор компании", is_system=True)
+    # M1-ERP-05: финальный согласующий — держатель quote.approve_final (роль «Руководитель»).
+    admin_role = CompanyRole.objects.create(
+        company=company, name="Руководитель", permissions=[Permission.QUOTE_APPROVE_FINAL.value]
+    )
     sales_role = CompanyRole.objects.create(company=company, name="Продажи", permissions=[Permission.QUOTE_BUILD.value])
     sales_user = _user("sales@codes.test")
-    _member(company, sales_user, workspace_role="SALES_MANAGER", company_role=sales_role)
+    _member(company, sales_user, workspace_role="SALES_MANAGER", company_roles=[sales_role])
     head_user = _user("head@codes.test")
-    _member(company, head_user, workspace_role="MEMBER", company_role=admin_role)
+    _member(company, head_user, workspace_role="MEMBER", company_roles=[admin_role])
     return {"company": company, "sales": sales_user, "head": head_user}
 
 

@@ -9,6 +9,15 @@ from .core import seller_company_q
 class CompanyMemberQuerySet(models.QuerySet):
     """Выборки по членству. Доступны и через обратную связь: `user.memberships.…`."""
 
+    def create(self, **kwargs):
+        """`company_roles=[...]` прямо в `create()` — роли бэк-офиса (M2M) назначаются после записи
+        участника; так фикстуры и сервисы создают сотрудника с ролями одной строкой."""
+        roles = [role for role in (kwargs.pop("company_roles", None) or []) if role is not None]
+        member = super().create(**kwargs)
+        if roles:
+            member.company_roles.add(*roles)
+        return member
+
     def in_seller_company(self):
         """Членства в компании-продавце. Флаги `is_active` / `can_sell` оставляем вызывающему —
         они про самого участника, а не про то, продавец ли компания."""
@@ -26,12 +35,12 @@ class CompanyMemberQuerySet(models.QuerySet):
 
 
 class CompanyRole(models.Model):
-    """A company-defined role with an explicit permission set (the access matrix).
+    """Роль бэк-офиса с набором прав (M1-ERP-05; ERPNext «Role + Role Permission», Odoo «группа»).
 
-    World-standard Role+Permission-set: the company admin creates named roles and ticks
-    permission checkboxes (accounts.constants.Permission). Replaces the cryptic
-    can_sell/can_buy toggles. Scoped per company — each company has its own role policy.
-    See Docs/old/specs/rbac-roles-design-2026-06-25.md.
+    Права — коды `accounts.constants.Permission`. У сотрудника может быть несколько ролей
+    (`CompanyMember.company_roles`), действует объединение прав. Системные роли (`is_system`,
+    `code` из `BackofficeRoleCode`) сеются для своей компании и не меняются; свои роли компания
+    собирает в «Настройках → Команда и роли». «Администратор» — не роль, а `is_superuser`.
     """
 
     company = models.ForeignKey(
@@ -41,6 +50,13 @@ class CompanyRole(models.Model):
         verbose_name=_("Компания"),
     )
     name = models.CharField(max_length=120, verbose_name=_("Название роли"))
+    code = models.CharField(
+        max_length=40,
+        blank=True,
+        default="",
+        verbose_name=_("Код"),
+        help_text=_("Код системной роли (BackofficeRoleCode); пусто у ролей, созданных компанией"),
+    )
     permissions = models.JSONField(
         default=list,
         blank=True,
@@ -49,8 +65,8 @@ class CompanyRole(models.Model):
     )
     is_system = models.BooleanField(
         default=False,
-        verbose_name=_("Системная (Администратор компании)"),
-        help_text=_("Полноправная роль администратора компании — нельзя удалить/урезать"),
+        verbose_name=_("Системная"),
+        help_text=_("Роль-шаблон бэк-офиса — имя и права не меняются, удалить нельзя"),
     )
     created_by = models.ForeignKey(
         "accounts.CustomUser",
@@ -69,10 +85,13 @@ class CompanyRole(models.Model):
         ordering = ["-is_system", "name"]
         constraints = [
             models.UniqueConstraint(fields=["company", "name"], name="unique_role_name_per_company"),
+            models.UniqueConstraint(
+                fields=["company", "code"], condition=~models.Q(code=""), name="unique_role_code_per_company"
+            ),
         ]
 
     def has_perm(self, code: str) -> bool:
-        return self.is_system or code in (self.permissions or [])
+        return code in (self.permissions or [])
 
     def __str__(self):
         return f"{self.name} — {self.company.name}"
@@ -105,17 +124,14 @@ class CompanyMember(models.Model):
         verbose_name=_("Роль в компании"),
         help_text=_("Функциональная роль внутри рабочего пространства"),
     )
-    # New per-company role with an explicit permission set (Role+Permission-set model,
-    # rbac-roles-design-2026-06-25). Additive: when set it drives access; `role`
-    # (legacy WorkspaceRole) is kept during the transition and as a derivation fallback.
-    company_role = models.ForeignKey(
+    # Роли бэк-офиса с правами (M1-ERP-05): несколько на человека, права — объединение.
+    # `role` (WorkspaceRole) — переходная должность для приглашения; доступ не определяет.
+    company_roles = models.ManyToManyField(
         "accounts.CompanyRole",
-        on_delete=models.SET_NULL,
-        null=True,
         blank=True,
         related_name="members",
-        verbose_name=_("Роль (с правами)"),
-        help_text=_("Роль компании с набором прав; назначается администратором компании"),
+        verbose_name=_("Роли (с правами)"),
+        help_text=_("Роли бэк-офиса; права складываются"),
     )
     is_primary = models.BooleanField(
         default=False,

@@ -176,3 +176,44 @@ def django_db_setup(django_db_setup, django_db_blocker):
             pgtrigger.install()
         except Exception:
             pass
+
+
+@pytest.fixture
+def grant(db):
+    """Выдать сотруднику роли бэк-офиса (M1-ERP-05: права — только из ролей, без фолбэка из должности).
+
+    `grant(user_or_member, "HEAD")` — системные роли по коду (`BackofficeRoleCode`);
+    `grant(user_or_member, "quote.build", "quote.send")` — своя роль ровно с этими правами.
+    Компания — `company=` или основное (иначе первое) активное членство пользователя.
+    """
+    from accounts.constants import BackofficeRoleCode
+    from accounts.models import CompanyMember, CompanyRole
+    from accounts.services.roles import ensure_default_company_roles
+
+    def _grant(user_or_member, *codes, company=None):
+        if isinstance(user_or_member, CompanyMember):
+            membership = user_or_member
+        else:
+            memberships = user_or_member.memberships.filter(is_active=True)
+            if company is not None:
+                memberships = memberships.filter(company=company)
+            membership = memberships.order_by("-is_primary", "id").first()
+        assert membership is not None, "grant(): у пользователя нет активного членства"
+        role_codes = [code for code in codes if code in BackofficeRoleCode.values]
+        perm_codes = sorted(code for code in codes if code not in BackofficeRoleCode.values)
+        roles = []
+        if role_codes:
+            system = ensure_default_company_roles(membership.company)
+            roles += [system[code] for code in role_codes]
+        if perm_codes:
+            roles.append(
+                CompanyRole.objects.get_or_create(
+                    company=membership.company,
+                    name="test:" + ",".join(perm_codes),
+                    defaults={"permissions": perm_codes},
+                )[0]
+            )
+        membership.company_roles.add(*roles)
+        return membership
+
+    return _grant

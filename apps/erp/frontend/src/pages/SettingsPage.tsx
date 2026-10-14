@@ -27,8 +27,8 @@ import { CompanyTab } from '@/components/Cabinet/CompanyTab';
 export function SettingsPage() {
   const { t } = useTranslation();
   const capabilities = useUserStore((s) => s.capabilities);
-  const isOwner = useAuthStore((s) => s.user?.workspace_role === 'OWNER');
-  const gate: SettingsGateInput = { isOwner, capabilities };
+  const isSuperuser = useAuthStore((s) => s.user?.is_superuser === true);
+  const gate: SettingsGateInput = { isSuperuser, capabilities };
   const sections = buildSettingsSections(gate);
 
   // `?section=` живёт в search-части URL (useUrlState), hash остаётся `#settings` —

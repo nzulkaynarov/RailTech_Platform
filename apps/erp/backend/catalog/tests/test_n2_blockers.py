@@ -19,7 +19,7 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture
-def seller(db):
+def seller(db, grant):
     ProductStatus.objects.get_or_create(code="DRAFT", defaults={"name": "Черновик", "sort_order": 10})
     ProductStatus.objects.get_or_create(code="PUBLISHED", defaults={"name": "Опубликован", "sort_order": 20})
     supplier_type, _ = CompanyType.objects.get_or_create(
@@ -34,6 +34,7 @@ def seller(db):
     company.types.add(supplier_type)
     user = CustomUser.objects.create_user(email="n2@seller.test", username="n2@seller.test", password="pw")
     CompanyMember.objects.create(user=user, company=company, role=role, is_active=True, is_primary=True)
+    grant(user, "HEAD")  # M1-ERP-05: права сотрудника — только из ролей
     client = APIClient()
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user).access_token}")
     return {"client": client, "company": company}

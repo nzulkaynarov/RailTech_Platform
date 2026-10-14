@@ -52,7 +52,7 @@ def _seller_member(company: Company, email: str) -> CustomUser:
         user=user,
         company=company,
         role=workspace_role,
-        company_role=company_role,
+        company_roles=[company_role],
         is_active=True,
         is_primary=True,
         can_sell=True,

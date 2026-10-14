@@ -10,13 +10,15 @@ from rest_framework.views import APIView
 from accounts import services
 from accounts.constants import PERMISSION_GROUPS
 from accounts.serializers import CompanyRoleSerializer
+from core.permissions import RoleGatedViewMixin
 
 # Service error code → HTTP status.
 _ERROR_STATUS = {
     "ONLY_TEAM_MANAGER_CAN_MANAGE_ROLES": status.HTTP_403_FORBIDDEN,
     "SYSTEM_ROLE_IMMUTABLE": status.HTTP_403_FORBIDDEN,
     "ROLE_HAS_MEMBERS_REASSIGN_FIRST": status.HTTP_409_CONFLICT,
-    "CANNOT_DEMOTE_LAST_COMPANY_ADMIN": status.HTTP_409_CONFLICT,
+    "CANNOT_DROP_OWN_TEAM_MANAGE": status.HTTP_409_CONFLICT,
+    "ROLE_COMPANY_MISMATCH": status.HTTP_403_FORBIDDEN,
     "MEMBER_NOT_FOUND": status.HTTP_404_NOT_FOUND,
     "ROLE_NOT_FOUND": status.HTTP_404_NOT_FOUND,
 }
@@ -27,35 +29,53 @@ def _err(code):
 
 
 _GROUP_LABELS = {
-    "sales": {"ru": "Продажи / КП", "en": "Sales / Quotes"},
-    "procurement": {"ru": "Закупки", "en": "Procurement"},
+    "deals": {"ru": "Запросы и сделки", "en": "Requests & deals"},
+    "quotes": {"ru": "КП", "en": "Quotes"},
+    "contracts": {"ru": "Договоры", "en": "Contracts"},
     "catalog": {"ru": "Каталог", "en": "Catalog"},
-    "company": {"ru": "Компания", "en": "Company admin"},
+    "supply": {"ru": "Снабжение", "en": "Supply"},
+    "fulfillment": {"ru": "Исполнение и логистика", "en": "Fulfillment & logistics"},
+    "finance": {"ru": "Финансы", "en": "Finance"},
+    "settings": {"ru": "Настройки и команда", "en": "Settings & team"},
     "data": {"ru": "Данные", "en": "Data"},
 }
 # English labels for the permission checkboxes (the .label on Permission is RU). The SPA
-# localizes via i18n keys, but the catalog ships both so non-i18n clients render correctly.
+# localizes via i18n keys by code, but the catalog ships both so non-i18n clients render correctly.
 _PERM_LABELS_EN = {
+    "deal.manage": "Handle requests & deals",
+    "deal.assign": "Assign the owner",
     "quote.build": "Build quotes",
-    "quote.send": "Send quotes to client",
+    "quote.edit_pricing": "Edit prices, discounts & cost lines",
     "quote.view_cost_margin": "See cost & margin",
-    "quote.edit_pricing": "Edit prices & discounts",
-    "request.create": "Create requests",
-    "quote.approve": "Approve / reject quotes",
-    "contract.sign": "Sign contracts",
-    "payment.record": "Record payments",
-    "catalog.manage": "Manage catalog & offers",
-    "catalog.publish": "Publish products",
+    "quote.send": "Send quotes to client",
+    "quote.review": "Review quotes",
+    "quote.approve_final": "Give final quote approval",
+    "contract.manage": "Prepare contracts",
+    "contract.sign": "Sign contracts for the company",
+    "catalog.manage": "Maintain the catalog",
+    "catalog.publish": "Publish items",
+    "supply.manage": "Maintain suppliers & their offers",
+    "fulfillment.manage": "Handle shipments & delivery notes",
+    "fulfillment.act": "Issue acceptance acts",
+    "finance.invoice": "Issue customer invoices",
+    "finance.payment": "Record payments",
+    "settings.edit": "Edit company details, templates & numbering",
+    "settings.charge_templates": "Maintain quote cost-line templates",
     "team.manage": "Manage team & roles",
-    "settings.edit": "Edit company settings",
-    "charge_templates.manage": "Manage charge templates",
     "data.export": "Export data",
 }
 
 
-class CompanyRoleViewSet(viewsets.ModelViewSet):
-    """CRUD for a company's own roles. Scoped to the requester's company; writes need
-    the `team.manage` permission. Platform admins manage roles via Django Unfold."""
+class CompanyRoleViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
+    """Роли бэк-офиса своей компании (M1-ERP-05): системные шаблоны + свои; запись — `team.manage`."""
+
+    required_permissions = {
+        "create": "team.manage",
+        "update": "team.manage",
+        "partial_update": "team.manage",
+        "destroy": "team.manage",
+        "assign": "team.manage",
+    }
 
     serializer_class = CompanyRoleSerializer
     permission_classes = [IsAuthenticated]
@@ -68,11 +88,10 @@ class CompanyRoleViewSet(viewsets.ModelViewSet):
         return services.list_roles_for_user(self.request.user)
 
     def create(self, request, *args, **kwargs):
-        company_id = request.data.get("company") or (
-            request.user.memberships.filter(is_active=True).values_list("company_id", flat=True).first()
-        )
+        from core.tenant import own_company_id
+
         role, err = services.create_company_role(
-            request.user, company_id, request.data.get("name"), request.data.get("permissions", [])
+            request.user, own_company_id(), request.data.get("name"), request.data.get("permissions", [])
         )
         if err:
             return _err(err)
@@ -95,15 +114,35 @@ class CompanyRoleViewSet(viewsets.ModelViewSet):
             return _err(err)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @extend_schema(summary="Assign a company role to a member", tags=["Accounts"])
+    @extend_schema(
+        summary="Set a member's back-office roles (replaces the whole set; permissions are the union)",
+        request=inline_serializer(
+            "AssignCompanyRoles",
+            fields={
+                "member_id": serializers.IntegerField(),
+                "role_ids": serializers.ListField(child=serializers.IntegerField()),
+            },
+        ),
+        responses={
+            200: inline_serializer(
+                "AssignedCompanyRoles",
+                fields={
+                    "member_id": serializers.IntegerField(),
+                    "role_ids": serializers.ListField(child=serializers.IntegerField()),
+                },
+            )
+        },
+        tags=["Accounts"],
+    )
     @action(detail=False, methods=["post"], url_path="assign")
     def assign(self, request):
-        member, err = services.assign_role_to_member(
-            request.user, request.data.get("member_id"), request.data.get("role_id")
+        member, err = services.set_member_roles(
+            request.user, request.data.get("member_id"), request.data.get("role_ids")
         )
         if err:
             return _err(err)
-        return Response({"member_id": member.id, "role_id": member.company_role_id})
+        role_ids = sorted(member.company_roles.values_list("id", flat=True))
+        return Response({"member_id": member.id, "role_ids": role_ids})
 
 
 class PermissionCatalogView(APIView):

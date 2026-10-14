@@ -29,16 +29,16 @@ def scene(db):
     other = Company.objects.create(name="Other", inn="3310009002")
     other.types.add(CompanyType.objects.get(code="CLIENT"))
 
-    role = CompanyRole.objects.create(company=seller, name="М", permissions=["quote.edit_pricing"])
+    role = CompanyRole.objects.create(company=seller, name="М", permissions=["quote.build", "quote.edit_pricing"])
     ws = WorkspaceRole.objects.get_or_create(code="SALES_MANAGER", defaults={"name": "SM", "sort_order": 10})[0]
 
     def _member(company, email):
         r = CompanyRole.objects.get_or_create(
-            company=company, name="М", defaults={"permissions": ["quote.edit_pricing"]}
+            company=company, name="М", defaults={"permissions": ["quote.build", "quote.edit_pricing"]}
         )[0]
         user = CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
         CompanyMember.objects.create(
-            user=user, company=company, role=ws, company_role=r, is_active=True, is_primary=True, can_sell=True
+            user=user, company=company, role=ws, company_roles=[r], is_active=True, is_primary=True, can_sell=True
         )
         return user
 

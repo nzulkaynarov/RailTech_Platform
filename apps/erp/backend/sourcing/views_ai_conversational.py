@@ -18,6 +18,8 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
+from core.permissions import BUYER_ONLY, RoleGatedViewMixin
+
 # Same clamp as the service — reject obviously-oversized payloads before the LLM.
 MAX_TEXT_CHARS = 4000
 
@@ -51,8 +53,13 @@ MAX_TEXT_CHARS = 4000
     },
     tags=["Sourcing"],
 )
-class ComposeRequestView(APIView):
+class ComposeRequestView(RoleGatedViewMixin, APIView):
     """AI #8 — turn a buyer's free-text need into reviewable заявка lines."""
+
+    required_permissions = {
+        "POST": BUYER_ONLY,
+    }
+    buyer_actions = frozenset({"POST"})  # до M2-ERP-01
 
     permission_classes = [IsAuthenticated]
     throttle_classes = [ScopedRateThrottle]

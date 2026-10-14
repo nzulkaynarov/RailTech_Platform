@@ -50,11 +50,11 @@ def scene(db):
     QuoteItem.objects.create(quote=rq, product=matched, quantity=5)  # matched → оффер в UZS
     QuoteItem.objects.create(quote=rq, quantity=3, imported_raw_name="Втулка X")  # unmatched → без оффера
 
-    role = CompanyRole.objects.create(company=seller, name="М", permissions=["quote.edit_pricing"])
+    role = CompanyRole.objects.create(company=seller, name="М", permissions=["quote.build", "quote.edit_pricing"])
     ws = WorkspaceRole.objects.get_or_create(code="SALES_MANAGER", defaults={"name": "SM", "sort_order": 10})[0]
     user = CustomUser.objects.create_user(email="cc@s.uz", username="cc@s.uz", password="pw", is_active=True)
     CompanyMember.objects.create(
-        user=user, company=seller, role=ws, company_role=role, is_active=True, is_primary=True, can_sell=True
+        user=user, company=seller, role=ws, company_roles=[role], is_active=True, is_primary=True, can_sell=True
     )
     return locals()
 

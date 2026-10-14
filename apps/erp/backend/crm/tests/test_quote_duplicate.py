@@ -36,8 +36,15 @@ def scenario(db):
         co = Company.objects.create(name=name, inn=inn)
         co.types.add(CompanyType.objects.get(code="SUPPLIER"))
         user = CustomUser.objects.create_user(email=f"{inn}@s.test", username=f"{inn}@s.test", password="pw")
+        from accounts.services.roles import ensure_default_company_roles
+
         CompanyMember.objects.create(
-            user=user, company=co, role=WorkspaceRole.objects.get(code="OWNER"), is_active=True, can_sell=True
+            user=user,
+            company=co,
+            role=WorkspaceRole.objects.get(code="OWNER"),
+            is_active=True,
+            can_sell=True,
+            company_roles=[ensure_default_company_roles(co)["CALCULATION"]],
         )
         return co, user
 

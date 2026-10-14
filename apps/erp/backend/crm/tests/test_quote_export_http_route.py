@@ -47,7 +47,7 @@ def _seller_member(company, email):
     role = CompanyRole.objects.create(company=company, name=f"role-{email}", permissions=[])
     user = CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
     CompanyMember.objects.create(
-        user=user, company=company, role=owner, company_role=role, is_primary=True, is_active=True, can_sell=True
+        user=user, company=company, role=owner, company_roles=[role], is_primary=True, is_active=True, can_sell=True
     )
     return user
 

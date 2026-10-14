@@ -4,8 +4,10 @@ not the legacy OWNER WorkspaceRole.
 Each gate is proven in three modes:
     WITH perm (WorkspaceRole=MEMBER + CompanyRole grants the perm)  → passes  (permission-gated now)
     WITHOUT perm (MEMBER, empty CompanyRole)                        → 403
-    LEGACY (OWNER WorkspaceRole, company_role=None)                 → passes  (member_has_permission
-                                                                     legacy fallback — no regression)
+    OWNER without roles                                             → 403 (M1-ERP-05: фолбэк из
+                                                                     должности снят — только роли)
+
+Отказ без права — единый гейт эндпоинта: 403 `ROLE_NOT_PERMITTED`.
 """
 
 import pytest
@@ -43,13 +45,13 @@ def _role(company, name, perms):
     return CompanyRole.objects.create(company=company, name=name, permissions=perms)
 
 
-def _member(company, email, *, workspace="MEMBER", company_role=None):
+def _member(company, email, *, workspace="MEMBER", company_roles=()):
     user = CustomUser.objects.create_user(email=email, username=email, password="x", is_active=True)
     CompanyMember.objects.create(
         user=user,
         company=company,
         role=WorkspaceRole.objects.get(code=workspace),
-        company_role=company_role,
+        company_roles=list(company_roles),
         is_active=True,
         is_primary=True,
         can_sell=True,
@@ -69,7 +71,7 @@ def _api(user):
 def test_company_edit_allowed_with_settings_edit_permission(lookups):
     company = _company()
     role = _role(company, "Настройщик", ["settings.edit"])
-    user = _member(company, "cfg@t.test", workspace="MEMBER", company_role=role)
+    user = _member(company, "cfg@t.test", workspace="MEMBER", company_roles=[role])
     resp = _api(user).patch(f"/api/v1/accounts/companies/{company.id}/", {"name": "Renamed"}, format="json")
     assert resp.status_code == 200  # MEMBER WorkspaceRole, but the permission lets them through
     company.refresh_from_db()
@@ -79,17 +81,18 @@ def test_company_edit_allowed_with_settings_edit_permission(lookups):
 def test_company_edit_denied_without_permission(lookups):
     company = _company()
     role = _role(company, "Наблюдатель", [])
-    user = _member(company, "obs@t.test", workspace="MEMBER", company_role=role)
+    user = _member(company, "obs@t.test", workspace="MEMBER", company_roles=[role])
     resp = _api(user).patch(f"/api/v1/accounts/companies/{company.id}/", {"name": "Nope"}, format="json")
     assert resp.status_code == 403
-    assert resp.json()["detail"] == "ONLY_COMPANY_OWNER_OR_ADMIN"
+    assert resp.json()["detail"] == "ROLE_NOT_PERMITTED"
 
 
-def test_company_edit_legacy_owner_without_company_role_still_allowed(lookups):
+def test_company_edit_owner_without_role_denied(lookups):
     company = _company()
-    user = _member(company, "owner@t.test", workspace="OWNER", company_role=None)
+    user = _member(company, "owner@t.test", workspace="OWNER")
     resp = _api(user).patch(f"/api/v1/accounts/companies/{company.id}/", {"name": "OwnerRenamed"}, format="json")
-    assert resp.status_code == 200  # legacy fallback: company_role-less OWNER keeps access
+    assert resp.status_code == 403  # M1-ERP-05: должность OWNER без роли прав не даёт
+    assert resp.json()["detail"] == "ROLE_NOT_PERMITTED"
 
 
 # ── Gate 2: set-member-role → team.manage ────────────────────────────────────
@@ -98,7 +101,7 @@ def test_company_edit_legacy_owner_without_company_role_still_allowed(lookups):
 def test_set_member_role_allowed_with_team_manage(lookups):
     company = _company()
     admin_role = _role(company, "Тим-админ", ["team.manage"])
-    admin = _member(company, "teamadmin@t.test", workspace="MEMBER", company_role=admin_role)
+    admin = _member(company, "teamadmin@t.test", workspace="MEMBER", company_roles=[admin_role])
     target = _member(company, "target@t.test", workspace="MEMBER")
     target_member = CompanyMember.objects.get(user=target)
     resp = _api(admin).post(
@@ -112,7 +115,7 @@ def test_set_member_role_allowed_with_team_manage(lookups):
 def test_set_member_role_denied_without_team_manage(lookups):
     company = _company()
     role = _role(company, "Обычный", [])
-    user = _member(company, "plain@t.test", workspace="MEMBER", company_role=role)
+    user = _member(company, "plain@t.test", workspace="MEMBER", company_roles=[role])
     target = _member(company, "target2@t.test", workspace="MEMBER")
     target_member = CompanyMember.objects.get(user=target)
     resp = _api(user).post(
@@ -121,31 +124,32 @@ def test_set_member_role_denied_without_team_manage(lookups):
         format="json",
     )
     assert resp.status_code == 403
-    assert resp.json()["detail"] == "ONLY_COMPANY_ADMIN_CAN_CHANGE_ROLES"
+    assert resp.json()["detail"] == "ROLE_NOT_PERMITTED"
 
 
-# ── Gate 3: ChargeTemplate CRUD → charge_templates.manage ────────────────────
+# ── Gate 3: ChargeTemplate CRUD → settings.charge_templates ──────────────────
 
 
 def test_charge_template_create_denied_without_permission(lookups):
     company = _company()
     role = _role(company, "Без прав", [])
-    user = _member(company, "noct@t.test", workspace="MEMBER", company_role=role)
+    user = _member(company, "noct@t.test", workspace="MEMBER", company_roles=[role])
     resp = _api(user).post("/api/v1/crm/charge-templates/", _CT_PAYLOAD, format="json")
     assert resp.status_code == 403
-    assert resp.json()["detail"] == "ONLY_COMPANY_ADMIN_CAN_MANAGE_TEMPLATES"
+    assert resp.json()["detail"] == "ROLE_NOT_PERMITTED"
 
 
 def test_charge_template_create_allowed_with_permission(lookups):
     company = _company()
-    role = _role(company, "Шаблонщик", ["charge_templates.manage"])
-    user = _member(company, "ct@t.test", workspace="MEMBER", company_role=role)
+    role = _role(company, "Шаблонщик", ["settings.charge_templates"])
+    user = _member(company, "ct@t.test", workspace="MEMBER", company_roles=[role])
     resp = _api(user).post("/api/v1/crm/charge-templates/", _CT_PAYLOAD, format="json")
     assert resp.status_code == 201  # MEMBER + permission passes the (now permission-based) gate
 
 
-def test_charge_template_legacy_owner_without_company_role_allowed(lookups):
+def test_charge_template_owner_without_role_denied(lookups):
     company = _company()
-    user = _member(company, "ctowner@t.test", workspace="OWNER", company_role=None)
+    user = _member(company, "ctowner@t.test", workspace="OWNER")
     resp = _api(user).post("/api/v1/crm/charge-templates/", _CT_PAYLOAD, format="json")
-    assert resp.status_code == 201  # legacy fallback keeps a company_role-less OWNER working
+    assert resp.status_code == 403  # M1-ERP-05: без роли — без права
+    assert resp.json()["detail"] == "ROLE_NOT_PERMITTED"

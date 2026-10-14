@@ -4,6 +4,8 @@ from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 
+from core.permissions import RoleGatedViewMixin
+
 
 @extend_schema_view(
     list=extend_schema(
@@ -17,7 +19,7 @@ from rest_framework.permissions import IsAuthenticated
         tags=["Sourcing"],
     ),
 )
-class AttachmentViewSet(viewsets.ModelViewSet):
+class AttachmentViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     """
     Uploads/lists/deletes private attachments tied to exactly one parent
     (deal, quote, company, or product).
@@ -29,6 +31,14 @@ class AttachmentViewSet(viewsets.ModelViewSet):
     Access to the attached entity is checked via the deal's company membership
     (or the product's manufacturer, or the company directly).
     """
+
+    required_permissions = {
+        "create": "deal.manage",
+        "update": "deal.manage",
+        "partial_update": "deal.manage",
+        "destroy": "deal.manage",
+    }
+    buyer_actions = frozenset({"create", "update", "partial_update", "destroy"})  # до M2-ERP-01
 
     from .models import Attachment as _AttachmentModel
     from .serializers import AttachmentSerializer

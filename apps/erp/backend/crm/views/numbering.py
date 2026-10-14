@@ -18,6 +18,7 @@ from rest_framework.views import APIView
 
 from accounts.services.document_profile import is_company_owner
 from accounts.services.permissions import primary_seller_company_id
+from core.permissions import RoleGatedViewMixin
 
 from ..serializers import (
     NumberingPreviewRequestSerializer,
@@ -67,9 +68,14 @@ def _scheme_view_payload(company) -> dict:
     }
 
 
-class NumberingSchemeView(APIView):
+class NumberingSchemeView(RoleGatedViewMixin, APIView):
     """GET/PATCH the acting seller company's document-numbering scheme.
     GET/PATCH /api/v1/crm/numbering-scheme/"""
+
+    required_permissions = {
+        "PATCH": "settings.edit",
+        "PUT": "settings.edit",
+    }
 
     permission_classes = [IsAuthenticated]
 
@@ -117,9 +123,13 @@ class NumberingSchemeView(APIView):
         return Response(NumberingSchemeSerializer(_scheme_view_payload(company)).data)
 
 
-class NumberingSchemePreviewView(APIView):
+class NumberingSchemePreviewView(RoleGatedViewMixin, APIView):
     """POST a DRAFT scheme → rendered example КП/CT/INV numbers (dry-run, no counter write).
     POST /api/v1/crm/numbering-scheme/preview/"""
+
+    required_permissions = {
+        "POST": "settings.edit",
+    }
 
     permission_classes = [IsAuthenticated]
 
