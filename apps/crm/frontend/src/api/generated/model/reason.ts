@@ -74,6 +74,7 @@ export const Reason = {
   form_too_fast: "form_too_fast",
   form_token_expired: "form_token_expired",
   rate_limited: "rate_limited",
+  consent_required: "consent_required",
   ai_spend_period: "ai_spend_period",
   service_not_switchable: "service_not_switchable",
   telegram_paused: "telegram_paused",

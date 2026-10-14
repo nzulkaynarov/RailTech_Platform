@@ -78,3 +78,8 @@ MINIO_EXTERNAL_ENDPOINT = os.environ.get("MINIO_EXTERNAL_ENDPOINT", "") or MINIO
 AUTH_USER_MODEL = "accounts.CustomUser"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Своя компания — компания-владелец ERP, единственный продавец (BUSINESS §3.3, M1-ERP-02 волна 3).
+# Точка истины — `core.tenant.own_company_id()`. Пусто → единственная активная компания-продавец
+# с активными участниками (dev, тесты, свежий стенд); несколько таких без настройки — ошибка конфигурации.
+OWN_COMPANY_ID = int(os.environ["OWN_COMPANY_ID"]) if os.environ.get("OWN_COMPANY_ID", "").strip() else None

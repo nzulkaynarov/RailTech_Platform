@@ -43,8 +43,6 @@ function makeAct(overrides: Partial<Act>): Act {
     pdf_url: null,
     signed_file: null,
     signed_file_url: null,
-    viewer_can_sign: false,
-    viewer_can_reject: false,
     viewer_can_remind: false,
     viewer_can_cancel: false,
     viewer_can_reissue: false,
@@ -95,19 +93,11 @@ describe('карточка акта', () => {
   });
 
   it('говорит, чей сейчас ход: у выпустившей стороны — ожидание заказчика', async () => {
-    vi.mocked(actsApi.list).mockResolvedValue([makeAct({ viewer_can_sign: false })]);
+    vi.mocked(actsApi.list).mockResolvedValue([makeAct({})]);
     renderWithProviders(<ActsPage />);
 
     const card = await openCard();
     expect(within(card).getByText('Ожидает подтверждения заказчика')).toBeInTheDocument();
-  });
-
-  it('говорит, чей сейчас ход: у заказчика — ждёт именно его', async () => {
-    vi.mocked(actsApi.list).mockResolvedValue([makeAct({ viewer_can_sign: true, viewer_can_reject: true })]);
-    renderWithProviders(<ActsPage />);
-
-    const card = await openCard();
-    expect(within(card).getByText('Ждёт вашего подтверждения')).toBeInTheDocument();
   });
 
   it('согласованный обеими сторонами акт называет обоих и закрывает ход', async () => {
@@ -154,9 +144,9 @@ describe('действия выпустившей стороны на карто
     expect(within(card).getByRole('button', { name: 'Аннулировать акт' })).toBeInTheDocument();
   });
 
-  it('заказчику этих кнопок не предлагает — напоминать и отзывать нечего', async () => {
+  it('без подсказок сервера кнопок напоминания и отзыва нет', async () => {
     vi.mocked(actsApi.list).mockResolvedValue([
-      makeAct({ viewer_can_sign: true, viewer_can_reject: true, viewer_can_remind: false, viewer_can_cancel: false }),
+      makeAct({ viewer_can_remind: false, viewer_can_cancel: false }),
     ]);
     renderWithProviders(<ActsPage />);
 

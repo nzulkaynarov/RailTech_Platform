@@ -3,10 +3,11 @@
 Логика вынесена из `DashboardAnalyticsView` (Rule 8), и это первый случай, когда её можно
 проверять без HTTP. Покрывается то, что через эндпоинт проверялось только на трёх сценариях,
 хотя цена ошибки высока: **область видимости — граница конфиденциальности**. Дырка в ней
-показывает продавцу цифры конкурента.
+показывает покупательскому аккаунту цифры другого клиента.
 
-Тесты на маршрутизацию через API остаются в `test_analytics_routing.py` — здесь то, что
-дешевле и точнее проверить на уровне функций.
+Продавец один — своя компания (M1-ERP-02 волна 3): сотрудник видит все сделки, покупательский
+аккаунт — свою компанию. Сценарии через API — в `test_dashboard_scope.py`, здесь то, что дешевле
+и точнее проверить на уровне функций.
 """
 
 from datetime import timedelta
@@ -23,6 +24,7 @@ from crm.services.dashboard_analytics import (
     DashboardScope,
     percentage_change,
     resolve_period_start,
+    resolve_scope,
     scope_deals,
 )
 
@@ -31,6 +33,7 @@ from crm.services.dashboard_analytics import (
 def lookups(db):
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
+    CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
     DealStage.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})
     QuoteStatus.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})
 
@@ -77,10 +80,23 @@ class TestResolvePeriodStart:
         assert abs((resolve_period_start("нечто") - resolve_period_start(DEFAULT_PERIOD)).total_seconds()) < 5
 
 
+def _member(company, email, **flags):
+    user = CustomUser.objects.create_user(email=email, username=email, password="x")
+    CompanyMember.objects.create(
+        user=user,
+        company=company,
+        role=WorkspaceRole.objects.get(code="OWNER"),
+        is_active=True,
+        is_primary=True,
+        **flags,
+    )
+    return user
+
+
 @pytest.mark.django_db
 class TestScopeDeals:
     """Граница конфиденциальности. Каждая ветка проверяется отдельно: ошибка здесь
-    показывает одному арендатору сделки другого."""
+    показывает одному клиенту сделки другого."""
 
     def _world(self):
         own = _company("Своя", "S100")
@@ -89,46 +105,72 @@ class TestScopeDeals:
         theirs = _deal(other, "Чужая сделка")
         return own, other, mine, theirs
 
-    def test_deal_scope_wins_over_company_ids(self, lookups):
-        """У действующего продавца область задают РОУТИНГОВЫЕ id, даже если компании переданы:
-        продавец не состоит в компании покупателя, и фильтр по компании дал бы ему ноль."""
-        own, _other, mine, theirs = self._world()
-        scope = DashboardScope(
-            is_staff=False,
-            deal_scope={theirs.id},
-            seller_company_ids=None,
-            user_company_ids=[own.id],
-        )
-        assert list(scope_deals(Deal.objects.all(), scope)) == [theirs]
-
     def test_company_ids_scope_buyer(self, lookups):
         own, _other, mine, _theirs = self._world()
-        scope = DashboardScope(False, None, None, [own.id])
+        scope = DashboardScope(False, None, [own.id])
         assert list(scope_deals(Deal.objects.all(), scope)) == [mine]
 
     def test_staff_sees_everything(self, lookups):
         _own, _other, mine, theirs = self._world()
-        scope = DashboardScope(True, None, None, None)
+        scope = DashboardScope(True, None, None)
         assert set(scope_deals(Deal.objects.all(), scope)) == {mine, theirs}
 
-    def test_empty_deal_scope_is_not_see_all(self, lookups):
-        """Пустое множество — это «нет доступа ни к чему», а НЕ «фильтр не задан».
-        Спутать пустой set с None здесь означало бы показать продавцу всю платформу."""
-        self._world()
-        scope = DashboardScope(False, set(), None, None)
-        assert list(scope_deals(Deal.objects.all(), scope)) == []
-
     def test_empty_company_ids_is_not_see_all(self, lookups):
+        """Пустой список — это «нет доступа ни к чему», а НЕ «фильтр не задан». Спутать пустой
+        список с None здесь означало бы показать постороннему все сделки."""
         self._world()
-        scope = DashboardScope(False, None, None, [])
+        scope = DashboardScope(False, None, [])
         assert list(scope_deals(Deal.objects.all(), scope)) == []
 
 
 @pytest.mark.django_db
-class TestDashboardAnalyticsCaching:
-    """Кэш переехал во вьюху из сервиса — ключ обязан различать пользователя и контекст."""
+class TestResolveScope:
+    """Кто есть кто: сотрудник своей компании видит все сделки (KPI каталога — его компания),
+    покупательский аккаунт ограничен своими компаниями."""
 
-    def _user_with_request(self, email, context):
+    def _own_company(self):
+        own = Company.objects.create(name="Своя продающая", inn="S900")
+        own.types.add(CompanyType.objects.get(code="SUPPLIER"))
+        return own
+
+    def test_staff_sees_every_deal(self, lookups):
+        own = self._own_company()
+        staff = _member(own, "staff@t.test", can_sell=True)
+        mine = _deal(_company("Клиент 1", "C901"), "Заявка 1")
+        theirs = _deal(_company("Клиент 2", "C902"), "Заявка 2")
+
+        scope = resolve_scope(staff, None)
+        assert scope.is_staff is False
+        assert scope.seller_company_ids == [own.id]
+        assert scope.user_company_ids is None
+        assert set(scope_deals(Deal.objects.all(), scope)) == {mine, theirs}
+
+    def test_buyer_is_limited_to_own_companies(self, lookups):
+        self._own_company()
+        buyer_co = _company("Клиент", "C903")
+        buyer = _member(buyer_co, "buyer@t.test", can_buy=True)
+        mine = _deal(buyer_co, "Моя заявка")
+        _deal(_company("Другой клиент", "C904"), "Чужая заявка")
+
+        scope = resolve_scope(buyer, None)
+        assert scope.seller_company_ids == []
+        assert scope.user_company_ids == [buyer_co.id]
+        assert list(scope_deals(Deal.objects.all(), scope)) == [mine]
+
+    def test_superuser_is_staff_scope(self, lookups):
+        admin = CustomUser.objects.create_user(email="adm@t.test", username="adm@t.test", password="x")
+        admin.is_superuser = True
+        admin.save(update_fields=["is_superuser"])
+        scope = resolve_scope(admin, None)
+        assert scope.is_staff is True
+        assert scope.seller_company_ids is None and scope.user_company_ids is None
+
+
+@pytest.mark.django_db
+class TestDashboardAnalyticsCaching:
+    """Кэш живёт в сервисе — ключ обязан различать пользователя (и период)."""
+
+    def _user_with_request(self, email):
         from unittest.mock import MagicMock
 
         company = _company(f"Компания {email}", email[:8])
@@ -141,10 +183,7 @@ class TestDashboardAnalyticsCaching:
             is_primary=True,
             can_buy=True,
         )
-        request = MagicMock()
-        request.headers = {"X-Active-Context": context}
-        request.META = {"HTTP_X_ACTIVE_CONTEXT": context}
-        return user, request
+        return user, MagicMock()
 
     def test_second_call_is_served_from_cache(self, lookups):
         from django.core.cache import cache
@@ -152,7 +191,7 @@ class TestDashboardAnalyticsCaching:
         from crm.services.dashboard_analytics import dashboard_analytics
 
         cache.clear()
-        user, request = self._user_with_request("cache@t.test", "BUYER")
+        user, request = self._user_with_request("cache@t.test")
         first = dashboard_analytics(user, request, "30d")
 
         # Новая сделка ПОСЛЕ первого вызова не должна просочиться сквозь минутный TTL —
@@ -167,8 +206,8 @@ class TestDashboardAnalyticsCaching:
         from crm.services.dashboard_analytics import dashboard_analytics
 
         cache.clear()
-        user_a, request_a = self._user_with_request("a@t.test", "BUYER")
-        user_b, request_b = self._user_with_request("b@t.test", "BUYER")
+        user_a, request_a = self._user_with_request("a@t.test")
+        user_b, request_b = self._user_with_request("b@t.test")
         _deal(user_a.memberships.first().company, "Сделка A")
 
         data_a = dashboard_analytics(user_a, request_a, "30d")
@@ -207,11 +246,7 @@ def test_dashboard_payload_keys_are_stable(lookups):
         vat_amount=Decimal("0"),
         total_incl_vat=Decimal("1000"),
     )
-    request = MagicMock()
-    request.headers = {"X-Active-Context": "BUYER"}
-    request.META = {"HTTP_X_ACTIVE_CONTEXT": "BUYER"}
-
-    data = dashboard_analytics(user, request, "90d")
+    data = dashboard_analytics(user, MagicMock(), "90d")
     expected = {
         "deals_volume",
         "deals_volume_change",

@@ -1,14 +1,14 @@
 /**
- * ИИ-хуки CRM: подбор по каталогу, пере-привязка товара, предполётная проверка,
- * сверка документа, дифф КП. (Лиды и подсказка ответа в чате удалены в M1-ERP-02 1b.)
+ * ИИ-хуки CRM: подбор по каталогу, пере-привязка товара, сверка документа. (Лиды и подсказка
+ * ответа в чате удалены в M1-ERP-02 1b; покупательские ИИ-помощники заявки — составление из
+ * текста, предполётная проверка, «КП vs заявка» — в волне 3.)
  *
  * Вынесено из useCRM.ts при распиле (727 строк, 39 правок). Домены зеркалят пакет
  * `@/api/crm`. Путь `@/hooks/useCRM` сохранён барьером — его импортируют 41 файл.
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { crmApi, MatchCatalogPayload, PreflightPayload, DocCheckPayload } from '../../api/crmApi';
-import { aiApi, type ComposeRequestPayload } from '../../api/aiApi';
+import { crmApi, MatchCatalogPayload, DocCheckPayload } from '../../api/crmApi';
 
 export const useMatchCandidates = (quoteItemId: number | null) => useQuery({
   queryKey: ["match-candidates", quoteItemId],
@@ -37,29 +37,9 @@ export const useMatchCatalog = () => useMutation({
   mutationFn: (payload: MatchCatalogPayload) => crmApi.matchCatalog(payload),
 });
 
-// AI #8 conversational заявка builder: POST free-text need → proposed structured
-// request lines + catalog candidates. Pure advisory op (no cache to invalidate);
-// the buyer reviews/edits/confirms before anything is added. May 503 when AI off.
-export const useComposeRequest = () => useMutation({
-  mutationFn: (payload: ComposeRequestPayload) => aiApi.composeRequest(payload),
-});
-
-// AI #7 pre-flight quality check: POST draft заявка lines → advisory findings.
-// Pure advisory op (no cache to invalidate); never blocks the buyer submit.
-export const usePreflightCheck = () => useMutation({
-  mutationFn: (payload: PreflightPayload) => crmApi.preflightCheck(payload),
-});
-
 // AI #6 contract/invoice extraction: POST a signed PDF + quote/contract id → extracted
 // fields and a code-computed reconciliation. Pure advisory op (no cache to invalidate);
 // the money verdict is recomputed on the backend in Decimal. May 503 when AI disabled.
 export const useCheckDocument = () => useMutation({
   mutationFn: (payload: DocCheckPayload) => crmApi.checkDocument(payload),
-});
-
-// AI #3 «КП vs заявка» coverage/diff: GET a received КП id → deterministic coverage
-// facts + (when AI on) semantic discrepancies. On-demand paid call → mutation so the
-// buyer triggers it explicitly. Read-only & assistive; never blocks. May 503 when off.
-export const useQuoteRequestDiff = () => useMutation({
-  mutationFn: (quoteId: number) => crmApi.quoteRequestDiff(quoteId),
 });

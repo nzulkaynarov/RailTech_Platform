@@ -51,8 +51,8 @@ class TimelineEntrySerializer(serializers.ModelSerializer):
         "Chronological business events (deal opened, КП sent/accepted/rejected, contract signed, "
         "payments) linked to a deal or a counterparty company. Pass deal_id OR "
         "company_id. Scoping: a deal timeline needs access to the deal (member of the client "
-        "company, routed seller, or platform admin); a company timeline shows a member their own "
-        "company's history, while a routed seller sees only events on deals visible to them."
+        "company, own-company staff, or administrator); a company timeline shows a member their own "
+        "company's history and own-company staff everything about the counterparty."
     ),
     parameters=[
         OpenApiParameter(name="deal_id", type=int, location=OpenApiParameter.QUERY, required=False),
@@ -107,34 +107,22 @@ class TimelineView(APIView):
         if not user_can_access_deal(request.user, deal):
             return None, Response({"detail": "MEMBER_REQUIRED_FOR_ACTION"}, status=403)
         logs = ActivityLog.objects.filter(deal_id=deal_id)
-        # SEC (audit #4): a routed seller sees only ITS OWN lane's events (+ deal-level/legacy
-        # NULL events) — a competitor's КП-sent/accepted history on a shared deal never leaks.
-        from django.db.models import Q
-
-        from accounts.services.permissions import seller_acting_company_ids, seller_visible_deal_ids
-
-        user = request.user
-        if not getattr(user, "is_superuser", False) and seller_visible_deal_ids(user, request) is not None:
-            own = seller_acting_company_ids(user, request) or set()
-            logs = logs.filter(Q(seller_company_id__in=own) | Q(seller_company__isnull=True))
         return logs, None
 
     @staticmethod
     def _company_scope(request, company_id):
         """Timeline of a counterparty organization.
 
-        - Platform admin: everything about the company.
+        - Administrator and own-company staff (the seller of every deal): everything about it.
         - A member of the company: their own organization's full history.
-        - A routed seller: only events on deals they may see (multi-seller confidentiality —
-          an empty scope yields an empty list, never an existence oracle).
+        - Anyone else: an empty list (never an existence oracle).
         """
-        from accounts.services.permissions import seller_visible_deal_ids
+        from accounts.services.permissions import sees_all_deals
 
         user = request.user
         base = ActivityLog.objects.filter(company_id=company_id)
-        if getattr(user, "is_superuser", False) or getattr(user, "is_superuser", False):
+        if sees_all_deals(user):
             return base
         if user.memberships.filter(company_id=company_id, is_active=True).exists():
             return base
-        deal_scope = seller_visible_deal_ids(user, request)
-        return base.filter(deal_id__in=deal_scope or set())
+        return base.none()

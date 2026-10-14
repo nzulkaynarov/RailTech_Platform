@@ -1,16 +1,10 @@
-"""Акт по РУЧНОМУ счёту утекал проигравшему со-роутед продавцу (F1, класс дефекта #463).
+"""Акт по РУЧНОМУ счёту (без договора) — видимость в боевом списке актов (F1, класс дефекта #463).
 
-Владелец биллингового документа выводится через цепочку КП. У счёта эта цепочка двойная
-(`_invoice_seller_side_q`): договор → КП, а для G2-счёта БЕЗ договора — позиции → исходное КП.
-У акта же владелец резолвился ровно одним путём — `invoice__contract__quote__seller_company`.
-
-`create_manual_invoice` создаёт счёт с `contract=None`, а `generate_act` копирует договор из
-счёта, то есть у акта по ручному счёту NULL и в `contract`, и в `invoice__contract`. Владелец
-не резолвится → срабатывает legacy-фолбэк «видно любому ПРОРОУТЕННОМУ продавцу», и акт
-победителя оказывается в списке актов конкурента, проигравшего ту же заявку.
-
-Это ровно то допущение, которое комментарий к фолбэку объявляет невозможным («the winner's
-docs ARE owner-anchored»), — как и в #463 у отгрузки, оно не выполняется для одной модели.
+У счёта G2 без договора владелец выводится через позиции → исходное КП, а `generate_act` копирует
+договор из счёта, поэтому у такого акта NULL и в `contract`, и в `invoice__contract`. Раньше это
+давало утечку акта со-роутед продавцу; с M1-ERP-02 волна 3 продавец один — компания-владелец, и
+инвариант звучит так: акт видят сотрудники своей компании и покупатель сделки, а посторонний
+(участник другой компании, даже с флагом can_sell) — нет.
 """
 
 from decimal import Decimal
@@ -20,17 +14,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
-from crm.models import (
-    Deal,
-    DealSellerRouting,
-    DealStage,
-    Invoice,
-    InvoiceItem,
-    InvoiceStatus,
-    Quote,
-    QuoteItem,
-    QuoteStatus,
-)
+from crm.models import Deal, DealStage, Invoice, InvoiceItem, InvoiceStatus, Quote, QuoteItem, QuoteStatus
 from crm.services.billing import generate_act
 
 ACTS_URL = "/api/v1/crm/acts/"
@@ -73,33 +57,28 @@ def _member(company, email, *, can_sell=False, can_buy=False):
     return user
 
 
-def _api(user, ctx="SELLER"):
+def _api(user):
     client = APIClient()
-    client.credentials(
-        HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user).access_token}",
-        HTTP_X_ACTIVE_CONTEXT=ctx,
-    )
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user).access_token}")
     return client
 
 
 @pytest.fixture
 def act_on_manual_invoice(lookups):
-    """Победитель выставляет РУЧНОЙ счёт (без договора) по своему КП и выпускает акт.
-    Второй продавец разослан на ту же заявку и проиграл."""
+    """Сотрудник своей компании выставляет РУЧНОЙ счёт (без договора) по КП и выпускает акт.
+    Посторонний — участник другой компании-клиента."""
     buyer_co = _company("Buyer Co", "B800", "CLIENT")
     _member(buyer_co, "buyer@act.test", can_buy=True)
 
-    winner_co = _company("Winner", "S800", "SUPPLIER")
+    winner_co = _company("Own Co", "S800", "SUPPLIER")
     winner_user = _member(winner_co, "winner@act.test", can_sell=True)
 
-    loser_co = _company("Loser", "S801", "SUPPLIER")
-    loser_user = _member(loser_co, "loser@act.test", can_sell=True)
+    loser_co = _company("Other Client", "S801", "CLIENT")
+    loser_user = _member(loser_co, "outsider@act.test", can_sell=True, can_buy=True)
 
     deal = Deal.objects.create(
         title="Manual act deal", company=buyer_co, stage=DealStage.objects.get(code="CLOSED_WON")
     )
-    DealSellerRouting.objects.create(deal=deal, seller_company=winner_co)
-    DealSellerRouting.objects.create(deal=deal, seller_company=loser_co)
 
     quote = Quote.objects.create(
         deal=deal,
@@ -135,7 +114,7 @@ def act_on_manual_invoice(lookups):
 
     act, error = generate_act(invoice.id, actor=winner_user)
     assert error is None, f"акт не выпустился: {error}"
-    return {"act": act, "invoice": invoice, "winner_user": winner_user, "loser_user": loser_user, "deal": deal}
+    return {"act": act, "invoice": invoice, "staff_user": winner_user, "outsider_user": loser_user, "deal": deal}
 
 
 def _ids(resp):
@@ -152,23 +131,23 @@ def test_manual_invoice_act_has_no_contract_chain(act_on_manual_invoice):
     assert act.invoice.contract_id is None
 
 
-def test_losing_seller_does_not_see_the_winners_manual_act_in_the_list(act_on_manual_invoice):
-    """Дыра в БОЕВОМ списке актов, а не только в сводке документов сделки."""
-    resp = _api(act_on_manual_invoice["loser_user"]).get(ACTS_URL)
+def test_outsider_does_not_see_the_manual_act_in_the_list(act_on_manual_invoice):
+    """Граница — в БОЕВОМ списке актов, а не только в сводке документов сделки."""
+    resp = _api(act_on_manual_invoice["outsider_user"]).get(ACTS_URL)
     assert resp.status_code == 200
-    assert act_on_manual_invoice["act"].id not in _ids(resp), "акт победителя виден проигравшему конкуренту"
+    assert act_on_manual_invoice["act"].id not in _ids(resp), "акт виден постороннему"
 
 
-def test_winner_still_sees_its_own_manual_act(act_on_manual_invoice):
-    """Контроль: сузив видимость, нельзя отнять акт у его законного владельца."""
-    resp = _api(act_on_manual_invoice["winner_user"]).get(ACTS_URL)
+def test_staff_sees_the_manual_act(act_on_manual_invoice):
+    """Контроль: сотрудник своей компании (выпустивший акт) его видит."""
+    resp = _api(act_on_manual_invoice["staff_user"]).get(ACTS_URL)
     assert resp.status_code == 200
-    assert act_on_manual_invoice["act"].id in _ids(resp), "владелец потерял собственный акт"
+    assert act_on_manual_invoice["act"].id in _ids(resp), "сотрудник потерял собственный акт"
 
 
 def test_buyer_still_sees_the_act(act_on_manual_invoice):
     """Покупатель — вторая законная сторона — акт видит по-прежнему."""
     buyer = CustomUser.objects.get(email="buyer@act.test")
-    resp = _api(buyer, ctx="BUYER").get(ACTS_URL)
+    resp = _api(buyer).get(ACTS_URL)
     assert resp.status_code == 200
     assert act_on_manual_invoice["act"].id in _ids(resp)

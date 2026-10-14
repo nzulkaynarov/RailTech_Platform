@@ -40,13 +40,12 @@ interface NewQuoteDialogProps {
 type RecipientMode = 'book' | 'new' | 'none';
 
 /**
- * Wave E F2 — the SELLER's «Новый КП» entry point.
+ * Wave E F2 — the back office's «Новый КП» entry point.
  *
- * A seller starts from the offer, not from a buyer's заявка: pick a counterparty from
+ * The back office starts from the offer, not from a client's заявка: pick a counterparty from
  * the client book, record a brand-new offline client inline, or price something with no
- * client at all («калькулятор» draft, F3). All three create a Deal the seller owns —
- * server-side that ownership is a DealSellerRouting row (F1) — and drop straight into
- * the КП builder. A client-less draft cannot be SENT until a recipient exists
+ * client at all («калькулятор» draft, F3). All three create a Deal of the company and drop
+ * straight into the КП builder. A client-less draft cannot be SENT until a recipient exists
  * (backend answers RECIPIENT_REQUIRED).
  */
 export function NewQuoteDialog({ open, onOpenChange, onCreated }: NewQuoteDialogProps) {

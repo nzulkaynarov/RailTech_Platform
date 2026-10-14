@@ -21,17 +21,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
-from crm.models import (
-    ActStatus,
-    Contract,
-    ContractStatus,
-    Deal,
-    DealSellerRouting,
-    DealStage,
-    InvoiceStatus,
-    Quote,
-    QuoteStatus,
-)
+from crm.models import ActStatus, Contract, ContractStatus, Deal, DealStage, InvoiceStatus, Quote, QuoteStatus
 from crm.services.billing import generate_act, generate_invoice_from_contract
 
 #: Посторонний не должен отличать «нет доступа» от «нет объекта» — оба ответа скрывают
@@ -95,7 +85,6 @@ def world(lookups):
     outsider = _member(outsider_co, "outsider@scope.test", can_buy=True)
 
     deal = Deal.objects.create(title="Сделка", company=buyer_co, stage=DealStage.objects.get(code="CONTRACT_SIGNED"))
-    DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)
     quote = Quote.objects.create(
         deal=deal,
         version=1,
@@ -314,14 +303,13 @@ class TestBillingListFilters:
 
     def _second_deal_invoice(self, world):
         """Второй счёт по ДРУГОЙ сделке того же покупателя — чтобы фильтр было что отсечь."""
-        from crm.models import Contract, ContractStatus, Deal, DealSellerRouting, Quote, QuoteStatus
+        from crm.models import Contract, ContractStatus, Deal, Quote, QuoteStatus
 
         other_deal = Deal.objects.create(
             title="Вторая сделка",
             company=world["deal"].company,
             stage=DealStage.objects.get(code="CONTRACT_SIGNED"),
         )
-        DealSellerRouting.objects.create(deal=other_deal, seller_company=world["seller"].memberships.first().company)
         other_quote = Quote.objects.create(
             deal=other_deal,
             version=1,

@@ -9,7 +9,7 @@ from .approvals import QuoteApprovalStep, StepParticipation, StepStatus, StepTri
 from .billing import Act, Invoice, InvoiceItem, Payment
 from .charges import ChargeTemplate, QuoteCharge
 from .contracts import Contract
-from .deals import ActivityLog, Deal, DealSellerRouting
+from .deals import ActivityLog, Deal
 from .documents import CompanyWordingVariant, DocumentTemplate, GeneratedDocument
 from .fulfillment import Fulfillment
 from .lookups import (
@@ -24,7 +24,6 @@ from .lookups import (
     QuoteStatus,
 )
 from .quotes import Quote, QuoteItem, QuoteItemHistory
-from .relationships import CounterpartyRelationship, RelationshipDirection, RelationshipSource, RelationshipStage
 from .sequences import DocumentNumberingScheme, DocumentSequence
 
 __all__ = [
@@ -36,9 +35,7 @@ __all__ = [
     "ChargeType",
     "Contract",
     "ContractStatus",
-    "CounterpartyRelationship",
     "Deal",
-    "DealSellerRouting",
     "DealStage",
     "DocumentNumberingScheme",
     "DocumentSequence",
@@ -56,9 +53,6 @@ __all__ = [
     "Quote",
     "QuoteAcceptanceCode",
     "QuoteApprovalStep",
-    "RelationshipDirection",
-    "RelationshipSource",
-    "RelationshipStage",
     "QuoteCharge",
     "QuoteItem",
     "QuoteItemHistory",

@@ -65,12 +65,6 @@ from .quotes import (
     reapply_company_defaults,
     reassign_quote_item_product,
 )
-from .relationships import (
-    ensure_edges_for_deal_routing,
-    recompute_rollups_for_deal,
-    recompute_rollups_for_edge,
-    touch_relationship,
-)
 from .rfq import (
     buyer_add_request_item,
     buyer_add_request_items,
@@ -78,7 +72,6 @@ from .rfq import (
     buyer_remove_request_item,
     buyer_update_request_item,
     buyer_update_request_meta,
-    route_request_to_sellers,
     submit_request,
 )
 
@@ -118,7 +111,6 @@ __all__ = [
     "update_document_values",
     "update_template",
     "effective_quote_lead_time",
-    "ensure_edges_for_deal_routing",
     "ensure_fulfillment",
     "export_quote",
     "force_cancel_contract",
@@ -132,12 +124,9 @@ __all__ = [
     "notify_seller_invoice_draft",
     "get_allowed_transitions",
     "reassign_quote_item_product",
-    "recompute_rollups_for_deal",
-    "recompute_rollups_for_edge",
     "record_payment",
     "register_new_deal",
     "resolve_seller_offer",
-    "route_request_to_sellers",
     "split_line_by_availability",
     "set_quote_delivery_basis",
     "sign_act",
@@ -150,7 +139,6 @@ __all__ = [
     "sign_contract_by_manager",
     "submit_request",
     "quote_vs_request_diff",
-    "touch_relationship",
     "user_can_view_quote_diff",
     "transition_deal_stage",
     "update_fulfillment_status",

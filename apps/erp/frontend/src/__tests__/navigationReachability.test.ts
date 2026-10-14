@@ -2,26 +2,25 @@
  * Инвариант волны U1: **если интерфейс предлагает переход, цель обязана быть достижима тому,
  * кому предложение показано.**
  *
- * Аудит UI 2026-07-30 нашёл 13 нарушений этого правила в пяти группах, и все они были одной
- * природы: видимость объекта считает сервер, а доступ к странице — статический список ролей в
- * реестре. Два источника правды разошлись, и каждое расхождение выглядело как отдельный «баг
- * с кнопкой». Заплатки по одной кнопке ловят следствие; тест ниже держит причину.
+ * Аудит UI 2026-07-30 нашёл 13 нарушений этого правила: видимость объекта считал сервер, а
+ * доступ к странице — статический список ролей в реестре. После M1-ERP-02 волны 3 сторон
+ * «покупатель / продавец» нет, и гейт страниц отбрасывает только неизвестный хэш, — поэтому
+ * тест держит то, что осталось существенным: каждая предлагаемая цель — известная странице SPA.
  *
  * Проверяются три семейства точек перехода разом:
- *   1. пункты меню — то, что реально построил `buildNavigation` для данной роли;
- *   2. маршруты документов — весь выход `documentRoute` для каждой стороны;
- *   3. маршрут «к сделке» — `dealsListRoute`, на который переведены чат, воронка и тур.
+ *   1. пункты меню — то, что реально построил `buildNavigation`;
+ *   2. маршруты документов — весь выход `documentRoute`;
+ *   3. маршрут «к сделкам» — `DEALS_LIST_ROUTE`, на который переведены воронка и уведомления.
  *
- * Судья один и тот же — `evaluatePageGuard`, тот самый, что решает в рантайме. Проверять
- * принадлежность к наборам страниц напрямую было бы проверкой теста самим собой.
+ * Судья — `evaluatePageGuard`, тот самый, что решает в рантайме.
  */
 
 import { describe, it, expect } from 'vitest';
 
-import { buildNavigation, TENANT_NAV, type CapableSides } from '@/config/navigation';
+import { buildNavigation, TENANT_NAV, TENANT_BOTTOM_NAV } from '@/config/navigation';
 import { evaluatePageGuard } from '@/routes/pageGuard';
-import { documentRoute, dealsListRoute, type DocumentKind } from '@/lib/documentRoute';
-import type { Capabilities, CompanyStatus, CompanyStatusEntry } from '@/store/userStore';
+import { documentRoute, DEALS_LIST_ROUTE, type DocumentKind } from '@/lib/documentRoute';
+import type { Capabilities } from '@/store/userStore';
 
 const t = (key: string) => key;
 
@@ -31,120 +30,68 @@ const ALL_PERMISSIONS = [
   'settings.edit', 'team.manage', 'data.export',
 ];
 
-interface Persona {
-  name: string;
-  caps: Capabilities;
-  sides: CapableSides;
-  activeStatus: CompanyStatus;
-  statusEntries: CompanyStatusEntry[];
-}
-
-function capabilities(overrides: Partial<Capabilities> = {}): Capabilities {
-  return {
-    can_buy: true,
-    can_sell: false,
-    permissions: ALL_PERMISSIONS,
-    ...overrides,
-  };
-}
-
-const entry = (status: CompanyStatus): CompanyStatusEntry => ({ status });
-
-/** Роли, под которыми снята матрица доступа в аудите. */
-const PERSONAS: Persona[] = [
-  {
-    name: 'покупатель',
-    caps: capabilities(),
-    sides: { buy: true, sell: false },
-    activeStatus: 'BUYER',
-    statusEntries: [entry('BUYER')],
-  },
-  {
-    name: 'продавец',
-    caps: capabilities({ can_sell: true, can_buy: false }),
-    sides: { buy: false, sell: true },
-    activeStatus: 'SELLER',
-    statusEntries: [entry('SELLER')],
-  },
-  {
-    name: 'компания с двумя сторонами',
-    caps: capabilities({ can_sell: true }),
-    sides: { buy: true, sell: true },
-    activeStatus: 'BUYER',
-    statusEntries: [entry('BUYER'), entry('SELLER')],
-  },
-  {
-    name: 'сотрудник без прав роли (список прав ещё не пришёл)',
-    caps: capabilities({ permissions: [] }),
-    sides: { buy: true, sell: false },
-    activeStatus: 'BUYER',
-    statusEntries: [entry('BUYER')],
-  },
+const PERSONAS: { name: string; caps: Capabilities }[] = [
+  { name: 'сотрудник со всеми правами', caps: { permissions: ALL_PERMISSIONS } },
+  { name: 'сотрудник без прав роли (список прав ещё не пришёл)', caps: { permissions: [] } },
+  { name: 'сотрудник каталога', caps: { permissions: ['catalog.manage'] } },
 ];
 
 /** Идентификаторы всех листьев меню, построенного движком для этой роли. */
-function menuTargets(persona: Persona): string[] {
-  const items = buildNavigation(TENANT_NAV, persona.caps, persona.sides, 'dashboard', t);
+function menuTargets(caps: Capabilities): string[] {
+  const items = [
+    ...buildNavigation(TENANT_NAV, caps, 'dashboard', t),
+    ...buildNavigation(TENANT_BOTTOM_NAV, caps, 'dashboard', t),
+  ];
   return items.flatMap((item) => (item.children ? item.children.map((child) => child.id) : item.id ? [item.id] : []));
 }
 
 /** Хэш без параметров: гейт решает по типу страницы, а не по конкретной записи. */
 const pageTypeOf = (route: string) => route.split('?')[0].split('/')[0];
 
-function guardFor(persona: Persona, route: string) {
-  return evaluatePageGuard({
-    pageType: pageTypeOf(route),
-    activeStatus: persona.activeStatus,
-    statusEntries: persona.statusEntries,
-    // Гейты применяем ПОСЛЕ бутстрапа: до него guard намеренно всё разрешает (холодный
-    // deep-link), и тест на пред-авторизационных дефолтах ничего бы не доказывал.
-    bootstrapped: true,
-  });
-}
+const isReachable = (route: string) => evaluatePageGuard(pageTypeOf(route)).action === 'allow';
 
-describe('каждый пункт меню ведёт на страницу, доступную тому, кому он показан', () => {
+describe('каждый пункт меню ведёт на известную страницу', () => {
   for (const persona of PERSONAS) {
     it(persona.name, () => {
-      const unreachable = menuTargets(persona).filter((target) => guardFor(persona, target).action === 'bounce');
-      expect(unreachable).toEqual([]);
+      expect(menuTargets(persona.caps).filter((target) => !isReachable(target))).toEqual([]);
     });
   }
 });
 
-describe('маршрут документа достижим стороне, которой документ показан', () => {
-  const KINDS: DocumentKind[] = ['quote', 'contract', 'invoice', 'act', 'payment', 'fulfillment', 'generated'];
+describe('маршрут документа ведёт на известную страницу', () => {
+  const KINDS: DocumentKind[] = [
+    'quote', 'contract', 'invoice', 'act', 'payment', 'fulfillment', 'generated', 'receipt', 'delivery_note',
+  ];
 
-  for (const persona of PERSONAS) {
-    it(persona.name, () => {
-      const viewer = { isSeller: persona.sides.sell };
-      const unreachable = KINDS
-        .map((kind) => ({ kind, route: documentRoute({ kind, id: 42, dealId: 7 }, viewer) }))
-        .filter((entry) => guardFor(persona, entry.route).action === 'bounce')
-        .map((entry) => `${entry.kind} → ${entry.route}`);
-      expect(unreachable).toEqual([]);
-    });
-  }
-
-  it('покупателя ведут не в билдер КП, а на его вид того же документа', () => {
-    // Билдер правит цены и себестоимость — это рабочее место продавца. Ссылка на КП у
-    // покупателя обязана вести на карточку заявки, а не в отказ.
-    expect(documentRoute({ kind: 'quote', dealId: 7 }, { isSeller: false })).toBe('request-detail/7');
-    expect(documentRoute({ kind: 'quote', dealId: 7 }, { isSeller: true })).toBe('deal-quote/7');
+  it('со сделкой и без неё', () => {
+    const routes = KINDS.flatMap((kind) => [
+      documentRoute({ kind, id: 42, dealId: 7 }),
+      documentRoute({ kind, id: 42 }),
+    ]);
+    expect(routes.filter((route) => !isReachable(route))).toEqual([]);
   });
 
-  it('акт ведёт на одну и ту же страницу обеим сторонам', () => {
-    // Двусторонний документ (G2): выпускает исполнитель, принимает заказчик.
-    expect(documentRoute({ kind: 'act', id: 5 }, { isSeller: false })).toBe('acts?open=5');
-    expect(documentRoute({ kind: 'act', id: 5 }, { isSeller: true })).toBe('acts?open=5');
+  it('КП ведёт в билдер сделки, без сделки — в реестр КП', () => {
+    expect(documentRoute({ kind: 'quote', dealId: 7 })).toBe('deal-quote/7');
+    expect(documentRoute({ kind: 'quote' })).toBe('crm-quotes');
+  });
+
+  it('акт открывается точечно', () => {
+    expect(documentRoute({ kind: 'act', id: 5 })).toBe('acts?open=5');
   });
 });
 
-describe('маршрут «к сделке» достижим той роли, которой его предлагают', () => {
-  for (const persona of PERSONAS) {
-    it(persona.name, () => {
-      const route = dealsListRoute({ isSeller: persona.sides.sell });
-      expect(guardFor(persona, route).action).not.toBe('bounce');
-    });
-  }
+describe('маршрут «к сделкам» — очередь сделок бэк-офиса', () => {
+  it('известен SPA', () => {
+    expect(DEALS_LIST_ROUTE).toBe('crm-deals');
+    expect(isReachable(DEALS_LIST_ROUTE)).toBe(true);
+  });
+});
 
+describe('устаревшие покупательские хэши отбрасываются гейтом', () => {
+  it('«Мои заявки» и «Поставщики» больше не страницы ERP (ушли в Cabinet)', () => {
+    for (const stale of ['my-requests', 'suppliers']) {
+      expect(evaluatePageGuard(stale)).toEqual({ action: 'bounce', reason: 'unknown' });
+    }
+  });
 });

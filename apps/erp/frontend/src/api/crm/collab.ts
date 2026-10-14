@@ -1,6 +1,6 @@
 /**
  * Совместная работа вокруг сделки: статус фоновых задач, выгрузки, лента активности,
- * таймлайн, книга контрагентов и офлайн-клиенты.
+ * таймлайн, контакты книги клиентов и офлайн-клиенты (книга контрагентов удалена в M1-ERP-02 волна 3).
  *
  * Вынесено из crmApi.ts при распиле (1179 строк, 56 правок — самый горячий файл проекта).
  * Composed в `./index.ts`; публичный объект `crmApi` и путь `@/api/crmApi` не изменились.
@@ -8,7 +8,7 @@
 
 import { apiClient } from '../client';
 import { PaginatedResponse } from '../types';
-import type { Contact, OfflineClientPayload, Relationship, RelationshipDirection, RelationshipStage, TimelineEntry } from './types';
+import type { Contact, OfflineClientPayload, TimelineEntry } from './types';
 
 export const collabApi = {
 	getTaskStatus: async (taskId: string) => {
@@ -27,19 +27,6 @@ export const collabApi = {
 	},	// CRM Phase A — read-only timeline scoped to a deal or a counterparty company.
 	getTimeline: async (params: { deal_id?: number; company_id?: number; limit?: number }) => {
 		const response = await apiClient.get<TimelineEntry[]>('crm/timeline/', { params });
-		return response.data;
-	},
-	// ─── CRM Phase B — counterparty book («Книга контрагентов») ─────────────
-	// direction=CLIENT → книга клиентов (seller context), SUPPLIER → книга поставщиков (buyer).
-	getRelationships: async (direction?: RelationshipDirection) => {
-		const response = await apiClient.get<PaginatedResponse<Relationship>>('crm/relationships/', {
-			params: direction ? { direction } : undefined,
-		});
-		return response.data.results;
-	},
-	// Only the two human-managed fields are writable: stage verdict + account owner.
-	updateRelationship: async (id: number, data: { stage?: RelationshipStage; owner_member?: number | null }) => {
-		const response = await apiClient.patch<Relationship>(`crm/relationships/${id}/`, data);
 		return response.data;
 	},
 	// Contacts of the team's OWN client book (confidentiality boundary is server-side).

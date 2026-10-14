@@ -219,19 +219,6 @@ def _handle_catalog_import_ai(payload: dict) -> dict:
     return result
 
 
-def _handle_suggest_sellers(payload: dict) -> dict:
-    """R3 — AI-enhanced seller-routing suggestions off-thread. The view already buyer-gated the
-    deal before enqueue; the worker just runs the enhanced (trigram + AI fallback) match. Falls
-    back to the deterministic result inside the service when AI is off / finds nothing."""
-    from crm.models import Deal
-    from sourcing.services import suggest_sellers_for_deal_ai
-
-    deal = Deal.objects.filter(pk=payload["deal_id"]).first()
-    if deal is None:
-        return {"error": "DEAL_NOT_FOUND"}
-    return {"sellers": suggest_sellers_for_deal_ai(deal)}
-
-
 def _handle_hs_classify(payload: dict) -> dict:
     """T4: пакетный подбор кодов для карточек. Предложения, НЕ применение.
 
@@ -263,7 +250,6 @@ FEATURE_HANDLERS = {
     "enrich": _handle_enrich,
     "quote_diff": _handle_quote_diff,
     "draft_quote": _handle_draft_quote,
-    "suggest_sellers": _handle_suggest_sellers,
     "hs_lookup": _handle_hs_lookup,
     "hs_classify": _handle_hs_classify,
 }

@@ -77,6 +77,8 @@ class Reason(StrEnum):
     FORM_TOO_FAST = "form_too_fast"
     FORM_TOKEN_EXPIRED = "form_token_expired"  # noqa: S105 — подкод ошибки, не секрет
     RATE_LIMITED = "rate_limited"
+    # Форма «Запрос»: согласие на обработку ПДн обязательно (DECISIONS Q-12, M2-CAB-03).
+    CONSENT_REQUIRED = "consent_required"
     # «Расходы» по ансамблю (M3-CRM-09): период журнала LiteLLM — не длиннее 90 дней, без будущего.
     AI_SPEND_PERIOD = "ai_spend_period"
     # Центр внешних сервисов (M3-CRM-12, ADR-0024): выключатель недоступен; Telegram на паузе.

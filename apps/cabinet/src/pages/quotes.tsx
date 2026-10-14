@@ -15,6 +15,7 @@ import { DetailSkeleton, ErrorState, ListSkeleton } from '@/components/QueryStat
 import { ReasonDialog } from '@/components/ReasonDialog';
 import { ResponsiveList } from '@/components/ResponsiveList';
 import { StatusBadge, ToneBadge } from '@/components/StatusBadge';
+import { ManagerButton } from '@/components/TelegramLinkButton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -115,9 +116,12 @@ function QuoteCard({ quote }: { quote: Quote }) {
       <PageHeader
         title={t('pages.quoteDetail.title', { number: quote.number })}
         actions={
-          quote.pdf_document_id ? (
-            <DocumentButton documentId={quote.pdf_document_id} fileName={`${quote.number}.pdf`} label={quote.number} />
-          ) : null
+          <>
+            {quote.pdf_document_id ? (
+              <DocumentButton documentId={quote.pdf_document_id} fileName={`${quote.number}.pdf`} label={quote.number} />
+            ) : null}
+            <ManagerButton dealId={quote.deal_id} label={t('manager.aboutQuote', { number: quote.number })} />
+          </>
         }
       />
       <div className="flex flex-col gap-4">

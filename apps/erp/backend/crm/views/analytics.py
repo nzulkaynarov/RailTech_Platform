@@ -45,8 +45,8 @@ class DashboardAnalyticsView(APIView):
 @extend_schema(
     summary="Time-to-first-КП wedge metric",
     description=(
-        "Hours from RFQ routed → first КП sent, aggregated (median/avg/p90). Platform admin sees "
-        "the platform-wide loop speed; a seller sees their OWN company's. The headline wedge KPI."
+        "Hours from the request entering ERP → first КП sent, aggregated (median/avg/p90). Admin sees "
+        "everything; own-company staff see the own company's КП. The headline wedge KPI."
     ),
     parameters=[
         OpenApiParameter(name="since_days", type=int, location=OpenApiParameter.QUERY, required=False),
@@ -60,13 +60,13 @@ class TimeToFirstQuoteView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        from accounts.services.permissions import seller_acting_company_ids
+        from accounts.services.permissions import seller_company_ids as own_seller_company_ids
         from crm.services.metrics import time_to_first_quote_stats
 
         is_staff = getattr(request.user, "is_superuser", False)
-        # Platform admin → whole platform (None). A seller → only their OWN company's КП (never a
-        # competitor's). A pure buyer has no seller companies → empty scope → zero sample.
-        seller_company_ids = None if is_staff else list(seller_acting_company_ids(request.user, request) or [])
+        # Administrator → everything (None). Own-company staff → the own company's КП. A buyer
+        # account has no seller company → empty scope → zero sample.
+        seller_company_ids = None if is_staff else own_seller_company_ids(request.user)
         try:
             since_days = int(request.query_params.get("since_days")) if request.query_params.get("since_days") else None
         except (TypeError, ValueError):
@@ -80,8 +80,8 @@ class TimeToFirstQuoteView(APIView):
     description=(
         "The viewer's newest documents ACROSS types — КП / контракты / инвойсы / акты / "
         "сгенерированные — merged and sorted by date desc, capped at `limit`. Each type is "
-        "company-scoped exactly like its own list endpoint (hidden competition preserved): a "
-        "routed seller never sees a co-routed competitor's document, nor another company's DRAFT."
+        "company-scoped exactly like its own list endpoint: own-company staff see every document, "
+        "a buyer account only its own company's (never another company's DRAFT)."
     ),
     parameters=[
         OpenApiParameter(

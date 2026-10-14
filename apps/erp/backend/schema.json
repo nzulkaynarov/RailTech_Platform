@@ -1230,26 +1230,6 @@
                 }
             }
         },
-        "/api/v1/accounts/companies/suppliers/": {
-            "get": {
-                "operationId": "accounts_companies_suppliers_retrieve",
-                "description": "Minimal directory of active SUPPLIER companies a buyer can invite to an RFQ. Available to any authenticated member — returns only id, name and INN, NOT the full admin company record.",
-                "summary": "List suppliers (for RFQ invitations)",
-                "tags": [
-                    "Accounts"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "List of {id, name, inn}"
-                    }
-                }
-            }
-        },
         "/api/v1/accounts/company-roles/": {
             "get": {
                 "operationId": "accounts_company_roles_list",
@@ -7009,7 +6989,7 @@
         "/api/v1/crm/analytics/recent-documents/": {
             "get": {
                 "operationId": "crm_analytics_recent_documents_retrieve",
-                "description": "The viewer's newest documents ACROSS types — КП / контракты / инвойсы / акты / сгенерированные — merged and sorted by date desc, capped at `limit`. Each type is company-scoped exactly like its own list endpoint (hidden competition preserved): a routed seller never sees a co-routed competitor's document, nor another company's DRAFT.",
+                "description": "The viewer's newest documents ACROSS types — КП / контракты / инвойсы / акты / сгенерированные — merged and sorted by date desc, capped at `limit`. Each type is company-scoped exactly like its own list endpoint: own-company staff see every document, a buyer account only its own company's (never another company's DRAFT).",
                 "summary": "Recent documents (dashboard widget)",
                 "parameters": [
                     {
@@ -7092,7 +7072,7 @@
         "/api/v1/crm/analytics/time-to-first-quote/": {
             "get": {
                 "operationId": "crm_analytics_time_to_first_quote_retrieve",
-                "description": "Hours from RFQ routed → first КП sent, aggregated (median/avg/p90). Platform admin sees the platform-wide loop speed; a seller sees their OWN company's. The headline wedge KPI.",
+                "description": "Hours from the request entering ERP → first КП sent, aggregated (median/avg/p90). Admin sees everything; own-company staff see the own company's КП. The headline wedge KPI.",
                 "summary": "Time-to-first-КП wedge metric",
                 "parameters": [
                     {
@@ -8843,7 +8823,7 @@
         "/api/v1/crm/deals/{id}/claim/": {
             "post": {
                 "operationId": "crm_deals_claim_create",
-                "description": "ADR-0006 Move 2: a routed seller-team member takes ownership of an unclaimed заявка.",
+                "description": "ADR-0006 Move 2: a back-office staff member takes ownership of an unclaimed заявка.",
                 "summary": "Claim a deal (take it from the shared queue)",
                 "parameters": [
                     {
@@ -9083,7 +9063,7 @@
                         "description": "No request lines"
                     },
                     "403": {
-                        "description": "Not a routed seller"
+                        "description": "Not own-company staff"
                     },
                     "404": {
                         "description": "Deal not found"
@@ -9128,64 +9108,6 @@
                             }
                         }
                     }
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/DealDetail"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            }
-        },
-        "/api/v1/crm/deals/{id}/route/": {
-            "post": {
-                "operationId": "crm_deals_route_create",
-                "description": "Buyer-only, while the deal is still DRAFT. Addresses a (typically free-text) заявка to chosen seller companies — multi-seller routing. Idempotent; each id must be an active SUPPLIER-type company.",
-                "summary": "Route the request (RFQ) to seller companies",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Сделка.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "CRM"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/RouteRequestRequestRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/RouteRequestRequestRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/RouteRequestRequestRequest"
-                            }
-                        }
-                    },
-                    "required": true
                 },
                 "security": [
                     {
@@ -9263,96 +9185,6 @@
                 }
             }
         },
-        "/api/v1/crm/deals/{id}/suggest-sellers-ai/": {
-            "post": {
-                "operationId": "crm_deals_suggest_sellers_ai_create",
-                "description": "R3: enqueue an AI-enhanced version of `suggested-sellers` (202 + task_id; poll sourcing/ai-status). Free-text заявка lines the trigram matcher missed are resolved in ONE bilingual LLM call so misspellings / synonyms / Latin script still route. Buyer-gated and subject to the daily AI cap; the buyer still confirms the list (AI never binds). 503 AI_DISABLED when AI is off (the sync suggested-sellers stays).",
-                "summary": "AI-enhance seller routing suggestions",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Сделка.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "CRM"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "202": {
-                        "description": "Enqueued — poll ai-status; result carries `sellers`"
-                    },
-                    "403": {
-                        "description": "ADMIN_VIEWER_CANNOT_ACT / ONLY_BUYER_CAN_ROUTE"
-                    },
-                    "429": {
-                        "description": "AI_DAILY_CAP_REACHED"
-                    },
-                    "503": {
-                        "description": "AI_DISABLED"
-                    }
-                }
-            }
-        },
-        "/api/v1/crm/deals/{id}/suggested-sellers/": {
-            "get": {
-                "operationId": "crm_deals_suggested_sellers_list",
-                "description": "Детерминированный trigram-подбор продавцов по позициям заявки (Ariba Discovery-паттерн): каждая позиция → каталожный товар → owner_company, со счётом совпавших позиций. Чистое чтение, без AI. Покупатель подтверждает выбор через POST route/. Пустой список — каталог не подсказал, покупатель выбирает вручную.",
-                "summary": "Suggested sellers for a free-text заявка (R1 — category-matched routing)",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Сделка.",
-                        "required": true
-                    },
-                    {
-                        "name": "search",
-                        "required": false,
-                        "in": "query",
-                        "description": "A search term.",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "tags": [
-                    "CRM"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/SuggestedSellerItem"
-                                    }
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            }
-        },
         "/api/v1/crm/deals/{id}/take-and-prepare/": {
             "post": {
                 "operationId": "crm_deals_take_and_prepare_create",
@@ -9407,7 +9239,7 @@
                         "description": "Нет строк заявки / стадия вне пред-КП набора"
                     },
                     "403": {
-                        "description": "Не routed-продавец / viewer"
+                        "description": "Не сотрудник своей компании"
                     },
                     "404": {
                         "description": "Deal not found"
@@ -9467,47 +9299,6 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/DealDetail"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            }
-        },
-        "/api/v1/crm/deals/suppliers/": {
-            "get": {
-                "operationId": "crm_deals_suppliers_list",
-                "description": "Buyer-facing lightweight directory of active SUPPLIER companies.",
-                "summary": "List seller companies for the routing picker",
-                "parameters": [
-                    {
-                        "name": "search",
-                        "required": false,
-                        "in": "query",
-                        "description": "A search term.",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "tags": [
-                    "CRM"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/SupplierPickerItem"
-                                    }
                                 }
                             }
                         },
@@ -13566,7 +13357,7 @@
         "/api/v1/crm/quotes/{quote_id}/request-diff/": {
             "get": {
                 "operationId": "crm_quotes_request_diff_retrieve",
-                "description": "Compares a received КП against the buyer's original request lines and returns a plain-language list of discrepancies: uncovered (unpriced) lines and — when AI is enabled — non-equivalent substitutions and notes the КП may have ignored. The deterministic coverage facts are always returned; the AI part is purely additive. Result is ASSISTIVE and never blocks. Scoped to the deal's buyer or routed seller.",
+                "description": "Compares a received КП against the buyer's original request lines and returns a plain-language list of discrepancies: uncovered (unpriced) lines and — when AI is enabled — non-equivalent substitutions and notes the КП may have ignored. The deterministic coverage facts are always returned; the AI part is purely additive. Result is ASSISTIVE and never blocks. Scoped to the deal's buyer or own-company staff.",
                 "summary": "AI КП-vs-заявка coverage / discrepancy check",
                 "parameters": [
                     {
@@ -13591,7 +13382,7 @@
                         "description": "AI job queued, task_id returned (poll sourcing/ai-status/<task_id>/ for {'ai_enabled': bool, 'findings': [{issue_type, line, explanation}]})"
                     },
                     "403": {
-                        "description": "Caller is neither the deal's buyer nor a routed seller"
+                        "description": "Caller is neither the deal's buyer nor own-company staff"
                     },
                     "404": {
                         "description": "Quote not found"
@@ -13600,7 +13391,7 @@
             },
             "post": {
                 "operationId": "crm_quotes_request_diff_create",
-                "description": "Compares a received КП against the buyer's original request lines and returns a plain-language list of discrepancies: uncovered (unpriced) lines and — when AI is enabled — non-equivalent substitutions and notes the КП may have ignored. The deterministic coverage facts are always returned; the AI part is purely additive. Result is ASSISTIVE and never blocks. Scoped to the deal's buyer or routed seller.",
+                "description": "Compares a received КП against the buyer's original request lines and returns a plain-language list of discrepancies: uncovered (unpriced) lines and — when AI is enabled — non-equivalent substitutions and notes the КП may have ignored. The deterministic coverage facts are always returned; the AI part is purely additive. Result is ASSISTIVE and never blocks. Scoped to the deal's buyer or own-company staff.",
                 "summary": "AI КП-vs-заявка coverage / discrepancy check",
                 "parameters": [
                     {
@@ -13625,7 +13416,7 @@
                         "description": "AI job queued, task_id returned (poll sourcing/ai-status/<task_id>/ for {'ai_enabled': bool, 'findings': [{issue_type, line, explanation}]})"
                     },
                     "403": {
-                        "description": "Caller is neither the deal's buyer nor a routed seller"
+                        "description": "Caller is neither the deal's buyer nor own-company staff"
                     },
                     "404": {
                         "description": "Quote not found"
@@ -13689,258 +13480,10 @@
                 }
             }
         },
-        "/api/v1/crm/relationships/": {
-            "get": {
-                "operationId": "crm_relationships_list",
-                "description": "The counterparty book of the user's own companies. No create/delete over the API —\nedges are born from real interactions (routing, offline clients, lead conversion).",
-                "parameters": [
-                    {
-                        "in": "query",
-                        "name": "direction",
-                        "schema": {
-                            "type": "string",
-                            "enum": [
-                                "CLIENT",
-                                "SUPPLIER"
-                            ]
-                        },
-                        "description": "CLIENT → книга клиентов (seller context), SUPPLIER → книга поставщиков (buyer context)"
-                    },
-                    {
-                        "name": "page",
-                        "required": false,
-                        "in": "query",
-                        "description": "A page number within the paginated result set.",
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "name": "page_size",
-                        "required": false,
-                        "in": "query",
-                        "description": "Number of results to return per page.",
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "name": "search",
-                        "required": false,
-                        "in": "query",
-                        "description": "A search term.",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "tags": [
-                    "CRM Counterparties"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/PaginatedRelationshipList"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            }
-        },
-        "/api/v1/crm/relationships/{id}/": {
-            "get": {
-                "operationId": "crm_relationships_retrieve",
-                "description": "The counterparty book of the user's own companies. No create/delete over the API —\nedges are born from real interactions (routing, offline clients, lead conversion).",
-                "parameters": [
-                    {
-                        "in": "query",
-                        "name": "direction",
-                        "schema": {
-                            "type": "string",
-                            "enum": [
-                                "CLIENT",
-                                "SUPPLIER"
-                            ]
-                        },
-                        "description": "CLIENT → книга клиентов (seller context), SUPPLIER → книга поставщиков (buyer context)"
-                    },
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Отношение с контрагентом.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "CRM Counterparties"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Relationship"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            },
-            "put": {
-                "operationId": "crm_relationships_update",
-                "description": "The counterparty book of the user's own companies. No create/delete over the API —\nedges are born from real interactions (routing, offline clients, lead conversion).",
-                "parameters": [
-                    {
-                        "in": "query",
-                        "name": "direction",
-                        "schema": {
-                            "type": "string",
-                            "enum": [
-                                "CLIENT",
-                                "SUPPLIER"
-                            ]
-                        },
-                        "description": "CLIENT → книга клиентов (seller context), SUPPLIER → книга поставщиков (buyer context)"
-                    },
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Отношение с контрагентом.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "CRM Counterparties"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/RelationshipRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/RelationshipRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/RelationshipRequest"
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Relationship"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            },
-            "patch": {
-                "operationId": "crm_relationships_partial_update",
-                "description": "The counterparty book of the user's own companies. No create/delete over the API —\nedges are born from real interactions (routing, offline clients, lead conversion).",
-                "parameters": [
-                    {
-                        "in": "query",
-                        "name": "direction",
-                        "schema": {
-                            "type": "string",
-                            "enum": [
-                                "CLIENT",
-                                "SUPPLIER"
-                            ]
-                        },
-                        "description": "CLIENT → книга клиентов (seller context), SUPPLIER → книга поставщиков (buyer context)"
-                    },
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Отношение с контрагентом.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "CRM Counterparties"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedRelationshipRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedRelationshipRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedRelationshipRequest"
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Relationship"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            }
-        },
         "/api/v1/crm/timeline/": {
             "get": {
                 "operationId": "crm_timeline_list",
-                "description": "Chronological business events (deal opened, КП sent/accepted/rejected, contract signed, payments) linked to a deal or a counterparty company. Pass deal_id OR company_id. Scoping: a deal timeline needs access to the deal (member of the client company, routed seller, or platform admin); a company timeline shows a member their own company's history, while a routed seller sees only events on deals visible to them.",
+                "description": "Chronological business events (deal opened, КП sent/accepted/rejected, contract signed, payments) linked to a deal or a counterparty company. Pass deal_id OR company_id. Scoping: a deal timeline needs access to the deal (member of the client company, own-company staff, or administrator); a company timeline shows a member their own company's history and own-company staff everything about the counterparty.",
                 "summary": "Counterparty / deal activity timeline",
                 "parameters": [
                     {
@@ -16295,7 +15838,7 @@
                         "description": "No file / bad type / missing quote_id"
                     },
                     "403": {
-                        "description": "Not the routed seller of this КП"
+                        "description": "Not own-company staff with pricing permission"
                     },
                     "404": {
                         "description": "Quote not found"
@@ -19189,12 +18732,6 @@
                         "description": "Whether the current user may add/edit/remove this deal's request rows.",
                         "readOnly": true
                     },
-                    "target_sellers_data": {
-                        "type": "array",
-                        "items": {},
-                        "description": "Seller companies this RFQ is routed to (multi-seller routing).",
-                        "readOnly": true
-                    },
                     "execution_complete": {
                         "type": "boolean",
                         "description": "Исполнение закрыто целиком (оплата + поставка + акт) — НЕ то же, что «сделка выиграна».\n\nO4: `CLOSED_WON` наступает при подписании договора, когда покупателю ещё платить и\nпринимать. Слово «Завершено» в интерфейсе опирается на этот флаг, а не на стадию.",
@@ -19229,7 +18766,6 @@
                     "quotes",
                     "stage_code",
                     "stage_name",
-                    "target_sellers_data",
                     "updated_at",
                     "viewer_can_release",
                     "viewer_is_buyer",
@@ -19368,12 +18904,6 @@
                         ],
                         "readOnly": true
                     },
-                    "target_sellers_data": {
-                        "type": "array",
-                        "items": {},
-                        "description": "Seller companies this RFQ is routed to (multi-seller routing).",
-                        "readOnly": true
-                    },
                     "execution_complete": {
                         "type": "boolean",
                         "description": "Исполнение закрыто целиком (оплата + поставка + акт) — НЕ то же, что «сделка выиграна».\n\nO4: `CLOSED_WON` наступает при подписании договора, когда покупателю ещё платить и\nпринимать. Слово «Завершено» в интерфейсе опирается на этот флаг, а не на стадию.",
@@ -19398,7 +18928,6 @@
                     "id",
                     "stage_code",
                     "stage_name",
-                    "target_sellers_data",
                     "total_value",
                     "viewer_can_release",
                     "viewer_is_buyer",
@@ -19551,14 +19080,6 @@
                     "code",
                     "name"
                 ]
-            },
-            "DirectionEnum": {
-                "enum": [
-                    "CLIENT",
-                    "SUPPLIER"
-                ],
-                "type": "string",
-                "description": "* `CLIENT` - Клиент (они покупают у нас)\n* `SUPPLIER` - Поставщик (мы покупаем у них)"
             },
             "DisplayTypeEnum": {
                 "enum": [
@@ -21803,37 +21324,6 @@
                     }
                 }
             },
-            "PaginatedRelationshipList": {
-                "type": "object",
-                "required": [
-                    "count",
-                    "results"
-                ],
-                "properties": {
-                    "count": {
-                        "type": "integer",
-                        "example": 123
-                    },
-                    "next": {
-                        "type": "string",
-                        "nullable": true,
-                        "format": "uri",
-                        "example": "http://api.example.org/accounts/?page=4"
-                    },
-                    "previous": {
-                        "type": "string",
-                        "nullable": true,
-                        "format": "uri",
-                        "example": "http://api.example.org/accounts/?page=2"
-                    },
-                    "results": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/Relationship"
-                        }
-                    }
-                }
-            },
             "PaginatedSupplierOfferList": {
                 "type": "object",
                 "required": [
@@ -23228,25 +22718,6 @@
                         "nullable": true,
                         "title": "Дата заморозки цен",
                         "description": "Момент фиксации цен при отправке клиенту"
-                    }
-                }
-            },
-            "PatchedRelationshipRequest": {
-                "type": "object",
-                "properties": {
-                    "stage": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/StageEnum"
-                            }
-                        ],
-                        "title": "Стадия отношения"
-                    },
-                    "owner_member": {
-                        "type": "integer",
-                        "nullable": true,
-                        "title": "Владелец аккаунта",
-                        "description": "Сотрудник команды, ответственный за отношение"
                     }
                 }
             },
@@ -25693,176 +25164,6 @@
                     }
                 }
             },
-            "Relationship": {
-                "type": "object",
-                "properties": {
-                    "id": {
-                        "type": "integer",
-                        "readOnly": true
-                    },
-                    "direction": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/DirectionEnum"
-                            }
-                        ],
-                        "readOnly": true,
-                        "title": "Роль контрагента",
-                        "description": "Кем контрагент является ДЛЯ владельца книги (Rule 2: сравнивать по коду)\n\n* `CLIENT` - Клиент (они покупают у нас)\n* `SUPPLIER` - Поставщик (мы покупаем у них)"
-                    },
-                    "stage": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/StageEnum"
-                            }
-                        ],
-                        "title": "Стадия отношения"
-                    },
-                    "source": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/SourceEnum"
-                            }
-                        ],
-                        "readOnly": true,
-                        "title": "Источник"
-                    },
-                    "counterparty": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/RelationshipCounterparty"
-                            }
-                        ],
-                        "readOnly": true
-                    },
-                    "owner_member": {
-                        "type": "integer",
-                        "nullable": true,
-                        "title": "Владелец аккаунта",
-                        "description": "Сотрудник команды, ответственный за отношение"
-                    },
-                    "owner_member_name": {
-                        "type": "string",
-                        "readOnly": true,
-                        "default": ""
-                    },
-                    "contacts_count": {
-                        "type": "integer",
-                        "readOnly": true,
-                        "default": 0
-                    },
-                    "first_interaction_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "readOnly": true,
-                        "nullable": true,
-                        "title": "Первое взаимодействие"
-                    },
-                    "last_interaction_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "readOnly": true,
-                        "nullable": true,
-                        "title": "Последнее взаимодействие"
-                    },
-                    "deals_count": {
-                        "type": "integer",
-                        "readOnly": true,
-                        "title": "Сделок"
-                    },
-                    "won_count": {
-                        "type": "integer",
-                        "readOnly": true,
-                        "title": "Выиграно"
-                    },
-                    "gmv": {
-                        "type": "string",
-                        "format": "decimal",
-                        "pattern": "^-?\\d{0,16}(?:\\.\\d{0,2})?$",
-                        "readOnly": true,
-                        "description": "Сумма total_incl_vat выигранных сделок (UZS-канон)"
-                    },
-                    "created_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "readOnly": true
-                    }
-                },
-                "required": [
-                    "contacts_count",
-                    "counterparty",
-                    "created_at",
-                    "deals_count",
-                    "direction",
-                    "first_interaction_at",
-                    "gmv",
-                    "id",
-                    "last_interaction_at",
-                    "owner_member_name",
-                    "source",
-                    "won_count"
-                ]
-            },
-            "RelationshipCounterparty": {
-                "type": "object",
-                "description": "Account summary embedded in an edge (nested read, flat write pattern).",
-                "properties": {
-                    "id": {
-                        "type": "integer",
-                        "readOnly": true
-                    },
-                    "name": {
-                        "type": "string",
-                        "readOnly": true
-                    },
-                    "inn": {
-                        "type": "string",
-                        "readOnly": true,
-                        "nullable": true
-                    },
-                    "stated_inn": {
-                        "type": "string",
-                        "readOnly": true
-                    },
-                    "is_registered": {
-                        "type": "boolean",
-                        "readOnly": true
-                    },
-                    "primary_contact_id": {
-                        "type": "integer",
-                        "nullable": true,
-                        "description": "The counterparty's primary contact — the target for a CB-invite (Phase D). Only\nmeaningful for an offline company; a registered one has real members instead.",
-                        "readOnly": true
-                    }
-                },
-                "required": [
-                    "id",
-                    "inn",
-                    "is_registered",
-                    "name",
-                    "primary_contact_id",
-                    "stated_inn"
-                ]
-            },
-            "RelationshipRequest": {
-                "type": "object",
-                "properties": {
-                    "stage": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/StageEnum"
-                            }
-                        ],
-                        "title": "Стадия отношения"
-                    },
-                    "owner_member": {
-                        "type": "integer",
-                        "nullable": true,
-                        "title": "Владелец аккаунта",
-                        "description": "Сотрудник команды, ответственный за отношение"
-                    }
-                }
-            },
             "RemoveMemberRequest": {
                 "type": "object",
                 "properties": {
@@ -25904,20 +25205,6 @@
                 ],
                 "type": "string",
                 "description": "* `never` - Никогда\n* `yearly` - Ежегодно\n* `monthly` - Ежемесячно"
-            },
-            "RouteRequestRequestRequest": {
-                "type": "object",
-                "properties": {
-                    "seller_company_ids": {
-                        "type": "array",
-                        "items": {
-                            "type": "integer"
-                        }
-                    }
-                },
-                "required": [
-                    "seller_company_ids"
-                ]
             },
             "SearchDocument": {
                 "type": "object",
@@ -26117,26 +25404,6 @@
                     "uid"
                 ]
             },
-            "SourceEnum": {
-                "enum": [
-                    "LEAD",
-                    "OFFLINE_CREATED",
-                    "INBOUND_RFQ",
-                    "SELF_REGISTERED"
-                ],
-                "type": "string",
-                "description": "* `LEAD` - Лид с лендинга\n* `OFFLINE_CREATED` - Заведён вручную (офлайн)\n* `INBOUND_RFQ` - Входящая заявка\n* `SELF_REGISTERED` - Саморегистрация"
-            },
-            "StageEnum": {
-                "enum": [
-                    "PROSPECT",
-                    "ACTIVE",
-                    "DORMANT",
-                    "LOST"
-                ],
-                "type": "string",
-                "description": "* `PROSPECT` - Проспект\n* `ACTIVE` - Активный\n* `DORMANT` - Спящий\n* `LOST` - Потерян"
-            },
             "StockStatus": {
                 "type": "object",
                 "properties": {
@@ -26161,29 +25428,6 @@
                     "code",
                     "id",
                     "name"
-                ]
-            },
-            "SuggestedSellerItem": {
-                "type": "object",
-                "properties": {
-                    "company_id": {
-                        "type": "integer"
-                    },
-                    "name": {
-                        "type": "string"
-                    },
-                    "matched_lines": {
-                        "type": "integer"
-                    },
-                    "total_lines": {
-                        "type": "integer"
-                    }
-                },
-                "required": [
-                    "company_id",
-                    "matched_lines",
-                    "name",
-                    "total_lines"
                 ]
             },
             "SupplierOffer": {
@@ -26422,21 +25666,6 @@
                 "required": [
                     "product",
                     "supplier"
-                ]
-            },
-            "SupplierPickerItem": {
-                "type": "object",
-                "properties": {
-                    "id": {
-                        "type": "integer"
-                    },
-                    "name": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "id",
-                    "name"
                 ]
             },
             "SystemRoleLookup": {

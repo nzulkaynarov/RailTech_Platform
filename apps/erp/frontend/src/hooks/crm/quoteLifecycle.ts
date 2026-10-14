@@ -35,21 +35,6 @@ export const useRevokePublicLink = () => {
     });
 };
 
-export const useApproveQuote = () => {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: (id: number) => crmApi.approveQuote(id),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['quotes'] });
-            queryClient.invalidateQueries({ queryKey: ['deals'] });
-            // Move 0 auto-materializes a Contract (PENDING_CLIENT) on approval — refresh
-            // ['contracts'] so the buyer's post-accept "next step" panel resolves the real
-            // contract and the dashboard "contracts to sign" counter reflects it at once.
-            queryClient.invalidateQueries({ queryKey: ['contracts'] });
-        },
-    });
-};
-
 export const useForceApproveQuote = () => {
     const queryClient = useQueryClient();
     return useMutation({

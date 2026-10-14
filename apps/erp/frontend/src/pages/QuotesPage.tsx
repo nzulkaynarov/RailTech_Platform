@@ -1,13 +1,11 @@
-import { useState } from 'react'; import { useTranslation } from 'react-i18next'; import { Card, CardContent } from '@/components/ui/card'; import { formatDate } from '@/lib/formatLocale'; import { Badge } from '@/components/ui/badge'; import { Button } from '@/components/ui/button'; import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable'; import {   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, } from '@/components/ui/dropdown-menu'; import {   Calculator, Files, MoreHorizontal, Send, } from 'lucide-react'; import { NewQuoteDialog } from '@/components/CRM/NewQuoteDialog'; import { SendQuoteDialog } from '@/components/CRM/SendQuoteDialog'; import { translateApiError } from '@/lib/apiError'; import { useUserStore } from '@/store/userStore'; import { QuoteStatus, quoteStatusLabelKey } from '@/lib/codes'; import { publicQuoteUrl } from '@/lib/quoteSend'; import { DocumentActions } from '@/components/Shared/DocumentActions'; import { useCurrencyStore } from '@/store/currencyStore'; import { useQuotes, useQuote, useDeal, useQuoteStatuses, useDuplicateQuote } from '@/hooks/useCRM'; import { sumMoney } from '@/utils/decimal'; import type { Quote } from '@/api/crmApi'; import { toast } from 'sonner'; import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell'; import { Toolbar, Pager } from '@/components/DataTable';
+import { useState } from 'react'; import { useTranslation } from 'react-i18next'; import { Card, CardContent } from '@/components/ui/card'; import { formatDate } from '@/lib/formatLocale'; import { Badge } from '@/components/ui/badge'; import { Button } from '@/components/ui/button'; import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable'; import {   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, } from '@/components/ui/dropdown-menu'; import {   Calculator, Files, MoreHorizontal, Send, } from 'lucide-react'; import { NewQuoteDialog } from '@/components/CRM/NewQuoteDialog'; import { SendQuoteDialog } from '@/components/CRM/SendQuoteDialog'; import { translateApiError } from '@/lib/apiError'; import { QuoteStatus, quoteStatusLabelKey } from '@/lib/codes'; import { publicQuoteUrl } from '@/lib/quoteSend'; import { DocumentActions } from '@/components/Shared/DocumentActions'; import { useCurrencyStore } from '@/store/currencyStore'; import { useQuotes, useQuote, useDeal, useQuoteStatuses, useDuplicateQuote } from '@/hooks/useCRM'; import type { Quote } from '@/api/crmApi'; import { toast } from 'sonner'; import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell'; import { Toolbar, Pager } from '@/components/DataTable';
 import { useListParams, applyListParams } from '@/components/DataTable/listParams';
 
 export function QuotesPage() {
   const { t } = useTranslation();
-  const { activeStatus } = useUserStore();
   const { data: quotes, isLoading, isError, refetch } = useQuotes();
   const duplicateMut = useDuplicateQuote();
   const formatCurrency = useCurrencyStore((s) => s.format);
-  const isBuyer = activeStatus === 'BUYER';
 
   const quotesList = quotes ?? [];
   const { data: statuses } = useQuoteStatuses();
@@ -16,7 +14,7 @@ export function QuotesPage() {
   // recipient · validity · margin-vs-floor · approval outcome · below-floor justification —
   // so the seller gets ONE send experience from any surface. Track which row's КП is sending.
   const [sendConfirmId, setSendConfirmId] = useState<number | null>(null);
-  // Wave E F2 — the seller-side «Новый КП» entry (offer-first, no buyer заявка needed).
+  // Wave E F2 — «Новый КП» from the registry (offer-first, no client заявка needed).
   const [newQuoteOpen, setNewQuoteOpen] = useState(false);
   const sendTargetQuote = quotesList.find((q) => q.id === sendConfirmId);
   // The composer needs the Deal (recipient/context) AND the quote DETAIL: the list serializer
@@ -26,21 +24,14 @@ export function QuotesPage() {
   const { data: sendDeal } = useDeal(sendTargetQuote?.deal ?? 0);
   const { data: sendQuoteDetail } = useQuote(sendConfirmId ?? 0);
 
-  const title = isBuyer ? t('pages.quotes.buyerTitle') : t('pages.quotes.sellerTitle');
-  const description = isBuyer ? t('pages.quotes.buyerDescription') : t('pages.quotes.sellerDescription');
-  const stats = isBuyer
-    ? [
-        { label: t('pages.quotes.stats.total'), value: String(quotesList.length) },
-        { label: t('pages.quotes.stats.underReview'), value: String(quotesList.filter(q => q.status_code === 'SENT').length) },
-        { label: t('pages.quotes.stats.accepted'), value: String(quotesList.filter(q => q.status_code === 'APPROVED').length) },
-        { label: t('pages.quotes.stats.totalAmount'), value: formatCurrency(sumMoney(quotesList.map(q => q.total_incl_vat))) },
-      ]
-    : [
-        { label: t('pages.quotes.stats.drafts'), value: String(quotesList.filter(q => q.status_code === 'DRAFT').length) },
-        { label: t('pages.quotes.stats.sent'), value: String(quotesList.filter(q => q.status_code === 'SENT').length) },
-        { label: t('pages.quotes.stats.approved'), value: String(quotesList.filter(q => q.status_code === 'APPROVED').length) },
-        { label: t('pages.quotes.stats.pipeline'), value: String(quotesList.filter(q => !['APPROVED', 'REJECTED', 'EXPIRED'].includes(q.status_code)).length) },
-      ];
+  const title = t('pages.quotes.sellerTitle');
+  const description = t('pages.quotes.sellerDescription');
+  const stats = [
+    { label: t('pages.quotes.stats.drafts'), value: String(quotesList.filter(q => q.status_code === 'DRAFT').length) },
+    { label: t('pages.quotes.stats.sent'), value: String(quotesList.filter(q => q.status_code === 'SENT').length) },
+    { label: t('pages.quotes.stats.approved'), value: String(quotesList.filter(q => q.status_code === 'APPROVED').length) },
+    { label: t('pages.quotes.stats.pipeline'), value: String(quotesList.filter(q => !['APPROVED', 'REJECTED', 'EXPIRED'].includes(q.status_code)).length) },
+  ];
 
   // WP-G1 — «Дублировать КП» from the registry: deep-copy → land the seller in the new draft's
   // builder. Degrades to an error toast if the backend duplicate endpoint isn't present yet.
@@ -82,7 +73,7 @@ export function QuotesPage() {
       cell: (q) => <span className="font-medium">#{q.id}-v{q.version}</span>,
     },
     {
-      id: 'party', header: isBuyer ? t('pages.quotes.table.supplier') : t('pages.quotes.table.client'),
+      id: 'party', header: t('pages.quotes.table.client'),
       cell: (q) => t('pages.quotes.dealRef', { id: q.deal }),
     },
     {
@@ -109,11 +100,9 @@ export function QuotesPage() {
       // Unified document actions (Просмотр/Печать/Скачать/Копировать ссылку) + the status-gated
       // Send/force menu. `data-row-action` keeps a click here from also opening the row.
       id: 'actions', header: t('pages.quotes.table.actions'), className: 'text-center', mobileActions: true,
-      cell: (q) => {
-        // «Дублировать» is a seller authoring action — offered to any non-buyer row.
-        const canDuplicate = !isBuyer;
-        const showStatusMenu = !isBuyer && (canDuplicate || q.status_code === QuoteStatus.READY_TO_SEND);
-        return (
+      // «Дублировать» — действие бэк-офиса, доступно на каждой строке; «Отправить» — только
+      // внутренне согласованному КП (FSM отклонит иначе).
+      cell: (q) => (
         <div className="flex items-center justify-center gap-1" data-row-action>
           <DocumentActions
             request={() => ({ path: `crm/quotes/${q.id}/download-pdf/` })}
@@ -123,33 +112,27 @@ export function QuotesPage() {
               : undefined}
             iconOnly
           />
-          {showStatusMenu && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={t('pages.quotes.table.actions')}>
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {/* Only an internally-approved КП can be sent — the FSM rejects otherwise. */}
-                {q.status_code === QuoteStatus.READY_TO_SEND && (
-                  <DropdownMenuItem onClick={() => setSendConfirmId(q.id)}>
-                    <Send className="mr-2 h-4 w-4" />
-                    {t('pages.quotes.actions.sendToClient')}
-                  </DropdownMenuItem>
-                )}
-                {canDuplicate && (
-                  <DropdownMenuItem onClick={() => handleDuplicate(q)} disabled={duplicateMut.isPending}>
-                    <Files className="mr-2 h-4 w-4" />
-                    {t('pages.quotes.actions.duplicate')}
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={t('pages.quotes.table.actions')}>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {q.status_code === QuoteStatus.READY_TO_SEND && (
+                <DropdownMenuItem onClick={() => setSendConfirmId(q.id)}>
+                  <Send className="mr-2 h-4 w-4" />
+                  {t('pages.quotes.actions.sendToClient')}
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={() => handleDuplicate(q)} disabled={duplicateMut.isPending}>
+                <Files className="mr-2 h-4 w-4" />
+                {t('pages.quotes.actions.duplicate')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-        );
-      },
+      ),
     },
   ];
 
@@ -160,11 +143,7 @@ export function QuotesPage() {
       icon={<Calculator className="h-5 w-5" />}
       stats={stats}
       statsError={isError}
-      actions={
-        isBuyer
-          ? undefined
-          : [{ label: t('newQuote.action'), onClick: () => setNewQuoteOpen(true) }]
-      }
+      actions={[{ label: t('newQuote.action'), onClick: () => setNewQuoteOpen(true) }]}
     >
       <Toolbar
         searchValue={listParams.searchInput}
@@ -212,9 +191,8 @@ export function QuotesPage() {
               columns={columns}
               rows={pageItems}
               getRowId={(q) => q.id}
-              // Click a row to OPEN the КП: the seller lands on the builder, the buyer on their
-              // canonical request surface (both keyed by the deal).
-              onRowClick={(q) => { window.location.hash = isBuyer ? `request-detail/${q.deal}` : `deal-quote/${q.deal}`; }}
+              // Click a row to OPEN the КП in the builder (keyed by the deal).
+              onRowClick={(q) => { window.location.hash = `deal-quote/${q.deal}`; }}
               sorting={{ ordering: listParams.ordering, onToggle: listParams.toggleOrdering }}
             />
             <Pager page={listParams.page} pageSize={listParams.pageSize} total={total} onPageChange={listParams.setPage} />

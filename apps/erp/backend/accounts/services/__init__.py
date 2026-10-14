@@ -31,17 +31,12 @@ from .members import (
     toggle_user_active,
 )
 from .permissions import (
-    acting_context,
     can_edit_quote_pricing,
     is_member_of,
     is_seller,
     member_has_permission,
     primary_seller_company_id,
-    seller_acting_company_ids,
-    seller_can_access_deal,
-    seller_company_routed_to_deal,
-    seller_sees_all_deals,
-    seller_visible_deal_ids,
+    sees_all_deals,
 )
 from .roles import (
     assign_role_to_member,
@@ -52,7 +47,6 @@ from .roles import (
 )
 
 __all__ = [
-    "acting_context",
     "add_company_member",
     "change_user_password",
     "can_delete_user",
@@ -69,9 +63,7 @@ __all__ = [
     "is_member_of",
     "is_seller",
     "primary_seller_company_id",
-    "seller_can_access_deal",
-    "seller_sees_all_deals",
-    "seller_visible_deal_ids",
+    "sees_all_deals",
     "remove_company_member",
     "reset_password",
     "revoke_user_refresh_tokens",
@@ -87,8 +79,6 @@ __all__ = [
     "find_client_company",
     "can_edit_quote_pricing",
     "member_has_permission",
-    "seller_acting_company_ids",
-    "seller_company_routed_to_deal",
     "assign_role_to_member",
     "create_company_role",
     "delete_company_role",

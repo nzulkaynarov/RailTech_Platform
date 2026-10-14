@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Send, Calculator, ThumbsUp, ThumbsDown, Loader2, FileText, Handshake, Sparkles, ClipboardCheck, Undo2 } from 'lucide-react';
+import { Send, Calculator, ThumbsUp, Loader2, FileText, Handshake, Sparkles, ClipboardCheck, Undo2 } from 'lucide-react';
 import type { Quote } from '@/api/crmApi';
 import { QuoteStatus } from '@/lib/codes';
 import { Button } from '@/components/ui/button';
@@ -8,12 +8,9 @@ import { Card, CardContent } from '@/components/ui/card';
 
 export interface RequestActionBarProps {
   quote: Quote | null;
-  isSellerSide: boolean;
-  isBuyerSide: boolean;
   isDraft: boolean;
   isSourcing: boolean;
   isCalculating: boolean;
-  isQuoteSent: boolean;
   isWon: boolean;
   hasQuote: boolean;
   canBuildQuote: boolean;
@@ -23,14 +20,12 @@ export interface RequestActionBarProps {
   canRelease: boolean;
   canTakeAndPrepare: boolean;
   canSubmitForReview: boolean;
-  canEditRequest: boolean;
   changeStagePending: boolean;
   claimPending: boolean;
   releasePending: boolean;
   takePending: boolean;
   submitReviewPending: boolean;
   sendQuotePending: boolean;
-  approvePending: boolean;
   onClaim: () => void;
   onRelease: () => void;
   onTakeAndPrepare: () => void;
@@ -40,42 +35,29 @@ export interface RequestActionBarProps {
   onOpenQuoteBuilder: () => void;
   onSubmitForReview: () => void;
   onSendQuote: () => void;
-  onApprove: () => void;
-  onReject: () => void;
   onOpenContract: () => void;
 }
 
 /**
- * Action bar for the deal-detail surface. Seller-side actions (start sourcing / calculation /
- * send КП) only show for SELLER / MANUFACTURER; the buyer only sees approve / reject once the
- * КП is sent. Returns null when there is nothing actionable (the parent renders wait-hints).
+ * Action bar for the deal-detail surface (back office). Одобрение / отклонение КП клиентом ушло
+ * в Cabinet (M1-ERP-02 волна 3). Returns a hint when there is nothing actionable.
  */
 export function RequestActionBar(props: RequestActionBarProps) {
   const { t } = useTranslation();
   const {
-    quote, isSellerSide, isBuyerSide, isDraft, isSourcing, isCalculating, isQuoteSent, isWon,
+    quote, isDraft, isSourcing, isCalculating, isWon,
     hasQuote, canBuildQuote, canBuildNewVersion, canClaim, canRelease, canTakeAndPrepare, canSubmitForReview,
-    canEditRequest, changeStagePending, claimPending, releasePending, takePending,
-    submitReviewPending, sendQuotePending, approvePending, onClaim, onRelease, onTakeAndPrepare,
+    changeStagePending, claimPending, releasePending, takePending,
+    submitReviewPending, sendQuotePending, onClaim, onRelease, onTakeAndPrepare,
     onStartSourcing, onStartCalculation, onOpenGenerate, onOpenQuoteBuilder, onSubmitForReview,
-    onSendQuote, onApprove, onReject, onOpenContract,
+    onSendQuote, onOpenContract,
   } = props;
 
-  const sellerActions = isSellerSide && (isDraft || isSourcing || isCalculating || hasQuote || canBuildNewVersion);
-  const buyerActions = isBuyerSide && isQuoteSent && !!quote;
-  // Buyer-side "won" state is owned by BuyerAcceptedPanel above, so it does not open an action
-  // bar; the seller still gets the "deal accepted / open contract" row from the isWon branch below.
-  const showActionBar = sellerActions || buyerActions || (isWon && isSellerSide) || canClaim || canRelease || canTakeAndPrepare;
+  const stageActions = isDraft || isSourcing || isCalculating || hasQuote || canBuildNewVersion;
+  const showActionBar = stageActions || isWon || canClaim || canRelease || canTakeAndPrepare;
 
   if (!showActionBar) {
-    // A buyer editing a draft already gets this guidance from the "Your request" card subtitle —
-    // don't waste a whole banner repeating it; the post-accept panel already speaks for the won state.
-    if (isBuyerSide && (canEditRequest || isWon)) return null;
-    return (
-      <p className="text-sm text-muted-foreground">
-        {isBuyerSide ? t('requestDetailActions.buyerWaitHint') : t('requestDetailActions.noActions')}
-      </p>
-    );
+    return <p className="text-sm text-muted-foreground">{t('requestDetailActions.noActions')}</p>;
   }
 
   return (
@@ -122,7 +104,7 @@ export function RequestActionBar(props: RequestActionBarProps) {
             {t('dealsKanban.release')}
           </Button>
         )}
-        {isSellerSide && isDraft && (
+        {isDraft && (
           <Button
             variant="default"
             onClick={onStartSourcing}
@@ -131,7 +113,7 @@ export function RequestActionBar(props: RequestActionBarProps) {
             {t('requestDetailActions.startSourcing')}
           </Button>
         )}
-        {isSellerSide && isSourcing && (
+        {isSourcing && (
           <Button
             variant="default"
             onClick={onStartCalculation}
@@ -152,7 +134,7 @@ export function RequestActionBar(props: RequestActionBarProps) {
             {t('generateQuote.submit')}
           </Button>
         )}
-        {/* КП rejected by the buyer — primary path out of the тупик: start a fresh version
+        {/* КП rejected by the client — primary path out of the тупик: start a fresh version
             (backend auto-increments), then open the builder for it. */}
         {canBuildNewVersion && (
           <Button
@@ -186,7 +168,7 @@ export function RequestActionBar(props: RequestActionBarProps) {
         )}
         {/* Only an internally-approved КП can be sent (backend requires READY_TO_SEND). Getting
             there is done via the approval chain on the Deals page; this stays disabled until then. */}
-        {isSellerSide && quote?.status_code === QuoteStatus.READY_TO_SEND && (
+        {quote?.status_code === QuoteStatus.READY_TO_SEND && (
           <Button
             variant="default"
             onClick={onSendQuote}
@@ -196,33 +178,13 @@ export function RequestActionBar(props: RequestActionBarProps) {
             {t('requestDetailActions.sendQuote')}
           </Button>
         )}
-        {buyerActions && (
-          <>
-            <Button
-              variant="default"
-              className="bg-success text-success-foreground hover:bg-success/90"
-              onClick={onApprove}
-              disabled={approvePending}
-            >
-              <ThumbsUp className="h-4 w-4 mr-2" />
-              {t('requestDetailActions.approveQuote')}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={onReject}
-            >
-              <ThumbsDown className="h-4 w-4 mr-2" />
-              {t('requestDetailActions.rejectQuote')}
-            </Button>
-          </>
-        )}
         {isWon && (
           <div className="flex flex-wrap items-center gap-3">
             <Badge variant="outline" className="bg-success/10 text-success border-success/20 py-1.5 px-3">
               <ThumbsUp className="h-4 w-4 mr-2" />
               {t('requestDetailActions.dealAccepted')}
             </Badge>
-            {/* The approval auto-materializes the Contract (B1) — carry the buyer straight to it
+            {/* The approval auto-materializes the Contract (B1) — carry the user straight to it
                 instead of a terminal badge with no next step (audit B2). */}
             <Button size="sm" onClick={onOpenContract}>
               <FileText className="h-4 w-4 mr-2" />

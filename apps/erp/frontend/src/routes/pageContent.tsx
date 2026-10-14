@@ -10,14 +10,10 @@
 import type { ComponentType, ReactNode } from 'react';
 import { PAGE_IDS } from '@/config/pageRegistry';
 import { lazyWithRetry } from '@/lib/lazyWithRetry';
-import type { CompanyStatus } from '@/store/userStore';
 import type { Page } from './hashRoute';
 
 const KNOWN_PAGE_IDS = new Set<string>(PAGE_IDS);
 
-const ProductManagement = lazyWithRetry(() =>
-  import('@/pages/ProductManagement').then((m) => ({ default: m.ProductManagement })),
-);
 const ProductDetail = lazyWithRetry(() => import('@/pages/ProductDetail').then((m) => ({ default: m.ProductDetail })));
 // R2: единый реестр «Мои товары» заменил очередь «Номенклатуры»; старый хэш — алиас.
 const MyProductsPage = lazyWithRetry(() =>
@@ -40,7 +36,6 @@ const RequestDetailPage = lazyWithRetry(() =>
 const DealsPage = lazyWithRetry(() => import('@/pages/DealsPage'));
 const QuotesPage = lazyWithRetry(() => import('@/pages/QuotesPage'));
 const HelpPage = lazyWithRetry(() => import('@/pages/HelpPage'));
-const MyRequestsPage = lazyWithRetry(() => import('@/pages/MyRequestsPage'));
 const ContractsPage = lazyWithRetry(() => import('@/pages/ContractsPage'));
 const InvoicesPage = lazyWithRetry(() => import('@/pages/InvoicesPage'));
 const PaymentsPage = lazyWithRetry(() => import('@/pages/PaymentsPage'));
@@ -58,7 +53,6 @@ const PLAIN_PAGES: Record<string, ComponentType> = {
   'crm-deals': DealsPage,
   'crm-quotes': QuotesPage,
   help: HelpPage,
-  'my-requests': MyRequestsPage,
   contracts: ContractsPage,
   invoices: InvoicesPage,
   payments: PaymentsPage,
@@ -71,17 +65,16 @@ const PLAIN_PAGES: Record<string, ComponentType> = {
 
 export interface PageRenderContext {
   page: Page;
-  activeStatus: CompanyStatus;
   navigateTo: (page: Page) => void;
   onNavigate: (target: string) => void;
   onProductClick: (productId: string) => void;
 }
 
 /** `activePage` шелла: обычно сам маршрут, но у нескольких страниц подсвечивается родитель. */
-function activePageIdFor(page: Page, activeStatus: CompanyStatus): string {
+function activePageIdFor(page: Page): string {
   switch (page.type) {
     case 'product_detail':
-      return 'products';
+    case 'products':
     case 'nomenclature':
     case 'product-new':
     case 'product-edit':
@@ -89,7 +82,6 @@ function activePageIdFor(page: Page, activeStatus: CompanyStatus): string {
     case 'profile':
       return 'settings';
     case 'request-detail':
-      return activeStatus === 'SELLER' ? 'crm-deals' : 'my-requests';
     case 'sourcing-requests':
     case 'deal-quote':
       return 'crm-deals';
@@ -106,11 +98,11 @@ function activePageIdFor(page: Page, activeStatus: CompanyStatus): string {
 
 /** Дашборд — и для неизвестного/устаревшего хэша (default в switch). */
 function renderDashboard(ctx: PageRenderContext): ReactNode {
-  return <Dashboard onProductClick={ctx.onProductClick} onNavigate={ctx.onNavigate} />;
+  return <Dashboard onNavigate={ctx.onNavigate} />;
 }
 
 function renderContent(ctx: PageRenderContext): ReactNode {
-  const { page, activeStatus, navigateTo, onProductClick } = ctx;
+  const { page, navigateTo, onProductClick } = ctx;
 
   const plain = PLAIN_PAGES[page.type];
   if (plain) {
@@ -121,10 +113,11 @@ function renderContent(ctx: PageRenderContext): ReactNode {
   switch (page.type) {
     case 'dashboard':
       return renderDashboard(ctx);
-    case 'products':
-      return <ProductManagement onProductClick={onProductClick} />;
-    // «Номенклатура» продавца — рабочее место, а не витрина: очередь кандидатов из заявок,
+    // «Мои товары» — рабочее место бэк-офиса, а не витрина: очередь кандидатов из заявок,
     // готовность карточки и публикация владельцем (волна A, spec-nomenclature-lifecycle).
+    // `products` — бывшая витрина каталога покупателя (удалена в M1-ERP-02 волна 3: витрина
+    // клиента живёт в Cabinet), `nomenclature` — старая очередь; оба хэша — алиасы.
+    case 'products':
     case 'nomenclature':
     case 'my-products':
       return <MyProductsPage onProductClick={onProductClick} onNavigate={ctx.onNavigate} />;
@@ -146,7 +139,7 @@ function renderContent(ctx: PageRenderContext): ReactNode {
       return (
         <ProductDetail
           productId={page.productId}
-          onBack={() => navigateTo({ type: 'products' })}
+          onBack={() => navigateTo({ type: 'my-products' })}
           onNavigate={(id) => navigateTo({ type: 'product_detail', productId: id })}
           onProductEdit={(id) => navigateTo({ type: 'product-edit', productId: id })}
         />
@@ -159,7 +152,7 @@ function renderContent(ctx: PageRenderContext): ReactNode {
       return (
         <RequestDetailPage
           dealId={page.dealId}
-          onBack={() => navigateTo({ type: activeStatus === 'SELLER' ? 'crm-deals' : 'my-requests' })}
+          onBack={() => navigateTo({ type: 'crm-deals' })}
         />
       );
     case 'sourcing-requests':
@@ -176,9 +169,7 @@ function renderContent(ctx: PageRenderContext): ReactNode {
         />
       );
     case 'clients':
-      return <CounterpartiesPage direction="CLIENT" />;
-    case 'suppliers':
-      return <CounterpartiesPage direction="SUPPLIER" />;
+      return <CounterpartiesPage />;
     default:
       // Неизвестный/устаревший хэш → откат на дашборд.
       return renderDashboard(ctx);
@@ -191,6 +182,6 @@ export function renderPage(ctx: PageRenderContext): { content: ReactNode; active
     // Неизвестный/устаревший хэш рендерит дашборд — подсветка в шелле должна это отражать.
     // «Известность» берётся из реестра, а не из отдельного списка: иначе он стал бы пятым
     // параллельным перечнем — ровно тем, что этот рефактор устраняет.
-    activePageId: KNOWN_PAGE_IDS.has(ctx.page.type) ? activePageIdFor(ctx.page, ctx.activeStatus) : 'dashboard',
+    activePageId: KNOWN_PAGE_IDS.has(ctx.page.type) ? activePageIdFor(ctx.page) : 'dashboard',
   };
 }

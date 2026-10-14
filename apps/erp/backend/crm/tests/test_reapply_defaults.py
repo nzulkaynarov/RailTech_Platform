@@ -13,7 +13,7 @@ from rest_framework.test import APIClient
 
 from accounts.constants import Permission
 from accounts.models import Company, CompanyMember, CompanyRole, CompanySettings, CompanyType, CustomUser, WorkspaceRole
-from crm.models import Deal, DealSellerRouting, DealStage, Quote, QuoteStatus
+from crm.models import Deal, DealStage, Quote, QuoteStatus
 from crm.services import reapply_company_defaults
 from master_data.models import Country, Currency, DeliveryBasis
 
@@ -128,10 +128,9 @@ def _seller_user(company):
 
 def test_endpoint_applies_defaults_for_seller(draft_quote, seller_company, configured_settings):
     user = _seller_user(seller_company)
-    DealSellerRouting.objects.create(deal=draft_quote.deal, seller_company=seller_company, assigned_to=user)
     api = APIClient()
     api.force_authenticate(user=user)
-    resp = api.post(f"/api/v1/crm/quotes/{draft_quote.id}/apply-defaults/", HTTP_X_ACTIVE_CONTEXT="seller")
+    resp = api.post(f"/api/v1/crm/quotes/{draft_quote.id}/apply-defaults/")
     assert resp.status_code == 200, resp.content
     assert set(resp.json()["changed_fields"]) == {
         "delivery_basis",
@@ -146,11 +145,10 @@ def test_endpoint_applies_defaults_for_seller(draft_quote, seller_company, confi
 
 def test_endpoint_rejects_frozen_quote(draft_quote, seller_company, configured_settings):
     user = _seller_user(seller_company)
-    DealSellerRouting.objects.create(deal=draft_quote.deal, seller_company=seller_company, assigned_to=user)
     draft_quote.frozen_at = timezone.now()
     draft_quote.save(update_fields=["frozen_at"])
     api = APIClient()
     api.force_authenticate(user=user)
-    resp = api.post(f"/api/v1/crm/quotes/{draft_quote.id}/apply-defaults/", HTTP_X_ACTIVE_CONTEXT="seller")
+    resp = api.post(f"/api/v1/crm/quotes/{draft_quote.id}/apply-defaults/")
     assert resp.status_code == 403
     assert resp.json()["detail"] == "QUOTE_FROZEN"

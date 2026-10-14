@@ -20,7 +20,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
-from crm.models import Deal, DealSellerRouting, DealStage, Quote, QuoteItem, QuoteStatus
+from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteStatus
 
 BULK_UPDATE_URL = "/api/v1/crm/quote-items/bulk-update/"
 BULK_CREATE_URL = "/api/v1/crm/quote-items/bulk-create/"
@@ -55,14 +55,12 @@ def _api(user, ctx="SELLER"):
     client = APIClient()
     client.credentials(
         HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user).access_token}",
-        HTTP_X_ACTIVE_CONTEXT=ctx,
     )
     return client
 
 
 def _quote_with_items(buyer_co, seller_co, base_prices):
     deal = Deal.objects.create(title="КП", company=buyer_co, stage=DealStage.objects.get(code="DRAFT"))
-    DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)
     quote = Quote.objects.create(
         deal=deal,
         version=1,

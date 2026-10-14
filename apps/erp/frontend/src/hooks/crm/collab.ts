@@ -1,5 +1,5 @@
 /**
- * Совместная работа: лента активности, таймлайн сделки и компании, книга контрагентов,
+ * Совместная работа: лента активности, таймлайн сделки и компании,
  * контакты и офлайн-клиенты.
  *
  * Вынесено из useCRM.ts при распиле (727 строк, 39 правок). Домены зеркалят пакет
@@ -7,7 +7,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { crmApi, RelationshipDirection, RelationshipStage, OfflineClientPayload } from '../../api/crmApi';
+import { crmApi, OfflineClientPayload } from '../../api/crmApi';
 
 // CRM Phase A — deal-scoped activity timeline (read-only history feed).
 export const useDealTimeline = (dealId: number) => useQuery({
@@ -22,24 +22,6 @@ export const useCompanyTimeline = (companyId: number) => useQuery({
     queryFn: () => crmApi.getTimeline({ company_id: companyId }),
     enabled: !!companyId,
 });
-
-// ─── CRM Phase B — counterparty relationship book («Книга контрагентов») ────
-export const useRelationships = (direction?: RelationshipDirection) => useQuery({
-    queryKey: ['relationships', direction ?? 'all'],
-    queryFn: () => crmApi.getRelationships(direction),
-});
-
-// PATCH is limited to the two human-managed fields: stage verdict + account owner.
-export const useUpdateRelationship = () => {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: ({ id, data }: { id: number; data: { stage?: RelationshipStage; owner_member?: number | null } }) =>
-            crmApi.updateRelationship(id, data),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['relationships'] });
-        },
-    });
-};
 
 // Contacts of the team's OWN client book — the «Новый КП» recipient picker (Wave E F2).
 export const useContacts = () => useQuery({

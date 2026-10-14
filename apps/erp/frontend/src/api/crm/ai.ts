@@ -9,7 +9,7 @@
 import { runAiJob } from '@/lib/aiJob';
 import { apiClient } from '../client';
 import type { NumberingPreviewInput, NumberingPreviewItem, NumberingScheme, NumberingSchemeUpdate, QuoteItem } from './types';
-import type { CatalogMatch, DocCheckPayload, DocCheckResult, MatchCatalogPayload, PreflightFinding, PreflightPayload, PricingSuggestion, QuoteDiffResult } from './types.ai';
+import type { CatalogMatch, DocCheckPayload, DocCheckResult, MatchCatalogPayload, PricingSuggestion } from './types.ai';
 
 export const aiApi = {
 	matchCandidates: async (quoteItemId: number) => {
@@ -81,20 +81,6 @@ export const aiApi = {
 		return runAiJob<{ prefilled: number; quote_id: number }>(async () => ({ task_id: taskId }));
 	},
 
-	// ─── AI #7 pre-flight quality check ──────────────────────
-	// POST draft request lines → advisory quality findings per line.
-	// Advisory only (never blocks submit); may 503 {error:'AI_DISABLED'}.
-	// ARCH-01: 202 + task_id, resolved via the ai-status poll (same return shape).
-	preflightCheck: async (payload: PreflightPayload) => {
-		return runAiJob<{ findings: PreflightFinding[] }>(async () => {
-			const response = await apiClient.post<{ task_id: string }>(
-				'sourcing/preflight-check/',
-				payload,
-			);
-			return response.data;
-		});
-	},
-
 	// ─── AI #6 contract/invoice extraction + reconciliation ──
 	// POST a signed contract/counter-invoice PDF + a quote OR contract id → extracted
 	// fields and a CODE-computed (Decimal) comparison vs the КП/Contract record. The
@@ -127,22 +113,6 @@ export const aiApi = {
 				'sourcing/import-quote-lines/',
 				formData,
 				{ headers: { 'Content-Type': 'multipart/form-data' } },
-			);
-			return response.data;
-		});
-	},
-
-	// ─── AI #3 «КП vs заявка» coverage / diff ────────────────
-	// GET a received КП id → deterministic coverage facts (uncovered lines) plus,
-	// when AI is on, semantic discrepancies (non-equivalent substitution, ignored
-	// note). Read-only & assistive — never blocks. Scoped to the deal's buyer or
-	// the routed seller (403 otherwise).
-	// ARCH-01: the GET now returns 202 + task_id; the diff runs on Celery and the
-	// result (same shape) is fetched via the ai-status poll.
-	quoteRequestDiff: async (quoteId: number) => {
-		return runAiJob<QuoteDiffResult>(async () => {
-			const response = await apiClient.get<{ task_id: string }>(
-				`crm/quotes/${quoteId}/request-diff/`,
 			);
 			return response.data;
 		});

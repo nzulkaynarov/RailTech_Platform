@@ -105,20 +105,12 @@ export const quotesApi = {
 		const response = await apiClient.post<Quote>(`crm/quotes/${id}/send-to-client/`, body);
 		return response.data;
 	},
-	approveQuote: async (id: number) => {
-		const response = await apiClient.post<Quote>(`crm/quotes/${id}/approve/`);
-		return response.data;
-	},
 	// Wave B2 — revoke the КП's public no-login link (PandaDoc «отозвать ссылку»). Sets
 	// public_token_revoked so the shared page starts answering 410 GONE. The backend gate
 	// mirrors send-to-client (own SENT КП only). Endpoint added by the parallel B1 lane; the
 	// post-send panel only renders this action once a share token is actually exposed.
 	revokePublicLink: async (id: number) => {
 		const response = await apiClient.post<Quote>(`crm/quotes/${id}/revoke-public-link/`);
-		return response.data;
-	},
-	rejectQuote: async (id: number, reason = '') => {
-		const response = await apiClient.post<Quote>(`crm/quotes/${id}/reject/`, { reason });
 		return response.data;
 	},
 	forceApproveQuote: async (id: number, reason: string) => {

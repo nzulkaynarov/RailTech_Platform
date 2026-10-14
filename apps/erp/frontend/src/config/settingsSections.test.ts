@@ -13,8 +13,6 @@ import type { Capabilities } from '@/store/userStore';
 
 function makeCapabilities(overrides: Partial<Capabilities> = {}): Capabilities {
   return {
-    can_buy: true,
-    can_sell: false,
     permissions: [],
     ...overrides,
   };
@@ -33,10 +31,10 @@ function sectionKeys(input: SettingsGateInput): string[] {
 }
 
 describe('buildSettingsSections — S1 гейтинг = правда сохранения (spec-settings-reorg-2026-07-23)', () => {
-  it('OWNER компании-продавца (can_sell): все tenant-секции (группа documents: branding/doc-templates/numbering; +platform); дефолт=profile', () => {
+  it('OWNER компании: все tenant-секции (группа documents: branding/doc-templates/numbering; +platform); дефолт=profile', () => {
     // M1-ERP-02: операторской плоскости нет; platform-секция (НДС/курс/имя/2FA) до ролей
     // бэк-офиса (M1-ERP-05) открыта OWNER'у как «Администратору».
-    const gate = makeGate({ isOwner: true, capabilities: makeCapabilities({ can_sell: true }) });
+    const gate = makeGate({ isOwner: true, capabilities: makeCapabilities() });
     expect(sectionKeys(gate)).toEqual([
       'profile', 'security', 'company', 'branding', 'doc-templates', 'numbering',
       'defaults', 'templates', 'team', 'platform',
@@ -44,32 +42,22 @@ describe('buildSettingsSections — S1 гейтинг = правда сохра�
     expect(defaultSettingsSection()).toBe('profile');
   });
 
-  it('OWNER компании-покупателя: без seller-секций, doc-templates виден (письма нужны обоим)', () => {
-    const gate = makeGate({ isOwner: true, capabilities: makeCapabilities({ can_sell: false }) });
-    expect(sectionKeys(gate)).toEqual(['profile', 'security', 'company', 'doc-templates', 'team', 'platform']);
-    expect(defaultSettingsSection()).toBe('profile');
+  it('сторон нет (M1-ERP-02 волна 3): у OWNER бланк, нумерация, дефолты и статьи расхода видны всегда', () => {
+    const gate = makeGate({ isOwner: true });
+    for (const key of ['branding', 'numbering', 'defaults', 'templates']) {
+      expect(sectionKeys(gate)).toContain(key);
+    }
   });
 
-  it('OWNER CLIENT-only компании: seller-секции скрыты (can_sell приходит с сервера уже ложным)', () => {
-    // `capabilities.can_sell` = серверный `is_seller` (членство И тип компании), поэтому у OWNER'а
-    // покупательской компании он ложен независимо от флага участника. Проверка держит инвариант:
-    // если сервер вернёт правду, секции появятся — значит гейт читает именно эту правду.
-    const gate = makeGate({
-      isOwner: true,
-      capabilities: makeCapabilities({ can_sell: false }),
-    });
-    expect(sectionKeys(gate)).toEqual(['profile', 'security', 'company', 'doc-templates', 'team', 'platform']);
-  });
-
-  it('рядовой член команды-продавца без прав: profile/security/team; дефолт=profile', () => {
-    const gate = makeGate({ capabilities: makeCapabilities({ can_sell: true }) });
+  it('рядовой член команды без прав: profile/security/team; дефолт=profile', () => {
+    const gate = makeGate({ capabilities: makeCapabilities() });
     expect(sectionKeys(gate)).toEqual(['profile', 'security', 'team']);
     expect(defaultSettingsSection()).toBe('profile');
   });
 
   it('settings.edit-делегат (без OWNER): company/branding/doc-templates/numbering/defaults — но НЕ templates(charge) и НЕ platform', () => {
     const gate = makeGate({
-      capabilities: makeCapabilities({ can_sell: true, permissions: ['settings.edit'] }),
+      capabilities: makeCapabilities({ permissions: ['settings.edit'] }),
     });
     expect(sectionKeys(gate)).toEqual([
       'profile', 'security', 'company', 'branding', 'doc-templates', 'numbering', 'defaults', 'team',
@@ -81,7 +69,7 @@ describe('buildSettingsSections — S1 гейтинг = правда сохра�
 
   it('charge-делегат (charge_templates.manage): profile/security/templates/team — БЕЗ мёртвых company-секций (фикс тупиков)', () => {
     const gate = makeGate({
-      capabilities: makeCapabilities({ can_sell: true, permissions: ['charge_templates.manage'] }),
+      capabilities: makeCapabilities({ permissions: ['charge_templates.manage'] }),
     });
     expect(sectionKeys(gate)).toEqual(['profile', 'security', 'templates', 'team']);
     // именно эти company/documents-секции больше НЕ показываются как заглушки:
@@ -111,7 +99,7 @@ describe('buildSettingsSections — S1 гейтинг = правда сохра�
 
   it('ни у одной роли список не пуст, profile всегда первый, дефолт всегда видим', () => {
     const roleMatrix: SettingsGateInput[] = [
-      makeGate({ isOwner: true, capabilities: makeCapabilities({ can_sell: true }) }),
+      makeGate({ isOwner: true, capabilities: makeCapabilities() }),
       makeGate({ isOwner: true }),
       makeGate(),
       makeGate({ capabilities: makeCapabilities({ permissions: ['settings.edit'] }) }),
@@ -128,7 +116,7 @@ describe('buildSettingsSections — S1 гейтинг = правда сохра�
 
 describe('buildSettingsSections — S2 группировка', () => {
   it('каждая секция несёт корректный group-ключ', () => {
-    const gate = makeGate({ isOwner: true, capabilities: makeCapabilities({ can_sell: true }) });
+    const gate = makeGate({ isOwner: true, capabilities: makeCapabilities() });
     const byKey = new Map(buildSettingsSections(gate).map((section) => [section.key, section.group]));
     expect(byKey.get('profile')).toBe('account');
     expect(byKey.get('security')).toBe('account');
@@ -150,7 +138,7 @@ describe('buildSettingsSections — S2 группировка', () => {
   });
 
   it('группы идут в порядке account→company→documents→sales→team→platform (первое появление)', () => {
-    const gate = makeGate({ isOwner: true, capabilities: makeCapabilities({ can_sell: true }) });
+    const gate = makeGate({ isOwner: true, capabilities: makeCapabilities() });
     const groupOrder: string[] = [];
     for (const section of buildSettingsSections(gate)) {
       if (!groupOrder.includes(section.group)) groupOrder.push(section.group);

@@ -8,13 +8,12 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from accounts.services.permissions import seller_company_ids, seller_visible_deal_ids
 from core.file_streaming import stream_file_field
 from core.optimistic_locking import OptimisticLockingMixin
 from core.permissions import IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin
 from crm import services as crm_services
 from crm.constants import DEFAULT_INVOICE_DUE_DAYS, InvoiceStatusCode
-from crm.models import Act, Contract, Fulfillment, Invoice, InvoiceItem, Payment
+from crm.models import Act, Contract, Fulfillment, Invoice, Payment
 from crm.serializers import (
     ActSerializer,
     ContractSerializer,
@@ -47,150 +46,65 @@ def _stream_or_render_pdf(obj):
     return stream_file_field(obj.pdf_file)
 
 
-def _seller_side_q(user, request, *, deal_path, seller_path):
-    """The SELLER-ownership portion of billing visibility, or None if the user owns no seller
-    company. A document is on the seller side when it is OWNED by the user's seller company
-    (winning quote.seller_company) OR its owner is unresolvable but the deal is routed to the
-    user (legacy/manual fallback). Split out of _billing_visibility_q so DRAFT documents can be
-    confined to the seller side only (I-3: a buyer must not see a seller's DRAFT invoice)."""
-    owned_seller_ids = seller_company_ids(user)
-    if not owned_seller_ids:
-        return None
-    # The seller sees documents OWNED by its seller company (winning quote.seller_company).
-    owned_q = Q(**{f"{seller_path}__in": owned_seller_ids})
-    # Fallback ONLY for documents whose owner is unresolvable (quote.seller_company NULL —
-    # legacy/manual docs, NEVER a contracted winning quote, which is always owner-anchored on
-    # claim/submit): keep them visible to a ROUTED seller by deal (WP-1). This never re-exposes a
-    # winner's billing to a losing co-routed seller, because the winner's docs ARE owner-anchored.
-    routed_deal_ids = seller_visible_deal_ids(user, request, force=True) or set()
-    unresolved_q = Q(**{f"{seller_path}__isnull": True}) & Q(**{f"{deal_path}_id__in": routed_deal_ids})
-    return owned_q | unresolved_q
+def _sees_all_billing(user) -> bool:
+    """Администратор и сотрудник компании-владельца (продавец любой сделки) видят все документы."""
+    from accounts.services.permissions import sees_all_deals
+
+    return sees_all_deals(user)
 
 
-def _invoice_seller_side_q(user, request):
-    """SELLER-ownership Q for INVOICES, or None if the user owns no seller company.
-
-    An invoice's owning seller is normally resolved through its contract → winning quote
-    (``contract__quote__seller_company``). A G2 MANUAL invoice has NO contract, so its owner is
-    resolved through its items' source КП (``items__source_quote_item__quote__seller_company``) —
-    a manual DRAFT invoice raised from seller A's КП is thus OWNED by A and hidden from a co-routed
-    competitor B, exactly like a contracted invoice. Subquery membership (``pk__in``) is used rather
-    than a to-many join isnull so an invoice that mixes КП + ad-hoc lines resolves cleanly.
-
-    The legacy routed-deal fallback (unresolved owner → visible to any ROUTED seller) fires ONLY
-    when BOTH ownership chains are empty (a pure ad-hoc счёт with no source КП). It never re-exposes
-    an owner-anchored invoice to a losing co-routed seller."""
-    owned_seller_ids = seller_company_ids(user)
-    if not owned_seller_ids:
-        return None
-    owned_via_source_ids = InvoiceItem.objects.filter(
-        source_quote_item__quote__seller_company_id__in=owned_seller_ids
-    ).values("invoice_id")
-    any_source_owner_ids = InvoiceItem.objects.filter(source_quote_item__quote__seller_company__isnull=False).values(
-        "invoice_id"
-    )
-    owned_q = Q(contract__quote__seller_company_id__in=owned_seller_ids) | Q(pk__in=owned_via_source_ids)
-    routed_deal_ids = seller_visible_deal_ids(user, request, force=True) or set()
-    unresolved_q = (
-        Q(contract__quote__seller_company_id__isnull=True)
-        & ~Q(pk__in=any_source_owner_ids)
-        & Q(deal_id__in=routed_deal_ids)
-    )
-    return owned_q | unresolved_q
+# Тавтология «все строки»: пустой `Q()` в `buyer_q | Q()` Django выбрасывает, а не трактует как «всё».
+_ALL_ROWS = Q(pk__isnull=False)
 
 
-def _act_seller_side_q(user, request):
-    """SELLER-ownership Q для АКТОВ, или None, если у пользователя нет компании-продавца.
+def _seller_side_q(user):
+    """Сторона продавца в видимости документов: сотрудник своей компании видит ВСЕ документы
+    (продавец один — BUSINESS §3.3), остальным — None. Вынесено отдельно, чтобы черновик счёта
+    оставался видимым только стороне продавца (I-3: покупатель не видит DRAFT-счёт)."""
+    from accounts.services.permissions import is_seller
 
-    Владелец акта — тот же, кто владеет его счётом, поэтому цепочек резолва столько же, сколько
-    у счёта: договор → КП, ЛИБО позиции счёта → исходное КП (ручной G2-счёт). Прежде путь был
-    один — `invoice__contract__quote__seller_company`, — а `create_manual_invoice` создаёт счёт
-    БЕЗ договора, и `generate_act` копирует этот NULL в акт. У акта по ручному счёту владелец
-    не резолвился, срабатывал legacy-фолбэк «видно любому ПРОРОУТЕННОМУ продавцу», и акт
-    победителя попадал в список проигравшего конкурента (тот же класс, что #463 у отгрузки:
-    комментарий к фолбэку обещает «winner's docs ARE owner-anchored», а для этой модели
-    обещание не выполнялось).
-
-    Фолбэк оставлен, но срабатывает теперь только когда пусты ВСЕ цепочки — то есть у акта
-    действительно нет прослеживаемого владельца.
-    """
-    owned_seller_ids = seller_company_ids(user)
-    if not owned_seller_ids:
-        return None
-    owned_via_invoice_source_ids = InvoiceItem.objects.filter(
-        source_quote_item__quote__seller_company_id__in=owned_seller_ids
-    ).values("invoice_id")
-    any_source_owner_ids = InvoiceItem.objects.filter(source_quote_item__quote__seller_company__isnull=False).values(
-        "invoice_id"
-    )
-    owned_q = (
-        Q(invoice__contract__quote__seller_company_id__in=owned_seller_ids)
-        | Q(contract__quote__seller_company_id__in=owned_seller_ids)
-        | Q(invoice_id__in=owned_via_invoice_source_ids)
-    )
-    routed_deal_ids = seller_visible_deal_ids(user, request, force=True) or set()
-    unresolved_q = (
-        Q(invoice__contract__quote__seller_company_id__isnull=True)
-        & Q(contract__quote__seller_company_id__isnull=True)
-        & ~Q(invoice_id__in=any_source_owner_ids)
-        & Q(deal_id__in=routed_deal_ids)
-    )
-    return owned_q | unresolved_q
+    return _ALL_ROWS if is_seller(user) else None
 
 
 def act_visibility_q(user, request):
-    """Полная Q видимости АКТОВ для не-админа: покупательская сторона ∪ владеющий продавец."""
+    """Полная Q видимости АКТОВ для не-админа: покупательская сторона ∪ сторона продавца."""
     user_company_ids = list(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
     buyer_q = Q(deal__company_id__in=user_company_ids)
-    seller_q = _act_seller_side_q(user, request)
+    seller_q = _seller_side_q(user)
     return buyer_q if seller_q is None else (buyer_q | seller_q)
 
 
 def invoice_visibility_q(user, request):
     """Полная Q видимости СЧЕТОВ для не-админа: чья это сторона + запрет чужого черновика.
 
-    Вынесено из `InvoiceViewSet.get_queryset`, потому что у счёта видимость сложнее прочих
-    (владелец резолвится через договор ИЛИ через исходное КП позиций ручного счёта) и её
-    понадобилось переиспользовать в сводке документов сделки. Копия этой логики стала бы
-    вторым определением видимости — тем самым классом расхождения, из-за которого отгрузка
-    победителя утекала проигравшему (#463).
+    Вынесено из `InvoiceViewSet.get_queryset` и переиспользуется сводкой документов сделки —
+    одно определение видимости, а не копии (#463).
     """
     user_company_ids = list(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
     buyer_q = Q(deal__company_id__in=user_company_ids)
-    seller_side_q = _invoice_seller_side_q(user, request)
+    seller_side_q = _seller_side_q(user)
     visibility_q = buyer_q if seller_side_q is None else (buyer_q | seller_side_q)
     # I-3: a DRAFT invoice is the seller's private working copy — hidden from the buyer until
     # it is ISSUED (Odoo canon: a draft is not shown to the customer). CANCELLED/ISSUED/… stay
-    # visible to both sides. seller_side_q ⊆ visibility_q, so ANDing the gate keeps non-DRAFT
-    # rows untouched and confines DRAFT rows to the seller side. A pure buyer (no seller
-    # company) has seller_side_q=None → never matches a DRAFT.
+    # visible to both sides. A pure buyer has seller_side_q=None → never matches a DRAFT.
     draft_gate = ~Q(status__code=InvoiceStatusCode.DRAFT)
     if seller_side_q is not None:
         draft_gate = draft_gate | seller_side_q
     return visibility_q & draft_gate
 
 
-def _billing_visibility_q(user, request, *, deal_path, seller_path):
+def _billing_visibility_q(user, request, *, deal_path):
     """Tenant-scope Q for a non-admin billing queryset.
 
     A billing document (contract / invoice / act / payment / fulfillment) is visible to:
       • a member of the BUYER company that owns the deal (deal_path → company), UNION
-      • a member of the SELLER company that OWNS the document — the winning quote's
-        seller_company (seller_path → quote.seller_company).
+      • own-company staff — the seller of every deal (BUSINESS §3.3).
 
-    Scoping the seller side to the document's OWN seller_company — not to every deal the
-    seller is merely ROUTED to — is what stops a LOSING co-routed seller from seeing the
-    WINNER's contract/invoice/act/payment on a shared multi-seller deal (hidden competition,
-    ADR-0003 §5). Billing models carry no seller_company field, so ownership is derived through
-    the quote chain. Visibility is INDEPENDENT of the SPA X-Active-Context header — a seller
-    landing in the default BUYER context still sees its own deals' billing (WP-1).
-
-    `deal_path`   — ORM prefix from the model to its Deal FK ("deal", or "invoice__deal" for Payment).
-    `seller_path` — ORM prefix from the model to the owning quote's seller_company id.
+    `deal_path` — ORM prefix from the model to its Deal FK ("deal", or "invoice__deal" for Payment).
     """
     user_company_ids = list(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
     buyer_q = Q(**{f"{deal_path}__company_id__in": user_company_ids})
-    seller_q = _seller_side_q(user, request, deal_path=deal_path, seller_path=seller_path)
+    seller_q = _seller_side_q(user)
     if seller_q is None:
         return buyer_q
     return buyer_q | seller_q
@@ -212,14 +126,11 @@ class ContractViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
         qs = Contract.objects.select_related(
             "deal__company", "quote", "currency", "client_signer", "manager_signer", "status"
         ).order_by("-created_at")
-        # Platform admin sees every billing record; otherwise BOTH sides of a deal
-        # (buyer company + routed seller) see its records, regardless of the SPA
-        # X-Active-Context header (WP-1). Seller side stays routing-scoped.
-        if getattr(user, "is_superuser", False):
+        # Administrator and own-company staff (the seller of every deal) see every billing
+        # record; a buyer account sees its own company's deals (until M2-ERP-01).
+        if _sees_all_billing(user):
             return qs
-        return qs.filter(
-            _billing_visibility_q(user, self.request, deal_path="deal", seller_path="quote__seller_company_id")
-        ).distinct()
+        return qs.filter(_billing_visibility_q(user, self.request, deal_path="deal")).distinct()
 
     # Private PDFs are streamed through these authenticated endpoints (get_object
     # enforces tenant scope) — NOT via the raw /media URL, which 404s on prod
@@ -392,10 +303,9 @@ class InvoiceViewSet(
             )
             .order_by("-created_at")
         )
-        # Platform admin sees every billing record; otherwise BOTH sides of a deal
-        # (buyer company + routed seller) see its records, regardless of the SPA
-        # X-Active-Context header (WP-1). Seller side stays routing-scoped.
-        if getattr(user, "is_superuser", False):
+        # Administrator and own-company staff (the seller of every deal) see every billing
+        # record; a buyer account sees its own company's deals (until M2-ERP-01).
+        if _sees_all_billing(user):
             return qs
         # Invoice ownership resolves through the contract chain OR — for a G2 contract-less MANUAL
         # invoice — through its items' source КП. Buyer sees its deals' invoices; seller sees the
@@ -542,6 +452,8 @@ class InvoiceViewSet(
             proof_file=request.FILES.get("proof_file"),
         )
         if err:
+            if err in ("MEMBER_REQUIRED_FOR_ACTION", "ROLE_NOT_PERMITTED"):
+                return Response({"detail": err}, status=403)
             return Response({"detail": err}, status=(404 if err == "NOT_FOUND" else 400))
         return Response(PaymentSerializer(payment).data, status=201)
 
@@ -574,17 +486,15 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
             return Payment.objects.none()
         user = self.request.user
         qs = Payment.objects.select_related("invoice__deal__company").order_by("-paid_at")
-        # Platform admin sees every billing record; otherwise BOTH sides of a deal
-        # (buyer company + routed seller) see its records, regardless of the SPA
-        # X-Active-Context header (WP-1). Payment reaches its deal via invoice__deal.
-        if getattr(user, "is_superuser", False):
+        # Administrator and own-company staff (the seller of every deal) see every billing
+        # record; a buyer account sees its own company's deals (until M2-ERP-01).
+        if _sees_all_billing(user):
             return qs
         return qs.filter(
             _billing_visibility_q(
                 user,
                 self.request,
                 deal_path="invoice__deal",
-                seller_path="invoice__contract__quote__seller_company_id",
             )
         ).distinct()
 
@@ -613,11 +523,9 @@ class ActViewSet(viewsets.ReadOnlyModelViewSet):
             return Act.objects.none()
         user = self.request.user
         qs = Act.objects.select_related("deal__company", "contract", "invoice", "status").order_by("-created_at")
-        # Platform admin sees every billing record; otherwise BOTH sides of a deal
-        # (buyer company + routed seller) see its records, regardless of the SPA
-        # X-Active-Context header (WP-1). Владелец акта резолвится по всем цепочкам его
-        # счёта — иначе акт по ручному счёту уходил в фолбэк и был виден конкуренту.
-        if getattr(user, "is_superuser", False):
+        # Administrator and own-company staff (the seller of every deal) see every billing
+        # record; a buyer account sees its own company's deals (until M2-ERP-01).
+        if _sees_all_billing(user):
             return qs
         return qs.filter(act_visibility_q(user, self.request)).distinct()
 
@@ -754,16 +662,11 @@ class FulfillmentViewSet(viewsets.ReadOnlyModelViewSet):
             return Fulfillment.objects.none()
         user = self.request.user
         qs = Fulfillment.objects.select_related("deal__company").order_by("-updated_at")
-        # Platform admin sees every billing record; otherwise BOTH sides of a deal
-        # (buyer company + routed seller) see its records, regardless of the SPA
-        # X-Active-Context header (WP-1). Seller side stays routing-scoped.
-        if getattr(user, "is_superuser", False):
+        # Administrator and own-company staff (the seller of every deal) see every billing
+        # record; a buyer account sees its own company's deals (until M2-ERP-01).
+        if _sees_all_billing(user):
             return qs
-        return qs.filter(
-            _billing_visibility_q(
-                user, self.request, deal_path="deal", seller_path="contract__quote__seller_company_id"
-            )
-        ).distinct()
+        return qs.filter(_billing_visibility_q(user, self.request, deal_path="deal")).distinct()
 
     @extend_schema(summary="Update fulfillment status", tags=["CRM"])
     @action(detail=False, methods=["post"], url_path="update-status", permission_classes=[IsAuthenticated])

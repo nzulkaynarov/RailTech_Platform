@@ -48,7 +48,7 @@ export function parseHashToPage(rawHash: string): Page {
   if (path === 'request-detail' || path.startsWith('request-detail/')) {
     const dealId = Number(path.slice('request-detail/'.length));
     if (Number.isFinite(dealId) && dealId > 0) return { type: 'request-detail', dealId };
-    return { type: 'my-requests' };
+    return { type: 'crm-deals' };
   }
   return { type: path } as Page;
 }
@@ -59,8 +59,8 @@ export function parseHashToPage(rawHash: string): Page {
  * Раньше идентификатор подставлялся только для `product_detail`, а `request-detail` и
  * `deal-quote` уходили в историю голыми. Назад/вперёд это не ломало (страница едет в
  * `history.state`), но URL переставал описывать экран: обновление страницы, закладка или
- * ссылка, отправленная коллеге, уводили с карточки сделки на список заявок. Прямые
- * присвоения `window.location.hash` (корзина, очередь согласования, уведомления) номер
+ * ссылка, отправленная коллеге, уводили с карточки сделки на список сделок. Прямые
+ * присвоения `window.location.hash` (очередь согласования, уведомления) номер
  * всегда клали — расходился именно этот путь.
  */
 export function pageToHash(page: Page): string {

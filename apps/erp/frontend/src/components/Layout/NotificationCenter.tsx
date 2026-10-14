@@ -9,7 +9,6 @@ import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
 import { getAccessToken } from '@/api/accessToken';
-import { useUserStore } from '@/store/userStore';
 
 import {
     Sheet,
@@ -49,8 +48,7 @@ const getTypeColor = (type: string, isRead: boolean) => {
 interface NotificationCenterProps {
     triggerOnly?: boolean;
     // AppShell passes its hash-navigation callback so a notification opens the right
-    // in-app page (no full-page reload to /crm or /cabinet shells the buyer/seller
-    // don't use). When absent (e.g. router shells) we fall back to the raw link.
+    // in-app page (no full-page reload to other shells). When absent (e.g. router shells) we fall back to the raw link.
     onNavigate?: (pageId: string) => void;
 }
 
@@ -59,10 +57,9 @@ interface NotificationCenterProps {
 // `deal` id the backend already sends — instead of the generic /crm/deals *list* the
 // legacy `link` field encoded (which dropped the user with no way to find the document
 // the alert was about). Returns a hash route for deal notifications, or a plain AppShell
-// page id for the rest (e.g. profile). Seller lands in the КП builder, buyer in the
-// request detail — both show the deal's documents in context.
-function notificationTarget(n: Notification, activeStatus: string): { hash?: string; page?: string } {
-    const isSeller = activeStatus === 'SELLER';
+// page id for the rest (e.g. profile). A deal notification lands in the КП builder, which
+// shows the deal's documents in context.
+function notificationTarget(n: Notification): { hash?: string; page?: string } {
     // F2: ссылка, начинающаяся с «#», — точный маршрут SPA, который бэкенд поставил осознанно
     // («вот ЭТОТ счёт»). Она обязана иметь приоритет над выводом по сделке: иначе уведомление
     // «оплата получена» приводило на карточку сделки вообще, и человек шёл искать документ,
@@ -71,15 +68,14 @@ function notificationTarget(n: Notification, activeStatus: string): { hash?: str
     const link = n.link || '';
     if (link.startsWith('#')) return { hash: link.slice(1) };
     if (n.deal) {
-        return { hash: `${isSeller ? 'deal-quote' : 'request-detail'}/${n.deal}` };
+        return { hash: `deal-quote/${n.deal}` };
     }
     if (link.toLowerCase().includes('profile')) return { page: 'profile' };
-    return { page: isSeller ? 'crm-deals' : 'my-requests' };
+    return { page: 'crm-deals' };
 }
 
 export const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNavigate }) => {
     const { t, i18n } = useTranslation();
-    const activeStatus = useUserStore((s) => s.activeStatus);
     const accessToken = useAuthStore((s) => s.accessToken);
     const [isOpen, setIsOpen] = useState(false);
     const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -370,7 +366,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNaviga
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         if (!n.is_read) handleMarkAsRead(n.id);
-                                                                        const target = notificationTarget(n, activeStatus);
+                                                                        const target = notificationTarget(n);
                                                                         if (target.hash) window.location.hash = target.hash;
                                                                         else if (target.page) onNavigate(target.page);
                                                                         setIsOpen(false);

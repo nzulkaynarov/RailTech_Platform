@@ -7681,9 +7681,10 @@ export const getWebLeadUrl = () => {
 /**
  * Форма «Запрос» со страницы входа Cabinet → лид CRM с источником `web` (ARCHITECTURE §17).
  *
- * Без аутентификации. Нужен телефон или e-mail. Ошибки: 422 `validation_failed` с
- * `details.reason` (`form_token_invalid` | `form_too_fast` | `form_token_expired` |
- * `contact_required` | `invalid_phone` | `invalid_email`), 429 `rate_limited`.
+ * Без аутентификации. Нужны телефон или e-mail и `consent: true` (согласие на обработку ПДн,
+ * Q-12). Ошибки: 422 `validation_failed` с `details.reason` (`consent_required` |
+ * `form_token_invalid` | `form_too_fast` | `form_token_expired` | `contact_required` |
+ * `invalid_phone` | `invalid_email`), 429 `rate_limited`.
  * Повторный запрос известного контакта дополняет существующую карточку.
  * @summary Web Lead
  */

@@ -4,7 +4,7 @@ import { DealStage } from '@/lib/codes';
 
 /**
  * W3 (spec-inbound-rfq, aging-counters — Bitrix24 pattern): how long a заявка has been
- * waiting for a seller. Pure client-side math over fields the Deal serializer already
+ * waiting for the back office. Pure client-side math over fields the Deal serializer already
  * exposes (created_at / assigned_to / stage_code) — no backend round-trip.
  */
 

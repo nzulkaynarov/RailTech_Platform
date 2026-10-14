@@ -20,12 +20,9 @@ export interface Fulfillment {
   expected_delivery_date: string | null;
   tracking_number: string;
   carrier: string;
-  /**
-   * Кто что может по ЭТОЙ отгрузке — по данным сервера: продвигает статус продавец,
-   * принимает (или спорит) покупатель. Ровно так делит стороны update_fulfillment_status.
-   */
+  /** Может ли зритель продвигать статус ЭТОЙ отгрузки — считает сервер. Приёмку и спор
+   *  выставляет клиент в Cabinet (M1-ERP-02 волна 3). */
   viewer_can_ship: boolean;
-  viewer_can_accept: boolean;
   notes: string;
   created_at: string;
   updated_at: string;

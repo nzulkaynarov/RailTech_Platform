@@ -1,8 +1,8 @@
-"""КП line-item (`QuoteItem`) ViewSet + the seller-owns-deal write guard.
+"""КП line-item (`QuoteItem`) ViewSet + the staff write guard.
 
-Split out of the monolithic ``crm/views/quotes.py`` (ARCH refactor) — behaviour
-unchanged. Seller writes (create/update/destroy/reassign/bulk) are gated to the КП's
-routed seller; buyer edits fall through to the request-item services.
+Split out of the monolithic ``crm/views/quotes.py`` (ARCH refactor). Seller writes
+(create/update/destroy/reassign/bulk) are gated to own-company staff with the pricing
+permission; buyer edits fall through to the request-item services.
 """
 
 from django.db import transaction
@@ -19,20 +19,18 @@ from crm.models import QuoteItem
 from crm.serializers import QuoteItemSerializer
 
 
-def _assert_seller_owns_quote_deal(request, quote):
-    """A seller may only WRITE to a quote whose deal is routed to them. `perform_create`
-    takes the target `quote` from the request body and bypasses the scoped get_queryset +
-    object permission, so without this a seller could POST items/charges onto a COMPETITOR's
-    КП (review 2026-06-25, CRITICAL #1). Superuser bypasses; platform-admin is already
-    refused upstream by _assert_seller (ADMIN_VIEWER_CANNOT_ACT)."""
+def _assert_staff_may_write_quote(request, quote):
+    """A КП is written only by own-company staff (the seller of every deal). `perform_create`
+    takes the target `quote` from the request body and bypasses the scoped get_queryset + object
+    permission, so a missing quote or a non-staff writer is refused here. Superuser bypasses."""
     from rest_framework.exceptions import PermissionDenied
 
-    from accounts.services.permissions import seller_can_access_deal
+    from accounts.services.permissions import is_seller
 
     user = request.user
     if getattr(user, "is_superuser", False):
         return
-    if quote is None or not seller_can_access_deal(user, request, quote.deal_id):
+    if quote is None or not is_seller(user):
         raise PermissionDenied("NO_ACCESS_TO_DEAL")
 
 
@@ -77,46 +75,14 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
         if getattr(self, "swagger_fake_view", False):
             return QuoteItem.objects.none()
         user = self.request.user
-        from accounts.services.permissions import seller_visible_deal_ids
+        from accounts.services.permissions import sees_all_deals
 
         queryset = QuoteItem.objects.all().select_related(
             "product", "product__domain_type", "quote", "offer", "offer__supplier", "frozen_currency"
         )
-        if getattr(user, "is_superuser", False):
+        # Administrator and own-company staff see every КП (the single seller).
+        if sees_all_deals(user):
             return queryset
-        visible_deal_ids = seller_visible_deal_ids(user, self.request)
-        if visible_deal_ids is not None:
-            from accounts.models import CompanyMember
-            from accounts.services.permissions import seller_acting_company_ids
-
-            # The seller sees items/charges on deals routed to them. Audit H1 (no cross-seller
-            # leak): hide a quote ONLY when it was prepared by a COMPETING seller company. The
-            # buyer's request lines and the seller's КП are the SAME quote in this model, and
-            # that quote is created by the BUYER (or left unassigned) — so scoping by
-            # prepared_by's *seller* company alone wrongly hid the seller's own КП and made
-            # pricing un-saveable (404 on item PATCH → subtotal stuck at 0). Exclude only
-            # quotes whose prepared_by belongs to another seller company.
-            seller_ids = seller_acting_company_ids(user, self.request) or set()
-            # Dual-membership edge: a user who belongs to BOTH the viewer's own seller
-            # company AND a competing one would otherwise land in competing_preparer_ids
-            # and hide their OWN company's legitimately-prepared КП from their own viewers.
-            # Subtract members of the viewer's OWN seller companies so only PURELY-competing
-            # preparers are excluded.
-            own_member_ids = CompanyMember.objects.filter(is_active=True, company_id__in=seller_ids).values_list(
-                "user_id", flat=True
-            )
-            competing_preparer_ids = (
-                CompanyMember.objects.filter(is_active=True)
-                .in_seller_company()
-                .exclude(company_id__in=seller_ids)
-                .exclude(user_id__in=own_member_ids)
-                .values_list("user_id", flat=True)
-            )
-            return (
-                queryset.filter(quote__deal_id__in=visible_deal_ids)
-                .exclude(quote__prepared_by_id__in=competing_preparer_ids)
-                .distinct()
-            )
         # Buyer sees line items only on their own deals (read-only — see _assert_seller).
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return queryset.filter(quote__deal__company_id__in=user_company_ids)
@@ -143,7 +109,7 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
         # get-or-creates the DRAFT quote and restricts fields to name + qty).
         self._assert_seller()
         quote = serializer.validated_data.get("quote")
-        _assert_seller_owns_quote_deal(self.request, quote)
+        _assert_staff_may_write_quote(self.request, quote)
         # A new single line (add-line / add-section) lands at the END unless the caller pinned a
         # position — default position=0 would otherwise sort it above the backfilled existing rows.
         save_kwargs = {}

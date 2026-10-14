@@ -5,7 +5,7 @@ side-effect branch of `update_fulfillment_status`:
 
   * unknown status code     → FULFILLMENT_INVALID_STATUS
   * buyer-side statuses (ACCEPTED / DISPUTED) gated by can_buy on deal.company
-  * seller-side statuses (SHIPPED / DELIVERED) gated by DealSellerRouting
+  * seller-side statuses (SHIPPED / DELIVERED) gated to own-company staff (single seller)
   * superuser bypasses both gates
   * shipped_at / delivered_at / accepted_at stamping (not overwritten on repeat)
   * **extra fields persisted; a None value is ignored
@@ -23,17 +23,7 @@ import pytest
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm import services as crm_services
 from crm.constants import DealStageCode, FulfillmentStatusCode
-from crm.models import (
-    Contract,
-    ContractStatus,
-    Deal,
-    DealSellerRouting,
-    DealStage,
-    Fulfillment,
-    FulfillmentStatus,
-    Quote,
-    QuoteStatus,
-)
+from crm.models import Contract, ContractStatus, Deal, DealStage, Fulfillment, FulfillmentStatus, Quote, QuoteStatus
 
 
 @pytest.fixture
@@ -73,7 +63,8 @@ def _member(company, email, *, can_sell=False, can_buy=False):
 
 @pytest.fixture
 def world(lookups):
-    """A buyer company with a can_buy member + deal, and a can_sell seller company."""
+    """A buyer company with a can_buy member + deal, the own (seller) company, and an outsider —
+    a can_sell member of ANOTHER client company."""
     buyer_co = Company.objects.create(name="Buyer Co", inn="B100")
     buyer_co.types.add(CompanyType.objects.get(code="CLIENT"))
     buyer = _member(buyer_co, "buyer@t.test", can_buy=True)
@@ -82,8 +73,8 @@ def world(lookups):
     seller_co.types.add(CompanyType.objects.get(code="SUPPLIER"))
     seller = _member(seller_co, "seller@t.test", can_sell=True)
 
-    other_seller_co = Company.objects.create(name="Other Seller Co", inn="S200")
-    other_seller_co.types.add(CompanyType.objects.get(code="SUPPLIER"))
+    other_seller_co = Company.objects.create(name="Other Client Co", inn="S200")
+    other_seller_co.types.add(CompanyType.objects.get(code="CLIENT"))
     other_seller = _member(other_seller_co, "other-seller@t.test", can_sell=True)
 
     superuser = CustomUser.objects.create_user(
@@ -166,8 +157,8 @@ def test_disputed_by_buyer_member_succeeds(world):
 
 
 @pytest.mark.django_db
-def test_seller_status_by_unrouted_seller_rejected(world):
-    """A can_sell seller whose company is NOT routed to the deal cannot ship it."""
+def test_seller_status_by_outsider_rejected(world):
+    """A can_sell member of another company (not own-company staff) cannot ship the deal."""
     crm_services.ensure_fulfillment(world["deal"])
     obj, err = crm_services.update_fulfillment_status(
         world["deal"].id, world["other_seller"], FulfillmentStatusCode.SHIPPED
@@ -184,8 +175,7 @@ def test_seller_status_by_unrouted_seller_rejected(world):
         (FulfillmentStatusCode.DELIVERED, "delivered_at"),
     ],
 )
-def test_seller_status_by_routed_seller_succeeds(world, status_code, stamp_field):
-    DealSellerRouting.objects.create(deal=world["deal"], seller_company=world["seller_co"])
+def test_seller_status_by_staff_succeeds(world, status_code, stamp_field):
     crm_services.ensure_fulfillment(world["deal"])
     obj, err = crm_services.update_fulfillment_status(world["deal"].id, world["seller"], status_code)
     assert err is None
@@ -195,7 +185,7 @@ def test_seller_status_by_routed_seller_succeeds(world, status_code, stamp_field
 
 @pytest.mark.django_db
 def test_superuser_authorized_for_any_status(world):
-    """Superuser is the DBA bypass — authorized for a seller status with no routing at all."""
+    """Superuser is the DBA bypass — authorized for a seller status without any membership."""
     crm_services.ensure_fulfillment(world["deal"])
     obj, err = crm_services.update_fulfillment_status(
         world["deal"].id, world["superuser"], FulfillmentStatusCode.DELIVERED
@@ -209,7 +199,6 @@ def test_superuser_authorized_for_any_status(world):
 
 @pytest.mark.django_db
 def test_timestamp_not_overwritten_on_repeat(world):
-    DealSellerRouting.objects.create(deal=world["deal"], seller_company=world["seller_co"])
     crm_services.ensure_fulfillment(world["deal"])
     obj, err = crm_services.update_fulfillment_status(world["deal"].id, world["seller"], FulfillmentStatusCode.SHIPPED)
     assert err is None
@@ -226,7 +215,6 @@ def test_timestamp_not_overwritten_on_repeat(world):
 
 @pytest.mark.django_db
 def test_extra_fields_persisted_and_none_ignored(world):
-    DealSellerRouting.objects.create(deal=world["deal"], seller_company=world["seller_co"])
     crm_services.ensure_fulfillment(world["deal"])
     eta = datetime.date(2026, 8, 1)
     obj, err = crm_services.update_fulfillment_status(

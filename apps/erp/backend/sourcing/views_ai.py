@@ -262,7 +262,7 @@ class DocumentExtractView(APIView):
     responses={
         202: OpenApiResponse(description="AI job queued, task_id returned (poll ai-status)"),
         400: OpenApiResponse(description="No file / bad type / missing quote_id"),
-        403: OpenApiResponse(description="Not the routed seller of this КП"),
+        403: OpenApiResponse(description="Not own-company staff with pricing permission"),
         404: OpenApiResponse(description="Quote not found"),
         503: OpenApiResponse(description="AI import disabled"),
     },
@@ -287,10 +287,10 @@ class QuoteImportFileView(APIView):
         except (TypeError, ValueError):
             return Response({"detail": "QUOTE_ID_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Seller-scoped authorization: only a routed can_sell seller with pricing capability may
-        # write to THIS КП (mirrors the builder's bulk-create gate). Foreign КП → 404 like the
-        # scoped queryset would yield; the worker re-checks (TOCTOU) with the recorded user.
-        from accounts.services.permissions import can_edit_quote_pricing, seller_company_routed_to_deal
+        # Seller-scoped authorization: only own-company staff with pricing capability may write
+        # to THIS КП (mirrors the builder's bulk-create gate); the worker re-checks (TOCTOU) with
+        # the recorded user.
+        from accounts.services.permissions import can_edit_quote_pricing
         from crm.models import Quote
 
         quote = Quote.objects.select_related("deal").filter(pk=quote_id).first()
@@ -298,10 +298,6 @@ class QuoteImportFileView(APIView):
             return Response({"detail": "QUOTE_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
         if not (getattr(request.user, "is_superuser", False) or can_edit_quote_pricing(request.user)):
             return Response({"detail": "ONLY_SELLER_CAN_BUILD_QUOTE"}, status=status.HTTP_403_FORBIDDEN)
-        if not (
-            getattr(request.user, "is_superuser", False) or seller_company_routed_to_deal(request.user, quote.deal_id)
-        ):
-            return Response({"detail": "QUOTE_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
         if quote.frozen_at:
             return Response({"detail": "QUOTE_FROZEN"}, status=status.HTTP_400_BAD_REQUEST)
 

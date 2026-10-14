@@ -17,13 +17,16 @@ logger = logging.getLogger(__name__)
 
 
 def _seller_company_ids(user: CustomUser) -> list:
-    """The SUPPLIER/MANUFACTURER companies the user is an active member of."""
-    return list(user.memberships.filter(is_active=True).in_seller_company().values_list("company_id", flat=True))
+    """`[own_company_id]` for own-company staff (the single seller), else empty."""
+    from .permissions import primary_seller_company_id
+
+    company_id = primary_seller_company_id(user)
+    return [company_id] if company_id else []
 
 
 def seller_clients(user: CustomUser):
-    """The seller's OWN client base (team-level): companies its members created as
-    offline clients (via a Contact) — NOT a platform-wide listing (confidentiality).
+    """The own company's client base (team-level): companies its staff created as offline
+    clients (via a Contact). Non-staff get an empty book.
     """
     seller_ids = _seller_company_ids(user)
     if not seller_ids:
@@ -104,23 +107,6 @@ def create_offline_client(
             position=position,
             is_primary=not company.contacts.filter(is_primary=True).exists(),
             created_by=seller,
-        )
-
-    # Counterparty book (Phase B): recording an offline client IS the relationship —
-    # the seller's book gains a CLIENT edge owned by the creator's seller company.
-    from .permissions import primary_seller_company_id
-
-    owner_company_id = primary_seller_company_id(seller)
-    if owner_company_id:
-        from crm.models import RelationshipDirection, RelationshipSource
-        from crm.services.relationships import touch_relationship
-
-        touch_relationship(
-            owner_company_id=owner_company_id,
-            counterparty_company_id=company.id,
-            direction=RelationshipDirection.CLIENT,
-            source=RelationshipSource.OFFLINE_CREATED,
-            owner_member=seller.memberships.filter(company_id=owner_company_id, is_active=True).first(),
         )
 
     return {"company": company, "contact": contact, "company_created": company_created}, None

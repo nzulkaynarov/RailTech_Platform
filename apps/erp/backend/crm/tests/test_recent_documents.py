@@ -2,9 +2,9 @@
 (GET /api/v1/crm/analytics/recent-documents/).
 
 Covers: mixed types merged + date-desc sorted; per-type deep-link hash; the `limit`
-clamp; and company-scoping — a routed seller / buyer see their deal's documents, a
-co-routed competitor does NOT (hidden competition, ADR-0003 §5), another company's
-DRAFT сгенерированный документ never leaks, and a non-member sees nothing.
+clamp; and company-scoping — own-company staff (the seller of every deal, M1-ERP-02 wave 3)
+and the buyer see their deal's documents, an outsider (a member of another client company) does
+NOT, another company's DRAFT сгенерированный документ never leaks, and a non-member sees nothing.
 
 Self-contained lookup seeding (CI runs --nomigrations)."""
 
@@ -23,7 +23,6 @@ from crm.models import (
     Contract,
     ContractStatus,
     Deal,
-    DealSellerRouting,
     DealStage,
     DocumentTemplate,
     DocumentTemplateKind,
@@ -79,12 +78,9 @@ def _member(company, email, *, can_sell=False, can_buy=False):
     return user
 
 
-def _api(user, ctx=None):
+def _api(user):
     client = APIClient()
-    creds = {"HTTP_AUTHORIZATION": f"Bearer {RefreshToken.for_user(user).access_token}"}
-    if ctx:
-        creds["HTTP_X_ACTIVE_CONTEXT"] = ctx
-    client.credentials(**creds)
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user).access_token}")
     return client
 
 
@@ -100,16 +96,17 @@ def _pairs(results):
 
 @pytest.fixture
 def world(lookups):
-    """Buyer, a routed seller (operational sub), a competing seller routed to
-    an UNRELATED deal, a platform admin, and a non-member."""
+    """Buyer, own-company staff (the seller of every deal), an outsider from another client
+    company, a platform admin, and a non-member."""
     buyer_co = _company("Buyer Co", "B100", "CLIENT")
     buyer_user = _member(buyer_co, "buyer@rd.test", can_buy=True)
 
-    seller_co = _company("Seller Co", "S100", "SUPPLIER")
+    seller_co = _company("Own Co", "S100", "SUPPLIER")
     seller_user = _member(seller_co, "seller@rd.test", can_sell=True)
 
-    other_co = _company("Other Seller Co", "O100", "SUPPLIER")
-    other_user = _member(other_co, "other@rd.test", can_sell=True)
+    # An outsider — a member of ANOTHER client company: neither staff nor this deal's buyer.
+    other_co = _company("Other Client Co", "O100", "CLIENT")
+    other_user = _member(other_co, "other@rd.test", can_buy=True)
 
     admin_user = CustomUser.objects.create_user(
         is_superuser=True,
@@ -149,11 +146,10 @@ def _quote(deal, seller_co, seller_user, *, number="ACME-КП-2026-00001"):
 
 @pytest.fixture
 def docs(world):
-    """A buyer-owned deal ROUTED to the seller, carrying one of every document type,
-    plus a competitor's DRAFT сгенерированный документ (must never leak). created_at is
+    """A buyer-owned deal with the own company's КП, carrying one of every document type,
+    plus another (client) company's DRAFT сгенерированный документ (must never leak). created_at is
     stamped in a deterministic ascending order so date-sort can be asserted."""
     deal = Deal.objects.create(title="Docs deal", company=world["buyer_co"], stage=DealStage.objects.get(code="DRAFT"))
-    DealSellerRouting.objects.create(deal=deal, seller_company=world["seller_co"])
     quote = _quote(deal, world["seller_co"], world["seller_user"])
 
     contract = Contract.objects.create(
@@ -189,7 +185,7 @@ def docs(world):
         title="Сопроводительное письмо",
         status=GeneratedDocumentStatus.objects.get(code="ISSUED"),
     )
-    # A co-routed competitor's private DRAFT letter — must never surface to buyer/seller.
+    # Another company's private DRAFT letter on the deal — must never surface to buyer/staff.
     foreign_draft = GeneratedDocument.objects.create(
         company=world["other_co"],
         deal=deal,
@@ -197,7 +193,7 @@ def docs(world):
             company=world["other_co"], name="Draft", kind=DocumentTemplateKind.objects.get(code="LETTER")
         ),
         number="DOC-OTHER-00001",
-        title="Секрет конкурента",
+        title="Секрет чужой компании",
         status=GeneratedDocumentStatus.objects.get(code="DRAFT"),
     )
 
@@ -276,47 +272,43 @@ def test_limit_clamped_low_and_high_and_invalid(world, docs):
     assert len(_results(_api(world["buyer_user"]).get(URL, {"limit": "abc"}))) == 5
 
 
-# ── 4. Company-scope: seller sees, competitor and non-member do not ───────────
+# ── 4. Company-scope: staff and buyer see, an outsider and a non-member do not ──
 
 
-def test_routed_seller_sees_billing_docs_in_every_context(world, docs):
-    """Billing docs mirror the WP-1 billing viewsets: visible to a routed seller regardless
-    of the SPA X-Active-Context header (force=True in the shared visibility Q)."""
-    for ctx in ("BUYER", "SELLER", None):
-        pairs = _pairs(_results(_api(world["seller_user"], ctx).get(URL)))
-        for key in ("contract", "invoice", "act"):
-            assert (key, docs[key].id) in pairs, f"seller lost {key} ctx={ctx}"
-
-
-def test_routed_seller_sees_quote_only_in_seller_context(world, docs):
-    """КП mirror QuoteViewSet exactly: a routed seller sees them in a SELLER (or default)
-    context, but NOT while acting as a BUYER — quote visibility is context-scoped, unlike
-    the force=True billing docs. Same asymmetry as the analytics dashboard."""
-    quote_key = ("quote", docs["quote"].id)
-    for ctx in ("SELLER", None):
-        assert quote_key in _pairs(_results(_api(world["seller_user"], ctx).get(URL))), f"seller lost quote ctx={ctx}"
-    assert quote_key not in _pairs(_results(_api(world["seller_user"], "BUYER").get(URL)))
-
-
-def test_competitor_seller_sees_none_of_the_deal_documents(world, docs):
-    our = {
+def _our(docs):
+    return {
         ("quote", docs["quote"].id),
         ("contract", docs["contract"].id),
         ("invoice", docs["invoice"].id),
         ("act", docs["act"].id),
         ("generated", docs["generated"].id),
     }
-    for ctx in ("BUYER", "SELLER", None):
-        pairs = _pairs(_results(_api(world["other_user"], ctx).get(URL)))
-        assert pairs.isdisjoint(our), f"competitor saw the deal's documents ctx={ctx}"
+
+
+def test_staff_sees_every_deal_document(world, docs):
+    """The seller of every deal is the own company: its staff see the КП and the billing chain
+    exactly like the КП / billing viewsets show them (and the client's ISSUED letter)."""
+    pairs = _pairs(_results(_api(world["seller_user"]).get(URL)))
+    assert pairs >= _our(docs)
+
+
+def test_buyer_sees_own_deal_documents(world, docs):
+    pairs = _pairs(_results(_api(world["buyer_user"]).get(URL)))
+    assert pairs >= _our(docs)
+
+
+def test_outsider_sees_none_of_the_deal_documents(world, docs):
+    pairs = _pairs(_results(_api(world["other_user"]).get(URL)))
+    assert pairs.isdisjoint(_our(docs)), "an outsider saw the deal's documents"
 
 
 def test_foreign_draft_generated_never_leaks(world, docs):
+    """Another company's DRAFT letter is its private working copy — the same rule as
+    GeneratedDocumentViewSet (own company any status + counterparties' ISSUED only)."""
     foreign = ("generated", docs["foreign_draft"].id)
     for viewer in ("buyer_user", "seller_user"):
-        for ctx in ("BUYER", "SELLER", None):
-            pairs = _pairs(_results(_api(world[viewer], ctx).get(URL)))
-            assert foreign not in pairs, f"foreign DRAFT letter leaked to {viewer} ctx={ctx}"
+        pairs = _pairs(_results(_api(world[viewer]).get(URL)))
+        assert foreign not in pairs, f"foreign DRAFT letter leaked to {viewer}"
 
 
 def test_non_member_sees_nothing(world, docs):
@@ -324,11 +316,5 @@ def test_non_member_sees_nothing(world, docs):
 
 
 def test_platform_admin_sees_all_types(world, docs):
-    pairs = _pairs(_results(_api(world["admin_user"], "BUYER").get(URL)))
-    assert pairs >= {
-        ("quote", docs["quote"].id),
-        ("contract", docs["contract"].id),
-        ("invoice", docs["invoice"].id),
-        ("act", docs["act"].id),
-        ("generated", docs["generated"].id),
-    }
+    pairs = _pairs(_results(_api(world["admin_user"]).get(URL)))
+    assert pairs >= _our(docs)

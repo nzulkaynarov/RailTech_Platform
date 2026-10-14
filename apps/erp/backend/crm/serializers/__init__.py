@@ -6,7 +6,7 @@ mechanical, behaviour-preserving) into:
   * ``item``    — QuoteItemSerializer (line-item, seller-cost redaction)
   * ``charge``  — ChargeType / ChargeTemplate / QuoteCharge serializers
   * ``quote``   — QuoteApprovalStep + Quote document serializer
-  * ``deal``    — Deal list/detail + viewer-scoped routing helpers
+  * ``deal``    — Deal list/detail + viewer-side helpers
   * ``misc``    — ActivityLog
   * ``billing`` — Contract / Invoice / InvoiceItem / Payment / Act / Fulfillment
 

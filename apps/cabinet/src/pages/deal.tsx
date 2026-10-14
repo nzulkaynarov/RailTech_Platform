@@ -10,6 +10,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { PageHeader } from '@/components/PageHeader';
 import { ErrorState, ListSkeleton } from '@/components/QueryStates';
 import { StatusBadge } from '@/components/StatusBadge';
+import { ManagerButton } from '@/components/TelegramLinkButton';
 import { Button } from '@/components/ui/button';
 import { useNow } from '@/hooks/useNow';
 import { formatDate, formatMoney, formatQuantity } from '@/lib/format';
@@ -18,7 +19,7 @@ import { invoiceView } from '@/lib/invoice';
 /**
  * Сделка — цель deep-link бота (`start_param=deal_<id>`): всё по сделке на одном экране, собрано из
  * списков портала по `deal_id` (отдельного `GET /deals/{id}` в контракте нет). «Написать менеджеру»
- * с контекстом сделки — M2-CAB-03.
+ * — бот CRM с контекстом сделки `start=deal_<id>` (M2-CAB-03).
  */
 export function DealPage() {
   const { t } = useTranslation();
@@ -77,7 +78,7 @@ export function DealPage() {
 
   return (
     <>
-      <PageHeader title={title} />
+      <PageHeader title={title} actions={<ManagerButton dealId={dealId} />} />
       <div className="flex flex-col gap-6">
         <DealSection title={t('pages.deal.requests')} count={dealRequests.length}>
           {dealRequests.map((item) => (

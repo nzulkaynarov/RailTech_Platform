@@ -20,10 +20,6 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import { useFulfillments, useUpdateFulfillmentStatus } from '@/hooks/useBilling';
 import { FulfillmentStatus as FStatusCode } from '@/lib/codes';
@@ -42,13 +38,12 @@ const STATUS_VARIANT: Record<FulfillmentStatus, 'default' | 'secondary' | 'destr
 const STATUS_CODES: FulfillmentStatus[] = [
   'PENDING', 'SHIPPED', 'IN_TRANSIT', 'DELIVERED', 'ACCEPTED', 'DISPUTED',
 ];
-/** Приёмку и спор подтверждает ЗАКАЗЧИК — сервер авторизует их по стороне покупателя. */
-const BUYER_STATUS_CODES: FulfillmentStatus[] = [FStatusCode.ACCEPTED, FStatusCode.DISPUTED];
+/** Приёмку и спор подтверждает КЛИЕНТ (в Cabinet) — бэк-офис эти статусы не выставляет. */
+const CLIENT_STATUS_CODES: FulfillmentStatus[] = [FStatusCode.ACCEPTED, FStatusCode.DISPUTED];
 
 export function FulfillmentsPage() {
   const { t } = useTranslation();
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [confirm, setConfirm] = useState<{ f: Fulfillment; status: FulfillmentStatus } | null>(null);
   const [editing, setEditing] = useState<Fulfillment | null>(null);
   const [form, setForm] = useState({
     status: 'PENDING' as FulfillmentStatus,
@@ -61,10 +56,8 @@ export function FulfillmentsPage() {
   const queryParams = statusFilter !== 'all' ? { status: statusFilter } : undefined;
   const { data: list, isLoading, isError, refetch } = useFulfillments(queryParams);
   const updateMut = useUpdateFulfillmentStatus();
-  // Продвигает отгрузку продавец, принимает/спорит покупатель — сторону по КАЖДОЙ строке
-  // считает сервер (`viewer_can_ship` / `viewer_can_accept`). Прежний вывод из activeStatus
-  // брал первый тип компании: посредник, который и покупает, и продаёт, терял половину
-  // действий, а на своей же отгрузке видел чужой набор кнопок.
+  // Продвигает отгрузку бэк-офис — право по КАЖДОЙ строке считает сервер (`viewer_can_ship`).
+  // Приёмка и спор — действия клиента в Cabinet (M1-ERP-02 волна 3 убрала их из ERP).
 
   const stats = useMemo(() => {
     const items = list ?? [];
@@ -99,22 +92,6 @@ export function FulfillmentsPage() {
       });
       toast.success(t('fulfillmentPage.statusUpdated'));
       setEditing(null);
-    } catch (e) {
-      toast.error(translateApiError(e));
-    }
-  };
-
-  // Buyer-side one-click accept/dispute of a delivered shipment.
-  const buyerAct = async (f: Fulfillment, status: FulfillmentStatus) => {
-    try {
-      await updateMut.mutateAsync({ deal_id: f.deal, status });
-      toast.success(
-        status === FStatusCode.ACCEPTED
-          ? t('fulfillmentPage.acceptedToast')
-          : status === FStatusCode.DISPUTED
-            ? t('fulfillmentPage.disputedToast')
-            : t('fulfillmentPage.statusUpdated'),
-      );
     } catch (e) {
       toast.error(translateApiError(e));
     }
@@ -191,35 +168,6 @@ export function FulfillmentsPage() {
                           {t('fulfillmentPage.updateStatus')}
                         </Button>
                       )}
-                      {/* Buyer accepts or disputes the delivery — ACCEPTED auto-closes
-                          the deal (CLOSED_WON). Only once the seller marks DELIVERED. */}
-                      {f.viewer_can_accept && f.status === FStatusCode.DELIVERED && (
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost" size="sm"
-                            disabled={updateMut.isPending}
-                            onClick={() => setConfirm({ f, status: FStatusCode.ACCEPTED })}
-                          >
-                            {t('fulfillmentPage.accept')}
-                          </Button>
-                          <Button
-                            variant="ghost" size="sm"
-                            disabled={updateMut.isPending}
-                            onClick={() => setConfirm({ f, status: FStatusCode.DISPUTED })}
-                          >
-                            {t('fulfillmentPage.dispute')}
-                          </Button>
-                        </div>
-                      )}
-                      {/* After a dispute the buyer has no action — the conflict is
-                          handled with the seller. Give a status hint + a way into
-                          the deal chat instead of a silent dead-end. */}
-                      {f.viewer_can_accept && f.status === FStatusCode.DISPUTED && (
-                        <div className="flex flex-col items-end gap-1">
-                          <span className="text-xs text-muted-foreground">{t('fulfillmentPage.disputedHint')}</span>
-                          <DealLink dealId={f.deal} className="text-xs" />
-                        </div>
-                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -240,14 +188,9 @@ export function FulfillmentsPage() {
               <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as FulfillmentStatus })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {/* Шторка открывается ПРОДАВЦУ (`viewer_can_ship`), а список печатался
-                      общий — вместе со статусами заказчика. Продавец выбирал «Принято»,
-                      сервер отбивал, и витрина переводила общий код как «действие доступно
-                      только членам компании»: он член своей компании, и отказ читался как
-                      поломка. Покупателю приёмка и спор даны отдельными кнопками выше. */}
-                  {STATUS_CODES.filter(
-                    (s) => !BUYER_STATUS_CODES.includes(s) || editing?.viewer_can_accept,
-                  ).map((s) => (
+                  {/* Статусы клиента («Принято», «Спор») бэк-офису не предлагаются: их ставит
+                      клиент, и сервер отбил бы выбор отказом, который читался бы как поломка. */}
+                  {STATUS_CODES.filter((s) => !CLIENT_STATUS_CODES.includes(s)).map((s) => (
                     <SelectItem key={s} value={s}>{t(`fulfillmentPage.status.${s}`)}</SelectItem>
                   ))}
                 </SelectContent>
@@ -286,31 +229,6 @@ export function FulfillmentsPage() {
         </SheetContent>
       </Sheet>
 
-      {/* Confirm the irreversible buyer decision — accepting closes the deal. */}
-      <AlertDialog open={!!confirm} onOpenChange={(open) => { if (!open) setConfirm(null); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {confirm?.status === FStatusCode.DISPUTED ? t('fulfillmentPage.dispute') : t('fulfillmentPage.accept')}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {confirm?.status === FStatusCode.DISPUTED
-                ? t('fulfillmentPage.confirmDispute')
-                : t('fulfillmentPage.confirmAccept')}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-            <AlertDialogAction
-              className={confirm?.status === FStatusCode.DISPUTED ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : undefined}
-              disabled={updateMut.isPending}
-              onClick={() => { if (confirm) buyerAct(confirm.f, confirm.status); setConfirm(null); }}
-            >
-              {confirm?.status === FStatusCode.DISPUTED ? t('fulfillmentPage.dispute') : t('fulfillmentPage.accept')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </PageShell>
   );
 }

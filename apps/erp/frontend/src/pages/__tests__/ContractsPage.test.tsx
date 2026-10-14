@@ -3,10 +3,9 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 
 import { ContractsPage } from '../ContractsPage';
 import { contractsApi, type Contract } from '@/api/contractsApi';
-import { useUserStore } from '@/store/userStore';
 import { renderWithProviders } from '@/test/renderWithProviders';
 
-// Mock at the API-client layer: the real useContracts / useSignContractClient
+// Mock at the API-client layer: the real useContracts / useSignContractManager
 // react-query hooks run against these mocks (never the network).
 vi.mock('@/api/contractsApi', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/contractsApi')>();
@@ -16,7 +15,6 @@ vi.mock('@/api/contractsApi', async (importOriginal) => {
       ...actual.contractsApi,
       list: vi.fn(),
       get: vi.fn(),
-      signClient: vi.fn(),
       signManager: vi.fn(),
       uploadSigned: vi.fn(),
       cancel: vi.fn(),
@@ -29,7 +27,7 @@ function makeContract(overrides: Partial<Contract> & { id: number }): Contract {
     deal: 42,
     quote: 7,
     number: 'CT-001',
-    status: 'PENDING_CLIENT',
+    status: 'PENDING_MANAGER',
     total_amount: '1000000.00',
     currency: null,
     pdf_file: null,
@@ -42,8 +40,7 @@ function makeContract(overrides: Partial<Contract> & { id: number }): Contract {
     manager_signer: null,
     manager_signer_name: null,
     manager_signed_at: null,
-    viewer_can_sign_client: true,
-    viewer_can_sign_manager: false,
+    viewer_can_sign_manager: true,
     valid_from: null,
     valid_until: null,
     invoice_id: null,
@@ -72,10 +69,8 @@ describe('ContractsPage', () => {
 
   beforeEach(() => {
     signedState = false;
-    // Regular company user, buyer context, not an admin viewer.
-    useUserStore.setState({ activeStatus: 'BUYER' });
     vi.mocked(contractsApi.list).mockImplementation(async () => (signedState ? [SIGNED] : [PENDING]));
-    vi.mocked(contractsApi.signClient).mockImplementation(async () => {
+    vi.mocked(contractsApi.signManager).mockImplementation(async () => {
       signedState = true;
       return SIGNED;
     });
@@ -113,34 +108,20 @@ describe('ContractsPage', () => {
     renderWithProviders(<ContractsPage />);
     fireEvent.click((await screen.findAllByText('CT-001'))[0]);
 
-    // Buyer on a PENDING_CLIENT contract → the "sign as client" button is offered.
-    const signButton = await screen.findByRole('button', { name: 'Подписать (клиент)' });
+    // Back office on a PENDING_MANAGER contract → the "sign as manager" button is offered.
+    const signButton = await screen.findByRole('button', { name: 'Подписать (продавец)' });
     fireEvent.click(signButton);
 
     // After the mutation resolves the list refetches (signed contract) and the LIVE
-    // panel re-derives: the client signature shows and the sign button disappears.
-    await waitFor(() => expect(screen.getByText(/Иван Клиент/)).toBeInTheDocument());
+    // panel re-derives: the manager signature shows and the sign button disappears.
+    await waitFor(() => expect(screen.getByText(/Пётр Продавец/)).toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: 'Подписать (продавец)' })).not.toBeInTheDocument();
+  });
+
+  it('не предлагает подписать договор за клиента (клиент подписывает в Cabinet)', async () => {
+    renderWithProviders(<ContractsPage />);
+    fireEvent.click((await screen.findAllByText('CT-001'))[0]);
+    await screen.findByRole('dialog');
     expect(screen.queryByRole('button', { name: 'Подписать (клиент)' })).not.toBeInTheDocument();
-  });
-
-  it('derives the BUYER side from the contract sign hint, not the page context', async () => {
-    // Even in SELLER page context, a contract the viewer can sign as CLIENT shows the buyer side.
-    useUserStore.setState({ activeStatus: 'SELLER' });
-    const { container } = renderWithProviders(<ContractsPage />);
-    await screen.findAllByText('CT-001');
-    // data-side carries the code (not the translated label) — i18n-independent.
-    expect(container.querySelector('[data-side="buyer"]')).not.toBeNull();
-    expect(container.querySelector('[data-side="seller"]')).toBeNull();
-  });
-
-  it('derives the SELLER side from the contract sign hint, not the page context', async () => {
-    // Even in BUYER page context, a contract the viewer can sign as MANAGER shows the seller side.
-    const sellerContract = makeContract({ id: 1, viewer_can_sign_client: false, viewer_can_sign_manager: true });
-    vi.mocked(contractsApi.list).mockImplementation(async () => [sellerContract]);
-    useUserStore.setState({ activeStatus: 'BUYER' });
-    const { container } = renderWithProviders(<ContractsPage />);
-    await screen.findAllByText('CT-001');
-    expect(container.querySelector('[data-side="seller"]')).not.toBeNull();
-    expect(container.querySelector('[data-side="buyer"]')).toBeNull();
   });
 });

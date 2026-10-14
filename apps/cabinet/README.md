@@ -16,7 +16,7 @@ make -C apps/cabinet dev            # http://localhost:5175 с моком пор
 make -C apps/cabinet dev-stand      # без мока: /api/portal → стенд (VITE_PORTAL_PROXY_TARGET, по умолчанию erp.localhost)
 make -C apps/cabinet check          # eslint, tsc, i18n, токены, типы API, vitest + axe  (= make check-cabinet из корня)
 make -C apps/cabinet build          # статика в dist/
-make -C apps/cabinet gen-api-types  # src/api/portal.d.ts из erp-portal.yaml (после изменения контракта)
+make -C apps/cabinet gen-api-types  # src/api/portal.d.ts из erp-portal.yaml; src/api/crm-form.d.ts из OpenAPI CRM
 ```
 
 ## Устройство
@@ -24,16 +24,17 @@ make -C apps/cabinet gen-api-types  # src/api/portal.d.ts из erp-portal.yaml (
 | Путь | Что |
 |---|---|
 | `src/api/portal.d.ts` | типы портального API — **только генерация** (`make gen-api-types`; `check` сверяет с контрактом) |
+| `src/api/crm.ts`, `crm-form.d.ts` | публичная форма CRM «Запрос» (`GET /api/v1/leads/web/token`, `POST /api/v1/leads/web`; база `VITE_CRM_URL`, без cookie); типы — генерация из `apps/crm/docs/api/openapi.json` (`scripts/gen-crm-form-types.mjs`, только пути формы) |
 | `src/api/portal.ts`, `errors.ts` | клиент: `fetch`, `credentials: 'include'`, база `/api/portal/v1`, `Idempotency-Key` на POST; `{"detail": CODE}` → `PortalApiError` → ключ `apiErrors.<CODE>` |
-| `src/mocks/` | MSW: `fixtures.ts` (все данные мока одним модулем, типизированы схемами контракта), `handlers.ts` (все эндпоинты), `browser.ts` (dev), `server.ts` (тесты) |
+| `src/mocks/` | MSW: `fixtures.ts` (все данные мока одним модулем, типизированы схемами контракта), `handlers.ts` (все эндпоинты), `crmForm.ts` (форма CRM «Запрос»), `browser.ts` (dev), `server.ts` (тесты) |
 | `src/session/` | сессия `GET /me` (`useMe`, `useCanAct`, `<CanAct>`, `useLogout`), режим `miniapp` / `web` |
 | `src/telegram/` | Telegram Web App SDK: `initData`, тема поверх переменных shadcn, `start_param` → маршрут |
 | `src/app/` | маршруты, guards, React Query, разделы навигации |
 | `src/components/shell/` | оболочка: нижняя навигация (телефон), боковая (десктоп), «Назад» Telegram |
 | `src/pages/` | экраны по домену: `requests`, `quotes`, `billing` (договоры, счета, акты), `deliveries` (поставки, документы), `catalog`, `company` (компания, команда), `deal`; вход, magic-link, «Я новый клиент», профиль |
 | `src/api/queries.ts` | React Query-хуки экранов: ключи по эндпоинту, после действия — инвалидация связанных списков |
-| `src/components/` | общие части экранов: `ResponsiveList`, `StatusBadge`, `QueryStates`, `ActionDialog`, `ReasonDialog`, `DocumentButton`, `Details`; `ui/` — shadcn из ERP |
-| `src/lib/` | `format.ts` (деньги, даты Asia/Tashkent, размеры), `status.ts`, `invoice.ts`, `quotes.ts`, `download.ts` (202 + Retry-After), `catalog.ts`, `company.ts` |
+| `src/components/` | общие части экранов: `ResponsiveList`, `StatusBadge`, `QueryStates`, `ActionDialog`, `ReasonDialog`, `DocumentButton`, `Details`, `TelegramLinkButton` / `ManagerButton` («Написать менеджеру» → `t.me/<бот>?start=deal_<id>`, в Mini App — `openTelegramLink`); `ui/` — shadcn из ERP |
+| `src/lib/` | `format.ts` (деньги, даты Asia/Tashkent, размеры), `status.ts`, `invoice.ts`, `quotes.ts`, `download.ts` (202 + Retry-After), `catalog.ts`, `company.ts`, `leadForm.ts` (проверка формы «Я новый клиент», тело для CRM, повтор с новым токеном) |
 | `src/i18n/locales/{ru,uz,en}.json` | словари; симметрия — `scripts/check_i18n_symmetry.py` |
 | `src/styles/tokens.generated.css` | копия `packages/ui-tokens/dist/shadcn.css` (`make tokens`), подключается в `src/index.css` |
 
@@ -65,6 +66,8 @@ make -C apps/cabinet gen-api-types  # src/api/portal.d.ts из erp-portal.yaml (
 | Каталог | 24 позиции, 2 страницы; поиск «ремень»; категория «Услуги»; «Цена по запросу»; карточка → «Запросить» → новый запрос с позицией |
 | Компания, команда | «Изменить» → ИНН `12` — ошибка 422; «Пригласить коллегу» — каналы e-mail/Telegram (для Telegram нужен телефон) |
 | Сделка | `/deals/35` — всё по сделке; `/deals/999` — «не найдено» |
+| «Написать менеджеру» | `/deals/35` в шапке, `/quotes/301` в шапке, иконка в строках договоров / счетов / актов, кнопка у каждой сделки в «Поставках» → `https://t.me/<бот>?start=deal_<id>` в новой вкладке; без `VITE_BOT_USERNAME` кнопок нет |
+| «Я новый клиент» (`/new-client`, без входа) | пустая отправка — «Укажите, как к вам обращаться»; без телефона и e-mail — подсказка на обоих полях; без галочки согласия — «Без согласия…», запрос не уходит; успех — «Спасибо! Запрос отправлен» + «Написать в Telegram» (`start=web`). Сценарии мока по тексту «Что нужно»: `#expired` — первая отправка получает `form_token_expired`, форма тихо берёт новый токен и через ~1 с отправляет снова (успех); `#fast` — `form_too_fast`; `#limit` — 429; телефон `12345` — «Номер не распознан» |
 
 ## Проверка как Mini App
 
@@ -78,6 +81,7 @@ location.href = '/#tgWebAppData=' + encodeURIComponent(data) + '&tgWebAppVersion
 ```
 
 Ожидаемо: страницы входа и шапки сайта нет, тёмная тема Telegram, открыта «Сделка №42» (`start_param=deal_42`).
+«Написать менеджеру» в Mini App вызывает `Telegram.WebApp.openTelegramLink` (в эмуляции вне Telegram SDK ничего не открывает — это ожидаемо).
 Мок принимает любой `init_data`; содержащий `bad` → 401 («Не удалось войти»), `viewer` → контакт без права действовать.
 SDK запоминает параметры в `sessionStorage` — для возврата в веб-режим откройте новую вкладку.
 
@@ -95,4 +99,9 @@ SDK запоминает параметры в `sessionStorage` — для во�
 
 `make up` из корня: сервис `cabinet-web` (этот Dockerfile: Vite → nginx, `/health`), Caddy
 `http://cabinet.localhost` — `/api/portal/*` → `erp-backend:8000` (до M2-ERP-01 — 404), остальное → `cabinet-web`.
-Имя бота для сборки — `TELEGRAM_BOT_USERNAME` из корневого `.env`.
+Имя бота для сборки — `TELEGRAM_BOT_USERNAME` из корневого `.env`. Форма «Я новый клиент» ходит в CRM напрямую:
+адрес — build-arg `VITE_CRM_URL` = `CABINET_CRM_URL` корневого `.env` (по умолчанию `http://crm.localhost:${HTTP_PORT}`),
+CRM разрешает CORS на `/api/v1/leads/web*` только origin из `CABINET_ORIGIN` (`crm-api` в `infra/compose/base.yml`;
+по умолчанию `http://cabinet.localhost`, `http://cabinet.localhost:${HTTP_PORT}`, `https://${CABINET_DOMAIN}`).
+Прод: `CABINET_CRM_URL=https://crm.railtech.uz`, `CABINET_ORIGIN=https://cabinet.railtech.uz`.
+`make dev-stand` без `VITE_CRM_URL` ведёт форму через прокси Vite на CRM стенда (`VITE_CRM_PROXY_TARGET`, по умолчанию `http://crm.localhost`).

@@ -12,7 +12,7 @@ import pytest
 
 from accounts.models import Company, CompanyMember, CompanyRole, CompanySettings, CompanyType, CustomUser, WorkspaceRole
 from catalog.models import Product, SupplierOffer
-from crm.models import Deal, DealSellerRouting, DealStage, Quote, QuoteItem, QuoteStatus
+from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteStatus
 from crm.services.draft_quote import prefill_created_quote, take_and_prepare_quote
 from crm.services.quotes.access import apply_company_quote_defaults
 from master_data.models import Currency
@@ -46,7 +46,6 @@ def scene(db):
     )
 
     deal = Deal.objects.create(title="RFQ", company=buyer, stage=DealStage.objects.get(code="RFQ_OPEN"))
-    DealSellerRouting.objects.create(deal=deal, seller_company=seller)
     rq = Quote.objects.create(deal=deal, version=1, status=draft)
     QuoteItem.objects.create(quote=rq, product=matched, quantity=5)  # matched → оффер в UZS
     QuoteItem.objects.create(quote=rq, quantity=3, imported_raw_name="Втулка X")  # unmatched → без оффера
