@@ -36,17 +36,11 @@ vi.mock('@/hooks/useCRM', () => ({
 	useTakeAndPrepareQuote: () => ({ mutate: vi.fn(), mutateAsync: vi.fn().mockResolvedValue(undefined), isPending: false }),
 }));
 
-// Seller is fully entitled — the send-gate is not what this spec covers.
-vi.mock('@/hooks/useQuoteSendGate', () => ({
-	useQuoteSendGate: () => ({ isSeller: true, blocked: false, reason: null, errorCode: null }),
-}));
-
 // Heavy children of the workspace aren't under test — stub them so the page renders
 // in isolation and the dialog is the only interactive surface.
 vi.mock('@/components/QuoteBuilder/QuoteBuilderGrid', () => ({ QuoteBuilderGrid: () => null }));
 vi.mock('@/components/CRM/GenerateQuoteDialog', () => ({ GenerateQuoteDialog: () => null }));
 vi.mock('@/components/CRM/QuoteApprovalChain', () => ({ QuoteApprovalChain: () => null }));
-vi.mock('@/components/CRM/QuoteSendGateBanner', () => ({ QuoteSendGateBanner: () => null }));
 vi.mock('@/components/CRM/GenerateContractDialog', () => ({ GenerateContractDialog: () => null }));
 
 vi.mock('sonner', () => ({

@@ -13,25 +13,20 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useDeal, useTakeAndPrepareQuote } from '@/hooks/useCRM';
 import { useUserStore } from '@/store/userStore';
-import { useQuoteSendGate } from '@/hooks/useQuoteSendGate';
 import { translateApiError } from '@/lib/apiError';
 import { QuoteBuilderGrid } from '@/components/QuoteBuilder/QuoteBuilderGrid';
 import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
 import { QuoteApprovalChain } from '@/components/CRM/QuoteApprovalChain';
-import { QuoteSendGateBanner } from '@/components/CRM/QuoteSendGateBanner';
 import { SendQuoteDialog } from '@/components/CRM/SendQuoteDialog';
 import { QuoteSentPanel } from '@/components/CRM/QuoteSentPanel';
 import { DealAttachmentsPanel } from '@/components/Sourcing/DealAttachmentsPanel';
 import { GenerateContractDialog } from '@/components/CRM/GenerateContractDialog';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { QuoteStatus, DealStage, DEAL_STAGE_LABEL_KEY } from '@/lib/codes';
 import { LoadingRows, EmptyState } from './shared/PageShell';
 
 interface DealQuotePageProps {
   dealId: number;
   onBack: () => void;
-  /** App-level hash navigation, for the send-gate banner CTA (subscription / help). */
-  onNavigate?: (target: string) => void;
 }
 
 /**
@@ -40,13 +35,11 @@ interface DealQuotePageProps {
  * side panel. Reached via the `deal-quote/<dealId>` hash route from DealsPage.
  * State is React Query throughout (useDeal / useCRM) — no flowStore.
  */
-export function DealQuotePage({ dealId, onBack, onNavigate }: DealQuotePageProps) {
+export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
   const { t } = useTranslation();
   const { data: deal, isLoading, isError, refetch } = useDeal(dealId);
   const activeStatus = useUserStore((s) => s.activeStatus);
   const takeMut = useTakeAndPrepareQuote();
-  // WP-H: proactive entitlement send-gate — banner up-front + disabled Send with the reason.
-  const sendGate = useQuoteSendGate();
   const [contractOpen, setContractOpen] = useState(false);
   // Q1: seller lands on the builder route before a КП exists — offer the manual «Сформировать КП»
   // path (one-click «Взять и подготовить» is the primary, below), never a dead «Назад»-only screen.
@@ -177,31 +170,11 @@ export function DealQuotePage({ dealId, onBack, onNavigate }: DealQuotePageProps
             </Button>
           )}
           {canSend && (
-            sendGate.blocked ? (
-              // A known blocker (subscription / demo / platform ban) → disable Send and explain why via a
-              // tooltip, using the SAME apiErrors.* copy the backend would return. A disabled button
-              // swallows pointer events, so the wrapping span carries the tooltip trigger.
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span tabIndex={0} className="inline-flex">
-                      <Button size="sm" disabled aria-disabled>
-                        <Send className="mr-2 h-4 w-4" />
-                        {t('requestDetailActions.sendQuote')}
-                      </Button>
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
-                    {translateApiError(sendGate.errorCode ?? '')}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            ) : (
-              <Button size="sm" onClick={() => setSendDialogOpen(true)}>
-                <Send className="mr-2 h-4 w-4" />
-                {t('requestDetailActions.sendQuote')}
-              </Button>
-            )
+            // Отправку решает право роли на сервере (`quote.send`); гейта подписки нет (M1-ERP-02).
+            <Button size="sm" onClick={() => setSendDialogOpen(true)}>
+              <Send className="mr-2 h-4 w-4" />
+              {t('requestDetailActions.sendQuote')}
+            </Button>
           )}
         </div>
       </div>
@@ -240,12 +213,6 @@ export function DealQuotePage({ dealId, onBack, onNavigate }: DealQuotePageProps
           </span>
         </div>
       )}
-
-      {/* WP-H: proactive send-gate banner — surfaces a subscription/demo blocker BEFORE the
-          seller finishes pricing, instead of a late surprise at «Отправить». Seller-side only.
-          U2: dismissible here — folding it away returns its row to the line grid on a 14" screen,
-          and the disabled «Отправить» button still explains the blocker at the point of action. */}
-      <QuoteSendGateBanner onNavigate={onNavigate} dismissible />
 
       {/* Wave B2 post-send tracking (PandaDoc pattern): the moment the КП is SENT, replace the
           silent builder with a live status line + link/version actions above the (now frozen) grid. */}

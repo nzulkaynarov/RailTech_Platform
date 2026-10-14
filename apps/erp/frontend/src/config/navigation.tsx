@@ -6,7 +6,7 @@
  * Номенклатура · Настройки); направление (Полученные/Отправленные) — фильтр ВНУТРИ страниц, не
  * отдельные разделы. Каждый пункт декларирует `requires` (capability) — движок ПРЯЧЕТ (не
  * дизейблит) то, что не выдано (мировой стандарт: Budibase/Oso). Гейтинг здесь = только UX;
- * бэкенд-enforcement (member_has_permission / подписка) остаётся независимым.
+ * бэкенд-enforcement (member_has_permission) остаётся независимым.
  *
  * `side` сохраняет текущий контекст-свитчер Покупатель↔Продавец как фильтр (Phase C сольёт
  * shell и уберёт свитчер). Цели (`id`) указывают на СУЩЕСТВУЮЩИЕ страницы — мы унифицируем
@@ -20,7 +20,6 @@ import type { Capabilities } from '@/store/userStore';
 
 /** Per-item capability gate. All present conditions must hold (AND). */
 export interface NavRequirement {
-  subscription?: boolean; // seller company must have an operational subscription
   anyPerm?: string[];     // member must hold AT LEAST ONE of these company permissions
 }
 
@@ -58,7 +57,6 @@ export interface ResolvedNavItem {
 /** True if `caps` satisfies a node's requirement (a buyer/seller capability check, NOT security). */
 function meetsRequirement(req: NavRequirement | undefined, caps: Capabilities): boolean {
   if (!req) return true;
-  if (req.subscription && !caps.subscription_active) return false;
   // Perm-gate only when we actually HAVE permission data — an empty list means "unknown"
   // (old /me payload, or a member pre-backfill) → don't over-hide; the backend still enforces.
   if (req.anyPerm && req.anyPerm.length > 0 && caps.permissions.length > 0) {
@@ -122,9 +120,6 @@ export const TENANT_NAV: NavNodeDef[] = [
       { labelKey: 'shell.catalogReference', id: 'catalog-reference' },
     ],
   },
-
-  // «Подписка» перенесена в Настройки → Биллинг (S5/P7) — top-level пункт убран. Роут
-  // #my-subscription остаётся рабочим (App.tsx) для старых ссылок/закладок, но в меню его нет.
 ];
 
 // Профиль слился с Настройками в единый Settings Hub (settings-profile-redesign §2.1):

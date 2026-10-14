@@ -5,7 +5,6 @@ import {
   Circle,
   ChevronRight,
   Users as UsersIcon,
-  CreditCard,
   Rocket,
   FilePlus,
 } from 'lucide-react';
@@ -14,7 +13,6 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useAuthStore } from '@/store/authStore';
 import { useUserStore } from '@/store/userStore';
-import { useMySubscription } from '@/hooks/useAccounts';
 import { useDeals } from '@/hooks/useCRM';
 import { cn } from '@/lib/utils';
 
@@ -54,14 +52,12 @@ export function OnboardingChecklist({ onNavigate }: OnboardingChecklistProps) {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const activeStatus = useUserStore((s) => s.activeStatus);
-  const { data: sub } = useMySubscription();
   const { data: deals = [] } = useDeals();
 
   const isSeller = activeStatus === 'SELLER';
   const isBuyer = activeStatus === 'BUYER';
 
   const profileDone = Boolean(user?.first_name && user?.last_name);
-  const hasSubscription = Boolean(sub && (sub.status === 'ACTIVE' || sub.status === 'TRIAL'));
   const hasDeal = deals.length > 0;
 
   const steps: Step[] = useMemo(() => {
@@ -76,15 +72,6 @@ export function OnboardingChecklist({ onNavigate }: OnboardingChecklistProps) {
         appliesTo: 'all',
       },
       {
-        id: 'subscription',
-        label: t('onboarding.steps.subscription.label'),
-        hint: t('onboarding.steps.subscription.hint'),
-        icon: CreditCard,
-        done: hasSubscription,
-        action: !hasSubscription ? { label: t('onboarding.steps.subscription.cta'), target: 'my-subscription' } : undefined,
-        appliesTo: 'seller',
-      },
-      {
         id: 'first-rfq',
         label: t('onboarding.steps.firstRfq.label'),
         hint: t('onboarding.steps.firstRfq.hint'),
@@ -95,7 +82,7 @@ export function OnboardingChecklist({ onNavigate }: OnboardingChecklistProps) {
       },
     ];
     return all.filter((s) => s.appliesTo === 'all' || (s.appliesTo === 'seller' && isSeller) || (s.appliesTo === 'buyer' && isBuyer));
-  }, [profileDone, hasSubscription, hasDeal, isSeller, isBuyer, t]);
+  }, [profileDone, hasDeal, isSeller, isBuyer, t]);
 
   const doneCount = steps.filter((s) => s.done).length;
   const total = steps.length;

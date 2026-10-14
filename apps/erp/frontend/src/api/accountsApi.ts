@@ -167,9 +167,6 @@ export interface User {
 	// SELLER/MANUFACTURER contexts.
 	can_sell?: boolean;
 	can_buy?: boolean;
-	// true/false for sellers, null for non-sellers. false → seller has no
-	// operational subscription and seller writes return SUBSCRIPTION_REQUIRED.
-	seller_subscription_operational?: boolean | null;
 	company?: Company;
 	primary_company?: Company;
 	is_active?: boolean;
@@ -455,65 +452,6 @@ export const accountsApi = {
 		return response.data;
 	},
 
-	// ─── Subscriptions (admin) ─────────────────────────────────────────
-	// Реестр подписок печатает счётчики вкладок и «Всего» по этому же списку, а пейджера у
-	// него нет — берём целиком, иначе оператор судит о платящих продавцах по первым 20.
-	getSubscriptions: async (params?: {
-		search?: string;
-		status?: string;
-		plan?: string;
-		ordering?: string;
-		fetchAll?: boolean;
-	}) => {
-		if (params?.fetchAll) {
-			const query = { ...params };
-			delete query.fetchAll;
-			return fetchAllPages<Subscription>('accounts/subscriptions/', query);
-		}
-		const response = await apiClient.get<PaginatedResponse<Subscription>>(
-			'accounts/subscriptions/',
-			{ params },
-		);
-		return response.data.results;
-	},
-	getMySubscription: async (): Promise<Subscription | null> => {
-		const response = await apiClient.get<Subscription>('accounts/subscriptions/mine/', {
-			validateStatus: (s) => s === 200 || s === 204 || s === 403,
-		});
-		if (response.status === 200) return response.data;
-		return null;
-	},
-	activateSubscription: async (id: number) => {
-		const response = await apiClient.post<Subscription>(`accounts/subscriptions/${id}/activate/`);
-		return response.data;
-	},
-	// Причина уходит ТЕЛОМ запроса. Диалог помечен `requireReason`, собирал её и передавал в
-	// колбэк — а до сервера она не доезжала: вызов уходил без тела. С тех пор как сервер стал
-	// класть причину в письмо арендатору (#611), цена дефекта выросла: отключённый продавец
-	// получал письмо с пустым объяснением.
-	suspendSubscription: async (id: number, reason: string) => {
-		const response = await apiClient.post<Subscription>(`accounts/subscriptions/${id}/suspend/`, { reason });
-		return response.data;
-	},
-	paySubscription: async (id: number, amount: string, months = 1) => {
-		const response = await apiClient.post<Subscription>(
-			`accounts/subscriptions/${id}/pay/`,
-			{ amount, months },
-		);
-		return response.data;
-	},
-	createSubscription: async (data: Partial<Subscription>) => {
-		const response = await apiClient.post<Subscription>('accounts/subscriptions/', data);
-		return response.data;
-	},
-	updateSubscription: async (id: number, data: Partial<Subscription>) => {
-		const response = await apiClient.patch<Subscription>(`accounts/subscriptions/${id}/`, data);
-		return response.data;
-	},
-	deleteSubscription: async (id: number) => {
-		await apiClient.delete(`accounts/subscriptions/${id}/`);
-	},
-
 	// ─── System Roles (admin) ──────────────────────────────────────────
 	getSystemRoles: async () => {
 		const response = await apiClient.get<{ code: string; name: string }[]>('accounts/system-roles/');
@@ -602,31 +540,6 @@ export const accountsApi = {
 };
 
 // ─── Types ──────────────────────────────────────────────────────────────
-
-export interface Subscription {
-	id: number;
-	company: number;
-	company_name: string;
-	company_inn: string;
-	plan: string;
-	plan_display: string;
-	status: string;
-	status_display: string;
-	monthly_rate: string;
-	currency: number | null;
-	currency_code: string | null;
-	valid_from: string | null;
-	valid_until: string | null;
-	last_payment_date: string | null;
-	next_payment_date: string | null;
-	notes: string;
-	/** Почему подписку приостановили — текст, который видит САМ арендатор.
-	 *  Раньше причина жила только в журнале доступа за правом оператора. */
-	suspended_reason?: string;
-	suspended_at?: string | null;
-	created_at: string;
-	updated_at: string;
-}
 
 export interface CompanyRole {
 	id: number;

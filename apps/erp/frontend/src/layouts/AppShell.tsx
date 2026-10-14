@@ -59,7 +59,6 @@ import { useAuthStore } from '@/store/authStore';
 import { NotificationCenter } from '@/components/Layout/NotificationCenter';
 import { DocumentSearchDialog } from '@/components/Layout/DocumentSearchDialog';
 import { useCommandPaletteShortcut, useCommandPaletteState } from '@/components/Layout/useCommandPalette';
-import { SubscriptionStatusBanner } from '@/components/Shared/SubscriptionStatusBanner';
 import { CartDrawer } from '@/components/ui/CartDrawer';
 import { sidebarDefaultOpen } from './sidebarDefaultOpen';
 
@@ -196,8 +195,8 @@ interface AppShellProps {
   onNavigate: (target: string) => void;
   onStartTour?: () => void;
   /**
-   * Full-bleed content mode: drops the `p-6` padding, the page-scroll and the subscription
-   * banner so a workspace page (e.g. the КП builder) can own the whole content viewport and
+   * Full-bleed content mode: drops the `p-6` padding and the page-scroll
+   * so a workspace page (e.g. the КП builder) can own the whole content viewport and
    * manage its own single scroll. Default false — every other page keeps the standard chrome.
    */
   fullBleed?: boolean;
@@ -502,11 +501,6 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour, fullBlee
             onNavigate={(hash) => { window.location.hash = hash; }}
           />
           <main className={cn('flex-1 min-h-0', fullBleed ? 'overflow-hidden' : 'overflow-y-auto p-6')}>
-            {!fullBleed && (
-              <div className="mb-4 space-y-2">
-                <SubscriptionStatusBanner onNavigate={onNavigate} />
-              </div>
-            )}
             {children}
           </main>
       </SidebarInset>

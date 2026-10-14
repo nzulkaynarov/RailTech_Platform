@@ -12,9 +12,6 @@ function caps(overrides: Partial<Capabilities> = {}): Capabilities {
   return {
     can_buy: true,
     can_sell: true,
-    subscription_active: false,
-    can_send_quotes: false,
-    quote_send_is_demo: false,
     permissions: [],
     ...overrides,
   };

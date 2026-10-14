@@ -18,7 +18,7 @@
  * компания типа SUPPLIER/MANUFACTURER), поэтому местная поправка на тип компании больше не нужна.
  * Раньше плоский флаг участника показывал seller-секции OWNER'у CLIENT-only компании.
  *
- * UX-гейтинг only — backend enforcement (member_has_permission / entitlements) независим.
+ * UX-гейтинг only — backend enforcement (member_has_permission) независим.
  */
 import type { Capabilities } from '@/store/userStore';
 
@@ -32,10 +32,9 @@ export type SettingsSectionKey =
   | 'templates'
   | 'doc-templates'
   | 'team'
-  | 'billing'
   | 'platform';
 
-/** Группа сайдбара — порядок: account → company → documents → sales → team → billing → platform.
+/** Группа сайдбара — порядок: account → company → documents → sales → team → platform.
  * Группа «documents» (решение владельца 27-07): всё «как выглядят мои документы» — бланк/бренд,
  * шаблоны писем и актов, нумерация — живёт в ОДНОМ месте. Юр.реквизиты компании остаются в
  * «company» (это идентичность, не внешний вид — трёхуровневый принцип настроек). */
@@ -45,7 +44,6 @@ export type SettingsGroupKey =
   | 'documents'
   | 'sales'
   | 'team'
-  | 'billing'
   | 'platform';
 
 export interface SettingsSectionDef {
@@ -60,8 +58,6 @@ export interface SettingsGateInput {
   isOwner: boolean;
   /** Consolidated /me capabilities (userStore) — permissions + can_sell drive the gates. */
   capabilities: Capabilities;
-  /** Company is seller-typed (any non-BUYER statusEntry) — see module docstring. */
-  companySells: boolean;
 }
 
 /**
@@ -138,14 +134,6 @@ const SECTION_RULES: SectionRule[] = [
   },
   // ── team ── (виден всем; действия управления внутри гейтятся hasTeamManage).
   { def: { key: 'team', labelKey: 'settings.tabs.team', group: 'team' }, visible: () => true },
-  // ── billing ── (S5/P7) «План и подписка» — витрина плана КОМПАНИИ (read-only), перенос
-  // top-level «Подписки» в Настройки. Гейт = компания-продавец (companySells): подписка —
-  // продавцовая сущность (T2), покупателю не нужна. Права участника не требуются — витрина плана
-  // видна всей команде продавца.
-  {
-    def: { key: 'billing', labelKey: 'settings.tabs.billing', group: 'billing' },
-    visible: (input) => input.companySells,
-  },
   // ── platform ── SystemSettings (НДС, курс, имя платформы, 2FA). Раньше — только операторская
   // плоскость; после её удаления (M1-ERP-02) до появления ролей бэк-офиса (M1-ERP-05) открыто
   // OWNER'у как «Администратору». Сервер остаётся источником истины на PATCH.

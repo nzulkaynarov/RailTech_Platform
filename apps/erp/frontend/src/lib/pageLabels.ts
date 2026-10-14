@@ -41,7 +41,6 @@ const pageI18nKeys: Record<string, string> = {
   payments: 'breadcrumbs.payments',
   acts: 'breadcrumbs.acts',
   fulfillments: 'breadcrumbs.fulfillments',
-  'my-subscription': 'breadcrumbs.mySubscription',
   'forgot-password': 'breadcrumbs.forgotPassword',
   'reset-password': 'breadcrumbs.resetPassword',
 };

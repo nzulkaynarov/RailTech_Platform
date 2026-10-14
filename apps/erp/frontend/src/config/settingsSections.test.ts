@@ -15,9 +15,6 @@ function makeCapabilities(overrides: Partial<Capabilities> = {}): Capabilities {
   return {
     can_buy: true,
     can_sell: false,
-    subscription_active: false,
-    can_send_quotes: false,
-    quote_send_is_demo: false,
     permissions: [],
     ...overrides,
   };
@@ -27,7 +24,6 @@ function makeGate(overrides: Partial<SettingsGateInput> = {}): SettingsGateInput
   return {
     isOwner: false,
     capabilities: makeCapabilities(),
-    companySells: true,
     ...overrides,
   };
 }
@@ -37,22 +33,20 @@ function sectionKeys(input: SettingsGateInput): string[] {
 }
 
 describe('buildSettingsSections — S1 гейтинг = правда сохранения (spec-settings-reorg-2026-07-23)', () => {
-  it('OWNER компании-продавца (can_sell): все tenant-секции (группа documents: branding/doc-templates/numbering; +billing, +platform); дефолт=profile', () => {
+  it('OWNER компании-продавца (can_sell): все tenant-секции (группа documents: branding/doc-templates/numbering; +platform); дефолт=profile', () => {
     // M1-ERP-02: операторской плоскости нет; platform-секция (НДС/курс/имя/2FA) до ролей
     // бэк-офиса (M1-ERP-05) открыта OWNER'у как «Администратору».
     const gate = makeGate({ isOwner: true, capabilities: makeCapabilities({ can_sell: true }) });
     expect(sectionKeys(gate)).toEqual([
       'profile', 'security', 'company', 'branding', 'doc-templates', 'numbering',
-      'defaults', 'templates', 'team', 'billing', 'platform',
+      'defaults', 'templates', 'team', 'platform',
     ]);
     expect(defaultSettingsSection()).toBe('profile');
   });
 
-  it('OWNER компании-покупателя: без seller-секций и без billing, doc-templates виден (письма нужны обоим)', () => {
-    // companySells:false — настоящая компания-покупатель; billing (S5) — продавцовая витрина, скрыта.
-    const gate = makeGate({ isOwner: true, companySells: false, capabilities: makeCapabilities({ can_sell: false }) });
+  it('OWNER компании-покупателя: без seller-секций, doc-templates виден (письма нужны обоим)', () => {
+    const gate = makeGate({ isOwner: true, capabilities: makeCapabilities({ can_sell: false }) });
     expect(sectionKeys(gate)).toEqual(['profile', 'security', 'company', 'doc-templates', 'team', 'platform']);
-    expect(sectionKeys(gate)).not.toContain('billing');
     expect(defaultSettingsSection()).toBe('profile');
   });
 
@@ -62,36 +56,34 @@ describe('buildSettingsSections — S1 гейтинг = правда сохра�
     // если сервер вернёт правду, секции появятся — значит гейт читает именно эту правду.
     const gate = makeGate({
       isOwner: true,
-      companySells: false,
       capabilities: makeCapabilities({ can_sell: false }),
     });
     expect(sectionKeys(gate)).toEqual(['profile', 'security', 'company', 'doc-templates', 'team', 'platform']);
   });
 
-  it('рядовой член команды-продавца без прав: profile/security/team + billing-витрина; дефолт=profile', () => {
-    // billing (S5) — read-only витрина плана компании, гейт = companySells, права участника не нужны.
+  it('рядовой член команды-продавца без прав: profile/security/team; дефолт=profile', () => {
     const gate = makeGate({ capabilities: makeCapabilities({ can_sell: true }) });
-    expect(sectionKeys(gate)).toEqual(['profile', 'security', 'team', 'billing']);
+    expect(sectionKeys(gate)).toEqual(['profile', 'security', 'team']);
     expect(defaultSettingsSection()).toBe('profile');
   });
 
-  it('settings.edit-делегат (без OWNER): company/branding/doc-templates/numbering/defaults/billing — но НЕ templates(charge) и НЕ platform', () => {
+  it('settings.edit-делегат (без OWNER): company/branding/doc-templates/numbering/defaults — но НЕ templates(charge) и НЕ platform', () => {
     const gate = makeGate({
       capabilities: makeCapabilities({ can_sell: true, permissions: ['settings.edit'] }),
     });
     expect(sectionKeys(gate)).toEqual([
-      'profile', 'security', 'company', 'branding', 'doc-templates', 'numbering', 'defaults', 'team', 'billing',
+      'profile', 'security', 'company', 'branding', 'doc-templates', 'numbering', 'defaults', 'team',
     ]);
     expect(sectionKeys(gate)).not.toContain('templates');
     expect(sectionKeys(gate)).not.toContain('platform');
     expect(defaultSettingsSection()).toBe('profile');
   });
 
-  it('charge-делегат (charge_templates.manage): profile/security/templates/team/billing — БЕЗ мёртвых company-секций (фикс тупиков)', () => {
+  it('charge-делегат (charge_templates.manage): profile/security/templates/team — БЕЗ мёртвых company-секций (фикс тупиков)', () => {
     const gate = makeGate({
       capabilities: makeCapabilities({ can_sell: true, permissions: ['charge_templates.manage'] }),
     });
-    expect(sectionKeys(gate)).toEqual(['profile', 'security', 'templates', 'team', 'billing']);
+    expect(sectionKeys(gate)).toEqual(['profile', 'security', 'templates', 'team']);
     // именно эти company/documents-секции больше НЕ показываются как заглушки:
     for (const dead of ['company', 'branding', 'numbering', 'defaults', 'doc-templates']) {
       expect(sectionKeys(gate)).not.toContain(dead);
@@ -149,8 +141,6 @@ describe('buildSettingsSections — S2 группировка', () => {
     expect(byKey.get('defaults')).toBe('sales');
     expect(byKey.get('templates')).toBe('sales');
     expect(byKey.get('team')).toBe('team');
-    // S5: billing-секция в собственной группе billing (продавец).
-    expect(byKey.get('billing')).toBe('billing');
   });
 
   it('platform-секция в группе platform', () => {
@@ -159,12 +149,12 @@ describe('buildSettingsSections — S2 группировка', () => {
     expect(platform?.group).toBe('platform');
   });
 
-  it('группы идут в порядке account→company→documents→sales→team→billing→platform (первое появление)', () => {
+  it('группы идут в порядке account→company→documents→sales→team→platform (первое появление)', () => {
     const gate = makeGate({ isOwner: true, capabilities: makeCapabilities({ can_sell: true }) });
     const groupOrder: string[] = [];
     for (const section of buildSettingsSections(gate)) {
       if (!groupOrder.includes(section.group)) groupOrder.push(section.group);
     }
-    expect(groupOrder).toEqual(['account', 'company', 'documents', 'sales', 'team', 'billing', 'platform']);
+    expect(groupOrder).toEqual(['account', 'company', 'documents', 'sales', 'team', 'platform']);
   });
 });

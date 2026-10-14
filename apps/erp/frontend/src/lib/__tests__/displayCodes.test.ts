@@ -2,18 +2,9 @@ import { describe, it, expect } from 'vitest';
 
 import ru from '@/i18n/locales/ru.json';
 import en from '@/i18n/locales/en.json';
-import {
-  COMPANY_TYPE_LABEL_KEY,
-  ENTITLEMENT_ACCESS_LABEL_KEY,
-  SUBSCRIPTION_PLAN_LABEL_KEY,
-  SUBSCRIPTION_STATUS_LABEL_KEY,
-  companyTypeLabelKey,
-  entitlementAccessLabelKey,
-  subscriptionPlanLabelKey,
-  subscriptionStatusLabelKey,
-} from '@/lib/codes';
+import { COMPANY_TYPE_LABEL_KEY, companyTypeLabelKey } from '@/lib/codes';
 
-/** Walk a dotted i18n key ("subscriptionPlans.basic") into a locale object. */
+/** Walk a dotted i18n key ("companyTypes.client") into a locale object. */
 function resolve(locale: Record<string, unknown>, dottedKey: string): unknown {
   return dottedKey.split('.').reduce<unknown>(
     (node, segment) =>
@@ -29,9 +20,6 @@ function resolve(locale: Record<string, unknown>, dottedKey: string): unknown {
  * English user silently gets the raw key rendered back at them.
  */
 const LABEL_MAPS: Array<[string, Record<string, string>]> = [
-  ['SUBSCRIPTION_PLAN_LABEL_KEY', SUBSCRIPTION_PLAN_LABEL_KEY],
-  ['SUBSCRIPTION_STATUS_LABEL_KEY', SUBSCRIPTION_STATUS_LABEL_KEY],
-  ['ENTITLEMENT_ACCESS_LABEL_KEY', ENTITLEMENT_ACCESS_LABEL_KEY],
   ['COMPANY_TYPE_LABEL_KEY', COMPANY_TYPE_LABEL_KEY],
 ];
 
@@ -63,14 +51,6 @@ describe('display-code label maps', () => {
 
 describe('display-code label-key resolvers', () => {
   const RESOLVERS: Array<[string, (code?: string | null) => string, string, string]> = [
-    ['subscriptionPlanLabelKey', subscriptionPlanLabelKey, 'PREMIUM', 'subscriptionPlans.premium'],
-    [
-      'subscriptionStatusLabelKey',
-      subscriptionStatusLabelKey,
-      'PAST_DUE',
-      'subscriptionStatuses.pastDue',
-    ],
-    ['entitlementAccessLabelKey', entitlementAccessLabelKey, 'DEMO', 'entitlementAccess.demo'],
     ['companyTypeLabelKey', companyTypeLabelKey, 'MANUFACTURER', 'companyTypes.manufacturer'],
   ];
 
@@ -92,8 +72,6 @@ describe('display-code label-key resolvers', () => {
 
   it('never matches on a translated name (IRON RULE 2)', () => {
     // The Russian display strings the backend sends must not be accepted as codes.
-    expect(subscriptionStatusLabelKey('Просрочена')).toBe('');
-    expect(subscriptionPlanLabelKey('Премиум')).toBe('');
-    expect(entitlementAccessLabelKey('Демо')).toBe('');
+    expect(companyTypeLabelKey('Производитель')).toBe('');
   });
 });
