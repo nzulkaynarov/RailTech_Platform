@@ -74,3 +74,15 @@ export function getInitData(): string {
 export function getStartParam(): string | undefined {
   return getTelegramWebApp()?.initDataUnsafe.start_param || undefined;
 }
+
+/**
+ * Ссылка `t.me/…` из Mini App: `WebApp.openTelegramLink` открывает чат внутри Telegram (обычный
+ * переход по ссылке webview Telegram не обрабатывает). `true` — открыто через SDK; `false` — не
+ * Mini App (или SDK без метода): срабатывает обычная ссылка в новой вкладке.
+ */
+export function openTelegramLink(url: string): boolean {
+  const webApp = getTelegramWebApp();
+  if (!webApp?.initData || typeof webApp.openTelegramLink !== 'function') return false;
+  webApp.openTelegramLink(url);
+  return true;
+}

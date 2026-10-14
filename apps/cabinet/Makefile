@@ -32,9 +32,11 @@ tokens-check: ## Копия токенов совпадает с packages/ui-tok
 	@echo "tokens: ok"
 
 .PHONY: api-types-check
-api-types-check: ## src/api/portal.d.ts совпадает с генерацией из erp-portal.yaml (контракт раньше кода)
+api-types-check: ## Типы совпадают с генерацией: портал (erp-portal.yaml) и форма лида CRM (apps/crm/docs/api/openapi.json)
 	@npx openapi-typescript ../../packages/contracts/openapi/erp-portal.yaml 2>/dev/null | diff -q - src/api/portal.d.ts >/dev/null \
 	  || { echo "cabinet: src/api/portal.d.ts устарел — выполните make -C apps/cabinet gen-api-types"; exit 1; }
+	@node scripts/gen-crm-form-types.mjs | diff -q - src/api/crm-form.d.ts >/dev/null \
+	  || { echo "cabinet: src/api/crm-form.d.ts устарел (OpenAPI CRM) — выполните make -C apps/cabinet gen-api-types"; exit 1; }
 	@echo "api types: ok"
 
 .PHONY: test
@@ -49,7 +51,7 @@ dev: ## Vite dev-сервер на :5175 с моком портального AP
 	VITE_PORTAL_MOCK=1 npx vite --port 5175 --strictPort
 
 .PHONY: dev-stand
-dev-stand: ## Vite dev-сервер на :5175 без мока: /api/portal проксируется на стенд (VITE_PORTAL_PROXY_TARGET, по умолчанию erp.localhost)
+dev-stand: ## Vite dev-сервер на :5175 без мока: /api/portal → стенд ERP (VITE_PORTAL_PROXY_TARGET), форма лида → CRM (VITE_CRM_PROXY_TARGET)
 	VITE_PORTAL_MOCK=0 npx vite --port 5175 --strictPort
 
 .PHONY: build
@@ -57,7 +59,7 @@ build: ## Прод-сборка статики в dist/
 	npm run build
 
 .PHONY: gen-api-types
-gen-api-types: ## Типы портального API из packages/contracts/openapi/erp-portal.yaml → src/api/portal.d.ts
+gen-api-types: ## Типы портала (erp-portal.yaml → src/api/portal.d.ts) и формы лида CRM (→ src/api/crm-form.d.ts)
 	npm run gen:api-types
 
 .PHONY: clean

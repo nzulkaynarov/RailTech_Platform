@@ -45,6 +45,7 @@ def web_body(settings: Settings, **patch: Any) -> dict[str, Any]:
         "text": "Нужна интеграция POS с 1С",
         "language": "uz",
         "form_token": form_token(settings),
+        "consent": True,
     }
     body.update(patch)
     return body
@@ -110,6 +111,63 @@ async def test_web_form_creates_lead_in_inbox_without_auth(
 
     actions = await audit_actions(sessions)
     assert {"lead.create_web", "lead.web_request"} <= actions
+
+
+async def test_web_form_consent_required_and_stored(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession], live_settings: Settings
+) -> None:
+    """Q-12 (M2-CAB-03): `consent: true` обязательно; у нового лида — `consent_given_at`, аудит."""
+    without = web_body(live_settings)
+    without.pop("consent")
+    # `false` и поле, не переданное вовсе, — один подкод.
+    for body in (web_body(live_settings, consent=False), without):
+        refused = client.post("/api/v1/leads/web", json=body)
+        assert refused.status_code == 422
+        assert refused.json()["code"] == "validation_failed"
+        assert refused.json()["details"] == {"reason": "consent_required", "field": "consent"}
+    async with sessions() as session:
+        assert (await session.scalars(select(Lead.id))).all() == []
+
+    accepted = client.post("/api/v1/leads/web", json=web_body(live_settings))
+    assert accepted.status_code == 202, accepted.text
+    lead_id = accepted.json()["lead_id"]
+    async with sessions() as session:
+        lead = await session.get(Lead, lead_id)
+        assert lead is not None
+        assert lead.consent_given_at is not None
+        assert lead.consent_version == "web-form"
+        created = (
+            await session.scalars(select(AuditLog).where(AuditLog.action == "lead.create_web"))
+        ).one()
+    assert created.after is not None
+    assert created.after["consent_version"] == "web-form"
+    assert created.after["consent_given_at"] == lead.consent_given_at.isoformat()
+
+    # Существующая карточка без согласия (ручной лид по звонку) — согласие формы не переносится
+    # в карточку (у Telegram-лида это открыло бы обработку диалога ИИ), а пишется в аудит.
+    manager, password = await make_user(sessions, "consent-mgr@railtech.uz", ["manager"])
+    auth = login(client, manager.email, password)
+    manual = client.post(
+        "/api/v1/leads",
+        json={"source": "phone", "name": "Бобур", "phone": "+998907654321"},
+        headers=auth,
+    )
+    assert manual.status_code == 201, manual.text
+    repeat = client.post(
+        "/api/v1/leads/web",
+        json=web_body(live_settings, phone="+998907654321", email=None, text="Перезвоните"),
+    )
+    assert repeat.json()["lead_id"] == manual.json()["id"]
+    async with sessions() as session:
+        known = await session.get(Lead, manual.json()["id"])
+        assert known is not None
+        assert known.consent_given_at is None
+        logged = (
+            await session.scalars(select(AuditLog).where(AuditLog.action == "lead.web_request"))
+        ).one()
+    assert logged.after is not None
+    assert logged.after["repeat"] is True
+    assert logged.after["consent_version"] == "web-form"
 
 
 async def test_web_form_rate_limit_per_ip(client: TestClient, live_settings: Settings) -> None:

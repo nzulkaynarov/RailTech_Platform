@@ -199,5 +199,6 @@ def test_reason_values_are_a_stable_contract() -> None:
         "form_too_fast",
         "form_token_expired",
         "rate_limited",
+        "consent_required",
         "ai_spend_period",
     }
