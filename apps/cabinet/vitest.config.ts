@@ -10,6 +10,8 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     exclude: [...configDefaults.exclude, 'e2e/**'],
     css: false,
+    // Сценарии экранов (ввод, диалоги, несколько запросов к моку) под параллельной нагрузкой дольше 5 с.
+    testTimeout: 20_000,
     // Имя бота для ссылок t.me в тестах (в сборке — VITE_BOT_USERNAME из окружения).
     env: { VITE_BOT_USERNAME: 'railtech_test_bot' },
   },
