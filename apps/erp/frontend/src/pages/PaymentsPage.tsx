@@ -3,7 +3,6 @@ import { useListParams, applyListParams } from '@/components/DataTable/listParam
 import { usePayments } from '@/hooks/useBilling';
 import { DocumentActions } from '@/components/Shared/DocumentActions';
 import { RecordPaymentDialog } from '@/components/Billing/RecordPaymentDialog';
-import { useUserStore } from '@/store/userStore';
 import { useCurrencyStore } from '@/store/currencyStore';
 
 export function PaymentsPage() {
@@ -11,10 +10,8 @@ export function PaymentsPage() {
   const { data: payments, isLoading, isError, refetch } = usePayments();
   const formatCurrency = useCurrencyStore((s) => s.format);
   const [recordOpen, setRecordOpen] = useState(false);
-  // Оплату записывает покупающая сторона. Гейтим по СПОСОБНОСТИ члена (`can_buy`), а не по
-  // контексту отображения: `activeStatus` — первый тип компании, и посредник, который и
-  // покупает, и продаёт, кнопки не видел. Тот же образец, что в DocumentCreateWizard.
-  const isBuyer = useUserStore((s) => s.capabilities.can_buy);
+  // Фиксация поступившей оплаты — действие бэк-офиса (финансы); гейта стороны «покупатель»
+  // больше нет (M1-ERP-02 волна 3). Право решает сервер и отвечает кодом ошибки.
   const listParams = useListParams([] as const, { urlKey: 'payments', defaultOrdering: '-paid_at' });
 
   const stats = [
@@ -28,7 +25,7 @@ export function PaymentsPage() {
       icon={<Wallet className="h-5 w-5" />}
       stats={stats}
       statsError={isError}
-      actions={isBuyer ? [{ label: t('recordPayment.cta'), onClick: () => setRecordOpen(true) }] : undefined}
+      actions={[{ label: t('recordPayment.cta'), onClick: () => setRecordOpen(true) }]}
     >
       <Toolbar
         searchValue={listParams.searchInput}
@@ -53,7 +50,7 @@ export function PaymentsPage() {
                 <EmptyState
                   icon={<Wallet className="h-5 w-5" />}
                   message={t('paymentsPage.emptyState')}
-                  action={isBuyer ? { label: t('recordPayment.cta'), onClick: () => setRecordOpen(true) } : undefined}
+                  action={{ label: t('recordPayment.cta'), onClick: () => setRecordOpen(true) }}
                 />
               );
             }

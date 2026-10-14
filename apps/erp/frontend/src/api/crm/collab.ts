@@ -30,7 +30,8 @@ export const collabApi = {
 		return response.data;
 	},
 	// ─── CRM Phase B — counterparty book («Книга контрагентов») ─────────────
-	// direction=CLIENT → книга клиентов (seller context), SUPPLIER → книга поставщиков (buyer).
+	// direction=CLIENT → книга клиентов бэк-офиса (покупательская книга поставщиков SUPPLIER
+	// удалена из SPA в M1-ERP-02 волна 3).
 	getRelationships: async (direction?: RelationshipDirection) => {
 		const response = await apiClient.get<PaginatedResponse<Relationship>>('crm/relationships/', {
 			params: direction ? { direction } : undefined,

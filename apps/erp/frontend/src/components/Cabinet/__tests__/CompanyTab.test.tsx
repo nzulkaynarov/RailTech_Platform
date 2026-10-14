@@ -14,16 +14,13 @@ import { accountsApi } from '@/api/accountsApi';
 
 // ── Mutable store state fed to the mocked stores (hoisted so the vi.mock
 //    factories below can close over it; each test resets via makeUserState). ──
-type Entry = { status: 'BUYER' | 'SELLER' };
 type MockUserState = {
   company: {
     id: number | null;
     name: string;
     inn: string;
     logoUrl: string | null;
-    statusEntries: Entry[];
   };
-  activeStatus: 'BUYER' | 'SELLER';
   updateCompany: ReturnType<typeof vi.fn>;
   capabilities: { permissions: string[] };
 };
@@ -67,10 +64,8 @@ function makeUserState(
       name: 'Рельсы',
       inn: '123456789',
       logoUrl: null,
-      statusEntries: [{ status: 'SELLER' }],
       ...overrides,
     },
-    activeStatus: 'SELLER',
     updateCompany: vi.fn(),
     capabilities: { permissions },
   };

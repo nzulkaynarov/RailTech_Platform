@@ -57,10 +57,12 @@ export function InvoicesPage() {
   const issueInvoice = useIssueInvoice();
   const cancelInvoice = useCancelInvoice();
   const updateDraft = useUpdateInvoiceDraft();
-  // Оплата — действие ПОКУПАТЕЛЯ, выпуск акта — ПРОДАВЦА. Сторону по каждому счёту считает
-  // сервер (`viewer_can_pay` / `viewer_can_manage`), как у договоров с viewer_can_sign_*:
-  // прежний вывод из activeStatus брал первый тип компании, и посредник, который и покупает,
-  // и продаёт, не видел кнопки «Сформировать акт» вовсе.
+  // Управление счётом (выпуск, акт, аннулирование) — по серверной подсказке `viewer_can_manage`.
+  // Фиксация поступившей оплаты — действие бэк-офиса (финансы): кнопка видна на выставленном
+  // неоплаченном счёте, право проверяет сервер. Прежний гейт `viewer_can_pay` означал сторону
+  // ПОКУПАТЕЛЯ и снят в M1-ERP-02 волна 3 — клиент в ERP не входит.
+  const canRecordPayment = (invoice: Invoice) =>
+    invoice.status === 'ISSUED' || invoice.status === 'PARTIAL' || invoice.status === 'OVERDUE';
 
   // DRAFT-only editable fields. Kept in local state, synced when the open
   // invoice changes; amounts are NOT editable (they derive from the contract).
@@ -235,7 +237,7 @@ export function InvoicesPage() {
                 <div><Label>{t('invoicesPage.table.deal')}</Label><DealLink dealId={selected.deal} /></div>
                 <div><Label>{t('invoicesPage.table.total')}</Label><p className="tabular-nums">{formatCurrency(Number(selected.total_incl_vat))}</p></div>
                 <div><Label>{t('invoicesPage.table.paid')}</Label><p className="tabular-nums">{formatCurrency(Number(selected.amount_paid))}</p></div>
-                {/* Outstanding balance — surfaced so the buyer doesn't subtract
+                {/* Outstanding balance — surfaced so nobody has to subtract
                     total − paid by hand before paying. Highlighted when overdue. */}
                 <div>
                   <Label>{t('invoicesPage.balanceDue')}</Label>
@@ -248,7 +250,7 @@ export function InvoicesPage() {
               <Separator />
               {selected.status === 'DRAFT' ? (
                 // DRAFT — editable due date + notes; amounts come from the contract
-                // and are not editable. «Issue» renders the PDF and notifies the buyer.
+                // and are not editable. «Issue» renders the PDF and notifies the client.
                 <div className="flex flex-col gap-3">
                   <p className="text-xs text-muted-foreground">{t('invoicesPage.amountsFromContract')}</p>
                   <div className="space-y-1.5">
@@ -302,7 +304,7 @@ export function InvoicesPage() {
                       size="default"
                     />
                   )}
-                  {selected.viewer_can_pay && (
+                  {canRecordPayment(selected) && (
                     <Button
                       onClick={() => setPayOpen(true)}
                     >

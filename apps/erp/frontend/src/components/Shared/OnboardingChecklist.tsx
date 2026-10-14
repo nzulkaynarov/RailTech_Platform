@@ -6,14 +6,11 @@ import {
   ChevronRight,
   Users as UsersIcon,
   Rocket,
-  FilePlus,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useAuthStore } from '@/store/authStore';
-import { useUserStore } from '@/store/userStore';
-import { useDeals } from '@/hooks/useCRM';
 import { cn } from '@/lib/utils';
 
 interface OnboardingChecklistProps {
@@ -27,7 +24,6 @@ interface Step {
   icon: React.ComponentType<{ className?: string }>;
   done: boolean;
   action?: { label: string; target: string };
-  appliesTo: 'all' | 'seller' | 'buyer';
 }
 
 const STORAGE_KEY = 'onboarding.dismissed';
@@ -51,38 +47,20 @@ function markDismissed() {
 export function OnboardingChecklist({ onNavigate }: OnboardingChecklistProps) {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
-  const activeStatus = useUserStore((s) => s.activeStatus);
-  const { data: deals = [] } = useDeals();
-
-  const isSeller = activeStatus === 'SELLER';
-  const isBuyer = activeStatus === 'BUYER';
-
   const profileDone = Boolean(user?.first_name && user?.last_name);
-  const hasDeal = deals.length > 0;
 
-  const steps: Step[] = useMemo(() => {
-    const all: Step[] = [
-      {
-        id: 'profile',
-        label: t('onboarding.steps.profile.label'),
-        hint: t('onboarding.steps.profile.hint'),
-        icon: UsersIcon,
-        done: profileDone,
-        action: !profileDone ? { label: t('onboarding.steps.profile.cta'), target: 'profile' } : undefined,
-        appliesTo: 'all',
-      },
-      {
-        id: 'first-rfq',
-        label: t('onboarding.steps.firstRfq.label'),
-        hint: t('onboarding.steps.firstRfq.hint'),
-        icon: FilePlus,
-        done: hasDeal,
-        action: !hasDeal ? { label: t('onboarding.steps.firstRfq.cta'), target: 'my-requests' } : undefined,
-        appliesTo: 'buyer',
-      },
-    ];
-    return all.filter((s) => s.appliesTo === 'all' || (s.appliesTo === 'seller' && isSeller) || (s.appliesTo === 'buyer' && isBuyer));
-  }, [profileDone, hasDeal, isSeller, isBuyer, t]);
+  // Покупательский шаг «Создайте первую заявку» удалён в M1-ERP-02 волна 3: заявки подают
+  // клиенты в Cabinet, бэк-офис их обрабатывает.
+  const steps: Step[] = useMemo(() => [
+    {
+      id: 'profile',
+      label: t('onboarding.steps.profile.label'),
+      hint: t('onboarding.steps.profile.hint'),
+      icon: UsersIcon,
+      done: profileDone,
+      action: !profileDone ? { label: t('onboarding.steps.profile.cta'), target: 'profile' } : undefined,
+    },
+  ], [profileDone, t]);
 
   const doneCount = steps.filter((s) => s.done).length;
   const total = steps.length;

@@ -26,9 +26,8 @@ export interface Contract {
   manager_signer: number | null;
   manager_signer_name: string | null;
   manager_signed_at: string | null;
-  // Which side the VIEWER may sign, derived server-side from their relationship to the deal
-  // (not the SPA page context) — a dual buy+sell company gets the right button either way.
-  viewer_can_sign_client: boolean;
+  // Может ли зритель подписать договор со стороны исполнителя — считает сервер. Подпись клиента
+  // ставится в Cabinet (M1-ERP-02 волна 3).
   viewer_can_sign_manager: boolean;
   valid_from: string | null;
   valid_until: string | null;
@@ -81,10 +80,6 @@ export const contractsApi = {
       field,
       variant_id: variantId,
     });
-    return response.data;
-  },
-  signClient: async (id: number) => {
-    const response = await apiClient.post<Contract>(`crm/contracts/${id}/sign-client/`);
     return response.data;
   },
   signManager: async (id: number) => {

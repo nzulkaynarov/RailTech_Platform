@@ -143,8 +143,6 @@ export interface UserMembership {
 	role_name?: string;
 	is_primary?: boolean;
 	is_active?: boolean;
-	can_sell?: boolean;
-	can_buy?: boolean;
 }
 
 export interface User {
@@ -161,12 +159,6 @@ export interface User {
 	workspace_role?: string | null;
 	preferences?: { language?: string; theme?: string };
 	memberships?: UserMembership[];
-	// Per-membership capabilities from the primary company.
-	// OWNER distributes these inside the team; frontend filters
-	// the context switcher so a member with can_sell=false does not see
-	// SELLER/MANUFACTURER contexts.
-	can_sell?: boolean;
-	can_buy?: boolean;
 	company?: Company;
 	primary_company?: Company;
 	is_active?: boolean;
@@ -226,12 +218,6 @@ export const accountsApi = {
 	},
 	getCompanyDetail: async (id: number) => {
 		const response = await apiClient.get<Company>(`accounts/companies/${id}/`);
-		return response.data;
-	},
-	// Buyer-facing verified-supplier directory for the open-RFQ invite flow.
-	// Member-accessible (unlike the admin-only full company list); minimal fields.
-	getPartnerSuppliers: async (): Promise<{ id: number; name: string; inn: string }[]> => {
-		const response = await apiClient.get<{ id: number; name: string; inn: string }[]>('accounts/companies/suppliers/');
 		return response.data;
 	},
 	createCompany: async (data: Partial<Company>) => {
@@ -459,15 +445,7 @@ export const accountsApi = {
 	},
 
 	// ─── Workspace Roles ───────────────────────────────────────────────
-	updateMemberCapabilities: async (
-		companyId: number,
-		payload: { member_id: number; can_sell?: boolean; can_buy?: boolean },
-	) => {
-		const response = await apiClient.post<{
-			id: number; user_id: number; can_sell: boolean; can_buy: boolean;
-		}>(`accounts/companies/${companyId}/update-member-capabilities/`, payload);
-		return response.data;
-	},	// S3 (P2): Company Admin removes a member from the company. Never-orphan on the
+	// S3 (P2): Company Admin removes a member from the company. Never-orphan on the
 	// backend → CANNOT_REMOVE_LAST_COMPANY_ADMIN. `member_id` is the CompanyMember pk.
 	removeMember: async (companyId: number, memberId: number) => {
 		const response = await apiClient.post<{ removed: boolean; member_id: number }>(

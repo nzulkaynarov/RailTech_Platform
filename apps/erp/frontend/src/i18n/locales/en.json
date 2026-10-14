@@ -105,11 +105,6 @@
         "label": "Complete your profile",
         "hint": "First and last name — so teammates recognise you in activity logs.",
         "cta": "Open profile"
-      },
-      "firstRfq": {
-        "label": "Create your first request",
-        "hint": "Describe what you need — we'll match suppliers.",
-        "cta": "Create"
       }
     }
   },
@@ -220,27 +215,6 @@
     "templateSecondary": "Exact Excel template — if you prefer to fill it in manually",
     "reqFormats": "Formats: Excel (.xlsx), PDF or photo (.png, .jpg, .jpeg) — up to 20 MB"
   },
-  "createDeal": {
-    "title": "New request (RFQ)",
-    "description": "Create a new procurement request. You can import line items from Excel and invite suppliers later.",
-    "submit": "Create",
-    "titleRequired": "Title is required",
-    "created": "Request created",
-    "importOptionHint": "Next, add items manually or upload a file — AI will recognise it.",
-    "fields": {
-      "title": "Title",
-      "titlePlaceholder": "e.g. Q2 2026 bearings procurement",
-      "notes": "Notes",
-      "notesPlaceholder": "Context, deadlines, constraints…",
-      "routeToSellers": "Route to seller(s)",
-      "routeToSellersPlaceholder": "Select sellers",
-      "routeToSellersHint": "Optional — choose which sellers receive this request. Can be left empty.",
-      "sellerSearchPlaceholder": "Search sellers…",
-      "sellersSelected": "{{count}} selected",
-      "removeSeller": "Remove {{name}}",
-      "noSellers": "No sellers found"
-    }
-  },
   "newQuote": {
     "action": "New quote",
     "title": "New quote",
@@ -296,56 +270,17 @@
     "table": {
       "name": "Name"
     },
-    "card": {
-      "requestQuote": "Request quote →"
-    },
     "productDetail": {
       "description": "Description"
     },
     "productNotFound": "Product not found"
   },
   "productManagement": {
-    "kpi": {
-      "totalItems": "Total Items",
-      "inCart": "In Cart"
-    },
-    "title": {
-      "buyer": "Product Catalog",
-      "manufacturer": "My Products",
-      "seller": "Product Range"
-    },
-    "subtitle": {
-      "buyer": "Browse catalog and submit requests",
-      "seller": "Products from approved partner manufacturers"
-    },
-    "createRequest": "Create Request",
-    "addProduct": "Add product",
-    "bulkImport": "Import from Excel",
-    "searchPlaceholder": {
-      "buyer": "Search by name, manufacturer, category...",
-      "seller": "Search by name, article, GOST..."
-    },
-    "filters": {
-      "allDomains": "All Domains",
-      "allStatuses": "All Statuses",
-      "allManufacturers": "All manufacturers",
-      "allOwners": "All listings",
-      "onlyMine": "Mine only"
-    },
     "table": {
       "name": "Name",
-      "article": "Article",
-      "domain": "Domain",
-      "category": "Category",
       "uom": "UOM",
-      "priceFca": "Price FCA",
-      "status": "Status",
-      "select": "Select",
-      "owner": "Listing owner",
-      "mine": "Mine",
-      "actions": "Actions"
-    },
-    "noResults": "No products found"
+      "status": "Status"
+    }
   },
   "domains": {
     "RAILWAY_MACHINERY": "Railway Equipment",
@@ -365,11 +300,6 @@
   },
   "sourcing": {
     "title": "Specification Import",
-    "uploadTitle": "Upload file",
-    "uploadHint": "Drag and drop an Excel file here or click to browse",
-    "uploadError": "Failed to upload file. Check the format (.xlsx, .xls).",
-    "processing": "Processing file...",
-    "processingHint": "Recognising line items — this can take up to a minute for large files…",
     "noMatch": "No match found"
   },
   "quote": {
@@ -692,12 +622,10 @@
   },
   "counterparties": {
     "title": {
-      "clients": "Clients",
-      "suppliers": "Suppliers"
+      "clients": "Clients"
     },
     "description": {
-      "clients": "Companies that buy from you — with interaction history",
-      "suppliers": "Companies you buy from — with interaction history"
+      "clients": "Companies that buy from you — with interaction history"
     },
     "searchPlaceholder": "Search by name or TIN",
     "newClient": "New client",
@@ -707,7 +635,6 @@
     "stageUpdated": "Stage updated",
     "emptyState": "No counterparties yet",
     "emptyStateHintClients": "Add your first client or wait for an inbound request",
-    "emptyStateHintSuppliers": "Route a request to sellers — they will appear here",
     "table": {
       "counterparty": "Counterparty",
       "stage": "Stage",
@@ -760,20 +687,6 @@
     "loadMore": "Show more"
   },
   "cart": {
-    "title": "Purchase Request",
-    "empty": "Purchase request is empty",
-    "emptyHint": "Add products from the catalog",
-    "rfqExplanation": "A purchase request invites suppliers to submit an offer with pricing and delivery timeline.",
-    "addedToCart": "Added",
-    "added": "«{{name}}» added to request",
-    "remove": "Remove",
-    "clear": "Clear",
-    "increase": "Increase quantity",
-    "decrease": "Decrease quantity",
-    "requestQuote": "Request Quote",
-    "requestFrom": "Request from",
-    "requestCreated": "Request #{{id}} created",
-    "titleLabel": "Request name (optional)",
     "itemsCount_one": "{{count}} item in request",
     "itemsCount_other": "{{count}} items in request"
   },
@@ -783,7 +696,6 @@
     "inn": "TIN"
   },
   "errors": {
-    "network": "Network error. Check your internet connection.",
     "forbidden": "You don't have access to this section.",
     "notFound": "Page not found.",
     "server": "Server error. Please try again later.",
@@ -903,13 +815,6 @@
     "inviteError": "Failed to send invitation.",
     "inviteHint": "Assign a company role to control what each member can do; you can change it any time below.",
     "ownerOnly": "Only the company Admin can invite new employees.",
-    "capabilities": {
-      "label": "Rights",
-      "sell": "Selling",
-      "buy": "Buying",
-      "none": "No rights",
-      "updated": "Member rights updated"
-    },
     "companyRole": "Company role",
     "noRole": "No role",
     "rolesSection": {
@@ -1028,10 +933,6 @@
     "release": "Return to queue",
     "released": "Request returned to the team queue"
   },
-  "companyStatus": {
-    "BUYER": "Buyer",
-    "SELLER": "Seller"
-  },
   "roles": {
     "ADMIN": "Platform Administrator",
     "USER": "User",
@@ -1039,10 +940,6 @@
     "adminDesc": "Owner of the platform; governs the whole system",
     "user": "User",
     "userDesc": "Operates within their company"
-  },
-  "companyStatusDesc": {
-    "BUYER": "Only requests quotes and purchases equipment",
-    "SELLER": "Intermediary: buys and resells, can add available products"
   },
   "productStatuses": {
     "in_stock": "In Stock",
@@ -1060,8 +957,6 @@
   },
   "shell": {
     "dashboard": "Dashboard",
-    "catalog": "Catalog",
-    "myRequests": "My Requests",
     "documents": "Documents",
     "nomenclature": "Nomenclature",
     "nomenclatureSection": "Products",
@@ -1093,8 +988,6 @@
     "specifications": "Specifications",
     "description": "Description",
     "documents": "Documents",
-    "addToRequest": "Add to request",
-    "addedToRequest": "Added to your request",
     "priceFCA": "FCA Price",
     "article": "Article",
     "gostDrawing": "GOST / Drawing",
@@ -1108,9 +1001,6 @@
     "document": "Document",
     "supplierOffers": "Supplier Offers",
     "minOrder": "Min. order: {{qty}} pcs",
-    "quantity": "Quantity",
-    "decrease": "Decrease",
-    "increase": "Increase",
     "actions": {
       "edit": "Edit",
       "unpublish": "Unpublish",
@@ -1124,23 +1014,8 @@
   },
   "dashboardPage": {
     "title": "Dashboard",
-    "welcome": {
-      "title": "Welcome, {{name}}!",
-      "subtitle": "Get started on the platform in 3 simple steps",
-      "stepN": "Step {{n}}",
-      "step1": "Browse the catalog",
-      "step1Desc": "Explore available equipment and parts from verified suppliers",
-      "step2": "Create a request",
-      "step2Desc": "Add products to your cart and submit a request for quotation",
-      "step3": "Track your requests",
-      "step3Desc": "Receive quotes from suppliers, compare prices and sign contracts",
-      "browseCatalog": "Open catalog",
-      "addToCart": "Go to catalog",
-      "viewRequests": "My requests"
-    },
     "quarter": "Quarter",
     "year": "Year",
-    "showAll": "Show all",
     "recentDocuments": {
       "title": "Recent documents",
       "document": "Document",
@@ -1162,19 +1037,14 @@
       "signContract": "Contracts to sign",
       "rfqNoKp": "RFQs without a quote",
       "expiredKp": "Expired quotes",
-      "reviewKp": "Quotes to review",
       "oldestWaiting": "oldest {{waiting}}",
       "postContractTitle": "Money and delivery",
       "invoicesToIssue": "Invoices to issue",
       "awaitingPayment": "Awaiting payment",
-      "invoicesToPay": "Invoices to pay",
       "overdueInvoices_one": "{{count}} overdue",
       "overdueInvoices_other": "{{count}} overdue",
       "actsAwaitingAcceptance": "Acts awaiting acceptance",
-      "actsToAccept": "Acts to accept",
-      "inTransit": "Shipments in transit",
-      "awaitingDelivery": "Expected deliveries",
-      "toAccept": "Awaiting acceptance"
+      "inTransit": "Shipments in transit"
     },
     "funnel": {
       "title": "Deal pipeline"
@@ -1195,22 +1065,12 @@
       "activeRequests": "Active Requests",
       "catalogItems": "Catalog Items",
       "dealsVolume": "Deal Volume",
-      "quotesReceived": "Quotes Received",
-      "completed": "Completed",
       "clients": "Clients"
-    },
-    "buyer": {
-      "days": "days",
-      "recentRequests": "Recent Requests",
-      "requestNumber": "#",
-      "date": "Date",
-      "status": "Status",
-      "amount": "Amount",
-      "deal": "Deal"
     },
     "manufacturer": {
       "waiting": "Waiting"
-    }
+    },
+    "days": "days"
   },
   "profile": {
     "title": "Profile",
@@ -1250,7 +1110,6 @@
       "legalAddress": "Legal address",
       "iso9001": "ISO 9001 certificate",
       "iso9001Help": "Check if the company holds a valid ISO 9001 quality certificate",
-      "platformStatuses": "Company statuses on the platform",
       "contactAdmin": "Contact administrator to change company data",
       "save": "Save company data",
       "saved": "Company data saved",
@@ -1390,18 +1249,14 @@
         "description": "55 items of railway equipment, goods, and services. Switch domains and view modes."
       },
       "1": {
-        "title": "Purchase Request",
-        "description": "Import line items from Excel straight into the request — the system automatically matches them to the catalog."
-      },
-      "2": {
         "title": "Commercial Offer",
         "description": "Landed Cost calculation: FCA + logistics + customs. Waterfall cost diagram."
       },
-      "3": {
+      "2": {
         "title": "Quote Builder",
         "description": "Full cost calculation with margin. Split by domains."
       },
-      "4": {
+      "3": {
         "title": "Analytics & CRM",
         "description": "Role-based dashboards, deal funnel, KPIs. One platform — three roles."
       }
@@ -1429,10 +1284,7 @@
     },
     "sourcingImport": {
       "title": "Excel Import",
-      "description": "Upload and parse client specifications",
-      "importSuccess": "Import started",
-      "templateError": "Couldn't download the template",
-      "downloadTemplate": "Download Excel template"
+      "description": "Upload and parse client specifications"
     },
     "deals": {
       "title": "Deals",
@@ -1458,21 +1310,14 @@
       "detail": {
         "quoteSentToast": "Quote sent to client",
         "openQuote": "Open quote"
-      },
-      "routedTo": "Routed to"
+      }
     },
     "quotes": {
-      "buyerTitle": "Commercial Offers",
-      "buyerDescription": "Received quotes from suppliers",
       "sellerTitle": "Quotes",
       "sellerDescription": "Quote Builder — Landed Cost calculation and quote generation",
       "searchPlaceholder": "Search by quote / deal",
       "allStatuses": "All statuses",
       "stats": {
-        "total": "Total quotes",
-        "underReview": "Under review",
-        "accepted": "Accepted",
-        "totalAmount": "Total amount",
         "drafts": "Drafts",
         "sent": "Sent",
         "approved": "Approved",
@@ -1480,7 +1325,6 @@
       },
       "table": {
         "number": "Quote #",
-        "supplier": "Supplier",
         "client": "Client",
         "items": "Items",
         "amount": "Amount",
@@ -1614,17 +1458,6 @@
         "howResetPasswordAnswer": "Click 'Forgot password?' on the login page. A recovery link will be sent to your registered email."
       }
     },
-    "myRequests": {
-      "title": "My Requests",
-      "description": "Track your requests and orders",
-      "deal": "Request",
-      "searchPlaceholder": "Search by title or company",
-      "newRequest": "New request",
-      "colRequest": "Request",
-      "colStatus": "Status",
-      "colDate": "Date",
-      "colTotal": "Total"
-    },
     "documents": {
       "title": "Documents",
       "description": "Quotes, contracts and closing documents"
@@ -1640,13 +1473,12 @@
     "dealQuote": {
       "title": "Quote builder",
       "noQuote": "No quote yet",
-      "noQuoteHint": "Go back to the deal and click “Create quote” to start.",
       "noQuoteSellerHint": "Prepare the quote in one click (the request and its lines are pulled in) or create an empty quote manually.",
       "notFound": "Deal not found",
-      "buyerNote": "What the buyer asked for",
       "calculatorDraft": "Draft with no client",
       "calculatorDraftHint": "Pick the recipient later — sending the quote will ask you to choose a client first.",
-      "stageBadgeHint": "Deal stage"
+      "stageBadgeHint": "Deal stage",
+      "clientNote": "What the client asked for"
     }
   },
   "a11y": {
@@ -1767,7 +1599,6 @@
     "searchPlaceholder": "Search by number or deal",
     "emptyState": "No contracts found",
     "emptyStateHint": "Contracts appear here once a quote on a deal is approved.",
-    "signedClient": "Signed by client",
     "signedManager": "Signed by manager",
     "uploadedSigned": "Signed copy uploaded",
     "cancelled": "Contract cancelled",
@@ -1786,12 +1617,7 @@
     "table": {
       "deal": "Deal",
       "total": "Total",
-      "created": "Created",
-      "side": "Side"
-    },
-    "side": {
-      "buyer": "We are the buyer",
-      "seller": "We are the seller"
+      "created": "Created"
     },
     "status": {
       "DRAFT": "Draft",
@@ -1890,7 +1716,6 @@
     "title": "Acts",
     "description": "Hand-over acts for closed deals",
     "emptyState": "No acts found",
-    "signed": "Act signed",
     "allStatuses": "All statuses",
     "stats": {
       "total": "Total",
@@ -1910,23 +1735,10 @@
       "CANCELLED": "Cancelled"
     },
     "downloadSigned": "Download signed",
-    "uploadSigned": "Upload signed",
-    "accept": "Accept act",
-    "reject": "Reject",
-    "rejected": "The act was returned to the issuer",
     "rejectedWithReason": "Returned by the customer: {{reason}}",
-    "rejectDialog": {
-      "title": "Reject the act",
-      "description": "Say what is wrong — the issuer will see the reason and re-issue the act.",
-      "reasonLabel": "Reason",
-      "reasonPlaceholder": "For example: the scope does not match the delivery note",
-      "confirm": "Reject",
-      "reasonRequired": "Please give a reason"
-    },
     "issuedBy": "Issued by",
     "acceptedBy": "Accepted by",
     "turn": {
-      "yours": "Waiting for your confirmation",
       "counterparty": "Waiting for the customer to confirm",
       "settled": "Confirmed by both parties"
     },
@@ -2086,12 +1898,6 @@
     "emptyState": "No fulfillments",
     "updateStatus": "Update status",
     "statusUpdated": "Status updated",
-    "acceptedToast": "Delivery accepted — deal closed",
-    "disputedToast": "A delivery dispute was opened",
-    "confirmAccept": "Accept the delivery? This closes the deal and confirms completion. This cannot be undone.",
-    "confirmDispute": "Open a dispute on this delivery? The deal stays open and the supplier is notified.",
-    "accept": "Accept delivery",
-    "dispute": "Dispute",
     "allStatuses": "All statuses",
     "stats": {
       "total": "Total",
@@ -2120,18 +1926,13 @@
       "carrier": "Carrier",
       "expectedDeliveryDate": "Expected date",
       "notes": "Notes"
-    },
-    "disputedHint": "Dispute recorded — await the supplier’s response. Discuss it in the request chat."
+    }
   },
   "confirmActions": {
     "sendQuote": {
       "title": "Send quote to the client?",
       "description": "The client will immediately see the priced offer and the prices will be frozen. This cannot be undone.",
       "justificationLabel": "Justification for sending below the margin floor"
-    },
-    "approveQuote": {
-      "title": "Approve this quote?",
-      "description": "Approving accepts the seller's offer and moves the deal toward a contract. This cannot be undone."
     }
   },
   "rematchDialog": {
@@ -2161,83 +1962,20 @@
     "esign": "Manual mode: click-to-sign. A legally binding e-signature (E-IMZO) will be wired before production release."
   },
   "guards": {
-    "notAvailableHere": "This section isn't available in the current mode"
-  },
-  "aiImport": {
-    "dialogTitle": "Import items from a file",
-    "optionAi": "AI recognition",
-    "optionAiHint": "Excel, CSV, PDF or a photo — AI recognises the items and fills the request.",
-    "optionTemplate": "Our template (no AI)",
-    "optionTemplateHint": "Fill in our template and upload it — no data sent to external AI.",
-    "disclaimerShort": "File is processed by an external AI (Anthropic). Don't upload confidential data; review the result.",
-    "more": "Details",
-    "less": "Hide",
-    "disclaimer": "The uploaded file will be sent to an external artificial-intelligence service (Anthropic Claude, servers outside Uzbekistan) to automatically recognise the line items. By clicking \"Recognise\" you consent to this processing. The platform operator uses the file only for recognition and is not responsible for data processing by the external AI service. Do not upload confidential, secret or personal data. AI can make mistakes — always review the recognised items manually before submitting the request.",
-    "agree": "Recognise file",
-    "acceptedAi": "Excel, CSV, PDF, image or a photo of a table",
-    "importSummaryMerged": "Added {{added}}, merged into existing: {{merged}}"
-  },
-  "requestStatus": {
-    "all": "All",
-    "draft": "Draft",
-    "awaiting": "Awaiting quote",
-    "quote": "Quote received",
-    "confirmed": "In progress",
-    "completed": "Completed",
-    "cancelled": "Cancelled"
+    "notAvailableHere": "This section doesn't exist or is no longer available"
   },
   "requestItems": {
-    "title": "Your request",
-    "subtitleEditable": "What you want to procure. Add and edit line items until the seller takes the request into work.",
-    "subtitleLocked": "The list of requested line items.",
-    "nameCol": "Name",
     "unitCol": "Unit",
-    "qtyCol": "Qty",
     "skuLabel": "Art.",
-    "numCol": "#",
     "noteCol": "Note",
-    "notePlaceholder": "Note (spec, standard…)",
-    "incomplete": "Incomplete — needs a name or code, and a unit",
-    "namePlaceholder": "Product name",
-    "uploadFile": "Upload file",
-    "add": "Add",
-    "empty": "No items yet. Add the first one manually or import an Excel file.",
-    "nameRequired": "Enter the item name",
-    "added": "Item added",
-    "removed": "Item removed",
-    "submit": "Submit request to the seller",
-    "submitHint": "Review the items and submit — the seller will prepare a quote.",
-    "submitHintEmpty": "Add at least one line item to submit the request.",
-    "submitHintIncomplete": "Complete the highlighted rows (name or code, and unit of measure) to submit.",
-    "submittedToast": "Request submitted to the seller",
-    "fromCatalog": "from catalog",
     "gostLabel": "GOST / drawing",
-    "codePlaceholder": "Part no. / GOST / drawing",
-    "codeLabel": "Part code",
-    "unitNotNormalized": "Unit not standardised — pick one from the list for an accurate quote",
-    "searchNamePlaceholder": "Search name (for catalog)",
-    "searchNameLabel": "Search name",
-    "pickSuppliersTitle": "Who should receive this request?",
-    "pickSuppliersDesc": "Choose the suppliers — they will receive your request and prepare quotes.",
-    "noSuppliers": "No verified suppliers on the platform yet. Try again later or contact support.",
-    "sendToSelected": "Send to selected",
     "suggestedHint_one": "Found {{count}} matching supplier for your items — pre-selected. You can uncheck or add others.",
     "suggestedHint_other": "Found {{count}} matching suppliers for your items — pre-selected. You can uncheck or add others.",
-    "matchedLines": "matched {{matched}} of {{total}}",
-    "aiSuggestHint": "Can't find the supplier you need?",
-    "aiSuggestButton": "Enhance with AI",
     "aiSuggestAdded_one": "AI found {{count}} more supplier",
-    "aiSuggestAdded_other": "AI found {{count}} more suppliers",
-    "aiSuggestNoneNew": "AI found no new suppliers — the list is already complete",
-    "removeConfirmTitle": "Delete this line?",
-    "removeConfirmDescription": "Line {{name}} will be removed from the request. It cannot be restored — you would need to add it again.",
-    "unitRequired": "Pick a unit of measure — without it the seller cannot price the line."
+    "aiSuggestAdded_other": "AI found {{count}} more suppliers"
   },
   "requestDetailActions": {
-    "titleLabel": "Request title",
     "soloNoClient": "No client (calculator)",
-    "noteToSeller": "Note to the seller",
-    "noteToSellerPlaceholder": "Deadlines, delivery terms, preferences…",
     "startSourcing": "Start sourcing",
     "takeAndPrepare": "Take & prepare quote",
     "takePreparing": "Preparing draft quote…",
@@ -2246,11 +1984,8 @@
     "newQuoteVersion": "Create new version",
     "sendQuote": "Send quote",
     "belowFloorSendInBuilder": "This quote is below the margin floor — sending it needs a written justification. Opening the quote builder.",
-    "approveQuote": "Approve",
-    "rejectQuote": "Reject",
     "dealAccepted": "Deal accepted",
     "noActions": "No actions available",
-    "buyerWaitHint": "The manager is preparing your quote. «Approve» and «Reject» will appear once the quote is sent.",
     "actionsLabel": "Actions",
     "quoteTitle": "Quote v{{version}}",
     "totalInclVat": "Total incl. VAT",
@@ -2262,32 +1997,16 @@
     "finalPriceCol": "Final price",
     "noItems": "No items in this quote yet",
     "noQuote": "No active quote yet",
-    "rejectDialog": {
-      "title": "Reject quote",
-      "description": "Provide a rejection reason — it will be logged and shown to the manager.",
-      "reasonLabel": "Reason",
-      "reasonPlaceholder": "E.g. price is 20% above our budget",
-      "confirm": "Reject",
-      "reasonRequired": "Reason is required"
-    },
     "validUntil": "Valid until",
     "validUntilExpired": "Expired",
     "sellerNote": "Supplier comment",
     "downloadPdf": "Download quote (PDF)",
     "subtotal": "Subtotal (excl. VAT)",
     "vatAmount": "VAT",
-    "backToRequests": "Back to my requests",
-    "routedTo": "Routed to",
+    "backToRequests": "Back to deals",
     "charges": "Charges / allowances",
     "openContract": "Open contract",
-    "accepted": {
-      "title": "Offer accepted",
-      "readyToSign": "Contract No. {{number}} is ready for your signature",
-      "contractReady": "Contract No. {{number}} has been created",
-      "contractPending": "The contract is being prepared — open the Contracts section",
-      "resolving": "Loading contract…",
-      "goToContract": "Go to contract"
-    }
+    "clientNote": "Client's note"
   },
   "deleteConfirmations": {
     "quoteItemDescription": "The item will be removed permanently."
@@ -2561,32 +2280,6 @@
     "published": "Published",
     "archived": "Archived"
   },
-  "preflight": {
-    "title": "Request quality check (AI)",
-    "subtitle": "Optional pre-submit pass: the AI flags what to improve. Advisory only — it never blocks submitting.",
-    "checkButton": "Check request",
-    "idleHint": "Press \"Check request\" to get quality suggestions for your line items.",
-    "allClear": "No issues found — the request looks ready to submit.",
-    "lineLabel": "Line {{index}}: {{name}}",
-    "unnamedLine": "Line {{index}} (unnamed)",
-    "suggestionLabel": "Suggestion"
-  },
-  "coverageCheck": {
-    "title": "Quote vs request check",
-    "subtitle": "Compares the received quote against your original request. Advisory only — it never blocks anything.",
-    "checkButton": "Check quote",
-    "idleHint": "Press \"Check quote\" to find uncovered lines and discrepancies with your request.",
-    "allClear": "No discrepancies with your request found.",
-    "lineLabel": "Line {{index}}: {{name}}",
-    "unnamedLine": "Item {{index}}",
-    "aiOffHint": "Semantic check is off — only uncovered lines are shown.",
-    "issue": {
-      "uncovered": "Line not priced in the quote",
-      "substituted": "A non-equivalent substitute was offered",
-      "note_ignored": "A requirement from the note may have been ignored",
-      "qty_unit": "Quantity or unit mismatch"
-    }
-  },
   "documentCheck": {
     "title": "Document check (AI)",
     "subtitle": "Upload a signed contract or counter-invoice — AI extracts the amounts and reconciles them against the quote/contract",
@@ -2612,23 +2305,6 @@
       "TOTAL_NOT_FOUND": "No total found in the document",
       "CURRENCY_NOT_FOUND": "No currency stated in the document"
     }
-  },
-  "conversationalRequest": {
-    "title": "Describe in words (AI)",
-    "hint": "Describe your need in plain text — the AI will propose request line items for you to review and add.",
-    "placeholder": "E.g.: need brake pads for a railcar, 4 sets, and axle-box bearings",
-    "compose": "Build request",
-    "composing": "Building…",
-    "textRequired": "Enter a description of the need",
-    "noItems": "No items recognized — please refine the description",
-    "proposedTitle": "Proposed items",
-    "acceptAll": "Add all",
-    "accept": "Add",
-    "added": "Added",
-    "accepted": "Item added to the request",
-    "unnamed": "Unnamed",
-    "codeLabel": "Code",
-    "candidatesCount": "{{count}} in catalog"
   },
   "export": {
     "pdf": "PDF"

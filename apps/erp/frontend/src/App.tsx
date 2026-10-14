@@ -1,5 +1,4 @@
 import { Suspense, useState, useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { AppShell } from './layouts/AppShell';
@@ -177,14 +176,6 @@ function App() {
 
 function MainApp() {
   const { t } = useTranslation();
-  const activeStatus = useUserStore((s) => s.activeStatus);
-  const setActiveStatus = useUserStore((s) => s.setActiveStatus);
-  const statusEntries = useUserStore((s) => s.company.statusEntries);
-  // `screen` flips to 'main' only when loadFromAuth() has populated real
-  // capabilities. Guards are deferred until then (see evaluatePageGuard) so a
-  // cold-load deep-link isn't bounced by pre-auth default state.
-  const bootstrapped = useUserStore((s) => s.screen === 'main');
-  const queryClient = useQueryClient();
   const [page, setPage] = useState<Page>(() => parseHashToPage(window.location.hash));
   const [showTour, setShowTour] = useState(false);
 
@@ -194,35 +185,16 @@ function MainApp() {
     window.history.pushState({ page: p }, '', `#${pageToHash(p)}`);
   };
 
-  // Unified page-access guard (context only), driven by the pure
-  // evaluatePageGuard. DEFERRED until userStore bootstrap (`bootstrapped`,
-  // i.e. screen === 'main'): on a cold deep-link the store still holds pre-auth
-  // defaults, and enforcing then would bounce a valid hash to #dashboard and
-  // clobber it via replaceState. Once loadFromAuth resolves real capabilities the
-  // effect re-runs (deps below) and enforces exactly as before —
-  //   • page unique to the user's OTHER verified context → adopt it (+ refetch);
-  //   • cross-role page (buyer→seller-only etc.) → toast.info(notAvailableHere) → dashboard.
+  // Гейт страницы (`evaluatePageGuard`): контекста «покупатель / продавец» больше нет
+  // (M1-ERP-02 волна 3), поэтому гейт отбрасывает только устаревший/неизвестный хэш
+  // (старая закладка `#my-requests`, `#admin-*`) — с объяснением и на дашборд.
   useEffect(() => {
-    const decision = evaluatePageGuard({
-      pageType: page.type,
-      activeStatus,
-      statusEntries,
-      bootstrapped,
-    });
-    if (decision.action === 'allow') return;
-    if (decision.action === 'adopt') {
-      // Phase C page-derived context: the working context follows the page.
-      // Invalidate queries so the new context refetches (mirrors the manual switcher).
-      setActiveStatus(decision.context);
-      queryClient.invalidateQueries();
-      return;
-    }
-    // decision.action === 'bounce' — surface WHY (LOW-20), then fall back to the dashboard.
+    if (evaluatePageGuard(page.type).action === 'allow') return;
     toast.info(t('guards.notAvailableHere'));
     // eslint-disable-next-line react-hooks/set-state-in-effect -- гейт страницы: не синхронизация, а НАВИГАЦИЯ с побочными действиями (toast + history.replaceState)
     setPage({ type: 'dashboard' });
     window.history.replaceState(null, '', '#dashboard');
-  }, [page.type, activeStatus, statusEntries, bootstrapped, setActiveStatus, queryClient, t]);
+  }, [page.type, t]);
 
   // Handle browser back/forward
   useEffect(() => {
@@ -234,7 +206,7 @@ function MainApp() {
       }
     };
     // Also react to direct `window.location.hash = …` assignments (used by a few
-    // deep-links: cart→import, lead→deal, catalog bulk-import). Those fire
+    // deep-links: approval queue, notifications, catalog bulk-import). Those fire
     // `hashchange`, not `popstate`, so without this listener the URL changed but
     // the page never switched — a silent dead-end.
     const onHashChange = () => setPage(parseHashToPage(window.location.hash));
@@ -276,10 +248,7 @@ function MainApp() {
     // а на главную (найдено прогоном глазами 19-08). Гейт считается по ТИПУ страницы, как и был.
     if (target.includes('/') || target.includes('?')) {
       const parsed = parseHashToPage(target);
-      const decision = evaluatePageGuard({
-        pageType: parsed.type, activeStatus, statusEntries, bootstrapped,
-      });
-      if (decision.action === 'bounce') {
+      if (evaluatePageGuard(parsed.type).action === 'bounce') {
         toast.info(t('guards.notAvailableHere'));
         navigateTo({ type: 'dashboard' });
         return;
@@ -290,27 +259,10 @@ function MainApp() {
       return;
     }
     // Цели меню — из реестра страниц (`navigable`). Раньше здесь лежал четвёртый
-    // рукописный список идентификаторов, и он уже расходился с остальными: пункты
-    // «Клиенты»/«Поставщики» существовали и в рендере, и в наборах контекста, но
-    // отсутствовали ЗДЕСЬ — клик по ним молча уводил на дашборд (ADR-0005 Phase F).
+    // рукописный список идентификаторов, и он уже расходился с остальными: пункт
+    // «Клиенты» существовал и в рендере, и в наборах контекста, но отсутствовал ЗДЕСЬ —
+    // клик по нему молча уводил на дашборд (ADR-0005 Phase F).
     if (!NAVIGABLE_PAGES.has(target)) {
-      navigateTo({ type: 'dashboard' });
-      return;
-    }
-    // Решение о доступе — ТОТ ЖЕ `evaluatePageGuard`, что и у эффекта ниже. Раньше здесь
-    // проверялись только роль и её список страниц, а гейт контекста доставался уже
-    // ПОСЛЕ перехода: страница успевала смонтироваться и отскакивала — пользователь видел
-    // мигание вместо отказа (аудит UI 2026-07-30). Теперь отказ виден до навигации, причина
-    // формулируется один раз, а `adopt` (страница другого подтверждённого контекста) как и
-    // прежде пропускается вперёд — контекст переключит эффект.
-    const decision = evaluatePageGuard({
-      pageType: target,
-      activeStatus,
-      statusEntries,
-      bootstrapped,
-    });
-    if (decision.action === 'bounce') {
-      toast.info(t('guards.notAvailableHere'));
       navigateTo({ type: 'dashboard' });
       return;
     }
@@ -322,15 +274,11 @@ function MainApp() {
     switch (page.type) {
       case 'dashboard': return [];
       case 'product_detail': return [
-        { label: getPageLabel('products', t), pageId: 'products' },
+        { label: getPageLabel('my-products', t), pageId: 'my-products' },
         { label: t('breadcrumb.productDetail') },
       ];
       case 'request-detail': return [
-        // The deal record is the seller's "Deals" detail and the buyer's "My Requests"
-        // detail — one page, context-aware parent crumb.
-        activeStatus === 'SELLER'
-          ? { label: getPageLabel('crm-deals', t), pageId: 'crm-deals' }
-          : { label: getPageLabel('my-requests', t), pageId: 'my-requests' },
+        { label: getPageLabel('crm-deals', t), pageId: 'crm-deals' },
         { label: t('breadcrumb.requestDetail') },
       ];
       case 'product-edit': return [
@@ -347,7 +295,6 @@ function MainApp() {
 
   const { content, activePageId } = renderPage({
     page,
-    activeStatus,
     navigateTo,
     onNavigate: handleNavigate,
     onProductClick: handleProductClick,

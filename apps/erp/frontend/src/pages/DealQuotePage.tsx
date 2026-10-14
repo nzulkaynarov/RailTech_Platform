@@ -12,7 +12,6 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useDeal, useTakeAndPrepareQuote } from '@/hooks/useCRM';
-import { useUserStore } from '@/store/userStore';
 import { translateApiError } from '@/lib/apiError';
 import { QuoteBuilderGrid } from '@/components/QuoteBuilder/QuoteBuilderGrid';
 import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
@@ -30,7 +29,7 @@ interface DealQuotePageProps {
 }
 
 /**
- * Full-page seller КП (quote) builder. Replaces the cramped in-sheet builder:
+ * Full-page КП (quote) builder of the back office. Replaces the cramped in-sheet builder:
  * the wide line-item/price grid + approval chain need the whole viewport, not a
  * side panel. Reached via the `deal-quote/<dealId>` hash route from DealsPage.
  * State is React Query throughout (useDeal / useCRM) — no flowStore.
@@ -38,7 +37,6 @@ interface DealQuotePageProps {
 export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
   const { t } = useTranslation();
   const { data: deal, isLoading, isError, refetch } = useDeal(dealId);
-  const activeStatus = useUserStore((s) => s.activeStatus);
   const takeMut = useTakeAndPrepareQuote();
   const [contractOpen, setContractOpen] = useState(false);
   // Q1: seller lands on the builder route before a КП exists — offer the manual «Сформировать КП»
@@ -47,8 +45,8 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
   // Wave B2: the single «Отправить клиенту» composer (recipient · validity · margin · approval).
   // The below-floor justification + reactive re-prompt now live INSIDE SendQuoteDialog.
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
-  // Single Deal-workspace (#3b): the buyer's request context lives ON the builder
-  // screen, so a seller prices the КП without bouncing back to the deal page. The
+  // Single Deal-workspace (#3b): the client's request context lives ON the builder
+  // screen, so the back office prices the КП without bouncing back to the deal page. The
   // ask (deal.notes) collapses to one line by default; the full thread opens in a slide-over.
   const [filesOpen, setFilesOpen] = useState(false);
   const [noteExpanded, setNoteExpanded] = useState(false);
@@ -111,9 +109,9 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
   const canSend = quoteStatus === QuoteStatus.READY_TO_SEND;
   const canContract = !!quote
     && ([QuoteStatus.APPROVED, QuoteStatus.SENT] as string[]).includes(quoteStatus);
-  // Wave B2: once the КП has been pushed to the buyer, the silent «КП отправлено» state is
+  // Wave B2: once the КП has been pushed to the client, the silent «КП отправлено» state is
   // replaced by the post-send tracking panel (Отправлено → Просмотрено → Решение).
-  const quoteSentToBuyer = ([QuoteStatus.SENT, QuoteStatus.APPROVED, QuoteStatus.REJECTED] as string[])
+  const quoteSentToClient = ([QuoteStatus.SENT, QuoteStatus.APPROVED, QuoteStatus.REJECTED] as string[])
     .includes(quoteStatus);
 
   const hasNote = (deal.notes ?? '').trim().length > 0;
@@ -121,10 +119,8 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
   // Q1: the no-КП screen must give a seller a way FORWARD, not just «Назад». Mirror request-detail's
   // one-click «Взять в работу и подготовить КП» (claim + стадия + предзаполненный КП) as the primary
   // path across the pre-КП stages, with the manual «Сформировать КП» dialog as the fallback.
-  const isSellerSide = activeStatus === 'SELLER';
   const canTakeAndPrepare =
-    isSellerSide
-    && !quote
+    !quote
     && ([DealStage.RFQ_OPEN, DealStage.SOURCING, DealStage.CALCULATING] as string[]).includes(deal.stage_code ?? '');
 
   return (
@@ -179,7 +175,7 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
         </div>
       </div>
 
-      {/* Buyer's ask — one-line collapsible (single Deal-workspace #3b): collapsed by default
+      {/* The client's ask — one-line collapsible (single Deal-workspace #3b): collapsed by default
           so it costs ~1 line, expands in place. */}
       {hasNote && (
         <button
@@ -190,7 +186,7 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
         >
           <MessageSquare className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
           <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground shrink-0">
-            {t('pages.dealQuote.buyerNote')}:
+            {t('pages.dealQuote.clientNote')}:
           </span>
           <span className={cn('min-w-0 flex-1 whitespace-pre-line text-xs text-foreground', noteExpanded ? '' : 'line-clamp-1')}>
             {deal.notes}
@@ -216,7 +212,7 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
 
       {/* Wave B2 post-send tracking (PandaDoc pattern): the moment the КП is SENT, replace the
           silent builder with a live status line + link/version actions above the (now frozen) grid. */}
-      {quote && quoteSentToBuyer && (
+      {quote && quoteSentToClient && (
         <div className="px-2 pt-2">
           <QuoteSentPanel quote={quote} />
         </div>
@@ -236,39 +232,35 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
           <div className="max-w-md space-y-1">
             <p className="text-sm font-medium text-foreground">{t('pages.dealQuote.noQuote')}</p>
             <p className="text-sm text-muted-foreground">
-              {isSellerSide ? t('pages.dealQuote.noQuoteSellerHint') : t('pages.dealQuote.noQuoteHint')}
+              {t('pages.dealQuote.noQuoteSellerHint')}
             </p>
           </div>
-          {/* Q1: give the seller a way forward — one-click prepare (primary) or a manual КП, never a
-              dead «Назад»-only screen. Buyers just get «Назад» (they never build КП). */}
-          {isSellerSide ? (
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              {canTakeAndPrepare && (
-                <Button
-                  onClick={async () => {
-                    try {
-                      await takeMut.mutateAsync(dealId);
-                      await refetch();
-                      toast.success(t('requestDetailActions.takePrepared'));
-                    } catch (e) {
-                      toast.error(translateApiError(e));
-                    }
-                  }}
-                  disabled={takeMut.isPending}
-                >
-                  <Wand2 className="mr-2 h-4 w-4" />
-                  {t('requestDetailActions.takeAndPrepare')}
-                </Button>
-              )}
-              <Button variant={canTakeAndPrepare ? 'outline' : 'default'} onClick={() => setGenerateQuoteOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                {t('generateQuote.submit')}
+          {/* Q1: give the back office a way forward — one-click prepare (primary) or a manual КП,
+              never a dead «Назад»-only screen. */}
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {canTakeAndPrepare && (
+              <Button
+                onClick={async () => {
+                  try {
+                    await takeMut.mutateAsync(dealId);
+                    await refetch();
+                    toast.success(t('requestDetailActions.takePrepared'));
+                  } catch (e) {
+                    toast.error(translateApiError(e));
+                  }
+                }}
+                disabled={takeMut.isPending}
+              >
+                <Wand2 className="mr-2 h-4 w-4" />
+                {t('requestDetailActions.takeAndPrepare')}
               </Button>
-              <Button variant="ghost" onClick={onBack}>{t('common.back')}</Button>
-            </div>
-          ) : (
-            <Button variant="outline" onClick={onBack}>{t('common.back')}</Button>
-          )}
+            )}
+            <Button variant={canTakeAndPrepare ? 'outline' : 'default'} onClick={() => setGenerateQuoteOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              {t('generateQuote.submit')}
+            </Button>
+            <Button variant="ghost" onClick={onBack}>{t('common.back')}</Button>
+          </div>
         </div>
       )}
 

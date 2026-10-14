@@ -58,7 +58,7 @@ describe('CounterpartiesPage', () => {
   // (CSS-hidden, both in the DOM) — row content appears twice, so query with *All*.
 
   it('renders the client book rows with the offline badge', async () => {
-    renderWithProviders(<CounterpartiesPage direction="CLIENT" />);
+    renderWithProviders(<CounterpartiesPage />);
     expect((await screen.findAllByText('ООО Магистраль')).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Оффлайн Клиент').length).toBeGreaterThanOrEqual(1);
     // The unregistered counterparty is flagged «Оффлайн».
@@ -66,19 +66,13 @@ describe('CounterpartiesPage', () => {
   });
 
   it('offers «Новый клиент» only in the client book', async () => {
-    renderWithProviders(<CounterpartiesPage direction="CLIENT" />);
+    renderWithProviders(<CounterpartiesPage />);
     await screen.findAllByText('ООО Магистраль');
     expect(screen.getByRole('button', { name: /Новый клиент/ })).toBeInTheDocument();
   });
 
-  it('hides «Новый клиент» in the supplier book', async () => {
-    renderWithProviders(<CounterpartiesPage direction="SUPPLIER" />);
-    await screen.findAllByText('ООО Магистраль');
-    expect(screen.queryByRole('button', { name: /Новый клиент/ })).not.toBeInTheDocument();
-  });
-
   it('opens the counterparty detail sheet on row click', async () => {
-    renderWithProviders(<CounterpartiesPage direction="CLIENT" />);
+    renderWithProviders(<CounterpartiesPage />);
     fireEvent.click((await screen.findAllByText('ООО Магистраль'))[0]);
     // The sheet shows the source label — proof the detail panel rendered.
     await waitFor(() => expect(screen.getByText('Заведён вручную')).toBeInTheDocument());

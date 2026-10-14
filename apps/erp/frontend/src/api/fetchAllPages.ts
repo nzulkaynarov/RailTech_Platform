@@ -29,7 +29,7 @@ const MAX_PAGES = 500;
 export async function fetchAllPages<T>(
   url: string,
   params?: Record<string, unknown>,
-  /** Доп. настройки запроса — например заголовок скоупа `X-Active-Context` у сделок. */
+  /** Доп. настройки запроса (заголовки). */
   config?: { headers?: Record<string, string> },
 ): Promise<T[]> {
   const all: T[] = [];

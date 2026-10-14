@@ -1,6 +1,7 @@
 /**
- * Типы CRM-домена, относящиеся к ИИ: подбор по каталогу, подсказка цены, предполётная
- * проверка заявки, дифф КП и сверка загруженного документа.
+ * Типы CRM-домена, относящиеся к ИИ: подбор по каталогу, подсказка цены и сверка загруженного
+ * документа. Покупательские ИИ-проверки (предполётная проверка заявки, «КП vs заявка») удалены
+ * в M1-ERP-02 волна 3.
  *
  * Вынесено из crmApi.ts при распиле (самый горячий файл: 1179 строк, 56 правок).
  */
@@ -43,49 +44,6 @@ export interface PricingSuggestion {
 	lead_time_days: number;
 	supplier_sku?: string;
 	delivery_basis?: string | null;
-}
-
-// AI #7 pre-flight quality check — one advisory finding per flagged line.
-// line_index references a line in the sent array (NOT a QuoteItem id).
-export interface PreflightFinding {
-	line_index: number;
-	severity: 'info' | 'warning';
-	issue: string;
-	suggestion: string;
-}
-
-export interface PreflightLine {
-	name: string;
-	quantity?: number;
-	unit?: string;
-	mpn?: string;
-	gost_drawing?: string;
-	note?: string;
-}
-
-export interface PreflightPayload {
-	lines: PreflightLine[];
-	domain_code?: string;
-}
-
-// AI #3 — «КП vs заявка» coverage / discrepancy check (advisory, never blocks).
-// issue_type is a CODE (compare by code, not translated text). `line` is the
-// 0-based index into the КП's items, resolvable back to requested/quoted names.
-export type QuoteDiffIssueType =
-	| 'uncovered' // seller did not price this requested line
-	| 'substituted' // a non-equivalent catalog product was offered
-	| 'note_ignored' // the line's note/requirement may have been ignored
-	| 'qty_unit'; // quantity / unit mismatch (reserved)
-
-export interface QuoteDiffFinding {
-	issue_type: QuoteDiffIssueType;
-	line: number;
-	explanation: string;
-}
-
-export interface QuoteDiffResult {
-	ai_enabled: boolean;
-	findings: QuoteDiffFinding[];
 }
 
 // AI #6 — signed contract / counter-invoice extraction + code-side reconciliation.

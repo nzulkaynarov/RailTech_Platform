@@ -30,9 +30,7 @@ vi.mock('@/hooks/useCRM', () => ({
       title: 'Заявка №7',
       stage_code: 'QUOTE_SENT',
       stage_name: 'КП отправлено',
-      can_edit_request: false,
       assigned_to: 1,
-      target_sellers_data: [],
       notes: '',
       client_name: 'ООО Клиент',
       company_name: 'ООО Клиент',
@@ -58,12 +56,7 @@ vi.mock('@/hooks/useCRM', () => ({
     refetch: vi.fn(),
   }),
   useChangeDealStage: () => mutation(),
-  useApproveQuote: () => mutation(),
-  useRejectQuote: () => mutation(),
   useSendQuoteToClient: () => mutation(),
-  useUpdateRequestMeta: () => mutation(),
-  usePreflightCheck: () => mutation(),
-  useQuoteRequestDiff: () => mutation(),
   useClaimDeal: () => mutation(),
   useReleaseDeal: () => mutation(),
   useTakeAndPrepareQuote: () => mutation(),
@@ -71,8 +64,8 @@ vi.mock('@/hooks/useCRM', () => ({
 }));
 
 vi.mock('@/store/userStore', () => ({
-  useUserStore: (selector: (s: { activeStatus: string }) => unknown) =>
-    selector({ activeStatus: 'SELLER' }),
+  useUserStore: (selector: (s: { capabilities: { permissions: string[] } }) => unknown) =>
+    selector({ capabilities: { permissions: [] } }),
 }));
 vi.mock('@/store/currencyStore', () => ({
   useCurrencyStore: (selector: (s: { format: (v: number) => string }) => unknown) =>
@@ -83,11 +76,7 @@ vi.mock('@/store/currencyStore', () => ({
 vi.mock('@/components/CRM/DealTimeline', () => ({ DealTimeline: () => null }));
 vi.mock('@/components/CRM/DealDocumentsCard', () => ({ DealDocumentsCard: () => null }));
 vi.mock('@/components/CRM/GenerateQuoteDialog', () => ({ GenerateQuoteDialog: () => null }));
-vi.mock('@/components/CRM/RejectQuoteDialog', () => ({ RejectQuoteDialog: () => null }));
 vi.mock('@/components/Shared/ConfirmActionDialog', () => ({ ConfirmActionDialog: () => null }));
-vi.mock('@/components/CRM/RequestItemsEditor', () => ({ RequestItemsEditor: () => null }));
-vi.mock('@/components/CRM/PreflightWarnings', () => ({ PreflightWarnings: () => null }));
-vi.mock('@/components/CRM/CoverageCheck', () => ({ CoverageCheck: () => null }));
 
 describe('RequestDetailPage — new КП version after rejection', () => {
   beforeEach(() => {

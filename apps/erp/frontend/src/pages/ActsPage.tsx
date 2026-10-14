@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'; import { useTranslation } from 'react-i18next'; import { toast } from 'sonner'; import { translateApiError } from '@/lib/apiError'; import { formatDate, formatDateTime } from '@/lib/formatLocale'; import { extractBlobErrorCode, fetchDocumentBlob, saveBlob } from '@/lib/documents'; import { ScrollText, PenLine, Download, Ban, BellRing } from 'lucide-react'; import { DocumentActions } from '@/components/Shared/DocumentActions'; import { ManualModeBanner } from '@/components/Shared/ManualModeBanner'; import { Badge } from '@/components/ui/badge'; import { Button } from '@/components/ui/button'; import { Label } from '@/components/ui/label'; import {   Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, } from '@/components/ui/sheet'; import { PageShell } from './shared/PageShell'; import { DocumentRegistry } from '@/components/Documents/DocumentRegistry'; import { useDocumentCoreColumns } from '@/components/Documents/useDocumentCoreColumns'; import { Toolbar } from '@/components/DataTable';
 import { useListParams, applyListParams } from '@/components/DataTable/listParams';
-import { useActs, useSignAct, useRejectAct, useRemindAct, useCancelAct, useReissueAct } from '@/hooks/useBilling';
-import { RejectActDialog } from '@/components/Billing/RejectActDialog';
+import { useActs, useRemindAct, useCancelAct, useReissueAct } from '@/hooks/useBilling';
 import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { DealLink } from '@/components/Shared/DealLink';
@@ -56,8 +55,10 @@ function SignatureLine({ name, at }: { name?: string | null; at?: string | null 
  *
  * Статус-код («Выставлен») говорит, ЧТО с документом, но не говорит, КОГО он ждёт. Эталоны
  * закрывающих документов показывают именно второе: Диадок «Ожидается подпись контрагента»,
- * DocuSign «Needs to Sign». Данные для этого сервер уже отдаёт — обе подписи и адресные
- * подсказки `viewer_can_sign` / `viewer_can_reject`.
+ * DocuSign «Needs to Sign». Данные для этого сервер уже отдаёт — обе подписи.
+ *
+ * Акт выпускает бэк-офис (исполнитель), принимает или возвращает его клиент — в Cabinet
+ * (M1-ERP-02 волна 3 убрала из ERP приёмку/возврат акта «глазами заказчика»).
  */
 function ActTurnLine({ act }: { act: Act }) {
   const { t } = useTranslation();
@@ -68,14 +69,6 @@ function ActTurnLine({ act }: { act: Act }) {
     return (
       <p className="rounded-md border border-success/30 bg-success/5 p-3 text-sm text-foreground">
         {t('actsPage.turn.settled')}
-      </p>
-    );
-  }
-  // Ждёт ЗРИТЕЛЯ — сервер сказал это адресно.
-  if (act.viewer_can_sign) {
-    return (
-      <p className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm font-medium text-foreground">
-        {t('actsPage.turn.yours')}
       </p>
     );
   }
@@ -95,12 +88,9 @@ export function ActsPage() {
   const { t } = useTranslation();
   const listParams = useListParams(['status'] as const, { urlKey: 'acts', defaultOrdering: '-created_at' });
   const { data: acts, isLoading, isError, refetch } = useActs(undefined);
-  const signAct = useSignAct();
-  const rejectAct = useRejectAct();
   const remindAct = useRemindAct();
   const cancelAct = useCancelAct();
   const reissueAct = useReissueAct();
-  const [rejectOpen, setRejectOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const formatCurrency = useCurrencyStore((s) => s.format);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -117,20 +107,6 @@ export function ActsPage() {
       { label: t('actsPage.stats.signed'), value: String(list.filter((a) => a.status === 'SIGNED').length) },
     ];
   }, [acts, t]);
-
-  const onSign = async (id: number, file?: File) => {
-    try {
-      await signAct.mutateAsync({ id, signedFile: file });
-      toast.success(t('actsPage.signed'));
-    } catch (e) {
-      toast.error(translateApiError(e));
-    }
-  };
-
-  const onReject = async (id: number, reason: string) => {
-    await rejectAct.mutateAsync({ id, reason });
-    toast.success(t('actsPage.rejected'));
-  };
 
   const onRemind = async (id: number) => {
     try {
@@ -304,27 +280,6 @@ export function ActsPage() {
                     {t('actsPage.downloadSigned')}
                   </Button>
                 )}
-                {/* Акт двусторонний (G2): принимает ЗАКАЗЧИК, и признак приходит с сервера —
-                    выпустившей стороне «принять собственный акт» не предлагается. */}
-                {selected.viewer_can_sign && (
-                  <Button
-                    onClick={() => onSign(selected.id)}
-                    disabled={signAct.isPending}
-                  >
-                    <PenLine className="mr-2 h-4 w-4" />
-                    {t('actsPage.accept')}
-                  </Button>
-                )}
-                {selected.viewer_can_reject && (
-                  <Button
-                    variant="outline"
-                    onClick={() => setRejectOpen(true)}
-                    disabled={rejectAct.isPending}
-                  >
-                    <Ban className="mr-2 h-4 w-4" />
-                    {t('actsPage.reject')}
-                  </Button>
-                )}
                 {/* Действия ВЫПУСТИВШЕЙ стороны (A4): до этого после выпуска акта исполнителю
                     было нечего делать — документ висел, и повлиять на это он не мог. */}
                 {selected.viewer_can_remind && (
@@ -363,35 +318,12 @@ export function ActsPage() {
                     {t('actsPage.cancel')}
                   </Button>
                 )}
-                {selected.viewer_can_sign && (
-                  <label
-                    className={`flex items-center justify-center gap-2 rounded-md border border-dashed border-border px-3 py-2 text-sm cursor-pointer hover:bg-accent`}
-                  >
-                    <PenLine className="h-4 w-4" />
-                    <span>{t('actsPage.uploadSigned')}</span>
-                    <input
-                      type="file"
-                      className="hidden"
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) onSign(selected.id, f);
-                      }}
-                    />
-                  </label>
-                )}
               </div>
             </div>
             <SheetFooter />
           </SheetContent>
         </Sheet>
       )}
-      <RejectActDialog
-        actNumber={selected?.number ?? null}
-        open={rejectOpen}
-        onOpenChange={setRejectOpen}
-        onConfirm={async (reason) => { if (selected) await onReject(selected.id, reason); }}
-      />
       {/* Отзыв акта — необратимое действие с обязательной причиной: тот же диалог, что и у
           остальных необратимых операций (волна U4), с `requireReason`. */}
       <ConfirmActionDialog

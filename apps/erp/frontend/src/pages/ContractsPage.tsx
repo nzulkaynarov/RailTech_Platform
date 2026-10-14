@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'; import { useTranslation } from 'react-i18next'; import { toast } from 'sonner'; import { translateApiError } from '@/lib/apiError'; import { formatDate, formatDateTime } from '@/lib/formatLocale'; import { extractBlobErrorCode, fetchDocumentBlob, saveBlob } from '@/lib/documents'; import { PenLine, Upload, Download, Receipt, Ban, FileSignature } from 'lucide-react'; import { DocumentActions } from '@/components/Shared/DocumentActions'; import { Badge } from '@/components/ui/badge'; import { Button } from '@/components/ui/button'; import { Label } from '@/components/ui/label'; import { Textarea } from '@/components/ui/textarea'; import {   Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, } from '@/components/ui/sheet'; import {   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, } from '@/components/ui/alert-dialog'; import { PageShell } from './shared/PageShell'; import { DocumentRegistry } from '@/components/Documents/DocumentRegistry'; import { useDocumentCoreColumns } from '@/components/Documents/useDocumentCoreColumns'; import { ManualModeBanner } from '@/components/Shared/ManualModeBanner'; import { Toolbar } from '@/components/DataTable';
 import { useListParams, applyListParams } from '@/components/DataTable/listParams';
 import {
-  useContracts, useSignContractClient, useSignContractManager,
+  useContracts, useSignContractManager,
   useUploadSignedContract, useCancelContract, useGenerateInvoice,
 } from '@/hooks/useBilling';
 import { useCurrencyStore } from '@/store/currencyStore';
@@ -30,8 +30,8 @@ export function ContractsPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [cancelTarget, setCancelTarget] = useState<Contract | null>(null);
 
-  // Deep-link support: `#contracts?open=<id>` (used by the buyer's post-accept panel,
-  // Wave A2) auto-opens that contract's detail sheet. Parsed from the hash query — the
+  // Deep-link support: `#contracts?open=<id>` (document links, notifications, search)
+  // auto-opens that contract's detail sheet. Parsed from the hash query — the
   // SPA is hash-routed, so window.location.search is not where our params live.
   useHashOpenParam('contracts', setSelectedId);
 
@@ -42,9 +42,8 @@ export function ContractsPage() {
   // дефект: заголовок диалога называл один номер, а причина была написана про другой.
   const [cancelReason, setCancelReason] = useDraftState(cancelTarget, () => '');
 
-  // Contract is double-signed: the buyer signs as client, the seller as manager. Which side the
-  // viewer may sign is server-computed per contract (viewer_can_sign_client/manager) — NOT the
-  // page context — so a dual buy+sell company gets the correct button either way.
+  // Договор подписывают обе стороны: клиент — в Cabinet, бэк-офис — здесь (`viewer_can_sign_manager`
+  // считает сервер). Подпись «за клиента» из ERP удалена в M1-ERP-02 волна 3.
   const { data: contracts, isLoading, isError, refetch } = useContracts(undefined);
   const generateInvoice = useGenerateInvoice();
 
@@ -76,7 +75,6 @@ export function ContractsPage() {
     }
   };
   const formatCurrency = useCurrencyStore((s) => s.format);
-  const signClient = useSignContractClient();
   const signManager = useSignContractManager();
   const uploadSigned = useUploadSignedContract();
   const cancelMut = useCancelContract();
@@ -89,28 +87,6 @@ export function ContractsPage() {
     () => (contracts ?? []).find((contract) => contract.id === selectedId) ?? null,
     [contracts, selectedId],
   );
-  // Side indicator: which side the VIEWER acts as on THIS contract — derived from the
-  // server-computed sign hints (viewer_can_sign_client/manager), not the SPA page context, so a
-  // dual buy+sell company sees the correct side per contract regardless of which context it
-  // landed in. Null when the viewer is neither side (non-signer).
-  const sideBadgeFor = (contract: Contract) => {
-    const side: 'buyer' | 'seller' | null = contract.viewer_can_sign_client
-      ? 'buyer'
-      : contract.viewer_can_sign_manager
-        ? 'seller'
-        : null;
-    if (!side) return null;
-    return (
-      <Badge
-        variant="outline"
-        data-side={side}
-        className={side === 'buyer' ? 'border-info text-info' : 'border-primary text-primary'}
-      >
-        {t(`contractsPage.side.${side}`)}
-      </Badge>
-    );
-  };
-
   const stats = useMemo(() => {
     const list = contracts ?? [];
     return [
@@ -125,15 +101,6 @@ export function ContractsPage() {
       },
     ];
   }, [contracts, t]);
-
-  const onSignClient = async (c: Contract) => {
-    try {
-      await signClient.mutateAsync(c.id);
-      toast.success(t('contractsPage.signedClient'));
-    } catch (e) {
-      toast.error(translateApiError(e));
-    }
-  };
 
   const onSignManager = async (c: Contract) => {
     try {
@@ -177,7 +144,7 @@ export function ContractsPage() {
     },
   });
 
-  // Ядро колонок в общем порядке; «Сторона» — специфика договора, приставлена после сделки.
+  // Ядро колонок в общем порядке.
   const columns = useDocumentCoreColumns<Contract>({
     number: (c) => <span className="font-medium">{c.number}</span>,
     deal: (c) => <DealLink dealId={c.deal} />,
@@ -194,13 +161,6 @@ export function ContractsPage() {
     ),
     sortKeys: { number: 'number', total: 'total', date: 'created_at' },
     dateHeader: t('contractsPage.table.created'),
-    insertAfter: {
-      deal: [{
-        id: 'side',
-        header: t('contractsPage.table.side'),
-        cell: (c: Contract) => sideBadgeFor(c),
-      }],
-    },
   });
 
   return (
@@ -251,7 +211,6 @@ export function ContractsPage() {
                 <Badge variant={STATUS_VARIANT[selected.status]}>
                   {t(`contractsPage.status.${selected.status}`)}
                 </Badge>
-                {sideBadgeFor(selected)}
               </SheetDescription>
             </SheetHeader>
             <div className="space-y-4 p-4">
@@ -318,15 +277,6 @@ export function ContractsPage() {
                   >
                     <Receipt className="mr-2 h-4 w-4" />
                     {t('contractsPage.createInvoice')}
-                  </Button>
-                )}
-                {selected.viewer_can_sign_client && !selected.client_signed_at && (selected.status === 'PENDING_CLIENT' || selected.status === 'DRAFT') && (
-                  <Button
-                    onClick={() => onSignClient(selected)}
-                    disabled={signClient.isPending}
-                  >
-                    <PenLine className="mr-2 h-4 w-4" />
-                    {t('contractsPage.signClient')}
                   </Button>
                 )}
                 {selected.viewer_can_sign_manager && !selected.manager_signed_at && (selected.status === 'PENDING_MANAGER' || selected.status === 'PENDING_CLIENT' || selected.status === 'DRAFT') && (

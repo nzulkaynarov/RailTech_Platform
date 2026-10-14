@@ -1,17 +1,15 @@
 import { useState } from 'react'; import { useTranslation } from 'react-i18next'; import { toast } from 'sonner'; import { FileText, Clock, Eye, Handshake, Loader2, Undo2 } from 'lucide-react'; import { Card, CardContent } from '@/components/ui/card'; import { formatDate } from '@/lib/formatLocale'; import { Button } from '@/components/ui/button'; import { StatusBadge } from '@/components/ui/StatusBadge'; import { getDealStageVariant } from '@/lib/statusVariants'; import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable'; import { Toolbar, Pager } from '@/components/DataTable';
 import { useListParams, applyListParams } from '@/components/DataTable/listParams';
 import { useCurrencyStore } from '@/store/currencyStore';
-import { useUserStore } from '@/store/userStore';
 import { useDeals, useDealStages, useClaimDeal, useReleaseDeal } from '@/hooks/useCRM';
 import { useIsSoloSeller } from '@/hooks/useCapabilities';
 import { DEAL_STAGE_LABEL_KEY } from '@/lib/codes';
 import { translateApiError } from '@/lib/apiError';
 import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
-import { CreateDealDialog } from '@/components/CRM/CreateDealDialog';
 import { DealsKanban } from '@/components/CRM/DealsKanban';
 import type { Deal } from '@/api/crmApi';
 
-/* ─── Single canonical seller deal pipeline (ADR-0003 consolidation) ─────────
+/* ─── Single canonical deal pipeline of the back office (ADR-0003 consolidation) ─
  * One index (list + Kanban) → ONE deal record (request-detail/<id>) → focused
  * КП builder (deal-quote/<id>). The old Sourcing→Requests list and the inline
  * DealDetailSheet were removed (duplicate surfaces on the same useDeals data).
@@ -23,27 +21,24 @@ function openDeal(deal: Deal) {
 export function DealsPage() {
   const { t } = useTranslation();
   // Весь список сделок, а не первые двадцать: 21-я иначе недостижима — ни открыть, ни найти.
-  const { data: deals, isLoading, isError, refetch } = useDeals(undefined, { fetchAll: true });
+  const { data: deals, isLoading, isError, refetch } = useDeals({ fetchAll: true });
   const { data: stages } = useDealStages();
   const formatCurrency = useCurrencyStore((s) => s.format);
-  const activeStatus = useUserStore((s) => s.activeStatus);
   const claimMut = useClaimDeal();
   const releaseMut = useReleaseDeal();
-  // Wave B2 (auto-claim): a solo seller has no one to route work between, so «Взять в работу» is
-  // noise — hide it. Multi-member companies keep claim (it still routes the queue). UI-only.
+  // Wave B2 (auto-claim): a solo team has no one to hand work to, so «Взять в работу» is
+  // noise — hide it. Multi-member companies keep claim (it still distributes the queue). UI-only.
   const isSoloSeller = useIsSoloSeller();
 
-  // Second in-funnel path to «взять в работу» (Kanban is the first). Claim is a
-  // seller-only pull from the routed queue — hidden in the BUYER context and for
-  // already-owned deals. Ownership keys off `assigned_to` (the id), which the deal
-  // serializer derives from the VIEWER's OWN DealSellerRouting row, so null == this
-  // seller's copy is unclaimed. Reuses useClaimDeal + the `dealsKanban.claim` key.
+  // Second in-funnel path to «взять в работу» (Kanban is the first): a team member pulls an
+  // unowned deal from the company queue (`assigned_to == null`); hidden for already-owned deals.
+  // Reuses useClaimDeal + the `dealsKanban.claim` key.
   // Localize the deal-stage label (codes.ts convention: render t(DEAL_STAGE_LABEL_KEY[code])
   // instead of the RU-only backend stage_name), falling back to stage_name for unknown codes.
   const stageLabel = (code: string | undefined, fallback: string | undefined) =>
     code && DEAL_STAGE_LABEL_KEY[code] ? t(DEAL_STAGE_LABEL_KEY[code]) : (fallback ?? '');
 
-  const canClaim = (deal: Deal) => activeStatus === 'SELLER' && deal.assigned_to == null && !isSoloSeller;
+  const canClaim = (deal: Deal) => deal.assigned_to == null && !isSoloSeller;
   const handleClaim = (dealId: number) => {
     claimMut.mutate(dealId, {
       onSuccess: () => toast.success(t('dealsKanban.claimed')),
@@ -58,7 +53,6 @@ export function DealsPage() {
   };
 
   const listParams = useListParams(['stage'] as const, { urlKey: 'deals', defaultOrdering: '-created_at' });
-  const [createOpen, setCreateOpen] = useState(false);
   const [view, setView] = useState<'list' | 'kanban'>(() => {
     try {
       return (localStorage.getItem('deals.view') as 'list' | 'kanban') || 'list';
@@ -79,17 +73,7 @@ export function DealsPage() {
   const columns: ResponsiveColumn<Deal>[] = [
     {
       id: 'deal', sortKey: 'id', header: t('pages.deals.table.deal'), mobileTitle: true,
-      cell: (deal) => (
-        <>
-          <span className="font-medium">{deal.title || `#${deal.id}`}</span>
-          {/* Multi-seller routing — show which sellers this RFQ targets. */}
-          {(deal.target_sellers_data?.length ?? 0) > 0 && (
-            <span className="mt-0.5 block text-xs text-muted-foreground">
-              {t('pages.deals.routedTo')}: {deal.target_sellers_data!.map((seller) => seller.name).join(', ')}
-            </span>
-          )}
-        </>
-      ),
+      cell: (deal) => <span className="font-medium">{deal.title || `#${deal.id}`}</span>,
     },
     {
       id: 'client', sortKey: 'client', header: t('pages.deals.table.client'),
@@ -109,8 +93,8 @@ export function DealsPage() {
     },
     {
       // Ресерч 2026-07-28: колонка читала legacy deal.manager_name, которого в list-ответе
-      // ВООБЩЕ нет — всегда «Не назначен», даже когда заявка взята. Владение живёт на
-      // routing.assigned_to (как в Канбане) — показываем его.
+      // ВООБЩЕ нет — всегда «Не назначен», даже когда заявка взята. Владение — `assigned_to`
+      // (как в Канбане) — показываем его.
       id: 'manager', header: t('pages.deals.table.responsible'),
       cell: (deal) => (deal.assigned_to != null
         ? <span>{deal.assigned_to_name || t('dealsKanban.assigned')}</span>
@@ -192,8 +176,6 @@ export function DealsPage() {
             options: (stages ?? []).map((s) => ({ value: s.code, label: stageLabel(s.code, s.name) })),
           },
         ]}
-        newLabel={activeStatus === 'BUYER' ? t('createDeal.title') : undefined}
-        onNew={activeStatus === 'BUYER' ? () => setCreateOpen(true) : undefined}
         extra={
           <div className="inline-flex shrink-0 rounded-md border p-0.5 text-xs">
             <button
@@ -212,13 +194,6 @@ export function DealsPage() {
             </button>
           </div>
         }
-      />
-      <CreateDealDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        onCreated={() => {
-          // Keep user on deals list; dialog already routed to import if chosen.
-        }}
       />
 
       {/* Табличный вид проверял загрузку и ошибку, а канбан — нет: при недоступном API он

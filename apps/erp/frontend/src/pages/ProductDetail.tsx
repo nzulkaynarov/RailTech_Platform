@@ -1,16 +1,14 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
-  ArrowLeft, ShoppingCart, Minus, Plus, Package, FileText,
+  ArrowLeft, Package, FileText,
   Building2, Clock, Truck, Pencil, Send, EyeOff, Archive, ArchiveRestore,
 } from 'lucide-react';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { getStockVariant } from '@/lib/statusVariants';
@@ -20,9 +18,7 @@ import {
   useProduct, usePublishProduct, useUnpublishProduct, useArchiveProduct, useRestoreProduct,
 } from '@/hooks/useCatalog';
 import { useHasCompanyPermission } from '@/hooks/useCapabilities';
-import { useCartStore } from '@/store/cartStore';
 import { formatMoney } from '@/utils/decimal';
-import { useUserStore } from '@/store/userStore';
 import { useAuthStore } from '@/store/authStore';
 import { getDomainLabelKey } from '@/config/domainConfig';
 import { deliveryBasisLabelKey, productStatusLabelKey, stockStatusLabelKey, uomLabelKey } from '@/lib/codes';
@@ -46,10 +42,8 @@ const STATUS_BADGE_VARIANT: Record<string, 'success' | 'warning' | 'neutral'> = 
 export function ProductDetail({ productId, onBack, onProductEdit }: ProductDetailProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const { addItem, openCart } = useCartStore();
-  const { activeStatus } = useUserStore();
-  const canSendRequest = activeStatus === 'BUYER';
-  const showPrices = activeStatus === 'SELLER';
+  // Карточка товара бэк-офиса: цена и предложения поставщиков видны всегда. Покупательская
+  // ветка («Добавить в заявку», корзина) удалена в M1-ERP-02 волна 3 — витрина клиента в Cabinet.
 
   // Слой владельца (D15): статус и действия видит ТОЛЬКО компания-владелец карточки,
   // кнопки — по правам CompanyRole (скрыты без права, не disabled), как в редакторе.
@@ -62,16 +56,6 @@ export function ProductDetail({ productId, onBack, onProductEdit }: ProductDetai
   const restoreMut = useRestoreProduct();
 
   const { data: product, isLoading, error, refetch } = useProduct(productId);
-  // `qty` is the always-valid (>=1) source of truth used by add-to-request;
-  // `qtyText` is the raw editable buffer so the field can be cleared to type a
-  // multi-digit number instead of being clamped to 1 on every keystroke.
-  const [qty, setQty] = useState(1);
-  const [qtyText, setQtyText] = useState('1');
-  const applyQty = (n: number) => {
-    const value = Math.max(1, Math.floor(Number.isFinite(n) ? n : 1));
-    setQty(value);
-    setQtyText(String(value));
-  };
 
   if (isLoading) {
     return (
@@ -396,8 +380,8 @@ export function ProductDetail({ productId, onBack, onProductEdit }: ProductDetai
 
         {/* ─── Right column (1/3) — actions & commercial ─── */}
         <div className="flex flex-col gap-4 lg:sticky lg:top-6 lg:self-start">
-          {/* Price card (seller/manufacturer) */}
-          {showPrices && basePrice && basePriceCurrency && Number(basePrice) > 0 && (
+          {/* Price card */}
+          {basePrice && basePriceCurrency && Number(basePrice) > 0 && (
             <Card>
               <CardContent className="p-5 text-center">
                 <p className="text-xs text-muted-foreground mb-1">{t('productDetail.priceFCA')}</p>
@@ -409,45 +393,9 @@ export function ProductDetail({ productId, onBack, onProductEdit }: ProductDetai
             </Card>
           )}
 
-          {/* Add to request — BUYER */}
-          {canSendRequest && (
-            <Card>
-              <CardContent className="p-4 space-y-3">
-                <div className="flex items-center gap-1 justify-center">
-                  <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => applyQty(qty - 1)} aria-label={t('productDetail.decrease')}>
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={qtyText}
-                    onChange={(e) => {
-                      setQtyText(e.target.value);
-                      const parsed = Number(e.target.value);
-                      if (Number.isFinite(parsed) && parsed >= 1) setQty(Math.floor(parsed));
-                    }}
-                    onBlur={() => applyQty(Number(qtyText))}
-                    aria-label={t('productDetail.quantity')}
-                    className="h-9 w-20 text-center tabular-nums"
-                  />
-                  <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => applyQty(qty + 1)} aria-label={t('productDetail.increase')}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                <Button
-                  className="w-full gap-2"
-                  onClick={() => { addItem(product, qty); openCart(); toast.success(t('productDetail.addedToRequest')); }}
-                >
-                  <ShoppingCart className="h-4 w-4" />
-                  {t('productDetail.addToRequest')}
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Supplier Offers — seller cost internals; NEVER shown to the buyer
-              (a buyer gets a price only via the seller's КП). */}
-          {showPrices && activeOffers.length > 0 && (
+          {/* Supplier Offers — back-office cost internals; never leave ERP (the client sees
+              only the published layer in Cabinet). */}
+          {activeOffers.length > 0 && (
             <Card>
               <CardContent className="p-5">
                 <h2 className="text-sm font-semibold mb-3">

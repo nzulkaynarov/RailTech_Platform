@@ -13,10 +13,9 @@
  * только для templates=статей расхода; hasTeamManage внутри секции team). Это устранение трения,
  * НЕ новая блокировка (PRODUCT RULE 2) — перестаём ПОКАЗЫВАТЬ несохраняемое.
  *
- * seller-секции (documents/defaults/numbering/templates) — за `capabilities.can_sell`. Это поле
- * теперь считает сервер тем же предикатом, что и авторизация (`is_seller`: членство с can_sell И
- * компания типа SUPPLIER/MANUFACTURER), поэтому местная поправка на тип компании больше не нужна.
- * Раньше плоский флаг участника показывал seller-секции OWNER'у CLIENT-only компании.
+ * Гейта стороны «продавец» (флаг возможности продавать) больше нет (M1-ERP-02 волна 3): ERP —
+ * бэк-офис одной компании-исполнителя, секции бланка, нумерации, дефолтов КП и статей расхода
+ * нужны ей всегда; видимость решает только право роли.
  *
  * UX-гейтинг only — backend enforcement (member_has_permission) независим.
  */
@@ -56,7 +55,7 @@ export interface SettingsSectionDef {
 export interface SettingsGateInput {
   /** WorkspaceRole OWNER of the company (authStore user.workspace_role). */
   isOwner: boolean;
-  /** Consolidated /me capabilities (userStore) — permissions + can_sell drive the gates. */
+  /** Consolidated /me capabilities (userStore) — permissions drive the gates. */
   capabilities: Capabilities;
 }
 
@@ -90,8 +89,6 @@ interface SectionRule {
   visible: (input: SettingsGateInput) => boolean;
 }
 
-const sells = (input: SettingsGateInput) => input.capabilities.can_sell;
-
 /**
  * Полный каталог секций в порядке отображения; порядок групп account→company→sales→team→platform.
  * labelKey переиспользует существующие ключи табов — контент секций тот же.
@@ -107,12 +104,12 @@ const SECTION_RULES: SectionRule[] = [
     visible: (input) => hasSettingsEdit(input),
   },
   // ── documents ── всё «как выглядят мои документы» в одном месте (владелец 27-07).
-  // Бланк и бренд — PDF-letterhead/тема/бланк КП (был подразделом company), продавец.
+  // Бланк и бренд — PDF-letterhead/тема/бланк КП (был подразделом company).
   {
     def: { key: 'branding', labelKey: 'settings.tabs.branding', group: 'documents' },
-    visible: (input) => hasSettingsEdit(input) && sells(input),
+    visible: (input) => hasSettingsEdit(input),
   },
-  // Шаблоны писем и актов — нужны И покупателю, И продавцу (решение владельца), гейт на settings.edit.
+  // Шаблоны писем и актов — гейт на settings.edit.
   {
     def: { key: 'doc-templates', labelKey: 'settings.tabs.docTemplates', group: 'documents' },
     visible: (input) => hasSettingsEdit(input),
@@ -120,17 +117,17 @@ const SECTION_RULES: SectionRule[] = [
   // Нумерация документов (была в company) — номер тоже часть документа.
   {
     def: { key: 'numbering', labelKey: 'settings.tabs.numbering', group: 'documents' },
-    visible: (input) => hasSettingsEdit(input) && sells(input),
+    visible: (input) => hasSettingsEdit(input),
   },
   // ── sales ── бизнес-дефолты КП (маржа/НДС/валюта/срок) + статьи расхода — НЕ внешний вид.
   {
     def: { key: 'defaults', labelKey: 'settings.tabs.defaults', group: 'sales' },
-    visible: (input) => hasSettingsEdit(input) && sells(input),
+    visible: (input) => hasSettingsEdit(input),
   },
   // templates = «Статьи расхода КП» — ЕДИНСТВЕННАЯ секция на charge-праве.
   {
     def: { key: 'templates', labelKey: 'settings.tabs.templates', group: 'sales' },
-    visible: (input) => hasChargeManage(input) && sells(input),
+    visible: (input) => hasChargeManage(input),
   },
   // ── team ── (виден всем; действия управления внутри гейтятся hasTeamManage).
   { def: { key: 'team', labelKey: 'settings.tabs.team', group: 'team' }, visible: () => true },

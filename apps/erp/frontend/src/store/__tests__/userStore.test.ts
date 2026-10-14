@@ -6,7 +6,6 @@ describe('userStore', () => {
     // Reset store to defaults
     useUserStore.setState({
       screen: 'loading',
-      activeStatus: 'BUYER',
       profile: {
         firstName: '',
         lastName: '',
@@ -24,7 +23,6 @@ describe('userStore', () => {
         country: '',
         city: '',
         logoUrl: null,
-        statusEntries: [],
       },
     });
   });
@@ -32,16 +30,11 @@ describe('userStore', () => {
   it('should initialize with default values', () => {
     const state = useUserStore.getState();
     expect(state.screen).toBe('loading');
-    // Pre-auth default context is the narrowest/safest side (BUYER); see userStore.ts.
-    expect(state.activeStatus).toBe('BUYER');
+    // ERP — бэк-офис одной компании (M1-ERP-02 волна 3): контекста «покупатель / продавец» нет.
+    expect('activeStatus' in state).toBe(false);
+    expect('setActiveStatus' in state).toBe(false);
     expect(state.profile.firstName).toBe('');
     expect(state.company.id).toBeNull();
-  });
-
-  it('should update activeStatus via setActiveStatus', () => {
-    const { setActiveStatus } = useUserStore.getState();
-    setActiveStatus('BUYER');
-    expect(useUserStore.getState().activeStatus).toBe('BUYER');
   });
 
   it('should partially update profile via updateProfile', () => {
@@ -64,18 +57,5 @@ describe('userStore', () => {
     expect(state.company.inn).toBe('123456789');
     // Other fields remain default
     expect(state.company.country).toBe('');
-  });
-
-  it('should keep valid CompanyStatus types', () => {
-    const { setActiveStatus } = useUserStore.getState();
-
-    setActiveStatus('SELLER');
-    expect(useUserStore.getState().activeStatus).toBe('SELLER');
-
-    setActiveStatus('SELLER');
-    expect(useUserStore.getState().activeStatus).toBe('SELLER');
-
-    setActiveStatus('BUYER');
-    expect(useUserStore.getState().activeStatus).toBe('BUYER');
   });
 });

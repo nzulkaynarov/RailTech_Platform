@@ -30,7 +30,6 @@ function makeHub(overrides: Partial<DealDocumentHub> = {}): DealDocumentHub {
       client_signed_at: '2026-07-30T10:00:00Z',
       manager_signed_at: '2026-07-30T11:00:00Z',
       is_fully_signed: true,
-      viewer_can_sign_client: false,
       viewer_can_sign_manager: false,
     },
     invoices: [],
@@ -38,7 +37,6 @@ function makeHub(overrides: Partial<DealDocumentHub> = {}): DealDocumentHub {
     fulfillment: null,
     payments_count: 0,
     payments_total: '0',
-    viewer: { is_buyer_side: true, is_seller_side: false },
     next_step: null,
     ...overrides,
   };
@@ -103,7 +101,6 @@ describe('DealChainCard', () => {
     // клиентской роли — продавцу не предлагают «оплатить» собственный счёт.
     getDealDocuments.mockResolvedValue(
       makeHub({
-        viewer: { is_buyer_side: false, is_seller_side: true },
         next_step: { code: 'PAY_INVOICE', for_viewer: false, page: 'invoices', object_id: 11 },
       }),
     );

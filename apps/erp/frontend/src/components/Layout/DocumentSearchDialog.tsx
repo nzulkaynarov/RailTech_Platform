@@ -13,7 +13,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/lib/formatLocale';
 import { useSearchDocuments } from '@/hooks/usePageStats';
-import { useUserStore } from '@/store/userStore';
 import { documentRoute } from '@/lib/documentRoute';
 import { documentStatusLabelKey } from '@/lib/codes';
 import type { RecentDocument } from '@/api/dashboardApi';
@@ -22,9 +21,9 @@ interface DocumentSearchDialogProps {
     open: boolean;
     onOpenChange: (v: boolean) => void;
     /**
-     * Вызывается с ДОСТИЖИМЫМ для зрителя маршрутом (`invoices?open=3`, `request-detail/5`).
-     * Маршрут считает `documentRoute` по стороне пользователя, а не берётся готовый хэш от
-     * сервера: тот не знает про гейты SPA и уводил покупателя в отказ (аудит UI, U1).
+     * Вызывается с маршрутом SPA (`invoices?open=3`, `request-detail/5`). Маршрут считает
+     * `documentRoute` по типу документа, а не берётся готовый хэш от сервера: тот не знает
+     * маршрутов SPA (аудит UI, U1).
      */
     onNavigate: (hash: string) => void;
 }
@@ -58,8 +57,6 @@ export function DocumentSearchDialog({ open, onOpenChange, onNavigate }: Documen
     const debouncedQuery = useDebouncedValue(query, DEBOUNCE_MS);
     const term = debouncedQuery.trim();
     const search = useSearchDocuments(term);
-    const activeStatus = useUserStore((state) => state.activeStatus);
-    const viewer = { isSeller: activeStatus === 'SELLER' };
 
     const grouped = useMemo(() => {
         const results = search.data ?? [];
@@ -126,7 +123,7 @@ export function DocumentSearchDialog({ open, onOpenChange, onNavigate }: Documen
                                     // Embed the query so cmdk's built-in filter never hides a server match.
                                     value={`${doc.type}-${doc.id} ${doc.label} ${term}`}
                                     onSelect={() => handleSelect(
-                                        documentRoute({ kind: doc.type, id: doc.id, dealId: doc.deal }, viewer),
+                                        documentRoute({ kind: doc.type, id: doc.id, dealId: doc.deal }),
                                     )}
                                 >
                                     <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />

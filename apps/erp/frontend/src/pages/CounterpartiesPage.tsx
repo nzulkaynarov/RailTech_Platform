@@ -1,4 +1,4 @@
-import { useState } from 'react'; import { useTranslation } from 'react-i18next'; import { activeDateFnsLocale } from '@/lib/formatLocale'; import { formatDistanceToNow } from 'date-fns'; import { toast } from 'sonner'; import {   Users, Truck, Clock, History, CheckCircle2, AlertTriangle, XCircle, Info, } from 'lucide-react'; import { Card, CardContent } from '@/components/ui/card'; import { Badge } from '@/components/ui/badge'; import { Label } from '@/components/ui/label'; import {   Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/components/ui/select'; import {   Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, } from '@/components/ui/sheet'; import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable'; import { Toolbar, Pager } from '@/components/DataTable';
+import { useState } from 'react'; import { useTranslation } from 'react-i18next'; import { activeDateFnsLocale } from '@/lib/formatLocale'; import { formatDistanceToNow } from 'date-fns'; import { toast } from 'sonner'; import {   Users, Clock, History, CheckCircle2, AlertTriangle, XCircle, Info, } from 'lucide-react'; import { Card, CardContent } from '@/components/ui/card'; import { Badge } from '@/components/ui/badge'; import { Label } from '@/components/ui/label'; import {   Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/components/ui/select'; import {   Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, } from '@/components/ui/sheet'; import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable'; import { Toolbar, Pager } from '@/components/DataTable';
 import { useListParams, applyListParams } from '@/components/DataTable/listParams';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useRelationships, useUpdateRelationship, useCompanyTimeline } from '@/hooks/useCRM';
@@ -6,15 +6,15 @@ import { translateApiError } from '@/lib/apiError';
 import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import { CreateOfflineClientDialog } from '@/components/CRM/CreateOfflineClientDialog';
 import type {
-  Relationship, RelationshipDirection, RelationshipStage, TimelineEntry,
+  Relationship, RelationshipStage, TimelineEntry,
 } from '@/api/crmApi';
 import { activityTitle, activityDetail } from '@/lib/activityText';
 
 /* ─── CRM Phase B — «Книга контрагентов» ─────────────────────────────────────
- * ONE page for both directions of the relationship book: direction=CLIENT is
- * the seller's client book («Клиенты»), direction=SUPPLIER the buyer's supplier
- * book («Поставщики»). Rows are read-only rollups; the ONLY writes are the two
- * human-managed fields (stage verdict / account owner) via PATCH.
+ * Книга клиентов бэк-офиса («Клиенты», direction=CLIENT). Покупательская «книга
+ * поставщиков» (direction=SUPPLIER) удалена в M1-ERP-02 волна 3: в ERP одна компания-продавец,
+ * а поставщики бэк-офиса — будущий модуль `supply` (M4). Rows are read-only rollups; the ONLY
+ * writes are the two human-managed fields (stage verdict / account owner) via PATCH.
  */
 
 // Stage/source are stable DB codes (Rule 2) — variants keyed by CODE, labels via t().
@@ -86,13 +86,9 @@ function CompanyTimeline({ companyId }: { companyId: number }) {
   );
 }
 
-interface CounterpartiesPageProps {
-  direction: RelationshipDirection;
-}
-
-export function CounterpartiesPage({ direction }: CounterpartiesPageProps) {
+export function CounterpartiesPage() {
   const { t } = useTranslation();
-  const { data: relationships, isLoading, isError, refetch } = useRelationships(direction);
+  const { data: relationships, isLoading, isError, refetch } = useRelationships('CLIENT');
   const updateMut = useUpdateRelationship();
   const formatCurrency = useCurrencyStore((s) => s.format);
   const dateLocale = activeDateFnsLocale();
@@ -101,11 +97,8 @@ export function CounterpartiesPage({ direction }: CounterpartiesPageProps) {
   const [selected, setSelected] = useState<Relationship | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
-  const isClientBook = direction === 'CLIENT';
-  const title = isClientBook ? t('counterparties.title.clients') : t('counterparties.title.suppliers');
-  const description = isClientBook
-    ? t('counterparties.description.clients')
-    : t('counterparties.description.suppliers');
+  const title = t('counterparties.title.clients');
+  const description = t('counterparties.description.clients');
 
   const onStageChange = async (relationship: Relationship, stage: RelationshipStage) => {
     if (stage === relationship.stage) return;
@@ -190,14 +183,14 @@ export function CounterpartiesPage({ direction }: CounterpartiesPageProps) {
     <PageShell
       title={title}
       description={description}
-      icon={isClientBook ? <Users className="h-5 w-5" /> : <Truck className="h-5 w-5" />}
+      icon={<Users className="h-5 w-5" />}
     >
       <Toolbar
         searchValue={listParams.searchInput}
         onSearchChange={listParams.setSearchInput}
         searchPlaceholder={t('counterparties.searchPlaceholder')}
-        newLabel={isClientBook ? t('counterparties.newClient') : undefined}
-        onNew={isClientBook ? () => setCreateOpen(true) : undefined}
+        newLabel={t('counterparties.newClient')}
+        onNew={() => setCreateOpen(true)}
       />
       <CreateOfflineClientDialog open={createOpen} onOpenChange={setCreateOpen} />
 
@@ -221,12 +214,10 @@ export function CounterpartiesPage({ direction }: CounterpartiesPageProps) {
             if (!pageItems.length) {
               return (
                 <EmptyState
-                  icon={isClientBook ? <Users className="h-5 w-5" /> : <Truck className="h-5 w-5" />}
+                  icon={<Users className="h-5 w-5" />}
                   message={t('counterparties.emptyState')}
-                  hint={isClientBook ? t('counterparties.emptyStateHintClients') : t('counterparties.emptyStateHintSuppliers')}
-                  action={isClientBook
-                    ? { label: t('counterparties.newClient'), onClick: () => setCreateOpen(true) }
-                    : undefined}
+                  hint={t('counterparties.emptyStateHintClients')}
+                  action={{ label: t('counterparties.newClient'), onClick: () => setCreateOpen(true) }}
                 />
               );
             }

@@ -74,20 +74,6 @@ export const useGenerateContract = () => {
   });
 };
 
-export const useSignContractClient = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: number) => contractsApi.signClient(id),
-    onSuccess: (_, id) => {
-      qc.invalidateQueries({ queryKey: ['contracts'] });
-      qc.invalidateQueries({ queryKey: ['contract', id] });
-      // Вторая подпись закрывает сделку как CLOSED_WON и материализует счёт — карточка и её
-      // хаб документов обязаны это увидеть без перезагрузки страницы.
-      invalidateDealChain(qc);
-    },
-  });
-};
-
 export const useSignContractManager = () => {
   const qc = useQueryClient();
   return useMutation({
@@ -275,17 +261,6 @@ export const useAct = (id: number | null) => useQuery({
   enabled: !!id,
 });
 
-export const useRejectAct = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, reason }: { id: number; reason: string }) => actsApi.reject(id, reason),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['acts'] });
-      invalidateDealChain(qc);
-    },
-  });
-};
-
 export const useRemindAct = () => {
   const qc = useQueryClient();
   return useMutation({
@@ -312,18 +287,6 @@ export const useCancelAct = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, reason }: { id: number; reason: string }) => actsApi.cancel(id, reason),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['acts'] });
-      invalidateDealChain(qc);
-    },
-  });
-};
-
-export const useSignAct = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, signedFile }: { id: number; signedFile?: File }) =>
-      actsApi.sign(id, signedFile),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['acts'] });
       invalidateDealChain(qc);

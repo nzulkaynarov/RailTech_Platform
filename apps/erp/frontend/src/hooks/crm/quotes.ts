@@ -109,14 +109,3 @@ export const useDuplicateQuote = () => {
     },
   });
 };
-
-export const useRejectQuote = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, reason }: { id: number; reason?: string }) => crmApi.rejectQuote(id, reason),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['quotes'] });
-      qc.invalidateQueries({ queryKey: ['deals'] });
-    },
-  });
-};

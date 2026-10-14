@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
 import {
-  ShoppingCart,
   Settings,
   ChevronDown,
   Layers,
@@ -53,13 +52,11 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useUserStore } from '@/store/userStore';
 import { buildNavigation, TENANT_NAV, TENANT_BOTTOM_NAV } from '@/config/navigation';
-import { useCartStore, useCartCount } from '@/store/cartStore';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useAuthStore } from '@/store/authStore';
 import { NotificationCenter } from '@/components/Layout/NotificationCenter';
 import { DocumentSearchDialog } from '@/components/Layout/DocumentSearchDialog';
 import { useCommandPaletteShortcut, useCommandPaletteState } from '@/components/Layout/useCommandPalette';
-import { CartDrawer } from '@/components/ui/CartDrawer';
 import { sidebarDefaultOpen } from './sidebarDefaultOpen';
 
 /* ─── Types ─────────────────────────────────────────────────────────── */
@@ -227,33 +224,21 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour, fullBlee
   const { profile, company, capabilities } = useUserStore();
   // Роль в компании (CompanyRole) — единственная роль после удаления операторской плоскости.
   const workspaceRole = useAuthStore((st) => st.user?.workspace_role ?? null);
-  const cartCount = useCartCount();
   const { currency, setCurrency, rateIsFallback } = useCurrencyStore();
   const { state } = useSidebar();
   const sidebarCollapsed = state === 'collapsed';
   // E2: Header flex shrinking — left container (min-w-0) allows company name truncation,
   // right container (flex-shrink-0) protects action icons from clipping at 1366px.
-  // Phase C — unified shell: nav visibility follows the company's CAPABILITIES (a dual
-  // buy+sell company sees both object groups at once), replacing the Покупатель↔Продавец
-  // switcher. The active data-context (X-Active-Context header) follows the PAGE the user
-  // opens (App.tsx pageContextOf), not a toggle, so it can only ever NARROW to a capable side.
-  const capableSides = useMemo(
-    () => ({
-      buy: company.statusEntries.some((e) => e.status === 'BUYER'),
-      sell: company.statusEntries.some((e) => e.status !== 'BUYER'),
-    }),
-    [company.statusEntries],
-  );
-  // ADR-0005: ONE config-driven nav, filtered by effective capabilities. Items the user can't
-  // access are HIDDEN (not greyed) — e.g. without `request.create`/`quote.approve` the buyer
-  // "Мои заявки" simply isn't shown. No disabled-state gating.
+  // ADR-0005: ONE config-driven nav, filtered by the role's permissions. Items the user can't
+  // access are HIDDEN (not greyed) — e.g. without `quote.build`/`quote.send` «Сделки» simply
+  // isn't shown. No disabled-state gating. Сторон «покупатель / продавец» нет (M1-ERP-02 в. 3).
   const navigation = useMemo(
-    () => buildNavigation(TENANT_NAV, capabilities, capableSides, activePage, t),
-    [capabilities, capableSides, activePage, t],
+    () => buildNavigation(TENANT_NAV, capabilities, activePage, t),
+    [capabilities, activePage, t],
   );
   const bottomNav = useMemo(
-    () => buildNavigation(TENANT_BOTTOM_NAV, capabilities, capableSides, activePage, t),
-    [capabilities, capableSides, activePage, t],
+    () => buildNavigation(TENANT_BOTTOM_NAV, capabilities, activePage, t),
+    [capabilities, activePage, t],
   );
 
   // Global document search (Cmd/Ctrl+K). Documents carry a ready-to-use deep-link `hash`, so the dialog assigns
@@ -284,9 +269,6 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour, fullBlee
         </SidebarHeader>
 
         <SidebarContent>
-          {/* Phase C: no Покупатель↔Продавец switcher — a dual company sees buy + sell
-              objects together in one nav below; single-side companies see only their side. */}
-
           {/* Main navigation */}
           <nav aria-label={t('shell.mainNavigation')} className="flex-1 space-y-0.5 overflow-y-auto py-3 px-3 group-data-[collapsible=icon]:px-1.5">
             {navigation.map((item) => (
@@ -453,26 +435,6 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour, fullBlee
               )}
 
               <Separator orientation="vertical" className="h-6" />
-              {/* Cart is a BUYER affordance (cart → RFQ). Shown for any buy-capable company
-                  (a pure seller has nothing to add to a cart). */}
-              {capableSides.buy && (
-                <>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="relative" aria-label={t('cart.title')} onClick={() => useCartStore.getState().openCart()}>
-                        <ShoppingCart className="h-4 w-4" />
-                        {cartCount > 0 && (
-                          <Badge className="absolute -top-1 -right-1 size-4 p-0 text-xs font-bold">
-                            {cartCount}
-                          </Badge>
-                        )}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>{t('cart.title')}</TooltipContent>
-                  </Tooltip>
-                  <CartDrawer />
-                </>
-              )}
               {/* Global document search — icon-only on small screens, labelled + ⌘K hint above sm */}
               <Tooltip>
                 <TooltipTrigger asChild>
