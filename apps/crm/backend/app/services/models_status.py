@@ -17,7 +17,7 @@ from app.domain.alerts import provider_problem
 from app.domain.budget import Route
 from app.integrations.litellm import EMBED_ALIAS
 from app.integrations.litellm_catalog import ModelEntry
-from app.integrations.llm_usage import COST_HEADER, UsageEvent, UsageSink, parse_cost
+from app.integrations.llm_usage import COST_HEADER, UsageEvent, UsageSink, gateway_body, parse_cost
 from app.models.system import SystemAlert
 from app.schemas.spend import ModelStatus, ModelTestResult
 
@@ -70,7 +70,9 @@ async def ping(client: AsyncOpenAI, alias: str, usage: UsageSink | None) -> floa
     Ошибку (`APIError`) пробрасывает: её разбирает вызывающий (кнопка «Проверить», монитор).
     """
     if alias == EMBED_ALIAS:
-        raw_e = await client.embeddings.with_raw_response.create(model=alias, input=["ping"])
+        raw_e = await client.embeddings.with_raw_response.create(
+            model=alias, input=["ping"], extra_body=gateway_body("probe", alias)
+        )
         model, tokens_in, tokens_out = _embed_usage(raw_e.parse())
         cost = parse_cost(raw_e.headers.get(COST_HEADER))
     else:
@@ -78,7 +80,7 @@ async def ping(client: AsyncOpenAI, alias: str, usage: UsageSink | None) -> floa
             model=alias,
             messages=[{"role": "user", "content": "ping"}],
             max_tokens=1,
-            extra_body={"disable_fallbacks": True},
+            extra_body=gateway_body("probe", alias, disable_fallbacks=True),
         )
         model, tokens_in, tokens_out = _chat_usage(raw_c.parse())
         cost = parse_cost(raw_c.headers.get(COST_HEADER))

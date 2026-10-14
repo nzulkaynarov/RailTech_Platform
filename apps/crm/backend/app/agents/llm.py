@@ -15,7 +15,14 @@ from openai import APIError, AsyncOpenAI
 
 from app.integrations import langfuse as lf
 from app.integrations.litellm import Alias
-from app.integrations.llm_usage import COST_HEADER, Purpose, UsageEvent, UsageSink, parse_cost
+from app.integrations.llm_usage import (
+    COST_HEADER,
+    Purpose,
+    UsageEvent,
+    UsageSink,
+    gateway_body,
+    parse_cost,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -129,7 +136,9 @@ class ChatModel:
             kwargs["response_format"] = response_format
         started = time.monotonic()
         with lf.generation(name=name, model=alias, input=messages) as span:
-            raw = await self._client.chat.completions.with_raw_response.create(**kwargs)
+            raw = await self._client.chat.completions.with_raw_response.create(
+                **kwargs, extra_body=gateway_body(self._purpose, alias)
+            )
             result = _to_result(
                 raw.parse(),
                 alias,

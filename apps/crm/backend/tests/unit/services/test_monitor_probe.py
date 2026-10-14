@@ -70,7 +70,14 @@ async def test_every_probe_call_is_recorded_as_probe() -> None:
         ("probe", "fallback-model", 0.00002),
     ]
     assert all(c["max_tokens"] == 1 for c in client.calls)
-    assert all(c["extra_body"] == {"disable_fallbacks": True} for c in client.calls)
+    # Без резерва LiteLLM (иначе сбой Claude скрыт ответом Gemini) и с тегами журнала расходов.
+    assert [c["extra_body"] for c in client.calls] == [
+        {
+            "metadata": {"tags": ["system=crm", "feature=probe", f"model={alias}"]},
+            "disable_fallbacks": True,
+        }
+        for alias in ALIASES
+    ]
 
 
 async def test_provider_over_limit_is_not_probed() -> None:

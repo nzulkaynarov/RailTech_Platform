@@ -4,6 +4,7 @@
 (`system_alerts`), очередь Procrastinate и конфигурация. Платных вызовов моделей нет.
 """
 
+from collections.abc import Sequence
 from datetime import datetime, timedelta
 
 from pydantic import SecretStr
@@ -13,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.config import Settings
 from app.domain import system_status as rules
 from app.domain.system_status import (
+    AiBudgetFacts,
     AlertRow,
     BackupFacts,
     BotFacts,
@@ -85,10 +87,13 @@ class SystemStatusService:
         *,
         token_configured: bool,
         erp: ErpFacts | None = None,
+        ai_budget: Sequence[AiBudgetFacts] | None = None,
     ) -> list[Component]:
         """Единый источник здоровья: «Состояние», индикатор в шапке и чек-лист настройки.
 
         `erp` — итог кэшированной пробы коннектора (M3-CRM-02); None — коннектор не настроен.
+        `ai_budget` — расход ИИ сегодня по системам из журнала LiteLLM (M3-CRM-09, кэш 60 с);
+        None — журнал недоступен.
         """
         report = await self._readiness.check()
         components = rules.dependencies(report.checks, now)
@@ -103,6 +108,7 @@ class SystemStatusService:
         components.append(rules.bot(bot, self._config.telegram_mode, now))
         components.append(await self._backup(now))
         components.append(rules.erp(erp or ErpFacts(configured=False), now))
+        components.append(rules.ai_budget(ai_budget, now))
         missing = missing_secrets(self._config, token_elsewhere=token_configured)
         has_key = bool(self._config.secrets_key.get_secret_value())
         components.append(rules.secrets(missing, now, secrets_key=has_key))

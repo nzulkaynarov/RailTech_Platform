@@ -7,6 +7,13 @@
 
 export * from "./accessOut";
 export * from "./actionResult";
+export * from "./aiBudgetOverrun";
+export * from "./aiSpendReport";
+export * from "./aiSpendReportGroup";
+export * from "./aiSpendRow";
+export * from "./aiSpendSystemCost";
+export * from "./aiSpendTotals";
+export * from "./aiSystemBudget";
 export * from "./assign";
 export * from "./assistOut";
 export * from "./assistOutNotice";
@@ -83,6 +90,8 @@ export * from "./exportClientsParams";
 export * from "./exportDealsParams";
 export * from "./exportDealsStage";
 export * from "./exportLeadsParams";
+export * from "./getAiSpendGroup";
+export * from "./getAiSpendParams";
 export * from "./getDashboardParams";
 export * from "./getSpendParams";
 export * from "./healthResponse";
