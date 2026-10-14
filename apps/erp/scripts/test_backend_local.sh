@@ -8,13 +8,16 @@
 #   scripts/test_backend_local.sh --migration-check    makemigrations --check и migrate на чистой базе
 #   scripts/test_backend_local.sh --manage <args>      произвольная manage.py-команда (например, makemigrations accounts)
 #   scripts/test_backend_local.sh --down               удалить контейнеры и сеть
+#   ERP_TEST_NS=<имя> scripts/test_backend_local.sh …  свой набор контейнеров (параллельные сессии/агенты)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-NET=rt-erp-test
-PG=rt-erp-test-pg
-RD=rt-erp-test-redis
-IMAGE="${ERP_TEST_IMAGE:-rt-platform-erp-backend:test}"
+# ERP_TEST_NS — суффикс имён: две сессии на одной машине не делят базу тестов.
+NS="${ERP_TEST_NS:+-${ERP_TEST_NS}}"
+NET="rt-erp-test${NS}"
+PG="rt-erp-test${NS}-pg"
+RD="rt-erp-test${NS}-redis"
+IMAGE="${ERP_TEST_IMAGE:-rt-platform-erp-backend:test${NS}}"
 PG_IMAGE="${ERP_TEST_PG_IMAGE:-pgvector/pgvector:0.8.7-pg17}"
 REDIS_IMAGE="${ERP_TEST_REDIS_IMAGE:-redis:7.4.11}"
 PASS=ci-only-password
@@ -25,7 +28,7 @@ down() {
   echo "Контейнеры $PG, $RD и сеть $NET удалены."
 }
 case "${1:-}" in
-  -h | --help) sed -n '2,10p' "$0"; exit 0 ;;
+  -h | --help) sed -n '2,11p' "$0"; exit 0 ;;
   --down) down; exit 0 ;;
 esac
 
