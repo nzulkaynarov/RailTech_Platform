@@ -64,6 +64,10 @@ smoke: ## /health трёх доменов через Caddy (порт HTTP_PORT �
 	  printf '  %-18s /health → %s\n' $$host.localhost $$code; [ "$$code" = 200 ] || ok=0; \
 	done; [ $$ok = 1 ] && echo "smoke: ok" || { echo "smoke: FAIL"; exit 1; }
 
+.PHONY: caddy-reload
+caddy-reload: _compose-check ## Пересоздать Caddy после правки infra/caddy/Caddyfile.dev (bind-mount файла не видит замену файла git'ом)
+	$(COMPOSE) up -d --force-recreate --no-deps caddy
+
 .PHONY: down
 down: _compose-check ## Остановить стенд ансамбля (volumes сохраняются)
 	$(COMPOSE) --profile observability down

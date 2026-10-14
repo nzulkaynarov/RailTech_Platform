@@ -90,6 +90,8 @@ make up-obs
 
 ## Если не поднимается
 
+- Поменяли `infra/caddy/Caddyfile.dev` (или подтянули его `git pull`), а домены ведут себя по-старому: Caddyfile смонтирован одиночным файлом, и после замены файла git'ом контейнер видит старую копию или пустоту («open /etc/caddy/Caddyfile: no such file»). Лечение — `make caddy-reload` (пересоздаёт контейнер Caddy).
+
 - `make ps` → `crm-api` не healthy: `make logs s=crm-api`; чаще всего — не применились миграции (`make logs s=crm-migrate`).
 - `litellm` не healthy: `make logs s=litellm`; база `litellm` создаётся `db-init` — проверьте его лог.
 - `docling` стартует до минуты (образ 7 ГБ); `crm-worker` ждёт его.

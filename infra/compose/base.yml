@@ -329,7 +329,7 @@ services:
       DJANGO_DEBUG: ${ERP_DEBUG:-true}
       DJANGO_LOG_LEVEL: ${LOG_LEVEL:-INFO}
       AUTO_MIGRATE: "true"
-      ALLOWED_HOSTS: erp.localhost,localhost,127.0.0.1,erp-backend,${ERP_DOMAIN:-erp.railtech.uz}
+      ALLOWED_HOSTS: erp.localhost,cabinet.localhost,localhost,127.0.0.1,erp-backend,${ERP_DOMAIN:-erp.railtech.uz},${CABINET_DOMAIN:-cabinet.railtech.uz}
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/erp?sslmode=disable
       DB_SSLMODE: disable
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/2
