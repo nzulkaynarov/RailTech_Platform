@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 )
 def refresh_exchange_rates():
     """Daily Celery-beat job: pull CBU FX rates into ExchangeRate."""
-    from .fx import fetch_cbu_rates
+    from finance.services.fx import fetch_cbu_rates
 
     count = fetch_cbu_rates()
     logger.info("FX: upserted %s exchange rates from CBU", count)

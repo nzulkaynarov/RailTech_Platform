@@ -90,7 +90,12 @@ def _step_permission(step: QuoteApprovalStep) -> str:
 
 def _set_status(quote: Quote, code: str) -> None:
     quote.status = QuoteStatus.objects.get(code=code)
-    quote.save(update_fields=["status", "updated_at"])
+    fields = ["status", "updated_at"]
+    if code == QuoteStatusCode.DRAFT and quote.fx_fixed_at is not None:
+        # M1-ERP-08: КП вернулось в черновик (отклонён шаг / отозвано) — курс снова живой.
+        quote.fx_fixed_at = None
+        fields.append("fx_fixed_at")
+    quote.save(update_fields=fields)
 
 
 def _log(

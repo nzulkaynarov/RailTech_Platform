@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { DocumentActions } from '@/components/Shared/DocumentActions';
+import { QuoteFxRates } from '@/components/CRM/QuoteFxRates';
 import { deliveryBasisLabelKey } from '@/lib/codes';
 import { marginToneClass, compactNumber } from './gridConstants';
 import { useQuoteBuilderGrid } from './QuoteBuilderGridContext';
@@ -94,6 +95,9 @@ export const EconomicsRail: React.FC = () => {
 						)}
 					</div>
 				</div>
+
+				{/* Курс на дату КП (M1-ERP-08; cost-viewer only — сервер не отдаёт fx_rates без права). */}
+				<QuoteFxRates quote={activeQuote} />
 
 				{/* Экономика сделки (cost-viewer only) */}
 				{econ && (

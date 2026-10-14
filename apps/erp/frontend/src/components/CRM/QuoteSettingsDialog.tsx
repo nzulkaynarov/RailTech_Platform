@@ -8,6 +8,7 @@ import { useCurrencies } from '@/hooks/useMasterData';
 import { currencyLabelKey } from '@/lib/codes';
 import { CountrySelect } from '@/components/Shared/CountrySelect';
 import { DeliveryBasisSelect } from './DeliveryBasisSelect';
+import { QuoteFxRates } from './QuoteFxRates';
 import {
 	Dialog,
 	DialogContent,
@@ -72,12 +73,6 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 	const [costCurrencyDefault, setCostCurrencyDefault] = useState('');
 	const [deliveryLeadTime, setDeliveryLeadTime] = useState('');
 	const [deliveryNote, setDeliveryNote] = useState('');
-	// КП-level manual FX overrides keyed by currency code (empty ⇒ use CBU snapshot).
-	const [fxManual, setFxManual] = useState<Record<string, string>>({});
-
-	// Currencies the engine has frozen an FX snapshot for — the rows of the FX editor.
-	const fxSnapshot = quote.fx_snapshot ?? {};
-	const fxCurrencies = Object.keys(fxSnapshot);
 
 	const vatRateNumber = vatRate === '' ? null : Number(vatRate);
 	const vatRateInvalid =
@@ -106,13 +101,8 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 		setCostCurrencyDefault(quote.cost_currency_default ?? '');
 		setDeliveryLeadTime(quote.delivery_lead_time_days != null ? String(quote.delivery_lead_time_days) : '');
 		setDeliveryNote(quote.delivery_note ?? '');
-		setFxManual({ ...(quote.fx_manual ?? {}) });
 	}, [open, quote]);
 
-	// Edit a single currency's manual override; empty string clears it (back to CBU).
-	const setOverride = (code: string, value: string) => {
-		setFxManual((prev) => ({ ...prev, [code]: value }));
-	};
 
 	async function submit(event: FormEvent) {
 		event.preventDefault();
@@ -120,10 +110,6 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 			toast.error(t('quote.settings.vatRateOutOfRange', { min: VAT_RATE_MIN, max: VAT_RATE_MAX }));
 			return;
 		}
-		// Keep only non-empty overrides — a blank input means "use the CBU snapshot".
-		const cleanedFxManual = Object.fromEntries(
-			Object.entries(fxManual).filter(([, rate]) => rate !== '' && rate != null),
-		);
 		try {
 			await updateSettings.mutateAsync({
 				id: quote.id,
@@ -136,7 +122,6 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 					cost_currency_default: costCurrencyDefault === '' ? null : costCurrencyDefault,
 					delivery_lead_time_days: deliveryLeadTime === '' ? null : Number(deliveryLeadTime),
 					delivery_note: deliveryNote,
-					fx_manual: cleanedFxManual,
 				},
 			});
 			toast.success(t('quote.settings.saved'));
@@ -326,36 +311,9 @@ export function QuoteSettingsDialog({ quote, open, onOpenChange }: QuoteSettings
 							/>
 						</div>
 
-						{/* Manual FX override editor — one row per currency the engine froze a rate
-						    for. The CBU snapshot is shown read-only; the input writes fx_manual
-						    (empty ⇒ keep CBU). Rates are сум per 1 unit of currency. */}
-						{fxCurrencies.length > 0 && (
-							<div className="flex flex-col gap-2">
-								<Label>{t('quote.settings.fxOverride')}</Label>
-								<p className="text-xs text-muted-foreground">{t('quote.settings.fxOverrideHelp')}</p>
-								<div className="flex flex-col gap-2">
-									{fxCurrencies.map((code) => (
-										<div key={code} className="flex items-center gap-2">
-											<span className="w-12 text-sm font-mono">{code}</span>
-											<span className="flex-1 text-xs text-muted-foreground">
-												{t('quote.settings.fxCbuRate', { rate: fxSnapshot[code] })}
-											</span>
-											<Input
-												type="number"
-												step="0.0001"
-												min={0}
-												className="w-32"
-												aria-label={t('quote.settings.fxOverrideFor', { code })}
-												value={fxManual[code] ?? ''}
-												onChange={(event) => setOverride(code, event.target.value)}
-												onFocus={(event) => event.target.select()}
-												placeholder={fxSnapshot[code]}
-											/>
-										</div>
-									))}
-								</div>
-							</div>
-						)}
+						{/* Курс на дату КП (M1-ERP-08): только просмотр; договорной курс задаёт финансист
+						    (право finance.rates) — с причиной, в журнал КП. */}
+						<QuoteFxRates quote={quote} />
 					</div>
 
 					<DialogFooter className="mt-6 gap-2">

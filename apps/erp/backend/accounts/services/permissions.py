@@ -174,3 +174,14 @@ def can_edit_quote_pricing(user: "CustomUser") -> bool:
     `quote.edit_pricing` permission. `can_sell` defaults True, so without the permission check a
     view-only CompanyRole (Наблюдатель) could still tamper with pricing (audit H2)."""
     return _own_company_permission(user, "quote.edit_pricing")
+
+
+def can_manage_quote_rates(user: "CustomUser") -> bool:
+    """M1-ERP-08: курс КП вручную (договорной курс с причиной) — право `finance.rates`."""
+    return _own_company_permission(user, "finance.rates")
+
+
+def can_record_purchase_actuals(user: "CustomUser") -> bool:
+    """M1-ERP-08: факт закупки по сделке (для отклонения маржи) вносит финансист (`finance.rates`)
+    или закупщик (`supply.manage`) — до M4 вручную, затем из счетов поставщиков."""
+    return _own_company_permission(user, "finance.rates") or _own_company_permission(user, "supply.manage")

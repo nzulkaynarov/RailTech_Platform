@@ -10,6 +10,7 @@ package ``__init__`` for the historical public import surface.
 from typing import Optional, Tuple
 
 from accounts.models import Company, CompanyMember
+from crm.constants import QuoteStatusCode
 from crm.models import ActivityLog, QuoteStatus
 
 
@@ -96,7 +97,12 @@ def _profile_has_branding(profile) -> bool:
 def _set_quote_status(quote, code: str) -> None:
     # .get (not get_or_create): the status MUST exist from the seed migration.
     quote.status = QuoteStatus.objects.get(code=code)
-    quote.save(update_fields=["status", "updated_at"])
+    fields = ["status", "updated_at"]
+    if code == QuoteStatusCode.DRAFT and quote.fx_fixed_at is not None:
+        # M1-ERP-08: КП вернулось в черновик — курс снова живой (sales.services.quote_fx).
+        quote.fx_fixed_at = None
+        fields.append("fx_fixed_at")
+    quote.save(update_fields=fields)
 
 
 def _notify_quote_outcome(

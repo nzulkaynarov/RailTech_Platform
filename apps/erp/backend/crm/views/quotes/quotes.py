@@ -20,6 +20,7 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from sales.views.quote_fx import QuoteFxMixin
 
 from core.optimistic_locking import OptimisticLockingMixin
 from core.permissions import ADMIN_ONLY, BUYER_ONLY, IsCompanyMemberOrPlatformAdmin, RoleGatedViewMixin
@@ -47,7 +48,7 @@ from crm.views.quotes.approval import QuoteApprovalMixin, _chain_error_response
     partial_update=extend_schema(summary="Partially update quote", tags=["CRM"]),
     destroy=extend_schema(summary="Delete quote", tags=["CRM"]),
 )
-class QuoteViewSet(RoleGatedViewMixin, QuoteApprovalMixin, OptimisticLockingMixin, viewsets.ModelViewSet):
+class QuoteViewSet(RoleGatedViewMixin, QuoteApprovalMixin, QuoteFxMixin, OptimisticLockingMixin, viewsets.ModelViewSet):
     """
     CRUD for quotes (commercial proposals).
 
@@ -72,6 +73,8 @@ class QuoteViewSet(RoleGatedViewMixin, QuoteApprovalMixin, OptimisticLockingMixi
         "revoke_public_link": "quote.build",
         "apply_defaults": "quote.edit_pricing",
         "charges_reorder": "quote.edit_pricing",
+        # Договорной курс КП (M1-ERP-08) — финансы, с причиной; сам расчёт КП не меняет права расчётчика.
+        "fx_override": "finance.rates",
         "send_to_client": "quote.send",
         "approval_act": ("quote.review", "quote.approve_final"),
         "approve": BUYER_ONLY,
@@ -87,7 +90,7 @@ class QuoteViewSet(RoleGatedViewMixin, QuoteApprovalMixin, OptimisticLockingMixi
         # Compute the (cost-gated) unit-economics block ONLY on the single-quote detail —
         # the КП builder reads it there. Off for list endpoints to avoid an items+charges N+1.
         ctx = super().get_serializer_context()
-        ctx["include_economics"] = self.action == "retrieve"
+        ctx["include_economics"] = self.action in ("retrieve", "fx_override")
         return ctx
 
     def get_queryset(self):

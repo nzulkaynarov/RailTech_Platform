@@ -4,7 +4,7 @@ usePricingMirror recomputes КП lines locally, but for a cost currency not yet 
 Quote.fx_snapshot / fx_manual the frontend had no rate → «пересчёт после сохранения». The
 read-only fx_market map exposes the current market rate_to_uzs for every ACTIVE currency
 (UZS = 1) so the mirror can preview the line. Rates come from the LOCAL ExchangeRate table
-(master_data.fx.get_rate_to_uzs) — no network in the request path. A currency with no known
+(finance.services.fx.get_rate_to_uzs, курс не старше FX_RATE_MAX_AGE_DAYS) — no network in the request path. A currency with no known
 rate is OMITTED, so the mirror keeps its honest «no rate» marker.
 """
 
@@ -35,6 +35,13 @@ def quote(db):
         vat_amount=Decimal("0"),
         total_incl_vat=Decimal("0"),
     )
+
+
+def _days_ago(days):
+    """Даты относительно сегодня: курс старше FX_RATE_MAX_AGE_DAYS считается отсутствующим (M1-ERP-08)."""
+    from django.utils import timezone
+
+    return timezone.localdate() - datetime.timedelta(days=days)
 
 
 def _currency(code, *, is_active):
@@ -73,12 +80,8 @@ def test_fx_market_uses_latest_table_rate(quote):
     usd = _currency("USD", is_active=True)
     ExchangeRate.objects.filter(currency=usd).delete()
     # Two rows — the map must reflect the most recent rate_date, not the stale one.
-    ExchangeRate.objects.create(
-        currency=usd, rate_date=datetime.date(2026, 1, 1), rate_to_uzs=Decimal("11000.00"), source="TEST"
-    )
-    ExchangeRate.objects.create(
-        currency=usd, rate_date=datetime.date(2026, 7, 1), rate_to_uzs=Decimal("12500.75"), source="TEST"
-    )
+    ExchangeRate.objects.create(currency=usd, rate_date=_days_ago(30), rate_to_uzs=Decimal("11000.00"), source="TEST")
+    ExchangeRate.objects.create(currency=usd, rate_date=_days_ago(1), rate_to_uzs=Decimal("12500.75"), source="TEST")
 
     data = _serialize(quote)
 
@@ -108,9 +111,7 @@ def test_fx_market_excludes_inactive_currency(quote):
     _currency("UZS", is_active=True)
     gbp = _currency("GBP", is_active=False)
     ExchangeRate.objects.filter(currency=gbp).delete()
-    ExchangeRate.objects.create(
-        currency=gbp, rate_date=datetime.date(2026, 7, 1), rate_to_uzs=Decimal("15000.00"), source="TEST"
-    )
+    ExchangeRate.objects.create(currency=gbp, rate_date=_days_ago(1), rate_to_uzs=Decimal("15000.00"), source="TEST")
 
     data = _serialize(quote)
 
@@ -126,9 +127,7 @@ def test_fx_market_gated_off_without_include_economics(quote):
 
     _currency("UZS", is_active=True)
     usd = _currency("USD", is_active=True)
-    ExchangeRate.objects.create(
-        currency=usd, rate_date=datetime.date(2026, 7, 1), rate_to_uzs=Decimal("12500.75"), source="TEST"
-    )
+    ExchangeRate.objects.create(currency=usd, rate_date=_days_ago(1), rate_to_uzs=Decimal("12500.75"), source="TEST")
 
     with CaptureQueriesContext(connection) as captured:
         data = _serialize(quote, include_economics=False)

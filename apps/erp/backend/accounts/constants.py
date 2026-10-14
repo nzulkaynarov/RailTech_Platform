@@ -60,6 +60,8 @@ class Permission(models.TextChoices):
     # Финансы
     FINANCE_INVOICE = "finance.invoice", "Выставлять счета клиентам"
     FINANCE_PAYMENT = "finance.payment", "Фиксировать оплаты"
+    # Курс КП вручную (с причиной) и фактическая закупка для отклонения маржи (M1-ERP-08)
+    FINANCE_RATES = "finance.rates", "Менять курс КП и вносить факт закупки"
     # Настройки и команда
     SETTINGS_EDIT = "settings.edit", "Менять реквизиты, шаблоны и нумерацию"
     SETTINGS_CHARGE_TEMPLATES = "settings.charge_templates", "Вести шаблоны статей расходов КП"
@@ -83,7 +85,7 @@ PERMISSION_GROUPS = {
     "catalog": [Permission.CATALOG_MANAGE, Permission.CATALOG_PUBLISH],
     "supply": [Permission.SUPPLY_MANAGE],
     "fulfillment": [Permission.FULFILLMENT_MANAGE, Permission.FULFILLMENT_ACT],
-    "finance": [Permission.FINANCE_INVOICE, Permission.FINANCE_PAYMENT],
+    "finance": [Permission.FINANCE_INVOICE, Permission.FINANCE_PAYMENT, Permission.FINANCE_RATES],
     "settings": [Permission.SETTINGS_EDIT, Permission.SETTINGS_CHARGE_TEMPLATES, Permission.TEAM_MANAGE],
     "data": [Permission.DATA_EXPORT],
 }
@@ -122,7 +124,13 @@ ROLE_TEMPLATES = {
         P.QUOTE_VIEW_COST_MARGIN,
     ],
     BackofficeRoleCode.FULFILLMENT: [P.FULFILLMENT_MANAGE, P.FULFILLMENT_ACT],
-    BackofficeRoleCode.FINANCE: [P.FINANCE_INVOICE, P.FINANCE_PAYMENT, P.QUOTE_VIEW_COST_MARGIN, P.DATA_EXPORT],
+    BackofficeRoleCode.FINANCE: [
+        P.FINANCE_INVOICE,
+        P.FINANCE_PAYMENT,
+        P.FINANCE_RATES,
+        P.QUOTE_VIEW_COST_MARGIN,
+        P.DATA_EXPORT,
+    ],
     # Руководитель: финальное утверждение и все действия бэк-офиса (BUSINESS §11, M1-ERP-05).
     BackofficeRoleCode.HEAD: list(Permission),
     BackofficeRoleCode.VIEWER: [],

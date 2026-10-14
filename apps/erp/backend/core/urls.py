@@ -5,6 +5,7 @@ from django.urls import include, path, re_path
 from django.views.static import serve as _serve_media
 from drf_spectacular.utils import extend_schema
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
+from finance.views import DealMarginDeviationView, DealPurchaseActualDetailView, DealPurchaseActualsView
 from rest_framework.permissions import IsAdminUser
 from rest_framework.routers import DefaultRouter
 
@@ -220,6 +221,22 @@ urlpatterns = (
             name="numbering-scheme-preview",
         ),
         path("api/v1/crm/numbering-scheme/", NumberingSchemeView.as_view(), name="numbering-scheme"),
+        # M1-ERP-08 — отклонение маржи сделки и факт закупки (вручную до M4).
+        path(
+            "api/v1/finance/deals/<int:deal_id>/margin-deviation/",
+            DealMarginDeviationView.as_view(),
+            name="deal-margin-deviation",
+        ),
+        path(
+            "api/v1/finance/deals/<int:deal_id>/purchase-actuals/",
+            DealPurchaseActualsView.as_view(),
+            name="deal-purchase-actuals",
+        ),
+        path(
+            "api/v1/finance/deals/<int:deal_id>/purchase-actuals/<str:currency>/",
+            DealPurchaseActualDetailView.as_view(),
+            name="deal-purchase-actual-detail",
+        ),
         # CRM Phase A — counterparty / deal activity timeline (read-only).
         path("api/v1/crm/timeline/", TimelineView.as_view(), name="crm-timeline"),
         path("api/v1/analytics/page-stats/", PageStatsView.as_view(), name="page-stats"),

@@ -47,7 +47,7 @@ from .bulk import (
 )
 from .duplicate import duplicate_quote
 from .lifecycle import QuoteLifecycleService
-from .pricing import QuoteCalculationService, _positive_fx_rate, compute_quote_economics, effective_quote_lead_time
+from .pricing import QuoteCalculationService, compute_quote_economics, effective_quote_lead_time
 
 __all__ = [
     # _shared
@@ -64,7 +64,6 @@ __all__ = [
     "QuoteCalculationService",
     "compute_quote_economics",
     "effective_quote_lead_time",
-    "_positive_fx_rate",
     # access
     "apply_company_quote_defaults",
     "reapply_company_defaults",

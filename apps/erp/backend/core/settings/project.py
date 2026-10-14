@@ -83,3 +83,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Точка истины — `core.tenant.own_company_id()`. Пусто → единственная активная компания-продавец
 # с активными участниками (dev, тесты, свежий стенд); несколько таких без настройки — ошибка конфигурации.
 OWN_COMPANY_ID = int(os.environ["OWN_COMPANY_ID"]) if os.environ.get("OWN_COMPANY_ID", "").strip() else None
+
+# Курс на дату КП (M1-ERP-08): курс берётся с ближайшей прошедшей даты (ЦБ не публикует курс в
+# выходные), но не старше стольких календарных дней; старее — «курса нет» (FX_RATE_MISSING блокирует
+# отправку на согласование, PDF и отправку клиенту, пока ЦБ не обновит курс или финансист не задаст
+# курс КП вручную). Политика курса переедет в «Настройки» ERP (M1-ERP-09).
+FX_RATE_MAX_AGE_DAYS = int((os.environ.get("FX_RATE_MAX_AGE_DAYS") or "7").strip() or "7")

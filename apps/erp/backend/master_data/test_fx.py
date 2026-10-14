@@ -44,7 +44,9 @@ def test_fetch_cbu_rates_upserts_tracked_only_and_is_idempotent(monkeypatch):
 
 def test_rate_lookup_and_conversion_with_manual_override():
     usd = Currency.objects.get_or_create(code="USD", defaults={"name": "$", "sort_order": 1})[0]
-    ExchangeRate.objects.create(currency=usd, rate_to_uzs=Decimal("12000"), rate_date=datetime.date(2026, 6, 26))
+    from django.utils import timezone
+
+    ExchangeRate.objects.create(currency=usd, rate_to_uzs=Decimal("12000"), rate_date=timezone.localdate())
 
     assert fx.get_rate_to_uzs("UZS") == Decimal("1")  # base currency
     assert fx.get_rate_to_uzs("USD") == Decimal("12000")
