@@ -28,11 +28,11 @@ check-erp: ## ERP: появится с M1-ERP-01; пока кода нет — �
 	@if [ -f $(ERP)/Makefile ]; then $(MAKE) -C $(ERP) check; else echo "check-erp: $(ERP) ещё без кода (M1-ERP-01) — пропуск"; fi
 
 .PHONY: check-cabinet
-check-cabinet: ## Cabinet: появится с M2-CAB-01; пока кода нет — пропуск
+check-cabinet: ## Cabinet: eslint, tsc, i18n ru/uz/en, токены, типы портала, vitest + axe (apps/cabinet/Makefile)
 	@if [ -f $(CABINET)/Makefile ]; then $(MAKE) -C $(CABINET) check; else echo "check-cabinet: $(CABINET) ещё без кода (M2-CAB-01) — пропуск"; fi
 
 .PHONY: tokens
-tokens: ## Токены дизайна: tokens.json → dist/ и apps/crm/frontend/src/app/tokens.generated.ts (M0-INF-05)
+tokens: ## Токены дизайна: tokens.json → dist/, копии в apps/crm (tokens.generated.ts) и apps/cabinet (tokens.generated.css)
 	$(MAKE) -C packages/ui-tokens build
 
 .PHONY: contracts

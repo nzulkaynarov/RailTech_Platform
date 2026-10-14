@@ -357,7 +357,7 @@ jobs:
         working-directory: apps/crm/frontend
         run: pnpm audit --prod --audit-level high
 
-  # ─── ERP и Cabinet: make check-<система> (пока кода нет — пропуск внутри цели) ─────────────
+  # ─── ERP и Cabinet: make check-<система> ──────────────────────────────────────────────────
 
   erp:
     name: ERP · check
@@ -394,6 +394,14 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/cabinet/package-lock.json
+      - name: Install (npm ci)
+        run: make -C apps/cabinet install
+      # eslint + tsc + i18n (ru/uz/en) + токены + типы портального API + vitest/axe
       - run: make check-cabinet
 
   # ─── packages: контракт и токены ───────────────────────────────────────────────────────────
