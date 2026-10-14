@@ -30,7 +30,6 @@ def _base_ctx(font_key: str) -> dict:
         "seller_profile": None,
         "seller_logo_url": None,
         "company": SimpleNamespace(name="ООО «Клиент»", inn="", legal_address="", contact_person=""),
-        "is_demo": False,
     }
 
 

@@ -10,22 +10,11 @@
 `UserRecordAccess`, Odoo Portal сверяет партнёра на сервере. Клиент роль ЧИТАЕТ.
 """
 
-from datetime import timedelta
-
 import pytest
-from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    SystemRole,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import Deal, DealSellerRouting, DealStage
 
 pytestmark = pytest.mark.django_db
@@ -59,9 +48,6 @@ def dual_world(lookups):
     # Порядок типов важен: CLIENT первым — из него фронт и делал `activeStatus = BUYER`.
     dual.types.add(CompanyType.objects.get(code="CLIENT"))
     dual.types.add(CompanyType.objects.get(code="SUPPLIER"))
-    SupplierSubscription.objects.create(
-        company=dual, plan="PREMIUM", status="ACTIVE", valid_until=timezone.localdate() + timedelta(days=30)
-    )
     buyer_co = Company.objects.create(name="ООО Покупатель", inn="8000000002")
     buyer_co.types.add(CompanyType.objects.get(code="CLIENT"))
 

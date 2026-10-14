@@ -323,8 +323,7 @@ AI_CATALOG_EXTENSIONS = ("xlsx", "pdf", "png", "jpg", "jpeg")
 class ImportCatalogAiView(APIView):
     """R5b — зеркало CatalogImportView для произвольных файлов (staging как у extract-document).
 
-    Entitlement-гейта нет СОЗНАТЕЛЬНО — как у extract (закреплено test_ai_enrich_entitlement:
-    extract не за стеной); дневной cap применяется внутри enqueue_ai_job.
+    Дневной предохранитель расхода ИИ применяется внутри enqueue_ai_job.
     """
 
     parser_classes = [MultiPartParser]

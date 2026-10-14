@@ -8,21 +8,11 @@ Self-contained fixtures (зеркалит test_invoice_lifecycle.py): тесты
 все lookup-коды сеются здесь.
 """
 
-from datetime import timedelta
 from decimal import Decimal
 
 import pytest
-from django.utils import timezone
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    SystemRole,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import (
     ActStatus,
     Contract,
@@ -90,12 +80,6 @@ def world(lookups):
         is_active=True,
         is_primary=True,
         can_sell=True,
-    )
-    SupplierSubscription.objects.create(
-        company=seller_co,
-        plan="PREMIUM",
-        status="ACTIVE",
-        valid_until=timezone.localdate() + timedelta(days=30),
     )
     deal = Deal.objects.create(title="Snap deal", company=buyer_co, stage=DealStage.objects.get(code="CONTRACT_SIGNED"))
     DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)

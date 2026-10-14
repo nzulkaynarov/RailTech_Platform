@@ -350,7 +350,7 @@ def test_contract_and_billing_events_are_structured(deal, buyer, manager):
 
 def _ready_priced_quote(deal, manager):
     """A properly-priced КП in READY_TO_SEND — same setup the golden path sends successfully,
-    so all the OTHER send guards (routing/entitlement/priced-lines) are satisfied."""
+    so all the OTHER send guards (routing/priced-lines) are satisfied."""
     quote = _build_quote_with_items(deal, manager)
     QuoteCalculationService.recalculate_quote(quote.id)
     quote.refresh_from_db()

@@ -144,7 +144,6 @@ def test_quote_pdf_hides_fx_rate_from_client(quote_qty2):
             "seller": seller,
             "seller_profile": None,
             "seller_logo_url": None,
-            "is_demo": False,
         },
     )
     # No CBU rate note, no rate value — the client only sees the final UZS price.
@@ -187,7 +186,6 @@ def test_quote_pdf_subtotal_excl_vat_keeps_kopecks_and_document_adds_up(quote_qt
             "seller": seller,
             "seller_profile": None,
             "seller_logo_url": None,
-            "is_demo": False,
             "totals": document_totals(
                 ccy="UZS",
                 vat_rate=quote.vat_rate,
@@ -240,7 +238,6 @@ def test_client_projection_distributes_charges_and_hides_the_breakout(quote_qty2
             "seller": seller,
             "seller_profile": None,
             "seller_logo_url": None,
-            "is_demo": False,
             "totals": document_totals(
                 ccy="UZS",
                 vat_rate=quote.vat_rate,

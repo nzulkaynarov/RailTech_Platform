@@ -6,21 +6,12 @@
 существенное — запрет продавцу выпускать акт по инвойсу КОНКУРЕНТА (аудит H4).
 """
 
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
 
 import pytest
-from django.utils import timezone
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    SystemRole,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import (
     Act,
     ActStatus,
@@ -85,21 +76,9 @@ def world(lookups):
 
     seller_co = _company("Продавец", "S902", "SUPPLIER")
     seller_user = _member(seller_co, "seller@billpaths.test", can_sell=True)
-    SupplierSubscription.objects.create(
-        company=seller_co,
-        plan="PREMIUM",
-        status="ACTIVE",
-        valid_until=timezone.localdate() + timedelta(days=30),
-    )
 
     other_co = _company("Посторонний продавец", "O902", "SUPPLIER")
     other_user = _member(other_co, "other@billpaths.test", can_sell=True)
-    SupplierSubscription.objects.create(
-        company=other_co,
-        plan="PREMIUM",
-        status="ACTIVE",
-        valid_until=timezone.localdate() + timedelta(days=30),
-    )
 
     operator = CustomUser.objects.create_user(
         is_superuser=True,

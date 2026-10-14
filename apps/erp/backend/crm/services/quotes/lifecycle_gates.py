@@ -5,7 +5,7 @@ not rewritten. These are leaf validators: they read a Quote (+ the acting user a
 pre-computed economics) and either raise ``ValueError(<CODE>)`` (render/send path — the
 caller maps the code to HTTP) or return an ``(value, error_code)`` / error-code result
 (submit path — the caller maps the tuple). They perform NO writes and NO side effects, so
-the entitlement / loss-prevention / below-floor policy lives in ONE place and
+the loss-prevention / below-floor policy lives in ONE place and
 both the admin and DRF surfaces reach it through ``QuoteLifecycleService`` unchanged
 (Rule 8 — business logic stays in services).
 
@@ -67,7 +67,7 @@ def assert_renderable(quote):
 def assert_sendable(quote, sent_by_user):
     """Non-economics send preconditions; returns the issuing seller company.
 
-    Runs the status / recipient / claim / entitlement gates in the exact order
+    Runs the status / recipient / claim gates in the exact order
     ``send_to_client`` used to inline them (order is contractual).
     """
     # Status guard: only an internally-approved КП (READY_TO_SEND — it passed
@@ -108,16 +108,6 @@ def assert_sendable(quote, sent_by_user):
     deal_for_send = quote.deal
     if not (deal_for_send.company_id or deal_for_send.contact_id or deal_for_send.client_id):
         raise ValueError("RECIPIENT_REQUIRED")
-
-    # MONETIZATION GATE (Move 4): sending is a PAID action needing the quote.send entitlement
-    # (an operational subscription grants it). A demo/unsubscribed seller can build the КП but
-    # not send it. Superuser = platform escalation. (The KYC floor in front of it was removed in
-    # M1-ERP-02 wave 1c.)
-    if seller_company is not None and not getattr(sent_by_user, "is_superuser", False):
-        from accounts.services import quote_send_entitled
-
-        if not quote_send_entitled(seller_company.id):
-            raise ValueError("QUOTE_SEND_NOT_ENTITLED")
 
     return seller_company
 

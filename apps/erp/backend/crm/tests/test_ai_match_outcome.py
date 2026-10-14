@@ -39,19 +39,6 @@ def scene(db):
     buyer.types.add(CompanyType.objects.get(code="CLIENT"))
     seller = Company.objects.create(name="Seller", inn="2220000031")
     seller.types.add(CompanyType.objects.get(code="SUPPLIER"))
-    from datetime import timedelta
-
-    from django.utils import timezone
-
-    from accounts.models import SupplierSubscription
-
-    SupplierSubscription.objects.create(
-        company=seller,
-        plan="BASIC",
-        status="ACTIVE",
-        valid_from=timezone.localdate(),
-        valid_until=(timezone.now() + timedelta(days=365)).date(),
-    )
 
     deal = Deal.objects.create(title="RFQ", company=buyer, stage=DealStage.objects.get(code="RFQ_OPEN"))
     DealSellerRouting.objects.create(deal=deal, seller_company=seller)

@@ -139,9 +139,9 @@ class ReadOnlyInspectionMixin:
 
     AUDIT SCOPE (be precise — do NOT overclaim): django-pghistory triggers capture changes
     ONLY for the tracked business models — Deal, Quote, QuoteItem, Contract, Invoice, Payment,
-    Act (and SystemSetting). Mutations to OTHER models (Company, SupplierSubscription,
+    Act (and SystemSetting). Mutations to OTHER models (Company,
     Fulfillment, Product, SupplierOffer, …) are NOT history-tracked.
-    Direct edits here also BYPASS service-layer side effects (FSM transitions, subscription
+    Direct edits here also BYPASS service-layer side effects (FSM transitions, notification
     emails, document-number minting, invoice.amount_paid recompute) — for those, prefer the
     React Operator pages / DRF services / @superuser_only_action handlers, which are audited.
     A handful of admins therefore keep `has_add_permission=False` (Contract/Invoice/Act/Payment)

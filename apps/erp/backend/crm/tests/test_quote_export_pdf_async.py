@@ -49,8 +49,8 @@ def lookups(db):
 
 @pytest.fixture
 def engineer(db):
-    # Superuser bypasses the seller entitlement/KYC gates so these tests exercise the
-    # render-vs-202 decision, not the monetization branch.
+    # Superuser bypasses the seller-side gates so these tests exercise the
+    # render-vs-202 decision only.
     return CustomUser.objects.create_user(
         email="root2@test.uz", username="root2@test.uz", password="pw", is_active=True, is_staff=True, is_superuser=True
     )
@@ -148,7 +148,7 @@ def test_export_unsupported_format_is_400(engineer, quote):
 @pytest.mark.django_db
 def test_export_pdf_cost_gate_untouched_pdf_is_free(engineer, quote):
     """PDF is the free client projection — the xlsx/csv cost gate never fires for it,
-    so the async PDF branch is reachable without an entitlement (scope unchanged)."""
+    so the async PDF branch is reachable for any viewer in scope."""
     from accounts.services.permissions import can_view_quote_costs_for
 
     # PDF must not be treated as a cost-bearing export regardless of viewer rights.

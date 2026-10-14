@@ -15,22 +15,12 @@
 подаёт, руководитель согласует) — иначе тест мерил бы не тот путь.
 """
 
-from datetime import timedelta
 from decimal import Decimal
 
 import pytest
-from django.utils import timezone
 
 from accounts.constants import Permission
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyRole,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, CustomUser, WorkspaceRole
 from crm.models import Deal, DealStage, Quote, QuoteStatus
 from crm.models.approvals import StepParticipation
 from crm.services.approvals import act_on_step
@@ -77,9 +67,6 @@ def _member(company, user, *, workspace_role, company_role):
 def seller(lookups):
     company = Company.objects.create(name="Продавец согласований", inn="908700001")
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
-    SupplierSubscription.objects.create(
-        company=company, plan="PREMIUM", status="ACTIVE", valid_until=timezone.localdate() + timedelta(days=365)
-    )
     admin_role = CompanyRole.objects.create(company=company, name="Администратор компании", is_system=True)
     sales_role = CompanyRole.objects.create(company=company, name="Продажи", permissions=[Permission.QUOTE_BUILD.value])
     sales_user = _user("sales@codes.test")

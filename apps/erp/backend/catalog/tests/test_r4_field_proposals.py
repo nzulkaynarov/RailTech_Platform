@@ -281,8 +281,7 @@ def _capabilities(user):
 
 @pytest.mark.django_db
 def test_me_reports_the_remaining_daily_ai_budget(settings):
-    settings.AI_DAILY_JOB_CAP_FREE = 5  # компания без подписки → свободный тариф
-    settings.AI_DAILY_USAGE_CACHE_TTL = 0
+    settings.AI_DAILY_JOB_CAP_PER_COMPANY = 5
     company = Company.objects.create(name="Remaining Co", inn="910000001")
     user = _member("r4-remaining@x.test", company)
     _seed_ai_jobs(user, 2)
@@ -296,8 +295,7 @@ def test_me_reports_the_remaining_daily_ai_budget(settings):
 
 @pytest.mark.django_db
 def test_the_whole_team_shares_one_daily_bucket(settings):
-    settings.AI_DAILY_JOB_CAP_FREE = 5
-    settings.AI_DAILY_USAGE_CACHE_TTL = 0
+    settings.AI_DAILY_JOB_CAP_PER_COMPANY = 5
     company = Company.objects.create(name="Team Budget Co", inn="910000002")
     colleague = _member("r4-colleague@x.test", company)
     user = _member("r4-teammate@x.test", company)
@@ -312,9 +310,7 @@ def test_the_whole_team_shares_one_daily_bucket(settings):
 @pytest.mark.django_db
 def test_unlimited_is_distinguishable_from_nothing_left(settings):
     """`null` ≠ 0: «безлимит» и «остаток исчерпан» — разные сообщения в интерфейсе."""
-    settings.AI_DAILY_JOB_CAP_FREE = 0  # тариф с отключённым потолком
-    settings.AI_DAILY_JOB_CAP_PER_COMPANY = 0
-    settings.AI_DAILY_USAGE_CACHE_TTL = 0
+    settings.AI_DAILY_JOB_CAP_PER_COMPANY = 0  # отключённый потолок
     company = Company.objects.create(name="Unlimited Co", inn="910000003")
     user = _member("r4-unlimited@x.test", company)
     _seed_ai_jobs(user, 3)
@@ -327,10 +323,9 @@ def test_unlimited_is_distinguishable_from_nothing_left(settings):
 
 
 @pytest.mark.django_db
-def test_the_display_cache_returns_the_right_number(settings):
-    """Кэш потолка (по умолчанию включён) на само число не влияет."""
-    settings.AI_DAILY_JOB_CAP_FREE = 7
-    settings.AI_DAILY_USAGE_CACHE_TTL = 60
+def test_the_remaining_budget_follows_new_jobs(settings):
+    """Израсходованное считается на каждый вызов — остаток следует за новыми задачами."""
+    settings.AI_DAILY_JOB_CAP_PER_COMPANY = 7
     company = Company.objects.create(name="Cached Co", inn="910000004")
     user = _member("r4-cached@x.test", company)
     _seed_ai_jobs(user, 1)
@@ -346,8 +341,7 @@ def test_exhausted_limit_does_not_forbid_anything_in_me(settings):
     """ГЛАВНОЕ: показ остатка — не гейт. Лимит исчерпан, а `/me` по-прежнему 200."""
     from rest_framework.test import APIClient
 
-    settings.AI_DAILY_JOB_CAP_FREE = 2
-    settings.AI_DAILY_USAGE_CACHE_TTL = 0
+    settings.AI_DAILY_JOB_CAP_PER_COMPANY = 2
     company = Company.objects.create(name="Exhausted Co", inn="910000005")
     user = _member("r4-exhausted@x.test", company)
     _seed_ai_jobs(user, 5)  # перерасход даже сверх потолка

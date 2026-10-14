@@ -11,22 +11,12 @@
 кода нет, — тест держит именно наличие кодов.
 """
 
-from datetime import timedelta
 from decimal import Decimal
 
 import pytest
-from django.utils import timezone
 
 from accounts.constants import Permission
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyRole,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, CustomUser, WorkspaceRole
 from crm.models import ActivityLog, Deal, DealStage, Quote, QuoteStatus
 from crm.models.approvals import StepParticipation
 
@@ -80,9 +70,6 @@ def test_approval_step_writes_participation_code(lookups):
 
     seller = Company.objects.create(name="Продавец ООО", inn="7000000004")
     seller.types.add(CompanyType.objects.get(code="SUPPLIER"))
-    SupplierSubscription.objects.create(
-        company=seller, plan="PREMIUM", status="ACTIVE", valid_until=timezone.localdate() + timedelta(days=365)
-    )
     admin_role = CompanyRole.objects.create(company=seller, name="Администратор компании", is_system=True)
     sales_role = CompanyRole.objects.create(company=seller, name="Продажи", permissions=[Permission.QUOTE_BUILD.value])
     sales_user = _user("sales@codes.test")

@@ -12,16 +12,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from accounts.constants import Permission
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyRole,
-    CompanySettings,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyRole, CompanySettings, CompanyType, CustomUser, WorkspaceRole
 from crm.models import Deal, DealSellerRouting, DealStage, Quote, QuoteStatus
 from crm.services import reapply_company_defaults
 from master_data.models import Country, Currency, DeliveryBasis
@@ -48,9 +39,6 @@ def seller_company(lookups):
     )
     company.types.add(
         CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})[0]
-    )
-    SupplierSubscription.objects.create(
-        company=company, plan="PREMIUM", status="ACTIVE", valid_until=timezone.localdate() + timedelta(days=365)
     )
     return company
 

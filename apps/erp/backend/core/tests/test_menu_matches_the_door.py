@@ -87,8 +87,9 @@ def test_the_superuser_still_sees_everything(db, rf):
 
     assert all(item["has_permission"] for item in items)
     # 36 после M1-ERP-02 волны 1b (ушли «Лиды с сайта» и «Сообщения»); 32 после волны 1c — ушли
-    # «Заявки на роли», «KYC документы», «Статусы верификации», «Типы KYC-документов».
-    assert len(items) >= 32, "инструмент инженера не урезан"
+    # «Заявки на роли», «KYC документы», «Статусы верификации», «Типы KYC-документов»; 31 после
+    # волны 2 — ушли «Подписки поставщиков».
+    assert len(items) >= 31, "инструмент инженера не урезан"
 
 
 def test_every_menu_link_resolves_to_a_real_admin_page(db):

@@ -139,12 +139,12 @@ class DealWorkflowActionsMixin:
         summary="W2 одна кнопка: взять заявку в работу и подготовить КП",
         description=(
             "One-click-quotation (утв. spec-inbound-rfq W2): claim + переход стадии в CALCULATING + "
-            "предзаполненный черновик КП со строками заявки. Продавец с ai.draft получает "
+            "предзаполненный черновик КП со строками заявки. При включённом ИИ — "
             "202 {task_id, mode:'ai'} (существующий draft_quote job — AI-матч и цены, поллинг "
-            "sourcing/ai-status/); без entitlement — 200 {quote_id, mode:'quote'} синхронно "
+            "sourcing/ai-status/); при выключенном — 200 {quote_id, mode:'quote'} синхронно "
             "(копия строк + точный ГОСТ/MPN-матч + цены из своих офферов, без AI). Идемпотентно: "
             "существующий КП компании переиспользуется, повторный клик в AI-режиме возвращает "
-            "уже идущий task_id (кредит не списывается дважды)."
+            "уже идущий task_id (задача не ставится дважды)."
         ),
         responses={
             200: OpenApiResponse(description="{mode:'quote', quote_id} — КП готов, открывайте билдер"),
@@ -188,7 +188,7 @@ class DealWorkflowActionsMixin:
             return Response({"mode": "quote", "quote_id": result["quote"].id, "deal_id": int(pk)})
 
         # AI mode. Double-click guard: while the first job is in flight its task_id is cached —
-        # a second press re-polls the SAME job instead of double-spending an ai.draft credit.
+        # a second press re-polls the SAME job instead of paying for a second LLM pass.
         cache_key = f"draft_quote_inflight:{pk}:{request.user.id}"
         inflight_task_id = cache.get(cache_key)
         if inflight_task_id:

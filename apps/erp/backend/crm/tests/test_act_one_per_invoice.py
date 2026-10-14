@@ -14,7 +14,6 @@
 выпущенного документа оформляется отдельной сущностью (кредит-нота), которой у нас нет.
 """
 
-from datetime import timedelta
 from decimal import Decimal
 
 import pytest
@@ -22,7 +21,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SupplierSubscription, WorkspaceRole
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
 from crm.models import (
     Act,
     Contract,
@@ -70,9 +69,6 @@ def world(db):
     buyer_user = member(buyer_co, "buyer@one-act.test", can_buy=True, can_sell=False)
     seller_co = company("Seller ONE", "S900", "SUPPLIER")
     seller_user = member(seller_co, "seller@one-act.test", can_sell=True, can_buy=False)
-    SupplierSubscription.objects.create(
-        company=seller_co, plan="PREMIUM", status="ACTIVE", valid_until=timezone.localdate() + timedelta(days=30)
-    )
 
     deal = Deal.objects.create(title="One act deal", company=buyer_co, stage=DealStage.objects.get(code="CLOSED_WON"))
     DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)

@@ -48,7 +48,7 @@ msgstr "Role"
 msgid "Профиль"
 msgstr "Profile"
 
-#: accounts/admin.py:184 accounts/models/subscriptions.py:172
+#: accounts/admin.py:184
 msgid "Доступ"
 msgstr "Access"
 
@@ -90,17 +90,27 @@ msgstr "Bank"
 msgid "KYC"
 msgstr "KYC"
 
-#: accounts/admin.py:397 accounts/admin.py:485
-#: accounts/models/applications.py:55 accounts/models/subscriptions.py:48
-#: catalog/admin.py:198 catalog/models/products.py:67
-#: catalog/models/requests.py:91 core/models.py:176
-#: crm/admin/billing_admin.py:54 crm/admin/billing_admin.py:88
-#: crm/admin/billing_admin.py:134 crm/admin/billing_admin.py:159
-#: crm/admin/deals_admin.py:130 crm/admin/quotes_admin.py:51
-#: crm/models/billing.py:49 crm/models/billing.py:267
-#: crm/models/contracts.py:49 crm/models/documents.py:132
-#: crm/models/fulfillment.py:33 crm/models/quotes.py:57
-#: notifications/admin.py:131 notifications/models.py:187
+#: accounts/admin.py:397
+#: accounts/admin.py:485
+#: accounts/models/applications.py:55
+#: catalog/admin.py:198
+#: catalog/models/products.py:67
+#: catalog/models/requests.py:91
+#: core/models.py:176
+#: crm/admin/billing_admin.py:54
+#: crm/admin/billing_admin.py:88
+#: crm/admin/billing_admin.py:134
+#: crm/admin/billing_admin.py:159
+#: crm/admin/deals_admin.py:130
+#: crm/admin/quotes_admin.py:51
+#: crm/models/billing.py:49
+#: crm/models/billing.py:267
+#: crm/models/contracts.py:49
+#: crm/models/documents.py:132
+#: crm/models/fulfillment.py:33
+#: crm/models/quotes.py:57
+#: notifications/admin.py:131
+#: notifications/models.py:187
 msgid "Статус"
 msgstr "Status"
 
@@ -138,8 +148,9 @@ msgstr "Plan"
 msgid "Биллинг"
 msgstr "Billing"
 
-#: accounts/admin.py:519 accounts/models/subscriptions.py:96
-#: crm/admin/deals_admin.py:91 crm/models/deals.py:111
+#: accounts/admin.py:519
+#: crm/admin/deals_admin.py:91
+#: crm/models/deals.py:111
 msgid "Заметки"
 msgstr "Notes"
 
@@ -196,17 +207,24 @@ msgstr "Rejected"
 
 #: accounts/models/applications.py:41
 #: accounts/models/company/company_settings.py:22
-#: accounts/models/company/contacts.py:19 accounts/models/company/core.py:288
+#: accounts/models/company/contacts.py:19
+#: accounts/models/company/core.py:288
 #: accounts/models/company/document_profile.py:22
 #: accounts/models/company/membership.py:41
-#: accounts/models/company/membership.py:98 accounts/models/kyc.py:18
-#: accounts/models/subscriptions.py:34 accounts/models/subscriptions.py:164
-#: catalog/models/requests.py:46 core/models.py:193
+#: accounts/models/company/membership.py:98
+#: accounts/models/kyc.py:18
+#: catalog/models/requests.py:46
+#: core/models.py:193
 #: core/tests/test_i18n_activation.py:102
-#: core/tests/test_i18n_activation.py:106 crm/models/charges.py:186
-#: crm/models/deals.py:42 crm/models/deals.py:319 crm/models/documents.py:37
-#: crm/models/documents.py:103 crm/models/documents.py:239
-#: crm/models/sequences.py:52 crm/models/sequences.py:132
+#: core/tests/test_i18n_activation.py:106
+#: crm/models/charges.py:186
+#: crm/models/deals.py:42
+#: crm/models/deals.py:319
+#: crm/models/documents.py:37
+#: crm/models/documents.py:103
+#: crm/models/documents.py:239
+#: crm/models/sequences.py:52
+#: crm/models/sequences.py:132
 #: sourcing/models.py:128
 msgid "Компания"
 msgstr "Company"
@@ -283,12 +301,17 @@ msgstr "Reviewed at"
 msgid "Дата подачи"
 msgstr "Submitted At"
 
-#: accounts/models/applications.py:121 accounts/models/company/core.py:260
-#: accounts/models/subscriptions.py:105 catalog/models/offers.py:136
-#: catalog/models/products.py:202 catalog/models/requests.py:123
-#: catalog/models/taxonomy.py:232 crm/models/charges.py:120
-#: crm/models/deals.py:122 crm/models/documents.py:75
-#: crm/models/documents.py:206 crm/models/documents.py:259
+#: accounts/models/applications.py:121
+#: accounts/models/company/core.py:260
+#: catalog/models/offers.py:136
+#: catalog/models/products.py:202
+#: catalog/models/requests.py:123
+#: catalog/models/taxonomy.py:232
+#: crm/models/charges.py:120
+#: crm/models/deals.py:122
+#: crm/models/documents.py:75
+#: crm/models/documents.py:206
+#: crm/models/documents.py:259
 #: crm/models/quotes.py:304
 msgid "Дата обновления"
 msgstr "Updated at"
@@ -1160,182 +1183,50 @@ msgstr "Operator role"
 msgid "Роли операторов"
 msgstr "Operator roles"
 
-#: accounts/models/subscriptions.py:18
-msgid "Базовый"
-msgstr "Basic"
-
-#: accounts/models/subscriptions.py:19
-msgid "Стандартный"
-msgstr "Standard"
-
-#: accounts/models/subscriptions.py:20
-msgid "Премиум"
-msgstr "Premium"
-
-#: accounts/models/subscriptions.py:23
-msgid "Пробный период"
-msgstr "Trial"
-
-#: accounts/models/subscriptions.py:24 catalog/models/taxonomy.py:61
+#: catalog/models/taxonomy.py:61
 #: catalog/models/taxonomy.py:129
 msgid "Активна"
 msgstr "Active"
 
-#: accounts/models/subscriptions.py:25
-msgid "Просрочена"
-msgstr "Past due"
-
-#: accounts/models/subscriptions.py:26 accounts/models/subscriptions.py:128
-msgid "Приостановлена"
-msgstr "Suspended at"
-
-#: accounts/models/subscriptions.py:27
-msgid "Отменена"
-msgstr "Cancelled"
-
-#: accounts/models/subscriptions.py:35
-msgid "Компания-поставщик (одна подписка на компанию)"
-msgstr "Supplier company (one subscription per company)"
-
-#: accounts/models/subscriptions.py:41
-msgid "Тарифный план"
-msgstr "Plan"
-
-#: accounts/models/subscriptions.py:42
-msgid "Базовый, Стандартный или Премиум"
-msgstr "Basic, Standard or Premium"
-
-#: accounts/models/subscriptions.py:49
-msgid "Текущее состояние подписки"
-msgstr "Current subscription status"
-
-#: accounts/models/subscriptions.py:57
-msgid "Ежемесячная стоимость"
-msgstr "Monthly rate"
-
-#: accounts/models/subscriptions.py:58
-msgid "Сумма ежемесячного платежа"
-msgstr "Monthly payment amount"
-
-#: accounts/models/subscriptions.py:66 catalog/models/offers.py:59
-#: crm/models/contracts.py:63 crm/models/quotes.py:556
-#: master_data/models.py:106 master_data/models.py:164
+#: catalog/models/offers.py:59
+#: crm/models/contracts.py:63
+#: crm/models/quotes.py:556
+#: master_data/models.py:106
+#: master_data/models.py:164
 msgid "Валюта"
 msgstr "Currency"
 
-#: accounts/models/subscriptions.py:67
-msgid "Валюта расчётов"
-msgstr "Settlement currency"
-
-#: accounts/models/subscriptions.py:72 catalog/models/offers.py:114
+#: catalog/models/offers.py:114
 #: master_data/models.py:243
 msgid "Действует с"
 msgstr "Valid from"
 
-#: accounts/models/subscriptions.py:73
-msgid "Дата начала действия подписки"
-msgstr "Subscription start date"
-
-#: accounts/models/subscriptions.py:78 accounts/models/subscriptions.py:179
-#: catalog/models/offers.py:120 crm/models/deals.py:482
+#: catalog/models/offers.py:120
+#: crm/models/deals.py:482
 #: crm/models/quotes.py:204
 msgid "Действует до"
 msgstr "Valid until"
 
-#: accounts/models/subscriptions.py:79
-msgid "Дата окончания (обычно конец календарного года)"
-msgstr "End date (usually the end of the calendar year)"
-
-#: accounts/models/subscriptions.py:84
-msgid "Последний платёж"
-msgstr "Last payment"
-
-#: accounts/models/subscriptions.py:85
-msgid "Дата последнего успешного платежа"
-msgstr "Date of the last successful payment"
-
-#: accounts/models/subscriptions.py:90
-msgid "Следующий платёж"
-msgstr "Next payment"
-
-#: accounts/models/subscriptions.py:91
-msgid "Дата ожидаемого следующего платежа"
-msgstr "Expected next payment date"
-
-#: accounts/models/subscriptions.py:97
-msgid "Внутренние заметки администратора"
-msgstr "Internal administrator notes"
-
-#: accounts/models/subscriptions.py:101 catalog/models/offers.py:132
-#: catalog/models/products.py:198 catalog/models/requests.py:122
-#: catalog/models/taxonomy.py:228 core/tests/test_i18n_activation.py:104
-#: crm/models/charges.py:119 crm/models/deals.py:118 crm/models/documents.py:74
-#: crm/models/documents.py:205 crm/models/documents.py:258
-#: crm/models/quotes.py:300 notifications/models.py:109 sourcing/models.py:226
+#: catalog/models/offers.py:132
+#: catalog/models/products.py:198
+#: catalog/models/requests.py:122
+#: catalog/models/taxonomy.py:228
+#: core/tests/test_i18n_activation.py:104
+#: crm/models/charges.py:119
+#: crm/models/deals.py:118
+#: crm/models/documents.py:74
+#: crm/models/documents.py:205
+#: crm/models/documents.py:258
+#: crm/models/quotes.py:300
+#: notifications/models.py:109
+#: sourcing/models.py:226
 #: sourcing/models.py:267
 msgid "Дата создания"
 msgstr "Created at"
 
-#: accounts/models/subscriptions.py:109
-msgid "Подписка поставщика"
-msgstr "Supplier subscription"
-
-#: accounts/models/subscriptions.py:110 core/settings/apps.py:135
-msgid "Подписки поставщиков"
-msgstr "Supplier subscriptions"
-
-#: accounts/models/subscriptions.py:127
-msgid "Причина приостановки"
-msgstr "Suspension reason"
-
-#: accounts/models/subscriptions.py:155
-msgid "Включено"
-msgstr "Enabled"
-
-#: accounts/models/subscriptions.py:156
-msgid "Выключено"
-msgstr "Disabled"
-
-#: accounts/models/subscriptions.py:157
-msgid "Демо"
-msgstr "Demo"
-
-#: accounts/models/subscriptions.py:169
-msgid "Ключ функции"
-msgstr "Feature key"
-
-#: accounts/models/subscriptions.py:170
-msgid ""
-"Стабильный код функции (accounts.constants.FeatureKey), напр. quote.send"
-msgstr "Stable feature code (accounts.constants.FeatureKey), e.g. quote.send"
-
-#: accounts/models/subscriptions.py:174
-msgid "Лимит"
-msgstr "Limit"
-
-#: accounts/models/subscriptions.py:174
-msgid "Потолок использования (пусто — без лимита)"
-msgstr "Usage cap (empty — no limit)"
-
-#: accounts/models/subscriptions.py:177
-msgid "Кредиты"
-msgstr "Credits"
-
-#: accounts/models/subscriptions.py:177
-msgid "Расходуемый баланс (пусто — неприменимо)"
-msgstr "Consumable balance (empty — not applicable)"
-
-#: accounts/models/subscriptions.py:180 crm/models/quotes.py:391
+#: crm/models/quotes.py:391
 msgid "Заметка"
 msgstr "Note"
-
-#: accounts/models/subscriptions.py:185
-msgid "Право доступа компании"
-msgstr "Company entitlement"
-
-#: accounts/models/subscriptions.py:186
-msgid "Права доступа компаний"
-msgstr "Company entitlements"
 
 #: accounts/models/users.py:22
 msgid "Основной email для входа в систему"
@@ -4461,10 +4352,6 @@ msgid "Стр."
 msgstr "Page"
 
 #: crm/templates/crm/_document_base.html:258
-msgid "ДЕМО — не для коммерческого использования"
-msgstr "DEMO — not for commercial use"
-
-#: crm/templates/crm/_document_base.html:258
 msgid "ЧЕРНОВИК · не является офертой"
 msgstr "DRAFT · not a binding offer"
 
@@ -6785,69 +6672,6 @@ msgstr ""
 msgid ""
 "Если вы не регистрировались на платформе, просто проигнорируйте это письмо."
 msgstr "If you did not sign up for the platform, simply ignore this email."
-
-#: templates/emails/subscription_suspended.html:3
-#: templates/emails/subscription_suspended_subject.txt:1
-msgid "Подписка приостановлена — часть функций недоступна"
-msgstr "Subscription suspended — some features are unavailable"
-
-#: templates/emails/subscription_suspended.html:4
-msgid "Подписка"
-msgstr "Subscription"
-
-#: templates/emails/subscription_suspended.html:7
-msgid "Подписка приостановлена"
-msgstr "Subscription suspended"
-
-#: templates/emails/subscription_suspended.html:10
-#, python-format
-msgid ""
-"Подписка компании <strong>%(company_name)s</strong> приостановлена "
-"оператором платформы."
-msgstr ""
-"The subscription of <strong>%(company_name)s</strong> was suspended by a "
-"platform operator."
-
-#: templates/emails/subscription_suspended.html:14
-#: templates/emails/subscription_suspended.txt:3
-#, python-format
-msgid "Причина: %(reason)s"
-msgstr "Reason: %(reason)s"
-
-#: templates/emails/subscription_suspended.html:18
-msgid ""
-"Пока подписка приостановлена, недоступны отправка и экспорт КП и другие "
-"функции продавца.\n"
-"    Работа с уже созданными документами сохраняется."
-msgstr ""
-"While the subscription is suspended, sending and exporting quotes and other "
-"seller features are unavailable. Work with already created documents is "
-"preserved."
-
-#: templates/emails/subscription_suspended.html:23
-msgid "Открыть подписку"
-msgstr "Open the subscription"
-
-#: templates/emails/subscription_suspended.txt:1
-#, python-format
-msgid ""
-"Подписка компании «%(company_name)s» приостановлена оператором платформы."
-msgstr ""
-"The subscription of “%(company_name)s” was suspended by a platform operator."
-
-#: templates/emails/subscription_suspended.txt:5
-msgid ""
-"Пока подписка приостановлена, недоступны отправка и экспорт КП и другие "
-"функции продавца. Работа с уже созданными документами сохраняется."
-msgstr ""
-"While the subscription is suspended, sending and exporting quotes and other "
-"seller features are unavailable. Work with already created documents is "
-"preserved."
-
-#: templates/emails/subscription_suspended.txt:7
-#, python-format
-msgid "Открыть подписку: %(subscription_url)s"
-msgstr "Open the subscription: %(subscription_url)s"
 
 #, python-format
 #~ msgid "Без KYC документов: %(names)s"

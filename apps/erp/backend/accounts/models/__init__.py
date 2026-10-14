@@ -15,13 +15,11 @@ from .company import (
     seller_company_q,
 )
 from .lookups import CompanyType, SystemRole, WorkspaceRole
-from .subscriptions import CompanyEntitlement, SupplierSubscription
 from .users import CustomUser
 
 __all__ = [
     "Company",
     "CompanyDocumentProfile",
-    "CompanyEntitlement",
     "CompanyMember",
     "CompanyMemberQuerySet",
     "CompanyQuerySet",
@@ -30,7 +28,6 @@ __all__ = [
     "Contact",
     "CompanyType",
     "CustomUser",
-    "SupplierSubscription",
     "SystemRole",
     "WorkspaceRole",
     "seller_company_q",

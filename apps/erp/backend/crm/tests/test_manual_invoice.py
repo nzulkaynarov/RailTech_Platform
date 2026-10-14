@@ -15,21 +15,13 @@ from decimal import Decimal
 
 import pytest
 
-from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SupplierSubscription, WorkspaceRole
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
 from crm.models import Deal, DealSellerRouting, DealStage, Invoice, InvoiceStatus, Quote, QuoteItem, QuoteStatus
 from crm.services import create_manual_invoice
 from crm.services.billing import record_payment
 from crm.services.invoice_lifecycle import cancel_invoice, issue_invoice
 from crm.views.billing import _invoice_seller_side_q
 from master_data.models import Currency
-
-
-def _grant_subscription(company):
-    """Operational subscription so assert_seller_can_operate passes (paid-seller gate)."""
-    SupplierSubscription.objects.update_or_create(
-        company=company,
-        defaults={"plan": "PREMIUM", "status": "ACTIVE", "valid_until": date(2999, 1, 1)},
-    )
 
 
 @pytest.fixture
@@ -48,7 +40,6 @@ def scenario(db):
         # O3: продавец с платёжными реквизитами — иначе `issue_invoice` не выпустит счёт (он неоплатен).
         co = Company.objects.create(name=name, inn=inn, bank_account="20208000900001234567", mfo="00443")
         co.types.add(CompanyType.objects.get(code="SUPPLIER"))
-        _grant_subscription(co)
         user = CustomUser.objects.create_user(email=f"{inn}@s.test", username=f"{inn}@s.test", password="pw")
         CompanyMember.objects.create(
             user=user, company=co, role=WorkspaceRole.objects.get(code="OWNER"), is_active=True, can_sell=True

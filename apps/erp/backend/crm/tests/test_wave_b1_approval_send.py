@@ -20,16 +20,7 @@ import pytest
 from django.utils import timezone
 
 from accounts.constants import Permission
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyRole,
-    CompanySettings,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyRole, CompanySettings, CompanyType, CustomUser, WorkspaceRole
 from crm.models import ActivityLog, Deal, DealStage, Quote, QuoteStatus
 from crm.models.approvals import StepParticipation, StepStatus, StepTrigger
 from crm.services.approvals import preview_approval_chain
@@ -72,19 +63,12 @@ def _member(company, user, *, workspace_role="MEMBER", company_role=None):
     )
 
 
-def _sub(company):
-    SupplierSubscription.objects.create(
-        company=company, plan="PREMIUM", status="ACTIVE", valid_until=timezone.localdate() + timedelta(days=365)
-    )
-
-
 def _seller_company(name, inn):
     company = Company.objects.create(
         name=name,
         inn=inn,
     )
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
-    _sub(company)
     return company
 
 
@@ -275,7 +259,7 @@ def test_preview_endpoint_returns_shape(two_person):
 
 
 def _sendable_quote(default_validity_days):
-    """A READY_TO_SEND КП owned by a subscribed seller, with a registered-client recipient
+    """A READY_TO_SEND КП owned by a seller, with a registered-client recipient
     and a deal already in CALCULATING (so send can advance it to QUOTE_SENT)."""
     company = _seller_company("Ready Seller LLC", "7700000012")
     if default_validity_days is not None:
@@ -315,7 +299,7 @@ def test_valid_until_left_none_when_company_unconfigured(lookups):
 
 def test_send_invalidates_cached_draft_pdf(lookups):
     """Prod incident 2026-07-26: «Предпросмотр PDF» seconds before send caches a DRAFT render
-    («ЧЕРНОВИК» watermark, placeholder number) — and send_quote_email only renders when pdf_file
+    («ЧЕРНОВИК» stamp, placeholder number) — and send_quote_email only renders when pdf_file
     is EMPTY, so the client received the stale draft. Send re-mints the document identity
     (№, frozen prices) → it must blank pdf_file so the email/public link re-render fresh."""
     from django.core.files.base import ContentFile

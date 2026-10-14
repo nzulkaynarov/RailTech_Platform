@@ -13,9 +13,7 @@ import pytest
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.constants import FeatureKey
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
-from accounts.services.entitlements import grant_entitlement
 from crm import services as crm_services
 from crm.models import DocumentTemplate, DocumentTemplateKind, GeneratedDocument, GeneratedDocumentStatus
 from crm.views.documents import DocumentPreviewThrottle, DocumentTemplateViewSet
@@ -64,18 +62,17 @@ def _template(company, user, body="<p>{{today}}</p>"):
 
 
 @pytest.fixture
-def entitled_world(lookups):
+def world(lookups):
     company = _company("Seller", "S1")
     owner = _member(company, "owner@t.uz")
-    grant_entitlement(company.id, FeatureKey.DOCUMENT_GENERATE)
     return company, owner
 
 
 # ── III-1: PROTECT on template delete → 400, not 500 ─────────────────────────
 
 
-def test_delete_template_in_use_returns_400_not_500(entitled_world):
-    company, owner = entitled_world
+def test_delete_template_in_use_returns_400_not_500(world):
+    company, owner = world
     template = _template(company, owner)
     # A rendered document pins the template (GeneratedDocument.template = on_delete=PROTECT).
     GeneratedDocument.objects.create(
@@ -92,8 +89,8 @@ def test_delete_template_in_use_returns_400_not_500(entitled_world):
     assert DocumentTemplate.objects.filter(pk=template.id).exists()  # not deleted
 
 
-def test_delete_unused_template_succeeds(entitled_world):
-    company, owner = entitled_world
+def test_delete_unused_template_succeeds(world):
+    company, owner = world
     template = _template(company, owner)
     resp = _api(owner).delete(f"/api/v1/crm/document-templates/{template.id}/")
     assert resp.status_code == 204, resp.content
@@ -113,16 +110,16 @@ def test_preview_action_has_dedicated_throttle():
 # ── III-6: quote.build gate on generation / issue ────────────────────────────
 
 
-def test_buy_only_member_cannot_generate(entitled_world):
-    company, _owner = entitled_world
+def test_buy_only_member_cannot_generate(world):
+    company, _owner = world
     junior = _member(company, "junior@t.uz", role_code="LOGIST", can_sell=False, can_buy=True)
     document, err = crm_services.generate_document(company, junior, template=_template(company, junior))
     assert document is None
     assert err == "ROLE_NOT_PERMITTED"
 
 
-def test_buy_only_member_cannot_issue(entitled_world):
-    company, owner = entitled_world
+def test_buy_only_member_cannot_issue(world):
+    company, owner = world
     document, err = crm_services.generate_document(company, owner, template=_template(company, owner))
     assert err is None
     junior = _member(company, "junior@t.uz", role_code="LOGIST", can_sell=False, can_buy=True)
@@ -130,8 +127,8 @@ def test_buy_only_member_cannot_issue(entitled_world):
     assert issue_err == "ROLE_NOT_PERMITTED"
 
 
-def test_owner_can_generate_and_issue(entitled_world):
-    company, owner = entitled_world
+def test_owner_can_generate_and_issue(world):
+    company, owner = world
     document, err = crm_services.generate_document(company, owner, template=_template(company, owner))
     assert err is None
     assert document.status_code == "DRAFT"

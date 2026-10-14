@@ -19,15 +19,6 @@ from .document_profile import (
     update_document_profile,
     upload_document_profile_logo,
 )
-from .entitlements import (
-    consume_credit,
-    entitlement_state,
-    grant_entitlement,
-    has_entitlement,
-    is_demo,
-    quote_export_entitled,
-    quote_send_entitled,
-)
 from .members import (
     add_company_member,
     can_delete_user,
@@ -41,9 +32,7 @@ from .members import (
 )
 from .permissions import (
     acting_context,
-    assert_seller_can_operate,
     can_edit_quote_pricing,
-    company_has_operational_subscription,
     is_member_of,
     is_seller,
     member_has_permission,
@@ -61,36 +50,15 @@ from .roles import (
     list_roles_for_user,
     update_company_role,
 )
-from .subscriptions import (
-    change_subscription_status,
-    check_and_expire_subscriptions,
-    ensure_trial_subscription,
-    expired_subscription_ids,
-    record_subscription_payment,
-    suspend_subscription,
-)
 
 __all__ = [
     "acting_context",
     "add_company_member",
-    "assert_seller_can_operate",
-    "change_subscription_status",
     "change_user_password",
     "can_delete_user",
     "change_user_role",
     "create_platform_user",
-    "check_and_expire_subscriptions",
     "company_active_admins",
-    "company_has_operational_subscription",
-    "consume_credit",
-    "entitlement_state",
-    "grant_entitlement",
-    "has_entitlement",
-    "is_demo",
-    "quote_export_entitled",
-    "quote_send_entitled",
-    "ensure_trial_subscription",
-    "expired_subscription_ids",
     "get_company_settings",
     "update_company_settings",
     "get_document_profile",
@@ -104,8 +72,6 @@ __all__ = [
     "seller_can_access_deal",
     "seller_sees_all_deals",
     "seller_visible_deal_ids",
-    "record_subscription_payment",
-    "suspend_subscription",
     "remove_company_member",
     "reset_password",
     "revoke_user_refresh_tokens",

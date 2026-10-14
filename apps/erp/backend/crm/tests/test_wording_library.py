@@ -6,11 +6,9 @@ Playbook-канон: юрист заранее готовит именованн
 после создания договора перепечатывала уже отправленный клиенту документ.
 """
 
-from datetime import timedelta
 from decimal import Decimal
 
 import pytest
-from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -20,7 +18,6 @@ from accounts.models import (
     CompanyMember,
     CompanyType,
     CustomUser,
-    SupplierSubscription,
     SystemRole,
     WorkspaceRole,
 )
@@ -60,12 +57,6 @@ def world(lookups):
         is_active=True,
         is_primary=True,
         can_sell=True,
-    )
-    SupplierSubscription.objects.create(
-        company=seller_co,
-        plan="PREMIUM",
-        status="ACTIVE",
-        valid_until=timezone.localdate() + timedelta(days=30),
     )
     deal = Deal.objects.create(title="W deal", company=buyer_co, stage=DealStage.objects.get(code="DRAFT"))
     DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)

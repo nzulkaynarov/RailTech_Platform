@@ -14,23 +14,13 @@
 получать доступ ни к одному detail-экшену её документов.
 """
 
-from datetime import timedelta
 from decimal import Decimal
 
 import pytest
-from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    SystemRole,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import (
     ActStatus,
     Contract,
@@ -99,12 +89,6 @@ def world(lookups):
 
     seller_co = _company("Продавец", "SS903", "SUPPLIER")
     seller = _member(seller_co, "seller@scope.test", can_sell=True)
-    SupplierSubscription.objects.create(
-        company=seller_co,
-        plan="PREMIUM",
-        status="ACTIVE",
-        valid_until=timezone.localdate() + timedelta(days=30),
-    )
 
     # Компания, не имеющая к сделке НИКАКОГО отношения: ни покупатель, ни зароутиненный продавец.
     outsider_co = _company("Посторонние", "SX903", "CLIENT")
