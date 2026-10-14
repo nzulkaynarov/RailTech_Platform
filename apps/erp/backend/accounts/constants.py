@@ -1,7 +1,7 @@
 """Single source of truth for accounts lookup CODES.
 
 These mirror the `code` of seeded lookup rows (WorkspaceRole, SystemRole,
-CompanyType, VerificationStatus). Reference these constants in business logic
+CompanyType). Reference these constants in business logic
 instead of bare string literals — a typo becomes an AttributeError, not a silent
 runtime miss. The rows themselves still live in the DB (names, i18n, sort_order);
 this is just the stable contract between code and data.
@@ -127,23 +127,6 @@ class CompanyTypeCode(models.TextChoices):
 # Company types whose members operate on the seller side. A manufacturer that sells
 # is simply a SUPPLIER; the OEM-as-brand lives in catalog.Manufacturer.
 SELLER_COMPANY_TYPES = (CompanyTypeCode.SUPPLIER,)
-
-
-class VerificationStatusCode(models.TextChoices):
-    L1_UNVERIFIED = "L1_UNVERIFIED", "Не верифицирован"
-    PROFILE_SUBMITTED = "PROFILE_SUBMITTED", "Профиль подан"
-    L2_VERIFIED = "L2_VERIFIED", "Верифицирован (L2)"
-    L3_CONTRACTED = "L3_CONTRACTED", "Контракт (L3)"
-
-
-# ADR-0006 Phase E — the KYC floor. A company completes KYC at L2; below it can register + browse
-# + build a DRAFT заявка, but not SUBMIT it (or otherwise trade). L3_CONTRACTED is MORE verified
-# than L2, so it belongs in the set: filtering on L2 alone silently hides contracted counterparties.
-#
-# Lives here, not in accounts.services.kyc, so the model layer can use it: the Company queryset
-# below (`verified_sellers`) needs it, and models cannot import services without a cycle.
-# `accounts.services.kyc` re-exports it, so the historical import path keeps working.
-KYC_VERIFIED_CODES = frozenset({VerificationStatusCode.L2_VERIFIED, VerificationStatusCode.L3_CONTRACTED})
 
 
 class FeatureKey(models.TextChoices):

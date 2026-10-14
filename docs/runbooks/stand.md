@@ -1,6 +1,6 @@
 # Runbook: стенд ансамбля локально (`make up`)
 
-Один `docker compose` поднимает общую инфраструктуру и CRM; ERP и Cabinet до своих вех — заглушки в Caddy.
+Один `docker compose` поднимает общую инфраструктуру, CRM, ERP и Cabinet.
 Файлы: `infra/compose/base.yml` + `dev.yml`, `infra/caddy/Caddyfile.dev`, `infra/ai/*`, `infra/db/init-databases.sh`.
 
 ## Первый запуск
@@ -17,7 +17,7 @@ make smoke        # /health трёх доменов → 200
 |---|---|
 | `http://crm.localhost` | CRM: SPA (`crm-web`), `/api/*`, `/health`, `/ready` → `crm-api` |
 | `http://erp.localhost` | ERP (с M1-ERP-01): `/api`, `/admin`, `/ws`, `/static`, `/media`, `/health` → `erp-backend`; остальное → `erp-web` (SPA) |
-| `http://cabinet.localhost` | заглушка до M2-CAB-01: `/health` 200 |
+| `http://cabinet.localhost` | Cabinet (с M2-CAB-01): `/api/portal/*` → `erp-backend` (до M2-ERP-01 — 404, ожидаемо); остальное, включая `/health`, → `cabinet-web` (SPA) |
 | `http://langfuse.localhost` | Langfuse (только `make up-obs`) |
 | `http://s3.localhost` | консоль RustFS |
 
@@ -37,6 +37,7 @@ make smoke        # /health трёх доменов → 200
 | `docling` | конвертация документов базы знаний CRM |
 | `crm-migrate`, `crm-api`, `crm-worker`, `crm-mcp-*`, `crm-web` | CRM из `apps/crm` (код монтируется, hot reload) |
 | `erp-backend`, `erp-worker`, `erp-worker-ai`, `erp-beat`, `erp-web` | ERP из `apps/erp` (копия B2B, M1-ERP-01): Daphne мигрирует при старте (`AUTO_MIGRATE`), Celery-воркеры, Beat, nginx со сборкой Vite; код бэкенда монтируется, перезапуск руками |
+| `cabinet-web` | Cabinet из `apps/cabinet` (M2-CAB-01): nginx со сборкой Vite, своей логики нет; пересборка — `make up`. Имя бота для ссылок — `TELEGRAM_BOT_USERNAME` в `.env`. Разработка экранов — `make -C apps/cabinet dev` (мок, без стенда) |
 | `caddy` | три домена |
 | `clickhouse`, `langfuse-worker`, `langfuse-web` | профиль `observability` |
 
@@ -88,6 +89,8 @@ make up-obs
 `crm-mcp-*` и вернуть их `make up`.
 
 ## Если не поднимается
+
+- Поменяли `infra/caddy/Caddyfile.dev` (или подтянули его `git pull`), а домены ведут себя по-старому: Caddyfile смонтирован одиночным файлом, и после замены файла git'ом контейнер видит старую копию или пустоту («open /etc/caddy/Caddyfile: no such file»). Лечение — `make caddy-reload` (пересоздаёт контейнер Caddy).
 
 - `make ps` → `crm-api` не healthy: `make logs s=crm-api`; чаще всего — не применились миграции (`make logs s=crm-migrate`).
 - `litellm` не healthy: `make logs s=litellm`; база `litellm` создаётся `db-init` — проверьте его лог.

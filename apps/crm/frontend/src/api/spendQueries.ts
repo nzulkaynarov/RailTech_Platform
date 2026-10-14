@@ -8,12 +8,17 @@ import {
   getSystemStatusQueryKey,
   resetModel,
   testModel,
+  useGetAiSpend,
   useGetSpend,
   useListModels,
 } from "./generated/crm";
-import type { ModelChangeIn } from "./generated/model";
+import type { GetAiSpendGroup, ModelChangeIn } from "./generated/model";
 
 export const useSpend = (days: number) => useGetSpend({ days });
+
+/** «Расходы» по ансамблю (M3-CRM-09): журнал LiteLLM за период, ряды по `group`. */
+export const useAiSpend = (range: { from: string; to: string }, group: GetAiSpendGroup) =>
+  useGetAiSpend({ ...range, group });
 
 export const useModels = () => useListModels();
 

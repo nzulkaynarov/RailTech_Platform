@@ -8,15 +8,7 @@ from decimal import Decimal
 
 import pytest
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SystemRole,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import Deal, DealStage, Quote, QuoteStatus
 from crm.services.quotes import QuoteLifecycleService
 from master_data.models import Country
@@ -29,7 +21,6 @@ def lookups(db):
     for code in ["DRAFT", "SENT", "APPROVED", "REJECTED"]:
         QuoteStatus.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     SystemRole.objects.get_or_create(code="USER", defaults={"name": "User", "sort_order": 10})
     Country.objects.get_or_create(code="UZ", defaults={"name": "Uzbekistan", "sort_order": 10})
@@ -44,9 +35,7 @@ def buyer(lookups):
     user = CustomUser.objects.create_user(
         email="q.buyer@example.com", username="q_buyer", password="pw", is_active=True
     )
-    company = Company.objects.create(
-        name="Q Buyer LLC", inn="9900000001", verification_status=VerificationStatus.objects.get(code="L2_VERIFIED")
-    )
+    company = Company.objects.create(name="Q Buyer LLC", inn="9900000001")
     company.types.add(CompanyType.objects.get(code="CLIENT"))
     CompanyMember.objects.create(
         user=user, company=company, role=WorkspaceRole.objects.get(code="OWNER"), is_primary=True, is_active=True

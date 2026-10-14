@@ -1,10 +1,10 @@
 """WP-H — /me.capabilities early-gate signals for the КП builder.
 
-The КП builder shows KYC / subscription blockers BEFORE the seller spends an hour on data
-entry (the audit's "late surprise" at send). That needs two new capability fields mirroring
-`send_to_client`'s gate order (SELLER_KYC_REQUIRED then QUOTE_SEND_NOT_ENTITLED):
+The КП builder shows subscription blockers BEFORE the seller spends an hour on data
+entry (the audit's "late surprise" at send). That needs two capability fields mirroring
+`send_to_client`'s gate (QUOTE_SEND_NOT_ENTITLED; the KYC floor was removed in M1-ERP-02 wave 1c):
 
-  - can_send_quotes  = quote_send_entitled(company)  (KYC L2+ AND quote.send entitlement AND not DEMO)
+  - can_send_quotes  = quote_send_entitled(company)  (quote.send entitlement AND not DEMO)
   - quote_send_is_demo = the seller holds quote.send in DEMO access (watermarked, send-gated)
 
 UI-gating only — send_to_client stays the authoritative gate. These tests pin the projection.
@@ -22,7 +22,6 @@ from accounts.models import (
     CompanyType,
     CustomUser,
     SupplierSubscription,
-    VerificationStatus,
     WorkspaceRole,
 )
 from accounts.serializers import MeSerializer
@@ -33,15 +32,13 @@ def lookups(db):
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
 
 
-def _seller_user(email, *, with_subscription, operational=True, kyc=True):
+def _seller_user(email, *, with_subscription, operational=True):
     """A SUPPLIER-company OWNER with can_sell — mirrors crm.tests.test_subscription_gate."""
     company = Company.objects.create(
         name=f"Seller {email}",
         inn=email,
-        verification_status=(VerificationStatus.objects.get(code="L2_VERIFIED") if kyc else None),
     )
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
     user = CustomUser.objects.create_user(email=email, username=email, password="x")
@@ -68,21 +65,14 @@ def _caps(user):
     return MeSerializer(user).data["capabilities"]
 
 
-def test_kyc_and_subscription_seller_can_send(lookups):
+def test_subscribed_seller_can_send(lookups):
     user, _ = _seller_user("ok@wph.test", with_subscription=True, operational=True)
     caps = _caps(user)
     assert caps["can_send_quotes"] is True
     assert caps["quote_send_is_demo"] is False
 
 
-def test_seller_without_kyc_cannot_send(lookups):
-    user, _ = _seller_user("nokyc@wph.test", with_subscription=True, operational=True, kyc=False)
-    caps = _caps(user)
-    assert caps["can_send_quotes"] is False
-    assert caps["quote_send_is_demo"] is False
-
-
-def test_kyc_seller_without_subscription_cannot_send(lookups):
+def test_seller_without_subscription_cannot_send(lookups):
     user, _ = _seller_user("nosub@wph.test", with_subscription=False)
     caps = _caps(user)
     assert caps["can_send_quotes"] is False

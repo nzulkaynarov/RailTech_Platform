@@ -13,7 +13,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import i18next, { type i18n as I18nType } from 'i18next';
 
-import { activityDetail, activityTitle } from '../activityText';
+import { activityDetail } from '../activityText';
 import { notificationMessage } from '../notificationText';
 import en from '../../i18n/locales/en.json';
 import ru from '../../i18n/locales/ru.json';
@@ -61,17 +61,6 @@ describe('кодовые параметры журнала', () => {
     };
 
     expect(activityDetail(t(), i18n, entry)).toBe('Step approved (Head of unit)');
-  });
-
-  it('роль компании печатается по коду', () => {
-    const added = {
-      event_code: 'company.role_added',
-      event_params: { role_code: 'SUPPLIER', application_id: 4 },
-      action: 'Добавлена роль: SUPPLIER',
-      detail: 'Одобрена заявка #4',
-    };
-
-    expect(activityTitle(t(), i18n, added)).toBe('Role added: Supplier');
   });
 
   it('СТАРАЯ строка без кода не ломается — печатается тем, что было записано', () => {

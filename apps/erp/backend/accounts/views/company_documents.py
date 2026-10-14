@@ -1,4 +1,4 @@
-"""KYC document, logo, document-profile and КП-settings actions for ``CompanyViewSet``.
+"""Logo, document-profile and КП-settings actions for ``CompanyViewSet``.
 
 Split out of the monolithic ``accounts/views/company.py`` (file-length refactor,
 500-line rule) as a mixin — behaviour, ``url_path``/``url_name``, parsers and
@@ -15,78 +15,11 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
 from accounts import services
-from accounts.serializers import (
-    CompanyDocumentProfileSerializer,
-    CompanySerializer,
-    CompanySettingsSerializer,
-    KYCDocumentSerializer,
-)
+from accounts.serializers import CompanyDocumentProfileSerializer, CompanySerializer, CompanySettingsSerializer
 
 
 class CompanyDocumentsMixin:
-    """KYC-document, logo, document-profile and КП-settings ``@action`` endpoints."""
-
-    @extend_schema(
-        summary="Upload KYC document",
-        description="Upload a KYC document for company verification. Supports multipart file upload.",
-        request={
-            "multipart/form-data": {
-                "type": "object",
-                "properties": {
-                    "file": {"type": "string", "format": "binary"},
-                    "doc_type": {"type": "string", "default": "OTHER"},
-                },
-            }
-        },
-        responses={201: KYCDocumentSerializer},
-        tags=["Accounts"],
-    )
-    @action(detail=True, methods=["post"], url_path="upload-document", parser_classes=[MultiPartParser, FormParser])
-    def upload_document(self, request, pk=None):
-        company = self.get_object()
-        self._assert_member_or_admin(company)
-        file_obj = request.FILES.get("file")
-        if not file_obj:
-            return Response({"detail": "NO_FILE_PROVIDED"}, status=status.HTTP_400_BAD_REQUEST)
-
-        doc_type_code = request.data.get("doc_type", "OTHER")
-        doc, error = services.upload_kyc_document(company, file_obj, doc_type_code)
-        if error:
-            return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(KYCDocumentSerializer(doc).data, status=status.HTTP_201_CREATED)
-
-    @extend_schema(
-        summary="Delete KYC document",
-        description="Delete a specific KYC document by its ID from a company.",
-        responses={204: None, 404: OpenApiResponse(description="Document not found")},
-        tags=["Accounts"],
-    )
-    @action(detail=True, methods=["delete"], url_path="delete-document/(?P<doc_id>[0-9]+)", url_name="delete-document")
-    def delete_document(self, request, pk=None, doc_id=None):
-        company = self.get_object()
-        self._assert_member_or_admin(company)
-        success, error = services.delete_kyc_document(company, int(doc_id))
-        if error:
-            return Response({"detail": error}, status=status.HTTP_404_NOT_FOUND)
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-    @extend_schema(
-        summary="Download a KYC document",
-        description="Stream a KYC document for review. Works with both MinIO and local storage "
-        "(prod has no MinIO, so the raw /media URL 404s — this authenticated stream is the only path).",
-        responses={200: OpenApiResponse(description="File stream"), 404: OpenApiResponse(description="Not found")},
-        tags=["Accounts"],
-    )
-    @action(detail=True, methods=["get"], url_path="download-document/(?P<doc_id>[0-9]+)", url_name="download-document")
-    def download_document(self, request, pk=None, doc_id=None):
-        from core.file_streaming import stream_file_field
-
-        company = self.get_object()
-        self._assert_member_or_admin(company)
-        doc = company.kyc_documents.filter(id=int(doc_id)).first()
-        if not doc:
-            return Response({"detail": "DOCUMENT_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
-        return stream_file_field(doc.file, content_type="application/octet-stream")
+    """Logo, document-profile and КП-settings ``@action`` endpoints."""
 
     @extend_schema(
         summary="Upload company logo",

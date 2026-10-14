@@ -33,7 +33,7 @@ def with_inspection_mode(admin_class):
     модельными правами правил и удалял: ЖУРНАЛ АКТИВНОСТИ (13 полей из 18 — то есть саму
     историю, по которой потом разбирают инцидент), историю правок КП, все справочники FSM
     (DealStage, QuoteStatus, ContractStatus, InvoiceStatus, ActStatus, FulfillmentStatus), все
-    справочники accounts (SystemRole, WorkspaceRole, CompanyType, VerificationStatus, KYCDocType),
+    справочники accounts (SystemRole, WorkspaceRole, CompanyType, а тогда ещё и справочники KYC),
     а также `auth.Group` и `auth.Permission`.
 
     Последнее особенно едко: волна #599 сделала модельное право «вторым ключом» к опасным

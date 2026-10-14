@@ -28,7 +28,6 @@ from accounts.models import (
     CustomUser,
     SupplierSubscription,
     SystemRole,
-    VerificationStatus,
     WorkspaceRole,
 )
 from crm.models import (
@@ -50,7 +49,6 @@ def lookups(db):
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     for code in ("CLIENT", "SUPPLIER"):
         CompanyType.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     SystemRole.objects.get_or_create(code="USER", defaults={"name": "User", "sort_order": 10})
     DealStage.objects.get_or_create(code="CONTRACT_SIGNED", defaults={"name": "CS", "sort_order": 10})
     QuoteStatus.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})
@@ -59,9 +57,7 @@ def lookups(db):
 
 
 def _seller(name, inn, email):
-    company = Company.objects.create(
-        name=name, inn=inn, verification_status=VerificationStatus.objects.get(code="L2_VERIFIED")
-    )
+    company = Company.objects.create(name=name, inn=inn)
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
     user = CustomUser.objects.create_user(email=email, username=email, password="x")
     CompanyMember.objects.create(
@@ -84,9 +80,7 @@ def _seller(name, inn, email):
 @pytest.fixture
 def multiseller_deal(lookups):
     """Заявка покупателя, зароутиненная на ДВУХ продавцов; выиграл первый."""
-    buyer_co = Company.objects.create(
-        name="Покупатель", inn="FB904", verification_status=VerificationStatus.objects.get(code="L2_VERIFIED")
-    )
+    buyer_co = Company.objects.create(name="Покупатель", inn="FB904")
     buyer_co.types.add(CompanyType.objects.get(code="CLIENT"))
 
     winner, winner_co = _seller("Победитель", "FW904", "winner@fulfil.test")

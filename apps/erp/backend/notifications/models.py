@@ -140,7 +140,7 @@ class EmailLog(models.Model):
         max_length=100,
         db_index=True,
         verbose_name=_("Шаблон"),
-        help_text=_("Код шаблона, например 'setup_password', 'kyc_verified'"),
+        help_text=_("Код шаблона, например 'setup_password', 'invite_member'"),
     )
     channel = models.CharField(
         max_length=40,
@@ -216,9 +216,8 @@ class EmailTemplate(models.Model):
     file templates in backend/templates/emails/ — so this is purely additive and
     backward compatible: an empty table changes nothing.
 
-    `key` matches the file template name (e.g. 'setup_password', 'invite_member',
-    'kyc_verified', 'quote_sent', 'reset_password', 'role_application_approved',
-    'role_application_rejected'). The stored subject/html/text are Django
+    `key` matches the file template name (e.g. 'setup_password',
+    'invite_member', 'quote_sent', 'reset_password'). The stored subject/html/text are Django
     templates rendered against the same context the calling service provides;
     `available_variables` documents those merge vars for the editor.
     """
@@ -227,7 +226,7 @@ class EmailTemplate(models.Model):
         max_length=100,
         db_index=True,
         verbose_name=_("Ключ"),
-        help_text=_("Совпадает с именем файлового шаблона: 'setup_password', 'kyc_verified', 'quote_sent', …"),
+        help_text=_("Совпадает с именем файлового шаблона: 'setup_password', 'invite_member', 'quote_sent', …"),
     )
     # L2 (spec-bilingual-ru-en): у оверрайда появилось языковое измерение. Пустое значение =
     # «на любом языке» — так ведут себя строки, заведённые до L2: они продолжают

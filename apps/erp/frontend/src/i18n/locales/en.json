@@ -3080,25 +3080,9 @@
       }
     },
     "company": {
-      "kyc_verified": {
-        "title": "KYC: verified",
-        "detail": "{{company_name}}: {{from_status}} → {{to_status}}"
-      },
-      "kyc_downgraded": {
-        "title": "KYC: level downgraded",
-        "detail": "{{company_name}}: {{from_status}} → {{to_status}}"
-      },
       "merged": {
         "title": "Duplicate company merged",
         "detail": "Duplicate #{{duplicate_id}} “{{duplicate_name}}” merged into “{{survivor_name}}”"
-      },
-      "role_application_approved": {
-        "title": "Role application approved",
-        "detail": "{{company_name}} → {{role_name}}"
-      },
-      "role_added": {
-        "title": "Role added: {{role_code}}",
-        "detail": "Application #{{application_id}} approved"
       }
     },
     "product": {
@@ -3158,12 +3142,6 @@
         "activated": {
           "title": "Subscription activated",
           "detail": "{{company_name}}"
-        }
-      },
-      "role_application": {
-        "documents_requested": {
-          "title": "Documents requested for the role application",
-          "detail": "{{company_name}} → {{requested_type}}"
         }
       },
       "lead": {
@@ -3519,14 +3497,6 @@
     "deal.assigned": {
       "title": "A request was assigned to you",
       "message": "Request #{{deal_id}} is assigned to you — a quote is needed"
-    },
-    "company.kyc_status_changed": {
-      "title": "Verification status updated",
-      "message": "Your company status: {{level_code}}"
-    },
-    "company.kyc_verified": {
-      "title": "KYC status updated",
-      "message": "KYC for {{company}} — {{level_code}}"
     },
     "invoice.issued": {
       "title": "Invoice issued",

@@ -35,15 +35,15 @@ http://erp.localhost {
 	}
 }
 
-# ─── Cabinet — кабинет клиента: заготовка до M2-CAB-01 (apps/cabinet) ──────────────────────
+# ─── Cabinet — кабинет клиента (apps/cabinet, M2-CAB-01) ───────────────────────────────────
+# SPA без бэкенда (ADR-0004): портальный API ERP отдаётся с того же домена, поэтому cookie сессии
+# портала same-origin и CORS не нужен. До M2-ERP-01 /api/portal/* отвечает 404 — ожидаемо.
 http://cabinet.localhost {
-	handle /health {
-		header Content-Type application/json
-		respond `{"status":"ok","system":"cabinet","stub":true,"next":"M2-CAB-01"}` 200
+	handle /api/portal/* {
+		reverse_proxy erp-backend:8000
 	}
 	handle {
-		header Content-Type "text/plain; charset=utf-8"
-		respond "Cabinet (cabinet.localhost) — заготовка. Приложение apps/cabinet появится на вехе M2 (ORCHESTRATOR §6)." 200
+		reverse_proxy cabinet-web:80
 	}
 }
 

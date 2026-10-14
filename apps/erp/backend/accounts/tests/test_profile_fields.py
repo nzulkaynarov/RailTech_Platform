@@ -1,12 +1,11 @@
 """Regression tests for the profile-field audit (user + company).
 
 Covers the gaps the audit surfaced:
-  * /me/ now returns `position` (was collected at registration, then dropped);
+  * /me/ now returns `position`;
   * self-update writes name/phone/position but NEVER email/username/is_active;
-  * the client company serializer no longer leaks internal `kyc_notes`;
   * a company OWNER may edit their own company, a plain member may not, and
-    KYC trust verdicts (is_verified / trust_score) stay read-only for everyone
-    but the platform.
+    the trust verdict (trust_score) stays read-only for everyone but the platform.
+    (KYC — kyc_notes / is_verified — was removed in M1-ERP-02 wave 1c.)
 """
 
 import pytest
@@ -153,17 +152,6 @@ def test_update_me_rejects_non_object_preferences(user_factory):
     assert "PREFERENCES_INVALID" in str(resp.data["preferences"])
 
 
-def test_company_detail_hides_kyc_notes(user_factory, company_factory, workspace_role_factory):
-    company = company_factory(kyc_notes="internal manager note — do not show")
-    user = user_factory(email="owner@example.com", username="owner")
-    _make_member(user, company, workspace_role_factory, role_code="OWNER", role_name="Owner")
-
-    resp = _client_for(user).get(f"/api/v1/accounts/companies/{company.id}/")
-
-    assert resp.status_code == 200
-    assert "kyc_notes" not in resp.data
-
-
 def test_owner_can_edit_company_but_not_trust_signals(user_factory, company_factory, workspace_role_factory):
     company = company_factory()
     user = user_factory(email="owner2@example.com", username="owner2")
@@ -171,7 +159,7 @@ def test_owner_can_edit_company_but_not_trust_signals(user_factory, company_fact
 
     resp = _client_for(user).patch(
         f"/api/v1/accounts/companies/{company.id}/",
-        {"phone": "+998900000000", "is_verified": True, "trust_score": 99},
+        {"phone": "+998900000000", "trust_score": 99},
         format="json",
     )
 
@@ -179,7 +167,6 @@ def test_owner_can_edit_company_but_not_trust_signals(user_factory, company_fact
     company.refresh_from_db()
     assert company.phone == "+998900000000"
     # Trust verdicts are platform-controlled — a company must not self-set them.
-    assert company.is_verified is False
     assert company.trust_score == 0
 
 

@@ -579,7 +579,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         summary="Unpublish a product (owner)",
         description=(
             "Снимает карточку с витрины: PUBLISHED → DRAFT (Shopify: Active → Draft двусторонне). "
-            "Право то же, что у публикации; KYC не требуется — снятие уменьшает экспозицию."
+            "Право то же, что у публикации."
         ),
         responses={200: OpenApiResponse(description="Unpublished"), 400: OpenApiResponse(description="Not published")},
         tags=["Catalog"],

@@ -1,7 +1,7 @@
 """Наименьшие привилегии в инженерной админке (Django Unfold остаётся инженерам — ARCHITECTURE §7).
 
 Прогон 20-08 нашёл класс «право нарисовано в меню, но за скрытой дверью ничего не стоит»:
-член инженерной группы без единого модельного права создавал арендатора с выставленным KYC;
+член инженерной группы без единого модельного права создавал арендатора через мастер;
 инженер с правом на модель пользователя сохранял себе `is_superuser`.
 
 Операторская часть этого файла (роль оператора «только просмотр») удалена в M1-ERP-02 волна 1a
@@ -22,7 +22,7 @@ PASSWORD = "Passw0rd!LP"
 
 @pytest.mark.django_db
 def test_engineer_without_model_permission_cannot_open_company_wizard(client):
-    """Член `system_engineers` без модельных прав проходил мастер до конца и ставил KYC."""
+    """Член `system_engineers` без модельных прав проходил мастер до конца и создавал арендатора."""
     engineer = CustomUser.objects.create_user(
         email="lp.engineer@test.uz", username="lp_engineer", password=PASSWORD, is_staff=True
     )

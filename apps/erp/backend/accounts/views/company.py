@@ -1,8 +1,7 @@
 """``CompanyViewSet`` — CRUD + the buyer-facing supplier directory and CSV/XLSX export.
 
-The KYC-verification / merge, document / logo / settings, and team-management
-``@action`` endpoints live in sibling mixin modules (``company_kyc``,
-``company_documents``, ``company_team``) so no single file exceeds the 500-line
+The document / logo / settings and team-management ``@action`` endpoints live in
+sibling mixin modules (``company_documents``, ``company_team``) so no single file exceeds the 500-line
 limit. This is a pure code-move refactor — behaviour, ``url_path``/``url_name``,
 permissions and the OpenAPI contract are unchanged. Mixins only ADD ``@action``
 methods (they override nothing), so MRO does not affect behaviour.
@@ -22,7 +21,6 @@ from accounts.models import Company, CompanyMember
 from accounts.serializers import CompanySerializer
 from accounts.services.permissions import member_has_permission
 from accounts.views.company_documents import CompanyDocumentsMixin
-from accounts.views.company_kyc import CompanyKYCMixin
 from accounts.views.company_team import CompanyTeamMixin
 from core.permissions import IsPlatformAdmin
 
@@ -30,7 +28,7 @@ from core.permissions import IsPlatformAdmin
 @extend_schema_view(
     list=extend_schema(
         summary="List companies",
-        description="Returns all companies with KYC documents and members. Manager/Admin only.",
+        description="Returns all companies with their members. Manager/Admin only.",
         tags=["Accounts"],
     ),
     create=extend_schema(
@@ -59,17 +57,16 @@ from core.permissions import IsPlatformAdmin
         tags=["Accounts"],
     ),
 )
-class CompanyViewSet(CompanyKYCMixin, CompanyDocumentsMixin, CompanyTeamMixin, viewsets.ModelViewSet):
+class CompanyViewSet(CompanyDocumentsMixin, CompanyTeamMixin, viewsets.ModelViewSet):
     """
     CRUD operations for companies.
 
-    Includes KYC verification, document upload, team management, and member invitations.
+    Includes logo / document-profile settings, team management, and member invitations.
     """
 
     queryset = (
-        Company.objects.select_related("verification_status", "country")
+        Company.objects.select_related("country")
         .prefetch_related(
-            "kyc_documents__doc_type",
             "types",
             "members",
         )
@@ -82,7 +79,6 @@ class CompanyViewSet(CompanyKYCMixin, CompanyDocumentsMixin, CompanyTeamMixin, v
     # fall back to the coarse platform-operator gate.
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = {
-        "verification_status__code": ["exact"],
         "types__code": ["exact"],
         # `?is_active=false` — вкладка «Архивные» (Odoo держит архив за фильтром, а не прячет).
         "is_active": ["exact"],
@@ -90,7 +86,7 @@ class CompanyViewSet(CompanyKYCMixin, CompanyDocumentsMixin, CompanyTeamMixin, v
     search_fields = ["name", "inn", "mfo", "contact_person", "email"]
 
     # Actions that a company member may perform on their own company
-    # (logo upload, KYC document upload/delete, partial update of profile fields).
+    # (logo upload, partial update of profile fields).
     # Actions a company MEMBER (not just a platform admin) may reach — the class is
     # otherwise IsPlatformAdmin. invite / update_member_capabilities enforce OWNER
     # inside the action itself, so IsAuthenticated here is correct (without this the
@@ -99,9 +95,6 @@ class CompanyViewSet(CompanyKYCMixin, CompanyDocumentsMixin, CompanyTeamMixin, v
         "retrieve",
         "update",
         "partial_update",
-        "upload_document",
-        "delete_document",
-        "download_document",
         "upload_logo",
         "delete_logo",
         "document_profile",
@@ -181,11 +174,11 @@ class CompanyViewSet(CompanyKYCMixin, CompanyDocumentsMixin, CompanyTeamMixin, v
         return super().get_permissions()
 
     @extend_schema(
-        summary="List verified suppliers (for RFQ invitations)",
+        summary="List suppliers (for RFQ invitations)",
         description=(
-            "Minimal directory of verified SUPPLIER / MANUFACTURER companies a buyer "
-            "can invite to an RFQ. Available to any authenticated member — returns only "
-            "id, name and INN, NOT the full admin company record (no KYC internals)."
+            "Minimal directory of active SUPPLIER companies a buyer can invite to an RFQ. "
+            "Available to any authenticated member — returns only id, name and INN, NOT the "
+            "full admin company record."
         ),
         responses={200: OpenApiResponse(description="List of {id, name, inn}")},
         tags=["Accounts"],
@@ -200,17 +193,14 @@ class CompanyViewSet(CompanyKYCMixin, CompanyDocumentsMixin, CompanyTeamMixin, v
     def suppliers(self, request):
         """Buyer-facing supplier directory for the open-RFQ invite flow.
 
-        Deliberately narrow (id/name/inn) and capped to verified sellers, so the
-        full company list — protected by IsPlatformAdmin — stays admin-only.
-
-        Verified == the canonical KYC set (L2 + L3), NOT L2 alone: an L3_CONTRACTED seller
-        is MORE verified than L2, and the old exact-L2 filter silently dropped exactly the
-        contracted suppliers a buyer most wants to invite. This is also the same set the
-        routing suggestion uses (sourcing.services), so a suggested seller is always a
-        seller the buyer can actually see and un-check here.
+        Deliberately narrow (id/name/inn) and capped to active sellers, so the full
+        company list — protected by IsPlatformAdmin — stays admin-only. This is the same set
+        the routing suggestion uses (sourcing.services), so a suggested seller is always a
+        seller the buyer can actually see and un-check here. (KYC verification was removed
+        in M1-ERP-02 wave 1c — counterparties are created by the back office.)
         """
-        verified_suppliers = Company.objects.verified_sellers().order_by("name").values("id", "name", "inn")
-        return Response(list(verified_suppliers))
+        suppliers = Company.objects.sellers().order_by("name").values("id", "name", "inn")
+        return Response(list(suppliers))
 
     def _assert_member_or_admin(self, company):
         user = self.request.user
@@ -236,8 +226,8 @@ class CompanyViewSet(CompanyKYCMixin, CompanyDocumentsMixin, CompanyTeamMixin, v
     def _assert_owner_or_admin(self, company):
         """Editing the company profile is an OWNER action (or platform admin).
         Plain members may view but not change company data. The serializer's
-        read_only_fields still protect KYC verdicts (verification_status /
-        is_verified / trust_score) from any non-admin write."""
+        read_only_fields still protect platform verdicts (trust_score, archive state)
+        from any non-admin write."""
         user = self.request.user
         if user.is_superuser:
             return
@@ -260,23 +250,6 @@ class CompanyViewSet(CompanyKYCMixin, CompanyDocumentsMixin, CompanyTeamMixin, v
         return super().partial_update(request, *args, **kwargs)
 
     @extend_schema(
-        summary="Bulk verify KYC",
-        description="Platform Admin: verify KYC for multiple companies in one request.",
-        request={
-            "application/json": {
-                "type": "object",
-                "properties": {
-                    "ids": {"type": "array", "items": {"type": "integer"}},
-                    "level": {"type": "string", "default": "L2_VERIFIED"},
-                    "reason": {"type": "string"},
-                },
-                "required": ["ids"],
-            }
-        },
-        responses={200: OpenApiResponse(description="approved count + skipped")},
-        tags=["Accounts"],
-    )
-    @extend_schema(
         summary="Export companies",
         description="Export filtered companies list as CSV or XLSX (format=csv|xlsx).",
         tags=["Accounts"],
@@ -298,7 +271,6 @@ class CompanyViewSet(CompanyKYCMixin, CompanyDocumentsMixin, CompanyTeamMixin, v
                 ("id", "ID", lambda c: c.id),
                 ("name", "Name", lambda c: c.name),
                 ("inn", "INN", lambda c: c.inn or ""),
-                ("verification", "KYC", lambda c: c.verification_status.code if c.verification_status_id else ""),
                 ("types", "Types", _types),
                 ("email", "Email", lambda c: c.email or ""),
                 ("phone", "Phone", lambda c: c.phone or ""),

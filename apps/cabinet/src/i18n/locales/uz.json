@@ -1,0 +1,195 @@
+{
+  "app": {
+    "name": "RailTech Cabinet",
+    "tagline": "Mijoz kabineti",
+    "skipToContent": "Asosiy qismga oʻtish",
+    "loading": "Yuklanmoqda…",
+    "mainNav": "Asosiy boʻlimlar",
+    "sideNav": "Kabinet boʻlimlari"
+  },
+  "nav": {
+    "requests": "Soʻrovlar",
+    "quotes": "Takliflar",
+    "contracts": "Shartnomalar",
+    "invoices": "Hisob-fakturalar",
+    "acts": "Dalolatnomalar",
+    "deliveries": "Yetkazib berish",
+    "documents": "Hujjatlar",
+    "catalog": "Katalog",
+    "company": "Kompaniya",
+    "team": "Jamoa",
+    "profile": "Profil",
+    "more": "Yana",
+    "moreTitle": "Boshqa boʻlimlar",
+    "moreDescription": "Shartnomalar, hisob-fakturalar, dalolatnomalar, yetkazib berish, kompaniya va profil"
+  },
+  "common": {
+    "retry": "Qayta urinish",
+    "home": "Bosh sahifaga",
+    "loading": "Yuklanmoqda…",
+    "error": "Xatolik yuz berdi",
+    "comingSoon": "Bu ekran kabinetning keyingi yangilanishida paydo boʻladi",
+    "notFoundTitle": "Sahifa topilmadi",
+    "notFoundText": "Bunday sahifa yoʻq yoki u boshqa kompaniyaga tegishli.",
+    "viewOnly": "Faqat koʻrish: amallar tasdiqlash huquqiga ega kontaktga ochiq",
+    "close": "Yopish"
+  },
+  "languages": {
+    "label": "Til",
+    "ru": "Русский",
+    "uz": "Oʻzbekcha",
+    "en": "English"
+  },
+  "auth": {
+    "login": {
+      "title": "Kabinetga kirish",
+      "subtitle": "Kabinet taklifnoma orqali ochiladi. Taklifnoma kelgan e-mailni kiriting — kirish havolasini yuboramiz.",
+      "email": "E-mail",
+      "emailPlaceholder": "name@company.uz",
+      "submit": "Kirish",
+      "sending": "Yuborilmoqda…",
+      "or": "yoki",
+      "newClient": "Men yangi mijozman",
+      "newClientHint": "Biz bilan hali ishlamaganmisiz? Soʻrov qoldiring — menejer siz bilan bogʻlanadi.",
+      "telegram": "Telegram orqali kirish"
+    },
+    "sent": {
+      "title": "Xat yuborildi",
+      "text": "Agar {{email}} manzili kabinetda boʻlsa, unga kirish havolasi yuborildi. Havola 15 daqiqa amal qiladi va bir marta ochiladi.",
+      "textNoEmail": "Agar manzil kabinetda boʻlsa, unga kirish havolasi yuborildi. Havola 15 daqiqa amal qiladi va bir marta ochiladi.",
+      "back": "Boshqa manzil kiritish",
+      "mockLink": "Xatdagi havolani ochish (mok)"
+    },
+    "magic": {
+      "exchanging": "Havola orqali kirilmoqda…",
+      "expiredTitle": "Havola amal qilmaydi",
+      "expiredText": "Havola muddati tugagan yoki u allaqachon ochilgan. Yangisini soʻrang.",
+      "requestAgain": "Yangi havola soʻrash"
+    },
+    "telegram": {
+      "signingIn": "Telegram orqali kirilmoqda…",
+      "failedTitle": "Kirib boʻlmadi",
+      "failedText": "Agar siz hali biz bilan ishlamasangiz, botga yozing — menejer sizni kabinetga taklif qiladi.",
+      "openBot": "Botni ochish",
+      "retry": "Qayta urinish"
+    }
+  },
+  "newClient": {
+    "title": "Men yangi mijozman",
+    "text": "Nima kerakligini ayting — menejer javob beradi va sizni kabinetga taklif qiladi. Soʻrov shakli tez orada shu yerda paydo boʻladi; hozircha Telegram orqali yozish eng tez yoʻl.",
+    "writeTelegram": "Telegramda yozish",
+    "backToLogin": "Menda allaqachon kirish bor",
+    "formTitle": "Soʻrov shakli"
+  },
+  "profile": {
+    "title": "Profil",
+    "contact": "Kontakt",
+    "company": "Kompaniya",
+    "email": "E-mail",
+    "phone": "Telefon",
+    "authMethod": "Kirish usuli",
+    "authMethods": {
+      "telegram": "Telegram",
+      "magic_link": "E-mail havolasi"
+    },
+    "rights": "Huquqlar",
+    "canAct": "Tasdiqlay oladi: takliflarni qabul qilish, shartnomalarni imzolash, dalolatnomalarni qabul qilish",
+    "viewOnly": "Faqat koʻrish",
+    "language": "Kabinet tili",
+    "logout": "Kabinetdan chiqish",
+    "name": "Ism"
+  },
+  "pages": {
+    "requests": {
+      "title": "Soʻrovlar",
+      "new": "Yangi soʻrov",
+      "emptyTitle": "Hozircha soʻrovlar yoʻq",
+      "emptyText": "Bu yerda soʻrovlaringiz va ularning holati koʻrinadi: yangi, ishda, taklif bor, yopilgan."
+    },
+    "requestNew": {
+      "title": "Yangi soʻrov",
+      "emptyTitle": "Soʻrov shakli shu yerda paydo boʻladi",
+      "emptyText": "Erkin matnli qatorlar va ilovalar — soʻrov toʻgʻridan-toʻgʻri bek-ofisga yuboriladi."
+    },
+    "requestDetail": {
+      "title": "Soʻrov №{{id}}",
+      "emptyTitle": "Soʻrov kartochkasi",
+      "emptyText": "Soʻrov qatorlari, ilovalar va holat — soʻrov boʻyicha butun tarix shu yerda koʻrinadi."
+    },
+    "quotes": {
+      "title": "Tijorat takliflari",
+      "emptyTitle": "Hozircha takliflar yoʻq",
+      "emptyText": "Menejer taklif yuborishi bilan u shu yerda paydo boʻladi — kabinetdan qabul qilish yoki rad etish mumkin."
+    },
+    "quoteDetail": {
+      "title": "Taklif №{{id}}",
+      "emptyTitle": "Taklif kartochkasi",
+      "emptyText": "Qatorlar, summa, amal qilish muddati; kod bilan qabul qilish yoki sabab bilan rad etish."
+    },
+    "contracts": {
+      "title": "Shartnomalar",
+      "emptyTitle": "Hozircha shartnomalar yoʻq",
+      "emptyText": "Shartnoma taklif qabul qilingach avtomatik yaratiladi; uni shu yerda imzolash mumkin."
+    },
+    "invoices": {
+      "title": "Hisob-fakturalar",
+      "emptyTitle": "Hozircha hisob-fakturalar yoʻq",
+      "emptyText": "Berilgan hisob-fakturalar, toʻlovlar va muddatlar shu yerda koʻrinadi."
+    },
+    "acts": {
+      "title": "Dalolatnomalar",
+      "emptyTitle": "Hozircha dalolatnomalar yoʻq",
+      "emptyText": "Bajarilgan yetkazib berish va xizmatlar boʻyicha dalolatnomalar: qabul qilish yoki sabab bilan qaytarish."
+    },
+    "deliveries": {
+      "title": "Yetkazib berish",
+      "emptyTitle": "Hozircha yetkazib berish yoʻq",
+      "emptyText": "Har bir qator boʻyicha holat, kutilayotgan sana va kuzatuv raqami."
+    },
+    "documents": {
+      "title": "Hujjatlar",
+      "emptyTitle": "Hozircha hujjatlar yoʻq",
+      "emptyText": "Takliflar, shartnomalar, hisob-fakturalar, dalolatnomalar va yuk xatlari — shu yerdan yuklab olish mumkin."
+    },
+    "catalog": {
+      "title": "Katalog",
+      "emptyTitle": "Katalog boʻsh",
+      "emptyText": "Narxi va mavjudligi bilan eʼlon qilingan tovarlar va xizmatlar."
+    },
+    "catalogItem": {
+      "title": "Katalog pozitsiyasi №{{id}}",
+      "emptyTitle": "Pozitsiya kartochkasi",
+      "emptyText": "Tavsif, xususiyatlar, narx va mavjudlik."
+    },
+    "company": {
+      "title": "Kompaniya",
+      "emptyTitle": "Kompaniya profili",
+      "emptyText": "Nomi, STIR, yuridik manzil va rekvizitlar."
+    },
+    "team": {
+      "title": "Jamoa",
+      "emptyTitle": "Jamoa",
+      "emptyText": "Kabinetga kirish huquqiga ega hamkasblar va yangilarini taklif qilish."
+    },
+    "deal": {
+      "title": "Bitim №{{id}}",
+      "emptyTitle": "Bitim kartochkasi",
+      "emptyText": "Ushbu bitim boʻyicha taklif, shartnoma, hisob-fakturalar, dalolatnomalar va yetkazib berish shu yerda jamlanadi."
+    }
+  },
+  "apiErrors": {
+    "UNKNOWN": "Soʻrovni bajarib boʻlmadi. Qayta urinib koʻring.",
+    "NETWORK": "Server bilan aloqa yoʻq. Ulanishni tekshiring.",
+    "UNAUTHORIZED": "Sessiya tugadi — qayta kiring.",
+    "FORBIDDEN": "Bu amalga huquqingiz yoʻq.",
+    "NOT_FOUND": "Topilmadi.",
+    "VALIDATION_ERROR": "Toʻldirilgan maydonlarni tekshiring.",
+    "INVALID_INIT_DATA": "Telegram kirishni tasdiqlamadi. Kabinetni botdan qayta oching.",
+    "CONTACT_NOT_FOUND": "Kontakt topilmadi. Menejerdan sizni kabinetga taklif qilishni soʻrang.",
+    "MAGIC_LINK_EXPIRED": "Kirish havolasi muddati tugagan yoki allaqachon ishlatilgan.",
+    "QUOTE_FINALIZED": "Taklif allaqachon qabul qilingan, rad etilgan yoki muddati tugagan.",
+    "ACT_FINALIZED": "Dalolatnoma allaqachon qabul qilingan yoki qaytarilgan.",
+    "CONTRACT_FINALIZED": "Shartnoma allaqachon imzolangan yoki bekor qilingan.",
+    "QUOTE_CODE_INVALID": "Tasdiqlash kodi notoʻgʻri."
+  }
+}

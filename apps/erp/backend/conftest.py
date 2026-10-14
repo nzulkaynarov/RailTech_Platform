@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import Company, SystemRole, VerificationStatus, WorkspaceRole
+from accounts.models import Company, SystemRole, WorkspaceRole
 
 User = get_user_model()
 
@@ -16,8 +16,8 @@ def _clear_default_cache():
     scopes, the SEC-06 login lockout, and the 2FA replay guards (used-ticket /
     used-code markers). Without this, throttle counters and replay markers
     persist across tests AND across local runs (their TTLs outlive a run),
-    so re-running the suite locally spuriously trips the register/login
-    throttle. CI uses ephemeral Redis and never saw it; this makes local
+    so re-running the suite locally spuriously trips the login/password
+    throttles. CI uses ephemeral Redis and never saw it; this makes local
     runs match CI.
     """
     from django.core.cache import cache
@@ -80,14 +80,8 @@ def company_factory(db):
         legal_address="123 Main St",
         website="https://example.com",
         country=None,
-        kyc_notes="",
     ):
-        # Get or create verification status
-        verification_status, _ = VerificationStatus.objects.get_or_create(
-            code="L1_UNVERIFIED", defaults={"name": "L1 Unverified"}
-        )
-
-        company = Company.objects.create(
+        return Company.objects.create(
             name=name,
             inn=inn,
             email=email,
@@ -95,10 +89,7 @@ def company_factory(db):
             legal_address=legal_address,
             website=website,
             country=country,
-            kyc_notes=kyc_notes,
-            verification_status=verification_status,
         )
-        return company
 
     return create_company
 

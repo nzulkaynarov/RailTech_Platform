@@ -21,15 +21,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SupplierSubscription, WorkspaceRole
 from crm.models import (
     Act,
     ActStatus,
@@ -56,12 +48,9 @@ def world(db):
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     for code, name in (("CLIENT", "Client"), ("SUPPLIER", "Supplier")):
         CompanyType.objects.get_or_create(code=code, defaults={"name": name, "sort_order": 10})
-    verified = VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})[
-        0
-    ]
 
     def company(name, inn, type_code):
-        obj = Company.objects.create(name=name, inn=inn, verification_status=verified)
+        obj = Company.objects.create(name=name, inn=inn)
         obj.types.add(CompanyType.objects.get(code=type_code))
         return obj
 

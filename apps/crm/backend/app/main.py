@@ -13,6 +13,7 @@ from app.api import errors, health, telegram
 from app.api.cors import WebLeadCorsMiddleware
 from app.api.v1 import (
     admin,
+    ai_spend,
     auth,
     client_contacts,
     clients,
@@ -140,6 +141,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         setup,
         system,
         spend,
+        ai_spend,
         models_admin,
         integrations,
         system_status,

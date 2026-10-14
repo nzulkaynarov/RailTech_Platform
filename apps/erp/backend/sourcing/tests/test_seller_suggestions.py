@@ -7,7 +7,7 @@ Category-matched routing (Ariba Discovery / Alibaba RFQ): позиции зая�
 
 import pytest
 
-from accounts.models import Company, CompanyType, VerificationStatus
+from accounts.models import Company, CompanyType
 from catalog.models import Product
 from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteStatus
 from sourcing.services import suggest_sellers_for_deal
@@ -26,14 +26,10 @@ def world(db):
         code="DRAFT", defaults={"name": "Draft", "sort_order": 2}
     )[0]
 
-    verified = VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})[
-        0
-    ]
-
-    def _seller(name, inn, verification=verified):
-        """A routable seller: SUPPLIER + KYC-verified. Unverified sellers are deliberately
-        excluded from suggestions — the picker can't show them (see _owner_ids_for_products)."""
-        company = Company.objects.create(name=name, inn=inn, verification_status=verification)
+    def _seller(name, inn):
+        """A routable seller: an active SUPPLIER. Archived sellers are deliberately excluded
+        from suggestions — the picker can't show them (see _owner_ids_for_products)."""
+        company = Company.objects.create(name=name, inn=inn)
         company.types.add(CompanyType.objects.get(code="SUPPLIER"))
         return company
 

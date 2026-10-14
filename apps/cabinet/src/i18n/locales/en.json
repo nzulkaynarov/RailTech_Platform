@@ -1,0 +1,195 @@
+{
+  "app": {
+    "name": "RailTech Cabinet",
+    "tagline": "Client cabinet",
+    "skipToContent": "Skip to content",
+    "loading": "Loading…",
+    "mainNav": "Main sections",
+    "sideNav": "Cabinet sections"
+  },
+  "nav": {
+    "requests": "Requests",
+    "quotes": "Quotes",
+    "contracts": "Contracts",
+    "invoices": "Invoices",
+    "acts": "Acts",
+    "deliveries": "Deliveries",
+    "documents": "Documents",
+    "catalog": "Catalog",
+    "company": "Company",
+    "team": "Team",
+    "profile": "Profile",
+    "more": "More",
+    "moreTitle": "More sections",
+    "moreDescription": "Contracts, invoices, acts, deliveries, company and profile"
+  },
+  "common": {
+    "retry": "Retry",
+    "home": "Home",
+    "loading": "Loading…",
+    "error": "Something went wrong",
+    "comingSoon": "This screen arrives in the next cabinet update",
+    "notFoundTitle": "Page not found",
+    "notFoundText": "There is no such page, or it belongs to another company.",
+    "viewOnly": "View only: actions are available to a contact with approval rights",
+    "close": "Close"
+  },
+  "languages": {
+    "label": "Language",
+    "ru": "Русский",
+    "uz": "Oʻzbekcha",
+    "en": "English"
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in to the cabinet",
+      "subtitle": "The cabinet opens by invitation. Enter the e-mail the invitation was sent to and we will send a sign-in link.",
+      "email": "E-mail",
+      "emailPlaceholder": "name@company.uz",
+      "submit": "Sign in",
+      "sending": "Sending…",
+      "or": "or",
+      "newClient": "I am a new client",
+      "newClientHint": "Haven't worked with us yet? Leave a request and a manager will get in touch.",
+      "telegram": "Sign in with Telegram"
+    },
+    "sent": {
+      "title": "E-mail sent",
+      "text": "If {{email}} is in the cabinet, a sign-in link has been sent to it. It is valid for 15 minutes and opens once.",
+      "textNoEmail": "If the address is in the cabinet, a sign-in link has been sent to it. It is valid for 15 minutes and opens once.",
+      "back": "Use another address",
+      "mockLink": "Open the link from the email (mock)"
+    },
+    "magic": {
+      "exchanging": "Signing in with the link…",
+      "expiredTitle": "The link no longer works",
+      "expiredText": "The link has expired or was already opened. Request a new one.",
+      "requestAgain": "Request a new link"
+    },
+    "telegram": {
+      "signingIn": "Signing in with Telegram…",
+      "failedTitle": "Could not sign in",
+      "failedText": "If you are not our client yet, message the bot and a manager will invite you to the cabinet.",
+      "openBot": "Open the bot",
+      "retry": "Try again"
+    }
+  },
+  "newClient": {
+    "title": "I am a new client",
+    "text": "Tell us what you need and a manager will reply and invite you to the cabinet. The request form will appear here soon; for now the fastest way is to message us in Telegram.",
+    "writeTelegram": "Message us in Telegram",
+    "backToLogin": "I already have access",
+    "formTitle": "Request form"
+  },
+  "profile": {
+    "title": "Profile",
+    "contact": "Contact",
+    "company": "Company",
+    "email": "E-mail",
+    "phone": "Phone",
+    "authMethod": "Sign-in method",
+    "authMethods": {
+      "telegram": "Telegram",
+      "magic_link": "E-mail link"
+    },
+    "rights": "Rights",
+    "canAct": "Can approve: accept quotes, sign contracts, accept acts",
+    "viewOnly": "View only",
+    "language": "Cabinet language",
+    "logout": "Sign out of the cabinet",
+    "name": "Name"
+  },
+  "pages": {
+    "requests": {
+      "title": "Requests",
+      "new": "New request",
+      "emptyTitle": "No requests yet",
+      "emptyText": "Your requests and their status will appear here: new, in progress, quoted, closed."
+    },
+    "requestNew": {
+      "title": "New request",
+      "emptyTitle": "The request form will appear here",
+      "emptyText": "Free-text lines and attachments — the request goes straight to the back office."
+    },
+    "requestDetail": {
+      "title": "Request #{{id}}",
+      "emptyTitle": "Request details",
+      "emptyText": "Request lines, attachments and status — the full history of the request will appear here."
+    },
+    "quotes": {
+      "title": "Quotes",
+      "emptyTitle": "No quotes yet",
+      "emptyText": "As soon as the manager sends a quote it will appear here — accept or reject it right from the cabinet."
+    },
+    "quoteDetail": {
+      "title": "Quote #{{id}}",
+      "emptyTitle": "Quote details",
+      "emptyText": "Lines, total, validity; accept with a code or reject with a reason."
+    },
+    "contracts": {
+      "title": "Contracts",
+      "emptyTitle": "No contracts yet",
+      "emptyText": "A contract is created automatically once a quote is accepted; you can sign it here."
+    },
+    "invoices": {
+      "title": "Invoices",
+      "emptyTitle": "No invoices yet",
+      "emptyText": "Issued invoices, payments and due dates will appear here."
+    },
+    "acts": {
+      "title": "Acts",
+      "emptyTitle": "No acts yet",
+      "emptyText": "Acts for completed deliveries and services: accept or return with a reason."
+    },
+    "deliveries": {
+      "title": "Deliveries",
+      "emptyTitle": "No deliveries yet",
+      "emptyText": "Status per line, expected date and tracking number."
+    },
+    "documents": {
+      "title": "Documents",
+      "emptyTitle": "No documents yet",
+      "emptyText": "Quotes, contracts, invoices, acts and waybills — download them from here."
+    },
+    "catalog": {
+      "title": "Catalog",
+      "emptyTitle": "The catalog is empty",
+      "emptyText": "Published goods and services with price and availability."
+    },
+    "catalogItem": {
+      "title": "Catalog item #{{id}}",
+      "emptyTitle": "Item details",
+      "emptyText": "Description, specifications, price and availability."
+    },
+    "company": {
+      "title": "Company",
+      "emptyTitle": "Company profile",
+      "emptyText": "Name, tax ID, legal address and bank details."
+    },
+    "team": {
+      "title": "Team",
+      "emptyTitle": "Team",
+      "emptyText": "Colleagues with cabinet access and inviting new ones."
+    },
+    "deal": {
+      "title": "Deal #{{id}}",
+      "emptyTitle": "Deal card",
+      "emptyText": "The quote, contract, invoices, acts and deliveries for this deal will be gathered here."
+    }
+  },
+  "apiErrors": {
+    "UNKNOWN": "The request could not be completed. Please try again.",
+    "NETWORK": "No connection to the server. Check your network.",
+    "UNAUTHORIZED": "The session has ended — sign in again.",
+    "FORBIDDEN": "You do not have the right to do this.",
+    "NOT_FOUND": "Not found.",
+    "VALIDATION_ERROR": "Check the fields you filled in.",
+    "INVALID_INIT_DATA": "Telegram did not confirm the sign-in. Open the cabinet from the bot again.",
+    "CONTACT_NOT_FOUND": "Contact not found. Ask your manager to invite you to the cabinet.",
+    "MAGIC_LINK_EXPIRED": "The sign-in link has expired or was already used.",
+    "QUOTE_FINALIZED": "The quote was already accepted, rejected or has expired.",
+    "ACT_FINALIZED": "The act was already accepted or returned.",
+    "CONTRACT_FINALIZED": "The contract was already signed or cancelled.",
+    "QUOTE_CODE_INVALID": "The confirmation code is incorrect."
+  }
+}

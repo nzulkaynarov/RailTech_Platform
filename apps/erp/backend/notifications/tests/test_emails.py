@@ -24,57 +24,7 @@ TEMPLATE_CASES = [
         "reset_password",
         {"first_name": "Алиса", "name": "Алиса", "reset_url": "https://app.example.com/reset?token=abc"},
     ),
-    (
-        "register_existing_account",
-        {
-            "first_name": "Алиса",
-            "name": "Алиса",
-            "login_url": "https://app.example.com/",
-            "forgot_url": "https://app.example.com/forgot?a=1&b=2",
-        },
-    ),
     ("invite_member", {"company_name": "Alpha LLC", "setup_url": "https://app.example.com/setup?token=xyz"}),
-    (
-        "invite_client",
-        {"company_name": "Alpha LLC", "contact_name": "Пётр", "invite_url": "https://app.example.com/invite?token=xyz"},
-    ),
-    (
-        "kyc_verified",
-        {
-            "company_name": "Alpha LLC",
-            "company_inn": "123456789",
-            "level_code": "L2_VERIFIED",
-            "frontend_url": "https://app.example.com",
-        },
-    ),
-    (
-        "kyc_verified",
-        {
-            "company_name": "Alpha LLC",
-            "company_inn": "123456789",
-            "level_code": "L3_CONTRACTED",
-            "frontend_url": "https://app.example.com",
-        },
-    ),
-    (
-        "role_application_approved",
-        {
-            "company_name": "Alpha LLC",
-            "requested_type_name": "Поставщик",
-            "trial_granted": True,
-            "days": 30,
-            "frontend_url": "https://app.example.com",
-        },
-    ),
-    (
-        "role_application_rejected",
-        {
-            "company_name": "Alpha LLC",
-            "requested_type_name": "Производитель",
-            "review_notes": "Не хватает устава.",
-            "frontend_url": "https://app.example.com",
-        },
-    ),
     (
         "new_rfq_seller",
         {

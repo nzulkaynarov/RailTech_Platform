@@ -185,7 +185,7 @@ def _has_legacy_send_role(actor, company_id: int) -> bool:
     EXACTLY the pre-U3 gate, but scoped to un-migrated members only. This deliberately does NOT
     honour the bare can_sell capability (which defaults True), so a company_role-less member with
     a non-sales WorkspaceRole is not auto-granted a client-facing send. Dies once every member has
-    a CompanyRole (invite / submit_company_profile / add_company_member all seed one)."""
+    a CompanyRole (invite / add_company_member seed one)."""
     membership = (
         actor.memberships.filter(company_id=company_id, is_active=True, company_role__isnull=True)
         .select_related("role")

@@ -20,7 +20,7 @@ import pytest
 from django.utils import timezone
 
 from accounts.constants import FeatureKey
-from accounts.models import Company, CompanyEntitlement, CompanyType, SupplierSubscription, VerificationStatus
+from accounts.models import Company, CompanyEntitlement, CompanyType, SupplierSubscription
 from accounts.services import consume_credit, has_entitlement, is_demo
 
 
@@ -31,7 +31,6 @@ def subscribed_company(db):
     company = Company.objects.create(
         name="Платящий продавец",
         inn="907900001",
-        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
     )
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
     SupplierSubscription.objects.create(

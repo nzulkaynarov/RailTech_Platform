@@ -31,7 +31,6 @@ from accounts.models import (
     CustomUser,
     SupplierSubscription,
     SystemRole,
-    VerificationStatus,
     WorkspaceRole,
 )
 
@@ -50,7 +49,6 @@ def world(db):
     company = Company.objects.create(
         name="Продавец подписки",
         inn="907800001",
-        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
     )
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
     seller = CustomUser.objects.create_user(

@@ -3,7 +3,7 @@ Custom S3/MinIO storage backends for RailTech B2B Ecosystem.
 
 Architecture:
   - PublicStorage  -> railtech-public  (product images, logos, avatars)
-  - PrivateStorage -> railtech-private (KYC, deals, quotes, imports)
+  - PrivateStorage -> railtech-private (deals, quotes, imports, company documents)
 
 When MINIO_ENDPOINT is not set, falls back to Django's default FileSystemStorage.
 All file names are UUID-based to prevent collisions and information leakage.
@@ -78,7 +78,10 @@ def manufacturer_logo_path(instance, filename):
 
 
 def kyc_document_path(instance, filename):
-    """companies/{company_id}/kyc/{uuid}.{ext}"""
+    """companies/{company_id}/kyc/{uuid}.{ext}
+
+    KYC removed in M1-ERP-02 (wave 1c); kept only because historical migrations reference it.
+    """
     name = _uuid_filename(instance, filename)
     return f"companies/{instance.company_id}/kyc/{name}"
 
@@ -93,8 +96,6 @@ def deal_attachment_path(instance, filename):
         return f"deals/{instance.deal_id}/attachments/{name}"
     if instance.quote_id:
         return f"deals/{instance.quote.deal_id}/quotes/{name}"
-    if instance.message_id:
-        return f"deals/{instance.message.deal_id}/chat/{name}"
     if instance.company_id:
         return f"companies/{instance.company_id}/documents/{name}"
     if instance.product_id:
@@ -166,6 +167,10 @@ def import_source_path(instance, filename):
     return f"sourcing/imports/{instance.pk}/{name}"
 
 
+# Role applications removed in M1-ERP-02 (wave 1c); the three path helpers below are kept only
+# because historical migrations reference them.
+
+
 def company_application_contract_path(instance, filename):
     """companies/{company_id}/applications/{pk}/contract/{uuid}.{ext}"""
     name = _uuid_filename(instance, filename)
@@ -227,7 +232,7 @@ def get_public_storage():
 
 def get_private_storage():
     """
-    Return the private storage backend (for KYC, deals, imports, etc.).
+    Return the private storage backend (for deals, imports, company documents, etc.).
 
     Uses MINIO_EXTERNAL_ENDPOINT for presigned URL generation so URLs
     are accessible from the browser (e.g. localhost:9000), while file

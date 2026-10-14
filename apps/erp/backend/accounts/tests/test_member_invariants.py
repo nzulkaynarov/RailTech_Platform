@@ -1,7 +1,7 @@
 """Never-orphan invariant: a company must always keep ≥1 active admin (OWNER).
 
 The OWNER workspace role (display label «Администратор компании») is the party
-accountable for KYC/billing; removing the last one would orphan the company.
+accountable for billing; removing the last one would orphan the company.
 """
 
 import pytest
@@ -135,7 +135,7 @@ def test_can_deactivate_admin_when_another_exists(company_with_admin):
 
 @pytest.mark.django_db
 def test_add_company_member_seeds_company_role(company_with_admin):
-    """The operator add-membership path must seed a CompanyRole (like invite / profile submit), so
+    """The operator add-membership path must seed a CompanyRole (like invite), so
     it stops minting permission-less company_role=NULL members that the permission engine can only
     serve via the shrinking legacy fallback."""
     from accounts.services import add_company_member

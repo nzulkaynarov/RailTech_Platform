@@ -329,7 +329,6 @@ class QuoteViewSet(QuoteApprovalMixin, OptimisticLockingMixin, viewsets.ModelVie
                     "FX_RATE_MISSING",
                     "QUOTE_HAS_UNPRICED_LINES",
                     "QUOTE_SEND_NOT_ENTITLED",
-                    "SELLER_KYC_REQUIRED",
                     "BELOW_FLOOR_JUSTIFICATION_REQUIRED",
                     "JUSTIFICATION_TOO_LONG",
                     # Wave E F3: company-less calculator draft has no addressee yet.

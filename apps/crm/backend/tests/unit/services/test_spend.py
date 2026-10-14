@@ -120,10 +120,12 @@ async def test_probe_is_minimal_and_recorded(alias: str) -> None:
     assert result.ok is True
     assert result.cost_usd == pytest.approx(0.00001)
     sent = client.kwargs[0]
+    tags = {"tags": ["system=crm", "feature=probe", f"model={alias}"]}
     if alias == "embed-model":
-        assert sent["input"] == ["ping"]
+        assert (sent["input"], sent["extra_body"]) == (["ping"], {"metadata": tags})
     else:
-        assert (sent["max_tokens"], sent["extra_body"]) == (1, {"disable_fallbacks": True})
+        extra = {"metadata": tags, "disable_fallbacks": True}
+        assert (sent["max_tokens"], sent["extra_body"]) == (1, extra)
     assert [(e.purpose, e.alias) for e in sink.events] == [("probe", alias)]
 
 

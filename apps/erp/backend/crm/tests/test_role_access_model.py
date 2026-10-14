@@ -13,7 +13,7 @@ import pytest
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import Company, CompanyMember, CompanyType, CustomUser, VerificationStatus, WorkspaceRole
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
 from crm.models import ContractStatus, Deal, DealStage, Quote, QuoteStatus
 
 pytestmark = pytest.mark.django_db
@@ -31,7 +31,6 @@ def lookups(db):
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
 
 
 def _api(user):
@@ -64,9 +63,7 @@ def seller(lookups):
 
 @pytest.fixture
 def buyer(lookups):
-    company = Company.objects.create(
-        name="Buyer LLC", inn="3300000001", verification_status=VerificationStatus.objects.get(code="L2_VERIFIED")
-    )
+    company = Company.objects.create(name="Buyer LLC", inn="3300000001")
     company.types.add(CompanyType.objects.get(code="CLIENT"))
     return _member(company, "buyer@cl.test", can_buy=True), company
 

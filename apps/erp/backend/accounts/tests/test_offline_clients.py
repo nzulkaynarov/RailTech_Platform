@@ -60,7 +60,7 @@ def test_dedupes_within_own_book_by_inn_and_email(seller):
 @pytest.mark.django_db
 def test_other_seller_does_not_see_or_reuse_first_sellers_client(seller):
     """Confidentiality + per-book scoping: a different seller creating the same INN gets
-    a SEPARATE record (cross-tenant dups are allowed; admin reconciles at KYC)."""
+    a SEPARATE record (cross-tenant dups are allowed)."""
     r1, _ = create_offline_client(
         seller=seller, company_name="Shared RealCo", contact_name="A", email="a@s.test", inn="305999000"
     )

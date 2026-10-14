@@ -34,20 +34,16 @@ def _clear_refresh_cookie(response) -> None:
 from accounts.serializers import (  # noqa: E402
     ActiveSessionSerializer,
     ForgotPasswordSerializer,
-    RegisterInterestSerializer,
     ResetPasswordSerializer,
     SetupPasswordSerializer,
-    SubmitProfileSerializer,
     UserSerializer,
 )
 from accounts.services import (  # noqa: E402
-    create_pending_user,
     login_guard,
     reset_password,
     revoke_user_refresh_tokens,
     send_password_reset_email,
     sessions,
-    submit_company_profile,
     two_factor,
     verify_and_setup_password,
 )
@@ -55,48 +51,10 @@ from accounts.throttles import PasswordResetEmailThrottle, ScopedRateThrottle  #
 
 
 @extend_schema(
-    summary="Register new user",
-    description=(
-        "Register a new user by email. Always returns 201 with the same neutral body "
-        "so the response never reveals whether the email already has an account "
-        "(anti-enumeration, P2): a free email gets a setup link, an existing active "
-        "account gets a sign-in/recover email, a pending one gets the setup link "
-        "re-sent — all indistinguishable in status, body, and timing."
-    ),
-    request=RegisterInterestSerializer,
-    responses={
-        201: OpenApiResponse(description="Verification email sent (neutral — see description)"),
-        400: OpenApiResponse(description="Validation error (malformed request only)"),
-    },
-    tags=["Auth"],
-)
-class RegisterView(views.APIView):
-    permission_classes = [permissions.AllowAny]
-    throttle_classes = [ScopedRateThrottle]
-    throttle_scope = "register"
-
-    def post(self, request):
-        serializer = RegisterInterestSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        email = serializer.validated_data["email"]
-        _user, error = create_pending_user(
-            email=email,
-            first_name=serializer.validated_data["first_name"],
-            last_name=serializer.validated_data["last_name"],
-            phone=serializer.validated_data["phone"],
-        )
-        if error:
-            return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
-        # Neutral body echoing the SUBMITTED email (which the client already knows) —
-        # never anything derived from account existence.
-        return Response({"message": "Verification email sent.", "email": email}, status=status.HTTP_201_CREATED)
-
-
-@extend_schema(
     summary="Setup password",
     description=(
-        "Set a password for a newly registered user. Requires the uid and token "
-        "from the verification email link. Activates the user account."
+        "Set the first password of an invited user (team invitation or an account created "
+        "by an administrator). Requires the uid and token from the email link. Activates the account."
     ),
     request=SetupPasswordSerializer,
     responses={
@@ -177,36 +135,6 @@ class ResetPasswordView(views.APIView):
         if error:
             return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"message": "Password has been reset.", "email": user.email})
-
-
-@extend_schema(
-    summary="Submit company profile",
-    description=(
-        "Minimal onboarding after registration. Creates a new Buyer (CLIENT) "
-        "company and makes the user its OWNER. INN and selling are deferred."
-    ),
-    request=SubmitProfileSerializer,
-    responses={
-        200: OpenApiResponse(description="Profile submitted successfully"),
-        400: OpenApiResponse(description="Validation error"),
-    },
-    tags=["Auth"],
-)
-class SubmitProfileView(views.APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def post(self, request):
-        serializer = SubmitProfileSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user, error = submit_company_profile(
-            user=request.user,
-            company_name=serializer.validated_data["companyName"],
-            position=serializer.validated_data.get("position", ""),
-            invite_token=serializer.validated_data.get("invite", ""),
-        )
-        if error:
-            return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
-        return Response({"message": "Profile submitted successful.", "user": UserSerializer(user).data})
 
 
 @extend_schema(

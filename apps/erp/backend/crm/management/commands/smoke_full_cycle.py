@@ -35,15 +35,7 @@ class Command(BaseCommand):
     @transaction.atomic
     def handle(self, *args, **options):
         from accounts import services as acc_services
-        from accounts.models import (
-            Company,
-            CompanyMember,
-            CompanyType,
-            CustomUser,
-            SystemRole,
-            VerificationStatus,
-            WorkspaceRole,
-        )
+        from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
         from catalog.models import DomainType, Product, ProductStatus, StockStatus, SupplierOffer
         from crm import services as crm_services
         from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteStatus
@@ -72,7 +64,6 @@ class Command(BaseCommand):
 
         client_type = _must(CompanyType, "CLIENT")
         supplier_type = _must(CompanyType, "SUPPLIER")
-        l2_status = _must(VerificationStatus, "L2_VERIFIED")
         owner_role = _must(WorkspaceRole, "OWNER")
         admin_role = _must(SystemRole, "ADMIN")
         draft_quote = _must(QuoteStatus, "DRAFT")
@@ -113,7 +104,7 @@ class Command(BaseCommand):
         )
         buyer_co, _ = Company.objects.get_or_create(
             inn="111111111",
-            defaults={"name": "Smoke Buyer LLC", "verification_status": l2_status, "country": country},
+            defaults={"name": "Smoke Buyer LLC", "country": country},
         )
         buyer_co.types.add(client_type)
         CompanyMember.objects.get_or_create(
@@ -133,7 +124,7 @@ class Command(BaseCommand):
         )
         supplier_co, _ = Company.objects.get_or_create(
             inn="222222222",
-            defaults={"name": "Smoke Supplier LLC", "verification_status": l2_status, "country": country},
+            defaults={"name": "Smoke Supplier LLC", "country": country},
         )
         supplier_co.types.add(supplier_type)
         CompanyMember.objects.get_or_create(

@@ -3094,25 +3094,9 @@
       }
     },
     "company": {
-      "kyc_verified": {
-        "title": "KYC: подтверждение",
-        "detail": "{{company_name}}: {{from_status}} → {{to_status}}"
-      },
-      "kyc_downgraded": {
-        "title": "KYC: понижение уровня",
-        "detail": "{{company_name}}: {{from_status}} → {{to_status}}"
-      },
       "merged": {
         "title": "Слияние дубля компании",
         "detail": "Дубль #{{duplicate_id}} «{{duplicate_name}}» влит в «{{survivor_name}}»"
-      },
-      "role_application_approved": {
-        "title": "Заявка на роль одобрена",
-        "detail": "{{company_name}} → {{role_name}}"
-      },
-      "role_added": {
-        "title": "Добавлена роль: {{role_code}}",
-        "detail": "Одобрена заявка #{{application_id}}"
       }
     },
     "product": {
@@ -3172,12 +3156,6 @@
         "activated": {
           "title": "Подписка активирована",
           "detail": "{{company_name}}"
-        }
-      },
-      "role_application": {
-        "documents_requested": {
-          "title": "Запрошены документы по заявке на роль",
-          "detail": "{{company_name}} → {{requested_type}}"
         }
       },
       "lead": {
@@ -3541,14 +3519,6 @@
     "deal.assigned": {
       "title": "Вам назначена заявка",
       "message": "Заявка #{{deal_id}} назначена вам — нужен КП"
-    },
-    "company.kyc_status_changed": {
-      "title": "Статус верификации обновлён",
-      "message": "Статус вашей компании: {{level_code}}"
-    },
-    "company.kyc_verified": {
-      "title": "Статус KYC обновлён",
-      "message": "KYC для {{company}} — {{level_code}}"
     },
     "invoice.issued": {
       "title": "Счёт выставлен",

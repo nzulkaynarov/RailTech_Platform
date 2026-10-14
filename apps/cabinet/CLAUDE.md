@@ -6,8 +6,10 @@
 SPA ходит в ERP `/api/portal/v1/*`, всё, что он показывает, сделал ERP; всё, что клиент делает, исполняет ERP.
 Тот же SPA открывается как Telegram Mini App бота CRM и как сайт `cabinet.railtech.uz`.
 
-**Статус документа: заготовка (M0-DOC-01).** Кода в `apps/cabinet` ещё нет — появляется на вехе **M2**
-(M2-CAB-01…03), после портального API ERP (M2-ERP-01). Всё, что помечено «появится в <ID>», пока не существует.
+**Статус: оболочка готова (M2-CAB-01, 2026-10-14).** Есть маршруты, вход (Mini App / magic-link), тема Telegram,
+i18n ru/uz/en, мок портального API; экраны разделов — заглушки до **M2-CAB-02**, форма «Я новый клиент» и
+«Написать менеджеру» — **M2-CAB-03**. Портального API в ERP ещё нет (M2-ERP-01) — разработка идёт против мока
+из контракта. Устройство и запуск — `README.md` рядом.
 
 ## 1. Карта документов — читай в этом порядке
 
@@ -17,7 +19,7 @@ SPA ходит в ERP `/api/portal/v1/*`, всё, что он показывае
 | `docs/PROGRESS.md`, `docs/QUESTIONS.md`, `docs/DECISIONS.md` | состояние, вопросы, решения | в начале сессии |
 | `docs/ARCHITECTURE.md` §5 | **состав Cabinet**; §17 — входы клиента (Mini App, веб, приглашение); §8 — ИИ (у Cabinet своего нет) | перед любой реализацией |
 | `docs/CONTRACTS.md` §4 | **портальный API — единственный источник данных**; §0 — форматы | перед каждым экраном |
-| `packages/contracts/openapi/erp-portal.yaml` | **схема портального API**, из неё генерируются типы (`packages/contracts/generated/erp-portal.d.ts`) | есть (M0-INF-02); перед каждым экраном |
+| `packages/contracts/openapi/erp-portal.yaml` | **схема портального API**; типы Cabinet — `src/api/portal.d.ts` (`make gen-api-types`, сверка в `make check`) | перед каждым экраном |
 | `docs/adr/0004-cabinet-without-backend.md`, `0005` | без бэкенда; без своего ИИ | перед любым «а давайте тут свой…» |
 | `docs/BUSINESS.md` §3.2, §4 | ценность и границы Cabinet, путь клиента | перед продуктовой задачей |
 | `legacy/b2b/CLAUDE.md`, `legacy/b2b/frontend/src/` | покупательские страницы и фронтовые конвенции B2B | когда переносишь экран; **только чтение** |
@@ -43,11 +45,11 @@ openapi-typescript (типы из packages/contracts/openapi/erp-portal.yaml) ·
 Telegram Web App SDK (initData, themeParams, start_param, MainButton/BackButton — где уместно)
 ```
 
-- Версии — те же, что у ERP-фронтенда после копирования из B2B; точные — M2-CAB-01.
-- Токены дизайна — из `packages/ui-tokens` (появится в M0-INF-05); в Mini App цвета темы Telegram накладываются на те же семантические токены, не на компоненты.
+- Версии — как в `apps/erp/frontend` (`package.json`): React 18.3, Vite 7, Tailwind 4.3, React Query 5, i18next 25, TypeScript 5.6, Vitest 4; плюс react-router-dom 7, MSW 2, vitest-axe. shadcn-примитивы `src/components/ui/` скопированы из ERP без правок.
+- Токены дизайна — копия `packages/ui-tokens/dist/shadcn.css` в `src/styles/tokens.generated.css` (`make tokens` из корня пишет её сама; `make check` сверяет). В Mini App цвета `themeParams` Telegram ложатся на те же переменные (`src/telegram/theme.ts`), не на компоненты.
 - Глобальное состояние минимально: сессия (`GET /me`: контакт, компания, `can_act`), язык, тема. Данные — только React Query над портальным API.
-- Маршрутизатор и deep-link по `start_param` (например, открыть сделку из кнопки бота) — решение M2-CAB-01; учитывай, что бот CRM шлёт кнопки «Открыть КП» и «Кабинет» (M3-CRM-04).
-- Деплой: статика за Caddy на `cabinet.railtech.uz` / `cabinet.localhost` (`infra/caddy`, есть с M0-INF-03; до M2-CAB-01 `cabinet.localhost` — заглушка); своего контейнера с логикой нет.
+- Маршрутизатор — react-router 7 (`src/app/routes.tsx`). Deep-link Mini App: `start_param=deal_<id>` → `/deals/<id>`, `quote_<id>` → `/quotes/<id>` (`src/telegram/start-param.ts`), разрешается до создания маршрутизатора; на вложенных экранах — системная «Назад» Telegram.
+- Деплой: сервис `cabinet-web` (Vite → nginx, `/health`) за Caddy на `cabinet.localhost` / `cabinet.railtech.uz`; `/api/portal/*` Caddy ведёт с того же домена на ERP (cookie same-origin, CORS не нужен).
 
 ## 4. Экраны (ARCHITECTURE §5, M2-CAB-02) и откуда они из `legacy/b2b/frontend/src`
 
@@ -74,26 +76,28 @@ Telegram Web App SDK (initData, themeParams, start_param, MainButton/BackButton 
 
 - **Только shadcn/ui + семантические токены**: `bg-primary`, `text-foreground`, `bg-destructive`, `bg-success`…; никаких `bg-emerald-500`, `text-white`, hex, inline-стилей, кастомного CSS. Размеры текста — только шкала Tailwind (`text-xs` минимум).
 - **Весь текст через i18n**: `t()` из `useTranslation()`, ключи одновременно в `ru.json`, `uz.json`, `en.json` (симметрия проверяется скриптом по образцу B2B `scripts/check_i18n_symmetry.py`; `uz` — новый словарь, M2-CAB-01). Язык по умолчанию — из `GET /me` (язык контакта) или `Telegram.WebApp.initDataUnsafe.user.language_code`, переключатель — в профиле.
-- **Типы API только сгенерированные** из `erp-portal.yaml` (`make contracts`); ручных типов и «временных» интерфейсов ответа нет. Статусы сравниваются по `code`, показываются по `name`.
+- **Типы API только сгенерированные** из `erp-portal.yaml` (`make -C apps/cabinet gen-api-types` → `src/api/portal.d.ts`); ручных типов и «временных» интерфейсов ответа нет. Статусы сравниваются по `code`, показываются по `name`.
 - Ошибки API — `{"detail": "<CODE>"}`; код → ключ i18n, показ toast'ом; 401 → повторный вход (в Mini App — повторный `POST /auth/telegram`), 404 — «не найдено», без утечки существования чужих сущностей.
 - Правила React Compiler включены; `useDraftState` / `useNow` / `useLatestRef` из B2B вместо самоделок; хелперы и константы — вне файлов компонентов.
 - Деньги — строка из API с валютой; форматирование — одной утилитой по локали, не вручную. Даты — ISO из API, показ в Asia/Tashkent.
 - Доступность: фокус-состояния, `aria-label` на иконках, контраст темы Telegram проверяется axe так же, как светлая/тёмная веб-тема.
 - Проверяй на телефоне: Mini App в тестовом боте (DevTools Telegram Desktop) и браузер на 390 px; виртуальная клавиатура не должна прятать кнопку действия.
 
-**Тесты.** Vitest + Testing Library с настоящим `ru.json`; моки — только на границе HTTP (мок портального API из `erp-portal.yaml`, инструмент — M2-CAB-01), не внутри компонентов. Playwright-смоук обоих входов. Матрица прав клиента: `can_act=false` → кнопки действий скрыты, API всё равно решает.
+**Тесты.** Vitest + Testing Library с настоящим `ru.json`; моки — только на границе HTTP: MSW (`src/mocks/handlers.ts` + `fixtures.ts`, те же обработчики в dev и в `msw/node`), не внутри компонентов. `renderApp(path)` (`src/test/render.tsx`) поднимает приложение целиком на memory-router; `signedIn(role)` / `asMiniApp()` задают сессию и режим. axe (`vitest-axe`) на каждом новом экране. Матрица прав клиента: `can_act=false` → кнопки действий скрыты (`<CanAct>`), API всё равно решает. Playwright-смоук обоих входов — M2-QA-01.
 
 ## 6. Команды
 
-| Команда | Что делает | Появится в |
-|---|---|---|
-| `make check-cabinet` (из корня) | делегирует в `make -C apps/cabinet check`: eslint + tsc + vitest | M2-CAB-01 |
-| `make -C apps/cabinet dev` | Vite dev-сервер против `erp.localhost` или мока портального API | M2-CAB-01 |
-| `make -C apps/cabinet build` | прод-сборка статики | M2-CAB-01 |
-| `make contracts` (из корня) | регенерация типов из `erp-portal.yaml` | есть (M0-INF-02) |
-| `make up` (из корня) | `cabinet.localhost` за Caddy вместе с ERP и CRM | есть (M0-INF-03); до M2-CAB-01 — заглушка Caddy |
+| Команда | Что делает |
+|---|---|
+| `make check-cabinet` (из корня) | `make -C apps/cabinet check`: eslint, tsc, i18n ru/uz/en, сверка токенов, сверка типов портала, vitest + axe |
+| `make -C apps/cabinet install` | `npm ci` |
+| `make -C apps/cabinet dev` | Vite на :5175 с MSW-моком портального API (`VITE_PORTAL_MOCK=1`) |
+| `make -C apps/cabinet dev-stand` | Vite на :5175 без мока, `/api/portal` → `erp.localhost` |
+| `make -C apps/cabinet build` | прод-сборка статики |
+| `make -C apps/cabinet gen-api-types` | `src/api/portal.d.ts` из `erp-portal.yaml` |
+| `make up` (из корня) | `cabinet.localhost` за Caddy (`cabinet-web`) вместе с ERP и CRM |
 
-Mini App локально: тестовый бот в BotFather указывает на туннель к `cabinet.localhost` (как — runbook M2-CAB-01).
+Mini App локально: эмуляция через `#tgWebAppData=…` или тестовый бот в BotFather с туннелем — `README.md`, раздел «Проверка как Mini App».
 
 ## 7. Чего здесь нет — не ищи и не воссоздавай
 
@@ -116,5 +120,6 @@ Mini App локально: тестовый бот в BotFather указывае
 
 ## 9. Открытые точки для M2 (не решать молча)
 
-- Сессия портала — cookie HttpOnly (CONTRACTS §4) при SPA на `cabinet.*` и API на `erp.*`: кросс-доменная cookie (`SameSite=None` + CORS с credentials) или проксирование `/api/portal` через Caddy с домена Cabinet — решение агентов ERP и Infra в M2-ERP-01 / M2-CAB-01, при необходимости ADR.
-- Имя бота для «Написать менеджеру» и URL CRM для формы лида — переменные сборки, имена появятся в M2-CAB-03.
+- Сессия портала — **решено (M2-CAB-01, по рекомендации, DECISIONS):** `/api/portal/*` проксируется Caddy с домена Cabinet на ERP, cookie same-origin (`SameSite=Lax` по контракту), CORS не нужен. ERP в M2-ERP-01 должен принимать Host `cabinet.*` (`ALLOWED_HOSTS`) и не требовать CSRF-токен Django для портальной сессии (или выдать его способом, доступным SPA).
+- Коды ошибок `detail` портала (`UNAUTHORIZED`, `INVALID_INIT_DATA`, `MAGIC_LINK_EXPIRED`, `QUOTE_FINALIZED`…) — предположение Cabinet в моке и словарях; ERP закрепляет перечень в контракте в M2-ERP-01, Cabinet подстраивает `apiErrors.*`.
+- Имя бота — `VITE_BOT_USERNAME` (в ансамбле `TELEGRAM_BOT_USERNAME`). URL CRM для формы лида — переменная сборки M2-CAB-03.

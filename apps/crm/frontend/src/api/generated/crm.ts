@@ -23,6 +23,7 @@ import type {
 import type {
   AccessOut,
   ActionResult,
+  AiSpendReport,
   Assign,
   AssistOut,
   AssistRequest,
@@ -63,6 +64,7 @@ import type {
   ExportClientsParams,
   ExportDealsParams,
   ExportLeadsParams,
+  GetAiSpendParams,
   GetDashboardParams,
   GetSpendParams,
   HealthResponse,
@@ -157,6 +159,144 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetAiSpendUrl = (params?: GetAiSpendParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/admin/ai-spend?${stringifiedParams}`
+    : `/api/v1/admin/ai-spend`;
+};
+
+/**
+ * Расходы на ИИ всего ансамбля из журнала LiteLLM (`/spend/logs/v2`), кэш 60 с.
+ *
+ * Вызовы, токены и USD по дням, системам (`system=crm|erp`), функциям и моделям; бюджет на день
+ * по системе и дни превышения; деградации — вызовы, обслуженные `fallback-model`. Период — до
+ * 90 дней, не в будущем (`422 ai_spend_period`); шлюз недоступен — `502 litellm_unavailable`.
+ * @summary Get Ai Spend
+ */
+export const getAiSpend = async (
+  params?: GetAiSpendParams,
+  options?: Parameters<typeof http>[1],
+): Promise<AiSpendReport> => {
+  return http<AiSpendReport>(getGetAiSpendUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAiSpendQueryKey = (params?: GetAiSpendParams) => {
+  return [`/api/v1/admin/ai-spend`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetAiSpendQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAiSpend>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: GetAiSpendParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getAiSpend>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAiSpendQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAiSpend>>> = ({ signal }) =>
+    getAiSpend(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAiSpend>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetAiSpendQueryResult = NonNullable<Awaited<ReturnType<typeof getAiSpend>>>;
+export type GetAiSpendQueryError = ErrorType<ErrorOut>;
+
+export function useGetAiSpend<
+  TData = Awaited<ReturnType<typeof getAiSpend>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params: undefined | GetAiSpendParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getAiSpend>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAiSpend>>,
+          TError,
+          Awaited<ReturnType<typeof getAiSpend>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetAiSpend<
+  TData = Awaited<ReturnType<typeof getAiSpend>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: GetAiSpendParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getAiSpend>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAiSpend>>,
+          TError,
+          Awaited<ReturnType<typeof getAiSpend>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetAiSpend<
+  TData = Awaited<ReturnType<typeof getAiSpend>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: GetAiSpendParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getAiSpend>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get Ai Spend
+ */
+
+export function useGetAiSpend<
+  TData = Awaited<ReturnType<typeof getAiSpend>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: GetAiSpendParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getAiSpend>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetAiSpendQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getListAuditUrl = (params?: ListAuditParams) => {
   const normalizedParams = new URLSearchParams();

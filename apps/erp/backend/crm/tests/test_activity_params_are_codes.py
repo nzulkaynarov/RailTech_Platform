@@ -22,11 +22,9 @@ from accounts.models import (
     Company,
     CompanyMember,
     CompanyRole,
-    CompanyRoleApplication,
     CompanyType,
     CustomUser,
     SupplierSubscription,
-    VerificationStatus,
     WorkspaceRole,
 )
 from crm.models import ActivityLog, Deal, DealStage, Quote, QuoteStatus
@@ -40,8 +38,6 @@ def lookups(db):
     """Справочники с РУССКИМИ именами — как в проде: именно они и замерзали в журнале."""
     for code, name, order in (("DRAFT", "Черновик", 0), ("RFQ_OPEN", "Открытый RFQ", 25)):
         DealStage.objects.get_or_create(code=code, defaults={"name": name, "sort_order": order})
-    for code, name in (("L1_UNVERIFIED", "Не верифицирован"), ("L2_VERIFIED", "KYC подтверждён (L2)")):
-        VerificationStatus.objects.get_or_create(code=code, defaults={"name": name, "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Покупатель", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Поставщик", "sort_order": 20})
     for code in ("DRAFT", "PENDING_APPROVAL", "READY_TO_SEND", "SENT"):
@@ -77,49 +73,6 @@ def test_stage_change_writes_stage_codes(lookups):
     assert params["from_stage"] == "Черновик"
 
 
-def test_kyc_verification_writes_level_codes(lookups):
-    from accounts.services.kyc import verify_company_kyc
-
-    company = Company.objects.create(
-        name="Компания", inn="7000000002", verification_status=VerificationStatus.objects.get(code="L1_UNVERIFIED")
-    )
-    approver = _user("op@codes.test")
-    approver.is_superuser = True
-    approver.save(update_fields=["is_superuser"])
-
-    _company, error = verify_company_kyc(
-        company=company,
-        approver=approver,
-        level_code="L2_VERIFIED",
-        require_documents=False,
-        reason="документов нет — проверено по реестру",
-    )
-
-    assert error is None
-    params = ActivityLog.objects.get(event_code="company.kyc_verified").event_params
-    assert params["from_status_code"] == "L1_UNVERIFIED"
-    assert params["to_status_code"] == "L2_VERIFIED"
-
-
-def test_role_application_approval_writes_role_code(lookups):
-    from accounts.services.applications import approve_role_application
-
-    company = Company.objects.create(name="Заявитель", inn="7000000003")
-    reviewer = _user("rev@codes.test")
-    application = CompanyRoleApplication.objects.create(
-        company=company, requested_type=CompanyType.objects.get(code="CLIENT"), status="PENDING"
-    )
-
-    _application, error = approve_role_application(application=application, reviewer=reviewer)
-
-    assert error is None
-    params = ActivityLog.objects.get(event_code="company.role_application_approved").event_params
-    assert params["role_code"] == "CLIENT"
-    # Имя справочника («Клиент») и слово продукта («Покупатель») — РАЗНЫЕ строки; ровно
-    # поэтому подпись подбирается по коду, а имя остаётся только запасным путём.
-    assert params["role_name"] == CompanyType.objects.get(code="CLIENT").name
-
-
 def test_approval_step_writes_participation_code(lookups):
     """Роль шага печаталась `get_participation_display()` — переводом на языке согласовавшего."""
     from crm.services.approvals import act_on_step
@@ -143,9 +96,7 @@ def test_approval_step_writes_participation_code(lookups):
             is_primary=True,
             is_active=True,
         )
-    buyer = Company.objects.create(
-        name="Покупатель ООО", inn="7000000005", verification_status=VerificationStatus.objects.get(code="L2_VERIFIED")
-    )
+    buyer = Company.objects.create(name="Покупатель ООО", inn="7000000005")
     buyer.types.add(CompanyType.objects.get(code="CLIENT"))
     deal = Deal.objects.create(
         title="Сделка", company=buyer, manager=sales_user, stage=DealStage.objects.get(code="DRAFT")

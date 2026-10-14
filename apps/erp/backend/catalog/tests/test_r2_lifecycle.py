@@ -4,16 +4,12 @@
 мог, а снять — нет; архив был чёрной дырой — слитый дубль уходил в ARCHIVED и исчезал из всех
 вкладок без пути назад. Эталон Shopify: Active → Draft двусторонне, Archive — отдельное и
 ОБРАТИМОЕ действие (unarchive → Draft).
-
-KYC-гейта у unpublish/archive НЕТ намеренно: верификация нужна, чтобы карточка стала ВИДНА
-рынку (publish), а снятие с витрины и архив экспозицию УМЕНЬШАЮТ — непроверенная компания
-обязана мочь убрать своё (наполнение до KYC открыто той же логикой, #550).
 """
 
 import pytest
 from rest_framework.test import APIClient
 
-from accounts.models import Company, CompanyMember, CompanyType, CustomUser, VerificationStatus, WorkspaceRole
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
 from catalog.merging import merge_products
 from catalog.models import Category, DomainType, Product, ProductStatus
 from catalog.publishing import archive_many, archive_product, publish_product, restore_product, unpublish_product
@@ -41,7 +37,6 @@ def world(db):
     seller = Company.objects.create(
         name="ООО Витрина",
         inn="9600000001",
-        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
     )
     seller.types.add(CompanyType.objects.get(code="SUPPLIER"))
     seller_user = CustomUser.objects.create_user(email="own@r2.test", username="own@r2.test", password="pw")
@@ -49,8 +44,8 @@ def world(db):
         user=seller_user, company=seller, role=owner_role, is_active=True, is_primary=True, can_sell=True
     )
 
-    # Непроверенная компания: наполнение до KYC открыто, публикация — нет (#550).
-    pending = Company.objects.create(name="ООО На проверке", inn="9600000002")
+    # Вторая компания-продавец со своим владельцем — снятие и архив своих карточек.
+    pending = Company.objects.create(name="ООО Вторая витрина", inn="9600000002")
     pending.types.add(CompanyType.objects.get(code="SUPPLIER"))
     pending_user = CustomUser.objects.create_user(email="pending@r2.test", username="pending@r2.test", password="pw")
     CompanyMember.objects.create(
@@ -171,21 +166,19 @@ def test_restore_refuses_a_card_that_is_not_archived(world):
     assert restored is None and error == "PRODUCT_NOT_ARCHIVED"
 
 
-# ── KYC-гейта нет намеренно: убрать своё может и непроверенная компания ──────────────────
+# ── Публикация, снятие и архив — по правам роли, без верификации компании ───────────────
 
 
-def test_unverified_company_can_unpublish_and_archive_but_not_publish(world):
-    """Контраст закреплён: publish требует верификации, unpublish/archive — нет.
-
-    Снятие с витрины и архив УМЕНЬШАЮТ экспозицию — непроверенная компания обязана мочь
-    убрать своё (наполнение до KYC открыто, #550). Гейт есть только там, где карточка
-    становится ВИДНА рынку.
-    """
+def test_any_seller_publishes_unpublishes_and_archives_its_own_cards(world):
+    """KYC удалён (M1-ERP-02 волна 1c): компания-владелец публикует полную карточку, снимает её с
+    витрины и убирает в архив по правам своей роли — без порога верификации."""
     published = _card(world, company=world["pending"], status_code="PUBLISHED", **_complete_kwargs(world))
 
     draft = _card(world, company=world["pending"], **_complete_kwargs(world))
     _, publish_error = publish_product(draft, world["pending_user"])
-    assert publish_error == "SELLER_KYC_REQUIRED", "контроль: публикация той же компании закрыта"
+    assert publish_error is None
+    draft.refresh_from_db()
+    assert draft.status.code == "PUBLISHED"
 
     _, error = unpublish_product(published, world["pending_user"])
     assert error is None
