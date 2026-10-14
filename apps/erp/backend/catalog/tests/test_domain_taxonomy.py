@@ -5,8 +5,6 @@ catalog/tests/ package (both resolve to module `catalog.tests`, breaking pytest
 collection on a clean checkout). Content is unchanged.
 """
 
-import importlib
-
 from django.apps import apps as django_apps
 from django.test import TestCase
 
@@ -41,7 +39,11 @@ class TaxonomyDedupeTest(TestCase):
     re-parent children (parent is CASCADE!), remap products, fix the typo."""
 
     def setUp(self):
-        self.mig = importlib.import_module("catalog.migrations.0008_dedupe_taxonomy")
+        from types import SimpleNamespace
+
+        from core.legacy_migration_helpers import dedupe_taxonomy
+
+        self.mig = SimpleNamespace(dedupe_taxonomy=dedupe_taxonomy)
 
     def test_merges_duplicate_categories_and_reparents_children(self):
         canon = Category.objects.create(name="ЖД Техника")

@@ -1,30 +1,38 @@
-"""models package — split from a monolithic module.
+"""CRM models package — re-exports from sales, finance, and documents per ADR-0006."""
 
-Public API re-exported so existing import paths keep working.
-"""
-
-from .acceptance import QuoteAcceptanceCode
-from .ai_match import AIMatchOutcome
-from .approvals import QuoteApprovalStep, StepParticipation, StepStatus, StepTrigger
-from .billing import Act, Invoice, InvoiceItem, Payment
-from .charges import ChargeTemplate, QuoteCharge
-from .contracts import Contract
-from .deals import ActivityLog, Deal
-from .documents import CompanyWordingVariant, DocumentTemplate, GeneratedDocument
-from .fulfillment import Fulfillment
-from .lookups import (
-    ActStatus,
-    ChargeType,
-    ContractStatus,
-    DealStage,
+from documents.models import (
+    CompanyWordingVariant,
+    DocumentNumberingScheme,
+    DocumentSequence,
+    DocumentTemplate,
     DocumentTemplateKind,
-    FulfillmentStatus,
+    GeneratedDocument,
     GeneratedDocumentStatus,
-    InvoiceStatus,
-    QuoteStatus,
 )
-from .quotes import Quote, QuoteItem, QuoteItemHistory
-from .sequences import DocumentNumberingScheme, DocumentSequence
+from finance.models import Act, ActStatus, Invoice, InvoiceItem, InvoiceStatus, Payment
+from sales.models import (
+    ActivityLog,
+    AIMatchOutcome,
+    ChargeTemplate,
+    ChargeType,
+    Contract,
+    ContractStatus,
+    Deal,
+    DealStage,
+    Fulfillment,
+    FulfillmentStatus,
+    Quote,
+    QuoteAcceptanceCode,
+    QuoteApprovalStep,
+    QuoteCharge,
+    QuoteItem,
+    QuoteItemHistory,
+    QuoteItemQuerySet,
+    QuoteStatus,
+    StepParticipation,
+    StepStatus,
+    StepTrigger,
+)
 
 __all__ = [
     "AIMatchOutcome",
@@ -33,13 +41,13 @@ __all__ = [
     "ActivityLog",
     "ChargeTemplate",
     "ChargeType",
+    "CompanyWordingVariant",
     "Contract",
     "ContractStatus",
     "Deal",
     "DealStage",
     "DocumentNumberingScheme",
     "DocumentSequence",
-    "CompanyWordingVariant",
     "DocumentTemplate",
     "DocumentTemplateKind",
     "Fulfillment",
@@ -56,6 +64,7 @@ __all__ = [
     "QuoteCharge",
     "QuoteItem",
     "QuoteItemHistory",
+    "QuoteItemQuerySet",
     "QuoteStatus",
     "StepParticipation",
     "StepStatus",

@@ -1,11 +1,8 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from parties.models import CompanyType
 
-from master_data.models import AbstractLookup
-
-# ────────────────────────────────────────────
-# Справочники модуля Accounts
-# ────────────────────────────────────────────
+from core.models import AbstractLookup
 
 
 class SystemRole(AbstractLookup):
@@ -19,17 +16,6 @@ class SystemRole(AbstractLookup):
     class Meta(AbstractLookup.Meta):
         verbose_name = _("Системная роль")
         verbose_name_plural = _("Справочник: Системные роли")
-
-
-class CompanyType(AbstractLookup):
-    """
-    Тип/роль компании на платформе.
-    Seed: CLIENT, MANUFACTURER, SUPPLIER, LOGISTICS_PROVIDER
-    """
-
-    class Meta(AbstractLookup.Meta):
-        verbose_name = _("Тип компании")
-        verbose_name_plural = _("Справочник: Типы компаний")
 
 
 class WorkspaceRole(AbstractLookup):
@@ -46,7 +32,7 @@ class WorkspaceRole(AbstractLookup):
     """
 
     applicable_to_types = models.ManyToManyField(
-        "accounts.CompanyType",
+        "parties.CompanyType",
         blank=True,
         related_name="workspace_roles",
         verbose_name=_("Применимо к типам компаний"),
@@ -58,3 +44,10 @@ class WorkspaceRole(AbstractLookup):
     class Meta(AbstractLookup.Meta):
         verbose_name = _("Роль в компании")
         verbose_name_plural = _("Справочник: Роли в компании")
+
+
+__all__ = [
+    "CompanyType",
+    "SystemRole",
+    "WorkspaceRole",
+]

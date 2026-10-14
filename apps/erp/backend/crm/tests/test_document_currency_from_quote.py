@@ -123,10 +123,9 @@ def test_null_quote_currency_stays_null_on_both_documents(lookups):
 
 # ── 0063 data-repair migration ─────────────────────────────────────────────────────────
 def _migration_fixer():
-    import importlib
+    from core.legacy_migration_helpers import fix_document_currencies
 
-    module = importlib.import_module("crm.migrations.0063_fix_document_currency_from_quote")
-    return module._fix_document_currencies
+    return fix_document_currencies
 
 
 @pytest.mark.django_db

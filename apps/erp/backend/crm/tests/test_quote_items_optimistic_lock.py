@@ -254,13 +254,14 @@ def test_single_patch_locks_the_row_before_reading_version(world):
         )
 
     assert resp.status_code == 200, resp.content
+    table_name = QuoteItem._meta.db_table
     statements = [query["sql"].lower() for query in captured.captured_queries]
     lock_at = next(
-        (i for i, sql in enumerate(statements) if "crm_quoteitem" in sql and "for update" in sql),
+        (i for i, sql in enumerate(statements) if table_name in sql and "for update" in sql),
         None,
     )
     write_at = next(
-        (i for i, sql in enumerate(statements) if sql.startswith("update") and "crm_quoteitem" in sql),
+        (i for i, sql in enumerate(statements) if sql.startswith("update") and table_name in sql),
         None,
     )
     assert lock_at is not None, "single PATCH did not lock the line — the TOCTOU race is open"

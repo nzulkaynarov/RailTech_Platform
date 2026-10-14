@@ -1,14 +1,16 @@
-import importlib
+from types import SimpleNamespace
 
 import pytest
 from django.apps import apps as django_apps
 
+from core.legacy_migration_helpers import dedupe_uom_stubs
+from core.seeds.delivery_basis import seed_incoterms
 from master_data.models import DeliveryBasis, UnitOfMeasure
 
 pytestmark = pytest.mark.django_db
 
-_MIG = importlib.import_module("master_data.migrations.0004_dedupe_uom_stubs")
-_INCOTERMS_MIG = importlib.import_module("master_data.migrations.0008_seed_delivery_basis_incoterms")
+_MIG = SimpleNamespace(dedupe_uom_stubs=dedupe_uom_stubs)
+_INCOTERMS_MIG = SimpleNamespace(seed_incoterms=seed_incoterms)
 
 
 def test_dedupe_removes_cyrillic_uom_stub_keeps_latin():

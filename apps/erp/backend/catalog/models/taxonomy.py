@@ -93,7 +93,7 @@ class Manufacturer(models.Model):
         help_text=_("Название бренда/производителя (OEM)"),
     )
     country = models.ForeignKey(
-        "master_data.Country",
+        "core.Country",
         on_delete=models.PROTECT,
         null=True,
         blank=True,
@@ -107,7 +107,7 @@ class Manufacturer(models.Model):
         help_text=_("Официальный сайт производителя"),
     )
     company = models.ForeignKey(
-        "accounts.Company",
+        "parties.Company",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

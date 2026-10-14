@@ -89,7 +89,7 @@ class Product(models.Model):
     # reads/writes this anymore; kept nullable for one release, dropped in a follow-up
     # migration (roadmap contract-phase). Do NOT use in new code.
     manufacturer = models.ForeignKey(
-        "accounts.Company",
+        "parties.Company",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -100,7 +100,7 @@ class Product(models.Model):
     # Tenancy: the platform company that owns/created this catalog card (the seller).
     # Drives the "see my own unpublished products" scoping; NOT the OEM (that's `brand`).
     owner_company = models.ForeignKey(
-        "accounts.Company",
+        "parties.Company",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -162,7 +162,7 @@ class Product(models.Model):
     # СКОЛЬКО раз её спрашивали: очередь сортируется по спросу, и продавец сначала описывает
     # то, что окупится быстрее.
     source_deal = models.ForeignKey(
-        "crm.Deal",
+        "sales.Deal",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

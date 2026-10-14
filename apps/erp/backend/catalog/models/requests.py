@@ -40,7 +40,7 @@ class CategoryRequest(models.Model):
     OPEN_STATUSES = (STATUS_PENDING,)
 
     company = models.ForeignKey(
-        "accounts.Company",
+        "parties.Company",
         on_delete=models.CASCADE,
         related_name="category_requests",
         verbose_name=_("Компания"),

@@ -36,14 +36,23 @@ INSTALLED_APPS = [
     "channels",
     "pgtrigger",
     "pghistory",
+    "core",
+    "parties.apps.PartiesConfig",
+    "accounts.apps.AccountsConfig",
     "catalog",
+    "sales.apps.SalesConfig",
+    "finance.apps.FinanceConfig",
+    "documents.apps.DocumentsConfig",
+    "ai.apps.AiConfig",
+    "supply.apps.SupplyConfig",
+    "inventory.apps.InventoryConfig",
+    "portal.apps.PortalConfig",
+    "integration.apps.IntegrationConfig",
     "crm",
     "sourcing",
-    "django_filters",
     "master_data",
-    "accounts.apps.AccountsConfig",
     "notifications",
-    "core",
+    "django_filters",
     "django_celery_beat",
     "storages",
 ]
@@ -231,6 +240,10 @@ def _menu_item_permission(link):
     required = f"{app_label}.{codename}_{model_name}"
 
     def _has(request):
+        if model_name == "company":
+            return request.user.has_perm(f"parties.{codename}_company") or request.user.has_perm(
+                f"accounts.{codename}_company"
+            )
         return request.user.has_perm(required)
 
     return _has

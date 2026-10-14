@@ -180,9 +180,8 @@ class CompanyWizardView(SessionWizardView):
         #
         # Гейт двери (волна 20-08) пускает сюда суперпользователя ИЛИ члена `system_engineers`.
         # Этого мало: прогон 20-08 показал, что член группы БЕЗ ЕДИНОГО модельного права
-        # (`get_all_permissions() == []`) проходил мастер до конца и создавал арендатора.
-        # Модельное право — тот самый второй ключ.
-        if not request.user.has_perm("accounts.add_company"):
+        app_label = Company._meta.app_label
+        if not (request.user.has_perm(f"{app_label}.add_company") or request.user.has_perm("accounts.add_company")):
             raise PermissionDenied
         return super().dispatch(request, *args, **kwargs)
 
@@ -304,6 +303,12 @@ class CompanyWizardView(SessionWizardView):
         # только если актор её откроет, иначе — на главную админки, где сообщение об успехе он
         # увидит.
         user = self.request.user
-        if user.has_perm("accounts.view_company") or user.has_perm("accounts.change_company"):
-            return redirect(f"/admin/accounts/company/{company.pk}/change/")
+        app_label = Company._meta.app_label
+        if (
+            user.has_perm(f"{app_label}.view_company")
+            or user.has_perm(f"{app_label}.change_company")
+            or user.has_perm("accounts.view_company")
+            or user.has_perm("accounts.change_company")
+        ):
+            return redirect(f"/admin/{app_label}/company/{company.pk}/change/")
         return redirect(reverse("admin:index"))

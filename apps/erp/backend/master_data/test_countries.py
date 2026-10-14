@@ -58,11 +58,13 @@ def test_reseed_is_idempotent_and_preserves_manual_edits():
     edited.vat_rate = 10
     edited.save(update_fields=["name", "vat_rate"])
 
-    from importlib import import_module
+    from types import SimpleNamespace
 
     from django.apps import apps
 
-    migration = import_module("master_data.migrations.0015_seed_iso_countries")
+    from core.seeds.countries import seed_countries
+
+    migration = SimpleNamespace(seed_countries=seed_countries)
     migration.seed_countries(apps, None)
 
     assert Country.objects.count() == ISO_COUNTRY_COUNT

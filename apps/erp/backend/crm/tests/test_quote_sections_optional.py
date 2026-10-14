@@ -14,7 +14,6 @@ Covers the money-critical invariant and the presentation surface:
 Sibling of test_quote_items_bulk_create.py — reuses the same seller/buyer/quote scaffolding.
 """
 
-import importlib
 from decimal import Decimal
 
 import pytest
@@ -170,7 +169,11 @@ def test_position_backfill_preserves_id_order(world):
     third = QuoteItem.objects.create(quote=quote, imported_raw_name="3", frozen_base_price=Decimal("30"))
     QuoteItem.objects.filter(quote=quote).update(position=0)  # simulate pre-0062 rows
 
-    migration = importlib.import_module("crm.migrations.0062_alter_quoteitem_options_and_more")
+    from types import SimpleNamespace
+
+    from core.legacy_migration_helpers import backfill_position
+
+    migration = SimpleNamespace(backfill_position=backfill_position)
 
     class _SchemaEditor:
         def execute(self, sql):

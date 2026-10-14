@@ -16,7 +16,6 @@
 всех ранее выставленных КП.
 """
 
-import importlib
 from decimal import Decimal
 
 import pytest
@@ -233,8 +232,9 @@ class TestZeroPricingChangeOnMigration:
 
     @staticmethod
     def _migration_data_step():
-        module = importlib.import_module("crm.migrations.0064_per_line_margin_override")
-        return module.null_out_never_applied_margins
+        from core.legacy_migration_helpers import null_out_never_applied_margins
+
+        return null_out_never_applied_margins
 
     def _legacy_quote_with_rows(self):
         """КП «как до миграции»: у каждой строки в колонке лежит НЕ-NULL значение, которое
@@ -315,7 +315,15 @@ class TestZeroPricingChangeOnMigration:
         assert without_migration != expected, "без data-миграции цены обязаны разъехаться"
 
     def test_migration_is_reversible_back_to_zero(self):
-        module = importlib.import_module("crm.migrations.0064_per_line_margin_override")
+        from types import SimpleNamespace
+
+        from core.legacy_migration_helpers import null_out_never_applied_margins, restore_zero_margins
+
+        module = SimpleNamespace(
+            null_out_never_applied_margins=null_out_never_applied_margins,
+            restore_zero_margins=restore_zero_margins,
+        )
+
         quote, items = self._legacy_quote_with_rows()
         module.null_out_never_applied_margins(global_apps, None)
 
