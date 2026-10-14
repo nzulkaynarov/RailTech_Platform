@@ -70,10 +70,7 @@ ERP сам их не описывает. Токены дизайна — из `p
 | `portal` (M2) | `/api/portal/v1/*`: только своя компания; вход Telegram `initData` / magic-link; действия клиента | покупательские вьюхи `crm`, `crm/views/documents_public.py`, `crm/services/public_page.py` |
 | `integration` (M3) | API для CRM, исходящие вебхуки с подписью и журналом, `erp-mcp` | новое |
 
-Не выделено отдельной строкой в ARCHITECTURE §4, но переносится по MIGRATION-MAP: `notifications`
-(EmailLog, шаблоны писем, WS-уведомления — ARCHITECTURE §18) и справочники `master_data` (страны,
-валюты, единицы, базисы, курсы). Куда их положить — отдельными приложениями или внутрь `core`/`documents` —
-решает M1-ERP-03; до решения не предполагай.
+Решено в M1-ERP-03 (DECISIONS 2026-10-14): справочники `master_data` (страны, валюты, единицы, базисы, курсы) и `notifications` (EmailLog, шаблоны писем, уведомления — ARCHITECTURE §18) — модели в `core`, ТН ВЭД — в `catalog`. Пакеты `crm`, `sourcing`, `master_data`, `notifications` — **переходные пакеты кода** (сервисы, вьюхи, задачи, ре-экспорт моделей из канонических приложений) без своих таблиц, кроме `sourcing.Attachment`; новый код пиши в каноническое приложение, а тронутый код переноси туда же; остаток — M1-ERP-10.
 
 Папки `apps/erp/` сейчас — как в B2B (`backend/<app>/`, `frontend/src/`, `Makefile`, `scripts/`, `pyproject.toml`, `.flake8`); целевая структура после M1-ERP-03:
 

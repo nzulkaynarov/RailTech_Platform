@@ -8,6 +8,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from accounts.models import Company, CompanyMember, CompanyType, SystemRole, WorkspaceRole
 from catalog.models import DomainType, ProductStatus, StockStatus
+from core.seeds import DOMAIN_TYPES
 from crm.models import DealStage, QuoteStatus
 from master_data.models import Currency
 from notifications.models import NotificationType
@@ -124,12 +125,9 @@ class Command(BaseCommand):
             _seed(CompanyType, code, name=name)
 
         # ─── 10. Типы доменов каталога ───
-        domains = [
-            ("RAILWAY_MACHINERY", "Ж/Д техника и запчасти", "ЖД"),
-            ("GENERAL_GOODS", "Общие промышленные товары", "ОТ"),
-            ("SERVICES", "Услуги (логистика, ремонт)", "УС"),
-        ]
-        for code, name, prefix in domains:
+        # Отрасль нейтральна (M1-ERP-04): домены каталога — только «товар / услуга»,
+        # их сеет миграция catalog (core.seeds.catalog.DOMAIN_TYPES); здесь — без своих имён.
+        for code, name, prefix, _order in DOMAIN_TYPES:
             _seed(DomainType, code, name=name, sku_prefix=prefix)
 
         # ─── 11. Статусы товаров ───
