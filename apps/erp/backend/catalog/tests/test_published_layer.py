@@ -177,8 +177,11 @@ def test_projection_keys_match_portal_contract():
     репозитории (make check-erp на хосте, локальный прогон) работает.
     """
     yaml = pytest.importorskip("yaml")
-    contract = Path(__file__).resolve().parents[5] / "packages" / "contracts" / "openapi" / "erp-portal.yaml"
-    if not contract.exists():
+    candidates = (
+        parent / "packages" / "contracts" / "openapi" / "erp-portal.yaml" for parent in Path(__file__).parents
+    )
+    contract = next((path for path in candidates if path.exists()), None)
+    if contract is None:
         pytest.skip("packages/contracts не смонтирован")
     schema = yaml.safe_load(contract.read_text())["components"]["schemas"]["CatalogItem"]
     assert set(schema["properties"]) == CATALOG_ITEM_KEYS
