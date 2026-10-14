@@ -112,8 +112,6 @@ UNFOLD = {
                 "items": [
                     {"title": _("Сделки"), "icon": "handshake", "link": "/admin/crm/deal/"},
                     {"title": _("Коммерческие предложения"), "icon": "request_quote", "link": "/admin/crm/quote/"},
-                    {"title": _("Лиды с сайта"), "icon": "contact_page", "link": "/admin/crm/lead/"},
-                    {"title": _("Сообщения"), "icon": "chat", "link": "/admin/crm/message/"},
                 ],
             },
             {

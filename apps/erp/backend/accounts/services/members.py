@@ -165,7 +165,6 @@ def can_delete_user(user: CustomUser) -> Optional[str]:
     * `CompanyMember.user` каскадный — удаление последнего администратора компании оставляло
       её без единого ответственного, хотя ровно это запрещает never-orphan
       (`remove_company_member` → `CANNOT_REMOVE_LAST_COMPANY_ADMIN`);
-    * `crm.Message.sender` каскадный — вместе с человеком исчезала переписка по сделкам;
     * таблицы истории pghistory ссылаются на пользователя с `DO_NOTHING` и живым FK в БД, так
       что удаление любого, кто хоть раз действовал по сделке, падало `IntegrityError` → 500.
 
@@ -181,11 +180,10 @@ def can_delete_user(user: CustomUser) -> Optional[str]:
         if is_admin and not company_active_admins(membership.company).exclude(pk=membership.pk).exists():
             return "CANNOT_REMOVE_LAST_COMPANY_ADMIN"
 
-    from crm.models import Deal, Message, Quote
+    from crm.models import Deal, Quote
 
     has_history = (
-        Message.objects.filter(sender=user).exists()
-        or Deal.objects.filter(Q(client=user) | Q(manager=user) | Q(assigned_to=user)).exists()
+        Deal.objects.filter(Q(client=user) | Q(manager=user) | Q(assigned_to=user)).exists()
         or Quote.objects.filter(Q(prepared_by=user) | Q(approved_by=user)).exists()
     )
     if has_history:

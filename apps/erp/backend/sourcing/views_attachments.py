@@ -20,10 +20,10 @@ from rest_framework.permissions import IsAuthenticated
 class AttachmentViewSet(viewsets.ModelViewSet):
     """
     Uploads/lists/deletes private attachments tied to exactly one parent
-    (deal, message, quote, company, or product).
+    (deal, quote, company, or product).
 
-    - list: filter by deal/message/quote/company/product query params.
-    - create: requires ONE of deal/message/quote/company/product, plus `file`.
+    - list: filter by deal/quote/company/product query params.
+    - create: requires ONE of deal/quote/company/product, plus `file`.
     - destroy: only uploader or platform admin.
 
     Access to the attached entity is checked via the deal's company membership
@@ -55,7 +55,6 @@ class AttachmentViewSet(viewsets.ModelViewSet):
         user = self.request.user
         qs = Attachment.objects.select_related(
             "deal__company",
-            "message__deal__company",
             "quote__deal__company",
             "company",
             "product__owner_company",
@@ -64,8 +63,6 @@ class AttachmentViewSet(viewsets.ModelViewSet):
         params = self.request.query_params
         if params.get("deal"):
             qs = qs.filter(deal_id=params["deal"])
-        if params.get("message"):
-            qs = qs.filter(message_id=params["message"])
         if params.get("quote"):
             qs = qs.filter(quote_id=params["quote"])
         if params.get("company"):
@@ -95,7 +92,6 @@ class AttachmentViewSet(viewsets.ModelViewSet):
 
         return qs.filter(
             Q(deal_id__in=accessible_deals)
-            | Q(message__deal_id__in=accessible_deals)
             | Q(quote__deal_id__in=accessible_deals)
             | Q(company_id__in=user_company_ids)
             | Q(product__owner_company_id__in=user_company_ids),
@@ -112,12 +108,11 @@ class AttachmentViewSet(viewsets.ModelViewSet):
         user_company_ids = set(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
 
         deal = validated.get("deal")
-        message = validated.get("message")
         quote = validated.get("quote")
         company = validated.get("company")
         product = validated.get("product")
 
-        target_deal = deal or (message.deal if message else None) or (quote.deal if quote else None)
+        target_deal = deal or (quote.deal if quote else None)
         if target_deal:
             if (
                 target_deal.company_id in user_company_ids

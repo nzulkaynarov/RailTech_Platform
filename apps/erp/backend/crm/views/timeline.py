@@ -98,13 +98,13 @@ class TimelineView(APIView):
 
     @staticmethod
     def _deal_scope(request, deal_id):
-        """Timeline of one deal — same access boundary as the deal chat."""
-        from crm.services.messaging import user_can_access_deal_chat
+        """Timeline of one deal — same access boundary as the deal itself."""
+        from crm.services import user_can_access_deal
 
         deal = Deal.objects.filter(pk=deal_id).first()
         if deal is None:
             return None, Response({"detail": "DEAL_NOT_FOUND"}, status=404)
-        if not user_can_access_deal_chat(request.user, deal):
+        if not user_can_access_deal(request.user, deal):
             return None, Response({"detail": "MEMBER_REQUIRED_FOR_ACTION"}, status=403)
         logs = ActivityLog.objects.filter(deal_id=deal_id)
         # SEC (audit #4): a routed seller sees only ITS OWN lane's events (+ deal-level/legacy

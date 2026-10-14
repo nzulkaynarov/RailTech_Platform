@@ -4,7 +4,7 @@ import os
 
 from .apps import *  # noqa: F401,F403 — последовательная композиция настроек
 
-# ASGI Support for Channels (Real-time chat)
+# ASGI Support for Channels (real-time notifications)
 ASGI_APPLICATION = "core.asgi.application"
 
 # Redis Channel Layer

@@ -18,7 +18,6 @@ class AttachmentSerializer(serializers.ModelSerializer):
             "uploaded_at",
             "product",
             "deal",
-            "message",
             "quote",
             "company",
         ]

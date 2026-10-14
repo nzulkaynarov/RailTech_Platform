@@ -4,14 +4,36 @@ from typing import Optional, Tuple
 from django.db import transaction
 from django.db.models import QuerySet
 
-from accounts.models import Company, CustomUser
+from accounts.models import CustomUser
 
 from ..constants import ContractStatusCode, DealStageCode
-from ..models import ActivityLog, Deal, DealStage, Lead
+from ..models import ActivityLog, Deal, DealStage
 
 logger = logging.getLogger(__name__)
 
 _S = DealStageCode  # local alias to keep the FSM matrix readable
+
+
+def user_can_access_deal(user: CustomUser, deal: Deal) -> bool:
+    """Superuser, deal manager, deal client, routed seller team, or any active member of deal.company.
+
+    The read boundary of a deal (timeline and other per-deal surfaces). Lived in the deal-chat
+    service until M1-ERP-02 wave 1b removed the chat; the predicate itself is about the deal.
+    """
+    if not user or not user.is_authenticated:
+        return False
+    if getattr(user, "is_superuser", False):
+        return True
+    if deal.manager_id == user.id or deal.client_id == user.id:
+        return True
+    seller_company_ids = list(
+        user.memberships.filter(is_active=True, can_sell=True).in_seller_company().values_list("company_id", flat=True)
+    )
+    if seller_company_ids and deal.seller_routings.filter(seller_company_id__in=seller_company_ids).exists():
+        return True
+    if deal.company_id:
+        return user.memberships.filter(company_id=deal.company_id, is_active=True).exists()
+    return False
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -309,59 +331,3 @@ def bulk_close_deals_lost(
         if not error:
             count += 1
     return count
-
-
-def mark_leads_processed(leads: QuerySet[Lead]) -> int:
-    """
-    Mark a queryset of leads as processed.
-
-    Returns: count of leads updated (only previously-unprocessed ones).
-    """
-    return leads.filter(is_processed=False).update(is_processed=True)
-
-
-@transaction.atomic
-def convert_lead_to_deal(
-    lead: Lead,
-    actor: CustomUser,
-    company: Optional[Company] = None,
-) -> Tuple[Optional[Deal], Optional[str]]:
-    """Convert a Lead into a Deal in DRAFT stage.
-
-    If `company` is not provided, tries to resolve one via the lead email.
-    """
-
-    if lead.is_processed:
-        return None, "LEAD_ALREADY_PROCESSED"
-
-    if company is None:
-        company = Company.objects.filter(
-            members__user__email__iexact=lead.email,
-            members__is_active=True,
-        ).first()
-    if company is None:
-        return None, "LEAD_NO_CLIENT_COMPANY"
-
-    draft_stage = DealStage.objects.filter(code=DealStageCode.DRAFT).first()
-    deal = Deal.objects.create(
-        company=company,
-        client=CustomUser.objects.filter(email__iexact=lead.email).first(),
-        manager=actor if (actor and actor.is_superuser) else None,
-        stage=draft_stage,
-        title=(lead.message[:200] if lead.message else f"Лид: {lead.name}"),
-        notes=f"Создано из Lead #{lead.id}\nEmail: {lead.email}\nТелефон: {lead.phone}",
-    )
-    lead.is_processed = True
-    lead.save(update_fields=["is_processed"])
-
-    ActivityLog.objects.create(
-        action="Lead конвертирован в сделку",
-        detail=f"Lead #{lead.id} → Deal #{deal.id}",
-        user=actor,
-        level="SUCCESS",
-        deal=deal,
-        company=company,
-        event_code="lead.converted",
-        event_params={"lead_id": lead.id, "deal_id": deal.id},
-    )
-    return deal, None

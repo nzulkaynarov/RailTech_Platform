@@ -7,7 +7,7 @@ mechanical, behaviour-preserving) into:
   * ``charge``  — ChargeType / ChargeTemplate / QuoteCharge serializers
   * ``quote``   — QuoteApprovalStep + Quote document serializer
   * ``deal``    — Deal list/detail + viewer-scoped routing helpers
-  * ``misc``    — Message / Lead / ActivityLog
+  * ``misc``    — ActivityLog
   * ``billing`` — Contract / Invoice / InvoiceItem / Payment / Act / Fulfillment
 
 The ENTIRE public surface is re-exported here so every existing
@@ -26,7 +26,7 @@ from .charge import ChargeTemplateSerializer, ChargeTypeSerializer, QuoteChargeS
 from .deal import DealDetailSerializer, DealListSerializer
 from .documents import DocumentTemplateSerializer, GeneratedDocumentSerializer
 from .item import QuoteItemSerializer
-from .misc import ActivityLogSerializer, LeadSerializer, MessageSerializer
+from .misc import ActivityLogSerializer
 from .numbering import (
     NumberingPreviewRequestSerializer,
     NumberingPreviewResponseSerializer,
@@ -55,8 +55,6 @@ __all__ = [
     "NumberingPreviewRequestSerializer",
     "NumberingPreviewResponseSerializer",
     # misc
-    "MessageSerializer",
-    "LeadSerializer",
     "ActivityLogSerializer",
     # billing
     "ContractSerializer",

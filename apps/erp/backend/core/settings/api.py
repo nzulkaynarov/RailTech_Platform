@@ -23,7 +23,6 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "anon": "20/minute",
         "user": "200/minute",
-        "lead_submit": "5/minute",
         "import_upload": "10/hour",
         # Anti-abuse on unauthenticated/sensitive auth endpoints (the global anon
         # 20/min is far too loose to stop e.g. password-reset email bombing).
@@ -44,7 +43,6 @@ REST_FRAMEWORK = {
         "ai_match": "20/minute",  # AI catalog-match endpoint — each call is a paid Claude request
         "ai_preflight": "20/minute",  # AI заявка pre-flight quality check — each call is a paid Claude request
         "ai_enrich": "20/minute",  # AI PIM product enrichment — each call is a paid Claude request
-        "ai_chat": "20/minute",  # AI deal-chat reply assist — each call is a paid Claude request
         "ai_diff": "20/minute",  # AI КП-vs-заявка diff — each call is a paid Claude request
         "ai_extract": "20/minute",  # AI PDF contract/invoice extraction — each call is a paid Claude request
         "ai_compose": "20/minute",  # AI conversational заявка builder — each call is a paid Claude request
@@ -128,7 +126,7 @@ SPECTACULAR_SETTINGS = {
         {"name": "Auth", "description": "Registration, password setup, JWT tokens"},
         {"name": "Accounts", "description": "Users, companies, KYC, team management"},
         {"name": "Catalog", "description": "Products (PIM), categories, equipment groups, supplier offers"},
-        {"name": "CRM", "description": "Deals, quotes, quote items, messages, activity logs"},
+        {"name": "CRM", "description": "Deals, quotes, quote items, activity logs"},
         {"name": "Sourcing", "description": "Excel imports, catalog imports, sourcing requests"},
         {"name": "Master Data", "description": "Countries, currencies, units of measure, delivery basis"},
         {"name": "Notifications", "description": "User notifications with read/unread tracking"},

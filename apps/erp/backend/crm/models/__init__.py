@@ -9,7 +9,7 @@ from .approvals import QuoteApprovalStep, StepParticipation, StepStatus, StepTri
 from .billing import Act, Invoice, InvoiceItem, Payment
 from .charges import ChargeTemplate, QuoteCharge
 from .contracts import Contract
-from .deals import ActivityLog, Deal, DealSellerRouting, Lead, Message
+from .deals import ActivityLog, Deal, DealSellerRouting
 from .documents import CompanyWordingVariant, DocumentTemplate, GeneratedDocument
 from .fulfillment import Fulfillment
 from .lookups import (
@@ -52,8 +52,6 @@ __all__ = [
     "Invoice",
     "InvoiceItem",
     "InvoiceStatus",
-    "Lead",
-    "Message",
     "Payment",
     "Quote",
     "QuoteAcceptanceCode",

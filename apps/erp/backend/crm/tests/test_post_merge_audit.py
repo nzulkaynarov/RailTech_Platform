@@ -23,7 +23,7 @@ from accounts.models import (
     VerificationStatus,
     WorkspaceRole,
 )
-from crm.models import Deal, DealSellerRouting, DealStage, Message
+from crm.models import Deal, DealSellerRouting, DealStage
 from crm.serializers import DealListSerializer
 from crm.services.assignment import assign_deal, claim_deal, release_deal
 
@@ -188,17 +188,6 @@ def test_assigned_to_name_scoped_to_viewers_own_company(scenario):
     assert _name_as_seen_by(deal, scenario.a_admin) == scenario.a_member.email  # same company
     assert _name_as_seen_by(deal, scenario.b_admin) is None  # B's own copy is unclaimed → nothing
     assert _name_as_seen_by(deal, scenario.buyer_user) is None  # buyer doesn't own
-
-
-# ─── chat notification reaches the claimed owner ────────────────────────────
-
-
-def test_new_message_notifies_claimed_owner(scenario):
-    from notifications.models import Notification
-
-    claim_deal(scenario.deal.id, scenario.a_member)
-    Message.objects.create(deal=scenario.deal, sender=scenario.buyer_user, text="Когда КП?", message_type="CHAT")
-    assert Notification.objects.filter(user=scenario.a_member, deal=scenario.deal).exists()
 
 
 # ─── подсказка «можно вернуть в очередь» ────────────────────────────────────

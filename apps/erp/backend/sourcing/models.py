@@ -101,15 +101,6 @@ class Attachment(models.Model):
         verbose_name=_("Сделка"),
         help_text=_("Привязка к сделке"),
     )
-    message = models.ForeignKey(
-        "crm.Message",
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name="attachments",
-        verbose_name=_("Сообщение"),
-        help_text=_("Привязка к сообщению в чате"),
-    )
     quote = models.ForeignKey(
         "crm.Quote",
         on_delete=models.CASCADE,
@@ -139,35 +130,24 @@ class Attachment(models.Model):
                     models.Q(
                         product__isnull=False,
                         deal__isnull=True,
-                        message__isnull=True,
                         quote__isnull=True,
                         company__isnull=True,
                     )
                     | models.Q(
                         product__isnull=True,
                         deal__isnull=False,
-                        message__isnull=True,
                         quote__isnull=True,
                         company__isnull=True,
                     )
                     | models.Q(
                         product__isnull=True,
                         deal__isnull=True,
-                        message__isnull=False,
-                        quote__isnull=True,
-                        company__isnull=True,
-                    )
-                    | models.Q(
-                        product__isnull=True,
-                        deal__isnull=True,
-                        message__isnull=True,
                         quote__isnull=False,
                         company__isnull=True,
                     )
                     | models.Q(
                         product__isnull=True,
                         deal__isnull=True,
-                        message__isnull=True,
                         quote__isnull=True,
                         company__isnull=False,
                     )
@@ -260,7 +240,7 @@ class AIJob(models.Model):
     feature = models.CharField(
         max_length=32,
         verbose_name=_("AI-функция"),
-        help_text=_("Код AI-функции (match, preflight, extract, compose, enrich, chat_reply, quote_diff, draft_quote)"),
+        help_text=_("Код AI-функции (match, preflight, extract, compose, enrich, quote_diff, draft_quote)"),
     )
     created_at = models.DateTimeField(
         auto_now_add=True,

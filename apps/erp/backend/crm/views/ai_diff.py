@@ -2,7 +2,7 @@
 
 Thin DRF wrapper (Rule 8): authorize → call ONE service → return. All logic —
 the deterministic coverage check, the gated semantic AI pass and the per-quote
-visibility scoping — lives in `crm.services.ai_diff`. Mirrors `SuggestChatReplyView`:
+visibility scoping — lives in `crm.services.ai_diff`. Mirrors `MatchCatalogView`:
 IsAuthenticated, scoped throttle (each call may be a paid Claude request), and a
 read-only assistive result that NEVER blocks the buyer.
 

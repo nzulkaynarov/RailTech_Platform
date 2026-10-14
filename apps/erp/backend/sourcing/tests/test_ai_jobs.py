@@ -257,23 +257,6 @@ def test_dispatch_enrich(monkeypatch):
     assert result == {"suggestion": {"description": "Колодка"}}
 
 
-@pytest.mark.django_db
-def test_dispatch_chat_reply(monkeypatch):
-    from sourcing.tasks_ai import run_ai_job
-
-    user = _user("aijob-chat@x.test")
-    seen = {}
-
-    def _fake_reply(deal_id, requesting_user):
-        seen.update(deal_id=deal_id, user_id=requesting_user.id)
-        return {"draft": "Добрый день!"}
-
-    monkeypatch.setattr("crm.services.suggest_chat_reply", _fake_reply)
-    result = run_ai_job("chat_reply", {"deal_id": 42, "user_id": user.id})
-    assert result == {"draft": "Добрый день!"}
-    assert seen == {"deal_id": 42, "user_id": user.id}
-
-
 def _make_diff_quote():
     from accounts.models import Company
     from crm.models import Deal, DealStage, Quote, QuoteStatus

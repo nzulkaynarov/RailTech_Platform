@@ -51,33 +51,15 @@ def test_notification_without_code_still_works(info_type, user):
 @pytest.mark.django_db
 def test_platform_admin_alert_carries_code(info_type):
     notification = notify_platform_admins(
-        title="Новый тикет поддержки",
-        message="Тикет #3: не открывается КП",
+        title="Запрошена новая категория",
+        message="Buyer Co: «Тормозные колодки»",
         type_code="INFO",
-        event_code="support.ticket_created",
-        event_params={"ticket_id": 3, "subject": "не открывается КП"},
+        event_code="catalog.category_requested",
+        event_params={"request_id": 3, "company_name": "Buyer Co", "category_name": "Тормозные колодки"},
     )
 
     assert notification.audience == Notification.AUDIENCE_PLATFORM_ADMIN
-    assert notification.event_code == "support.ticket_created"
-
-
-@pytest.mark.django_db
-def test_support_ticket_no_longer_stores_i18n_keys_as_text(db):
-    """Регресс: раньше в title/message клали КЛЮЧИ («support.alert.new_ticket_title»), а
-    интерфейс их не переводит — оператор видел на экране точечную строку."""
-    from accounts.models import CustomUser
-    from core.services import create_support_ticket
-
-    NotificationType.objects.get_or_create(code="INFO", defaults={"name": "Info", "sort_order": 10})
-    author = CustomUser.objects.create_user(email="a@codes.test", username="a@codes.test", password="x")
-
-    create_support_ticket(author=author, subject="Не открывается КП", description="Подробности")
-
-    alert = Notification.objects.filter(audience=Notification.AUDIENCE_PLATFORM_ADMIN).latest("id")
-    assert not alert.title.startswith("support."), alert.title
-    assert alert.event_code == "support.ticket_created"
-    assert alert.event_params.get("subject") == "Не открывается КП"
+    assert notification.event_code == "catalog.category_requested"
 
 
 @pytest.mark.django_db

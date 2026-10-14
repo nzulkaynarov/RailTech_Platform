@@ -134,9 +134,6 @@ def merge_companies(
     Attachment.objects.filter(company=duplicate).update(company=survivor)
     ChargeTemplate.objects.filter(company=duplicate).update(company=survivor)
     DocumentSequence.objects.filter(company=duplicate).update(company=survivor)
-    from core.models import SupportTicket
-
-    SupportTicket.objects.filter(company=duplicate).update(company=survivor)
 
     _merge_relationship_edges(survivor, duplicate)
 

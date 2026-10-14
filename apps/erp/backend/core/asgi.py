@@ -1,7 +1,7 @@
 """
 ASGI config for core project.
 
-Configures Django Channels for WebSocket support (real-time chat)
+Configures Django Channels for WebSocket support (real-time notifications)
 and standard HTTP requests via Django's ASGI application.
 """
 
