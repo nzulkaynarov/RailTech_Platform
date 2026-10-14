@@ -6,7 +6,7 @@
 # Langfuse — профиль `observability` (make up-obs). Бэкапы — профиль `backup` (M5-INF-01).
 #
 # Сервисы CRM перенесены из apps/crm/infra/docker-compose.yml с префиксом `crm-`; код и образы — те же.
-# ERP (M1) и Cabinet (M2) пока заглушки в Caddy: erp.localhost и cabinet.localhost отвечают /health 200.
+# ERP — копия B2B (M1-ERP-01); Cabinet — статика SPA `cabinet-web` (M2-CAB-01), API портала — ERP через Caddy.
 
 name: rt-platform
 
@@ -413,6 +413,20 @@ services:
       timeout: 5s
       retries: 10
 
+  # SPA Cabinet (M2-CAB-01): сборка Vite + nginx, своей логики нет (ADR-0004). VITE_API_URL пустой →
+  # /api/portal/* Caddy ведёт с cabinet.* на erp-backend (cookie портала same-origin, CORS не нужен).
+  cabinet-web:
+    build:
+      context: ../../apps/cabinet
+      args:
+        VITE_API_URL: ""
+        VITE_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
   # ─── Вход: Caddy на три домена ──────────────────────────────────────────────────────────────
 
   caddy:
@@ -425,6 +439,8 @@ services:
       erp-backend:
         condition: service_healthy
       erp-web:
+        condition: service_healthy
+      cabinet-web:
         condition: service_healthy
     volumes:
       - caddy_data:/data
