@@ -1,5 +1,5 @@
 """
-File upload validators for RailTech B2B platform.
+File upload validators for ERP platform.
 
 Provides validation for images, avatars, and documents with extension,
 content-type, and file size checks.

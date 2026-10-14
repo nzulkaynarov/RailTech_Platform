@@ -72,9 +72,9 @@ IMPORT_EXPORT_EXPORT_PERMISSION_CODE = "view"
 IMPORT_EXPORT_IMPORT_PERMISSION_CODE = "change"
 
 UNFOLD = {
-    "SITE_TITLE": "RailTech B2B Control Center",
-    "SITE_HEADER": "RailTech B2B",
-    "SITE_SYMBOL": "train",
+    "SITE_TITLE": os.environ.get("PLATFORM_NAME", "ERP") + " Control Center",
+    "SITE_HEADER": os.environ.get("PLATFORM_NAME", "ERP"),
+    "SITE_SYMBOL": "settings",
     "DASHBOARD_CALLBACK": "core.dashboard.dashboard_callback",
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": True,

@@ -22,7 +22,7 @@ import { test, expect, Page } from '@playwright/test';
  * ── GREEN-RUN PREREQUISITES ───────────────────────────────────────────────────────────
  * For every scenario to actually EXERCISE (not gracefully skip) you need:
  *   • a frontend build that INCLUDES the feature branch (feat/u7-density);
- *   • a seeded seller (seller.local@railtech.uz) with ≥1 routed deal that has an
+ *   • a seeded seller (seller.local@erp.localhost) with ≥1 routed deal that has an
  *     active_quote whose КП carries priced ITEM lines — AND, for the collapse scenario,
  *     at least one SECTION row with item children;
  *   • ideally a КП with >50 lines to drive the virtualization window (see the note in the
@@ -45,8 +45,8 @@ import { test, expect, Page } from '@playwright/test';
 
 const SEED_PW = process.env.E2E_SEED_PASSWORD || 'Demo1234!';
 // Seller login is env-overridable so the suite runs against whatever seed a given local
-// stack carries (the canonical demo seed uses seller.local@railtech.uz).
-const SELLER = { email: process.env.E2E_SELLER_EMAIL || 'seller.local@railtech.uz', password: SEED_PW };
+// stack carries (the canonical demo seed uses seller.local@erp.localhost).
+const SELLER = { email: process.env.E2E_SELLER_EMAIL || 'seller.local@erp.localhost', password: SEED_PW };
 
 // Local-stack gate — the seeded seller only exists on a local/staging stack (never prod),
 // same guard the review-fixes suite uses. The whole file is skipped otherwise.

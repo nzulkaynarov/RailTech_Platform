@@ -62,9 +62,7 @@ _IDENTITY = (
 )
 
 REQUIREMENTS_BY_DOMAIN: dict[str, tuple] = {
-    # Ж/д техника: идентичность и ТН ВЭД — то, без чего деталь не подобрать.
-    "RAILWAY_MACHINERY": (_NAME, _UOM, _CATEGORY, _IDENTITY, _HS),
-    # Общие товары: идентичность желательна, но не обязательна — многое продаётся по описанию.
+    # Товары: наименование, ед. изм., категория, ТН ВЭД.
     "GENERAL_GOODS": (_NAME, _UOM, _CATEGORY, _HS),
     # Услуги: ни артикула, ни ТН ВЭД не бывает.
     "SERVICES": (_NAME, _UOM, _CATEGORY),

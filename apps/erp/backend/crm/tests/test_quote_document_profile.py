@@ -77,7 +77,7 @@ def test_seller_profile_drives_document(scenario):
     assert "3001112223" in html
     assert "Спасибо за сотрудничество с РемПуть!" in html
     # Platform fallback footer must NOT appear when a profile footer is set.
-    assert "Документ сформирован в RailTech B2B Ecosystem" not in html
+    assert "Документ сформирован в ERP" not in html
 
 
 @pytest.mark.django_db
@@ -90,12 +90,12 @@ def test_empty_profile_falls_back(scenario):
     # Seller Company name (not the branded legal_name) + platform attribution in the footer
     # (print-typography wave: the auto registration footer wraps the attribution with <br>).
     assert "РемПуть" in html
-    assert "Документ сформирован" in html and "RailTech B2B Ecosystem" in html
+    assert "Документ сформирован" in html and "ERP" in html
 
 
 @pytest.mark.django_db
 def test_no_seller_uses_platform_name(scenario):
     buyer, _, quote = scenario
     html = _render(quote, buyer, None, None)
-    assert "RailTech B2B" in html
-    assert "Документ сформирован в RailTech B2B Ecosystem" in html
+    assert "ERP" in html
+    assert "Документ сформирован в ERP" in html

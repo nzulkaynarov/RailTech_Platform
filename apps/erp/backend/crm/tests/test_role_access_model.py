@@ -55,8 +55,8 @@ def _member(company, email, *, can_sell=False, can_buy=False, role="OWNER"):
 
 @pytest.fixture
 def seller(lookups):
-    """RailTech — the single seller (SUPPLIER, can_sell)."""
-    company = Company.objects.create(name="RailTech LLC", inn="7700000001")
+    """The single seller (SUPPLIER, can_sell)."""
+    company = Company.objects.create(name="Acme Seller LLC", inn="7700000001")
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
     return _member(company, "seller@rt.test", can_sell=True), company
 
@@ -75,7 +75,7 @@ def deal(buyer, seller):
     d = Deal.objects.create(
         title="Buyer заявка", company=buyer_co, client=buyer_user, stage=DealStage.objects.get(code="CALCULATING")
     )
-    # Multi-seller routing: this RFQ is routed to RailTech (the seller) — that is
+    # Multi-seller routing: this RFQ is routed to the seller — that is
     # what grants the seller team visibility now (replaces the old see-all).
 
     return d
@@ -215,7 +215,7 @@ def test_client_cannot_see_other_companies_deals(buyer, deal):
 
 def test_real_seller_still_sees_all_deals(seller, deal):
     """The legitimate seller still sees an RFQ routed to it (the `deal` fixture routes
-    to RailTech). Multi-seller scoping must not hide deals genuinely directed here."""
+    to the seller). Multi-seller scoping must not hide deals genuinely directed here."""
     resp = _api(seller[0]).get("/api/v1/crm/deals/")
     ids = [d["id"] for d in (resp.data["results"] if isinstance(resp.data, dict) else resp.data)]
     assert deal.id in ids

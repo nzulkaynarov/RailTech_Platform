@@ -1,10 +1,10 @@
 {% load i18n %}{% translate "Здравствуйте!" %}
 
-{% blocktranslate %}Вас пригласили в команду компании «{{ company_name }}» на платформе RailTech B2B.
+{% blocktranslate with platform=platform_name|default:'ERP' %}Вас пригласили в команду компании «{{ company_name }}» на платформе {{ platform }}.
 Чтобы принять приглашение, установите пароль по ссылке:{% endblocktranslate %}
 
 {{ setup_url }}
 
 {% translate "Если вы не ожидали это приглашение, просто проигнорируйте письмо." %}
 
-— {% translate "Команда RailTech B2B" %}
+— {% blocktranslate with platform=platform_name|default:'ERP' %}Команда {{ platform }}{% endblocktranslate %}

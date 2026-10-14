@@ -23,7 +23,7 @@ export const collabApi = {
 	// Polls through the 202 GENERATING window (ARCH-03) before saving the blob.
 	exportDealPDF: async (dealId: number) => {
 		const { downloadFile } = await import('@/lib/download');
-		await downloadFile(`crm/deals/${dealId}/export-pdf/`, `RailTech_Quote_${dealId}.pdf`);
+		await downloadFile(`crm/deals/${dealId}/export-pdf/`, `Quote_${dealId}.pdf`);
 	},	// CRM Phase A — read-only timeline scoped to a deal or a counterparty company.
 	getTimeline: async (params: { deal_id?: number; company_id?: number; limit?: number }) => {
 		const response = await apiClient.get<TimelineEntry[]>('crm/timeline/', { params });

@@ -99,7 +99,7 @@ export function OtherDocumentsPage() {
       cell: (doc) => (doc.status_code === 'ISSUED' ? (
         <DocumentActions
           request={() => ({ path: `crm/generated-documents/${doc.id}/download-pdf/` })}
-          filenameBase={`RailTech_Document_${doc.id}`}
+          filenameBase={`Document_${doc.id}`}
           variant="ghost"
           iconOnly
         />
@@ -345,7 +345,7 @@ function DocumentSheet({
             {isIssued && (
               <DocumentActions
                 request={() => ({ path: `crm/generated-documents/${document.id}/download-pdf/` })}
-                filenameBase={`RailTech_Document_${document.id}`}
+                filenameBase={`Document_${document.id}`}
                 publicLink={publicLink ?? undefined}
                 size="default"
               />

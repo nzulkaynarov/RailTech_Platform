@@ -36,7 +36,7 @@ def platform_admin():
     """Администратор ERP = суперпользователь (M1-ERP-02)."""
     role, _ = SystemRole.objects.get_or_create(code="ADMIN", defaults={"name": "Admin"})
     return CustomUser.objects.create_user(
-        email="ops@railtech.uz", username="ops@railtech.uz", password="x", role=role, is_superuser=True
+        email="ops@example.com", username="ops@example.com", password="x", role=role, is_superuser=True
     )
 
 
@@ -143,7 +143,7 @@ def test_emaillog_redacts_setup_reset_tokens():
         is_active=True,
     )
     mail.outbox = []
-    url = "https://b2b.railtech.uz/setup-password?uid=MTI3&token=abc123-secretTOKEN&x=1"
+    url = "https://erp.example.com/setup-password?uid=MTI3&token=abc123-secretTOKEN&x=1"
     log = send_templated_email("setup_password", {"setup_url": url}, to=["r@example.com"])
     # Delivered email keeps the working link.
     assert "abc123-secretTOKEN" in mail.outbox[0].body

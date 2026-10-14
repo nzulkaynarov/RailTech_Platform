@@ -741,7 +741,7 @@ class ProductViewSet(viewsets.ModelViewSet):
             ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 20
 
         response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-        response["Content-Disposition"] = 'attachment; filename="railtech_import_template.xlsx"'
+        response["Content-Disposition"] = 'attachment; filename="catalog_import_template.xlsx"'
         wb.save(response)
         return response
 

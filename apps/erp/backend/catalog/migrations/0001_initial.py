@@ -39,7 +39,7 @@ class Migration(migrations.Migration):
                 ('name', models.CharField(help_text='Отображаемое название', max_length=255, verbose_name='Название')),
                 ('sort_order', models.PositiveIntegerField(default=0, help_text='Порядок отображения в интерфейсе', verbose_name='Порядок сортировки')),
                 ('is_active', models.BooleanField(default=True, help_text='Неактивные записи скрыты в формах выбора', verbose_name='Активен')),
-                ('sku_prefix', models.CharField(default='RT', help_text='Префикс для авто-генерации SKU товаров этого домена', max_length=10, verbose_name='Префикс артикула')),
+                ('sku_prefix', models.CharField(default='SKU', help_text='Префикс для авто-генерации SKU товаров этого домена', max_length=10, verbose_name='Префикс артикула')),
             ],
             options={
                 'verbose_name': 'Тип домена',
@@ -90,7 +90,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('name', models.CharField(db_index=True, help_text='Полное наименование товара', max_length=255, verbose_name='Наименование')),
-                ('sku', models.CharField(blank=True, db_index=True, help_text='Внутренний артикул RailTech (генерируется автоматически)', max_length=50, unique=True, verbose_name='Артикул (SKU)')),
+                ('sku', models.CharField(blank=True, db_index=True, help_text='Внутренний артикул (генерируется автоматически)', max_length=50, unique=True, verbose_name='Артикул (SKU)')),
                 ('description', models.TextField(blank=True, help_text='Подробное описание товара для каталога', verbose_name='Описание')),
                 ('manufacturer_part_number', models.CharField(blank=True, db_index=True, help_text='Заводской артикул. Ключ дедупликации PIM: бренд + артикул.', max_length=120, verbose_name='Артикул производителя (MPN)')),
                 ('gost_drawing', models.CharField(blank=True, db_index=True, help_text='Номер ГОСТ или чертежа', max_length=100, verbose_name='ГОСТ / Чертёж')),

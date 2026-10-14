@@ -282,13 +282,13 @@
     }
   },
   "domains": {
-    "RAILWAY_MACHINERY": "Железнодорожное оборудование",
-    "GENERAL_GOODS": "Общепромышленные товары",
+    "GOODS": "Товары",
+    "GENERAL_GOODS": "Товары",
     "SERVICES": "Услуги",
     "unknown": "Другое",
     "short": {
-      "RAILWAY_MACHINERY": "Ж/Д оборудование",
-      "GENERAL_GOODS": "Пром. товары",
+      "GOODS": "Товары",
+      "GENERAL_GOODS": "Товары",
       "SERVICES": "Услуги"
     }
   },
@@ -1169,6 +1169,9 @@
       "vatRate": "Ставка НДС (%)",
       "exchangeRate": "Курс USD→UZS",
       "platformName": "Название платформы",
+      "supportEmail": "Email поддержки",
+      "logoUrl": "URL логотипа",
+      "domain": "Основной домен",
       "save": "Сохранить",
       "saved": "Настройки сохранены",
       "saveFailed": "Не удалось сохранить"
@@ -1250,7 +1253,7 @@
     "defaultMessage": "Произошла непредвиденная ошибка в приложении.",
     "hardRefresh": "Перезагрузить",
     "returnHome": "На главную",
-    "supportId": "Техподдержка RailTech ID",
+    "supportId": "ID для техподдержки",
     "description": "Произошла непредвиденная ошибка. Попробуйте перезагрузить страницу."
   },
   "pages": {
@@ -1346,7 +1349,7 @@
       "description": "Документация, FAQ и контакты технической поддержки",
       "needHelp": "Нужна помощь?",
       "supportHours": "Наша техническая поддержка работает Пн-Пт 09:00-18:00 (UTC+5). Среднее время ответа — 30 минут.",
-      "supportEmail": "support@railtech.uz",
+      "supportEmail": "support@example.com",
       "supportPhone": "+998 (71) 200-00-00",
       "contactSupport": "Написать в поддержку",
       "sections": {
@@ -2592,7 +2595,7 @@
         "detail": "Договор {{number}} / сделка #{{deal_id}}"
       },
       "signed_manager": {
-        "title": "[MANUAL_MODE] Подписан договор (сторона RailTech)",
+        "title": "[MANUAL_MODE] Подписан договор (сторона исполнителя)",
         "detail": "Договор {{number}} / сделка #{{deal_id}}"
       },
       "auto_close_failed": {

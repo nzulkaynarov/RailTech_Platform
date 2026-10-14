@@ -75,7 +75,7 @@ export const invoicesApi = {
     const response = await apiClient.get<Invoice>(`crm/invoices/${id}/`);
     return response.data;
   },
-  downloadPdf: (id: number) => downloadFile(`crm/invoices/${id}/download-pdf/`, `RailTech_Invoice_${id}.pdf`),
+  downloadPdf: (id: number) => downloadFile(`crm/invoices/${id}/download-pdf/`, `Invoice_${id}.pdf`),
   // WP-G2 — «Создать инвойс с нуля». POST a deal (+ optional `source_quote` to import that КП's
   // lines) → a DRAFT Invoice with contract=null. Mirrors the Odoo «create invoice, optionally
   // from a sales order» pattern. Endpoint: the backend `create-manual` action on InvoiceViewSet.
@@ -202,7 +202,7 @@ export const actsApi = {
     const response = await apiClient.get<Act>(`crm/acts/${id}/`);
     return response.data;
   },
-  downloadPdf: (id: number) => downloadFile(`crm/acts/${id}/download-pdf/`, `RailTech_Act_${id}.pdf`),
+  downloadPdf: (id: number) => downloadFile(`crm/acts/${id}/download-pdf/`, `Act_${id}.pdf`),
   // Повтор приглашения заказчику (не новый вид письма). Сервер откажет
   // ACT_REMINDER_TOO_SOON, если с прошлого напоминания не прошли сутки.
   remind: async (id: number) => {

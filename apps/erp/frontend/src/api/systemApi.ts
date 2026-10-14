@@ -6,6 +6,9 @@ export interface SystemSettings {
 	// (the pricing engine reads CompanySettings.default_margin_percent).
 	exchange_rate_usd_uzs: string;
 	platform_name: string;
+	support_email?: string;
+	logo_url?: string;
+	domain?: string;
 	maintenance_mode: boolean;
 	is_two_factor_required: boolean;
 	updated_at: string;

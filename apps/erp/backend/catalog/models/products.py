@@ -38,7 +38,7 @@ class Product(models.Model):
         db_index=True,
         blank=True,
         verbose_name=_("Артикул (SKU)"),
-        help_text=_("Внутренний артикул RailTech (генерируется автоматически)"),
+        help_text=_("Внутренний артикул (генерируется автоматически)"),
     )
     description = models.TextField(
         blank=True,
@@ -55,7 +55,7 @@ class Product(models.Model):
         blank=True,
         db_index=True,
         verbose_name=_("Тип домена"),
-        help_text=_("Домен каталога: ж/д техника, общие товары или услуги"),
+        help_text=_("Домен каталога: товары или услуги"),
     )
     status = models.ForeignKey(
         "catalog.ProductStatus",

@@ -27,11 +27,11 @@
   ],
   "companies": [
     {
-      "name": "ООО RailTech",
+      "name": "ООО Платформа",
       "inn": "309876543",
       "legal_address": "г. Ташкент, ул. Железнодорожная, 1",
       "contact_person": "System Admin",
-      "email": "info@railtech.uz",
+      "email": "info@example.com",
       "phone": "+998 71 203-34-33",
       "verification_status": "L2_VERIFIED",
       "company_type": "SUPPLIER",
@@ -272,7 +272,7 @@
     {
       "email_env": "SUPERADMIN_EMAIL",
       "password_env": "SUPERADMIN_PASSWORD",
-      "email_default": "admin@railtech.uz",
+      "email_default": "admin@example.com",
       "password_default": null,
       "first_name": "Nurbek",
       "last_name": "Zulkainarov",
@@ -283,7 +283,7 @@
       "is_active": true
     },
     {
-      "email_default": "aziz.kodirov@railtech.uz",
+      "email_default": "aziz.kodirov@example.com",
       "password_default": null, "password_env": "SEED_USER_PASSWORD",
       "first_name": "Aziz",
       "last_name": "Kodirov",
@@ -296,7 +296,7 @@
       "workspace_role": "OWNER"
     },
     {
-      "email_default": "diana.rakhimova@railtech.uz",
+      "email_default": "diana.rakhimova@example.com",
       "password_default": null, "password_env": "SEED_USER_PASSWORD",
       "first_name": "Diana",
       "last_name": "Rakhimova",
@@ -309,7 +309,7 @@
       "workspace_role": "SALES_MANAGER"
     },
     {
-      "email_default": "farhod.mahmudov@railtech.uz",
+      "email_default": "farhod.mahmudov@example.com",
       "password_default": null, "password_env": "SEED_USER_PASSWORD",
       "first_name": "Farhod",
       "last_name": "Mahmudov",
@@ -322,7 +322,7 @@
       "workspace_role": "SALES_MANAGER"
     },
     {
-      "email_default": "lola.iskandarova@railtech.uz",
+      "email_default": "lola.iskandarova@example.com",
       "password_default": null, "password_env": "SEED_USER_PASSWORD",
       "first_name": "Lola",
       "last_name": "Iskandarova",
@@ -335,7 +335,7 @@
       "workspace_role": "OWNER"
     },
     {
-      "email_default": "umid.abdullaev@railtech.uz",
+      "email_default": "umid.abdullaev@example.com",
       "password_default": null, "password_env": "SEED_USER_PASSWORD",
       "first_name": "Umid",
       "last_name": "Abdullaev",
@@ -348,7 +348,7 @@
       "workspace_role": "SALES_MANAGER"
     },
     {
-      "email_default": "natalia.petrova@railtech.uz",
+      "email_default": "natalia.petrova@example.com",
       "password_default": null, "password_env": "SEED_USER_PASSWORD",
       "first_name": "Natalia",
       "last_name": "Petrova",
@@ -361,7 +361,7 @@
       "workspace_role": "SALES_MANAGER"
     },
     {
-      "email_default": "kamol.zarifov@railtech.uz",
+      "email_default": "kamol.zarifov@example.com",
       "password_default": null, "password_env": "SEED_USER_PASSWORD",
       "first_name": "Kamol",
       "last_name": "Zarifov",
@@ -374,7 +374,7 @@
       "workspace_role": "SALES_MANAGER"
     },
     {
-      "email_default": "evgeny.smirnov@railtech.uz",
+      "email_default": "evgeny.smirnov@example.com",
       "password_default": null, "password_env": "SEED_USER_PASSWORD",
       "first_name": "Evgeny",
       "last_name": "Smirnov",
@@ -1535,7 +1535,7 @@
       "uom_code": "T",
       "status_code": "PUBLISHED",
       "base_price_fca": 1650,
-      "description": "Высокоочищенное трансформаторное масло марки РТ-45 от RailTech для питающих трансформаторов тяговых подстанций.",
+      "description": "Высокоочищенное трансформаторное масло марки РТ-45 для питающих трансформаторов тяговых подстанций.",
       "specifications": {
         "Марка": "РТ-45",
         "Вязкость": "45 мм²/с при 40°C",
@@ -1606,7 +1606,7 @@
       "client_inn": "201345678991",
       "amount_usd": 95000,
       "stage": "DRAFT",
-      "manager_email": "diana.rakhimova@railtech.uz",
+      "manager_email": "diana.rakhimova@example.com",
       "days_in_stage": 3,
       "created_date": "2026-03-22",
       "last_updated": "2026-03-25"
@@ -1617,7 +1617,7 @@
       "client_inn": "201456789012",
       "amount_usd": 210000,
       "stage": "DRAFT",
-      "manager_email": "diana.rakhimova@railtech.uz",
+      "manager_email": "diana.rakhimova@example.com",
       "days_in_stage": 1,
       "created_date": "2026-03-24",
       "last_updated": "2026-03-25"
@@ -1628,7 +1628,7 @@
       "client_inn": "200876543",
       "amount_usd": 320000,
       "stage": "SOURCING",
-      "manager_email": "aziz.kodirov@railtech.uz",
+      "manager_email": "aziz.kodirov@example.com",
       "days_in_stage": 5,
       "created_date": "2026-03-20",
       "last_updated": "2026-03-25"
@@ -1639,7 +1639,7 @@
       "client_inn": "201567890123",
       "amount_usd": 150000,
       "stage": "SOURCING",
-      "manager_email": "farhod.mahmudov@railtech.uz",
+      "manager_email": "farhod.mahmudov@example.com",
       "days_in_stage": 2,
       "created_date": "2026-03-23",
       "last_updated": "2026-03-25"
@@ -1650,7 +1650,7 @@
       "client_inn": "201678901234",
       "amount_usd": 85000,
       "stage": "SOURCING",
-      "manager_email": "diana.rakhimova@railtech.uz",
+      "manager_email": "diana.rakhimova@example.com",
       "days_in_stage": 7,
       "created_date": "2026-03-18",
       "last_updated": "2026-03-25"
@@ -1661,7 +1661,7 @@
       "client_inn": "201890123456",
       "amount_usd": 275000,
       "stage": "CALCULATING",
-      "manager_email": "farhod.mahmudov@railtech.uz",
+      "manager_email": "farhod.mahmudov@example.com",
       "days_in_stage": 4,
       "created_date": "2026-03-21",
       "last_updated": "2026-03-25"
@@ -1672,7 +1672,7 @@
       "client_inn": "201901234567",
       "amount_usd": 120000,
       "stage": "CALCULATING",
-      "manager_email": "farhod.mahmudov@railtech.uz",
+      "manager_email": "farhod.mahmudov@example.com",
       "days_in_stage": 2,
       "created_date": "2026-03-23",
       "last_updated": "2026-03-25"
@@ -1683,7 +1683,7 @@
       "client_inn": "200100102",
       "amount_usd": 180000,
       "stage": "QUOTE_SENT",
-      "manager_email": "diana.rakhimova@railtech.uz",
+      "manager_email": "diana.rakhimova@example.com",
       "days_in_stage": 6,
       "created_date": "2026-03-19",
       "last_updated": "2026-03-25"
@@ -1705,7 +1705,7 @@
       "client_inn": "202012345678",
       "amount_usd": 155000,
       "stage": "CONTRACT_SIGNED",
-      "manager_email": "farhod.mahmudov@railtech.uz",
+      "manager_email": "farhod.mahmudov@example.com",
       "days_in_stage": 8,
       "created_date": "2026-03-17",
       "last_updated": "2026-03-25"
@@ -1716,7 +1716,7 @@
       "client_inn": "200100101",
       "amount_usd": 245000,
       "stage": "CLOSED_WON",
-      "manager_email": "aziz.kodirov@railtech.uz",
+      "manager_email": "aziz.kodirov@example.com",
       "days_in_stage": 12,
       "created_date": "2026-03-13",
       "last_updated": "2026-03-25"
@@ -1727,7 +1727,7 @@
       "client_inn": "202123456789",
       "amount_usd": 98000,
       "stage": "CLOSED_WON",
-      "manager_email": "diana.rakhimova@railtech.uz",
+      "manager_email": "diana.rakhimova@example.com",
       "days_in_stage": 9,
       "created_date": "2026-03-16",
       "last_updated": "2026-03-25"
@@ -1738,7 +1738,7 @@
       "client_inn": "202345678901",
       "amount_usd": 175000,
       "stage": "CLOSED_WON",
-      "manager_email": "farhod.mahmudov@railtech.uz",
+      "manager_email": "farhod.mahmudov@example.com",
       "days_in_stage": 15,
       "created_date": "2026-03-10",
       "last_updated": "2026-03-25"
@@ -1829,7 +1829,7 @@
       "type": "DEAL_CREATED",
       "title": "New deal created",
       "message": "D-2026-001 has been created for Navoi Mining",
-      "recipient_email": "admin@railtech.uz",
+      "recipient_email": "admin@example.com",
       "created_date": "2026-03-22"
     },
     {
@@ -1837,7 +1837,7 @@
       "type": "QUOTE_SENT",
       "title": "Quote sent",
       "message": "КП-2026-001 sent to UTY Tashkent",
-      "recipient_email": "diana.rakhimova@railtech.uz",
+      "recipient_email": "diana.rakhimova@example.com",
       "created_date": "2026-03-20"
     },
     {
@@ -1845,7 +1845,7 @@
       "type": "DEAL_STAGE_CHANGED",
       "title": "Deal stage updated",
       "message": "D-2026-003 moved to SOURCING stage",
-      "recipient_email": "aziz.kodirov@railtech.uz",
+      "recipient_email": "aziz.kodirov@example.com",
       "created_date": "2026-03-20"
     }
   ],

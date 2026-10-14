@@ -47,7 +47,7 @@ def _rich_quote(token):
     seller_user = CustomUser.objects.create_user(
         email=f"seller_{token}@rail.uz", username=f"seller_{token}", password="pw", is_active=True
     )
-    seller = Company.objects.create(name="RailTech Seller", inn=_next_inn())
+    seller = Company.objects.create(name="Acme Seller", inn=_next_inn())
     buyer = Company.objects.create(name="ACME Buyer", inn=_next_inn(), is_registered=False)
     contact = Contact.objects.create(company=buyer, name="Buyer Person", email="buyer@acme.uz")
     deal = Deal.objects.create(

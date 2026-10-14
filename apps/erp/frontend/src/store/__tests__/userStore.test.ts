@@ -50,10 +50,10 @@ describe('userStore', () => {
 
   it('should partially update company via updateCompany', () => {
     const { updateCompany } = useUserStore.getState();
-    updateCompany({ name: 'RailTech', inn: '123456789' });
+    updateCompany({ name: 'Acme Corp', inn: '123456789' });
 
     const state = useUserStore.getState();
-    expect(state.company.name).toBe('RailTech');
+    expect(state.company.name).toBe('Acme Corp');
     expect(state.company.inn).toBe('123456789');
     // Other fields remain default
     expect(state.company.country).toBe('');

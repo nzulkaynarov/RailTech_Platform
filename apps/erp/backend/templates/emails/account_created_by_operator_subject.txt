@@ -1,1 +1,1 @@
-{% load i18n %}{% translate "Для вас создан аккаунт на RailTech B2B" %}
+{% load i18n %}{% blocktranslate with platform=platform_name|default:'ERP' %}Для вас создан аккаунт на {{ platform }}{% endblocktranslate %}

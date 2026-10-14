@@ -180,3 +180,11 @@ if (!process.argv.includes("--no-cabinet")) {
   writeFileSync(cabinetTarget, shadcnCss);
   console.log(`Cabinet: ${cabinetTarget}`);
 }
+
+// Копия для ERP (M1-ERP-04): образ erp-web собирается с контекстом apps/erp/frontend, без packages/.
+const erpTarget = resolve(here, "../../apps/erp/frontend/src/styles/tokens.generated.css");
+if (!process.argv.includes("--no-erp")) {
+  mkdirSync(dirname(erpTarget), { recursive: true });
+  writeFileSync(erpTarget, shadcnCss);
+  console.log(`ERP: ${erpTarget}`);
+}

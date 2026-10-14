@@ -1,7 +1,7 @@
 """
 Security-hardening regression tests (added 2026-06-26).
 
-Covers two prod gaps found by an external HTTP study of https://b2b.railtech.uz:
+Covers two prod gaps found by an external HTTP study:
   1. OpenAPI schema (/api/schema/) was anonymously readable — it must now be
      gated behind IsAdminUser (401/403 for anon, 200 for staff).
   2. No Content-Security-Policy header — every response must now carry a CSP
@@ -40,8 +40,8 @@ class TestSchemaGating:
 
     def test_staff_can_read_schema(self, client):
         admin = CustomUser.objects.create_superuser(
-            email="schema-admin@railtech.test",
-            username="schema-admin@railtech.test",
+            email="schema-admin@example.test",
+            username="schema-admin@example.test",
             password="pw-Test1234!",
         )
         client.force_authenticate(user=admin)
@@ -50,8 +50,8 @@ class TestSchemaGating:
 
     def test_non_staff_user_is_denied(self, client):
         user = CustomUser.objects.create_user(
-            email="plain@railtech.test",
-            username="plain@railtech.test",
+            email="plain@example.test",
+            username="plain@example.test",
             password="pw-Test1234!",
         )
         client.force_authenticate(user=user)

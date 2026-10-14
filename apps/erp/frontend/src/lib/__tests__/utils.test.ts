@@ -22,10 +22,10 @@ describe('cn (className merger)', () => {
   });
 
   it('should resolve complex Tailwind conflicts', () => {
-    /* eslint-disable railtech/no-hardcoded-colors */
+    /* eslint-disable erp/no-hardcoded-colors */
     const result = cn('text-red-500', 'text-blue-500');
     expect(result).toBe('text-blue-500');
-    /* eslint-enable railtech/no-hardcoded-colors */
+    /* eslint-enable erp/no-hardcoded-colors */
   });
 
   it('should handle empty input', () => {

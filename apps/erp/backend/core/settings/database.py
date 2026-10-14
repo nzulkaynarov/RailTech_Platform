@@ -59,7 +59,7 @@ else:
     DATABASES = {
         "default": {
             "ENGINE": "dj_db_conn_pool.backends.postgresql",
-            "NAME": os.environ.get("POSTGRES_DB", "railtech"),
+            "NAME": os.environ.get("POSTGRES_DB", "erp"),
             "USER": os.environ.get("POSTGRES_USER", "postgres"),
             "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "postgres"),
             "HOST": os.environ.get("POSTGRES_HOST", "db"),

@@ -64,7 +64,7 @@ _CHART_OPTIONS_JSON = json.dumps(
 
 
 def dashboard_callback(request, context):
-    """RailTech B2B Control Center Dashboard.
+    """Control Center Dashboard.
 
     Wraps the heavy computation in Django cache (5-min TTL). Cache key includes
     current thread-local language so RU/EN sessions don't poison each other.

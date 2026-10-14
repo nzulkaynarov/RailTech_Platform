@@ -11,16 +11,15 @@ from master_data.models import AbstractLookup
 class DomainType(AbstractLookup):
     """
     Домен каталога (Критический справочник).
-    Seed: RAILWAY_MACHINERY, GENERAL_GOODS, SERVICES
+    Seed: GENERAL_GOODS, SERVICES
     """
 
-    RAILWAY_MACHINERY = "RAILWAY_MACHINERY"
     GENERAL_GOODS = "GENERAL_GOODS"
     SERVICES = "SERVICES"
 
     sku_prefix = models.CharField(
         max_length=10,
-        default="RT",
+        default="SKU",
         verbose_name=_("Префикс артикула"),
         help_text=_("Префикс для авто-генерации SKU товаров этого домена"),
     )

@@ -1,5 +1,5 @@
 # ==============================================================================
-# RailTech Frontend — Multi-stage Dockerfile
+# ERP Frontend — Multi-stage Dockerfile
 # Stage 1 (builder): Builds React + Vite app
 # Stage 2 (runtime): Serves with nginx
 # ==============================================================================

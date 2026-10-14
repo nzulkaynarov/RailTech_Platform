@@ -106,7 +106,7 @@ export function QuotesPage() {
         <div className="flex items-center justify-center gap-1" data-row-action>
           <DocumentActions
             request={() => ({ path: `crm/quotes/${q.id}/download-pdf/` })}
-            filenameBase={`RailTech_Quote_${q.id}`}
+            filenameBase={`Quote_${q.id}`}
             publicLink={q.public_access_token && !q.public_token_revoked
               ? (publicQuoteUrl(q.public_access_token, window.location.origin) ?? undefined)
               : undefined}

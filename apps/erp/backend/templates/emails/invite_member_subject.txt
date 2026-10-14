@@ -1,1 +1,1 @@
-{% load i18n %}{% blocktranslate %}Приглашение в команду {{ company_name }} на RailTech B2B{% endblocktranslate %}
+{% load i18n %}{% blocktranslate with platform=platform_name|default:'ERP' %}Приглашение в команду {{ company_name }} на {{ platform }}{% endblocktranslate %}

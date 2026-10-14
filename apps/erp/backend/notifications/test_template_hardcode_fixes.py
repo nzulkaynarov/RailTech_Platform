@@ -1,6 +1,6 @@
 """Regression tests for the template hardcode/costyl audit fixes.
 
-B1 (BLOCKER): the КП email names the REAL selling company, never a hardcoded «RailTech».
+B1 (BLOCKER): the КП email names the REAL selling company, never a hardcoded legacy platform name.
 m2/m3: template preview sample context mirrors the real merge variables; the trial length in
 the approval email is parameterised. support_email is injected platform-wide from settings.
 """
@@ -16,7 +16,7 @@ from notifications.emails import _render_bodies
 
 
 @pytest.mark.django_db
-def test_quote_sent_names_the_real_seller_not_railtech():
+def test_quote_sent_names_the_real_seller_not_legacy():
     subject, text, html = _render_bodies(
         "quote_sent",
         {
@@ -33,8 +33,8 @@ def test_quote_sent_names_the_real_seller_not_railtech():
     assert "Вагонсервис" in subject
     assert "Вагонсервис" in html
     # ...and the old hardcoded platform identity is gone.
-    assert "Компания <strong>RailTech</strong>" not in html
-    assert "RailTech" not in subject
+    assert "Компания <strong>ERP</strong>" not in html
+    assert "ООО Платформа" not in subject
     # D0 content-correctness: the client sees the КП NUMBER (not an internal deal id), the sum WITH
     # currency, and the subject does not nest «ёлочки» around an already-quoted seller name.
     assert "КП-2026-00099" in subject and "КП-2026-00099" in html
@@ -56,7 +56,7 @@ def test_quote_sent_without_seller_is_graceful():
     )
     # No seller → neutral wording, never a fabricated company name.
     assert "подготовлено" in html
-    assert "RailTech</strong>" not in html
+    assert "ООО Платформа" not in html
 
 
 # ── D1e: white-label — the seller's brand opens a client email, platform stays in the footer ──
@@ -82,7 +82,7 @@ def test_client_email_header_is_white_labeled_with_seller_brand():
     assert "ООО «Вагонсервис»" in header
     assert "#7a1f1f" in html
     # ...but the platform stays named in the FOOTER (Stripe/DocuSign pattern), never erased.
-    assert "платформы RailTech B2B" in html
+    assert "платформы" in html
 
 
 @pytest.mark.django_db
@@ -98,7 +98,7 @@ def test_client_email_falls_back_to_platform_brand_without_seller():
         },
     )
     header = html.split("padding:24px 32px", 1)[1][:400]
-    assert "RailTech B2B" in header  # platform default header when no brand passed
+    assert "ERP" in header  # platform default header when no brand passed
     assert "#1e3a8a" in html  # platform default accent
 
 

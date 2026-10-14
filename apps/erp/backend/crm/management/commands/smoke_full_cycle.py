@@ -93,9 +93,9 @@ class Command(BaseCommand):
 
         step(1, "Buyer user + company")
         buyer, _ = CustomUser.objects.get_or_create(
-            email="smoke.buyer@railtech.test",
+            email="smoke.buyer@example.test",
             defaults={
-                "username": "smoke.buyer@railtech.test",
+                "username": "smoke.buyer@example.test",
                 "is_active": True,
                 "first_name": "Smoke",
                 "last_name": "Buyer",
@@ -113,9 +113,9 @@ class Command(BaseCommand):
 
         step(2, "Supplier user + company")
         supplier, _ = CustomUser.objects.get_or_create(
-            email="smoke.supplier@railtech.test",
+            email="smoke.supplier@example.test",
             defaults={
-                "username": "smoke.supplier@railtech.test",
+                "username": "smoke.supplier@example.test",
                 "is_active": True,
                 "first_name": "Smoke",
                 "last_name": "Supplier",
@@ -133,9 +133,9 @@ class Command(BaseCommand):
 
         step(3, "Manager user")
         manager, _ = CustomUser.objects.get_or_create(
-            email="smoke.manager@railtech.test",
+            email="smoke.manager@example.test",
             defaults={
-                "username": "smoke.manager@railtech.test",
+                "username": "smoke.manager@example.test",
                 "is_active": True,
                 "is_staff": True,
                 "first_name": "Smoke",

@@ -67,7 +67,7 @@ ran at generation), so autoescape is disabled ONLY for that field.
       <div class="brand">
         {% if seller_logo_url and show_logo %}<img class="brand-logo" src="{{ seller_logo_url }}" alt="logo">{% endif %}
         <div>
-          <div class="brand-name">{% firstof seller_profile.legal_name seller.name company.name "RailTech B2B" %}</div>
+          <div class="brand-name">{% firstof seller_profile.legal_name seller.name company.name platform_name "ERP" %}</div>
           <div class="meta">Документ <strong>{{ document.number }}</strong></div>
         </div>
       </div>

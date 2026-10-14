@@ -23,7 +23,7 @@ from django.test.utils import CaptureQueriesContext
 
 from sourcing.catalog_import import ImportResult, _hs_digits, _resolve_columns, run_catalog_import
 
-RAILWAY = "RAILWAY_MACHINERY"
+SERVICES = "SERVICES"
 LIVE_HS = "8482100000"
 RETIRED_HS = "8607191000"
 
@@ -45,10 +45,10 @@ def world(db):
     ProductStatus.objects.get_or_create(code="DRAFT", defaults={"name": "Черновик"})
     ProductStatus.objects.get_or_create(code="PUBLISHED", defaults={"name": "Опубликован"})
     unit, _ = UnitOfMeasure.objects.get_or_create(code="PCS", defaults={"name": "шт"})
-    railway, _ = DomainType.objects.get_or_create(code=RAILWAY, defaults={"name": "Ж/д техника"})
+    services, _ = DomainType.objects.get_or_create(code=SERVICES, defaults={"name": "Услуги"})
     goods, _ = DomainType.objects.get_or_create(code="GENERAL_GOODS", defaults={"name": "Общие товары"})
     category, _ = Category.objects.get_or_create(name="Тормозное оборудование")
-    return {"unit": unit, "railway": railway, "goods": goods, "category": category}
+    return {"unit": unit, "services": services, "goods": goods, "category": category}
 
 
 @pytest.fixture
@@ -195,21 +195,21 @@ def test_explicit_domain_beats_the_keyword_guess(world, seller):
     assert Product.objects.get(manufacturer_part_number="D-1").domain_type.code == "GENERAL_GOODS"
 
 
-@pytest.mark.parametrize("written", [RAILWAY, "railway_machinery", "name", "NAME"])
+@pytest.mark.parametrize("written", [SERVICES, "services", "name", "NAME"])
 @pytest.mark.django_db
 def test_domain_accepts_both_the_code_and_the_human_name(world, seller, written):
     """Продавец пишет в файле или код, или человеческое название направления — регистр не важен."""
     from catalog.models import Product
 
-    railway_name = world["railway"].name
-    value = {"name": railway_name, "NAME": railway_name.upper()}.get(written, written)
+    services_name = world["services"].name
+    value = {"name": services_name, "NAME": services_name.upper()}.get(written, written)
     result = run_catalog_import(
         _xlsx([{"Наименование": "Ось", "Бренд": "B", "Артикул производителя": "D-2", "Направление": value}]),
         supplier_company_id=seller.id,
     )
 
     assert result["skipped"] == 0
-    assert Product.objects.get(manufacturer_part_number="D-2").domain_type.code == RAILWAY
+    assert Product.objects.get(manufacturer_part_number="D-2").domain_type.code == SERVICES
 
 
 @pytest.mark.django_db
@@ -420,7 +420,7 @@ def test_publishability_summary_costs_the_same_for_three_and_thirty_cards(world,
             Product.objects.create(
                 name=f"Карточка {index:03d}",
                 manufacturer_part_number=f"Q-{index}",
-                domain_type=world["railway"],
+                domain_type=world["goods"],
                 uom=world["unit"],
                 category=world["category"],
                 hs_code="",
@@ -530,9 +530,9 @@ def test_template_carries_the_new_columns_and_real_reference_values(world, user_
     first_category = Category.objects.filter(is_active=True).order_by("sort_order", "name").first()
     assert {"Категория", "Код ТН ВЭД", "Направление"} <= set(header)
     assert example["Категория"] == first_category.name, "пример берётся из живой таксономии"
-    assert example["Направление"] == world["railway"].name
+    assert example["Направление"] == world["goods"].name
     assert ("Категория", world["category"].name) in reference
-    assert ("Направление", world["railway"].name) in reference
+    assert ("Направление", world["goods"].name) in reference
 
 
 # ── 6. Ведущий ноль в коде ТН ВЭД ────────────────────────────────────────────────────────

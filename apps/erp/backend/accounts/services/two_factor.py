@@ -92,8 +92,11 @@ def generate_totp_setup(user) -> dict:
     Nothing is persisted — the secret only becomes active after enable_totp()
     confirms the user actually scanned it (proves possession of the device).
     """
+    from core.models import SystemSetting
+
     secret = pyotp.random_base32()
-    uri = pyotp.totp.TOTP(secret).provisioning_uri(name=user.email, issuer_name="RailTech B2B")
+    platform_name = SystemSetting.load().platform_name or "ERP"
+    uri = pyotp.totp.TOTP(secret).provisioning_uri(name=user.email, issuer_name=platform_name)
     return {"secret": secret, "uri": uri}
 
 

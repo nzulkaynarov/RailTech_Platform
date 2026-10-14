@@ -138,7 +138,7 @@ export function ActsPage() {
     try {
       const blob = await fetchDocumentBlob(`crm/acts/${act.id}/download-signed/`);
       const ext = blob.type.includes('pdf') ? 'pdf' : (blob.type.split('/')[1] || 'bin');
-      saveBlob(blob, `RailTech_Act_${act.id}_signed.${ext}`);
+      saveBlob(blob, `Act_${act.id}_signed.${ext}`);
     } catch (err) {
       // Surface the real backend code (403/404/expiry) instead of a generic message. Blob-response
       // error bodies aren't plain JSON — parse the code out first, fall back to the generic string.
@@ -169,7 +169,7 @@ export function ActsPage() {
     actions: (a) => (
       <DocumentActions
         request={() => ({ path: `crm/acts/${a.id}/download-pdf/` })}
-        filenameBase={`RailTech_Act_${a.id}`}
+        filenameBase={`Act_${a.id}`}
         variant="ghost"
         iconOnly
       />
@@ -271,7 +271,7 @@ export function ActsPage() {
                     отрисован, — и без единого объяснения (аудит UI, U3). */}
                 <DocumentActions
                   request={() => ({ path: `crm/acts/${selected.id}/download-pdf/` })}
-                  filenameBase={`RailTech_Act_${selected.id}`}
+                  filenameBase={`Act_${selected.id}`}
                   size="default"
                 />
                 {selected.signed_file_url && (

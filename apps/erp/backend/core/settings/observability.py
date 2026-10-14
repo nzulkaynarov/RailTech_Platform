@@ -56,7 +56,7 @@ FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
 
 # Support contact printed in the footer of every transactional email (was hardcoded in
 # templates/emails/base.html). Overridable per deployment.
-SUPPORT_EMAIL = os.environ.get("SUPPORT_EMAIL", "support@railtech.uz")
+SUPPORT_EMAIL = os.environ.get("SUPPORT_EMAIL", "support@example.com")
 
 
 # ──────────────────────────────────────────────────────────────────────────

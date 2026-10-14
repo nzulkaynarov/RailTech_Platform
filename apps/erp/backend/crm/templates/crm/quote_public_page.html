@@ -221,7 +221,7 @@
       <div class="brandbar">
         <div>
           {% if seller_logo_url and show_logo %}<img class="brand-logo" src="{{ seller_logo_url }}" alt="logo"><br>{% endif %}
-          <div class="brand-name">{% firstof seller_profile.legal_name seller.name "RailTech B2B" %}</div>
+          <div class="brand-name">{% firstof seller_profile.legal_name seller.name platform_name "ERP" %}</div>
           <div class="brand-meta">
             {% if seller_profile.inn %}ИНН {{ seller_profile.inn }}{% elif seller.inn %}ИНН {{ seller.inn }}{% endif %}
             {% if seller.phone %} · тел. {{ seller.phone }}{% endif %}
@@ -444,7 +444,7 @@
       {% endif %}
     </div>
 
-    <div class="footer">Документ сформирован в RailTech B2B</div>
+    <div class="footer">Документ сформирован в {{ platform_name|default:"ERP" }}</div>
   </div>
   {% endwith %}
   <script src="{{ page_js_url }}" defer></script>

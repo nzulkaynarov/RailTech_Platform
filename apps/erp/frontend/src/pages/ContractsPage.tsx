@@ -54,7 +54,7 @@ export function ContractsPage() {
     try {
       const blob = await fetchDocumentBlob(`crm/contracts/${contract.id}/download-signed/`);
       const ext = blob.type.includes('pdf') ? 'pdf' : (blob.type.split('/')[1] || 'bin');
-      saveBlob(blob, `RailTech_Contract_${contract.id}_signed.${ext}`);
+      saveBlob(blob, `Contract_${contract.id}_signed.${ext}`);
     } catch (err) {
       // Surface the real backend code (403/404/expiry) so permission/not-found reads differently
       // from a network blip. Blob-response bodies aren't plain JSON — parse the code out first.
@@ -154,7 +154,7 @@ export function ContractsPage() {
     actions: (c) => (
       <DocumentActions
         request={() => ({ path: `crm/contracts/${c.id}/download-pdf/` })}
-        filenameBase={`RailTech_Contract_${c.id}`}
+        filenameBase={`Contract_${c.id}`}
         variant="ghost"
         iconOnly
       />
@@ -249,7 +249,7 @@ export function ContractsPage() {
                     отрисован (аудит UI, U3). */}
                 <DocumentActions
                   request={() => ({ path: `crm/contracts/${selected.id}/download-pdf/` })}
-                  filenameBase={`RailTech_Contract_${selected.id}`}
+                  filenameBase={`Contract_${selected.id}`}
                   size="default"
                 />
                 {selected.signed_file_url && (

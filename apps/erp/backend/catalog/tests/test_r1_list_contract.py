@@ -39,8 +39,8 @@ def world(db):
     for code, name in (("DRAFT", "Черновик"), ("PUBLISHED", "Опубликован"), ("ARCHIVED", "Архив")):
         ProductStatus.objects.get_or_create(code=code, defaults={"name": name, "sort_order": 10})
     domain, _ = DomainType.objects.get_or_create(
-        code="RAILWAY_MACHINERY",
-        defaults={"name": "Ж/д техника", "sku_prefix": "RM", "sort_order": 10},
+        code="GENERAL_GOODS",
+        defaults={"name": "Товары", "sku_prefix": "GD", "sort_order": 10},
     )
     supplier_type, _ = CompanyType.objects.get_or_create(
         code="SUPPLIER", defaults={"name": "Поставщик", "sort_order": 20}

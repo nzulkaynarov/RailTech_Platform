@@ -20,7 +20,7 @@ admin.site.unregister(Group)
 class GroupAdmin(ModelAdmin):
     """Django auth Group — оставлен для инженерной инспекции.
 
-    В RailTech бизнес-RBAC живёт в SystemRole + CompanyMember.role (ADR-0002),
+    В ERP бизнес-RBAC живёт в SystemRole + CompanyMember.role (ADR-0002),
     Django Groups НЕ используются для проверки прав в services.py. Этот экран —
     для DBA, который хочет понять, какие Django-разрешения выданы группе.
     """
@@ -44,7 +44,7 @@ class GroupAdmin(ModelAdmin):
 class PermissionAdmin(ModelAdmin):
     """Django Permission — 4 авто-разрешения на каждый ContentType (add/change/delete/view).
 
-    В RailTech НЕ используется для проверки бизнес-прав (услуги проверяют
+    В ERP НЕ используется для проверки бизнес-прав (услуги проверяют
     is_member_of / role.code). Этот экран нужен только чтобы понять, что Django
     знает о каждой модели — отладка, не повседневное использование.
     """

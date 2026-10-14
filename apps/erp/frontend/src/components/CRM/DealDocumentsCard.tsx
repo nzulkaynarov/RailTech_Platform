@@ -72,7 +72,7 @@ export function DealDocumentsCard({ dealId }: {
                 {doc.status_code === 'ISSUED' && (
                   <DocumentActions
                     request={() => ({ path: `crm/generated-documents/${doc.id}/download-pdf/` })}
-                    filenameBase={`RailTech_Document_${doc.id}`}
+                    filenameBase={`Document_${doc.id}`}
                     variant="ghost"
                     iconOnly
                   />

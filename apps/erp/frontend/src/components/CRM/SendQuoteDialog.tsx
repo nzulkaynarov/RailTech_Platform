@@ -85,7 +85,7 @@ export function SendQuoteDialog({ deal, quote, open, onOpenChange, onSent }: Sen
     try {
       const { fetchDocumentBlob, openBlobInNewTab } = await import('@/lib/documents');
       const blob = await fetchDocumentBlob(`crm/quotes/${quote.id}/export/`, { export_format: 'pdf' });
-      if (!openBlobInNewTab(blob, previewWindow, `RailTech_Quote_${quote.id}.pdf`)) {
+      if (!openBlobInNewTab(blob, previewWindow, `Quote_${quote.id}.pdf`)) {
         toast.error(t('docActions.popupBlocked'));
       }
     } catch (err) {

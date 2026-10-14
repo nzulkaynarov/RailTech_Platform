@@ -282,13 +282,13 @@
     }
   },
   "domains": {
-    "RAILWAY_MACHINERY": "Railway Equipment",
-    "GENERAL_GOODS": "General Industrial Goods",
+    "GOODS": "Goods",
+    "GENERAL_GOODS": "Goods",
     "SERVICES": "Services",
     "unknown": "Other",
     "short": {
-      "RAILWAY_MACHINERY": "Railway Equip.",
-      "GENERAL_GOODS": "Industrial Goods",
+      "GOODS": "Goods",
+      "GENERAL_GOODS": "Goods",
       "SERVICES": "Services"
     }
   },
@@ -1164,6 +1164,9 @@
       "vatRate": "VAT rate (%)",
       "exchangeRate": "USD→UZS exchange rate",
       "platformName": "Platform name",
+      "supportEmail": "Support email",
+      "logoUrl": "Logo URL",
+      "domain": "Main domain",
       "save": "Save",
       "saved": "Settings saved",
       "saveFailed": "Failed to save"
@@ -1245,7 +1248,7 @@
     "defaultMessage": "An unexpected error has occurred in the application.",
     "hardRefresh": "Hard Refresh",
     "returnHome": "Return Home",
-    "supportId": "RailTech Technical Support ID",
+    "supportId": "Technical Support ID",
     "description": "An unexpected error occurred. Try reloading the page."
   },
   "pages": {
@@ -1341,7 +1344,7 @@
       "description": "Documentation, FAQ and technical support contacts",
       "needHelp": "Need help?",
       "supportHours": "Our technical support operates Mon-Fri 09:00-18:00 (UTC+5). Average response time is 30 minutes.",
-      "supportEmail": "support@railtech.uz",
+      "supportEmail": "support@example.com",
       "supportPhone": "+998 (71) 200-00-00",
       "contactSupport": "Contact support",
       "sections": {
@@ -2581,7 +2584,7 @@
         "detail": "Contract {{number}} / deal #{{deal_id}}"
       },
       "signed_manager": {
-        "title": "[MANUAL_MODE] Contract signed (RailTech/seller side)",
+        "title": "[MANUAL_MODE] Contract signed (seller side)",
         "detail": "Contract {{number}} / deal #{{deal_id}}"
       },
       "auto_close_failed": {

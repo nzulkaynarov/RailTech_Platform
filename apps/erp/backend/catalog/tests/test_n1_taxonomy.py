@@ -44,8 +44,8 @@ def test_general_domain_is_merged_into_general_goods():
 
 def test_starter_taxonomy_is_seeded_by_migration():
     """После migrate на ПУСТОЙ базе продавцу есть из чего выбирать (Rule 1)."""
-    railway = DomainType.objects.get(code="RAILWAY_MACHINERY")
-    assert Category.objects.filter(domain_type=railway).exists()
+    goods = DomainType.objects.get(code="GENERAL_GOODS")
+    assert Category.objects.filter(domain_type=goods).exists()
     assert Category.objects.filter(domain_type__code="SERVICES").exists()
 
 

@@ -5,10 +5,10 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 
 /**
- * Custom RailTech ESLint rules enforcing CLAUDE.md coding standards.
+ * Custom ERP ESLint rules enforcing CLAUDE.md coding standards.
  * These catch violations that were previously only found by manual AI review.
  */
-const railtechPlugin = {
+const erpPlugin = {
   rules: {
     // Rule 4: No hardcoded non-semantic Tailwind colors
     'no-hardcoded-colors': {
@@ -68,7 +68,7 @@ export default tseslint.config(
     plugins: {
       'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
-      'railtech': railtechPlugin,
+      'erp': erpPlugin,
     },
     rules: {
       // eslint 10 + eslint-plugin-react-hooks 7 (17-08): `configs.recommended` в v7 включает
@@ -105,9 +105,9 @@ export default tseslint.config(
         'warn',
         { allowConstantExport: true },
       ],
-      // RailTech CLAUDE.md enforcement
-      'railtech/no-hardcoded-colors': 'error',
-      'railtech/no-arbitrary-text-size': 'error',
+      // ERP CLAUDE.md enforcement
+      'erp/no-hardcoded-colors': 'error',
+      'erp/no-arbitrary-text-size': 'error',
     },
   },
   {

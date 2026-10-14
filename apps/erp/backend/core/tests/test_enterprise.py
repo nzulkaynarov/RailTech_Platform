@@ -1,5 +1,5 @@
 """
-Enterprise Automated Test Suite for RailTech B2B Ecosystem.
+Enterprise Automated Test Suite for ERP Ecosystem.
 
 Covers the three most critical areas:
 1. Financial engine accuracy (Landed Cost pipeline)

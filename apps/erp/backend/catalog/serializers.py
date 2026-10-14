@@ -279,13 +279,7 @@ class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
         read_only_fields = ["sku", "created_at", "updated_at", "owner_company", "status"]
 
     def validate(self, attrs):
-        """Enforce the RAILWAY_MACHINERY "≥1 equipment group" rule at the API layer (H5).
-
-        ``Product.clean()`` skips the check when ``pk is None`` (the m2m can't be
-        read before the row exists) and an empty m2m fires no ``m2m_changed`` signal,
-        so an API *create* without groups would otherwise persist a silently-invalid
-        card. We validate here so the request gets a clean 400 instead.
-        """
+        """Validate product attributes before create/update."""
         attrs = super().validate(attrs)
         # Бренд на лету (N1): форма шлёт `brand_name` строкой, нормализатор общий с импортом.
         # `brand_name` в чтении — SerializerMethodField, поэтому на запись берём из initial_data;

@@ -6,8 +6,8 @@ This is the canonical way to give a user access to Django Unfold admin
 the React Admin instead.
 
 Usage:
-    python manage.py grant_engineer dev@railtech.uz
-    python manage.py grant_engineer dev@railtech.uz --revoke
+    python manage.py grant_engineer dev@example.com
+    python manage.py grant_engineer dev@example.com --revoke
 """
 
 from django.contrib.auth.models import Group

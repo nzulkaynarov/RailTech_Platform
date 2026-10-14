@@ -79,7 +79,7 @@ def _make_sent_quote(*, token, contact_email="buyer@acme.uz", stage="QUOTE_SENT"
     seller_user = CustomUser.objects.create_user(
         email=f"seller_{token}@rail.uz", username=f"seller_{token}", password="pw", is_active=True, first_name="Aziz"
     )
-    seller = Company.objects.create(name="RailTech Seller", inn=_next_inn())
+    seller = Company.objects.create(name="Acme Seller", inn=_next_inn())
     client_company = Company.objects.create(name="ACME Buyer", inn=_next_inn(), is_registered=False)
     contact = None
     if contact_email is not None:

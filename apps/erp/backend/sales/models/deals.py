@@ -56,7 +56,7 @@ class Deal(models.Model):
         db_index=True,
         related_name="deals_as_manager",
         verbose_name=_("Менеджер"),
-        help_text=_("Ответственный менеджер RailTech"),
+        help_text=_("Ответственный менеджер"),
     )
     assigned_to = models.ForeignKey(
         settings.AUTH_USER_MODEL,

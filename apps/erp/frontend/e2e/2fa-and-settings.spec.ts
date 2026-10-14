@@ -23,8 +23,8 @@ const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:5173';
 const IS_LOCAL_STACK = /localhost|127\.0\.0\.1/.test(BASE_URL);
 const API = process.env.E2E_API_URL || (IS_LOCAL_STACK ? 'http://localhost:8000/api/v1' : `${BASE_URL}/api/v1`);
 const SEED_PW = process.env.E2E_SEED_PASSWORD || 'Demo1234!';
-const SELLER = { email: process.env.E2E_SELLER_EMAIL || 'seller.local@railtech.uz', password: SEED_PW };
-const BUYER = { email: process.env.E2E_BUYER_EMAIL || 'buyer.local@railtech.uz', password: SEED_PW };
+const SELLER = { email: process.env.E2E_SELLER_EMAIL || 'seller.local@erp.localhost', password: SEED_PW };
+const BUYER = { email: process.env.E2E_BUYER_EMAIL || 'buyer.local@erp.localhost', password: SEED_PW };
 const RAW_KEY = /\b(common|dashboardpage|settings|profile|shell|auth)\.[a-z]/;
 
 // RFC 6238 TOTP (SHA1, 6 digits, 30s) — must match backend pyotp.

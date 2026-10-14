@@ -582,8 +582,8 @@ msgid "Верифицирован"
 msgstr "Verified"
 
 #: accounts/models/company/core.py:168
-msgid "Компания прошла базовую проверку RailTech"
-msgstr "The company has passed RailTech's basic verification"
+msgid "Компания прошла базовую проверку ERP"
+msgstr "The company has passed ERP's basic verification"
 
 #: accounts/models/company/core.py:172
 msgid "ISO 9001"
@@ -1676,8 +1676,8 @@ msgid "Артикул (SKU)"
 msgstr "Article (SKU)"
 
 #: catalog/models/products.py:42
-msgid "Внутренний артикул RailTech (генерируется автоматически)"
-msgstr "Internal RailTech article (generated automatically)"
+msgid "Внутренний артикул ERP (генерируется автоматически)"
+msgstr "Internal ERP article (generated automatically)"
 
 #: catalog/models/products.py:47
 msgid "Подробное описание товара для каталога"
@@ -3091,8 +3091,8 @@ msgid "Менеджер"
 msgstr "Manager"
 
 #: crm/models/deals.py:71
-msgid "Ответственный менеджер RailTech"
-msgstr "Responsible RailTech manager"
+msgid "Ответственный менеджер ERP"
+msgstr "Responsible ERP manager"
 
 #: crm/models/deals.py:85 crm/models/deals.py:198
 msgid "Ответственный (взял в работу)"
@@ -5417,8 +5417,8 @@ msgstr "All sections"
 
 #: templates/emails/account_created_by_operator.html:3
 #: templates/emails/account_created_by_operator_subject.txt:1
-msgid "Для вас создан аккаунт на RailTech B2B"
-msgstr "An account has been created for you on RailTech B2B"
+msgid "Для вас создан аккаунт на ERP"
+msgstr "An account has been created for you on ERP"
 
 #: templates/emails/account_created_by_operator.html:4
 msgid "Новый аккаунт"
@@ -5430,11 +5430,11 @@ msgstr "An account has been created for you"
 
 #: templates/emails/account_created_by_operator.html:10
 msgid ""
-"Оператор платформы RailTech B2B создал для вас аккаунт. Чтобы начать "
+"Оператор платформы ERP создал для вас аккаунт. Чтобы начать "
 "работу,\n"
 "    установите пароль — до этого войти в систему нельзя."
 msgstr ""
-"A RailTech B2B platform operator created an account for you. To get started, "
+"A ERP platform operator created an account for you. To get started, "
 "set a password — until then you cannot sign in."
 
 #: templates/emails/account_created_by_operator.html:15
@@ -5472,10 +5472,10 @@ msgstr "Hello, %(name)s!"
 
 #: templates/emails/account_created_by_operator.txt:3
 msgid ""
-"Оператор платформы RailTech B2B создал для вас аккаунт.\n"
+"Оператор платформы ERP создал для вас аккаунт.\n"
 "Чтобы начать работу, установите пароль по ссылке:"
 msgstr ""
-"A RailTech B2B platform operator created an account for you.\n"
+"A ERP platform operator created an account for you.\n"
 "To get started, set a password using the link:"
 
 #: templates/emails/account_created_by_operator.txt:8
@@ -5490,8 +5490,8 @@ msgstr ""
 #: templates/emails/invite_client.txt:13 templates/emails/invite_member.txt:10
 #: templates/emails/reset_password.txt:10
 #: templates/emails/setup_password.txt:10
-msgid "Команда RailTech B2B"
-msgstr "The RailTech B2B team"
+msgid "Команда ERP"
+msgstr "The ERP team"
 
 #: templates/emails/act_awaiting_acceptance.html:3
 #: templates/emails/act_awaiting_acceptance_subject.txt:1
@@ -5591,10 +5591,10 @@ msgstr "Platform notification"
 
 #: templates/emails/base.html:37
 msgid ""
-"Это автоматическое письмо от платформы RailTech B2B — отвечать на него не "
+"Это автоматическое письмо от платформы ERP — отвечать на него не "
 "нужно."
 msgstr ""
-"This is an automated email from the RailTech B2B platform — no reply is "
+"This is an automated email from the ERP platform — no reply is "
 "needed."
 
 #: templates/emails/base.html:40
@@ -5660,36 +5660,36 @@ msgstr "Best regards,"
 #: templates/emails/quote_acceptance_code.txt:12
 #: templates/emails/quote_accepted_contact.txt:10
 #: templates/emails/quote_sent.txt:14
-msgid "команда RailTech"
-msgstr "the RailTech team"
+msgid "команда ERP"
+msgstr "the ERP team"
 
 #: templates/emails/invite_client.html:3
 #: templates/emails/invite_client_subject.txt:1
 #, python-format
-msgid "%(company_name)s приглашает вас на RailTech B2B"
-msgstr "%(company_name)s invites you to RailTech B2B"
+msgid "%(company_name)s приглашает вас на ERP"
+msgstr "%(company_name)s invites you to ERP"
 
 #: templates/emails/invite_client.html:4
 msgid "Приглашение к регистрации"
 msgstr "Invitation to register"
 
 #: templates/emails/invite_client.html:7
-msgid "Зарегистрируйтесь на RailTech B2B"
-msgstr "Register on RailTech B2B"
+msgid "Зарегистрируйтесь на ERP"
+msgstr "Register on ERP"
 
 #: templates/emails/invite_client.html:10
 #, python-format
 msgid ""
 "%(contact_name)s, компания\n"
 "    <strong>%(company_name)s</strong> приглашает вас зарегистрироваться на "
-"платформе RailTech B2B,\n"
+"платформе ERP,\n"
 "    чтобы получать коммерческие предложения и документы напрямую. "
 "Регистрация подтянет уже\n"
 "    накопленную историю взаимодействий под ваш аккаунт — без создания дубля."
 msgstr ""
 "%(contact_name)s, the company\n"
 "    <strong>%(company_name)s</strong> invites you to register on the "
-"RailTech B2B platform\n"
+"ERP platform\n"
 "    so you can receive quotes and documents directly. Registering will bring "
 "the history of your\n"
 "    past interactions into your account — without creating a duplicate."
@@ -5699,14 +5699,14 @@ msgstr ""
 msgid ""
 "Компания\n"
 "    <strong>%(company_name)s</strong> приглашает вас зарегистрироваться на "
-"платформе RailTech B2B,\n"
+"платформе ERP,\n"
 "    чтобы получать коммерческие предложения и документы напрямую. "
 "Регистрация подтянет уже\n"
 "    накопленную историю взаимодействий под ваш аккаунт — без создания дубля."
 msgstr ""
 "The company\n"
 "    <strong>%(company_name)s</strong> invites you to register on the "
-"RailTech B2B platform\n"
+"ERP platform\n"
 "    so you can receive quotes and documents directly. Registering will bring "
 "the history of your\n"
 "    past interactions into your account — without creating a duplicate."
@@ -5728,11 +5728,11 @@ msgstr "Hello, %(contact_name)s!"
 #, python-format
 msgid ""
 "Компания «%(company_name)s» приглашает вас зарегистрироваться на платформе\n"
-"RailTech B2B. Регистрация подтянет уже накопленную историю\n"
+"ERP. Регистрация подтянет уже накопленную историю\n"
 "взаимодействий — заявки, КП и переписку — под ваш аккаунт."
 msgstr ""
 "The company “%(company_name)s” invites you to register on the\n"
-"RailTech B2B platform. Registering will bring your accumulated history of\n"
+"ERP platform. Registering will bring your accumulated history of\n"
 "interactions — requests, quotes and correspondence — into your account."
 
 #: templates/emails/invite_client.txt:7
@@ -5753,19 +5753,19 @@ msgid "Приглашение в команду"
 msgstr "Team invitation"
 
 #: templates/emails/invite_member.html:7
-msgid "Вас пригласили в RailTech B2B"
-msgstr "You have been invited to RailTech B2B"
+msgid "Вас пригласили в ERP"
+msgstr "You have been invited to ERP"
 
 #: templates/emails/invite_member.html:10
 #, python-format
 msgid ""
 "Компания <strong>%(company_name)s</strong> приглашает вас присоединиться к "
 "команде\n"
-"    на платформе RailTech B2B. Чтобы принять приглашение, установите пароль "
+"    на платформе ERP. Чтобы принять приглашение, установите пароль "
 "для своего аккаунта."
 msgstr ""
 "The company <strong>%(company_name)s</strong> invites you to join its team\n"
-"    on the RailTech B2B platform. To accept the invitation, set a password "
+"    on the ERP platform. To accept the invitation, set a password "
 "for your account."
 
 #: templates/emails/invite_member.html:15
@@ -5779,18 +5779,18 @@ msgstr "Not expecting an invitation from this company? Just ignore this email."
 #: templates/emails/invite_member.txt:3
 #, python-format
 msgid ""
-"Вас пригласили в команду компании «%(company_name)s» на платформе RailTech "
+"Вас пригласили в команду компании «%(company_name)s» на платформе ERP "
 "B2B.\n"
 "Чтобы принять приглашение, установите пароль по ссылке:"
 msgstr ""
-"You have been invited to join the team of “%(company_name)s” on the RailTech "
+"You have been invited to join the team of “%(company_name)s” on the ERP "
 "B2B platform.\n"
 "To accept the invitation, set your password using the link below:"
 
 #: templates/emails/invite_member_subject.txt:1
 #, python-format
-msgid "Приглашение в команду %(company_name)s на RailTech B2B"
-msgstr "Invitation to the %(company_name)s team on RailTech B2B"
+msgid "Приглашение в команду %(company_name)s на ERP"
+msgstr "Invitation to the %(company_name)s team on ERP"
 
 #: templates/emails/invoice_issued.html:3
 #: templates/emails/invoice_issued_subject.txt:1
@@ -5914,13 +5914,13 @@ msgstr "Open your account"
 #: templates/emails/register_existing_account.txt:15
 #: templates/emails/role_application_approved.txt:8
 #: templates/emails/role_application_rejected.txt:11
-msgid "— Команда RailTech B2B"
-msgstr "— The RailTech B2B team"
+msgid "— Команда ERP"
+msgstr "— The ERP team"
 
 #: templates/emails/kyc_revoked_subject.txt:1
 #, python-format
-msgid "RailTech: проверка компании %(company_name)s не пройдена"
-msgstr "RailTech: verification of %(company_name)s did not pass"
+msgid "ERP: проверка компании %(company_name)s не пройдена"
+msgstr "ERP: verification of %(company_name)s did not pass"
 
 #: templates/emails/kyc_verified.html:3
 msgid "Контракт активирован"
@@ -5946,10 +5946,10 @@ msgstr "KYC for %(company_name)s has been verified"
 
 #: templates/emails/kyc_verified.html:16
 msgid ""
-"Контракт между вашей компанией и RailTech активирован.\n"
+"Контракт между вашей компанией и ERP активирован.\n"
 "      Все премиум-функции платформы открыты для команды."
 msgstr ""
-"The contract between your company and RailTech is now active.\n"
+"The contract between your company and ERP is now active.\n"
 "      All premium platform features are open to your team."
 
 #: templates/emails/kyc_verified.html:21
@@ -5972,9 +5972,9 @@ msgstr ""
 #, python-format
 msgid ""
 "Контракт для компании «%(company_name)s» активирован. Все премиум-функции "
-"RailTech B2B теперь доступны вашей команде."
+"ERP теперь доступны вашей команде."
 msgstr ""
-"The contract for “%(company_name)s” has been activated. All RailTech B2B "
+"The contract for “%(company_name)s” has been activated. All ERP "
 "premium features are now available to your team."
 
 #: templates/emails/kyc_verified.txt:3
@@ -5988,13 +5988,13 @@ msgstr ""
 
 #: templates/emails/kyc_verified_subject.txt:1
 #, python-format
-msgid "RailTech: контракт для %(company_name)s активирован"
-msgstr "RailTech: contract for %(company_name)s activated"
+msgid "ERP: контракт для %(company_name)s активирован"
+msgstr "ERP: contract for %(company_name)s activated"
 
 #: templates/emails/kyc_verified_subject.txt:1
 #, python-format
-msgid "RailTech: KYC компании %(company_name)s подтверждён"
-msgstr "RailTech: KYC for %(company_name)s has been verified"
+msgid "ERP: KYC компании %(company_name)s подтверждён"
+msgstr "ERP: KYC for %(company_name)s has been verified"
 
 #: templates/emails/new_rfq_seller.html:3
 #: templates/emails/new_rfq_seller.html:4
@@ -6410,8 +6410,8 @@ msgid "№ %(quote_number)s (в.%(quote_version)s)"
 msgstr "No. %(quote_number)s (v.%(quote_version)s)"
 
 #: templates/emails/register_existing_account.html:3
-msgid "Аккаунт уже существует — RailTech B2B"
-msgstr "Account already exists — RailTech B2B"
+msgid "Аккаунт уже существует — ERP"
+msgstr "Account already exists — ERP"
 
 #: templates/emails/register_existing_account.html:4
 #: templates/emails/reset_password.html:4
@@ -6427,13 +6427,13 @@ msgstr "Hello, %(first_name)s!"
 
 #: templates/emails/register_existing_account.html:10
 msgid ""
-"На платформе <strong>RailTech B2B</strong> кто-то (возможно, вы) попытался\n"
+"На платформе <strong>ERP</strong> кто-то (возможно, вы) попытался\n"
 "    зарегистрировать аккаунт с этим email. Аккаунт с этим адресом уже "
 "существует,\n"
 "    поэтому новый создан не был."
 msgstr ""
 "Someone (possibly you) tried to register an account with this email on\n"
-"    <strong>RailTech B2B</strong>. An account with this address already "
+"    <strong>ERP</strong>. An account with this address already "
 "exists,\n"
 "    so no new one was created."
 
@@ -6461,12 +6461,12 @@ msgstr ""
 
 #: templates/emails/register_existing_account.txt:3
 msgid ""
-"На платформе RailTech B2B кто-то (возможно, вы) попытался зарегистрировать "
+"На платформе ERP кто-то (возможно, вы) попытался зарегистрировать "
 "аккаунт с этим email. Аккаунт с этим адресом уже существует, поэтому новый "
 "создан не был."
 msgstr ""
 "Someone (possibly you) tried to register an account with this email on "
-"RailTech B2B. An account with this address already exists, so a new one was "
+"ERP. An account with this address already exists, so a new one was "
 "not created."
 
 #: templates/emails/register_existing_account.txt:13
@@ -6478,19 +6478,19 @@ msgstr ""
 "been changed."
 
 #: templates/emails/register_existing_account_subject.txt:1
-msgid "RailTech B2B: аккаунт с этим email уже существует"
-msgstr "RailTech B2B: an account with this email already exists"
+msgid "ERP: аккаунт с этим email уже существует"
+msgstr "ERP: an account with this email already exists"
 
 #: templates/emails/reset_password.html:3
-msgid "Сброс пароля — RailTech B2B"
-msgstr "Password reset — RailTech B2B"
+msgid "Сброс пароля — ERP"
+msgstr "Password reset — ERP"
 
 #: templates/emails/reset_password.html:10
 msgid ""
-"Вы запросили сброс пароля на платформе <strong>RailTech B2B</strong>.\n"
+"Вы запросили сброс пароля на платформе <strong>ERP</strong>.\n"
 "    Задайте новый пароль по ссылке ниже — она действительна в течение суток."
 msgstr ""
-"You requested a password reset on <strong>RailTech B2B</strong>.\n"
+"You requested a password reset on <strong>ERP</strong>.\n"
 "    Set a new password using the link below — it is valid for 24 hours."
 
 #: templates/emails/reset_password.html:15
@@ -6513,10 +6513,10 @@ msgstr ""
 
 #: templates/emails/reset_password.txt:3
 msgid ""
-"Вы запросили сброс пароля для аккаунта на RailTech B2B.\n"
+"Вы запросили сброс пароля для аккаунта на ERP.\n"
 "Чтобы задать новый пароль, перейдите по ссылке:"
 msgstr ""
-"You requested a password reset for your RailTech B2B account.\n"
+"You requested a password reset for your ERP account.\n"
 "To set a new password, follow the link:"
 
 #: templates/emails/reset_password.txt:8
@@ -6528,8 +6528,8 @@ msgstr ""
 "simply ignore this email — your account will not be changed."
 
 #: templates/emails/reset_password_subject.txt:1
-msgid "RailTech B2B: сброс пароля"
-msgstr "RailTech B2B: password reset"
+msgid "ERP: сброс пароля"
+msgstr "ERP: password reset"
 
 #: templates/emails/role_application_approved.html:3
 msgid "Заявка на роль одобрена"
@@ -6544,10 +6544,10 @@ msgstr "Application approved"
 #, python-format
 msgid ""
 "Компания «<strong>%(company_name)s</strong>» получила роль\n"
-"    «<strong>%(requested_type_name)s</strong>» на платформе RailTech B2B."
+"    «<strong>%(requested_type_name)s</strong>» на платформе ERP."
 msgstr ""
 "“<strong>%(company_name)s</strong>” has been granted the\n"
-"    “<strong>%(requested_type_name)s</strong>” role on the RailTech B2B "
+"    “<strong>%(requested_type_name)s</strong>” role on the ERP "
 "platform."
 
 #: templates/emails/role_application_approved.html:15
@@ -6578,8 +6578,8 @@ msgstr ""
 
 #: templates/emails/role_application_approved_subject.txt:1
 #, python-format
-msgid "RailTech: заявка на роль «%(requested_type_name)s» одобрена"
-msgstr "RailTech: application for the “%(requested_type_name)s” role approved"
+msgid "ERP: заявка на роль «%(requested_type_name)s» одобрена"
+msgstr "ERP: application for the “%(requested_type_name)s” role approved"
 
 #: templates/emails/role_application_rejected.html:3
 msgid "Заявка на роль отклонена"
@@ -6632,13 +6632,13 @@ msgstr ""
 
 #: templates/emails/role_application_rejected_subject.txt:1
 #, python-format
-msgid "RailTech: заявка на роль «%(requested_type_name)s» отклонена"
-msgstr "RailTech: application for the “%(requested_type_name)s” role rejected"
+msgid "ERP: заявка на роль «%(requested_type_name)s» отклонена"
+msgstr "ERP: application for the “%(requested_type_name)s” role rejected"
 
 #: templates/emails/setup_password.html:3
 #: templates/emails/setup_password_subject.txt:1
-msgid "Подтверждение регистрации в RailTech B2B"
-msgstr "Confirm your registration at RailTech B2B"
+msgid "Подтверждение регистрации в ERP"
+msgstr "Confirm your registration at ERP"
 
 #: templates/emails/setup_password.html:4
 msgid "Регистрация"
@@ -6646,11 +6646,11 @@ msgstr "Registration"
 
 #: templates/emails/setup_password.html:10
 msgid ""
-"Вы создали аккаунт на платформе <strong>RailTech B2B</strong>.\n"
+"Вы создали аккаунт на платформе <strong>ERP</strong>.\n"
 "    Чтобы завершить регистрацию, установите пароль — это займёт меньше "
 "минуты."
 msgstr ""
-"You have created an account on <strong>RailTech B2B</strong>.\n"
+"You have created an account on <strong>ERP</strong>.\n"
 "    To finish signing up, set a password — it takes less than a minute."
 
 #: templates/emails/setup_password.html:23
@@ -6662,10 +6662,10 @@ msgstr ""
 
 #: templates/emails/setup_password.txt:3
 msgid ""
-"Вы создали аккаунт на платформе RailTech B2B.\n"
+"Вы создали аккаунт на платформе ERP.\n"
 "Чтобы завершить регистрацию и установить пароль, перейдите по ссылке:"
 msgstr ""
-"You have created an account on the RailTech B2B platform.\n"
+"You have created an account on the ERP platform.\n"
 "To finish signing up and set your password, follow the link:"
 
 #: templates/emails/setup_password.txt:8

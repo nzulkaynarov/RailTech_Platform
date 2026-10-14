@@ -6,6 +6,7 @@ SystemSetting: single-row table holding global business parameters
 inspected via Unfold. Tracked by pghistory for audit trail.
 """
 
+import os
 from decimal import Decimal
 
 import pghistory
@@ -52,11 +53,27 @@ class SystemSetting(models.Model):
         help_text=_("Справочный курс (может обновляться автоматически)"),
     )
 
-    # ─── Platform ───────────────────────────────────────────────────────
+    # ─── Platform & Branding ────────────────────────────────────────────
     platform_name = models.CharField(
         max_length=200,
-        default="RailTech B2B Ecosystem",
+        default=os.environ.get("PLATFORM_NAME", "ERP"),
         verbose_name=_("Название платформы"),
+    )
+    support_email = models.EmailField(
+        default=os.environ.get("SUPPORT_EMAIL", "support@example.com"),
+        verbose_name=_("Email поддержки"),
+    )
+    logo_url = models.URLField(
+        blank=True,
+        default="",
+        verbose_name=_("URL логотипа"),
+        help_text=_("Ссылка на изображение логотипа платформы"),
+    )
+    domain = models.CharField(
+        max_length=255,
+        default=os.environ.get("PLATFORM_DOMAIN", "erp.localhost"),
+        verbose_name=_("Основной домен"),
+        help_text=_("Доменное имя платформы для ссылок и уведомлений"),
     )
     maintenance_mode = models.BooleanField(
         default=False,

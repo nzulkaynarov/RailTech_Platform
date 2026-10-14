@@ -33,7 +33,7 @@ describe('DocumentActions', () => {
     renderWithProviders(
       <DocumentActions
         request={(format) => ({ path: `crm/contracts/7/download-pdf/`, params: { format } })}
-        filenameBase="RailTech_Contract_7"
+        filenameBase="Contract_7"
         formats={['pdf', 'xlsx']}
         {...props}
       />,
@@ -49,7 +49,7 @@ describe('DocumentActions', () => {
     await user.click(await screen.findByText('Скачать PDF'));
 
     await waitFor(() => expect(mocked.fetchDocumentBlob).toHaveBeenCalledWith('crm/contracts/7/download-pdf/', { format: 'pdf' }));
-    await waitFor(() => expect(mocked.saveBlob).toHaveBeenCalledWith(blob, 'RailTech_Contract_7.pdf'));
+    await waitFor(() => expect(mocked.saveBlob).toHaveBeenCalledWith(blob, 'Contract_7.pdf'));
     expect(toast.error).not.toHaveBeenCalled();
   });
 

@@ -64,7 +64,7 @@ async function failRefresh(err: unknown): Promise<void> {
 		const { useAuthStore } = await import('../store/authStore');
 		useAuthStore.getState().logout();
 	} catch {
-		localStorage.removeItem('railtech-auth');
+		localStorage.removeItem('erp-auth');
 	}
 	// Don't bounce the user off public, unauthenticated routes (password setup/reset,
 	// registration). A background 401 there is expected — there's no session yet — and
