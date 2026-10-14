@@ -42,7 +42,7 @@
       "inn": "200876543",
       "legal_address": "г. Ташкент, проспект Амира Тимура",
       "contact_person": "Рахматов Р.М.",
-      "email": "contact@uty.uz",
+      "email": "contact@uty.example",
       "phone": "+998 71 237-55-00",
       "verification_status": "L2_VERIFIED",
       "company_type": "CLIENT"
@@ -52,7 +52,7 @@
       "inn": "201345678991",
       "legal_address": "г. Навои, Узбекистан",
       "contact_person": "Исмоилов Ф.",
-      "email": "info@navoimining.uz",
+      "email": "info@navoimining.example",
       "phone": "+998 69 222-33-44",
       "verification_status": "L2_VERIFIED",
       "company_type": "SUPPLIER"
@@ -62,7 +62,7 @@
       "inn": "201456789012",
       "legal_address": "г. Алмалык, Узбекистан",
       "contact_person": "Абдуллаева Г.X.",
-      "email": "contact@almalykmc.uz",
+      "email": "contact@almalykmc.example",
       "phone": "+998 74 223-45-56",
       "verification_status": "L2_VERIFIED",
       "company_type": "MANUFACTURER"
@@ -72,7 +72,7 @@
       "inn": "201567890123",
       "legal_address": "г. Ташкент, Узбекистан",
       "contact_person": "Назаров И.А.",
-      "email": "procure@metrotashkent.uz",
+      "email": "procure@metrotashkent.example",
       "phone": "+998 71 240-45-67",
       "verification_status": "PENDING",
       "company_type": "CLIENT"
@@ -82,7 +82,7 @@
       "inn": "201678901234",
       "legal_address": "г. Ташкент, Узбекистан",
       "contact_person": "Каримов О.Е.",
-      "email": "logistics@uzrailway.uz",
+      "email": "logistics@uzrailway.example",
       "phone": "+998 71 202-56-78",
       "verification_status": "L2_VERIFIED",
       "company_type": "SUPPLIER"
@@ -92,7 +92,7 @@
       "inn": "201789012345",
       "legal_address": "г. Самарканд, Узбекистан",
       "contact_person": "Хасанова А.К.",
-      "email": "info@samarkanddtransport.uz",
+      "email": "info@samarkanddtransport.example",
       "phone": "+998 66 233-67-89",
       "verification_status": "PENDING",
       "company_type": "CLIENT"
@@ -102,7 +102,7 @@
       "inn": "201890123456",
       "legal_address": "г. Ташкент, Узбекистан",
       "contact_person": "Демидов П.В.",
-      "email": "info@tlw.uz",
+      "email": "info@tlw.example",
       "phone": "+998 71 241-78-90",
       "verification_status": "L2_VERIFIED",
       "company_type": "MANUFACTURER"
@@ -112,7 +112,7 @@
       "inn": "201901234567",
       "legal_address": "г. Фергона, Узбекистан",
       "contact_person": "Касимов Н.Б.",
-      "email": "terminal@ferganarailway.uz",
+      "email": "terminal@ferganarailway.example",
       "phone": "+998 73 244-89-01",
       "verification_status": "L2_VERIFIED",
       "company_type": "CLIENT"
@@ -122,7 +122,7 @@
       "inn": "202012345678",
       "legal_address": "г. Хива, Узбекистан",
       "contact_person": "Хусаинов М.Х.",
-      "email": "depot@khivarailway.uz",
+      "email": "depot@khivarailway.example",
       "phone": "+998 63 225-90-12",
       "verification_status": "L2_VERIFIED",
       "company_type": "MANUFACTURER"
@@ -132,7 +132,7 @@
       "inn": "202123456789",
       "legal_address": "г. Андижан, Узбекистан",
       "contact_person": "Ташбаева С.А.",
-      "email": "logistics@andijonlogistics.uz",
+      "email": "logistics@andijonlogistics.example",
       "phone": "+998 74 230-01-23",
       "verification_status": "L2_VERIFIED",
       "company_type": "SUPPLIER"
@@ -142,7 +142,7 @@
       "inn": "202234567890",
       "legal_address": "г. Маргилан, Узбекистан",
       "contact_person": "Юсупов Р.И.",
-      "email": "info@margilaning.uz",
+      "email": "info@margilaning.example",
       "phone": "+998 73 251-12-34",
       "verification_status": "L2_VERIFIED",
       "company_type": "MANUFACTURER"
@@ -152,7 +152,7 @@
       "inn": "202345678901",
       "legal_address": "г. Навои, Узбекистан",
       "contact_person": "Ибрагимов К.Т.",
-      "email": "port@navoimultimodal.uz",
+      "email": "port@navoimultimodal.example",
       "phone": "+998 69 223-23-45",
       "verification_status": "L2_VERIFIED",
       "company_type": "CLIENT"
@@ -162,7 +162,7 @@
       "inn": "500111222",
       "legal_address": "г. Ташкент, Россия",
       "contact_person": "Смирнов А.В.",
-      "email": "info@saut.ru",
+      "email": "info@saut.example",
       "phone": "+7 495 123-45-67",
       "verification_status": "L2_VERIFIED",
       "company_type": "MANUFACTURER"
@@ -172,7 +172,7 @@
       "inn": "500333444",
       "legal_address": "г. Екатеринбург, Россия",
       "contact_person": "Козлов И.Н.",
-      "email": "info@ratep.ru",
+      "email": "info@ratep.example",
       "phone": "+7 343 234-56-78",
       "verification_status": "L2_VERIFIED",
       "company_type": "MANUFACTURER"
@@ -182,7 +182,7 @@
       "inn": "600111222",
       "legal_address": "г. Москва, Россия",
       "contact_person": "Соколов М.Е.",
-      "email": "contact@mmz.ru",
+      "email": "contact@mmz.example",
       "phone": "+7 495 456-78-90",
       "verification_status": "L2_VERIFIED",
       "company_type": "MANUFACTURER"
@@ -192,7 +192,7 @@
       "inn": "600222333",
       "legal_address": "г. Новосибирск, Россия",
       "contact_person": "Волков Л.С.",
-      "email": "info@novosibirsk-oz.ru",
+      "email": "info@novosibirsk-oz.example",
       "phone": "+7 383 234-56-78",
       "verification_status": "L2_VERIFIED",
       "company_type": "MANUFACTURER"
@@ -202,7 +202,7 @@
       "inn": "600333444",
       "legal_address": "г. Санкт-Петербург, Россия",
       "contact_person": "Петров В.И.",
-      "email": "sales@transmash.ru",
+      "email": "sales@transmash.example",
       "phone": "+7 812 567-89-01",
       "verification_status": "L2_VERIFIED",
       "company_type": "MANUFACTURER"
@@ -212,7 +212,7 @@
       "inn": "600444555",
       "legal_address": "г. Челябинск, Россия",
       "contact_person": "Железнов О.К.",
-      "email": "info@severstal.ru",
+      "email": "info@severstal.example",
       "phone": "+7 351 789-01-23",
       "verification_status": "L2_VERIFIED",
       "company_type": "MANUFACTURER"
@@ -222,7 +222,7 @@
       "inn": "600555666",
       "legal_address": "г. Санкт-Петербург, Россия",
       "contact_person": "Краснов А.П.",
-      "email": "sales@kirovzavod.ru",
+      "email": "sales@kirovzavod.example",
       "phone": "+7 812 890-12-34",
       "verification_status": "L2_VERIFIED",
       "company_type": "MANUFACTURER"
@@ -232,7 +232,7 @@
       "inn": "600666777",
       "legal_address": "г. Москва, Россия",
       "contact_person": "Морозов Н.Ю.",
-      "email": "contact@gazpromneft-sm.ru",
+      "email": "contact@gazpromneft-sm.example",
       "phone": "+7 495 901-23-45",
       "verification_status": "L2_VERIFIED",
       "company_type": "MANUFACTURER"
@@ -242,7 +242,7 @@
       "inn": "200100100",
       "legal_address": "г. Ташкент, Узбекистан",
       "contact_person": "Иванов А.П.",
-      "email": "tashkent@uty.uz",
+      "email": "tashkent@uty.example",
       "phone": "+998 71 237-55-01",
       "verification_status": "L2_VERIFIED",
       "company_type": "CLIENT"
@@ -252,7 +252,7 @@
       "inn": "200100101",
       "legal_address": "г. Карши, Узбекистан",
       "contact_person": "Петров Б.С.",
-      "email": "karshi@uty.uz",
+      "email": "karshi@uty.example",
       "phone": "+998 65 225-55-02",
       "verification_status": "L2_VERIFIED",
       "company_type": "CLIENT"
@@ -262,7 +262,7 @@
       "inn": "200100102",
       "legal_address": "г. Бухара, Узбекистан",
       "contact_person": "Алимов В.Р.",
-      "email": "bukhara@uty.uz",
+      "email": "bukhara@uty.example",
       "phone": "+998 65 225-55-03",
       "verification_status": "L2_VERIFIED",
       "company_type": "CLIENT"
@@ -389,7 +389,7 @@
     {
       "email_env": "CLIENT_EMAIL",
       "password_env": "CLIENT_PASSWORD",
-      "email_default": "client@uty.uz",
+      "email_default": "client@uty.example",
       "password_default": null,
       "first_name": "Alexandr",
       "last_name": "Ivanov",
@@ -405,55 +405,55 @@
   "categories": [
     {
       "name": "ЖД Техника",
-      "domain_type": "RAILWAY_MACHINERY",
+      "domain_type": "GENERAL_GOODS",
       "parent": null,
       "children": ["Тяговый подвижной состав", "Тормозное оборудование"]
     },
     {
       "name": "Тяговый подвижной состав",
-      "domain_type": "RAILWAY_MACHINERY",
+      "domain_type": "GENERAL_GOODS",
       "parent": "ЖД Техника",
       "children": ["ТЭД", "Тепловозы", "Электровозы"]
     },
     {
       "name": "ТЭД",
-      "domain_type": "RAILWAY_MACHINERY",
+      "domain_type": "GENERAL_GOODS",
       "parent": "Тяговый подвижной состав",
       "children": []
     },
     {
       "name": "Тепловозы",
-      "domain_type": "RAILWAY_MACHINERY",
+      "domain_type": "GENERAL_GOODS",
       "parent": "Тяговый подвижной состав",
       "children": []
     },
     {
       "name": "Электровозы",
-      "domain_type": "RAILWAY_MACHINERY",
+      "domain_type": "GENERAL_GOODS",
       "parent": "Тяговый подвижной состав",
       "children": []
     },
     {
       "name": "Тормозное оборудование",
-      "domain_type": "RAILWAY_MACHINERY",
+      "domain_type": "GENERAL_GOODS",
       "parent": "ЖД Техника",
       "children": ["Цилиндры", "Краны", "Шланги"]
     },
     {
       "name": "Цилиндры",
-      "domain_type": "RAILWAY_MACHINERY",
+      "domain_type": "GENERAL_GOODS",
       "parent": "Тормозное оборудование",
       "children": []
     },
     {
       "name": "Краны",
-      "domain_type": "RAILWAY_MACHINERY",
+      "domain_type": "GENERAL_GOODS",
       "parent": "Тормозное оборудование",
       "children": []
     },
     {
       "name": "Шланги",
-      "domain_type": "RAILWAY_MACHINERY",
+      "domain_type": "GENERAL_GOODS",
       "parent": "Тормозное оборудование",
       "children": []
     },
@@ -471,7 +471,7 @@
     },
     {
       "name": "Электрооборудование",
-      "domain_type": "RAILWAY_MACHINERY",
+      "domain_type": "GENERAL_GOODS",
       "parent": null,
       "children": []
     },
@@ -489,55 +489,55 @@
     },
     {
       "name": "Ходовые части",
-      "domain_type": "RAILWAY_MACHINERY",
+      "domain_type": "GENERAL_GOODS",
       "parent": null,
       "children": []
     },
     {
       "name": "Колёсные пары",
-      "domain_type": "RAILWAY_MACHINERY",
+      "domain_type": "GENERAL_GOODS",
       "parent": null,
       "children": []
     },
     {
       "name": "Сцепные устройства",
-      "domain_type": "RAILWAY_MACHINERY",
+      "domain_type": "GENERAL_GOODS",
       "parent": null,
       "children": []
     },
     {
       "name": "Пневматика",
-      "domain_type": "RAILWAY_MACHINERY",
+      "domain_type": "GENERAL_GOODS",
       "parent": null,
       "children": []
     },
     {
       "name": "Подвеска",
-      "domain_type": "RAILWAY_MACHINERY",
+      "domain_type": "GENERAL_GOODS",
       "parent": null,
       "children": []
     },
     {
       "name": "Электроснабжение",
-      "domain_type": "RAILWAY_MACHINERY",
+      "domain_type": "GENERAL_GOODS",
       "parent": null,
       "children": []
     },
     {
       "name": "Трансмиссия",
-      "domain_type": "RAILWAY_MACHINERY",
+      "domain_type": "GENERAL_GOODS",
       "parent": null,
       "children": []
     },
     {
       "name": "Управление",
-      "domain_type": "RAILWAY_MACHINERY",
+      "domain_type": "GENERAL_GOODS",
       "parent": null,
       "children": []
     },
     {
       "name": "Автоматика",
-      "domain_type": "RAILWAY_MACHINERY",
+      "domain_type": "GENERAL_GOODS",
       "parent": null,
       "children": []
     },
@@ -573,7 +573,7 @@
     },
     {
       "name": "Изоляция",
-      "domain_type": "RAILWAY_MACHINERY",
+      "domain_type": "GENERAL_GOODS",
       "parent": null,
       "children": []
     },
@@ -703,7 +703,7 @@
       "sku": "ELC-001",
       "name": "Провод БПВЛ 1,5 мм²",
       "gost_drawing": "ТУ16.505.911-76",
-      "domain_type_code": "RAILWAY_MACHINERY",
+      "domain_type_code": "GENERAL_GOODS",
       "category_name": "Электрооборудование",
       "manufacturer_inn": "600333444",
       "uom_code": "M",
@@ -721,7 +721,7 @@
       "sku": "ELC-002",
       "name": "Провод БПВЛ 2,5 мм²",
       "gost_drawing": "ТУ16.505.911-76",
-      "domain_type_code": "RAILWAY_MACHINERY",
+      "domain_type_code": "GENERAL_GOODS",
       "category_name": "Электрооборудование",
       "manufacturer_inn": "600333444",
       "uom_code": "M",
@@ -850,7 +850,7 @@
       "sku": "INS-001",
       "name": "Лента элмикатерм 0,08х20мм",
       "gost_drawing": "—",
-      "domain_type_code": "RAILWAY_MACHINERY",
+      "domain_type_code": "GENERAL_GOODS",
       "category_name": "Изоляция",
       "manufacturer_inn": "500111222",
       "uom_code": "T",
@@ -867,7 +867,7 @@
       "sku": "INS-002",
       "name": "Стеклотекстолит СТЭФ-1 5мм",
       "gost_drawing": "—",
-      "domain_type_code": "RAILWAY_MACHINERY",
+      "domain_type_code": "GENERAL_GOODS",
       "category_name": "Изоляция",
       "manufacturer_inn": "300400500",
       "uom_code": "T",
@@ -950,7 +950,7 @@
       "sku": "INS-003",
       "name": "Полиамидная лента ПМ(л) 0,045х20мм",
       "gost_drawing": "—",
-      "domain_type_code": "RAILWAY_MACHINERY",
+      "domain_type_code": "GENERAL_GOODS",
       "category_name": "Изоляция",
       "manufacturer_inn": "500111222",
       "uom_code": "T",
@@ -967,7 +967,7 @@
       "sku": "RLM-001",
       "name": "Тележки грузовые модель 18-100",
       "gost_drawing": "ГОСТ 9245-82",
-      "domain_type_code": "RAILWAY_MACHINERY",
+      "domain_type_code": "GENERAL_GOODS",
       "category_name": "Ходовые части",
       "manufacturer_inn": "500111222",
       "uom_code": "ШТ",
@@ -986,7 +986,7 @@
       "sku": "RLM-002",
       "name": "Колёсные пары РУ1Ш-957-Г",
       "gost_drawing": "ГОСТ 10791-2016",
-      "domain_type_code": "RAILWAY_MACHINERY",
+      "domain_type_code": "GENERAL_GOODS",
       "category_name": "Колёсные пары",
       "manufacturer_inn": "500111222",
       "uom_code": "ШТ",
@@ -1004,7 +1004,7 @@
       "sku": "RLM-003",
       "name": "Тяговый двигатель ЭД-118А",
       "gost_drawing": "ТУ 32.144-54-2003",
-      "domain_type_code": "RAILWAY_MACHINERY",
+      "domain_type_code": "GENERAL_GOODS",
       "category_name": "Электрооборудование",
       "manufacturer_inn": "500333444",
       "uom_code": "ШТ",
@@ -1023,7 +1023,7 @@
       "sku": "RLM-004",
       "name": "Автосцепка СА-3",
       "gost_drawing": "ГОСТ 25999-2016",
-      "domain_type_code": "RAILWAY_MACHINERY",
+      "domain_type_code": "GENERAL_GOODS",
       "category_name": "Сцепные устройства",
       "manufacturer_inn": "500111222",
       "uom_code": "ШТ",
@@ -1041,7 +1041,7 @@
       "sku": "RLM-005",
       "name": "Тормозной цилиндр ТЦ-320",
       "gost_drawing": "ТУ 32.144.80-99",
-      "domain_type_code": "RAILWAY_MACHINERY",
+      "domain_type_code": "GENERAL_GOODS",
       "category_name": "Тормозное оборудование",
       "manufacturer_inn": "500333444",
       "uom_code": "ШТ",
@@ -1060,7 +1060,7 @@
       "sku": "RLM-006",
       "name": "Компрессор ВУ-3.5/10",
       "gost_drawing": "ТУ 32.144-39-2001",
-      "domain_type_code": "RAILWAY_MACHINERY",
+      "domain_type_code": "GENERAL_GOODS",
       "category_name": "Пневматика",
       "manufacturer_inn": "500333444",
       "uom_code": "ШТ",
@@ -1079,7 +1079,7 @@
       "sku": "RLM-007",
       "name": "Букса ЦНИИ-Х3-0",
       "gost_drawing": "ГОСТ 18407-2016",
-      "domain_type_code": "RAILWAY_MACHINERY",
+      "domain_type_code": "GENERAL_GOODS",
       "category_name": "Ходовые части",
       "manufacturer_inn": "500111222",
       "uom_code": "ШТ",
@@ -1097,7 +1097,7 @@
       "sku": "RLM-008",
       "name": "Редуктор ЗУ-45",
       "gost_drawing": "ТУ 32.144-19-98",
-      "domain_type_code": "RAILWAY_MACHINERY",
+      "domain_type_code": "GENERAL_GOODS",
       "category_name": "Трансмиссия",
       "manufacturer_inn": "500111222",
       "uom_code": "ШТ",
@@ -1115,7 +1115,7 @@
       "sku": "RLM-009",
       "name": "Подшипник буксовый 232726",
       "gost_drawing": "ГОСТ 8338-2016",
-      "domain_type_code": "RAILWAY_MACHINERY",
+      "domain_type_code": "GENERAL_GOODS",
       "category_name": "Подшипники",
       "manufacturer_inn": "500111222",
       "uom_code": "ШТ",
@@ -1133,7 +1133,7 @@
       "sku": "RLM-010",
       "name": "Рессора листовая Р75",
       "gost_drawing": "ГОСТ 3577-2016",
-      "domain_type_code": "RAILWAY_MACHINERY",
+      "domain_type_code": "GENERAL_GOODS",
       "category_name": "Подвеска",
       "manufacturer_inn": "309876543",
       "uom_code": "ШТ",
@@ -1151,7 +1151,7 @@
       "sku": "RLM-011",
       "name": "Токоприёмник Т-5М1",
       "gost_drawing": "ГОСТ 2700-2015",
-      "domain_type_code": "RAILWAY_MACHINERY",
+      "domain_type_code": "GENERAL_GOODS",
       "category_name": "Электроснабжение",
       "manufacturer_inn": "500333444",
       "uom_code": "ШТ",
@@ -1170,7 +1170,7 @@
       "sku": "RLM-012",
       "name": "Генератор ГП-321",
       "gost_drawing": "ТУ 32.144-61-2002",
-      "domain_type_code": "RAILWAY_MACHINERY",
+      "domain_type_code": "GENERAL_GOODS",
       "category_name": "Электрооборудование",
       "manufacturer_inn": "500333444",
       "uom_code": "ШТ",
@@ -1188,7 +1188,7 @@
       "sku": "RLM-013",
       "name": "Пантограф ТАсС-10-01",
       "gost_drawing": "ТУ 32.144-67-2000",
-      "domain_type_code": "RAILWAY_MACHINERY",
+      "domain_type_code": "GENERAL_GOODS",
       "category_name": "Электроснабжение",
       "manufacturer_inn": "500333444",
       "uom_code": "ШТ",
@@ -1206,7 +1206,7 @@
       "sku": "RLM-014",
       "name": "Кран машиниста 394",
       "gost_drawing": "ГОСТ 6035-2016",
-      "domain_type_code": "RAILWAY_MACHINERY",
+      "domain_type_code": "GENERAL_GOODS",
       "category_name": "Управление",
       "manufacturer_inn": "500111222",
       "uom_code": "ШТ",
@@ -1224,7 +1224,7 @@
       "sku": "RLM-015",
       "name": "Блок автоматики АЛСН",
       "gost_drawing": "ТУ 32.144-51-2001",
-      "domain_type_code": "RAILWAY_MACHINERY",
+      "domain_type_code": "GENERAL_GOODS",
       "category_name": "Автоматика",
       "manufacturer_inn": "500111222",
       "uom_code": "ШТ",

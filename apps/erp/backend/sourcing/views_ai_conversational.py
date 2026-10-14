@@ -25,8 +25,8 @@ MAX_TEXT_CHARS = 4000
 @extend_schema(
     summary="AI compose: free-text need → structured заявка lines (AI #8)",
     description=(
-        'The buyer describes a need in plain text ("нужны тормозные колодки на вагон, '
-        '4 комплекта, и подшипники буксовые") and Claude proposes structured request '
+        'The buyer describes a need in plain text ("нужны подшипники 6205, '
+        '4 комплекта, и перчатки рабочие 40 пар") and Claude proposes structured request '
         "line items {name, quantity, unit, mpn, gost_drawing, note} plus REAL catalog "
         "product candidates per line (ids always from a DB trigram shortlist — never "
         "invented). Human-in-loop: the buyer reviews/edits/confirms in the grid; nothing "

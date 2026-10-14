@@ -5449,7 +5449,7 @@ export interface paths {
         put?: never;
         /**
          * AI compose: free-text need → structured заявка lines (AI #8)
-         * @description The buyer describes a need in plain text ("нужны тормозные колодки на вагон, 4 комплекта, и подшипники буксовые") and Claude proposes structured request line items {name, quantity, unit, mpn, gost_drawing, note} plus REAL catalog product candidates per line (ids always from a DB trigram shortlist — never invented). Human-in-loop: the buyer reviews/edits/confirms in the grid; nothing is auto-submitted. Returns {items: []} contents when AI is disabled.
+         * @description The buyer describes a need in plain text ("нужны подшипники 6205, 4 комплекта, и перчатки рабочие 40 пар") and Claude proposes structured request line items {name, quantity, unit, mpn, gost_drawing, note} plus REAL catalog product candidates per line (ids always from a DB trigram shortlist — never invented). Human-in-loop: the buyer reviews/edits/confirms in the grid; nothing is auto-submitted. Returns {items: []} contents when AI is disabled.
          */
         post: operations["sourcing_compose_request_create"];
         delete?: never;
@@ -5637,7 +5637,7 @@ export interface paths {
         head?: never;
         /**
          * Update system settings
-         * @description Partially update platform settings. Admin/Manager only.
+         * @description Partially update platform settings. Administrator (superuser) only.
          */
         patch: operations["system_settings_partial_update"];
         trace?: never;

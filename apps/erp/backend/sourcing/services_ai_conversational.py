@@ -1,7 +1,7 @@
 """AI #8 — conversational заявка builder.
 
-The buyer describes a need in free text ("нужны тормозные колодки на вагон,
-4 комплекта, и подшипники буксовые") and Claude turns it into STRUCTURED request
+The buyer describes a need in free text ("нужны подшипники 6205, 4 комплекта,
+и перчатки рабочие 40 пар") and Claude turns it into STRUCTURED request
 line items the buyer then reviews, edits and confirms in the editable grid
 (human-in-loop — nothing is auto-submitted). This is the same idea as the
 file-upload normaliser in ``services_ai`` but the input is a plain sentence
@@ -74,8 +74,8 @@ COMPOSE_RESULT_SCHEMA = {
 }
 
 COMPOSE_SYSTEM_PROMPT = (
-    "Ты — ассистент составления заявки на закупку для B2B-площадки (железнодорожное и "
-    "промышленное оборудование, материалы). Покупатель описывает свою потребность ОБЫЧНЫМ "
+    "Ты — ассистент составления заявки на закупку у компании-поставщика (товары, "
+    "материалы, оборудование, услуги). Покупатель описывает свою потребность ОБЫЧНЫМ "
     "ТЕКСТОМ (одно-два предложения), а ты разбиваешь её на отдельные позиции заявки.\n\n"
     "ПРАВИЛА:\n"
     "1. Для каждой упомянутой позиции верни: name (наименование), quantity (количество, число; "

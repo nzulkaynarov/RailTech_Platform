@@ -35,7 +35,7 @@ class SystemSettingSerializer(drf_serializers.ModelSerializer):
 class SystemSettingsView(APIView):
     """
     GET  /api/v1/system-settings/ — read current settings (any authenticated user)
-    PATCH /api/v1/system-settings/ — update settings (admin/manager only)
+    PATCH /api/v1/system-settings/ — update settings (administrator = superuser only)
     """
 
     permission_classes = [IsAuthenticated]
@@ -55,14 +55,14 @@ class SystemSettingsView(APIView):
 
     @extend_schema(
         summary="Update system settings",
-        description="Partially update platform settings. Admin/Manager only.",
+        description="Partially update platform settings. Administrator (superuser) only.",
         request=SystemSettingSerializer,
         responses={200: SystemSettingSerializer},
         tags=["System"],
     )
     def patch(self, request):
         # Write requires elevated permissions
-        if not (request.user.is_superuser or request.user.is_superuser):
+        if not request.user.is_superuser:
             from rest_framework.exceptions import PermissionDenied
 
             raise PermissionDenied()
