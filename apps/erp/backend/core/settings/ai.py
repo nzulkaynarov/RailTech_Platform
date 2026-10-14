@@ -101,6 +101,12 @@ LOGGING = {
         "handlers": ["console"],
         "level": os.environ.get("DJANGO_LOG_LEVEL", "INFO"),
     },
+    # httpx/httpcore на INFO печатают URL каждого запроса — секреты в адресе (ключ шлюза и т. п.)
+    # не должны попадать в журнал; ошибки транспорта видны на WARNING.
+    "loggers": {
+        "httpx": {"level": "WARNING"},
+        "httpcore": {"level": "WARNING"},
+    },
 }
 
 # Validation Rules
