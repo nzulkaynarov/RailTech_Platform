@@ -53,7 +53,7 @@ describe('PublicationSection — опубликованный слой карт�
 
     expect(screen.getByText(/Клиент увидит цену-витрину в кабинете/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Цена-витрина/)).toHaveValue(1234.5);
-    expect(screen.getByLabelText('Так видит клиент')).toHaveTextContent(/1[\s  ]?234,50/);
+    expect(screen.getByLabelText('Так видит клиент')).toHaveTextContent(/1[\s\u00a0\u202f]?234,50/);
   });
 
   it('политика исполнения — только у услуги', () => {

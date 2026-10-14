@@ -41,6 +41,8 @@ DEMAND = 731957
 SENTINELS = (SUPPLIER_NAME, SUPPLIER_SKU, "48213.77", "48213,77", "48 213", str(STOCK_QTY), str(DEMAND))
 
 TODAY = datetime.date.today()
+#: Ссылка публичного КП для обхода маршрутов — тестовое значение, не секрет.
+SWEEP_QUOTE_LINK = "tok_M107_SWEEP"
 
 
 @pytest.fixture
@@ -441,7 +443,7 @@ def client_world(world):
         version=1,
         status=QuoteStatus.objects.get(code="SENT"),
         frozen_at=timezone.now(),
-        public_access_token="tok_M107_SWEEP",
+        public_access_token=SWEEP_QUOTE_LINK,
     )
     quote.pdf_file.save("kp.pdf", ContentFile(b"%PDF-1.4 fake"), save=True)
     QuoteItem.objects.create(
