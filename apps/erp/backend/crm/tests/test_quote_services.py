@@ -1,7 +1,7 @@
 """
 Service-level tests for high-risk CRM logic (CLAUDE.md "Known test debt"):
-force_approve_quote, reject_quote, and send_deal_message — the override and
-chat paths that previously had no direct coverage.
+force_approve_quote and reject_quote — the override paths that previously had no
+direct coverage.
 """
 
 from decimal import Decimal
@@ -17,7 +17,6 @@ from accounts.models import (
     VerificationStatus,
     WorkspaceRole,
 )
-from crm import services as crm_services
 from crm.models import Deal, DealStage, Quote, QuoteStatus
 from crm.services.quotes import QuoteLifecycleService
 from master_data.models import Country
@@ -142,33 +141,3 @@ def test_reject_quote_moves_deal_back_to_calculating(deal, buyer):
     assert result.status.code == "REJECTED"
     deal.refresh_from_db()
     assert deal.stage.code == "CALCULATING"
-
-
-# ─── send_deal_message ──────────────────────────────────────────────────────
-
-
-@pytest.mark.django_db
-def test_send_deal_message_rejects_non_member(deal, lookups):
-    stranger = CustomUser.objects.create_user(
-        email="stranger@example.com", username="stranger", password="pw", is_active=True
-    )
-    msg, err = crm_services.send_deal_message(stranger, deal, "hello")
-    assert msg is None
-    assert err == "NOT_DEAL_MEMBER"
-
-
-@pytest.mark.django_db
-def test_send_deal_message_rejects_empty(deal, buyer):
-    buyer_user, _ = buyer
-    msg, err = crm_services.send_deal_message(buyer_user, deal, "   ")
-    assert msg is None
-    assert err == "EMPTY_MESSAGE"
-
-
-@pytest.mark.django_db
-def test_send_deal_message_creates_message(deal, buyer):
-    buyer_user, _ = buyer
-    msg, err = crm_services.send_deal_message(buyer_user, deal, "When can you ship?")
-    assert err is None
-    assert msg is not None
-    assert msg.text == "When can you ship?"

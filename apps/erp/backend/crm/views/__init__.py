@@ -5,7 +5,7 @@ Re-exports all ViewSets and Views for backwards compatibility so that
 ``from crm.views import DealViewSet`` continues to work unchanged.
 """
 
-from crm.views.ai import SuggestChatReplyView  # noqa: F401
+from crm.views.activity_logs import ActivityLogViewSet  # noqa: F401
 from crm.views.ai_diff import QuoteRequestDiffView  # noqa: F401
 from crm.views.analytics import (  # noqa: F401
     DashboardAnalyticsView,
@@ -23,8 +23,6 @@ from crm.views.billing import (  # noqa: F401
 from crm.views.deals import DealStageViewSet, DealViewSet  # noqa: F401
 from crm.views.documents import DocumentTemplateViewSet, GeneratedDocumentViewSet  # noqa: F401
 from crm.views.documents_public import PublicDocumentView  # noqa: F401
-from crm.views.leads import LeadCreateView, LeadViewSet  # noqa: F401
-from crm.views.messages import ActivityLogViewSet, MessageViewSet  # noqa: F401
 from crm.views.numbering import NumberingSchemePreviewView, NumberingSchemeView  # noqa: F401
 from crm.views.quotes import (  # noqa: F401
     ChargeTemplateViewSet,
@@ -61,8 +59,7 @@ __all__ = [
     "PublicQuoteRequestCodeView",
     "PublicQuoteAcceptView",
     "PublicQuoteRejectView",
-    # messages
-    "MessageViewSet",
+    # activity log
     "ActivityLogViewSet",
     # numbering (N2 editor)
     "NumberingSchemeView",
@@ -78,11 +75,7 @@ __all__ = [
     "PaymentViewSet",
     "ActViewSet",
     "FulfillmentViewSet",
-    # leads
-    "LeadCreateView",
-    "LeadViewSet",
     # ai
-    "SuggestChatReplyView",
     "QuoteRequestDiffView",
     # timeline (CRM Phase A)
     "TimelineView",

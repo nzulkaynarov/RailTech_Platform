@@ -14,11 +14,11 @@ class AttachmentAdmin(ReadOnlyInspectionMixin, ModelAdmin):
     list_filter = ("uploaded_at",)
     search_fields = ("original_filename", "uploaded_by__email")
     readonly_fields = ("uploaded_at",)
-    autocomplete_fields = ["uploaded_by", "product", "deal", "message", "quote", "company"]
+    autocomplete_fields = ["uploaded_by", "product", "deal", "quote", "company"]
     list_per_page = 30
     # parent_entity() reads all 5 FK refs to pick the non-null one — без select_related
     # это 5 SELECT на строку.
-    list_select_related = ("uploaded_by", "product", "deal", "quote", "company", "message")
+    list_select_related = ("uploaded_by", "product", "deal", "quote", "company")
     show_full_result_count = False
 
     @display(description=_("Привязка"))
@@ -31,8 +31,6 @@ class AttachmentAdmin(ReadOnlyInspectionMixin, ModelAdmin):
             return f"КП: {obj.quote}"
         if obj.company:
             return f"Компания: {obj.company}"
-        if obj.message:
-            return f"Сообщение #{obj.message_id}"
         return "—"
 
     fieldsets = (
@@ -49,7 +47,7 @@ class AttachmentAdmin(ReadOnlyInspectionMixin, ModelAdmin):
             _("Привязка"),
             {
                 "classes": ["tab"],
-                "fields": ("product", "deal", "quote", "company", "message"),
+                "fields": ("product", "deal", "quote", "company"),
             },
         ),
     )

@@ -7,7 +7,7 @@ from django.dispatch import receiver
 
 from accounts.models import Company
 from crm.constants import DealStageCode
-from crm.models import Deal, Message
+from crm.models import Deal
 
 from .models import Notification, NotificationType
 from .services import push_notification_ws
@@ -125,55 +125,6 @@ def notify_deal_created(sender, instance, created, **kwargs):
             event_params={"deal_id": instance.pk, "company": company_name},
         )
         push_notification_ws(notif)
-
-
-@receiver(post_save, sender=Message)
-def notify_new_message(sender, instance, created, **kwargs):
-    """Notify deal participants about new chat messages."""
-    if not created or instance.message_type != "CHAT":
-        return
-
-    deal = instance.deal
-    sender_user = instance.sender
-    info_type = NotificationType.objects.filter(code="INFO").first()
-    short_text = instance.text[:80] + ("..." if len(instance.text) > 80 else "")
-
-    # Collect recipients, excluding the sender. Buyer↔seller must be symmetric: the seller side of a
-    # claimed deal is `assigned_to` (the КП author), NOT `manager` (legacy, ~always NULL for real
-    # buyer/seller deals — ADR-0006 Move 2). If the deal is still unclaimed, alert the routed seller
-    # team so the buyer's message isn't lost in the queue.
-    recipients = set()
-    if deal.client_id and deal.client_id != sender_user.id:
-        recipients.add(deal.client_id)
-    if deal.manager_id and deal.manager_id != sender_user.id:
-        recipients.add(deal.manager_id)
-    # Per-seller ownership (ADR-0006 Move 2): notify each routed seller's claimed owner; for a routing
-    # still in the queue, alert that company's seller team. Competition is hidden — each seller hears
-    # only about their own thread.
-    unclaimed_company_ids = []
-    for routing in deal.seller_routings.all():
-        if routing.assigned_to_id:
-            recipients.add(routing.assigned_to_id)
-        else:
-            unclaimed_company_ids.append(routing.seller_company_id)
-    recipients.update(_seller_user_ids_for_companies(unclaimed_company_ids))
-    recipients.discard(sender_user.id)
-
-    notifications = [
-        Notification(
-            user_id=uid,
-            type=info_type,
-            title=f"Сообщение по сделке #{deal.pk}",
-            message=f"{sender_user.get_full_name() or sender_user.email}: {short_text}",
-            link="/crm/deals",
-            deal=deal,
-        )
-        for uid in recipients
-    ]
-    if notifications:
-        created = Notification.objects.bulk_create(notifications)
-        for notif in created:
-            push_notification_ws(notif)
 
 
 @receiver(pre_save, sender=Deal)

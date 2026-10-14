@@ -129,14 +129,6 @@ def _handle_enrich(payload: dict) -> dict:
     return {"suggestion": suggestion}
 
 
-def _handle_chat_reply(payload: dict) -> dict:
-    from accounts.models import CustomUser
-    from crm.services import suggest_chat_reply
-
-    user = CustomUser.objects.get(pk=payload["user_id"])
-    return suggest_chat_reply(payload["deal_id"], user)
-
-
 def _handle_quote_diff(payload: dict) -> dict:
     from accounts.models import CustomUser
     from crm.models import Quote
@@ -145,7 +137,7 @@ def _handle_quote_diff(payload: dict) -> dict:
     quote = Quote.objects.select_related("deal").get(pk=payload["quote_id"])
     # Re-run the visibility gate with the recorded user: the view checked it at enqueue,
     # but under queue latency a routing revocation / member deactivation must not still
-    # deliver the diff minutes later (TOCTOU — mirrors chat_reply re-running its scoping).
+    # deliver the diff minutes later (TOCTOU).
     user = CustomUser.objects.get(pk=payload["user_id"])
     if not user_can_view_quote_diff(user, quote):
         return {"error": "NOT_AUTHORIZED"}
@@ -269,7 +261,6 @@ FEATURE_HANDLERS = {
     "catalog_import_ai": _handle_catalog_import_ai,
     "compose": _handle_compose,
     "enrich": _handle_enrich,
-    "chat_reply": _handle_chat_reply,
     "quote_diff": _handle_quote_diff,
     "draft_quote": _handle_draft_quote,
     "suggest_sellers": _handle_suggest_sellers,

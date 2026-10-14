@@ -51,7 +51,7 @@ from catalog.views import (
     SupplierOfferViewSet,
 )
 from core.health import health_check
-from core.views import PageStatsView, PlatformDashboardView, SupportTicketViewSet, SystemSettingsView
+from core.views import PageStatsView, PlatformDashboardView, SystemSettingsView
 from crm.views import (
     ActivityLogViewSet,
     ActViewSet,
@@ -65,9 +65,6 @@ from crm.views import (
     FulfillmentViewSet,
     GeneratedDocumentViewSet,
     InvoiceViewSet,
-    LeadCreateView,
-    LeadViewSet,
-    MessageViewSet,
     NumberingSchemePreviewView,
     NumberingSchemeView,
     PaymentViewSet,
@@ -86,7 +83,6 @@ from crm.views import (
     RecentDocumentsView,
     RelationshipViewSet,
     SearchDocumentsView,
-    SuggestChatReplyView,
     TimelineView,
     TimeToFirstQuoteView,
     WordingVariantViewSet,
@@ -135,7 +131,6 @@ router.register(r"crm/charge-templates", ChargeTemplateViewSet, basename="charge
 router.register(r"crm/document-templates", DocumentTemplateViewSet, basename="documenttemplate")
 router.register(r"crm/wording-variants", WordingVariantViewSet, basename="wordingvariant")
 router.register(r"crm/generated-documents", GeneratedDocumentViewSet, basename="generateddocument")
-router.register(r"crm/messages", MessageViewSet, basename="message")
 router.register(r"crm/activity-logs", ActivityLogViewSet, basename="activitylog")
 router.register(r"crm/deal-stages", DealStageViewSet, basename="dealstage")
 router.register(r"crm/quote-statuses", QuoteStatusViewSet, basename="quotestatus")
@@ -144,7 +139,6 @@ router.register(r"crm/invoices", InvoiceViewSet, basename="invoice")
 router.register(r"crm/payments", PaymentViewSet, basename="payment")
 router.register(r"crm/acts", ActViewSet, basename="act")
 router.register(r"crm/fulfillments", FulfillmentViewSet, basename="fulfillment")
-router.register(r"crm/leads", LeadViewSet, basename="lead")
 # CRM Phase B — counterparty book (relationship edges of the user's own companies).
 router.register(r"crm/relationships", RelationshipViewSet, basename="relationship")
 
@@ -161,9 +155,6 @@ router.register(r"accounts/company-types", CompanyTypeViewSet, basename="company
 router.register(r"accounts/company-roles", CompanyRoleViewSet, basename="company-role")
 router.register(r"notifications", NotificationViewSet, basename="notification")
 router.register(r"admin/email-templates", EmailTemplateViewSet, basename="admin-email-template")
-
-# Support tickets
-router.register(r"support/tickets", SupportTicketViewSet, basename="support-ticket")
 
 # Master Data
 router.register(r"master-data/countries", CountryViewSet)
@@ -221,9 +212,6 @@ urlpatterns = (
         path("api/v1/sourcing/compose-request/", ComposeRequestView.as_view(), name="compose-request"),
         path("api/v1/catalog/product-enrich/", ProductEnrichView.as_view(), name="product-enrich"),
         path(
-            "api/v1/crm/deals/<int:deal_id>/suggest-reply/", SuggestChatReplyView.as_view(), name="suggest-chat-reply"
-        ),
-        path(
             "api/v1/crm/quotes/<int:quote_id>/request-diff/", QuoteRequestDiffView.as_view(), name="quote-request-diff"
         ),
         path("api/v1/sourcing/import-catalog/", CatalogImportView.as_view(), name="import-catalog"),
@@ -250,7 +238,6 @@ urlpatterns = (
         path("api/v1/crm/timeline/", TimelineView.as_view(), name="crm-timeline"),
         path("api/v1/analytics/page-stats/", PageStatsView.as_view(), name="page-stats"),
         path("api/v1/analytics/platform-dashboard/", PlatformDashboardView.as_view(), name="platform-dashboard"),
-        path("api/v1/crm/leads/", LeadCreateView.as_view(), name="lead-create"),
         # Public, unauthenticated КП surface by secret token (Wave A: page + offline acceptance).
         # The bare path content-negotiates (browser → HTML page, ?export=pdf → PDF); the action
         # endpoints (viewed beacon / request-code / accept / reject) are POST-only, JSON.

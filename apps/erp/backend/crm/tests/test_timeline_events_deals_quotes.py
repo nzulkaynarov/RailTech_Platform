@@ -72,22 +72,6 @@ def test_deal_created_writes_event_code_and_params(lookups):
     }
 
 
-@pytest.mark.django_db
-def test_lead_converted_writes_event_code_and_params(lookups):
-    from crm.models import ActivityLog, Lead
-    from crm.services.deals import convert_lead_to_deal
-
-    buyer_company = _company("Buyer Co", "CLIENT")
-    actor = _member(buyer_company, "converter@t.test", can_buy=True)
-    lead = Lead.objects.create(name="Ivan", email="ivan@lead.test", phone="+998", message="Нужны рельсы")
-
-    deal, err = convert_lead_to_deal(lead, actor, company=buyer_company)
-    assert err is None, err
-
-    log = ActivityLog.objects.filter(deal=deal, event_code="lead.converted").get()
-    assert log.event_params == {"lead_id": lead.id, "deal_id": deal.id}
-
-
 # ── quotes.py (via the _log_quote wrapper + direct re-match create) ───────────────────────────
 
 
@@ -164,27 +148,3 @@ def test_quote_expired_writes_event_code_and_params(lookups):
         "deal_id": deal.id,
         "valid_until": str(yesterday),
     }
-
-
-# ── views/leads.py (public landing lead) ─────────────────────────────────────────────────────
-
-
-@pytest.mark.django_db
-def test_lead_received_writes_event_code_and_params(lookups):
-    from rest_framework.test import APIRequestFactory
-
-    from crm.models import ActivityLog
-    from crm.views.leads import LeadCreateView
-
-    # Drive the public producer directly — the URLconf shares /crm/leads/ with the
-    # authenticated LeadViewSet, so hit the view class to exercise this branch's site.
-    request = APIRequestFactory().post(
-        "/api/v1/crm/leads/",
-        {"name": "Пётр", "email": "petr@landing.test", "phone": "+998", "message": "Заявка"},
-        format="json",
-    )
-    resp = LeadCreateView.as_view()(request)
-    assert resp.status_code == 201, resp.data
-
-    log = ActivityLog.objects.filter(event_code="lead.received").get()
-    assert log.event_params == {"name": "Пётр", "email": "petr@landing.test"}

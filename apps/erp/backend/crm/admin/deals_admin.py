@@ -13,8 +13,6 @@ from ..models import (
     DealStage,
     FulfillmentStatus,
     InvoiceStatus,
-    Lead,
-    Message,
     QuoteStatus,
 )
 
@@ -109,127 +107,6 @@ class DealAdmin(ReadOnlyInspectionMixin, ModelAdmin):
 
         updated = services.bulk_close_deals_lost(queryset, actor=request.user)
         self.message_user(request, _("%(count)d сделок закрыто.") % {"count": updated})
-
-
-# ────────────────────────────────────────────
-# Leads
-# ────────────────────────────────────────────
-
-
-@admin.register(Lead)
-class LeadAdmin(ReadOnlyInspectionMixin, ModelAdmin):
-    list_display = ("name", "company", "email", "phone", "processed_badge", "created_at")
-    list_filter = ("is_processed", "created_at")
-    list_filter_submit = True
-    search_fields = ("name", "company", "email", "phone")
-    readonly_fields = ("created_at",)
-    actions = ["mark_processed"]
-    list_per_page = 25
-
-    @display(
-        description=_("Статус"),
-        label={True: "success", False: "danger"},
-    )
-    def processed_badge(self, obj):
-        return obj.is_processed
-
-    fieldsets = (
-        (
-            None,
-            {
-                "fields": (
-                    ("name", "company"),
-                    ("email", "phone"),
-                    "message",
-                    ("is_processed", "created_at"),
-                ),
-            },
-        ),
-    )
-
-    @superuser_only_action(_("[Emergency] Пометить обработанными"))
-    def mark_processed(self, request, queryset):
-        from .. import services
-
-        updated = services.mark_leads_processed(queryset)
-        self.message_user(request, _("%(count)d обработано.") % {"count": updated})
-
-
-# ────────────────────────────────────────────
-# Messages
-# ────────────────────────────────────────────
-
-
-@admin.register(Message)
-class MessageAdmin(ReadOnlyInspectionMixin, ModelAdmin):
-    list_display = ("id", "sender", "deal", "short_text", "message_type", "archive_badge", "timestamp")
-    list_filter = ("message_type", "is_archived", "timestamp")
-    list_filter_submit = True
-    search_fields = ("text", "sender__email", "deal__title", "deal__company__name")
-    autocomplete_fields = ["deal", "sender"]
-    list_per_page = 50
-    list_select_related = ("sender", "deal")
-    show_full_result_count = False
-    actions = ["archive_selected"]
-
-    fieldsets = (
-        (
-            None,
-            {
-                "fields": (
-                    ("deal", "sender"),
-                    "text",
-                    ("message_type", "timestamp"),
-                ),
-            },
-        ),
-        (
-            _("Архив"),
-            {
-                "classes": ["tab"],
-                "fields": (
-                    "is_archived",
-                    ("archived_at", "archive_path"),
-                ),
-            },
-        ),
-    )
-
-    @display(description=_("Текст"))
-    def short_text(self, obj):
-        return obj.text[:80] + "..." if len(obj.text) > 80 else obj.text
-
-    @display(
-        description=_("Архив"),
-        label={True: "info", False: "success"},
-    )
-    def archive_badge(self, obj):
-        return obj.is_archived
-
-    @superuser_only_action(_("[Emergency] Архивировать в S3 (sync)"))
-    def archive_selected(self, request, queryset):
-        """Synchronously archive the selected messages to S3 cold storage.
-
-        For bulk/scheduled use prefer the Celery beat schedule or:
-            python manage.py archive_messages --older-than 90 --async
-        """
-        from .. import services
-
-        result = services.archive_messages_sync(queryset)
-
-        if not result["archived"] and not result["errors"]:
-            self.message_user(request, _("Нет сообщений для архивации"), level="warning")
-            return
-
-        for err in result["errors"]:
-            self.message_user(request, _("Ошибка записи: %(err)s") % {"err": err}, level="error")
-
-        if result["archived"]:
-            self.message_user(
-                request,
-                _("%(count)d сообщений архивировано в %(files)d файл(ах)")
-                % {"count": result["archived"], "files": result["files"]},
-            )
 
 
 # ────────────────────────────────────────────

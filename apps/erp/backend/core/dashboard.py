@@ -7,7 +7,7 @@ from django.utils import translation
 from django.utils.translation import gettext_lazy as _
 
 from accounts.models import Company, CompanyRoleApplication, CustomUser
-from crm.models import Deal, Lead, Quote, QuoteItem
+from crm.models import Deal, Quote, QuoteItem
 
 # Dashboard payload is recomputed every DASHBOARD_CACHE_TTL seconds.
 # 5 minutes: fresh-enough for KPI read from Ops, avoids hammering Neon on every
@@ -107,7 +107,6 @@ def _compute_dashboard_payload() -> dict:
     role_apps_pending = CompanyRoleApplication.objects.filter(
         status__in=["PENDING", "DOCUMENTS_REQUIRED", "PAYMENT_REQUIRED"]
     ).count()
-    unprocessed_leads = Lead.objects.filter(is_processed=False).count()
     sourcing_backlog = QuoteItem.objects.filter(product__isnull=True).count()
     managers_count = CustomUser.objects.filter(role__code="ADMIN").count()
     productivity = round(total_quotes / managers_count, 1) if managers_count > 0 else 0
@@ -158,12 +157,6 @@ def _compute_dashboard_payload() -> dict:
                 "metric": role_apps_pending,
                 "icon": "assignment",
                 "link": "/admin/accounts/companyroleapplication/?status__exact=PENDING",
-            },
-            {
-                "title": _("Новые лиды"),
-                "metric": unprocessed_leads,
-                "icon": "contact_page",
-                "link": "/admin/crm/lead/?is_processed__exact=0",
             },
             {
                 "title": _("Нераспознанные позиции"),

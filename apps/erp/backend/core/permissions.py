@@ -124,7 +124,7 @@ class IsOfferSupplierOrAdmin(BasePermission):
 
 class IsCompanyMemberOrPlatformAdmin(BasePermission):
     """
-    Object-level permission для мульти-тенантных ресурсов (Deal, Quote, Message, QuoteItem).
+    Object-level permission для мульти-тенантных ресурсов (Deal, Quote, QuoteItem).
 
     - Администратор (`is_superuser`): полный доступ.
     - Остальные: доступ только к объектам своей компании (через CompanyMember).
@@ -156,7 +156,7 @@ class IsCompanyMemberOrPlatformAdmin(BasePermission):
             deal_id = None
             if hasattr(obj, "seller_routings"):  # obj is a Deal
                 deal_id = obj.pk
-            elif hasattr(obj, "deal_id"):  # Quote / Message / Invoice / Contract / Act
+            elif hasattr(obj, "deal_id"):  # Quote / Invoice / Contract / Act
                 deal_id = obj.deal_id
             elif hasattr(obj, "quote"):  # QuoteItem
                 deal_id = obj.quote.deal_id
