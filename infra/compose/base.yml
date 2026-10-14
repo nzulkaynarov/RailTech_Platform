@@ -221,6 +221,9 @@ services:
     environment:
       <<: *crm-backend-env
       FORWARDED_ALLOW_IPS: "*"
+      # CORS формы «Я новый клиент» (только /api/v1/leads/web*, M2-CAB-03): origin страницы входа
+      # Cabinet. Origin сравнивается вместе с портом, поэтому при HTTP_PORT≠80 нужен и вариант с портом.
+      CABINET_ORIGIN: ${CABINET_ORIGIN:-http://cabinet.localhost,http://cabinet.localhost:${HTTP_PORT:-80},https://${CABINET_DOMAIN:-cabinet.railtech.uz}}
     volumes:
       - ../../apps/crm/infra/casbin:/app/casbin:ro
       - ../ai/litellm.models.yaml:/app/litellm.models.yaml:ro
@@ -421,6 +424,8 @@ services:
       args:
         VITE_API_URL: ""
         VITE_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
+        # Форма «Я новый клиент» → CRM POST /api/v1/leads/web (CORS — CABINET_ORIGIN у crm-api).
+        VITE_CRM_URL: ${CABINET_CRM_URL:-http://crm.localhost:${HTTP_PORT:-80}}
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1/health"]
       interval: 15s

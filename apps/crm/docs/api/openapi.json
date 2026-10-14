@@ -5122,6 +5122,7 @@
           "form_too_fast",
           "form_token_expired",
           "rate_limited",
+          "consent_required",
           "ai_spend_period"
         ],
         "title": "Reason",
@@ -6709,7 +6710,7 @@
         "type": "object"
       },
       "WebLeadIn": {
-        "description": "Форма «Запрос» со страницы входа Cabinet: вложений в первой версии нет (Q-12).\n\n`website` — honeypot: человек поле не видит; заполнено — запрос принят, лид не создан.",
+        "description": "Форма «Запрос» со страницы входа Cabinet: вложений в первой версии нет (Q-12).\n\n`consent` — согласие на обработку персональных данных, обязательно `true` (Q-12): иначе\n422 `consent_required`. `website` — honeypot: человек поле не видит; заполнено — запрос\nпринят, лид не создан.",
         "properties": {
           "company": {
             "anyOf": [
@@ -6722,6 +6723,12 @@
               }
             ],
             "title": "Company"
+          },
+          "consent": {
+            "default": false,
+            "description": "Согласие на обработку персональных данных; обязательно true (иначе 422 consent_required).",
+            "title": "Consent",
+            "type": "boolean"
           },
           "email": {
             "anyOf": [
@@ -10524,7 +10531,7 @@
     },
     "/api/v1/leads/web": {
       "post": {
-        "description": "Форма «Запрос» со страницы входа Cabinet → лид CRM с источником `web` (ARCHITECTURE §17).\n\nБез аутентификации. Нужен телефон или e-mail. Ошибки: 422 `validation_failed` с\n`details.reason` (`form_token_invalid` | `form_too_fast` | `form_token_expired` |\n`contact_required` | `invalid_phone` | `invalid_email`), 429 `rate_limited`.\nПовторный запрос известного контакта дополняет существующую карточку.",
+        "description": "Форма «Запрос» со страницы входа Cabinet → лид CRM с источником `web` (ARCHITECTURE §17).\n\nБез аутентификации. Нужны телефон или e-mail и `consent: true` (согласие на обработку ПДн,\nQ-12). Ошибки: 422 `validation_failed` с `details.reason` (`consent_required` |\n`form_token_invalid` | `form_too_fast` | `form_token_expired` | `contact_required` |\n`invalid_phone` | `invalid_email`), 429 `rate_limited`.\nПовторный запрос известного контакта дополняет существующую карточку.",
         "operationId": "web_lead",
         "requestBody": {
           "content": {
