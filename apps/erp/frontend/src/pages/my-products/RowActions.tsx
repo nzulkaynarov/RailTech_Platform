@@ -9,7 +9,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useCatalogPublishGate } from '@/hooks/useCatalogPublishGate';
 import { useArchiveProduct, usePublishProduct, useRestoreProduct, useUnpublishProduct } from '@/hooks/useCatalog';
 import { extractApiErrorCode, translateApiError } from '@/lib/apiError';
 import type { Product } from '@/api/catalogApi';
@@ -20,9 +19,6 @@ import type { MyProductsTabKey } from './tabs';
  * кандидаты/черновики — «Дополнить» (страница-редактор) + «Опубликовать»;
  * опубликовано — «Открыть» + меню «Снять с публикации» / «В архив»;
  * архив — «Восстановить» (архив ОБРАТИМ — закрывает D10 «чёрную дыру»).
- *
- * KYC-гейт действует ТОЛЬКО на публикацию: снятие с витрины, архив и восстановление
- * бэкенд сознательно разрешает до верификации — наводить порядок можно всегда.
  */
 export function RowActions({
   product,
@@ -36,7 +32,6 @@ export function RowActions({
   onOpen: (product: Product) => void;
 }) {
   const { t } = useTranslation();
-  const publishGate = useCatalogPublishGate();
   const publishOne = usePublishProduct();
   const unpublishOne = useUnpublishProduct();
   const archiveOne = useArchiveProduct();
@@ -53,8 +48,7 @@ export function RowActions({
         </Button>
         <Button
           size="sm"
-          title={publishGate.blocked ? t('nomenclature.publishNeedsKyc') : undefined}
-          disabled={!product.completeness?.is_publishable || publishOne.isPending || publishGate.blocked}
+          disabled={!product.completeness?.is_publishable || publishOne.isPending}
           onClick={() =>
             publishOne.mutate(product.id, {
               onSuccess: () => toast.success(t('nomenclature.published', { name: product.name })),

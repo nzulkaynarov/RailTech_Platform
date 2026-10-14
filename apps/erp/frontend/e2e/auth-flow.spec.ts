@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * Auth-flow regression net for the registration → setup-password journey that
+ * Auth-flow regression net for the invitation → setup-password journey that
  * broke three times on 2026-06-08 (email link, public-route redirect, dropped
- * phone). NON-INVASIVE: it never submits the registration form (no user is
- * created) and uses a fake uid/token, so it is safe to run against prod.
+ * phone). NON-INVASIVE: it uses a fake uid/token, so it is safe to run against
+ * prod. Self-registration (/register) is gone (M1-ERP-02).
  *
  * Run: cd frontend && E2E_BASE_URL=https://b2b.railtech.uz npm run test:e2e
  */
@@ -17,17 +17,6 @@ const STALE_AUTH = JSON.stringify({
 });
 
 test.describe('auth flow', () => {
-  test('register page renders its form (no crash, no raw i18n keys)', async ({ page }) => {
-    await page.goto('/register');
-    await expect(page.locator('#root')).not.toBeEmpty();
-    await expect(page.getByRole('textbox').first()).toBeVisible();
-
-    const bodyText = (await page.locator('body').innerText()).toLowerCase();
-    expect(bodyText, 'untranslated i18n key visible on register page').not.toMatch(
-      /\b(common|auth|register|onboarding)\.[a-z]/
-    );
-  });
-
   // Regression for project-bug-public-route-401-redirect: a stale token in
   // localStorage makes initAuth's /me return 401; the response interceptor must
   // NOT bounce the user off /setup-password to the login screen. Before the fix

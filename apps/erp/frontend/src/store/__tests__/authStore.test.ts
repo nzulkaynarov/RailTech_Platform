@@ -9,7 +9,6 @@ const mockUser = (overrides = {}) => ({
   last_name: 'User',
   phone: '+1234567890',
   role_code: 'USER',
-  kyc_status: 'L1_UNVERIFIED',
   company: undefined,
   ...overrides,
 });
@@ -36,19 +35,17 @@ describe('authStore', () => {
     await state.logout();
 
     expect(useAuthStore.getState().user).toBeNull();
-    expect(useAuthStore.getState().kyc_status).toBeNull();
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
   });
 
-  it('should keep the user and kyc_status from setUser', () => {
+  it('should keep the user from setUser', () => {
     const state = useAuthStore.getState();
 
-    const user = mockUser({ role_code: 'USER', kyc_status: 'L2_VERIFIED' });
+    const user = mockUser({ role_code: 'USER' });
     state.setUser(user);
 
     const currentState = useAuthStore.getState();
     expect(currentState.user).toEqual(user);
-    expect(currentState.kyc_status).toBe('L2_VERIFIED');
   });
 
   it('should handle primary_company mapping', () => {
@@ -56,7 +53,7 @@ describe('authStore', () => {
 
     const company = { id: 1, name: 'Test Company' };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const user = mockUser({ kyc_status: null, primary_company: company }) as any;
+    const user = mockUser({ primary_company: company }) as any;
     state.setUser(user);
 
     const currentState = useAuthStore.getState();

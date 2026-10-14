@@ -7,21 +7,19 @@ import { CompanyTab } from '@/components/Cabinet/CompanyTab';
 import { accountsApi } from '@/api/accountsApi';
 
 /**
- * Settings Hub PR 3 — CompanyTab regrouped into three cards (requisites / bank /
- * KYC documents) with UNCHANGED logic: same single-PATCH save, same OWNER gating,
- * same INN lock after KYC verification. These tests pin both the grouping and
- * the preserved behaviour.
+ * Settings Hub PR 3 — CompanyTab grouped into two cards (requisites / bank): single-PATCH
+ * save, OWNER / settings.edit gating. The company-verification card and the INN lock that
+ * hung on it are gone (M1-ERP-02) — ERP does not verify counterparties.
  */
 
 // ── Mutable store state fed to the mocked stores (hoisted so the vi.mock
 //    factories below can close over it; each test resets via makeUserState). ──
-type Entry = { status: 'BUYER' | 'SELLER'; verification: 'verified' | 'pending' | 'rejected' };
+type Entry = { status: 'BUYER' | 'SELLER' };
 type MockUserState = {
   company: {
     id: number | null;
     name: string;
     inn: string;
-    kycStatus: 'verified' | 'pending' | 'not_started';
     logoUrl: string | null;
     statusEntries: Entry[];
   };
@@ -56,8 +54,6 @@ vi.mock('@/api/accountsApi', () => ({
     updateCompany: vi.fn(),
     uploadCompanyLogo: vi.fn(),
     deleteCompanyLogo: vi.fn(),
-    uploadDocument: vi.fn(),
-    deleteDocument: vi.fn(),
   },
 }));
 
@@ -70,9 +66,8 @@ function makeUserState(
       id: 7,
       name: 'Рельсы',
       inn: '123456789',
-      kycStatus: 'pending',
       logoUrl: null,
-      statusEntries: [{ status: 'SELLER', verification: 'verified' }],
+      statusEntries: [{ status: 'SELLER' }],
       ...overrides,
     },
     activeStatus: 'SELLER',
@@ -94,8 +89,6 @@ const detailResponse = {
   mfo: '00014',
   country: 1,
   has_iso9001: false,
-  kyc_documents: [],
-  verification_status: 1,
 };
 
 beforeEach(() => {
@@ -107,13 +100,13 @@ beforeEach(() => {
 });
 
 describe('CompanyTab (settings hub PR 3 grouping)', () => {
-  it('renders the three group cards and populates fields from the full company record', async () => {
+  it('renders the two group cards and populates fields from the full company record', async () => {
     renderWithProviders(<CompanyTab />);
 
-    // Three cards of the regrouped form.
+    // Two cards of the regrouped form; no company-verification card any more.
     expect(screen.getByText('Реквизиты компании')).toBeInTheDocument();
     expect(screen.getByText('Банковские реквизиты')).toBeInTheDocument();
-    expect(screen.getByText('KYC-документы')).toBeInTheDocument();
+    expect(screen.queryByText(/верификац/i)).not.toBeInTheDocument();
 
     // Fields hydrate from getCompanyDetail (not the lightweight /me projection).
     await waitFor(() => {
@@ -123,21 +116,18 @@ describe('CompanyTab (settings hub PR 3 grouping)', () => {
     expect(screen.getByDisplayValue('00014')).toBeInTheDocument();
     expect(accountsApi.getCompanyDetail).toHaveBeenCalledWith(7);
 
-    // OWNER sees the save action; INN editable while KYC is not verified.
+    // OWNER sees the save action; INN is editable.
     expect(screen.getByRole('button', { name: /Сохранить данные/ })).toBeInTheDocument();
     expect(screen.getByDisplayValue('123456789')).toBeEnabled();
   });
 
-  it('locks INN after KYC verification and omits it from the save payload', async () => {
-    userStoreRef.state = makeUserState({ kycStatus: 'verified' });
+  it('saves requisites and INN in one PATCH (no verification lock on INN)', async () => {
     renderWithProviders(<CompanyTab />);
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('ООО Рельсы')).toBeInTheDocument();
     });
-    // INN is a checked legal identifier once verified — disabled even for OWNER.
-    expect(screen.getByDisplayValue('123456789')).toBeDisabled();
-    expect(screen.getByDisplayValue('ООО Рельсы')).toBeEnabled();
+    expect(screen.getByDisplayValue('123456789')).toBeEnabled();
 
     await userEvent.click(screen.getByRole('button', { name: /Сохранить данные/ }));
     await waitFor(() => {
@@ -145,8 +135,7 @@ describe('CompanyTab (settings hub PR 3 grouping)', () => {
     });
     const [calledId, payload] = vi.mocked(accountsApi.updateCompany).mock.calls[0];
     expect(calledId).toBe(7);
-    expect(payload).toEqual(expect.objectContaining({ name: 'ООО Рельсы', mfo: '00014' }));
-    expect(payload).not.toHaveProperty('inn');
+    expect(payload).toEqual(expect.objectContaining({ name: 'ООО Рельсы', mfo: '00014', inn: '123456789' }));
   });
 
   it('renders read-only for a plain non-OWNER member (no save, inputs disabled, hint shown)', async () => {

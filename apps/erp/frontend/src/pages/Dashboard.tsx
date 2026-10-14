@@ -12,11 +12,9 @@ import {
   AlertCircle,
   Loader2,
   Clock,
-  AlertTriangle,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
 import { formatDate } from '@/lib/formatLocale';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -46,152 +44,7 @@ import { useRecentDocuments } from '@/hooks/usePageStats';
 import { buyerStatus } from '@/lib/requestStatus';
 import { dashboardApi, type DashboardStats, type RecentDocument } from '@/api/dashboardApi';
 
-// ─── KYC Pending Banner ────────────────────────────────────────────────
-
-function KYCPendingBanner({ onNavigate }: { onNavigate?: (p: string) => void } = {}) {
-  const { t } = useTranslation();
-  const { profile, company } = useUserStore();
-  // Экран читает КОД состояния, а не «всё, кроме L2/L3 — на проверке». После ОТЗЫВА уровня
-  // арендатор видел бейдж «На проверке» и подпись «обычно 1–2 рабочих дня»: он ждал вердикта,
-  // который уже вынесен, и не знал ни об отказе, ни о причине (замер 26-08, находка 28).
-  const capabilities = useUserStore((state) => state.capabilities);
-  const isRejected = capabilities?.kyc_status_code === 'L1_UNVERIFIED' && Boolean(capabilities?.kyc_last_reason);
-
-  const levels = [
-    {
-      code: 'L1',
-      label: t('dashboardPage.kyc.levels.l1.label'),
-      desc: t('dashboardPage.kyc.levels.l1.desc'),
-      features: t('dashboardPage.kyc.levels.l1.features'),
-      status: 'done' as const,
-    },
-    {
-      code: 'L2',
-      label: t('dashboardPage.kyc.levels.l2.label'),
-      desc: t('dashboardPage.kyc.levels.l2.desc'),
-      features: t('dashboardPage.kyc.levels.l2.features'),
-      status: (company.kycStatus === 'verified' ? 'done' : 'current') as 'done' | 'current' | 'locked',
-    },
-    {
-      code: 'L3',
-      label: t('dashboardPage.kyc.levels.l3.label'),
-      desc: t('dashboardPage.kyc.levels.l3.desc'),
-      features: t('dashboardPage.kyc.levels.l3.features'),
-      status: 'locked' as const,
-    },
-  ];
-
-  return (
-    <div className="flex flex-col gap-6">
-      {/* Header */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-warning/10">
-              <Clock className="h-6 w-6 text-warning" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold">{t('dashboardPage.kyc.title', { name: profile.firstName || '' })}</h2>
-              <p className="text-sm text-muted-foreground mt-1">{t('dashboardPage.kyc.subtitle')}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Company info */}
-      <Card>
-        <CardContent className="p-5">
-          <h3 className="text-sm font-semibold mb-4">{t('dashboardPage.kyc.statusTitle')}</h3>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">{t('dashboardPage.kyc.company')}</span>
-              <span className="text-sm font-medium">{company.name || t('dashboardPage.kyc.notSpecified')}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">{t('dashboardPage.kyc.inn')}</span>
-              <span className="text-sm font-mono">{company.inn || t('dashboardPage.kyc.notSpecified')}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">{t('dashboardPage.kyc.status')}</span>
-              <Badge variant={isRejected ? 'destructive' : 'secondary'} className="gap-1">
-                {isRejected ? <AlertTriangle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
-                {isRejected ? t('dashboardPage.kyc.rejected') : t('dashboardPage.kyc.pending')}
-              </Badge>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* KYC Levels Roadmap */}
-      <Card>
-        <CardContent className="p-5">
-          <h3 className="text-sm font-semibold mb-4">{t('dashboardPage.kyc.levelsTitle')}</h3>
-          <div className="space-y-4">
-            {levels.map((level, i) => (
-              <div key={level.code} className={cn(
-                'relative rounded-lg border p-4',
-                level.status === 'current' && 'border-warning bg-warning/5',
-                level.status === 'done' && 'border-success/30 bg-success/5',
-                level.status === 'locked' && 'opacity-50',
-              )}>
-                <div className="flex items-start gap-3">
-                  {/* Step indicator */}
-                  <div className={cn(
-                    'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold',
-                    level.status === 'done' && 'bg-success text-success-foreground',
-                    level.status === 'current' && 'bg-warning text-warning-foreground',
-                    level.status === 'locked' && 'bg-muted text-muted-foreground',
-                  )}>
-                    {level.status === 'done' ? '✓' : i + 1}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-sm font-semibold">{level.label}</h4>
-                      {level.status === 'current' && (
-                        <Badge variant="secondary" className="text-xs gap-1">
-                          <Clock className="h-3 w-3" />
-                          {t('dashboardPage.kyc.yourLevel')}
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">{level.desc}</p>
-                    <p className="text-xs mt-2">
-                      <span className="font-medium">{t('dashboardPage.kyc.access')}: </span>
-                      <span className="text-muted-foreground">{level.features}</span>
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Actions */}
-      <Card className="border-dashed">
-        <CardContent className="p-5 text-center space-y-3">
-          <p className="text-sm text-muted-foreground">
-            {isRejected
-              ? t('dashboardPage.kyc.rejectedHint', { reason: capabilities?.kyc_last_reason })
-              : t('dashboardPage.kyc.hint')}
-          </p>
-          <div className="flex justify-center gap-3">
-            <Button variant="outline" size="sm" onClick={() => onNavigate?.('profile')}>
-              {t('dashboardPage.kyc.editProfile')}
-            </Button>
-            <Button variant="outline" size="sm" asChild>
-              <a href={`mailto:support@railtech.uz?subject=${encodeURIComponent(t('dashboardPage.kyc.supportSubject'))}`}>
-                {t('dashboardPage.kyc.contactSupport')}
-              </a>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-// ─── BUYER Welcome (KYC verified, no activity) ────────────────────────
+// ─── BUYER Welcome (no activity yet) ─────────────────────────────────
 
 function BuyerWelcome({ onNavigate }: { onNavigate: (page: string) => void }) {
   const { t } = useTranslation();
@@ -420,12 +273,7 @@ function RecentDocumentsCard() {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function BuyerDashboard({ onProductClick: _onProductClick, period: _period, stats, onNavigate }: { onProductClick?: (id: string) => void; period: string; stats: DashboardStats | null; onNavigate: (page: string) => void }) {
-  const { company } = useUserStore();
-
-  // State 1: KYC not verified — show verification status
-  if (company.kycStatus !== 'verified') return <KYCPendingBanner onNavigate={onNavigate} />;
-
-  // State 2: KYC verified but no activity — show welcome guide
+  // No activity yet — show the welcome guide.
   const isEmpty = !stats || ((stats.active_requests ?? 0) === 0 && (stats.deals_completed ?? 0) === 0 && (stats.quotes_received ?? 0) === 0);
   if (isEmpty) return <BuyerWelcome onNavigate={onNavigate} />;
 
@@ -486,10 +334,6 @@ function TimeToFirstQuoteCard() {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function SellerDashboard({ period: _period, stats, onNavigate }: { period: string; stats: DashboardStats | null; onNavigate: (page: string) => void }) {
-  const { company } = useUserStore();
-
-  if (company.kycStatus !== 'verified') return <KYCPendingBanner onNavigate={onNavigate} />;
-
   // Operations inbox: what needs me now (attention strip + approval queue) → the wedge
   // north-star (TTFK) → pipeline distribution → a low-ink metric strip. Actions above metrics.
   return (

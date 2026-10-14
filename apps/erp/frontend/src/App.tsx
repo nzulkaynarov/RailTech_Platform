@@ -10,11 +10,10 @@ import { getPageLabel } from '@/lib/pageLabels';
 import { useUserStore } from './store/userStore';
 import { useAuthStore } from './store/authStore';
 import { LoginPage } from './components/Auth/LoginPage';
-import { KYCRegistrationForm } from './components/Auth/KYCRegistrationForm';
 import { PasswordSetupPage } from './components/Auth/PasswordSetupPage';
 import { ForgotPasswordPage } from './components/Auth/ForgotPasswordPage';
 import { ResetPasswordPage } from './components/Auth/ResetPasswordPage';
-import { ProfileCompletionForm } from './components/Cabinet/ProfileCompletionForm';
+import { NoCompanyScreen } from './components/Auth/NoCompanyScreen';
 import { LoadingSkeleton } from './components/LoadingSkeleton';
 import { NAVIGABLE_PAGES } from './config/pageRegistry';
 import { parseHashToPage, pageToHash, type Page } from './routes/hashRoute';
@@ -22,7 +21,7 @@ import { evaluatePageGuard } from './routes/pageGuard';
 import { renderPage } from './routes/pageContent';
 
 /** Parse URL path and query params for auth routes */
-type AuthRouteView = 'login' | 'register' | 'setup-password' | 'forgot-password' | 'reset-password';
+type AuthRouteView = 'login' | 'setup-password' | 'forgot-password' | 'reset-password';
 
 function parseAuthRoute(): { view: AuthRouteView; uid: string | null; token: string | null } {
   const url = new URL(window.location.href);
@@ -44,23 +43,15 @@ function parseAuthRoute(): { view: AuthRouteView; uid: string | null; token: str
   if (path === '/forgot-password') {
     return { view: 'forgot-password', uid: null, token: null };
   }
-  if (path === '/register') {
-    // CRM Phase D — a CB-invite link (/register?invite=…) claims an existing offline company.
-    // Stash the token so it survives the register → setup-password → submit-profile steps.
-    const invite = url.searchParams.get('invite');
-    if (invite) sessionStorage.setItem('cb_invite_token', invite);
-    return { view: 'register', uid: null, token: null };
-  }
   return { view: 'login', uid: null, token: null };
 }
 
 function useAuthRoute() {
   const [route, setRoute] = useState(parseAuthRoute);
 
-  const navigate = (view: Extract<AuthRouteView, 'login' | 'register' | 'forgot-password'>) => {
+  const navigate = (view: Extract<AuthRouteView, 'login' | 'forgot-password'>) => {
     const pathMap: Record<typeof view, string> = {
       login: '/',
-      register: '/register',
       'forgot-password': '/forgot-password',
     };
     window.history.pushState(null, '', pathMap[view]);
@@ -83,7 +74,6 @@ function App() {
   const initAuth = useAuthStore((s) => s.initAuth);
   const loadFromAuth = useUserStore((s) => s.loadFromAuth);
   const { route, navigate } = useAuthRoute();
-  const [profileCompleted, setProfileCompleted] = useState(false);
   // Full-page skeleton is for the INITIAL cold-load session check ONLY. It must NOT
   // key off the store's `isLoading`, which also spikes during an interactive login()/
   // login2FA() call — that would unmount LoginPage mid-login and wipe its local state
@@ -160,32 +150,22 @@ function App() {
     );
   }
 
-  // Not authenticated — show login or registration
+  // Not authenticated — login only: self-registration is gone (M1-ERP-02). Employees are
+  // provisioned by CRM (ADR-0003) or invited by a teammate (setup-password link above).
   if (!isAuthenticated) {
-    if (route.view === 'register') {
-      return <KYCRegistrationForm />;
-    }
     return (
       <LoginPage
         onNavigate={() => {}}
-        onRegister={() => navigate('register')}
         onForgotPassword={() => navigate('forgot-password')}
       />
     );
   }
 
-  // Authenticated but no company — show profile completion (company + type selection).
-  const hasCompany = user?.company || user?.primary_company || profileCompleted;
+  // Authenticated but not attached to a company. There is no self-service company creation
+  // any more — the back office or CRM attaches the account; say so instead of a dead form.
+  const hasCompany = user?.company || user?.primary_company;
   if (!hasCompany) {
-    return (
-      <ProfileCompletionForm
-        onComplete={async () => {
-          setProfileCompleted(true);
-          await initAuth();
-          await loadFromAuth();
-        }}
-      />
-    );
+    return <NoCompanyScreen />;
   }
 
   return (
@@ -200,7 +180,6 @@ function MainApp() {
   const activeStatus = useUserStore((s) => s.activeStatus);
   const setActiveStatus = useUserStore((s) => s.setActiveStatus);
   const statusEntries = useUserStore((s) => s.company.statusEntries);
-  const kycStatus = useUserStore((s) => s.company.kycStatus);
   // `screen` flips to 'main' only when loadFromAuth() has populated real
   // capabilities. Guards are deferred until then (see evaluatePageGuard) so a
   // cold-load deep-link isn't bounced by pre-auth default state.
@@ -215,19 +194,17 @@ function MainApp() {
     window.history.pushState({ page: p }, '', `#${pageToHash(p)}`);
   };
 
-  // Unified page-access guard (KYC → context), driven by the pure
+  // Unified page-access guard (context only), driven by the pure
   // evaluatePageGuard. DEFERRED until userStore bootstrap (`bootstrapped`,
   // i.e. screen === 'main'): on a cold deep-link the store still holds pre-auth
   // defaults, and enforcing then would bounce a valid hash to #dashboard and
   // clobber it via replaceState. Once loadFromAuth resolves real capabilities the
   // effect re-runs (deps below) and enforces exactly as before —
-  //   • unverified user off the KYC floor → toast.info(kycRequired) → dashboard;
   //   • page unique to the user's OTHER verified context → adopt it (+ refetch);
   //   • cross-role page (buyer→seller-only etc.) → toast.info(notAvailableHere) → dashboard.
   useEffect(() => {
     const decision = evaluatePageGuard({
       pageType: page.type,
-      kycStatus,
       activeStatus,
       statusEntries,
       bootstrapped,
@@ -240,17 +217,12 @@ function MainApp() {
       queryClient.invalidateQueries();
       return;
     }
-    // decision.action === 'bounce' — surface WHY, then fall back to the dashboard.
-    if (decision.reason === 'kyc') {
-      // LOW-20: surface why the user was bounced back instead of silent redirect.
-      toast.info(t('guards.kycRequired'));
-    } else {
-      toast.info(t('guards.notAvailableHere'));
-    }
+    // decision.action === 'bounce' — surface WHY (LOW-20), then fall back to the dashboard.
+    toast.info(t('guards.notAvailableHere'));
     // eslint-disable-next-line react-hooks/set-state-in-effect -- гейт страницы: не синхронизация, а НАВИГАЦИЯ с побочными действиями (toast + history.replaceState)
     setPage({ type: 'dashboard' });
     window.history.replaceState(null, '', '#dashboard');
-  }, [page.type, kycStatus, activeStatus, statusEntries, bootstrapped, setActiveStatus, queryClient, t]);
+  }, [page.type, activeStatus, statusEntries, bootstrapped, setActiveStatus, queryClient, t]);
 
   // Handle browser back/forward
   useEffect(() => {
@@ -305,11 +277,10 @@ function MainApp() {
     if (target.includes('/') || target.includes('?')) {
       const parsed = parseHashToPage(target);
       const decision = evaluatePageGuard({
-        pageType: parsed.type, kycStatus, activeStatus, statusEntries, bootstrapped,
+        pageType: parsed.type, activeStatus, statusEntries, bootstrapped,
       });
       if (decision.action === 'bounce') {
-        if (decision.reason === 'kyc') toast.info(t('guards.kycRequired'));
-        else toast.info(t('guards.notAvailableHere'));
+        toast.info(t('guards.notAvailableHere'));
         navigateTo({ type: 'dashboard' });
         return;
       }
@@ -327,21 +298,19 @@ function MainApp() {
       return;
     }
     // Решение о доступе — ТОТ ЖЕ `evaluatePageGuard`, что и у эффекта ниже. Раньше здесь
-    // проверялись только роль и её список страниц, а гейты KYC и контекста доставались уже
+    // проверялись только роль и её список страниц, а гейт контекста доставался уже
     // ПОСЛЕ перехода: страница успевала смонтироваться и отскакивала — пользователь видел
     // мигание вместо отказа (аудит UI 2026-07-30). Теперь отказ виден до навигации, причина
     // формулируется один раз, а `adopt` (страница другого подтверждённого контекста) как и
     // прежде пропускается вперёд — контекст переключит эффект.
     const decision = evaluatePageGuard({
       pageType: target,
-      kycStatus,
       activeStatus,
       statusEntries,
       bootstrapped,
     });
     if (decision.action === 'bounce') {
-      if (decision.reason === 'kyc') toast.info(t('guards.kycRequired'));
-      else toast.info(t('guards.notAvailableHere'));
+      toast.info(t('guards.notAvailableHere'));
       navigateTo({ type: 'dashboard' });
       return;
     }

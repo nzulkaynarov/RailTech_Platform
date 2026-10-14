@@ -8,7 +8,6 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { crmApi, RelationshipDirection, RelationshipStage, OfflineClientPayload } from '../../api/crmApi';
-import { accountsApi } from '../../api/accountsApi';
 
 // CRM Phase A — deal-scoped activity timeline (read-only history feed).
 export const useDealTimeline = (dealId: number) => useQuery({
@@ -61,8 +60,3 @@ export const useCreateOfflineClient = () => {
         },
     });
 };
-
-// CRM Phase D — invite an offline client's contact to register and claim its company.
-export const useInviteContact = () => useMutation({
-    mutationFn: (contactId: number) => accountsApi.inviteContact(contactId),
-});

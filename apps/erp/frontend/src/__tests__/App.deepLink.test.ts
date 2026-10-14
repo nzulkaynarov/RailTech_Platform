@@ -8,18 +8,17 @@ import { evaluatePageGuard, type PageGuardInput } from '../routes/pageGuard';
 // authStore rehydrates isAuthenticated/user from localStorage while isLoading
 // stays at its default `false`, so App mounts MainApp on the FIRST render —
 // before initAuth()/loadFromAuth() run. At that instant userStore is still at
-// pre-auth DEFAULTS (kycStatus 'not_started', activeStatus 'BUYER',
-// empty statusEntries). The old KYC/context guards enforced against those and
+// pre-auth DEFAULTS (activeStatus 'BUYER', empty statusEntries). The old
+// context guard enforced against those and
 // bounced a valid deep-link (#request-detail/{id}, #deal-quote/{id}) to
 // #dashboard, clobbering the hash via replaceState. The fix defers all guards
 // until bootstrap (`bootstrapped`, i.e. userStore.screen === 'main').
 
-/** Build a guard input with sensible verified-buyer defaults. */
+/** Build a guard input with sensible buyer defaults. */
 function input(overrides: Partial<PageGuardInput> & { pageType: string }): PageGuardInput {
   return {
-    kycStatus: 'verified',
     activeStatus: 'BUYER',
-    statusEntries: [{ status: 'BUYER', verification: 'verified' }],
+    statusEntries: [{ status: 'BUYER' }],
     bootstrapped: true,
     ...overrides,
   };
@@ -27,7 +26,6 @@ function input(overrides: Partial<PageGuardInput> & { pageType: string }): PageG
 
 /** Pre-auth default store state, as seen on the first render of a cold load. */
 const PRE_AUTH_DEFAULTS: Omit<PageGuardInput, 'pageType'> = {
-  kycStatus: 'not_started',
   activeStatus: 'BUYER',
   statusEntries: [],
   bootstrapped: false,
@@ -67,36 +65,34 @@ describe('parseHashToPage', () => {
 
 describe('evaluatePageGuard — cold-load deferral (the fix)', () => {
   it('ALLOWS a request-detail deep link before bootstrap (does not bounce on defaults)', () => {
-    // Before the fix this bounced: kyc default not_started + request-detail
-    // outside KYC_ALLOWED_PAGES.
     expect(evaluatePageGuard({ ...PRE_AUTH_DEFAULTS, pageType: 'request-detail' })).toEqual({ action: 'allow' });
   });
 
   it('ALLOWS a deal-quote deep link before bootstrap (seller cold load)', () => {
-    // Before the fix this bounced twice: KYC (not_started) AND context
-    // (default BUYER + empty statusEntries → deal-quote ∉ BUYER_PAGES).
+    // Before the fix this bounced on context (default BUYER + empty statusEntries →
+    // deal-quote ∉ BUYER_PAGES).
     expect(evaluatePageGuard({ ...PRE_AUTH_DEFAULTS, pageType: 'deal-quote' })).toEqual({ action: 'allow' });
   });
 
 });
 
 describe('evaluatePageGuard — valid deep links survive bootstrap', () => {
-  it('opens request-detail for a verified buyer', () => {
+  it('opens request-detail for a buyer', () => {
     expect(evaluatePageGuard(input({ pageType: 'request-detail' }))).toEqual({ action: 'allow' });
   });
 
-  it('opens request-detail for a verified seller', () => {
+  it('opens request-detail for a seller', () => {
     expect(
       evaluatePageGuard(
-        input({ pageType: 'request-detail', activeStatus: 'SELLER', statusEntries: [{ status: 'SELLER', verification: 'verified' }] }),
+        input({ pageType: 'request-detail', activeStatus: 'SELLER', statusEntries: [{ status: 'SELLER' }] }),
       ),
     ).toEqual({ action: 'allow' });
   });
 
-  it('opens deal-quote for a verified seller', () => {
+  it('opens deal-quote for a seller', () => {
     expect(
       evaluatePageGuard(
-        input({ pageType: 'deal-quote', activeStatus: 'SELLER', statusEntries: [{ status: 'SELLER', verification: 'verified' }] }),
+        input({ pageType: 'deal-quote', activeStatus: 'SELLER', statusEntries: [{ status: 'SELLER' }] }),
       ),
     ).toEqual({ action: 'allow' });
   });
@@ -114,29 +110,18 @@ describe('evaluatePageGuard — cross-role / role bounces still hold after boots
           pageType: 'deal-quote',
           activeStatus: 'BUYER',
           statusEntries: [
-            { status: 'BUYER', verification: 'verified' },
-            { status: 'SELLER', verification: 'verified' },
+            { status: 'BUYER' },
+            { status: 'SELLER' },
           ],
         }),
       ),
     ).toEqual({ action: 'adopt', context: 'SELLER' });
   });
 
-  it('bounces an unverified user off a non-KYC-floor page (KYC guard)', () => {
-    // Раньше примером служила карточка заявки — она перестала им быть: свой ЧЕРНОВИК
-    // покупателю разрешён до верификации (KYC floor, ADR-0006), и гейт на его ЧТЕНИИ был
-    // тупиком. Порог остался на отправке, поэтому берём страницу, которая действительно за
-    // ним: договоры появляются только после согласованного КП.
-    expect(evaluatePageGuard(input({ pageType: 'contracts', kycStatus: 'pending' }))).toEqual({
-      action: 'bounce',
-      reason: 'kyc',
-    });
-  });
-
-  it('lets a pre-KYC buyer open its OWN draft request (KYC floor allows the draft)', () => {
-    expect(evaluatePageGuard(input({ pageType: 'request-detail', kycStatus: 'pending' }))).toEqual({
-      action: 'allow',
-    });
+  it('has no company-verification gate: documents open on context alone (M1-ERP-02)', () => {
+    // Раньше договоры отбрасывали компанию без подтверждённого уровня проверки на дашборд.
+    // Проверки клиентов в ERP нет — доступ решает контекст, действия ограничивает право роли.
+    expect(evaluatePageGuard(input({ pageType: 'contracts' }))).toEqual({ action: 'allow' });
   });
 
   it('bounces a stale operator-plane hash (admin-*) like any unknown page (M1-ERP-02)', () => {

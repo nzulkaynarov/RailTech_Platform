@@ -25,15 +25,9 @@ interface ReasonMeta {
   target: string;
 }
 
-/** Reason → message + CTA. Targets are existing hash routes: `settings` (Settings Hub → company /
- * documents, where a seller completes KYC) and `my-subscription` (the plan/tariff page). */
+/** Reason → message + CTA. Targets are existing hash routes: `my-subscription` (the plan/tariff
+ * page) and `help`. */
 const REASON_META: Record<QuoteSendBlockReason, ReasonMeta> = {
-  kyc: {
-    icon: ShieldAlert,
-    messageKey: 'quote.sendGate.kyc',
-    ctaKey: 'quote.sendGate.kycCta',
-    target: 'settings',
-  },
   subscription: {
     icon: Receipt,
     messageKey: 'quote.sendGate.subscription',
@@ -57,8 +51,8 @@ const REASON_META: Record<QuoteSendBlockReason, ReasonMeta> = {
 };
 
 /**
- * WP-H — proactive КП send-gate banner. Warns a seller who cannot send the КП (KYC below L2, no
- * subscription, or a DEMO grant) up-front on the builder, instead of at the end after an hour of
+ * WP-H — proactive КП send-gate banner. Warns a seller who cannot send the КП (no subscription,
+ * a DEMO grant, or a platform ban) up-front on the builder, instead of at the end after an hour of
  * data entry. Non-blocking and NOT dismissible — it reflects a persistent account state and clears
  * on its own once the blocker is resolved. Renders only on the seller side and only while blocked.
  * Message order mirrors the backend send_to_client gates (see useQuoteSendGate).

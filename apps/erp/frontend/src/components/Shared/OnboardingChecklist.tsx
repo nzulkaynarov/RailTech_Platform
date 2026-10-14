@@ -4,7 +4,6 @@ import {
   CheckCircle2,
   Circle,
   ChevronRight,
-  ShieldCheck,
   Users as UsersIcon,
   CreditCard,
   Rocket,
@@ -61,13 +60,6 @@ export function OnboardingChecklist({ onNavigate }: OnboardingChecklistProps) {
   const isSeller = activeStatus === 'SELLER';
   const isBuyer = activeStatus === 'BUYER';
 
-  const kycStatusCode =
-    user?.primary_company?.verification_status_code
-    ?? user?.company?.verification_status_code
-    ?? null;
-  const kycDone = kycStatusCode === 'L2_VERIFIED' || kycStatusCode === 'L3_CONTRACTED';
-  const kycSubmitted = kycStatusCode === 'PROFILE_SUBMITTED';
-
   const profileDone = Boolean(user?.first_name && user?.last_name);
   const hasSubscription = Boolean(sub && (sub.status === 'ACTIVE' || sub.status === 'TRIAL'));
   const hasDeal = deals.length > 0;
@@ -81,17 +73,6 @@ export function OnboardingChecklist({ onNavigate }: OnboardingChecklistProps) {
         icon: UsersIcon,
         done: profileDone,
         action: !profileDone ? { label: t('onboarding.steps.profile.cta'), target: 'profile' } : undefined,
-        appliesTo: 'all',
-      },
-      {
-        id: 'kyc',
-        label: t('onboarding.steps.kyc.label'),
-        hint: kycSubmitted
-          ? t('onboarding.steps.kyc.hintSubmitted')
-          : t('onboarding.steps.kyc.hint'),
-        icon: ShieldCheck,
-        done: kycDone,
-        action: !kycDone && !kycSubmitted ? { label: t('onboarding.steps.kyc.cta'), target: 'profile' } : undefined,
         appliesTo: 'all',
       },
       {
@@ -114,7 +95,7 @@ export function OnboardingChecklist({ onNavigate }: OnboardingChecklistProps) {
       },
     ];
     return all.filter((s) => s.appliesTo === 'all' || (s.appliesTo === 'seller' && isSeller) || (s.appliesTo === 'buyer' && isBuyer));
-  }, [profileDone, kycDone, kycSubmitted, hasSubscription, hasDeal, isSeller, isBuyer, t]);
+  }, [profileDone, hasSubscription, hasDeal, isSeller, isBuyer, t]);
 
   const doneCount = steps.filter((s) => s.done).length;
   const total = steps.length;

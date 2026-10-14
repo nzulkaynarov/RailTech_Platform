@@ -23,7 +23,6 @@ import { CompanyDocumentProfileSettings } from '@/components/Cabinet/CompanyDocu
 import { CompanyDefaultsSettings } from '@/components/Cabinet/CompanyDefaultsSettings';
 import { CompanyNumberingSettings } from '@/components/Cabinet/CompanyNumberingSettings';
 import { CompanyTab } from '@/components/Cabinet/CompanyTab';
-import { CompanyRoleSection } from '@/components/Settings/CompanyRoleSection';
 import { MySubscriptionContent } from '@/pages/MySubscriptionPage';
 
 export function SettingsPage() {
@@ -77,14 +76,7 @@ function SectionContent({ sectionKey }: { sectionKey: SettingsSectionKey }): Rea
       return <SecuritySection />;
     case 'company':
       // ТОЛЬКО юр.реквизиты компании (бренд переехал в `branding`).
-      // Юр.реквизиты + роль компании на платформе: и то и другое — идентичность компании,
-      // и запрашивают роль там же, где смотрят, какая она сейчас.
-      return (
-        <div className="flex flex-col gap-6">
-          <CompanyTab />
-          <CompanyRoleSection />
-        </div>
-      );
+      return <CompanyTab />;
     case 'branding':
       // «Бланк и бренд» — PDF-letterhead/тема/бланк КП (группа «Документы»), только продавец.
       return <CompanyBrandingSection />;
