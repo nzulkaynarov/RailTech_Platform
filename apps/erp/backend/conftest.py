@@ -26,6 +26,30 @@ def _clear_default_cache():
     yield
 
 
+@pytest.fixture(autouse=True)
+def _block_real_model_calls(monkeypatch):
+    """Ни один тест не ходит в настоящий LiteLLM (платные вызовы — только evals с согласия):
+    транспорт шлюза заблокирован; нужен ответ модели — фикстура ``fake_gateway``."""
+    from ai.testing import blocked_transport
+
+    monkeypatch.setattr("ai.services.gateway._transport", blocked_transport)
+
+
+@pytest.fixture
+def fake_gateway(monkeypatch, settings):
+    """ИИ включён, шлюз — фейк с очередью ответов (``ai.testing.FakeGateway``), бюджет без лимита."""
+    from ai.testing import FakeGateway
+
+    settings.AI_IMPORT_ENABLED = True
+    settings.LITELLM_BASE_URL = "http://litellm.test"
+    settings.LITELLM_API_KEY = "sk-erp-test"
+    settings.AI_DAILY_BUDGET_USD = 0
+    settings.AI_MAX_RETRIES = 0
+    gateway = FakeGateway()
+    monkeypatch.setattr("ai.services.gateway._transport", gateway)
+    return gateway
+
+
 @pytest.fixture
 def api_client():
     """REST API client for making requests."""

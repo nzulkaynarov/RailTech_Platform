@@ -96,3 +96,44 @@ class AIJob(models.Model):
 
     def __str__(self):
         return f"{self.feature}: {self.celery_task_id}"
+
+
+class AICall(models.Model):
+    """Журнал вызовов шлюза LiteLLM — одна строка на вызов модели (M1-ERP-06).
+
+    Источник дневного бюджета ERP (`AI_DAILY_BUDGET_USD`: сумма `cost_usd` за календарный день
+    `TIME_ZONE`), версии промпта у ответа и статуса ИИ для консоли администратора (§3.13).
+    Стоимость — из заголовка шлюза `x-litellm-response-cost`. Текст промптов и ответов здесь
+    НЕ хранится (он — в трейсе Langfuse), только метаданные вызова.
+    """
+
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True, verbose_name=_("Время вызова"))
+    session_id = models.CharField(
+        max_length=64,
+        db_index=True,
+        verbose_name=_("Задача"),
+        help_text=_("ID ИИ-задачи (Celery) или импорта; совпадает с session_id трейса Langfuse"),
+    )
+    user_id = models.BigIntegerField(null=True, blank=True, verbose_name=_("Сотрудник"))
+    feature = models.CharField(max_length=32, verbose_name=_("Функция"), help_text=_("Тег feature= вызова"))
+    model_alias = models.CharField(max_length=32, verbose_name=_("Алиас модели"))
+    prompt_name = models.CharField(max_length=64, verbose_name=_("Промпт"))
+    prompt_version = models.CharField(max_length=16, verbose_name=_("Версия промпта (хэш)"))
+    status = models.CharField(
+        max_length=16,
+        verbose_name=_("Исход"),
+        help_text=_("ok / refusal / truncated / invalid_json / error / budget"),
+    )
+    error_code = models.CharField(max_length=40, blank=True, default="", verbose_name=_("Код ошибки"))
+    input_tokens = models.PositiveIntegerField(default=0, verbose_name=_("Токены на входе"))
+    output_tokens = models.PositiveIntegerField(default=0, verbose_name=_("Токены на выходе"))
+    cost_usd = models.DecimalField(max_digits=12, decimal_places=6, default=0, verbose_name=_("Стоимость, USD"))
+    latency_ms = models.PositiveIntegerField(default=0, verbose_name=_("Длительность, мс"))
+
+    class Meta:
+        verbose_name = _("Вызов модели")
+        verbose_name_plural = _("Вызовы моделей")
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.feature}/{self.model_alias}: {self.status}"

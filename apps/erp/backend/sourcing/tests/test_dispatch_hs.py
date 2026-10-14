@@ -22,7 +22,7 @@ def test_hs_classify_dispatches_through_run_ai_job(monkeypatch):
         seen["ids"] = list(product_ids)
         return {"results": []}
 
-    monkeypatch.setattr("catalog.hs_lookup_ai.classify_products", stub)
+    monkeypatch.setattr("ai.services.hs_lookup.classify_products", stub)
 
     result = run_ai_job.run("hs_classify", {"product_ids": [1, 2, 3]})
 
@@ -31,7 +31,7 @@ def test_hs_classify_dispatches_through_run_ai_job(monkeypatch):
 
 
 def test_hs_lookup_dispatches_through_run_ai_job(monkeypatch):
-    monkeypatch.setattr("catalog.hs_lookup_ai.lookup_hs_code", lambda text: {"echo": text})
+    monkeypatch.setattr("ai.services.hs_lookup.lookup_hs_code", lambda text: {"echo": text})
 
     result = run_ai_job.run("hs_lookup", {"description": "колодка тормозная"})
 

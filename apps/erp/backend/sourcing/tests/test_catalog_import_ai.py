@@ -6,13 +6,13 @@
 после задачи при любом исходе; вьюха повторяет продавцовую авторизацию CatalogImportView.
 """
 
-import json
 from io import BytesIO
 from types import SimpleNamespace
 from uuid import uuid4
 
 import pandas as pd
 import pytest
+from ai.testing import install_fake_gateway
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -43,23 +43,13 @@ def _stage(content: bytes, extension: str) -> str:
 
 
 def _stub_ai_client(monkeypatch, rows):
-    """Застабить фабрику клиента модулю services_ai_catalog (он импортирует _client по имени)."""
-    fake = SimpleNamespace(
-        content=[SimpleNamespace(type="text", text=json.dumps({"rows": rows}))],
-        stop_reason="end_turn",
-        usage=SimpleNamespace(input_tokens=1, output_tokens=1),
-    )
-    monkeypatch.setattr(
-        "sourcing.services_ai_catalog._client",
-        lambda: SimpleNamespace(messages=SimpleNamespace(create=lambda **kw: fake)),
-    )
+    """Фейковый шлюз LiteLLM отвечает строками прайса `rows`."""
+    install_fake_gateway(monkeypatch).reply_json({"rows": rows})
 
 
 def _forbid_ai_client(monkeypatch):
-    monkeypatch.setattr(
-        "sourcing.services_ai_catalog._client",
-        lambda: pytest.fail("paid AI call reached on the free template-xlsx path"),
-    )
+    """Бесплатный путь не должен дойти до шлюза: фейк без заготовок упадёт на любом вызове."""
+    install_fake_gateway(monkeypatch)
 
 
 @pytest.fixture

@@ -82,14 +82,10 @@ python-dotenv>=1.2
 python-dateutil>=2.9
 tzdata>=2026.1
 
-# AI — заявка normalisation (client uploads any file → Claude extracts our schema)
-# Floor raised from >=0.40: every AI feature (sourcing/services_ai.py, crm/services/ai_chat.py,
-# catalog/ai_enrich.py, services_ai_preflight.py) calls messages.create(output_config={'format':
-# {'type':'json_schema',...}}). The old >=0.40 floor predates the Structured-Outputs output_config.format
-# API, so a fresh install could resolve an SDK that silently ignores the schema → unconstrained "dirty"
-# JSON. 0.111 is the version verified working in the container (matches output_config.format). Cap below
-# 1.0 to avoid an unvetted breaking major.
-anthropic>=0.111,<1
+# AI — the ONLY model client is the shared LiteLLM gateway over its OpenAI-compatible HTTP API
+# (ADR-0005, M1-ERP-06: ai/services/gateway.py). No provider SDK is allowed in ERP; httpx is the
+# thin synchronous HTTP client for Celery workers (metadata tags, cost header, timeouts).
+httpx>=0.28,<1
 
 # Testing — pytest lives in the base image because the dev container (= prod image
 # + mounted code) runs `make test` / `make test-backend` (pytest --cov) directly.

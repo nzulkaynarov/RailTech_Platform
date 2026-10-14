@@ -97,3 +97,31 @@ createsuperuser: ## Суперпользователь ERP на стенде
 .PHONY: seed
 seed: ## dev/demo-справочники и тест-пользователи (core_seed) на стенде
 	cd ../.. && docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env exec erp-backend python manage.py core_seed
+
+# --- ИИ (M1-ERP-06): состояние шлюза и evals ----------------------------------------------
+STAND := cd ../.. && docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env
+
+.PHONY: ai-status
+ai-status: ## Состояние ИИ ERP без вызова моделей: шлюз, бюджет и расход за сегодня, ошибки, версии промптов
+	$(STAND) exec erp-backend python manage.py ai_status
+
+.PHONY: ai-gateway-sync
+ai-gateway-sync: ## Перерегистрировать ключ ERP в LiteLLM (бюджет на день, трейсы Langfuse) после правки .env
+	$(STAND) run --rm erp-ai-gateway
+
+# Ключевые кейсы eval-quick (~10 вызовов intake-model/match-model). Полный набор — make eval.
+QUICK_CASES := text-two-goods-ru,text-cable-meters,text-latin-translit,text-service,text-not-a-request,csv-simple-table,exact-name-ru,latin-to-cyrillic,code-is-the-strong-signal,nothing-fits
+
+.PHONY: eval-quick
+eval-quick: ## ПЛАТНО (~10 вызовов): ключевые golden-кейсы разбора и сопоставления. make eval-quick CONFIRM=yes [EVAL_MAX_USD=0.2]
+	@$(MAKE) --no-print-directory _paid-check
+	$(STAND) run --rm --no-deps -e EVAL_CONFIRM=yes -e EVAL_MAX_USD=$(or $(EVAL_MAX_USD),0.2) -e EVAL_CASES=$(QUICK_CASES) erp-worker-ai pytest -m eval evals -p no:cacheprovider -s
+
+.PHONY: eval
+eval: ## ПЛАТНО (~20 вызовов): все golden-кейсы ERP. make eval CONFIRM=yes [EVAL_MAX_USD=0.5]
+	@$(MAKE) --no-print-directory _paid-check
+	$(STAND) run --rm --no-deps -e EVAL_CONFIRM=yes -e EVAL_MAX_USD=$(or $(EVAL_MAX_USD),0.5) erp-worker-ai pytest -m eval evals -p no:cacheprovider -s
+
+.PHONY: _paid-check
+_paid-check:
+	@test "$(CONFIRM)" = "yes" || { echo "Цель вызывает ПЛАТНЫЕ модели через LiteLLM стенда — только с согласия владельца на этот прогон. Подтвердите: CONFIRM=yes. Потолок — EVAL_MAX_USD."; exit 1; }

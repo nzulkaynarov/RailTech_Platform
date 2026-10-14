@@ -1,0 +1,74 @@
+# Сопоставление строк запроса с каталогом (ARCHITECTURE §8). Шорт-лист кандидатов задан в кейсе
+# (в продукте его строит триграммный поиск по БД) — модель только ранжирует. expect — id лучшего
+# кандидата; null — ни один не подходит, строка должна остаться без кандидатов.
+
+- id: exact-name-ru
+  tags: [quick]
+  lines:
+    - name: Подшипник 6205
+      candidates:
+        - {id: 101, name: Подшипник шариковый 6205-2RS, sku: BRG-6205}
+        - {id: 102, name: Подшипник шариковый 6305, sku: BRG-6305}
+        - {id: 103, name: Втулка бронзовая 25x30}
+      expect: 101
+
+- id: latin-to-cyrillic
+  tags: [quick]
+  lines:
+    - name: kabel VVG 3x2.5
+      name_canonical: Кабель ВВГ 3x2,5
+      candidates:
+        - {id: 201, name: Кабель ВВГнг 3x1,5}
+        - {id: 202, name: Кабель ВВГнг 3x2,5}
+        - {id: 203, name: Провод ПВС 3x2,5}
+      expect: 202
+
+- id: english-request
+  lines:
+    - name: office chair with armrests
+      candidates:
+        - {id: 301, name: Стол офисный 120x60}
+        - {id: 302, name: Кресло офисное с подлокотниками}
+        - {id: 303, name: Стул для посетителей}
+      expect: 302
+
+- id: code-is-the-strong-signal
+  tags: [quick]
+  lines:
+    - name: блок питания 24В
+      mpn: LRS-150-24
+      candidates:
+        - {id: 401, name: Блок питания 24В 100Вт, sku: LRS-100-24}
+        - {id: 402, name: Блок питания 24В 150Вт, sku: LRS-150-24}
+      expect: 402
+
+- id: nothing-fits
+  tags: [quick]
+  lines:
+    - name: Краска фасадная белая 10 л
+      candidates:
+        - {id: 501, name: Перчатки рабочие х/б}
+        - {id: 502, name: Лента малярная 50 мм}
+      expect: null
+
+- id: service-line
+  lines:
+    - name: монтаж кондиционера настенного
+      candidates:
+        - {id: 601, name: Кондиционер настенный 9000 BTU}
+        - {id: 602, name: Услуга монтажа настенного кондиционера}
+        - {id: 603, name: Чистка кондиционера}
+      expect: 602
+
+- id: two-lines-independent
+  lines:
+    - name: Бумага А4 офисная
+      candidates:
+        - {id: 701, name: Бумага офисная А4 80 г/м², 500 л.}
+        - {id: 702, name: Бумага для плоттера 914 мм}
+      expect: 701
+    - name: ручка гелевая чёрная
+      candidates:
+        - {id: 703, name: Ручка шариковая синяя}
+        - {id: 704, name: Ручка гелевая чёрная 0,5 мм}
+      expect: 704

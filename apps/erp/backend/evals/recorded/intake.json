@@ -1,0 +1,21 @@
+{
+  "_comment": "Записанные (нормализованные сервисом) ответы разбора запроса для офлайн-тестов оценщика. Не вызов модели: форма ответа сервиса, по которой проверяется scoring.",
+  "text-two-goods-ru": [
+    {"name": "Подшипник 6205", "name_canonical": "Подшипник 6205", "quantity": 4, "unit": "компл.", "mpn": "6205", "gost_drawing": "", "note": "", "candidates": []},
+    {"name": "Перчатки рабочие", "name_canonical": "Перчатки рабочие", "quantity": 40, "unit": "пар", "mpn": "", "gost_drawing": "", "note": "", "candidates": []}
+  ],
+  "text-latin-translit": [
+    {"name": "boltы M12x60", "name_canonical": "Болт М12x60", "quantity": 100, "unit": "шт", "mpn": "", "gost_drawing": "", "note": "", "candidates": []},
+    {"name": "gaiki M12", "name_canonical": "Гайка М12", "quantity": 100, "unit": "шт", "mpn": "", "gost_drawing": "", "note": "", "candidates": []}
+  ],
+  "text-not-a-request": [],
+  "text-service": [
+    {"name": "Монтаж вентиляции", "name_canonical": "Монтаж вентиляции", "quantity": 1, "unit": "", "mpn": "", "gost_drawing": "", "note": "на объекте", "candidates": []},
+    {"name": "Пусконаладка вентиляции", "name_canonical": "Пусконаладка вентиляции", "quantity": 1, "unit": "", "mpn": "", "gost_drawing": "", "note": "", "candidates": []}
+  ],
+  "csv-simple-table": [
+    {"name": "Труба стальная 57x3", "name_canonical": "Труба стальная 57x3", "quantity": 12, "unit": "м", "unit_code": "MTR", "mpn": "", "gost_drawing": "", "note": ""},
+    {"name": "Отвод 90° 57x3", "name_canonical": "Отвод 90° 57x3", "quantity": 8, "unit": "шт", "unit_code": "H87", "mpn": "", "gost_drawing": "", "note": ""},
+    {"name": "Фланец 57", "name_canonical": "Фланец 57", "quantity": 4, "unit": "шт", "unit_code": "H87", "mpn": "", "gost_drawing": "", "note": ""}
+  ]
+}

@@ -22,8 +22,8 @@ from master_data.models import Currency
 
 @pytest.fixture(autouse=True)
 def _disable_ai_by_default(settings):
-    # Same guard as test_draft_quote.py: local dev has ANTHROPIC_API_KEY → AI on; the fuzzy tests
-    # opt back in and mock the matcher so no real Claude call ever fires.
+    # Same guard as test_draft_quote.py: a stand with LITELLM_API_KEY → AI on; the fuzzy tests
+    # opt back in and mock the matcher so no real model call ever fires.
     settings.AI_IMPORT_ENABLED = False
 
 
@@ -87,7 +87,7 @@ def _draft_with_candidate(scene, settings, monkeypatch, confidence):
     product = _published_product(scene)
     settings.AI_IMPORT_ENABLED = True
     settings.AI_DRAFT_MATCH_CONFIDENCE = 0.9
-    monkeypatch.setattr("sourcing.services_ai.match_lines_to_catalog", _fake_match(product, confidence))
+    monkeypatch.setattr("ai.services.matching.match_lines_to_catalog", _fake_match(product, confidence))
     quote, err, _ = generate_draft_quote(scene["deal"].id, scene["seller_user"])
     assert err is None
     return quote, product

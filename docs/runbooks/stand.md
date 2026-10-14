@@ -88,6 +88,19 @@ make up-obs
 При нехватке памяти Docker Desktop (8 ГБ на несколько стендов) на время старта можно остановить `docling`, `crm-worker`,
 `crm-mcp-*` и вернуть их `make up`.
 
+### ИИ ERP: ключ шлюза, бюджет, трейсы (M1-ERP-06)
+
+ERP ходит в LiteLLM своим виртуальным ключом `ERP_LITELLM_API_KEY` (генерирует `make env`; в старом `.env` его нет —
+выполните `make env`, он допишет переменную). Одноразовый сервис `erp-ai-gateway` при `make up` регистрирует ключ в
+LiteLLM: бюджет на день `ERP_AI_DAILY_BUDGET_USD` (сутки UTC) и колбэк Langfuse (`ERP_LANGFUSE_*`, пусто — ключи
+CRM `CRM_LANGFUSE_*`, общий проект). После смены ключей Langfuse или бюджета — `make -C apps/erp ai-gateway-sync`.
+Состояние без вызова моделей — `make -C apps/erp ai-status` (шлюз жив, бюджет ключа, расход и ошибки за сегодня).
+Трейс ERP в Langfuse: имя `erp.<функция>`, `sessionId` = id ИИ-задачи, пользователь `erp-staff-<id>`, в метаданных версия
+промпта. Langfuse v4 в режиме events_only: публичные `/api/public/traces` и `/sessions` отвечают 404 — для проверки из
+консоли `GET /api/public/v2/observations?fields=core,basic,metadata` (Basic `pk:sk`). Проверка пути без платных вызовов —
+временная mock-модель LiteLLM (`litellm_params.mock_response`), поле `mock_response` в теле запроса прокси игнорирует
+и идёт к провайдеру.
+
 ## Если не поднимается
 
 - Поменяли `infra/caddy/Caddyfile.dev` (или подтянули его `git pull`), а домены ведут себя по-старому: Caddyfile смонтирован одиночным файлом, и после замены файла git'ом контейнер видит старую копию или пустоту («open /etc/caddy/Caddyfile: no such file»). Лечение — `make caddy-reload` (пересоздаёт контейнер Caddy).

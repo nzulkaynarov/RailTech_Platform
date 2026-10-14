@@ -344,9 +344,13 @@ services:
       FRONTEND_URL: http://erp.localhost
       SUPPORT_EMAIL: ${SUPPORT_EMAIL:-support@example.com}
       EMAIL_BACKEND: ${ERP_EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
-      # Прямой SDK провайдера остаётся пустым: ИИ ERP переводится на LiteLLM в M1-ERP-06 (ADR-0005).
-      ANTHROPIC_API_KEY: ""
-      AI_IMPORT_ENABLED: "false"
+      # ИИ ERP — только через общий шлюз по алиасам (ADR-0005, M1-ERP-06). Ключ — виртуальный ключ ERP
+      # с дневным бюджетом и трейсами Langfuse (регистрирует сервис erp-ai-gateway); нет его в .env —
+      # мастер-ключ (бюджет — только журнал ERP, без трейсов). Ключей провайдеров у ERP нет.
+      LITELLM_BASE_URL: http://litellm:4000
+      LITELLM_API_KEY: ${ERP_LITELLM_API_KEY:-${LITELLM_MASTER_KEY}}
+      AI_IMPORT_ENABLED: ${ERP_AI_ENABLED:-true}
+      AI_DAILY_BUDGET_USD: ${ERP_AI_DAILY_BUDGET_USD:-1}
     volumes:
       - erp_static:/app/staticfiles
       - erp_media:/app/media
@@ -403,6 +407,25 @@ services:
     environment: *erp-env
     depends_on:
       erp-backend:
+        condition: service_healthy
+
+  # Виртуальный ключ ERP в LiteLLM (M1-ERP-06): регистрирует значение ERP_LITELLM_API_KEY с дневным
+  # бюджетом (ERP_AI_DAILY_BUDGET_USD, сутки UTC) и колбэком Langfuse (ERP_LANGFUSE_*, по умолчанию —
+  # проект CRM). Одноразовый, идемпотентный, всегда завершается кодом 0; мастер-ключ — только здесь.
+  # В M3-CRM-11 этот шаг переезжает в консоль CRM (бюджет — settings.budget.erp_daily_usd).
+  erp-ai-gateway:
+    build:
+      context: ../../apps/erp/backend
+    command: ["python", "manage.py", "ai_gateway_sync"]
+    environment:
+      <<: *erp-env
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
+      ERP_LANGFUSE_PUBLIC_KEY: ${ERP_LANGFUSE_PUBLIC_KEY:-${CRM_LANGFUSE_PUBLIC_KEY:-}}
+      ERP_LANGFUSE_SECRET_KEY: ${ERP_LANGFUSE_SECRET_KEY:-${CRM_LANGFUSE_SECRET_KEY:-}}
+      ERP_LANGFUSE_HOST: http://langfuse-web:3000
+    restart: "no"
+    depends_on:
+      litellm:
         condition: service_healthy
 
   # SPA ERP: сборка Vite + nginx (как в B2B). VITE_API_URL пустой → запросы относительные, /api и /ws

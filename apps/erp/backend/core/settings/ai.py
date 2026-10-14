@@ -5,15 +5,18 @@ from decimal import Decimal
 
 from .infra import *  # noqa: F401,F403 — последовательная композиция настроек
 
-# ── AI заявка normalisation ─────────────────────────────────────────────────
-# A client may upload ANY file (Excel / CSV / PDF / image / pasted text); Claude
-# extracts the line items into our canonical schema (name / quantity / unit /
-# note). The buyer ALWAYS reviews the result before submitting — the AI never
-# writes a final заявка unattended. Disabled automatically when no API key is set
-# (the deterministic keyword parser remains the fallback).
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-AI_IMPORT_MODEL = os.environ.get("AI_IMPORT_MODEL", "claude-opus-4-8")
-AI_IMPORT_ENABLED = bool(ANTHROPIC_API_KEY) and os.environ.get("AI_IMPORT_ENABLED", "true").lower() == "true"
+# ── ИИ через общий шлюз LiteLLM (ADR-0005, M1-ERP-06) ───────────────────────
+# Код знает только алиасы (intake-model, match-model, draft-model, enrich-model —
+# ai/services/gateway.py); какая модель за алиасом и ключи провайдеров — в LiteLLM
+# (консоль «Модели ИИ» CRM). ERP получает адрес шлюза и свой ключ как секреты окружения
+# (те же имена, что у CRM). Ключ — виртуальный ключ ERP с дневным бюджетом и трейсами
+# Langfuse (`manage.py ai_gateway_sync`, сервис erp-ai-gateway); пусто — ИИ выключен
+# (детерминированные пути остаются, как раньше без ключа провайдера).
+LITELLM_BASE_URL = (os.environ.get("LITELLM_BASE_URL") or "").strip().rstrip("/")
+LITELLM_API_KEY = (os.environ.get("LITELLM_API_KEY") or "").strip()
+AI_IMPORT_ENABLED = (
+    bool(LITELLM_BASE_URL and LITELLM_API_KEY) and os.environ.get("AI_IMPORT_ENABLED", "true").lower() == "true"
+)
 # Rows-per-chunk cap so a 10k-line spec is split into bounded LLM calls (token
 # limits) and merged — keeps each request fast, cheap, and within output budget.
 AI_IMPORT_CHUNK_ROWS = int(os.environ.get("AI_IMPORT_CHUNK_ROWS", "400"))
@@ -21,24 +24,26 @@ AI_IMPORT_CHUNK_ROWS = int(os.environ.get("AI_IMPORT_CHUNK_ROWS", "400"))
 # High by default — a confident bind into a seller-reviewed draft is safe; below it the line is left
 # for the manual Smart Match. Exact GOST/MPN matches bypass this (they're deterministic, not fuzzy).
 AI_DRAFT_MATCH_CONFIDENCE = float((os.environ.get("AI_DRAFT_MATCH_CONFIDENCE") or "0.9").strip() or "0.9")
-# ARCH-01: cap how long a single synchronous LLM call may hold a request worker.
-# The interactive AI endpoints (catalog-match / pre-flight / КП-diff / chat-assist
-# / PIM-enrich / contract-extract / conversational builder) call Claude IN the
-# request path on Daphne; the anthropic SDK's DEFAULT read timeout is 600s, so one
-# slow/hung completion could pin a worker for up to 600s × (1 + max_retries) —
-# ~30 min worst case — starving all other requests. Cap the per-attempt timeout
-# well below that but comfortably above normal Structured-Outputs latency (a few
-# seconds). The bulk Excel import shares this client but runs off the request path
-# (Celery: sourcing.tasks.process_excel_import), so the cap is safe there too.
-AI_REQUEST_TIMEOUT = float((os.environ.get("AI_REQUEST_TIMEOUT") or "60").strip() or "60")
+# Таймаут одного HTTP-вызова шлюза (секунды). Вызовы идут только из очереди `ai` (Celery), но
+# зависший ответ не должен держать воркер дольше лимита задачи; у алиасов в LiteLLM свои
+# таймауты (60–120 с), этот — потолок со стороны ERP.
+AI_REQUEST_TIMEOUT = float((os.environ.get("AI_REQUEST_TIMEOUT") or "130").strip() or "130")
+# Повторы при сетевой ошибке/5xx шлюза — только у пакетного импорта Excel (process_excel_import);
+# интерактивные задачи — одна попытка (платный вызов, пользователь просто нажмёт ещё раз).
 AI_MAX_RETRIES = int((os.environ.get("AI_MAX_RETRIES") or "2").strip() or "2")
 # Security audit #13: per-company daily safety cap on interactive AI jobs (a runaway
-# script / abuse would otherwise run an unbounded Anthropic bill). This is a spend
+# script / abuse would otherwise run an unbounded model bill). This is a spend
 # CIRCUIT-BREAKER, not a policy/tier limit — the ceiling is deliberately GENEROUS so a
-# legitimate team never reaches it; enforced blanket across all 8 AI features at the one
+# legitimate team never reaches it; enforced blanket across all AI features at the one
 # enqueue choke-point. Counted per company per calendar day (settings.TIME_ZONE) from the
 # persistent AIJob rows. 0 or negative disables the cap entirely (opt-out).
 AI_DAILY_JOB_CAP_PER_COMPANY = int((os.environ.get("AI_DAILY_JOB_CAP_PER_COMPANY") or "300").strip() or "300")
+# Бюджет ERP на день в USD (ARCHITECTURE §8): первый уровень — журнал вызовов ERP (ai.AICall,
+# стоимость из заголовка шлюза, календарный день TIME_ZONE) проверяется ПЕРЕД каждым вызовом;
+# второй — бюджет виртуального ключа ERP в LiteLLM (то же значение, сутки UTC). Превышение —
+# код AI_BUDGET_EXCEEDED в результате задачи. 0 — без лимита. По умолчанию $1 — как
+# `settings.budget.erp_daily_usd` консоли CRM (страница «Расходы»).
+AI_DAILY_BUDGET_USD = float((os.environ.get("AI_DAILY_BUDGET_USD") or "1").strip() or "1")
 # Hard byte cap before a file is sent to the model. Vision payloads (PDF/image) go
 # as one base64 request, so an oversized file means a 413 + wasted spend — reject it
 # early. Default 10 MB (the upload endpoint already caps the raw file at 20 MB).

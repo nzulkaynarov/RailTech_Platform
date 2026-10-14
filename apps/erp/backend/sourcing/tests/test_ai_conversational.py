@@ -1,6 +1,6 @@
 """AI #8 conversational заявка builder — disabled→empty, items returned, endpoint guards.
 
-The Claude client is stubbed (no paid/nondeterministic calls); we assert the deterministic
+The LiteLLM gateway is faked (ai.testing.FakeGateway) (no paid/nondeterministic calls); we assert the deterministic
 contract: gated on AI_IMPORT_ENABLED, free-text → structured items, noise rows dropped,
 endpoint 400/503 guards. Catalog matching is stubbed off (attach_candidates=False / no DB).
 """
@@ -8,18 +8,14 @@ endpoint 400/503 guards. Catalog matching is stubbed off (attach_candidates=Fals
 from types import SimpleNamespace
 
 import pytest
+from ai.testing import install_fake_gateway
 from rest_framework.test import APIClient
 
 from accounts.models import CustomUser
 
 
 def _stub_response(items):
-    text = __import__("json").dumps({"items": items})
-    return SimpleNamespace(
-        content=[SimpleNamespace(type="text", text=text)],
-        stop_reason="end_turn",
-        usage=SimpleNamespace(input_tokens=1, output_tokens=1),
-    )
+    return {"items": items}
 
 
 @pytest.mark.django_db
@@ -63,10 +59,7 @@ def test_compose_returns_structured_items(settings, monkeypatch):
             },
         ]
     )
-    monkeypatch.setattr(
-        "sourcing.services_ai_conversational._client",
-        lambda: SimpleNamespace(messages=SimpleNamespace(create=lambda **kw: fake)),
-    )
+    install_fake_gateway(monkeypatch).reply_json(fake)
     from sourcing.services_ai_conversational import build_request_from_text
 
     # attach_candidates=False keeps the test off the DB/catalog match path.
@@ -102,10 +95,7 @@ def test_compose_drops_noise_rows(settings, monkeypatch):
             {"name": "", "name_canonical": "", "quantity": 1, "unit": "", "mpn": "", "gost_drawing": "", "note": ""},
         ]
     )
-    monkeypatch.setattr(
-        "sourcing.services_ai_conversational._client",
-        lambda: SimpleNamespace(messages=SimpleNamespace(create=lambda **kw: fake)),
-    )
+    install_fake_gateway(monkeypatch).reply_json(fake)
     from sourcing.services_ai_conversational import build_request_from_text
 
     items = build_request_from_text("нужны болты М12, 100 штук", attach_candidates=False)["items"]
@@ -117,9 +107,7 @@ def test_compose_drops_noise_rows(settings, monkeypatch):
 def test_compose_endpoint_guards(settings, monkeypatch):
     # Spy: every guarded path (missing/blank text, AI disabled) MUST return BEFORE the paid
     # Claude call — this proves the no-paid-call contract, not just the status code.
-    import sourcing.services_ai_conversational as conv
 
-    monkeypatch.setattr(conv, "_client", lambda: pytest.fail("paid LLM call reached on a guarded compose path"))
     settings.AI_IMPORT_ENABLED = True
     user = CustomUser.objects.create_user(email="cw@x.test", username="cw@x.test", password="pw", is_active=True)
     client = APIClient()

@@ -1,0 +1,97 @@
+# Разбор запроса в строки (ARCHITECTURE §8: «разбор запроса в строки»). kind: text — свободный
+# текст (compose, intake-model); kind: csv — файл клиента (intake, intake-model, справочник единиц
+# из миграций). name_any — хотя бы одно слово должно быть в name или name_canonical строки;
+# max_extra_lines — сколько лишних строк допустимо (по умолчанию 0: модель не выдумывает позиции).
+
+- id: text-two-goods-ru
+  kind: text
+  tags: [quick]
+  input: Нужны подшипники 6205, 4 комплекта, и перчатки рабочие 40 пар
+  lines:
+    - {name_any: [подшипник], quantity: 4, unit_any: [компл]}
+    - {name_any: [перчат], quantity: 40, unit_any: [пар]}
+
+- id: text-cable-meters
+  kind: text
+  tags: [quick]
+  input: Кабель ВВГ 3x2,5 — 150 метров и автоматический выключатель 25А, 6 штук
+  lines:
+    - {name_any: [кабель], quantity: 150, unit_any: [м]}
+    - {name_any: [выключател, автомат], quantity: 6, unit_any: [шт]}
+
+- id: text-latin-translit
+  kind: text
+  tags: [quick]
+  input: nuzhny boltы M12x60 100 sht i gaiki M12 100 sht
+  lines:
+    - {name_any: [болт], quantity: 100}
+    - {name_any: [гайк], quantity: 100}
+
+- id: text-english
+  kind: text
+  input: Please quote 20 office chairs and 5 standing desks
+  lines:
+    - {name_any: [chair, стул, кресл], quantity: 20}
+    - {name_any: [desk, стол], quantity: 5}
+
+- id: text-uzbek
+  kind: text
+  input: 10 dona printer kartriji kerak
+  lines:
+    - {name_any: [картридж, kartrij, cartridge], quantity: 10}
+
+- id: text-service
+  kind: text
+  tags: [quick]
+  input: Требуется монтаж вентиляции на объекте и пусконаладка, по одному разу
+  lines:
+    - {name_any: [монтаж], quantity: 1}
+    - {name_any: [пусконаладк, наладк], quantity: 1}
+  max_extra_lines: 1
+
+- id: text-mpn-kept
+  kind: text
+  input: Блок питания Mean Well LRS-150-24, 3 шт, допускается аналог
+  lines:
+    - {name_any: [блок питания], quantity: 3, unit_any: [шт]}
+
+- id: text-not-a-request
+  kind: text
+  tags: [quick]
+  input: Здравствуйте! Подскажите, пожалуйста, ваш график работы?
+  lines: []
+
+- id: csv-simple-table
+  kind: csv
+  tags: [quick]
+  input: |
+    №,Наименование,Кол-во,Ед.
+    1,Труба стальная 57x3,12,м
+    2,Отвод 90° 57x3,8,шт
+    3,Фланец 57,4,шт
+  lines:
+    - {name_any: [труба], quantity: 12, unit_any: [м]}
+    - {name_any: [отвод], quantity: 8, unit_any: [шт]}
+    - {name_any: [фланец], quantity: 4, unit_any: [шт]}
+
+- id: csv-header-and-total-ignored
+  kind: csv
+  input: |
+    Заявка на закупку
+    Наименование,Количество,Единица
+    Бумага офисная А4,20,пачка
+    Ручка шариковая синяя,50,шт
+    Итого,,
+  lines:
+    - {name_any: [бумага], quantity: 20, unit_any: [пач]}
+    - {name_any: [ручк], quantity: 50, unit_any: [шт]}
+
+- id: csv-code-only-line
+  kind: csv
+  input: |
+    Наименование,Артикул,Кол-во
+    ,6205-2RS,10
+    Ремень приводной,A-1000,2
+  lines:
+    - {name_any: [ремень], quantity: 2}
+  max_extra_lines: 1

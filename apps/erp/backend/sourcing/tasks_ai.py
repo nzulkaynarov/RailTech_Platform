@@ -1,6 +1,6 @@
 """ARCH-01 — off-thread runner for the interactive AI endpoints.
 
-Each of the 8 request-path LLM endpoints used to call Claude synchronously inside a DRF
+Each of the 8 request-path LLM endpoints used to call the model synchronously inside a DRF
 view, pinning an ASGI threadpool thread for up to AI_REQUEST_TIMEOUT seconds. They now
 enqueue ONE generic Celery task (queue "ai") and return 202 + task_id; the frontend polls
 GET sourcing/ai-status/<task_id>/ (see `sourcing.ai_jobs`), mirroring the proven Excel
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 def _handle_match(payload: dict) -> dict:
-    from sourcing.services_ai import match_lines_to_catalog
+    from ai.services.matching import match_lines_to_catalog
 
     matches = match_lines_to_catalog(
         payload["lines"],
@@ -34,7 +34,7 @@ def _handle_match(payload: dict) -> dict:
 
 
 def _handle_preflight(payload: dict) -> dict:
-    from sourcing.services_ai_preflight import pre_flight_check
+    from ai.services.preflight import pre_flight_check
 
     findings = pre_flight_check(payload["lines"], domain_code=payload.get("domain_code"))
     return {"findings": findings}
@@ -50,9 +50,8 @@ def _handle_extract(payload: dict) -> dict:
     128mb + noeviction, so a handful of queued 10MB uploads would brick all of Celery);
     the temp file is always deleted after the attempt.
     """
+    from ai.services.documents import extract_document_fields, reconcile
     from django.core.files.storage import default_storage
-
-    from sourcing.services_ai_extract import extract_document_fields, reconcile
 
     file_key = payload["file_key"]
     try:
@@ -81,12 +80,12 @@ def _handle_import_lines(payload: dict) -> dict:
     КОНКРЕТНЫЙ КП по quote_id, а не deal.active_quote. Авторизация перепроверяется с записанным
     user (TOCTOU — как quote_diff): под очередью routing мог быть отозван. Файл едет storage-ключом
     (не через брокер), удаляется после попытки."""
+    from ai.services.intake import extract_request_items
     from django.core.files.storage import default_storage
 
     from accounts.models import CustomUser
     from crm.models import Quote
     from crm.services.quotes.bulk import import_extracted_lines_into_quote
-    from sourcing.services_ai import extract_request_items
 
     file_key = payload["file_key"]
     user = CustomUser.objects.filter(pk=payload["user_id"]).first()
@@ -112,13 +111,13 @@ def _handle_import_lines(payload: dict) -> dict:
 
 
 def _handle_compose(payload: dict) -> dict:
-    from sourcing.services_ai_conversational import build_request_from_text
+    from ai.services.compose import build_request_from_text
 
     return build_request_from_text(payload["text"], domain_code=payload.get("domain_code"))
 
 
 def _handle_enrich(payload: dict) -> dict:
-    from catalog.ai_enrich import enrich_product
+    from ai.services.enrich import enrich_product
 
     suggestion = enrich_product(
         payload["name"],
@@ -179,16 +178,16 @@ def _handle_catalog_import_ai(payload: dict) -> dict:
     """R5b — массовая загрузка каталога ЛЮБЫМ файлом (Excel/PDF/фото) через существующий ИИ.
 
     Файл едет storage-ключом (не через брокер — как extract/import_lines) и удаляется после
-    попытки. Строки извлекает `services_ai_catalog.extract_price_rows` (бесплатный путь для
+    попытки. Строки извлекает `ai.services.price_list.extract_price_rows` (бесплатный путь для
     нашего xlsx-шаблона, иначе vision-экстракция), дальше — ШТАТНОЕ ядро импорта
     `run_catalog_import_frame`: тот же разбор шапки, справочники и отчёт, что у import-catalog.
     Продавцовая авторизация выполнена вьюхой ДО постановки (supplier_company_id уже разрешён).
     """
     import pandas as pd
+    from ai.services.price_list import extract_price_rows
     from django.core.files.storage import default_storage
 
     from sourcing.catalog_import import run_catalog_import_frame
-    from sourcing.services_ai_catalog import extract_price_rows
 
     storage_path = payload["storage_path"]
     try:
@@ -228,14 +227,14 @@ def _handle_hs_classify(payload: dict) -> dict:
     ДО постановки задачи (вьюха фильтрует can_manage), а `user_id` внутри
     `classify_products` не использовался вовсе.
     """
-    from catalog.hs_lookup_ai import classify_products
+    from ai.services.hs_lookup import classify_products
 
     return classify_products(payload.get("product_ids") or [])
 
 
 def _handle_hs_lookup(payload: dict) -> dict:
     """T3: «опишите товар своими словами» → код ТН ВЭД из справочника с объяснением."""
-    from catalog.hs_lookup_ai import lookup_hs_code
+    from ai.services.hs_lookup import lookup_hs_code
 
     return lookup_hs_code(payload.get("description") or "")
 
@@ -257,7 +256,7 @@ FEATURE_HANDLERS = {
 
 # SINGLE ATTEMPT — deliberate deviation from the CLAUDE.md Celery convention
 # (max_retries=3, autoretry_for=(Exception,), retry_backoff=True): every feature here is
-# a paid-per-call Claude request (compose fires TWO calls per attempt), and draft_quote
+# a paid-per-call model request (compose fires TWO calls per attempt), and draft_quote
 # commits writes inside the handler. A blanket autoretry would multiply the spend up to 4x
 # and, on any post-commit failure, duplicate the created quote. An interactive failure must surface to the user (who simply
 # clicks again) — never silently re-execute.
@@ -270,8 +269,14 @@ FEATURE_HANDLERS = {
     max_retries=0,
 )
 def run_ai_job(self, feature: str, payload: dict) -> dict:
-    """Dispatch one off-thread AI job to its feature handler (ARCH-01, single attempt)."""
+    """Dispatch one off-thread AI job to its feature handler (ARCH-01, single attempt).
+
+    M1-ERP-06: the handler runs inside the job's trace scope (`ai.services.jobs`) — every gateway
+    call carries session = this task id and the owning staff member; an exhausted daily budget
+    becomes the result {"error": "AI_BUDGET_EXCEEDED"}."""
+    from ai.services.jobs import run_traced_job
+
     handler = FEATURE_HANDLERS.get(feature)
     if handler is None:
         raise ValueError(f"Unknown AI job feature: {feature}")
-    return handler(payload)
+    return run_traced_job(str(self.request.id or "adhoc"), feature, handler, payload)

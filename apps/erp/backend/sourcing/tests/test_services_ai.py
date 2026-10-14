@@ -1,62 +1,21 @@
-"""Unit tests for the AI заявка extractor's pure logic (no Anthropic API calls).
+"""Разбор файла клиента в строки запроса — чистая логика и устойчивость одного вызова.
 
-Covers normalisation (_normalize_items) and the resilience of a single model call
-(_extract_one) under refusal / truncation / unparseable-JSON, using a stub client.
-The chunk-isolation behaviour of extract_request_items is covered via stub too.
+Нормализация (`normalize_items`) — без I/O; устойчивость вызова (отказ модели, оборванный и
+непарсибельный JSON, недоступный шлюз) и политика повторов — через фейковый шлюз LiteLLM
+(`fake_gateway`), без единого настоящего вызова модели.
 """
 
-import json
-from types import SimpleNamespace
-from unittest import mock
-
-from django.conf import settings
-from django.test import SimpleTestCase, override_settings
-
-import sourcing.services_ai as services_ai
-from sourcing.services_ai import _client, _extract_one, _normalize_items
+import pytest
+from ai.services.intake import extract_request_items
+from ai.services.intake import normalize_items as _normalize_items
+from django.test import SimpleTestCase
 
 VALID_CODES = {"PCE", "MTR", "KGM"}
 
 
-@override_settings(ANTHROPIC_API_KEY="test-key", AI_REQUEST_TIMEOUT=60.0, AI_MAX_RETRIES=2)
-class ClientRetryPolicyTest(SimpleTestCase):
-    """ARCH-03: request-path AI calls get a SINGLE attempt (bounded latency); only the celery
-    bulk-import path opts into AI_MAX_RETRIES. We patch anthropic.Anthropic to capture the
-    kwargs the factory builds — no client is constructed and no API call is made."""
-
-    def test_request_path_client_has_no_retries(self):
-        with mock.patch("anthropic.Anthropic") as anthropic_cls:
-            _client()  # request-path default
-            self.assertEqual(anthropic_cls.call_args.kwargs["max_retries"], 0)
-
-    def test_celery_path_client_keeps_retries(self):
-        with mock.patch("anthropic.Anthropic") as anthropic_cls:
-            _client(max_retries=settings.AI_MAX_RETRIES)  # celery bulk-import path
-            self.assertEqual(anthropic_cls.call_args.kwargs["max_retries"], 2)
-
-    def test_per_attempt_timeout_still_bounded(self):
-        # The ARCH-01 timeout cap is unchanged by the retry split.
-        with mock.patch("anthropic.Anthropic") as anthropic_cls:
-            _client()
-            self.assertEqual(anthropic_cls.call_args.kwargs["timeout"], 60.0)
-
-    def test_celery_bulk_import_routes_through_retrying_client(self):
-        # extract_request_items (the ONLY celery caller) must build its client with AI_MAX_RETRIES.
-        captured = {}
-
-        def fake_client(max_retries=None):
-            captured["max_retries"] = max_retries
-            return mock.Mock()
-
-        with override_settings(AI_IMPORT_ENABLED=True):
-            with (
-                mock.patch.object(services_ai, "_client", side_effect=fake_client),
-                mock.patch.object(services_ai, "_unit_code_reference", return_value=(set(), "")),
-                mock.patch.object(services_ai, "file_to_payload", return_value=("row1\n", None)),
-                mock.patch.object(services_ai, "_extract_one", return_value=[]),
-            ):
-                services_ai.extract_request_items(b"row1\n", "req.csv")
-        self.assertEqual(captured["max_retries"], settings.AI_MAX_RETRIES)
+@pytest.fixture
+def no_units(monkeypatch):
+    monkeypatch.setattr("ai.services.intake.unit_code_reference", lambda: (set(), ""))
 
 
 class NormalizeItemsTest(SimpleTestCase):
@@ -113,35 +72,80 @@ class NormalizeItemsTest(SimpleTestCase):
         self.assertEqual(result["note"], "прим")
 
 
-def _stub_client(stop_reason, text):
-    """A fake Anthropic client whose messages.create returns one canned response."""
-    response = SimpleNamespace(
-        stop_reason=stop_reason,
-        stop_details=None,
-        usage=SimpleNamespace(input_tokens=10, output_tokens=20),
-        content=[SimpleNamespace(type="text", text=text)],
-    )
-    client = mock.Mock()
-    client.messages.create.return_value = response
-    return client
+@pytest.mark.django_db
+def test_happy_path_returns_items(fake_gateway, no_units):
+    fake_gateway.reply_json({"items": [{"name": "Болт", "quantity": 2}]})
+    items = extract_request_items(b"Bolt,2\n", "req.csv")
+    assert [(row["name"], row["quantity"]) for row in items] == [("Болт", 2)]
+    body = fake_gateway.last_body
+    assert body["model"] == "intake-model"
+    assert body["metadata"]["tags"] == ["system=erp", "feature=intake", "model=intake-model"]
+    assert body["response_format"]["type"] == "json_schema"
+    # Данные клиента — в сообщении user, системный промпт — из файла без незаполненных плейсхолдеров.
+    assert "Bolt,2" in fake_gateway.user_text()
+    assert "Bolt,2" not in body["messages"][0]["content"]
+    assert "{{" not in body["messages"][0]["content"]
 
 
-class ExtractOneResilienceTest(SimpleTestCase):
-    def test_happy_path_returns_items(self):
-        payload = json.dumps({"items": [{"name": "Болт"}]})
-        client = _stub_client("end_turn", payload)
-        result = _extract_one(client, "claude-opus-4-8", "sys", text="raw")
-        self.assertEqual(result, [{"name": "Болт"}])
+@pytest.mark.django_db
+def test_refusal_yields_empty(fake_gateway, no_units):
+    fake_gateway.reply_refusal()
+    assert extract_request_items(b"x\n", "req.csv") == []
 
-    def test_refusal_yields_empty(self):
-        client = _stub_client("refusal", "")
-        self.assertEqual(_extract_one(client, "m", "sys", text="raw"), [])
 
-    def test_truncated_unparseable_json_yields_empty(self):
-        # max_tokens cut the JSON mid-object — must not raise.
-        client = _stub_client("max_tokens", '{"items": [{"name": "Бол')
-        self.assertEqual(_extract_one(client, "m", "sys", text="raw"), [])
+@pytest.mark.django_db
+def test_truncated_unparseable_json_yields_empty(fake_gateway, no_units):
+    # Вывод оборван посреди JSON — не падаем, кусок просто пустой.
+    fake_gateway.reply_text('{"items": [{"name": "Бол', finish_reason="length")
+    assert extract_request_items(b"x\n", "req.csv") == []
 
-    def test_empty_items_key(self):
-        client = _stub_client("end_turn", json.dumps({"items": []}))
-        self.assertEqual(_extract_one(client, "m", "sys", text="raw"), [])
+
+@pytest.mark.django_db
+def test_every_chunk_failing_raises_for_parser_fallback(fake_gateway, no_units, settings):
+    settings.AI_IMPORT_CHUNK_ROWS = 1
+    fake_gateway.reply_http_error(502).reply_transport_error()
+    with pytest.raises(RuntimeError, match="AI_EXTRACT_ALL_CHUNKS_FAILED"):
+        extract_request_items(b"head\nrow1\nrow2\n", "req.csv")
+
+
+@pytest.mark.django_db
+def test_one_failing_chunk_keeps_the_others(fake_gateway, no_units, settings):
+    settings.AI_IMPORT_CHUNK_ROWS = 1
+    fake_gateway.reply_http_error(502).reply_json({"items": [{"name": "Шайба"}]})
+    items = extract_request_items(b"head\nrow1\nrow2\n", "req.csv")
+    assert [row["name"] for row in items] == ["Шайба"]
+
+
+@pytest.mark.django_db
+def test_bulk_import_retries_transient_gateway_errors(fake_gateway, no_units, settings, monkeypatch):
+    """Пакетный импорт (Celery) повторяет сеть/5xx шлюза AI_MAX_RETRIES раз; 4xx — не повторяет."""
+    monkeypatch.setattr("ai.services.gateway.time.sleep", lambda seconds: None)
+    settings.AI_MAX_RETRIES = 2
+    fake_gateway.reply_transport_error().reply_http_error(503).reply_json({"items": [{"name": "Гайка"}]})
+    items = extract_request_items(b"x\n", "req.csv")
+    assert [row["name"] for row in items] == ["Гайка"]
+    assert fake_gateway.calls == 3
+
+
+@pytest.mark.django_db
+def test_vision_file_goes_as_a_block_and_is_masked(fake_gateway, no_units):
+    fake_gateway.reply_json({"items": []})
+    extract_request_items(b"\x89PNG fake", "scan.png")
+    body = fake_gateway.last_body
+    first = body["messages"][1]["content"][0]
+    assert first["type"] == "image_url"
+    assert first["image_url"]["url"].startswith("data:image/png;base64,")
+    assert body["metadata"]["mask_input"] is True
+
+
+@pytest.mark.django_db
+def test_vision_gateway_down_raises_code(fake_gateway, no_units):
+    fake_gateway.reply_transport_error()
+    with pytest.raises(RuntimeError, match="AI_GATEWAY_UNAVAILABLE"):
+        extract_request_items(b"%PDF-1.4", "doc.pdf")
+
+
+def test_disabled_raises(settings):
+    settings.AI_IMPORT_ENABLED = False
+    with pytest.raises(RuntimeError, match="AI_IMPORT_DISABLED"):
+        extract_request_items(b"x", "req.csv")

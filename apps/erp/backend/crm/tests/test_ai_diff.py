@@ -1,6 +1,6 @@
 """AI #3 «КП vs заявка» coverage/diff — deterministic detection + id-scope guard.
 
-The Claude client is stubbed (no paid / nondeterministic calls); we assert the
+The LiteLLM gateway is faked (ai.testing.FakeGateway) (no paid / nondeterministic calls); we assert the
 deterministic contract:
   * uncovered (unpriced, unmatched) request lines are detected in PURE CODE, even
     when AI is OFF (the feature degrades, never disappears),
@@ -20,15 +20,6 @@ from accounts.models import Company, CompanyMember, CompanyType, CustomUser, Wor
 from catalog.models import Product
 from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteStatus
 from master_data.models import Currency
-
-
-def _stub_response(findings):
-    text = __import__("json").dumps({"findings": findings})
-    return SimpleNamespace(
-        content=[SimpleNamespace(type="text", text=text)],
-        stop_reason="end_turn",
-        usage=SimpleNamespace(input_tokens=1, output_tokens=1),
-    )
 
 
 def _seed_lookups():
@@ -155,19 +146,16 @@ def test_uncovered_line_detected_with_ai_off(settings):
 
 
 @pytest.mark.django_db
-def test_ai_layer_adds_semantic_findings_and_drops_bad_index(settings, monkeypatch):
+def test_ai_layer_adds_semantic_findings_and_drops_bad_index(fake_gateway):
     """AI ON → deterministic uncovered finding PLUS the model's semantic verdicts,
     while an out-of-range index the model invents is dropped (Rule 1)."""
-    settings.AI_IMPORT_ENABLED = True
-    fake = _stub_response(
-        [
-            {"line": 1, "issue_type": "note_ignored", "explanation": "Замена не допускалась, а предложен аналог."},
-            {"line": 99, "issue_type": "substituted", "explanation": "Несуществующая строка — должна быть отброшена."},
-        ]
-    )
-    monkeypatch.setattr(
-        "crm.services.ai_diff._client",
-        lambda: SimpleNamespace(messages=SimpleNamespace(create=lambda **kw: fake)),
+    fake_gateway.reply_json(
+        {
+            "findings": [
+                {"line": 1, "issue_type": "note_ignored", "explanation": "Замена не допускалась, а предложен аналог."},
+                {"line": 99, "issue_type": "substituted", "explanation": "Несуществующая строка — отброшена."},
+            ]
+        }
     )
     from crm.services import quote_vs_request_diff
 
@@ -180,6 +168,11 @@ def test_ai_layer_adds_semantic_findings_and_drops_bad_index(settings, monkeypat
     assert (1, "note_ignored") in issue_types  # semantic, valid line
     # The invented index 99 must NOT appear.
     assert all(f["line"] != 99 for f in result["findings"])
+    # КП-сверка идёт через draft-model; коды находок подставлены в промпт из кода.
+    body = fake_gateway.last_body
+    assert body["model"] == "draft-model"
+    assert "'substituted'" in body["messages"][0]["content"]
+    assert "{{" not in body["messages"][0]["content"]
 
 
 @pytest.mark.django_db

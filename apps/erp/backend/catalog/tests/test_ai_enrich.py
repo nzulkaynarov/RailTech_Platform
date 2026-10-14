@@ -1,6 +1,6 @@
 """AI #2 PIM product enrichment — disabled→{}, spec normalisation, category-hint-only.
 
-The Claude client is stubbed (no paid/nondeterministic calls); we assert the deterministic
+The LiteLLM gateway is faked (ai.testing.FakeGateway) (no paid/nondeterministic calls); we assert the deterministic
 contract: gated on AI_IMPORT_ENABLED, specs cleaned/dropped, category returned as a HINT
 string (never an id — Rule 1), and the endpoint guards (400 missing name, 503 disabled).
 """
@@ -27,15 +27,6 @@ def _seller_user(email):
     return user
 
 
-def _stub_response(payload):
-    text = __import__("json").dumps(payload)
-    return SimpleNamespace(
-        content=[SimpleNamespace(type="text", text=text)],
-        stop_reason="end_turn",
-        usage=SimpleNamespace(input_tokens=1, output_tokens=1),
-    )
-
-
 @pytest.mark.django_db
 def test_enrich_disabled_returns_empty(settings):
     settings.AI_IMPORT_ENABLED = False
@@ -54,10 +45,9 @@ def test_enrich_empty_name_returns_empty(settings):
 
 
 @pytest.mark.django_db
-def test_enrich_normalises_and_keeps_category_as_hint(settings, monkeypatch):
+def test_enrich_normalises_and_keeps_category_as_hint(fake_gateway):
     """Rule 1: category is a HINT string only; spec rows without a key are dropped."""
-    settings.AI_IMPORT_ENABLED = True
-    fake = _stub_response(
+    fake_gateway.reply_json(
         {
             "description": "Композитная тормозная колодка для грузовых вагонов.",
             "specifications": [
@@ -67,10 +57,6 @@ def test_enrich_normalises_and_keeps_category_as_hint(settings, monkeypatch):
             "suggested_category_hint": "Тормозное оборудование",
         }
     )
-    monkeypatch.setattr(
-        "catalog.ai_enrich._client",
-        lambda: SimpleNamespace(messages=SimpleNamespace(create=lambda **kw: fake)),
-    )
     from catalog.ai_enrich import enrich_product
 
     result = enrich_product("Тормозная колодка композитная", domain_code="GENERAL_GOODS")
@@ -79,20 +65,22 @@ def test_enrich_normalises_and_keeps_category_as_hint(settings, monkeypatch):
     # HINT only — a plain string, never a resolved Category id.
     assert result["suggested_category_hint"] == "Тормозное оборудование"
     assert isinstance(result["suggested_category_hint"], str)
+    body = fake_gateway.last_body
+    assert body["model"] == "enrich-model"
+    assert body["metadata"]["tags"] == ["system=erp", "feature=enrich", "model=enrich-model"]
 
 
 @pytest.mark.django_db
-def test_enrich_refusal_returns_empty(settings, monkeypatch):
-    settings.AI_IMPORT_ENABLED = True
-    fake = SimpleNamespace(
-        content=[],
-        stop_reason="refusal",
-        usage=SimpleNamespace(input_tokens=1, output_tokens=0),
-    )
-    monkeypatch.setattr(
-        "catalog.ai_enrich._client",
-        lambda: SimpleNamespace(messages=SimpleNamespace(create=lambda **kw: fake)),
-    )
+def test_enrich_refusal_returns_empty(fake_gateway):
+    fake_gateway.reply_refusal()
+    from catalog.ai_enrich import enrich_product
+
+    assert enrich_product("Болт М12") == {}
+
+
+@pytest.mark.django_db
+def test_enrich_gateway_error_is_a_logged_noop(fake_gateway):
+    fake_gateway.reply_http_error(503)
     from catalog.ai_enrich import enrich_product
 
     assert enrich_product("Болт М12") == {}

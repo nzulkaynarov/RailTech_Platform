@@ -1,12 +1,13 @@
 """AI semantic match заявка→catalog (roadmap #1) — shortlist + Rule-1 validation + endpoint.
 
-The Claude client is stubbed (no paid/nondeterministic calls); we assert the deterministic
+The LiteLLM gateway is faked (ai.testing.FakeGateway) (no paid/nondeterministic calls); we assert the deterministic
 contract: trigram shortlist, product_id must come from the DB shortlist, endpoint guards.
 """
 
 from types import SimpleNamespace
 
 import pytest
+from ai.testing import install_fake_gateway
 from rest_framework.test import APIClient
 
 from accounts.models import CustomUser
@@ -14,12 +15,7 @@ from catalog.models import Product
 
 
 def _stub_response(matches):
-    text = __import__("json").dumps({"matches": matches})
-    return SimpleNamespace(
-        content=[SimpleNamespace(type="text", text=text)],
-        stop_reason="end_turn",
-        usage=SimpleNamespace(input_tokens=1, output_tokens=1),
-    )
+    return {"matches": matches}
 
 
 @pytest.fixture
@@ -34,17 +30,12 @@ def products(db):
 
 
 def _stub_extract_response(items):
-    text = __import__("json").dumps({"items": items})
-    return SimpleNamespace(
-        content=[SimpleNamespace(type="text", text=text)],
-        stop_reason="end_turn",
-        usage=SimpleNamespace(input_tokens=1, output_tokens=1),
-    )
+    return {"items": items}
 
 
 @pytest.mark.django_db
 def test_shortlist_finds_by_trigram(products):
-    from sourcing.services_ai import _shortlist_products
+    from ai.services.matching import shortlist_products as _shortlist_products
 
     found = _shortlist_products({"name": "Автосцепка", "mpn": "", "gost_drawing": ""}, None)
     assert any(p.name == "Автосцепка СА-3" for p in found)
@@ -54,7 +45,7 @@ def test_shortlist_finds_by_trigram(products):
 def test_shortlist_uses_name_canonical_for_latin_query(products):
     """Bilingual win: a Latin raw name trigram-misses the Cyrillic catalog, but the
     canonical Russian `name_canonical` preselects the right row (Greatest similarity)."""
-    from sourcing.services_ai import _shortlist_products
+    from ai.services.matching import shortlist_products as _shortlist_products
 
     line = {"name": "Avtoscepka SA-3", "name_canonical": "Автосцепка СА-3", "mpn": "", "gost_drawing": ""}
     found = _shortlist_products(line, None)
@@ -71,7 +62,6 @@ def test_extract_returns_canonical_russian_name(settings, monkeypatch):
     """A Latin input line is normalised to a canonical Russian `name_canonical`,
     while the original `name` is preserved verbatim."""
     settings.AI_IMPORT_ENABLED = True
-    settings.AI_IMPORT_MODEL = "stub-model"
     settings.AI_IMPORT_CHUNK_ROWS = 100
     fake = _stub_extract_response(
         [
@@ -87,13 +77,9 @@ def test_extract_returns_canonical_russian_name(settings, monkeypatch):
             }
         ]
     )
-    monkeypatch.setattr(
-        # ARCH-03: _client now takes an optional max_retries kwarg (celery path passes it).
-        "sourcing.services_ai._client",
-        lambda max_retries=None: SimpleNamespace(messages=SimpleNamespace(create=lambda **kw: fake)),
-    )
+    install_fake_gateway(monkeypatch).reply_json(fake)
     # Avoid DB hit for the unit-code справочник; the model returned ''.
-    monkeypatch.setattr("sourcing.services_ai._unit_code_reference", lambda: (set(), ""))
+    monkeypatch.setattr("ai.services.intake.unit_code_reference", lambda: (set(), ""))
     from sourcing.services_ai import extract_request_items
 
     items = extract_request_items(b"Tormoznaya koloda,2,sht\n", "request.csv")
@@ -105,7 +91,7 @@ def test_extract_returns_canonical_russian_name(settings, monkeypatch):
 @pytest.mark.django_db
 def test_normalize_falls_back_to_name_when_canonical_missing():
     """Old/empty model output without name_canonical falls back to the raw name."""
-    from sourcing.services_ai import _normalize_items
+    from ai.services.intake import normalize_items as _normalize_items
 
     cleaned = _normalize_items(
         [
@@ -141,11 +127,7 @@ def test_match_rejects_ids_outside_shortlist(products, settings, monkeypatch):
             }
         ]
     )
-    monkeypatch.setattr(
-        # ARCH-03: _client now takes an optional max_retries kwarg (celery path passes it).
-        "sourcing.services_ai._client",
-        lambda max_retries=None: SimpleNamespace(messages=SimpleNamespace(create=lambda **kw: fake)),
-    )
+    install_fake_gateway(monkeypatch).reply_json(fake)
     from sourcing.services_ai import match_lines_to_catalog
 
     res = match_lines_to_catalog(
@@ -194,8 +176,9 @@ def test_endpoint_guards(products, settings, monkeypatch):
 def test_shortlist_excludes_unpublished_products(db):
     """Regression (review 2026-06-25 #3): the AI catalog shortlist must not surface DRAFT/
     ARCHIVED cards — only PUBLISHED ones, mirroring the catalog list endpoint."""
+    from ai.services.matching import shortlist_products as _shortlist_products
+
     from catalog.models import Product, ProductStatus
-    from sourcing.services_ai import _shortlist_products
 
     pub = ProductStatus.objects.get_or_create(code="PUBLISHED", defaults={"name": "P", "sort_order": 1})[0]
     drf = ProductStatus.objects.get_or_create(code="DRAFT", defaults={"name": "D", "sort_order": 1})[0]

@@ -1,24 +1,20 @@
 """AI #7 pre-flight заявка quality check — disabled→[], Rule-1 index drop, flag surfaces.
 
-The Claude client is stubbed (no paid/nondeterministic calls); we assert the deterministic
+The LiteLLM gateway is faked (ai.testing.FakeGateway) (no paid/nondeterministic calls); we assert the deterministic
 contract: gated on AI_IMPORT_ENABLED, out-of-range line_index dropped, a flagged line surfaces.
 """
 
 from types import SimpleNamespace
 
 import pytest
+from ai.testing import install_fake_gateway
 from rest_framework.test import APIClient
 
 from accounts.models import CustomUser
 
 
 def _stub_response(findings):
-    text = __import__("json").dumps({"findings": findings})
-    return SimpleNamespace(
-        content=[SimpleNamespace(type="text", text=text)],
-        stop_reason="end_turn",
-        usage=SimpleNamespace(input_tokens=1, output_tokens=1),
-    )
+    return {"findings": findings}
 
 
 @pytest.mark.django_db
@@ -40,10 +36,7 @@ def test_preflight_drops_out_of_range_index(settings, monkeypatch):
             {"line_index": 5, "severity": "warning", "issue": "invented", "suggestion": "ghost"},
         ]
     )
-    monkeypatch.setattr(
-        "sourcing.services_ai_preflight._client",
-        lambda: SimpleNamespace(messages=SimpleNamespace(create=lambda **kw: fake)),
-    )
+    install_fake_gateway(monkeypatch).reply_json(fake)
     from sourcing.services_ai_preflight import pre_flight_check
 
     findings = pre_flight_check([{"name": "труба", "quantity": 1, "unit": "шт"}])
@@ -59,10 +52,7 @@ def test_preflight_flagged_line_surfaces(settings, monkeypatch):
     fake = _stub_response(
         [{"line_index": 1, "severity": "info", "issue": "Нет единицы", "suggestion": "Добавьте ед. изм."}]
     )
-    monkeypatch.setattr(
-        "sourcing.services_ai_preflight._client",
-        lambda: SimpleNamespace(messages=SimpleNamespace(create=lambda **kw: fake)),
-    )
+    install_fake_gateway(monkeypatch).reply_json(fake)
     from sourcing.services_ai_preflight import pre_flight_check
 
     findings = pre_flight_check(

@@ -6,7 +6,7 @@
 ## 1. Где мы
 
 Монорепозиторий `RailTech_Platform` (GitHub `nzulkaynarov/RailTech_Platform`), ветка `main`.
-Вехи M0, M1-ERP-01, M1-ERP-02 (все 4 волны), M1-ERP-03 (новые имена приложений, свежие миграции), M1-ERP-04 (бренд и отрасль → настройки) завершены и влиты в `main`.
+Вехи M0, M1-ERP-01, M1-ERP-02 (все 4 волны), M1-ERP-03 (новые имена приложений, свежие миграции), M1-ERP-04 (бренд и отрасль → настройки) завершены и влиты в `main`; M1-ERP-06 (ИИ через LiteLLM) — PR.
 
 | Веха | Состояние |
 |---|---|
@@ -35,6 +35,7 @@
 - **M1-ERP-04**: Бренд платформы перенесён в `SystemSetting` (`platform_name`, `support_email`, `logo_url`, `domain`) и доступен для редактирования в Platform Settings SPA. Все 22 email-шаблона, печатные формы (PDF) и публичные страницы нейтрализованы. Отраслевые `DomainType` переведены на `GENERAL_GOODS` и `SERVICES`. Подключены токены из `packages/ui-tokens` в `apps/erp/frontend/src/index.css`.
 - Полная очистка бренда: `grep -ri railtech apps/erp` возвращает **0 совпадений** (разрешено только в `.env.example`).
 - Приёмка M1-ERP-03/04 (2026-10-14): пакеты `crm`, `sourcing`, `master_data`, `notifications` — **переходные пакеты кода** (сервисы, вьюхи, задачи, ре-экспорт моделей) без своих таблиц, кроме `sourcing.Attachment`; новый код — в канонические приложения, остаток переносится в M1-ERP-10 (DECISIONS 2026-10-14). Промпты ИИ и демо-сид без отрасли.
+- **M1-ERP-06** (PR `m1/erp-06-ai-litellm`): ИИ только через LiteLLM по алиасам `intake/match/draft/enrich-model` (клиент `ai/services/gateway.py`, SDK провайдера удалён), теги `system=erp` → «Расходы» CRM, трейсы Langfuse пишет шлюз колбэком виртуального ключа ERP, бюджет на день (журнал `ai.AICall` + бюджет ключа), промпты `backend/prompts/*.md` с версией по хэшу, evals `backend/evals/` (`make -C apps/erp eval-quick CONFIRM=yes` — только с согласия), состояние для консоли админа `make -C apps/erp ai-status`. После слияния: `make env` (допишет `ERP_LITELLM_API_KEY` и др.) и `make up`.
 - Тесты и стабильность: бэкенд **1906 passed**, фронтенд **696 passed**, Cabinet **209 passed**, 0 ошибок линтера, миграции применяются на чистой базе без дрифта.
 
 **Cabinet (`apps/cabinet`)** — новое приложение: оболочка, вход Telegram Mini App и magic-link, все экраны клиента,
@@ -48,7 +49,7 @@
 ## 3. Что делать дальше (порядок)
 
 1. **M1-ERP-05** — роли бэк-офиса (`ADMIN`, `OPERATOR`, `MANAGER`, `ACCOUNTANT`, `WAREHOUSE`, `EXECUTIVE`), права доступа к операциям, API аудита и изоляция.
-2. **M1-ERP-06** — ИИ через LiteLLM, Langfuse, evals (единая точка, теги `system=erp` — дашборд затрат CRM подхватывает автоматически).
+2. **M1-ERP-06** — готово, PR (ИИ через LiteLLM, Langfuse, evals); после слияния — `make env`, `make up`. Регистрацию ключа ERP и бюджет перенести в консоль CRM — M3-CRM-11; `ai_status()` в центр внешних сервисов — M3-ERP-06.
 3. **M1-ERP-07** — каталог с двумя слоями (мастер-номенклатура / номенклатура продавца), политика видимости.
 4. **M1-ERP-08** — курс на дату КП, отклонение маржи.
 5. **M1-ERP-09** — Настройки ERP (Settings Hub: шаблоны писем, справочники, системные параметры).

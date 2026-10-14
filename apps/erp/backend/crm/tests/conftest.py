@@ -18,7 +18,7 @@ from master_data.models import Currency
 
 @pytest.fixture(autouse=True)
 def _ai_off(settings):
-    settings.ANTHROPIC_API_KEY = ""  # детерминированные тесты — LLM выключен
+    settings.AI_IMPORT_ENABLED = False  # детерминированные тесты — ИИ выключен
 
 
 @pytest.fixture

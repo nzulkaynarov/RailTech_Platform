@@ -235,8 +235,8 @@ def process_excel_import(
     Turns an uploaded client file into QuoteItems on the deal's active Quote.
 
     Two paths to the same canonical schema (name/quantity/unit/note):
-      • use_ai=True  → Claude reads ANY file (Excel/CSV/PDF/photo) and maps it
-        (sourcing.services_ai). Falls back to the deterministic parser on failure.
+      • use_ai=True  → the model (LiteLLM, intake-model) reads ANY file (Excel/CSV/PDF/photo) and maps it
+        (ai.services.intake). Falls back to the deterministic parser on failure.
       • use_ai=False → deterministic header-detect + keyword parser (xlsx only).
 
     The buyer reviews every recognised item before submitting, so the AI never
@@ -263,13 +263,18 @@ def process_excel_import(
 
         items_to_create = []
 
-        # ── AI path: any file → Claude → our schema (fallback to parser on error) ──
+        # ── AI path: any file → model (LiteLLM) → our schema (fallback to parser on error) ──
         ai_rows = None
         if use_ai and getattr(settings, "AI_IMPORT_ENABLED", False):
             try:
-                from sourcing.services_ai import extract_request_items
+                from ai.services.context import trace_scope
+                from ai.services.intake import extract_request_items
 
-                ai_rows = extract_request_items(file_content, filename or "upload.xlsx")
+                # Трейс Langfuse и журнал вызовов: задача импорта, сотрудник — из аргументов задачи.
+                with trace_scope(
+                    str(self.request.id or f"import-deal-{deal_id}"), user_id=user_id, job_feature="intake"
+                ):
+                    ai_rows = extract_request_items(file_content, filename or "upload.xlsx")
                 logger.info("AI import: deal=%s recognised %s items", deal_id, len(ai_rows))
             except Exception:  # noqa: BLE001 — an AI/API failure must never break the import (parser fallback)
                 logger.exception("AI import failed deal=%s — falling back to deterministic parser", deal_id)
