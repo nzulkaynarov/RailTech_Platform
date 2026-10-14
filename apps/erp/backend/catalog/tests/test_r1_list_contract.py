@@ -35,7 +35,7 @@ RETIRED_HS = "8607191000"
 
 
 @pytest.fixture
-def world(db):
+def world(db, grant):
     for code, name in (("DRAFT", "Черновик"), ("PUBLISHED", "Опубликован"), ("ARCHIVED", "Архив")):
         ProductStatus.objects.get_or_create(code=code, defaults={"name": name, "sort_order": 10})
     domain, _ = DomainType.objects.get_or_create(
@@ -59,6 +59,8 @@ def world(db):
     CompanyMember.objects.create(
         user=seller, company=seller_company, role=owner_role, is_active=True, is_primary=True, can_sell=True
     )
+    # M1-ERP-07: цены поставщиков — внутренний слой; их видит роль с правом себестоимости/каталога.
+    grant(seller, "CATALOG_SUPPLY")
 
     outsider = CustomUser.objects.create_user(email="r1.other@test.uz", username="r1.other@test.uz", password="pw")
 

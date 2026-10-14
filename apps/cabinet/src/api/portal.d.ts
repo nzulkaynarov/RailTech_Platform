@@ -604,8 +604,27 @@ export interface components {
             file_name?: string;
             size_bytes?: number;
         };
-        /** @enum {string} */
+        /**
+         * @description Наличие как статус, без количеств (BUSINESS §10.1): в наличии / под заказ / ожидается
+         * @enum {string}
+         */
         Availability: "in_stock" | "on_order" | "expected";
+        /**
+         * @description Политика исполнения услуги (M1-ERP-07): `fixed` — фиксированная цена, `milestones` — по этапам, `time` — по времени (цена за час / сутки)
+         * @enum {string}
+         */
+        FulfillmentPolicy: "fixed" | "milestones" | "time";
+        CatalogDocument: {
+            name: string;
+            /** Format: uri */
+            url: string;
+        };
+        /**
+         * @description Опубликованный слой карточки «товар / услуга» (M1-ERP-07) — ровно эти поля, внутреннего слоя
+         *     (поставщики, себестоимость, остатки по количеству, ТН ВЭД, внутренние заметки) нет. Политика
+         *     видимости карточки: `cabinet` — с ценой, наличием и сроком; `on_request` — `price`,
+         *     `availability` и `lead_time_days` равны `null` («цена по запросу»).
+         */
         CatalogItem: {
             /** Format: int64 */
             id: number;
@@ -613,13 +632,19 @@ export interface components {
             kind: "goods" | "service";
             name: string;
             description?: string;
+            /** @description Единица (для услуги «по времени» — час или сутки) */
             unit: string;
             category?: string | null;
-            /** @description `null` — «цена по запросу» */
+            /** @description Только у услуги; у товара — `null` */
+            fulfillment_policy: components["schemas"]["FulfillmentPolicy"] | null;
+            /** @description `null` — «цена по запросу» (видимость `on_request`) */
             price: components["schemas"]["Money"] | null;
-            availability: components["schemas"]["Availability"];
+            /** @description `null` — у услуги и при видимости `on_request` */
+            availability: components["schemas"]["Availability"] | null;
             lead_time_days?: number | null;
             images?: string[];
+            /** @description Документы карточки, отмеченные «видно клиенту» */
+            documents?: components["schemas"]["CatalogDocument"][];
             attributes?: {
                 name: string;
                 value: string;

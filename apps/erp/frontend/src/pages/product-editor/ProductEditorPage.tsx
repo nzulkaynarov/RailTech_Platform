@@ -16,7 +16,8 @@ import { BasicsSection } from './BasicsSection';
 import { ClassificationSection } from './ClassificationSection';
 import { SpecificationsSection } from './SpecificationsSection';
 import { MediaSection } from './MediaSection';
-import { CommerceSection } from './CommerceSection';
+import { ClientLayerSection } from './ClientLayerSection';
+import { InternalLayerSection } from './InternalLayerSection';
 import { ActionsSection } from './ActionsSection';
 import { SECTION_IDS, scrollToSection } from './anchors';
 
@@ -138,8 +139,10 @@ export function ProductEditorPage({
           <BasicsSection form={form} />
           <ClassificationSection form={form} />
           <SpecificationsSection form={form} />
+          {/* M1-ERP-07: два слоя карточки — что видит клиент и что только сотрудникам (Odoo: «Продажи / Сайт» и «Закупки»). */}
+          <ClientLayerSection form={form} product={product} />
           <MediaSection productId={product?.id ?? createdId} />
-          {form.sellerMode && <CommerceSection form={form} />}
+          <InternalLayerSection form={form} product={product} />
           {product && <ActionsSection product={product} />}
         </div>
       </div>

@@ -9,30 +9,38 @@ from typing import List, Tuple
 
 from django.db.models import QuerySet
 
-from .models import Product, ProductStatus
+from ..models import Product, ProductStatus
 
 
 def publish_products(products: QuerySet[Product]) -> Tuple[int, List[str]]:
     """
-    Publish products: set status to PUBLISHED.
+    Publish products: set status to PUBLISHED (инженерное действие админки).
 
-    Only publishes DRAFT products. Skips products without domain_type.
+    Only publishes DRAFT products that pass the publication threshold (M1-ERP-07: тот же порог,
+    что у кнопки «Опубликовать» — `catalog.completeness`); the rest are skipped by name.
 
     Returns:
         (count_published, list_of_skipped_product_names)
         If validation fails (no PUBLISHED status), returns (0, [error]).
     """
+    from ..completeness import CompletenessContext, completeness
+
     published_status = ProductStatus.objects.filter(code="PUBLISHED").first()
     if not published_status:
         return 0, ["ProductStatus 'PUBLISHED' not found in master data"]
 
     # Only publish DRAFT products
-    draft_products = products.filter(status__code="DRAFT")
-
-    skipped = list(draft_products.filter(domain_type__isnull=True).values_list("name", flat=True))
-
-    publishable = draft_products.exclude(domain_type__isnull=True)
-    updated = publishable.update(status=published_status)
+    draft_products = list(
+        products.filter(status__code="DRAFT").select_related("domain_type", "uom", "category", "status")
+    )
+    ctx = CompletenessContext(draft_products)
+    publishable_ids, skipped = [], []
+    for product in draft_products:
+        if completeness(product, ctx)["is_publishable"]:
+            publishable_ids.append(product.pk)
+        else:
+            skipped.append(product.name)
+    updated = Product.objects.filter(pk__in=publishable_ids).update(status=published_status)
     return updated, skipped
 
 
@@ -44,7 +52,7 @@ def find_or_create_manufacturer(name: str):
     Amazon brand: бренд — нормализуемый ввод продавца, не закрытый справочник. Пустое имя →
     None (бренд снят).
     """
-    from .models import Manufacturer
+    from ..models import Manufacturer
 
     cleaned = (name or "").strip()
     if not cleaned:

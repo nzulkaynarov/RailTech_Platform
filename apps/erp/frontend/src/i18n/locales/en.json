@@ -1552,17 +1552,17 @@
     },
     "mediaAfterCreate": "Images and documents can be uploaded after creating the product",
     "pricing": {
-      "title": "Price & availability",
-      "hint": "Your offer for this product (price is visible only to you and the platform).",
+      "title": "Supplier purchase",
+      "hint": "The supplier offer: purchase price, availability and lead times. Internal layer — the client never sees it; set the client price under “For the client”.",
       "leadTimeText": "Delivery time (free text)",
-      "leadTimeTextHint": "Shown on the public product page. For cases a number cannot express: “14-21 days”, “by agreement”.",
+      "leadTimeTextHint": "For lead times that are not a plain number: “14-21 days”, “by agreement”. Not shown to the client.",
       "validity": "Price validity",
       "validityHint": "An empty date means an open boundary: without a start the price is already in effect, without an end it never expires.",
       "validFrom": "Valid from",
       "validUntil": "Valid until",
       "validityRangeInvalid": "“Valid until” cannot be earlier than “valid from”.",
       "isActive": "Offer on sale",
-      "isActiveHint": "A withdrawn offer is not used in quotes and is hidden from buyers. It is not deleted — the same switch puts it back on sale."
+      "isActiveHint": "An inactive offer is not used in quotes. It is not deleted — switch it back on here."
     },
     "aiEnrich": {
       "title": "AI enrichment",
@@ -2206,7 +2206,9 @@
     "CANNOT_DELETE_SUPERUSER": "A superuser cannot be deleted from the panel — a platform engineer does that.",
     "ONLY_COMPANY_OWNER_CAN_APPLY": "Only a company administrator can file an application.",
     "PAYMENT_EXCEEDS_BALANCE_DUE": "The amount is larger than the balance due. Enter an amount within the balance — overpayment is not accepted.",
-    "REQUEST_HAS_NO_ITEMS": "The request has no line items — there is nothing for the seller to quote. Add at least one and submit again."
+    "REQUEST_HAS_NO_ITEMS": "The request has no line items — there is nothing for the seller to quote. Add at least one and submit again.",
+    "CATALOG_PUBLISH_INCOMPLETE": "The card is not ready to publish — fill in what is missing (see “Publication readiness”)",
+    "CATALOG_VISIBILITY_INVALID": "Unknown client visibility of the card"
   },
   "fileUpload": {
     "upload": "Upload",
@@ -3209,7 +3211,12 @@
       "category": "Category",
       "identity": "Part number or GOST/drawing",
       "equipment_groups": "Equipment group",
-      "hs_code": "HS code (current)"
+      "hs_code": "HS code (current)",
+      "kind": "Kind: goods or service",
+      "content": "Description or specifications",
+      "fulfillment_policy": "Service fulfillment policy",
+      "time_unit": "Time unit (hour, day)",
+      "list_price": "Client price and currency"
     },
     "searchPlaceholder": "Search by name, GOST or SKU",
     "selectAllOnPage": "Select all rows on this page",
@@ -3393,7 +3400,72 @@
       "archive": "Archive",
       "restore": "Restore",
       "failed": "Action failed",
-      "publishBlocked": "Fill the required fields — see the list on the left"
+      "publishBlocked": "Fill the required fields — see the list on the left",
+      "published": "Card published",
+      "unpublished": "Card unpublished",
+      "archived": "Card archived",
+      "restored": "Card restored to drafts"
+    },
+    "layers": {
+      "clientTitle": "For the client",
+      "clientBadge": "Client sees this",
+      "clientHint": "Published layer: this is what the client sees in the Cabinet once the card is published. Supplier prices never get here.",
+      "internalTitle": "Staff only",
+      "internalBadge": "Hidden from client",
+      "internalHint": "Internal layer: suppliers, purchase prices, supplier stock and lead times, notes. Never sent to the client.",
+      "internalNotes": "Internal notes",
+      "internalNotesPlaceholder": "E.g. buy only from the vetted supplier, check stock before quoting",
+      "costHidden": "Supplier offers are managed by a role with the “Manage suppliers and their offers” permission.",
+      "offersTitle": "Supplier offers"
+    },
+    "kind": {
+      "label": "Kind",
+      "goods": "Goods",
+      "service": "Service"
+    },
+    "policy": {
+      "label": "Fulfillment policy",
+      "placeholder": "Choose how the service is delivered",
+      "fixed": "Fixed price",
+      "milestones": "By milestones",
+      "time": "By time (hour, day)",
+      "hint": "How the service is delivered and invoiced: as a whole, by milestones or by time spent.",
+      "timeHint": "The price is per time unit: pick “hour” or “day” as the unit in Basics."
+    },
+    "visibility": {
+      "label": "What the client sees",
+      "on_request": "Price on request",
+      "on_requestHint": "The card is visible in the Cabinet; price, availability and lead time are on request.",
+      "cabinet": "Price and availability in the Cabinet",
+      "cabinetHint": "The client sees the client price, availability and lead time. Requires a price with currency.",
+      "readOnly": "Can be changed by a role with the publish permission.",
+      "afterDraft": "Available after the first save.",
+      "changed": "Client visibility updated"
+    },
+    "price": {
+      "label": "Client price",
+      "currency": "Currency",
+      "leadTime": "Client lead time, days",
+      "hint": "List price per unit. The client sees it only with “Price and availability in the Cabinet”; the purchase price lives in “Staff only”."
+    },
+    "preview": {
+      "title": "Through the client's eyes",
+      "notPublished": "Not published — hidden from client",
+      "priceOnRequest": "Price on request",
+      "leadTime_one": "lead time {{count}} day",
+      "leadTime_other": "lead time {{count}} days",
+      "media": "Client photos: {{images}}, documents: {{documents}}",
+      "availability": {
+        "in_stock": "In stock",
+        "on_order": "On order",
+        "expected": "Expected"
+      }
+    },
+    "media": {
+      "visibilityTitle": "Which media the client sees",
+      "visibilityHint": "Photos are visible to the client by default, documents are not: supplier price lists and letters stay internal.",
+      "visibleToClient": "Visible to client",
+      "photoN": "Photo {{n}}"
     }
   }
 }

@@ -1,10 +1,41 @@
 import uuid
 
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from core.storage import get_public_storage, product_document_path, product_image_path
-from master_data.models import UnitOfMeasure
+from master_data.models import Currency, UnitOfMeasure
+
+# ────────────────────────────────────────────
+# Вид карточки, политика исполнения, видимость (M1-ERP-07)
+# ────────────────────────────────────────────
+
+
+class ProductKind(models.TextChoices):
+    """Вид карточки. Хранится в `domain_type` (справочник «Товары» / «Услуги»), здесь — коды API."""
+
+    GOODS = "goods", _("Товар")
+    SERVICE = "service", _("Услуга")
+
+
+class FulfillmentPolicy(models.TextChoices):
+    """Политика исполнения услуги (Odoo: service invoicing policy) — как оказывается и выставляется."""
+
+    FIXED = "fixed", _("Фиксированная цена")
+    MILESTONES = "milestones", _("По этапам")
+    TIME = "time", _("По времени")
+
+
+class CatalogVisibility(models.TextChoices):
+    """Что клиент видит у ОПУБЛИКОВАННОЙ карточки (BUSINESS §8 «один каталог, два слоя»)."""
+
+    CABINET = "cabinet", _("В кабинете с ценой и наличием")
+    ON_REQUEST = "on_request", _("Цена по запросу")
+
+
+#: Единицы, в которых считается услуга «по времени» (UN/ECE Rec. 20: час, сутки).
+TIME_UNIT_CODES = frozenset({"HUR", "DAY"})
 
 # ────────────────────────────────────────────
 # Справочники модуля Catalog
@@ -18,12 +49,13 @@ from master_data.models import UnitOfMeasure
 
 class Product(models.Model):
     """
-    Эталонная карточка товара (Product Information Management).
+    Единая карточка «товар / услуга» (M1-ERP-07) в два слоя.
 
-    Содержит ТОЛЬКО справочные данные: что это за товар, какие у него
-    характеристики, кто производитель, к какому оборудованию относится.
-
-    Коммерческие условия (цена, наличие, сроки) вынесены в SupplierOffer.
+    Опубликованный слой — то, что видит клиент: имя, описание, характеристики, единица, вид,
+    политика исполнения услуги, цена-витрина (`list_price`), срок для клиента, публичные фото и
+    документы; что из этого отдаётся — решают статус и `visibility`. Внутренний слой — поставщики
+    и их цены (`SupplierOffer`), артикулы поставщиков, ТН ВЭД, внутренние заметки, провенанс и
+    спрос. Клиенту карточка отдаётся ТОЛЬКО проекцией `catalog.services.layers.published_projection`.
     """
 
     name = models.CharField(
@@ -183,6 +215,55 @@ class Product(models.Model):
         help_text=_("Когда позицию спрашивали в последний раз."),
     )
 
+    # ── Опубликованный слой (M1-ERP-07) ─────────────────────────────────────────
+    fulfillment_policy = models.CharField(
+        max_length=16,
+        choices=FulfillmentPolicy.choices,
+        blank=True,
+        default="",
+        verbose_name=_("Политика исполнения"),
+        help_text=_("Только для услуг: фиксированная цена, по этапам или по времени (час, сутки)."),
+    )
+    visibility = models.CharField(
+        max_length=16,
+        choices=CatalogVisibility.choices,
+        default=CatalogVisibility.ON_REQUEST,
+        db_index=True,
+        verbose_name=_("Видимость для клиента"),
+        help_text=_("В кабинете с ценой и наличием или «цена по запросу». Действует у опубликованной карточки."),
+    )
+    list_price = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        verbose_name=_("Цена для клиента"),
+        help_text=_("Цена-витрина за единицу. Клиент видит её только при видимости «в кабинете»."),
+    )
+    list_price_currency = models.ForeignKey(
+        Currency,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="list_priced_products",
+        verbose_name=_("Валюта цены для клиента"),
+    )
+    client_lead_time_days = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_("Срок для клиента, дней"),
+        help_text=_("Обещаемый клиенту срок; срок поставщика — во внутреннем слое."),
+    )
+
+    # ── Внутренний слой ─────────────────────────────────────────────────────────
+    internal_notes = models.TextField(
+        blank=True,
+        default="",
+        verbose_name=_("Внутренние заметки"),
+        help_text=_("Только для сотрудников: никогда не уходит клиенту."),
+    )
+
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name=_("Дата создания"),
@@ -204,10 +285,26 @@ class Product(models.Model):
     def __str__(self):
         return f"{self.name} [{self.sku}]" if self.sku else self.name
 
+    @property
+    def kind(self) -> str | None:
+        """`goods` / `service` по справочнику вида; `None` — вид ещё не выбран (кандидат из заявки)."""
+        from catalog.models import DomainType
+
+        if self.domain_type_id is None:
+            return None
+        return ProductKind.SERVICE if self.domain_type.code == DomainType.SERVICES else ProductKind.GOODS
+
     def clean(self):
         super().clean()
 
     def save(self, *args, **kwargs):
+        # Политика исполнения — свойство услуги: у товара её нет, поэтому смена вида на «товар»
+        # снимает её молча (форма могла держать значение от прежнего вида).
+        if self.fulfillment_policy and self.kind != ProductKind.SERVICE:
+            self.fulfillment_policy = ""
+            update_fields = kwargs.get("update_fields")
+            if update_fields is not None:
+                kwargs["update_fields"] = {*update_fields, "fulfillment_policy"}
         # Статус — часть жизненного цикла, а не необязательный ярлык: у 5 из 8 карточек он был
         # пуст, и «черновик / опубликован / архив» существовал только на бумаге. Новая карточка
         # рождается ЧЕРНОВИКОМ (Akeneo/Pimcore: запись входит в workflow, а не появляется сразу
@@ -268,6 +365,11 @@ class ProductImage(models.Model):
         default=0,
         verbose_name=_("Порядок сортировки"),
     )
+    is_public = models.BooleanField(
+        default=True,
+        verbose_name=_("Видно клиенту"),
+        help_text=_("Фото опубликованной карточки показывается клиенту (по умолчанию — да)."),
+    )
 
     class Meta:
         verbose_name = _("Фото товара")
@@ -310,6 +412,11 @@ class ProductDocument(models.Model):
     uploaded_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name=_("Дата загрузки"),
+    )
+    is_public = models.BooleanField(
+        default=False,
+        verbose_name=_("Видно клиенту"),
+        help_text=_("Документ уходит клиенту только с этой отметкой (прайсы и письма поставщика — нет)."),
     )
 
     class Meta:

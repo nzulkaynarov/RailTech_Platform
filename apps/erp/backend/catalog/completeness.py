@@ -9,8 +9,10 @@
 каталог даже собственный товар. Теперь публикует владелец, а роль «проверяющего» играет
 детерминированный порог.
 
-Набор обязательного зависит от домена: у ж/д запчасти без ГОСТ/чертежа или артикула нет
-идентичности, а у услуги их не бывает вовсе.
+Набор обязательного зависит от вида и видимости (M1-ERP-07 — порог публикации опубликованного
+слоя): у товара — ТН ВЭД, у услуги — политика исполнения (и единица времени для «по времени»),
+у видимости «в кабинете» — цена для клиента; у всех — вид, имя, единица, категория и описание
+или характеристики.
 """
 
 from __future__ import annotations
@@ -61,19 +63,65 @@ _IDENTITY = (
     lambda p, ctx: bool((p.manufacturer_part_number or "").strip() or (p.gost_drawing or "").strip()),
 )
 
+# ── Порог публикации опубликованного слоя (M1-ERP-07) ───────────────────────────
+#: Вид карточки — товар или услуга (справочник `domain_type`).
+_KIND = ("kind", _("Вид: товар или услуга"), lambda p, ctx: p.domain_type_id is not None)
+
+
+def _has_content(product, ctx) -> bool:
+    """Клиенту есть что прочитать: описание или хотя бы одна заполненная характеристика."""
+    if (product.description or "").strip():
+        return True
+    specs = product.specifications if isinstance(product.specifications, dict) else {}
+    return any(str(value).strip() for value in specs.values() if value is not None)
+
+
+_CONTENT = ("content", _("Описание или характеристики"), _has_content)
+#: Услуга без политики исполнения не говорит клиенту, как её закажут и выставят (Odoo invoice policy).
+_POLICY = ("fulfillment_policy", _("Политика исполнения услуги"), lambda p, ctx: bool(p.fulfillment_policy))
+
+
+def _time_unit_ok(product, ctx) -> bool:
+    """Услуга «по времени» считается в часах или сутках — иначе цена за единицу бессмысленна."""
+    from catalog.models import TIME_UNIT_CODES, FulfillmentPolicy
+
+    if product.fulfillment_policy != FulfillmentPolicy.TIME:
+        return True
+    return product.uom_id is not None and product.uom.code in TIME_UNIT_CODES
+
+
+_TIME_UNIT = ("time_unit", _("Единица времени для услуги «по времени» (час, сутки)"), _time_unit_ok)
+#: Видимость «в кабинете» обещает клиенту цену — без цены и валюты публиковать нечего.
+_LIST_PRICE = (
+    "list_price",
+    _("Цена для клиента и валюта"),
+    lambda p, ctx: p.list_price is not None and p.list_price_currency_id is not None,
+)
+
 REQUIREMENTS_BY_DOMAIN: dict[str, tuple] = {
-    # Товары: наименование, ед. изм., категория, ТН ВЭД.
-    "GENERAL_GOODS": (_NAME, _UOM, _CATEGORY, _HS),
-    # Услуги: ни артикула, ни ТН ВЭД не бывает.
-    "SERVICES": (_NAME, _UOM, _CATEGORY),
+    # Товары: вид, наименование, ед. изм., категория, описание/характеристики, ТН ВЭД.
+    "GENERAL_GOODS": (_NAME, _KIND, _UOM, _CATEGORY, _CONTENT, _HS),
+    # Услуги: ни артикула, ни ТН ВЭД не бывает — зато нужна политика исполнения.
+    "SERVICES": (_NAME, _KIND, _UOM, _CATEGORY, _CONTENT, _POLICY, _TIME_UNIT),
 }
-#: Домен не указан (карточка-кандидат в самом начале пути) — спрашиваем общий минимум.
-DEFAULT_REQUIREMENTS = (_NAME, _UOM, _CATEGORY, _HS)
+#: Домен не указан (карточка-кандидат в самом начале пути) — спрашиваем общий минимум и сам вид.
+DEFAULT_REQUIREMENTS = (_NAME, _KIND, _UOM, _CATEGORY, _CONTENT, _HS)
 
 
-def requirements_for(product) -> tuple:
+def requirements_for(product, visibility: str | None = None) -> tuple:
+    """Требования порога публикации: по виду карточки плюс по видимости.
+
+    `visibility` — та, с которой карточку собираются публиковать (по умолчанию — её текущая):
+    «в кабинете» добавляет цену для клиента.
+    """
+    from catalog.models import CatalogVisibility
+
     domain_code = getattr(getattr(product, "domain_type", None), "code", None)
-    return REQUIREMENTS_BY_DOMAIN.get(domain_code, DEFAULT_REQUIREMENTS)
+    requirements = REQUIREMENTS_BY_DOMAIN.get(domain_code, DEFAULT_REQUIREMENTS)
+    target = visibility or getattr(product, "visibility", None)
+    if target == CatalogVisibility.CABINET:
+        requirements = (*requirements, _LIST_PRICE)
+    return requirements
 
 
 class CompletenessContext:
@@ -113,7 +161,7 @@ class CompletenessContext:
         return self._hs_populated
 
 
-def completeness(product, ctx: CompletenessContext | None = None) -> dict:
+def completeness(product, ctx: CompletenessContext | None = None, *, visibility: str | None = None) -> dict:
     """`{percent, missing: [{code, label}], is_publishable}` для одной карточки.
 
     `missing` — главное поле: процент мотивирует, а список говорит, ЧТО именно сделать.
@@ -122,7 +170,7 @@ def completeness(product, ctx: CompletenessContext | None = None) -> dict:
     Без него (одиночная карточка: детальный сериализатор, публикация) контекст строится сам.
     """
     ctx = ctx if ctx is not None else CompletenessContext([product])
-    requirements = requirements_for(product)
+    requirements = requirements_for(product, visibility)
     missing = [{"code": code, "label": str(label)} for code, label, check in requirements if not check(product, ctx)]
     filled = len(requirements) - len(missing)
     percent = round(filled * 100 / len(requirements)) if requirements else 100

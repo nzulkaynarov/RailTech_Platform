@@ -368,6 +368,7 @@ def test_report_counts_unpublishable_cards_and_names_what_is_missing(world, sell
                     "Категория": "Тормозное оборудование",
                     "Код ТН ВЭД": LIVE_HS,
                     "Направление": goods,
+                    "Описание": "Описание для клиента",
                 },
                 {"Наименование": "Пустая", "Бренд": "B", "Артикул производителя": "P-2", "Направление": goods},
             ]
@@ -378,7 +379,7 @@ def test_report_counts_unpublishable_cards_and_names_what_is_missing(world, sell
     assert result["created"] == 2
     assert result["unpublishable"] == 1, "полностью заполненная карточка публикуема"
     missing = {item["code"]: item for item in result["missing_breakdown"]}
-    assert set(missing) == {"uom", "category", "hs_code"}
+    assert set(missing) == {"uom", "category", "hs_code", "content"}
     assert missing["category"]["count"] == 1
     assert missing["category"]["label"] == "Категория", "подпись берётся из completeness.py, а не заводится заново"
 
@@ -399,7 +400,7 @@ def test_dry_run_reports_publishability_and_still_persists_nothing(world, seller
     assert result["dry_run"] is True
     assert result["created"] == 1
     assert result["unpublishable"] == 1
-    assert {item["code"] for item in result["missing_breakdown"]} == {"uom", "category", "hs_code"}
+    assert {item["code"] for item in result["missing_breakdown"]} == {"uom", "category", "hs_code", "content"}
     assert Product.objects.count() == 0, "откат предпросмотра не тронут"
 
 
@@ -424,6 +425,7 @@ def test_publishability_summary_costs_the_same_for_three_and_thirty_cards(world,
                 uom=world["unit"],
                 category=world["category"],
                 hs_code="",
+                description="Описание для клиента",
             )
             for index in range(offset, offset + count)
         ]
@@ -589,6 +591,7 @@ def test_leading_zero_code_does_not_make_the_card_unpublishable(world, seller):
                     "Код ТН ВЭД": ZERO_HS,
                     "Ед. изм.": "PCS",
                     "Направление": "GENERAL_GOODS",
+                    "Описание": "Описание для клиента",
                 }
             ]
         ),

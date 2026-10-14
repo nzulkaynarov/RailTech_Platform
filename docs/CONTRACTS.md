@@ -78,7 +78,7 @@
 | `GET /invoices`, `GET /acts`, `POST /acts/{id}/accept`, `POST /acts/{id}/return {reason}` | счета и акты |
 | `GET /deliveries` | поставки по строкам: проекция клиента (статус, ожидаемая дата, трек) |
 | `GET /documents`, `GET /documents/{id}/file` | документы (поток, аудит) |
-| `GET /catalog`, `GET /catalog/{id}` | опубликованный слой с ценой и наличием (решение владельца: только здесь) |
+| `GET /catalog`, `GET /catalog/{id}` | опубликованный слой с ценой и наличием (решение владельца: только здесь). `CatalogItem` (M1-ERP-07): вид `goods`/`service`, `fulfillment_policy` услуги (`fixed`/`milestones`/`time`), публичные `images` и `documents`, `attributes`; при видимости `on_request` `price`, `availability`, `lead_time_days` — `null`; у услуги `availability` — `null`; лишних полей нет (`additionalProperties: false`). В ERP отдаётся одной функцией `catalog.services.layers.published_projection` |
 | `GET /company`, `PUT /company`, `GET /team`, `POST /team/invite` | профиль и команда клиента |
 
 Все ответы отфильтрованы по компании сессии; тест на каждый эндпоинт «чужая компания → 404».

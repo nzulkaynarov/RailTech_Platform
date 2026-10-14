@@ -12,7 +12,7 @@ import { useUnits, useCurrencies, useDeliveryBases } from '@/hooks/useMasterData
 import { useCompanies } from '@/hooks/useAccounts';
 import { useUserStore } from '@/store/userStore';
 import { useDraftState } from '@/hooks/useDraftState';
-import type { Category, Product, ProductEnrichSuggestion } from '@/api/catalogApi';
+import type { Category, Product, ProductEnrichSuggestion, ProductKind } from '@/api/catalogApi';
 import type { LookupItem } from '@/api/masterDataApi';
 import { extractApiErrorCode, translateApiError } from '@/lib/apiError';
 import { emptyDraft, type Draft, type OfferDraft } from './types';
@@ -55,6 +55,10 @@ export const ENRICH_FIELD_LABEL_KEY: Record<EnrichField, string> = {
 const specToText = (value: unknown): string => (value === null || value === undefined ? '' : String(value));
 
 const digitsOnly = (value: string | null | undefined): string => (value ?? '').replace(/\D/g, '');
+
+/** Пустое поле формы — осознанный `null` («не задано»), а не ноль. */
+const emptyToNull = (value: string | number | null | undefined): string | null =>
+  value === null || value === undefined || String(value).trim() === '' ? null : String(value).trim();
 
 /**
  * Превращает ответ ИИ в список предложений. Поля, которые ИИ не подобрал (`""`/`null`)
@@ -214,6 +218,8 @@ export function useProductForm({ target, sellerCompanyId, open = true, onSaved }
 
   const domainCode = (domainTypes ?? []).find((d) => d.id === Number(draft.domain_type))?.code
     ?? (typeof draft.domain_type === 'string' ? draft.domain_type : undefined);
+  /** Вид карточки (M1-ERP-07) — из справочника направлений: «Услуги» → услуга, иначе товар. */
+  const kind: ProductKind | null = domainCode ? (domainCode === 'SERVICES' ? 'service' : 'goods') : null;
 
   const update = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
 
@@ -378,6 +384,15 @@ export function useProductForm({ target, sellerCompanyId, open = true, onSaved }
       // номенклатуры требовала то, что негде ввести.
       hs_code: (draft.hs_code || '').replace(/\D/g, ''),
       specifications: draft.specifications ?? undefined,
+      // M1-ERP-07: опубликованный слой (политика исполнения — только у услуги) и внутренние заметки.
+      // Видимость сюда не входит: её меняет действие под правом `catalog.publish`.
+      fulfillment_policy: kind === 'service' ? (draft.fulfillment_policy || '') : '',
+      list_price: emptyToNull(draft.list_price),
+      list_price_currency: draft.list_price_currency ? Number(draft.list_price_currency) : null,
+      client_lead_time_days: emptyToNull(draft.client_lead_time_days) === null
+        ? null
+        : Number(draft.client_lead_time_days),
+      internal_notes: draft.internal_notes ?? '',
       // N3: владелец карточки при создании оператором (у продавца его ставит сервер).
       owner_company: !sellerMode && !isEdit && draft.owner_company ? Number(draft.owner_company) : undefined,
     } as unknown as Partial<Product>;
@@ -442,7 +457,7 @@ export function useProductForm({ target, sellerCompanyId, open = true, onSaved }
     // state
     draft, offerDraft, categoryHint,
     // derived
-    sellerMode, isEdit, busy,
+    sellerMode, isEdit, busy, kind,
     enrichPending: enrichMut.isPending,
     // AI suggestions (панель «поле → было → предложение»)
     enrichProposals, rejectedFields, rejectedSpecKeys, enrichAcceptedCount,

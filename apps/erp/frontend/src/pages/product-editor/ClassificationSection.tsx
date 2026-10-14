@@ -17,6 +17,12 @@ import { CustomsDutiesSheet } from '@/components/Shared/CustomsDutiesSheet';
 import type { ProductFormState } from '@/components/Shared/product-form/useProductForm';
 import { SECTION_IDS } from './anchors';
 
+/** Код направления → подпись вида карточки (M1-ERP-07); иное направление — своим именем. */
+const KIND_LABEL_KEY: Record<string, string> = {
+  GENERAL_GOODS: 'productEditor.kind.goods',
+  SERVICES: 'productEditor.kind.service',
+};
+
 /**
  * Секция «Классификация»: домен → категория → ТН ВЭД.
  *
@@ -56,15 +62,18 @@ export function ClassificationSection({ form }: { form: ProductFormState }) {
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label>{t('adminCatalog.fields.domainType')}</Label>
+              {/* M1-ERP-07: вид карточки «товар / услуга» хранится в справочнике направлений. */}
+              <Label htmlFor="pe-kind">{t('productEditor.kind.label')}</Label>
               <Select
                 value={draft.domain_type ? String(draft.domain_type) : undefined}
                 onValueChange={(value) => update({ domain_type: Number(value) })}
               >
-                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectTrigger id="pe-kind"><SelectValue placeholder="—" /></SelectTrigger>
                 <SelectContent>
                   {(domainTypes ?? []).map((domain) => (
-                    <SelectItem key={domain.id} value={String(domain.id)}>{domain.name}</SelectItem>
+                    <SelectItem key={domain.id} value={String(domain.id)}>
+                      {KIND_LABEL_KEY[domain.code] ? t(KIND_LABEL_KEY[domain.code]) : domain.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>

@@ -1,198 +1,66 @@
-from drf_spectacular.utils import extend_schema_serializer
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from accounts.models import Company
-from master_data.models import Currency, DeliveryBasis, UnitOfMeasure
-
-from .models import (
-    Category,
-    DomainType,
-    Manufacturer,
-    Product,
-    ProductDocument,
-    ProductImage,
-    ProductStatus,
-    StockStatus,
-    SupplierOffer,
+from ..models import Product
+from .base import (
+    CategorySerializer,
+    CompanyLightSerializer,
+    ProductDocumentSerializer,
+    ProductImageSerializer,
+    SupplierOfferSerializer,
+    UnitOfMeasureSerializer,
 )
-
-
-class CompanyLightSerializer(serializers.ModelSerializer):
-    """Lightweight company serializer for nested use — no extra queries."""
-
-    class Meta:
-        model = Company
-        fields = ["id", "name", "inn", "logo"]
-
-
-class ManufacturerSerializer(serializers.ModelSerializer):
-    """OEM brand lookup (catalog.Manufacturer) — the canonical `Product.brand` source.
-
-    NOT a platform participant (that's the seller/owner). A brand needn't have an
-    account; `company` optionally links it to one if the OEM is registered."""
-
-    country_name = serializers.CharField(source="country.name", read_only=True, default=None)
-
-    class Meta:
-        model = Manufacturer
-        fields = ["id", "name", "country", "country_name", "website", "company", "is_active"]
-
-
-# --- Simple Reference Serializers ---
-
-
-class DomainTypeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = DomainType
-        fields = ["id", "code", "name", "sku_prefix", "sort_order", "is_active"]
-
-
-class ProductStatusSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ProductStatus
-        fields = ["id", "code", "name"]
-
-
-class StockStatusSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = StockStatus
-        fields = ["id", "code", "name"]
-
-
-class CategorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Category
-        fields = ["id", "name", "parent", "domain_type", "icon"]
-
-
-@extend_schema_serializer(component_name="CatalogUnitOfMeasure")
-class UnitOfMeasureSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = UnitOfMeasure
-        fields = ["id", "code", "name"]
-
-
-@extend_schema_serializer(component_name="CatalogCurrency")
-class CurrencySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Currency
-        fields = ["id", "code", "symbol"]
-
-
-@extend_schema_serializer(component_name="CatalogDeliveryBasis")
-class DeliveryBasisSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = DeliveryBasis
-        fields = ["id", "code", "name", "description"]
-
-
-# --- Media Serializers ---
-
-
-class ProductImageSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ProductImage
-        fields = ["id", "image", "image_url", "is_main", "alt_text"]
-
-
-class ProductDocumentSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ProductDocument
-        fields = ["id", "file", "file_url", "name", "uploaded_at"]
-
-
-# --- Supplier Offer Serializer ---
-
-
-class SupplierOfferSerializer(serializers.ModelSerializer):
-    supplier_data = CompanyLightSerializer(source="supplier", read_only=True)
-    currency_data = CurrencySerializer(source="currency", read_only=True)
-    delivery_basis_data = DeliveryBasisSerializer(source="delivery_basis", read_only=True)
-
-    class Meta:
-        model = SupplierOffer
-        fields = [
-            "id",
-            "product",
-            "supplier",
-            "supplier_data",
-            "supplier_sku",
-            "base_price",
-            "currency",
-            "currency_data",
-            "delivery_basis",
-            "delivery_basis_data",
-            "stock_status",
-            "delivery_lead_time",
-            "stock_quantity",
-            "in_stock_lead_time_days",
-            "order_lead_time_days",
-            "min_order_qty",
-            # R7: окно действия цены было в модели, но не в контракте — задать срок было
-            # негде, и «цена до конца квартала» жила в переписке, а не в карточке.
-            "valid_from",
-            "valid_until",
-            "is_active",
-        ]
-
-    def validate(self, attrs):
-        """Окно действия цены проверяется ЦЕЛИКОМ, включая частичное обновление.
-
-        На PATCH в теле приходит одна граница из двух — сравнивать её надо со второй,
-        уже сохранённой, иначе перевёрнутое окно собиралось бы двумя запросами.
-        """
-        attrs = super().validate(attrs)
-        instance = self.instance
-        valid_from = attrs.get("valid_from", getattr(instance, "valid_from", None))
-        valid_until = attrs.get("valid_until", getattr(instance, "valid_until", None))
-        from catalog.services import offer_validity_error
-
-        error = offer_validity_error(valid_from, valid_until)
-        if error:
-            raise serializers.ValidationError({"detail": error})
-        return attrs
-
 
 # --- Main Product Serializer (PIM) ---
 
 
+#: Кто из сотрудников видит внутренний слой цен (предложения поставщиков, себестоимость):
+#: ведущий каталог, закупщик и тот, кому роль даёт себестоимость и маржу КП. Администратор — всегда.
+COST_VIEW_PERMISSIONS = ("quote.view_cost_margin", "catalog.manage", "supply.manage")
+
+
 class _CostGateMixin:
-    """Strip supplier-cost fields (offers / base_price) from viewers who don't own
-    the product. Only the OWNING seller's team + platform admins see cost & supplier
-    identity — buyers, other sellers and anon never do (C1 cost-leak fix). React was
-    only hiding these client-side; the data still travelled in the API response.
+    """Срезает поля себестоимости (`offers` / `base_price`) у тех, кому их видеть нельзя (C1, M1-ERP-07).
+
+    Цены поставщиков — внутренний слой: их видят администратор и сотрудник своей компании с правом
+    `quote.view_cost_margin`, `catalog.manage` или `supply.manage`. Клиенту (не-сотруднику) карточка
+    этим сериализатором не отдаётся вовсе — только проекцией опубликованного слоя.
     """
 
     cost_fields: tuple = ()
 
-    def _viewer_company_ids(self):
-        if hasattr(self, "_vci"):
-            return self._vci
+    def _viewer_sees_cost(self) -> bool:
+        if hasattr(self, "_sees_cost"):
+            return self._sees_cost
         user = getattr(self.context.get("request"), "user", None)
-        ids = set()
-        if user is not None and getattr(user, "is_authenticated", False):
-            ids = set(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
-        self._vci = ids
-        return ids
+        from accounts.services.permissions import staff_has_permission
 
-    def _viewer_owns_or_admin(self, obj) -> bool:
-        user = getattr(self.context.get("request"), "user", None)
-        if not (user is not None and getattr(user, "is_authenticated", False)):
-            return False
-        if getattr(user, "is_superuser", False) or getattr(user, "is_superuser", False):
-            return True
-        owner_id = getattr(obj, "owner_company_id", None)
-        return bool(owner_id and owner_id in self._viewer_company_ids())
+        self._sees_cost = bool(
+            user is not None
+            and getattr(user, "is_authenticated", False)
+            and (getattr(user, "is_superuser", False) or staff_has_permission(user, COST_VIEW_PERMISSIONS))
+        )
+        return self._sees_cost
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        if not self._viewer_owns_or_admin(instance):
+        if not self._viewer_sees_cost():
             for field_name in self.cost_fields:
                 data.pop(field_name, None)
         return data
 
 
-class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
+class _LayerFieldsMixin:
+    """Поля вида и опубликованного слоя, общие для списка и карточки."""
+
+    def get_kind(self, obj) -> str | None:
+        return str(obj.kind) if obj.kind else None
+
+    def get_list_price_currency_code(self, obj) -> str | None:
+        return obj.list_price_currency.code if obj.list_price_currency_id else None
+
+
+class ProductSerializer(_CostGateMixin, _LayerFieldsMixin, serializers.ModelSerializer):
     # `base_price_currency` уезжает вместе с ценой: валюта цены, которую зрителю не показали,
     # сама по себе бессмысленна и лишь намекает на скрытое.
     cost_fields = ("offers", "base_price", "base_price_currency")
@@ -229,6 +97,22 @@ class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
     stock_status = serializers.SerializerMethodField()
     base_price = serializers.SerializerMethodField()
     base_price_currency = serializers.SerializerMethodField()
+    kind = serializers.SerializerMethodField()
+    list_price_currency_code = serializers.SerializerMethodField()
+    # «Глазами клиента» (M1-ERP-07): ровно то, что уйдёт клиенту, — той же функцией проекции.
+    client_preview = serializers.SerializerMethodField()
+
+    @extend_schema_field(
+        {
+            "type": "object",
+            "description": "Опубликованный слой глазами клиента (`published_projection`, режим client)",
+            "additionalProperties": True,
+        }
+    )
+    def get_client_preview(self, obj) -> dict:
+        from catalog.services.layers import published_projection
+
+        return published_projection(obj, request=self.context.get("request"))
 
     class Meta:
         model = Product
@@ -237,6 +121,15 @@ class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
             "sku",
             "name",
             "description",
+            "kind",
+            "fulfillment_policy",
+            "visibility",
+            "list_price",
+            "list_price_currency",
+            "list_price_currency_code",
+            "client_lead_time_days",
+            "internal_notes",
+            "client_preview",
             "status",
             "status_name",
             "status_code",
@@ -276,7 +169,9 @@ class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
         # status — жизненный цикл, а не поле формы (N2, B4 аудита): записываемый status
         # позволял опубликовать PATCH'ем в обход порога полноты publish_product(). Смена
         # статуса — ТОЛЬКО сервисами (publishing.py, merging.py, Unfold emergency).
-        read_only_fields = ["sku", "created_at", "updated_at", "owner_company", "status"]
+        # visibility — решение о показе цены клиенту: только действиями `publish` / `visibility`
+        # под правом `catalog.publish` (M1-ERP-07), не правкой формы под `catalog.manage`.
+        read_only_fields = ["sku", "created_at", "updated_at", "owner_company", "status", "visibility"]
 
     def validate(self, attrs):
         """Validate product attributes before create/update."""
@@ -360,7 +255,7 @@ class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
         return None
 
 
-class ProductListSerializer(_CostGateMixin, serializers.ModelSerializer):
+class ProductListSerializer(_CostGateMixin, _LayerFieldsMixin, serializers.ModelSerializer):
     """Lightweight serializer for list endpoints — no nested offers/documents."""
 
     # Полнота нужна ИМЕННО в списке: очередь наполнения продавца показывает, чего не хватает,
@@ -411,6 +306,8 @@ class ProductListSerializer(_CostGateMixin, serializers.ModelSerializer):
     stock_status = serializers.SerializerMethodField()
     base_price = serializers.SerializerMethodField()
     base_price_currency = serializers.SerializerMethodField()
+    kind = serializers.SerializerMethodField()
+    list_price_currency_code = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -418,6 +315,11 @@ class ProductListSerializer(_CostGateMixin, serializers.ModelSerializer):
             "id",
             "sku",
             "name",
+            "kind",
+            "fulfillment_policy",
+            "visibility",
+            "list_price",
+            "list_price_currency_code",
             "status",
             "status_name",
             "status_code",

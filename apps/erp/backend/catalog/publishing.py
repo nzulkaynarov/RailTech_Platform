@@ -18,6 +18,22 @@ from .completeness import completeness
 #: Максимум карточек за один пакетный вызов — та же граница, что у платформенного bulk_publish.
 MAX_BATCH = 500
 
+#: Порог публикации не пройден — ответ API `{"detail": CODE, "missing": [коды требований]}`.
+PUBLISH_INCOMPLETE = "CATALOG_PUBLISH_INCOMPLETE"
+#: Видимость вне `cabinet` / `on_request`.
+VISIBILITY_INVALID = "CATALOG_VISIBILITY_INVALID"
+
+
+def publish_blockers(product, visibility: str | None = None) -> list[str]:
+    """Коды недостающих требований порога публикации (пусто — карточку можно выпускать)."""
+    return [item["code"] for item in completeness(product, visibility=visibility)["missing"]]
+
+
+def _valid_visibility(visibility) -> bool:
+    from .models import CatalogVisibility
+
+    return visibility in CatalogVisibility.values
+
 
 def can_manage(user, product, *, permission: str = "catalog.manage") -> bool:
     """Право распоряжаться карточкой (N3: слой `catalog.*` действующий, не декоративный).
@@ -37,24 +53,51 @@ def can_manage(user, product, *, permission: str = "catalog.manage") -> bool:
 
 
 @transaction.atomic
-def publish_product(product, actor) -> tuple[object | None, str | None]:
-    """Опубликовать одну карточку. Возвращает `(product, error_code)`."""
+def publish_product(product, actor, *, visibility: str | None = None) -> tuple[object | None, str | None]:
+    """Опубликовать одну карточку (по желанию — сразу с видимостью). Возвращает `(product, error_code)`.
+
+    Порог публикации (M1-ERP-07) считается с ТОЙ видимостью, с которой карточка выйдет: «в кабинете»
+    требует цену для клиента. Не пройден — `CATALOG_PUBLISH_INCOMPLETE`; чего не хватает —
+    `publish_blockers` (вьюха отдаёт список в `missing`).
+    """
     from .models import ProductStatus
 
     # Публикация — отдельная способность (`catalog.publish`): наполнять карточку может
     # менеджер каталога, а выпускать в общий каталог — тот, кому это доверено.
     if not can_manage(actor, product, permission="catalog.publish"):
         return None, "PRODUCT_NOT_YOURS"
-    report = completeness(product)
-    if not report["is_publishable"]:
-        # Код ошибки называет НЕДОСТАЮЩЕЕ — пользователь не должен гадать, как у волны E2
-        # с обязательными блоками шаблона (`TEMPLATE_MISSING_REQUIRED_BLOCKS`).
-        return None, "PRODUCT_INCOMPLETE:" + ",".join(item["code"] for item in report["missing"])
+    if visibility is not None and not _valid_visibility(visibility):
+        return None, VISIBILITY_INVALID
+    if publish_blockers(product, visibility):
+        return None, PUBLISH_INCOMPLETE
     published = ProductStatus.objects.filter(code="PUBLISHED").first()
     if published is None:
         return None, "PRODUCT_STATUS_MISSING"
     product.status = published
-    product.save(update_fields=["status", "updated_at"])
+    fields = ["status", "updated_at"]
+    if visibility is not None:
+        product.visibility = visibility
+        fields.append("visibility")
+    product.save(update_fields=fields)
+    return product, None
+
+
+@transaction.atomic
+def set_visibility(product, actor, visibility) -> tuple[object | None, str | None]:
+    """Сменить видимость карточки для клиента: `cabinet` (цена и наличие) / `on_request`.
+
+    Право — `catalog.publish`: показать клиенту цену — решение того же уровня, что выпуск
+    карточки. У ОПУБЛИКОВАННОЙ карточки новая видимость проходит порог публикации («в кабинете»
+    без цены клиенту не уходит); у черновика — просто запоминается до публикации.
+    """
+    if not can_manage(actor, product, permission="catalog.publish"):
+        return None, "PRODUCT_NOT_YOURS"
+    if not _valid_visibility(visibility):
+        return None, VISIBILITY_INVALID
+    if getattr(product.status, "code", None) == "PUBLISHED" and publish_blockers(product, visibility):
+        return None, PUBLISH_INCOMPLETE
+    product.visibility = visibility
+    product.save(update_fields=["visibility", "updated_at"])
     return product, None
 
 
@@ -161,7 +204,9 @@ def publish_many(product_ids, actor) -> dict:
     skipped: list[dict] = []
     for product in Product.objects.filter(pk__in=ids).select_related("status", "domain_type", "uom", "category"):
         _card, error = publish_product(product, actor)
-        if error:
+        if error == PUBLISH_INCOMPLETE:
+            skipped.append({"id": product.pk, "error": error, "missing": publish_blockers(product)})
+        elif error:
             skipped.append({"id": product.pk, "error": error})
         else:
             published.append(product.pk)

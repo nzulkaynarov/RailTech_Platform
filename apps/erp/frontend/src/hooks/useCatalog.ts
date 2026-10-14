@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { catalogApi } from '../api/catalogApi';
-import type { ProductListParams } from '../api/catalogApi';
+import type { CatalogVisibility, ProductListParams } from '../api/catalogApi';
 
 /**
  * Баннеры-подсказки «Мои товары» (переклассификация, дубли, покрытие) — списки ЗАДАЧ,
@@ -262,6 +262,29 @@ export const usePublishProduct = () => {
   return useMutation({
     mutationFn: (id: number) => catalogApi.publishProduct(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['products'] }),
+  });
+};
+
+/** M1-ERP-07: видимость карточки для клиента; детальная карточка живёт под ['product', id]. */
+export const useSetProductVisibility = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, visibility }: { id: number; visibility: CatalogVisibility }) =>
+      catalogApi.setProductVisibility(id, visibility),
+    onSuccess: (product) => {
+      qc.invalidateQueries({ queryKey: ['products'] });
+      qc.invalidateQueries({ queryKey: ['product', String(product.id)] });
+    },
+  });
+};
+
+/** M1-ERP-07: «видно клиенту» у фото и документов карточки. */
+export const useSetMediaPublic = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { productId: number; media: 'image' | 'document'; mediaId: number; isPublic: boolean }) =>
+      catalogApi.setMediaPublic(args.productId, args.media, args.mediaId, args.isPublic),
+    onSuccess: (_data, args) => qc.invalidateQueries({ queryKey: ['product', String(args.productId)] }),
   });
 };
 

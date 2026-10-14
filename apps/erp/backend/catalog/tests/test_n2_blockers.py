@@ -59,12 +59,15 @@ def test_publish_action_still_flips_the_status(seller):
 
     uom, _ = UnitOfMeasure.objects.get_or_create(code="PCS", defaults={"name": "шт", "sort_order": 10})
     services_domain_card = Product.objects.create(name="Услуга доставки", owner_company=seller["company"], uom=uom)
-    # Домен SERVICES: требования — имя, ед.изм., категория.
+    # Домен SERVICES: требования — имя, вид, ед.изм., категория, описание, политика исполнения.
     from catalog.models import Category, DomainType
 
     services = DomainType.objects.get(code="SERVICES")
     services_domain_card.domain_type = services
     services_domain_card.category = Category.objects.filter(domain_type=services).first()
+    # M1-ERP-07: услуге нужны описание и политика исполнения.
+    services_domain_card.description = "Доставка до склада клиента"
+    services_domain_card.fulfillment_policy = "fixed"
     services_domain_card.save()
 
     member = CustomUser.objects.get(email="n2@seller.test")

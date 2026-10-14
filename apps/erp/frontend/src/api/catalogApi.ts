@@ -62,6 +62,27 @@ export interface SupplierOffer {
     is_active?: boolean;
 }
 
+export type ProductKind = 'goods' | 'service';
+export type FulfillmentPolicy = 'fixed' | 'milestones' | 'time';
+export type CatalogVisibility = 'cabinet' | 'on_request';
+
+/** Опубликованный слой карточки (`published_projection`) — схема `CatalogItem` портала. */
+export interface PublishedCatalogItem {
+    id: number;
+    kind: ProductKind | null;
+    name: string;
+    description: string;
+    unit: string;
+    category: string | null;
+    fulfillment_policy: FulfillmentPolicy | null;
+    price: { amount: string; currency: string } | null;
+    availability: 'in_stock' | 'on_order' | 'expected' | null;
+    lead_time_days: number | null;
+    images: string[];
+    documents: { name: string; url: string }[];
+    attributes: { name: string; value: string }[];
+}
+
 export interface Product {
     id: number;
     name: string;
@@ -120,8 +141,34 @@ export interface Product {
         [key: string]: string | number | boolean | null | undefined;
     } | null;
 
-    images?: { id: number, image: string | null, image_url: string | null, is_main: boolean, alt_text?: string }[];
-    documents?: { id: number, file: string | null, file_url: string | null, name: string }[];
+    images?: {
+        id: number, image: string | null, image_url: string | null, is_main: boolean, alt_text?: string,
+        /** Видно клиенту у опубликованной карточки (M1-ERP-07; фото — по умолчанию да). */
+        is_public?: boolean,
+    }[];
+    documents?: {
+        id: number, file: string | null, file_url: string | null, name: string,
+        /** Видно клиенту (M1-ERP-07; документ — по умолчанию нет). */
+        is_public?: boolean,
+    }[];
+
+    // ── M1-ERP-07: единая карточка «товар / услуга», два слоя ──────────────────────────
+    /** Вид карточки по справочнику направлений: `goods` / `service`; `null` — не выбран. */
+    kind?: ProductKind | null;
+    /** Политика исполнения услуги; у товара — пустая строка. */
+    fulfillment_policy?: FulfillmentPolicy | '';
+    /** Что видит клиент у опубликованной карточки; меняется только действием (`catalog.publish`). */
+    visibility?: CatalogVisibility;
+    /** Цена-витрина для клиента (опубликованный слой), строка Decimal. */
+    list_price?: string | null;
+    list_price_currency?: number | null;
+    list_price_currency_code?: string | null;
+    /** Обещаемый клиенту срок, дней. */
+    client_lead_time_days?: number | null;
+    /** Внутренние заметки — только сотрудникам. */
+    internal_notes?: string;
+    /** Карточка глазами клиента — ровно то, что отдаёт опубликованный слой. */
+    client_preview?: PublishedCatalogItem;
 
     main_image_url?: string | null;
     main_document_url?: string | null;
@@ -317,8 +364,24 @@ export const catalogApi = {
         );
         return response.data;
     },
-    publishProduct: async (id: number): Promise<Product> => {
-        const response = await apiClient.post<Product>(`catalog/products/${id}/publish/`, {});
+    publishProduct: async (id: number, visibility?: CatalogVisibility): Promise<Product> => {
+        const response = await apiClient.post<Product>(
+            `catalog/products/${id}/publish/`, visibility ? { visibility } : {},
+        );
+        return response.data;
+    },
+    /** M1-ERP-07: что видит клиент — цена в кабинете или «по запросу» (право `catalog.publish`). */
+    setProductVisibility: async (id: number, visibility: CatalogVisibility): Promise<Product> => {
+        const response = await apiClient.post<Product>(`catalog/products/${id}/visibility/`, { visibility });
+        return response.data;
+    },
+    /** M1-ERP-07: показать или скрыть клиенту фото / документ карточки. */
+    setMediaPublic: async (
+        productId: number, media: 'image' | 'document', mediaId: number, isPublic: boolean,
+    ): Promise<{ id: number; is_public: boolean }> => {
+        const response = await apiClient.post<{ id: number; is_public: boolean }>(
+            `catalog/products/${productId}/${media}-visibility/${mediaId}/`, { is_public: isPublic },
+        );
         return response.data;
     },
     /** N4: покрытие каталога — доля строк КП, опирающихся на карточку (Ariba catalog spend). */

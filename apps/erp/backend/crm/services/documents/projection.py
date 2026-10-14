@@ -4,9 +4,15 @@ The seller's cost/charge structure must never be decomposable from what the buye
 document-level charges are spread INTO each priced line's delivered price, never listed as a
 separate «Доп. расходы» row. Both the PDF and its public HTML twin render from here, so the
 two surfaces cannot drift apart on this invariant.
+
+The catalog card behind a line reaches the client only through the published layer
+(`catalog.services.layers.client_line_reference`, M1-ERP-07) — never as a model the template
+could walk to suppliers or cost.
 """
 
 from decimal import ROUND_HALF_UP, Decimal
+
+from catalog.services.layers import client_line_reference
 
 _PENNY = Decimal("0.01")
 
@@ -94,7 +100,7 @@ def _item_row(item, line_no: int, projected_unit: dict, projected_line_total: di
     return {
         "display_type": "ITEM",
         "line_no": line_no,
-        "product": item.product,
+        "product": client_line_reference(item.product),
         "imported_raw_name": item.imported_raw_name,
         "mpn": item.mpn,
         "gost_drawing": item.gost_drawing,
@@ -157,7 +163,7 @@ def client_optional_items(quote) -> list:
 
     return [
         {
-            "product": item.product,
+            "product": client_line_reference(item.product),
             "imported_raw_name": item.imported_raw_name,
             "mpn": item.mpn,
             "gost_drawing": item.gost_drawing,

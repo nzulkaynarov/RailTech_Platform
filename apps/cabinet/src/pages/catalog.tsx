@@ -202,7 +202,8 @@ function AvailabilityText({ item }: { item: CatalogItem }) {
   const { t } = useTranslation();
   return (
     <span className="flex flex-wrap items-center gap-2 text-sm">
-      <StatusBadge entity="availability" code={item.availability} />
+      {/* `null` — у услуги и при «цене по запросу» (M1-ERP-07): статуса наличия нет. */}
+      {item.availability ? <StatusBadge entity="availability" code={item.availability} /> : null}
       {item.lead_time_days !== null && item.lead_time_days !== undefined ? (
         <span className="text-muted-foreground">{t('pages.catalog.leadTime', { count: item.lead_time_days })}</span>
       ) : null}

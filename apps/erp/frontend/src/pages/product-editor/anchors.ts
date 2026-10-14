@@ -9,7 +9,8 @@ export const SECTION_IDS = {
   classification: 'pe-classification',
   specifications: 'pe-specifications',
   media: 'pe-media',
-  commerce: 'pe-commerce',
+  client: 'pe-client',
+  internal: 'pe-internal',
   actions: 'pe-actions',
 } as const;
 
@@ -20,6 +21,12 @@ export const SECTION_BY_REQUIREMENT: Record<string, string> = {
   uom: SECTION_IDS.basics,
   category: SECTION_IDS.classification,
   hs_code: SECTION_IDS.classification,
+  // M1-ERP-07: порог публикации опубликованного слоя.
+  kind: SECTION_IDS.classification,
+  content: SECTION_IDS.basics,
+  time_unit: SECTION_IDS.basics,
+  fulfillment_policy: SECTION_IDS.client,
+  list_price: SECTION_IDS.client,
 };
 
 export function scrollToSection(sectionId: string) {

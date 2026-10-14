@@ -9,7 +9,14 @@ from core.permissions import RoleGatedViewMixin
 
 from ..filters import StableOrderingFilter
 from ..models import Product, ProductDocument, ProductImage
-from ..serializers import ProductDocumentSerializer, ProductImageSerializer, ProductListSerializer, ProductSerializer
+from ..serializers import (
+    ProductDocumentSerializer,
+    ProductImageSerializer,
+    ProductListSerializer,
+    ProductSerializer,
+    PublishedCatalogItemSerializer,
+)
+from .layers import ProductLayerActionsMixin, is_staff_viewer
 
 
 def catalog_ai_gate(user):
@@ -35,7 +42,10 @@ def catalog_ai_gate(user):
     list=extend_schema(
         summary="List products",
         description=(
-            "Returns products from the PIM catalog. Non-admin users only see PUBLISHED products. "
+            "Returns products from the PIM catalog. Back-office staff get the internal card (supplier "
+            "cost only with `quote.view_cost_margin` / `catalog.manage` / `supply.manage`); any other "
+            "authenticated viewer gets ONLY the published layer of PUBLISHED cards "
+            "(`PublishedCatalogItem`, M1-ERP-07). "
             "Filterable by domain_type, category, manufacturer, stock_status. "
             "Searchable by name, GOST/drawing, SKU. Server-side ordering via `?ordering=` "
             "(name, sku, demand_count, last_requested_at, created_at, updated_at; prefix with "
@@ -61,12 +71,13 @@ def catalog_ai_gate(user):
     partial_update=extend_schema(summary="Partially update product", tags=["Catalog"]),
     destroy=extend_schema(summary="Delete product", tags=["Catalog"]),
 )
-class ProductViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
+class ProductViewSet(RoleGatedViewMixin, ProductLayerActionsMixin, viewsets.ModelViewSet):
     """
     CRUD for PIM products.
 
-    Public read access (PUBLISHED only for non-admin);
-    write operations require Admin role.
+    Read access — authenticated only (M1-ERP-07): staff get the internal card, everyone else the
+    published layer of PUBLISHED cards via `published_projection` (no anonymous catalog: prices
+    and availability go to clients only through Cabinet, DECISIONS 2026-10-13).
 
     NOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER
     (catalog _CostGateMixin), so a response is viewer-specific and must never be
@@ -96,6 +107,9 @@ class ProductViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         "hs_classify": "catalog.manage",
         "publish": "catalog.publish",
         "unpublish": "catalog.publish",
+        "visibility": "catalog.publish",
+        "image_visibility": "catalog.manage",
+        "document_visibility": "catalog.manage",
         "bulk_publish": "catalog.publish",
         "hs_lookup": ("catalog.manage", "quote.build"),
     }
@@ -103,14 +117,37 @@ class ProductViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     serializer_class = ProductSerializer
 
     def get_serializer_class(self):
+        # Не-сотрудник (покупательский аккаунт до M2-ERP-01) видит ТОЛЬКО опубликованный слой.
+        if self.action in ("list", "retrieve") and not is_staff_viewer(self.request.user):
+            return PublishedCatalogItemSerializer
         if self.action == "list":
             return ProductListSerializer
         return ProductSerializer
 
+    def filter_queryset(self, queryset):
+        if is_staff_viewer(self.request.user):
+            return super().filter_queryset(queryset)
+        # Клиенту — без сортировок и фильтров по внутреннему слою (спрос, наличие у поставщика):
+        # порядок выдачи не должен выдавать то, что скрыто в полях.
+        for backend in (DjangoFilterBackend, filters.SearchFilter):
+            queryset = backend().filter_queryset(self.request, queryset, self)
+        return queryset.order_by("name", "pk")
+
     def get_queryset(self):
         user = self.request.user
+        if self.action in ("list", "retrieve") and not is_staff_viewer(user):
+            from catalog.services.layers import client_visible_products
+
+            return client_visible_products()
         base = Product.objects.all().select_related(
-            "category", "owner_company", "domain_type", "status", "uom", "brand", "brand__country"
+            "category",
+            "owner_company",
+            "domain_type",
+            "status",
+            "uom",
+            "brand",
+            "brand__country",
+            "list_price_currency",
         )
         if self.action == "list":
             queryset = base.prefetch_related(
@@ -194,6 +231,7 @@ class ProductViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         "domain_type__code": ["exact"],
         "category": ["exact"],
         "brand": ["exact"],
+        "visibility": ["exact"],
     }
     #: Белый список сортировок. До R1 `?ordering=` молча не работал вовсе: бэкенд не подключал
     #: `OrderingFilter`, и клик по заголовку колонки ничего не менял. Поле вне списка DRF
@@ -204,13 +242,14 @@ class ProductViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
-            return [permissions.AllowAny()]
+            return [permissions.IsAuthenticated()]
         # Публикует ВЛАДЕЛЕЦ карточки (Amazon/Alibaba/Shopify), а порог качества держит
         # детерминированная полнота — см. `catalog/publishing.py`. Право платформы сохраняется.
         if self.action in (
             "publish",
             "bulk_publish",
             "unpublish",
+            "visibility",
             "archive",
             "restore",
             "bulk_archive",
@@ -510,9 +549,16 @@ class ProductViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     @extend_schema(
         summary="Publish a product (owner)",
         description=(
-            "Публикует карточку. Доступно ВЛАДЕЛЬЦУ и платформе. Требует полноты: неполная "
-            "карточка отвечает `PRODUCT_INCOMPLETE:<коды недостающих полей>`."
+            "Публикует карточку (по желанию — сразу с видимостью `cabinet` / `on_request`). Требует "
+            "порога публикации: неполная карточка отвечает 400 "
+            "`{detail: CATALOG_PUBLISH_INCOMPLETE, missing: [коды требований]}`."
         ),
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {"visibility": {"type": "string", "enum": ["cabinet", "on_request"]}},
+            }
+        },
         responses={200: OpenApiResponse(description="Published"), 400: OpenApiResponse(description="Incomplete")},
         tags=["Catalog"],
     )
@@ -521,10 +567,10 @@ class ProductViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         from catalog.publishing import publish_product
 
         product = self.get_object()
-        published, error = publish_product(product, request.user)
+        visibility = request.data.get("visibility") if hasattr(request.data, "get") else None
+        published, error = publish_product(product, request.user, visibility=visibility)
         if error:
-            code = 403 if error == "PRODUCT_NOT_YOURS" else status.HTTP_400_BAD_REQUEST
-            return Response({"detail": error}, status=code)
+            return self.layer_error_response(product, error, visibility)
         return Response(self.get_serializer(published).data)
 
     @extend_schema(
@@ -778,6 +824,7 @@ class ProductViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
                     "image": {"type": "string", "format": "binary"},
                     "is_main": {"type": "boolean", "default": False},
                     "alt_text": {"type": "string"},
+                    "is_public": {"type": "boolean", "default": True},
                 },
             }
         },
@@ -806,6 +853,8 @@ class ProductViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         is_main = str(request.data.get("is_main", "false")).lower() in ("true", "1")
+        # Фото по умолчанию видно клиенту (опубликованный слой), документ — нет (M1-ERP-07).
+        is_public = str(request.data.get("is_public", "true")).lower() in ("true", "1")
         alt_text = request.data.get("alt_text", "")
 
         if is_main:
@@ -816,6 +865,7 @@ class ProductViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
             image=image_file,
             is_main=is_main,
             alt_text=alt_text,
+            is_public=is_public,
         )
         return Response(ProductImageSerializer(img).data, status=status.HTTP_201_CREATED)
 
@@ -849,6 +899,7 @@ class ProductViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
                 "properties": {
                     "file": {"type": "string", "format": "binary"},
                     "name": {"type": "string"},
+                    "is_public": {"type": "boolean", "default": False},
                 },
             }
         },
@@ -877,7 +928,8 @@ class ProductViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         name = request.data.get("name") or file_obj.name
-        doc = ProductDocument.objects.create(product=product, file=file_obj, name=name)
+        is_public = str(request.data.get("is_public", "false")).lower() in ("true", "1")
+        doc = ProductDocument.objects.create(product=product, file=file_obj, name=name, is_public=is_public)
         return Response(ProductDocumentSerializer(doc).data, status=status.HTTP_201_CREATED)
 
     @extend_schema(

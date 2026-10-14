@@ -1056,11 +1056,33 @@ components:
 
     Availability:
       type: string
+      description: 'Наличие как статус, без количеств (BUSINESS §10.1): в наличии / под заказ / ожидается'
       enum: [in_stock, on_order, expected]
+
+    FulfillmentPolicy:
+      type: string
+      description: 'Политика исполнения услуги (M1-ERP-07): `fixed` — фиксированная цена, `milestones` — по этапам, `time` — по времени (цена за час / сутки)'
+      enum: [fixed, milestones, time]
+
+    CatalogDocument:
+      type: object
+      required: [name, url]
+      properties:
+        name:
+          type: string
+        url:
+          type: string
+          format: uri
+      additionalProperties: false
 
     CatalogItem:
       type: object
-      required: [id, kind, name, unit, price, availability]
+      description: |
+        Опубликованный слой карточки «товар / услуга» (M1-ERP-07) — ровно эти поля, внутреннего слоя
+        (поставщики, себестоимость, остатки по количеству, ТН ВЭД, внутренние заметки) нет. Политика
+        видимости карточки: `cabinet` — с ценой, наличием и сроком; `on_request` — `price`,
+        `availability` и `lead_time_days` равны `null` («цена по запросу»).
+      required: [id, kind, name, unit, price, availability, fulfillment_policy]
       properties:
         id:
           type: integer
@@ -1074,15 +1096,24 @@ components:
           type: string
         unit:
           type: string
+          description: 'Единица (для услуги «по времени» — час или сутки)'
         category:
           type: [string, 'null']
+        fulfillment_policy:
+          oneOf:
+            - $ref: '#/components/schemas/FulfillmentPolicy'
+            - type: 'null'
+          description: 'Только у услуги; у товара — `null`'
         price:
           oneOf:
             - $ref: '#/components/schemas/Money'
             - type: 'null'
-          description: '`null` — «цена по запросу»'
+          description: '`null` — «цена по запросу» (видимость `on_request`)'
         availability:
-          $ref: '#/components/schemas/Availability'
+          oneOf:
+            - $ref: '#/components/schemas/Availability'
+            - type: 'null'
+          description: '`null` — у услуги и при видимости `on_request`'
         lead_time_days:
           type: [integer, 'null']
           minimum: 0
@@ -1091,6 +1122,11 @@ components:
           items:
             type: string
             format: uri
+        documents:
+          type: array
+          description: 'Документы карточки, отмеченные «видно клиенту»'
+          items:
+            $ref: '#/components/schemas/CatalogDocument'
         attributes:
           type: array
           items:
@@ -1102,6 +1138,7 @@ components:
               value:
                 type: string
             additionalProperties: false
+      additionalProperties: false
 
     CatalogPage:
       type: object

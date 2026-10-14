@@ -2,10 +2,13 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { useHasCompanyPermission } from '@/hooks/useCapabilities';
 import {
   useProduct,
   useUploadProductImage, useDeleteProductImage,
   useUploadProductDocument, useDeleteProductDocument,
+  useSetMediaPublic,
 } from '@/hooks/useCatalog';
 import { ImageGalleryUpload } from '@/components/Shared/ImageGalleryUpload';
 import { FileUpload } from '@/components/Shared/FileUpload';
@@ -29,6 +32,19 @@ export function ProductMediaSection({ productId }: { productId: number }) {
   const deleteDoc = useDeleteProductDocument();
   const [altText, setAltText] = useState('');
   const [docName, setDocName] = useState('');
+  const canManage = useHasCompanyPermission('catalog.manage');
+  const setPublic = useSetMediaPublic();
+  // M1-ERP-07: что из медиа видит клиент. Фото — по умолчанию да, документы — нет.
+  const visibilityRows = [
+    ...(product?.images ?? []).map((img, index) => ({
+      key: `image-${img.id}`, media: 'image' as const, id: img.id, isPublic: img.is_public !== false,
+      label: img.alt_text || t('productEditor.media.photoN', { n: index + 1 }),
+    })),
+    ...(product?.documents ?? []).map((doc) => ({
+      key: `document-${doc.id}`, media: 'document' as const, id: doc.id, isPublic: doc.is_public === true,
+      label: doc.name,
+    })),
+  ];
 
   const images = (product?.images ?? []).map(img => ({
     id: img.id,
@@ -99,6 +115,32 @@ export function ProductMediaSection({ productId }: { productId: number }) {
           description={t('adminCatalog.media.documentsHelp')}
         />
       </div>
+      {visibilityRows.length > 0 && (
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">{t('productEditor.media.visibilityTitle')}</Label>
+          <p className="text-xs text-muted-foreground">{t('productEditor.media.visibilityHint')}</p>
+          <ul className="divide-y rounded-md border">
+            {visibilityRows.map((row) => (
+              <li key={row.key} className="flex items-center justify-between gap-3 px-3 py-2">
+                <span className="min-w-0 truncate text-sm">{row.label}</span>
+                <span className="flex shrink-0 items-center gap-2">
+                  <Label htmlFor={`media-public-${row.key}`} className="text-xs font-normal text-muted-foreground">
+                    {t('productEditor.media.visibleToClient')}
+                  </Label>
+                  <Switch
+                    id={`media-public-${row.key}`}
+                    checked={row.isPublic}
+                    disabled={!canManage || setPublic.isPending}
+                    onCheckedChange={(checked) => setPublic.mutate({
+                      productId, media: row.media, mediaId: row.id, isPublic: checked,
+                    })}
+                  />
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

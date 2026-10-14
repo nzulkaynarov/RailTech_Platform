@@ -29,7 +29,9 @@ class SupplierOfferViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     """
     CRUD for supplier offers (pricing, stock, delivery terms).
 
-    Public read access (active only); write operations require Manager/Admin role.
+    Предложения поставщиков — ВНУТРЕННИЙ слой каталога (M1-ERP-07): читать их может только
+    сотрудник с правом видеть себестоимость (`quote.view_cost_margin` / `catalog.manage` /
+    `supply.manage`) и администратор; без входа — 401, остальным — пустой список.
     """
 
     required_permissions = {
@@ -58,6 +60,11 @@ class SupplierOfferViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         user = self.request.user
         if user.is_authenticated and user.is_superuser:
             return qs
+        from accounts.services.permissions import staff_has_permission
+        from catalog.serializers import COST_VIEW_PERMISSIONS
+
+        if not staff_has_permission(user, COST_VIEW_PERMISSIONS):
+            return qs.none()
         company_ids = self._seller_company_ids()
         if not company_ids:
             return qs.none()
@@ -96,7 +103,7 @@ class SupplierOfferViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
-            return [permissions.AllowAny()]
+            return [permissions.IsAuthenticated()]
         # Запись: право роли `supply.manage` (гейт RoleGatedViewMixin выше) И, для конкретного
         # предложения, членство в компании-поставщике этого предложения (уровень объекта).
         from core.permissions import IsOfferSupplierOrAdmin

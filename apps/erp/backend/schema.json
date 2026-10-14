@@ -4508,8 +4508,7 @@
                 "security": [
                     {
                         "jwtAuth": []
-                    },
-                    {}
+                    }
                 ],
                 "responses": {
                     "200": {
@@ -4573,7 +4572,7 @@
         "/api/v1/catalog/offers/{id}/": {
             "get": {
                 "operationId": "catalog_offers_retrieve",
-                "description": "CRUD for supplier offers (pricing, stock, delivery terms).\n\nPublic read access (active only); write operations require Manager/Admin role.",
+                "description": "CRUD for supplier offers (pricing, stock, delivery terms).\n\nПредложения поставщиков — ВНУТРЕННИЙ слой каталога (M1-ERP-07): читать их может только\nсотрудник с правом видеть себестоимость (`quote.view_cost_margin` / `catalog.manage` /\n`supply.manage`) и администратор; без входа — 401, остальным — пустой список.",
                 "summary": "Get supplier offer",
                 "parameters": [
                     {
@@ -4592,8 +4591,7 @@
                 "security": [
                     {
                         "jwtAuth": []
-                    },
-                    {}
+                    }
                 ],
                 "responses": {
                     "200": {
@@ -4610,7 +4608,7 @@
             },
             "put": {
                 "operationId": "catalog_offers_update",
-                "description": "CRUD for supplier offers (pricing, stock, delivery terms).\n\nPublic read access (active only); write operations require Manager/Admin role.",
+                "description": "CRUD for supplier offers (pricing, stock, delivery terms).\n\nПредложения поставщиков — ВНУТРЕННИЙ слой каталога (M1-ERP-07): читать их может только\nсотрудник с правом видеть себестоимость (`quote.view_cost_margin` / `catalog.manage` /\n`supply.manage`) и администратор; без входа — 401, остальным — пустой список.",
                 "summary": "Update supplier offer",
                 "parameters": [
                     {
@@ -4666,7 +4664,7 @@
             },
             "patch": {
                 "operationId": "catalog_offers_partial_update",
-                "description": "CRUD for supplier offers (pricing, stock, delivery terms).\n\nPublic read access (active only); write operations require Manager/Admin role.",
+                "description": "CRUD for supplier offers (pricing, stock, delivery terms).\n\nПредложения поставщиков — ВНУТРЕННИЙ слой каталога (M1-ERP-07): читать их может только\nсотрудник с правом видеть себестоимость (`quote.view_cost_margin` / `catalog.manage` /\n`supply.manage`) и администратор; без входа — 401, остальным — пустой список.",
                 "summary": "Partially update supplier offer",
                 "parameters": [
                     {
@@ -4721,7 +4719,7 @@
             },
             "delete": {
                 "operationId": "catalog_offers_destroy",
-                "description": "CRUD for supplier offers (pricing, stock, delivery terms).\n\nPublic read access (active only); write operations require Manager/Admin role.",
+                "description": "CRUD for supplier offers (pricing, stock, delivery terms).\n\nПредложения поставщиков — ВНУТРЕННИЙ слой каталога (M1-ERP-07): читать их может только\nсотрудник с правом видеть себестоимость (`quote.view_cost_margin` / `catalog.manage` /\n`supply.manage`) и администратор; без входа — 401, остальным — пустой список.",
                 "summary": "Delete supplier offer",
                 "parameters": [
                     {
@@ -4878,7 +4876,7 @@
         "/api/v1/catalog/products/": {
             "get": {
                 "operationId": "catalog_products_list",
-                "description": "Returns products from the PIM catalog. Non-admin users only see PUBLISHED products. Filterable by domain_type, category, manufacturer, stock_status. Searchable by name, GOST/drawing, SKU. Server-side ordering via `?ordering=` (name, sku, demand_count, last_requested_at, created_at, updated_at; prefix with `-` for descending). `?ordering=` overrides the legacy `?order=demand` default.",
+                "description": "Returns products from the PIM catalog. Back-office staff get the internal card (supplier cost only with `quote.view_cost_margin` / `catalog.manage` / `supply.manage`); any other authenticated viewer gets ONLY the published layer of PUBLISHED cards (`PublishedCatalogItem`, M1-ERP-07). Filterable by domain_type, category, manufacturer, stock_status. Searchable by name, GOST/drawing, SKU. Server-side ordering via `?ordering=` (name, sku, demand_count, last_requested_at, created_at, updated_at; prefix with `-` for descending). `?ordering=` overrides the legacy `?order=demand` default.",
                 "summary": "List products",
                 "parameters": [
                     {
@@ -4945,6 +4943,19 @@
                             "type": "string"
                         },
                         "description": "Filter by supplier offer stock status code (e.g. IN_STOCK, ON_ORDER)"
+                    },
+                    {
+                        "in": "query",
+                        "name": "visibility",
+                        "schema": {
+                            "type": "string",
+                            "title": "Видимость для клиента",
+                            "enum": [
+                                "cabinet",
+                                "on_request"
+                            ]
+                        },
+                        "description": "В кабинете с ценой и наличием или «цена по запросу». Действует у опубликованной карточки.\n\n* `cabinet` - В кабинете с ценой и наличием\n* `on_request` - Цена по запросу"
                     }
                 ],
                 "tags": [
@@ -4953,15 +4964,14 @@
                 "security": [
                     {
                         "jwtAuth": []
-                    },
-                    {}
+                    }
                 ],
                 "responses": {
                     "200": {
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/PaginatedProductListList"
+                                    "$ref": "#/components/schemas/PaginatedPublishedCatalogItemList"
                                 }
                             }
                         },
@@ -5037,15 +5047,14 @@
                 "security": [
                     {
                         "jwtAuth": []
-                    },
-                    {}
+                    }
                 ],
                 "responses": {
                     "200": {
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/Product"
+                                    "$ref": "#/components/schemas/PublishedCatalogItem"
                                 }
                             }
                         },
@@ -5111,7 +5120,7 @@
             },
             "patch": {
                 "operationId": "catalog_products_partial_update",
-                "description": "CRUD for PIM products.\n\nPublic read access (PUBLISHED only for non-admin);\nwrite operations require Admin role.\n\nNOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER\n(catalog _CostGateMixin), so a response is viewer-specific and must never be\nshared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%\nhit rate + per-token cache bloat anyway.\n\nN+1 (fixed in R1 — until then this docstring claimed a freedom the code lacked):\nthe list branch prefetches EVERY relation the row serializer touches and batches the\nreference-table probes behind `completeness` once per page via `CompletenessContext`,\nso the query count is flat in page_size (guarded by tests/test_r1_list_contract.py).",
+                "description": "CRUD for PIM products.\n\nRead access — authenticated only (M1-ERP-07): staff get the internal card, everyone else the\npublished layer of PUBLISHED cards via `published_projection` (no anonymous catalog: prices\nand availability go to clients only through Cabinet, DECISIONS 2026-10-13).\n\nNOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER\n(catalog _CostGateMixin), so a response is viewer-specific and must never be\nshared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%\nhit rate + per-token cache bloat anyway.\n\nN+1 (fixed in R1 — until then this docstring claimed a freedom the code lacked):\nthe list branch prefetches EVERY relation the row serializer touches and batches the\nreference-table probes behind `completeness` once per page via `CompletenessContext`,\nso the query count is flat in page_size (guarded by tests/test_r1_list_contract.py).",
                 "summary": "Partially update product",
                 "parameters": [
                     {
@@ -5166,7 +5175,7 @@
             },
             "delete": {
                 "operationId": "catalog_products_destroy",
-                "description": "CRUD for PIM products.\n\nPublic read access (PUBLISHED only for non-admin);\nwrite operations require Admin role.\n\nNOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER\n(catalog _CostGateMixin), so a response is viewer-specific and must never be\nshared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%\nhit rate + per-token cache bloat anyway.\n\nN+1 (fixed in R1 — until then this docstring claimed a freedom the code lacked):\nthe list branch prefetches EVERY relation the row serializer touches and batches the\nreference-table probes behind `completeness` once per page via `CompletenessContext`,\nso the query count is flat in page_size (guarded by tests/test_r1_list_contract.py).",
+                "description": "CRUD for PIM products.\n\nRead access — authenticated only (M1-ERP-07): staff get the internal card, everyone else the\npublished layer of PUBLISHED cards via `published_projection` (no anonymous catalog: prices\nand availability go to clients only through Cabinet, DECISIONS 2026-10-13).\n\nNOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER\n(catalog _CostGateMixin), so a response is viewer-specific and must never be\nshared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%\nhit rate + per-token cache bloat anyway.\n\nN+1 (fixed in R1 — until then this docstring claimed a freedom the code lacked):\nthe list branch prefetches EVERY relation the row serializer touches and batches the\nreference-table probes behind `completeness` once per page via `CompletenessContext`,\nso the query count is flat in page_size (guarded by tests/test_r1_list_contract.py).",
                 "summary": "Delete product",
                 "parameters": [
                     {
@@ -5251,7 +5260,7 @@
         "/api/v1/catalog/products/{id}/delete-document/{doc_id}/": {
             "delete": {
                 "operationId": "catalog_products_delete_document_destroy",
-                "description": "CRUD for PIM products.\n\nPublic read access (PUBLISHED only for non-admin);\nwrite operations require Admin role.\n\nNOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER\n(catalog _CostGateMixin), so a response is viewer-specific and must never be\nshared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%\nhit rate + per-token cache bloat anyway.\n\nN+1 (fixed in R1 — until then this docstring claimed a freedom the code lacked):\nthe list branch prefetches EVERY relation the row serializer touches and batches the\nreference-table probes behind `completeness` once per page via `CompletenessContext`,\nso the query count is flat in page_size (guarded by tests/test_r1_list_contract.py).",
+                "description": "CRUD for PIM products.\n\nRead access — authenticated only (M1-ERP-07): staff get the internal card, everyone else the\npublished layer of PUBLISHED cards via `published_projection` (no anonymous catalog: prices\nand availability go to clients only through Cabinet, DECISIONS 2026-10-13).\n\nNOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER\n(catalog _CostGateMixin), so a response is viewer-specific and must never be\nshared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%\nhit rate + per-token cache bloat anyway.\n\nN+1 (fixed in R1 — until then this docstring claimed a freedom the code lacked):\nthe list branch prefetches EVERY relation the row serializer touches and batches the\nreference-table probes behind `completeness` once per page via `CompletenessContext`,\nso the query count is flat in page_size (guarded by tests/test_r1_list_contract.py).",
                 "summary": "Delete product document",
                 "parameters": [
                     {
@@ -5294,7 +5303,7 @@
         "/api/v1/catalog/products/{id}/delete-image/{image_id}/": {
             "delete": {
                 "operationId": "catalog_products_delete_image_destroy",
-                "description": "CRUD for PIM products.\n\nPublic read access (PUBLISHED only for non-admin);\nwrite operations require Admin role.\n\nNOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER\n(catalog _CostGateMixin), so a response is viewer-specific and must never be\nshared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%\nhit rate + per-token cache bloat anyway.\n\nN+1 (fixed in R1 — until then this docstring claimed a freedom the code lacked):\nthe list branch prefetches EVERY relation the row serializer touches and batches the\nreference-table probes behind `completeness` once per page via `CompletenessContext`,\nso the query count is flat in page_size (guarded by tests/test_r1_list_contract.py).",
+                "description": "CRUD for PIM products.\n\nRead access — authenticated only (M1-ERP-07): staff get the internal card, everyone else the\npublished layer of PUBLISHED cards via `published_projection` (no anonymous catalog: prices\nand availability go to clients only through Cabinet, DECISIONS 2026-10-13).\n\nNOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER\n(catalog _CostGateMixin), so a response is viewer-specific and must never be\nshared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%\nhit rate + per-token cache bloat anyway.\n\nN+1 (fixed in R1 — until then this docstring claimed a freedom the code lacked):\nthe list branch prefetches EVERY relation the row serializer touches and batches the\nreference-table probes behind `completeness` once per page via `CompletenessContext`,\nso the query count is flat in page_size (guarded by tests/test_r1_list_contract.py).",
                 "summary": "Delete product image",
                 "parameters": [
                     {
@@ -5330,6 +5339,126 @@
                     },
                     "404": {
                         "description": "Image not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/products/{id}/document-visibility/{doc_id}/": {
+            "post": {
+                "operationId": "catalog_products_document_visibility_create",
+                "description": "CRUD for PIM products.\n\nRead access — authenticated only (M1-ERP-07): staff get the internal card, everyone else the\npublished layer of PUBLISHED cards via `published_projection` (no anonymous catalog: prices\nand availability go to clients only through Cabinet, DECISIONS 2026-10-13).\n\nNOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER\n(catalog _CostGateMixin), so a response is viewer-specific and must never be\nshared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%\nhit rate + per-token cache bloat anyway.\n\nN+1 (fixed in R1 — until then this docstring claimed a freedom the code lacked):\nthe list branch prefetches EVERY relation the row serializer touches and batches the\nreference-table probes behind `completeness` once per page via `CompletenessContext`,\nso the query count is flat in page_size (guarded by tests/test_r1_list_contract.py).",
+                "summary": "Show or hide a product document to clients",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "doc_id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[0-9]+$"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Товар (PIM).",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "is_public"
+                                ],
+                                "properties": {
+                                    "is_public": {
+                                        "type": "boolean"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{id, is_public}"
+                    },
+                    "404": {
+                        "description": "No document"
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/products/{id}/image-visibility/{image_id}/": {
+            "post": {
+                "operationId": "catalog_products_image_visibility_create",
+                "description": "CRUD for PIM products.\n\nRead access — authenticated only (M1-ERP-07): staff get the internal card, everyone else the\npublished layer of PUBLISHED cards via `published_projection` (no anonymous catalog: prices\nand availability go to clients only through Cabinet, DECISIONS 2026-10-13).\n\nNOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER\n(catalog _CostGateMixin), so a response is viewer-specific and must never be\nshared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%\nhit rate + per-token cache bloat anyway.\n\nN+1 (fixed in R1 — until then this docstring claimed a freedom the code lacked):\nthe list branch prefetches EVERY relation the row serializer touches and batches the\nreference-table probes behind `completeness` once per page via `CompletenessContext`,\nso the query count is flat in page_size (guarded by tests/test_r1_list_contract.py).",
+                "summary": "Show or hide a product image to clients",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Товар (PIM).",
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "image_id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[0-9]+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "is_public"
+                                ],
+                                "properties": {
+                                    "is_public": {
+                                        "type": "boolean"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{id, is_public}"
+                    },
+                    "404": {
+                        "description": "No image"
                     }
                 }
             }
@@ -5385,7 +5514,7 @@
         "/api/v1/catalog/products/{id}/publish/": {
             "post": {
                 "operationId": "catalog_products_publish_create",
-                "description": "Публикует карточку. Доступно ВЛАДЕЛЬЦУ и платформе. Требует полноты: неполная карточка отвечает `PRODUCT_INCOMPLETE:<коды недостающих полей>`.",
+                "description": "Публикует карточку (по желанию — сразу с видимостью `cabinet` / `on_request`). Требует порога публикации: неполная карточка отвечает 400 `{detail: CATALOG_PUBLISH_INCOMPLETE, missing: [коды требований]}`.",
                 "summary": "Publish a product (owner)",
                 "parameters": [
                     {
@@ -5405,21 +5534,19 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/ProductRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/ProductRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/ProductRequest"
+                                "type": "object",
+                                "properties": {
+                                    "visibility": {
+                                        "type": "string",
+                                        "enum": [
+                                            "cabinet",
+                                            "on_request"
+                                        ]
+                                    }
+                                }
                             }
                         }
-                    },
-                    "required": true
+                    }
                 },
                 "security": [
                     {
@@ -5575,6 +5702,10 @@
                                     },
                                     "name": {
                                         "type": "string"
+                                    },
+                                    "is_public": {
+                                        "type": "boolean",
+                                        "default": false
                                     }
                                 }
                             }
@@ -5635,6 +5766,10 @@
                                     },
                                     "alt_text": {
                                         "type": "string"
+                                    },
+                                    "is_public": {
+                                        "type": "boolean",
+                                        "default": true
                                     }
                                 }
                             }
@@ -5656,6 +5791,61 @@
                             }
                         },
                         "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/products/{id}/visibility/": {
+            "post": {
+                "operationId": "catalog_products_visibility_create",
+                "description": "Видимость карточки для клиента: `cabinet` — цена, наличие и срок в кабинете; `on_request` — карточка видна, цена «по запросу». У опубликованной карточки новая видимость проходит порог публикации (`CATALOG_PUBLISH_INCOMPLETE` + `missing`). Право — `catalog.publish`.",
+                "summary": "Set what the client sees: price in Cabinet or «on request»",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Товар (PIM).",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "visibility"
+                                ],
+                                "properties": {
+                                    "visibility": {
+                                        "type": "string",
+                                        "enum": [
+                                            "cabinet",
+                                            "on_request"
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Product"
+                    },
+                    "400": {
+                        "description": "Invalid"
                     }
                 }
             }
@@ -16194,7 +16384,7 @@
                     "kind": {
                         "allOf": [
                             {
-                                "$ref": "#/components/schemas/KindEnum"
+                                "$ref": "#/components/schemas/AttachmentKindEnum"
                             }
                         ],
                         "readOnly": true,
@@ -16253,6 +16443,14 @@
                     "uploaded_by_email"
                 ]
             },
+            "AttachmentKindEnum": {
+                "enum": [
+                    "SOURCE",
+                    "SUPPORTING"
+                ],
+                "type": "string",
+                "description": "* `SOURCE` - Исходник заявки\n* `SUPPORTING` - Документ"
+            },
             "AttachmentRequest": {
                 "type": "object",
                 "properties": {
@@ -16289,6 +16487,20 @@
                 },
                 "required": [
                     "file"
+                ]
+            },
+            "AvailabilityEnum": {
+                "enum": [
+                    "in_stock",
+                    "on_order",
+                    "expected"
+                ],
+                "type": "string",
+                "description": "* `in_stock` - in_stock\n* `on_order` - on_order\n* `expected` - expected"
+            },
+            "BlankEnum": {
+                "enum": [
+                    ""
                 ]
             },
             "BulkCreateQuoteItemsRequestRequest": {
@@ -19426,6 +19638,15 @@
                     "viewer_can_ship"
                 ]
             },
+            "FulfillmentPolicyEnum": {
+                "enum": [
+                    "fixed",
+                    "milestones",
+                    "time"
+                ],
+                "type": "string",
+                "description": "* `fixed` - Фиксированная цена\n* `milestones` - По этапам\n* `time` - По времени"
+            },
             "FulfillmentRequest": {
                 "type": "object",
                 "description": "Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.\n\nЗачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,\nкоторая одновременно покупает и продаёт, не видела продавцовских кнопок: «Сформировать\nакт» пряталась за `!isBuyer`, и у dual-компании с порядком типов [CLIENT, SUPPLIER]\nкнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`\nу договора.\n\nПоля-подсказки НЕ являются полным правом: подписку и стадию проверит сервис,\nвыполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку\nкнопок чужой стороны.",
@@ -19945,14 +20166,6 @@
                     "deal"
                 ]
             },
-            "KindEnum": {
-                "enum": [
-                    "SOURCE",
-                    "SUPPORTING"
-                ],
-                "type": "string",
-                "description": "* `SOURCE` - Исходник заявки\n* `SUPPORTING` - Документ"
-            },
             "LayoutPresetEnum": {
                 "enum": [
                     "light",
@@ -20195,6 +20408,11 @@
                     "title",
                     "type_code",
                     "type_name"
+                ]
+            },
+            "NullEnum": {
+                "enum": [
+                    null
                 ]
             },
             "NumberingPreviewItem": {
@@ -20862,7 +21080,7 @@
                     }
                 }
             },
-            "PaginatedProductListList": {
+            "PaginatedPublishedCatalogItemList": {
                 "type": "object",
                 "required": [
                     "count",
@@ -20888,7 +21106,7 @@
                     "results": {
                         "type": "array",
                         "items": {
-                            "$ref": "#/components/schemas/ProductList"
+                            "$ref": "#/components/schemas/PublishedCatalogItem"
                         }
                     }
                 }
@@ -21993,7 +22211,7 @@
             },
             "PatchedProductRequest": {
                 "type": "object",
-                "description": "Strip supplier-cost fields (offers / base_price) from viewers who don't own\nthe product. Only the OWNING seller's team + platform admins see cost & supplier\nidentity — buyers, other sellers and anon never do (C1 cost-leak fix). React was\nonly hiding these client-side; the data still travelled in the API response.",
+                "description": "Срезает поля себестоимости (`offers` / `base_price`) у тех, кому их видеть нельзя (C1, M1-ERP-07).\n\nЦены поставщиков — внутренний слой: их видят администратор и сотрудник своей компании с правом\n`quote.view_cost_margin`, `catalog.manage` или `supply.manage`. Клиенту (не-сотруднику) карточка\nэтим сериализатором не отдаётся вовсе — только проекцией опубликованного слоя.",
                 "properties": {
                     "name": {
                         "type": "string",
@@ -22006,6 +22224,44 @@
                         "type": "string",
                         "title": "Описание",
                         "description": "Подробное описание товара для каталога"
+                    },
+                    "fulfillment_policy": {
+                        "title": "Политика исполнения",
+                        "description": "Только для услуг: фиксированная цена, по этапам или по времени (час, сутки).\n\n* `fixed` - Фиксированная цена\n* `milestones` - По этапам\n* `time` - По времени",
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/FulfillmentPolicyEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/BlankEnum"
+                            }
+                        ]
+                    },
+                    "list_price": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
+                        "nullable": true,
+                        "title": "Цена для клиента",
+                        "description": "Цена-витрина за единицу. Клиент видит её только при видимости «в кабинете»."
+                    },
+                    "list_price_currency": {
+                        "type": "integer",
+                        "nullable": true,
+                        "title": "Валюта цены для клиента"
+                    },
+                    "client_lead_time_days": {
+                        "type": "integer",
+                        "maximum": 2147483647,
+                        "minimum": 0,
+                        "nullable": true,
+                        "title": "Срок для клиента, дней",
+                        "description": "Обещаемый клиенту срок; срок поставщика — во внутреннем слое."
+                    },
+                    "internal_notes": {
+                        "type": "string",
+                        "title": "Внутренние заметки",
+                        "description": "Только для сотрудников: никогда не уходит клиенту."
                     },
                     "demand_count": {
                         "type": "integer",
@@ -22932,7 +23188,7 @@
             },
             "Product": {
                 "type": "object",
-                "description": "Strip supplier-cost fields (offers / base_price) from viewers who don't own\nthe product. Only the OWNING seller's team + platform admins see cost & supplier\nidentity — buyers, other sellers and anon never do (C1 cost-leak fix). React was\nonly hiding these client-side; the data still travelled in the API response.",
+                "description": "Срезает поля себестоимости (`offers` / `base_price`) у тех, кому их видеть нельзя (C1, M1-ERP-07).\n\nЦены поставщиков — внутренний слой: их видят администратор и сотрудник своей компании с правом\n`quote.view_cost_margin`, `catalog.manage` или `supply.manage`. Клиенту (не-сотруднику) карточка\nэтим сериализатором не отдаётся вовсе — только проекцией опубликованного слоя.",
                 "properties": {
                     "id": {
                         "type": "integer",
@@ -22954,6 +23210,70 @@
                         "type": "string",
                         "title": "Описание",
                         "description": "Подробное описание товара для каталога"
+                    },
+                    "kind": {
+                        "type": "string",
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "fulfillment_policy": {
+                        "title": "Политика исполнения",
+                        "description": "Только для услуг: фиксированная цена, по этапам или по времени (час, сутки).\n\n* `fixed` - Фиксированная цена\n* `milestones` - По этапам\n* `time` - По времени",
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/FulfillmentPolicyEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/BlankEnum"
+                            }
+                        ]
+                    },
+                    "visibility": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/VisibilityEnum"
+                            }
+                        ],
+                        "readOnly": true,
+                        "title": "Видимость для клиента",
+                        "description": "В кабинете с ценой и наличием или «цена по запросу». Действует у опубликованной карточки.\n\n* `cabinet` - В кабинете с ценой и наличием\n* `on_request` - Цена по запросу"
+                    },
+                    "list_price": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
+                        "nullable": true,
+                        "title": "Цена для клиента",
+                        "description": "Цена-витрина за единицу. Клиент видит её только при видимости «в кабинете»."
+                    },
+                    "list_price_currency": {
+                        "type": "integer",
+                        "nullable": true,
+                        "title": "Валюта цены для клиента"
+                    },
+                    "list_price_currency_code": {
+                        "type": "string",
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "client_lead_time_days": {
+                        "type": "integer",
+                        "maximum": 2147483647,
+                        "minimum": 0,
+                        "nullable": true,
+                        "title": "Срок для клиента, дней",
+                        "description": "Обещаемый клиенту срок; срок поставщика — во внутреннем слое."
+                    },
+                    "internal_notes": {
+                        "type": "string",
+                        "title": "Внутренние заметки",
+                        "description": "Только для сотрудников: никогда не уходит клиенту."
+                    },
+                    "client_preview": {
+                        "type": "object",
+                        "description": "Опубликованный слой глазами клиента (`published_projection`, режим client)",
+                        "additionalProperties": true,
+                        "readOnly": true
                     },
                     "status": {
                         "type": "integer",
@@ -23161,6 +23481,7 @@
                     "brand_country",
                     "brand_name",
                     "category_data",
+                    "client_preview",
                     "completeness",
                     "created_at",
                     "documents",
@@ -23168,6 +23489,8 @@
                     "domain_type_name",
                     "id",
                     "images",
+                    "kind",
+                    "list_price_currency_code",
                     "main_document_url",
                     "main_image_url",
                     "name",
@@ -23180,7 +23503,8 @@
                     "status_name",
                     "stock_status",
                     "uom_data",
-                    "updated_at"
+                    "updated_at",
+                    "visibility"
                 ]
             },
             "ProductDocument": {
@@ -23224,6 +23548,11 @@
                         "format": "date-time",
                         "readOnly": true,
                         "title": "Дата загрузки"
+                    },
+                    "is_public": {
+                        "type": "boolean",
+                        "title": "Видно клиенту",
+                        "description": "Документ уходит клиенту только с этой отметкой (прайсы и письма поставщика — нет)."
                     }
                 },
                 "required": [
@@ -23264,6 +23593,11 @@
                         "title": "Название документа",
                         "description": "Напр: Паспорт изделия, Сертификат ГОСТ",
                         "maxLength": 255
+                    },
+                    "is_public": {
+                        "type": "boolean",
+                        "title": "Видно клиенту",
+                        "description": "Документ уходит клиенту только с этой отметкой (прайсы и письма поставщика — нет)."
                     }
                 },
                 "required": [
@@ -23334,6 +23668,11 @@
                         "title": "Alt-текст",
                         "description": "Альтернативный текст для SEO и доступности",
                         "maxLength": 255
+                    },
+                    "is_public": {
+                        "type": "boolean",
+                        "title": "Видно клиенту",
+                        "description": "Фото опубликованной карточки показывается клиенту (по умолчанию — да)."
                     }
                 },
                 "required": [
@@ -23376,221 +23715,17 @@
                         "title": "Alt-текст",
                         "description": "Альтернативный текст для SEO и доступности",
                         "maxLength": 255
+                    },
+                    "is_public": {
+                        "type": "boolean",
+                        "title": "Видно клиенту",
+                        "description": "Фото опубликованной карточки показывается клиенту (по умолчанию — да)."
                     }
                 }
             },
-            "ProductList": {
-                "type": "object",
-                "description": "Lightweight serializer for list endpoints — no nested offers/documents.",
-                "properties": {
-                    "id": {
-                        "type": "integer",
-                        "readOnly": true
-                    },
-                    "sku": {
-                        "type": "string",
-                        "title": "Артикул (SKU)",
-                        "description": "Внутренний артикул (генерируется автоматически)",
-                        "maxLength": 50
-                    },
-                    "name": {
-                        "type": "string",
-                        "title": "Наименование",
-                        "description": "Полное наименование товара",
-                        "maxLength": 255
-                    },
-                    "status": {
-                        "type": "integer",
-                        "nullable": true,
-                        "title": "Статус",
-                        "description": "Статус жизненного цикла: черновик, опубликован, архив"
-                    },
-                    "status_name": {
-                        "type": "string",
-                        "nullable": true,
-                        "readOnly": true
-                    },
-                    "status_code": {
-                        "type": "string",
-                        "nullable": true,
-                        "readOnly": true
-                    },
-                    "demand_count": {
-                        "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 0,
-                        "title": "Сколько раз спрашивали",
-                        "description": "Число КП, где встретилась эта позиция. Очередь наполнения сортируется по нему."
-                    },
-                    "completeness": {
-                        "type": "object",
-                        "additionalProperties": {},
-                        "readOnly": true
-                    },
-                    "last_requested_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "nullable": true,
-                        "title": "Последний запрос",
-                        "description": "Когда позицию спрашивали в последний раз."
-                    },
-                    "source_deal": {
-                        "type": "integer",
-                        "nullable": true,
-                        "title": "Заявка-источник",
-                        "description": "Заявка, из строки которой родилась карточка (провенанс кандидата)."
-                    },
-                    "domain_type": {
-                        "type": "integer",
-                        "nullable": true,
-                        "title": "Тип домена",
-                        "description": "Домен каталога: товары или услуги"
-                    },
-                    "domain_type_name": {
-                        "type": "string",
-                        "nullable": true,
-                        "readOnly": true
-                    },
-                    "domain_type_code": {
-                        "type": "string",
-                        "nullable": true,
-                        "readOnly": true
-                    },
-                    "category": {
-                        "type": "integer",
-                        "nullable": true,
-                        "title": "Категория",
-                        "description": "Категория товара в иерархии каталога"
-                    },
-                    "category_data": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/Category"
-                            }
-                        ],
-                        "readOnly": true
-                    },
-                    "owner_company": {
-                        "type": "integer",
-                        "nullable": true,
-                        "title": "Компания-владелец",
-                        "description": "Продавец/поставщик, создавший карточку (мультитенантность PIM)."
-                    },
-                    "owner_company_data": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/CompanyLight"
-                            }
-                        ],
-                        "readOnly": true
-                    },
-                    "brand": {
-                        "type": "integer",
-                        "nullable": true,
-                        "title": "Производитель (бренд)",
-                        "description": "Бренд/производитель из справочника (OEM). Канонический для PIM."
-                    },
-                    "brand_name": {
-                        "type": "string",
-                        "nullable": true,
-                        "readOnly": true
-                    },
-                    "brand_country": {
-                        "type": "string",
-                        "nullable": true,
-                        "readOnly": true
-                    },
-                    "manufacturer_part_number": {
-                        "type": "string",
-                        "title": "Артикул производителя (MPN)",
-                        "description": "Заводской артикул. Ключ дедупликации PIM: бренд + артикул.",
-                        "maxLength": 120
-                    },
-                    "uom": {
-                        "type": "integer",
-                        "nullable": true,
-                        "title": "Единица измерения",
-                        "description": "Базовая единица измерения (шт, кг, м)"
-                    },
-                    "uom_data": {
-                        "allOf": [
-                            {
-                                "$ref": "#/components/schemas/CatalogUnitOfMeasure"
-                            }
-                        ],
-                        "readOnly": true
-                    },
-                    "gost_drawing": {
-                        "type": "string",
-                        "title": "ГОСТ / Чертёж",
-                        "description": "Номер ГОСТ или чертежа",
-                        "maxLength": 100
-                    },
-                    "hs_code": {
-                        "type": "string",
-                        "title": "Код ТНВЭД",
-                        "description": "Код товарной номенклатуры ВЭД (ТНВЭД/HS). Хранится в карточке, чтобы не искать заново.",
-                        "maxLength": 14
-                    },
-                    "main_image_url": {
-                        "type": "string",
-                        "nullable": true,
-                        "readOnly": true
-                    },
-                    "stock_status": {
-                        "type": "string",
-                        "nullable": true,
-                        "readOnly": true
-                    },
-                    "base_price": {
-                        "type": "string",
-                        "nullable": true,
-                        "description": "Цена ИЛИ `null` — «нет оффера» и «стоит ноль» не одно и то же.\n\nСтрока \"0\" рендерилась как настоящая цена и делала карточку без единого предложения\nпохожей на бесплатную (Odoo/Shopify так же различают «нет прайса» и «цена 0»).",
-                        "readOnly": true
-                    },
-                    "base_price_currency": {
-                        "type": "string",
-                        "nullable": true,
-                        "description": "ISO-код валюты ТОГО ЖЕ оффера, что дал `base_price` (иначе `null`).\n\nБез него список печатал любую цену как UZS — долларовый оффер выглядел дешевле\nсобственной цены в 12 тысяч раз.",
-                        "readOnly": true
-                    },
-                    "created_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "readOnly": true,
-                        "title": "Дата создания"
-                    },
-                    "updated_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "readOnly": true,
-                        "title": "Дата обновления"
-                    }
-                },
-                "required": [
-                    "base_price",
-                    "base_price_currency",
-                    "brand_country",
-                    "brand_name",
-                    "category_data",
-                    "completeness",
-                    "created_at",
-                    "domain_type_code",
-                    "domain_type_name",
-                    "id",
-                    "main_image_url",
-                    "name",
-                    "owner_company_data",
-                    "status_code",
-                    "status_name",
-                    "stock_status",
-                    "uom_data",
-                    "updated_at"
-                ]
-            },
             "ProductRequest": {
                 "type": "object",
-                "description": "Strip supplier-cost fields (offers / base_price) from viewers who don't own\nthe product. Only the OWNING seller's team + platform admins see cost & supplier\nidentity — buyers, other sellers and anon never do (C1 cost-leak fix). React was\nonly hiding these client-side; the data still travelled in the API response.",
+                "description": "Срезает поля себестоимости (`offers` / `base_price`) у тех, кому их видеть нельзя (C1, M1-ERP-07).\n\nЦены поставщиков — внутренний слой: их видят администратор и сотрудник своей компании с правом\n`quote.view_cost_margin`, `catalog.manage` или `supply.manage`. Клиенту (не-сотруднику) карточка\nэтим сериализатором не отдаётся вовсе — только проекцией опубликованного слоя.",
                 "properties": {
                     "name": {
                         "type": "string",
@@ -23603,6 +23738,44 @@
                         "type": "string",
                         "title": "Описание",
                         "description": "Подробное описание товара для каталога"
+                    },
+                    "fulfillment_policy": {
+                        "title": "Политика исполнения",
+                        "description": "Только для услуг: фиксированная цена, по этапам или по времени (час, сутки).\n\n* `fixed` - Фиксированная цена\n* `milestones` - По этапам\n* `time` - По времени",
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/FulfillmentPolicyEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/BlankEnum"
+                            }
+                        ]
+                    },
+                    "list_price": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
+                        "nullable": true,
+                        "title": "Цена для клиента",
+                        "description": "Цена-витрина за единицу. Клиент видит её только при видимости «в кабинете»."
+                    },
+                    "list_price_currency": {
+                        "type": "integer",
+                        "nullable": true,
+                        "title": "Валюта цены для клиента"
+                    },
+                    "client_lead_time_days": {
+                        "type": "integer",
+                        "maximum": 2147483647,
+                        "minimum": 0,
+                        "nullable": true,
+                        "title": "Срок для клиента, дней",
+                        "description": "Обещаемый клиенту срок; срок поставщика — во внутреннем слое."
+                    },
+                    "internal_notes": {
+                        "type": "string",
+                        "title": "Внутренние заметки",
+                        "description": "Только для сотрудников: никогда не уходит клиенту."
                     },
                     "demand_count": {
                         "type": "integer",
@@ -23700,6 +23873,107 @@
                     "id",
                     "name"
                 ]
+            },
+            "PublishedCatalogItem": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/PublishedCatalogItemKindEnum"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "unit": {
+                        "type": "string"
+                    },
+                    "category": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "fulfillment_policy": {
+                        "nullable": true,
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/FulfillmentPolicyEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "price": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/_Money"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "`null` — «цена по запросу»"
+                    },
+                    "availability": {
+                        "nullable": true,
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/AvailabilityEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "lead_time_days": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "images": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "format": "uri"
+                        }
+                    },
+                    "documents": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/_DocumentLink"
+                        }
+                    },
+                    "attributes": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/_Attribute"
+                        }
+                    }
+                },
+                "required": [
+                    "attributes",
+                    "availability",
+                    "category",
+                    "description",
+                    "documents",
+                    "fulfillment_policy",
+                    "id",
+                    "images",
+                    "kind",
+                    "lead_time_days",
+                    "name",
+                    "price",
+                    "unit"
+                ]
+            },
+            "PublishedCatalogItemKindEnum": {
+                "enum": [
+                    "goods",
+                    "service"
+                ],
+                "type": "string",
+                "description": "* `goods` - Товар\n* `service` - Услуга"
             },
             "Quote": {
                 "type": "object",
@@ -25917,6 +26191,14 @@
                     "username"
                 ]
             },
+            "VisibilityEnum": {
+                "enum": [
+                    "cabinet",
+                    "on_request"
+                ],
+                "type": "string",
+                "description": "* `cabinet` - В кабинете с ценой и наличием\n* `on_request` - Цена по запросу"
+            },
             "WorkspaceRoleLookup": {
                 "type": "object",
                 "description": "Response shape for the WorkspaceRole lookup feed ({code, name, applicable_to_types}).",
@@ -25953,6 +26235,52 @@
                 "required": [
                     "expires_in",
                     "ticket"
+                ]
+            },
+            "_Attribute": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    },
+                    "value": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "name",
+                    "value"
+                ]
+            },
+            "_DocumentLink": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    },
+                    "url": {
+                        "type": "string",
+                        "format": "uri"
+                    }
+                },
+                "required": [
+                    "name",
+                    "url"
+                ]
+            },
+            "_Money": {
+                "type": "object",
+                "properties": {
+                    "amount": {
+                        "type": "string"
+                    },
+                    "currency": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "amount",
+                    "currency"
                 ]
             }
         },

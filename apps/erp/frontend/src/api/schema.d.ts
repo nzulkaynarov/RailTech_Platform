@@ -1639,14 +1639,18 @@ export interface paths {
          * Get supplier offer
          * @description CRUD for supplier offers (pricing, stock, delivery terms).
          *
-         *     Public read access (active only); write operations require Manager/Admin role.
+         *     Предложения поставщиков — ВНУТРЕННИЙ слой каталога (M1-ERP-07): читать их может только
+         *     сотрудник с правом видеть себестоимость (`quote.view_cost_margin` / `catalog.manage` /
+         *     `supply.manage`) и администратор; без входа — 401, остальным — пустой список.
          */
         get: operations["catalog_offers_retrieve"];
         /**
          * Update supplier offer
          * @description CRUD for supplier offers (pricing, stock, delivery terms).
          *
-         *     Public read access (active only); write operations require Manager/Admin role.
+         *     Предложения поставщиков — ВНУТРЕННИЙ слой каталога (M1-ERP-07): читать их может только
+         *     сотрудник с правом видеть себестоимость (`quote.view_cost_margin` / `catalog.manage` /
+         *     `supply.manage`) и администратор; без входа — 401, остальным — пустой список.
          */
         put: operations["catalog_offers_update"];
         post?: never;
@@ -1654,7 +1658,9 @@ export interface paths {
          * Delete supplier offer
          * @description CRUD for supplier offers (pricing, stock, delivery terms).
          *
-         *     Public read access (active only); write operations require Manager/Admin role.
+         *     Предложения поставщиков — ВНУТРЕННИЙ слой каталога (M1-ERP-07): читать их может только
+         *     сотрудник с правом видеть себестоимость (`quote.view_cost_margin` / `catalog.manage` /
+         *     `supply.manage`) и администратор; без входа — 401, остальным — пустой список.
          */
         delete: operations["catalog_offers_destroy"];
         options?: never;
@@ -1663,7 +1669,9 @@ export interface paths {
          * Partially update supplier offer
          * @description CRUD for supplier offers (pricing, stock, delivery terms).
          *
-         *     Public read access (active only); write operations require Manager/Admin role.
+         *     Предложения поставщиков — ВНУТРЕННИЙ слой каталога (M1-ERP-07): читать их может только
+         *     сотрудник с правом видеть себестоимость (`quote.view_cost_margin` / `catalog.manage` /
+         *     `supply.manage`) и администратор; без входа — 401, остальным — пустой список.
          */
         patch: operations["catalog_offers_partial_update"];
         trace?: never;
@@ -1731,7 +1739,7 @@ export interface paths {
         };
         /**
          * List products
-         * @description Returns products from the PIM catalog. Non-admin users only see PUBLISHED products. Filterable by domain_type, category, manufacturer, stock_status. Searchable by name, GOST/drawing, SKU. Server-side ordering via `?ordering=` (name, sku, demand_count, last_requested_at, created_at, updated_at; prefix with `-` for descending). `?ordering=` overrides the legacy `?order=demand` default.
+         * @description Returns products from the PIM catalog. Back-office staff get the internal card (supplier cost only with `quote.view_cost_margin` / `catalog.manage` / `supply.manage`); any other authenticated viewer gets ONLY the published layer of PUBLISHED cards (`PublishedCatalogItem`, M1-ERP-07). Filterable by domain_type, category, manufacturer, stock_status. Searchable by name, GOST/drawing, SKU. Server-side ordering via `?ordering=` (name, sku, demand_count, last_requested_at, created_at, updated_at; prefix with `-` for descending). `?ordering=` overrides the legacy `?order=demand` default.
          */
         get: operations["catalog_products_list"];
         put?: never;
@@ -1768,8 +1776,9 @@ export interface paths {
          * Delete product
          * @description CRUD for PIM products.
          *
-         *     Public read access (PUBLISHED only for non-admin);
-         *     write operations require Admin role.
+         *     Read access — authenticated only (M1-ERP-07): staff get the internal card, everyone else the
+         *     published layer of PUBLISHED cards via `published_projection` (no anonymous catalog: prices
+         *     and availability go to clients only through Cabinet, DECISIONS 2026-10-13).
          *
          *     NOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER
          *     (catalog _CostGateMixin), so a response is viewer-specific and must never be
@@ -1788,8 +1797,9 @@ export interface paths {
          * Partially update product
          * @description CRUD for PIM products.
          *
-         *     Public read access (PUBLISHED only for non-admin);
-         *     write operations require Admin role.
+         *     Read access — authenticated only (M1-ERP-07): staff get the internal card, everyone else the
+         *     published layer of PUBLISHED cards via `published_projection` (no anonymous catalog: prices
+         *     and availability go to clients only through Cabinet, DECISIONS 2026-10-13).
          *
          *     NOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER
          *     (catalog _CostGateMixin), so a response is viewer-specific and must never be
@@ -1838,8 +1848,9 @@ export interface paths {
          * Delete product document
          * @description CRUD for PIM products.
          *
-         *     Public read access (PUBLISHED only for non-admin);
-         *     write operations require Admin role.
+         *     Read access — authenticated only (M1-ERP-07): staff get the internal card, everyone else the
+         *     published layer of PUBLISHED cards via `published_projection` (no anonymous catalog: prices
+         *     and availability go to clients only through Cabinet, DECISIONS 2026-10-13).
          *
          *     NOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER
          *     (catalog _CostGateMixin), so a response is viewer-specific and must never be
@@ -1871,8 +1882,9 @@ export interface paths {
          * Delete product image
          * @description CRUD for PIM products.
          *
-         *     Public read access (PUBLISHED only for non-admin);
-         *     write operations require Admin role.
+         *     Read access — authenticated only (M1-ERP-07): staff get the internal card, everyone else the
+         *     published layer of PUBLISHED cards via `published_projection` (no anonymous catalog: prices
+         *     and availability go to clients only through Cabinet, DECISIONS 2026-10-13).
          *
          *     NOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER
          *     (catalog _CostGateMixin), so a response is viewer-specific and must never be
@@ -1885,6 +1897,74 @@ export interface paths {
          *     so the query count is flat in page_size (guarded by tests/test_r1_list_contract.py).
          */
         delete: operations["catalog_products_delete_image_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/products/{id}/document-visibility/{doc_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Show or hide a product document to clients
+         * @description CRUD for PIM products.
+         *
+         *     Read access — authenticated only (M1-ERP-07): staff get the internal card, everyone else the
+         *     published layer of PUBLISHED cards via `published_projection` (no anonymous catalog: prices
+         *     and availability go to clients only through Cabinet, DECISIONS 2026-10-13).
+         *
+         *     NOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER
+         *     (catalog _CostGateMixin), so a response is viewer-specific and must never be
+         *     shared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%
+         *     hit rate + per-token cache bloat anyway.
+         *
+         *     N+1 (fixed in R1 — until then this docstring claimed a freedom the code lacked):
+         *     the list branch prefetches EVERY relation the row serializer touches and batches the
+         *     reference-table probes behind `completeness` once per page via `CompletenessContext`,
+         *     so the query count is flat in page_size (guarded by tests/test_r1_list_contract.py).
+         */
+        post: operations["catalog_products_document_visibility_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/products/{id}/image-visibility/{image_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Show or hide a product image to clients
+         * @description CRUD for PIM products.
+         *
+         *     Read access — authenticated only (M1-ERP-07): staff get the internal card, everyone else the
+         *     published layer of PUBLISHED cards via `published_projection` (no anonymous catalog: prices
+         *     and availability go to clients only through Cabinet, DECISIONS 2026-10-13).
+         *
+         *     NOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER
+         *     (catalog _CostGateMixin), so a response is viewer-specific and must never be
+         *     shared; the old cache_page keyed on the rotating Authorization JWT gave a ~0%
+         *     hit rate + per-token cache bloat anyway.
+         *
+         *     N+1 (fixed in R1 — until then this docstring claimed a freedom the code lacked):
+         *     the list branch prefetches EVERY relation the row serializer touches and batches the
+         *     reference-table probes behind `completeness` once per page via `CompletenessContext`,
+         *     so the query count is flat in page_size (guarded by tests/test_r1_list_contract.py).
+         */
+        post: operations["catalog_products_image_visibility_create"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1921,7 +2001,7 @@ export interface paths {
         put?: never;
         /**
          * Publish a product (owner)
-         * @description Публикует карточку. Доступно ВЛАДЕЛЬЦУ и платформе. Требует полноты: неполная карточка отвечает `PRODUCT_INCOMPLETE:<коды недостающих полей>`.
+         * @description Публикует карточку (по желанию — сразу с видимостью `cabinet` / `on_request`). Требует порога публикации: неполная карточка отвечает 400 `{detail: CATALOG_PUBLISH_INCOMPLETE, missing: [коды требований]}`.
          */
         post: operations["catalog_products_publish_create"];
         delete?: never;
@@ -2004,6 +2084,26 @@ export interface paths {
          * @description Attach an image file to a product. Multipart upload.
          */
         post: operations["catalog_products_upload_image_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/products/{id}/visibility/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set what the client sees: price in Cabinet or «on request»
+         * @description Видимость карточки для клиента: `cabinet` — цена, наличие и срок в кабинете; `on_request` — карточка видна, цена «по запросу». У опубликованной карточки новая видимость проходит порог публикации (`CATALOG_PUBLISH_INCOMPLETE` + `missing`). Право — `catalog.publish`.
+         */
+        post: operations["catalog_products_visibility_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5886,7 +5986,7 @@ export interface components {
              *     * `SOURCE` - Исходник заявки
              *     * `SUPPORTING` - Документ
              */
-            readonly kind: components["schemas"]["KindEnum"];
+            readonly kind: components["schemas"]["AttachmentKindEnum"];
             /**
              * Загрузил
              * @description Пользователь, загрузивший файл
@@ -5919,6 +6019,12 @@ export interface components {
              */
             company?: number | null;
         };
+        /**
+         * @description * `SOURCE` - Исходник заявки
+         *     * `SUPPORTING` - Документ
+         * @enum {string}
+         */
+        AttachmentKindEnum: "SOURCE" | "SUPPORTING";
         AttachmentRequest: {
             /**
              * Файл
@@ -5947,6 +6053,15 @@ export interface components {
              */
             company?: number | null;
         };
+        /**
+         * @description * `in_stock` - in_stock
+         *     * `on_order` - on_order
+         *     * `expected` - expected
+         * @enum {string}
+         */
+        AvailabilityEnum: "in_stock" | "on_order" | "expected";
+        /** @enum {unknown} */
+        BlankEnum: "";
         BulkCreateQuoteItemsRequestRequest: {
             quote: number;
             items: {
@@ -7639,6 +7754,13 @@ export interface components {
             readonly updated_at: string;
         };
         /**
+         * @description * `fixed` - Фиксированная цена
+         *     * `milestones` - По этапам
+         *     * `time` - По времени
+         * @enum {string}
+         */
+        FulfillmentPolicyEnum: "fixed" | "milestones" | "time";
+        /**
          * @description Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.
          *
          *     Зачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,
@@ -7880,12 +8002,6 @@ export interface components {
             notes?: string;
         };
         /**
-         * @description * `SOURCE` - Исходник заявки
-         *     * `SUPPORTING` - Документ
-         * @enum {string}
-         */
-        KindEnum: "SOURCE" | "SUPPORTING";
-        /**
          * @description * `light` - Светлый
          *     * `boxed` - В рамках
          *     * `bold` - Контрастный
@@ -8021,6 +8137,8 @@ export interface components {
              */
             readonly created_at: string;
         };
+        /** @enum {unknown} */
+        NullEnum: null;
         /** @description One rendered example number for a document kind (КП / CT / INV). */
         NumberingPreviewItem: {
             type_code: string;
@@ -8316,7 +8434,7 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["Payment"][];
         };
-        PaginatedProductListList: {
+        PaginatedPublishedCatalogItemList: {
             /** @example 123 */
             count: number;
             /**
@@ -8329,7 +8447,7 @@ export interface components {
              * @example http://api.example.org/accounts/?page=2
              */
             previous?: string | null;
-            results: components["schemas"]["ProductList"][];
+            results: components["schemas"]["PublishedCatalogItem"][];
         };
         PaginatedQuoteChargeList: {
             /** @example 123 */
@@ -9094,10 +9212,11 @@ export interface components {
             };
         };
         /**
-         * @description Strip supplier-cost fields (offers / base_price) from viewers who don't own
-         *     the product. Only the OWNING seller's team + platform admins see cost & supplier
-         *     identity — buyers, other sellers and anon never do (C1 cost-leak fix). React was
-         *     only hiding these client-side; the data still travelled in the API response.
+         * @description Срезает поля себестоимости (`offers` / `base_price`) у тех, кому их видеть нельзя (C1, M1-ERP-07).
+         *
+         *     Цены поставщиков — внутренний слой: их видят администратор и сотрудник своей компании с правом
+         *     `quote.view_cost_margin`, `catalog.manage` или `supply.manage`. Клиенту (не-сотруднику) карточка
+         *     этим сериализатором не отдаётся вовсе — только проекцией опубликованного слоя.
          */
         PatchedProductRequest: {
             /**
@@ -9110,6 +9229,33 @@ export interface components {
              * @description Подробное описание товара для каталога
              */
             description?: string;
+            /**
+             * Политика исполнения
+             * @description Только для услуг: фиксированная цена, по этапам или по времени (час, сутки).
+             *
+             *     * `fixed` - Фиксированная цена
+             *     * `milestones` - По этапам
+             *     * `time` - По времени
+             */
+            fulfillment_policy?: components["schemas"]["FulfillmentPolicyEnum"] | components["schemas"]["BlankEnum"];
+            /**
+             * Цена для клиента
+             * Format: decimal
+             * @description Цена-витрина за единицу. Клиент видит её только при видимости «в кабинете».
+             */
+            list_price?: string | null;
+            /** Валюта цены для клиента */
+            list_price_currency?: number | null;
+            /**
+             * Срок для клиента, дней
+             * @description Обещаемый клиенту срок; срок поставщика — во внутреннем слое.
+             */
+            client_lead_time_days?: number | null;
+            /**
+             * Внутренние заметки
+             * @description Только для сотрудников: никогда не уходит клиенту.
+             */
+            internal_notes?: string;
             /**
              * Сколько раз спрашивали
              * @description Число КП, где встретилась эта позиция. Очередь наполнения сортируется по нему.
@@ -9741,10 +9887,11 @@ export interface components {
             logo?: string | null;
         };
         /**
-         * @description Strip supplier-cost fields (offers / base_price) from viewers who don't own
-         *     the product. Only the OWNING seller's team + platform admins see cost & supplier
-         *     identity — buyers, other sellers and anon never do (C1 cost-leak fix). React was
-         *     only hiding these client-side; the data still travelled in the API response.
+         * @description Срезает поля себестоимости (`offers` / `base_price`) у тех, кому их видеть нельзя (C1, M1-ERP-07).
+         *
+         *     Цены поставщиков — внутренний слой: их видят администратор и сотрудник своей компании с правом
+         *     `quote.view_cost_margin`, `catalog.manage` или `supply.manage`. Клиенту (не-сотруднику) карточка
+         *     этим сериализатором не отдаётся вовсе — только проекцией опубликованного слоя.
          */
         Product: {
             readonly id: number;
@@ -9763,6 +9910,47 @@ export interface components {
              * @description Подробное описание товара для каталога
              */
             description?: string;
+            readonly kind: string | null;
+            /**
+             * Политика исполнения
+             * @description Только для услуг: фиксированная цена, по этапам или по времени (час, сутки).
+             *
+             *     * `fixed` - Фиксированная цена
+             *     * `milestones` - По этапам
+             *     * `time` - По времени
+             */
+            fulfillment_policy?: components["schemas"]["FulfillmentPolicyEnum"] | components["schemas"]["BlankEnum"];
+            /**
+             * Видимость для клиента
+             * @description В кабинете с ценой и наличием или «цена по запросу». Действует у опубликованной карточки.
+             *
+             *     * `cabinet` - В кабинете с ценой и наличием
+             *     * `on_request` - Цена по запросу
+             */
+            readonly visibility: components["schemas"]["VisibilityEnum"];
+            /**
+             * Цена для клиента
+             * Format: decimal
+             * @description Цена-витрина за единицу. Клиент видит её только при видимости «в кабинете».
+             */
+            list_price?: string | null;
+            /** Валюта цены для клиента */
+            list_price_currency?: number | null;
+            readonly list_price_currency_code: string | null;
+            /**
+             * Срок для клиента, дней
+             * @description Обещаемый клиенту срок; срок поставщика — во внутреннем слое.
+             */
+            client_lead_time_days?: number | null;
+            /**
+             * Внутренние заметки
+             * @description Только для сотрудников: никогда не уходит клиенту.
+             */
+            internal_notes?: string;
+            /** @description Опубликованный слой глазами клиента (`published_projection`, режим client) */
+            readonly client_preview: {
+                [key: string]: unknown;
+            };
             /**
              * Статус
              * @description Статус жизненного цикла: черновик, опубликован, архив
@@ -9890,6 +10078,11 @@ export interface components {
              * Format: date-time
              */
             readonly uploaded_at: string;
+            /**
+             * Видно клиенту
+             * @description Документ уходит клиенту только с этой отметкой (прайсы и письма поставщика — нет).
+             */
+            is_public?: boolean;
         };
         ProductDocumentRequest: {
             /**
@@ -9908,6 +10101,11 @@ export interface components {
              * @description Напр: Паспорт изделия, Сертификат ГОСТ
              */
             name: string;
+            /**
+             * Видно клиенту
+             * @description Документ уходит клиенту только с этой отметкой (прайсы и письма поставщика — нет).
+             */
+            is_public?: boolean;
         };
         ProductEnrichRequestRequest: {
             name: string;
@@ -9938,6 +10136,11 @@ export interface components {
              * @description Альтернативный текст для SEO и доступности
              */
             alt_text?: string;
+            /**
+             * Видно клиенту
+             * @description Фото опубликованной карточки показывается клиенту (по умолчанию — да).
+             */
+            is_public?: boolean;
         };
         ProductImageRequest: {
             /**
@@ -9961,125 +10164,18 @@ export interface components {
              * @description Альтернативный текст для SEO и доступности
              */
             alt_text?: string;
-        };
-        /** @description Lightweight serializer for list endpoints — no nested offers/documents. */
-        ProductList: {
-            readonly id: number;
             /**
-             * Артикул (SKU)
-             * @description Внутренний артикул (генерируется автоматически)
+             * Видно клиенту
+             * @description Фото опубликованной карточки показывается клиенту (по умолчанию — да).
              */
-            sku?: string;
-            /**
-             * Наименование
-             * @description Полное наименование товара
-             */
-            name: string;
-            /**
-             * Статус
-             * @description Статус жизненного цикла: черновик, опубликован, архив
-             */
-            status?: number | null;
-            readonly status_name: string | null;
-            readonly status_code: string | null;
-            /**
-             * Сколько раз спрашивали
-             * @description Число КП, где встретилась эта позиция. Очередь наполнения сортируется по нему.
-             */
-            demand_count?: number;
-            readonly completeness: {
-                [key: string]: unknown;
-            };
-            /**
-             * Последний запрос
-             * Format: date-time
-             * @description Когда позицию спрашивали в последний раз.
-             */
-            last_requested_at?: string | null;
-            /**
-             * Заявка-источник
-             * @description Заявка, из строки которой родилась карточка (провенанс кандидата).
-             */
-            source_deal?: number | null;
-            /**
-             * Тип домена
-             * @description Домен каталога: товары или услуги
-             */
-            domain_type?: number | null;
-            readonly domain_type_name: string | null;
-            readonly domain_type_code: string | null;
-            /**
-             * Категория
-             * @description Категория товара в иерархии каталога
-             */
-            category?: number | null;
-            readonly category_data: components["schemas"]["Category"];
-            /**
-             * Компания-владелец
-             * @description Продавец/поставщик, создавший карточку (мультитенантность PIM).
-             */
-            owner_company?: number | null;
-            readonly owner_company_data: components["schemas"]["CompanyLight"];
-            /**
-             * Производитель (бренд)
-             * @description Бренд/производитель из справочника (OEM). Канонический для PIM.
-             */
-            brand?: number | null;
-            readonly brand_name: string | null;
-            readonly brand_country: string | null;
-            /**
-             * Артикул производителя (MPN)
-             * @description Заводской артикул. Ключ дедупликации PIM: бренд + артикул.
-             */
-            manufacturer_part_number?: string;
-            /**
-             * Единица измерения
-             * @description Базовая единица измерения (шт, кг, м)
-             */
-            uom?: number | null;
-            readonly uom_data: components["schemas"]["CatalogUnitOfMeasure"];
-            /**
-             * ГОСТ / Чертёж
-             * @description Номер ГОСТ или чертежа
-             */
-            gost_drawing?: string;
-            /**
-             * Код ТНВЭД
-             * @description Код товарной номенклатуры ВЭД (ТНВЭД/HS). Хранится в карточке, чтобы не искать заново.
-             */
-            hs_code?: string;
-            readonly main_image_url: string | null;
-            readonly stock_status: string | null;
-            /**
-             * @description Цена ИЛИ `null` — «нет оффера» и «стоит ноль» не одно и то же.
-             *
-             *     Строка "0" рендерилась как настоящая цена и делала карточку без единого предложения
-             *     похожей на бесплатную (Odoo/Shopify так же различают «нет прайса» и «цена 0»).
-             */
-            readonly base_price: string | null;
-            /**
-             * @description ISO-код валюты ТОГО ЖЕ оффера, что дал `base_price` (иначе `null`).
-             *
-             *     Без него список печатал любую цену как UZS — долларовый оффер выглядел дешевле
-             *     собственной цены в 12 тысяч раз.
-             */
-            readonly base_price_currency: string | null;
-            /**
-             * Дата создания
-             * Format: date-time
-             */
-            readonly created_at: string;
-            /**
-             * Дата обновления
-             * Format: date-time
-             */
-            readonly updated_at: string;
+            is_public?: boolean;
         };
         /**
-         * @description Strip supplier-cost fields (offers / base_price) from viewers who don't own
-         *     the product. Only the OWNING seller's team + platform admins see cost & supplier
-         *     identity — buyers, other sellers and anon never do (C1 cost-leak fix). React was
-         *     only hiding these client-side; the data still travelled in the API response.
+         * @description Срезает поля себестоимости (`offers` / `base_price`) у тех, кому их видеть нельзя (C1, M1-ERP-07).
+         *
+         *     Цены поставщиков — внутренний слой: их видят администратор и сотрудник своей компании с правом
+         *     `quote.view_cost_margin`, `catalog.manage` или `supply.manage`. Клиенту (не-сотруднику) карточка
+         *     этим сериализатором не отдаётся вовсе — только проекцией опубликованного слоя.
          */
         ProductRequest: {
             /**
@@ -10092,6 +10188,33 @@ export interface components {
              * @description Подробное описание товара для каталога
              */
             description?: string;
+            /**
+             * Политика исполнения
+             * @description Только для услуг: фиксированная цена, по этапам или по времени (час, сутки).
+             *
+             *     * `fixed` - Фиксированная цена
+             *     * `milestones` - По этапам
+             *     * `time` - По времени
+             */
+            fulfillment_policy?: components["schemas"]["FulfillmentPolicyEnum"] | components["schemas"]["BlankEnum"];
+            /**
+             * Цена для клиента
+             * Format: decimal
+             * @description Цена-витрина за единицу. Клиент видит её только при видимости «в кабинете».
+             */
+            list_price?: string | null;
+            /** Валюта цены для клиента */
+            list_price_currency?: number | null;
+            /**
+             * Срок для клиента, дней
+             * @description Обещаемый клиенту срок; срок поставщика — во внутреннем слое.
+             */
+            client_lead_time_days?: number | null;
+            /**
+             * Внутренние заметки
+             * @description Только для сотрудников: никогда не уходит клиенту.
+             */
+            internal_notes?: string;
             /**
              * Сколько раз спрашивали
              * @description Число КП, где встретилась эта позиция. Очередь наполнения сортируется по нему.
@@ -10162,6 +10285,28 @@ export interface components {
              */
             name: string;
         };
+        PublishedCatalogItem: {
+            id: number;
+            kind: components["schemas"]["PublishedCatalogItemKindEnum"];
+            name: string;
+            description: string;
+            unit: string;
+            category: string | null;
+            fulfillment_policy: (components["schemas"]["FulfillmentPolicyEnum"] | components["schemas"]["NullEnum"]) | null;
+            /** @description `null` — «цена по запросу» */
+            price: components["schemas"]["_Money"] | null;
+            availability: (components["schemas"]["AvailabilityEnum"] | components["schemas"]["NullEnum"]) | null;
+            lead_time_days: number | null;
+            images: string[];
+            documents: components["schemas"]["_DocumentLink"][];
+            attributes: components["schemas"]["_Attribute"][];
+        };
+        /**
+         * @description * `goods` - Товар
+         *     * `service` - Услуга
+         * @enum {string}
+         */
+        PublishedCatalogItemKindEnum: "goods" | "service";
         Quote: {
             readonly id: number;
             /**
@@ -11425,6 +11570,12 @@ export interface components {
              */
             is_active?: boolean;
         };
+        /**
+         * @description * `cabinet` - В кабинете с ценой и наличием
+         *     * `on_request` - Цена по запросу
+         * @enum {string}
+         */
+        VisibilityEnum: "cabinet" | "on_request";
         /** @description Response shape for the WorkspaceRole lookup feed ({code, name, applicable_to_types}). */
         WorkspaceRoleLookup: {
             code: string;
@@ -11434,6 +11585,19 @@ export interface components {
         WsTicket: {
             ticket: string;
             expires_in: number;
+        };
+        _Attribute: {
+            name: string;
+            value: string;
+        };
+        _DocumentLink: {
+            name: string;
+            /** Format: uri */
+            url: string;
+        };
+        _Money: {
+            amount: string;
+            currency: string;
         };
     };
     responses: never;
@@ -14325,6 +14489,13 @@ export interface operations {
                 search?: string;
                 /** @description Filter by supplier offer stock status code (e.g. IN_STOCK, ON_ORDER) */
                 stock_status?: string;
+                /**
+                 * @description В кабинете с ценой и наличием или «цена по запросу». Действует у опубликованной карточки.
+                 *
+                 *     * `cabinet` - В кабинете с ценой и наличием
+                 *     * `on_request` - Цена по запросу
+                 */
+                visibility?: "cabinet" | "on_request";
             };
             header?: never;
             path?: never;
@@ -14337,7 +14508,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaginatedProductListList"];
+                    "application/json": components["schemas"]["PaginatedPublishedCatalogItemList"];
                 };
             };
         };
@@ -14384,7 +14555,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Product"];
+                    "application/json": components["schemas"]["PublishedCatalogItem"];
                 };
             };
         };
@@ -14558,6 +14729,76 @@ export interface operations {
             };
         };
     };
+    catalog_products_document_visibility_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                doc_id: string;
+                /** @description A unique integer value identifying this Товар (PIM). */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    is_public: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description {id, is_public} */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No document */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    catalog_products_image_visibility_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Товар (PIM). */
+                id: number;
+                image_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    is_public: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description {id, is_public} */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No image */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     catalog_products_merge_create: {
         parameters: {
             query?: never;
@@ -14602,11 +14843,12 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
+        requestBody?: {
             content: {
-                "application/json": components["schemas"]["ProductRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["ProductRequest"];
-                "multipart/form-data": components["schemas"]["ProductRequest"];
+                "application/json": {
+                    /** @enum {string} */
+                    visibility?: "cabinet" | "on_request";
+                };
             };
         };
         responses: {
@@ -14710,6 +14952,8 @@ export interface operations {
                     /** Format: binary */
                     file?: string;
                     name?: string;
+                    /** @default false */
+                    is_public?: boolean;
                 };
             };
         };
@@ -14742,6 +14986,8 @@ export interface operations {
                     /** @default false */
                     is_main?: boolean;
                     alt_text?: string;
+                    /** @default true */
+                    is_public?: boolean;
                 };
             };
         };
@@ -14753,6 +14999,41 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ProductImage"];
                 };
+            };
+        };
+    };
+    catalog_products_visibility_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Товар (PIM). */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    visibility: "cabinet" | "on_request";
+                };
+            };
+        };
+        responses: {
+            /** @description Product */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

@@ -12,7 +12,7 @@ import pytest
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
 from catalog.completeness import completeness
 from catalog.models import Category, DomainType, Product, ProductStatus
-from catalog.publishing import publish_many, publish_product
+from catalog.publishing import publish_blockers, publish_many, publish_product
 from master_data.models import UnitOfMeasure
 
 pytestmark = pytest.mark.django_db
@@ -58,9 +58,10 @@ def test_incomplete_card_cannot_be_published_and_the_error_names_what_is_missing
     published, error = publish_product(card, seller_world["user"])
 
     assert published is None
-    assert error.startswith("PRODUCT_INCOMPLETE:")
-    # Пользователь не должен гадать — код перечисляет недостающее (линия E2 с блоками шаблона).
-    assert "category" in error and "uom" in error
+    assert error == "CATALOG_PUBLISH_INCOMPLETE"
+    # Пользователь не должен гадать — порог перечисляет недостающее (линия E2 с блоками шаблона).
+    missing = publish_blockers(card)
+    assert {"category", "uom", "kind", "content"} <= set(missing)
 
 
 def test_owner_publishes_once_the_card_is_complete(seller_world):
@@ -70,6 +71,7 @@ def test_owner_publishes_once_the_card_is_complete(seller_world):
         uom=seller_world["uom"],
         category=seller_world["category"],
         hs_code="7302300000",
+        description="Описание для клиента",
     )
     assert completeness(card)["is_publishable"] is True
 
@@ -86,6 +88,7 @@ def test_a_stranger_cannot_publish_someone_elses_card(seller_world):
         uom=seller_world["uom"],
         category=seller_world["category"],
         hs_code="7302300000",
+        description="Описание для клиента",
     )
     stranger = CustomUser.objects.create_user(email="x@pub.test", username="x@pub.test", password="pw")
 
@@ -102,6 +105,7 @@ def test_bulk_publish_reports_line_by_line(seller_world):
         uom=seller_world["uom"],
         category=seller_world["category"],
         hs_code="7302300000",
+        description="Описание для клиента",
     )
     incomplete = _card(seller_world, name="Полуфабрикат")
 
@@ -110,6 +114,8 @@ def test_bulk_publish_reports_line_by_line(seller_world):
     assert report["published"] == [complete.pk]
     assert len(report["skipped"]) == 1
     assert report["skipped"][0]["id"] == incomplete.pk
+    assert report["skipped"][0]["error"] == "CATALOG_PUBLISH_INCOMPLETE"
+    assert "category" in report["skipped"][0]["missing"]
 
 
 def test_requirements_depend_on_the_domain(seller_world):
@@ -124,6 +130,8 @@ def test_requirements_depend_on_the_domain(seller_world):
         domain_type=services,
         uom=seller_world["uom"],
         category=service_category,
+        description="Шефмонтаж на объекте клиента",
+        fulfillment_policy="milestones",
     )
 
-    assert completeness(card)["is_publishable"] is True, "услуге хватает имени, единицы и категории"
+    assert completeness(card)["is_publishable"] is True, "услуге не нужны ни артикул, ни ТН ВЭД"

@@ -12,6 +12,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# packages/contracts монтируется только для чтения в /contracts: контрактные тесты (проекция каталога ↔
+# erp-portal.yaml, M1-ERP-07) читают OpenAPI оттуда (ERP_CONTRACTS_DIR).
 # ERP_TEST_NS — суффикс имён: две сессии на одной машине не делят базу тестов.
 NS="${ERP_TEST_NS:+-${ERP_TEST_NS}}"
 NET="rt-erp-test${NS}"
@@ -66,6 +68,8 @@ run_in() {
     -e CELERY_RESULT_BACKEND="redis://${RD}:6379/1" \
     -e EMAIL_BACKEND=django.core.mail.backends.locmem.EmailBackend \
     -e LITELLM_API_KEY= \
+    -e ERP_CONTRACTS_DIR=/contracts \
+    -v "$ROOT/../../packages/contracts:/contracts:ro" \
     -v "$ROOT/backend:/app" -w /app "$IMAGE" "$@"
 }
 

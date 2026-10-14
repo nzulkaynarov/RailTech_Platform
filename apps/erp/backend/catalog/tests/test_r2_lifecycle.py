@@ -90,6 +90,7 @@ def _complete_kwargs(world):
         "uom": world["uom"],
         "category": world["category"],
         "hs_code": "7318159000",
+        "description": "Описание для клиента",  # M1-ERP-07: порог требует описание или характеристики
     }
 
 
