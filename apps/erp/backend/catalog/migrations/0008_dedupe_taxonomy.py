@@ -26,14 +26,18 @@ def _norm(name):
 
 def dedupe_taxonomy(apps, schema_editor):
     Category = apps.get_model("catalog", "Category")
-    EquipmentGroup = apps.get_model("catalog", "EquipmentGroup")
+    try:
+        EquipmentGroup = apps.get_model("catalog", "EquipmentGroup")
+    except LookupError:
+        EquipmentGroup = None
     Product = apps.get_model("catalog", "Product")
 
     # Fix obvious typos first so the corrected row participates in the merge below
     # (and folds into an existing correctly-spelled sibling if one exists).
     for wrong, right in TYPO_FIXES.items():
         Category.objects.filter(name=wrong).update(name=right)
-        EquipmentGroup.objects.filter(name=wrong).update(name=right)
+        if EquipmentGroup is not None:
+            EquipmentGroup.objects.filter(name=wrong).update(name=right)
 
     # ── Categories: merge by name; re-parent children + remap products ──
     cat_groups = defaultdict(list)
@@ -48,19 +52,20 @@ def dedupe_taxonomy(apps, schema_editor):
         Category.objects.filter(id__in=dup_ids).delete()
 
     # ── EquipmentGroups: merge by name; re-parent children + remap M2M ──
-    eg_groups = defaultdict(list)
-    for gid, gname in EquipmentGroup.objects.order_by("id").values_list("id", "name"):
-        eg_groups[_norm(gname)].append(gid)
-    for ids in eg_groups.values():
-        if len(ids) < 2:
-            continue
-        canonical_id, dup_ids = ids[0], ids[1:]
-        EquipmentGroup.objects.filter(parent_id__in=dup_ids).update(parent_id=canonical_id)
-        canonical = EquipmentGroup.objects.get(id=canonical_id)
-        for dup in EquipmentGroup.objects.filter(id__in=dup_ids):
-            for product in dup.products.all():
-                product.equipment_groups.add(canonical)
-        EquipmentGroup.objects.filter(id__in=dup_ids).delete()
+    if EquipmentGroup is not None:
+        eg_groups = defaultdict(list)
+        for gid, gname in EquipmentGroup.objects.order_by("id").values_list("id", "name"):
+            eg_groups[_norm(gname)].append(gid)
+        for ids in eg_groups.values():
+            if len(ids) < 2:
+                continue
+            canonical_id, dup_ids = ids[0], ids[1:]
+            EquipmentGroup.objects.filter(parent_id__in=dup_ids).update(parent_id=canonical_id)
+            canonical = EquipmentGroup.objects.get(id=canonical_id)
+            for dup in EquipmentGroup.objects.filter(id__in=dup_ids):
+                for product in dup.products.all():
+                    product.equipment_groups.add(canonical)
+            EquipmentGroup.objects.filter(id__in=dup_ids).delete()
 
 
 def noop(apps, schema_editor):

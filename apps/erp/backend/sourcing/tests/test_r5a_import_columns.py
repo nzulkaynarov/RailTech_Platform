@@ -177,9 +177,6 @@ def test_category_is_applied_to_an_existing_card_on_reimport(world, seller):
 def test_explicit_domain_beats_the_keyword_guess(world, seller):
     """Догадка смотрит только на наименование; продавец сказал прямо — прямое и записываем."""
     from catalog.models import Product
-    from sourcing.models import DomainKeyword
-
-    DomainKeyword.objects.create(keyword="колодка", domain_type=world["railway"])
 
     run_catalog_import(
         _xlsx(
@@ -230,9 +227,7 @@ def test_unknown_domain_is_a_row_error(world, seller):
 def test_explicit_domain_corrects_an_existing_card_but_a_guess_never_does(world, seller):
     """Явное направление правит карточку; ДОГАДКА остаётся правом только новой карточки."""
     from catalog.models import Manufacturer, Product
-    from sourcing.models import DomainKeyword
 
-    DomainKeyword.objects.create(keyword="ось", domain_type=world["railway"])
     brand = Manufacturer.objects.create(name="B")
     guessed = Product.objects.create(
         name="Ось", brand=brand, manufacturer_part_number="D-3", domain_type=world["goods"]
@@ -415,11 +410,10 @@ def test_publishability_summary_costs_the_same_for_three_and_thirty_cards(world,
     Справочники здесь наполнены намеренно — на пустых дорогая ветка полноты просто не работает.
     """
     from catalog.completeness import summarize_completeness
-    from catalog.models import EquipmentGroup, Product
+    from catalog.models import Product
     from master_data.models import HSCode
 
     HSCode.objects.create(code=LIVE_HS, name="Подшипники шариковые", level=10)
-    EquipmentGroup.objects.create(name="Тепловозы")
 
     def make(count, offset):
         return [
@@ -429,7 +423,7 @@ def test_publishability_summary_costs_the_same_for_three_and_thirty_cards(world,
                 domain_type=world["railway"],
                 uom=world["unit"],
                 category=world["category"],
-                hs_code=LIVE_HS,
+                hs_code="",
             )
             for index in range(offset, offset + count)
         ]
@@ -446,8 +440,8 @@ def test_publishability_summary_costs_the_same_for_three_and_thirty_cards(world,
     with django_assert_num_queries(baseline):
         summary = summarize_completeness(large)
 
-    assert summary["unpublishable"] == 30, "все ж/д карточки без группы оборудования"
-    assert summary["missing_breakdown"][0]["code"] == "equipment_groups"
+    assert summary["unpublishable"] == 30
+    assert summary["missing_breakdown"][0]["code"] == "hs_code"
     assert baseline <= 5, f"сводка обязана стоить единицы запросов, а не {baseline}"
 
 
@@ -488,26 +482,6 @@ def test_counters_outlive_the_reported_lists():
     payload = result.as_dict()
     assert payload["error_count"] == 250 and len(payload["errors"]) == 200
     assert payload["warning_count"] == 250 and len(payload["warnings"]) == 200
-
-
-@pytest.mark.django_db
-def test_railway_card_without_equipment_group_fails_by_name(world, seller):
-    """Было безымянное ROW_FAILED: модель запрещает, а продавец не знал, что именно чинить."""
-    from catalog.models import EquipmentGroup, Manufacturer, Product
-
-    EquipmentGroup.objects.create(name="Тепловозы")
-    brand = Manufacturer.objects.create(name="B")
-    product = Product.objects.create(
-        name="Ось", brand=brand, manufacturer_part_number="E-1", domain_type=world["railway"]
-    )
-
-    result = run_catalog_import(
-        _xlsx([{"Наименование": "Ось", "Бренд": "B", "Артикул производителя": "E-1", "Цена": "10", "Валюта": "UZS"}]),
-        supplier_company_id=seller.id,
-    )
-
-    assert result["skipped"] == 1
-    assert result["errors"][0]["message"] == f"EQUIPMENT_GROUP_REQUIRED:{product.sku}"
 
 
 @pytest.mark.django_db

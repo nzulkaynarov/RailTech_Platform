@@ -24,7 +24,6 @@ const pageI18nKeys: Record<string, string> = {
   'production-schedule': 'breadcrumbs.productionSchedule',
   analytics: 'breadcrumbs.analytics',
   categories: 'breadcrumbs.categories',
-  'equipment-groups': 'breadcrumbs.equipmentGroups',
   // R6: единая страница справочников. Без строки в этой таблице крошка печатала бы сырой
   // идентификатор маршрута — `getPageLabel` возвращает pageId, когда ключа нет.
   'catalog-reference': 'breadcrumbs.catalogReference',

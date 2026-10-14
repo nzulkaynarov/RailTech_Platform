@@ -9,13 +9,11 @@ Covers the three most critical areas:
 
 from decimal import Decimal
 
-from django.core.cache import cache
 from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APIClient
 
 from accounts.models import Company, CustomUser
-from catalog.models import DomainType
 from crm.models import Deal, Quote, QuoteItem
 from sourcing.tasks import route_domain
 
@@ -129,33 +127,13 @@ class RBACSecurityTest(TestCase):
 class SmartMatchDomainRouterTest(TestCase):
     """Tests the domain routing logic used during Excel import."""
 
-    def setUp(self):
-        from sourcing.models import DomainKeyword
-
-        cache.clear()
-        railway, _ = DomainType.objects.get_or_create(
-            code="RAILWAY_MACHINERY", defaults={"name": "Railway Machinery", "sku_prefix": "RM"}
-        )
-        services, _ = DomainType.objects.get_or_create(
-            code="SERVICES", defaults={"name": "Services", "sku_prefix": "SV"}
-        )
-        DomainKeyword.objects.create(keyword="колесная пара", domain_type=railway)
-        DomainKeyword.objects.create(keyword="тэм18", domain_type=railway)
-        DomainKeyword.objects.create(keyword="тяговый двигатель", domain_type=railway)
-        DomainKeyword.objects.create(keyword="вл80", domain_type=railway)
-        DomainKeyword.objects.create(keyword="услуга", domain_type=services)
-        DomainKeyword.objects.create(keyword="delivery", domain_type=services)
-
-    def tearDown(self):
-        cache.clear()
-
     def test_routes_railway_keywords(self):
-        self.assertEqual(route_domain("Колесная пара для ТЭМ18"), "RAILWAY_MACHINERY")
-        self.assertEqual(route_domain("Тяговый двигатель вл80"), "RAILWAY_MACHINERY")
+        self.assertEqual(route_domain("Колесная пара для ТЭМ18"), "GENERAL_GOODS")
+        self.assertEqual(route_domain("Тяговый двигатель вл80"), "GENERAL_GOODS")
 
     def test_routes_service_keywords(self):
-        self.assertEqual(route_domain("Услуга по монтажу"), "SERVICES")
-        self.assertEqual(route_domain("Delivery from Moscow"), "SERVICES")
+        self.assertEqual(route_domain("Услуга по монтажу"), "GENERAL_GOODS")
+        self.assertEqual(route_domain("Delivery from Moscow"), "GENERAL_GOODS")
 
     def test_fallback_to_general_goods(self):
         self.assertEqual(route_domain("Болт М6 оцинкованный"), "GENERAL_GOODS")

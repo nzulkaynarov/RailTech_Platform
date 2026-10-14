@@ -103,6 +103,6 @@ def test_me_capabilities_object(lookups):
     assert caps["can_buy"] is True  # CLIENT company, default can_buy
     # OWNER holds the is_system admin role → ALL_PERMISSIONS (mirrors CompanyRole.has_perm)
     assert set(caps["permissions"]) == set(ALL_PERMISSIONS)
-    assert caps["is_platform_admin"] is False  # переходный алиас is_superuser (M1-ERP-02)
-    assert "subscription_active" in caps
+    assert "is_platform_admin" not in caps
+    assert "subscription_active" not in caps
     assert not any(key.startswith("kyc") for key in caps)  # KYC удалён (M1-ERP-02 волна 1c)

@@ -7,7 +7,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import { productStatusLabelKey } from '@/lib/codes';
 import { CustomsDutiesSheet } from '@/components/Shared/CustomsDutiesSheet';
@@ -34,11 +33,11 @@ export function ProductFormSheet({
   // Шторка закрывается после сохранения; страница-редактор (R3) с тем же хуком остаётся на месте.
   const form = useProductForm({ target, sellerCompanyId, open, onSaved: () => onOpenChange(false) });
   const {
-    domainTypes, categories, units, equipmentGroups, adminCompanies,
-    draft, groupIds, categoryHint,
-    sellerMode, isEdit, isRailway, busy, enrichPending,
+    domainTypes, categories, units, adminCompanies,
+    draft, categoryHint,
+    sellerMode, isEdit, busy, enrichPending,
     aiDailyCap, aiDailyRemaining,
-    update, toggleGroup, runEnrich, submit,
+    update, runEnrich, submit,
   } = form;
   // Безлимит (`null`) — это НЕ «осталось 0»; когда бэкенд лимит не прислал, не показываем ничего.
   const aiLimitText = aiDailyCap === undefined && aiDailyRemaining === undefined
@@ -223,30 +222,6 @@ export function ProductFormSheet({
               onOpenChange={setDutiesOpen}
             />
           </div>
-
-          {isRailway && (
-            <div className="space-y-2">
-              <Label>
-                {t('adminCatalog.fields.equipmentGroups')}
-                <span className="ml-1 text-destructive">*</span>
-              </Label>
-              <p className="text-xs text-muted-foreground">{t('adminCatalog.equipmentGroupsHint')}</p>
-              <div className="max-h-44 space-y-2 overflow-y-auto rounded-md border p-3">
-                {(equipmentGroups ?? []).length === 0 && (
-                  <p className="text-xs text-muted-foreground">{t('pages.common.noData')}</p>
-                )}
-                {(equipmentGroups ?? []).map((g) => (
-                  <label key={g.id} className="flex items-center gap-2 text-sm">
-                    <Checkbox
-                      checked={groupIds.includes(g.id)}
-                      onCheckedChange={() => toggleGroup(g.id)}
-                    />
-                    {g.name}
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
 
           {sellerMode && (
             <>

@@ -296,8 +296,6 @@ class UserSerializer(serializers.ModelSerializer):
     role_code = serializers.CharField(source="role.code", read_only=True)
     role_data = serializers.SerializerMethodField()
     workspace_role = serializers.SerializerMethodField()
-    # Переходный алиас для SPA до чистки фронтенда (M1-ERP-02 волна 1b): администратор = superuser.
-    is_platform_admin = serializers.BooleanField(source="is_superuser", read_only=True)
 
     class Meta:
         model = CustomUser
@@ -316,7 +314,6 @@ class UserSerializer(serializers.ModelSerializer):
             "role_name",
             "role_data",
             "workspace_role",
-            "is_platform_admin",
             "is_2fa_enabled",
             "is_active",
             "memberships",
@@ -421,15 +418,10 @@ class MeSerializer(serializers.ModelSerializer):
     role_code = serializers.CharField(source="role.code", read_only=True)
     role_data = serializers.SerializerMethodField()
     workspace_role = serializers.SerializerMethodField()
-    # Переходный алиас для SPA до чистки фронтенда (M1-ERP-02 волна 1b): администратор = superuser.
-    is_platform_admin = serializers.BooleanField(source="is_superuser", read_only=True)
     # Per-membership flags for the primary company. Frontend uses these to
     # filter the BUYER/SELLER/MANUFACTURER context-switcher.
     can_sell = serializers.SerializerMethodField()
     can_buy = serializers.SerializerMethodField()
-    # ПЕРЕХОДНОЕ поле (M1-ERP-02 волна 2): подписок больше нет, SPA ещё читает флаг до чистки
-    # фронтенда. True для пользователя со стороны продавца, None — иначе. Убрать вместе с SPA.
-    seller_subscription_operational = serializers.SerializerMethodField()
     is_superuser = serializers.BooleanField(read_only=True)
     # ADR-0005 (unified nav, Phase B): ONE explicit capability object the frontend's
     # buildNavigation() reads to render/gate the single nav from — instead of re-deriving it
@@ -454,11 +446,9 @@ class MeSerializer(serializers.ModelSerializer):
             "role_name",
             "role_data",
             "workspace_role",
-            "is_platform_admin",
             "is_superuser",
             "can_sell",
             "can_buy",
-            "seller_subscription_operational",
             "capabilities",
             "is_2fa_enabled",
             "is_active",
@@ -496,11 +486,6 @@ class MeSerializer(serializers.ModelSerializer):
         # default to True so UI isn't accidentally locked down.
         return bool(membership.can_buy) if membership else True
 
-    def get_seller_subscription_operational(self, obj) -> bool | None:
-        from accounts.services import primary_seller_company_id
-
-        return True if primary_seller_company_id(obj) is not None else None
-
     def get_capabilities(self, obj):
         """Consolidated effective-capability object (ADR-0005). `permissions` are the member's
         effective CompanyRole permission codes — is_system role → ALL_PERMISSIONS (mirrors
@@ -517,7 +502,6 @@ class MeSerializer(serializers.ModelSerializer):
             role = membership.company_role
             permissions = list(ALL_PERMISSIONS) if role.is_system else list(role.permissions or [])
         seller_company_id = primary_seller_company_id(obj)
-        has_seller_context = seller_company_id is not None
         ai_usage = ai_daily_usage(obj)
         # `can_sell` здесь — «пользователь на стороне ПРОДАВЦА», ровно как это понимает авторизация
         # (`is_seller`: сотрудник компании-владельца, продавец один — M1-ERP-02 волна 3).
@@ -527,15 +511,6 @@ class MeSerializer(serializers.ModelSerializer):
         return {
             "can_buy": self.get_can_buy(obj),
             "can_sell": is_seller(obj),
-            # ПЕРЕХОДНЫЕ ключи (M1-ERP-02 волна 2): подписки, DEMO и платный гейт отправки КП
-            # удалены — отправку решает право роли `quote.send` (send_to_client). SPA до чистки
-            # фронтенда ещё гейтит навигацию и конструктор КП по этим двум флагам; для стороны
-            # продавца они всегда истинны. Убрать вместе с SPA.
-            "subscription_active": has_seller_context,
-            "can_send_quotes": has_seller_context,
-            # Wave B: a "solo seller" is a seller company with exactly ONE active member who can
-            # sell — for them the deal-claim button is pure noise (nobody else to claim against),
-            # so the SPA hides it. UI-only signal; claim/routing services stay authoritative.
             "is_solo_seller": self._is_solo_seller(seller_company_id),
             # R4 §7.4: ОСТАТОК дневного лимита ИИ — информация, а не гейт. Механизм потолка уже
             # есть (sourcing/ai_spend_cap.py), не хватало видимости: пользователь узнавал о лимите,
@@ -546,7 +521,6 @@ class MeSerializer(serializers.ModelSerializer):
             "ai_daily_cap": ai_usage["cap"],
             "ai_daily_remaining": ai_usage["remaining"],
             "permissions": permissions,
-            "is_platform_admin": bool(getattr(obj, "is_superuser", False)),
         }
 
     @staticmethod

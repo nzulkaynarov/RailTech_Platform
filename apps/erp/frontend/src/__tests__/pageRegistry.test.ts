@@ -23,7 +23,7 @@ describe('реестр страниц', () => {
       asSorted([
         'dashboard', 'profile', 'settings', 'help',
         'products', 'nomenclature', 'my-products', 'product-new', 'product-edit',
-        'catalog-reference', 'hs-directory', 'categories', 'equipment-groups', 'catalog-import',
+        'catalog-reference', 'hs-directory', 'categories', 'catalog-import',
         'product_detail',
         'contracts', 'invoices', 'payments', 'fulfillments', 'acts', 'other-documents', 'company-files',
         'sourcing-requests', 'crm-deals', 'crm-quotes', 'request-detail', 'deal-quote', 'clients',
@@ -36,7 +36,7 @@ describe('реестр страниц', () => {
       asSorted([
         'dashboard', 'profile', 'settings', 'help',
         'products', 'nomenclature', 'my-products', 'product-new',
-        'catalog-reference', 'hs-directory', 'categories', 'equipment-groups', 'catalog-import',
+        'catalog-reference', 'hs-directory', 'categories', 'catalog-import',
         'contracts', 'invoices', 'payments', 'fulfillments', 'acts', 'other-documents', 'company-files',
         'sourcing-requests', 'crm-deals', 'crm-quotes', 'clients',
       ]),

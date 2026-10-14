@@ -1,11 +1,11 @@
 from django.utils.translation import gettext_lazy as _
 from import_export import fields, resources
-from import_export.widgets import ForeignKeyWidget, ManyToManyWidget
+from import_export.widgets import ForeignKeyWidget
 
 from accounts.models import Company
 from master_data.models import Currency, DeliveryBasis, UnitOfMeasure
 
-from .models import Category, DomainType, EquipmentGroup, Manufacturer, Product, ProductStatus, SupplierOffer
+from .models import Category, DomainType, Manufacturer, Product, ProductStatus, SupplierOffer
 
 
 class ProductResource(resources.ModelResource):
@@ -41,11 +41,6 @@ class ProductResource(resources.ModelResource):
         attribute="brand",
         widget=ForeignKeyWidget(Manufacturer, field="name"),
     )
-    equipment_groups = fields.Field(
-        column_name=_("Группы оборудования"),
-        attribute="equipment_groups",
-        widget=ManyToManyWidget(EquipmentGroup, field="name", separator=";"),
-    )
     # MPN (the brand+MPN PIM dedup key) and HS code are plain CharFields — without
     # them the import/export round-trips drop the dedup key and the customs code
     # (M9). Column names match the XLSX import template (M10) for a clean round-trip.
@@ -73,7 +68,6 @@ class ProductResource(resources.ModelResource):
             "manufacturer_part_number",
             "gost_drawing",
             "hs_code",
-            "equipment_groups",
         )
         export_order = fields
         skip_unchanged = True

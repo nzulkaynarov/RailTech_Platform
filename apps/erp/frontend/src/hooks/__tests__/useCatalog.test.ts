@@ -15,16 +15,12 @@ describe('useCatalog exports', () => {
     expect(typeof mod.useProductsCount).toBe('function');
     expect(typeof mod.useCategories).toBe('function');
     expect(typeof mod.useManufacturers).toBe('function');
-    expect(typeof mod.useEquipmentGroups).toBe('function');
     expect(typeof mod.useCreateProduct).toBe('function');
     expect(typeof mod.useUpdateProduct).toBe('function');
     expect(typeof mod.useDeleteProduct).toBe('function');
     expect(typeof mod.useCreateCategory).toBe('function');
     expect(typeof mod.useUpdateCategory).toBe('function');
     expect(typeof mod.useDeleteCategory).toBe('function');
-    expect(typeof mod.useCreateEquipmentGroup).toBe('function');
-    expect(typeof mod.useUpdateEquipmentGroup).toBe('function');
-    expect(typeof mod.useDeleteEquipmentGroup).toBe('function');
     expect(typeof mod.useOffers).toBe('function');
     expect(typeof mod.useCreateOffer).toBe('function');
     expect(typeof mod.useUpdateOffer).toBe('function');

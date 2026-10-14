@@ -5,8 +5,6 @@ import { Check, ChevronsUpDown, Landmark } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
@@ -20,18 +18,16 @@ import type { ProductFormState } from '@/components/Shared/product-form/useProdu
 import { SECTION_IDS } from './anchors';
 
 /**
- * Секция «Классификация»: домен → категория → группы оборудования → ТН ВЭД.
+ * Секция «Классификация»: домен → категория → ТН ВЭД.
  *
  * Категория — комбобокс с поиском, ОТФИЛЬТРОВАННЫЙ по выбранному домену (категории без
  * домена видны всегда): закрывает застарелую жалобу «категории не фильтруются по
- * домену» — продавец перебирал весь плоский список руками. Группы оборудования — чеклист
- * с поиском по имени (справочник растёт, а Sheet показывал все строки скроллом).
+ * домену» — продавец перебирал весь плоский список руками.
  */
 export function ClassificationSection({ form }: { form: ProductFormState }) {
   const { t } = useTranslation();
-  const { draft, domainTypes, categories, equipmentGroups, groupIds, isRailway, update, toggleGroup } = form;
+  const { draft, domainTypes, categories, update } = form;
   const [categoryOpen, setCategoryOpen] = useState(false);
-  const [groupQuery, setGroupQuery] = useState('');
   const [dutiesOpen, setDutiesOpen] = useState(false);
 
   const domainId = draft.domain_type ? Number(draft.domain_type) : null;
@@ -49,10 +45,6 @@ export function ClassificationSection({ form }: { form: ProductFormState }) {
     ? [selectedCategory, ...visibleCategories]
     : visibleCategories;
 
-  const normalizedGroupQuery = groupQuery.trim().toLowerCase();
-  const visibleGroups = (equipmentGroups ?? []).filter(
-    (group) => !normalizedGroupQuery || group.name.toLowerCase().includes(normalizedGroupQuery),
-  );
   const hsDigits = (draft.hs_code ?? '').replace(/\D/g, '');
 
   return (
@@ -126,36 +118,6 @@ export function ClassificationSection({ form }: { form: ProductFormState }) {
               </Popover>
             </div>
           </div>
-
-          {isRailway && (
-            <div className="space-y-2">
-              <Label>
-                {t('adminCatalog.fields.equipmentGroups')}
-                <span className="ml-1 text-destructive">*</span>
-              </Label>
-              <p className="text-xs text-muted-foreground">{t('adminCatalog.equipmentGroupsHint')}</p>
-              <Input
-                value={groupQuery}
-                onChange={(e) => setGroupQuery(e.target.value)}
-                placeholder={t('common.search')}
-                aria-label={t('common.search')}
-              />
-              <div className="max-h-52 space-y-2 overflow-y-auto rounded-md border p-3">
-                {visibleGroups.length === 0 && (
-                  <p className="text-xs text-muted-foreground">{t('pages.common.noData')}</p>
-                )}
-                {visibleGroups.map((group) => (
-                  <label key={group.id} className="flex items-center gap-2 text-sm">
-                    <Checkbox
-                      checked={groupIds.includes(group.id)}
-                      onCheckedChange={() => toggleGroup(group.id)}
-                    />
-                    {group.name}
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
 
           <div className="space-y-2">
             <Label>{t('adminCatalog.fields.hsCode')}</Label>

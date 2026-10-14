@@ -5,12 +5,10 @@ from io import BytesIO
 import pandas as pd
 from celery import shared_task
 from django.conf import settings
-from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
 
-from .models import DomainKeyword
 from .services import smart_match_product
 
 logger = logging.getLogger(__name__)
@@ -24,27 +22,8 @@ BULK_CHUNK = 1_000
 
 def route_domain(text: str) -> str:
     """
-    MED-2: Dynamic domain routing.
-    Checks raw text against keywords stored in the database.
+    Default domain routing (GENERAL_GOODS). Keyword-based routing removed in M1-ERP-02 wave 4.
     """
-    if not text:
-        return "GENERAL_GOODS"
-
-    text_lower = text.lower()
-
-    # Cache keywords for 5 minutes to avoid DB pressure
-    keywords = cache.get("sourcing_routing_keywords")
-    if not keywords:
-        # Structure: [(keyword_lower, domain_code), ...]
-        keywords = list(DomainKeyword.objects.values_list("keyword", "domain_type__code"))
-        # Handle case-insensitive matching by lowering keywords
-        keywords = [(k.lower(), code) for k, code in keywords]
-        cache.set("sourcing_routing_keywords", keywords, 300)
-
-    for keyword, domain_code in keywords:
-        if keyword in text_lower:
-            return domain_code
-
     return "GENERAL_GOODS"
 
 

@@ -26,7 +26,6 @@ from decimal import Decimal, InvalidOperation
 from io import BytesIO
 
 import pandas as pd
-from django.core.exceptions import ValidationError
 from django.db import transaction
 
 logger = logging.getLogger(__name__)
@@ -255,19 +254,7 @@ def _find_existing_product(ctx: _Ctx, brand, mpn: str, gost: str):
 
 
 def _save_product(product) -> None:
-    """Сохранить карточку, назвав ту ошибку модели, которую импорт реально умеет вызвать.
-
-    `Product.save()` зовёт `full_clean()`, а `clean()` требует у СУЩЕСТВУЮЩЕЙ ж/д карточки хотя
-    бы одну группу оборудования (когда справочник групп наполнен). Продавец видел за этим
-    безымянное `ROW_FAILED` и не мог догадаться, что делать. Модельную проверку не ослабляем —
-    даём ей имя и адрес карточки.
-    """
-    try:
-        product.save()
-    except ValidationError as exc:
-        if "equipment_groups" in (getattr(exc, "error_dict", None) or {}):
-            raise ValueError(f"EQUIPMENT_GROUP_REQUIRED:{product.sku}") from exc
-        raise
+    product.save()
 
 
 def _update_product(ctx: _Ctx, existing, fields: dict, brand, uom) -> None:

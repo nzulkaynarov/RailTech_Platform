@@ -185,7 +185,6 @@
       "hsCodeNotInClassifier": "HS code is not in the classifier: {{code}}",
       "hsCodeRetired": "HS code was retired from the current revision: {{code}}",
       "hsCodeTooLong": "HS code is longer than the classifier allows: {{code}}",
-      "equipmentGroupRequired": "A railway card requires an equipment group",
       "unknownCode": "Unknown reason (code: {{code}})"
     },
     "requirements": "File requirements",
@@ -882,7 +881,6 @@
     "productionSchedule": "Production Schedule",
     "analytics": "Analytics",
     "categories": "Categories",
-    "equipmentGroups": "Equipment Groups",
     "integrations": "Integrations",
     "help": "Help",
     "profile": "Profile",
@@ -978,7 +976,6 @@
     "manufacturer": "Manufacturer",
     "characteristics": "Key Attributes",
     "images": "Images",
-    "equipmentGroups": "Equipment Groups",
     "document": "Document",
     "supplierOffers": "Supplier Offers",
     "minOrder": "Min. order: {{qty}} pcs",
@@ -1505,7 +1502,6 @@
       "gost": "GOST / Drawing",
       "sku": "SKU",
       "partNumber": "Manufacturer part number",
-      "equipmentGroups": "Equipment groups",
       "hsCode": "HS code",
       "ownerCompany": "Owner company"
     },
@@ -1521,8 +1517,6 @@
       "documentNameHint": "Applied to the file you upload next. Leave empty to use the file name."
     },
     "mediaAfterCreate": "Images and documents can be uploaded after creating the product",
-    "equipmentGroupsHint": "Required for the Railway machinery domain: pick at least one group.",
-    "equipmentGroupsRequired": "Select at least one equipment group for a railway product.",
     "pricing": {
       "title": "Price & availability",
       "hint": "Your offer for this product (price is visible only to you and the platform).",
@@ -3264,22 +3258,16 @@
   },
   "catalogReference": {
     "title": "Reference data",
-    "description": "Platform classifiers: HS codes, categories and equipment groups. The taxonomy is maintained by the platform — if a category is missing, send a request.",
+    "description": "Platform classifiers: HS codes and categories. The taxonomy is maintained by the platform — if a category is missing, send a request.",
     "showProducts": "Products",
     "tabs": {
       "hs": "HS codes",
-      "categories": "Categories",
-      "groups": "Equipment groups"
+      "categories": "Categories"
     },
     "categories": {
       "hint": "The category tree is maintained by the platform: it is shared by every seller — buyers browse by it and HS codes are matched against it.",
       "emptyHint": "The directory is still empty. Request a category — an operator will create it.",
       "subcategories": "Subcategories: {{count}}"
-    },
-    "groups": {
-      "hint": "Equipment groups — the hierarchy of rolling-stock and track-machinery units, maintained by the platform.",
-      "searchPlaceholder": "Search groups by name",
-      "emptyHint": "The group directory is not populated yet — the «pick a group» requirement turns on with it."
     },
     "products": {
       "brand": "Brand",

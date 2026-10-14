@@ -4359,287 +4359,6 @@
                 }
             }
         },
-        "/api/v1/catalog/equipment-groups/": {
-            "get": {
-                "operationId": "catalog_equipment_groups_list",
-                "description": "Returns all equipment groups. Searchable by name. Public read access.",
-                "summary": "List equipment groups",
-                "parameters": [
-                    {
-                        "name": "page",
-                        "required": false,
-                        "in": "query",
-                        "description": "A page number within the paginated result set.",
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "name": "page_size",
-                        "required": false,
-                        "in": "query",
-                        "description": "Number of results to return per page.",
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "name": "search",
-                        "required": false,
-                        "in": "query",
-                        "description": "A search term.",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "tags": [
-                    "Catalog"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    },
-                    {}
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/PaginatedEquipmentGroupList"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            },
-            "post": {
-                "operationId": "catalog_equipment_groups_create",
-                "description": "Create a new equipment group. Admin only.",
-                "summary": "Create equipment group",
-                "tags": [
-                    "Catalog"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/EquipmentGroupRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/EquipmentGroupRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/EquipmentGroupRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/EquipmentGroup"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            }
-        },
-        "/api/v1/catalog/equipment-groups/{id}/": {
-            "get": {
-                "operationId": "catalog_equipment_groups_retrieve",
-                "description": "CRUD for equipment groups (hierarchical classification).\n\nPublic read access; write operations require an operator with `platform.settings`\n(N3, ADR-0004: раньше писала ЛЮБАЯ суб-роль оператора, включая SUPPORT «только просмотр»).",
-                "summary": "Get equipment group",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Группа оборудования.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "Catalog"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    },
-                    {}
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/EquipmentGroup"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            },
-            "put": {
-                "operationId": "catalog_equipment_groups_update",
-                "description": "Admin only.",
-                "summary": "Update equipment group",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Группа оборудования.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "Catalog"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/EquipmentGroupRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/EquipmentGroupRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/EquipmentGroupRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/EquipmentGroup"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            },
-            "patch": {
-                "operationId": "catalog_equipment_groups_partial_update",
-                "description": "CRUD for equipment groups (hierarchical classification).\n\nPublic read access; write operations require an operator with `platform.settings`\n(N3, ADR-0004: раньше писала ЛЮБАЯ суб-роль оператора, включая SUPPORT «только просмотр»).",
-                "summary": "Partially update equipment group",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Группа оборудования.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "Catalog"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedEquipmentGroupRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedEquipmentGroupRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedEquipmentGroupRequest"
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/EquipmentGroup"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            },
-            "delete": {
-                "operationId": "catalog_equipment_groups_destroy",
-                "description": "CRUD for equipment groups (hierarchical classification).\n\nPublic read access; write operations require an operator with `platform.settings`\n(N3, ADR-0004: раньше писала ЛЮБАЯ суб-роль оператора, включая SUPPORT «только просмотр»).",
-                "summary": "Delete equipment group",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Группа оборудования.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "Catalog"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "No response body"
-                    }
-                }
-            }
-        },
         "/api/v1/catalog/manufacturers/": {
             "get": {
                 "operationId": "catalog_manufacturers_list",
@@ -5158,7 +4877,7 @@
         "/api/v1/catalog/products/": {
             "get": {
                 "operationId": "catalog_products_list",
-                "description": "Returns products from the PIM catalog. Non-admin users only see PUBLISHED products. Filterable by domain_type, category, manufacturer, equipment_groups, stock_status. Searchable by name, GOST/drawing, SKU. Server-side ordering via `?ordering=` (name, sku, demand_count, last_requested_at, created_at, updated_at; prefix with `-` for descending). `?ordering=` overrides the legacy `?order=demand` default.",
+                "description": "Returns products from the PIM catalog. Non-admin users only see PUBLISHED products. Filterable by domain_type, category, manufacturer, stock_status. Searchable by name, GOST/drawing, SKU. Server-side ordering via `?ordering=` (name, sku, demand_count, last_requested_at, created_at, updated_at; prefix with `-` for descending). `?ordering=` overrides the legacy `?order=demand` default.",
                 "summary": "List products",
                 "parameters": [
                     {
@@ -5181,18 +4900,6 @@
                         "schema": {
                             "type": "string"
                         }
-                    },
-                    {
-                        "in": "query",
-                        "name": "equipment_groups",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "type": "integer"
-                            }
-                        },
-                        "explode": true,
-                        "style": "form"
                     },
                     {
                         "name": "ordering",
@@ -19547,45 +19254,6 @@
                     "to_email"
                 ]
             },
-            "EquipmentGroup": {
-                "type": "object",
-                "properties": {
-                    "id": {
-                        "type": "integer",
-                        "readOnly": true
-                    },
-                    "name": {
-                        "type": "string",
-                        "title": "Название",
-                        "description": "Название группы/типа оборудования",
-                        "maxLength": 255
-                    },
-                    "full_path": {
-                        "type": "string",
-                        "readOnly": true
-                    }
-                },
-                "required": [
-                    "full_path",
-                    "id",
-                    "name"
-                ]
-            },
-            "EquipmentGroupRequest": {
-                "type": "object",
-                "properties": {
-                    "name": {
-                        "type": "string",
-                        "minLength": 1,
-                        "title": "Название",
-                        "description": "Название группы/типа оборудования",
-                        "maxLength": 255
-                    }
-                },
-                "required": [
-                    "name"
-                ]
-            },
             "FontFamilyEnum": {
                 "enum": [
                     "sans",
@@ -21014,37 +20682,6 @@
                     }
                 }
             },
-            "PaginatedEquipmentGroupList": {
-                "type": "object",
-                "required": [
-                    "count",
-                    "results"
-                ],
-                "properties": {
-                    "count": {
-                        "type": "integer",
-                        "example": 123
-                    },
-                    "next": {
-                        "type": "string",
-                        "nullable": true,
-                        "format": "uri",
-                        "example": "http://api.example.org/accounts/?page=4"
-                    },
-                    "previous": {
-                        "type": "string",
-                        "nullable": true,
-                        "format": "uri",
-                        "example": "http://api.example.org/accounts/?page=2"
-                    },
-                    "results": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/EquipmentGroup"
-                        }
-                    }
-                }
-            },
             "PaginatedFulfillmentList": {
                 "type": "object",
                 "required": [
@@ -22202,18 +21839,6 @@
                     }
                 }
             },
-            "PatchedEquipmentGroupRequest": {
-                "type": "object",
-                "properties": {
-                    "name": {
-                        "type": "string",
-                        "minLength": 1,
-                        "title": "Название",
-                        "description": "Название группы/типа оборудования",
-                        "maxLength": 255
-                    }
-                }
-            },
             "PatchedInvoiceRequest": {
                 "type": "object",
                 "description": "Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.\n\nЗачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,\nкоторая одновременно покупает и продаёт, не видела продавцовских кнопок: «Сформировать\nакт» пряталась за `!isBuyer`, и у dual-компании с порядком типов [CLIENT, SUPPLIER]\nкнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`\nу договора.\n\nПоля-подсказки НЕ являются полным правом: подписку и стадию проверит сервис,\nвыполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку\nкнопок чужой стороны.",
@@ -22422,15 +22047,6 @@
                     "specifications": {
                         "title": "Технические параметры",
                         "description": "Динамические характеристики в формате ключ: значение"
-                    },
-                    "equipment_groups": {
-                        "type": "array",
-                        "items": {
-                            "type": "integer",
-                            "title": "Группы оборудования"
-                        },
-                        "title": "Группы оборудования",
-                        "description": "Применимость к типам оборудования (обязательно для ж/д техники)"
                     }
                 }
             },
@@ -23424,22 +23040,6 @@
                         "title": "Технические параметры",
                         "description": "Динамические характеристики в формате ключ: значение"
                     },
-                    "equipment_groups": {
-                        "type": "array",
-                        "items": {
-                            "type": "integer",
-                            "title": "Группы оборудования"
-                        },
-                        "title": "Группы оборудования",
-                        "description": "Применимость к типам оборудования (обязательно для ж/д техники)"
-                    },
-                    "equipment_groups_data": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/EquipmentGroup"
-                        },
-                        "readOnly": true
-                    },
                     "offers": {
                         "type": "array",
                         "items": {
@@ -23512,7 +23112,6 @@
                     "documents",
                     "domain_type_code",
                     "domain_type_name",
-                    "equipment_groups_data",
                     "id",
                     "images",
                     "main_document_url",
@@ -24016,15 +23615,6 @@
                     "specifications": {
                         "title": "Технические параметры",
                         "description": "Динамические характеристики в формате ключ: значение"
-                    },
-                    "equipment_groups": {
-                        "type": "array",
-                        "items": {
-                            "type": "integer",
-                            "title": "Группы оборудования"
-                        },
-                        "title": "Группы оборудования",
-                        "description": "Применимость к типам оборудования (обязательно для ж/д техники)"
                     }
                 },
                 "required": [
@@ -26127,10 +25717,6 @@
                         "nullable": true,
                         "readOnly": true
                     },
-                    "is_platform_admin": {
-                        "type": "boolean",
-                        "readOnly": true
-                    },
                     "is_2fa_enabled": {
                         "type": "boolean",
                         "readOnly": true,
@@ -26176,7 +25762,6 @@
                     "email",
                     "id",
                     "is_2fa_enabled",
-                    "is_platform_admin",
                     "last_login",
                     "memberships",
                     "primary_company",

@@ -20,7 +20,7 @@ from django.test.utils import CaptureQueriesContext
 from rest_framework.test import APIClient
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
-from catalog.models import DomainType, EquipmentGroup, Product, ProductStatus, SupplierOffer
+from catalog.models import DomainType, Product, ProductStatus, SupplierOffer
 from master_data.models import Currency, HSCode
 
 pytestmark = pytest.mark.django_db
@@ -49,8 +49,6 @@ def world(db):
 
     HSCode.objects.create(code=LIVE_HS, name="Подшипники шариковые прочие", level=10)
     HSCode.objects.create(code=RETIRED_HS, name="Оси в сборе", level=10, valid_until=YESTERDAY)
-    bogie = EquipmentGroup.objects.create(name="Тележка")
-    brake = EquipmentGroup.objects.create(name="Тормозная система")
 
     usd, _ = Currency.objects.get_or_create(code="USD", defaults={"name": "Доллар США", "symbol": "$"})
     uzs, _ = Currency.objects.get_or_create(code="UZS", defaults={"name": "Сум", "symbol": "сўм"})
@@ -78,12 +76,11 @@ def world(db):
         "outsider_client": outsider_client,
         "usd": usd,
         "uzs": uzs,
-        "groups": [bogie, brake],
     }
 
 
-def make_card(world, name, *, demand=0, hs_code=LIVE_HS, groups=None, published=False, offer=None):
-    """Карточка ж/д домена с группой оборудования — то есть по ДОРОГОЙ ветке полноты."""
+def make_card(world, name, *, demand=0, hs_code=LIVE_HS, published=False, offer=None):
+    """Карточка ж/д домена — то есть по ДОРОГОЙ ветке полноты (проверка ТН ВЭД)."""
     product = Product.objects.create(
         name=name,
         owner_company=world["company"],
@@ -92,7 +89,6 @@ def make_card(world, name, *, demand=0, hs_code=LIVE_HS, groups=None, published=
         demand_count=demand,
         status=ProductStatus.objects.get(code="PUBLISHED" if published else "DRAFT"),
     )
-    product.equipment_groups.set(groups if groups is not None else [world["groups"][0]])
     if offer is not None:
         price, currency = offer
         SupplierOffer.objects.create(
@@ -246,45 +242,12 @@ def test_completeness_still_tells_the_truth_on_the_cheap_path(world):
     """Пакетная загрузка справочников не должна менять ВЕРДИКТ полноты."""
     make_card(world, "С живым кодом", hs_code=LIVE_HS)
     make_card(world, "С мёртвым кодом", hs_code=RETIRED_HS)
-    make_card(world, "Без группы", hs_code=LIVE_HS, groups=[])
 
     rows = {row["name"]: row for row in world["client"].get(PRODUCTS_URL, {"ordering": "name"}).json()["results"]}
 
     missing = {name: {item["code"] for item in row["completeness"]["missing"]} for name, row in rows.items()}
     assert "hs_code" not in missing["С живым кодом"]
     assert "hs_code" in missing["С мёртвым кодом"], "код, выведенный из редакции, не считается заполненным"
-    assert "equipment_groups" in missing["Без группы"]
-    assert "equipment_groups" not in missing["С живым кодом"]
-
-
-# ── 4. Фильтр по группе оборудования не размножает строки ────────────────────────────────
-
-
-def test_equipment_group_filter_returns_each_card_once(world):
-    bogie, brake = world["groups"]
-    both = make_card(world, "В двух группах", groups=[bogie, brake])
-    make_card(world, "Только тележка", groups=[bogie])
-    make_card(world, "Только тормоз", groups=[brake])
-
-    response = world["client"].get(PRODUCTS_URL, {"equipment_groups": [bogie.pk, brake.pk]})
-
-    assert response.status_code == 200
-    payload = response.json()
-    ids = [row["id"] for row in payload["results"]]
-    assert ids.count(both.pk) == 1, "карточка в двух группах не должна раздваиваться"
-    assert len(ids) == len(set(ids))
-    assert payload["count"] == len(ids), "count обязан совпадать с числом реальных строк"
-
-
-def test_equipment_group_filter_scopes_to_the_group(world):
-    bogie, brake = world["groups"]
-    make_card(world, "В двух группах", groups=[bogie, brake])
-    make_card(world, "Только тормоз", groups=[brake])
-
-    response = world["client"].get(PRODUCTS_URL, {"equipment_groups": bogie.pk})
-
-    assert response.json()["count"] == 1
-    assert names(response) == ["В двух группах"]
 
 
 # ── 5. Карточка товара отдаёт цену так же, как список ─────────────────────────────────────
