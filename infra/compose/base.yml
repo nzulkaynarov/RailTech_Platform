@@ -253,6 +253,9 @@ services:
   crm-worker:
     <<: *crm-backend
     command: ["python", "-m", "app", "worker"]
+    # Центр внешних сервисов (M3-CRM-12) читает статус бэкапов из общего тома — только чтение.
+    volumes:
+      - crm_backups:/backups:ro
     depends_on:
       <<: *crm-backend-deps
       docling:

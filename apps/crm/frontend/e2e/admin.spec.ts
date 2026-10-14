@@ -22,7 +22,13 @@ test("admin sections render and greeting can be changed", async ({ page }) => {
 
   // «Расходы» по ансамблю (M3-CRM-09): журнал шлюза LiteLLM — плитки или понятная причина.
   await page.goto("/spend");
-  await expect(page.getByRole("tab", { name: "Ансамбль: CRM и ERP" })).toBeVisible();
+  // Вкладки (UrlTabs) на телефоне — раскрывающиеся секции: та же проверка, что у разделов клиента ниже.
+  await expect(
+    page
+      .getByRole("tab", { name: "Ансамбль: CRM и ERP" })
+      .or(page.getByRole("button", { name: /Ансамбль: CRM и ERP/ }))
+      .first(),
+  ).toBeVisible();
   await expect(
     page.getByText(/^Всего за период$|^Журнал расходов шлюза моделей недоступен$/).first(),
   ).toBeVisible();

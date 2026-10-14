@@ -215,4 +215,7 @@ M1 и независимая часть M3 идут параллельно в р
 
 ## 9. Текущее состояние
 
-Веха: **M0 — все 6 задач выполнены 2026-10-13**, ждёт слияния стопки PR #1→#6 (`m0/infra-01-monorepo` → `infra-02-contracts` → `infra-03-compose` → `infra-04-ci` → `doc-01-claude-stubs` → `infra-05-ui-tokens`) и гейта владельца: `make env && make up && make smoke` на `crm.`/`erp.`/`cabinet.localhost`, `make check`, контракт v0 в `packages/contracts`. Репозиторий — **`RailTech_Platform`** (github.com/nzulkaynarov/RailTech_Platform, кодовое имя `rt_platform`). После гейта M0 параллельно стартуют M1 (ERP, роль ERP) и независимая часть M3 (M3-CRM-01/02/05/08, роль CRM). Состояние — `docs/PROGRESS.md`.
+На 2026-10-14: **M0 закрыта**; **M1** в работе (M1-ERP-01 готово, M1-ERP-02 — волны 1a–3 влиты, осталась волна 4);
+**M2** — Cabinet готов против мока (M2-CAB-01…03), портальный API (M2-ERP-01) не начат; **M3** — независимая часть CRM
+готова (M3-CRM-01, 02, 05, 08, CRM-части 09 и 12). Сводка и порядок продолжения — **`docs/HANDOFF.md`**; статусы задач —
+`docs/PROGRESS.md`. Следующая задача — M1-ERP-02 волна 4 (ЖД-домен), затем M1-ERP-03.
