@@ -48,7 +48,6 @@ const ActsPage = lazyWithRetry(() => import('@/pages/ActsPage'));
 const OtherDocumentsPage = lazyWithRetry(() => import('@/pages/OtherDocumentsPage'));
 const CompanyFilesPage = lazyWithRetry(() => import('@/pages/CompanyFilesPage'));
 const FulfillmentsPage = lazyWithRetry(() => import('@/pages/FulfillmentsPage'));
-const MySubscriptionPage = lazyWithRetry(() => import('@/pages/MySubscriptionPage'));
 const CatalogImportPage = lazyWithRetry(() => import('@/pages/CatalogImportPage'));
 const DealQuotePage = lazyWithRetry(() => import('@/pages/DealQuotePage'));
 const CounterpartiesPage = lazyWithRetry(() => import('@/pages/CounterpartiesPage'));
@@ -67,7 +66,6 @@ const PLAIN_PAGES: Record<string, ComponentType> = {
   'other-documents': OtherDocumentsPage,
   'company-files': CompanyFilesPage,
   fulfillments: FulfillmentsPage,
-  'my-subscription': MySubscriptionPage,
   'catalog-import': CatalogImportPage,
 };
 
@@ -112,7 +110,7 @@ function renderDashboard(ctx: PageRenderContext): ReactNode {
 }
 
 function renderContent(ctx: PageRenderContext): ReactNode {
-  const { page, activeStatus, navigateTo, onNavigate, onProductClick } = ctx;
+  const { page, activeStatus, navigateTo, onProductClick } = ctx;
 
   const plain = PLAIN_PAGES[page.type];
   if (plain) {
@@ -175,7 +173,6 @@ function renderContent(ctx: PageRenderContext): ReactNode {
         <DealQuotePage
           dealId={page.dealId}
           onBack={() => navigateTo({ type: 'request-detail', dealId: page.dealId })}
-          onNavigate={onNavigate}
         />
       );
     case 'clients':

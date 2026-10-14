@@ -26,20 +26,6 @@ export interface CompanyStatusEntry {
 export interface Capabilities {
   can_buy: boolean;
   can_sell: boolean;
-  subscription_active: boolean;
-  /** WP-H: the seller may SEND a КП right now — folds all send preconditions (the quote.send
-   * entitlement, NOT a DEMO grant). Mirrors send_to_client; lets the КП builder warn
-   * about blockers up-front instead of at send. UI-gating only; the backend stays authoritative. */
-  can_send_quotes: boolean;
-  /** WP-H: the seller holds quote.send in DEMO access — output is watermarked and send is gated.
-   * Drives the distinct "DEMO watermark" builder message (vs a plain "subscription required"). */
-  quote_send_is_demo: boolean;
-  /** Функция закрыта ЯВНЫМ запретом платформы, а не отсутствием подписки. Без этого признака
-   *  оба случая сваливались в баннер «нужна активная подписка» с кнопкой в раздел подписки —
-   *  где та же подписка написана активной. Платящему продавцу называли ложную причину и
-   *  предлагали бесполезное действие (находка 5). Само правило не менялось: явный запрет
-   *  побеждает подписку (ADR-0006). */
-  quote_send_blocked_by_operator?: boolean;
   permissions: string[];
   /** Wave B2 (auto-claim) — true when the seller company effectively has ONE member with claim
    * rights, so «Взять в работу» is noise (there is no one to route work between). OPTIONAL: the
@@ -48,11 +34,9 @@ export interface Capabilities {
    * server-side. See useIsSoloSeller. */
   is_solo_seller?: boolean;
   /**
-   * Дневной расход ИИ. Не гейт, а ИНФОРМАЦИЯ: механизм потолков существовал давно, но
-   * пользователь узнавал о нём, лишь упёршись в 429. Эталоны (Shopify Magic в подписке,
-   * Akeneo как add-on) подтверждения стоимости перед пачкой не спрашивают, поэтому новых
-   * блокировок волна не вносит — только показ остатка.
-   * `null` в потолке и остатке = безлимит (это НЕ то же, что остаток 0).
+   * Дневной расход ИИ. Не гейт, а ИНФОРМАЦИЯ рядом с кнопкой ИИ: потолок живёт на сервере
+   * (429 `AI_DAILY_CAP_REACHED`) как защита бюджета, не как тариф. Новых блокировок нет —
+   * только показ остатка. `null` в потолке и остатке = безлимит (это НЕ то же, что остаток 0).
    */
   ai_daily_used?: number;
   ai_daily_cap?: number | null;
@@ -92,10 +76,6 @@ interface UserState {
   activeStatus: CompanyStatus;
   profile: UserProfile;
   company: Company;
-  /** Whether the seller company has an operational subscription. null for
-   * non-sellers / before /me resolves. false → show the "subscription required"
-   * banner (seller writes return SUBSCRIPTION_REQUIRED). */
-  sellerSubscriptionOperational: boolean | null;
   /** ADR-0005: consolidated capability object driving the unified nav engine. */
   capabilities: Capabilities;
 
@@ -118,10 +98,8 @@ export const useUserStore = create<UserState>((set, get) => ({
    * `statusEntries.length === 0 ? 'BUYER'` fallback in loadFromAuth, so cold-load
    * requests never go out under a wider seller scope before /me resolves. */
   activeStatus: 'BUYER',
-  sellerSubscriptionOperational: null,
   capabilities: {
-    can_buy: true, can_sell: true, subscription_active: false,
-    can_send_quotes: false, quote_send_is_demo: false,
+    can_buy: true, can_sell: true,
     permissions: [],
   },
   profile: {
@@ -182,12 +160,10 @@ export const useUserStore = create<UserState>((set, get) => ({
       const userPayload = authState.user as {
         can_sell?: boolean;
         can_buy?: boolean;
-        seller_subscription_operational?: boolean | null;
         capabilities?: Capabilities;
       };
       const canSell = userPayload.can_sell !== false;
       const canBuy = userPayload.can_buy !== false;
-      const sellerSubscriptionOperational = userPayload.seller_subscription_operational ?? null;
 
       const rawEntries: CompanyStatusEntry[] = companyTypes.map((code) => ({
         status: typeMap[code] || 'BUYER',
@@ -212,12 +188,6 @@ export const useUserStore = create<UserState>((set, get) => ({
       const capabilities: Capabilities = userPayload.capabilities ?? {
         can_buy: canBuy,
         can_sell: canSell,
-        subscription_active: sellerSubscriptionOperational === true,
-        // Best-effort derivation for a legacy payload that predates these fields: an operational
-        // subscription approximates the quote.send entitlement (DEMO can't be inferred → false).
-        // The next /me refresh replaces this with the authoritative backend projection.
-        can_send_quotes: sellerSubscriptionOperational === true,
-        quote_send_is_demo: false,
         permissions: [],
       };
 
@@ -228,7 +198,6 @@ export const useUserStore = create<UserState>((set, get) => ({
       set({
         screen: 'main',
         activeStatus,
-        sellerSubscriptionOperational,
         capabilities,
         profile: {
           firstName: first_name || '',

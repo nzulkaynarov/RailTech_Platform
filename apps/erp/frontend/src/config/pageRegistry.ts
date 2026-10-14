@@ -78,8 +78,6 @@ const SHARED_DOCUMENTS = [
   { id: 'acts', buyer: true, seller: true, navigable: true },
   { id: 'other-documents', buyer: true, seller: true, navigable: true },
   { id: 'company-files', buyer: true, seller: true, navigable: true },
-  // Подписка — страница СЧЁТА, а не бизнес-операция (уйдёт с волной подписок M1-ERP-02).
-  { id: 'my-subscription', buyer: true, seller: true, navigable: true },
   // Карточка сделки — одна страница для обеих сторон, родительская крошка контекстная.
   { id: 'request-detail', buyer: true, seller: true },
 ] as const satisfies readonly PageDefinition[];

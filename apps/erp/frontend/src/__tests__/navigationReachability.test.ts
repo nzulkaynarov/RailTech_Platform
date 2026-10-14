@@ -43,9 +43,6 @@ function capabilities(overrides: Partial<Capabilities> = {}): Capabilities {
   return {
     can_buy: true,
     can_sell: false,
-    subscription_active: false,
-    can_send_quotes: false,
-    quote_send_is_demo: false,
     permissions: ALL_PERMISSIONS,
     ...overrides,
   };
@@ -63,15 +60,15 @@ const PERSONAS: Persona[] = [
     statusEntries: [entry('BUYER')],
   },
   {
-    name: 'продавец (подписка активна)',
-    caps: capabilities({ can_sell: true, can_buy: false, subscription_active: true, can_send_quotes: true }),
+    name: 'продавец',
+    caps: capabilities({ can_sell: true, can_buy: false }),
     sides: { buy: false, sell: true },
     activeStatus: 'SELLER',
     statusEntries: [entry('SELLER')],
   },
   {
     name: 'компания с двумя сторонами',
-    caps: capabilities({ can_sell: true, subscription_active: true, can_send_quotes: true }),
+    caps: capabilities({ can_sell: true }),
     sides: { buy: true, sell: true },
     activeStatus: 'BUYER',
     statusEntries: [entry('BUYER'), entry('SELLER')],

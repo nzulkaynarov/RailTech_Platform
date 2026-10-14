@@ -1,15 +1,4 @@
 {
-  "featureKeys": {
-    "quoteSend": "Sending quotes to clients",
-    "quoteExport": "Quote export (PDF/Excel)",
-    "aiMatch": "AI catalog matching",
-    "aiDraft": "AI quote draft",
-    "aiPreflight": "AI request check",
-    "aiEnrich": "AI product card enrichment",
-    "rolesCustom": "Custom company roles",
-    "documentGenerate": "Document generation from templates",
-    "aiDailyCap": "Daily AI limit (override)"
-  },
   "dealStages": {
     "draft": "Draft",
     "rfqOpen": "RFQ open",
@@ -116,11 +105,6 @@
         "label": "Complete your profile",
         "hint": "First and last name — so teammates recognise you in activity logs.",
         "cta": "Open profile"
-      },
-      "subscription": {
-        "label": "Activate subscription",
-        "hint": "Suppliers and manufacturers need an active subscription to bid.",
-        "cta": "Pay now"
       },
       "firstRfq": {
         "label": "Create your first request",
@@ -235,40 +219,6 @@
     "aiUsedNotice": "Rows extracted by AI: {{n}} — review the preview carefully.",
     "templateSecondary": "Exact Excel template — if you prefer to fill it in manually",
     "reqFormats": "Formats: Excel (.xlsx), PDF or photo (.png, .jpg, .jpeg) — up to 20 MB"
-  },
-  "mySubscription": {
-    "title": "My subscription",
-    "description": "Plan, status and payment history for your company",
-    "payNow": "Pay now",
-    "noneTitle": "No subscription",
-    "noneHint": "Your company doesn't have an active subscription yet. Contact the platform admin or support to get started.",
-    "kpi": {
-      "plan": "Plan",
-      "status": "Status",
-      "monthly": "Monthly rate",
-      "validUntil": "Valid until",
-      "remaining_one": "{{count}} day left",
-      "remaining_other": "{{count}} days left"
-    },
-    "alerts": {
-      "suspendedTitle": "Subscription suspended",
-      "suspendedWithReason": "The subscription was suspended by a platform operator. Reason: {{reason}}",
-      "suspendedHint": "While the subscription is suspended, seller features are unavailable. Clear the balance to resume.",
-      "pastDueTitle": "Payment overdue",
-      "pastDueHint": "Pay the next cycle to keep access to seller features.",
-      "expiringTitle": "Subscription expires in {{days}} days",
-      "expiringHint": "Renew early to avoid interruption.",
-      "requiredTitle": "Active subscription required",
-      "requiredHint": "Selling actions (sending quotes, signing contracts, issuing documents) need an active subscription. Activate one to start selling."
-    },
-    "billing": {
-      "title": "Billing & payments",
-      "company": "Company",
-      "validFrom": "Valid from",
-      "lastPayment": "Last payment",
-      "nextPayment": "Next payment",
-      "manualModeHint": "Payments are currently processed manually. Once a payment provider is wired up, this button will extend the period automatically."
-    }
   },
   "createDeal": {
     "title": "New request (RFQ)",
@@ -561,14 +511,6 @@
     "rowError": {
       "marker": "Errors in collapsed fields",
       "fields": "Check fields:"
-    },
-    "sendGate": {
-      "subscription": "Sending a quote to the client requires an active subscription.",
-      "disabledByOperator": "Sending quotes is disabled by the platform for your company. This is not about the subscription — please contact support.",
-      "disabledByOperatorCta": "Contact support",
-      "subscriptionCta": "Subscribe",
-      "demo": "Demo mode: sending a quote is unavailable — documents carry a DEMO watermark.",
-      "demoCta": "Subscribe"
     },
     "customsDuty": "Customs, per unit",
     "quantity": "Qty",
@@ -1067,7 +1009,6 @@
     "payments": "Payments",
     "acts": "Acts",
     "fulfillments": "Fulfillments",
-    "mySubscription": "My subscription",
     "forgotPassword": "Reset password",
     "resetPassword": "New password",
     "hsDirectory": "HS classifier",
@@ -1370,7 +1311,6 @@
       "defaults": "Default quote parameters",
       "numbering": "Document numbering",
       "docTemplates": "Email & act templates",
-      "billing": "Plan & subscription",
       "branding": "Letterhead & brand"
     },
     "groups": {
@@ -1378,7 +1318,6 @@
       "company": "Company",
       "sales": "Sales",
       "team": "Team & access",
-      "billing": "Billing",
       "platform": "Platform",
       "documents": "Documents"
     },
@@ -2217,13 +2156,6 @@
     "generate": "Create contract",
     "success": "Contract created"
   },
-  "subscriptionPay": {
-    "title": "Pay subscription",
-    "amount": "Amount",
-    "months": "Number of months",
-    "pay": "Pay",
-    "paid": "Payment recorded, subscription activated"
-  },
   "manualMode": {
     "payment": "Manual mode: payment is recorded by hand. A real payment provider (Click / Payme / Stripe) will be wired before production release.",
     "esign": "Manual mode: click-to-sign. A legally binding e-signature (E-IMZO) will be wired before production release."
@@ -2369,7 +2301,6 @@
     "CONTACT_HAS_NO_EMAIL": "The contact has no email to invite",
     "COMPANY_ALREADY_REGISTERED": "The company is already registered",
     "CLIENT_INVITE_INVALID": "The invitation is invalid or has expired",
-    "SUBSCRIPTION_REQUIRED": "An active subscription is required to perform seller actions. Activate a subscription to continue.",
     "DOCUMENT_NOT_EDITABLE": "Only a draft document can be edited",
     "DOCUMENT_ALREADY_ISSUED": "The document is already issued",
     "DOCUMENT_ALREADY_CANCELLED": "The document is already cancelled",
@@ -2418,14 +2349,10 @@
     "QUOTE_HAS_UNPRICED_LINES": "Set a price on every line — a quote with zero-priced rows can't be submitted",
     "QUOTE_BELOW_COST": "Quote is below landed cost — selling at a loss. Raise the price or margin.",
     "FX_RATE_MISSING": "No FX rate for a line currency — cost not computed. Set the rate in quote settings.",
-    "QUOTE_SEND_NOT_ENTITLED": "Sending a quote requires an active subscription — subscribe to send proposals to clients.",
-    "QUOTE_EXPORT_NOT_ENTITLED": "Exporting a quote with cost data requires an active subscription.",
-    "AI_DRAFT_NOT_ENTITLED": "AI draft quote requires an active subscription or credits.",
     "NO_REQUEST_LINES": "The request has no lines to draft a quote from.",
     "PLATFORM_ADMIN_REQUIRED": "This action is restricted to platform administrators",
     "FORCE_REASON_REQUIRED": "Force-action requires a mandatory reason (written to the audit log)",
     "QUOTE_STATUS_NOT_FOUND": "Quote status not found in the lookup table",
-    "SUBSCRIPTION_NOT_OPERATIONAL": "Company subscription is not operational — please pay the subscription to continue selling",
     "PLATFORM_ADMIN_CANNOT_JOIN_COMPANY": "A platform administrator cannot join a company — admins have no commercial stake in any deal",
     "ADMIN_ROLE_REQUIRES_NO_MEMBERSHIPS": "The platform admin role can only be assigned to users with no company memberships",
     "WORKSPACE_ROLE_NOT_APPLICABLE_TO_COMPANY_TYPE": "This workspace role is not applicable to the selected company type",
@@ -2455,7 +2382,6 @@
     "ACT_AWAITING_REISSUE": "The act for this invoice came back with a remark — re-issue it instead of creating a second one",
     "ACT_REISSUE_NOT_ALLOWED": "Only an act returned by the customer can be re-issued",
     "COMPANY_NOT_FOUND": "Company not found",
-    "SUBSCRIPTION_EXPIRED_EXTEND_FIRST": "The subscription has expired — a payment renews it, not a status change",
     "INVALID_MONTHS": "The number of months must be between 1 and 60",
     "INVALID_AMOUNT": "The amount cannot be negative",
     "OPERATOR_PERMISSION_REQUIRED": "Your operator role does not have the capability for this action",
@@ -2476,7 +2402,6 @@
     "ONLY_COMPANY_ADMIN_CAN_MANAGE_TEAM": "Only the Company Admin can manage the team.",
     "FILE_TOO_LARGE": "The file exceeds the allowed size",
     "FULFILLMENT_ACCEPTANCE_IS_BUYER_STEP": "Acceptance and disputes are the customer’s step — the seller marks shipping and delivery",
-    "SUBSCRIPTION_STATUS_IS_AN_ACTION": "Subscription status is changed by the Activate and Suspend actions, not by editing the card",
     "ERR_NETWORK": "No connection to the server. Check your network and try again",
     "ECONNABORTED": "The server did not respond in time. Try again",
     "ETIMEDOUT": "The server did not respond in time. Try again",
@@ -2497,7 +2422,6 @@
     "NO_QUOTE_COMPANY": "The quote has no owning company — assign a preparer first",
     "UNKNOWN": "Unknown error",
     "AI_DAILY_CAP_REACHED": "Your company has reached its daily AI limit. It resets tomorrow.",
-    "AI_FEATURE_NOT_ENTITLED": "This AI feature requires a subscription.",
     "AI_DISABLED": "The AI check is currently unavailable.",
     "AI_EXTRACT_FAILED": "Could not read the document. Try again or upload a clearer file.",
     "AI_JOB_FAILED": "The AI task failed. Please try again.",
@@ -3073,12 +2997,6 @@
         "detail": "Act {{number}} for deal #{{deal_id}}: the customer was reminded"
       }
     },
-    "subscription": {
-      "paid": {
-        "title": "Subscription paid",
-        "detail": "Subscription for {{company_name}}: +{{months}} mo, amount {{amount}}. Valid until {{valid_until}}."
-      }
-    },
     "company": {
       "merged": {
         "title": "Duplicate company merged",
@@ -3120,30 +3038,6 @@
           "detail": "{{email}}: {{before}} → {{after}}"
         }
       },
-      "entitlement": {
-        "granted": {
-          "title": "Entitlement granted",
-          "detail": "{{company_name}} · {{feature_key}}"
-        },
-        "changed": {
-          "title": "Entitlement changed",
-          "detail": "{{company_name}} · {{feature_key}}"
-        },
-        "revoked": {
-          "title": "Entitlement revoked",
-          "detail": "{{company_name}} · {{feature_key}}"
-        }
-      },
-      "subscription": {
-        "suspended": {
-          "title": "Subscription suspended",
-          "detail": "{{company_name}}"
-        },
-        "activated": {
-          "title": "Subscription activated",
-          "detail": "{{company_name}}"
-        }
-      },
       "lead": {
         "routed": {
           "title": "Lead assigned to a company",
@@ -3176,23 +3070,6 @@
     "client": "Buyer",
     "supplier": "Supplier",
     "manufacturer": "Manufacturer"
-  },
-  "subscriptionPlans": {
-    "basic": "Basic",
-    "standard": "Standard",
-    "premium": "Premium"
-  },
-  "subscriptionStatuses": {
-    "trial": "Trial",
-    "active": "Active",
-    "pastDue": "Past due",
-    "suspended": "Suspended",
-    "cancelled": "Cancelled"
-  },
-  "entitlementAccess": {
-    "enabled": "Enabled",
-    "disabled": "Disabled",
-    "demo": "Demo"
   },
   "chargeTypes": {
     "freight": "Freight / logistics",
@@ -3457,10 +3334,6 @@
     "act.signed": {
       "title": "Act signed",
       "message": "Act {{number}} on deal #{{deal_id}} has been signed"
-    },
-    "subscription.suspended": {
-      "title": "Subscription suspended",
-      "message": "{{company_name}}: some seller features are unavailable. {{reason}}"
     },
     "act.rejected": {
       "title": "Act rejected by the customer",

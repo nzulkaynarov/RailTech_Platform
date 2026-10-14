@@ -23,16 +23,12 @@ import { CompanyDocumentProfileSettings } from '@/components/Cabinet/CompanyDocu
 import { CompanyDefaultsSettings } from '@/components/Cabinet/CompanyDefaultsSettings';
 import { CompanyNumberingSettings } from '@/components/Cabinet/CompanyNumberingSettings';
 import { CompanyTab } from '@/components/Cabinet/CompanyTab';
-import { MySubscriptionContent } from '@/pages/MySubscriptionPage';
 
 export function SettingsPage() {
   const { t } = useTranslation();
-  const { capabilities, company } = useUserStore();
+  const capabilities = useUserStore((s) => s.capabilities);
   const isOwner = useAuthStore((s) => s.user?.workspace_role === 'OWNER');
-  // Компания типизирована как продавец (SUPPLIER/MANUFACTURER → statusEntries !== BUYER).
-  // capabilities.can_sell — флаг участника и НЕ знает тип компании (см. settingsSections).
-  const companySells = company.statusEntries.some((entry) => entry.status !== 'BUYER');
-  const gate: SettingsGateInput = { isOwner, capabilities, companySells };
+  const gate: SettingsGateInput = { isOwner, capabilities };
   const sections = buildSettingsSections(gate);
 
   // `?section=` живёт в search-части URL (useUrlState), hash остаётся `#settings` —
@@ -90,9 +86,6 @@ function SectionContent({ sectionKey }: { sectionKey: SettingsSectionKey }): Rea
       return <DocumentTemplatesSettings />;
     case 'team':
       return <CompanyTeamSettings />;
-    case 'billing':
-      // S5/P7 — витрина плана компании (read-only), перенос top-level «Подписки» в настройки.
-      return <MySubscriptionContent />;
     case 'platform':
       return <PlatformSettings />;
   }

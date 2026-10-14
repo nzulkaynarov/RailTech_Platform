@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { accountsApi, User, UserFilterParams, CompanyFilterParams } from '../api/accountsApi';
-import { useUserStore } from '../store/userStore';
 
 // ─── Company Roles & Permissions ─────────────────────────────────────────────
 
@@ -297,81 +296,5 @@ export const useDeleteUserAvatar = () => {
   return useMutation({
     mutationFn: (userId: number) => accountsApi.deleteUserAvatar(userId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
-  });
-};
-
-// ─── Subscriptions ─────────────────────────────────────────────────────
-
-export const useSubscriptions = (params?: {
-  search?: string;
-  status?: string;
-  plan?: string;
-  ordering?: string;
-  fetchAll?: boolean;
-}) => useQuery({
-  queryKey: ['subscriptions', params],
-  queryFn: () => accountsApi.getSubscriptions(params),
-});
-
-export const useMySubscription = () => {
-  // Subscriptions are a seller concern, so idle until the store actually reads SELLER —
-  // the pre-auth default is BUYER, which also closes the login race window (AppShell
-  // mounts and the query would fire before loadFromAuth resolves /me).
-  const activeStatus = useUserStore((s) => s.activeStatus);
-  return useQuery({
-    queryKey: ['my-subscription'],
-    queryFn: () => accountsApi.getMySubscription(),
-    staleTime: 60_000,
-    enabled: activeStatus === 'SELLER',
-  });
-};
-
-export const useActivateSubscription = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: number) => accountsApi.activateSubscription(id),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['subscriptions'] }); },
-  });
-};
-
-export const useSuspendSubscription = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, reason }: { id: number; reason: string }) => accountsApi.suspendSubscription(id, reason),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['subscriptions'] }); },
-  });
-};
-
-export const usePaySubscription = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, amount, months }: { id: number; amount: string; months?: number }) =>
-      accountsApi.paySubscription(id, amount, months ?? 1),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['subscriptions'] }),
-  });
-};
-
-export const useCreateSubscription = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data: Parameters<typeof accountsApi.createSubscription>[0]) => accountsApi.createSubscription(data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['subscriptions'] }),
-  });
-};
-
-export const useUpdateSubscription = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Parameters<typeof accountsApi.updateSubscription>[1] }) =>
-      accountsApi.updateSubscription(id, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['subscriptions'] }),
-  });
-};
-
-export const useDeleteSubscription = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: number) => accountsApi.deleteSubscription(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['subscriptions'] }),
   });
 };

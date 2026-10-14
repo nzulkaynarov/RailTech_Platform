@@ -46,7 +46,7 @@ describe('реестр страниц: эквивалентность прежн
         'dashboard', 'profile', 'settings', 'help',
         'products', 'product_detail', 'my-requests', 'request-detail',
         'contracts', 'invoices', 'payments', 'acts', 'fulfillments', 'other-documents', 'company-files',
-        'my-subscription', 'suppliers',
+        'suppliers',
       ]),
     );
   });
@@ -65,7 +65,7 @@ describe('реестр страниц: эквивалентность прежн
         // + R6: страница справочников (ТН ВЭД · категории · группы) — тоже продавцовая.
         'catalog-reference',
         'sourcing-requests', 'crm-deals', 'crm-quotes',
-        'deal-quote', 'request-detail', 'my-subscription',
+        'deal-quote', 'request-detail',
         'contracts', 'invoices', 'payments', 'acts', 'fulfillments', 'other-documents', 'company-files',
         'clients',
       ]),
@@ -82,7 +82,7 @@ describe('реестр страниц: эквивалентность прежн
         'categories', 'equipment-groups',
         'help', 'my-requests',
         'contracts', 'invoices', 'payments', 'acts', 'fulfillments', 'other-documents', 'company-files',
-        'my-subscription', 'catalog-import',
+        'catalog-import',
         // + волна A номенклатуры.
         'nomenclature',
         // R2/R3: «Мои товары» + создание/редактор карточки; nomenclature — алиас.

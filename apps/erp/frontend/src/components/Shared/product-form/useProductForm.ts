@@ -348,7 +348,7 @@ export function useProductForm({ target, sellerCompanyId, open = true, onSaved }
       const status = (err as { response?: { status?: number } })?.response?.status;
       if (status === 503) toast.info(t('adminCatalog.aiEnrich.empty'));
       // Business gates carry a stable {detail: CODE} — surface the localised message
-      // (403 AI_FEATURE_NOT_ENTITLED = needs subscription; 429 AI_DAILY_CAP_REACHED).
+      // (403 — нет права роли; 429 AI_DAILY_CAP_REACHED).
       else if (status === 403 || status === 429) toast.error(translateApiError(err));
       else toast.error(t('adminCatalog.aiEnrich.failed'));
     }
