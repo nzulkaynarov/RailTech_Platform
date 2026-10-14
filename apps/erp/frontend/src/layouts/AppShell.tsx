@@ -57,8 +57,6 @@ import { useCartStore, useCartCount } from '@/store/cartStore';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useAuthStore } from '@/store/authStore';
 import { NotificationCenter } from '@/components/Layout/NotificationCenter';
-import { SupportButton } from '@/components/Layout/SupportButton';
-import { ChatDrawer } from '@/components/Layout/ChatDrawer';
 import { DocumentSearchDialog } from '@/components/Layout/DocumentSearchDialog';
 import { useCommandPaletteShortcut, useCommandPaletteState } from '@/components/Layout/useCommandPalette';
 import { SubscriptionStatusBanner } from '@/components/Shared/SubscriptionStatusBanner';
@@ -495,8 +493,6 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour, fullBlee
                 </TooltipTrigger>
                 <TooltipContent>{t('search.trigger')}</TooltipContent>
               </Tooltip>
-              <ChatDrawer onNavigate={onNavigate} />
-              <SupportButton />
               <NotificationCenter onNavigate={onNavigate} />
             </div>
           </header>

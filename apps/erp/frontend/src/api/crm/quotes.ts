@@ -151,5 +151,4 @@ export const quotesApi = {
 		const response = await apiClient.get<PaginatedResponse<Quote>>('crm/quotes/my-approval-queue/');
 		return response.data.results;
 	},
-	// ─── Lead ops ─────────────────────────────────────────────
 };

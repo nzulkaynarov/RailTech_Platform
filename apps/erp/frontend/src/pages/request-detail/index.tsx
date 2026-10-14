@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
-import { DealChatPanel } from '@/components/Sourcing/DealChatPanel';
+import { DealAttachmentsPanel } from '@/components/Sourcing/DealAttachmentsPanel';
 import { RejectQuoteDialog } from '@/components/CRM/RejectQuoteDialog';
 import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog';
 import { RequestItemsEditor } from '@/components/CRM/RequestItemsEditor';
@@ -296,9 +296,13 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
         <DealTimeline dealId={deal.id} />
       </div>
 
-      {/* Chat Panel — pass routed sellers so the buyer picks a private lane per seller (audit #4) */}
+      {/* Вложения сделки (Excel-спецификации, чертежи). Чат сделки ушёл в M1-ERP-02 1b — переписка с клиентом в CRM. */}
       <div className="w-80 shrink-0 sticky top-0 self-start hidden lg:flex flex-col">
-        <DealChatPanel dealId={deal.id} sellers={deal.target_sellers_data} />
+        <Card>
+          <CardContent>
+            <DealAttachmentsPanel dealId={deal.id} />
+          </CardContent>
+        </Card>
       </div>
 
       <RejectQuoteDialog

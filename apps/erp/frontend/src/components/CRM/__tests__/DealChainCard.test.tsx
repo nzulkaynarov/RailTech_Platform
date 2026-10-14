@@ -38,7 +38,7 @@ function makeHub(overrides: Partial<DealDocumentHub> = {}): DealDocumentHub {
     fulfillment: null,
     payments_count: 0,
     payments_total: '0',
-    viewer: { is_buyer_side: true, is_seller_side: false, is_viewer: false },
+    viewer: { is_buyer_side: true, is_seller_side: false },
     next_step: null,
     ...overrides,
   };
@@ -103,7 +103,7 @@ describe('DealChainCard', () => {
     // клиентской роли — продавцу не предлагают «оплатить» собственный счёт.
     getDealDocuments.mockResolvedValue(
       makeHub({
-        viewer: { is_buyer_side: false, is_seller_side: true, is_viewer: false },
+        viewer: { is_buyer_side: false, is_seller_side: true },
         next_step: { code: 'PAY_INVOICE', for_viewer: false, page: 'invoices', object_id: 11 },
       }),
     );

@@ -1446,66 +1446,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/access-log/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Access log — break-glass + force-override feed
-         * @description Platform-wide feed of break-glass grants and force-override actions (force-approve quote, force-cancel contract, forced deal-stage), newest first. Powers the admin «Журнал доступа» page.
-         */
-        get: operations["admin_access_log_retrieve"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/activity/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Entity-scoped activity log
-         * @description Returns ActivityLog entries filtered by entity_type + entity_id. Used by the Timeline tab on admin detail pages.
-         */
-        get: operations["admin_activity_retrieve"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/break-glass/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Open a break-glass access grant (audited, time-boxed)
-         * @description Records a reason-required, entity-scoped BREAK_GLASS log so an operator's access to a tenant's private deal/quote/contract is attributable and expires.
-         */
-        post: operations["admin_break_glass_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/admin/email-templates/": {
         parameters: {
             query?: never;
@@ -1713,163 +1653,6 @@ export interface paths {
          *     or access enums; adding a feature key here surfaces it in the UI with no frontend change.
          */
         get: operations["admin_entitlements_choices_retrieve"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/operator-permissions/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Operator permission catalog
-         * @description The operator capability catalog for the role editor (grouped, bilingual labels).
-         */
-        get: operations["admin_operator_permissions_retrieve"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/operator-roles/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * @description CRUD for platform-operator sub-roles. Any platform operator may read; mutating
-         *     needs the `operators.manage` capability (SUPER_OPERATOR). Platform-scoped.
-         */
-        get: operations["admin_operator_roles_list"];
-        put?: never;
-        /**
-         * @description CRUD for platform-operator sub-roles. Any platform operator may read; mutating
-         *     needs the `operators.manage` capability (SUPER_OPERATOR). Platform-scoped.
-         */
-        post: operations["admin_operator_roles_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/operator-roles/{id}/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * @description CRUD for platform-operator sub-roles. Any platform operator may read; mutating
-         *     needs the `operators.manage` capability (SUPER_OPERATOR). Platform-scoped.
-         */
-        get: operations["admin_operator_roles_retrieve"];
-        /**
-         * @description CRUD for platform-operator sub-roles. Any platform operator may read; mutating
-         *     needs the `operators.manage` capability (SUPER_OPERATOR). Platform-scoped.
-         */
-        put: operations["admin_operator_roles_update"];
-        post?: never;
-        /**
-         * @description CRUD for platform-operator sub-roles. Any platform operator may read; mutating
-         *     needs the `operators.manage` capability (SUPER_OPERATOR). Platform-scoped.
-         */
-        delete: operations["admin_operator_roles_destroy"];
-        options?: never;
-        head?: never;
-        /**
-         * @description CRUD for platform-operator sub-roles. Any platform operator may read; mutating
-         *     needs the `operators.manage` capability (SUPER_OPERATOR). Platform-scoped.
-         */
-        patch: operations["admin_operator_roles_partial_update"];
-        trace?: never;
-    };
-    "/api/v1/admin/operator-roles/assign/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Assign an operator role to a platform operator
-         * @description CRUD for platform-operator sub-roles. Any platform operator may read; mutating
-         *     needs the `operators.manage` capability (SUPER_OPERATOR). Platform-scoped.
-         */
-        post: operations["admin_operator_roles_assign_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/pulse/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Admin pulse metrics
-         * @description Daily time-series for the admin dashboard: new companies, new deals (count + value), and monthly recurring revenue base (subscription monthly_rate sum of ACTIVE subs) by day.
-         */
-        get: operations["admin_pulse_retrieve"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/queue/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Admin triage queue
-         * @description Unified list of items requiring platform admin attention: KYC pending, role applications, subscriptions past-due/expiring, overdue invoices, urgent support tickets. Sorted by severity then oldest first.
-         */
-        get: operations["admin_queue_retrieve"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/admin/search/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Admin cross-entity search
-         * @description Fuzzy admin search across companies, users, deals, supplier offers, and support tickets.
-         */
-        get: operations["admin_search_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3890,26 +3673,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/crm/deals/{deal_id}/suggest-reply/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * AI suggest reply for a deal chat
-         * @description Drafts a professional reply DRAFT for the deal's chat from its recent message history + minimal deal context. The user reviews/edits the draft before sending (human-in-loop — never auto-sent). The draft is built ONLY from the actual conversation in our DB (Rule 1: no invented commitments/prices). Returns an empty draft when the user cannot access this deal's chat, when there is no conversation yet, or when AI is off.
-         */
-        post: operations["crm_deals_suggest_reply_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/crm/deals/{id}/": {
         parameters: {
             query?: never;
@@ -4930,246 +4693,6 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
-        trace?: never;
-    };
-    "/api/v1/crm/leads/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List leads
-         * @description Очередь лидов площадки: оператор назначает, компания берёт в работу.
-         *
-         *     Эталон — Salesforce Lead Queue + Take Ownership: входящий лид лежит в очереди ПЛОЩАДКИ,
-         *     оператор его квалифицирует и назначает владельцу, а сделку создаёт принимающая сторона
-         *     (она же становится владельцем). Так квалификация остаётся модерацией, а бизнес-объект не
-         *     рождается от лица оператора (ADR-0002).
-         *
-         *     Права: до 24-08 класс стоял на голом `IsPlatformAdmin` — любой оператор, включая
-         *     «Поддержку» с одними `*.view`, мог править и УДАЛЯТЬ лиды. Это приведение к уже
-         *     заявленному («только просмотр»), а не новая блокировка. Сырое удаление снято совсем:
-         *     лид закрывают отклонением с причиной, как контакты (`ContactViewSet`).
-         */
-        get: operations["crm_leads_list"];
-        put?: never;
-        /**
-         * Create lead
-         * @description Очередь лидов площадки: оператор назначает, компания берёт в работу.
-         *
-         *     Эталон — Salesforce Lead Queue + Take Ownership: входящий лид лежит в очереди ПЛОЩАДКИ,
-         *     оператор его квалифицирует и назначает владельцу, а сделку создаёт принимающая сторона
-         *     (она же становится владельцем). Так квалификация остаётся модерацией, а бизнес-объект не
-         *     рождается от лица оператора (ADR-0002).
-         *
-         *     Права: до 24-08 класс стоял на голом `IsPlatformAdmin` — любой оператор, включая
-         *     «Поддержку» с одними `*.view`, мог править и УДАЛЯТЬ лиды. Это приведение к уже
-         *     заявленному («только просмотр»), а не новая блокировка. Сырое удаление снято совсем:
-         *     лид закрывают отклонением с причиной, как контакты (`ContactViewSet`).
-         */
-        post: operations["crm_leads_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/crm/leads/{id}/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get lead details
-         * @description Очередь лидов площадки: оператор назначает, компания берёт в работу.
-         *
-         *     Эталон — Salesforce Lead Queue + Take Ownership: входящий лид лежит в очереди ПЛОЩАДКИ,
-         *     оператор его квалифицирует и назначает владельцу, а сделку создаёт принимающая сторона
-         *     (она же становится владельцем). Так квалификация остаётся модерацией, а бизнес-объект не
-         *     рождается от лица оператора (ADR-0002).
-         *
-         *     Права: до 24-08 класс стоял на голом `IsPlatformAdmin` — любой оператор, включая
-         *     «Поддержку» с одними `*.view`, мог править и УДАЛЯТЬ лиды. Это приведение к уже
-         *     заявленному («только просмотр»), а не новая блокировка. Сырое удаление снято совсем:
-         *     лид закрывают отклонением с причиной, как контакты (`ContactViewSet`).
-         */
-        get: operations["crm_leads_retrieve"];
-        /**
-         * Update lead
-         * @description Очередь лидов площадки: оператор назначает, компания берёт в работу.
-         *
-         *     Эталон — Salesforce Lead Queue + Take Ownership: входящий лид лежит в очереди ПЛОЩАДКИ,
-         *     оператор его квалифицирует и назначает владельцу, а сделку создаёт принимающая сторона
-         *     (она же становится владельцем). Так квалификация остаётся модерацией, а бизнес-объект не
-         *     рождается от лица оператора (ADR-0002).
-         *
-         *     Права: до 24-08 класс стоял на голом `IsPlatformAdmin` — любой оператор, включая
-         *     «Поддержку» с одними `*.view`, мог править и УДАЛЯТЬ лиды. Это приведение к уже
-         *     заявленному («только просмотр»), а не новая блокировка. Сырое удаление снято совсем:
-         *     лид закрывают отклонением с причиной, как контакты (`ContactViewSet`).
-         */
-        put: operations["crm_leads_update"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /**
-         * Partially update lead
-         * @description Очередь лидов площадки: оператор назначает, компания берёт в работу.
-         *
-         *     Эталон — Salesforce Lead Queue + Take Ownership: входящий лид лежит в очереди ПЛОЩАДКИ,
-         *     оператор его квалифицирует и назначает владельцу, а сделку создаёт принимающая сторона
-         *     (она же становится владельцем). Так квалификация остаётся модерацией, а бизнес-объект не
-         *     рождается от лица оператора (ADR-0002).
-         *
-         *     Права: до 24-08 класс стоял на голом `IsPlatformAdmin` — любой оператор, включая
-         *     «Поддержку» с одними `*.view`, мог править и УДАЛЯТЬ лиды. Это приведение к уже
-         *     заявленному («только просмотр»), а не новая блокировка. Сырое удаление снято совсем:
-         *     лид закрывают отклонением с причиной, как контакты (`ContactViewSet`).
-         */
-        patch: operations["crm_leads_partial_update"];
-        trace?: never;
-    };
-    "/api/v1/crm/leads/{id}/claim/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Claim a routed lead — the receiving company creates the deal
-         * @description Компания берёт назначенный ей лид в работу. Сделка рождается здесь, и владелец у неё правильный — компания, а не оператор платформы (ADR-0002).
-         */
-        post: operations["crm_leads_claim_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/crm/leads/{id}/reject/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Reject a lead (spam / duplicate)
-         * @description Очередь лидов площадки: оператор назначает, компания берёт в работу.
-         *
-         *     Эталон — Salesforce Lead Queue + Take Ownership: входящий лид лежит в очереди ПЛОЩАДКИ,
-         *     оператор его квалифицирует и назначает владельцу, а сделку создаёт принимающая сторона
-         *     (она же становится владельцем). Так квалификация остаётся модерацией, а бизнес-объект не
-         *     рождается от лица оператора (ADR-0002).
-         *
-         *     Права: до 24-08 класс стоял на голом `IsPlatformAdmin` — любой оператор, включая
-         *     «Поддержку» с одними `*.view`, мог править и УДАЛЯТЬ лиды. Это приведение к уже
-         *     заявленному («только просмотр»), а не новая блокировка. Сырое удаление снято совсем:
-         *     лид закрывают отклонением с причиной, как контакты (`ContactViewSet`).
-         */
-        post: operations["crm_leads_reject_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/crm/leads/{id}/route/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Route a lead to a company (Salesforce lead assignment)
-         * @description Оператор платформы назначает лид компании. Это маршрутизация, а не создание сделки: сделку создаёт принимающая сторона действием `claim`.
-         */
-        post: operations["crm_leads_route_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/crm/messages/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List messages
-         * @description Returns deal messages. Filterable by deal_id.
-         */
-        get: operations["crm_messages_list"];
-        put?: never;
-        /**
-         * Send message
-         * @description Send a message in a deal chat. Sender is auto-assigned.
-         */
-        post: operations["crm_messages_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/crm/messages/{id}/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get message
-         * @description CRUD for deal messages (chat within a deal).
-         *
-         *     Messages are ordered by timestamp. The sender is auto-assigned
-         *     to the current user on creation.
-         */
-        get: operations["crm_messages_retrieve"];
-        /**
-         * Update message
-         * @description CRUD for deal messages (chat within a deal).
-         *
-         *     Messages are ordered by timestamp. The sender is auto-assigned
-         *     to the current user on creation.
-         */
-        put: operations["crm_messages_update"];
-        post?: never;
-        /**
-         * Delete message
-         * @description CRUD for deal messages (chat within a deal).
-         *
-         *     Messages are ordered by timestamp. The sender is auto-assigned
-         *     to the current user on creation.
-         */
-        delete: operations["crm_messages_destroy"];
-        options?: never;
-        head?: never;
-        /**
-         * Partially update message
-         * @description CRUD for deal messages (chat within a deal).
-         *
-         *     Messages are ordered by timestamp. The sender is auto-assigned
-         *     to the current user on creation.
-         */
-        patch: operations["crm_messages_partial_update"];
         trace?: never;
     };
     "/api/v1/crm/numbering-scheme/": {
@@ -6613,10 +6136,10 @@ export interface paths {
         put?: never;
         /**
          * @description Uploads/lists/deletes private attachments tied to exactly one parent
-         *     (deal, message, quote, company, or product).
+         *     (deal, quote, company, or product).
          *
-         *     - list: filter by deal/message/quote/company/product query params.
-         *     - create: requires ONE of deal/message/quote/company/product, plus `file`.
+         *     - list: filter by deal/quote/company/product query params.
+         *     - create: requires ONE of deal/quote/company/product, plus `file`.
          *     - destroy: only uploader or platform admin.
          *
          *     Access to the attached entity is checked via the deal's company membership
@@ -6643,10 +6166,10 @@ export interface paths {
         get: operations["sourcing_attachments_retrieve"];
         /**
          * @description Uploads/lists/deletes private attachments tied to exactly one parent
-         *     (deal, message, quote, company, or product).
+         *     (deal, quote, company, or product).
          *
-         *     - list: filter by deal/message/quote/company/product query params.
-         *     - create: requires ONE of deal/message/quote/company/product, plus `file`.
+         *     - list: filter by deal/quote/company/product query params.
+         *     - create: requires ONE of deal/quote/company/product, plus `file`.
          *     - destroy: only uploader or platform admin.
          *
          *     Access to the attached entity is checked via the deal's company membership
@@ -6656,10 +6179,10 @@ export interface paths {
         post?: never;
         /**
          * @description Uploads/lists/deletes private attachments tied to exactly one parent
-         *     (deal, message, quote, company, or product).
+         *     (deal, quote, company, or product).
          *
-         *     - list: filter by deal/message/quote/company/product query params.
-         *     - create: requires ONE of deal/message/quote/company/product, plus `file`.
+         *     - list: filter by deal/quote/company/product query params.
+         *     - create: requires ONE of deal/quote/company/product, plus `file`.
          *     - destroy: only uploader or platform admin.
          *
          *     Access to the attached entity is checked via the deal's company membership
@@ -6670,10 +6193,10 @@ export interface paths {
         head?: never;
         /**
          * @description Uploads/lists/deletes private attachments tied to exactly one parent
-         *     (deal, message, quote, company, or product).
+         *     (deal, quote, company, or product).
          *
-         *     - list: filter by deal/message/quote/company/product query params.
-         *     - create: requires ONE of deal/message/quote/company/product, plus `file`.
+         *     - list: filter by deal/quote/company/product query params.
+         *     - create: requires ONE of deal/quote/company/product, plus `file`.
          *     - destroy: only uploader or platform admin.
          *
          *     Access to the attached entity is checked via the deal's company membership
@@ -6691,10 +6214,10 @@ export interface paths {
         };
         /**
          * @description Uploads/lists/deletes private attachments tied to exactly one parent
-         *     (deal, message, quote, company, or product).
+         *     (deal, quote, company, or product).
          *
-         *     - list: filter by deal/message/quote/company/product query params.
-         *     - create: requires ONE of deal/message/quote/company/product, plus `file`.
+         *     - list: filter by deal/quote/company/product query params.
+         *     - create: requires ONE of deal/quote/company/product, plus `file`.
          *     - destroy: only uploader or platform admin.
          *
          *     Access to the attached entity is checked via the deal's company membership
@@ -6903,202 +6426,6 @@ export interface paths {
          * @description Runs an ADVISORY quality pass over draft request lines before the buyer submits the RFQ. Claude flags vague descriptions, missing/implausible qty or units, likely-duplicate lines and missing key specs. Returns warnings only — never a hard block (line_index always references a GIVEN line; out-of-range indices are dropped). Capped at 50 lines per call. ARCH-01: the LLM call runs on Celery — returns 202 + task_id; poll sourcing/ai-status/<task_id>/ for {findings: []}.
          */
         post: operations["sourcing_preflight_check_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/support/tickets/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List support tickets
-         * @description Канал прямой связи: любой пользователь создаёт тикет, Platform Admin
-         *     ведёт переписку и меняет статус.
-         *
-         *     - пользователь: видит свои тикеты, может создавать и отвечать;
-         *     - Platform Admin: видит все тикеты, меняет статус, назначает исполнителя,
-         *       оставляет внутренние заметки (is_internal=True).
-         */
-        get: operations["support_tickets_list"];
-        put?: never;
-        /**
-         * Create support ticket
-         * @description Канал прямой связи: любой пользователь создаёт тикет, Platform Admin
-         *     ведёт переписку и меняет статус.
-         *
-         *     - пользователь: видит свои тикеты, может создавать и отвечать;
-         *     - Platform Admin: видит все тикеты, меняет статус, назначает исполнителя,
-         *       оставляет внутренние заметки (is_internal=True).
-         */
-        post: operations["support_tickets_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/support/tickets/{id}/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get support ticket
-         * @description Канал прямой связи: любой пользователь создаёт тикет, Platform Admin
-         *     ведёт переписку и меняет статус.
-         *
-         *     - пользователь: видит свои тикеты, может создавать и отвечать;
-         *     - Platform Admin: видит все тикеты, меняет статус, назначает исполнителя,
-         *       оставляет внутренние заметки (is_internal=True).
-         */
-        get: operations["support_tickets_retrieve"];
-        put?: never;
-        post?: never;
-        /**
-         * Delete support ticket (admin)
-         * @description Канал прямой связи: любой пользователь создаёт тикет, Platform Admin
-         *     ведёт переписку и меняет статус.
-         *
-         *     - пользователь: видит свои тикеты, может создавать и отвечать;
-         *     - Platform Admin: видит все тикеты, меняет статус, назначает исполнителя,
-         *       оставляет внутренние заметки (is_internal=True).
-         */
-        delete: operations["support_tickets_destroy"];
-        options?: never;
-        head?: never;
-        /**
-         * Update support ticket (admin)
-         * @description Канал прямой связи: любой пользователь создаёт тикет, Platform Admin
-         *     ведёт переписку и меняет статус.
-         *
-         *     - пользователь: видит свои тикеты, может создавать и отвечать;
-         *     - Platform Admin: видит все тикеты, меняет статус, назначает исполнителя,
-         *       оставляет внутренние заметки (is_internal=True).
-         */
-        patch: operations["support_tickets_partial_update"];
-        trace?: never;
-    };
-    "/api/v1/support/tickets/{id}/add-message/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Add ticket message
-         * @description Канал прямой связи: любой пользователь создаёт тикет, Platform Admin
-         *     ведёт переписку и меняет статус.
-         *
-         *     - пользователь: видит свои тикеты, может создавать и отвечать;
-         *     - Platform Admin: видит все тикеты, меняет статус, назначает исполнителя,
-         *       оставляет внутренние заметки (is_internal=True).
-         */
-        post: operations["support_tickets_add_message_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/support/tickets/{id}/assign/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Assign ticket to Platform Admin
-         * @description Канал прямой связи: любой пользователь создаёт тикет, Platform Admin
-         *     ведёт переписку и меняет статус.
-         *
-         *     - пользователь: видит свои тикеты, может создавать и отвечать;
-         *     - Platform Admin: видит все тикеты, меняет статус, назначает исполнителя,
-         *       оставляет внутренние заметки (is_internal=True).
-         */
-        post: operations["support_tickets_assign_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/support/tickets/{id}/change-status/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Change ticket status (admin)
-         * @description Канал прямой связи: любой пользователь создаёт тикет, Platform Admin
-         *     ведёт переписку и меняет статус.
-         *
-         *     - пользователь: видит свои тикеты, может создавать и отвечать;
-         *     - Platform Admin: видит все тикеты, меняет статус, назначает исполнителя,
-         *       оставляет внутренние заметки (is_internal=True).
-         */
-        post: operations["support_tickets_change_status_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/support/tickets/{id}/messages/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * @description Канал прямой связи: любой пользователь создаёт тикет, Platform Admin
-         *     ведёт переписку и меняет статус.
-         *
-         *     - пользователь: видит свои тикеты, может создавать и отвечать;
-         *     - Platform Admin: видит все тикеты, меняет статус, назначает исполнителя,
-         *       оставляет внутренние заметки (is_internal=True).
-         */
-        get: operations["support_tickets_messages_retrieve"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/support/tickets/stats/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List ticket messages
-         * @description Плитки экрана поддержки считались по `data.results` — то есть по ОДНОЙ странице из двадцати строк, тогда как рядом `Всего` бралось из `count`. При 57 тикетах экран показывал «Открытых 20» и «Срочных 0», хотя срочные лежали на страницах 2 и 3. Счётчики обязаны считаться по той же выборке, что и список — со всеми фильтрами и поиском, но без постраничного среза.
-         */
-        get: operations["support_tickets_stats_list"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -7382,11 +6709,6 @@ export interface components {
              */
             deal?: number | null;
             /**
-             * Сообщение
-             * @description Привязка к сообщению в чате
-             */
-            message?: number | null;
-            /**
              * КП
              * @description Привязка к коммерческому предложению
              */
@@ -7415,11 +6737,6 @@ export interface components {
              */
             deal?: number | null;
             /**
-             * Сообщение
-             * @description Привязка к сообщению в чате
-             */
-            message?: number | null;
-            /**
              * КП
              * @description Привязка к коммерческому предложению
              */
@@ -7429,12 +6746,6 @@ export interface components {
              * @description Привязка к компании
              */
             company?: number | null;
-        };
-        BreakGlassRequestRequest: {
-            entity_type: string;
-            entity_id: number;
-            reason: string;
-            minutes?: number;
         };
         BulkCreateQuoteItemsRequestRequest: {
             quote: number;
@@ -7564,15 +6875,6 @@ export interface components {
              */
             icon?: string | null;
         };
-        /**
-         * @description * `BUG` - Ошибка в системе
-         *     * `QUESTION` - Вопрос
-         *     * `BILLING` - Оплата/биллинг
-         *     * `FEATURE` - Пожелание
-         *     * `OTHER` - Другое
-         * @enum {string}
-         */
-        CategoryEnum: "BUG" | "QUESTION" | "BILLING" | "FEATURE" | "OTHER";
         CategoryRequest: {
             /**
              * Название
@@ -9650,113 +8952,6 @@ export interface components {
          * @enum {string}
          */
         LayoutPresetEnum: "light" | "boxed" | "bold" | "striped";
-        Lead: {
-            readonly id: number;
-            /**
-             * ФИО
-             * @description Имя контактного лица
-             */
-            name: string;
-            /**
-             * Компания
-             * @description Название организации
-             */
-            company?: string;
-            /**
-             * Телефон
-             * @description Контактный телефон
-             */
-            phone: string;
-            /**
-             * Адрес электронной почты
-             * Format: email
-             * @description Электронная почта для связи
-             */
-            email: string;
-            /**
-             * Сообщение
-             * @description Текст заявки с лендинга
-             */
-            message?: string;
-            /**
-             * Обработан
-             * @description Менеджер обработал заявку
-             */
-            readonly is_processed: boolean;
-            /**
-             * Дата получения
-             * Format: date-time
-             */
-            readonly created_at: string;
-            /**
-             * Компания-владелец
-             * @description Пусто — лид в общей очереди платформы
-             */
-            owner_company?: number | null;
-            /** @default  */
-            readonly owner_company_name: string;
-            /**
-             * Назначен
-             * Format: date-time
-             */
-            assigned_at?: string | null;
-            /** Созданная сделка */
-            converted_deal?: number | null;
-            /**
-             * Взят в работу
-             * Format: date-time
-             */
-            converted_at?: string | null;
-            /** Причина отклонения */
-            rejection_reason?: string;
-        };
-        LeadRequest: {
-            /**
-             * ФИО
-             * @description Имя контактного лица
-             */
-            name: string;
-            /**
-             * Компания
-             * @description Название организации
-             */
-            company?: string;
-            /**
-             * Телефон
-             * @description Контактный телефон
-             */
-            phone: string;
-            /**
-             * Адрес электронной почты
-             * Format: email
-             * @description Электронная почта для связи
-             */
-            email: string;
-            /**
-             * Сообщение
-             * @description Текст заявки с лендинга
-             */
-            message?: string;
-            /**
-             * Компания-владелец
-             * @description Пусто — лид в общей очереди платформы
-             */
-            owner_company?: number | null;
-            /**
-             * Назначен
-             * Format: date-time
-             */
-            assigned_at?: string | null;
-            /** Созданная сделка */
-            converted_deal?: number | null;
-            /**
-             * Взят в работу
-             * Format: date-time
-             */
-            converted_at?: string | null;
-            /** Причина отклонения */
-            rejection_reason?: string;
-        };
         /**
          * @description * `INFO` - Информация
          *     * `SUCCESS` - Успех
@@ -9822,51 +9017,6 @@ export interface components {
             can_sell?: boolean;
             can_buy?: boolean;
         };
-        Message: {
-            readonly id: number;
-            /**
-             * Сделка
-             * @description Сделка, к которой относится сообщение
-             */
-            deal: number;
-            /**
-             * Продавец (lane)
-             * @description Приватный тред покупатель↔продавец на мульти-seller заявке
-             */
-            readonly seller_company: number | null;
-            /**
-             * Отправитель
-             * @description Автор сообщения
-             */
-            readonly sender: number;
-            readonly sender_name: string;
-            /** Текст сообщения */
-            text: string;
-            /** Тип сообщения */
-            readonly message_type: components["schemas"]["MessageTypeEnum"];
-            /**
-             * Время отправки
-             * Format: date-time
-             */
-            readonly timestamp: string;
-            readonly is_me: boolean;
-        };
-        MessageRequest: {
-            /**
-             * Сделка
-             * @description Сделка, к которой относится сообщение
-             */
-            deal: number;
-            /** Текст сообщения */
-            text: string;
-        };
-        /**
-         * @description * `CHAT` - Chat
-         *     * `SYSTEM` - System event
-         *     * `NOTIFICATION` - Notification
-         * @enum {string}
-         */
-        MessageTypeEnum: "CHAT" | "SYSTEM" | "NOTIFICATION";
         /**
          * @description * `BANK_TRANSFER` - Банковский перевод
          *     * `CARD` - Банковская карта
@@ -9984,51 +9134,6 @@ export interface components {
             phone: string;
             /** @default  */
             position: string;
-        };
-        OperatorPermissionCatalog: {
-            groups: {
-                [key: string]: unknown;
-            }[];
-        };
-        /** @description A platform-operator sub-role with its capability set (ADR-0004 G1). */
-        OperatorRole: {
-            readonly id: number;
-            /**
-             * Код роли
-             * @description Стабильный код (accounts.constants.OperatorRoleCode); сравнение в коде по нему
-             */
-            readonly code: string;
-            /** Название роли */
-            name: string;
-            /**
-             * Права
-             * @description Список кодов прав (accounts.constants.OperatorPermission)
-             */
-            permissions?: unknown;
-            /**
-             * Системная (Супероператор)
-             * @description Полноправная роль оператора — нельзя удалить/урезать
-             */
-            readonly is_system: boolean;
-            /** Описание */
-            description?: string;
-            readonly operator_count: number | null;
-            /** Format: date-time */
-            readonly created_at: string;
-            /** Format: date-time */
-            readonly updated_at: string;
-        };
-        /** @description A platform-operator sub-role with its capability set (ADR-0004 G1). */
-        OperatorRoleRequest: {
-            /** Название роли */
-            name: string;
-            /**
-             * Права
-             * @description Список кодов прав (accounts.constants.OperatorPermission)
-             */
-            permissions?: unknown;
-            /** Описание */
-            description?: string;
         };
         PaginatedActList: {
             /** @example 123 */
@@ -10270,21 +9375,6 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["Invoice"][];
         };
-        PaginatedLeadList: {
-            /** @example 123 */
-            count: number;
-            /**
-             * Format: uri
-             * @example http://api.example.org/accounts/?page=4
-             */
-            next?: string | null;
-            /**
-             * Format: uri
-             * @example http://api.example.org/accounts/?page=2
-             */
-            previous?: string | null;
-            results: components["schemas"]["Lead"][];
-        };
         PaginatedManufacturerList: {
             /** @example 123 */
             count: number;
@@ -10300,21 +9390,6 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["Manufacturer"][];
         };
-        PaginatedMessageList: {
-            /** @example 123 */
-            count: number;
-            /**
-             * Format: uri
-             * @example http://api.example.org/accounts/?page=4
-             */
-            next?: string | null;
-            /**
-             * Format: uri
-             * @example http://api.example.org/accounts/?page=2
-             */
-            previous?: string | null;
-            results: components["schemas"]["Message"][];
-        };
         PaginatedNotificationList: {
             /** @example 123 */
             count: number;
@@ -10329,21 +9404,6 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["Notification"][];
-        };
-        PaginatedOperatorRoleList: {
-            /** @example 123 */
-            count: number;
-            /**
-             * Format: uri
-             * @example http://api.example.org/accounts/?page=4
-             */
-            next?: string | null;
-            /**
-             * Format: uri
-             * @example http://api.example.org/accounts/?page=2
-             */
-            previous?: string | null;
-            results: components["schemas"]["OperatorRole"][];
         };
         PaginatedPaymentList: {
             /** @example 123 */
@@ -10465,36 +9525,6 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["SupplierSubscription"][];
         };
-        PaginatedSupportTicketList: {
-            /** @example 123 */
-            count: number;
-            /**
-             * Format: uri
-             * @example http://api.example.org/accounts/?page=4
-             */
-            next?: string | null;
-            /**
-             * Format: uri
-             * @example http://api.example.org/accounts/?page=2
-             */
-            previous?: string | null;
-            results: components["schemas"]["SupportTicket"][];
-        };
-        PaginatedSupportTicketMessageList: {
-            /** @example 123 */
-            count: number;
-            /**
-             * Format: uri
-             * @example http://api.example.org/accounts/?page=4
-             */
-            next?: string | null;
-            /**
-             * Format: uri
-             * @example http://api.example.org/accounts/?page=2
-             */
-            previous?: string | null;
-            results: components["schemas"]["SupportTicketMessage"][];
-        };
         PaginatedUserList: {
             /** @example 123 */
             count: number;
@@ -10527,11 +9557,6 @@ export interface components {
              * @description Привязка к сделке
              */
             deal?: number | null;
-            /**
-             * Сообщение
-             * @description Привязка к сообщению в чате
-             */
-            message?: number | null;
             /**
              * КП
              * @description Привязка к коммерческому предложению
@@ -11212,62 +10237,6 @@ export interface components {
             currency?: number | null;
             notes?: string;
         };
-        PatchedLeadRequest: {
-            /**
-             * ФИО
-             * @description Имя контактного лица
-             */
-            name?: string;
-            /**
-             * Компания
-             * @description Название организации
-             */
-            company?: string;
-            /**
-             * Телефон
-             * @description Контактный телефон
-             */
-            phone?: string;
-            /**
-             * Адрес электронной почты
-             * Format: email
-             * @description Электронная почта для связи
-             */
-            email?: string;
-            /**
-             * Сообщение
-             * @description Текст заявки с лендинга
-             */
-            message?: string;
-            /**
-             * Компания-владелец
-             * @description Пусто — лид в общей очереди платформы
-             */
-            owner_company?: number | null;
-            /**
-             * Назначен
-             * Format: date-time
-             */
-            assigned_at?: string | null;
-            /** Созданная сделка */
-            converted_deal?: number | null;
-            /**
-             * Взят в работу
-             * Format: date-time
-             */
-            converted_at?: string | null;
-            /** Причина отклонения */
-            rejection_reason?: string;
-        };
-        PatchedMessageRequest: {
-            /**
-             * Сделка
-             * @description Сделка, к которой относится сообщение
-             */
-            deal?: number;
-            /** Текст сообщения */
-            text?: string;
-        };
         PatchedNotificationRequest: {
             /**
              * Получатель
@@ -11318,18 +10287,6 @@ export interface components {
             type_labels?: {
                 [key: string]: string;
             };
-        };
-        /** @description A platform-operator sub-role with its capability set (ADR-0004 G1). */
-        PatchedOperatorRoleRequest: {
-            /** Название роли */
-            name?: string;
-            /**
-             * Права
-             * @description Список кодов прав (accounts.constants.OperatorPermission)
-             */
-            permissions?: unknown;
-            /** Описание */
-            description?: string;
         };
         /**
          * @description Strip supplier-cost fields (offers / base_price) from viewers who don't own
@@ -11823,21 +10780,6 @@ export interface components {
              */
             notes?: string;
         };
-        PatchedSupportTicketRequest: {
-            /** Тема */
-            subject?: string;
-            /**
-             * Описание
-             * @description Подробное описание обращения
-             */
-            description?: string;
-            /** Категория */
-            category?: components["schemas"]["CategoryEnum"];
-            /** Приоритет */
-            priority?: components["schemas"]["PriorityEnum"];
-            /** Статус */
-            status?: components["schemas"]["SupportTicketStatusEnum"];
-        };
         PatchedSystemSettingRequest: {
             /**
              * Ставка НДС (%)
@@ -12088,14 +11030,6 @@ export interface components {
              */
             logo?: string | null;
         };
-        /**
-         * @description * `LOW` - Низкий
-         *     * `NORMAL` - Обычный
-         *     * `HIGH` - Высокий
-         *     * `URGENT` - Срочный
-         * @enum {string}
-         */
-        PriorityEnum: "LOW" | "NORMAL" | "HIGH" | "URGENT";
         /**
          * @description Strip supplier-cost fields (offers / base_price) from viewers who don't own
          *     the product. Only the OWNING seller's team + platform admins see cost & supplier
@@ -13221,9 +12155,6 @@ export interface components {
         RejectActRequest: {
             reason: string;
         };
-        RejectLeadRequest: {
-            reason: string;
-        };
         RejectQuoteRequestRequest: {
             /** @default  */
             reason: string;
@@ -13318,10 +12249,6 @@ export interface components {
          * @enum {string}
          */
         ResetPeriodEnum: "never" | "yearly" | "monthly";
-        RouteLeadRequest: {
-            company_id: number;
-            reason: string;
-        };
         RouteRequestRequestRequest: {
             seller_company_ids: number[];
         };
@@ -13774,108 +12701,6 @@ export interface components {
          * @enum {string}
          */
         SupplierSubscriptionStatusEnum: "TRIAL" | "ACTIVE" | "PAST_DUE" | "SUSPENDED" | "CANCELLED";
-        SupportTicket: {
-            readonly id: number;
-            /** Тема */
-            subject: string;
-            /**
-             * Описание
-             * @description Подробное описание обращения
-             */
-            description: string;
-            /** Категория */
-            category?: components["schemas"]["CategoryEnum"];
-            /** Приоритет */
-            priority?: components["schemas"]["PriorityEnum"];
-            /** Статус */
-            status?: components["schemas"]["SupportTicketStatusEnum"];
-            /** Автор */
-            readonly created_by: number | null;
-            readonly created_by_email: string;
-            readonly created_by_full_name: string;
-            /**
-             * Компания
-             * @description Компания автора (берётся из primary_company при создании)
-             */
-            readonly company: number | null;
-            readonly company_name: string;
-            /**
-             * Назначен
-             * @description Platform Admin, ведущий тикет
-             */
-            readonly assigned_to: number | null;
-            readonly assigned_to_email: string;
-            readonly messages_count: number;
-            /**
-             * Создан
-             * Format: date-time
-             */
-            readonly created_at: string;
-            /**
-             * Обновлён
-             * Format: date-time
-             */
-            readonly updated_at: string;
-            /**
-             * Решён
-             * Format: date-time
-             */
-            readonly resolved_at: string | null;
-        };
-        SupportTicketMessage: {
-            readonly id: number;
-            /** Тикет */
-            readonly ticket: number;
-            /** Текст */
-            text: string;
-            /**
-             * Внутренняя заметка
-             * @description Видно только Platform Admin (комментарий для себя или команды)
-             */
-            is_internal?: boolean;
-            /** Автор */
-            readonly author: number | null;
-            readonly author_email: string;
-            readonly author_full_name: string;
-            readonly author_is_admin: boolean;
-            /**
-             * Создано
-             * Format: date-time
-             */
-            readonly created_at: string;
-        };
-        SupportTicketMessageRequest: {
-            /** Текст */
-            text: string;
-            /**
-             * Внутренняя заметка
-             * @description Видно только Platform Admin (комментарий для себя или команды)
-             */
-            is_internal?: boolean;
-        };
-        SupportTicketRequest: {
-            /** Тема */
-            subject: string;
-            /**
-             * Описание
-             * @description Подробное описание обращения
-             */
-            description: string;
-            /** Категория */
-            category?: components["schemas"]["CategoryEnum"];
-            /** Приоритет */
-            priority?: components["schemas"]["PriorityEnum"];
-            /** Статус */
-            status?: components["schemas"]["SupportTicketStatusEnum"];
-        };
-        /**
-         * @description * `OPEN` - Открыт
-         *     * `IN_PROGRESS` - В работе
-         *     * `RESOLVED` - Решён
-         *     * `CLOSED` - Закрыт
-         * @enum {string}
-         */
-        SupportTicketStatusEnum: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
         /** @description Response shape for the SystemRole lookup feed ({code, name}). */
         SystemRoleLookup: {
             code: string;
@@ -14106,14 +12931,6 @@ export interface components {
             } | null;
             readonly workspace_role: string | null;
             readonly kyc_status: string | null;
-            /**
-             * Роль оператора
-             * @description Гранулярная под-роль платформенного оператора (ADR-0004 G1). Имеет смысл только для SystemRole=ADMIN; пусто = полный доступ (Супероператор).
-             */
-            readonly operator_role: number | null;
-            readonly operator_role_data: {
-                [key: string]: unknown;
-            } | null;
             readonly is_platform_admin: boolean;
             /**
              * 2FA Включена
@@ -16723,78 +15540,6 @@ export interface operations {
             };
         };
     };
-    admin_access_log_retrieve: {
-        parameters: {
-            query?: {
-                /** @description Max items (default 100, max 500) */
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Access-log entries */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    admin_activity_retrieve: {
-        parameters: {
-            query: {
-                /** @description Entity primary key */
-                entity_id: number;
-                /** @description Entity code (company, user, deal, subscription, role_application) */
-                entity_type: string;
-                /** @description Filter by severity level */
-                level?: string;
-                /** @description Max items (default 100, max 500) */
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Activity log entries */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    admin_break_glass_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["BreakGlassRequestRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["BreakGlassRequestRequest"];
-                "multipart/form-data": components["schemas"]["BreakGlassRequestRequest"];
-            };
-        };
-        responses: {
-            /** @description Break-glass grant recorded */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     admin_email_templates_list: {
         parameters: {
             query?: {
@@ -17173,267 +15918,6 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CompanyEntitlement"];
                 };
-            };
-        };
-    };
-    admin_operator_permissions_retrieve: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OperatorPermissionCatalog"];
-                };
-            };
-        };
-    };
-    admin_operator_roles_list: {
-        parameters: {
-            query?: {
-                /** @description A page number within the paginated result set. */
-                page?: number;
-                /** @description Number of results to return per page. */
-                page_size?: number;
-                /** @description A search term. */
-                search?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PaginatedOperatorRoleList"];
-                };
-            };
-        };
-    };
-    admin_operator_roles_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["OperatorRoleRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["OperatorRoleRequest"];
-                "multipart/form-data": components["schemas"]["OperatorRoleRequest"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OperatorRole"];
-                };
-            };
-        };
-    };
-    admin_operator_roles_retrieve: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Роль оператора. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OperatorRole"];
-                };
-            };
-        };
-    };
-    admin_operator_roles_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Роль оператора. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["OperatorRoleRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["OperatorRoleRequest"];
-                "multipart/form-data": components["schemas"]["OperatorRoleRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OperatorRole"];
-                };
-            };
-        };
-    };
-    admin_operator_roles_destroy: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Роль оператора. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No response body */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    admin_operator_roles_partial_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Роль оператора. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["PatchedOperatorRoleRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["PatchedOperatorRoleRequest"];
-                "multipart/form-data": components["schemas"]["PatchedOperatorRoleRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OperatorRole"];
-                };
-            };
-        };
-    };
-    admin_operator_roles_assign_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["OperatorRoleRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["OperatorRoleRequest"];
-                "multipart/form-data": components["schemas"]["OperatorRoleRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OperatorRole"];
-                };
-            };
-        };
-    };
-    admin_pulse_retrieve: {
-        parameters: {
-            query?: {
-                /** @description 7d | 30d | 90d */
-                period?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Pulse payload */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    admin_queue_retrieve: {
-        parameters: {
-            query?: {
-                /** @description Max items to return (default 200) */
-                limit?: number;
-                /** @description Filter by queue_type code */
-                queue_type?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Queue items */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    admin_search_retrieve: {
-        parameters: {
-            query: {
-                /** @description Results per group (default 5, max 20) */
-                per_group?: number;
-                /** @description Search term (min 2 chars) */
-                q: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Grouped search results */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
         };
     };
@@ -20468,33 +18952,6 @@ export interface operations {
             };
         };
     };
-    crm_deals_suggest_reply_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                deal_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description AI job queued, task_id returned (poll sourcing/ai-status/<task_id>/ for {'draft': str}) */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description AI assist disabled */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     crm_deals_retrieve: {
         parameters: {
             query?: never;
@@ -22030,392 +20487,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Invoice"];
-                };
-            };
-        };
-    };
-    crm_leads_list: {
-        parameters: {
-            query?: {
-                /** @description A page number within the paginated result set. */
-                page?: number;
-                /** @description Number of results to return per page. */
-                page_size?: number;
-                /** @description A search term. */
-                search?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PaginatedLeadList"];
-                };
-            };
-        };
-    };
-    crm_leads_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["LeadRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["LeadRequest"];
-                "multipart/form-data": components["schemas"]["LeadRequest"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Lead"];
-                };
-            };
-        };
-    };
-    crm_leads_retrieve: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Лид. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Lead"];
-                };
-            };
-        };
-    };
-    crm_leads_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Лид. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["LeadRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["LeadRequest"];
-                "multipart/form-data": components["schemas"]["LeadRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Lead"];
-                };
-            };
-        };
-    };
-    crm_leads_partial_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Лид. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["PatchedLeadRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["PatchedLeadRequest"];
-                "multipart/form-data": components["schemas"]["PatchedLeadRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Lead"];
-                };
-            };
-        };
-    };
-    crm_leads_claim_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Лид. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description {deal_id, stage} */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description LEAD_NOT_YOURS */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    crm_leads_reject_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Лид. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RejectLeadRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["RejectLeadRequest"];
-                "multipart/form-data": components["schemas"]["RejectLeadRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Lead"];
-                };
-            };
-            /** @description REASON_REQUIRED */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    crm_leads_route_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Лид. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RouteLeadRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["RouteLeadRequest"];
-                "multipart/form-data": components["schemas"]["RouteLeadRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Lead"];
-                };
-            };
-            /** @description COMPANY_NOT_FOUND / REASON_REQUIRED */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    crm_messages_list: {
-        parameters: {
-            query?: {
-                deal?: number;
-                deal_id?: number;
-                /**
-                 * @description * `CHAT` - Chat
-                 *     * `SYSTEM` - System event
-                 *     * `NOTIFICATION` - Notification
-                 */
-                message_type?: "CHAT" | "NOTIFICATION" | "SYSTEM";
-                /** @description A page number within the paginated result set. */
-                page?: number;
-                /** @description Number of results to return per page. */
-                page_size?: number;
-                /** @description A search term. */
-                search?: string;
-                seller_company?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PaginatedMessageList"];
-                };
-            };
-        };
-    };
-    crm_messages_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["MessageRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["MessageRequest"];
-                "multipart/form-data": components["schemas"]["MessageRequest"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Message"];
-                };
-            };
-        };
-    };
-    crm_messages_retrieve: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Сообщение. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Message"];
-                };
-            };
-        };
-    };
-    crm_messages_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Сообщение. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["MessageRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["MessageRequest"];
-                "multipart/form-data": components["schemas"]["MessageRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Message"];
-                };
-            };
-        };
-    };
-    crm_messages_destroy: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Сообщение. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No response body */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    crm_messages_partial_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Сообщение. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["PatchedMessageRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["PatchedMessageRequest"];
-                "multipart/form-data": components["schemas"]["PatchedMessageRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Message"];
                 };
             };
         };
@@ -25724,324 +23795,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-        };
-    };
-    support_tickets_list: {
-        parameters: {
-            query?: {
-                assigned_to?: number;
-                /**
-                 * @description * `BUG` - Ошибка в системе
-                 *     * `QUESTION` - Вопрос
-                 *     * `BILLING` - Оплата/биллинг
-                 *     * `FEATURE` - Пожелание
-                 *     * `OTHER` - Другое
-                 */
-                category?: "BILLING" | "BUG" | "FEATURE" | "OTHER" | "QUESTION";
-                /** @description Несколько значений могут быть разделены запятыми. */
-                category__in?: string[];
-                company?: number;
-                /** @description Which field to use when ordering the results. */
-                ordering?: string;
-                /** @description A page number within the paginated result set. */
-                page?: number;
-                /** @description Number of results to return per page. */
-                page_size?: number;
-                /**
-                 * @description * `LOW` - Низкий
-                 *     * `NORMAL` - Обычный
-                 *     * `HIGH` - Высокий
-                 *     * `URGENT` - Срочный
-                 */
-                priority?: "HIGH" | "LOW" | "NORMAL" | "URGENT";
-                /** @description Несколько значений могут быть разделены запятыми. */
-                priority__in?: string[];
-                /** @description A search term. */
-                search?: string;
-                /**
-                 * @description * `OPEN` - Открыт
-                 *     * `IN_PROGRESS` - В работе
-                 *     * `RESOLVED` - Решён
-                 *     * `CLOSED` - Закрыт
-                 */
-                status?: "CLOSED" | "IN_PROGRESS" | "OPEN" | "RESOLVED";
-                /** @description Несколько значений могут быть разделены запятыми. */
-                status__in?: string[];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PaginatedSupportTicketList"];
-                };
-            };
-        };
-    };
-    support_tickets_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SupportTicketRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["SupportTicketRequest"];
-                "multipart/form-data": components["schemas"]["SupportTicketRequest"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SupportTicket"];
-                };
-            };
-        };
-    };
-    support_tickets_retrieve: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Тикет поддержки. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SupportTicket"];
-                };
-            };
-        };
-    };
-    support_tickets_destroy: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Тикет поддержки. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No response body */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    support_tickets_partial_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Тикет поддержки. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["PatchedSupportTicketRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["PatchedSupportTicketRequest"];
-                "multipart/form-data": components["schemas"]["PatchedSupportTicketRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SupportTicket"];
-                };
-            };
-        };
-    };
-    support_tickets_add_message_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Тикет поддержки. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SupportTicketMessageRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["SupportTicketMessageRequest"];
-                "multipart/form-data": components["schemas"]["SupportTicketMessageRequest"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SupportTicketMessage"];
-                };
-            };
-        };
-    };
-    support_tickets_assign_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Тикет поддержки. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SupportTicketRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["SupportTicketRequest"];
-                "multipart/form-data": components["schemas"]["SupportTicketRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SupportTicket"];
-                };
-            };
-        };
-    };
-    support_tickets_change_status_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Тикет поддержки. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SupportTicketRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["SupportTicketRequest"];
-                "multipart/form-data": components["schemas"]["SupportTicketRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SupportTicket"];
-                };
-            };
-        };
-    };
-    support_tickets_messages_retrieve: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Тикет поддержки. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SupportTicket"];
-                };
-            };
-        };
-    };
-    support_tickets_stats_list: {
-        parameters: {
-            query?: {
-                assigned_to?: number;
-                /**
-                 * @description * `BUG` - Ошибка в системе
-                 *     * `QUESTION` - Вопрос
-                 *     * `BILLING` - Оплата/биллинг
-                 *     * `FEATURE` - Пожелание
-                 *     * `OTHER` - Другое
-                 */
-                category?: "BILLING" | "BUG" | "FEATURE" | "OTHER" | "QUESTION";
-                /** @description Несколько значений могут быть разделены запятыми. */
-                category__in?: string[];
-                company?: number;
-                /** @description Which field to use when ordering the results. */
-                ordering?: string;
-                /** @description A page number within the paginated result set. */
-                page?: number;
-                /** @description Number of results to return per page. */
-                page_size?: number;
-                /**
-                 * @description * `LOW` - Низкий
-                 *     * `NORMAL` - Обычный
-                 *     * `HIGH` - Высокий
-                 *     * `URGENT` - Срочный
-                 */
-                priority?: "HIGH" | "LOW" | "NORMAL" | "URGENT";
-                /** @description Несколько значений могут быть разделены запятыми. */
-                priority__in?: string[];
-                /** @description A search term. */
-                search?: string;
-                /**
-                 * @description * `OPEN` - Открыт
-                 *     * `IN_PROGRESS` - В работе
-                 *     * `RESOLVED` - Решён
-                 *     * `CLOSED` - Закрыт
-                 */
-                status?: "CLOSED" | "IN_PROGRESS" | "OPEN" | "RESOLVED";
-                /** @description Несколько значений могут быть разделены запятыми. */
-                status__in?: string[];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PaginatedSupportTicketMessageList"];
-                };
             };
         };
     };
