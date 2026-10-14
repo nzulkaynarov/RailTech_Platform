@@ -195,39 +195,6 @@ class Command(BaseCommand):
         for code, name in notif_types:
             _seed(NotificationType, code, name=name)
 
-        # ─── 16. Ключевые слова Smart Match ───
-        from sourcing.models import DomainKeyword
-
-        keywords = {
-            "RAILWAY_MACHINERY": [
-                "тепловоз",
-                "локомотив",
-                "вагон",
-                "двигатель",
-                "колесная пара",
-                "рельс",
-                "шпала",
-                "подшипник",
-                "компрессор",
-                "генератор",
-                "тормоз",
-            ],
-            "SERVICES": [
-                "доставка",
-                "ремонт",
-                "услуга",
-                "аренда",
-                "логистика",
-                "перевозка",
-                "монтаж",
-                "диагностика",
-            ],
-        }
-        for dom_code, kws in keywords.items():
-            dom = DomainType.objects.get(code=dom_code)
-            for kw in kws:
-                DomainKeyword.objects.get_or_create(keyword=kw, defaults={"domain_type": dom})
-
         # ─── 17. Компании из seed_data.json ───
         # Статус верификации в seed_data.json — наследие KYC (удалён в M1-ERP-02 волна 1c),
         # игнорируется.

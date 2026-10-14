@@ -92,12 +92,6 @@ export const useManufacturers = (opts?: { fetchAll?: boolean }) => useQuery({
   staleTime: 10 * 60_000,
 });
 
-export const useEquipmentGroups = (search?: string, opts?: { fetchAll?: boolean }) => useQuery({
-  queryKey: ['equipment-groups', { search, fetchAll: opts?.fetchAll ?? false }],
-  queryFn: () => catalogApi.getEquipmentGroups(search, opts),
-  staleTime: 5 * 60_000,
-});
-
 export const useCreateProduct = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -151,31 +145,6 @@ export const useDeleteCategory = () => {
   return useMutation({
     mutationFn: (id: number) => catalogApi.deleteCategory(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['categories'] }),
-  });
-};
-
-export const useCreateEquipmentGroup = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data: Parameters<typeof catalogApi.createEquipmentGroup>[0]) => catalogApi.createEquipmentGroup(data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['equipment-groups'] }),
-  });
-};
-
-export const useUpdateEquipmentGroup = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Parameters<typeof catalogApi.updateEquipmentGroup>[1] }) =>
-      catalogApi.updateEquipmentGroup(id, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['equipment-groups'] }),
-  });
-};
-
-export const useDeleteEquipmentGroup = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: number) => catalogApi.deleteEquipmentGroup(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['equipment-groups'] }),
   });
 };
 

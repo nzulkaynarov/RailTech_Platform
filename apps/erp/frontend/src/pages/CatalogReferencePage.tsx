@@ -6,12 +6,11 @@ import { useUrlState } from '@/hooks/useUrlState';
 import { PageShell } from './shared/PageShell';
 import { HSDirectorySection } from './HSDirectoryPage';
 import { CategoriesTab } from './catalog-reference/CategoriesTab';
-import { EquipmentGroupsTab } from './catalog-reference/EquipmentGroupsTab';
 
 /** Вкладки справочников. Идентификатор живёт в URL — ссылкой можно поделиться. */
-export type ReferenceTab = 'hs' | 'categories' | 'groups';
+export type ReferenceTab = 'hs' | 'categories';
 
-const TABS: readonly ReferenceTab[] = ['hs', 'categories', 'groups'];
+const TABS: readonly ReferenceTab[] = ['hs', 'categories'];
 
 const isTab = (value: string): value is ReferenceTab => (TABS as readonly string[]).includes(value);
 
@@ -29,12 +28,12 @@ function tabFromHash(): ReferenceTab | null {
 }
 
 interface CatalogReferencePageProps {
-  /** Вкладка по умолчанию — из маршрута (старые хэши `#categories` / `#equipment-groups`). */
+  /** Вкладка по умолчанию — из маршрута. */
   defaultTab?: ReferenceTab;
 }
 
 /**
- * «Справочники» (R6, D14) — три классификатора платформы одной страницей.
+ * «Справочники» (R6, D14) — классификаторы платформы одной страницей.
  *
  * Раздел «Номенклатура» состоял из ШЕСТИ пунктов меню, три из которых были справочниками
  * (ТН ВЭД, категории, группы оборудования) — а слово «Номенклатура» означало в меню три
@@ -61,16 +60,12 @@ export function CatalogReferencePage({ defaultTab = 'hs' }: CatalogReferencePage
         <TabsList>
           <TabsTrigger value="hs">{t('catalogReference.tabs.hs')}</TabsTrigger>
           <TabsTrigger value="categories">{t('catalogReference.tabs.categories')}</TabsTrigger>
-          <TabsTrigger value="groups">{t('catalogReference.tabs.groups')}</TabsTrigger>
         </TabsList>
         <TabsContent value="hs" className="mt-4">
           <HSDirectorySection />
         </TabsContent>
         <TabsContent value="categories" className="mt-4">
           <CategoriesTab />
-        </TabsContent>
-        <TabsContent value="groups" className="mt-4">
-          <EquipmentGroupsTab />
         </TabsContent>
       </Tabs>
     </PageShell>

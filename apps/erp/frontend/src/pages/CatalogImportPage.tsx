@@ -35,7 +35,6 @@ const PLAIN_MESSAGE_KEYS: Record<string, string> = {
   PRICE_NOT_A_NUMBER: 'catalogImport.err.badPrice',
   PRICE_NOT_POSITIVE: 'catalogImport.err.priceNotPositive',
   NAME_COLUMN_NOT_FOUND: 'catalogImport.err.nameColumnNotFound',
-  EQUIPMENT_GROUP_REQUIRED: 'catalogImport.err.equipmentGroupRequired',
   ROW_FAILED: 'catalogImport.err.rowFailed',
   // ИИ-путь может вернуть штатный отчёт со status=error и этим кодом в message —
   // переводим той же таблицей, ключ живёт в общем словаре apiErrors.

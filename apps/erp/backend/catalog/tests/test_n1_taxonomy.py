@@ -12,8 +12,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
-from catalog.completeness import completeness
-from catalog.models import Category, DomainType, EquipmentGroup, Manufacturer, Product, ProductStatus
+from catalog.models import Category, DomainType, Manufacturer, Product, ProductStatus
 from catalog.services import find_or_create_manufacturer
 
 pytestmark = pytest.mark.django_db
@@ -48,39 +47,6 @@ def test_starter_taxonomy_is_seeded_by_migration():
     railway = DomainType.objects.get(code="RAILWAY_MACHINERY")
     assert Category.objects.filter(domain_type=railway).exists()
     assert Category.objects.filter(domain_type__code="SERVICES").exists()
-    deep_group = EquipmentGroup.objects.filter(name="Тепловозы").first()
-    assert deep_group is not None
-    assert deep_group.cached_path == "Подвижной состав / Локомотивы / Тепловозы"
-
-
-def test_empty_equipment_classifier_does_not_block_railway_card(seller_client):
-    """Канон ТН ВЭД: пустой справочник → требование выключено, карточка сохраняется."""
-    EquipmentGroup.objects.all().delete()
-    railway = DomainType.objects.get(code="RAILWAY_MACHINERY")
-
-    response = seller_client.post(
-        "/api/v1/catalog/products/",
-        {"name": "Ось колёсной пары", "domain_type": railway.pk, "equipment_groups": []},
-        format="json",
-    )
-
-    assert response.status_code == 201, response.content
-    card = Product.objects.get(pk=response.json()["id"])
-    assert "equipment_groups" not in [item["code"] for item in completeness(card)["missing"]]
-
-
-def test_filled_classifier_still_requires_a_group(seller_client):
-    """С наполненным справочником прежнее правило действует — API отвечает чистым 400."""
-    railway = DomainType.objects.get(code="RAILWAY_MACHINERY")
-
-    response = seller_client.post(
-        "/api/v1/catalog/products/",
-        {"name": "Ось колёсной пары", "domain_type": railway.pk, "equipment_groups": []},
-        format="json",
-    )
-
-    assert response.status_code == 400
-    assert "equipment_groups" in response.json()
 
 
 def test_brand_name_creates_and_reuses_manufacturer(seller_client):

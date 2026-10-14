@@ -1,4 +1,3 @@
-from django.utils.translation import gettext_lazy
 from drf_spectacular.utils import extend_schema_serializer
 from rest_framework import serializers
 
@@ -8,7 +7,6 @@ from master_data.models import Currency, DeliveryBasis, UnitOfMeasure
 from .models import (
     Category,
     DomainType,
-    EquipmentGroup,
     Manufacturer,
     Product,
     ProductDocument,
@@ -86,14 +84,6 @@ class DeliveryBasisSerializer(serializers.ModelSerializer):
     class Meta:
         model = DeliveryBasis
         fields = ["id", "code", "name", "description"]
-
-
-class EquipmentGroupSerializer(serializers.ModelSerializer):
-    full_path = serializers.CharField(read_only=True)
-
-    class Meta:
-        model = EquipmentGroup
-        fields = ["id", "name", "full_path"]
 
 
 # --- Media Serializers ---
@@ -211,7 +201,6 @@ class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
     category_data = CategorySerializer(source="category", read_only=True)
     owner_company_data = CompanyLightSerializer(source="owner_company", read_only=True)
     uom_data = UnitOfMeasureSerializer(source="uom", read_only=True)
-    equipment_groups_data = EquipmentGroupSerializer(source="equipment_groups", many=True, read_only=True)
 
     offers = SupplierOfferSerializer(many=True, read_only=True)
     images = ProductImageSerializer(many=True, read_only=True)
@@ -271,8 +260,6 @@ class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
             "gost_drawing",
             "hs_code",
             "specifications",
-            "equipment_groups",
-            "equipment_groups_data",
             "offers",
             "images",
             "documents",
@@ -308,35 +295,6 @@ class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
             from catalog.services import find_or_create_manufacturer
 
             attrs["brand"] = find_or_create_manufacturer(str(raw_brand_name))
-        domain_type = attrs.get("domain_type")
-        # On partial update domain_type may be absent — fall back to the instance.
-        if domain_type is None and self.instance is not None:
-            domain_type = self.instance.domain_type
-        is_railway = bool(domain_type) and getattr(domain_type, "code", None) == "RAILWAY_MACHINERY"
-        if not is_railway:
-            return attrs
-        from catalog.services import equipment_groups_available
-
-        # Пустой справочник групп не блокирует сохранение (канон ТН ВЭД, N1).
-        if not equipment_groups_available():
-            return attrs
-
-        # equipment_groups present in the payload? use it; else fall back to the
-        # instance's current groups (partial update that doesn't touch groups).
-        if "equipment_groups" in attrs:
-            groups = attrs.get("equipment_groups") or []
-        elif self.instance is not None:
-            groups = list(self.instance.equipment_groups.all())
-        else:
-            groups = []
-        if not groups:
-            raise serializers.ValidationError(
-                {
-                    "equipment_groups": gettext_lazy(
-                        "Товары домена RAILWAY_MACHINERY должны быть привязаны минимум к одной группе оборудования."
-                    )
-                }
-            )
         return attrs
 
     def get_status_name(self, obj) -> str | None:

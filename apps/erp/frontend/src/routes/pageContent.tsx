@@ -89,7 +89,6 @@ function activePageIdFor(page: Page): string {
     // закладке `#categories` не подсвечивал бы ничего (пункта с таким id в меню больше нет).
     case 'hs-directory':
     case 'categories':
-    case 'equipment-groups':
       return 'catalog-reference';
     default:
       return page.type;
@@ -133,8 +132,6 @@ function renderContent(ctx: PageRenderContext): ReactNode {
       return <CatalogReferencePage defaultTab="hs" />;
     case 'categories':
       return <CatalogReferencePage defaultTab="categories" />;
-    case 'equipment-groups':
-      return <CatalogReferencePage defaultTab="groups" />;
     case 'product_detail':
       return (
         <ProductDetail

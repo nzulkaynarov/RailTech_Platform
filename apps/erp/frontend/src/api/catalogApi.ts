@@ -12,16 +12,6 @@ export interface DomainTypeItem {
     is_active: boolean;
 }
 
-export interface EquipmentGroup {
-    id: number;
-    name: string;
-    full_path: string;
-    parent?: number | null;
-    description?: string;
-    sort_order?: number;
-    is_active?: boolean;
-}
-
 export interface Category {
     id: number;
     name: string;
@@ -136,7 +126,6 @@ export interface Product {
     main_image_url?: string | null;
     main_document_url?: string | null;
 
-    equipment_groups?: EquipmentGroup[];
     offers?: SupplierOffer[];
     created_at?: string;
     updated_at?: string;
@@ -153,7 +142,6 @@ export interface ProductListParams {
     search?: string;
     category?: number;
     brand?: number;
-    equipment_groups?: number;
     stock_status?: string;
     /** Только карточки своей компании (бэкенд: `?mine=1`). */
     mine?: boolean;
@@ -182,7 +170,6 @@ function buildProductListQuery(params: ProductListParams): string {
     if (params.search) query.append('search', params.search);
     if (params.category) query.append('category', String(params.category));
     if (params.brand) query.append('brand', String(params.brand));
-    if (params.equipment_groups) query.append('equipment_groups', String(params.equipment_groups));
     if (params.stock_status) query.append('stock_status', params.stock_status);
     if (params.mine) query.append('mine', '1');
     if (params.status) query.append('status', params.status);
@@ -376,15 +363,6 @@ export const catalogApi = {
     deleteProduct: async (id: number): Promise<void> => {
         await apiClient.delete(`catalog/products/${id}/`);
     },
-    getEquipmentGroups: async (search?: string, opts?: { fetchAll?: boolean }): Promise<EquipmentGroup[]> => {
-        let url = 'catalog/equipment-groups/';
-        if (search) {
-            url += `?search=${encodeURIComponent(search)}`;
-        }
-        if (opts?.fetchAll) return fetchAllPages<EquipmentGroup>(url);
-        const response = await apiClient.get<PaginatedResponse<EquipmentGroup>>(url);
-        return response.data.results;
-    },
     createCategory: async (data: Partial<Category>): Promise<Category> => {
         const response = await apiClient.post<Category>('catalog/categories/', data);
         return response.data;
@@ -395,17 +373,6 @@ export const catalogApi = {
     },
     deleteCategory: async (id: number): Promise<void> => {
         await apiClient.delete(`catalog/categories/${id}/`);
-    },
-    createEquipmentGroup: async (data: Partial<EquipmentGroup>): Promise<EquipmentGroup> => {
-        const response = await apiClient.post<EquipmentGroup>('catalog/equipment-groups/', data);
-        return response.data;
-    },
-    updateEquipmentGroup: async (id: number, data: Partial<EquipmentGroup>): Promise<EquipmentGroup> => {
-        const response = await apiClient.patch<EquipmentGroup>(`catalog/equipment-groups/${id}/`, data);
-        return response.data;
-    },
-    deleteEquipmentGroup: async (id: number): Promise<void> => {
-        await apiClient.delete(`catalog/equipment-groups/${id}/`);
     },
     getOffers: async (params?: { product?: number; supplier?: number; fetchAll?: boolean }): Promise<SupplierOffer[]> => {
         let url = 'catalog/offers/';

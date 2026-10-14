@@ -49,12 +49,11 @@ const CATALOG = [
   { id: 'my-products', navigable: true },
   { id: 'product-new', navigable: true },
   { id: 'product-edit' },
-  // Справочники одной страницей: ТН ВЭД · категории · группы (R6). Пункт меню ОДИН;
+  // Справочники одной страницей: ТН ВЭД · категории (R6). Пункт меню ОДИН;
   // старые маршруты ниже — рабочие алиасы на свою вкладку.
   { id: 'catalog-reference', navigable: true },
   { id: 'hs-directory', navigable: true },
   { id: 'categories', navigable: true },
-  { id: 'equipment-groups', navigable: true },
   { id: 'catalog-import', navigable: true },
   { id: 'product_detail' },
 ] as const satisfies readonly PageDefinition[];

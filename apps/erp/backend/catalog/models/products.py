@@ -1,6 +1,5 @@
 import uuid
 
-from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -127,15 +126,6 @@ class Product(models.Model):
         help_text=_("Заводской артикул. Ключ дедупликации PIM: бренд + артикул."),
     )
 
-    # Привязка к оборудованию (Домен 1)
-    equipment_groups = models.ManyToManyField(
-        "catalog.EquipmentGroup",
-        blank=True,
-        related_name="products",
-        verbose_name=_("Группы оборудования"),
-        help_text=_("Применимость к типам оборудования (обязательно для ж/д техники)"),
-    )
-
     # Технические характеристики
     gost_drawing = models.CharField(
         max_length=100,
@@ -216,41 +206,6 @@ class Product(models.Model):
 
     def clean(self):
         super().clean()
-        if self.domain_type and getattr(self.domain_type, "code", None) == "RAILWAY_MACHINERY":
-            from catalog.services import equipment_groups_available
-
-            # Пустой справочник групп не блокирует (канон ТН ВЭД, N1).
-            if self.pk and equipment_groups_available() and not self.equipment_groups.exists():
-                raise ValidationError(
-                    {
-                        "equipment_groups": _(
-                            "Товары домена RAILWAY_MACHINERY должны быть привязаны "
-                            "минимум к одной группе оборудования."
-                        )
-                    }
-                )
-
-    @staticmethod
-    def validate_railway_equipment_groups(product):
-        """
-        Post-save validation: call after setting M2M equipment_groups.
-        Raises ValidationError if RAILWAY_MACHINERY product has no groups.
-        """
-        from catalog.services import equipment_groups_available
-
-        if (
-            product.domain_type
-            and getattr(product.domain_type, "code", None) == "RAILWAY_MACHINERY"
-            and equipment_groups_available()
-            and not product.equipment_groups.exists()
-        ):
-            raise ValidationError(
-                {
-                    "equipment_groups": _(
-                        "Товары домена RAILWAY_MACHINERY должны быть привязаны " "минимум к одной группе оборудования."
-                    )
-                }
-            )
 
     def save(self, *args, **kwargs):
         # Статус — часть жизненного цикла, а не необязательный ярлык: у 5 из 8 карточек он был

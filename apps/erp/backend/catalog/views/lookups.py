@@ -5,11 +5,10 @@ from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import filters, permissions, viewsets
 
-from ..models import Category, DomainType, EquipmentGroup, ProductStatus, StockStatus
+from ..models import Category, DomainType, ProductStatus, StockStatus
 from ..serializers import (
     CategorySerializer,
     DomainTypeSerializer,
-    EquipmentGroupSerializer,
     ManufacturerSerializer,
     ProductStatusSerializer,
     StockStatusSerializer,
@@ -40,47 +39,6 @@ class DomainTypeViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = DomainTypeSerializer
     permission_classes = [permissions.AllowAny]
     pagination_class = None  # Small lookup table — no pagination needed
-
-
-@extend_schema_view(
-    list=extend_schema(
-        summary="List equipment groups",
-        description="Returns all equipment groups. Searchable by name. Public read access.",
-        tags=["Catalog"],
-    ),
-    create=extend_schema(
-        summary="Create equipment group",
-        description="Create a new equipment group. Admin only.",
-        tags=["Catalog"],
-    ),
-    retrieve=extend_schema(summary="Get equipment group", tags=["Catalog"]),
-    update=extend_schema(summary="Update equipment group", description="Admin only.", tags=["Catalog"]),
-    partial_update=extend_schema(summary="Partially update equipment group", tags=["Catalog"]),
-    destroy=extend_schema(summary="Delete equipment group", tags=["Catalog"]),
-)
-@method_decorator(vary_on_headers("Accept-Language"), name="list")
-@method_decorator(cache_page(LOOKUP_CACHE_TTL), name="list")
-class EquipmentGroupViewSet(viewsets.ModelViewSet):
-    """
-    CRUD for equipment groups (hierarchical classification).
-
-    Public read access; write operations require an operator with `platform.settings`
-    (N3, ADR-0004: раньше писала ЛЮБАЯ суб-роль оператора, включая SUPPORT «только просмотр»).
-    """
-
-    # EquipmentGroup has no domain_type FK (only a self-referential `parent`);
-    # select_related("domain_type") raised FieldError → 500 on every list.
-    queryset = EquipmentGroup.objects.select_related("parent").all()
-    serializer_class = EquipmentGroupSerializer
-    filter_backends = [filters.SearchFilter]
-    search_fields = ["name"]
-
-    def get_permissions(self):
-        if self.action in ["list", "retrieve"]:
-            return [permissions.AllowAny()]
-        from core.permissions import IsPlatformAdmin
-
-        return [IsPlatformAdmin()]
 
 
 @extend_schema_view(

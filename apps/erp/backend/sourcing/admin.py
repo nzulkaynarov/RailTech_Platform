@@ -5,7 +5,7 @@ from unfold.decorators import display
 
 from core.admin_mixins import ReadOnlyInspectionMixin
 
-from .models import Attachment, DomainKeyword, ImportTask
+from .models import Attachment, ImportTask
 
 
 @admin.register(Attachment)
@@ -51,18 +51,6 @@ class AttachmentAdmin(ReadOnlyInspectionMixin, ModelAdmin):
             },
         ),
     )
-
-
-@admin.register(DomainKeyword)
-class DomainKeywordAdmin(ModelAdmin):
-    list_display = ("keyword", "domain_type")
-    list_filter = ("domain_type",)
-    search_fields = ("keyword",)
-    autocomplete_fields = ["domain_type"]
-    list_per_page = 30
-    list_select_related = ("domain_type",)
-
-    fieldsets = ((None, {"fields": (("keyword", "domain_type"),)}),)
 
 
 @admin.register(ImportTask)

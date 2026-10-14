@@ -1575,71 +1575,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/catalog/equipment-groups/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List equipment groups
-         * @description Returns all equipment groups. Searchable by name. Public read access.
-         */
-        get: operations["catalog_equipment_groups_list"];
-        put?: never;
-        /**
-         * Create equipment group
-         * @description Create a new equipment group. Admin only.
-         */
-        post: operations["catalog_equipment_groups_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/catalog/equipment-groups/{id}/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get equipment group
-         * @description CRUD for equipment groups (hierarchical classification).
-         *
-         *     Public read access; write operations require an operator with `platform.settings`
-         *     (N3, ADR-0004: раньше писала ЛЮБАЯ суб-роль оператора, включая SUPPORT «только просмотр»).
-         */
-        get: operations["catalog_equipment_groups_retrieve"];
-        /**
-         * Update equipment group
-         * @description Admin only.
-         */
-        put: operations["catalog_equipment_groups_update"];
-        post?: never;
-        /**
-         * Delete equipment group
-         * @description CRUD for equipment groups (hierarchical classification).
-         *
-         *     Public read access; write operations require an operator with `platform.settings`
-         *     (N3, ADR-0004: раньше писала ЛЮБАЯ суб-роль оператора, включая SUPPORT «только просмотр»).
-         */
-        delete: operations["catalog_equipment_groups_destroy"];
-        options?: never;
-        head?: never;
-        /**
-         * Partially update equipment group
-         * @description CRUD for equipment groups (hierarchical classification).
-         *
-         *     Public read access; write operations require an operator with `platform.settings`
-         *     (N3, ADR-0004: раньше писала ЛЮБАЯ суб-роль оператора, включая SUPPORT «только просмотр»).
-         */
-        patch: operations["catalog_equipment_groups_partial_update"];
-        trace?: never;
-    };
     "/api/v1/catalog/manufacturers/": {
         parameters: {
             query?: never;
@@ -1807,7 +1742,7 @@ export interface paths {
         };
         /**
          * List products
-         * @description Returns products from the PIM catalog. Non-admin users only see PUBLISHED products. Filterable by domain_type, category, manufacturer, equipment_groups, stock_status. Searchable by name, GOST/drawing, SKU. Server-side ordering via `?ordering=` (name, sku, demand_count, last_requested_at, created_at, updated_at; prefix with `-` for descending). `?ordering=` overrides the legacy `?order=demand` default.
+         * @description Returns products from the PIM catalog. Non-admin users only see PUBLISHED products. Filterable by domain_type, category, manufacturer, stock_status. Searchable by name, GOST/drawing, SKU. Server-side ordering via `?ordering=` (name, sku, demand_count, last_requested_at, created_at, updated_at; prefix with `-` for descending). `?ordering=` overrides the legacy `?order=demand` default.
          */
         get: operations["catalog_products_list"];
         put?: never;
@@ -7619,22 +7554,6 @@ export interface components {
             /** Format: email */
             to_email: string;
         };
-        EquipmentGroup: {
-            readonly id: number;
-            /**
-             * Название
-             * @description Название группы/типа оборудования
-             */
-            name: string;
-            readonly full_path: string;
-        };
-        EquipmentGroupRequest: {
-            /**
-             * Название
-             * @description Название группы/типа оборудования
-             */
-            name: string;
-        };
         /**
          * @description * `sans` - Гротеск (без засечек)
          *     * `serif` - Антиква (с засечками)
@@ -8296,21 +8215,6 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["EmailTemplate"][];
-        };
-        PaginatedEquipmentGroupList: {
-            /** @example 123 */
-            count: number;
-            /**
-             * Format: uri
-             * @example http://api.example.org/accounts/?page=4
-             */
-            next?: string | null;
-            /**
-             * Format: uri
-             * @example http://api.example.org/accounts/?page=2
-             */
-            previous?: string | null;
-            results: components["schemas"]["EquipmentGroup"][];
         };
         PaginatedFulfillmentList: {
             /** @example 123 */
@@ -9076,13 +8980,6 @@ export interface components {
              */
             is_active?: boolean;
         };
-        PatchedEquipmentGroupRequest: {
-            /**
-             * Название
-             * @description Название группы/типа оборудования
-             */
-            name?: string;
-        };
         /**
          * @description Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.
          *
@@ -9244,11 +9141,6 @@ export interface components {
              * @description Динамические характеристики в формате ключ: значение
              */
             specifications?: unknown;
-            /**
-             * Группы оборудования
-             * @description Применимость к типам оборудования (обязательно для ж/д техники)
-             */
-            equipment_groups?: number[];
         };
         /** @description КП-level expense item / discount (UBL document AllowanceCharge). */
         PatchedQuoteChargeRequest: {
@@ -9909,12 +9801,6 @@ export interface components {
              * @description Динамические характеристики в формате ключ: значение
              */
             specifications?: unknown;
-            /**
-             * Группы оборудования
-             * @description Применимость к типам оборудования (обязательно для ж/д техники)
-             */
-            equipment_groups?: number[];
-            readonly equipment_groups_data: components["schemas"]["EquipmentGroup"][];
             readonly offers: components["schemas"]["SupplierOffer"][];
             readonly images: components["schemas"]["ProductImage"][];
             readonly documents: components["schemas"]["ProductDocument"][];
@@ -10222,11 +10108,6 @@ export interface components {
              * @description Динамические характеристики в формате ключ: значение
              */
             specifications?: unknown;
-            /**
-             * Группы оборудования
-             * @description Применимость к типам оборудования (обязательно для ж/д техники)
-             */
-            equipment_groups?: number[];
         };
         ProductStatus: {
             readonly id: number;
@@ -11423,7 +11304,6 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             readonly workspace_role: string | null;
-            readonly is_platform_admin: boolean;
             /**
              * 2FA Включена
              * @description Включена ли двухфакторная аутентификация
@@ -14086,156 +13966,6 @@ export interface operations {
             };
         };
     };
-    catalog_equipment_groups_list: {
-        parameters: {
-            query?: {
-                /** @description A page number within the paginated result set. */
-                page?: number;
-                /** @description Number of results to return per page. */
-                page_size?: number;
-                /** @description A search term. */
-                search?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PaginatedEquipmentGroupList"];
-                };
-            };
-        };
-    };
-    catalog_equipment_groups_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["EquipmentGroupRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["EquipmentGroupRequest"];
-                "multipart/form-data": components["schemas"]["EquipmentGroupRequest"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EquipmentGroup"];
-                };
-            };
-        };
-    };
-    catalog_equipment_groups_retrieve: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Группа оборудования. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EquipmentGroup"];
-                };
-            };
-        };
-    };
-    catalog_equipment_groups_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Группа оборудования. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["EquipmentGroupRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["EquipmentGroupRequest"];
-                "multipart/form-data": components["schemas"]["EquipmentGroupRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EquipmentGroup"];
-                };
-            };
-        };
-    };
-    catalog_equipment_groups_destroy: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Группа оборудования. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No response body */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    catalog_equipment_groups_partial_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Группа оборудования. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["PatchedEquipmentGroupRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["PatchedEquipmentGroupRequest"];
-                "multipart/form-data": components["schemas"]["PatchedEquipmentGroupRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EquipmentGroup"];
-                };
-            };
-        };
-    };
     catalog_manufacturers_list: {
         parameters: {
             query?: {
@@ -14530,7 +14260,6 @@ export interface operations {
                 brand?: number;
                 category?: number;
                 domain_type__code?: string;
-                equipment_groups?: number[];
                 /** @description Which field to use when ordering the results. */
                 ordering?: string;
                 /** @description A page number within the paginated result set. */

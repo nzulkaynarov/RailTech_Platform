@@ -10,7 +10,7 @@ import importlib
 from django.apps import apps as django_apps
 from django.test import TestCase
 
-from catalog.models import Category, DomainType, EquipmentGroup, Product
+from catalog.models import Category, DomainType, Product
 
 
 class DomainConstraintsTest(TestCase):
@@ -26,17 +26,14 @@ class DomainConstraintsTest(TestCase):
 
     def test_railway_machinery_product_save(self):
         """
-        Verify that creating a RAILWAY_MACHINERY product and assigning M2M works.
+        Verify that creating a RAILWAY_MACHINERY product works without equipment groups (M1-ERP-02 wave 4).
         """
-        group = EquipmentGroup.objects.create(name="Test Group")
         product = Product.objects.create(name="Test Railway Product", domain_type=self.railway_domain)
-        product.equipment_groups.add(group)
-        self.assertEqual(product.equipment_groups.count(), 1)
         self.assertEqual(product.domain_type.code, "RAILWAY_MACHINERY")
 
     def test_services_product(self):
         product = Product.objects.create(name="Test Service", domain_type=self.services_domain)
-        self.assertEqual(product.equipment_groups.count(), 0)
+        self.assertEqual(product.domain_type.code, "SERVICES")
 
 
 class TaxonomyDedupeTest(TestCase):
@@ -70,15 +67,3 @@ class TaxonomyDedupeTest(TestCase):
         self.mig.dedupe_taxonomy(django_apps, None)
         self.assertEqual(Category.objects.filter(name__in=["Безопасность", "Безопастность"]).count(), 1)
         self.assertTrue(Category.objects.filter(id=correct.id, name="Безопасность").exists())
-
-    def test_merges_equipment_groups_and_is_idempotent(self):
-        # Имя ВНЕ стартовой таксономии (catalog/0015): сид уже содержит «Тепловозы»,
-        # и канон дедупликации — старейшая строка, то есть посеянная, а не тестовая.
-        canon = EquipmentGroup.objects.create(name="Мотовозы")
-        EquipmentGroup.objects.create(name="Мотовозы")
-        self.mig.dedupe_taxonomy(django_apps, None)
-        self.assertEqual(EquipmentGroup.objects.filter(name="Мотовозы").count(), 1)
-        # second run is a no-op
-        self.mig.dedupe_taxonomy(django_apps, None)
-        self.assertEqual(EquipmentGroup.objects.filter(name="Мотовозы").count(), 1)
-        self.assertTrue(EquipmentGroup.objects.filter(id=canon.id).exists())

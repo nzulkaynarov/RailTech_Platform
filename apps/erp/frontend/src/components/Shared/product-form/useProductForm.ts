@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   useCreateProduct, useUpdateProduct, useProduct,
-  useDomainTypes, useCategories, useEquipmentGroups,
+  useDomainTypes, useCategories,
   useStockStatuses, useOffers, useCreateOffer, useUpdateOffer,
   useEnrichProduct,
 } from '@/hooks/useCatalog';
@@ -132,7 +132,6 @@ export function useProductForm({ target, sellerCompanyId, open = true, onSaved }
   const { data: domainTypes } = useDomainTypes();
   const { data: categories } = useCategories();
   const { data: units } = useUnits();
-  const { data: equipmentGroups } = useEquipmentGroups();
   const createMut = useCreateProduct();
   const updateMut = useUpdateProduct();
 
@@ -151,12 +150,11 @@ export function useProductForm({ target, sellerCompanyId, open = true, onSaved }
   const ownOffer = sellerMode ? (ownOffers ?? []).find((o) => o.supplier === sellerCompanyId) ?? null : null;
 
   const [draft, setDraft] = useState<Draft>(() => target ?? emptyDraft());
-  const [groupIds, setGroupIds] = useState<number[]>(() => target?.equipment_groups?.map((g) => g.id) ?? []);
   const [offerDraft, setOfferDraft] = useState<OfferDraft>({});
 
   // N2 (B2/B3 аудита): `target` — строка СПИСКА, а ProductListSerializer не отдаёт
-  // description и equipment_groups. Форма, сидящая на строке списка, слала PATCH с
-  // description:"" и equipment_groups:[] — молча стирая карточку при каждом «Дополнить».
+  // description. Форма, сидящая на строке списка, слала PATCH с
+  // description:"" — молча стирая карточку при каждом «Дополнить».
   // Поэтому на редактировании добираем ПОЛНУЮ карточку и пересаживаем черновик на неё;
   // до её прихода сохранение закрыто (fullCardReady в busy).
   const { data: fullCard } = useProduct(target?.id ? String(target.id) : '');
@@ -171,19 +169,12 @@ export function useProductForm({ target, sellerCompanyId, open = true, onSaved }
     seededTargetId.current = targetId;
     seededFullId.current = null;
     setDraft(target ? { ...target } : emptyDraft());
-    setGroupIds(target?.equipment_groups?.map((g) => g.id) ?? []);
   }, [target]);
   useEffect(() => {
     if (!fullCard || fullCard.id !== target?.id) return;
     if (seededFullId.current === fullCard.id) return;
     seededFullId.current = fullCard.id;
     setDraft({ ...fullCard });
-    // Полный сериализатор отдаёт M2M PK-списком (number[]), списочный — объектами.
-    setGroupIds(
-      ((fullCard.equipment_groups ?? []) as Array<number | { id: number }>).map((g) =>
-        typeof g === 'number' ? g : g.id,
-      ),
-    );
   }, [fullCard, target]);
   const fullCardReady = !target?.id || fullCard?.id === target.id;
 
@@ -221,13 +212,8 @@ export function useProductForm({ target, sellerCompanyId, open = true, onSaved }
     !fullCardReady;
   const isEdit = Boolean(target?.id);
 
-  // Equipment groups are a RAILWAY_MACHINERY taxonomy and are required for that
-  // domain (Product.clean()). Resolve the selected domain's code to gate the field.
   const domainCode = (domainTypes ?? []).find((d) => d.id === Number(draft.domain_type))?.code
     ?? (typeof draft.domain_type === 'string' ? draft.domain_type : undefined);
-  const isRailway = domainCode === 'RAILWAY_MACHINERY';
-  const toggleGroup = (id: number) =>
-    setGroupIds((ids) => (ids.includes(id) ? ids.filter((g) => g !== id) : [...ids, id]));
 
   const update = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
 
@@ -359,12 +345,6 @@ export function useProductForm({ target, sellerCompanyId, open = true, onSaved }
       toast.error(t('adminCatalog.nameRequired'));
       return;
     }
-    // Пустой справочник групп не блокирует сохранение (канон ТН ВЭД, N1) — требование
-    // включается вместе с наполнением; бэкенд проверяет то же условие.
-    if (isRailway && (equipmentGroups ?? []).length > 0 && groupIds.length === 0) {
-      toast.error(t('adminCatalog.equipmentGroupsRequired'));
-      return;
-    }
     // N3: оператор обязан назвать владельца создаваемой карточки (бэкенд ответит
     // OWNER_COMPANY_REQUIRED — но честнее не пускать запрос вовсе).
     if (!sellerMode && !isEdit && !draft.owner_company) {
@@ -383,9 +363,7 @@ export function useProductForm({ target, sellerCompanyId, open = true, onSaved }
       return;
     }
     // brand_name — строка: сервер нормализует (iexact) и создаёт бренд на лету (N1),
-    // тем же нормализатором, что Excel-импорт. equipment_groups is an M2M write (list
-    // of ids) — the read type is EquipmentGroup[], so the body goes through a
-    // write-shaped cast.
+    // тем же нормализатором, что Excel-импорт.
     const payload = {
       name: draft.name,
       description: draft.description || '',
@@ -395,7 +373,6 @@ export function useProductForm({ target, sellerCompanyId, open = true, onSaved }
       uom: draft.uom ? Number(draft.uom) : null,
       brand_name: (draft.brand_name || '').trim(),
       manufacturer_part_number: draft.manufacturer_part_number || '',
-      equipment_groups: groupIds,
       gost_drawing: draft.gost_drawing || '',
       // T1: код ТН ВЭД теперь редактируется из формы — раньше поля не было вовсе, и очередь
       // номенклатуры требовала то, что негде ввести.
@@ -460,18 +437,18 @@ export function useProductForm({ target, sellerCompanyId, open = true, onSaved }
 
   return {
     // lookups
-    domainTypes, categories, units, equipmentGroups,
+    domainTypes, categories, units,
     currencies, stockStatuses, deliveryBases, adminCompanies,
     // state
-    draft, groupIds, offerDraft, categoryHint,
+    draft, offerDraft, categoryHint,
     // derived
-    sellerMode, isEdit, isRailway, busy,
+    sellerMode, isEdit, busy,
     enrichPending: enrichMut.isPending,
     // AI suggestions (панель «поле → было → предложение»)
     enrichProposals, rejectedFields, rejectedSpecKeys, enrichAcceptedCount,
     aiDailyCap, aiDailyRemaining,
     // actions
-    update, updateOffer, toggleGroup, runEnrich, submit,
+    update, updateOffer, runEnrich, submit,
     toggleEnrichField, toggleEnrichSpec, applyEnrich, dismissEnrich,
   };
 }

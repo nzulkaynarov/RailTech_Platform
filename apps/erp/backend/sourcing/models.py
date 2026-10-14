@@ -2,33 +2,7 @@ from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from catalog.models import DomainType
 from core.storage import deal_attachment_path, get_private_storage
-
-
-class DomainKeyword(models.Model):
-    """MED-2: Dynamic routing keywords for Smart Match."""
-
-    domain_type = models.ForeignKey(
-        DomainType,
-        on_delete=models.CASCADE,
-        related_name="keywords",
-        verbose_name=_("Тип домена"),
-        help_text=_("Домен каталога, к которому привязано ключевое слово"),
-    )
-    keyword = models.CharField(
-        max_length=100,
-        unique=True,
-        verbose_name=_("Ключевое слово"),
-        help_text=_("Слово для автоматического определения домена при Excel-импорте (регистронезависимое)"),
-    )
-
-    class Meta:
-        verbose_name = _("Ключевое слово домена")
-        verbose_name_plural = _("Ключевые слова доменов")
-
-    def __str__(self):
-        return f"{self.keyword} -> {self.domain_type.name}"
 
 
 class AttachmentKind(models.TextChoices):

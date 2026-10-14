@@ -53,19 +53,6 @@ def find_or_create_manufacturer(name: str):
     return existing or Manufacturer.objects.create(name=cleaned)
 
 
-def equipment_groups_available() -> bool:
-    """Есть ли в справочнике групп оборудования хоть одна строка.
-
-    Канон ТН ВЭД (N1): ПУСТОЙ справочник не блокирует работу — требовать выбрать группу,
-    когда выбирать не из чего и завести её продавец не может (запись только у платформы),
-    значит запереть сохранение карточки наглухо. Требование «ж/д товар привязан к группе»
-    включается вместе с наполнением справочника.
-    """
-    from .models import EquipmentGroup
-
-    return EquipmentGroup.objects.exists()
-
-
 def offer_validity_error(valid_from, valid_until) -> str | None:
     """Код ошибки окна действия цены (`None` — окно корректно).
 

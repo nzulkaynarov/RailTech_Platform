@@ -152,16 +152,15 @@ class PageStatsView(APIView):
     @staticmethod
     def _get_catalog_stats() -> dict:
         """Aggregate product catalog statistics — 2 queries (products + rest)."""
-        from catalog.models import Category, EquipmentGroup, Product, SupplierOffer
+        from catalog.models import Category, Product, SupplierOffer
 
         product_stats = Product.objects.aggregate(
             total=Count("id"),
             published=Count("id", filter=Q(status__code="PUBLISHED")),
         )
-        # Categories, equipment groups, and offers are separate tables — one aggregate each
+        # Categories and offers are separate tables — one aggregate each
         other_stats = {
             "categories": Category.objects.filter(is_active=True).count(),
-            "equipment_groups": EquipmentGroup.objects.filter(is_active=True).count(),
             "offers": SupplierOffer.objects.filter(is_active=True).count(),
         }
         return {**product_stats, **other_stats}

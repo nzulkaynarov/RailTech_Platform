@@ -320,20 +320,6 @@ export function ProductDetail({ productId, onBack, onProductEdit }: ProductDetai
             </Card>
           )}
 
-          {/* Equipment groups */}
-          {product.equipment_groups && product.equipment_groups.length > 0 && (
-            <Card>
-              <CardContent className="p-5">
-                <h2 className="text-sm font-semibold mb-3">{t('productDetail.equipmentGroups')}</h2>
-                <div className="flex flex-wrap gap-1.5">
-                  {product.equipment_groups.map(g => (
-                    <Badge key={g.id} variant="outline" className="text-xs">{g.name}</Badge>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
           {/* Documents */}
           {hasDocs && (
             <Card>

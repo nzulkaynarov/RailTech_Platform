@@ -37,7 +37,6 @@ from catalog.views import (
     CategoryRequestViewSet,
     CategoryViewSet,
     DomainTypeViewSet,
-    EquipmentGroupViewSet,
     ManufacturerViewSet,
     ProductEnrichView,
     ProductStatusViewSet,
@@ -107,7 +106,6 @@ from sourcing.views_ai_conversational import ComposeRequestView  # noqa: E402,F8
 router = DefaultRouter()
 router.register(r"catalog/products", ProductViewSet, basename="product")
 router.register(r"catalog/offers", SupplierOfferViewSet, basename="offer")
-router.register(r"catalog/equipment-groups", EquipmentGroupViewSet, basename="equipmentgroup")
 router.register(r"catalog/categories", CategoryViewSet, basename="category")
 # Escape-hatch платформенной таксономии (R6): продавец ПРОСИТ категорию, а не заводит её.
 router.register(r"catalog/category-requests", CategoryRequestViewSet, basename="categoryrequest")

@@ -34,7 +34,7 @@ def catalog_ai_gate(user):
         summary="List products",
         description=(
             "Returns products from the PIM catalog. Non-admin users only see PUBLISHED products. "
-            "Filterable by domain_type, category, manufacturer, equipment_groups, stock_status. "
+            "Filterable by domain_type, category, manufacturer, stock_status. "
             "Searchable by name, GOST/drawing, SKU. Server-side ordering via `?ordering=` "
             "(name, sku, demand_count, last_requested_at, created_at, updated_at; prefix with "
             "`-` for descending). `?ordering=` overrides the legacy `?order=demand` default."
@@ -93,15 +93,13 @@ class ProductViewSet(viewsets.ModelViewSet):
             queryset = base.prefetch_related(
                 "images",
                 "offers__stock_status",
-                # R1: обе связи читает КАЖДАЯ строка списка — `offers__currency` для валюты
-                # цены (`base_price_currency`), `equipment_groups` для полноты карточки.
+                # R1: связь читает КАЖДАЯ строка списка — `offers__currency` для валюты
+                # цены (`base_price_currency`).
                 # Без prefetch это было бы по запросу на строку, то есть N+1 на всю страницу.
                 "offers__currency",
-                "equipment_groups",
             )
         else:
             queryset = base.prefetch_related(
-                "equipment_groups",
                 "images",
                 "documents",
                 "offers__stock_status",
@@ -173,13 +171,6 @@ class ProductViewSet(viewsets.ModelViewSet):
         "domain_type__code": ["exact"],
         "category": ["exact"],
         "brand": ["exact"],
-        # `equipment_groups` — m2m, и JOIN по нему МОГ БЫ размножить строку карточки (запрос с
-        # двумя группами вернул бы карточку из обеих дважды и завысил `count`). Ручной
-        # `.distinct()` здесь не нужен и добавлять его НЕ НАДО: django-filter генерирует для
-        # m2m `ModelMultipleChoiceFilter`, а тот схлопывает выборку сам (`distinct=True` по
-        # умолчанию). Проверено тестом test_r1_list_contract.py — он же сторожит инвариант,
-        # если фильтр когда-нибудь объявят вручную другим классом.
-        "equipment_groups": ["exact"],
     }
     #: Белый список сортировок. До R1 `?ordering=` молча не работал вовсе: бэкенд не подключал
     #: `OrderingFilter`, и клик по заголовку колонки ничего не менял. Поле вне списка DRF

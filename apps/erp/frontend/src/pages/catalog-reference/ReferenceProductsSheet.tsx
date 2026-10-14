@@ -15,7 +15,7 @@ const PAGE_SIZE = 20;
 /** Строка справочника, по которой открыт разрез каталога. */
 export interface ReferenceTarget {
   title: string;
-  params: Pick<ProductListParams, 'category' | 'equipment_groups'>;
+  params: Pick<ProductListParams, 'category'>;
 }
 
 interface ReferenceProductsSheetProps {
@@ -26,12 +26,7 @@ interface ReferenceProductsSheetProps {
 /**
  * Разрез каталога по строке справочника (R6, D8).
  *
- * До этой волны карточка группы оборудования имела `cursor-pointer`, ховер и шеврон — и НЕ
- * имела обработчика: справочник обещал переход, которого не существовало. Бейджи подкатегорий
- * вели себя так же. Эталон (Odoo Product Categories, Shopify Collections, Google Merchant
- * Center): строка классификатора — это ссылка «покажи, что здесь лежит».
- *
- * Считает СЕРВЕР: фильтры `category` / `equipment_groups` и постраничка уже есть в
+ * Считает СЕРВЕР: фильтр `category` и постраничка уже есть в
  * `ProductViewSet` (R1). Клиентская выборка поверх первой страницы врала бы так же, как
  * витрина до R1. Панель монтируется только на время показа — иначе справочник дёргал бы
  * список товаров при каждом открытии страницы.

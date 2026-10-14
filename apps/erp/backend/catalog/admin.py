@@ -11,7 +11,6 @@ from .models import (
     Category,
     CategoryRequest,
     DomainType,
-    EquipmentGroup,
     Manufacturer,
     Product,
     ProductDocument,
@@ -109,36 +108,6 @@ class CategoryAdmin(ModelAdmin):
     )
 
 
-@admin.register(EquipmentGroup)
-class EquipmentGroupAdmin(ModelAdmin):
-    list_display = ("name", "parent", "cached_path", "is_active")
-    list_filter = ("is_active",)
-    search_fields = ("name", "cached_path")
-    autocomplete_fields = ["parent"]
-    readonly_fields = ("cached_path",)
-    list_per_page = 30
-    list_select_related = ("parent",)
-
-    fieldsets = (
-        (
-            None,
-            {
-                "fields": (
-                    ("name", "parent"),
-                    "description",
-                    ("cached_path", "sort_order", "is_active"),
-                ),
-            },
-        ),
-    )
-
-    def get_readonly_fields(self, request, obj=None):
-        readonly = list(super().get_readonly_fields(request, obj))
-        if "cached_path" not in readonly:
-            readonly.append("cached_path")
-        return readonly
-
-
 @admin.register(Manufacturer)
 class ManufacturerAdmin(ModelAdmin):
     list_display = ("name", "country", "company", "is_active")
@@ -170,7 +139,6 @@ class ProductAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelAdmin):
         "uom",
         "owner_company",
         "brand",
-        "equipment_groups",
     ]
     inlines = [SupplierOfferInline, ProductImageInline, ProductDocumentInline]
     actions = ["publish_products"]
@@ -222,13 +190,6 @@ class ProductAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelAdmin):
                     "gost_drawing",
                     "specifications",
                 ),
-            },
-        ),
-        (
-            _("Оборудование"),
-            {
-                "classes": ["tab"],
-                "fields": ("equipment_groups",),
             },
         ),
         (

@@ -15,7 +15,6 @@
 
 from __future__ import annotations
 
-from django.db.models import prefetch_related_objects
 from django.utils.translation import gettext_lazy as _
 
 #: Размер пачки для догрузки m2m в `summarize_completeness`. Держит `IN (...)` в разумных
@@ -62,27 +61,9 @@ _IDENTITY = (
     lambda p, ctx: bool((p.manufacturer_part_number or "").strip() or (p.gost_drawing or "").strip()),
 )
 
-
-def _equipment_satisfied(product, ctx) -> bool:
-    """Группа выбрана — либо справочник групп пуст и требование выключено (канон ТН ВЭД, N1)."""
-    if not ctx.equipment_groups_populated:
-        return True
-    if product.pk is None:
-        return False
-    # `.all()` читает ПРЕДЗАГРУЖЕННЫЙ m2m (prefetch_related на ветке списка), `.exists()`
-    # ходил бы в базу на каждую строку даже при живом prefetch — это и был N+1.
-    return bool(product.equipment_groups.all())
-
-
-_EQUIPMENT = (
-    "equipment_groups",
-    _("Группа оборудования"),
-    _equipment_satisfied,
-)
-
 REQUIREMENTS_BY_DOMAIN: dict[str, tuple] = {
-    # Ж/д техника: идентичность и применимость к оборудованию — то, без чего деталь не подобрать.
-    "RAILWAY_MACHINERY": (_NAME, _UOM, _CATEGORY, _IDENTITY, _EQUIPMENT, _HS),
+    # Ж/д техника: идентичность и ТН ВЭД — то, без чего деталь не подобрать.
+    "RAILWAY_MACHINERY": (_NAME, _UOM, _CATEGORY, _IDENTITY, _HS),
     # Общие товары: идентичность желательна, но не обязательна — многое продаётся по описанию.
     "GENERAL_GOODS": (_NAME, _UOM, _CATEGORY, _HS),
     # Услуги: ни артикула, ни ТН ВЭД не бывает.
@@ -100,32 +81,12 @@ def requirements_for(product) -> tuple:
 class CompletenessContext:
     """Справочные факты, ОБЩИЕ для всей пачки карточек, — считаются один раз на пачку.
 
-    Зачем: полнота считается для КАЖДОЙ строки списка, а два из её требований опирались на
-    справочники. Наивно это стоило до четырёх запросов НА СТРОКУ — `HSCode.objects.exists()` +
-    `HSCode.objects.filter(code=…)` (внутри `validate_hs_code`), `EquipmentGroup.objects.exists()`
-    и `product.equipment_groups.exists()`. Страница в 200 карточек (очередь наполнения просит
-    ровно столько) превращалась в сотни лишних запросов, хотя ответы у всех строк одинаковые.
-
-    Почему ПАКЕТ НА ЗАПРОС, а не кэш с TTL и не памятка уровня модуля:
-
-    * «наполнен ли классификатор» — свойство БАЗЫ, но меняется оно данными-миграциями (Rule 1:
-      справочники сеются миграциями) и недельным автосинком ТН ВЭД. Кэш с TTL пришлось бы
-      инвалидировать сигналами, а данные-миграции работают через исторические модели и сигналов
-      НЕ шлют — наполненный справочник остался бы «пустым» до истечения TTL, то есть публикация
-      карточек молча жила бы по старым правилам;
-    * памятка уровня модуля (глобальная переменная / `lru_cache`) пережила бы не только запрос,
-      но и границу теста — ровно тот случай, который запрещён.
-
-    Пакет на запрос даёт тот же O(1) запросов на страницу, но без единого окна протухания:
-    контекст живёт ровно один сериализующий проход и умирает вместе с ним.
-
-    Оба обращения к справочникам ЛЕНИВЫ: страница без кодов ТН ВЭД и без ж/д домена не платит
-    за них вовсе.
+    Зачем: полнота считается для КАЖДОЙ строки списка, а её требования опираются на
+    справочник ТН ВЭД.
     """
 
     def __init__(self, products):
         self._hs_populated = None
-        self._equipment_populated = None
         self.current_hs_codes: frozenset[str] = frozenset()
 
         codes = {digits for digits in (hs_digits(product) for product in products) if digits}
@@ -152,14 +113,6 @@ class CompletenessContext:
 
             self._hs_populated = HSCode.objects.exists()
         return self._hs_populated
-
-    @property
-    def equipment_groups_populated(self) -> bool:
-        if self._equipment_populated is None:
-            from catalog.services import equipment_groups_available
-
-            self._equipment_populated = equipment_groups_available()
-        return self._equipment_populated
 
 
 def completeness(product, ctx: CompletenessContext | None = None) -> dict:
@@ -193,10 +146,6 @@ def summarize_completeness(products) -> dict:
     products = [product for product in products if product is not None]
     if not products:
         return {"unpublishable": 0, "missing_breakdown": []}
-
-    saved = [product for product in products if product.pk is not None]
-    for start in range(0, len(saved), COMPLETENESS_BATCH):
-        prefetch_related_objects(saved[start : start + COMPLETENESS_BATCH], "equipment_groups")
 
     ctx = CompletenessContext(products)
     counts: dict[str, int] = {}

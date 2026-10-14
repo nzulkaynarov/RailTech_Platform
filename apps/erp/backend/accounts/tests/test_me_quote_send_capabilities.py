@@ -50,10 +50,10 @@ def test_seller_can_send_without_any_plan(lookups):
     the role permission (quote.send) stays authoritative in send_to_client."""
     user, _ = _seller_user("ok@wph.test")
     caps = _caps(user)
-    assert caps["can_send_quotes"] is True
-    assert caps["subscription_active"] is True
+    assert "can_send_quotes" not in caps
+    assert "subscription_active" not in caps
     assert not [key for key in caps if key.startswith("quote_send_")], "DEMO/operator send flags are gone"
-    assert MeSerializer(user).data["seller_subscription_operational"] is True
+    assert "seller_subscription_operational" not in MeSerializer(user).data
 
 
 def test_buyer_only_user_has_no_seller_send_signals(lookups):
@@ -70,9 +70,9 @@ def test_buyer_only_user_has_no_seller_send_signals(lookups):
         can_buy=True,
     )
     caps = _caps(user)
-    assert caps["can_send_quotes"] is False
-    assert caps["subscription_active"] is False
-    assert MeSerializer(user).data["seller_subscription_operational"] is None
+    assert "can_send_quotes" not in caps
+    assert "subscription_active" not in caps
+    assert "seller_subscription_operational" not in MeSerializer(user).data
 
 
 # ──────────────────────────────────────────────────────────────────────────────

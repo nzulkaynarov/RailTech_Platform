@@ -20,7 +20,6 @@ export const SECTION_BY_REQUIREMENT: Record<string, string> = {
   uom: SECTION_IDS.basics,
   category: SECTION_IDS.classification,
   hs_code: SECTION_IDS.classification,
-  equipment_groups: SECTION_IDS.classification,
 };
 
 export function scrollToSection(sectionId: string) {
