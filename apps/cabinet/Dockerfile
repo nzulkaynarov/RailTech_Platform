@@ -12,10 +12,13 @@ RUN npm ci
 COPY . .
 
 # Только VITE_*-переменные без секретов (CLAUDE.md §2.8). VITE_API_URL пустой — запросы same-origin.
+# VITE_CRM_URL — CRM для формы «Я новый клиент» (M2-CAB-03); пусто — вместо формы «Написать в Telegram».
 ARG VITE_API_URL=
 ARG VITE_BOT_USERNAME=
+ARG VITE_CRM_URL=
 ENV VITE_API_URL=${VITE_API_URL} \
-    VITE_BOT_USERNAME=${VITE_BOT_USERNAME}
+    VITE_BOT_USERNAME=${VITE_BOT_USERNAME} \
+    VITE_CRM_URL=${VITE_CRM_URL}
 
 # Мок портального API в прод-сборку не попадает (ветка import.meta.env.DEV); воркер MSW не нужен.
 RUN npm run build && rm -f dist/mockServiceWorker.js

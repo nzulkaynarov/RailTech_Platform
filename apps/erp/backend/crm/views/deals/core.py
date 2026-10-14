@@ -26,14 +26,6 @@ from crm.services import (
 from .ai import DealAiActionsMixin
 from .workflow import DealWorkflowActionsMixin
 
-# Экшены, открывающие ОДНУ конкретную сделку (read-only). Видимость у них шире списочной:
-# продавец вправе открыть сделку, где он покупатель, и наоборот. Раньше это условие было
-# записано литералом `self.action == "retrieve"` в двух местах get_queryset, поэтому КАЖДЫЙ
-# новый detail-экшен молча получал списочный скоуп и отдавал 404 там, где retrieve отдаёт 200.
-# Набор намеренно ограничен читающими экшенами: расширять скоуп пишущим — менять границу
-# безопасности.
-SINGLE_DEAL_READ_ACTIONS = frozenset({"retrieve", "documents"})
-
 
 @extend_schema_view(
     list=extend_schema(
@@ -97,54 +89,21 @@ class DealViewSet(DealAiActionsMixin, DealWorkflowActionsMixin, viewsets.ModelVi
             .prefetch_related(Prefetch("items", queryset=quote_items_qs))
             .order_by("-version")
         )
-        # SEC (audit #2): scope the nested quotes to the viewer's own — otherwise the
-        # deal-nested `quotes`/`active_quote` (and export-pdf, which reads active_quote off
-        # this prefetch) leak a competitor's full КП on a multi-seller-routed deal. Same
-        # boundary QuoteViewSet enforces, via the shared helper so they can't diverge.
-        from crm.services.quotes import scope_quotes_for_viewer
-
-        quotes_qs = scope_quotes_for_viewer(quotes_qs, user, self.request)
         queryset = (
             Deal.objects.all()
-            .select_related("client", "manager", "company", "stage")
-            .prefetch_related(Prefetch("quotes", queryset=quotes_qs), "target_sellers")
+            .select_related("client", "manager", "company", "stage", "assigned_to")
+            .prefetch_related(Prefetch("quotes", queryset=quotes_qs))
         )
 
-        from django.db.models import Q
+        from accounts.services.permissions import sees_all_deals
 
-        from accounts.services.permissions import seller_visible_deal_ids
-
-        # Platform admin sees every deal (oversight). A seller acting in a seller
-        # context is scoped to the RFQs ROUTED to them (multi-seller confidentiality
-        # keystone — replaces the old see-all leak where seller A saw seller B's
-        # buyers' заявки). A dual seller+buyer user in the BUYER context (or a pure
-        # buyer) falls through to its own-company scope.
-        if getattr(user, "is_superuser", False):
+        # Продавец один — своя компания (BUSINESS §3.3): администратор и сотрудник компании-владельца
+        # видят все сделки, что с ними можно делать — решают права роли в сервисах. Покупательский
+        # аккаунт (до M2-ERP-01) — только сделки своей компании-клиента.
+        if sees_all_deals(user):
             return queryset
-
         user_company_ids = list(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
-        buyer_scope = Q(company_id__in=user_company_ids)
-
-        visible_deal_ids = seller_visible_deal_ids(user, self.request)
-        if visible_deal_ids is not None:
-            scope = Q(id__in=visible_deal_ids)
-            # Opening ONE specific deal: a seller may also open a deal they own as the buyer.
-            if self.action in SINGLE_DEAL_READ_ACTIONS:
-                scope |= buyer_scope
-            return queryset.filter(scope)
-
-        # Buyer / no-seller-context. LIST stays buyer-scoped (context-switching, ADR-0005), but
-        # RETRIEVE of a specific deal a user is a ROUTED SELLER on must succeed regardless of the
-        # active context — otherwise a seller's own company-less «калькулятор» deal (buyer=None)
-        # 404s in the default BUYER context (it's a seller artifact, invisible to buyer scope).
-        # force=True resolves routing regardless of the X-Active-Context header, staying
-        # routing-only (no competitor widening) — the same WP-1 rule billing docs already use.
-        scope = buyer_scope
-        if self.action in SINGLE_DEAL_READ_ACTIONS:
-            forced = seller_visible_deal_ids(user, self.request, force=True)
-            if forced:
-                scope |= Q(id__in=forced)
-        return queryset.filter(scope)
+        return queryset.filter(company_id__in=user_company_ids)
 
     def destroy(self, request, *args, **kwargs):
         """Members may delete only their own DRAFT deals; once a deal enters the
@@ -170,9 +129,8 @@ class DealViewSet(DealAiActionsMixin, DealWorkflowActionsMixin, viewsets.ModelVi
 
         if without_client and not contact_id:
             # Wave E F3 — «калькулятор»: a seller prices something BEFORE there is a client
-            # (Deal.company NULL). Seller-only: the deal is made reachable solely by the
-            # creator's DealSellerRouting row (register_new_deal → ensure_creator_seller_routing),
-            # so a non-seller would create an orphan nobody — not even themselves — can see.
+            # (Deal.company NULL). Back-office only: a company-less deal is visible solely to the
+            # own company's staff, so anyone else would create an orphan they cannot see.
             # It can never be SENT until a recipient exists (RECIPIENT_REQUIRED).
             from accounts.services.permissions import primary_seller_company_id
 
@@ -247,8 +205,8 @@ class DealViewSet(DealAiActionsMixin, DealWorkflowActionsMixin, viewsets.ModelVi
             )
 
         # SEC (audit #7): user-initiated gate — this generic endpoint must not be a parallel
-        # path around submit_request's capability gate, nor let a co-routed seller close
-        # the shared deal. (Internal auto-transitions call the service directly, ungated.)
+        # path around submit_request's capability gate; staff need the quote.build role
+        # permission. (Internal auto-transitions call the service directly, ungated.)
         from crm.services.deals import assert_user_may_change_stage
 
         guard_error = assert_user_may_change_stage(deal, request.user, stage_code)

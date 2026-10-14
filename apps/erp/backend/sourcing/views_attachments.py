@@ -70,7 +70,11 @@ class AttachmentViewSet(viewsets.ModelViewSet):
         if params.get("product"):
             qs = qs.filter(product_id=params["product"])
 
-        if user.is_superuser:
+        # Administrator and own-company staff (the seller of every deal) reach every attachment —
+        # including the buyer's заявка source-of-truth file (review 2026-06-25 #5).
+        from accounts.services.permissions import sees_all_deals
+
+        if sees_all_deals(user):
             return qs
 
         user_company_ids = user.memberships.filter(is_active=True).values("company_id")
@@ -78,16 +82,8 @@ class AttachmentViewSet(viewsets.ModelViewSet):
         # Subquery: avoid loading all deal IDs into memory
         from django.db.models import Q
 
-        # A routed seller can reach their routed deals' attachments (the buyer's заявка
-        # source-of-truth file) — review 2026-06-25 #5.
-        from accounts.services.permissions import seller_visible_deal_ids
-
-        seller_deal_ids = seller_visible_deal_ids(user, self.request) or set()
         accessible_deals = Deal.objects.filter(
-            Q(company_id__in=user_company_ids)
-            | Q(manager_id=user.id)
-            | Q(client_id=user.id)
-            | Q(id__in=seller_deal_ids),
+            Q(company_id__in=user_company_ids) | Q(manager_id=user.id) | Q(client_id=user.id),
         ).values("id")
 
         return qs.filter(
@@ -114,8 +110,11 @@ class AttachmentViewSet(viewsets.ModelViewSet):
 
         target_deal = deal or (quote.deal if quote else None)
         if target_deal:
+            from accounts.services.permissions import is_seller
+
             if (
-                target_deal.company_id in user_company_ids
+                is_seller(user)  # own-company staff — the seller of every deal
+                or target_deal.company_id in user_company_ids
                 or target_deal.manager_id == user.id
                 or target_deal.client_id == user.id
             ):

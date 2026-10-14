@@ -35,7 +35,6 @@ from .access import (
     can_send_quote_to_client,
     public_quote_gate,
     reapply_company_defaults,
-    scope_quotes_for_viewer,
 )
 from .bulk import (
     _BULK_CREATE_WRITABLE_FIELDS,
@@ -68,7 +67,6 @@ __all__ = [
     "effective_quote_lead_time",
     "_positive_fx_rate",
     # access
-    "scope_quotes_for_viewer",
     "apply_company_quote_defaults",
     "reapply_company_defaults",
     "can_duplicate_quote",

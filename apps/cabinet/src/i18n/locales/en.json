@@ -146,10 +146,54 @@
   },
   "newClient": {
     "title": "I am a new client",
-    "text": "Tell us what you need and a manager will reply and invite you to the cabinet. The request form will appear here soon; for now the fastest way is to message us in Telegram.",
+    "intro": "Tell us what you need and a manager will get in touch and invite you to the cabinet.",
     "writeTelegram": "Message us in Telegram",
+    "orTelegram": "Prefer chatting? Message us in Telegram.",
     "backToLogin": "I already have access",
-    "formTitle": "Request form"
+    "unavailableTitle": "The request form is unavailable",
+    "unavailableText": "Message us in Telegram and a manager will reply and invite you to the cabinet.",
+    "sentTitle": "Thank you! Your request has been sent",
+    "sentText": "A manager will contact you by phone or e-mail during business hours. If you prefer chatting, message us in Telegram.",
+    "form": {
+      "name": "Your name",
+      "company": "Company (optional)",
+      "contacts": "How can we reach you",
+      "contactsHint": "Phone or e-mail — one is enough.",
+      "phone": "Phone",
+      "phonePlaceholder": "+998 90 123 45 67",
+      "email": "E-mail",
+      "emailPlaceholder": "name@company.uz",
+      "text": "What do you need",
+      "textPlaceholder": "For example: POS integration with 1C for 5 stores, by the end of the month",
+      "website": "Do not fill in this field",
+      "consent": "I agree to the processing of my personal data so that you can contact me about this request",
+      "submit": "Send request",
+      "sending": "Sending…"
+    },
+    "errors": {
+      "name_required": "Tell us how to address you.",
+      "contact_required": "Enter a phone number or an e-mail — at least one.",
+      "invalid_phone": "The number is not recognized — enter it with the country code, e.g. +998 90 123 45 67.",
+      "invalid_email": "The e-mail address is not valid.",
+      "text_required": "Describe what you need.",
+      "consent_required": "We cannot answer your request without consent to the processing of personal data.",
+      "form_too_fast": "The form was sent too quickly — check the fields and send it again.",
+      "form_token_expired": "The form has expired — reload the page and send your request again.",
+      "form_token_invalid": "The form has expired — reload the page and send your request again.",
+      "rate_limited": "Too many requests from your address — try again in an hour or message us in Telegram.",
+      "validation_failed": "Check the form fields.",
+      "network": "No connection to the server — check your internet and try again.",
+      "unknown": "Could not send the request — try again later or message us in Telegram.",
+      "tokenUnavailable": "The form is unavailable right now. Try again or message us in Telegram."
+    }
+  },
+  "manager": {
+    "write": "Message the manager",
+    "aboutDeal": "Message the manager about deal #{{id}}",
+    "aboutQuote": "Message the manager about quote {{number}}",
+    "aboutContract": "Message the manager about contract {{number}}",
+    "aboutInvoice": "Message the manager about invoice {{number}}",
+    "aboutAct": "Message the manager about act {{number}}"
   },
   "profile": {
     "title": "Profile",

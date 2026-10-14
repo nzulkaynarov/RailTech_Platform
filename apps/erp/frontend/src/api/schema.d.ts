@@ -376,26 +376,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/accounts/companies/suppliers/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List suppliers (for RFQ invitations)
-         * @description Minimal directory of active SUPPLIER companies a buyer can invite to an RFQ. Available to any authenticated member — returns only id, name and INN, NOT the full admin company record.
-         */
-        get: operations["accounts_companies_suppliers_retrieve"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/accounts/company-roles/": {
         parameters: {
             query?: never;
@@ -2642,7 +2622,7 @@ export interface paths {
         };
         /**
          * Recent documents (dashboard widget)
-         * @description The viewer's newest documents ACROSS types — КП / контракты / инвойсы / акты / сгенерированные — merged and sorted by date desc, capped at `limit`. Each type is company-scoped exactly like its own list endpoint (hidden competition preserved): a routed seller never sees a co-routed competitor's document, nor another company's DRAFT.
+         * @description The viewer's newest documents ACROSS types — КП / контракты / инвойсы / акты / сгенерированные — merged and sorted by date desc, capped at `limit`. Each type is company-scoped exactly like its own list endpoint: own-company staff see every document, a buyer account only its own company's (never another company's DRAFT).
          */
         get: operations["crm_analytics_recent_documents_retrieve"];
         put?: never;
@@ -2682,7 +2662,7 @@ export interface paths {
         };
         /**
          * Time-to-first-КП wedge metric
-         * @description Hours from RFQ routed → first КП sent, aggregated (median/avg/p90). Platform admin sees the platform-wide loop speed; a seller sees their OWN company's. The headline wedge KPI.
+         * @description Hours from the request entering ERP → first КП sent, aggregated (median/avg/p90). Admin sees everything; own-company staff see the own company's КП. The headline wedge KPI.
          */
         get: operations["crm_analytics_time_to_first_quote_retrieve"];
         put?: never;
@@ -3207,7 +3187,7 @@ export interface paths {
         put?: never;
         /**
          * Claim a deal (take it from the shared queue)
-         * @description ADR-0006 Move 2: a routed seller-team member takes ownership of an unclaimed заявка.
+         * @description ADR-0006 Move 2: a back-office staff member takes ownership of an unclaimed заявка.
          */
         post: operations["crm_deals_claim_create"];
         delete?: never;
@@ -3319,26 +3299,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/crm/deals/{id}/route/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Route the request (RFQ) to seller companies
-         * @description Buyer-only, while the deal is still DRAFT. Addresses a (typically free-text) заявка to chosen seller companies — multi-seller routing. Idempotent; each id must be an active SUPPLIER-type company.
-         */
-        post: operations["crm_deals_route_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/crm/deals/{id}/submit-request/": {
         parameters: {
             query?: never;
@@ -3353,46 +3313,6 @@ export interface paths {
          * @description Buyer-only. Issues the request to the seller: Draft → RFQ_OPEN. Requires ≥1 line and no incomplete lines. After this the request locks.
          */
         post: operations["crm_deals_submit_request_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/crm/deals/{id}/suggest-sellers-ai/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * AI-enhance seller routing suggestions
-         * @description R3: enqueue an AI-enhanced version of `suggested-sellers` (202 + task_id; poll sourcing/ai-status). Free-text заявка lines the trigram matcher missed are resolved in ONE bilingual LLM call so misspellings / synonyms / Latin script still route. Buyer-gated and subject to the daily AI cap; the buyer still confirms the list (AI never binds). 503 AI_DISABLED when AI is off (the sync suggested-sellers stays).
-         */
-        post: operations["crm_deals_suggest_sellers_ai_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/crm/deals/{id}/suggested-sellers/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Suggested sellers for a free-text заявка (R1 — category-matched routing)
-         * @description Детерминированный trigram-подбор продавцов по позициям заявки (Ariba Discovery-паттерн): каждая позиция → каталожный товар → owner_company, со счётом совпавших позиций. Чистое чтение, без AI. Покупатель подтверждает выбор через POST route/. Пустой список — каталог не подсказал, покупатель выбирает вручную.
-         */
-        get: operations["crm_deals_suggested_sellers_list"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3437,26 +3357,6 @@ export interface paths {
          * @description Buyer-only, while the request is still DRAFT.
          */
         patch: operations["crm_deals_update_request_meta_partial_update"];
-        trace?: never;
-    };
-    "/api/v1/crm/deals/suppliers/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List seller companies for the routing picker
-         * @description Buyer-facing lightweight directory of active SUPPLIER companies.
-         */
-        get: operations["crm_deals_suppliers_list"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
         trace?: never;
     };
     "/api/v1/crm/document-templates/": {
@@ -4916,13 +4816,13 @@ export interface paths {
         };
         /**
          * AI КП-vs-заявка coverage / discrepancy check
-         * @description Compares a received КП against the buyer's original request lines and returns a plain-language list of discrepancies: uncovered (unpriced) lines and — when AI is enabled — non-equivalent substitutions and notes the КП may have ignored. The deterministic coverage facts are always returned; the AI part is purely additive. Result is ASSISTIVE and never blocks. Scoped to the deal's buyer or routed seller.
+         * @description Compares a received КП against the buyer's original request lines and returns a plain-language list of discrepancies: uncovered (unpriced) lines and — when AI is enabled — non-equivalent substitutions and notes the КП may have ignored. The deterministic coverage facts are always returned; the AI part is purely additive. Result is ASSISTIVE and never blocks. Scoped to the deal's buyer or own-company staff.
          */
         get: operations["crm_quotes_request_diff_retrieve"];
         put?: never;
         /**
          * AI КП-vs-заявка coverage / discrepancy check
-         * @description Compares a received КП against the buyer's original request lines and returns a plain-language list of discrepancies: uncovered (unpriced) lines and — when AI is enabled — non-equivalent substitutions and notes the КП may have ignored. The deterministic coverage facts are always returned; the AI part is purely additive. Result is ASSISTIVE and never blocks. Scoped to the deal's buyer or routed seller.
+         * @description Compares a received КП against the buyer's original request lines and returns a plain-language list of discrepancies: uncovered (unpriced) lines and — when AI is enabled — non-equivalent substitutions and notes the КП may have ignored. The deterministic coverage facts are always returned; the AI part is purely additive. Result is ASSISTIVE and never blocks. Scoped to the deal's buyer or own-company staff.
          */
         post: operations["crm_quotes_request_diff_create"];
         delete?: never;
@@ -4951,54 +4851,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/crm/relationships/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * @description The counterparty book of the user's own companies. No create/delete over the API —
-         *     edges are born from real interactions (routing, offline clients, lead conversion).
-         */
-        get: operations["crm_relationships_list"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/crm/relationships/{id}/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * @description The counterparty book of the user's own companies. No create/delete over the API —
-         *     edges are born from real interactions (routing, offline clients, lead conversion).
-         */
-        get: operations["crm_relationships_retrieve"];
-        /**
-         * @description The counterparty book of the user's own companies. No create/delete over the API —
-         *     edges are born from real interactions (routing, offline clients, lead conversion).
-         */
-        put: operations["crm_relationships_update"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /**
-         * @description The counterparty book of the user's own companies. No create/delete over the API —
-         *     edges are born from real interactions (routing, offline clients, lead conversion).
-         */
-        patch: operations["crm_relationships_partial_update"];
-        trace?: never;
-    };
     "/api/v1/crm/timeline/": {
         parameters: {
             query?: never;
@@ -5008,7 +4860,7 @@ export interface paths {
         };
         /**
          * Counterparty / deal activity timeline
-         * @description Chronological business events (deal opened, КП sent/accepted/rejected, contract signed, payments) linked to a deal or a counterparty company. Pass deal_id OR company_id. Scoping: a deal timeline needs access to the deal (member of the client company, routed seller, or platform admin); a company timeline shows a member their own company's history, while a routed seller sees only events on deals visible to them.
+         * @description Chronological business events (deal opened, КП sent/accepted/rejected, contract signed, payments) linked to a deal or a counterparty company. Pass deal_id OR company_id. Scoping: a deal timeline needs access to the deal (member of the client company, own-company staff, or administrator); a company timeline shows a member their own company's history and own-company staff everything about the counterparty.
          */
         get: operations["crm_timeline_list"];
         put?: never;
@@ -7332,8 +7184,6 @@ export interface components {
             readonly quotes: components["schemas"]["Quote"][];
             /** @description Whether the current user may add/edit/remove this deal's request rows. */
             readonly can_edit_request: boolean;
-            /** @description Seller companies this RFQ is routed to (multi-seller routing). */
-            readonly target_sellers_data: unknown[];
             /**
              * @description Исполнение закрыто целиком (оплата + поставка + акт) — НЕ то же, что «сделка выиграна».
              *
@@ -7422,8 +7272,6 @@ export interface components {
             readonly viewer_is_seller: boolean;
             readonly viewer_is_buyer: boolean;
             readonly active_quote: components["schemas"]["Quote"];
-            /** @description Seller companies this RFQ is routed to (multi-seller routing). */
-            readonly target_sellers_data: unknown[];
             /**
              * @description Исполнение закрыто целиком (оплата + поставка + акт) — НЕ то же, что «сделка выиграна».
              *
@@ -7543,12 +7391,6 @@ export interface components {
              */
             seller_pays_delivery?: boolean;
         };
-        /**
-         * @description * `CLIENT` - Клиент (они покупают у нас)
-         *     * `SUPPLIER` - Поставщик (мы покупаем у них)
-         * @enum {string}
-         */
-        DirectionEnum: "CLIENT" | "SUPPLIER";
         /**
          * @description * `ITEM` - Позиция
          *     * `SECTION` - Раздел
@@ -8605,21 +8447,6 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["Quote"][];
         };
-        PaginatedRelationshipList: {
-            /** @example 123 */
-            count: number;
-            /**
-             * Format: uri
-             * @example http://api.example.org/accounts/?page=4
-             */
-            next?: string | null;
-            /**
-             * Format: uri
-             * @example http://api.example.org/accounts/?page=2
-             */
-            previous?: string | null;
-            results: components["schemas"]["Relationship"][];
-        };
         PaginatedSupplierOfferList: {
             /** @example 123 */
             count: number;
@@ -9644,15 +9471,6 @@ export interface components {
              * @description Момент фиксации цен при отправке клиенту
              */
             frozen_at?: string | null;
-        };
-        PatchedRelationshipRequest: {
-            /** Стадия отношения */
-            stage?: components["schemas"]["StageEnum"];
-            /**
-             * Владелец аккаунта
-             * @description Сотрудник команды, ответственный за отношение
-             */
-            owner_member?: number | null;
         };
         /**
          * @description Fields a user may edit on their OWN profile via /users/update-me/.
@@ -11111,74 +10929,6 @@ export interface components {
             /** @default  */
             reason: string;
         };
-        Relationship: {
-            readonly id: number;
-            /**
-             * Роль контрагента
-             * @description Кем контрагент является ДЛЯ владельца книги (Rule 2: сравнивать по коду)
-             *
-             *     * `CLIENT` - Клиент (они покупают у нас)
-             *     * `SUPPLIER` - Поставщик (мы покупаем у них)
-             */
-            readonly direction: components["schemas"]["DirectionEnum"];
-            /** Стадия отношения */
-            stage?: components["schemas"]["StageEnum"];
-            /** Источник */
-            readonly source: components["schemas"]["SourceEnum"];
-            readonly counterparty: components["schemas"]["RelationshipCounterparty"];
-            /**
-             * Владелец аккаунта
-             * @description Сотрудник команды, ответственный за отношение
-             */
-            owner_member?: number | null;
-            /** @default  */
-            readonly owner_member_name: string;
-            /** @default 0 */
-            readonly contacts_count: number;
-            /**
-             * Первое взаимодействие
-             * Format: date-time
-             */
-            readonly first_interaction_at: string | null;
-            /**
-             * Последнее взаимодействие
-             * Format: date-time
-             */
-            readonly last_interaction_at: string | null;
-            /** Сделок */
-            readonly deals_count: number;
-            /** Выиграно */
-            readonly won_count: number;
-            /**
-             * Format: decimal
-             * @description Сумма total_incl_vat выигранных сделок (UZS-канон)
-             */
-            readonly gmv: string;
-            /** Format: date-time */
-            readonly created_at: string;
-        };
-        /** @description Account summary embedded in an edge (nested read, flat write pattern). */
-        RelationshipCounterparty: {
-            readonly id: number;
-            readonly name: string;
-            readonly inn: string | null;
-            readonly stated_inn: string;
-            readonly is_registered: boolean;
-            /**
-             * @description The counterparty's primary contact — the target for a CB-invite (Phase D). Only
-             *     meaningful for an offline company; a registered one has real members instead.
-             */
-            readonly primary_contact_id: number | null;
-        };
-        RelationshipRequest: {
-            /** Стадия отношения */
-            stage?: components["schemas"]["StageEnum"];
-            /**
-             * Владелец аккаунта
-             * @description Сотрудник команды, ответственный за отношение
-             */
-            owner_member?: number | null;
-        };
         RemoveMemberRequest: {
             member_id: number;
         };
@@ -11194,9 +10944,6 @@ export interface components {
          * @enum {string}
          */
         ResetPeriodEnum: "never" | "yearly" | "monthly";
-        RouteRequestRequestRequest: {
-            seller_company_ids: number[];
-        };
         SearchDocument: {
             type: components["schemas"]["TypeEnum"];
             id: number;
@@ -11270,22 +11017,6 @@ export interface components {
             token: string;
             password: string;
         };
-        /**
-         * @description * `LEAD` - Лид с лендинга
-         *     * `OFFLINE_CREATED` - Заведён вручную (офлайн)
-         *     * `INBOUND_RFQ` - Входящая заявка
-         *     * `SELF_REGISTERED` - Саморегистрация
-         * @enum {string}
-         */
-        SourceEnum: "LEAD" | "OFFLINE_CREATED" | "INBOUND_RFQ" | "SELF_REGISTERED";
-        /**
-         * @description * `PROSPECT` - Проспект
-         *     * `ACTIVE` - Активный
-         *     * `DORMANT` - Спящий
-         *     * `LOST` - Потерян
-         * @enum {string}
-         */
-        StageEnum: "PROSPECT" | "ACTIVE" | "DORMANT" | "LOST";
         StockStatus: {
             readonly id: number;
             /**
@@ -11298,12 +11029,6 @@ export interface components {
              * @description Отображаемое название
              */
             name: string;
-        };
-        SuggestedSellerItem: {
-            company_id: number;
-            name: string;
-            matched_lines: number;
-            total_lines: number;
         };
         SupplierOffer: {
             readonly id: number;
@@ -11468,10 +11193,6 @@ export interface components {
              * @description Неактивные офферы не отображаются при выборе
              */
             is_active?: boolean;
-        };
-        SupplierPickerItem: {
-            id: number;
-            name: string;
         };
         /** @description Response shape for the SystemRole lookup feed ({code, name}). */
         SystemRoleLookup: {
@@ -12533,24 +12254,6 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Company"];
                 };
-            };
-        };
-    };
-    accounts_companies_suppliers_retrieve: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description List of {id, name, inn} */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
         };
     };
@@ -17049,7 +16752,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Not a routed seller */
+            /** @description Not own-company staff */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -17093,34 +16796,6 @@ export interface operations {
             };
         };
     };
-    crm_deals_route_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Сделка. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RouteRequestRequestRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["RouteRequestRequestRequest"];
-                "multipart/form-data": components["schemas"]["RouteRequestRequestRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DealDetail"];
-                };
-            };
-        };
-    };
     crm_deals_submit_request_create: {
         parameters: {
             query?: never;
@@ -17145,73 +16820,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DealDetail"];
-                };
-            };
-        };
-    };
-    crm_deals_suggest_sellers_ai_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Сделка. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Enqueued — poll ai-status; result carries `sellers` */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description ADMIN_VIEWER_CANNOT_ACT / ONLY_BUYER_CAN_ROUTE */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description AI_DAILY_CAP_REACHED */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description AI_DISABLED */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    crm_deals_suggested_sellers_list: {
-        parameters: {
-            query?: {
-                /** @description A search term. */
-                search?: string;
-            };
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Сделка. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SuggestedSellerItem"][];
                 };
             };
         };
@@ -17255,7 +16863,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Не routed-продавец / viewer */
+            /** @description Не сотрудник своей компании */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -17302,28 +16910,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DealDetail"];
-                };
-            };
-        };
-    };
-    crm_deals_suppliers_list: {
-        parameters: {
-            query?: {
-                /** @description A search term. */
-                search?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SupplierPickerItem"][];
                 };
             };
         };
@@ -19680,7 +19266,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Caller is neither the deal's buyer nor a routed seller */
+            /** @description Caller is neither the deal's buyer nor own-company staff */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -19714,7 +19300,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Caller is neither the deal's buyer nor a routed seller */
+            /** @description Caller is neither the deal's buyer nor own-company staff */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -19752,121 +19338,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaginatedQuoteList"];
-                };
-            };
-        };
-    };
-    crm_relationships_list: {
-        parameters: {
-            query?: {
-                /** @description CLIENT → книга клиентов (seller context), SUPPLIER → книга поставщиков (buyer context) */
-                direction?: "CLIENT" | "SUPPLIER";
-                /** @description A page number within the paginated result set. */
-                page?: number;
-                /** @description Number of results to return per page. */
-                page_size?: number;
-                /** @description A search term. */
-                search?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PaginatedRelationshipList"];
-                };
-            };
-        };
-    };
-    crm_relationships_retrieve: {
-        parameters: {
-            query?: {
-                /** @description CLIENT → книга клиентов (seller context), SUPPLIER → книга поставщиков (buyer context) */
-                direction?: "CLIENT" | "SUPPLIER";
-            };
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Отношение с контрагентом. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Relationship"];
-                };
-            };
-        };
-    };
-    crm_relationships_update: {
-        parameters: {
-            query?: {
-                /** @description CLIENT → книга клиентов (seller context), SUPPLIER → книга поставщиков (buyer context) */
-                direction?: "CLIENT" | "SUPPLIER";
-            };
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Отношение с контрагентом. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["RelationshipRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["RelationshipRequest"];
-                "multipart/form-data": components["schemas"]["RelationshipRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Relationship"];
-                };
-            };
-        };
-    };
-    crm_relationships_partial_update: {
-        parameters: {
-            query?: {
-                /** @description CLIENT → книга клиентов (seller context), SUPPLIER → книга поставщиков (buyer context) */
-                direction?: "CLIENT" | "SUPPLIER";
-            };
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Отношение с контрагентом. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["PatchedRelationshipRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["PatchedRelationshipRequest"];
-                "multipart/form-data": components["schemas"]["PatchedRelationshipRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Relationship"];
                 };
             };
         };
@@ -21372,7 +20843,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Not the routed seller of this КП */
+            /** @description Not own-company staff with pricing permission */
             403: {
                 headers: {
                     [name: string]: unknown;

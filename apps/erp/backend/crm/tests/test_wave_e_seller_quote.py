@@ -1,12 +1,12 @@
 """Wave E (F1–F4) — the seller-initiated КП path: offline client, calculator draft, promote.
 
-F1  the keystone: a deal a seller opens for an offline contact gets a DealSellerRouting row,
-    so it is visible to (and claimable / buildable by) its own creator. Before the fix seller
-    visibility was routing-only and the creator could not see their own deal.
+F1  a deal a staff member opens for an offline contact is owned by its creator from the start
+    (`Deal.assigned_to`) and is visible to / claimable / buildable by the back office (the own
+    company is the seller of every deal — M1-ERP-02 wave 3).
 F3  `Deal.company` is NULLABLE — the «калькулятор» draft. The whole security story is that
     scoping stays FAIL-CLOSED: buyer-side scopes are `company_id__in=[...]`, which a NULL
-    never matches, and seller-side access is the routing row — so nothing is reachable "by
-    accident". The cross-tenant negatives below are the load-bearing tests.
+    never matches, and only own-company staff see every deal — so nothing is reachable "by
+    accident" for an outsider. The outsider negatives below are the load-bearing tests.
 F4  accepting a promote-invite backfills `deal.client` on the contact's historical deals.
 """
 
@@ -15,9 +15,7 @@ from rest_framework.test import APIClient
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from accounts.services import create_offline_client
-from crm.models import Deal, DealSellerRouting, DealStage, Quote, QuoteStatus
-
-SELLER_HEADERS = {"HTTP_X_ACTIVE_CONTEXT": "SELLER"}
+from crm.models import Deal, DealStage, Quote, QuoteStatus
 
 
 @pytest.fixture
@@ -35,6 +33,23 @@ def _seller(email, inn):
     """A seller-team user: OWNER of a SUPPLIER company, can_sell."""
     company = Company.objects.create(name=f"Seller {inn}", inn=inn)
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
+    user = CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
+    CompanyMember.objects.create(
+        user=user,
+        company=company,
+        role=WorkspaceRole.objects.get(code="OWNER"),
+        is_active=True,
+        is_primary=True,
+        can_sell=True,
+    )
+    return user, company
+
+
+def _outsider(email, inn):
+    """A member of ANOTHER (client) company with the legacy can_sell flag on — not own-company
+    staff, so it reaches nothing of the back office."""
+    company = Company.objects.create(name=f"Outsider {inn}", inn=inn)
+    company.types.add(CompanyType.objects.get(code="CLIENT"))
     user = CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
     CompanyMember.objects.create(
         user=user,
@@ -69,7 +84,7 @@ def _api(user):
     return client
 
 
-# ── F1: the routing keystone ────────────────────────────────────────────────
+# ── F1: the creator owns the offline deal ────────────────────────────────────────────────
 
 
 @pytest.fixture
@@ -87,18 +102,17 @@ def offline_deal(lookups):
     return seller, seller_company, Deal.objects.get(pk=resp.json()["id"])
 
 
-def test_f1_offline_deal_gets_creator_routing_row(offline_deal):
-    seller, seller_company, deal = offline_deal
-    routing = DealSellerRouting.objects.get(deal=deal)
-    assert routing.seller_company_id == seller_company.id
+def test_f1_offline_deal_is_owned_by_its_creator(offline_deal):
+    seller, _seller_company, deal = offline_deal
+    deal.refresh_from_db()
     # The creator owns it from the start — it is not dumped into an anonymous queue.
-    assert routing.assigned_to_id == seller.id
-    assert routing.assigned_at is not None
+    assert deal.assigned_to_id == seller.id
+    assert deal.assigned_at is not None
 
 
 def test_f1_creator_sees_own_offline_deal_in_list(offline_deal):
     seller, _company, deal = offline_deal
-    resp = _api(seller).get("/api/v1/crm/deals/", **SELLER_HEADERS)
+    resp = _api(seller).get("/api/v1/crm/deals/")
     assert resp.status_code == 200
     body = resp.json()
     ids = [row["id"] for row in (body["results"] if isinstance(body, dict) else body)]
@@ -107,32 +121,45 @@ def test_f1_creator_sees_own_offline_deal_in_list(offline_deal):
 
 def test_f1_creator_can_claim_own_offline_deal(offline_deal):
     seller, _company, deal = offline_deal
-    resp = _api(seller).post(f"/api/v1/crm/deals/{deal.id}/claim/", **SELLER_HEADERS)
+    resp = _api(seller).post(f"/api/v1/crm/deals/{deal.id}/claim/")
     # Already owned by the creator → idempotent success, NOT "MEMBER_REQUIRED_FOR_ACTION".
     assert resp.status_code == 200, resp.content
 
 
 def test_f1_creator_can_build_quote_on_own_offline_deal(offline_deal):
     seller, _company, deal = offline_deal
-    resp = _api(seller).post("/api/v1/crm/quotes/", {"deal": deal.id}, format="json", **SELLER_HEADERS)
+    resp = _api(seller).post("/api/v1/crm/quotes/", {"deal": deal.id}, format="json")
     assert resp.status_code == 201, resp.content
     assert Quote.objects.filter(deal=deal).exists()
 
 
-def test_f1_other_seller_cannot_see_or_build_on_the_offline_deal(offline_deal):
-    """Routing is per seller company — F1 must not widen visibility beyond the creator."""
+def test_f1_teammate_sees_and_builds_on_the_offline_deal(offline_deal):
+    """Single seller: a colleague in the own company works the same deal."""
+    _seller_a, company, deal = offline_deal
+    teammate = CustomUser.objects.create_user(email="f1-mate@s.test", username="f1-mate@s.test", password="pw")
+    CompanyMember.objects.create(
+        user=teammate, company=company, role=WorkspaceRole.objects.get(code="OWNER"), is_active=True, can_sell=True
+    )
+    api = _api(teammate)
+    assert api.get(f"/api/v1/crm/deals/{deal.id}/").status_code == 200
+    resp = api.post("/api/v1/crm/quotes/", {"deal": deal.id}, format="json")
+    assert resp.status_code == 201, resp.content
+
+
+def test_f1_outsider_cannot_see_or_build_on_the_offline_deal(offline_deal):
+    """F1 must not widen visibility beyond the back office."""
     _seller_a, _company, deal = offline_deal
-    intruder, _intruder_company = _seller("f1-intruder@s.test", "710000002")
+    intruder, _intruder_company = _outsider("f1-intruder@s.test", "710000002")
     api = _api(intruder)
 
-    body = api.get("/api/v1/crm/deals/", **SELLER_HEADERS).json()
+    body = api.get("/api/v1/crm/deals/").json()
     ids = [row["id"] for row in (body["results"] if isinstance(body, dict) else body)]
     assert deal.id not in ids
 
-    assert api.get(f"/api/v1/crm/deals/{deal.id}/", **SELLER_HEADERS).status_code == 404
-    resp = api.post("/api/v1/crm/quotes/", {"deal": deal.id}, format="json", **SELLER_HEADERS)
+    assert api.get(f"/api/v1/crm/deals/{deal.id}/").status_code == 404
+    resp = api.post("/api/v1/crm/quotes/", {"deal": deal.id}, format="json")
     assert resp.status_code == 403
-    assert resp.json()["detail"] == "NO_ACCESS_TO_DEAL"
+    assert resp.json()["detail"] == "ONLY_SELLER_CAN_BUILD_QUOTE"
 
 
 # ── F3: the company-less calculator draft ───────────────────────────────────
@@ -148,23 +175,23 @@ def calculator_draft(lookups):
     return seller, seller_company, Deal.objects.get(pk=resp.json()["id"])
 
 
-def test_f3_creates_company_less_draft_with_routing(calculator_draft):
-    seller, seller_company, deal = calculator_draft
+def test_f3_creates_company_less_draft_owned_by_creator(calculator_draft):
+    seller, _seller_company, deal = calculator_draft
     assert deal.company_id is None and deal.contact_id is None and deal.client_id is None
-    assert DealSellerRouting.objects.filter(deal=deal, seller_company=seller_company).exists()
+    assert deal.assigned_to_id == seller.id
 
 
 def test_f3_creator_can_see_and_build(calculator_draft):
     seller, _company, deal = calculator_draft
     api = _api(seller)
-    assert api.get(f"/api/v1/crm/deals/{deal.id}/", **SELLER_HEADERS).status_code == 200
-    resp = api.post("/api/v1/crm/quotes/", {"deal": deal.id}, format="json", **SELLER_HEADERS)
+    assert api.get(f"/api/v1/crm/deals/{deal.id}/").status_code == 200
+    resp = api.post("/api/v1/crm/quotes/", {"deal": deal.id}, format="json")
     assert resp.status_code == 201, resp.content
 
 
 def test_f3_serializer_reports_null_company_name(calculator_draft):
     seller, _company, deal = calculator_draft
-    body = _api(seller).get(f"/api/v1/crm/deals/{deal.id}/", **SELLER_HEADERS).json()
+    body = _api(seller).get(f"/api/v1/crm/deals/{deal.id}/").json()
     assert body["company"] is None
     assert body["company_name"] is None
 
@@ -179,23 +206,23 @@ def test_f3_non_seller_cannot_create_calculator_draft(lookups):
 # ── F3 SECURITY: fail-closed cross-tenant negatives ─────────────────────────
 
 
-def test_f3_cross_tenant_seller_cannot_reach_company_less_draft(calculator_draft):
+def test_f3_outsider_cannot_reach_company_less_draft(calculator_draft):
     """THE load-bearing negative. `core/permissions.py` resolves `target_company =
-    obj.deal.company`; with NULL it must DENY (`if target_company:` is falsy), and the seller
-    branch must not grant either, because seller B has no routing row. Two NULLs must never
-    compare as a match."""
+    obj.deal.company`; with NULL it must DENY (`if target_company:` is falsy), and the staff
+    branch must not grant either, because the outsider is not own-company staff. Two NULLs must
+    never compare as a match."""
     _seller_a, _company_a, deal = calculator_draft
-    intruder, _company_b = _seller("f3-intruder@s.test", "720000002")
+    intruder, _company_b = _outsider("f3-intruder@s.test", "720000002")
     api = _api(intruder)
 
-    body = api.get("/api/v1/crm/deals/", **SELLER_HEADERS).json()
+    body = api.get("/api/v1/crm/deals/").json()
     ids = [row["id"] for row in (body["results"] if isinstance(body, dict) else body)]
-    assert deal.id not in ids, "company-less draft leaked into another seller's list"
+    assert deal.id not in ids, "company-less draft leaked into an outsider's list"
 
-    assert api.get(f"/api/v1/crm/deals/{deal.id}/", **SELLER_HEADERS).status_code == 404
-    assert api.post(f"/api/v1/crm/deals/{deal.id}/claim/", **SELLER_HEADERS).status_code in (400, 403)
-    resp = api.post("/api/v1/crm/quotes/", {"deal": deal.id}, format="json", **SELLER_HEADERS)
-    assert resp.status_code == 403 and resp.json()["detail"] == "NO_ACCESS_TO_DEAL"
+    assert api.get(f"/api/v1/crm/deals/{deal.id}/").status_code == 404
+    assert api.post(f"/api/v1/crm/deals/{deal.id}/claim/").status_code in (400, 403)
+    resp = api.post("/api/v1/crm/quotes/", {"deal": deal.id}, format="json")
+    assert resp.status_code == 403 and resp.json()["detail"] == "ONLY_SELLER_CAN_BUILD_QUOTE"
 
 
 def test_f3_unrelated_buyer_cannot_reach_company_less_draft(calculator_draft):
@@ -211,15 +238,15 @@ def test_f3_unrelated_buyer_cannot_reach_company_less_draft(calculator_draft):
     assert api.get(f"/api/v1/crm/deals/{deal.id}/").status_code == 404
 
 
-def test_f3_company_less_quote_object_permission_denies_foreign_seller(calculator_draft):
+def test_f3_company_less_quote_object_permission_denies_outsider(calculator_draft):
     """Object-level guard directly: a Quote hanging off a NULL-company deal must not fall
     through `target_company` to an accidental allow."""
     seller_a, _company_a, deal = calculator_draft
     quote = Quote.objects.create(
         deal=deal, version=1, prepared_by=seller_a, status=QuoteStatus.objects.get(code="DRAFT")
     )
-    intruder, _company_b = _seller("f3-intruder2@s.test", "720000004")
-    resp = _api(intruder).get(f"/api/v1/crm/quotes/{quote.id}/", **SELLER_HEADERS)
+    intruder, _company_b = _outsider("f3-intruder2@s.test", "720000004")
+    resp = _api(intruder).get(f"/api/v1/crm/quotes/{quote.id}/")
     assert resp.status_code == 404
 
 

@@ -213,8 +213,7 @@ class QuoteItemSerializer(serializers.ModelSerializer):
     )
 
     def _can_see_costs(self, quote) -> bool:
-        # Per-quote (C1): cost/margin only on a quote the viewer's own company prepared —
-        # not a competitor's quote on the same multi-seller-routed deal. Cached by quote id
+        # Per-quote (C1): cost/margin gate (`can_view_quote_costs_for`). Cached by quote id
         # so a list of items on one quote doesn't re-query the preparer's memberships.
         cache = getattr(self, "_cost_cache", None)
         if cache is None:

@@ -1,16 +1,18 @@
 """SEC audit #7 — the generic change-stage endpoint must not be a parallel path around
-submit_request's capability gate, nor let a co-routed seller close a shared deal.
+submit_request's capability gate, and on the back-office side moving the pipeline is a
+role permission (`quote.build`).
 
-Self-contained fixtures (not shared with test_ms_routing.py) so this file never conflicts
-with other sec-PRs appending to the routing suite.
+The seller of every deal is the own company (M1-ERP-02 wave 3): the multi-seller «shared deal»
+close gate is gone — staff with the permission may decline (CLOSED_LOST) any deal, a view-only
+role may not, an outsider does not even reach the deal.
 """
 
 import pytest
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
-from crm.models import Deal, DealSellerRouting, DealStage
+from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, CustomUser, WorkspaceRole
+from crm.models import Deal, DealStage
 
 
 @pytest.fixture
@@ -22,83 +24,90 @@ def lookups(db):
         DealStage.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
 
 
-def _seller(name, inn, email):
-    company = Company.objects.create(name=name, inn=inn)
-    company.types.add(CompanyType.objects.get(code="SUPPLIER"))
+def _member(company, email, *, company_role=None, can_sell=False, can_buy=False):
     user = CustomUser.objects.create_user(email=email, username=email, password="x")
     CompanyMember.objects.create(
         user=user,
         company=company,
         role=WorkspaceRole.objects.get(code="OWNER"),
+        company_role=company_role,
         is_active=True,
         is_primary=True,
-        can_sell=True,
-    )
-    return user, company
-
-
-def _buyer(email, buyer_co):
-    user = CustomUser.objects.create_user(email=email, username=email, password="x")
-    CompanyMember.objects.create(
-        user=user,
-        company=buyer_co,
-        role=WorkspaceRole.objects.get(code="OWNER"),
-        is_active=True,
-        is_primary=True,
-        can_buy=True,
+        can_sell=can_sell,
+        can_buy=can_buy,
     )
     return user
 
 
-def _api(user, ctx="SELLER"):
+def _api(user):
     client = APIClient()
-    client.credentials(
-        HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user).access_token}", HTTP_X_ACTIVE_CONTEXT=ctx
-    )
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user).access_token}")
     return client
 
 
 @pytest.fixture
 def world(lookups):
-    sa_user, sa_co = _seller("Seller A", "A100", "sa@cs.test")
-    sb_user, sb_co = _seller("Seller B", "B100", "sb@cs.test")
+    own = Company.objects.create(name="Own Co", inn="A100")
+    own.types.add(CompanyType.objects.get(code="SUPPLIER"))
     buyer_co = Company.objects.create(name="Buyer Co", inn="C100")
     buyer_co.types.add(CompanyType.objects.get(code="CLIENT"))
-    return dict(sa_user=sa_user, sa_co=sa_co, sb_user=sb_user, sb_co=sb_co, buyer_co=buyer_co)
+    other_co = Company.objects.create(name="Other Client", inn="C200")
+    other_co.types.add(CompanyType.objects.get(code="CLIENT"))
+    viewer_role = CompanyRole.objects.create(company=own, name="Наблюдатель", permissions=[])
+    return dict(
+        staff=_member(own, "sa@cs.test", can_sell=True),  # legacy OWNER → every permission
+        observer=_member(own, "obs@cs.test", company_role=viewer_role, can_sell=True),
+        outsider=_member(other_co, "out@cs.test", can_sell=True),
+        buyer_co=buyer_co,
+    )
+
+
+def _change_stage(user, deal, stage_code):
+    return _api(user).post(f"/api/v1/crm/deals/{deal.id}/change-stage/", {"stage_code": stage_code}, format="json")
 
 
 @pytest.mark.django_db
-def test_change_stage_gates_seller_but_not_buyer(world):
+def test_change_stage_gates_staff_but_not_buyer(world):
     """change-stage must not bypass submit_request's buyer-capability gate for DRAFT→RFQ_OPEN.
     The KYC floor in front of it was removed in M1-ERP-02 wave 1c: the buyer passes."""
     draft = DealStage.objects.get(code="DRAFT")
     deal = Deal.objects.create(title="Draft RFQ", company=world["buyer_co"], stage=draft)
-    DealSellerRouting.objects.create(deal=deal, seller_company=world["sb_co"])
 
-    r2 = _api(world["sb_user"]).post(
-        f"/api/v1/crm/deals/{deal.id}/change-stage/", {"stage_code": "RFQ_OPEN"}, format="json"
-    )
+    r2 = _change_stage(world["staff"], deal, "RFQ_OPEN")
     assert r2.status_code == 403
     assert r2.json()["detail"] == "ONLY_BUYER_CAN_SUBMIT_REQUEST"
 
-    buyer_user = _buyer("buyer7@cs.test", world["buyer_co"])
-    r = _api(buyer_user, ctx="BUYER").post(
-        f"/api/v1/crm/deals/{deal.id}/change-stage/", {"stage_code": "RFQ_OPEN"}, format="json"
-    )
+    buyer_user = _member(world["buyer_co"], "buyer7@cs.test", can_buy=True)
+    r = _change_stage(buyer_user, deal, "RFQ_OPEN")
     # The user gate passes; what answers now is the FSM's own data guard (an empty заявка).
     assert r.status_code == 422, r.content
     assert r.json()["detail"] == "REQUEST_HAS_NO_ITEMS"
 
 
 @pytest.mark.django_db
-def test_change_stage_blocks_seller_closing_shared_deal(world):
-    """A co-routed seller can't drive the SHARED multi-seller deal to CLOSED_LOST."""
-    rfq = DealStage.objects.get(code="RFQ_OPEN")
-    deal = Deal.objects.create(title="Shared", company=world["buyer_co"], stage=rfq)
-    DealSellerRouting.objects.create(deal=deal, seller_company=world["sa_co"])
-    DealSellerRouting.objects.create(deal=deal, seller_company=world["sb_co"])
-    r = _api(world["sb_user"]).post(
-        f"/api/v1/crm/deals/{deal.id}/change-stage/", {"stage_code": "CLOSED_LOST"}, format="json"
-    )
+def test_staff_with_permission_may_decline_the_deal(world):
+    """No «shared deal» any more: staff holding quote.build closes the deal as lost."""
+    deal = Deal.objects.create(title="RFQ", company=world["buyer_co"], stage=DealStage.objects.get(code="RFQ_OPEN"))
+    r = _change_stage(world["staff"], deal, "CLOSED_LOST")
+    assert r.status_code == 200, r.content
+    deal.refresh_from_db()
+    assert deal.stage.code == "CLOSED_LOST"
+
+
+@pytest.mark.django_db
+def test_view_only_staff_cannot_move_the_deal(world):
+    deal = Deal.objects.create(title="RFQ", company=world["buyer_co"], stage=DealStage.objects.get(code="RFQ_OPEN"))
+    r = _change_stage(world["observer"], deal, "CLOSED_LOST")
     assert r.status_code == 403, r.content
-    assert r.json()["detail"] == "ONLY_BUYER_CAN_CLOSE_SHARED_DEAL"
+    assert r.json()["detail"] == "ROLE_NOT_PERMITTED"
+    deal.refresh_from_db()
+    assert deal.stage.code == "RFQ_OPEN"
+
+
+@pytest.mark.django_db
+def test_outsider_does_not_reach_the_deal(world):
+    deal = Deal.objects.create(title="RFQ", company=world["buyer_co"], stage=DealStage.objects.get(code="RFQ_OPEN"))
+    r = _change_stage(world["outsider"], deal, "CLOSED_LOST")
+    assert r.status_code == 404, r.content
+    deal.refresh_from_db()
+    assert deal.stage.code == "RFQ_OPEN"

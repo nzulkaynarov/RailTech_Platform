@@ -1,8 +1,9 @@
 """W1 (spec-inbound-rfq-gap-analysis, утв. 27-07): email продавцу о новой заявке.
 
 Паттерн instant-assign-notification (Odoo/Bitrix24/Salesforce): in-app колокольчик достигает
-только залогиненных — email обязан долететь до оффлайн-продавца. Один task НА ПОЛУЧАТЕЛЯ:
-routed-компании — конкуренты, их адреса не должны встречаться в одном письме.
+только залогиненных — email обязан долететь до оффлайн-продавца. Получатели — сотрудники своей
+компании (продавец любой сделки, M1-ERP-02 волна 3); один task НА ПОЛУЧАТЕЛЯ — адреса не
+встречаются в одном письме; участники других компаний писем не получают.
 """
 
 from unittest.mock import patch
@@ -10,7 +11,7 @@ from unittest.mock import patch
 import pytest
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
-from crm.models import Deal, DealSellerRouting, DealStage
+from crm.models import Deal, DealStage
 from notifications.emails import _render_bodies
 from notifications.models import NotificationType
 
@@ -21,11 +22,14 @@ def world(db):
     DealStage.objects.get_or_create(code="RFQ_OPEN", defaults={"name": "RFQ", "sort_order": 20})
     NotificationType.objects.get_or_create(code="INFO", defaults={"name": "Info", "sort_order": 1})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
+    CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
+    own = Company.objects.create(name="Own Co", inn="3100000001")
+    own.types.add(CompanyType.objects.get(code="SUPPLIER"))
+    other = Company.objects.create(name="Other Client", inn="3100000002")
+    other.types.add(CompanyType.objects.get(code="CLIENT"))
 
-    def _seller(name, inn, email):
-        company = Company.objects.create(name=name, inn=inn)
-        company.types.add(CompanyType.objects.get(code="SUPPLIER"))
+    def _member(company, email):
         user = CustomUser.objects.create_user(email=email, username=email, password="pw")
         CompanyMember.objects.create(
             user=user,
@@ -34,25 +38,24 @@ def world(db):
             is_active=True,
             can_sell=True,
         )
-        return company, user
+        return user
 
-    seller_a, user_a = _seller("Seller A", "3100000001", "a@sella.test")
-    seller_b, user_b = _seller("Seller B", "3100000002", "b@sellb.test")
+    user_a = _member(own, "a@sella.test")
+    user_b = _member(own, "b@sellb.test")
+    _member(other, "x@other.test")  # can_sell in ANOTHER company — not the back office
     buyer = Company.objects.create(name="ООО «Покупатель»", inn="7700000042")
     deal = Deal.objects.create(title="Рельсы Р65", company=buyer, stage=DealStage.objects.get(code="DRAFT"))
-    DealSellerRouting.objects.create(deal=deal, seller_company=seller_a)
-    DealSellerRouting.objects.create(deal=deal, seller_company=seller_b)
-    return {"deal": deal, "user_a": user_a, "user_b": user_b}
+    return {"deal": deal, "user_a": user_a, "user_b": user_b, "own": own}
 
 
 @pytest.mark.django_db(transaction=False)
-def test_rfq_open_transition_emails_each_routed_seller_separately(world, django_capture_on_commit_callbacks):
+def test_rfq_open_transition_emails_each_staff_member_separately(world, django_capture_on_commit_callbacks):
     deal = world["deal"]
     with patch("notifications.tasks.send_transactional_email.delay") as delay:
         with django_capture_on_commit_callbacks(execute=True):
             deal.stage = DealStage.objects.get(code="RFQ_OPEN")
             deal.save()
-    # One task PER recipient — competitor addresses never share a message.
+    # One task PER staff member — addresses never share a message; the outsider gets nothing.
     assert delay.call_count == 2
     recipients = sorted(call.kwargs["to"][0] for call in delay.call_args_list)
     assert recipients == ["a@sella.test", "b@sellb.test"]
@@ -65,14 +68,15 @@ def test_rfq_open_transition_emails_each_routed_seller_separately(world, django_
 
 
 @pytest.mark.django_db(transaction=False)
-def test_no_email_without_routing(world, django_capture_on_commit_callbacks):
+def test_no_email_when_back_office_has_no_staff(world, django_capture_on_commit_callbacks):
+    CompanyMember.objects.filter(company=world["own"]).update(is_active=False)
     buyer = Company.objects.create(name="Ещё покупатель", inn="7700000043")
     lone_deal = Deal.objects.create(title="X", company=buyer, stage=DealStage.objects.get(code="DRAFT"))
     with patch("notifications.tasks.send_transactional_email.delay") as delay:
         with django_capture_on_commit_callbacks(execute=True):
             lone_deal.stage = DealStage.objects.get(code="RFQ_OPEN")
             lone_deal.save()
-    assert delay.call_count == 0  # никому не роутили — никому не пишем
+    assert delay.call_count == 0  # сотрудников нет — писать некому
 
 
 @pytest.mark.django_db

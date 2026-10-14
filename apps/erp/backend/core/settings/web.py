@@ -69,9 +69,11 @@ CORS_ALLOWED_ORIGINS = (
 )
 
 # Allow our custom request headers through CORS preflight (cross-origin dev). Without
-# these a credentialed request carrying them is blocked: X-Active-Context (context
-# scoping), Idempotency-Key (F2.4), If-Match (F2.5 optimistic locking). Prod is
-# same-origin (no preflight) but this keeps cross-origin dev honest.
+# these a credentialed request carrying them is blocked: Idempotency-Key (F2.4), If-Match
+# (F2.5 optimistic locking). Prod is same-origin (no preflight) but this keeps cross-origin
+# dev honest. `x-active-context` — переходное: бэкенд заголовок больше не читает (переключатель
+# «покупатель / продавец» удалён в M1-ERP-02 волна 3), но SPA ещё шлёт его на каждом запросе,
+# и без него preflight в cross-origin dev падает. Убрать вместе с фронтендом волны 3.
 from corsheaders.defaults import default_headers  # noqa: E402
 
 CORS_ALLOW_HEADERS = (*default_headers, "x-active-context", "idempotency-key", "if-match", "accept-language")

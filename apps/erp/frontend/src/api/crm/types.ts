@@ -398,41 +398,6 @@ export interface TimelineEntry {
 	contact_id: number | null;
 }
 
-// ─── CRM Phase B — counterparty relationship book («Книга контрагентов») ──
-// Direction/stage/source are stable DB codes (Rule 2: compare by code, translate for display).
-export type RelationshipDirection = 'CLIENT' | 'SUPPLIER';
-export type RelationshipStage = 'PROSPECT' | 'ACTIVE' | 'DORMANT' | 'LOST';
-export type RelationshipSource = 'LEAD' | 'OFFLINE_CREATED' | 'INBOUND_RFQ' | 'SELF_REGISTERED';
-
-/** Account summary embedded in a relationship edge (nested read, flat write pattern). */
-export interface RelationshipCounterparty {
-	id: number;
-	name: string;
-	inn: string | null;
-	// INN as stated by the book owner for an offline (unregistered) counterparty.
-	stated_inn: string;
-	is_registered: boolean;
-	// The counterparty's primary contact — the CB-invite target (Phase D); null if none.
-	primary_contact_id: number | null;
-}
-
-export interface Relationship {
-	id: number;
-	direction: RelationshipDirection;
-	stage: RelationshipStage;
-	source: RelationshipSource;
-	counterparty: RelationshipCounterparty;
-	owner_member: number | null;
-	owner_member_name: string;
-	contacts_count: number;
-	first_interaction_at: string | null;
-	last_interaction_at: string | null;
-	deals_count: number;
-	won_count: number;
-	// Decimal string — total_incl_vat of won deals, UZS-канон.
-	gmv: string;
-	created_at: string;
-}
 
 /** Contact of a company in the team's own client book. */
 export interface Contact {

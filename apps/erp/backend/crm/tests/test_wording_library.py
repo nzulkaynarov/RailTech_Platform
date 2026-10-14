@@ -21,7 +21,7 @@ from accounts.models import (
     SystemRole,
     WorkspaceRole,
 )
-from crm.models import CompanyWordingVariant, ContractStatus, Deal, DealSellerRouting, DealStage, Quote, QuoteStatus
+from crm.models import CompanyWordingVariant, ContractStatus, Deal, DealStage, Quote, QuoteStatus
 from crm.services.contracts import generate_contract_from_quote
 from crm.services.document_blocks import contract_block_values
 from crm.services.wording_variants import create_variant, select_contract_wording
@@ -59,7 +59,6 @@ def world(lookups):
         can_sell=True,
     )
     deal = Deal.objects.create(title="W deal", company=buyer_co, stage=DealStage.objects.get(code="DRAFT"))
-    DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)
     quote = Quote.objects.create(
         deal=deal,
         version=1,

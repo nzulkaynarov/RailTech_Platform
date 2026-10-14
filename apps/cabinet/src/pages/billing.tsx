@@ -14,6 +14,7 @@ import { ErrorState, ListSkeleton } from '@/components/QueryStates';
 import { ReasonDialog } from '@/components/ReasonDialog';
 import { ResponsiveList } from '@/components/ResponsiveList';
 import { StatusBadge, ToneBadge } from '@/components/StatusBadge';
+import { ManagerButton } from '@/components/TelegramLinkButton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useNow } from '@/hooks/useNow';
@@ -87,6 +88,7 @@ export function ContractsPage() {
               cell: (row) => (
                 <>
                   <RowDocument documentId={row.document_id} number={row.number} />
+                  <ManagerButton compact dealId={row.deal_id} label={t('manager.aboutContract', { number: row.number })} />
                   {contractAwaitsClient(row.status) ? (
                     <CanAct>
                       <Button size="sm" onClick={() => setTarget(row)} aria-label={t('pages.contracts.signNamed', { number: row.number })}>
@@ -217,7 +219,15 @@ export function InvoicesPage() {
               },
               { id: 'deal', header: t('pages.invoices.columns.deal'), cell: (row) => <DealLink dealId={row.deal_id} /> },
             ]}
-            actions={{ header: t('common.actions'), cell: (row) => <RowDocument documentId={row.document_id} number={row.number} /> }}
+            actions={{
+              header: t('common.actions'),
+              cell: (row) => (
+                <>
+                  <RowDocument documentId={row.document_id} number={row.number} />
+                  <ManagerButton compact dealId={row.deal_id} label={t('manager.aboutInvoice', { number: row.number })} />
+                </>
+              ),
+            }}
           />
         </>
       )}
@@ -280,6 +290,7 @@ export function ActsPage() {
               cell: (row) => (
                 <>
                   <RowDocument documentId={row.document_id} number={row.number} />
+                  <ManagerButton compact dealId={row.deal_id} label={t('manager.aboutAct', { number: row.number })} />
                   {row.status === 'issued' ? (
                     <CanAct>
                       <Button size="sm" onClick={() => setTarget({ act: row, action: 'accept' })} aria-label={t('pages.acts.acceptNamed', { number: row.number })}>

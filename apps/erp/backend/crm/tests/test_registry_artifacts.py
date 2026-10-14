@@ -15,7 +15,6 @@ from crm.models import (
     Contract,
     ContractStatus,
     Deal,
-    DealSellerRouting,
     DealStage,
     DocumentTemplateKind,
     Fulfillment,
@@ -87,7 +86,6 @@ def world(lookups):
         can_buy=True,
     )
     deal = Deal.objects.create(title="R deal", company=buyer_co, stage=DealStage.objects.get(code="CONTRACT_SIGNED"))
-    DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)
     quote = Quote.objects.create(
         deal=deal,
         version=1,

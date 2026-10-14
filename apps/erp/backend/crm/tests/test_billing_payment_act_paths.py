@@ -3,7 +3,8 @@
 `crm/services/billing.py` был покрыт на 55%. Дыры приходились ровно на деньги на входе и
 на акт: идемпотентность платежа по банковской ссылке (двойной клик не должен зачесть
 платёж дважды), переход инвойса в частично оплаченный, гейты оператора-наблюдателя, и —
-существенное — запрет продавцу выпускать акт по инвойсу КОНКУРЕНТА (аудит H4).
+существенное — запрет постороннему (не сотруднику своей компании) выпускать акт (аудит H4;
+продавец один — компания-владелец, M1-ERP-02 волна 3).
 """
 
 from datetime import date
@@ -11,14 +12,13 @@ from decimal import Decimal
 
 import pytest
 
-from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
+from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import (
     Act,
     ActStatus,
     Contract,
     ContractStatus,
     Deal,
-    DealSellerRouting,
     DealStage,
     InvoiceStatus,
     Payment,
@@ -69,16 +69,16 @@ def _member(company, email, *, can_sell=False, can_buy=False):
 
 @pytest.fixture
 def world(lookups):
-    """Покупатель, зароутиненный продавец с подпиской, ПОСТОРОННИЙ продавец и подписанный
-    договор, готовый к выставлению счёта."""
+    """Покупатель, сотрудник своей компании (продавец), ПОСТОРОННИЙ — участник другой
+    компании-клиента, и подписанный договор, готовый к выставлению счёта."""
     buyer_co = _company("Покупатель", "B902", "CLIENT")
     buyer_user = _member(buyer_co, "buyer@billpaths.test", can_buy=True)
 
     seller_co = _company("Продавец", "S902", "SUPPLIER")
     seller_user = _member(seller_co, "seller@billpaths.test", can_sell=True)
 
-    other_co = _company("Посторонний продавец", "O902", "SUPPLIER")
-    other_user = _member(other_co, "other@billpaths.test", can_sell=True)
+    other_co = _company("Посторонняя компания", "O902", "CLIENT")
+    other_user = _member(other_co, "other@billpaths.test", can_sell=True, can_buy=True)
 
     operator = CustomUser.objects.create_user(
         is_superuser=True,
@@ -89,7 +89,6 @@ def world(lookups):
     )
 
     deal = Deal.objects.create(title="Сделка", company=buyer_co, stage=DealStage.objects.get(code="CONTRACT_SIGNED"))
-    DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)
     quote = Quote.objects.create(
         deal=deal,
         version=1,
@@ -109,6 +108,7 @@ def world(lookups):
     )
     return {
         "buyer_user": buyer_user,
+        "seller_co": seller_co,
         "seller_user": seller_user,
         "other_user": other_user,
         "operator": operator,
@@ -131,14 +131,38 @@ def _issued_invoice(world):
 
 @pytest.mark.django_db
 class TestRecordPaymentGates:
-    def test_seller_cannot_record_buyers_payment(self, world):
-        """Платёж фиксирует покупательская сторона сделки."""
+    def test_staff_without_payment_permission_cannot_record_payment(self, world):
+        """Бэк-офис фиксирует оплату только по явному праву роли `payment.record`: сотрудник
+        своей компании без него получает ROLE_NOT_PERMITTED, и платёж не записывается."""
         invoice = _issued_invoice(world)
         result, error = record_payment(
             invoice.id, actor=world["seller_user"], amount=Decimal("10"), paid_at=date.today()
         )
         assert result is None
+        assert error == "ROLE_NOT_PERMITTED"
+        assert not Payment.objects.filter(invoice=invoice).exists()
+
+    def test_staff_with_payment_permission_records_payment(self, world):
+        """Финансист своей компании (явная роль с `payment.record`) фиксирует поступление."""
+        invoice = _issued_invoice(world)
+        finance = CompanyRole.objects.create(company=world["seller_co"], name="Финансы", permissions=["payment.record"])
+        CompanyMember.objects.filter(user=world["seller_user"], company=world["seller_co"]).update(company_role=finance)
+        payment, error = record_payment(
+            invoice.id, actor=world["seller_user"], amount=Decimal("10"), paid_at=date.today()
+        )
+        assert error is None, error
+        assert payment is not None
+        assert Payment.objects.filter(invoice=invoice).count() == 1
+
+    def test_outsider_cannot_record_payment(self, world):
+        """Посторонний (участник другой компании) — ни покупатель сделки, ни сотрудник."""
+        invoice = _issued_invoice(world)
+        result, error = record_payment(
+            invoice.id, actor=world["other_user"], amount=Decimal("10"), paid_at=date.today()
+        )
+        assert result is None
         assert error == "MEMBER_REQUIRED_FOR_ACTION"
+        assert not Payment.objects.filter(invoice=invoice).exists()
 
     def test_missing_invoice_is_reported(self, world):
         result, error = record_payment(10**7, actor=world["buyer_user"], amount=Decimal("10"), paid_at=date.today())
@@ -257,9 +281,9 @@ class TestGenerateAct:
         assert result is None
         assert error == "MEMBER_REQUIRED_FOR_ACTION"
 
-    def test_competitor_seller_cannot_issue_act_on_foreign_invoice(self, world):
-        """Аудит H4 — граница конфиденциальности: продавец, не зароутиненный на сделку, не
-        должен выпускать акт по чужому счёту."""
+    def test_outsider_cannot_issue_act_on_foreign_invoice(self, world):
+        """Аудит H4 — граница доступа: участник чужой компании (не сотрудник своей компании) не
+        выпускает акт по счёту сделки, даже с флагом can_sell."""
         invoice = _issued_invoice(world)
         result, error = generate_act(invoice.id, actor=world["other_user"])
         assert result is None
@@ -279,7 +303,7 @@ class TestGenerateAct:
         assert result is None
         assert error == "NOT_FOUND"
 
-    def test_routed_seller_issues_an_act_mirroring_the_invoice(self, world):
+    def test_staff_issues_an_act_mirroring_the_invoice(self, world):
         """Акт зеркалит счёт: та же сумма, статус «выпущен», связи проставлены."""
         invoice = _issued_invoice(world)
         act, error = generate_act(invoice.id, actor=world["seller_user"])

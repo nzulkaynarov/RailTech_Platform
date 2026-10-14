@@ -9,6 +9,12 @@ logger = logging.getLogger(__name__)
 
 # ──────────────────────────────────────────────────────────────────────────
 # Actor-level guards for business services
+#
+# ERP — бэк-офис одной компании (BUSINESS §3.3: «продавец один — компания-владелец»).
+# Маршрутизация заявок между продавцами («скрытая конкуренция», заголовок контекста
+# покупатель / продавец) удалена в M1-ERP-02 волна 3: продавец любой сделки — своя
+# компания (`core.tenant.own_company_id`), сотрудник — её активный участник, а что ему можно —
+# решают права роли (`member_has_permission`).
 # ──────────────────────────────────────────────────────────────────────────
 
 
@@ -18,7 +24,7 @@ def is_member_of(user: "CustomUser", company_id: int, *, capability: Optional[st
     If `capability` is 'sell' or 'buy', also checks the membership's can_sell /
     can_buy flag. OWNER distributes these in the team; a member without the
     flag must be refused at the service layer even if the company has the
-    matching CompanyType.
+    matching CompanyType. (Покупательская сторона — до M2-ERP-01.)
     """
     if not user or not user.is_authenticated:
         return False
@@ -76,267 +82,81 @@ def member_has_permission(user: "CustomUser", company_id: int, perm: str) -> boo
 
 
 def is_seller(user: "CustomUser") -> bool:
-    """True if the user is on the seller team — an active can_sell membership in a
-    SELLER-type company (SUPPLIER / MANUFACTURER).
+    """Сотрудник бэк-офиса — активный участник компании-владельца (`core.tenant.own_company_id`).
 
-    CRITICAL: `can_sell` DEFAULTS TO TRUE on every CompanyMember, so checking
-    can_sell alone would make EVERY user (incl. brand-new CLIENTS) a "seller" and
-    grant them the cross-tenant "see all deals" queryset — a data leak. The
-    company-type filter is what keeps a client a client. Since the seller operates
-    across ALL buyer заявки/deals (single-seller model, RailTech) and is not a
-    member of the buyer's deal.company, seller-side authz keys off this rather than
-    deal-company membership.
+    Сторона «продавец» больше не выводится из флага `can_sell`, типа компании или заголовка
+    контекста: продавец один, и это своя компания. Что сотруднику можно делать, решают права
+    роли (`member_has_permission`). Имя функции историческое — переименование в M1-ERP-03.
     """
     if not user or not user.is_authenticated:
         return False
-    return user.memberships.filter(is_active=True, can_sell=True).in_seller_company().exists()
+    from core.tenant import own_company_id
+
+    company_id = own_company_id()
+    if company_id is None:
+        return False
+    return user.memberships.filter(company_id=company_id, is_active=True).exists()
+
+
+def sees_all_deals(user: "CustomUser") -> bool:
+    """Видит ли пользователь все сделки ERP: администратор или сотрудник компании-владельца.
+
+    Продавец любой сделки — своя компания, поэтому фильтра маршрутизации нет. Остальные
+    (покупательские аккаунты — до M2-ERP-01) видят только сделки своей компании-клиента.
+    """
+    if not user or not user.is_authenticated:
+        return False
+    return bool(getattr(user, "is_superuser", False) or is_seller(user))
 
 
 def primary_seller_company_id(user: "CustomUser") -> Optional[int]:
-    """The seller company to anchor Quote.prepared_by on (prefers the primary
-    membership). None if the user has no can_sell membership in a SELLER company."""
-    if not user or not user.is_authenticated:
+    """Компания, от имени которой сотрудник строит КП, выставляет счёт и подписывает документы, —
+    всегда компания-владелец. None, если пользователь не её сотрудник."""
+    if not is_seller(user):
         return None
-    membership = (
-        user.memberships.filter(is_active=True, can_sell=True).in_seller_company().order_by("-is_primary", "id").first()
-    )
-    return membership.company_id if membership else None
+    from core.tenant import own_company_id
+
+    return own_company_id()
+
+
+def seller_company_ids(user: "CustomUser") -> list:
+    """`[own_company_id]` для сотрудника, пусто для остальных и для администратора (он видит всё
+    и без этого скоупа)."""
+    if getattr(user, "is_superuser", False):
+        return []
+    company_id = primary_seller_company_id(user)
+    return [company_id] if company_id else []
+
+
+def _own_company_permission(user: "CustomUser", perm: str) -> bool:
+    """Право роли сотрудника в компании-владельце; администратор — всегда."""
+    if not user or not user.is_authenticated:
+        return False
+    if getattr(user, "is_superuser", False):
+        return True
+    from core.tenant import own_company_id
+
+    company_id = own_company_id()
+    return bool(company_id) and member_has_permission(user, company_id, perm)
 
 
 def can_view_quote_costs(user: "CustomUser") -> bool:
     """True if the viewer may see КП cost/margin fields (base price, logistics, customs,
     margin, landed cost, charges). Administrator (`is_superuser`) always; otherwise a member of
-    a SELLER company who holds the `quote.view_cost_margin` permission. This is the sensitive
-    gate that replaces the blanket "any seller sees cost" — a restricted seller-team role
-    (e.g. Наблюдатель) no longer sees margin."""
-    if not user or not user.is_authenticated:
-        return False
-    if getattr(user, "is_superuser", False):
-        return True
-    seller_company_ids = (
-        user.memberships.filter(is_active=True).in_seller_company().values_list("company_id", flat=True).distinct()
-    )
-    return any(member_has_permission(user, cid, "quote.view_cost_margin") for cid in seller_company_ids)
+    the own company holding `quote.view_cost_margin` — a restricted back-office role
+    (e.g. Наблюдатель) does not see margin."""
+    return _own_company_permission(user, "quote.view_cost_margin")
 
 
 def can_view_quote_costs_for(user: "CustomUser", quote) -> bool:
-    """Per-quote cost/margin gate (audit C1). `can_view_quote_costs` answers "may this user
-    EVER see cost?"; this also requires the quote to belong to the viewer's OWN company —
-    on a deal routed to competing sellers A and B, A must not read B's КП cost/margin.
-    Administrator (`is_superuser`) sees all; an unclaimed (prepared_by=None) request quote carries
-    no real cost yet and is owned by whichever seller builds it.
-    """
-    if not can_view_quote_costs(user):
-        return False
-    if getattr(user, "is_superuser", False):
-        return True
-    prepared_by_id = getattr(quote, "prepared_by_id", None)
-    if prepared_by_id is None:
-        return True
-    from accounts.models import CompanyMember
-
-    viewer_company_ids = set(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
-    preparer_company_ids = set(
-        CompanyMember.objects.filter(user_id=prepared_by_id, is_active=True).values_list("company_id", flat=True)
-    )
-    return bool(viewer_company_ids & preparer_company_ids)
-
-
-# Frontend context-switcher value, sent on every SPA request so the backend can
-# scope data to the role the user is currently ACTING as (not just what their
-# memberships allow). A user who is both a seller and a buyer must, while in the
-# BUYER context, see only their own company's deals — not every buyer's заявка.
-_SELLER_CONTEXTS = {"SELLER", "MANUFACTURER"}
-
-
-def acting_context(request) -> str:
-    """The X-Active-Context header value (BUYER / SELLER / MANUFACTURER), upper-cased.
-    Empty string when absent (non-SPA client)."""
-    return (request.META.get("HTTP_X_ACTIVE_CONTEXT") or "").strip().upper()
-
-
-def seller_sees_all_deals(user: "CustomUser", request) -> bool:
-    """Whether this request should receive the cross-company seller queryset.
-
-    True for the administrator (`is_superuser`, always), or a seller acting in a SELLER/MANUFACTURER
-    context. A seller acting in the BUYER context is scoped to its own company —
-    this is what stops a dual seller+buyer user from seeing other buyers' заявки
-    while purchasing. SECURITY NOTE: this only ever NARROWS access — it never
-    grants more than is_seller() already would, so a forged/missing header can't
-    leak data a pure buyer shouldn't see (they fail is_seller and stay scoped).
-    A missing header defaults to seller-see-all to preserve non-SPA API clients;
-    the SPA always sends the header.
-    """
-    if getattr(user, "is_superuser", False):
-        return True
-    if not is_seller(user):
-        return False
-    ctx = acting_context(request)
-    return ctx == "" or ctx in _SELLER_CONTEXTS
-
-
-def seller_company_ids(user: "CustomUser") -> list:
-    """The seller companies a user can act for (active membership, can_sell, seller company type).
-
-    Used to scope SELLER-side billing visibility to documents OWNED by the user's seller company
-    (via the doc's quote.seller_company) rather than to every routed deal — the fix for a losing
-    co-routed seller seeing the winner's contract/invoice/act on a shared multi-seller deal
-    (ADR-0003 §5 hidden competition). Empty for non-sellers / the administrator.
-    """
-    if getattr(user, "is_superuser", False):
-        return []
-    return list(
-        user.memberships.filter(is_active=True, can_sell=True).in_seller_company().values_list("company_id", flat=True)
-    )
-
-
-def seller_visible_deal_ids(user: "CustomUser", request, *, force: bool = False) -> Optional[set]:
-    """The deal ids a context-acting seller may see: those routed to one of their
-    seller companies (DealSellerRouting) OR offering one of their catalog products
-    (defense-in-depth for drafts whose routing rows aren't written yet). This is
-    the multi-seller confidentiality boundary that replaces the old see-all leak.
-
-    Returns None when the user is NOT a routing-scoped seller — the caller then
-    applies administrator see-all (check `is_superuser` first) or the
-    buyer-company scope. A seller acting in the BUYER context also gets None, so a
-    dual seller+buyer user is scoped to its own company while purchasing.
-
-    `force=True` bypasses ONLY the acting-context gate, so a seller resolves its
-    routed deals regardless of the SPA X-Active-Context header. Used to make
-    billing documents (contract/invoice/act/payment/fulfillment) visible to BOTH
-    sides of a deal no matter which context the viewer landed in (WP-1). It never
-    widens the routing boundary — the returned set is still ROUTING-only, so a
-    seller still never sees an unrelated buyer's deals. Default False keeps every
-    existing caller's behaviour unchanged.
-    """
-    if getattr(user, "is_superuser", False):
-        return None
-    if not is_seller(user):
-        return None
-    if not force and acting_context(request) not in ({""} | _SELLER_CONTEXTS):
-        return None
-    from crm.models import Deal
-
-    seller_company_ids = list(
-        user.memberships.filter(is_active=True, can_sell=True).in_seller_company().values_list("company_id", flat=True)
-    )
-    # ROUTING ROWS ONLY. A prior version also OR'd in "deals that merely offer one of my
-    # products" — but that leaked: a buyer adding seller A's product to a deal routed to
-    # seller B made the whole of B's deal visible to A (review 2026-06-25, CRITICAL).
-    # submit_request already writes a DealSellerRouting row per product owner, so the
-    # "offers my product" case is covered for submitted deals; unrouted drafts must stay
-    # invisible to every seller.
-    return set(
-        Deal.objects.filter(seller_routings__seller_company_id__in=seller_company_ids).values_list("id", flat=True)
-    )
-
-
-def seller_can_access_deal(user: "CustomUser", request, deal_id, *, force: bool = False) -> bool:
-    """Object-level counterpart of `seller_visible_deal_ids` — a single EXISTS query
-    for one deal. A context-acting seller may act on `deal_id` IFF it is routed to
-    one of their seller companies.
-
-    `force=True` bypasses ONLY the acting-context gate — the object-permission
-    counterpart of `seller_visible_deal_ids(force=True)` (WP-1). Without it a routed
-    seller who landed in the BUYER context sees a billing document in the LIST but
-    gets 403/404 on the DETAIL retrieve / PDF download (`get_object`), because this
-    gate returned False off the X-Active-Context header. The routing boundary is
-    unchanged (still an EXISTS on DealSellerRouting), so a seller never gains access
-    to an unrelated deal. Default False keeps every existing caller's behaviour.
-    """
-    if not is_seller(user):
-        return False
-    if not force and acting_context(request) not in ({""} | _SELLER_CONTEXTS):
-        return False
-    from crm.models import Deal
-
-    seller_company_ids = list(
-        user.memberships.filter(is_active=True, can_sell=True).in_seller_company().values_list("company_id", flat=True)
-    )
-    # Routing rows only — see seller_visible_deal_ids (the product-owner OR-clause leaked).
-    return Deal.objects.filter(pk=deal_id, seller_routings__seller_company_id__in=seller_company_ids).exists()
-
-
-def seller_company_routed_to_deal(user: "CustomUser", deal_id) -> bool:
-    """Service-layer (NO request/acting-context) binding: True if the actor has a can_sell
-    SELLER company that is a routing target of `deal_id`. Seller write actions (contract
-    sign, act issuance, fulfillment state) must bind to the specific deal they're routed
-    to — `is_seller(actor)` alone let any seller act on a competitor's deal (review
-    2026-06-25 platform audit H3/H4/M1).
-    """
-    if not user or not user.is_authenticated:
-        return False
-    from crm.models import Deal
-
-    seller_company_ids = list(
-        user.memberships.filter(is_active=True, can_sell=True).in_seller_company().values_list("company_id", flat=True)
-    )
-    if not seller_company_ids:
-        return False
-    return Deal.objects.filter(pk=deal_id, seller_routings__seller_company_id__in=seller_company_ids).exists()
-
-
-def routed_seller_company_id(user: "CustomUser", deal_id) -> Optional[int]:
-    """WHICH of the actor's can_sell SELLER companies is a routing target of `deal_id`, or None.
-
-    Stronger form of `seller_company_routed_to_deal` that returns the company id, so the КП
-    approval chain can anchor the КП-owning company to a *verified routed seller* before it
-    writes `quote.prepared_by`. Without this, any authenticated user could claim an unclaimed
-    buyer-request КП and drive its approval chain cross-tenant (audit F0).
-    """
-    if not user or not user.is_authenticated:
-        return None
-    from crm.models import DealSellerRouting
-
-    routed_ids = set(DealSellerRouting.objects.filter(deal_id=deal_id).values_list("seller_company_id", flat=True))
-    if not routed_ids:
-        return None
-    # The actor's active can_sell SELLER memberships that are routed to this deal, ordered
-    # DETERMINISTICALLY (audit M5 — no arbitrary .first()): prefer the primary membership, then
-    # prefer a company where the actor can actually build the КП (holds quote.build), so the
-    # downstream permission check in submit_for_review resolves against the RIGHT company.
-    # ADR-0005 Phase E U3: the tie-break reads the quote.build permission, not a WorkspaceRole.
-    memberships = (
-        user.memberships.filter(is_active=True, can_sell=True, company_id__in=routed_ids)
-        .in_seller_company()
-        .select_related("company_role", "role")
-        .order_by("-is_primary", "company_id")
-    )
-    fallback_id = None
-    for membership in memberships:
-        if fallback_id is None:
-            fallback_id = membership.company_id
-        if member_has_permission(user, membership.company_id, "quote.build"):
-            return membership.company_id
-    return fallback_id
-
-
-def seller_acting_company_ids(user: "CustomUser", request):
-    """The viewer's can_sell SELLER company ids when ACTING as a seller (seller context),
-    else None. Used to scope quote querysets to the seller's OWN КП — on a deal routed to
-    competing sellers, each must see only the quotes their own company prepared (audit H1).
-    """
-    if getattr(user, "is_superuser", False):
-        return None
-    if not is_seller(user):
-        return None
-    if acting_context(request) not in ({""} | _SELLER_CONTEXTS):
-        return None
-    return set(
-        user.memberships.filter(is_active=True, can_sell=True).in_seller_company().values_list("company_id", flat=True)
-    )
+    """Per-quote cost/margin gate. Every КП belongs to the own company (single seller), so this
+    equals `can_view_quote_costs`; the quote argument keeps the callers' per-object call shape."""
+    return can_view_quote_costs(user)
 
 
 def can_edit_quote_pricing(user: "CustomUser") -> bool:
     """True if the user may WRITE КП pricing (price/margin/logistics/customs/charges).
-    Administrator (`is_superuser`) always; otherwise a member of a SELLER company holding the
-    `quote.edit_pricing` permission. `can_sell` defaults True, so without this a view-only
-    CompanyRole (Наблюдатель) could still tamper with pricing (audit H2)."""
-    if not user or not user.is_authenticated:
-        return False
-    if getattr(user, "is_superuser", False):
-        return True
-    seller_company_ids = (
-        user.memberships.filter(is_active=True).in_seller_company().values_list("company_id", flat=True).distinct()
-    )
-    return any(member_has_permission(user, cid, "quote.edit_pricing") for cid in seller_company_ids)
+    Administrator (`is_superuser`) always; otherwise a member of the own company holding the
+    `quote.edit_pricing` permission. `can_sell` defaults True, so without the permission check a
+    view-only CompanyRole (Наблюдатель) could still tamper with pricing (audit H2)."""
+    return _own_company_permission(user, "quote.edit_pricing")

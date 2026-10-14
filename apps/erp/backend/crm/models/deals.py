@@ -30,8 +30,8 @@ class Deal(models.Model):
     # draft with NO client yet (price something first, pick the recipient later). NULL means
     # "no counterparty on this deal yet", NOT "any company": every buyer-side ORM scope
     # filters `company_id__in=<my companies>`, which NULL never matches, so a company-less
-    # draft is invisible to every buyer. Seller visibility comes from the creator's
-    # DealSellerRouting row (F1). Sending such a draft is blocked by RECIPIENT_REQUIRED.
+    # draft is invisible to every buyer. Back-office staff see every deal (single seller —
+    # the own company). Sending such a draft is blocked by RECIPIENT_REQUIRED.
     company = models.ForeignKey(
         "accounts.Company",
         on_delete=models.CASCADE,
@@ -70,8 +70,8 @@ class Deal(models.Model):
         verbose_name=_("Менеджер"),
         help_text=_("Ответственный менеджер RailTech"),
     )
-    # ADR-0006 Move 2 — explicit DEAL OWNER on the seller side. NULL = unclaimed, sitting in the
-    # routed sellers' shared work-queue; a routed member claims it (claimable queue, the world-
+    # ADR-0006 Move 2 — explicit DEAL OWNER in the back office. NULL = unclaimed, sitting in the
+    # team's shared work-queue; a staff member claims it (claimable queue, the world-
     # standard ownership pattern — works for a 1-person or 100-person team, not a hard-coded
     # round-robin). assigned_at anchors the time-to-first-touch SLA. (Distinct from the legacy
     # `manager`, which stays for back-compat.)
@@ -122,15 +122,6 @@ class Deal(models.Model):
         verbose_name=_("Дата обновления"),
     )
 
-    target_sellers = models.ManyToManyField(
-        "accounts.Company",
-        through="crm.DealSellerRouting",
-        related_name="targeted_deals",
-        blank=True,
-        verbose_name=_("Целевые продавцы"),
-        help_text=_("Продавцы, которым адресована заявка (RFQ-маршрутизация)"),
-    )
-
     class Meta:
         verbose_name = _("Сделка")
         verbose_name_plural = _("Сделки")
@@ -159,56 +150,6 @@ class Deal(models.Model):
     def total_value(self) -> Decimal:
         quote = self.active_quote
         return quote.total_incl_vat if quote else Decimal("0")
-
-
-class DealSellerRouting(models.Model):
-    """Routes an RFQ (Deal) to a specific seller company — the per-seller private
-    thread handle. World-standard RFQ confidentiality: a seller sees a buyer's
-    заявка IFF a routing row links them, so competing sellers are siloed (no
-    cross-seller leak). Routing is normally inferred from the catalog products'
-    `owner_company` at submit; product-less (free-text) deals can be routed
-    explicitly by the buyer.
-    """
-
-    deal = models.ForeignKey(
-        "crm.Deal",
-        on_delete=models.CASCADE,
-        related_name="seller_routings",
-        verbose_name=_("Сделка"),
-    )
-    seller_company = models.ForeignKey(
-        "accounts.Company",
-        on_delete=models.CASCADE,
-        related_name="routed_deals",
-        db_index=True,
-        verbose_name=_("Компания-продавец"),
-    )
-    routed_at = models.DateTimeField(auto_now_add=True)
-    # ADR-0006 Move 2 (per-seller ownership). Competition is HIDDEN: each routed seller works the
-    # заявка INDEPENDENTLY and the buyer picks a winner at the end, so ownership is PER seller
-    # company (this routing row), NOT a single deal-level owner — seller A claiming must not block
-    # seller B. NULL = unclaimed in this company's shared queue. assigned_at = time-to-first-touch.
-    assigned_to = models.ForeignKey(
-        "accounts.CustomUser",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        db_index=True,
-        related_name="claimed_routings",
-        verbose_name=_("Ответственный (взял в работу)"),
-    )
-    assigned_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Взята в работу"))
-
-    class Meta:
-        verbose_name = _("Маршрутизация заявки продавцу")
-        verbose_name_plural = _("Маршрутизация заявок продавцам")
-        constraints = [
-            models.UniqueConstraint(fields=["deal", "seller_company"], name="uniq_deal_seller_routing"),
-        ]
-        indexes = [models.Index(fields=["seller_company", "deal"], name="deal_routing_seller_idx")]
-
-    def __str__(self):
-        return f"Deal #{self.deal_id} → seller {self.seller_company_id}"
 
 
 # ────────────────────────────────────────────
@@ -343,20 +284,6 @@ class ActivityLog(models.Model):
         blank=True,
         related_name="timeline_logs",
         verbose_name=_("Сделка"),
-    )
-    # SEC (audit #4): the seller lane a deal event belongs to on a multi-seller RFQ. A
-    # seller-authored event (КП sent/accepted, chat) carries that seller's company; buyer/
-    # system/deal-level events stay NULL and are visible to all parties. The «История» feed
-    # scopes a seller viewer to its own lane (own seller_company OR NULL) so a competitor's
-    # КП events don't leak (hidden competition).
-    seller_company = models.ForeignKey(
-        "accounts.Company",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="lane_timeline_logs",
-        db_index=True,
-        verbose_name=_("Продавец (lane)"),
     )
 
     class Meta:

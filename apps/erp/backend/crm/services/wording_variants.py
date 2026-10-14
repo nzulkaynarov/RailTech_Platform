@@ -74,13 +74,10 @@ def select_contract_wording(contract, actor, *, field: str, variant_id):
     дефолту компании (variant_id=None). Только пока договор не подписан ни одной стороной —
     подписанный текст неприкосновенен (двусторонний документ, G2)."""
     from accounts.services import is_seller
-    from accounts.services.permissions import seller_company_routed_to_deal
 
     from .quotes import _quote_seller_company
 
     if not (getattr(actor, "is_superuser", False) or is_seller(actor)):
-        return None, "MEMBER_REQUIRED_FOR_ACTION"
-    if not (getattr(actor, "is_superuser", False) or seller_company_routed_to_deal(actor, contract.deal_id)):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
     if field not in CONTRACT_WORDING_FIELDS:
         return None, "WORDING_FIELD_UNKNOWN"

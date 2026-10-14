@@ -283,13 +283,13 @@ def quote_vs_request_diff(quote: Quote) -> dict:
 
 
 def user_can_view_quote_diff(user: CustomUser, quote: Quote) -> bool:
-    """Scope guard (Rule: only the deal's buyer or the routed seller). The diff is
+    """Scope guard (Rule: only the deal's buyer or the own company's staff). The diff is
     assistive read-only, so a platform admin viewer may also inspect it. Buyer =
-    the deal's client OR an active member of the deal's company; seller = a can_sell
-    company routed to the deal. Reuses the accounts permission helpers — no bespoke
+    the deal's client OR an active member of the deal's company; seller = staff of the
+    own company (the single seller). Reuses the accounts permission helpers — no bespoke
     membership logic here.
     """
-    from accounts.services.permissions import seller_company_routed_to_deal
+    from accounts.services.permissions import is_seller
 
     if not user or not user.is_authenticated:
         return False
@@ -302,5 +302,5 @@ def user_can_view_quote_diff(user: CustomUser, quote: Quote) -> bool:
         return True
     if deal.company_id and user.memberships.filter(company_id=deal.company_id, is_active=True).exists():
         return True
-    # Seller side: a routed can_sell seller company.
-    return seller_company_routed_to_deal(user, deal.pk)
+    # Seller side: staff of the own company.
+    return is_seller(user)

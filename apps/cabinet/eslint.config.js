@@ -65,7 +65,7 @@ const railtechPlugin = {
 };
 
 export default tseslint.config(
-  { ignores: ['dist', 'public', 'src/api/portal.d.ts'] },
+  { ignores: ['dist', 'public', 'src/api/portal.d.ts', 'src/api/crm-form.d.ts'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],

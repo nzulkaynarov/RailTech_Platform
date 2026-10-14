@@ -2,8 +2,7 @@
 
 Covers the regressions a service-only test (golden_path) could not catch because
 it bypasses the view permission layer:
-  * the supplier directory is member-accessible (buyers can browse suppliers)
-    without exposing the admin-only full company list.
+  * the admin-only full company list is not exposed to a buyer account.
   * deal destroy is restricted to DRAFT for non-admins.
 """
 
@@ -63,36 +62,12 @@ def draft_deal(buyer):
     )
 
 
-# ── supplier directory (checkup #1b) ────────────────────────────────────────
-
-
-def test_supplier_directory_is_member_accessible(buyer):
-    """Buyers can fetch the supplier directory to invite to an RFQ — active sellers only
-    (archived ones are excluded), and only id/name/inn are returned. KYC verification was
-    removed in M1-ERP-02 wave 1c, so it no longer narrows the directory."""
-    user, _ = buyer
-    active = Company.objects.create(
-        name="Active Supplier",
-        inn="7700000010",
-    )
-    active.types.add(CompanyType.objects.get(code="SUPPLIER"))
-    archived = Company.objects.create(
-        name="Archived Supplier",
-        inn="7700000011",
-        is_active=False,
-    )
-    archived.types.add(CompanyType.objects.get(code="SUPPLIER"))
-
-    resp = _api(user).get("/api/v1/accounts/companies/suppliers/")
-    assert resp.status_code == 200
-    names = {row["name"] for row in resp.data}
-    assert "Active Supplier" in names
-    assert "Archived Supplier" not in names
-    assert set(resp.data[0].keys()) == {"id", "name", "inn"}
+# ── company directory stays admin-only (checkup #1b) ─────────────────────────
 
 
 def test_full_company_list_stays_admin_only(buyer):
-    """The dedicated suppliers action must NOT have opened the admin company list."""
+    """A buyer account must not reach the admin company list (the buyer-facing supplier picker
+    was removed with the routing in M1-ERP-02 wave 3)."""
     user, _ = buyer
     resp = _api(user).get("/api/v1/accounts/companies/")
     assert resp.status_code == 403

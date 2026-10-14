@@ -146,10 +146,54 @@
   },
   "newClient": {
     "title": "Men yangi mijozman",
-    "text": "Nima kerakligini ayting — menejer javob beradi va sizni kabinetga taklif qiladi. Soʻrov shakli tez orada shu yerda paydo boʻladi; hozircha Telegram orqali yozish eng tez yoʻl.",
+    "intro": "Nima kerakligini ayting — menejer siz bilan bogʻlanadi va kabinetga taklif qiladi.",
     "writeTelegram": "Telegramda yozish",
+    "orTelegram": "Yozishmalar qulayroqmi? Bizga Telegramda yozing.",
     "backToLogin": "Menda allaqachon kirish bor",
-    "formTitle": "Soʻrov shakli"
+    "unavailableTitle": "Soʻrov shakli mavjud emas",
+    "unavailableText": "Bizga Telegramda yozing — menejer javob beradi va sizni kabinetga taklif qiladi.",
+    "sentTitle": "Rahmat! Soʻrov yuborildi",
+    "sentText": "Menejer ish vaqtida siz bilan telefon yoki e-mail orqali bogʻlanadi. Yozishmalar qulayroq boʻlsa — bizga Telegramda yozing.",
+    "form": {
+      "name": "Sizga qanday murojaat qilaylik",
+      "company": "Kompaniya (ixtiyoriy)",
+      "contacts": "Siz bilan qanday bogʻlanamiz",
+      "contactsHint": "Telefon yoki e-mail — bittasi yetarli.",
+      "phone": "Telefon",
+      "phonePlaceholder": "+998 90 123 45 67",
+      "email": "E-mail",
+      "emailPlaceholder": "name@company.uz",
+      "text": "Nima kerak",
+      "textPlaceholder": "Masalan: 5 ta nuqta uchun POSni 1C bilan integratsiya qilish, muddat — oy oxirigacha",
+      "website": "Bu maydonni toʻldirmang",
+      "consent": "Ushbu soʻrov boʻyicha men bilan bogʻlanishlari uchun shaxsiy maʼlumotlarimni qayta ishlashga roziman",
+      "submit": "Soʻrovni yuborish",
+      "sending": "Yuborilmoqda…"
+    },
+    "errors": {
+      "name_required": "Sizga qanday murojaat qilishni koʻrsating.",
+      "contact_required": "Telefon yoki e-mailni koʻrsating — hech boʻlmaganda bittasini.",
+      "invalid_phone": "Raqam tanilmadi — uni mamlakat kodi bilan koʻrsating, masalan +998 90 123 45 67.",
+      "invalid_email": "E-mail xato koʻrsatilgan.",
+      "text_required": "Sizga nima kerakligini yozing.",
+      "consent_required": "Shaxsiy maʼlumotlarni qayta ishlashga roziliksiz soʻrovga javob bera olmaymiz.",
+      "form_too_fast": "Shakl juda tez yuborildi — maydonlarni tekshirib, qayta yuboring.",
+      "form_token_expired": "Shakl eskirgan — sahifani yangilang va soʻrovni qayta yuboring.",
+      "form_token_invalid": "Shakl eskirgan — sahifani yangilang va soʻrovni qayta yuboring.",
+      "rate_limited": "Manzilingizdan soʻrovlar juda koʻp — bir soatdan keyin urinib koʻring yoki bizga Telegramda yozing.",
+      "validation_failed": "Shakl maydonlarini tekshiring.",
+      "network": "Server bilan aloqa yoʻq — internetni tekshirib, qayta urinib koʻring.",
+      "unknown": "Soʻrovni yuborib boʻlmadi — keyinroq urinib koʻring yoki bizga Telegramda yozing.",
+      "tokenUnavailable": "Shakl hozir mavjud emas. Qayta urinib koʻring yoki bizga Telegramda yozing."
+    }
+  },
+  "manager": {
+    "write": "Menejerga yozish",
+    "aboutDeal": "Menejerga yozish: bitim №{{id}}",
+    "aboutQuote": "Menejerga yozish: {{number}} taklifi",
+    "aboutContract": "Menejerga yozish: {{number}} shartnomasi",
+    "aboutInvoice": "Menejerga yozish: {{number}} hisob-fakturasi",
+    "aboutAct": "Menejerga yozish: {{number}} dalolatnomasi"
   },
   "profile": {
     "title": "Profil",

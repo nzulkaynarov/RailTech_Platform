@@ -2,6 +2,7 @@ import { http, HttpResponse, type JsonBodyType } from 'msw';
 
 import type { Schemas } from '@/api/portal';
 import { businessToday } from '@/lib/format';
+import { crmFormHandlers, resetMockCrmForm } from './crmForm';
 import * as fixtures from './fixtures';
 
 /**
@@ -79,6 +80,7 @@ let dbs: Record<Dataset, Db> = { demo: createDb('demo'), empty: createDb('empty'
 export function resetMockPortal(): void {
   setMockSession(null);
   dbs = { demo: createDb('demo'), empty: createDb('empty') };
+  resetMockCrmForm();
 }
 
 function contactFor(role: Role): Schemas['TeamMember'] {
@@ -427,4 +429,6 @@ export const handlers = [
       { action: true },
     ),
   ),
+  // Публичная форма CRM «Запрос» со страницы «Я новый клиент» (M2-CAB-03) — src/mocks/crmForm.ts.
+  ...crmFormHandlers,
 ];

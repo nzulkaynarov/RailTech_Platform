@@ -1,4 +1,4 @@
-"""Workflow-экшены сделки: маршрутизация, claim/assign, AI-черновик КП, операторские
+"""Workflow-экшены сделки: claim/assign, AI-черновик КП, операторские
 оверрайды и экспорт. Отдельный модуль по причине изменения (распил deals.py 783 строки,
 тех-долг хендоффов); поведение 1:1 — методы перенесены дословно."""
 
@@ -12,83 +12,13 @@ from rest_framework.response import Response
 from core.permissions import IsPlatformAdmin
 from crm.models import Deal
 from crm.serializers import DealDetailSerializer
-from crm.services import force_transition_deal_stage, route_request_to_sellers
+from crm.services import force_transition_deal_stage
 
 from .ai import AiDraftThrottle
-
-# Экшены, открывающие ОДНУ конкретную сделку (read-only). Видимость у них шире списочной:
-# продавец вправе открыть сделку, где он покупатель, и наоборот. Раньше это условие было
-# записано литералом `self.action == "retrieve"` в двух местах get_queryset, поэтому КАЖДЫЙ
-# новый detail-экшен молча получал списочный скоуп и отдавал 404 там, где retrieve отдаёт 200.
-# Набор намеренно ограничен читающими экшенами: расширять скоуп пишущим — менять границу
-# безопасности.
-SINGLE_DEAL_READ_ACTIONS = frozenset({"retrieve", "documents"})
 
 
 class DealWorkflowActionsMixin:
     """Экшены «после сборки заявки»: кто ведёт сделку и что с ней делает продавец."""
-
-    @extend_schema(
-        summary="Route the request (RFQ) to seller companies",
-        description=(
-            "Buyer-only, while the deal is still DRAFT. Addresses a (typically "
-            "free-text) заявка to chosen seller companies — multi-seller routing. "
-            "Idempotent; each id must be an active SUPPLIER-type company."
-        ),
-        request=inline_serializer(
-            "RouteRequestRequest",
-            fields={
-                "seller_company_ids": drf_serializers.ListField(child=drf_serializers.IntegerField()),
-            },
-        ),
-        responses={200: DealDetailSerializer},
-        tags=["CRM"],
-    )
-    @action(detail=True, methods=["post"], url_path="route")
-    def route(self, request, pk=None):
-        """Buyer routes the request to the chosen seller company/companies."""
-        route_request_to_sellers(
-            request.user,
-            self.get_object(),
-            request.data.get("seller_company_ids", []),
-        )
-        # Re-fetch so target_sellers_data reflects the freshly-created routing rows
-        # (the get_object() instance carries a stale prefetched M2M cache).
-        deal = self.get_queryset().get(pk=pk)
-        return Response(DealDetailSerializer(deal, context={"request": request}).data)
-
-    @extend_schema(
-        summary="Suggested sellers for a free-text заявка (R1 — category-matched routing)",
-        description=(
-            "Детерминированный trigram-подбор продавцов по позициям заявки (Ariba Discovery-паттерн): "
-            "каждая позиция → каталожный товар → owner_company, со счётом совпавших позиций. "
-            "Чистое чтение, без AI. Покупатель подтверждает выбор через POST route/. Пустой список — "
-            "каталог не подсказал, покупатель выбирает вручную."
-        ),
-        responses={
-            200: inline_serializer(
-                "SuggestedSellerItem",
-                fields={
-                    "company_id": drf_serializers.IntegerField(),
-                    "name": drf_serializers.CharField(),
-                    "matched_lines": drf_serializers.IntegerField(),
-                    "total_lines": drf_serializers.IntegerField(),
-                },
-                many=True,
-            )
-        },
-        tags=["CRM"],
-    )
-    @action(detail=True, methods=["get"], url_path="suggested-sellers", pagination_class=None)
-    def suggested_sellers(self, request, pk=None):
-        """Thin wrapper (Rule 8): read-only seller suggestions for the buyer's routing step."""
-        from accounts.services.permissions import is_member_of
-        from sourcing.services import suggest_sellers_for_deal
-
-        deal = self.get_object()
-        if not is_member_of(request.user, deal.company_id, capability="buy"):
-            return Response({"detail": "ONLY_BUYER_CAN_ROUTE"}, status=status.HTTP_403_FORBIDDEN)
-        return Response(suggest_sellers_for_deal(deal))
 
     def _assignment_response(self, deal, err, request):
         if err:
@@ -109,7 +39,7 @@ class DealWorkflowActionsMixin:
     @extend_schema(summary="Claim a deal (take it from the shared queue)", tags=["CRM"])
     @action(detail=True, methods=["post"], url_path="claim", permission_classes=[IsAuthenticated])
     def claim(self, request, pk=None):
-        """ADR-0006 Move 2: a routed seller-team member takes ownership of an unclaimed заявка."""
+        """ADR-0006 Move 2: a back-office staff member takes ownership of an unclaimed заявка."""
         from crm.services.assignment import claim_deal
 
         deal, err = claim_deal(int(pk), request.user)
@@ -150,7 +80,7 @@ class DealWorkflowActionsMixin:
             200: OpenApiResponse(description="{mode:'quote', quote_id} — КП готов, открывайте билдер"),
             202: OpenApiResponse(description="{mode:'ai', task_id} — AI-черновик готовится, поллинг ai-status"),
             400: OpenApiResponse(description="Нет строк заявки / стадия вне пред-КП набора"),
-            403: OpenApiResponse(description="Не routed-продавец / viewer"),
+            403: OpenApiResponse(description="Не сотрудник своей компании"),
             404: OpenApiResponse(description="Deal not found"),
             409: OpenApiResponse(description="Заявку уже взял коллега (DEAL_ALREADY_CLAIMED)"),
         },
@@ -201,29 +131,6 @@ class DealWorkflowActionsMixin:
             cache.add(cache_key, response.data["task_id"], timeout=180)
             response.data["mode"] = "ai"
         return response
-
-    @extend_schema(
-        summary="List seller companies for the routing picker",
-        description="Buyer-facing lightweight directory of active SUPPLIER companies.",
-        responses={
-            200: inline_serializer(
-                "SupplierPickerItem",
-                fields={
-                    "id": drf_serializers.IntegerField(),
-                    "name": drf_serializers.CharField(),
-                },
-                many=True,
-            )
-        },
-        tags=["CRM"],
-    )
-    @action(detail=False, methods=["get"], url_path="suppliers", pagination_class=None)
-    def suppliers(self, request):
-        """Active SUPPLIER companies for the buyer's routing picker."""
-        from accounts.models import Company
-
-        sellers = Company.objects.sellers().order_by("name").values("id", "name")
-        return Response(list(sellers))
 
     @extend_schema(
         summary="Force change deal stage (admin)",

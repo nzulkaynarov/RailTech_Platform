@@ -5,9 +5,8 @@
 
 * **61.** `ReadOnlyInspectionMixin` вычёркивал M2M из списка полей, которые делает readonly.
   У инженера с `change_company` на форме компании оставалось РОВНО ОДНО живое поле — `types`:
-  снятие `SUPPLIER` выбивало компанию из подбора продавцов у всех покупателей. Тот же зазор
-  открывал `Deal.target_sellers` — адресацию конкретной заявки, то есть keystone-инвариант
-  «скрытой конкуренции» (ADR-0003 §5). Докстринг обещал «all fields become readonly».
+  снятие `SUPPLIER` выбивало компанию из подбора продавцов у всех покупателей. Докстринг
+  обещал «all fields become readonly».
 * **60.** У массовых действий `django_celery_beat` `allowed_permissions = None`, поэтому право
   `view_periodictask` открывало ЗАПИСЬ: одним POST'ом выключалась платформенная задача — без
   подтверждения и без следа. Молча гаснут автосинк ТН ВЭД, напоминания об оплате, истечение
@@ -25,7 +24,6 @@ from django.contrib import admin
 from django.contrib.auth.models import Group, Permission
 
 from accounts.models import Company, CustomUser
-from crm.models import Deal
 from notifications.models import EmailTemplate
 
 
@@ -78,19 +76,6 @@ def test_company_types_are_readonly_for_an_engineer(engineer, db):
 
     assert "types" in readonly, "M2M обязан быть закрыт: это роль компании на рынке"
     assert "inn" in readonly, "опорная проверка: обычные поля закрыты и раньше"
-
-
-def test_deal_target_sellers_are_readonly_for_an_engineer(engineer, db):
-    """`target_sellers` — адресация заявки. Правка здесь ломает «скрытую конкуренцию»
-    (ADR-0003 §5) тише, чем что-либо ещё в админке."""
-    from crm.models import DealStage
-
-    buyer = Company.objects.create(name="Покупатель M2M", inn="908100002")
-    deal = Deal.objects.create(title="Заявка", company=buyer, stage=DealStage.objects.get(code="DRAFT"))
-
-    readonly = _readonly_for(Deal, engineer, deal)
-
-    assert "target_sellers" in readonly
 
 
 def test_the_superuser_still_edits_everything(superuser, db):

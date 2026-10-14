@@ -22,7 +22,6 @@ from crm.models import (
     Contract,
     ContractStatus,
     Deal,
-    DealSellerRouting,
     DealStage,
     Fulfillment,
     FulfillmentStatus,
@@ -86,7 +85,6 @@ def chain(lookups):
     seller_user = _member(seller_co, "seller@notify.test", can_sell=True)
 
     deal = Deal.objects.create(title="Notify deal", company=buyer_co, stage=DealStage.objects.get(code="CLOSED_WON"))
-    DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)
     quote = Quote.objects.create(
         deal=deal,
         version=1,

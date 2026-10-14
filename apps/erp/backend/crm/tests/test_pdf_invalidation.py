@@ -17,7 +17,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
-from crm.models import Deal, DealSellerRouting, DealStage, Quote, QuoteItem, QuoteStatus
+from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteStatus
 from crm.services import QuoteCalculationService
 
 
@@ -39,7 +39,6 @@ def seller_world(db):
         can_sell=True,
     )
     deal = Deal.objects.create(title="PDF deal", company=None, stage=DealStage.objects.get(code="CALCULATING"))
-    DealSellerRouting.objects.create(deal=deal, seller_company=company, assigned_to=user)
     quote = Quote.objects.create(
         deal=deal,
         version=1,
@@ -56,7 +55,6 @@ def _api(user):
     client = APIClient()
     client.credentials(
         HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user).access_token}",
-        HTTP_X_ACTIVE_CONTEXT="SELLER",
     )
     return client
 

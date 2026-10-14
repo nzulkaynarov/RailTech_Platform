@@ -24,7 +24,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
-from crm.models import Deal, DealSellerRouting, DealStage, Quote, QuoteItem, QuoteStatus
+from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteStatus
 from crm.serializers import QuoteItemSerializer
 from crm.services.documents import client_optional_items, client_projection_items
 from crm.services.quotes import QuoteCalculationService, compute_quote_economics
@@ -63,7 +63,6 @@ def _api(user, ctx="SELLER"):
     client = APIClient()
     client.credentials(
         HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user).access_token}",
-        HTTP_X_ACTIVE_CONTEXT=ctx,
     )
     return client
 
@@ -78,7 +77,6 @@ def world(lookups):
 
 def _quote(world):
     deal = Deal.objects.create(title="КП", company=world["buyer_co"], stage=DealStage.objects.get(code="DRAFT"))
-    DealSellerRouting.objects.create(deal=deal, seller_company=world["seller_co"])
     return Quote.objects.create(
         deal=deal,
         version=1,

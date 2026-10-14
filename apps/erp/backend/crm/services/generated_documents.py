@@ -174,13 +174,13 @@ def resolve_owner_company_id(user: CustomUser) -> Optional[int]:
 
 
 def _user_can_access_deal(user: CustomUser, deal) -> bool:
-    """A deal is reachable if the user is a member of its owning (buyer) company OR a
-    seller routed to it (hidden-competition scope)."""
-    from accounts.services import is_member_of, seller_company_routed_to_deal
+    """A deal is reachable if the user is a member of its owning (buyer) company OR own-company
+    staff (the single seller)."""
+    from accounts.services import is_member_of, sees_all_deals
 
-    if getattr(user, "is_superuser", False):
+    if sees_all_deals(user):
         return True
-    return bool(is_member_of(user, deal.company_id) or seller_company_routed_to_deal(user, deal.id))
+    return bool(is_member_of(user, deal.company_id))
 
 
 def _user_owns_document(user: CustomUser, document) -> bool:
@@ -582,24 +582,19 @@ def party_visible_document_q(user):
     read-only surface (II-2). Combined by the ViewSet with the own-company clause; DRAFT/CANCELLED
     of another company are never included.
 
-    Hidden-competition invariant (ADR-0003, F2-3/MAJOR-1): on a multi-seller deal a routed seller
-    must NEVER see a CO-ROUTED competitor's document. So the seller-side clause is confined to
-    documents whose author is the deal's BUYER (`company == deal.company`) — a seller sees only the
-    buyer's letters addressed to the deal, never another seller's. The buyer-side clause (the user
-    IS the deal owner) may see any seller's ISSUED document on their own deal (it is addressed to
-    them)."""
+    As the buyer (the user is a member of the deal's company) — any ISSUED document on their own
+    deal is addressed to them. As own-company staff (the seller of every deal) — the client's own
+    ISSUED letters on any deal (`company == deal.company`)."""
     from django.db.models import F, Q
 
+    from accounts.services import is_seller
+
     company_ids = list(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
-    seller_company_ids = list(
-        user.memberships.filter(is_active=True, can_sell=True).values_list("company_id", flat=True)
-    )
-    # As the buyer (deal owner): any ISSUED document on your deal is addressed to you.
     as_buyer = Q(deal__company_id__in=company_ids)
-    # As a routed seller: ONLY the buyer's own documents (company == deal.company) — never a
-    # co-routed competitor's, whose company_id differs from the deal owner's.
-    as_seller = Q(deal__seller_routings__seller_company_id__in=seller_company_ids) & Q(company_id=F("deal__company_id"))
-    return Q(status__code=GeneratedDocumentStatusCode.ISSUED) & (as_buyer | as_seller)
+    visible = as_buyer
+    if is_seller(user):
+        visible |= Q(deal__isnull=False) & Q(company_id=F("deal__company_id"))
+    return Q(status__code=GeneratedDocumentStatusCode.ISSUED) & visible
 
 
 def resolve_document_recipient(document, override_email=None):

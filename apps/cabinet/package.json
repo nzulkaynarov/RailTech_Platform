@@ -12,7 +12,7 @@
     "typecheck": "tsc -b",
     "test": "vitest run",
     "test:watch": "vitest",
-    "gen:api-types": "openapi-typescript ../../packages/contracts/openapi/erp-portal.yaml -o src/api/portal.d.ts"
+    "gen:api-types": "openapi-typescript ../../packages/contracts/openapi/erp-portal.yaml -o src/api/portal.d.ts && node scripts/gen-crm-form-types.mjs > src/api/crm-form.d.ts"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.1",

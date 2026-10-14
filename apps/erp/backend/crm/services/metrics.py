@@ -1,18 +1,29 @@
 """Wedge metric — time-to-first-КП (ADR-0006 Move 4). Rule 8 service.
 
-THE wedge KPI: how fast a routed seller turns a buyer заявка into a sent КП. Measured per routing
-as (first sent quote's frozen_at) − (routing.routed_at), aggregated to median / avg / p90 so the
-platform (and each seller) can watch the loop get faster as AI assist lands. Read-only analytics.
+THE wedge KPI (BUSINESS §3.3 «время от запроса до первого КП»): how fast the back office turns a
+заявка into a sent КП. Measured per deal as (first sent quote's frozen_at) − (deal.created_at — the
+moment the request entered ERP), aggregated to median / avg / p90 so the team can watch the loop get
+faster as AI assist lands. Read-only analytics. The seller of every deal is the own company, so the
+sample is per deal (the per-seller routing anchor was removed in M1-ERP-02 wave 3).
 """
 
 import statistics
 from datetime import timedelta
 from typing import Optional
 
-from django.db.models import Min
+from django.db.models import F, Min
 from django.utils import timezone
 
-from ..models import DealSellerRouting, Quote
+from ..models import Quote
+
+_EMPTY_STATS = {
+    "sample_size": 0,
+    "median_hours": 0.0,
+    "avg_hours": 0.0,
+    "p90_hours": 0.0,
+    "fastest_hours": 0.0,
+    "slowest_hours": 0.0,
+}
 
 
 def _percentile(sorted_vals, pct: float) -> float:
@@ -24,52 +35,24 @@ def _percentile(sorted_vals, pct: float) -> float:
 
 
 def time_to_first_quote_stats(seller_company_ids: Optional[list] = None, since_days: Optional[int] = None) -> dict:
-    """Hours from RFQ routed → first КП sent, per (deal, seller_company). Optionally scoped to a set
-    of seller companies and/or a recent window. Returns sample size + median/avg/p90/fastest/slowest
-    (hours, rounded). sample_size 0 ⇒ all stats 0."""
+    """Hours from the request entering ERP → first КП sent, per deal. Optionally scoped to a set of
+    seller companies (the own company for staff) and/or a recent window. Returns sample size +
+    median/avg/p90/fastest/slowest (hours, rounded). sample_size 0 ⇒ all stats 0."""
     sent = Quote.objects.filter(frozen_at__isnull=False, seller_company__isnull=False)
     if seller_company_ids is not None:
         sent = sent.filter(seller_company_id__in=seller_company_ids)
     if since_days:
         sent = sent.filter(frozen_at__gte=timezone.now() - timedelta(days=since_days))
 
-    # Earliest sent КП per (deal, seller_company) — the seller's FIRST quote on that заявка.
-    firsts = list(sent.values("deal_id", "seller_company_id").annotate(first_sent=Min("frozen_at")))
-    if not firsts:
-        return {
-            "sample_size": 0,
-            "median_hours": 0.0,
-            "avg_hours": 0.0,
-            "p90_hours": 0.0,
-            "fastest_hours": 0.0,
-            "slowest_hours": 0.0,
-        }
-
-    # One query for all relevant routings → {(deal_id, seller_company_id): routed_at}.
-    pairs = {(f["deal_id"], f["seller_company_id"]) for f in firsts}
-    routed_at = {
-        (r.deal_id, r.seller_company_id): r.routed_at
-        for r in DealSellerRouting.objects.filter(
-            deal_id__in={d for d, _ in pairs}, seller_company_id__in={s for _, s in pairs}
-        )
-    }
-
-    hours = []
-    for f in firsts:
-        anchor = routed_at.get((f["deal_id"], f["seller_company_id"]))
-        if anchor and f["first_sent"] >= anchor:
-            hours.append((f["first_sent"] - anchor).total_seconds() / 3600.0)
+    # Earliest sent КП per deal — the back office's FIRST quote on that заявка.
+    firsts = sent.values("deal_id").annotate(first_sent=Min("frozen_at"), anchor=F("deal__created_at"))
+    hours = sorted(
+        (row["first_sent"] - row["anchor"]).total_seconds() / 3600.0
+        for row in firsts
+        if row["anchor"] and row["first_sent"] >= row["anchor"]
+    )
     if not hours:
-        return {
-            "sample_size": 0,
-            "median_hours": 0.0,
-            "avg_hours": 0.0,
-            "p90_hours": 0.0,
-            "fastest_hours": 0.0,
-            "slowest_hours": 0.0,
-        }
-
-    hours.sort()
+        return dict(_EMPTY_STATS)
     return {
         "sample_size": len(hours),
         "median_hours": round(statistics.median(hours), 1),

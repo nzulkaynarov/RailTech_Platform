@@ -15,7 +15,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
-from crm.models import ChargeType, Deal, DealSellerRouting, DealStage, Quote, QuoteCharge, QuoteItem, QuoteStatus
+from crm.models import ChargeType, Deal, DealStage, Quote, QuoteCharge, QuoteItem, QuoteStatus
 from crm.services import duplicate_quote
 from master_data.models import Country
 
@@ -42,15 +42,16 @@ def scenario(db):
         return co, user
 
     seller, seller_user = _seller("Seller A", "3000000001")
-    foreign, foreign_user = _seller("Seller B", "3000000002")
 
     buyer = Company.objects.create(name="Buyer LLC", inn="6600000001")
     buyer.types.add(CompanyType.objects.get(code="CLIENT"))
+    # The deal's buyer sees the КП (its own deal) but is not own-company staff — must not duplicate it.
+    foreign_user = CustomUser.objects.create_user(email="buyer@b.test", username="buyer@b.test", password="pw")
+    CompanyMember.objects.create(
+        user=foreign_user, company=buyer, role=WorkspaceRole.objects.get(code="OWNER"), is_active=True, can_sell=True
+    )
 
     deal = Deal.objects.create(title="Deal", company=buyer, stage=DealStage.objects.get(code="DRAFT"))
-    DealSellerRouting.objects.create(deal=deal, seller_company=seller)
-    # Foreign seller is co-routed to the SAME deal (hidden competition) — still must not duplicate A's КП.
-    DealSellerRouting.objects.create(deal=deal, seller_company=foreign)
 
     # A SENT (frozen-ish) source КП, owned by seller A, with a full mix of rows + charges + settings.
     source = Quote.objects.create(
@@ -221,8 +222,9 @@ def test_endpoint_owner_can_duplicate(scenario):
 
 
 @pytest.mark.django_db
-def test_endpoint_foreign_seller_forbidden(scenario):
-    """IDOR: a co-routed competitor (member of a different company) cannot duplicate A's КП."""
+def test_endpoint_non_staff_forbidden(scenario):
+    """IDOR: a member of another company — here the deal's buyer, who can SEE the КП — cannot
+    duplicate it: building a КП is the own company's quote.build."""
     client = _auth(scenario["foreign_user"])
     resp = client.post(f"{_QUOTES_URL}{scenario['source'].id}/duplicate/")
     assert resp.status_code == 403

@@ -12,7 +12,7 @@ import pytest
 
 from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, CustomUser, WorkspaceRole
 from catalog.models import Product, SupplierOffer
-from crm.models import Deal, DealSellerRouting, DealStage, Quote, QuoteItem, QuoteStatus
+from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteStatus
 from master_data.models import Currency
 
 
@@ -41,7 +41,6 @@ def scene(db):
     )
 
     deal = Deal.objects.create(title="RFQ", company=buyer, stage=DealStage.objects.get(code="RFQ_OPEN"))
-    routing = DealSellerRouting.objects.create(deal=deal, seller_company=seller)
     request_quote = Quote.objects.create(deal=deal, version=1, status=draft)
     QuoteItem.objects.create(quote=request_quote, product=product, quantity=5)
     QuoteItem.objects.create(quote=request_quote, quantity=2, imported_raw_name="Тормозная колодка")

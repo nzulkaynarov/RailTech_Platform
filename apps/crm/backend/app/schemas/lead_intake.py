@@ -22,7 +22,9 @@ class WebFormToken(BaseModel):
 class WebLeadIn(BaseModel):
     """Форма «Запрос» со страницы входа Cabinet: вложений в первой версии нет (Q-12).
 
-    `website` — honeypot: человек поле не видит; заполнено — запрос принят, лид не создан.
+    `consent` — согласие на обработку персональных данных, обязательно `true` (Q-12): иначе
+    422 `consent_required`. `website` — honeypot: человек поле не видит; заполнено — запрос
+    принят, лид не создан.
     """
 
     name: str = Field(min_length=1, max_length=255)
@@ -33,6 +35,13 @@ class WebLeadIn(BaseModel):
     text: str = Field(min_length=1, max_length=10000)
     language: Language = "ru"
     form_token: str = Field(min_length=1, max_length=64)
+    # Не `Literal[True]`: отсутствие и `false` дают один понятный подкод `consent_required`,
+    # а не общую ошибку валидации тела.
+    consent: bool = Field(
+        default=False,
+        description="Согласие на обработку персональных данных; обязательно true "
+        "(иначе 422 consent_required).",
+    )
     website: str | None = Field(default=None, max_length=255)
 
 

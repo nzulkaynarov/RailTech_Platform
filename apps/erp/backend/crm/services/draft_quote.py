@@ -1,6 +1,6 @@
 """AI draft-КП generation (ADR-0006 Move 3 — speed).
 
-A routed seller turns the buyer's request into a pre-filled draft КП in ONE click: the request lines
+A back-office staff member turns the buyer's request into a pre-filled draft КП in ONE click: the request lines
 are copied into a new seller Quote, and matched products get cost / currency / lead-time prefilled
 from the seller's own SupplierOffers (pricing-assist). The seller reviews-and-sends instead of
 re-typing the whole КП — cutting time-to-first-КП (the wedge metric). Rule 8 service.
@@ -147,24 +147,20 @@ def _resolve_ai_catalog_matches(request_items, resolved: dict) -> Tuple[int, lis
 
 def _run_draft_quote_gates(deal_id: int, actor: CustomUser):
     """Read-only gate checks shared by generate_draft_quote, prepare_quote_from_request and the
-    pre-enqueue validation (ARCH-01): actor role, deal existence, seller routing, request lines.
+    pre-enqueue validation (ARCH-01): actor role, deal existence, own-company staff, request lines.
     No writes, no LLM. (The paid ai.draft entitlement / credit gate was removed in M1-ERP-02
     wave 2 — the action is decided by the role permission.)
 
     Returns (deal, request_items, seller_company_id, error_code) — error_code None when clear.
     """
-    from accounts.services.permissions import (
-        can_edit_quote_pricing,
-        primary_seller_company_id,
-        seller_company_routed_to_deal,
-    )
+    from accounts.services.permissions import can_edit_quote_pricing, is_seller, primary_seller_company_id
 
     if not (getattr(actor, "is_superuser", False) or can_edit_quote_pricing(actor)):
         return None, None, None, "ONLY_SELLER_CAN_BUILD_QUOTE"
     deal = Deal.objects.filter(pk=deal_id).first()
     if deal is None:
         return None, None, None, "DEAL_NOT_FOUND"
-    if not (getattr(actor, "is_superuser", False) or seller_company_routed_to_deal(actor, deal_id)):
+    if not (getattr(actor, "is_superuser", False) or is_seller(actor)):
         return None, None, None, "MEMBER_REQUIRED_FOR_ACTION"
     request_items = _request_items(deal)
     if not request_items:
@@ -184,7 +180,7 @@ def validate_draft_quote_gates(deal_id: int, actor: CustomUser) -> Optional[str]
 def generate_draft_quote(deal_id: int, actor: CustomUser) -> Tuple[Optional[Quote], Optional[str], int]:
     """Build a pre-filled draft КП for `actor`'s seller company from the deal's buyer request.
     Returns (quote, error_code, prefilled_count). The quote is a fresh DRAFT owned by the actor's
-    seller company — never touches the buyer request or a competitor's КП."""
+    seller company — never touches the buyer request."""
     deal, request_items, seller_company_id, err = _run_draft_quote_gates(deal_id, actor)
     if err:
         return None, err, 0
@@ -356,7 +352,7 @@ def take_and_prepare_quote(deal_id: int, actor: CustomUser) -> Tuple[Optional[di
     draft КП in ONE action, collapsing the 4–6 manual steps across two screens.
 
     Orchestration of EXISTING services (no FSM bypass, no duplicated gates):
-      1. claim_deal — the actor's company takes its copy (no-op when already self-owned;
+      1. claim_deal — the actor takes the заявка (no-op when already self-owned;
          refuses when a teammate owns it).
       2. transition_deal_stage → CALCULATING (RFQ_OPEN→CALCULATING is a legal single FSM hop —
          one buyer notification, not two).
@@ -386,7 +382,7 @@ def take_and_prepare_quote(deal_id: int, actor: CustomUser) -> Tuple[Optional[di
         if err:
             return None, err
 
-    # Idempotency: this seller company's КП already exists → reuse it, never fork a duplicate.
+    # Idempotency: the own company's КП already exists → reuse it, never fork a duplicate.
     from accounts.services.permissions import primary_seller_company_id
 
     seller_company_id = primary_seller_company_id(actor)

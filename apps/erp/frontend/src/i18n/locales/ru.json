@@ -634,36 +634,17 @@
     "inn": "ИНН",
     "offline": "Оффлайн",
     "registered": "Зарегистрирован",
-    "stageUpdated": "Стадия обновлена",
     "emptyState": "Пока нет контрагентов",
     "emptyStateHintClients": "Заведите первого клиента или дождитесь входящей заявки",
     "table": {
       "counterparty": "Контрагент",
-      "stage": "Стадия",
-      "deals": "Сделок / выиграно",
-      "gmv": "GMV",
-      "lastInteraction": "Последнее взаимодействие",
-      "owner": "Ответственный",
-      "ownerUnassigned": "Не назначен"
+      "contact": "Основной контакт",
+      "contacts": "Контактов",
+      "added": "Добавлен"
     },
     "detail": {
-      "stage": "Стадия отношения",
-      "deals": "Сделок / выиграно",
-      "source": "Источник",
-      "firstInteraction": "Первое взаимодействие",
-      "lastInteraction": "Последнее взаимодействие"
-    },
-    "stage": {
-      "PROSPECT": "Проспект",
-      "ACTIVE": "Активный",
-      "DORMANT": "Спящий",
-      "LOST": "Потерян"
-    },
-    "source": {
-      "LEAD": "Лид с лендинга",
-      "OFFLINE_CREATED": "Заведён вручную",
-      "INBOUND_RFQ": "Входящая заявка",
-      "SELF_REGISTERED": "Саморегистрация"
+      "contacts": "Контакты",
+      "primary": "Основной"
     },
     "dialog": {
       "title": "Новый клиент",
@@ -2520,12 +2501,6 @@
       "item_removed": {
         "title": "Удалена позиция заявки",
         "detail": "Сделка #{{deal_id}}: позиция #{{item_id}} удалена"
-      },
-      "routed": {
-        "title": "Заявка направлена продавцам",
-        "detail_one": "Сделка #{{deal_id}}: {{count}} продавцу",
-        "detail_few": "Сделка #{{deal_id}}: {{count}} продавцам",
-        "detail_many": "Сделка #{{deal_id}}: {{count}} продавцам"
       },
       "submitted": {
         "title": "Заявка отправлена поставщику",

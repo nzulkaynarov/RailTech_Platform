@@ -2,7 +2,8 @@
 
 Covers the block-I defects:
   I-1  record_payment rejects a DRAFT invoice → INVOICE_NOT_ISSUED (no "zombie PAID").
-  I-2  update_invoice_draft is seller-gated (buyer / non-routed seller cannot edit a draft).
+  I-2  update_invoice_draft is seller-gated (buyer / outsider cannot edit a draft; the seller is the
+       own company — single seller, M1-ERP-02 wave 3).
   I-3  the invoice list queryset HIDES DRAFT from the buyer, but shows ISSUED to both sides.
   I-4  generate_invoice_from_contract ignores CANCELLED invoices → re-invoicing works after cancel.
   I-5  a bogus contract/invoice id resolves to NOT_FOUND (404), never a 500.
@@ -24,7 +25,6 @@ from crm.models import (
     Contract,
     ContractStatus,
     Deal,
-    DealSellerRouting,
     DealStage,
     FulfillmentStatus,
     InvoiceStatus,
@@ -97,19 +97,18 @@ def _ids(resp):
 
 @pytest.fixture
 def world(lookups):
-    """A buyer, a routed seller, an UNRELATED seller, and a
-    signed-contract deal ready to be invoiced."""
+    """A buyer, own-company staff (the seller), an OUTSIDER (member of another client company),
+    and a signed-contract deal ready to be invoiced."""
     buyer_co = _company("Buyer Co", "B901", "CLIENT")
     buyer_user = _member(buyer_co, "buyer@invfix.test", can_buy=True)
 
     seller_co = _company("Seller Co", "S901", "SUPPLIER")
     seller_user = _member(seller_co, "seller@invfix.test", can_sell=True)
 
-    other_co = _company("Other Seller Co", "O901", "SUPPLIER")
-    other_user = _member(other_co, "other@invfix.test", can_sell=True)
+    other_co = _company("Other Client Co", "O901", "CLIENT")
+    other_user = _member(other_co, "other@invfix.test", can_sell=True, can_buy=True)
 
     deal = Deal.objects.create(title="Inv deal", company=buyer_co, stage=DealStage.objects.get(code="CONTRACT_SIGNED"))
-    DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)
     quote = Quote.objects.create(
         deal=deal,
         version=1,
@@ -199,7 +198,7 @@ def test_buyer_cannot_update_invoice_draft(world):
 
 
 @pytest.mark.django_db
-def test_unrouted_seller_cannot_update_invoice_draft(world):
+def test_outsider_cannot_update_invoice_draft(world):
     invoice = _make_draft(world)
     result, err = update_invoice_draft(invoice, world["other_user"], due_date=date(2030, 1, 1))
     assert result is None
@@ -207,8 +206,8 @@ def test_unrouted_seller_cannot_update_invoice_draft(world):
 
 
 @pytest.mark.django_db
-def test_routed_seller_can_update_invoice_draft(world):
-    """Control: the owning seller can still edit its own draft."""
+def test_staff_can_update_invoice_draft(world):
+    """Control: own-company staff can still edit the draft."""
     invoice = _make_draft(world)
     updated, err = update_invoice_draft(invoice, world["seller_user"], due_date=date(2030, 1, 1), notes="hi")
     assert err is None, err
@@ -236,15 +235,15 @@ def test_buyer_queryset_hides_draft_shows_issued(world):
 
 
 @pytest.mark.django_db
-def test_seller_queryset_includes_own_draft(world):
+def test_staff_queryset_includes_draft(world):
     draft = _make_draft(world)
     resp = _api(world["seller_user"]).get(_INVOICES_URL)
     assert resp.status_code == 200
-    assert draft.id in _ids(resp), "the owning seller must see its own DRAFT invoice"
+    assert draft.id in _ids(resp), "own-company staff must see the DRAFT invoice"
 
 
 @pytest.mark.django_db
-def test_unrelated_seller_never_sees_draft(world):
+def test_outsider_never_sees_draft(world):
     draft = _make_draft(world)
     resp = _api(world["other_user"]).get(_INVOICES_URL)
     assert resp.status_code == 200

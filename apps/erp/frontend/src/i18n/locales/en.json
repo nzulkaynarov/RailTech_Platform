@@ -632,36 +632,17 @@
     "inn": "TIN",
     "offline": "Offline",
     "registered": "Registered",
-    "stageUpdated": "Stage updated",
     "emptyState": "No counterparties yet",
     "emptyStateHintClients": "Add your first client or wait for an inbound request",
     "table": {
       "counterparty": "Counterparty",
-      "stage": "Stage",
-      "deals": "Deals / won",
-      "gmv": "GMV",
-      "lastInteraction": "Last interaction",
-      "owner": "Account owner",
-      "ownerUnassigned": "Unassigned"
+      "contact": "Primary contact",
+      "contacts": "Contacts",
+      "added": "Added"
     },
     "detail": {
-      "stage": "Relationship stage",
-      "deals": "Deals / won",
-      "source": "Source",
-      "firstInteraction": "First interaction",
-      "lastInteraction": "Last interaction"
-    },
-    "stage": {
-      "PROSPECT": "Prospect",
-      "ACTIVE": "Active",
-      "DORMANT": "Dormant",
-      "LOST": "Lost"
-    },
-    "source": {
-      "LEAD": "Landing lead",
-      "OFFLINE_CREATED": "Created manually",
-      "INBOUND_RFQ": "Inbound request",
-      "SELF_REGISTERED": "Self-registered"
+      "contacts": "Contacts",
+      "primary": "Primary"
     },
     "dialog": {
       "title": "New client",
@@ -2510,11 +2491,6 @@
       "item_removed": {
         "title": "Request line removed",
         "detail": "Deal #{{deal_id}}: line #{{item_id}} removed"
-      },
-      "routed": {
-        "title": "Request routed to sellers (RFQ routing)",
-        "detail_one": "Deal #{{deal_id}}: {{count}} seller",
-        "detail_other": "Deal #{{deal_id}}: {{count}} sellers"
       },
       "submitted": {
         "title": "Request submitted to supplier (RFQ)",
