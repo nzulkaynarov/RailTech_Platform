@@ -202,8 +202,9 @@ def test_writing_the_model_directly_invalidates_the_api_cache(db):
     """Инженерная админка, management-команда и шелл пишут ту же таблицу мимо вьюсета.
     Инвалидация, привязанная к пути, их не замечала — и правка до десяти минут не доходила."""
     from master_data.models import UnitOfMeasure
+    from master_data.signals import lookup_version_key
 
-    key = "lookup-version:master_data.unitofmeasure"
+    key = lookup_version_key(UnitOfMeasure)
     cache.set(key, 1, None)
 
     UnitOfMeasure.objects.create(code="SIG_UOM", name="Сигнальная", sort_order=960)
@@ -213,9 +214,10 @@ def test_writing_the_model_directly_invalidates_the_api_cache(db):
 
 def test_deleting_the_model_invalidates_too(db):
     from master_data.models import UnitOfMeasure
+    from master_data.signals import lookup_version_key
 
     unit = UnitOfMeasure.objects.create(code="SIG_UOM2", name="Вторая", sort_order=961)
-    key = "lookup-version:master_data.unitofmeasure"
+    key = lookup_version_key(UnitOfMeasure)
     cache.set(key, 5, None)
 
     unit.delete()
@@ -226,7 +228,10 @@ def test_deleting_the_model_invalidates_too(db):
 def test_an_unrelated_model_does_not_bump_the_lookup_version(db):
     """Обратная сторона: приёмник подписан без `sender=`, и без отбора он сбрасывал бы кэш
     справочников на КАЖДУЮ запись в базе."""
-    key = "lookup-version:master_data.unitofmeasure"
+    from master_data.models import UnitOfMeasure
+    from master_data.signals import lookup_version_key
+
+    key = lookup_version_key(UnitOfMeasure)
     cache.set(key, 7, None)
 
     Company.objects.create(name="Не справочник", inn="908600009")

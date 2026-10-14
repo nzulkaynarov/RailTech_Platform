@@ -5,18 +5,20 @@ counter started at 0 and collided (`duplicate key crm_contract_number_key` 500 i
 0037 backfills the counter to the max existing suffix.
 """
 
-import importlib
+from types import SimpleNamespace
 
 import pytest
 from django.apps import apps as django_apps
 from django.db import transaction
 
 from accounts.models import Company, CustomUser
+from core.legacy_migration_helpers import backfill_sequences
 from crm.models import Contract, ContractStatus, Deal, DealStage, DocumentSequence, Quote, QuoteStatus
 from crm.services.numbering import next_document_number
 
 pytestmark = pytest.mark.django_db
-_MIG = importlib.import_module("crm.migrations.0037_backfill_document_sequences")
+
+_MIG = SimpleNamespace(backfill_sequences=backfill_sequences)
 
 
 def test_backfill_corrects_behind_counter_and_prevents_collision():

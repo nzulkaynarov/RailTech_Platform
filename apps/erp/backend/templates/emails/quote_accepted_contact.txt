@@ -7,4 +7,4 @@
 {% translate "Обратите внимание: принятие предложения — это коммерческий акцепт оферты, а не электронная подпись. Договор подписывается отдельно." %}
 
 {% translate "С уважением," %}
-{% translate "команда RailTech" %}
+{% blocktranslate with platform=platform_name|default:'ERP' %}команда {{ platform }}{% endblocktranslate %}

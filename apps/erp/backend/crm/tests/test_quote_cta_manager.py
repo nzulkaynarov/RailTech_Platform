@@ -82,7 +82,7 @@ def test_manager_falls_back_to_email_and_seller_phone():
 
 # ── online-accept CTA ────────────────────────────────────────────────
 def test_cta_renders_when_public_url_present():
-    url = "https://b2b.railtech.uz/api/v1/public/quotes/tok123/"
+    url = "https://erp.example.com/api/v1/public/quotes/tok123/"
     html = render_to_string("crm/quote_pdf.html", _ctx(public_quote_url=url))
     assert "Онлайн-версия предложения" in html
     assert url in html
@@ -95,7 +95,7 @@ def test_cta_absent_without_public_url():
 
 # ── online-accept QR (F-09) ──────────────────────────────────────────
 def test_cta_qr_img_renders_when_qr_present():
-    url = "https://b2b.railtech.uz/api/v1/public/quotes/tok123/"
+    url = "https://erp.example.com/api/v1/public/quotes/tok123/"
     qr = "data:image/svg+xml;base64,PHN2Zz48L3N2Zz4="
     html = render_to_string("crm/quote_pdf.html", _ctx(public_quote_url=url, public_quote_qr=qr))
     assert 'class="cta-qr"' in html
@@ -104,7 +104,7 @@ def test_cta_qr_img_renders_when_qr_present():
 
 
 def test_cta_qr_img_absent_when_no_qr_but_link_stays():
-    url = "https://b2b.railtech.uz/api/v1/public/quotes/tok123/"
+    url = "https://erp.example.com/api/v1/public/quotes/tok123/"
     html = render_to_string("crm/quote_pdf.html", _ctx(public_quote_url=url))
     assert 'class="cta-qr"' not in html
     assert url in html  # the text-link CTA still renders without the QR
@@ -117,7 +117,7 @@ def test_public_quote_qr_none_without_token():
 
 
 def test_public_quote_qr_returns_svg_data_uri(settings):
-    settings.FRONTEND_URL = "https://b2b.railtech.uz"
+    settings.FRONTEND_URL = "https://erp.example.com"
     uri = public_quote_qr(SimpleNamespace(public_access_token="abc123"))
     assert uri is not None
     assert uri.startswith("data:image/svg+xml;base64,")
@@ -151,6 +151,6 @@ def test_public_quote_url_none_without_token():
 
 
 def test_public_quote_url_built_from_token(settings):
-    settings.FRONTEND_URL = "https://b2b.railtech.uz"
+    settings.FRONTEND_URL = "https://erp.example.com"
     url = public_quote_url(SimpleNamespace(public_access_token="abc123"))
-    assert url == "https://b2b.railtech.uz/api/v1/public/quotes/abc123/"
+    assert url == "https://erp.example.com/api/v1/public/quotes/abc123/"

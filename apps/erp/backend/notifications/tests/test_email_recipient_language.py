@@ -22,7 +22,7 @@ LOCMEM = {
         "username": "",
         "password": "",
         "use_tls": False,
-        "from_email": "test@railtech.uz",
+        "from_email": "test@example.com",
     }
     for channel in ("transactional", "marketing", "system")
 }

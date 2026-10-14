@@ -8,14 +8,14 @@ Why a custom middleware instead of django-csp:
     grows nonces / per-view overrides.
 
 Where CSP actually comes from on the prod host (IMPORTANT — read before editing):
-    On the VPS the **host Caddy** (deploy/caddy/b2b.railtech.uz.caddy) sets a
+    On the VPS the **host Caddy** (deploy/caddy) sets a
     site-level `header { Content-Security-Policy ... }`. In Caddy a site-level
     header directive applies to EVERY response on the origin — the React SPA it
     serves directly AND the /api + /admin responses it reverse-proxies to
     Django — and it REPLACES any header the backend already set. So on prod,
     Caddy's CSP is the effective policy for the whole origin and the header this
     middleware sets is overwritten (verified 2026-07-03:
-    `curl -I https://b2b.railtech.uz/admin/login/` returns Caddy's policy).
+    `curl -I https://example.com/admin/login/` returns Caddy's policy).
 
     This middleware is therefore the FALLBACK, not the prod source of truth: it
     stamps a CSP on deploys that have no fronting proxy setting one (local dev,

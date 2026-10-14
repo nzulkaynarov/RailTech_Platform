@@ -5,8 +5,6 @@ catalog/tests/ package (both resolve to module `catalog.tests`, breaking pytest
 collection on a clean checkout). Content is unchanged.
 """
 
-import importlib
-
 from django.apps import apps as django_apps
 from django.test import TestCase
 
@@ -15,21 +13,17 @@ from catalog.models import Category, DomainType, Product
 
 class DomainConstraintsTest(TestCase):
     def setUp(self):
-        # RAILWAY_MACHINERY / SERVICES are seeded by a data migration (Rule 1), so use
-        # get_or_create — a plain create() collides with the seeded row (UniqueViolation).
-        self.railway_domain = DomainType.objects.get_or_create(
-            code="RAILWAY_MACHINERY", defaults={"name": "Railway Machinery", "sku_prefix": "RM"}
+        self.goods_domain = DomainType.objects.get_or_create(
+            code="GENERAL_GOODS", defaults={"name": "General Goods", "sku_prefix": "GD"}
         )[0]
         self.services_domain = DomainType.objects.get_or_create(
             code="SERVICES", defaults={"name": "Services", "sku_prefix": "SV"}
         )[0]
 
-    def test_railway_machinery_product_save(self):
-        """
-        Verify that creating a RAILWAY_MACHINERY product works without equipment groups (M1-ERP-02 wave 4).
-        """
-        product = Product.objects.create(name="Test Railway Product", domain_type=self.railway_domain)
-        self.assertEqual(product.domain_type.code, "RAILWAY_MACHINERY")
+    def test_goods_product_save(self):
+        """Verify that creating a GENERAL_GOODS product works."""
+        product = Product.objects.create(name="Test Goods Product", domain_type=self.goods_domain)
+        self.assertEqual(product.domain_type.code, "GENERAL_GOODS")
 
     def test_services_product(self):
         product = Product.objects.create(name="Test Service", domain_type=self.services_domain)
@@ -41,13 +35,17 @@ class TaxonomyDedupeTest(TestCase):
     re-parent children (parent is CASCADE!), remap products, fix the typo."""
 
     def setUp(self):
-        self.mig = importlib.import_module("catalog.migrations.0008_dedupe_taxonomy")
+        from types import SimpleNamespace
+
+        from core.legacy_migration_helpers import dedupe_taxonomy
+
+        self.mig = SimpleNamespace(dedupe_taxonomy=dedupe_taxonomy)
 
     def test_merges_duplicate_categories_and_reparents_children(self):
-        canon = Category.objects.create(name="ЖД Техника")
-        dup = Category.objects.create(name="ЖД Техника")  # duplicate, higher id
-        child = Category.objects.create(name="Краны", parent=dup)  # under the dup
-        product = Product.objects.create(name="Рельс Р65", category=dup)
+        canon = Category.objects.create(name="Тестовый металлопрокат")
+        dup = Category.objects.create(name="Тестовый металлопрокат")  # duplicate, higher id
+        child = Category.objects.create(name="Трубы", parent=dup)  # under the dup
+        product = Product.objects.create(name="Труба стальная", category=dup)
 
         self.mig.dedupe_taxonomy(django_apps, None)
 

@@ -19,7 +19,7 @@ from django.utils.http import urlsafe_base64_encode
 from accounts.models import CustomUser
 from accounts.services.auth import reset_password
 
-ENV = {"SUPERADMIN_EMAIL": "admin@railtech.uz", "SUPERADMIN_PASSWORD": "Sup3r-Str0ng-Pass!"}
+ENV = {"SUPERADMIN_EMAIL": "admin@example.com", "SUPERADMIN_PASSWORD": "Sup3r-Str0ng-Pass!"}
 
 
 def _run_command(*args):
@@ -33,7 +33,7 @@ def test_init_superadmin_creates_by_email(monkeypatch):
     for key, value in ENV.items():
         monkeypatch.setenv(key, value)
     output = _run_command()
-    user = CustomUser.objects.get(email="admin@railtech.uz")
+    user = CustomUser.objects.get(email="admin@example.com")
     assert user.is_superuser and user.is_staff and user.is_active
     assert user.check_password(ENV["SUPERADMIN_PASSWORD"])
     assert "created" in output
@@ -49,9 +49,9 @@ def test_init_superadmin_does_not_hijack_unrelated_local_part_account(monkeypatc
     _run_command()
     bystander.refresh_from_db()
     assert not bystander.is_superuser  # untouched
-    admin = CustomUser.objects.get(email="admin@railtech.uz")
+    admin = CustomUser.objects.get(email="admin@example.com")
     assert admin.is_superuser
-    assert admin.username == "admin@railtech.uz"  # local part taken → full email
+    assert admin.username == "admin@example.com"  # local part taken → full email
 
 
 @pytest.mark.django_db
@@ -59,7 +59,7 @@ def test_init_superadmin_rerun_leaves_existing_account_alone(monkeypatch):
     for key, value in ENV.items():
         monkeypatch.setenv(key, value)
     _run_command()
-    admin = CustomUser.objects.get(email="admin@railtech.uz")
+    admin = CustomUser.objects.get(email="admin@example.com")
     admin.set_password("Rotated-Elsewhere-1!")
     admin.is_active = False  # e.g. deliberately disabled
     admin.save()
@@ -77,7 +77,7 @@ def test_init_superadmin_reset_password_flag_rotates(monkeypatch):
     for key, value in ENV.items():
         monkeypatch.setenv(key, value)
     _run_command()
-    admin = CustomUser.objects.get(email="admin@railtech.uz")
+    admin = CustomUser.objects.get(email="admin@example.com")
     admin.set_password("Old-Pass-1!")
     admin.is_active = False
     admin.save()

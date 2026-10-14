@@ -64,11 +64,11 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 25 * 1024 * 1024
 MINIO_ENDPOINT = os.environ.get("MINIO_ENDPOINT", "")
 MINIO_ACCESS_KEY = os.environ.get("MINIO_ACCESS_KEY", "")
 MINIO_SECRET_KEY = os.environ.get("MINIO_SECRET_KEY", "")
-MINIO_PUBLIC_BUCKET = os.environ.get("MINIO_PUBLIC_BUCKET", "railtech-public")
-MINIO_PRIVATE_BUCKET = os.environ.get("MINIO_PRIVATE_BUCKET", "railtech-private")
-MINIO_TEMP_BUCKET = os.environ.get("MINIO_TEMP_BUCKET", "railtech-temp")
+MINIO_PUBLIC_BUCKET = os.environ.get("MINIO_PUBLIC_BUCKET", "erp-public")
+MINIO_PRIVATE_BUCKET = os.environ.get("MINIO_PRIVATE_BUCKET", "erp-private")
+MINIO_TEMP_BUCKET = os.environ.get("MINIO_TEMP_BUCKET", "erp-temp")
 # Domain used for public URLs (served via nginx proxy)
-# e.g. "localhost/storage" or "cdn.railtech.uz"
+# e.g. "localhost/storage" or "cdn.example.com"
 MINIO_PUBLIC_DOMAIN = os.environ.get("MINIO_PUBLIC_DOMAIN", "")
 # External endpoint for presigned URLs (accessible from browser, not Docker internal)
 # e.g. "http://localhost:9000" — defaults to MINIO_ENDPOINT if not set

@@ -6,12 +6,14 @@
 `event_code`/`event_params` неприкосновенны.
 """
 
-import importlib
+from types import SimpleNamespace
 
 import pytest
 from django.apps import apps
 
-migration = importlib.import_module("crm.migrations.0086_activity_log_one_word")
+from core.legacy_migration_helpers import rewrite_activity_logs, rewrite_text
+
+migration = SimpleNamespace(rewrite_text=rewrite_text, rewrite=rewrite_activity_logs)
 
 
 def test_rewrite_covers_declensions_and_keeps_case():

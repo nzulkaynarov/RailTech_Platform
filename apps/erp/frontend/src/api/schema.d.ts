@@ -2880,7 +2880,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Sign contract by manager (RailTech side)
+         * Sign contract by manager
          * @description Contracts -- generated from approved quotes, double-signed.
          */
         post: operations["crm_contracts_sign_manager_create"];
@@ -7087,7 +7087,7 @@ export interface components {
             readonly client_name: string;
             /**
              * Менеджер
-             * @description Ответственный менеджер RailTech
+             * @description Ответственный менеджер
              */
             manager?: number | null;
             readonly manager_name: string;
@@ -7151,7 +7151,7 @@ export interface components {
             client?: number | null;
             /**
              * Менеджер
-             * @description Ответственный менеджер RailTech
+             * @description Ответственный менеджер
              */
             manager?: number | null;
             /**
@@ -7196,7 +7196,7 @@ export interface components {
             readonly total_value: number;
             /**
              * Менеджер
-             * @description Ответственный менеджер RailTech
+             * @description Ответственный менеджер
              */
             manager?: number | null;
             readonly assigned_to: number | null;
@@ -8863,7 +8863,7 @@ export interface components {
             client?: number | null;
             /**
              * Менеджер
-             * @description Ответственный менеджер RailTech
+             * @description Ответственный менеджер
              */
             manager?: number | null;
             /**
@@ -9103,7 +9103,7 @@ export interface components {
             source_deal?: number | null;
             /**
              * Тип домена
-             * @description Домен каталога: ж/д техника, общие товары или услуги
+             * @description Домен каталога: товары или услуги
              */
             domain_type?: number | null;
             /**
@@ -9166,20 +9166,20 @@ export interface components {
              */
             amount?: string;
             /**
-             * Процент (%)
+             * Процент от суммы позиций (%)
              * Format: decimal
-             * @description Процент от суммы позиций. Если задан — приоритетнее фиксированной суммы
+             * @description Если задан — сумма считается как процент от базы до НДС (приоритетнее суммы)
              */
             rate_percent?: string | null;
             /**
-             * Ваша стоимость статьи
+             * Себестоимость статьи для продавца
              * Format: decimal
-             * @description Сколько статья реально стоит продавцу. Пусто = по себестоимости (= выставленной сумме).
+             * @description Реальные затраты продавца по этой статье. Пусто = перевыставление без маржи (cost = amount).
              */
             cost_amount?: string | null;
             /**
              * Скидка (вычет)
-             * @description Если включено — сумма вычитается из базы до НДС (UBL allowance)
+             * @description Если True — сумма вычитается из базы (скидка / бонус), а не добавляется
              */
             is_deduction?: boolean;
         };
@@ -9495,6 +9495,21 @@ export interface components {
             /** Название платформы */
             platform_name?: string;
             /**
+             * Email поддержки
+             * Format: email
+             */
+            support_email?: string;
+            /**
+             * URL логотипа
+             * @description Ссылка на изображение логотипа платформы
+             */
+            logo_url?: string;
+            /**
+             * Основной домен
+             * @description Доменное имя платформы для ссылок и уведомлений
+             */
+            domain?: string;
+            /**
              * Режим обслуживания
              * @description Когда включён — пользователи видят заглушку
              */
@@ -9710,7 +9725,7 @@ export interface components {
             readonly id: number;
             /**
              * Артикул (SKU)
-             * @description Внутренний артикул RailTech (генерируется автоматически)
+             * @description Внутренний артикул (генерируется автоматически)
              */
             readonly sku: string;
             /**
@@ -9751,7 +9766,7 @@ export interface components {
             source_deal?: number | null;
             /**
              * Тип домена
-             * @description Домен каталога: ж/д техника, общие товары или услуги
+             * @description Домен каталога: товары или услуги
              */
             domain_type?: number | null;
             readonly domain_type_name: string | null;
@@ -9927,7 +9942,7 @@ export interface components {
             readonly id: number;
             /**
              * Артикул (SKU)
-             * @description Внутренний артикул RailTech (генерируется автоматически)
+             * @description Внутренний артикул (генерируется автоматически)
              */
             sku?: string;
             /**
@@ -9963,7 +9978,7 @@ export interface components {
             source_deal?: number | null;
             /**
              * Тип домена
-             * @description Домен каталога: ж/д техника, общие товары или услуги
+             * @description Домен каталога: товары или услуги
              */
             domain_type?: number | null;
             readonly domain_type_name: string | null;
@@ -10070,7 +10085,7 @@ export interface components {
             source_deal?: number | null;
             /**
              * Тип домена
-             * @description Домен каталога: ж/д техника, общие товары или услуги
+             * @description Домен каталога: товары или услуги
              */
             domain_type?: number | null;
             /**
@@ -10335,24 +10350,24 @@ export interface components {
              */
             amount?: string;
             /**
-             * Процент (%)
+             * Процент от суммы позиций (%)
              * Format: decimal
-             * @description Процент от суммы позиций. Если задан — приоритетнее фиксированной суммы
+             * @description Если задан — сумма считается как процент от базы до НДС (приоритетнее суммы)
              */
             rate_percent?: string | null;
             /**
-             * Ваша стоимость статьи
+             * Себестоимость статьи для продавца
              * Format: decimal
-             * @description Сколько статья реально стоит продавцу. Пусто = по себестоимости (= выставленной сумме).
+             * @description Реальные затраты продавца по этой статье. Пусто = перевыставление без маржи (cost = amount).
              */
             cost_amount?: string | null;
             /**
              * Скидка (вычет)
-             * @description Если включено — сумма вычитается из базы до НДС (UBL allowance)
+             * @description Если True — сумма вычитается из базы (скидка / бонус), а не добавляется
              */
             is_deduction?: boolean;
             /**
-             * Порядок
+             * Порядок в каскаде
              * @description Позиция в каскаде: статья считается от нарастающего итога всех строк выше неё.
              */
             readonly sort_order: number;
@@ -10367,8 +10382,8 @@ export interface components {
              */
             readonly resolved_amount: string | null;
             /**
-             * Из шаблона
-             * @description Строка создана автоматически из шаблона базиса поставки
+             * Создана из шаблона базиса
+             * @description True — строка авто-создана при выборе базиса поставки
              */
             readonly from_template: boolean;
             /**
@@ -10406,20 +10421,20 @@ export interface components {
              */
             amount?: string;
             /**
-             * Процент (%)
+             * Процент от суммы позиций (%)
              * Format: decimal
-             * @description Процент от суммы позиций. Если задан — приоритетнее фиксированной суммы
+             * @description Если задан — сумма считается как процент от базы до НДС (приоритетнее суммы)
              */
             rate_percent?: string | null;
             /**
-             * Ваша стоимость статьи
+             * Себестоимость статьи для продавца
              * Format: decimal
-             * @description Сколько статья реально стоит продавцу. Пусто = по себестоимости (= выставленной сумме).
+             * @description Реальные затраты продавца по этой статье. Пусто = перевыставление без маржи (cost = amount).
              */
             cost_amount?: string | null;
             /**
              * Скидка (вычет)
-             * @description Если включено — сумма вычитается из базы до НДС (UBL allowance)
+             * @description Если True — сумма вычитается из базы (скидка / бонус), а не добавляется
              */
             is_deduction?: boolean;
         };
@@ -11095,6 +11110,21 @@ export interface components {
             exchange_rate_usd_uzs?: string;
             /** Название платформы */
             platform_name?: string;
+            /**
+             * Email поддержки
+             * Format: email
+             */
+            support_email?: string;
+            /**
+             * URL логотипа
+             * @description Ссылка на изображение логотипа платформы
+             */
+            logo_url?: string;
+            /**
+             * Основной домен
+             * @description Доменное имя платформы для ссылок и уведомлений
+             */
+            domain?: string;
             /**
              * Режим обслуживания
              * @description Когда включён — пользователи видят заглушку

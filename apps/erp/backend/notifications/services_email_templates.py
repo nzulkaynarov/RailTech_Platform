@@ -25,27 +25,27 @@ from .emails import _render_bodies, send_templated_email
 SAMPLE_CONTEXTS: dict[str, dict] = {
     "setup_password": {
         "first_name": "Алиса",
-        "setup_url": "https://b2b.railtech.uz/setup-password?uid=NDA&token=sample-token",
+        "setup_url": "https://erp.example.com/setup-password?uid=NDA&token=sample-token",
     },
     "invite_member": {
         "first_name": "Алиса",
         "company_name": "ООО «Пример»",
-        "setup_url": "https://b2b.railtech.uz/setup-password?uid=NDA&token=sample-token",
+        "setup_url": "https://erp.example.com/setup-password?uid=NDA&token=sample-token",
     },
     "quote_sent": {
         # Mirrors the REAL merge variables passed by crm.tasks.send_quote_email — an operator
         # editing this template by the preview must see the same names the live send substitutes.
         "recipient_name": "Алиса",
-        "seller_name": "ООО «Вагонсервис»",
+        "seller_name": "ООО «Поставщик»",
         "deal_id": 1024,
         "quote_version": 1,
         "valid_until": "08.08.2026",
         "total_incl_vat": "20 608 000,00",
-        "public_link": "https://b2b.railtech.uz/api/v1/public/quotes/sample-token/",
+        "public_link": "https://erp.example.com/api/v1/public/quotes/sample-token/",
     },
     "reset_password": {
         "first_name": "Алиса",
-        "reset_url": "https://b2b.railtech.uz/reset-password?uid=NDA&token=sample-token",
+        "reset_url": "https://erp.example.com/reset-password?uid=NDA&token=sample-token",
     },
 }
 
@@ -54,7 +54,7 @@ SAMPLE_CONTEXTS: dict[str, dict] = {
 _GENERIC_SAMPLE_CONTEXT = {
     "first_name": "Алиса",
     "company_name": "ООО «Пример»",
-    "frontend_url": "https://b2b.railtech.uz",
+    "frontend_url": "https://erp.example.com",
 }
 
 

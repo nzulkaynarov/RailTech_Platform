@@ -8,4 +8,4 @@
 
 {{ invoice_url }}
 
-— RailTech B2B
+— {{ platform_name|default:'ERP' }}

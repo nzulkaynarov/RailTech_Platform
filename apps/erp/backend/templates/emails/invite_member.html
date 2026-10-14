@@ -4,11 +4,11 @@
 {% block header_hint %}{% translate "Приглашение в команду" %}{% endblock %}
 {% block content %}
   <h1 style="margin:0 0 16px 0; font-size:22px; line-height:1.3; color:#111827;">
-    {% translate "Вас пригласили в RailTech B2B" %}
+    {% blocktranslate with platform=platform_name|default:'ERP' %}Вас пригласили в {{ platform }}{% endblocktranslate %}
   </h1>
   <p style="margin:0 0 16px 0;">
-    {% blocktranslate %}Компания <strong>{{ company_name }}</strong> приглашает вас присоединиться к команде
-    на платформе RailTech B2B. Чтобы принять приглашение, установите пароль для своего аккаунта.{% endblocktranslate %}
+    {% blocktranslate with platform=platform_name|default:'ERP' %}Компания <strong>{{ company_name }}</strong> приглашает вас присоединиться к команде
+    на платформе {{ platform }}. Чтобы принять приглашение, установите пароль для своего аккаунта.{% endblocktranslate %}
   </p>
   <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0;">
     <tr><td style="border-radius:8px; background-color:#2563eb;">

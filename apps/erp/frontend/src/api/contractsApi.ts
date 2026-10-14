@@ -64,7 +64,7 @@ export const contractsApi = {
   // 404s on prod (local storage, no MinIO). Polls through 202 GENERATING (ARCH-03).
   downloadPdf: async (id: number) => {
     const { downloadFile } = await import('@/lib/download');
-    await downloadFile(`crm/contracts/${id}/download-pdf/`, `RailTech_Contract_${id}.pdf`);
+    await downloadFile(`crm/contracts/${id}/download-pdf/`, `Contract_${id}.pdf`);
   },
   generateFromQuote: async (quoteId: number, notes?: string) => {
     const response = await apiClient.post<Contract>('crm/contracts/generate-from-quote/', {

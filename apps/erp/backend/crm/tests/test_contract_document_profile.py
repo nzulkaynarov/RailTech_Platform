@@ -1,6 +1,6 @@
 """Contract document counterparty — the «Поставщик» party on the договор PDF must name
 the REAL seller (its CompanyDocumentProfile legal_name, else the Company name), never the
-hardcoded platform identity «ООО «RailTech»» (audit F8).
+hardcoded legacy platform identity (audit F8).
 
 Renders crm/contract_pdf.html directly (no WeasyPrint) with the same context
 _render_contract_pdf builds, and also covers the service resolver _quote_seller_company
@@ -76,8 +76,7 @@ def test_seller_company_named_not_platform(scenario):
     assert "ООО РельсМаш Поставка" in html
     assert "3000000001" in html  # ИНН
     # The old hardcoded platform counterparty must NEVER appear on a real contract.
-    assert "«RailTech»" not in html
-    assert "ООО «RailTech»" not in html
+    assert "ООО Платформа" not in html
 
 
 @pytest.mark.django_db
@@ -96,4 +95,4 @@ def test_seller_profile_legal_name_and_requisites(scenario):
     assert "ООО «РельсМаш Поставка и Ко»" in html
     assert "3001112223" in html
     assert "р/с 2020 8000 ... МФО 00014" in html
-    assert "«RailTech»" not in html
+    assert "ООО Платформа" not in html

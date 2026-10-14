@@ -4,13 +4,14 @@ The migration is a data-fix; pytest runs with --nomigrations, so we import its R
 function and exercise it directly against a constructed scenario using the live models.
 """
 
-import importlib
+from types import SimpleNamespace
 
 import pytest
 
 from accounts.models import Company, CompanyMember, CompanyRole, CustomUser, WorkspaceRole
+from core.legacy_migration_helpers import demote_overgranted
 
-_mig = importlib.import_module("accounts.migrations.0031_demote_overgranted_company_admins")
+_mig = SimpleNamespace(demote_overgranted=demote_overgranted)
 
 ADMIN_NAME = "Администратор компании"
 

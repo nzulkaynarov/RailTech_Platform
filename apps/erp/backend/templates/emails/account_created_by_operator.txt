@@ -1,10 +1,10 @@
 {% load i18n %}{% blocktranslate with name=first_name|default:"" %}Здравствуйте, {{ name }}!{% endblocktranslate %}
 
-{% blocktranslate %}Оператор платформы RailTech B2B создал для вас аккаунт.
+{% blocktranslate with platform=platform_name|default:'ERP' %}Оператор платформы {{ platform }} создал для вас аккаунт.
 Чтобы начать работу, установите пароль по ссылке:{% endblocktranslate %}
 
 {{ setup_url }}
 
 {% translate "Если вы не ожидали это письмо, просто проигнорируйте его — без пароля аккаунтом воспользоваться нельзя." %}
 
-— {% translate "Команда RailTech B2B" %}
+— {% blocktranslate with platform=platform_name|default:'ERP' %}Команда {{ platform }}{% endblocktranslate %}

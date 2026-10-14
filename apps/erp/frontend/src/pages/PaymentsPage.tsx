@@ -85,7 +85,7 @@ export function PaymentsPage() {
                           {/* D2a: квитанция — печатный артефакт платежа (Odoo Payment Receipt). */}
                           <DocumentActions
                             request={() => ({ path: `crm/payments/${p.id}/download-receipt/` })}
-                            filenameBase={`RailTech_Receipt_${p.receipt_number || p.id}`}
+                            filenameBase={`Receipt_${p.receipt_number || p.id}`}
                             size="sm"
                           />
                         </TableCell>

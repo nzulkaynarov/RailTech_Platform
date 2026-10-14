@@ -38,7 +38,7 @@ class Product(models.Model):
         db_index=True,
         blank=True,
         verbose_name=_("Артикул (SKU)"),
-        help_text=_("Внутренний артикул RailTech (генерируется автоматически)"),
+        help_text=_("Внутренний артикул (генерируется автоматически)"),
     )
     description = models.TextField(
         blank=True,
@@ -55,7 +55,7 @@ class Product(models.Model):
         blank=True,
         db_index=True,
         verbose_name=_("Тип домена"),
-        help_text=_("Домен каталога: ж/д техника, общие товары или услуги"),
+        help_text=_("Домен каталога: товары или услуги"),
     )
     status = models.ForeignKey(
         "catalog.ProductStatus",
@@ -89,7 +89,7 @@ class Product(models.Model):
     # reads/writes this anymore; kept nullable for one release, dropped in a follow-up
     # migration (roadmap contract-phase). Do NOT use in new code.
     manufacturer = models.ForeignKey(
-        "accounts.Company",
+        "parties.Company",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -100,7 +100,7 @@ class Product(models.Model):
     # Tenancy: the platform company that owns/created this catalog card (the seller).
     # Drives the "see my own unpublished products" scoping; NOT the OEM (that's `brand`).
     owner_company = models.ForeignKey(
-        "accounts.Company",
+        "parties.Company",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -162,7 +162,7 @@ class Product(models.Model):
     # СКОЛЬКО раз её спрашивали: очередь сортируется по спросу, и продавец сначала описывает
     # то, что окупится быстрее.
     source_deal = models.ForeignKey(
-        "crm.Deal",
+        "sales.Deal",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

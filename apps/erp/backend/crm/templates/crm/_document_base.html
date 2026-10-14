@@ -24,7 +24,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-{% firstof seller_profile.legal_name seller.name "RailTech B2B" as seller_name %}
+{% firstof seller_profile.legal_name seller.name platform_name "ERP" as seller_name %}
 {% firstof accent seller_profile.accent_color "#15294d" as accent %}
 {% with accent_contrast=accent_contrast|default:"#ffffff" %}
 <style>
@@ -266,7 +266,7 @@
             «в КП 3 раза реквизиты» — были в шапке, блоке сторон и футере одновременно).
           {% endcomment %}
           {% if seller_profile.inn %}{% translate "ИНН" %} {{ seller_profile.inn }}{% elif seller.inn %}{% translate "ИНН" %} {{ seller.inn }}{% endif %}
-          {% if not seller %}RailTech B2B Ecosystem{% endif %}
+          {% if not seller %}{{ platform_name|default:"ERP" }}{% endif %}
           {# Bank requisites in the letterhead (CIS practice) — spec-kp-blank, toggle on the profile. #}
           {% if seller_profile.show_bank_in_header and seller_profile.bank_details %}<br><span class="brand-bank">{{ seller_profile.bank_details|linebreaksbr }}</span>{% endif %}
         </div>
@@ -300,8 +300,8 @@
             {% firstof seller_profile.legal_address seller.legal_address as party_seller_addr %}
             {% if party_seller_addr %}<p>{{ party_seller_addr }}</p>{% endif %}
           {% else %}
-            <div class="pname">RailTech B2B</div>
-            <p>{% translate "Платформа" %} b2b.railtech.uz</p>
+            <div class="pname">{{ platform_name|default:"ERP" }}</div>
+            {% if platform_domain %}<p>{% translate "Платформа" %} {{ platform_domain }}</p>{% endif %}
           {% endif %}
         </div>
       </td>
@@ -356,11 +356,11 @@
               {% if seller.phone %}{% translate "тел." %} {{ seller.phone }}<br>{% endif %}
               {% if seller.email %}{{ seller.email }}{% endif %}
             </td>
-            <td style="width:18%">{% blocktranslate with brand="RailTech B2B Ecosystem" %}Документ сформирован<br>в {{ brand }}{% endblocktranslate %}</td>
+            <td style="width:18%">{% blocktranslate with brand=platform_name|default:"ERP" %}Документ сформирован<br>в {{ brand }}{% endblocktranslate %}</td>
           </tr>
         </table>
       {% else %}
-        {% blocktranslate with brand="RailTech B2B Ecosystem" %}Документ сформирован в {{ brand }}{% endblocktranslate %}
+        {% blocktranslate with brand=platform_name|default:"ERP" %}Документ сформирован в {{ brand }}{% endblocktranslate %}
       {% endif %}
     {% endblock %}
   </div>

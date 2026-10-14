@@ -37,11 +37,15 @@ def test_engineer_without_model_permission_cannot_open_company_wizard(client):
 @pytest.mark.django_db
 def test_engineer_with_add_company_permission_gets_in(client):
     """Запрет не должен закрыть путь тому, кому право выдали осознанно."""
+    from accounts.models import Company
+
     engineer = CustomUser.objects.create_user(
         email="lp.engineer2@test.uz", username="lp_engineer2", password=PASSWORD, is_staff=True
     )
     engineer.groups.add(Group.objects.get(name=SYSTEM_ENGINEERS_GROUP))
-    engineer.user_permissions.add(Permission.objects.get(codename="add_company", content_type__app_label="accounts"))
+    engineer.user_permissions.add(
+        Permission.objects.get(codename="add_company", content_type__app_label=Company._meta.app_label)
+    )
     assert client.login(username=engineer.email, password=PASSWORD)
 
     response = client.get("/admin/accounts/company/wizard/")

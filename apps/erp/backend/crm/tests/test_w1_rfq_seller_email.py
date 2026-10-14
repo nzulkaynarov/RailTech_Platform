@@ -86,16 +86,16 @@ def test_new_rfq_seller_template_renders_link_and_buyer():
         {
             "buyer_name": "ООО «Покупатель»",
             "deal_title": "Рельсы Р65",
-            "deal_url": "https://b2b.railtech.uz/#request-detail/42",
+            "deal_url": "https://erp.example.com/#request-detail/42",
             "assigned": False,
         },
     )
     assert "Новая заявка" in subject and "ООО «Покупатель»" in subject
     for body in (text, html):
-        assert "https://b2b.railtech.uz/#request-detail/42" in body
+        assert "https://erp.example.com/#request-detail/42" in body
         assert "Рельсы Р65" in body
     # Платформенный бренд (внутреннее письмо продавцу) — white-label здесь не применяется.
-    assert "RailTech B2B" in html
+    assert "ERP" in html
 
 
 @pytest.mark.django_db

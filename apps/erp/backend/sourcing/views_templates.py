@@ -64,8 +64,8 @@ def _template_example(categories, domains) -> list:
 
     example = list(CATALOG_TEMPLATE_EXAMPLE)
     example_name = example[CATALOG_TEMPLATE_HEADERS.index("Наименование")]
-    railway = next((domain for domain in domains if domain.code == "RAILWAY_MACHINERY"), None)
-    domain = railway or (domains[0] if domains else None)
+    goods = next((domain for domain in domains if domain.code in ("GENERAL_GOODS", "GOODS")), None)
+    domain = goods or (domains[0] if domains else None)
     suggestions = suggest_hs_codes(example_name, limit=1)
 
     example[CATALOG_TEMPLATE_HEADERS.index("Категория")] = categories[0].name if categories else ""
@@ -120,6 +120,6 @@ class CatalogTemplateView(APIView):
             reference.append(["Категория", "", category.name])
 
         response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-        response["Content-Disposition"] = 'attachment; filename="railtech_catalog_template.xlsx"'
+        response["Content-Disposition"] = 'attachment; filename="catalog_template.xlsx"'
         workbook.save(response)
         return response

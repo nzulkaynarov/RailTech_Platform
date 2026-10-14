@@ -186,4 +186,4 @@ def test_someone_who_can_open_the_company_lands_on_it(creator, client, db):
     response = _run_wizard(client, inn="908300004", owner_email="owner4@wizard.test")
 
     company = Company.objects.get(inn="908300004")
-    assert response.url == f"/admin/accounts/company/{company.pk}/change/"
+    assert response.url == f"/admin/{Company._meta.app_label}/company/{company.pk}/change/"

@@ -114,8 +114,8 @@ def test_sanitizer_drops_javascript_href_but_keeps_tag():
 
 
 def test_sanitizer_keeps_safe_href():
-    out = sanitize_template_html('<a href="https://railtech.uz">сайт</a>')
-    assert 'href="https://railtech.uz"' in out
+    out = sanitize_template_html('<a href="https://example.com">сайт</a>')
+    assert 'href="https://example.com"' in out
 
 
 def test_sanitizer_allows_data_png_on_img():

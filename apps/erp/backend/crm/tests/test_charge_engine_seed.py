@@ -1,18 +1,17 @@
-import importlib
+from types import SimpleNamespace
 
 import pytest
 from django.apps import apps as django_apps
 
+from core.seeds.delivery_basis import seed_incoterms
+from core.seeds.sales import seed_basis_freight, seed_charge_engine
 from crm.models import ChargeTemplate, ChargeType
 
 pytestmark = pytest.mark.django_db
 
-# B3: the КП charge engine's reference data moved out of core_seed (a demo seeder)
-# into idempotent data migrations. These tests assert that running those migrations
-# on a DB yields a working charge apparatus (≥3 ChargeType rows + ≥1 GLOBAL template).
-_INCOTERMS_MIG = importlib.import_module("master_data.migrations.0008_seed_delivery_basis_incoterms")
-_CHARGE_MIG = importlib.import_module("crm.migrations.0036_seed_charge_engine")
-_FREIGHT_MIG = importlib.import_module("crm.migrations.0038_seed_basis_freight_charge")
+_INCOTERMS_MIG = SimpleNamespace(seed_incoterms=seed_incoterms)
+_CHARGE_MIG = SimpleNamespace(seed_charge_engine=seed_charge_engine)
+_FREIGHT_MIG = SimpleNamespace(seed_basis_freight=seed_basis_freight)
 
 
 def test_charge_engine_seed_creates_types_and_global_templates():

@@ -159,7 +159,7 @@ export function InvoicesPage() {
     actions: (inv) => (
       <DocumentActions
         request={() => ({ path: `crm/invoices/${inv.id}/download-pdf/` })}
-        filenameBase={`RailTech_Invoice_${inv.id}`}
+        filenameBase={`Invoice_${inv.id}`}
         variant="ghost"
         iconOnly
       />
@@ -300,7 +300,7 @@ export function InvoicesPage() {
                   {selected.status !== 'CANCELLED' && (
                     <DocumentActions
                       request={() => ({ path: `crm/invoices/${selected.id}/download-pdf/` })}
-                      filenameBase={`RailTech_Invoice_${selected.id}`}
+                      filenameBase={`Invoice_${selected.id}`}
                       size="default"
                     />
                   )}

@@ -96,14 +96,14 @@ def test_empty_uom_lookup_yields_no_candidates():
 @pytest.mark.django_db
 def test_category_candidates_are_filtered_by_domain_when_it_is_known():
     Category.objects.all().delete()
-    rail = DomainType.objects.get_or_create(code="RAILWAY_MACHINERY", defaults={"name": "ЖД"})[0]
+    goods = DomainType.objects.get_or_create(code="GENERAL_GOODS", defaults={"name": "Товары"})[0]
     services = DomainType.objects.get_or_create(code="SERVICES", defaults={"name": "Услуги"})[0]
-    own = Category.objects.create(name="Тормозное оборудование", domain_type=rail)
+    own = Category.objects.create(name="Металлопрокат", domain_type=goods)
     foreign = Category.objects.create(name="Логистика и перевозка", domain_type=services)
     # Категория без домена доменом не ограничена и годится любому товару — остаётся в списке.
     domainless = Category.objects.create(name="Прочее", domain_type=None)
 
-    ids = [row["id"] for row in category_candidates("Тормозная колодка", domain_code="RAILWAY_MACHINERY")]
+    ids = [row["id"] for row in category_candidates("Труба стальная", domain_code="GENERAL_GOODS")]
 
     assert own.id in ids
     assert domainless.id in ids
@@ -168,8 +168,8 @@ def _stub_client(monkeypatch, payload, captured=None):
 def test_enrich_proposes_verified_category_and_uom(settings, monkeypatch):
     settings.AI_IMPORT_ENABLED = True
     Category.objects.all().delete()
-    rail = DomainType.objects.get_or_create(code="RAILWAY_MACHINERY", defaults={"name": "ЖД"})[0]
-    category = Category.objects.create(name="Тормозное оборудование", domain_type=rail)
+    goods = DomainType.objects.get_or_create(code="GENERAL_GOODS", defaults={"name": "Товары"})[0]
+    category = Category.objects.create(name="Тормозное оборудование", domain_type=goods)
     captured = []
     _stub_client(
         monkeypatch,
@@ -184,7 +184,7 @@ def test_enrich_proposes_verified_category_and_uom(settings, monkeypatch):
         captured,
     )
 
-    result = enrich_product("Тормозная колодка композитная", domain_code="RAILWAY_MACHINERY")
+    result = enrich_product("Тормозная колодка композитная", domain_code="GENERAL_GOODS")
 
     assert result["category_id"] == category.id
     assert result["uom_code"] == "H87"
@@ -202,7 +202,7 @@ def test_enrich_drops_a_foreign_category_and_an_unknown_unit(settings, monkeypat
     settings.AI_IMPORT_ENABLED = True
     Category.objects.all().delete()
     services = DomainType.objects.get_or_create(code="SERVICES", defaults={"name": "Услуги"})[0]
-    DomainType.objects.get_or_create(code="RAILWAY_MACHINERY", defaults={"name": "ЖД"})
+    DomainType.objects.get_or_create(code="GENERAL_GOODS", defaults={"name": "Товары"})
     foreign = Category.objects.create(name="Логистика и перевозка", domain_type=services)
     _stub_client(
         monkeypatch,
@@ -216,7 +216,7 @@ def test_enrich_drops_a_foreign_category_and_an_unknown_unit(settings, monkeypat
         },
     )
 
-    result = enrich_product("Тормозная колодка", domain_code="RAILWAY_MACHINERY")
+    result = enrich_product("Тормозная колодка", domain_code="GENERAL_GOODS")
 
     assert result["category_id"] is None
     assert result["uom_code"] == ""

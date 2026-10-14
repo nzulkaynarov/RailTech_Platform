@@ -5,7 +5,7 @@ import { test, expect } from '@playwright/test';
  * (backend/crm/tests/test_golden_path.py) proves the SERVICE flow; this proves
  * the actual buyer/seller CLICKS work end-to-end in a real browser.
  *
- * Run: cd frontend && E2E_BASE_URL=https://staging.b2b.railtech.uz npm run test:e2e
+ * Run: cd frontend && E2E_BASE_URL=https://staging.erp.example.com npm run test:e2e
  *
  * The `smoke` block below is runnable as-is. The full journey is a labelled
  * skeleton — fill the selectors marked TODO against the real UI (they depend on

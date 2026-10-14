@@ -1,5 +1,5 @@
 # ==============================================================================
-# RailTech Backend — Multi-stage Dockerfile
+# ERP Backend — Multi-stage Dockerfile
 # Stage 1 (builder): компилирует зависимости с gcc/libpq-dev
 # Stage 2 (runtime): минимальный образ, только runtime-библиотеки
 # ==============================================================================

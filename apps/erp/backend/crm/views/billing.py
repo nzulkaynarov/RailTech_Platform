@@ -207,7 +207,7 @@ class ContractViewSet(OptimisticLockingMixin, viewsets.ModelViewSet):
             return Response({"detail": err}, status=400)
         return Response(ContractSerializer(contract).data)
 
-    @extend_schema(summary="Sign contract by manager (RailTech side)", tags=["CRM"])
+    @extend_schema(summary="Sign contract by manager", tags=["CRM"])
     @action(detail=True, methods=["post"], url_path="sign-manager", permission_classes=[IsAuthenticated])
     def sign_manager(self, request, pk=None):
         contract, err = crm_services.sign_contract_by_manager(int(pk), request.user)

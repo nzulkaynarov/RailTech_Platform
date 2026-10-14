@@ -37,5 +37,5 @@ if not SECRET_KEY:
 
 ALLOWED_HOSTS = os.environ.get(
     "ALLOWED_HOSTS",
-    "localhost,127.0.0.1,railtech.uz,b2b.railtech.uz,cabinet.railtech.uz,crm.railtech.uz,admin.railtech.uz",
+    "localhost,127.0.0.1,erp.localhost",
 ).split(",")

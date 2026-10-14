@@ -181,7 +181,7 @@ export const useAuthStore = create<AuthState>()(
             clearError: () => set({ error: null }),
         }),
         {
-            name: 'railtech-auth',
+            name: 'erp-auth',
             // Tokens are NEVER persisted (F2.1): access is in-memory, refresh is an
             // HttpOnly cookie. Only cache display data so the shell paints instantly on
             // reload while initAuth() re-mints the access token from the cookie.

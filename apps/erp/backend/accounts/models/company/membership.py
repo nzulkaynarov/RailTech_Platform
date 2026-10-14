@@ -35,7 +35,7 @@ class CompanyRole(models.Model):
     """
 
     company = models.ForeignKey(
-        "accounts.Company",
+        "parties.Company",
         on_delete=models.CASCADE,
         related_name="roles",
         verbose_name=_("Компания"),
@@ -92,7 +92,7 @@ class CompanyMember(models.Model):
         help_text=_("Участник компании"),
     )
     company = models.ForeignKey(
-        "accounts.Company",
+        "parties.Company",
         on_delete=models.CASCADE,
         related_name="members",
         verbose_name=_("Компания"),

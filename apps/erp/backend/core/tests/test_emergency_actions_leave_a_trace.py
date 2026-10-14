@@ -53,7 +53,7 @@ def deals(db):
 
 
 def _post_action(client, deals, action="mark_closed_lost", **extra):
-    url = reverse("admin:crm_deal_changelist")
+    url = reverse(f"admin:{Deal._meta.app_label}_deal_changelist")
     payload = {
         "action": action,
         ACTION_CHECKBOX_NAME: [str(deal.pk) for deal in deals],

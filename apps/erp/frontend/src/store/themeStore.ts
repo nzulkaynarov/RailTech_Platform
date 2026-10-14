@@ -30,7 +30,7 @@ export const useThemeStore = create<ThemeState>()(
             }),
         }),
         {
-            name: 'railtech-theme',
+            name: 'erp-theme',
         }
     )
 );

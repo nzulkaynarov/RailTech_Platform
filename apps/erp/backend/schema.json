@@ -1,12 +1,12 @@
 {
     "openapi": "3.0.3",
     "info": {
-        "title": "RailTech B2B API",
+        "title": "ERP API",
         "version": "1.0.0",
-        "description": "B2B marketplace API for railway equipment procurement in Uzbekistan. Supports deal lifecycle management, quoting, product catalog (PIM), Excel imports, and real-time notifications via WebSocket.",
+        "description": "ERP Platform API. Supports deal lifecycle management, quoting, product catalog (PIM), Excel imports, and real-time notifications via WebSocket.",
         "contact": {
-            "name": "RailTech API Support",
-            "email": "api@railtech.com"
+            "name": "ERP API Support",
+            "email": "support@example.com"
         },
         "license": {
             "name": "Proprietary"
@@ -7755,7 +7755,7 @@
             "post": {
                 "operationId": "crm_contracts_sign_manager_create",
                 "description": "Contracts -- generated from approved quotes, double-signed.",
-                "summary": "Sign contract by manager (RailTech side)",
+                "summary": "Sign contract by manager",
                 "parameters": [
                     {
                         "in": "path",
@@ -18360,7 +18360,7 @@
                         "type": "integer",
                         "nullable": true,
                         "title": "Менеджер",
-                        "description": "Ответственный менеджер RailTech"
+                        "description": "Ответственный менеджер"
                     },
                     "manager_name": {
                         "type": "string",
@@ -18499,7 +18499,7 @@
                         "type": "integer",
                         "nullable": true,
                         "title": "Менеджер",
-                        "description": "Ответственный менеджер RailTech"
+                        "description": "Ответственный менеджер"
                     },
                     "stage": {
                         "type": "integer",
@@ -18573,7 +18573,7 @@
                         "type": "integer",
                         "nullable": true,
                         "title": "Менеджер",
-                        "description": "Ответственный менеджер RailTech"
+                        "description": "Ответственный менеджер"
                     },
                     "assigned_to": {
                         "type": "integer",
@@ -21692,7 +21692,7 @@
                         "type": "integer",
                         "nullable": true,
                         "title": "Менеджер",
-                        "description": "Ответственный менеджер RailTech"
+                        "description": "Ответственный менеджер"
                     },
                     "stage": {
                         "type": "integer",
@@ -22006,7 +22006,7 @@
                         "type": "integer",
                         "nullable": true,
                         "title": "Тип домена",
-                        "description": "Домен каталога: ж/д техника, общие товары или услуги"
+                        "description": "Домен каталога: товары или услуги"
                     },
                     "category": {
                         "type": "integer",
@@ -22083,21 +22083,21 @@
                         "format": "decimal",
                         "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
                         "nullable": true,
-                        "title": "Процент (%)",
-                        "description": "Процент от суммы позиций. Если задан — приоритетнее фиксированной суммы"
+                        "title": "Процент от суммы позиций (%)",
+                        "description": "Если задан — сумма считается как процент от базы до НДС (приоритетнее суммы)"
                     },
                     "cost_amount": {
                         "type": "string",
                         "format": "decimal",
                         "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
                         "nullable": true,
-                        "title": "Ваша стоимость статьи",
-                        "description": "Сколько статья реально стоит продавцу. Пусто = по себестоимости (= выставленной сумме)."
+                        "title": "Себестоимость статьи для продавца",
+                        "description": "Реальные затраты продавца по этой статье. Пусто = перевыставление без маржи (cost = amount)."
                     },
                     "is_deduction": {
                         "type": "boolean",
                         "title": "Скидка (вычет)",
-                        "description": "Если включено — сумма вычитается из базы до НДС (UBL allowance)"
+                        "description": "Если True — сумма вычитается из базы (скидка / бонус), а не добавляется"
                     }
                 }
             },
@@ -22498,6 +22498,35 @@
                         "title": "Название платформы",
                         "maxLength": 200
                     },
+                    "support_email": {
+                        "type": "string",
+                        "format": "email",
+                        "minLength": 1,
+                        "title": "Email поддержки",
+                        "maxLength": 254
+                    },
+                    "logo_url": {
+                        "title": "URL логотипа",
+                        "description": "Ссылка на изображение логотипа платформы",
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "uri",
+                                "maxLength": 200
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
+                    },
+                    "domain": {
+                        "type": "string",
+                        "minLength": 1,
+                        "title": "Основной домен",
+                        "description": "Доменное имя платформы для ссылок и уведомлений",
+                        "maxLength": 255
+                    },
                     "maintenance_mode": {
                         "type": "boolean",
                         "title": "Режим обслуживания",
@@ -22888,7 +22917,7 @@
                         "type": "string",
                         "readOnly": true,
                         "title": "Артикул (SKU)",
-                        "description": "Внутренний артикул RailTech (генерируется автоматически)"
+                        "description": "Внутренний артикул (генерируется автоматически)"
                     },
                     "name": {
                         "type": "string",
@@ -22947,7 +22976,7 @@
                         "type": "integer",
                         "nullable": true,
                         "title": "Тип домена",
-                        "description": "Домен каталога: ж/д техника, общие товары или услуги"
+                        "description": "Домен каталога: товары или услуги"
                     },
                     "domain_type_name": {
                         "type": "string",
@@ -23336,7 +23365,7 @@
                     "sku": {
                         "type": "string",
                         "title": "Артикул (SKU)",
-                        "description": "Внутренний артикул RailTech (генерируется автоматически)",
+                        "description": "Внутренний артикул (генерируется автоматически)",
                         "maxLength": 50
                     },
                     "name": {
@@ -23390,7 +23419,7 @@
                         "type": "integer",
                         "nullable": true,
                         "title": "Тип домена",
-                        "description": "Домен каталога: ж/д техника, общие товары или услуги"
+                        "description": "Домен каталога: товары или услуги"
                     },
                     "domain_type_name": {
                         "type": "string",
@@ -23574,7 +23603,7 @@
                         "type": "integer",
                         "nullable": true,
                         "title": "Тип домена",
-                        "description": "Домен каталога: ж/д техника, общие товары или услуги"
+                        "description": "Домен каталога: товары или услуги"
                     },
                     "category": {
                         "type": "integer",
@@ -23976,26 +24005,26 @@
                         "format": "decimal",
                         "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
                         "nullable": true,
-                        "title": "Процент (%)",
-                        "description": "Процент от суммы позиций. Если задан — приоритетнее фиксированной суммы"
+                        "title": "Процент от суммы позиций (%)",
+                        "description": "Если задан — сумма считается как процент от базы до НДС (приоритетнее суммы)"
                     },
                     "cost_amount": {
                         "type": "string",
                         "format": "decimal",
                         "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
                         "nullable": true,
-                        "title": "Ваша стоимость статьи",
-                        "description": "Сколько статья реально стоит продавцу. Пусто = по себестоимости (= выставленной сумме)."
+                        "title": "Себестоимость статьи для продавца",
+                        "description": "Реальные затраты продавца по этой статье. Пусто = перевыставление без маржи (cost = amount)."
                     },
                     "is_deduction": {
                         "type": "boolean",
                         "title": "Скидка (вычет)",
-                        "description": "Если включено — сумма вычитается из базы до НДС (UBL allowance)"
+                        "description": "Если True — сумма вычитается из базы (скидка / бонус), а не добавляется"
                     },
                     "sort_order": {
                         "type": "integer",
                         "readOnly": true,
-                        "title": "Порядок",
+                        "title": "Порядок в каскаде",
                         "description": "Позиция в каскаде: статья считается от нарастающего итога всех строк выше неё."
                     },
                     "resolved_base": {
@@ -24017,8 +24046,8 @@
                     "from_template": {
                         "type": "boolean",
                         "readOnly": true,
-                        "title": "Из шаблона",
-                        "description": "Строка создана автоматически из шаблона базиса поставки"
+                        "title": "Создана из шаблона базиса",
+                        "description": "True — строка авто-создана при выборе базиса поставки"
                     },
                     "created_by": {
                         "type": "integer",
@@ -24080,21 +24109,21 @@
                         "format": "decimal",
                         "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
                         "nullable": true,
-                        "title": "Процент (%)",
-                        "description": "Процент от суммы позиций. Если задан — приоритетнее фиксированной суммы"
+                        "title": "Процент от суммы позиций (%)",
+                        "description": "Если задан — сумма считается как процент от базы до НДС (приоритетнее суммы)"
                     },
                     "cost_amount": {
                         "type": "string",
                         "format": "decimal",
                         "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
                         "nullable": true,
-                        "title": "Ваша стоимость статьи",
-                        "description": "Сколько статья реально стоит продавцу. Пусто = по себестоимости (= выставленной сумме)."
+                        "title": "Себестоимость статьи для продавца",
+                        "description": "Реальные затраты продавца по этой статье. Пусто = перевыставление без маржи (cost = amount)."
                     },
                     "is_deduction": {
                         "type": "boolean",
                         "title": "Скидка (вычет)",
-                        "description": "Если включено — сумма вычитается из базы до НДС (UBL allowance)"
+                        "description": "Если True — сумма вычитается из базы (скидка / бонус), а не добавляется"
                     }
                 },
                 "required": [
@@ -25295,6 +25324,33 @@
                         "type": "string",
                         "title": "Название платформы",
                         "maxLength": 200
+                    },
+                    "support_email": {
+                        "type": "string",
+                        "format": "email",
+                        "title": "Email поддержки",
+                        "maxLength": 254
+                    },
+                    "logo_url": {
+                        "title": "URL логотипа",
+                        "description": "Ссылка на изображение логотипа платформы",
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "uri",
+                                "maxLength": 200
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
+                    },
+                    "domain": {
+                        "type": "string",
+                        "title": "Основной домен",
+                        "description": "Доменное имя платформы для ссылок и уведомлений",
+                        "maxLength": 255
                     },
                     "maintenance_mode": {
                         "type": "boolean",

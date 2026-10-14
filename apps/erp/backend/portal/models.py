@@ -1,0 +1,1 @@
+"""Portal models stub."""

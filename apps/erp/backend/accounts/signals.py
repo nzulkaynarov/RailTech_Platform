@@ -3,11 +3,10 @@ Invariant: every Company must have at least one CompanyType.
 Otherwise the frontend cannot derive a status context (BUYER/SELLER/MANUFACTURER)
 and Admin-role users get bounced to ProfileCompletionForm when they open the app.
 
-Default restoration: CLIENT for ALL companies — including the RailTech company
-itself. RailTech on the platform is an equal participant; super-rights belong
-exclusively to the `admin@railtech.uz` user account (is_superuser + SystemRole.ADMIN),
-NOT to the RailTech company. If RailTech's company needs to act as a seller, a
-human must add SUPPLIER to its types through normal Admin UI — no magic bypass.
+Default restoration: CLIENT for ALL companies. Super-rights belong
+exclusively to the superuser account (is_superuser + SystemRole.ADMIN).
+If a company needs to act as a seller, a human must add SUPPLIER to its types
+through normal Admin UI — no magic bypass.
 
 Mirrors the backfill in core/migrations/0002_seed_enterprise_lookups.py, but
 applied on every M2M-edit, not once per migrate.

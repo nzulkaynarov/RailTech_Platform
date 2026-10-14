@@ -73,7 +73,7 @@ def test_enrich_normalises_and_keeps_category_as_hint(settings, monkeypatch):
     )
     from catalog.ai_enrich import enrich_product
 
-    result = enrich_product("Тормозная колодка композитная", domain_code="RAILWAY_MACHINERY")
+    result = enrich_product("Тормозная колодка композитная", domain_code="GENERAL_GOODS")
     assert result["description"].startswith("Композитная")
     assert result["specifications"] == [{"key": "Материал", "value": "Композит"}]
     # HINT only — a plain string, never a resolved Category id.

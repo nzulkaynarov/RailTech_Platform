@@ -25,11 +25,17 @@ export function PlatformSettings() {
     vatRate: loaded?.vat_rate ?? '',
     exchangeRate: loaded?.exchange_rate_usd_uzs ?? '',
     platformName: loaded?.platform_name ?? '',
+    supportEmail: loaded?.support_email ?? '',
+    logoUrl: loaded?.logo_url ?? '',
+    domain: loaded?.domain ?? '',
   }));
-  const { vatRate, exchangeRate, platformName } = form;
+  const { vatRate, exchangeRate, platformName, supportEmail, logoUrl, domain } = form;
   const setVatRate = (value: string) => setForm((prev) => ({ ...prev, vatRate: value }));
   const setExchangeRate = (value: string) => setForm((prev) => ({ ...prev, exchangeRate: value }));
   const setPlatformName = (value: string) => setForm((prev) => ({ ...prev, platformName: value }));
+  const setSupportEmail = (value: string) => setForm((prev) => ({ ...prev, supportEmail: value }));
+  const setLogoUrl = (value: string) => setForm((prev) => ({ ...prev, logoUrl: value }));
+  const setDomain = (value: string) => setForm((prev) => ({ ...prev, domain: value }));
 
   const handleSave = async () => {
     try {
@@ -39,6 +45,9 @@ export function PlatformSettings() {
         vat_rate: vatRate,
         exchange_rate_usd_uzs: exchangeRate,
         platform_name: platformName,
+        support_email: supportEmail,
+        logo_url: logoUrl,
+        domain,
       });
       toast.success(t('settings.platform.saved'));
     } catch {
@@ -72,6 +81,18 @@ export function PlatformSettings() {
               <div className="space-y-2">
                 <Label>{t('settings.platform.platformName')}</Label>
                 <Input value={platformName} onChange={(e) => setPlatformName(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>{t('settings.platform.supportEmail')}</Label>
+                <Input type="email" value={supportEmail} onChange={(e) => setSupportEmail(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>{t('settings.platform.logoUrl')}</Label>
+                <Input value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>{t('settings.platform.domain')}</Label>
+                <Input value={domain} onChange={(e) => setDomain(e.target.value)} />
               </div>
             </div>
 

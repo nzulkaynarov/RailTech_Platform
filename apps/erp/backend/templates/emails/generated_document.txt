@@ -6,4 +6,4 @@
 {{ public_link }}
 {% endif %}
 {% translate "С уважением," %}
-{% translate "команда RailTech" %}
+{% blocktranslate with platform=platform_name|default:'ERP' %}команда {{ platform }}{% endblocktranslate %}

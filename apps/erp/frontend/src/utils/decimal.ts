@@ -9,8 +9,8 @@ function moneyFormatLocale(): string {
 
 
 /**
- * RailTech Financial Utility
- * Ensures all B2B calculations follow strict decimal precision.
+ * ERP Financial Utility
+ * Ensures all calculations follow strict decimal precision.
  */
 
 export const toDecimal = (value: string | number | undefined | null): Decimal => {

@@ -237,4 +237,4 @@ def test_the_superuser_keeps_the_full_toolbox(db, seller_company):
     # ломался бы от любого несвязанного теста. Сравниваем ДВЕ стороны одного правила.
     open_for_root = _open_admins(root)
     assert len(open_for_root) > 20, open_for_root
-    assert "crm.ActivityLog" in open_for_root, "аварийная правка истории суперпользователю оставлена"
+    assert ActivityLog._meta.label in open_for_root, "аварийная правка истории суперпользователю оставлена"

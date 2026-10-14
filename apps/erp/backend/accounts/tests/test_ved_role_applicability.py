@@ -3,17 +3,18 @@ SUPPLIER seller (the seller of record is a SUPPLIER company, not MANUFACTURER), 
 the КП approval chain's ВЭД step can have a member.
 """
 
-import importlib
+from types import SimpleNamespace
 
 import pytest
 from django.apps import apps as django_apps
 
 from accounts.models import Company, CompanyType, CustomUser, WorkspaceRole
 from accounts.services.members import add_company_member
+from core.seeds.accounts import widen_ved_applicability
 
 pytestmark = pytest.mark.django_db
 
-_MIGRATION = importlib.import_module("accounts.migrations.0014_ved_role_applicable_to_supplier")
+_MIGRATION = SimpleNamespace(widen_ved_applicability=widen_ved_applicability)
 
 
 @pytest.fixture

@@ -155,7 +155,7 @@ export function FulfillmentsPage() {
                       {f.shipped_at && (
                         <DocumentActions
                           request={() => ({ path: `crm/fulfillments/${f.id}/download-note/` })}
-                          filenameBase={`RailTech_DeliveryNote_DN-${f.id}`}
+                          filenameBase={`DeliveryNote_DN-${f.id}`}
                           size="sm"
                         />
                       )}

@@ -99,8 +99,8 @@ class TestLoginLockoutEndpoint:
 
     def _make_user(self):
         return CustomUser.objects.create_user(
-            email="lockme@railtech.test",
-            username="lockme@railtech.test",
+            email="lockme@example.test",
+            username="lockme@example.test",
             password="Right-pw-123!",
         )
 

@@ -9,4 +9,4 @@
 {% translate "Если вы не запрашивали этот код — просто игнорируйте это письмо." %}
 
 {% translate "С уважением," %}
-{% translate "команда RailTech" %}
+{% blocktranslate with platform=platform_name|default:'ERP' %}команда {{ platform }}{% endblocktranslate %}

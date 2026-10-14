@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test';
  * phone). NON-INVASIVE: it uses a fake uid/token, so it is safe to run against
  * prod. Self-registration (/register) is gone (M1-ERP-02).
  *
- * Run: cd frontend && E2E_BASE_URL=https://b2b.railtech.uz npm run test:e2e
+ * Run: cd frontend && E2E_BASE_URL=http://erp.localhost npm run test:e2e
  */
 
 // A structurally-valid but expired zustand-persisted auth blob. It makes the
@@ -23,7 +23,7 @@ test.describe('auth flow', () => {
   // the page would flash and then redirect to '/'.
   test('setup-password keeps the user on the page despite a stale token', async ({ page }) => {
     await page.addInitScript((auth) => {
-      window.localStorage.setItem('railtech-auth', auth);
+      window.localStorage.setItem('erp-auth', auth);
     }, STALE_AUTH);
 
     await page.goto('/setup-password?uid=FAKEuid&token=fake-token-123');

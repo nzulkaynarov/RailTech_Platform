@@ -45,7 +45,7 @@ def assert_renderable(quote):
 
     - An unclaimed buyer-request КП (prepared_by NULL) has NO issuing seller, so
       rendering it would brand a "коммерческое предложение" with the platform
-      identity ("RailTech B2B") — misrepresenting the supplier on a commercial
+      identity — misrepresenting the supplier on a commercial
       document (audit F1) → QUOTE_NOT_CLAIMED.
     - HOLE 2 (loss-prevention): the render/export surface was the gate bypass — a
       seller could generate a КП PDF on a DRAFT at the placeholder rate 1 (or below

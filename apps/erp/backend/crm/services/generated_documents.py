@@ -112,10 +112,11 @@ def _flatten_brand_for_preview(brand: dict) -> dict:
     model instances and SimpleNamespace stubs (getattr with a default works for either)."""
     seller = brand.get("seller")
     profile = brand.get("seller_profile")
-    seller_name = getattr(profile, "legal_name", None) or getattr(seller, "name", None) or "RailTech B2B"
+    platform_name = brand.get("platform_name") or "ERP"
+    seller_name = getattr(profile, "legal_name", None) or getattr(seller, "name", None) or platform_name
     inn = getattr(profile, "inn", None) or getattr(seller, "inn", None) or ""
     address = getattr(profile, "legal_address", None) or getattr(seller, "legal_address", None) or ""
-    footer = getattr(profile, "footer_text", None) or "Документ сформирован в RailTech B2B Ecosystem"
+    footer = getattr(profile, "footer_text", None) or f"Документ сформирован в {platform_name}"
     logo = brand.get("seller_logo_url") if brand.get("show_logo", True) else None
     return {
         "seller_name": seller_name,

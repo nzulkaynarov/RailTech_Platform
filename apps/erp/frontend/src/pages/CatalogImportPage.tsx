@@ -223,7 +223,7 @@ export function CatalogImportPage() {
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = url;
-      anchor.download = 'railtech_catalog_template.xlsx';
+      anchor.download = 'catalog_template.xlsx';
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();

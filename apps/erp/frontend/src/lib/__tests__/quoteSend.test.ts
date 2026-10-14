@@ -97,8 +97,8 @@ describe('resolveDecision', () => {
 
 describe('publicQuoteUrl', () => {
   it('builds the no-login КП URL from the token, mirroring the backend pattern', () => {
-    expect(publicQuoteUrl('abc123', 'https://b2b.railtech.uz'))
-      .toBe('https://b2b.railtech.uz/api/v1/public/quotes/abc123/');
+    expect(publicQuoteUrl('abc123', 'https://erp.example.com'))
+      .toBe('https://erp.example.com/api/v1/public/quotes/abc123/');
   });
   it('returns null when the token is absent (draft / not exposed yet)', () => {
     expect(publicQuoteUrl(null, 'https://x')).toBeNull();

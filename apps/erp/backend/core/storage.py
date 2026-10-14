@@ -1,9 +1,9 @@
 """
-Custom S3/MinIO storage backends for RailTech B2B Ecosystem.
+Custom S3/MinIO storage backends for ERP Ecosystem.
 
 Architecture:
-  - PublicStorage  -> railtech-public  (product images, logos, avatars)
-  - PrivateStorage -> railtech-private (deals, quotes, imports, company documents)
+  - PublicStorage  -> erp-public  (product images, logos, avatars)
+  - PrivateStorage -> erp-private (deals, quotes, imports, company documents)
 
 When MINIO_ENDPOINT is not set, falls back to Django's default FileSystemStorage.
 All file names are UUID-based to prevent collisions and information leakage.
@@ -280,7 +280,7 @@ def get_temp_storage():
 
         external = getattr(settings, "MINIO_EXTERNAL_ENDPOINT", "") or settings.MINIO_ENDPOINT
         internal = settings.MINIO_ENDPOINT
-        temp_bucket = getattr(settings, "MINIO_TEMP_BUCKET", "") or "railtech-temp"
+        temp_bucket = getattr(settings, "MINIO_TEMP_BUCKET", "") or "erp-temp"
 
         class TempS3Storage(S3Boto3Storage):
             def url(self, name, parameters=None, expire=None, http_method=None):

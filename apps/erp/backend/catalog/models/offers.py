@@ -29,7 +29,7 @@ class SupplierOffer(models.Model):
         help_text=_("Эталонный товар из каталога PIM"),
     )
     supplier = models.ForeignKey(
-        "accounts.Company",
+        "parties.Company",
         on_delete=models.CASCADE,
         related_name="supplier_offers",
         verbose_name=_("Поставщик"),

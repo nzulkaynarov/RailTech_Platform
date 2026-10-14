@@ -14,7 +14,7 @@ def test_scrubs_sensitive_keys_in_request_data():
                 "inn": "1234567890",
                 "phone": "+998901234567",
                 "bank_account": "20208000000000000001",
-                "company_name": "Railtech LLC",
+                "company_name": "Acme LLC",
             }
         }
     }
@@ -24,7 +24,7 @@ def test_scrubs_sensitive_keys_in_request_data():
     assert data["phone"] == MASK
     assert data["bank_account"] == MASK
     # Non-sensitive key with non-PII value is untouched.
-    assert data["company_name"] == "Railtech LLC"
+    assert data["company_name"] == "Acme LLC"
 
 
 def test_scrubs_inn_and_phone_in_free_text_values():

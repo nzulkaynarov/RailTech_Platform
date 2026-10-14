@@ -214,5 +214,5 @@ class DealWorkflowActionsMixin:
             quote.pdf_file.open("rb"),
             content_type="application/pdf",
             as_attachment=True,
-            filename=f"RailTech_Quote_{deal.id}.pdf",
+            filename=f"Quote_{deal.id}.pdf",
         )

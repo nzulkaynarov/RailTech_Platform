@@ -48,7 +48,7 @@ REST_FRAMEWORK = {
     },
     # SEC-04: number of trusted reverse proxies that set X-Forwarded-For before Django.
     # Prod/staging = 1 (host Caddy OVERWRITES XFF with the client IP — see
-    # deploy/caddy/b2b.railtech.uz.caddy). Dev = 0 (no proxy; XFF is client-forgeable
+    # deploy/caddy). Dev = 0 (no proxy; XFF is client-forgeable
     # and must be ignored, otherwise per-IP throttles are trivially bypassed).
     # Tolerate an empty/blank env value (e.g. DRF_NUM_PROXIES= in a .env) so a
     # malformed override fails safe to 0 instead of crashing app boot on int("").
@@ -108,14 +108,14 @@ LOGIN_LOCKOUT_COOLDOWN = int((os.environ.get("LOGIN_LOCKOUT_COOLDOWN") or "900")
 
 # DRF Spectacular (API Documentation)
 SPECTACULAR_SETTINGS = {
-    "TITLE": "RailTech B2B API",
+    "TITLE": "ERP API",
     "DESCRIPTION": (
-        "B2B marketplace API for railway equipment procurement in Uzbekistan. "
+        "ERP Platform API. "
         "Supports deal lifecycle management, quoting, product catalog (PIM), "
         "Excel imports, and real-time notifications via WebSocket."
     ),
     "VERSION": "1.0.0",
-    "CONTACT": {"name": "RailTech API Support", "email": "api@railtech.com"},
+    "CONTACT": {"name": "ERP API Support", "email": "support@example.com"},
     "LICENSE": {"name": "Proprietary"},
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,

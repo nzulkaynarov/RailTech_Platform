@@ -163,9 +163,11 @@ class TestBackfillOfOldRows:
 
     @staticmethod
     def _migration():
-        import importlib
+        from types import SimpleNamespace
 
-        return importlib.import_module("crm.migrations.0091_activity_params_backfill_codes")
+        from core.legacy_migration_helpers import backfill_activity_params
+
+        return SimpleNamespace(backfill=backfill_activity_params)
 
     def test_stage_codes_come_from_the_audit_snapshot_not_from_a_guess(self, lookups):
         from django.apps import apps

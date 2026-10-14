@@ -18,7 +18,7 @@ export type DocFormat = 'pdf' | 'xlsx' | 'csv';
 export interface DocumentActionsProps {
   /** Maps a format to the streaming endpoint that returns its bytes. */
   request: (format: DocFormat) => { path: string; params?: Record<string, string> };
-  /** Base filename (no extension), e.g. `RailTech_Contract_12`. */
+  /** Base filename (no extension), e.g. `Contract_12`. */
   filenameBase: string;
   /** Downloadable formats (default ['pdf']). Non-PDF formats are download-only. */
   formats?: DocFormat[];

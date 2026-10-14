@@ -54,7 +54,7 @@ export function CompanyFilesPage() {
   const onDownload = async (file: Attachment) => {
     try {
       const blob = await fetchDocumentBlob(`sourcing/attachments/${file.id}/download/`);
-      saveBlob(blob, file.original_filename || `RailTech_File_${file.id}`);
+      saveBlob(blob, file.original_filename || `File_${file.id}`);
     } catch (err) {
       // Surface the real backend code (403/404/expiry) instead of a generic message. Blob-response
       // error bodies aren't plain JSON — parse the code out first, fall back to the generic string.

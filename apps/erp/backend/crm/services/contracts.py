@@ -378,7 +378,7 @@ def sign_contract_by_manager(
     )
     contract.save(update_fields=["manager_signer", "manager_signed_at", "status", "updated_at"])
     ActivityLog.objects.create(
-        action="[MANUAL_MODE] Подписан договор (сторона RailTech)",
+        action="[MANUAL_MODE] Подписан договор (сторона продавца)",
         detail=f"Договор {contract.number} / сделка #{contract.deal_id}",
         event_code="contract.signed_manager",
         event_params={"number": contract.number, "deal_id": contract.deal_id, "manual": True},

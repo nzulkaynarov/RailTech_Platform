@@ -24,7 +24,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     # Stamps Content-Security-Policy on responses (protects Unfold /admin/ HTML;
     # no-op on JSON). Report-Only by default — see core/csp.py. The public SPA's
-    # CSP is mirrored on the host Caddy (deploy/caddy/b2b.railtech.uz.caddy).
+    # CSP is mirrored on the host Caddy (deploy/caddy).
     "core.csp.ContentSecurityPolicyMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -50,16 +50,14 @@ MIDDLEWARE = [
 IDEMPOTENCY_TTL_SECONDS = int(os.environ.get("IDEMPOTENCY_TTL_SECONDS", str(24 * 3600)))
 IDEMPOTENCY_LOCK_SECONDS = int(os.environ.get("IDEMPOTENCY_LOCK_SECONDS", "90"))
 
+_env_cors = [o.strip() for o in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",") if o.strip()]
 CORS_ALLOW_ALL_ORIGINS = DEBUG
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = (
     [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
-        "https://railtech.uz",
-        "https://b2b.railtech.uz",
-        "https://cabinet.railtech.uz",
-        "https://crm.railtech.uz",
+        *_env_cors,
     ]
     if not DEBUG
     else [
@@ -78,21 +76,18 @@ CORS_ALLOW_HEADERS = (*default_headers, "idempotency-key", "if-match", "accept-l
 # Let the SPA read these response headers cross-origin.
 CORS_EXPOSE_HEADERS = ["ETag", "Idempotent-Replay", "Deprecation", "Sunset"]
 
+_env_csrf = [o.strip() for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()]
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:8000",
     "http://127.0.0.1:5173",
     "http://127.0.0.1:8000",
-    "https://railtech.uz",
-    "https://b2b.railtech.uz",
-    "https://cabinet.railtech.uz",
-    "https://crm.railtech.uz",
-    "https://admin.railtech.uz",
+    *_env_csrf,
 ]
 
 # Production Cookie & Session Settings — only for real production domains (behind HTTPS nginx)
 # On localhost (even with DEBUG=False) these must NOT be set, otherwise cookies
-# are scoped to .railtech.uz domain and require HTTPS, breaking local admin login.
+# are scoped to production domain and require HTTPS, breaking local admin login.
 _is_real_production = not DEBUG and os.environ.get("PRODUCTION", "False").lower() == "true"
 
 # Security headers — always enabled (safe for localhost too)
@@ -106,7 +101,7 @@ if not DEBUG:
     SESSION_COOKIE_SAMESITE = "Lax"
 
 # SEC-09: the PRODUCTION gate stays (DEBUG=False over plain http is a legit local
-# prod-like flow — Secure cookies + .railtech.uz domain would break it), but a box
+# prod-like flow — Secure cookies + domain would break it), but a box
 # that FORGOT the flag must not run silently without secure cookies/HSTS.
 if not DEBUG and not _is_real_production:
     import warnings
@@ -119,8 +114,10 @@ if not DEBUG and not _is_real_production:
     )
 
 if _is_real_production:
-    SESSION_COOKIE_DOMAIN = ".railtech.uz"
-    CSRF_COOKIE_DOMAIN = ".railtech.uz"
+    if os.environ.get("SESSION_COOKIE_DOMAIN"):
+        SESSION_COOKIE_DOMAIN = os.environ["SESSION_COOKIE_DOMAIN"]
+    if os.environ.get("CSRF_COOKIE_DOMAIN"):
+        CSRF_COOKIE_DOMAIN = os.environ["CSRF_COOKIE_DOMAIN"]
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 

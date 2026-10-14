@@ -18,7 +18,10 @@ const { settingsFixture, mutateAsyncMock } = vi.hoisted(() => ({
     vat_rate: '12.00',
     standard_margin: '15.00',
     exchange_rate_usd_uzs: '12650.0000',
-    platform_name: 'RailTech B2B',
+    platform_name: 'ERP Platform',
+    support_email: 'support@example.com',
+    logo_url: 'https://example.com/logo.png',
+    domain: 'erp.example.com',
     maintenance_mode: true,
     is_two_factor_required: true,
     updated_at: '2026-07-10T10:00:00Z',
@@ -47,7 +50,10 @@ describe('PlatformSettings (spec PR 5, вариант Б)', () => {
     expect(screen.getByText('Системные настройки')).toBeInTheDocument();
     expect(screen.getByDisplayValue('12.00')).toBeInTheDocument();
     expect(screen.getByDisplayValue('12650.0000')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('RailTech B2B')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('ERP Platform')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('support@example.com')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('https://example.com/logo.png')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('erp.example.com')).toBeInTheDocument();
 
     // standard_margin убран из UI (P9): поле инертно, не показываем и не редактируем.
     expect(screen.queryByDisplayValue('15.00')).not.toBeInTheDocument();
@@ -69,7 +75,10 @@ describe('PlatformSettings (spec PR 5, вариант Б)', () => {
     expect(mutateAsyncMock).toHaveBeenCalledWith({
       vat_rate: '12.00',
       exchange_rate_usd_uzs: '12650.0000',
-      platform_name: 'RailTech B2B',
+      platform_name: 'ERP Platform',
+      support_email: 'support@example.com',
+      logo_url: 'https://example.com/logo.png',
+      domain: 'erp.example.com',
     });
     const payload = mutateAsyncMock.mock.calls[0][0];
     expect(payload).not.toHaveProperty('maintenance_mode');

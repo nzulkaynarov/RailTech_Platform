@@ -153,7 +153,7 @@ def _locmem_channel() -> dict:
         "username": "",
         "password": "",
         "use_tls": False,
-        "from_email": "test@railtech.uz",
+        "from_email": "test@example.com",
     }
 
 
@@ -263,7 +263,7 @@ class EmailLinkIntegrityTests(TestCase):
     ]
 
     def test_plaintext_query_links_are_not_html_escaped(self):
-        url = "https://b2b.railtech.uz/setup-password?uid=NDA&token=abc-123def"
+        url = "https://erp.example.com/setup-password?uid=NDA&token=abc-123def"
         for template, url_key in self.LINK_TEMPLATES:
             with self.subTest(template=template):
                 context = {"first_name": "Тест", "company_name": "Acme", url_key: url}

@@ -1,7 +1,7 @@
 """P0 document-correctness fixes (2026-07-08) — the three verified template defects:
 
   1. INVOICE «Поставщик» must name the REAL seller (its CompanyDocumentProfile legal_name,
-     else the Company), NEVER the hardcoded fake platform identity «ООО «RailTech»» /
+     else the Company), NEVER the hardcoded fake platform identity /
      ИНН 300000000001 (IRON RULE 1/2 — an invoice is a legal document).
   2. CONTRACT line «Сумма, без НДС» = line_total (price × qty), not the unit price.
   3. Client КП PDF must NOT leak the CBU FX-rate snapshot to the buyer (soft sourcing leak
@@ -56,7 +56,7 @@ def test_invoice_names_real_seller_not_platform():
     assert "ООО РельсМаш Поставка" in html
     assert "3000000001" in html
     # The old hardcoded fake supplier must NEVER appear on a real invoice.
-    assert "ООО «RailTech»" not in html
+    assert "ООО Платформа" not in html
     assert "300000000001" not in html
 
 
@@ -72,14 +72,14 @@ def test_invoice_prefers_seller_profile_legal_name():
     html = _render_invoice(supplier=seller, seller_profile=profile)
     assert "ООО «РельсМаш и Ко»" in html
     assert "3001112223" in html
-    assert "ООО «RailTech»" not in html
+    assert "ООО Платформа" not in html
 
 
 def test_invoice_without_resolvable_seller_shows_dash_not_fake():
     """A manual invoice without a contract can't resolve a seller — show «—», not fake data."""
     html = _render_invoice(supplier=None, seller_profile=None)
     assert "300000000001" not in html
-    assert "ООО «RailTech»" not in html
+    assert "ООО Платформа" not in html
 
 
 # ─────────────────────────────────────────────────────────────────────

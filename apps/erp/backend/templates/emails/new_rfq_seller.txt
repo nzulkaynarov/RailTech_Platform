@@ -10,4 +10,4 @@
 
 {% translate "Быстрый ответ заметно повышает шанс выиграть сделку." %}
 
-— RailTech B2B
+— {{ platform_name|default:'ERP' }}
