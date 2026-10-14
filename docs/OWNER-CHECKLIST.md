@@ -6,7 +6,7 @@
 - [x] Ответить на Q-1…Q-5 в `QUESTIONS.md` (2026-10-13).
 - [x] Создать репозиторий — `RailTech_Platform` (github.com/nzulkaynarov/RailTech_Platform), 2026-10-13.
 - [ ] Включить защиту `main` (PR + обязательная проверка `ci-ok`) — после разблокировки Actions (Q-10) и первого зелёного прогона.
-- [ ] **Разблокировать GitHub Actions** (Settings → Billing & plans: платёж/spending limit) — Q-10. Workflow готов (M0-INF-04); до разблокировки гейт — `make ci-local`.
+- [x] **Разблокировать GitHub Actions** (Settings → Billing & plans: платёж/spending limit) — Q-10, сделано 2026-10-14. Workflow готов (M0-INF-04); до разблокировки гейт — `make ci-local`.
 - [x] Выдать агенту доступ к `crm-rt-ai` и `RailTech_SaaS_B2B` для переноса с историей (локальные клоны; перенос выполнен 2026-10-13, M0-INF-01).
 
 ## До M1 (гейт M0 отмечен)
