@@ -53,6 +53,8 @@ import type {
   DocumentOut,
   DocumentUpdate,
   DryRunResponse,
+  EmailLogItem,
+  EmailQueuedOut,
   ErpCheckOut,
   ErpConnectorIn,
   ErpStatusOut,
@@ -78,6 +80,7 @@ import type {
   ListClientsParams,
   ListDealsParams,
   ListDocumentsParams,
+  ListEmailLogParams,
   ListKbDocumentsParams,
   ListKbGapsParams,
   ListLeadsParams,
@@ -85,6 +88,7 @@ import type {
   LoginRequest,
   MakeCustomer,
   ManualDocument,
+  ManualLeadIn,
   MePatch,
   MessageOut,
   ModelChangeIn,
@@ -115,6 +119,9 @@ import type {
   SetupAdminRequest,
   SetupChecklist,
   SetupState,
+  SmtpCheckOut,
+  SmtpConnectorIn,
+  SmtpStatusOut,
   Snooze,
   SpendReport,
   SystemStatusOut,
@@ -126,6 +133,9 @@ import type {
   UserCreated,
   UserOut,
   UserUpdate,
+  WebFormToken,
+  WebLeadAccepted,
+  WebLeadIn,
 } from "./model";
 
 import { http } from "../http";
@@ -3987,6 +3997,501 @@ export const useCheckErpConnection = <TError = ErrorType<ErrorOut>, TContext = u
   return useMutation(getCheckErpConnectionMutationOptions(options), queryClient);
 };
 
+export const getGetSmtpStatusUrl = () => {
+  return `/api/v1/integrations/smtp`;
+};
+
+/**
+ * Коннектор «Почта» (M3-CRM-08, ADR-0018): релей SMTP для писем сотрудникам.
+ *
+ * Пароль SMTP не возвращается — только «задан», источник и `last4`. Коннектор «настроен» =
+ * есть хост и адрес отправителя (из «Подключений», иначе `SMTP_*` в `.env`).
+ * @summary Get Smtp Status
+ */
+export const getSmtpStatus = async (
+  options?: Parameters<typeof http>[1],
+): Promise<SmtpStatusOut> => {
+  return http<SmtpStatusOut>(getGetSmtpStatusUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetSmtpStatusQueryKey = () => {
+  return [`/api/v1/integrations/smtp`] as const;
+};
+
+export const getGetSmtpStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSmtpStatus>>,
+  TError = ErrorType<ErrorOut>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSmtpStatus>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetSmtpStatusQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getSmtpStatus>>> = ({ signal }) =>
+    getSmtpStatus({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getSmtpStatus>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetSmtpStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getSmtpStatus>>>;
+export type GetSmtpStatusQueryError = ErrorType<ErrorOut>;
+
+export function useGetSmtpStatus<
+  TData = Awaited<ReturnType<typeof getSmtpStatus>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSmtpStatus>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSmtpStatus>>,
+          TError,
+          Awaited<ReturnType<typeof getSmtpStatus>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSmtpStatus<
+  TData = Awaited<ReturnType<typeof getSmtpStatus>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSmtpStatus>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSmtpStatus>>,
+          TError,
+          Awaited<ReturnType<typeof getSmtpStatus>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSmtpStatus<
+  TData = Awaited<ReturnType<typeof getSmtpStatus>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSmtpStatus>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get Smtp Status
+ */
+
+export function useGetSmtpStatus<
+  TData = Awaited<ReturnType<typeof getSmtpStatus>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSmtpStatus>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetSmtpStatusQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getPutSmtpConnectorUrl = () => {
+  return `/api/v1/integrations/smtp`;
+};
+
+/**
+ * Сохранить релей и секреты (после пароля админа); логин/пароль `null` — оставить прежние.
+ *
+ * Ошибки: `smtp_invalid_host` (422, поле `host`), `invalid_email` (422, `from_email`),
+ * `wrong_password` (422), `secrets_key_missing` (409 — секреты не сохранить без `SECRETS_KEY`).
+ * @summary Put Smtp Connector
+ */
+export const putSmtpConnector = async (
+  smtpConnectorIn: SmtpConnectorIn,
+  options?: Parameters<typeof http>[1],
+): Promise<SmtpStatusOut> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<SmtpStatusOut>(getPutSmtpConnectorUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(smtpConnectorIn),
+  });
+};
+
+export const getPutSmtpConnectorMutationKey = () => ["putSmtpConnector"] as const;
+
+export const getPutSmtpConnectorMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof putSmtpConnector>>,
+    TError,
+    PutSmtpConnectorMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof putSmtpConnector>>,
+  TError,
+  PutSmtpConnectorMutationVariables,
+  TContext
+> => {
+  const mutationKey = getPutSmtpConnectorMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof putSmtpConnector>>,
+    PutSmtpConnectorMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return putSmtpConnector(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PutSmtpConnectorMutationResult = NonNullable<
+  Awaited<ReturnType<typeof putSmtpConnector>>
+>;
+export type PutSmtpConnectorMutationBody = SmtpConnectorIn;
+export type PutSmtpConnectorMutationError = ErrorType<ErrorOut>;
+export type PutSmtpConnectorMutationVariables = { data: SmtpConnectorIn };
+
+/**
+ * @summary Put Smtp Connector
+ */
+export const usePutSmtpConnector = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof putSmtpConnector>>,
+      TError,
+      PutSmtpConnectorMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof putSmtpConnector>>,
+  TError,
+  PutSmtpConnectorMutationVariables,
+  TContext
+> => {
+  return useMutation(getPutSmtpConnectorMutationOptions(options), queryClient);
+};
+
+export const getCheckSmtpConnectionUrl = () => {
+  return `/api/v1/integrations/smtp/check`;
+};
+
+/**
+ * «Проверить связь»: соединение, EHLO, STARTTLS/SMTPS и AUTH без отправки письма, 10 с.
+ *
+ * Ошибки (ADR-0017, `details.reason`): `smtp_not_configured` (409), `smtp_invalid_host` (422),
+ * `smtp_unavailable` / `smtp_tls_failed` / `smtp_auth_failed` (502).
+ * @summary Check Smtp Connection
+ */
+export const checkSmtpConnection = async (
+  options?: Parameters<typeof http>[1],
+): Promise<SmtpCheckOut> => {
+  return http<SmtpCheckOut>(getCheckSmtpConnectionUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getCheckSmtpConnectionMutationKey = () => ["checkSmtpConnection"] as const;
+
+export const getCheckSmtpConnectionMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof checkSmtpConnection>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof checkSmtpConnection>>, TError, void, TContext> => {
+  const mutationKey = getCheckSmtpConnectionMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof checkSmtpConnection>>,
+    void
+  > = () => {
+    return checkSmtpConnection(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CheckSmtpConnectionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof checkSmtpConnection>>
+>;
+
+export type CheckSmtpConnectionMutationError = ErrorType<ErrorOut>;
+
+/**
+ * @summary Check Smtp Connection
+ */
+export const useCheckSmtpConnection = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof checkSmtpConnection>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof checkSmtpConnection>>, TError, void, TContext> => {
+  return useMutation(getCheckSmtpConnectionMutationOptions(options), queryClient);
+};
+
+export const getListEmailLogUrl = (params?: ListEmailLogParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/integrations/smtp/log?${stringifiedParams}`
+    : `/api/v1/integrations/smtp/log`;
+};
+
+/**
+ * Журнал писем сотрудникам: последние `limit`, фильтр по статусу; тел писем в журнале нет.
+ * @summary List Email Log
+ */
+export const listEmailLog = async (
+  params?: ListEmailLogParams,
+  options?: Parameters<typeof http>[1],
+): Promise<EmailLogItem[]> => {
+  return http<EmailLogItem[]>(getListEmailLogUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListEmailLogQueryKey = (params?: ListEmailLogParams) => {
+  return [`/api/v1/integrations/smtp/log`, ...(params ? [params] : [])] as const;
+};
+
+export const getListEmailLogQueryOptions = <
+  TData = Awaited<ReturnType<typeof listEmailLog>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListEmailLogParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEmailLog>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListEmailLogQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listEmailLog>>> = ({ signal }) =>
+    listEmailLog(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listEmailLog>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListEmailLogQueryResult = NonNullable<Awaited<ReturnType<typeof listEmailLog>>>;
+export type ListEmailLogQueryError = ErrorType<ErrorOut>;
+
+export function useListEmailLog<
+  TData = Awaited<ReturnType<typeof listEmailLog>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params: undefined | ListEmailLogParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEmailLog>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEmailLog>>,
+          TError,
+          Awaited<ReturnType<typeof listEmailLog>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListEmailLog<
+  TData = Awaited<ReturnType<typeof listEmailLog>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListEmailLogParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEmailLog>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEmailLog>>,
+          TError,
+          Awaited<ReturnType<typeof listEmailLog>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListEmailLog<
+  TData = Awaited<ReturnType<typeof listEmailLog>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListEmailLogParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEmailLog>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List Email Log
+ */
+
+export function useListEmailLog<
+  TData = Awaited<ReturnType<typeof listEmailLog>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListEmailLogParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEmailLog>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListEmailLogQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getSendSmtpTestUrl = () => {
+  return `/api/v1/integrations/smtp/test-send`;
+};
+
+/**
+ * Тестовое письмо на адрес самого администратора — через журнал и очередь, как настоящее.
+ *
+ * Ошибки: `smtp_not_configured` (409), `secrets_key_missing` (409). Итог доставки — в журнале.
+ * @summary Send Smtp Test
+ */
+export const sendSmtpTest = async (
+  options?: Parameters<typeof http>[1],
+): Promise<EmailQueuedOut> => {
+  return http<EmailQueuedOut>(getSendSmtpTestUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getSendSmtpTestMutationKey = () => ["sendSmtpTest"] as const;
+
+export const getSendSmtpTestMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof sendSmtpTest>>, TError, void, TContext>;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof sendSmtpTest>>, TError, void, TContext> => {
+  const mutationKey = getSendSmtpTestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendSmtpTest>>, void> = () => {
+    return sendSmtpTest(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SendSmtpTestMutationResult = NonNullable<Awaited<ReturnType<typeof sendSmtpTest>>>;
+
+export type SendSmtpTestMutationError = ErrorType<ErrorOut>;
+
+/**
+ * @summary Send Smtp Test
+ */
+export const useSendSmtpTest = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof sendSmtpTest>>, TError, void, TContext>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof sendSmtpTest>>, TError, void, TContext> => {
+  return useMutation(getSendSmtpTestMutationOptions(options), queryClient);
+};
+
 export const getGetTelegramStatusUrl = () => {
   return `/api/v1/integrations/telegram`;
 };
@@ -6347,6 +6852,338 @@ export function useListLeads<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getListLeadsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateLeadUrl = () => {
+  return `/api/v1/leads`;
+};
+
+/**
+ * «Новый лид» вручную: звонок, письмо, рекомендация; создавший становится ответственным.
+ *
+ * 409 `conflict` с `details.reason=lead_exists` (`lead_id`, `display_name`) или
+ * `client_exists` (`client_id`, `client_name`) — такой телефон/почта уже есть: откройте карточку.
+ * @summary Create Lead
+ */
+export const createLead = async (
+  manualLeadIn: ManualLeadIn,
+  options?: Parameters<typeof http>[1],
+): Promise<Created> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<Created>(getCreateLeadUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(manualLeadIn),
+  });
+};
+
+export const getCreateLeadMutationKey = () => ["createLead"] as const;
+
+export const getCreateLeadMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createLead>>,
+    TError,
+    CreateLeadMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createLead>>,
+  TError,
+  CreateLeadMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateLeadMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createLead>>,
+    CreateLeadMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createLead(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateLeadMutationResult = NonNullable<Awaited<ReturnType<typeof createLead>>>;
+export type CreateLeadMutationBody = ManualLeadIn;
+export type CreateLeadMutationError = ErrorType<ErrorOut>;
+export type CreateLeadMutationVariables = { data: ManualLeadIn };
+
+/**
+ * @summary Create Lead
+ */
+export const useCreateLead = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createLead>>,
+      TError,
+      CreateLeadMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createLead>>,
+  TError,
+  CreateLeadMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateLeadMutationOptions(options), queryClient);
+};
+
+export const getWebLeadUrl = () => {
+  return `/api/v1/leads/web`;
+};
+
+/**
+ * Форма «Запрос» со страницы входа Cabinet → лид CRM с источником `web` (ARCHITECTURE §17).
+ *
+ * Без аутентификации. Нужен телефон или e-mail. Ошибки: 422 `validation_failed` с
+ * `details.reason` (`form_token_invalid` | `form_too_fast` | `form_token_expired` |
+ * `contact_required` | `invalid_phone` | `invalid_email`), 429 `rate_limited`.
+ * Повторный запрос известного контакта дополняет существующую карточку.
+ * @summary Web Lead
+ */
+export const webLead = async (
+  webLeadIn: WebLeadIn,
+  options?: Parameters<typeof http>[1],
+): Promise<WebLeadAccepted> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<WebLeadAccepted>(getWebLeadUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(webLeadIn),
+  });
+};
+
+export const getWebLeadMutationKey = () => ["webLead"] as const;
+
+export const getWebLeadMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof webLead>>,
+    TError,
+    WebLeadMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof webLead>>,
+  TError,
+  WebLeadMutationVariables,
+  TContext
+> => {
+  const mutationKey = getWebLeadMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof webLead>>,
+    WebLeadMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return webLead(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type WebLeadMutationResult = NonNullable<Awaited<ReturnType<typeof webLead>>>;
+export type WebLeadMutationBody = WebLeadIn;
+export type WebLeadMutationError = ErrorType<ErrorOut>;
+export type WebLeadMutationVariables = { data: WebLeadIn };
+
+/**
+ * @summary Web Lead
+ */
+export const useWebLead = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof webLead>>,
+      TError,
+      WebLeadMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof webLead>>,
+  TError,
+  WebLeadMutationVariables,
+  TContext
+> => {
+  return useMutation(getWebLeadMutationOptions(options), queryClient);
+};
+
+export const getWebLeadTokenUrl = () => {
+  return `/api/v1/leads/web/token`;
+};
+
+/**
+ * Токен формы «Запрос»: получить при показе формы, отправить в `form_token`.
+ *
+ * Без аутентификации. Отправка раньше `min_fill_seconds` или после `expires_at` отклоняется.
+ * @summary Web Lead Token
+ */
+export const webLeadToken = async (options?: Parameters<typeof http>[1]): Promise<WebFormToken> => {
+  return http<WebFormToken>(getWebLeadTokenUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getWebLeadTokenQueryKey = () => {
+  return [`/api/v1/leads/web/token`] as const;
+};
+
+export const getWebLeadTokenQueryOptions = <
+  TData = Awaited<ReturnType<typeof webLeadToken>>,
+  TError = ErrorType<ErrorOut>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof webLeadToken>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getWebLeadTokenQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof webLeadToken>>> = ({ signal }) =>
+    webLeadToken({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof webLeadToken>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type WebLeadTokenQueryResult = NonNullable<Awaited<ReturnType<typeof webLeadToken>>>;
+export type WebLeadTokenQueryError = ErrorType<ErrorOut>;
+
+export function useWebLeadToken<
+  TData = Awaited<ReturnType<typeof webLeadToken>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof webLeadToken>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof webLeadToken>>,
+          TError,
+          Awaited<ReturnType<typeof webLeadToken>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useWebLeadToken<
+  TData = Awaited<ReturnType<typeof webLeadToken>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof webLeadToken>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof webLeadToken>>,
+          TError,
+          Awaited<ReturnType<typeof webLeadToken>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useWebLeadToken<
+  TData = Awaited<ReturnType<typeof webLeadToken>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof webLeadToken>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Web Lead Token
+ */
+
+export function useWebLeadToken<
+  TData = Awaited<ReturnType<typeof webLeadToken>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof webLeadToken>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getWebLeadTokenQueryOptions(options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
@@ -11501,6 +12338,93 @@ export const useUpdateUser = <TError = ErrorType<ErrorOut>, TContext = unknown>(
   return useMutation(getUpdateUserMutationOptions(options), queryClient);
 };
 
+export const getInviteUserUrl = (userId: number) => {
+  return `/api/v1/users/${userId}/invite`;
+};
+
+/**
+ * Пригласить по почте (M3-CRM-08): новый временный пароль и письмо через коннектор «Почта».
+ *
+ * Без коннектора — 409 `smtp_not_configured`, пароль не меняется (выдайте его вручную,
+ * как прежде); без `SECRETS_KEY` — 409 `secrets_key_missing`. Итог доставки — в журнале писем.
+ * @summary Invite User
+ */
+export const inviteUser = async (
+  userId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<EmailQueuedOut> => {
+  return http<EmailQueuedOut>(getInviteUserUrl(userId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getInviteUserMutationKey = () => ["inviteUser"] as const;
+
+export const getInviteUserMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof inviteUser>>,
+    TError,
+    InviteUserMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof inviteUser>>,
+  TError,
+  InviteUserMutationVariables,
+  TContext
+> => {
+  const mutationKey = getInviteUserMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof inviteUser>>,
+    InviteUserMutationVariables
+  > = (props) => {
+    const { userId } = props ?? {};
+
+    return inviteUser(userId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type InviteUserMutationResult = NonNullable<Awaited<ReturnType<typeof inviteUser>>>;
+
+export type InviteUserMutationError = ErrorType<ErrorOut>;
+export type InviteUserMutationVariables = { userId: number };
+
+/**
+ * @summary Invite User
+ */
+export const useInviteUser = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof inviteUser>>,
+      TError,
+      InviteUserMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof inviteUser>>,
+  TError,
+  InviteUserMutationVariables,
+  TContext
+> => {
+  return useMutation(getInviteUserMutationOptions(options), queryClient);
+};
+
 export const getResetPasswordUrl = (userId: number) => {
   return `/api/v1/users/${userId}/reset-password`;
 };
@@ -11582,6 +12506,94 @@ export const useResetPassword = <TError = ErrorType<ErrorOut>, TContext = unknow
   TContext
 > => {
   return useMutation(getResetPasswordMutationOptions(options), queryClient);
+};
+
+export const getResetPasswordByEmailUrl = (userId: number) => {
+  return `/api/v1/users/${userId}/reset-password/email`;
+};
+
+/**
+ * Сбросить пароль и отправить временный по почте (M3-CRM-08); сессии завершаются.
+ *
+ * Без коннектора — 409 `smtp_not_configured`, пароль не меняется.
+ * @summary Reset Password By Email
+ */
+export const resetPasswordByEmail = async (
+  userId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<EmailQueuedOut> => {
+  return http<EmailQueuedOut>(getResetPasswordByEmailUrl(userId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getResetPasswordByEmailMutationKey = () => ["resetPasswordByEmail"] as const;
+
+export const getResetPasswordByEmailMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resetPasswordByEmail>>,
+    TError,
+    ResetPasswordByEmailMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resetPasswordByEmail>>,
+  TError,
+  ResetPasswordByEmailMutationVariables,
+  TContext
+> => {
+  const mutationKey = getResetPasswordByEmailMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resetPasswordByEmail>>,
+    ResetPasswordByEmailMutationVariables
+  > = (props) => {
+    const { userId } = props ?? {};
+
+    return resetPasswordByEmail(userId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResetPasswordByEmailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof resetPasswordByEmail>>
+>;
+
+export type ResetPasswordByEmailMutationError = ErrorType<ErrorOut>;
+export type ResetPasswordByEmailMutationVariables = { userId: number };
+
+/**
+ * @summary Reset Password By Email
+ */
+export const useResetPasswordByEmail = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof resetPasswordByEmail>>,
+      TError,
+      ResetPasswordByEmailMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof resetPasswordByEmail>>,
+  TError,
+  ResetPasswordByEmailMutationVariables,
+  TContext
+> => {
+  return useMutation(getResetPasswordByEmailMutationOptions(options), queryClient);
 };
 
 export const getHealthUrl = () => {

@@ -16,6 +16,7 @@ TASK_MODULES = (
     "app.tasks.reports",
     "app.tasks.documents",
     "app.tasks.monitoring",
+    "app.tasks.mail",
 )
 
 queue = procrastinate.App(

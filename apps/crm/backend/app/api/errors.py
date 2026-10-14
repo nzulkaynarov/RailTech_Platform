@@ -23,6 +23,7 @@ STATUS: dict[type[e.DomainError], int] = {
     e.AccountLockedError: status.HTTP_423_LOCKED,
     e.ValidationFailedError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     e.UpstreamUnavailableError: status.HTTP_502_BAD_GATEWAY,
+    e.RateLimitedError: status.HTTP_429_TOO_MANY_REQUESTS,
 }
 HTTP_CODES: dict[int, str] = {
     status.HTTP_401_UNAUTHORIZED: e.AuthError.code,

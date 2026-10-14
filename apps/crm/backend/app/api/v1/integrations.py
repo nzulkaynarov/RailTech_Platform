@@ -1,9 +1,9 @@
-"""«Подключения» (admin, аудит 2026-10-12 §3): Telegram-бот, канал команды и коннектор ERP."""
+"""«Подключения» (admin, аудит 2026-10-12 §3): бот, канал команды, коннекторы ERP и «Почта»."""
 
 from dataclasses import asdict
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 
 from app.api.deps import ContainerDep, require
 from app.bot.profile import ProfilePublish
@@ -12,10 +12,16 @@ from app.integrations.telegram import AiogramProbe
 from app.schemas.integrations import (
     BotProfileOut,
     ChatCandidateOut,
+    EmailLogItem,
+    EmailQueuedOut,
+    EmailStatus,
     ErpCheckOut,
     ErpConnectorIn,
     ErpStatusOut,
     ProfilePublishOut,
+    SmtpCheckOut,
+    SmtpConnectorIn,
+    SmtpStatusOut,
     TelegramStatusOut,
     TelegramTokenIn,
 )
@@ -25,6 +31,8 @@ from app.security.principal import Principal
 from app.security.reauth import LockoutPolicy
 from app.services.erp_connector import ErpConnectorService, ErpStatus
 from app.services.integrations import TelegramIntegrationService
+from app.services.mail import EmailLogView
+from app.services.smtp_connector import SmtpConnectorService
 
 router = APIRouter(prefix="/api/v1/integrations", tags=["integrations"])
 
@@ -150,3 +158,79 @@ async def check_erp_connection(_: Writer, service: ErpDep) -> ErpCheckOut:
     `erp_unauthorized` / `erp_unavailable` / `erp_bad_response` (502).
     """
     return ErpCheckOut(**asdict(await service.check()))
+
+
+def get_smtp_service(container: ContainerDep) -> SmtpConnectorService:
+    return container.smtp_connector
+
+
+SmtpDep = Annotated[SmtpConnectorService, Depends(get_smtp_service)]
+
+
+def queued_out(view: EmailLogView) -> EmailQueuedOut:
+    return EmailQueuedOut.model_validate(
+        {"email_log_id": view.id, "to_email": view.to_email, "status": view.status}
+    )
+
+
+@router.get("/smtp", response_model=SmtpStatusOut)
+async def get_smtp_status(_: Reader, service: SmtpDep) -> SmtpStatusOut:
+    """Коннектор «Почта» (M3-CRM-08, ADR-0018): релей SMTP для писем сотрудникам.
+
+    Пароль SMTP не возвращается — только «задан», источник и `last4`. Коннектор «настроен» =
+    есть хост и адрес отправителя (из «Подключений», иначе `SMTP_*` в `.env`).
+    """
+    return SmtpStatusOut(**asdict(await service.status()))
+
+
+@router.put("/smtp", response_model=SmtpStatusOut)
+async def put_smtp_connector(body: SmtpConnectorIn, who: Writer, service: SmtpDep) -> SmtpStatusOut:
+    """Сохранить релей и секреты (после пароля админа); логин/пароль `null` — оставить прежние.
+
+    Ошибки: `smtp_invalid_host` (422, поле `host`), `invalid_email` (422, `from_email`),
+    `wrong_password` (422), `secrets_key_missing` (409 — секреты не сохранить без `SECRETS_KEY`).
+    """
+    secret = body.smtp_password.get_secret_value() if body.smtp_password is not None else None
+    status = await service.save(
+        who,
+        host=body.host,
+        port=body.port,
+        security=body.security,
+        from_email=body.from_email,
+        from_name=body.from_name,
+        username=body.username,
+        password=secret,
+        admin_password=body.password.get_secret_value(),
+    )
+    return SmtpStatusOut(**asdict(status))
+
+
+@router.post("/smtp/check", response_model=SmtpCheckOut)
+async def check_smtp_connection(_: Writer, service: SmtpDep) -> SmtpCheckOut:
+    """«Проверить связь»: соединение, EHLO, STARTTLS/SMTPS и AUTH без отправки письма, 10 с.
+
+    Ошибки (ADR-0017, `details.reason`): `smtp_not_configured` (409), `smtp_invalid_host` (422),
+    `smtp_unavailable` / `smtp_tls_failed` / `smtp_auth_failed` (502).
+    """
+    return SmtpCheckOut(**asdict(await service.check()))
+
+
+@router.post("/smtp/test-send", response_model=EmailQueuedOut)
+async def send_smtp_test(who: Writer, service: SmtpDep) -> EmailQueuedOut:
+    """Тестовое письмо на адрес самого администратора — через журнал и очередь, как настоящее.
+
+    Ошибки: `smtp_not_configured` (409), `secrets_key_missing` (409). Итог доставки — в журнале.
+    """
+    return queued_out(await service.test_send(who))
+
+
+@router.get("/smtp/log", response_model=list[EmailLogItem])
+async def list_email_log(
+    _: Reader,
+    container: ContainerDep,
+    status: EmailStatus | None = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+) -> list[EmailLogItem]:
+    """Журнал писем сотрудникам: последние `limit`, фильтр по статусу; тел писем в журнале нет."""
+    rows = await container.mail_service.list_log(status, limit)
+    return [EmailLogItem.model_validate(asdict(row)) for row in rows]

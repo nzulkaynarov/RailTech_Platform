@@ -322,14 +322,52 @@ class BudgetSettings(StrictModel):
     providers: ProviderLimitsSettings = Field(default_factory=ProviderLimitsSettings)
 
 
+class SmtpSettings(StrictModel):
+    """Коннектор «Почта» без секретов (M3-CRM-08): SMTP-релей для писем сотрудникам.
+
+    Логин и пароль — `integration_secrets` (`smtp_username`, `smtp_password`). Пустой `host` —
+    настройки из `.env` (`SMTP_*`), иначе коннектора нет: письма не уходят, в журнале
+    `skipped_no_smtp`, пользователю — понятная ошибка `smtp_not_configured`.
+    """
+
+    host: str = Field(default="", max_length=253)
+    port: int = Field(default=587, ge=1, le=65535)
+    # `starttls` — 587 (обычный релей), `ssl` — 465 (SMTPS), `none` — только внутри сети.
+    security: Literal["starttls", "ssl", "none"] = "starttls"
+    from_email: str = Field(default="", max_length=255)
+    from_name: str = Field(default="", max_length=120)
+
+
 class IntegrationsSettings(StrictModel):
     """Коннекторы «Подключений» без секретов (ADR-0018, M3-CRM-02); секреты — `integration_secrets`.
 
-    Правится на экране «Подключения» → «ERP», на экране «Настройки» не показывается.
+    Правится на экране «Подключения» («ERP», «Почта»), на экране «Настройки» не показывается.
     """
 
     # Корень ERP (`https://erp.example.com`); пусто — адрес из `ERP_BASE_URL`, иначе коннектора нет.
     erp_base_url: str = Field(default="", max_length=500)
+    smtp: SmtpSettings = Field(default_factory=SmtpSettings)
+
+
+class WebFormSettings(StrictModel):
+    """Антиспам публичной формы «Запрос» с сайта (M3-CRM-05, `domain/web_form.py`).
+
+    Без внешних сервисов: honeypot, подписанный токен формы (минимальное время заполнения и срок
+    жизни) и окно запросов по IP.
+    """
+
+    min_fill_seconds: int = Field(
+        default=3, ge=0, le=300, description="Минимум секунд между выдачей формы и отправкой"
+    )
+    token_ttl_minutes: int = Field(
+        default=60, ge=1, le=1440, description="Сколько минут действует токен формы"
+    )
+    rate_limit_per_hour: int = Field(
+        default=5, ge=1, le=1000, description="Не больше запросов с одного IP в час"
+    )
+    max_text_chars: int = Field(
+        default=4000, ge=100, le=10000, description="Максимум символов в поле «Что нужно»"
+    )
 
 
 SETTINGS_MODELS: Final[dict[str, type[BaseModel]]] = {
@@ -347,6 +385,7 @@ SETTINGS_MODELS: Final[dict[str, type[BaseModel]]] = {
     "deals": DealsSettings,
     "bot_profile": BotProfileSettings,
     "integrations": IntegrationsSettings,
+    "web_form": WebFormSettings,
 }
 
 
@@ -380,6 +419,7 @@ class AppSettings(StrictModel):
     deals: DealsSettings = Field(default_factory=DealsSettings)
     bot_profile: BotProfileSettings = Field(default_factory=BotProfileSettings)
     integrations: IntegrationsSettings = Field(default_factory=IntegrationsSettings)
+    web_form: WebFormSettings = Field(default_factory=WebFormSettings)
 
     def lead_notice(
         self,

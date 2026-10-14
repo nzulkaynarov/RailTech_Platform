@@ -36,6 +36,7 @@ class Lead(TimestampMixin, Base):
         CheckConstraint("score BETWEEN 0 AND 100", name="score"),
         Index("ix_leads_stage", "stage"),
         Index("ix_leads_last_lead_msg_at", "last_lead_msg_at"),
+        Index("ix_leads_phone_e164", "phone_e164"),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
@@ -68,8 +69,14 @@ class Lead(TimestampMixin, Base):
     # Последнее личное уведомление менеджеру о сообщении лида (троттлинг, Q-010).
     manager_notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     erased_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # `telegram` | `web` | `phone` | `email` | `referral` (`domain/lead_sources.py`) | `sandbox`.
     source: Mapped[str] = mapped_column(String(16), server_default=sql("'telegram'"))
     notes_count: Mapped[int] = mapped_column(Integer, server_default=sql("0"))
+    # Контакты лида без Telegram (сайт, звонок, почта, рекомендация — M3-CRM-05); номер из
+    # Telegram остаётся в `telegram_identities.phone_e164`, склейка — по обоим (`lead_sources`).
+    phone_e164: Mapped[str | None] = mapped_column(String(20))
+    email: Mapped[str | None] = mapped_column(String(255))
+    company_name: Mapped[str | None] = mapped_column(String(255))
 
     identities: Mapped[list["TelegramIdentity"]] = relationship(back_populates="lead")
 

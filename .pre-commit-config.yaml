@@ -9,7 +9,8 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
-        args: [--allow-multiple-documents]
+        # --unsafe: compose-файлы CRM используют теги `!reset` (docker compose merge)
+        args: [--allow-multiple-documents, --unsafe]
       - id: check-toml
       - id: check-json
         # tsconfig*.json — JSONC (комментарии, запятые в конце), не JSON
@@ -45,5 +46,7 @@ repos:
       - id: eslint-crm
         name: eslint (apps/crm/frontend)
         language: system
-        entry: bash -c 'cd apps/crm/frontend && pnpm exec eslint --max-warnings=0 "${@#apps/crm/frontend/}"' --
+        entry: bash -c 'cd apps/crm/frontend && pnpm exec eslint --max-warnings=0 --no-warn-ignored "${@#apps/crm/frontend/}"' --
         files: ^apps/crm/frontend/.*\.(ts|tsx|js)$
+        # Клиент orval в eslint-ignore: явная передача этих файлов даёт warning «File ignored».
+        exclude: ^apps/crm/frontend/src/api/generated/

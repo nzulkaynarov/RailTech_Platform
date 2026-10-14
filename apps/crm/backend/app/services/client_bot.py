@@ -28,6 +28,7 @@ from app.services import escalation
 from app.services.conversation_support import current_lead, lang_of, verified_client
 from app.services.conversation_types import EscalationHook, Outgoing
 from app.services.documents import LINK_TTL_S
+from app.services.lead_merge import merge_by_phone
 from app.services.lead_parts import ACTIVE_ESCALATION
 from app.services.settings import SettingsService
 
@@ -177,28 +178,43 @@ class ClientBotService:
 
     async def save_phone(self, tg_user_id: int, phone_e164: str) -> None:
         """Номер — в идентичность; если у лида уже открыта передача, её карточка в канале
-        перерисовывается, чтобы менеджер увидел номер, а не «Номер: не указан»."""
-        escalation_id: int | None = None
+        перерисовывается, чтобы менеджер увидел номер, а не «Номер: не указан».
+
+        Такой номер уже есть у лида с сайта/звонка/почты — карточки склеиваются в одну
+        (`services/lead_merge.py`, M3-CRM-05): история и Telegram остаются, источник — первый.
+        """
+        escalations: list[int] = []
         async with self._sessions() as session, session.begin():
             identity = await repo.get_identity(session, tg_user_id)
             if identity is not None:
                 identity.phone_e164 = phone_e164
-                if identity.lead_id is not None:
-                    escalation_id = await session.scalar(
-                        select(Escalation.id)
-                        .where(
-                            Escalation.lead_id == identity.lead_id,
-                            Escalation.status.in_(ACTIVE_ESCALATION),
-                        )
-                        .order_by(Escalation.id.desc())
-                        .limit(1)
-                    )
+                merged = await merge_by_phone(session, identity, phone_e164)
+                lead_id = merged.survivor_id if merged else identity.lead_id
+                if merged is not None:
+                    escalations = list(merged.escalation_ids)
+                elif lead_id is not None:
+                    escalations = await self._latest_active_escalation(session, lead_id)
         logger.info("lead_phone_saved", tg_user_id=tg_user_id)
-        if escalation_id is not None and self._on_card_changed is not None:
-            try:
-                await self._on_card_changed(escalation_id)
-            except Exception:  # noqa: BLE001 — номер сохранён; карточка обновится со следующим событием
-                logger.warning("phone_card_refresh_failed", escalation_id=escalation_id)
+        for escalation_id in escalations:
+            await self._refresh_card(escalation_id)
+
+    @staticmethod
+    async def _latest_active_escalation(session: AsyncSession, lead_id: int) -> list[int]:
+        escalation_id = await session.scalar(
+            select(Escalation.id)
+            .where(Escalation.lead_id == lead_id, Escalation.status.in_(ACTIVE_ESCALATION))
+            .order_by(Escalation.id.desc())
+            .limit(1)
+        )
+        return [escalation_id] if escalation_id is not None else []
+
+    async def _refresh_card(self, escalation_id: int) -> None:
+        if self._on_card_changed is None:
+            return
+        try:
+            await self._on_card_changed(escalation_id)
+        except Exception:  # noqa: BLE001 — номер сохранён; карточка обновится со следующим событием
+            logger.warning("phone_card_refresh_failed", escalation_id=escalation_id)
 
     async def documents(self, tg_user_id: int) -> list[tuple[int, str]] | None:
         """До 10 документов клиента, новые первыми; None — собеседник не клиент."""

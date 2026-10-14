@@ -135,7 +135,7 @@ class UserService:
             if patch.is_active is False or stops_work:
                 await _hand_over_work(session, actor, user_id, patch.transfer_to_user_id)
             if patch.is_active is False:
-                await _revoke_tokens(session, user_id)
+                await revoke_tokens(session, user_id)
             try:
                 await session.flush()
             except IntegrityError as exc:
@@ -164,7 +164,7 @@ class UserService:
             user.must_change_password = True
             user.failed_logins = 0
             user.locked_until = None
-            await _revoke_tokens(session, user_id)
+            await revoke_tokens(session, user_id)
             await audit.record(session, actor, "user.reset_password", "user", user_id)
         return password
 
@@ -356,7 +356,7 @@ async def _reassign(session: AsyncSession, user_id: int, to_user_id: int | None)
     )
 
 
-async def _revoke_tokens(session: AsyncSession, user_id: int) -> None:
+async def revoke_tokens(session: AsyncSession, user_id: int) -> None:
     await session.execute(
         update(RefreshToken)
         .where(RefreshToken.user_id == user_id, RefreshToken.revoked_at.is_(None))
