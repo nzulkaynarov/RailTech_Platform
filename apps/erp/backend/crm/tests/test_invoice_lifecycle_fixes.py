@@ -11,23 +11,14 @@ Self-contained fixtures (mirrors test_invoice_lifecycle.py / test_billing_visibi
 run with --nomigrations, so every lookup code the flow asserts on is seeded here.
 """
 
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
 
 import pytest
-from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    SystemRole,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import (
     ActStatus,
     Contract,
@@ -106,19 +97,13 @@ def _ids(resp):
 
 @pytest.fixture
 def world(lookups):
-    """A buyer, a routed seller (operational subscription), an UNRELATED seller, and a
+    """A buyer, a routed seller, an UNRELATED seller, and a
     signed-contract deal ready to be invoiced."""
     buyer_co = _company("Buyer Co", "B901", "CLIENT")
     buyer_user = _member(buyer_co, "buyer@invfix.test", can_buy=True)
 
     seller_co = _company("Seller Co", "S901", "SUPPLIER")
     seller_user = _member(seller_co, "seller@invfix.test", can_sell=True)
-    SupplierSubscription.objects.create(
-        company=seller_co,
-        plan="PREMIUM",
-        status="ACTIVE",
-        valid_until=timezone.localdate() + timedelta(days=30),
-    )
 
     other_co = _company("Other Seller Co", "O901", "SUPPLIER")
     other_user = _member(other_co, "other@invfix.test", can_sell=True)

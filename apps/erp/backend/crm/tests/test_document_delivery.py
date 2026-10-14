@@ -14,9 +14,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.constants import FeatureKey
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
-from accounts.services.entitlements import grant_entitlement
 from crm import services as crm_services
 from crm.models import Deal, DealSellerRouting, DealStage, DocumentTemplateKind, GeneratedDocumentStatus
 from notifications.models import Notification, NotificationType
@@ -71,7 +69,6 @@ def world(lookups):
     """Seller (routed) issues a document on a buyer-owned deal; a competing seller is routed nowhere."""
     seller_co = _company("Seller Co", "S1", "SUPPLIER")
     seller_user = _member(seller_co, "seller@doc.test", can_sell=True)
-    grant_entitlement(seller_co.id, FeatureKey.DOCUMENT_GENERATE)
 
     buyer_co = _company("Buyer Co", "B1", "CLIENT")
     buyer_user = _member(buyer_co, "buyer@doc.test", can_buy=True)

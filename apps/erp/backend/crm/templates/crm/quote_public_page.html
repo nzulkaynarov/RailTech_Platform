@@ -137,9 +137,6 @@
     .status-box h2 { margin: 0 0 6px; font-size: 18px; }
     .legal-note { font-size: 12px; color: var(--muted); margin-top: 10px; }
     .footer { text-align: center; font-size: 12px; color: var(--muted); padding: 8px 0 24px; }
-    .demo-banner { background: color-mix(in srgb, var(--danger) 14%, transparent);
-      color: var(--danger); text-align: center; padding: 8px; border-radius: 8px; font-weight: 600;
-      font-size: 13px; margin-bottom: 12px; }
 
     /* ── ТЕЛЕФОН: строка позиции вместо таблицы ─────────────────────────────────────────
        Клиент открывает КП по QR с телефона. Пять колонок в 320–390 px не помещаются:
@@ -218,7 +215,6 @@
   {% with pres_ccy=quote.quote_currency.code|default:"UZS" %}
   <div class="wrap">
 
-    {% if is_demo %}<div class="demo-banner">ДЕМО — не для коммерческого использования</div>{% endif %}
 
     <!-- ── Header ── -->
     <div class="card">

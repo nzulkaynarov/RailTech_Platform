@@ -4,15 +4,7 @@
 Замеры скептиков 26-08 по находкам 21, 35, 42, 43, 44, 45, 117 прогона 20-08 — и один замер,
 которого в аудите не было вовсе.
 
-* **43.** У подписки была ВТОРАЯ дверь к тому же результату: обычный `PATCH {"status":
-  "SUSPENDED"}` по карточке. Он не звал сервис, не требовал причины, не заполнял
-  `suspended_reason`/`suspended_at` и НЕ слал арендатору ни письма, ни уведомления — ровно то,
-  ради чего заводили #611. Отключение платящего продавца проходило молча.
-* **44.** У `SupplierSubscriptionViewSet` не было ни `perform_create`, ни `perform_destroy`:
-  DELETE физически уносил запись вместе с историей оплат, и в журнале не оставалось ни того,
-  что удалили, ни кем.
-* **45.** Массовая приостановка писала запись БЕЗ `event_code`, а «Журнал доступа» отбирает
-  ленту по машинному коду `admin.*` — отключение ПАЧКИ продавцов было видно хуже, чем одного.
+* **43–45.** (Подписки поставщиков — удалены вместе с монетизацией в M1-ERP-02 волна 2.)
 * **35.** (Реестр заявок на роль — удалён вместе с заявками в M1-ERP-02 волна 1c.)
 * **21.** Правки справочников и шаблонов писем не оставляли следа вовсе, хотя печатаются в
   документах и письмах ВСЕХ арендаторов.
@@ -26,16 +18,13 @@
   путь самовыдачи «второго ключа», на котором стоит гейт мастера компаний из #599.
 """
 
-from datetime import timedelta
-
 import pytest
 from django.contrib import admin
 from django.contrib.auth.models import Group, Permission
 from django.db.models import Q
-from django.utils import timezone
 from rest_framework.test import APIClient
 
-from accounts.models import Company, CompanyType, CustomUser, SupplierSubscription
+from accounts.models import Company, CompanyType, CustomUser
 from crm.models import ActivityLog
 
 ACCESS_LOG_FILTER = (
@@ -58,18 +47,6 @@ def _api(user):
 
 
 @pytest.fixture
-def billing_operator(db):
-    """Администратор ERP = суперпользователь (M1-ERP-02: операторских суб-ролей нет)."""
-    return CustomUser.objects.create_user(
-        email="billing@onedoor.test",
-        username="billing_onedoor",
-        password="x",
-        is_superuser=True,
-        is_active=True,
-    )
-
-
-@pytest.fixture
 def seller_company(db):
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
     company = Company.objects.create(
@@ -78,118 +55,6 @@ def seller_company(db):
     )
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
     return company
-
-
-@pytest.fixture
-def subscription(seller_company):
-    return SupplierSubscription.objects.create(
-        company=seller_company,
-        plan="PREMIUM",
-        status="ACTIVE",
-        valid_until=timezone.localdate() + timedelta(days=90),
-    )
-
-
-# ── 43. Статус меняют действия, а не правка карточки ────────────────────────
-
-
-def test_patching_the_status_is_refused(billing_operator, subscription):
-    resp = _api(billing_operator).patch(
-        f"/api/v1/accounts/subscriptions/{subscription.pk}/", {"status": "SUSPENDED"}, format="json"
-    )
-
-    assert resp.status_code == 400
-    assert resp.json()["detail"] == "SUBSCRIPTION_STATUS_IS_AN_ACTION"
-    subscription.refresh_from_db()
-    assert subscription.status == "ACTIVE", "отказ обязан ничего не менять"
-
-
-def test_patching_other_fields_still_works(billing_operator, subscription):
-    """Обратная сторона: карточка осталась редактируемой — закрыт ровно статус."""
-    resp = _api(billing_operator).patch(
-        f"/api/v1/accounts/subscriptions/{subscription.pk}/", {"notes": "перенесли оплату"}, format="json"
-    )
-
-    assert resp.status_code == 200, resp.content
-    subscription.refresh_from_db()
-    assert subscription.notes == "перенесли оплату"
-
-
-def test_sending_the_same_status_is_not_a_change(billing_operator, subscription):
-    """Витрина шлёт карточку целиком; неизменившийся статус — не попытка обойти действие."""
-    resp = _api(billing_operator).patch(
-        f"/api/v1/accounts/subscriptions/{subscription.pk}/",
-        {"status": "ACTIVE", "notes": "без смены статуса"},
-        format="json",
-    )
-
-    assert resp.status_code == 200, resp.content
-
-
-def test_the_action_path_still_suspends_and_notifies(
-    billing_operator, subscription, django_capture_on_commit_callbacks
-):
-    from notifications.models import EmailLog
-
-    before = EmailLog.objects.count()
-    with django_capture_on_commit_callbacks(execute=True):
-        resp = _api(billing_operator).post(
-            f"/api/v1/accounts/subscriptions/{subscription.pk}/suspend/", {"reason": "Неоплата"}, format="json"
-        )
-
-    assert resp.status_code == 200, resp.content
-    subscription.refresh_from_db()
-    assert subscription.status == "SUSPENDED"
-    assert subscription.suspended_reason == "Неоплата"
-    assert EmailLog.objects.count() >= before, "путь действия по-прежнему оповещает"
-
-
-# ── 44. Создание и удаление подписки оставляют след ─────────────────────────
-
-
-def test_creating_a_subscription_leaves_a_trace(billing_operator, seller_company, db):
-    resp = _api(billing_operator).post(
-        "/api/v1/accounts/subscriptions/",
-        {"company": seller_company.pk, "plan": "BASIC", "status": "ACTIVE", "monthly_rate": "500000"},
-        format="json",
-    )
-
-    assert resp.status_code == 201, resp.content
-    entry = ActivityLog.objects.get(event_code="admin.subscription.created")
-    assert entry.user_id == billing_operator.pk
-    assert ActivityLog.objects.filter(
-        ACCESS_LOG_FILTER, pk=entry.pk
-    ).exists(), "запись обязана попасть в журнал доступа"
-
-
-def test_deleting_a_subscription_leaves_a_trace_of_what_was_deleted(billing_operator, subscription):
-    """След пишется ДО удаления: после него ни pk, ни компании уже не спросишь."""
-    company_name = subscription.company.name
-
-    resp = _api(billing_operator).delete(f"/api/v1/accounts/subscriptions/{subscription.pk}/")
-
-    assert resp.status_code == 204
-    assert not SupplierSubscription.objects.filter(pk=subscription.pk).exists()
-    entry = ActivityLog.objects.get(event_code="admin.subscription.deleted")
-    assert company_name in entry.detail
-    assert entry.before_data["plan"] == "PREMIUM", "в следе видно, ЧТО именно удалили"
-
-
-# ── 45. Массовая приостановка видна в журнале доступа ───────────────────────
-
-
-def test_bulk_suspension_reaches_the_access_log(billing_operator, subscription, django_capture_on_commit_callbacks):
-    with django_capture_on_commit_callbacks(execute=True):
-        resp = _api(billing_operator).post(
-            "/api/v1/accounts/subscriptions/bulk-set-status/",
-            {"ids": [subscription.pk], "status": "SUSPENDED", "reason": "проверка"},
-            format="json",
-        )
-
-    assert resp.status_code == 200, resp.content
-    bulk = ActivityLog.objects.filter(action__icontains="Bulk")
-    assert bulk.exists()
-    assert ActivityLog.objects.filter(ACCESS_LOG_FILTER, pk__in=bulk.values("pk")).count() == bulk.count()
 
 
 # ── 21. Справочники и шаблоны писем оставляют след ──────────────────────────
@@ -268,7 +133,7 @@ def _open_admins(user):
 
 
 @pytest.mark.django_db
-def test_no_admin_is_open_to_a_non_superuser(engineer, subscription):
+def test_no_admin_is_open_to_a_non_superuser(engineer, seller_company):
     """Обещание докстринга выполнялось у 28 админок из 60 — теперь его держит САЙТ.
 
     Проверяем ПОВЕДЕНИЕ по всему реестру, а не наличие миксина в цепочке классов: наследование
@@ -278,9 +143,9 @@ def test_no_admin_is_open_to_a_non_superuser(engineer, subscription):
 
 
 @pytest.mark.django_db
-def test_the_audit_trail_itself_cannot_be_rewritten(engineer, subscription):
+def test_the_audit_trail_itself_cannot_be_rewritten(engineer, seller_company):
     """Журнал активности был редактируем на 13 полей из 18 — саму историю можно было переписать."""
-    entry = ActivityLog.objects.create(entity_type="subscription", entity_id=subscription.pk, action="проба")
+    entry = ActivityLog.objects.create(entity_type="company", entity_id=seller_company.pk, action="проба")
     model_admin = admin.site._registry[ActivityLog]
     request = _Request(engineer)
 
@@ -348,7 +213,7 @@ def test_marking_someone_elses_notifications_read_leaves_a_trace(db):
 
 
 @pytest.mark.django_db
-def test_the_superuser_keeps_the_full_toolbox(db, subscription):
+def test_the_superuser_keeps_the_full_toolbox(db, seller_company):
     """Обратная сторона: инструмент инженера не урезан — решение владельца 2026-06-29."""
     root = CustomUser.objects.create_user(
         email="root@onedoor.test",
@@ -360,12 +225,12 @@ def test_the_superuser_keeps_the_full_toolbox(db, subscription):
     )
     # Строку журнала заводим ЯВНО: `_open_admins` пропускает модели без записей, и без неё
     # проверка «история осталась доступна суперпользователю» была бы зелёной впустую.
-    ActivityLog.objects.create(entity_type="subscription", entity_id=subscription.pk, action="проба")
+    ActivityLog.objects.create(entity_type="company", entity_id=seller_company.pk, action="проба")
     request = _Request(root)
     company_admin = admin.site._registry[Company]
 
     assert company_admin.has_add_permission(request) is True
-    assert set(company_admin.get_readonly_fields(request, obj=subscription.company)) != {
+    assert set(company_admin.get_readonly_fields(request, obj=seller_company)) != {
         f.name for f in Company._meta.get_fields()
     }
     # Не магическое число: в тестовой базе строки есть не у всех моделей, и абсолютный порог

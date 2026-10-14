@@ -272,9 +272,8 @@ FEATURE_HANDLERS = {
 # SINGLE ATTEMPT — deliberate deviation from the CLAUDE.md Celery convention
 # (max_retries=3, autoretry_for=(Exception,), retry_backoff=True): every feature here is
 # a paid-per-call Claude request (compose fires TWO calls per attempt), and draft_quote
-# commits writes + consumes an AI_DRAFT credit inside the handler. A blanket autoretry
-# would multiply the spend up to 4x and, on any post-commit failure, duplicate the created
-# quote and the billed credit. An interactive failure must surface to the user (who simply
+# commits writes inside the handler. A blanket autoretry would multiply the spend up to 4x
+# and, on any post-commit failure, duplicate the created quote. An interactive failure must surface to the user (who simply
 # clicks again) — never silently re-execute.
 @shared_task(
     bind=True,

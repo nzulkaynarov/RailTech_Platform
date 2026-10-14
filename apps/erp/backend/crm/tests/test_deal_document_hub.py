@@ -10,7 +10,6 @@
 3. **Подсказка следующего шага** идёт по фактическому состоянию цепочки, а не по стадии сделки.
 """
 
-from datetime import timedelta
 from decimal import Decimal
 
 import pytest
@@ -18,15 +17,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    SystemRole,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import (
     Act,
     ActStatus,
@@ -90,15 +81,6 @@ def _member(company, email, *, can_sell=False, can_buy=False):
     return user
 
 
-def _subscribe(company):
-    SupplierSubscription.objects.create(
-        company=company,
-        plan="PREMIUM",
-        status="ACTIVE",
-        valid_until=timezone.localdate() + timedelta(days=30),
-    )
-
-
 def _api(user, ctx=None):
     client = APIClient()
     creds = {"HTTP_AUTHORIZATION": f"Bearer {RefreshToken.for_user(user).access_token}"}
@@ -115,11 +97,9 @@ def world(lookups):
 
     winner_co = _company("Winner Seller", "S700", "SUPPLIER")
     winner_user = _member(winner_co, "winner@hub.test", can_sell=True)
-    _subscribe(winner_co)
 
     loser_co = _company("Loser Seller", "S701", "SUPPLIER")
     loser_user = _member(loser_co, "loser@hub.test", can_sell=True)
-    _subscribe(loser_co)
 
     deal = Deal.objects.create(title="Hub deal", company=buyer_co, stage=DealStage.objects.get(code="CONTRACT_SIGNED"))
     # Обоим продавцам разослана одна заявка — выигрывает один (скрытая конкуренция).
@@ -236,7 +216,6 @@ def test_dual_company_gets_both_sides_regardless_of_context_header(lookups):
     """Ловушка `activeStatus`: у компании с типами [CLIENT, SUPPLIER] клиент брал ПЕРВЫЙ тип
     и прятал продавцовские действия. Сервер обязан отдать обе стороны в любом контексте."""
     dual_co = _company("Dual Co", "D700", "CLIENT", "SUPPLIER")
-    _subscribe(dual_co)
     dual_user = _member(dual_co, "dual@hub.test", can_sell=True, can_buy=True)
 
     deal = Deal.objects.create(title="Dual deal", company=dual_co, stage=DealStage.objects.get(code="CONTRACT_SIGNED"))

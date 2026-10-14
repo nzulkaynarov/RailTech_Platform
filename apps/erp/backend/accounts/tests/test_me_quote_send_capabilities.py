@@ -1,29 +1,16 @@
 """WP-H — /me.capabilities early-gate signals for the КП builder.
 
-The КП builder shows subscription blockers BEFORE the seller spends an hour on data
-entry (the audit's "late surprise" at send). That needs two capability fields mirroring
-`send_to_client`'s gate (QUOTE_SEND_NOT_ENTITLED; the KYC floor was removed in M1-ERP-02 wave 1c):
-
-  - can_send_quotes  = quote_send_entitled(company)  (quote.send entitlement AND not DEMO)
-  - quote_send_is_demo = the seller holds quote.send in DEMO access (watermarked, send-gated)
-
-UI-gating only — send_to_client stays the authoritative gate. These tests pin the projection.
+M1-ERP-02 wave 2 removed subscriptions, entitlements and DEMO. The SPA still reads two of the
+old signals until its own cleanup, so `/me` keeps them as TRANSITIONAL constants of the seller
+side: `can_send_quotes` / `subscription_active` = the user acts for a seller company
+(`seller_subscription_operational` = True / None). The DEMO and «blocked by operator»
+send flags are gone. UI-gating only — send_to_client (role permission
+quote.send) stays authoritative. These tests pin the projection.
 """
 
-from datetime import timedelta
-
 import pytest
-from django.utils import timezone
 
-from accounts.models import (
-    Company,
-    CompanyEntitlement,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
 from accounts.serializers import MeSerializer
 
 
@@ -34,8 +21,8 @@ def lookups(db):
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
 
 
-def _seller_user(email, *, with_subscription, operational=True):
-    """A SUPPLIER-company OWNER with can_sell — mirrors crm.tests.test_subscription_gate."""
+def _seller_user(email):
+    """A SUPPLIER-company OWNER with can_sell."""
     company = Company.objects.create(
         name=f"Seller {email}",
         inn=email,
@@ -51,13 +38,6 @@ def _seller_user(email, *, with_subscription, operational=True):
         can_sell=True,
         can_buy=True,
     )
-    if with_subscription:
-        SupplierSubscription.objects.create(
-            company=company,
-            plan="PREMIUM",
-            status="ACTIVE" if operational else "PAST_DUE",
-            valid_until=timezone.localdate() + timedelta(days=30),
-        )
     return user, company
 
 
@@ -65,27 +45,15 @@ def _caps(user):
     return MeSerializer(user).data["capabilities"]
 
 
-def test_subscribed_seller_can_send(lookups):
-    user, _ = _seller_user("ok@wph.test", with_subscription=True, operational=True)
+def test_seller_can_send_without_any_plan(lookups):
+    """No subscription exists any more: the seller side always passes the UI send pre-gate;
+    the role permission (quote.send) stays authoritative in send_to_client."""
+    user, _ = _seller_user("ok@wph.test")
     caps = _caps(user)
     assert caps["can_send_quotes"] is True
-    assert caps["quote_send_is_demo"] is False
-
-
-def test_seller_without_subscription_cannot_send(lookups):
-    user, _ = _seller_user("nosub@wph.test", with_subscription=False)
-    caps = _caps(user)
-    assert caps["can_send_quotes"] is False
-    assert caps["quote_send_is_demo"] is False
-
-
-def test_demo_entitlement_flags_watermark_and_blocks_send(lookups):
-    user, company = _seller_user("demo@wph.test", with_subscription=True, operational=True)
-    CompanyEntitlement.objects.create(company=company, feature_key="quote.send", access="DEMO")
-    caps = _caps(user)
-    # DEMO = build + watermark but never actually send → not entitled, but flagged as demo.
-    assert caps["can_send_quotes"] is False
-    assert caps["quote_send_is_demo"] is True
+    assert caps["subscription_active"] is True
+    assert not [key for key in caps if key.startswith("quote_send_")], "DEMO/operator send flags are gone"
+    assert MeSerializer(user).data["seller_subscription_operational"] is True
 
 
 def test_buyer_only_user_has_no_seller_send_signals(lookups):
@@ -103,7 +71,8 @@ def test_buyer_only_user_has_no_seller_send_signals(lookups):
     )
     caps = _caps(user)
     assert caps["can_send_quotes"] is False
-    assert caps["quote_send_is_demo"] is False
+    assert caps["subscription_active"] is False
+    assert MeSerializer(user).data["seller_subscription_operational"] is None
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -138,7 +107,7 @@ def test_capability_can_sell_is_false_for_member_of_client_only_company(lookups)
 
 
 def test_capability_can_sell_is_true_for_seller_company_member(lookups):
-    user, _ = _seller_user("seller@caps.test", with_subscription=False)
+    user, _ = _seller_user("seller@caps.test")
     assert MeSerializer(user).data["capabilities"]["can_sell"] is True
 
 

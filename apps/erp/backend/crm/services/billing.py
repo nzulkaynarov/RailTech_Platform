@@ -57,16 +57,13 @@ def generate_invoice_from_contract(
 
     from django.utils import timezone
 
-    from accounts.services import assert_seller_can_operate, is_seller
+    from accounts.services import is_seller
 
     from ..models import Contract, Invoice, InvoiceItem
 
     # Issuing the invoice is a seller-side action.
     if actor is not None and not (getattr(actor, "is_superuser", False) or is_seller(actor)):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
-    # Paid-seller gate (skipped for the actor=None automation path).
-    if actor is not None and (sub_err := assert_seller_can_operate(actor)):
-        return None, sub_err
     try:
         contract = Contract.objects.select_related("quote__deal", "quote__quote_currency").get(pk=contract_id)
     except Contract.DoesNotExist:
@@ -454,16 +451,13 @@ def generate_act(
 ) -> Tuple[Optional[object], Optional[str]]:
     from django.utils import timezone
 
-    from accounts.services import assert_seller_can_operate, is_seller, seller_company_routed_to_deal
+    from accounts.services import is_seller, seller_company_routed_to_deal
 
     from ..models import Act, Invoice
 
     # Issuing the act (acceptance certificate) is a seller-side action.
     if actor is not None and not (getattr(actor, "is_superuser", False) or is_seller(actor)):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
-    # Paid-seller gate (skipped for the actor=None automation path).
-    if actor is not None and (sub_err := assert_seller_can_operate(actor)):
-        return None, sub_err
     try:
         invoice = Invoice.objects.select_related("contract__quote", "deal", "status").get(pk=invoice_id)
     except Invoice.DoesNotExist:
@@ -786,19 +780,15 @@ def reissue_act(act_id: int, actor: CustomUser) -> Tuple[Optional[object], Optio
     """
     from django.utils import timezone
 
-    from accounts.services import assert_seller_can_operate
-
     from .document_blocks import frozen_body_for
 
     act = _locked_act(act_id)
     if act.status_code != ActStatusCode.DRAFT:
         return None, "ACT_REISSUE_NOT_ALLOWED"
-    # Сторону проверяем ДО подписки: заказчику, который вернул акт, надо ответить «это не ваше
-    # действие», а не «нужна подписка продавца» — иначе отказ уводит в ложную сторону.
+    # Выпустить акт заново может только сторона-исполнитель: заказчику, который вернул акт,
+    # отвечаем «это не ваше действие».
     if act_viewer_side(actor, act) != "issuer":
         return None, "ACT_ISSUER_SIDE_REQUIRED"
-    if sub_err := assert_seller_can_operate(actor):
-        return None, sub_err
 
     seller_company = _invoice_seller_company(act.invoice) if act.invoice_id else None
     act.status = _astatus(ActStatusCode.ISSUED)

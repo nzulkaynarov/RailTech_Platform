@@ -119,7 +119,7 @@ def brand_context_for_pdf(brand: dict) -> dict:
     return {**brand, "seller_logo_url": f"data:{mime};base64,{encoded}"}
 
 
-def document_brand_context(seller_company, *, is_demo: bool = False) -> dict:
+def document_brand_context(seller_company) -> dict:
     """The branding bundle every concrete document template feeds the base with. Resolves the
     seller's CompanyDocumentProfile + logo. Safe when `seller_company` is None (renders the
     neutral platform fallback — never fake counterparty data)."""
@@ -127,7 +127,7 @@ def document_brand_context(seller_company, *, is_demo: bool = False) -> dict:
 
     # ONE read of the profile row (never creates).
     row = CompanyDocumentProfile.objects.filter(company=seller_company).first() if seller_company else None
-    return _brand_context_from_row(seller_company, row, is_demo=is_demo)
+    return _brand_context_from_row(seller_company, row)
 
 
 def _apply_company_defaults(seller_company, row) -> None:
@@ -163,7 +163,7 @@ def _apply_company_defaults(seller_company, row) -> None:
     # пусто там — документ печатает «Подпись / дата», а не чужое имя.
 
 
-def _brand_context_from_row(seller_company, row, *, is_demo: bool = False) -> dict:
+def _brand_context_from_row(seller_company, row) -> dict:
     """Build the brand context from an ALREADY-FETCHED profile row (may be mutated in-memory by
     the caller — the draft-preview path applies unsaved overrides before delegating here).
 
@@ -196,7 +196,6 @@ def _brand_context_from_row(seller_company, row, *, is_demo: bool = False) -> di
         "seller": seller_company,
         "seller_profile": branded,
         "seller_logo_url": seller_logo_url(branded),
-        "is_demo": is_demo,
         "show_logo": row.show_logo if row else True,
         "show_lead_time": row.show_lead_time if row else True,
         "show_fx_note": row.show_fx_note if row else False,

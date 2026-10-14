@@ -8,13 +8,11 @@ from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
 from .models import (
     Company,
     CompanyDocumentProfile,
-    CompanyEntitlement,
     CompanyMember,
     CompanyRole,
     CompanySettings,
     CompanyType,
     CustomUser,
-    SupplierSubscription,
 )
 
 
@@ -429,15 +427,14 @@ class MeSerializer(serializers.ModelSerializer):
     # filter the BUYER/SELLER/MANUFACTURER context-switcher.
     can_sell = serializers.SerializerMethodField()
     can_buy = serializers.SerializerMethodField()
-    # Whether the seller company has an operational subscription. Lets the UI show
-    # a "subscription required" banner before the seller hits SUBSCRIPTION_REQUIRED
-    # on a write. None for non-sellers (banner only renders for can_sell users).
+    # ПЕРЕХОДНОЕ поле (M1-ERP-02 волна 2): подписок больше нет, SPA ещё читает флаг до чистки
+    # фронтенда. True для пользователя со стороны продавца, None — иначе. Убрать вместе с SPA.
     seller_subscription_operational = serializers.SerializerMethodField()
     is_superuser = serializers.BooleanField(read_only=True)
     # ADR-0005 (unified nav, Phase B): ONE explicit capability object the frontend's
     # buildNavigation() reads to render/gate the single nav from — instead of re-deriving it
-    # from scattered company_types/can_sell/can_buy/subscription fields. UI gating
-    # only; backend enforcement stays independent (member_has_permission / subscription).
+    # from scattered company_types/can_sell/can_buy fields. UI gating
+    # only; backend enforcement stays independent (member_has_permission).
     capabilities = serializers.SerializerMethodField()
 
     class Meta:
@@ -499,13 +496,10 @@ class MeSerializer(serializers.ModelSerializer):
         # default to True so UI isn't accidentally locked down.
         return bool(membership.can_buy) if membership else True
 
-    def get_seller_subscription_operational(self, obj):
-        from accounts.services import company_has_operational_subscription, primary_seller_company_id
+    def get_seller_subscription_operational(self, obj) -> bool | None:
+        from accounts.services import primary_seller_company_id
 
-        company_id = primary_seller_company_id(obj)
-        if company_id is None:
-            return None
-        return company_has_operational_subscription(company_id)
+        return True if primary_seller_company_id(obj) is not None else None
 
     def get_capabilities(self, obj):
         """Consolidated effective-capability object (ADR-0005). `permissions` are the member's
@@ -513,7 +507,6 @@ class MeSerializer(serializers.ModelSerializer):
         CompanyRole.has_perm's short-circuit, so a perm added later isn't wrongly missing for an
         existing company admin). Drives the unified nav's per-item `requires` gates."""
         from accounts.services import is_seller, primary_seller_company_id
-        from accounts.services.entitlements import quote_send_state
         from sourcing.ai_spend_cap import ai_daily_usage
 
         from .constants import ALL_PERMISSIONS
@@ -523,16 +516,8 @@ class MeSerializer(serializers.ModelSerializer):
         if membership and getattr(membership, "company_role", None):
             role = membership.company_role
             permissions = list(ALL_PERMISSIONS) if role.is_system else list(role.permissions or [])
-        # WP-H early-gate signals: surface the seller's quote.send eligibility to the КП builder so
-        # blockers show BEFORE an hour of data entry, mirroring send_to_client's entitlement gate
-        # (QUOTE_SEND_NOT_ENTITLED). `can_send_quotes` folds both send preconditions (quote.send
-        # entitlement, NOT demo); `quote_send_is_demo` lets the
-        # UI show the distinct "output watermarked" message. UI-gating only — send_to_client stays
-        # authoritative. None seller company → both False (no seller context to gate).
         seller_company_id = primary_seller_company_id(obj)
-        # Строка права снимается ОДИН раз: три отдельных вопроса о ней («можно?», «это демо?»,
-        # «запрещено платформой?») читали её четырежды на каждый вызов `/me/`.
-        quote_send = quote_send_state(seller_company_id)
+        has_seller_context = seller_company_id is not None
         ai_usage = ai_daily_usage(obj)
         # `can_sell` здесь — «пользователь на стороне ПРОДАВЦА», ровно как это понимает авторизация
         # (`is_seller`: активное членство с can_sell И компания типа SUPPLIER/MANUFACTURER).
@@ -542,18 +527,12 @@ class MeSerializer(serializers.ModelSerializer):
         return {
             "can_buy": self.get_can_buy(obj),
             "can_sell": is_seller(obj),
-            "subscription_active": bool(self.get_seller_subscription_operational(obj)),
-            "can_send_quotes": quote_send["allowed"],
-            "quote_send_is_demo": quote_send["is_demo"],
-            # ПОЧЕМУ закрыто, а не только «закрыто». Витрина знала ровно два поля и сваливала
-            # оба случая — «нет подписки» и «платформа отключила функцию» — в один баннер
-            # «нужна активная подписка» с кнопкой в раздел подписки, где та же подписка
-            # написана активной. Платящему продавцу называли ложную причину и предлагали
-            # бесполезное действие (замер 26-08, находка 5).
-            #
-            # Явный запрет платформы — осознанное правило (ADR-0006: строка CompanyEntitlement
-            # перебивает подписку), и мы его не трогаем. Мы называем его своим именем.
-            "quote_send_blocked_by_operator": quote_send["blocked_by_operator"],
+            # ПЕРЕХОДНЫЕ ключи (M1-ERP-02 волна 2): подписки, DEMO и платный гейт отправки КП
+            # удалены — отправку решает право роли `quote.send` (send_to_client). SPA до чистки
+            # фронтенда ещё гейтит навигацию и конструктор КП по этим двум флагам; для стороны
+            # продавца они всегда истинны. Убрать вместе с SPA.
+            "subscription_active": has_seller_context,
+            "can_send_quotes": has_seller_context,
             # Wave B: a "solo seller" is a seller company with exactly ONE active member who can
             # sell — for them the deal-claim button is pure noise (nobody else to claim against),
             # so the SPA hides it. UI-only signal; claim/routing services stay authoritative.
@@ -562,7 +541,7 @@ class MeSerializer(serializers.ModelSerializer):
             # есть (sourcing/ai_spend_cap.py), не хватало видимости: пользователь узнавал о лимите,
             # только упёршись в 429 посреди работы. Ни одна кнопка от этих полей не выключается —
             # запрещает по-прежнему ТОЛЬКО enqueue_ai_job. cap/remaining = null — БЕЗЛИМИТ
-            # (тариф Безлимит, отключённый потолок, оператор), это отличимо от «осталось 0».
+            # (отключённый потолок, администратор), это отличимо от «осталось 0».
             "ai_daily_used": ai_usage["used"],
             "ai_daily_cap": ai_usage["cap"],
             "ai_daily_remaining": ai_usage["remaining"],
@@ -606,92 +585,6 @@ class ChangePasswordSerializer(serializers.Serializer):
 # ──────────────────────────────────────────────────────────────────────────
 # Admin-facing serializers (Phase 3 deferred)
 # ──────────────────────────────────────────────────────────────────────────
-
-
-class SupplierSubscriptionSerializer(serializers.ModelSerializer):
-    company_name = serializers.CharField(source="company.name", read_only=True)
-    company_inn = serializers.CharField(source="company.inn", read_only=True)
-    currency_code = serializers.CharField(source="currency.code", read_only=True, default=None)
-    plan_display = serializers.CharField(source="get_plan_display", read_only=True)
-    status_display = serializers.CharField(source="get_status_display", read_only=True)
-
-    class Meta:
-        model = SupplierSubscription
-        fields = [
-            "id",
-            "company",
-            "company_name",
-            "company_inn",
-            "plan",
-            "plan_display",
-            "status",
-            "status_display",
-            "monthly_rate",
-            "currency",
-            "currency_code",
-            "valid_from",
-            "valid_until",
-            "last_payment_date",
-            "next_payment_date",
-            "notes",
-            # Причину приостановки видит САМ АРЕНДАТОР: раньше она жила только в журнале
-            # доступа за правом оператора, и отключённая сторона не знала, за что её отключили.
-            "suspended_reason",
-            "suspended_at",
-            "created_at",
-            "updated_at",
-        ]
-        # Приостановка — ДЕЙСТВИЕ со следом и оповещением (`suspend`), а не поле формы:
-        # иначе причина проставлялась бы молча, без письма адресату.
-        read_only_fields = [
-            "id",
-            "company_name",
-            "company_inn",
-            "created_at",
-            "updated_at",
-            "suspended_reason",
-            "suspended_at",
-        ]
-
-
-class CompanyEntitlementSerializer(serializers.ModelSerializer):
-    """Platform-admin view/CRUD of a company's feature entitlements (ADR-0006 Move 4 monetization)."""
-
-    company_name = serializers.CharField(source="company.name", read_only=True)
-    company_inn = serializers.CharField(source="company.inn", read_only=True)
-    access_display = serializers.CharField(source="get_access_display", read_only=True)
-    is_granted = serializers.SerializerMethodField()
-
-    def get_is_granted(self, obj) -> bool:
-        return obj.is_currently_granted()
-
-    class Meta:
-        model = CompanyEntitlement
-        fields = [
-            "id",
-            "company",
-            "company_name",
-            "company_inn",
-            "feature_key",
-            "access",
-            "access_display",
-            "limit",
-            "credits",
-            "expires_at",
-            "note",
-            "is_granted",
-            "created_at",
-            "updated_at",
-        ]
-        read_only_fields = [
-            "id",
-            "company_name",
-            "company_inn",
-            "access_display",
-            "is_granted",
-            "created_at",
-            "updated_at",
-        ]
 
 
 class ActiveSessionSerializer(serializers.ModelSerializer):

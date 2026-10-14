@@ -10,19 +10,18 @@ from types import SimpleNamespace
 import pytest
 from rest_framework.test import APIClient
 
-from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SupplierSubscription, WorkspaceRole
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
 
 
-def _subscribed_seller_user(email):
-    """A can_sell member of a SUPPLIER company with an operational (TRIAL) subscription —
-    so the ai.enrich monetization gate (P1) is satisfied and enrich reaches the enqueue."""
+def _seller_user(email):
+    """A can_sell OWNER of a SUPPLIER company — passes the catalog.manage role gate (legacy OWNER
+    fallback), so enrich reaches the enqueue."""
     supplier_type = CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 10})[
         0
     ]
     owner_role = WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})[0]
     company = Company.objects.create(name="Enrich Seller", inn="7100000001")
     company.types.add(supplier_type)
-    SupplierSubscription.objects.create(company=company)  # TRIAL + no expiry → operational
     user = CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
     CompanyMember.objects.create(user=user, company=company, role=owner_role, is_active=True, can_sell=True)
     return user
@@ -112,7 +111,7 @@ def test_enrich_endpoint_guards(settings, monkeypatch):
         pytest.skip("product-enrich route not wired yet (orchestrator registers it in core/urls.py)")
 
     settings.AI_IMPORT_ENABLED = True
-    user = _subscribed_seller_user("en@x.test")
+    user = _seller_user("en@x.test")
     client = APIClient()
     client.force_authenticate(user)
     # missing name → 400

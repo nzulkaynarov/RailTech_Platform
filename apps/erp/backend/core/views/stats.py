@@ -216,7 +216,7 @@ class PageStatsView(APIView):
     summary="Platform admin dashboard metrics",
     description=(
         "Aggregate metrics for Platform Admin dashboard: users, companies, "
-        "deals, subscriptions, pending attention counters, recent activity. "
+        "deals, pending attention counters, recent activity. "
         "Platform Admin only."
     ),
     responses={200: OpenApiResponse(description="Dashboard payload")},
@@ -238,25 +238,16 @@ class PlatformDashboardView(APIView):
 
         now = timezone.now()
         week_ago = now - timedelta(days=7)
-        soon = now + timedelta(days=7)
 
         user_stats = self._get_user_stats(week_ago)
         company_stats = self._get_company_stats()
         deal_stats = self._get_deal_dashboard_stats()
-        subscription_stats = self._get_subscription_stats(now, soon)
-        attention = self._get_attention_counters(subscription_stats, now)
+        attention = self._get_attention_counters(now)
 
         data = {
             "users": user_stats,
             "companies": company_stats,
             "deals": deal_stats,
-            "subscriptions": {
-                "active": subscription_stats["active"],
-                "trial": subscription_stats["trial"],
-                "past_due": subscription_stats["past_due"],
-                "suspended": subscription_stats["suspended"],
-                "expiring_7d": subscription_stats["expiring_7d"],
-            },
             "attention": attention,
             "recent_activity": self._get_recent_activity(),
         }
@@ -328,28 +319,7 @@ class PlatformDashboardView(APIView):
         }
 
     @staticmethod
-    def _get_subscription_stats(now, soon) -> dict:
-        """Aggregate subscription counts by status — single query via aggregate()."""
-        from accounts.models import SupplierSubscription
-
-        return SupplierSubscription.objects.aggregate(
-            active=Count("id", filter=Q(status="ACTIVE")),
-            trial=Count("id", filter=Q(status="TRIAL")),
-            past_due=Count("id", filter=Q(status="PAST_DUE")),
-            suspended=Count("id", filter=Q(status="SUSPENDED")),
-            expiring_7d=Count(
-                "id",
-                filter=Q(
-                    status__in=["ACTIVE", "TRIAL"],
-                    valid_until__isnull=False,
-                    valid_until__lte=soon.date(),
-                    valid_until__gte=now.date(),
-                ),
-            ),
-        )
-
-    @staticmethod
-    def _get_attention_counters(subscription_stats: dict, now) -> dict:
+    def _get_attention_counters(now) -> dict:
         """Compute pending-attention badge counters for the sidebar."""
         from crm.models import Invoice
 
@@ -358,8 +328,6 @@ class PlatformDashboardView(APIView):
             due_date__lt=now.date(),
         ).count()
         return {
-            "subscriptions_past_due": subscription_stats["past_due"],
-            "subscriptions_expiring_7d": subscription_stats["expiring_7d"],
             "overdue_invoices": overdue_invoices,
         }
 

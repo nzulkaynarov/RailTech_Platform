@@ -16,15 +16,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    SystemRole,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import (
     Act,
     ActStatus,
@@ -115,12 +107,6 @@ def world(lookups):
 
     seller_co = _company("Seller Co", "S100", "SUPPLIER")
     seller_user = _member(seller_co, "seller@rd.test", can_sell=True)
-    SupplierSubscription.objects.create(
-        company=seller_co,
-        plan="PREMIUM",
-        status="ACTIVE",
-        valid_until=timezone.localdate() + timedelta(days=30),
-    )
 
     other_co = _company("Other Seller Co", "O100", "SUPPLIER")
     other_user = _member(other_co, "other@rd.test", can_sell=True)

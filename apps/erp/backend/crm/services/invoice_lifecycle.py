@@ -95,14 +95,10 @@ def issue_invoice(invoice, user) -> Tuple[Optional[object], Optional[str]]:
 
     from django.utils import timezone
 
-    from accounts.services import assert_seller_can_operate
-
     from .billing import invoice_due_days
 
     if gate_err := _assert_seller_may_act_on_invoice(invoice, user):
         return None, gate_err
-    if sub_err := assert_seller_can_operate(user):
-        return None, sub_err
     if invoice.status_code != InvoiceStatusCode.DRAFT:
         return None, "INVOICE_ALREADY_ISSUED"
 

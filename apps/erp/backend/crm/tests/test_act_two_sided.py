@@ -12,7 +12,6 @@
 скопирована с договора, где две подписи с подписантами уже были.
 """
 
-from datetime import timedelta
 from decimal import Decimal
 
 import pytest
@@ -20,15 +19,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    SystemRole,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import (
     Act,
     ActStatus,
@@ -96,9 +87,6 @@ def act_world(lookups):
     buyer_user = _member(buyer_co, "buyer@g2.test", can_buy=True)
     seller_co = _company("Seller G2", "S200", "SUPPLIER")
     seller_user = _member(seller_co, "seller@g2.test", can_sell=True)
-    SupplierSubscription.objects.create(
-        company=seller_co, plan="PREMIUM", status="ACTIVE", valid_until=timezone.localdate() + timedelta(days=30)
-    )
     outsider = CustomUser.objects.create_user(email="outsider@g2.test", username="outsider@g2.test", password="x")
 
     deal = Deal.objects.create(title="G2 deal", company=buyer_co, stage=DealStage.objects.get(code="CLOSED_WON"))

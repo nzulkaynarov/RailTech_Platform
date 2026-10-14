@@ -1,7 +1,7 @@
 """E2 (spec 2026-07-12): sanity upper caps on КП line quantity/price.
 
 A fat-finger / paste-into-wrong-field can create an absurd deal (qty=1 500 000 or a
-price of 10^12) that distorts economics and the credit meter. The QuoteItemSerializer
+price of 10^12) that distorts economics. The QuoteItemSerializer
 enforces settings-driven upper caps and rejects over-cap input with a value-comparable
 code (QUOTE_ITEM_QTY_TOO_LARGE / QUOTE_ITEM_PRICE_TOO_LARGE). The lower bound (0/1) is
 already guarded by the model's MinValueValidator (KP-04), auto-mapped onto the fields.

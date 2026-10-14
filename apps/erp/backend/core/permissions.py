@@ -34,13 +34,16 @@ class IsPlatformAdminOrReadOnly(BasePermission):
         return bool(user.is_superuser)
 
 
-class IsSupplierWithActiveSubscription(BasePermission):
+class IsSellerCatalogManager(BasePermission):
     """
-    Запись разрешена компаниям-поставщикам с активной/триальной подпиской.
-    Администратор обходит проверку. Чтение свободно.
+    Запись — участнику компании-продавца с правом роли `catalog.manage`; администратор
+    (`is_superuser`) — всегда. Чтение свободно.
+
+    До M1-ERP-02 (волна 2) здесь стоял гейт «активная подписка поставщика»; монетизация
+    платформы удалена — действие решают права роли.
     """
 
-    message = "SUBSCRIPTION_REQUIRED"
+    message = "ROLE_NOT_PERMITTED"
 
     def has_permission(self, request, view):
         user = request.user
@@ -50,13 +53,13 @@ class IsSupplierWithActiveSubscription(BasePermission):
             return False
         if user.is_superuser:
             return True
-        from accounts.models import SupplierSubscription
+        from accounts.constants import Permission
+        from accounts.services.permissions import member_has_permission
 
-        supplier_company_ids = (
+        seller_company_ids = (
             user.memberships.filter(is_active=True).in_seller_company().values_list("company_id", flat=True)
         )
-        subs = SupplierSubscription.objects.filter(company_id__in=list(supplier_company_ids))
-        return any(s.is_operational for s in subs)
+        return any(member_has_permission(user, cid, Permission.CATALOG_MANAGE) for cid in seller_company_ids)
 
 
 class IsProductManagerOrAdmin(BasePermission):

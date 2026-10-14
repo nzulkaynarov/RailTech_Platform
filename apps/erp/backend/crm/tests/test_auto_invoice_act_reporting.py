@@ -11,13 +11,11 @@
 прогон идемпотентен. Триггер выпуска акта проверяется в `test_act_trigger_and_due_date.py`.
 """
 
-from datetime import timedelta
 from decimal import Decimal
 
 import pytest
-from django.utils import timezone
 
-from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SupplierSubscription, WorkspaceRole
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
 from crm.models import (
     ActStatus,
     Contract,
@@ -59,12 +57,6 @@ def won_deal(db):
         is_active=True,
         is_primary=True,
         can_sell=True,
-    )
-    SupplierSubscription.objects.create(
-        company=seller_co,
-        plan="PREMIUM",
-        status="ACTIVE",
-        valid_until=timezone.localdate() + timedelta(days=30),
     )
 
     deal = Deal.objects.create(title="Выигранная", company=buyer_co, stage=DealStage.objects.get(code="CLOSED_WON"))

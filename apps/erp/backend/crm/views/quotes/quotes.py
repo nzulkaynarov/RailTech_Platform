@@ -146,7 +146,7 @@ class QuoteViewSet(QuoteApprovalMixin, OptimisticLockingMixin, viewsets.ModelVie
         # W2 (spec-inbound-rfq, разрыв №4): the manual «Сформировать КП» path used to create an
         # EMPTY КП — the seller re-typed lines that already exist on the заявка. Copy them here
         # (same deterministic builder as the one-click path: lines + exact GOST/MPN + own-offer
-        # prices, no AI, no credit). No-op when the deal carries no request lines.
+        # prices, no AI). No-op when the deal carries no request lines.
         from crm.services.draft_quote import prefill_created_quote
 
         prefill_created_quote(quote)
@@ -299,7 +299,6 @@ class QuoteViewSet(QuoteApprovalMixin, OptimisticLockingMixin, viewsets.ModelVie
         ran the approval chain), so this can't reuse the deal-company-scoped
         get_queryset — it fetches the quote directly like the chain actions do.
         """
-        from accounts.services import assert_seller_can_operate
         from crm.services import QuoteLifecycleService
         from crm.services.quotes import can_send_quote_to_client
 
@@ -308,9 +307,6 @@ class QuoteViewSet(QuoteApprovalMixin, OptimisticLockingMixin, viewsets.ModelVie
             return Response({"detail": "QUOTE_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
         if not can_send_quote_to_client(request.user, quote):
             return _chain_error_response("ROLE_NOT_PERMITTED")
-        # Paid-seller gate: sending the КП to the client is the monetised seller action.
-        if sub_err := assert_seller_can_operate(request.user):
-            return _chain_error_response(sub_err)
         # S7a below-floor justification (free text; length is validated in the service).
         justification = request.data.get("justification", "")
         if not isinstance(justification, str):
@@ -328,7 +324,6 @@ class QuoteViewSet(QuoteApprovalMixin, OptimisticLockingMixin, viewsets.ModelVie
                     "QUOTE_NOT_CLAIMED",
                     "FX_RATE_MISSING",
                     "QUOTE_HAS_UNPRICED_LINES",
-                    "QUOTE_SEND_NOT_ENTITLED",
                     "BELOW_FLOOR_JUSTIFICATION_REQUIRED",
                     "JUSTIFICATION_TOO_LONG",
                     # Wave E F3: company-less calculator draft has no addressee yet.
