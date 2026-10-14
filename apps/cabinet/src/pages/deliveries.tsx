@@ -11,6 +11,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { ErrorState, ListSkeleton } from '@/components/QueryStates';
 import { ResponsiveList } from '@/components/ResponsiveList';
 import { StatusBadge } from '@/components/StatusBadge';
+import { ManagerButton } from '@/components/TelegramLinkButton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { groupDeliveries } from '@/lib/deliveries';
@@ -39,15 +40,16 @@ export function DeliveriesPage() {
         <div className="flex flex-col gap-4">
           {groupDeliveries(deliveries.data).map((group) => (
             <Card key={group.dealId} className="gap-3 py-4">
-              <CardHeader className="px-4">
-                <CardTitle>
-                  <h2 className="flex flex-wrap items-baseline justify-between gap-2 text-base">
+              <CardHeader className="flex flex-wrap items-center justify-between gap-2 px-4">
+                <CardTitle className="min-w-0">
+                  <h2 className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-base">
                     <DealLink dealId={group.dealId} />
                     <span className="text-sm font-normal text-muted-foreground">
                       {t('pages.deliveries.progress', { done: group.delivered, total: group.lines.length })}
                     </span>
                   </h2>
                 </CardTitle>
+                <ManagerButton dealId={group.dealId} label={t('manager.aboutDeal', { id: group.dealId })} />
               </CardHeader>
               <CardContent className="px-4">
                 <ul className="flex flex-col divide-y" aria-label={t('common.dealNumber', { id: group.dealId })}>

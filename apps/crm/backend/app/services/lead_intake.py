@@ -4,6 +4,9 @@
 окно по IP — пороги из `settings.web_form`), источник `web`, попадает во «Входящие» в «Без
 ответственного» (`owner_mode=paused`, бот ему написать не может — Telegram-идентичности нет).
 Повторный запрос с тем же номером/почтой не плодит карточек: текст уходит заметкой в существующую.
+Согласие на обработку ПДн (`consent: true`, DECISIONS Q-12) обязательно: у нового лида — это
+`consent_given_at` с версией `WEB_CONSENT_VERSION` (бот всё равно спросит своё согласие — версия
+другая); у существующей карточки согласие не перезаписывается, факт — в аудите `lead.web_request`.
 
 Ручной лид: `phone` | `email` | `referral`, создавший менеджер становится ответственным
 (стадия «В работе», как после «Забрать»). Совпадение телефона с лидом или контактом клиента —
@@ -42,6 +45,9 @@ _HOUR_S = 3600
 _SUMMARY_MAX = 2000
 # Пометка заметки с повторным запросом с сайта (текст запроса — после неё).
 WEB_NOTE_MARK = "[web] "
+# Версия согласия из формы «Запрос» — не версия текста бота (`settings.texts.consent_version`):
+# согласие формы — на обработку ПДн для связи, согласие бота — ещё и на обработку диалога ИИ.
+WEB_CONSENT_VERSION = "web-form"
 _TOKEN_REASONS = {
     TokenVerdict.INVALID: Reason.FORM_TOKEN_INVALID,
     TokenVerdict.TOO_FAST: Reason.FORM_TOO_FAST,
@@ -108,6 +114,13 @@ class LeadIntakeService:
         if is_honeypot_filled(body.website):
             logger.info("web_lead_honeypot", ip=ip)
             return None
+        if not body.consent:
+            # До антиспама: забытая галочка не расходует окно запросов по IP.
+            raise ValidationFailedError(
+                "consent to personal data processing is required",
+                reason=Reason.CONSENT_REQUIRED,
+                field="consent",
+            )
         self._check_spam(body, cfg, ip, moment)
         phone, email = _phone(body.phone), contact_email(body.email)
         if phone is None and email is None:
@@ -118,7 +131,7 @@ class LeadIntakeService:
         async with self._sessions() as session, session.begin():
             existing = await _find_existing(session, phone, email)
             if existing is not None:
-                return await _repeat_request(session, existing, text, ip)
+                return await _repeat_request(session, existing, text, ip, moment)
             lead = Lead(
                 display_name=body.name.strip()[:255],
                 language=body.language,
@@ -130,6 +143,8 @@ class LeadIntakeService:
                 company_name=_clean(body.company, 255),
                 need_summary=text[:_SUMMARY_MAX],
                 last_lead_msg_at=moment,
+                consent_given_at=moment,
+                consent_version=WEB_CONSENT_VERSION,
             )
             session.add(lead)
             await session.flush()
@@ -139,7 +154,7 @@ class LeadIntakeService:
                 "lead.create_web",
                 "lead",
                 lead.id,
-                after=_audit_view(lead),
+                after={**_audit_view(lead), **_consent_view(moment)},
             )
             await events.publish(session, "lead.updated", lead_id=lead.id, owner_mode="paused")
             logger.info("web_lead_created", lead_id=lead.id, language=lead.language)
@@ -249,8 +264,18 @@ async def _reject_duplicates(session: AsyncSession, phone: str | None, email: st
         )
 
 
-async def _repeat_request(session: AsyncSession, lead: Lead, text: str, ip: str | None) -> int:
-    """Повторный запрос с сайта от известного контакта — заметкой в существующую карточку."""
+def _consent_view(moment: datetime) -> dict[str, object]:
+    return {"consent_given_at": moment.isoformat(), "consent_version": WEB_CONSENT_VERSION}
+
+
+async def _repeat_request(
+    session: AsyncSession, lead: Lead, text: str, ip: str | None, moment: datetime
+) -> int:
+    """Повторный запрос с сайта от известного контакта — заметкой в существующую карточку.
+
+    Согласие карточки не трогаем: у Telegram-лида, ещё не давшего согласие боту, оно открыло бы
+    обработку диалога ИИ (квалификатор). Согласие формы фиксируется в аудите.
+    """
     session.add(
         LeadNote(
             lead_id=lead.id, user_id=None, text=(WEB_NOTE_MARK + text)[:4000], visible_to_bot=True
@@ -265,7 +290,7 @@ async def _repeat_request(session: AsyncSession, lead: Lead, text: str, ip: str 
         "lead.web_request",
         "lead",
         lead.id,
-        after={"repeat": True, "source": lead.source},
+        after={"repeat": True, "source": lead.source, **_consent_view(moment)},
     )
     await events.publish(session, "lead.updated", lead_id=lead.id)
     logger.info("web_lead_repeat", lead_id=lead.id)

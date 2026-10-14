@@ -6,7 +6,8 @@ import tailwindcss from '@tailwindcss/vite';
 // Cabinet — SPA без бэкенда (ADR-0004). В проде статика за Caddy на cabinet.*, `/api/portal/*`
 // проксируется с того же домена на ERP (VITE_API_URL пустой → относительные запросы, cookie same-origin).
 // В dev: `VITE_PORTAL_MOCK=1` включает MSW-мок портального API (src/mocks), иначе прокси dev-сервера
-// ведёт на VITE_PORTAL_PROXY_TARGET (по умолчанию стенд ансамбля erp.localhost).
+// ведёт на VITE_PORTAL_PROXY_TARGET (по умолчанию стенд ансамбля erp.localhost), форму лида — на
+// VITE_CRM_PROXY_TARGET (crm.localhost).
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
@@ -16,6 +17,12 @@ export default defineConfig({
     proxy: {
       '/api/portal': {
         target: process.env.VITE_PORTAL_PROXY_TARGET ?? 'http://erp.localhost',
+        changeOrigin: true,
+      },
+      // Форма «Я новый клиент» в make dev-stand (VITE_CRM_URL пуст): CRM стенда с того же origin,
+      // без CORS. В make dev запросы раньше перехватывает MSW.
+      '/api/v1/leads/web': {
+        target: process.env.VITE_CRM_PROXY_TARGET ?? 'http://crm.localhost',
         changeOrigin: true,
       },
     },

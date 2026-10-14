@@ -57,9 +57,10 @@ describe('вход с веба', () => {
     expect(screen.getByRole('link', { name: 'Запросить новую ссылку' })).toHaveAttribute('href', '/login');
   });
 
-  it('«Я новый клиент»: заглушка формы и «Написать в Telegram» с меткой web', async () => {
+  it('«Я новый клиент»: форма запроса и рядом «Написать в Telegram» с меткой web (форма — new-client.test)', async () => {
     renderApp('/new-client');
     expect(await screen.findByRole('heading', { level: 1, name: 'Я новый клиент' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Отправить запрос' })).toBeInTheDocument();
     const link = screen.getByRole('link', { name: 'Написать в Telegram' });
     expect(link.getAttribute('href')).toMatch(/^https:\/\/t\.me\/[^/?]+\?start=web$/);
   });

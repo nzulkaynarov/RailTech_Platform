@@ -9,10 +9,14 @@ import type { WebLeadInLanguage } from "./webLeadInLanguage";
 /**
  * Форма «Запрос» со страницы входа Cabinet: вложений в первой версии нет (Q-12).
  *
- * `website` — honeypot: человек поле не видит; заполнено — запрос принят, лид не создан.
+ * `consent` — согласие на обработку персональных данных, обязательно `true` (Q-12): иначе
+ * 422 `consent_required`. `website` — honeypot: человек поле не видит; заполнено — запрос
+ * принят, лид не создан.
  */
 export interface WebLeadIn {
   company?: string | null;
+  /** Согласие на обработку персональных данных; обязательно true (иначе 422 consent_required). */
+  consent?: boolean;
   email?: string | null;
   /**
    * @minLength 1

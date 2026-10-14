@@ -41,6 +41,7 @@ def body(**patch: Any) -> WebLeadIn:
         "phone": "+998901234567",
         "text": "Нужна интеграция",
         "form_token": issue_form_token(KEY, NOW - timedelta(seconds=30)),
+        "consent": True,
     }
     base.update(patch)
     return WebLeadIn(**base)
@@ -91,3 +92,25 @@ async def test_invalid_phone_is_a_field_error() -> None:
     with pytest.raises(ValidationFailedError) as info:
         await service().create_web(body(phone="abc"), "1.1.1.1", NOW)
     assert info.value.details == {"reason": "invalid_phone", "field": "phone"}
+
+
+@pytest.mark.parametrize("patch", [{"consent": False}, {}])
+async def test_consent_is_required_before_antispam(patch: dict[str, Any]) -> None:
+    """Q-12: без `consent: true` — 422 `consent_required`; окно по IP при этом не расходуется."""
+    limiter = SlidingWindowLimiter(limit=100, window_s=3600)
+    svc = service(limiter, rate_limit_per_hour=1)
+    payload = body().model_dump() | patch
+    if not patch:
+        payload.pop("consent")
+    with pytest.raises(ValidationFailedError) as info:
+        await svc.create_web(WebLeadIn(**payload), "7.7.7.7", NOW)
+    assert info.value.details == {"reason": "consent_required", "field": "consent"}
+    # Галочка забыта — лимит адреса цел: следующая попытка доходит до проверки контакта.
+    with pytest.raises(ValidationFailedError) as again:
+        await svc.create_web(body(phone=None), "7.7.7.7", NOW)
+    assert again.value.details["reason"] == "contact_required"
+
+
+async def test_honeypot_wins_over_missing_consent() -> None:
+    """Бот, заполнивший ловушку, получает «принято», а не подсказку про согласие."""
+    assert await service().create_web(body(website="x", consent=False), "1.1.1.1", NOW) is None

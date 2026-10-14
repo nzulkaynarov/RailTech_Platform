@@ -6,10 +6,11 @@
 SPA ходит в ERP `/api/portal/v1/*`, всё, что он показывает, сделал ERP; всё, что клиент делает, исполняет ERP.
 Тот же SPA открывается как Telegram Mini App бота CRM и как сайт `cabinet.railtech.uz`.
 
-**Статус: оболочка (M2-CAB-01) и экраны разделов (M2-CAB-02) готовы, 2026-10-14.** Есть маршруты, вход (Mini App /
-magic-link), тема Telegram, i18n ru/uz/en, все экраны §4 с действиями клиента; форма «Я новый клиент» и
-«Написать менеджеру» — **M2-CAB-03**. Портального API в ERP ещё нет (M2-ERP-01) — разработка идёт против мока
-из контракта; недостающее в контракте — QUESTIONS Q-14…Q-17 (обходы описаны там). Устройство и запуск — `README.md` рядом.
+**Статус: оболочка (M2-CAB-01), экраны разделов (M2-CAB-02), «Написать менеджеру» и форма «Я новый клиент»
+(M2-CAB-03) готовы, 2026-10-14.** Есть маршруты, вход (Mini App / magic-link), тема Telegram, i18n ru/uz/en, все
+экраны §4 с действиями клиента, кнопка бота с контекстом сделки, форма запроса → лид CRM `web`. Портального API в
+ERP ещё нет (M2-ERP-01) — разработка идёт против мока из контракта; недостающее в контракте — QUESTIONS Q-14…Q-17
+(обходы описаны там). Дальше — прогон глазами M2-QA-01. Устройство и запуск — `README.md` рядом.
 
 ## 1. Карта документов — читай в этом порядке
 
@@ -28,10 +29,10 @@ magic-link), тема Telegram, i18n ru/uz/en, все экраны §4 с дей
 
 ## 2. Правила (нарушение = PR не принимается)
 
-1. **Только `/api/portal/v1/*`** (CONTRACTS §4). Единственное исключение — публичная форма «Я новый клиент» на странице входа, которая отправляет лид в CRM (`POST /api/v1/leads/web`, появится в M3-CRM-05 / M2-CAB-03). Вызовов internal- или integration-API ERP из Cabinet нет и не будет.
+1. **Только `/api/portal/v1/*`** (CONTRACTS §4). Единственное исключение — публичная форма «Я новый клиент» на странице входа: `GET /api/v1/leads/web/token` и `POST /api/v1/leads/web` CRM (M3-CRM-05, M2-CAB-03; `src/api/crm.ts`, база — `VITE_CRM_URL`, без cookie, CORS — `CABINET_ORIGIN` в CRM). Других вызовов CRM нет; вызовов internal- или integration-API ERP из Cabinet нет и не будет.
 2. **Нет своего бэкенда, базы, серверных функций.** Нужны данные, которых нет в портальном API, — задача агенту ERP через `docs/QUESTIONS.md` / `docs/PROGRESS.md`, не обход и не «пока захардкодим».
 3. **В Cabinet нет:** сотрудников, ролей компании-исполнителя, настроек бизнеса, внутреннего слоя каталога, себестоимости, маржи, поставщиков. Клиент видит только опубликованный слой и проекцию сделки — это обеспечивает ERP, но Cabinet не рисует полей, которых в контракте нет.
-4. **Своего ИИ нет** (ADR-0005). Вопросы клиента — бот CRM; «Написать менеджеру» → `t.me/<bot>?start=deal_<id>` с контекстом сделки (M2-CAB-03). Позже — веб-виджет того же агента CRM.
+4. **Своего ИИ нет** (ADR-0005). Вопросы клиента — бот CRM; «Написать менеджеру» → `t.me/<bot>?start=deal_<id>` с контекстом сделки (`ManagerButton`, `app/links.ts`; в Mini App — `WebApp.openTelegramLink`; без имени бота кнопки нет). Позже — веб-виджет того же агента CRM.
 5. **Режимы входа:** Mini App — `initData` → `POST /auth/telegram`, без страницы входа, тема Telegram; веб — magic-link по e-mail (`POST /auth/magic-link` → `GET /auth/magic/{token}`), необязательный пароль. Регистрации «с улицы» нет: первый вход — по приглашению.
 6. **Телефон — основной экран.** Каждый экран на 390 px без горизонтальной прокрутки; axe — 0 нарушений; DoD — скриншоты в Mini App и в браузере.
 7. **Контракт раньше кода:** недостающее поле или эндпоинт — сначала `packages/contracts` (PR агента ERP в той же вехе), потом экран.
@@ -41,7 +42,7 @@ magic-link), тема Telegram, i18n ru/uz/en, все экраны §4 с дей
 
 ```
 React 18 · TypeScript · Vite · Tailwind CSS 4 · shadcn/ui · React Query · i18next (ru / uz / en) ·
-openapi-typescript (типы из packages/contracts/openapi/erp-portal.yaml) · Vitest + Testing Library · Playwright (смоук) ·
+openapi-typescript (типы из packages/contracts/openapi/erp-portal.yaml; форма лида — из OpenAPI CRM) · Vitest + Testing Library · Playwright (смоук) ·
 Telegram Web App SDK (initData, themeParams, start_param, MainButton/BackButton — где уместно)
 ```
 
@@ -66,7 +67,8 @@ Telegram Web App SDK (initData, themeParams, start_param, MainButton/BackButton 
 | Компания и команда клиента, приглашение коллеги | `GET/PUT /company`, `GET /team`, `POST /team/invite` | `pages/SettingsPage.tsx` (разделы профиль и команда), `components/Settings/` | `src/pages/company.tsx`: в `PUT` — только изменённые поля; приглашение с каналами e-mail/Telegram |
 | Каталог с ценами и наличием (решение владельца: только здесь) | `GET /catalog`, `GET /catalog/{id}` | `pages/ProductDetail.tsx` как основа карточки; список — новый экран | `src/pages/catalog.tsx`: поиск/категории/страница в URL; категории — обход Q-15; «Запросить» → новый запрос с позицией |
 | Сделка (deep-link бота `deal_<id>`) | списки выше по `deal_id` | — | `src/pages/deal.tsx` (своего `GET /deals/{id}` нет — Q-16) |
-| Страница входа (веб): «Войти» / «Я новый клиент» | `POST /auth/magic-link`; форма → лид CRM `web` | новое (M2-CAB-01, M2-CAB-03) | M2-CAB-01; форма — M2-CAB-03 |
+| Страница входа (веб): «Войти» / «Я новый клиент» | `POST /auth/magic-link`; форма → CRM `GET /api/v1/leads/web/token`, `POST /api/v1/leads/web` | новое (M2-CAB-01, M2-CAB-03) | `src/pages/auth/NewClientPage.tsx`: имя, компания, телефон / e-mail (хотя бы одно), «что нужно», язык интерфейса, согласие на обработку ПДн (обязательно, Q-12), скрытое honeypot-поле `website`; `form_token_expired`/`invalid` — тихий повтор с новым токеном (после его `min_fill_seconds`); успех — «Спасибо» + «Написать в Telegram» (`start=web`); без `VITE_CRM_URL` в сборке — только Telegram |
+| «Написать менеджеру» (M2-CAB-03) | — (ссылка на бота) | новое | `components/TelegramLinkButton.tsx` (`ManagerButton`): шапка сделки и КП, строка договора / счёта / акта (иконка с `aria-label` «…о счёте S-…»), шапка сделки в «Поставках» |
 
 - Общие части экранов: `components/ResponsiveList.tsx` (по образцу B2B `ResponsiveDataTable`: таблица от `lg`, карточки ниже, одна раскладка по media-запросу, строка — ссылка), `StatusBadge` (`lib/status.ts`: код → `status.<сущность>.<код>` и тон токена), `QueryStates` (скелетоны, ошибка `detail` → `apiErrors.*` + «Повторить»), `EmptyState`, `ActionDialog` / `ReasonDialog` (ошибка ERP остаётся в диалоге), `DocumentButton`, `Details`. Форматирование — только `lib/format.ts` (`formatMoney`, `formatDate`, `formatDateTime`, `formatQuantity`, `formatFileSize`, суммы в копейках `BigInt`). Данные — хуки `src/api/queries.ts`.
 - Оболочка — своя, не `AppShell` ERP: без боковой навигации бэк-офиса, нижняя навигация / простое меню под телефон; в Mini App — без шапки входа и без дублирования кнопок Telegram.
@@ -77,8 +79,8 @@ Telegram Web App SDK (initData, themeParams, start_param, MainButton/BackButton 
 
 - **Только shadcn/ui + семантические токены**: `bg-primary`, `text-foreground`, `bg-destructive`, `bg-success`…; никаких `bg-emerald-500`, `text-white`, hex, inline-стилей, кастомного CSS. Размеры текста — только шкала Tailwind (`text-xs` минимум).
 - **Весь текст через i18n**: `t()` из `useTranslation()`, ключи одновременно в `ru.json`, `uz.json`, `en.json` (симметрия проверяется скриптом по образцу B2B `scripts/check_i18n_symmetry.py`; `uz` — новый словарь, M2-CAB-01). Язык по умолчанию — из `GET /me` (язык контакта) или `Telegram.WebApp.initDataUnsafe.user.language_code`, переключатель — в профиле.
-- **Типы API только сгенерированные** из `erp-portal.yaml` (`make -C apps/cabinet gen-api-types` → `src/api/portal.d.ts`); ручных типов и «временных» интерфейсов ответа нет. Статусы сравниваются по `code`, показываются по `name`.
-- Ошибки API — `{"detail": "<CODE>"}`; код → ключ i18n, показ toast'ом; 401 → повторный вход (в Mini App — повторный `POST /auth/telegram`), 404 — «не найдено», без утечки существования чужих сущностей.
+- **Типы API только сгенерированные** из `erp-portal.yaml` (`make -C apps/cabinet gen-api-types` → `src/api/portal.d.ts`); форма лида — `src/api/crm-form.d.ts` из `apps/crm/docs/api/openapi.json` (только пути `/api/v1/leads/web*` и их схемы, `scripts/gen-crm-form-types.mjs`); ручных типов и «временных» интерфейсов ответа нет. Статусы сравниваются по `code`, показываются по `name`.
+- Ошибки API — `{"detail": "<CODE>"}`; код → ключ i18n, показ toast'ом; 401 → повторный вход (в Mini App — повторный `POST /auth/telegram`), 404 — «не найдено», без утечки существования чужих сущностей. Форма лида — формат CRM `{"code", "message", "details": {"reason", "field"}}` → `newClient.errors.<reason>`.
 - Правила React Compiler включены; `useDraftState` / `useNow` / `useLatestRef` из B2B вместо самоделок; хелперы и константы — вне файлов компонентов.
 - Деньги — строка из API с валютой; форматирование — одной утилитой по локали, не вручную. Даты — ISO из API, показ в Asia/Tashkent.
 - Доступность: фокус-состояния, `aria-label` на иконках, контраст темы Telegram проверяется axe так же, как светлая/тёмная веб-тема.
@@ -95,7 +97,7 @@ Telegram Web App SDK (initData, themeParams, start_param, MainButton/BackButton 
 | `make -C apps/cabinet dev` | Vite на :5175 с MSW-моком портального API (`VITE_PORTAL_MOCK=1`) |
 | `make -C apps/cabinet dev-stand` | Vite на :5175 без мока, `/api/portal` → `erp.localhost` |
 | `make -C apps/cabinet build` | прод-сборка статики |
-| `make -C apps/cabinet gen-api-types` | `src/api/portal.d.ts` из `erp-portal.yaml` |
+| `make -C apps/cabinet gen-api-types` | `src/api/portal.d.ts` из `erp-portal.yaml` и `src/api/crm-form.d.ts` из OpenAPI CRM (после `make -C apps/crm openapi`) |
 | `make up` (из корня) | `cabinet.localhost` за Caddy (`cabinet-web`) вместе с ERP и CRM |
 
 Mini App локально: эмуляция через `#tgWebAppData=…` или тестовый бот в BotFather с туннелем — `README.md`, раздел «Проверка как Mini App».
@@ -112,7 +114,7 @@ Mini App локально: эмуляция через `#tgWebAppData=…` ил�
 
 - [ ] Задача по ID из ORCHESTRATOR §6; зависимости (M2-ERP-01 или мок из контракта) закрыты; ветка `m<N>/cabinet-<NN>-<slug>`.
 - [ ] `make check-cabinet` зелёный; типы сгенерированы, ручных нет; `grep -r "/api/v1/" src` пусто (кроме формы лида `leads/web`).
-- [ ] Ни одного поля, которого нет в `erp-portal.yaml`; недостающее — задача агенту ERP в `docs/QUESTIONS.md`.
+- [ ] Ни одного поля, которого нет в `erp-portal.yaml` (форма лида — в OpenAPI CRM); недостающее — задача агенту ERP в `docs/QUESTIONS.md`.
 - [ ] Весь текст через `t()`, ключи в трёх словарях; только shadcn и семантические токены.
 - [ ] Экран на 390 px без горизонтальной прокрутки; axe 0; скриншоты в Mini App **и** в браузере в описании PR.
 - [ ] `can_act=false` скрывает действия; 401/404 обработаны без утечек.
@@ -126,4 +128,5 @@ Mini App локально: эмуляция через `#tgWebAppData=…` ил�
 - Недостающее в контракте после M2-CAB-02 (агенту ERP, обходы — в QUESTIONS): загрузка файлов для вложений запроса (Q-14), id и справочник категорий каталога (Q-15), строки запроса и номер сделки для клиента (Q-16). Снять обходы сразу после правки контракта.
 - Тёмная тема Mini App: статусные токены переопределены в `src/index.css` (`.dark`) до тёмных токенов в `packages/ui-tokens`; контраст `button_color` самого Telegram проверяется на M2-QA-01.
 - Скачивание в Mini App: файл сохраняется через `<a download>` (blob); поведение в webview Telegram на iOS/Android проверить на M2-QA-01 (при проблеме — `WebApp.downloadFile`, Bot API 8.0, но ему нужна ссылка без cookie).
-- Имя бота — `VITE_BOT_USERNAME` (в ансамбле `TELEGRAM_BOT_USERNAME`). URL CRM для формы лида — переменная сборки M2-CAB-03.
+- Имя бота — `VITE_BOT_USERNAME` (в ансамбле `TELEGRAM_BOT_USERNAME`). URL CRM для формы лида — `VITE_CRM_URL` (в ансамбле `CABINET_CRM_URL`, по умолчанию `http://crm.localhost:${HTTP_PORT}`); CRM пускает origin из `CABINET_ORIGIN` (по умолчанию `http://cabinet.localhost`, вариант с `HTTP_PORT` и `https://${CABINET_DOMAIN}`) — **решено M2-CAB-03**.
+- Бот CRM пока не разбирает параметр `/start` (`deal_<id>`, `web`) — отвечает приветствием. Контекст сделки в диалоге (лента, сервисный режим «где мой счёт») — M3-CRM-04 / M3-CRM-07 (`deal_<id>` — `erp_deal_id`, сопоставление — `deals.erp_deal_id` из M3-CRM-03).
