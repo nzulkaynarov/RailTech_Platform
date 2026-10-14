@@ -4,7 +4,7 @@
 снабжение, склад, финансы), **Cabinet** (кабинет клиента, фронтенд над API ERP). Связь CRM ↔ ERP —
 только API и события. Общих таблиц нет.
 
-**Первым читай `ORCHESTRATOR.md`** — там цель, инварианты, роли агентов, текущая веха и протокол.
+**Первым читай `ORCHESTRATOR.md`**, затем `docs/HANDOFF.md` — там цель, инварианты, роли агентов, текущая веха и протокол.
 Затем — `CLAUDE.md` того приложения, в котором работаешь: конвенции кода живут у приложений, не здесь.
 
 ```
@@ -15,7 +15,7 @@ legacy/b2b/      старая B2B, только чтение; удаляется
 packages/contracts/   OpenAPI ERP (internal, portal, integration), схемы событий, схемы MCP-инструментов
 packages/ui-tokens/   общие токены дизайна для AntD и shadcn
 infra/           compose (base/dev/prod), caddy (3 домена), ai (LiteLLM, Langfuse), db (2 базы, бэкапы), ci
-docs/            BUSINESS, ARCHITECTURE, CONTRACTS, MIGRATION-MAP, DECISIONS, QUESTIONS, OWNER-CHECKLIST, PROGRESS.md, adr/, runbooks/, history/
+docs/            HANDOFF (где мы и что дальше), BUSINESS, ARCHITECTURE, CONTRACTS, MIGRATION-MAP, DECISIONS, QUESTIONS, OWNER-CHECKLIST, PROGRESS.md, adr/, runbooks/, history/
 ```
 
 Правила уровня ансамбля (подробно — ORCHESTRATOR.md §3):

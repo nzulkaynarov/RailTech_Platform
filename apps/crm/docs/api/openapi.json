@@ -5534,11 +5534,10 @@
           "form_too_fast",
           "form_token_expired",
           "rate_limited",
+          "consent_required",
           "ai_spend_period",
           "service_not_switchable",
           "telegram_paused"
-          "consent_required",
-          "ai_spend_period"
         ],
         "title": "Reason",
         "type": "string"
