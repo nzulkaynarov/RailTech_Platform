@@ -11,7 +11,6 @@
 
 export const DealStage = {
   DRAFT: 'DRAFT',
-  KYC_PENDING: 'KYC_PENDING',
   RFQ_OPEN: 'RFQ_OPEN',
   SOURCING: 'SOURCING',
   CALCULATING: 'CALCULATING',
@@ -29,7 +28,6 @@ export type DealStageCode = (typeof DealStage)[keyof typeof DealStage];
  */
 export const DEAL_STAGE_LABEL_KEY: Record<string, string> = {
   DRAFT: 'dealStages.draft',
-  KYC_PENDING: 'dealStages.kycPending',
   RFQ_OPEN: 'dealStages.rfqOpen',
   SOURCING: 'dealStages.sourcing',
   CALCULATING: 'dealStages.calculating',
@@ -146,18 +144,6 @@ export const COMPANY_TYPE_LABEL_KEY: Record<string, string> = {
  *  can fall back to the raw DB name (`|| requested_type_name`). */
 export const companyTypeLabelKey = (code: string | undefined | null): string =>
   code && COMPANY_TYPE_LABEL_KEY[code] ? COMPANY_TYPE_LABEL_KEY[code] : '';
-
-export const VerificationStatus = {
-  L1_UNVERIFIED: 'L1_UNVERIFIED',
-  PROFILE_SUBMITTED: 'PROFILE_SUBMITTED',
-  L2_VERIFIED: 'L2_VERIFIED',
-  L3_CONTRACTED: 'L3_CONTRACTED',
-} as const;
-
-/** i18n key for a KYC-level CODE — уровни верификации компании. Returns `''` when unknown so
- *  callers can fall back to the raw DB name. Mirrors `kycLevels.*` in ru.json / en.json. */
-export const kycLevelLabelKey = (code: string | undefined | null): string =>
-  code && code in VerificationStatus ? `kycLevels.${code}` : '';
 
 /** Product PUBLICATION-status CODEs (catalog `ProductStatus` lookup: DRAFT/PUBLISHED/
  *  ARCHIVED). Distinct from the stock-availability `productStatuses.*` keys. */
@@ -277,56 +263,6 @@ const FEATURE_KEY_LABEL_KEY: Record<string, string> = {
 
 export const featureKeyLabelKey = (code: string | undefined | null): string =>
   (code && FEATURE_KEY_LABEL_KEY[code]) || '';
-
-/** `CompanyRoleApplication.status` CODEs (accounts.models.applications STATUS_CHOICES). */
-export const RoleApplicationStatus = {
-  PENDING: 'PENDING',
-  DOCUMENTS_REQUIRED: 'DOCUMENTS_REQUIRED',
-  PAYMENT_REQUIRED: 'PAYMENT_REQUIRED',
-  APPROVED: 'APPROVED',
-  REJECTED: 'REJECTED',
-} as const;
-export type RoleApplicationStatusCode = (typeof RoleApplicationStatus)[keyof typeof RoleApplicationStatus];
-
-/** Mirrors the `roleApplicationStatuses.*` keys in ru.json / en.json. */
-export const ROLE_APPLICATION_STATUS_LABEL_KEY: Record<string, string> = {
-  PENDING: 'roleApplicationStatuses.pending',
-  DOCUMENTS_REQUIRED: 'roleApplicationStatuses.documentsRequired',
-  PAYMENT_REQUIRED: 'roleApplicationStatuses.paymentRequired',
-  APPROVED: 'roleApplicationStatuses.approved',
-  REJECTED: 'roleApplicationStatuses.rejected',
-};
-
-/** Resolve a role-application-status label key from a code, returning `''` when unknown
- *  so callers can fall back to the raw DB display (`|| status_display`). */
-export const roleApplicationStatusLabelKey = (code: string | undefined | null): string =>
-  code && ROLE_APPLICATION_STATUS_LABEL_KEY[code] ? ROLE_APPLICATION_STATUS_LABEL_KEY[code] : '';
-
-/** `KYCDocType` lookup CODEs (seeded in core/migrations/0002_seed_enterprise_lookups). */
-export const KycDocType = {
-  CHARTER: 'CHARTER',
-  LICENSE: 'LICENSE',
-  PASSPORT: 'PASSPORT',
-  TAX_CERT: 'TAX_CERT',
-  BANK_REF: 'BANK_REF',
-  OTHER: 'OTHER',
-} as const;
-export type KycDocTypeCode = (typeof KycDocType)[keyof typeof KycDocType];
-
-/** Mirrors the `kycDocTypes.*` keys in ru.json / en.json. */
-export const KYC_DOC_TYPE_LABEL_KEY: Record<string, string> = {
-  CHARTER: 'kycDocTypes.charter',
-  LICENSE: 'kycDocTypes.license',
-  PASSPORT: 'kycDocTypes.passport',
-  TAX_CERT: 'kycDocTypes.taxCert',
-  BANK_REF: 'kycDocTypes.bankRef',
-  OTHER: 'kycDocTypes.other',
-};
-
-/** Resolve a KYC doc-type label key from a code, returning `''` when unknown (operators
- *  may add lookup rows via Unfold) so callers can fall back to `|| doc_type_display`. */
-export const kycDocTypeLabelKey = (code: string | undefined | null): string =>
-  code && KYC_DOC_TYPE_LABEL_KEY[code] ? KYC_DOC_TYPE_LABEL_KEY[code] : '';
 
 /** `ChargeType` lookup CODEs — the КП document-level expense articles (crm charge engine,
  *  seeded in crm/0036_seed_charge_engine; RENT/PAYROLL/COMMISSION deactivated in 0046 but

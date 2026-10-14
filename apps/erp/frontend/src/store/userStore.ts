@@ -17,29 +17,18 @@ export const companyStatusDescriptions: Record<CompanyStatus, string> = {
   SELLER: 'companyStatusDesc.SELLER',
 };
 
-/* ─── Verification status per company status ────────────────────────── */
-export type VerificationStatus = 'pending' | 'verified' | 'rejected';
-
-export const verificationLabels: Record<VerificationStatus, string> = {
-  pending: 'verification.pending',
-  verified: 'verification.verified',
-  rejected: 'verification.rejected',
-};
-
 export interface CompanyStatusEntry {
   status: CompanyStatus;
-  verification: VerificationStatus;
 }
 
 /** Consolidated effective capabilities (mirrors backend MeSerializer.capabilities, ADR-0005).
  * Single source the unified nav engine (config/navigation.tsx) reads to render/gate items. */
 export interface Capabilities {
-  kyc_level: string | null;
   can_buy: boolean;
   can_sell: boolean;
   subscription_active: boolean;
-  /** WP-H: the seller may SEND a КП right now — folds all send preconditions (KYC L2+, the
-   * quote.send entitlement, NOT a DEMO grant). Mirrors send_to_client; lets the КП builder warn
+  /** WP-H: the seller may SEND a КП right now — folds all send preconditions (the quote.send
+   * entitlement, NOT a DEMO grant). Mirrors send_to_client; lets the КП builder warn
    * about blockers up-front instead of at send. UI-gating only; the backend stays authoritative. */
   can_send_quotes: boolean;
   /** WP-H: the seller holds quote.send in DEMO access — output is watermarked and send is gated.
@@ -51,12 +40,6 @@ export interface Capabilities {
    *  предлагали бесполезное действие (находка 5). Само правило не менялось: явный запрет
    *  побеждает подписку (ADR-0006). */
   quote_send_blocked_by_operator?: boolean;
-  /** КОД состояния KYC, а не «всё, кроме L2/L3 — на проверке». После ОТЗЫВА уровня арендатор
-   *  видел «На проверке» и «обычно 1–2 рабочих дня» — ждал вердикта, который уже вынесен. */
-  kyc_status_code?: string | null;
-  /** Причина последнего вердикта по KYC. Сервер её ТРЕБУЕТ при понижении, но она оставалась
-   *  в журнале, закрытом от арендатора: человек не знал, что исправить (находка 28). */
-  kyc_last_reason?: string;
   permissions: string[];
   /** Wave B2 (auto-claim) — true when the seller company effectively has ONE member with claim
    * rights, so «Взять в работу» is noise (there is no one to route work between). OPTIONAL: the
@@ -94,19 +77,14 @@ export interface Company {
   id: number | null;
   name: string;
   inn: string;
-  kycStatus: 'verified' | 'pending' | 'not_started';
   country: string;
   city: string;
   logoUrl: string | null;
-  /**
-   * Each entry has its own verification status.
-   * All statuses start as 'pending' until system admin approves.
-   */
   statusEntries: CompanyStatusEntry[];
 }
 
-/* ─── App State (auth / onboarding) ─────────────────────────────────── */
-export type AppScreen = 'onboarding' | 'pending_verification' | 'main';
+/* ─── App State: 'loading' until loadFromAuth() resolves /me, then 'main' ── */
+export type AppScreen = 'loading' | 'main';
 
 /* ─── Store ─────────────────────────────────────────────────────────── */
 interface UserState {
@@ -134,7 +112,7 @@ interface UserState {
 
 export const useUserStore = create<UserState>((set, get) => ({
   /* Default: empty until loaded from auth. */
-  screen: 'onboarding',
+  screen: 'loading',
   /* Pre-auth default context is the NARROWEST/safest side, BUYER. It matches the
    * `|| 'BUYER'` fallback in api/client.ts (X-Active-Context) and the
    * `statusEntries.length === 0 ? 'BUYER'` fallback in loadFromAuth, so cold-load
@@ -142,7 +120,7 @@ export const useUserStore = create<UserState>((set, get) => ({
   activeStatus: 'BUYER',
   sellerSubscriptionOperational: null,
   capabilities: {
-    kyc_level: null, can_buy: true, can_sell: true, subscription_active: false,
+    can_buy: true, can_sell: true, subscription_active: false,
     can_send_quotes: false, quote_send_is_demo: false,
     permissions: [],
   },
@@ -160,7 +138,6 @@ export const useUserStore = create<UserState>((set, get) => ({
     id: null,
     name: '',
     inn: '',
-    kycStatus: 'not_started',
     country: '',
     city: '',
     logoUrl: null,
@@ -214,7 +191,6 @@ export const useUserStore = create<UserState>((set, get) => ({
 
       const rawEntries: CompanyStatusEntry[] = companyTypes.map((code) => ({
         status: typeMap[code] || 'BUYER',
-        verification: 'verified' as const,
       }));
       // Filter out contexts the member may not use:
       //   can_sell=false → drop SELLER / MANUFACTURER
@@ -234,7 +210,6 @@ export const useUserStore = create<UserState>((set, get) => ({
       // fallback from the legacy flags if an older /me payload omits it (empty permissions →
       // the nav engine treats perm-gates as "unknown" and doesn't over-hide; backend enforces).
       const capabilities: Capabilities = userPayload.capabilities ?? {
-        kyc_level: company?.verification_status != null ? String(company.verification_status) : null,
         can_buy: canBuy,
         can_sell: canSell,
         subscription_active: sellerSubscriptionOperational === true,
@@ -273,9 +248,6 @@ export const useUserStore = create<UserState>((set, get) => ({
           id: company.id ?? null,
           name: company.name || '',
           inn: company.inn || '',
-          kycStatus: (['L2_VERIFIED', 'L3_CONTRACTED'].includes(company.verification_status_code ?? '')
-            ? 'verified'
-            : 'pending') as 'verified' | 'pending' | 'not_started',
           country: company.country != null ? String(company.country) : '',
           city: '',
           logoUrl: company.logo ?? null,
@@ -284,7 +256,6 @@ export const useUserStore = create<UserState>((set, get) => ({
           id: null,
           name: '',
           inn: '',
-          kycStatus: 'not_started',
           country: '',
           city: '',
           logoUrl: null,
@@ -317,7 +288,7 @@ export const useUserStore = create<UserState>((set, get) => ({
  * touches `screen` / `activeStatus` / the `loadFromAuth` bootstrap flow, so it cannot
  * affect the ADR-0005 cold-load BUYER context default or WP-4's `screen === 'main'`
  * deep-link signal. Returns true iff the current member may act as a SELLER for their
- * company: the company exposes a *verified* SELLER context AND the member's `can_sell`
+ * company: the company exposes a SELLER context AND the member's `can_sell`
  * capability was not revoked — both already encoded into `statusEntries` by
  * `loadFromAuth` (rawEntries from `company_types`, filtered by `can_sell`/`can_buy`).
  * Mirrors the sell-capability derivation already used in App.tsx / AppShell.tsx.
@@ -328,4 +299,4 @@ export const useUserStore = create<UserState>((set, get) => ({
  * and the ADR-0005 cache invalidation).
  */
 export const selectIsSellerCapable = (state: { company: Company }): boolean =>
-  state.company.statusEntries.some((entry) => entry.status === 'SELLER' && entry.verification === 'verified');
+  state.company.statusEntries.some((entry) => entry.status === 'SELLER');

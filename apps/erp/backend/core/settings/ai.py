@@ -39,26 +39,6 @@ AI_MAX_RETRIES = int((os.environ.get("AI_MAX_RETRIES") or "2").strip() or "2")
 # enqueue choke-point. Counted per company per calendar day (settings.TIME_ZONE) from the
 # persistent AIJob rows. 0 or negative disables the cap entirely (opt-out).
 AI_DAILY_JOB_CAP_PER_COMPANY = int((os.environ.get("AI_DAILY_JOB_CAP_PER_COMPANY") or "300").strip() or "300")
-# P1 two-tier cap: the tighter daily ceiling for a company WITHOUT an operational subscription.
-# The free floor (ai.match / ai.preflight) and the ungated wedge features (extract / compose) are
-# usable by unsubscribed tenants, so a free company still needs a runaway-bill fuse — just a lower
-# one than a paying tenant. 0 or negative disables the free-tier cap entirely (opt-out).
-AI_DAILY_JOB_CAP_FREE = int((os.environ.get("AI_DAILY_JOB_CAP_FREE") or "30").strip() or "30")
-# Tier-aware daily AI ceiling: map each subscription plan to its daily AI-job allowance
-# (Старт / Про / Безлимит). The DB plan CODES stay stable (BASIC/STANDARD/PREMIUM) — only
-# the allowance number is attached here, tunable via env. 0 or negative = UNLIMITED (the
-# Безлимит tier, PREMIUM). A per-company CompanyEntitlement(ai.daily_cap).limit override
-# (set by an operator in React Admin) wins over these plan defaults. A company with NO
-# operational subscription falls back to AI_DAILY_JOB_CAP_FREE above.
-AI_DAILY_CAP_BASIC = int((os.environ.get("AI_DAILY_CAP_BASIC") or "75").strip() or "75")  # Старт
-AI_DAILY_CAP_STANDARD = int((os.environ.get("AI_DAILY_CAP_STANDARD") or "300").strip() or "300")  # Про
-AI_DAILY_CAP_PREMIUM = int((os.environ.get("AI_DAILY_CAP_PREMIUM") or "0").strip() or "0")  # Безлимит (0 = off)
-# R4 §7.4: `/me` показывает остаток дневного лимита ИИ. Разрешение ПОТОЛКА (подписка +
-# энтайтлмент-override) — это запросы в базу на каждый `/me`, а сам потолок меняется раз в
-# месяцы; кэшируем его на столько секунд. Израсходованное НЕ кэшируется никогда — это как раз
-# то число, которое меняется. Кэш только на показе: предохранитель в enqueue считает потолок
-# напрямую. 0 отключает кэш (тесты, отладка).
-AI_DAILY_USAGE_CACHE_TTL = int((os.environ.get("AI_DAILY_USAGE_CACHE_TTL") or "60").strip() or "60")
 # Hard byte cap before a file is sent to the model. Vision payloads (PDF/image) go
 # as one base64 request, so an oversized file means a 413 + wasted spend — reject it
 # early. Default 10 MB (the upload endpoint already caps the raw file at 20 MB).

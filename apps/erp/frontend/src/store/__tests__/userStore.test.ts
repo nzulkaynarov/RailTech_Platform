@@ -5,7 +5,7 @@ describe('userStore', () => {
   beforeEach(() => {
     // Reset store to defaults
     useUserStore.setState({
-      screen: 'onboarding',
+      screen: 'loading',
       activeStatus: 'BUYER',
       profile: {
         firstName: '',
@@ -21,7 +21,6 @@ describe('userStore', () => {
         id: null,
         name: '',
         inn: '',
-        kycStatus: 'not_started',
         country: '',
         city: '',
         logoUrl: null,
@@ -32,7 +31,7 @@ describe('userStore', () => {
 
   it('should initialize with default values', () => {
     const state = useUserStore.getState();
-    expect(state.screen).toBe('onboarding');
+    expect(state.screen).toBe('loading');
     // Pre-auth default context is the narrowest/safest side (BUYER); see userStore.ts.
     expect(state.activeStatus).toBe('BUYER');
     expect(state.profile.firstName).toBe('');
@@ -64,7 +63,7 @@ describe('userStore', () => {
     expect(state.company.name).toBe('RailTech');
     expect(state.company.inn).toBe('123456789');
     // Other fields remain default
-    expect(state.company.kycStatus).toBe('not_started');
+    expect(state.company.country).toBe('');
   });
 
   it('should keep valid CompanyStatus types', () => {

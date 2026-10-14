@@ -12,7 +12,6 @@
 скопирована с договора, где две подписи с подписантами уже были.
 """
 
-from datetime import timedelta
 from decimal import Decimal
 
 import pytest
@@ -20,16 +19,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    SystemRole,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import (
     Act,
     ActStatus,
@@ -50,7 +40,6 @@ def lookups(db):
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     for code, name in (("CLIENT", "Client"), ("SUPPLIER", "Supplier")):
         CompanyType.objects.get_or_create(code=code, defaults={"name": name, "sort_order": 10})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     for code in ("USER", "ADMIN"):
         SystemRole.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
     DealStage.objects.get_or_create(code="CLOSED_WON", defaults={"name": "Won", "sort_order": 80})
@@ -67,9 +56,7 @@ def lookups(db):
 
 
 def _company(name, inn, type_code):
-    company = Company.objects.create(
-        name=name, inn=inn, verification_status=VerificationStatus.objects.get(code="L2_VERIFIED")
-    )
+    company = Company.objects.create(name=name, inn=inn)
     company.types.add(CompanyType.objects.get(code=type_code))
     return company
 
@@ -100,9 +87,6 @@ def act_world(lookups):
     buyer_user = _member(buyer_co, "buyer@g2.test", can_buy=True)
     seller_co = _company("Seller G2", "S200", "SUPPLIER")
     seller_user = _member(seller_co, "seller@g2.test", can_sell=True)
-    SupplierSubscription.objects.create(
-        company=seller_co, plan="PREMIUM", status="ACTIVE", valid_until=timezone.localdate() + timedelta(days=30)
-    )
     outsider = CustomUser.objects.create_user(email="outsider@g2.test", username="outsider@g2.test", password="x")
 
     deal = Deal.objects.create(title="G2 deal", company=buyer_co, stage=DealStage.objects.get(code="CLOSED_WON"))

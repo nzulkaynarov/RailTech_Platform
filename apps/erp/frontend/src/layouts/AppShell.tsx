@@ -240,14 +240,14 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour, fullBlee
   // opens (App.tsx pageContextOf), not a toggle, so it can only ever NARROW to a capable side.
   const capableSides = useMemo(
     () => ({
-      buy: company.statusEntries.some((e) => e.status === 'BUYER' && e.verification === 'verified'),
-      sell: company.statusEntries.some((e) => e.status !== 'BUYER' && e.verification === 'verified'),
+      buy: company.statusEntries.some((e) => e.status === 'BUYER'),
+      sell: company.statusEntries.some((e) => e.status !== 'BUYER'),
     }),
     [company.statusEntries],
   );
   // ADR-0005: ONE config-driven nav, filtered by effective capabilities. Items the user can't
-  // access are HIDDEN (not greyed) — e.g. before KYC the buyer "Мои заявки" simply isn't shown,
-  // leaving Главная/Каталог/Настройки + the onboarding checklist. No disabled-state gating.
+  // access are HIDDEN (not greyed) — e.g. without `request.create`/`quote.approve` the buyer
+  // "Мои заявки" simply isn't shown. No disabled-state gating.
   const navigation = useMemo(
     () => buildNavigation(TENANT_NAV, capabilities, capableSides, activePage, t),
     [capabilities, capableSides, activePage, t],

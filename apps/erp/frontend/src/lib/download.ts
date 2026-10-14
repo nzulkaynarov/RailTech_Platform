@@ -8,7 +8,7 @@ const PDF_POLL_DEFAULT_RETRY_SECONDS = 2;
 /**
  * Download a private file through an authenticated streaming endpoint.
  *
- * Private documents (contract/invoice/act PDFs, KYC docs) must NOT be linked via
+ * Private documents (contract/invoice/act PDFs, company files) must NOT be linked via
  * their raw `pdf_url` / `.url` (= `/media/…`): on prod there is no MinIO and Django
  * does not serve private MEDIA paths, so those URLs 404. The backend exposes
  * `…/download-pdf/` (and `…/download-document/{id}/`) actions that stream the bytes

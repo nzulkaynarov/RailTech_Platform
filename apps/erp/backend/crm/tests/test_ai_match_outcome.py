@@ -11,15 +11,7 @@ from io import StringIO
 import pytest
 from django.core.management import CommandError, call_command
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyRole,
-    CompanyType,
-    CustomUser,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, CustomUser, WorkspaceRole
 from catalog.models import Product, ProductStatus, SupplierOffer
 from crm.models import AIMatchOutcome, Deal, DealSellerRouting, DealStage, Quote, QuoteItem, QuoteStatus
 from crm.services.ai_telemetry import finalize_outcomes_on_send
@@ -37,7 +29,6 @@ def _disable_ai_by_default(settings):
 
 @pytest.fixture
 def scene(db):
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
     usd = Currency.objects.get_or_create(code="USD", defaults={"name": "USD", "symbol": "$", "sort_order": 10})[0]
@@ -48,19 +39,6 @@ def scene(db):
     buyer.types.add(CompanyType.objects.get(code="CLIENT"))
     seller = Company.objects.create(name="Seller", inn="2220000031")
     seller.types.add(CompanyType.objects.get(code="SUPPLIER"))
-    from datetime import timedelta
-
-    from django.utils import timezone
-
-    from accounts.models import SupplierSubscription
-
-    SupplierSubscription.objects.create(
-        company=seller,
-        plan="BASIC",
-        status="ACTIVE",
-        valid_from=timezone.localdate(),
-        valid_until=(timezone.now() + timedelta(days=365)).date(),
-    )
 
     deal = Deal.objects.create(title="RFQ", company=buyer, stage=DealStage.objects.get(code="RFQ_OPEN"))
     DealSellerRouting.objects.create(deal=deal, seller_company=seller)

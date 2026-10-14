@@ -145,13 +145,11 @@ def _resolve_ai_catalog_matches(request_items, resolved: dict) -> Tuple[int, lis
     return added, telemetry
 
 
-def _run_draft_quote_gates(deal_id: int, actor: CustomUser, *, require_ai_entitlement: bool = True):
-    """Read-only gate checks shared by generate_draft_quote and the pre-enqueue validation
-    (ARCH-01): actor role, deal existence, seller routing, request lines, and a cheap
-    read-only entitlement look (has_entitlement — never consumed). No writes, no LLM.
-    Running the entitlement check HERE means the worker refuses BEFORE the paid AI match
-    when the credits are already gone; the authoritative consume_credit still runs inside
-    the atomic write block of generate_draft_quote.
+def _run_draft_quote_gates(deal_id: int, actor: CustomUser):
+    """Read-only gate checks shared by generate_draft_quote, prepare_quote_from_request and the
+    pre-enqueue validation (ARCH-01): actor role, deal existence, seller routing, request lines.
+    No writes, no LLM. (The paid ai.draft entitlement / credit gate was removed in M1-ERP-02
+    wave 2 — the action is decided by the role permission.)
 
     Returns (deal, request_items, seller_company_id, error_code) — error_code None when clear.
     """
@@ -172,21 +170,13 @@ def _run_draft_quote_gates(deal_id: int, actor: CustomUser, *, require_ai_entitl
     if not request_items:
         return deal, [], None, "NO_REQUEST_LINES"
     seller_company_id = primary_seller_company_id(actor)
-    if require_ai_entitlement and not getattr(actor, "is_superuser", False):
-        from accounts.constants import FeatureKey
-        from accounts.services import has_entitlement
-
-        if not has_entitlement(seller_company_id, FeatureKey.AI_DRAFT):
-            return None, None, None, "AI_DRAFT_NOT_ENTITLED"
     return deal, request_items, seller_company_id, None
 
 
 def validate_draft_quote_gates(deal_id: int, actor: CustomUser) -> Optional[str]:
     """Cheap pre-enqueue validation for the async draft-КП endpoint (ARCH-01): the same gates
-    as generate_draft_quote but read-only — the entitlement is CHECKED (has_entitlement, inside
-    _run_draft_quote_gates), never consumed, so the view can 4xx before queueing without
-    double-spending a credit. The worker re-runs the authoritative gates (incl. consume_credit)
-    inside generate_draft_quote."""
+    as generate_draft_quote, run before queueing so the view can 4xx without a paid LLM call.
+    The worker re-runs them inside generate_draft_quote."""
     _deal, _request_items, _seller_company_id, err = _run_draft_quote_gates(deal_id, actor)
     return err
 
@@ -208,19 +198,6 @@ def generate_draft_quote(deal_id: int, actor: CustomUser) -> Tuple[Optional[Quot
     ai_matched, ai_telemetry = _resolve_ai_catalog_matches(request_items, resolved_matches)
 
     with transaction.atomic():
-        # MONETIZATION GATE (ADR-0006 Move 4): AI draft is a paid accelerator. An operational
-        # subscription grants it (unmetered) by the baseline; a credit-limited entitlement meters
-        # it. consume_credit decrements only when metered, and the write block is atomic so a
-        # credit rolls back on error. Superuser = platform escalation (no seller company), bypasses.
-        # Exhausted credits were already refused read-only in _run_draft_quote_gates (before the
-        # paid AI match above); the remaining window — a credit spent by a CONCURRENT job between
-        # that check and this consume — is an accepted tiny in-flight race (one stray LLM call).
-        if not getattr(actor, "is_superuser", False):
-            from accounts.constants import FeatureKey
-            from accounts.services import consume_credit
-
-            if not consume_credit(seller_company_id, FeatureKey.AI_DRAFT):
-                return None, "AI_DRAFT_NOT_ENTITLED", 0
         quote, prefilled = _create_prefilled_quote(
             deal,
             actor,
@@ -317,8 +294,7 @@ def _create_prefilled_quote(
 
 def prefill_created_quote(quote: Quote) -> int:
     """W2 fix (разрыв №4): a freshly-created MANUAL КП copies the buyer's request lines instead of
-    starting empty (lines + exact GOST/MPN binds + own-offer prices — deterministic, no AI, no
-    credit). Only fills a quote that has NO items yet (never clobbers duplication flows); a deal
+    starting empty (lines + exact GOST/MPN binds + own-offer prices — deterministic, no AI). Only fills a quote that has NO items yet (never clobbers duplication flows); a deal
     without request lines is a no-op. Returns the number of copied lines."""
     if not quote.deal_id or quote.items.exists():
         return 0
@@ -358,9 +334,9 @@ def prefill_created_quote(quote: Quote) -> int:
 
 def prepare_quote_from_request(deal_id: int, actor: CustomUser) -> Tuple[Optional[Quote], Optional[str], int]:
     """W2 no-AI path: the same prefilled draft КП (lines copied, EXACT GOST/MPN matches bound,
-    prices from the seller's own offers) WITHOUT the paid AI fuzzy pass — for sellers without the
-    ai.draft entitlement. Free deterministic logic only: no credit consumed, no LLM call."""
-    deal, request_items, seller_company_id, err = _run_draft_quote_gates(deal_id, actor, require_ai_entitlement=False)
+    prices from the seller's own offers) WITHOUT the AI fuzzy pass — used when AI is switched off
+    (``settings.AI_IMPORT_ENABLED``). Deterministic logic only: no LLM call."""
+    deal, request_items, seller_company_id, err = _run_draft_quote_gates(deal_id, actor)
     if err:
         return None, err, 0
     resolved_matches = _resolve_exact_catalog_matches(request_items)
@@ -386,9 +362,10 @@ def take_and_prepare_quote(deal_id: int, actor: CustomUser) -> Tuple[Optional[di
          one buyer notification, not two).
       3. Idempotency: the actor company's existing КП short-circuits — pressing the button
          twice never forks a second КП.
-      4. Mode: ai.draft-entitled sellers get {"mode": "ai"} — the VIEW enqueues the existing
-         draft_quote job (paid pass, 202+poll); everyone else gets the deterministic prefilled
-         КП synchronously ({"mode": "quote", "quote": ...}).
+      4. Mode: with AI switched on (``settings.AI_IMPORT_ENABLED``) → {"mode": "ai"} — the VIEW
+         enqueues the existing draft_quote job (202+poll); with AI off → the deterministic
+         prefilled КП synchronously ({"mode": "quote", "quote": ...}). The paid ai.draft
+         entitlement that used to pick the mode was removed in M1-ERP-02 wave 2.
 
     Returns ({"deal", "mode", "quote"|None}, None) or (None, error_code).
     """
@@ -424,15 +401,7 @@ def take_and_prepare_quote(deal_id: int, actor: CustomUser) -> Tuple[Optional[di
     if existing is not None:
         return {"deal": deal, "mode": "quote", "quote": existing}, None
 
-    entitled_for_ai = False
-    if getattr(actor, "is_superuser", False):
-        entitled_for_ai = True
-    elif seller_company_id:
-        from accounts.constants import FeatureKey
-        from accounts.services import has_entitlement
-
-        entitled_for_ai = has_entitlement(seller_company_id, FeatureKey.AI_DRAFT)
-    if entitled_for_ai:
+    if getattr(settings, "AI_IMPORT_ENABLED", False):
         return {"deal": deal, "mode": "ai", "quote": None}, None
 
     quote, err, _prefilled = prepare_quote_from_request(deal_id, actor)

@@ -8,22 +8,11 @@ Self-contained fixtures (зеркалит test_invoice_lifecycle.py): тесты
 все lookup-коды сеются здесь.
 """
 
-from datetime import timedelta
 from decimal import Decimal
 
 import pytest
-from django.utils import timezone
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    SystemRole,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import (
     ActStatus,
     Contract,
@@ -49,7 +38,6 @@ def lookups(db):
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     SystemRole.objects.get_or_create(code="USER", defaults={"name": "User", "sort_order": 10})
     for code in ("DRAFT", "CONTRACT_SIGNED", "CLOSED_WON"):
         DealStage.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
@@ -71,7 +59,6 @@ def world(lookups):
     buyer_co = Company.objects.create(
         name="Buyer Co",
         inn="B901",
-        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
         # O3: продавец с платёжными реквизитами — иначе `issue_invoice` не выпустит счёт (он неоплатен).
         bank_account="20208000900001234567",
         mfo="00443",
@@ -80,7 +67,6 @@ def world(lookups):
     seller_co = Company.objects.create(
         name="Seller Co",
         inn="S901",
-        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
         # O3: продавец с платёжными реквизитами — иначе `issue_invoice` не выпустит счёт (он неоплатен).
         bank_account="20208000900001234567",
         mfo="00443",
@@ -94,12 +80,6 @@ def world(lookups):
         is_active=True,
         is_primary=True,
         can_sell=True,
-    )
-    SupplierSubscription.objects.create(
-        company=seller_co,
-        plan="PREMIUM",
-        status="ACTIVE",
-        valid_until=timezone.localdate() + timedelta(days=30),
     )
     deal = Deal.objects.create(title="Snap deal", company=buyer_co, stage=DealStage.objects.get(code="CONTRACT_SIGNED"))
     DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)

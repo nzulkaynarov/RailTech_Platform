@@ -7,7 +7,7 @@ from .ai import *  # noqa: F401,F403 — последовательная ком
 # ──────────────────────────────────────────────────────────────────────────
 # Email channels — one SMTP/ESP config per purpose.
 #
-# Why channels: transactional (1:1 registration/KYC/invites) and marketing
+# Why channels: transactional (1:1 invites / password / documents) and marketing
 # (digests / campaigns) SHOULD use different providers in production —
 # reputation of transactional mail tanks when marketing messages get flagged.
 # On day one, every channel falls back to the default SMTP above, so nothing
@@ -37,7 +37,7 @@ def _email_channel(prefix: str, *, default_from: str) -> dict:
 
 
 EMAIL_CHANNELS = {
-    # Registration, setup-password, KYC, invitations, subscription alerts.
+    # Setup-password, invitations, documents.
     "transactional": _email_channel("TX", default_from=DEFAULT_FROM_EMAIL),
     # Digests, campaigns, broadcasts. Not used yet — reserved.
     "marketing": _email_channel(

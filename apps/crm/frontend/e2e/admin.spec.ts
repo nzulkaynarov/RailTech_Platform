@@ -20,6 +20,13 @@ test("admin sections render and greeting can be changed", async ({ page }) => {
   await page.goto("/dashboard");
   await expect(page.getByText(/^Воронка/).first()).toBeVisible();
 
+  // «Расходы» по ансамблю (M3-CRM-09): журнал шлюза LiteLLM — плитки или понятная причина.
+  await page.goto("/spend");
+  await expect(page.getByRole("tab", { name: "Ансамбль: CRM и ERP" })).toBeVisible();
+  await expect(
+    page.getByText(/^Всего за период$|^Журнал расходов шлюза моделей недоступен$/).first(),
+  ).toBeVisible();
+
   await page.goto("/kb");
   await expect(page.getByRole("button", { name: "Загрузить файл" })).toBeVisible();
   await expect(page.getByText("Что найдёт бот")).toBeVisible();

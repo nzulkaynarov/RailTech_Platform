@@ -59,7 +59,6 @@ def _quote_ctx(**toggles):
         "seller": Company(name="Seller", inn="3000000000"),
         "seller_profile": None,
         "seller_logo_url": None,
-        "is_demo": False,
         "show_logo": True,
         "show_lead_time": True,
         "show_fx_note": False,

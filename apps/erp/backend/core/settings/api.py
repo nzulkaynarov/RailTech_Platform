@@ -28,8 +28,6 @@ REST_FRAMEWORK = {
         # 20/min is far too loose to stop e.g. password-reset email bombing).
         "password_reset": "5/hour",  # forgot-password, per IP
         "password_reset_email": "3/hour",  # forgot-password, per TARGET email (cross-IP victim shield)
-        "register": "5/hour",  # account/verification-email spam, per IP
-        "client_invite": "20/hour",  # seller invites an offline client to register (CRM Phase D), per user
         "password_set": "20/hour",  # setup/reset-password token submission, per IP (brute-force)
         "login": "10/minute",  # token obtain + 2FA code step, per IP (brute-force; lenient enough for typos)
         "two_factor": "10/minute",  # 2FA setup/verify/disable, per user (stolen-session code brute-force)
@@ -114,7 +112,7 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": (
         "B2B marketplace API for railway equipment procurement in Uzbekistan. "
         "Supports deal lifecycle management, quoting, product catalog (PIM), "
-        "KYC verification, Excel imports, and real-time notifications via WebSocket."
+        "Excel imports, and real-time notifications via WebSocket."
     ),
     "VERSION": "1.0.0",
     "CONTACT": {"name": "RailTech API Support", "email": "api@railtech.com"},
@@ -123,8 +121,8 @@ SPECTACULAR_SETTINGS = {
     "COMPONENT_SPLIT_REQUEST": True,
     "SCHEMA_PATH_PREFIX": "/api/v[0-9]+/",
     "TAGS": [
-        {"name": "Auth", "description": "Registration, password setup, JWT tokens"},
-        {"name": "Accounts", "description": "Users, companies, KYC, team management"},
+        {"name": "Auth", "description": "Login, password setup by invitation, JWT tokens"},
+        {"name": "Accounts", "description": "Users, companies, team management"},
         {"name": "Catalog", "description": "Products (PIM), categories, equipment groups, supplier offers"},
         {"name": "CRM", "description": "Deals, quotes, quote items, activity logs"},
         {"name": "Sourcing", "description": "Excel imports, catalog imports, sourcing requests"},

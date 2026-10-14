@@ -10,9 +10,9 @@
   client_projection_items) and a flat totals bridge (Итого без НДС → VAT → total), all in
   the КП presentation currency (quote_currency, UZS).
 
-  Branding (header logo, «Поставщик» block, accent, footer, DEMO watermark) is provided by
+  Branding (header logo, «Поставщик» block, accent, footer, draft watermark) is provided by
   the shared base from the seller's CompanyDocumentProfile. Context: quote, items, company
-  (buyer) + the brand bundle (seller, seller_profile, seller_logo_url, is_demo).
+  (buyer) + the brand bundle (seller, seller_profile, seller_logo_url).
 {% endcomment %}
 {% block doc_meta %}
   <div class="doc-no">{% if quote.number %}КП № {{ quote.number }}{% else %}КП № {{ quote.deal_id }}-{{ quote.version }}{% endif %}</div>

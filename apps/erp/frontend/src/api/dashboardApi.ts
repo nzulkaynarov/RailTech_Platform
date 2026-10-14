@@ -24,7 +24,7 @@ export interface PageStats {
   sourcing: { total: number; new: number; in_progress: number; completed: number };
   deals: { total: number; active: number; quote_sent: number; closed_won: number };
   quotes: { drafts: number; sent: number; approved: number; under_review: number; total_amount: string; pipeline: string };
-  clients: { total: number; verified: number; awaiting_kyc: number; unverified: number };
+  clients: { total: number };
   products: { total: number; published: number; categories: number; equipment_groups: number; offers: number };
   analytics: { conversion: string; avg_deal: string; pipeline: string; win_rate: string };
   analytics_buyer: { spend_period: string; active_requests: number };
@@ -32,49 +32,6 @@ export interface PageStats {
   admin_users: { total: number; admins: number; managers: number; employees: number };
   imports: { total: number; attachments: number };
   notifications_unread: number;
-}
-
-export interface PlatformDashboard {
-  users: { total: number; active: number; new_7d: number; admins: number };
-  companies: {
-    total: number;
-    by_type: { BUYER: number; SELLER: number; MANUFACTURER: number };
-    pending_kyc: number;
-    verified: number;
-  };
-  deals: {
-    total: number;
-    active: number;
-    won: number;
-    lost: number;
-    by_stage: { stage__code: string; stage__name: string; count: number }[];
-    pipeline_value: string;
-    won_value: string;
-  };
-  subscriptions: {
-    active: number;
-    trial: number;
-    past_due: number;
-    suspended: number;
-    expiring_7d: number;
-  };
-  attention: {
-    kyc: number;
-    role_applications: number;
-    subscriptions_past_due: number;
-    subscriptions_expiring_7d: number;
-    overdue_invoices: number;
-  };
-  recent_activity: {
-    id: number;
-    action: string;
-    detail: string;
-    event_code?: string;
-    event_params?: Record<string, unknown>;
-    level: 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR';
-    user_email: string | null;
-    timestamp: string;
-  }[];
 }
 
 // Wave I-2 — виджет «Недавние документы» (та же форма строки у поиска документов ⌘K).
@@ -114,10 +71,6 @@ export const dashboardApi = {
   },
   getPageStats: async (): Promise<PageStats> => {
     const response = await apiClient.get<PageStats>('analytics/page-stats/');
-    return response.data;
-  },
-  getPlatformDashboard: async (): Promise<PlatformDashboard> => {
-    const response = await apiClient.get<PlatformDashboard>('analytics/platform-dashboard/');
     return response.data;
   },
 };

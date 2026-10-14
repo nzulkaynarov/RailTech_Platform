@@ -6,7 +6,7 @@ Run:
 
 What it does:
     1. Create (or reuse) a BUYER company + user.
-    2. Create (or reuse) a SUPPLIER company + user + TRIAL subscription.
+    2. Create (or reuse) a SUPPLIER company + user.
     3. Create (or reuse) a MANAGER user.
     4. Create a Deal (DRAFT).
     5. Move Deal DRAFT → SOURCING → CALCULATING via the FSM.
@@ -34,16 +34,7 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
-        from accounts import services as acc_services
-        from accounts.models import (
-            Company,
-            CompanyMember,
-            CompanyType,
-            CustomUser,
-            SystemRole,
-            VerificationStatus,
-            WorkspaceRole,
-        )
+        from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
         from catalog.models import DomainType, Product, ProductStatus, StockStatus, SupplierOffer
         from crm import services as crm_services
         from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteStatus
@@ -72,7 +63,6 @@ class Command(BaseCommand):
 
         client_type = _must(CompanyType, "CLIENT")
         supplier_type = _must(CompanyType, "SUPPLIER")
-        l2_status = _must(VerificationStatus, "L2_VERIFIED")
         owner_role = _must(WorkspaceRole, "OWNER")
         admin_role = _must(SystemRole, "ADMIN")
         draft_quote = _must(QuoteStatus, "DRAFT")
@@ -113,7 +103,7 @@ class Command(BaseCommand):
         )
         buyer_co, _ = Company.objects.get_or_create(
             inn="111111111",
-            defaults={"name": "Smoke Buyer LLC", "verification_status": l2_status, "country": country},
+            defaults={"name": "Smoke Buyer LLC", "country": country},
         )
         buyer_co.types.add(client_type)
         CompanyMember.objects.get_or_create(
@@ -121,7 +111,7 @@ class Command(BaseCommand):
         )
         info(f"buyer={buyer.email} company={buyer_co.name}")
 
-        step(2, "Supplier user + company + TRIAL subscription")
+        step(2, "Supplier user + company")
         supplier, _ = CustomUser.objects.get_or_create(
             email="smoke.supplier@railtech.test",
             defaults={
@@ -133,14 +123,13 @@ class Command(BaseCommand):
         )
         supplier_co, _ = Company.objects.get_or_create(
             inn="222222222",
-            defaults={"name": "Smoke Supplier LLC", "verification_status": l2_status, "country": country},
+            defaults={"name": "Smoke Supplier LLC", "country": country},
         )
         supplier_co.types.add(supplier_type)
         CompanyMember.objects.get_or_create(
             user=supplier, company=supplier_co, defaults={"role": owner_role, "is_primary": True, "is_active": True}
         )
-        sub = acc_services.ensure_trial_subscription(supplier_co)
-        info(f"supplier={supplier.email} subscription={sub.status} until={sub.valid_until}")
+        info(f"supplier={supplier.email} company={supplier_co.name}")
 
         step(3, "Manager user")
         manager, _ = CustomUser.objects.get_or_create(

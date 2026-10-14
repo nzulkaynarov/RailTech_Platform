@@ -1,23 +1,12 @@
 import json
 import os
-from datetime import timedelta
 from pathlib import Path
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
-from django.utils import timezone
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    KYCDocType,
-    SupplierSubscription,
-    SystemRole,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, SystemRole, WorkspaceRole
 from catalog.models import DomainType, ProductStatus, StockStatus
 from crm.models import DealStage, QuoteStatus
 from master_data.models import Currency
@@ -134,29 +123,6 @@ class Command(BaseCommand):
         for code, name in company_types:
             _seed(CompanyType, code, name=name)
 
-        # ─── 8. Типы KYC документов ───
-        kyc_doc_types = [
-            ("CHARTER", "Устав"),
-            ("LICENSE", "Лицензия"),
-            ("PASSPORT", "Паспорт руководителя"),
-            ("TAX_CERT", "Свидетельство ИНН"),
-            ("BANK_REF", "Банковская справка"),
-            ("OTHER", "Прочий документ"),
-        ]
-        for code, name in kyc_doc_types:
-            _seed(KYCDocType, code, name=name)
-
-        # ─── 9. Статусы верификации ───
-        v_statuses = [
-            ("L1_UNVERIFIED", "Не верифицирован"),
-            ("PROFILE_SUBMITTED", "Профиль на проверке"),
-            ("L2_VERIFIED", "KYC подтверждён"),
-            ("L3_CONTRACTED", "Договор заключён"),
-            ("REJECTED", "Отклонён"),
-        ]
-        for code, name in v_statuses:
-            _seed(VerificationStatus, code, name=name)
-
         # ─── 10. Типы доменов каталога ───
         domains = [
             ("RAILWAY_MACHINERY", "Ж/Д техника и запчасти", "ЖД"),
@@ -263,10 +229,9 @@ class Command(BaseCommand):
                 DomainKeyword.objects.get_or_create(keyword=kw, defaults={"domain_type": dom})
 
         # ─── 17. Компании из seed_data.json ───
+        # Статус верификации в seed_data.json — наследие KYC (удалён в M1-ERP-02 волна 1c),
+        # игнорируется.
         for company_data in seed_data.get("companies", []):
-            vs = None
-            if company_data.get("verification_status"):
-                vs = VerificationStatus.objects.filter(code=company_data["verification_status"]).first()
             company_obj, _ = Company.objects.get_or_create(
                 inn=company_data["inn"],
                 defaults={
@@ -274,7 +239,6 @@ class Command(BaseCommand):
                     "legal_address": company_data.get("legal_address", ""),
                     "contact_person": company_data.get("contact_person", ""),
                     "email": company_data.get("email", ""),
-                    "verification_status": vs,
                 },
             )
             # Assign CompanyType(s) — WITHOUT this a seeded company has empty types
@@ -351,38 +315,5 @@ class Command(BaseCommand):
 
                         member.company_role = default_company_role_for(company, ws_role.code)
                         member.save(update_fields=["company_role"])
-
-        # ─── 19. Подписки продавцов ───
-        # Sellers (SUPPLIER / MANUFACTURER) need an operational subscription or the
-        # F0.2 gate (assert_seller_can_operate) blocks send-КП / contract / invoice.
-        # Default ACTIVE PREMIUM; a company may override via a `subscription` block in
-        # seed_data.json (e.g. {"status": "PAST_DUE"}) to exercise the gate realistically.
-        seller_type_codes = {"SUPPLIER"}
-        usd = Currency.objects.filter(code="USD").first()
-        today = timezone.localdate()
-        plan_rates = {"BASIC": "150", "STANDARD": "400", "PREMIUM": "900"}
-        for company_data in seed_data.get("companies", []):
-            codes = set(company_data.get("company_types") or [company_data.get("company_type")])
-            if not (codes & seller_type_codes):
-                continue
-            company = Company.objects.filter(inn=company_data["inn"]).first()
-            if not company:
-                continue
-            sub_cfg = company_data.get("subscription") or {}
-            plan = sub_cfg.get("plan", "PREMIUM")
-            sub_status = sub_cfg.get("status", "ACTIVE")
-            # PAST_DUE/SUSPENDED/CANCELLED → expired window so is_operational is False.
-            valid_until = today - timedelta(days=1) if sub_status != "ACTIVE" else today + timedelta(days=365)
-            SupplierSubscription.objects.update_or_create(
-                company=company,
-                defaults={
-                    "plan": plan,
-                    "status": sub_status,
-                    "monthly_rate": plan_rates.get(plan, "0"),
-                    "currency": usd,
-                    "valid_from": today,
-                    "valid_until": valid_until,
-                },
-            )
 
         self.stdout.write(self.style.SUCCESS("Справочники загружены!"))

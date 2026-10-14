@@ -20,17 +20,7 @@ from decimal import Decimal
 
 import pytest
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyRole,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    SystemRole,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import Contract, ContractStatus, Deal, DealStage, Invoice, InvoiceStatus, Quote, QuoteStatus
 from crm.services.billing import record_payment
 from crm.services.contracts import sign_contract_by_client, sign_contract_by_manager
@@ -68,21 +58,6 @@ def _make_member(user, company, *, company_role=None, can_sell=True, can_buy=Tru
     )
 
 
-def _op_subscription(company):
-    """Give company an ACTIVE SupplierSubscription so the paid-seller gate passes."""
-    from datetime import timedelta
-
-    from django.utils import timezone
-
-    return SupplierSubscription.objects.create(
-        company=company,
-        plan="BASIC",
-        status="ACTIVE",
-        valid_from=timezone.localdate(),
-        valid_until=(timezone.now() + timedelta(days=365)).date(),
-    )
-
-
 # ─── shared lookups fixture ────────────────────────────────────────────────────
 
 
@@ -107,7 +82,6 @@ def lookups(db):
         InvoiceStatus.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     Country.objects.get_or_create(code="UZ", defaults={"name": "Uzbekistan", "sort_order": 10})
     Currency.objects.get_or_create(code="USD", defaults={"name": "US Dollar", "symbol": "$", "sort_order": 10})
     SystemRole.objects.get_or_create(code="USER", defaults={"name": "User", "sort_order": 10})
@@ -122,7 +96,6 @@ def buyer_company(lookups):
     company = Company.objects.create(
         name="Buyer Co",
         inn="1110000001",
-        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
     )
     company.types.add(CompanyType.objects.get(code="CLIENT"))
     return company
@@ -133,7 +106,6 @@ def seller_company(lookups):
     company = Company.objects.create(
         name="Seller Co",
         inn="2220000001",
-        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
     )
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
     return company
@@ -384,17 +356,15 @@ def test_contract_manager_sign_with_perm_passes(lookups, buyer_company, seller_c
     """Seller member WITH contract.sign CompanyRole permission can sign as manager.
 
     The member uses MEMBER workspace role (no SALES_MANAGER/OWNER legacy path),
-    but has can_sell=True so the paid-subscription gate (assert_seller_can_operate)
-    can resolve their seller company. The CompanyRole perm is what bypasses the
+    but has can_sell=True so the seller-side checks can resolve their seller company. The CompanyRole perm is what bypasses the
     WorkspaceRole check: even a MEMBER can sign contracts when explicitly granted.
     """
     seller = _make_user("msign_seller_perm@s.test")
     crole = CompanyRole.objects.create(company=seller_company, name="ContractManager", permissions=["contract.sign"])
-    # can_sell=True is required so assert_seller_can_operate can locate the company.
+    # can_sell=True is required so the seller-side checks can locate the company.
     seller_member = _make_member(seller, seller_company, can_sell=True, is_primary=True)
     seller_member.company_role = crole
     seller_member.save()
-    _op_subscription(seller_company)
 
     quote = _sent_quote(deal, prepared_by=seller)
     # Need PENDING_MANAGER status for manager to sign (client already signed).
@@ -440,7 +410,6 @@ def test_contract_manager_sign_legacy_can_sell_passes(lookups, buyer_company, se
     """Legacy can_sell=True (no CompanyRole) continues to work for manager sign."""
     seller = _make_user("msign_seller_legacy@s.test")
     _make_member(seller, seller_company, can_sell=True, is_primary=True)
-    _op_subscription(seller_company)
 
     quote = _sent_quote(deal, prepared_by=seller)
     contract = Contract.objects.create(
@@ -619,7 +588,6 @@ def test_send_kp_from_rfq_open_advances_deal_not_stuck(lookups, buyer_company, s
     was swallowed → КП marked SENT + emailed while the deal stuck in RFQ_OPEN forever."""
     seller = _make_user("send_rfq_seller@s.test")
     _make_member(seller, seller_company, can_sell=True, is_primary=True)
-    _op_subscription(seller_company)
 
     deal.stage = DealStage.objects.get(code="RFQ_OPEN")  # real post-submit_request state
     # A deal that reached RFQ_OPEN through submit_request ALWAYS has a buyer behind it; the bare
@@ -695,7 +663,6 @@ def test_claim_deal_non_routed_seller_denied(lookups, buyer_company, seller_comp
     other_co = Company.objects.create(
         name="Unrouted Seller",
         inn="9990000009",
-        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
     )
     other_co.types.add(CompanyType.objects.get(code="SUPPLIER"))
     outsider = _make_user("unrouted_seller@s.test")

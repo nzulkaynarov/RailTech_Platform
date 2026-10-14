@@ -13,7 +13,7 @@ export interface paths {
         };
         /**
          * List companies
-         * @description Returns all companies with KYC documents and members. Manager/Admin only.
+         * @description Returns all companies with their members. Manager/Admin only.
          */
         get: operations["accounts_companies_list"];
         put?: never;
@@ -80,26 +80,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/accounts/companies/{id}/delete-document/{doc_id}/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * Delete KYC document
-         * @description Delete a specific KYC document by its ID from a company.
-         */
-        delete: operations["accounts_companies_delete_document_destroy"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/accounts/companies/{id}/delete-logo/": {
         parameters: {
             query?: never;
@@ -114,7 +94,7 @@ export interface paths {
          * Delete company logo
          * @description CRUD operations for companies.
          *
-         *     Includes KYC verification, document upload, team management, and member invitations.
+         *     Includes logo / document-profile settings, team management, and member invitations.
          */
         delete: operations["accounts_companies_delete_logo_destroy"];
         options?: never;
@@ -190,26 +170,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/accounts/companies/{id}/download-document/{doc_id}/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Download a KYC document
-         * @description Stream a KYC document for review. Works with both MinIO and local storage (prod has no MinIO, so the raw /media URL 404s — this authenticated stream is the only path).
-         */
-        get: operations["accounts_companies_download_document_retrieve"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/accounts/companies/{id}/invite/": {
         parameters: {
             query?: never;
@@ -224,46 +184,6 @@ export interface paths {
          * @description Invite a new user to the company by email. Only the company owner or staff can invite. Default role: PROCUREMENT_MANAGER.
          */
         post: operations["accounts_companies_invite_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/accounts/companies/{id}/merge/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Merge a duplicate offline company into this one
-         * @description Platform Admin: fold an OFFLINE duplicate (its contacts, deals, activity, relationship edges) into this surviving company (CRM Phase C). Body: {duplicate_id, reason?}.
-         */
-        post: operations["accounts_companies_merge_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/accounts/companies/{id}/merge-candidates/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Duplicate offline companies (merge candidates)
-         * @description Platform Admin: offline placeholder companies whose stated INN matches this company's canonical INN — candidates to fold in via merge (CRM Phase C).
-         */
-        get: operations["accounts_companies_merge_candidates_retrieve"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -387,7 +307,7 @@ export interface paths {
          * Return an archived company to circulation
          * @description CRUD operations for companies.
          *
-         *     Includes KYC verification, document upload, team management, and member invitations.
+         *     Includes logo / document-profile settings, team management, and member invitations.
          */
         post: operations["accounts_companies_unarchive_create"];
         delete?: never;
@@ -416,26 +336,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/accounts/companies/{id}/upload-document/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Upload KYC document
-         * @description Upload a KYC document for company verification. Supports multipart file upload.
-         */
-        post: operations["accounts_companies_upload_document_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/accounts/companies/{id}/upload-logo/": {
         parameters: {
             query?: never;
@@ -456,47 +356,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/accounts/companies/{id}/verify-kyc/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Verify company KYC
-         * @description Update KYC verification status for a company. Pass a VerificationStatus code (e.g. 'L2_VERIFIED') and optional comment.
-         */
-        post: operations["accounts_companies_verify_kyc_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/accounts/companies/bulk-verify-kyc/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * @description CRUD operations for companies.
-         *
-         *     Includes KYC verification, document upload, team management, and member invitations.
-         */
-        post: operations["accounts_companies_bulk_verify_kyc_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/accounts/companies/export/": {
         parameters: {
             query?: never;
@@ -505,8 +364,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Bulk verify KYC
-         * @description Platform Admin: verify KYC for multiple companies in one request.
+         * Export companies
+         * @description Export filtered companies list as CSV or XLSX (format=csv|xlsx).
          */
         get: operations["accounts_companies_export_retrieve"];
         put?: never;
@@ -525,8 +384,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List verified suppliers (for RFQ invitations)
-         * @description Minimal directory of verified SUPPLIER / MANUFACTURER companies a buyer can invite to an RFQ. Available to any authenticated member — returns only id, name and INN, NOT the full admin company record (no KYC internals).
+         * List suppliers (for RFQ invitations)
+         * @description Minimal directory of active SUPPLIER companies a buyer can invite to an RFQ. Available to any authenticated member — returns only id, name and INN, NOT the full admin company record.
          */
         get: operations["accounts_companies_suppliers_retrieve"];
         put?: never;
@@ -699,26 +558,6 @@ export interface paths {
         patch: operations["accounts_contacts_partial_update"];
         trace?: never;
     };
-    "/api/v1/accounts/contacts/{id}/invite/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Invite an offline client to register
-         * @description CRM Phase D: email this contact an invite to register and CLAIM its existing offline company (no duplicate). Throttled per user.
-         */
-        post: operations["accounts_contacts_invite_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/accounts/me/": {
         parameters: {
             query?: never;
@@ -753,130 +592,6 @@ export interface paths {
         get: operations["accounts_permissions_retrieve"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/accounts/role-applications/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List role applications
-         * @description Returns all company role applications. Filterable by status, type, company.
-         */
-        get: operations["accounts_role_applications_list"];
-        put?: never;
-        /**
-         * Create role application
-         * @description Submit a new role application for a company.
-         */
-        post: operations["accounts_role_applications_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/accounts/role-applications/{id}/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get role application details
-         * @description Company role applications:
-         *       - Admin: full CRUD + approve/reject across all companies.
-         *       - Company OWNER: may list/create/update only their own company's applications.
-         */
-        get: operations["accounts_role_applications_retrieve"];
-        /**
-         * Update role application
-         * @description Company role applications:
-         *       - Admin: full CRUD + approve/reject across all companies.
-         *       - Company OWNER: may list/create/update only their own company's applications.
-         */
-        put: operations["accounts_role_applications_update"];
-        post?: never;
-        /**
-         * Delete role application
-         * @description Company role applications:
-         *       - Admin: full CRUD + approve/reject across all companies.
-         *       - Company OWNER: may list/create/update only their own company's applications.
-         */
-        delete: operations["accounts_role_applications_destroy"];
-        options?: never;
-        head?: never;
-        /**
-         * Partially update role application
-         * @description Company role applications:
-         *       - Admin: full CRUD + approve/reject across all companies.
-         *       - Company OWNER: may list/create/update only their own company's applications.
-         */
-        patch: operations["accounts_role_applications_partial_update"];
-        trace?: never;
-    };
-    "/api/v1/accounts/role-applications/{id}/approve/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Approve role application
-         * @description Approve a pending role application. Adds the requested CompanyType to the company.
-         */
-        post: operations["accounts_role_applications_approve_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/accounts/role-applications/{id}/reject/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Reject role application
-         * @description Reject a pending role application with an optional reason.
-         */
-        post: operations["accounts_role_applications_reject_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/accounts/role-applications/{id}/request-documents/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Request the missing documents instead of rejecting
-         * @description Статус DOCUMENTS_REQUIRED был в модели с самого начала, но поставить его было нечем: в меню строки жили только «Одобрить» и «Отклонить», и оператору оставалось закрыть путь целиком. Эталон — Stripe verification «information needed» и Salesforce «Request more info».
-         */
-        post: operations["accounts_role_applications_request_documents_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1827,26 +1542,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/auth/register/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Register new user
-         * @description Register a new user by email. Always returns 201 with the same neutral body so the response never reveals whether the email already has an account (anti-enumeration, P2): a free email gets a setup link, an existing active account gets a sign-in/recover email, a pending one gets the setup link re-sent — all indistinguishable in status, body, and timing.
-         */
-        post: operations["auth_register_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/auth/reset-password/": {
         parameters: {
             query?: never;
@@ -1918,29 +1613,9 @@ export interface paths {
         put?: never;
         /**
          * Setup password
-         * @description Set a password for a newly registered user. Requires the uid and token from the verification email link. Activates the user account.
+         * @description Set the first password of an invited user (team invitation or an account created by an administrator). Requires the uid and token from the email link. Activates the account.
          */
         post: operations["auth_setup_password_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/submit-profile/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Submit company profile
-         * @description Minimal onboarding after registration. Creates a new Buyer (CLIENT) company and makes the user its OWNER. INN and selling are deferred.
-         */
-        post: operations["auth_submit_profile_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2658,7 +2333,7 @@ export interface paths {
         put?: never;
         /**
          * Unpublish a product (owner)
-         * @description Снимает карточку с витрины: PUBLISHED → DRAFT (Shopify: Active → Draft двусторонне). Право то же, что у публикации; KYC не требуется — снятие уменьшает экспозицию.
+         * @description Снимает карточку с витрины: PUBLISHED → DRAFT (Shopify: Active → Draft двусторонне). Право то же, что у публикации.
          */
         post: operations["catalog_products_unpublish_create"];
         delete?: never;
@@ -5609,7 +5284,7 @@ export interface paths {
         };
         /**
          * Counterparty / deal activity timeline
-         * @description Chronological business events (deal opened, КП sent/accepted/rejected, contract signed, payments, messages, KYC) linked to a deal or a counterparty company. Pass deal_id OR company_id. Scoping: a deal timeline needs access to the deal (member of the client company, routed seller, or platform admin); a company timeline shows a member their own company's history, while a routed seller sees only events on deals visible to them.
+         * @description Chronological business events (deal opened, КП sent/accepted/rejected, contract signed, payments) linked to a deal or a counterparty company. Pass deal_id OR company_id. Scoping: a deal timeline needs access to the deal (member of the client company, routed seller, or platform admin); a company timeline shows a member their own company's history, while a routed seller sees only events on deals visible to them.
          */
         get: operations["crm_timeline_list"];
         put?: never;
@@ -6476,7 +6151,7 @@ export interface components {
          *     кнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`
          *     у договора.
          *
-         *     Поля-подсказки НЕ являются полным правом: подписку, KYC и стадию проверит сервис,
+         *     Поля-подсказки НЕ являются полным правом: подписку и стадию проверит сервис,
          *     выполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку
          *     кнопок чужой стороны.
          */
@@ -6570,7 +6245,7 @@ export interface components {
          *     кнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`
          *     у договора.
          *
-         *     Поля-подсказки НЕ являются полным правом: подписку, KYC и стадию проверит сервис,
+         *     Поля-подсказки НЕ являются полным правом: подписку и стадию проверит сервис,
          *     выполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку
          *     кнопок чужой стороны.
          */
@@ -7048,18 +6723,6 @@ export interface components {
              */
             inn?: (string) | null;
             /**
-             * Статус верификации
-             * @description Текущий статус KYC-проверки компании
-             */
-            readonly verification_status: number | null;
-            readonly verification_status_name: string;
-            readonly verification_status_code: string;
-            /**
-             * Верифицирован
-             * @description Компания прошла базовую проверку RailTech
-             */
-            readonly is_verified: boolean;
-            /**
              * ISO 9001
              * @description Имеется сертификат качества ISO 9001
              */
@@ -7120,7 +6783,6 @@ export interface components {
              * Format: date-time
              */
             readonly created_at: string;
-            readonly kyc_documents: components["schemas"]["KYCDocument"][];
             readonly user_count: number;
             readonly company_types: unknown[];
             /**
@@ -7591,119 +7253,6 @@ export interface components {
             /** Format: date-time */
             readonly updated_at: string;
         };
-        CompanyRoleApplication: {
-            readonly id: number;
-            /**
-             * Компания
-             * @description Организация, подавшая заявку
-             */
-            readonly company: number;
-            readonly company_name: string;
-            readonly company_inn: string;
-            /**
-             * Запрашиваемая роль
-             * @description Роль, на которую подаётся заявка (SUPPLIER или MANUFACTURER)
-             */
-            requested_type: number;
-            readonly requested_type_name: string;
-            readonly requested_type_code: string;
-            /**
-             * Статус
-             * @description Текущий статус рассмотрения заявки
-             *
-             *     * `PENDING` - На рассмотрении
-             *     * `DOCUMENTS_REQUIRED` - Требуются документы
-             *     * `PAYMENT_REQUIRED` - Ожидание оплаты
-             *     * `APPROVED` - Одобрено
-             *     * `REJECTED` - Отклонено
-             */
-            readonly status: components["schemas"]["CompanyRoleApplicationStatusEnum"];
-            readonly status_display: string;
-            /**
-             * Подал заявку
-             * @description Пользователь, инициировавший заявку
-             */
-            readonly submitted_by: number | null;
-            readonly submitted_by_email: string;
-            /**
-             * Договор
-             * Format: uri
-             * @description Подписанный договор (обязательно для SUPPLIER)
-             */
-            contract_file?: string | null;
-            /**
-             * NDA
-             * Format: uri
-             * @description Соглашение о неразглашении (обязательно для SUPPLIER)
-             */
-            nda_file?: string | null;
-            /**
-             * Договор о партнёрстве
-             * Format: uri
-             * @description Партнёрское соглашение (обязательно для MANUFACTURER)
-             */
-            partnership_agreement?: string | null;
-            /**
-             * Рассмотрел
-             * @description Администратор, рассмотревший заявку
-             */
-            readonly reviewed_by: number | null;
-            readonly reviewed_by_email: string;
-            /**
-             * Комментарий
-             * @description Внутренний комментарий администратора
-             */
-            readonly review_notes: string;
-            /**
-             * Дата рассмотрения
-             * Format: date-time
-             */
-            readonly reviewed_at: string | null;
-            /**
-             * Дата подачи
-             * Format: date-time
-             */
-            readonly created_at: string;
-            /**
-             * Дата обновления
-             * Format: date-time
-             */
-            readonly updated_at: string;
-        };
-        CompanyRoleApplicationRequest: {
-            /**
-             * Запрашиваемая роль
-             * @description Роль, на которую подаётся заявка (SUPPLIER или MANUFACTURER)
-             */
-            requested_type: number;
-            /**
-             * Договор
-             * Format: binary
-             * @description Подписанный договор (обязательно для SUPPLIER)
-             */
-            contract_file?: string | null;
-            /**
-             * NDA
-             * Format: binary
-             * @description Соглашение о неразглашении (обязательно для SUPPLIER)
-             */
-            nda_file?: string | null;
-            /**
-             * Договор о партнёрстве
-             * Format: binary
-             * @description Партнёрское соглашение (обязательно для MANUFACTURER)
-             */
-            partnership_agreement?: string | null;
-        };
-        /**
-         * @description * `PENDING` - На рассмотрении
-         *     * `DOCUMENTS_REQUIRED` - Требуются документы
-         *     * `PAYMENT_REQUIRED` - Ожидание оплаты
-         *     * `APPROVED` - Одобрено
-         *     * `REJECTED` - Отклонено
-         * @enum {string}
-         */
-        CompanyRoleApplicationStatusEnum: "PENDING" | "DOCUMENTS_REQUIRED" | "PAYMENT_REQUIRED" | "APPROVED" | "REJECTED";
         /** @description A company-defined role with its permission set (the access matrix). */
         CompanyRoleRequest: {
             /** Название роли */
@@ -8482,7 +8031,7 @@ export interface components {
             readonly id: number;
             /**
              * Ключ
-             * @description Совпадает с именем файлового шаблона: 'setup_password', 'kyc_verified', 'quote_sent', …
+             * @description Совпадает с именем файлового шаблона: 'setup_password', 'invite_member', 'quote_sent', …
              */
             key: string;
             /**
@@ -8535,7 +8084,7 @@ export interface components {
         EmailTemplateRequest: {
             /**
              * Ключ
-             * @description Совпадает с именем файлового шаблона: 'setup_password', 'kyc_verified', 'quote_sent', …
+             * @description Совпадает с именем файлового шаблона: 'setup_password', 'invite_member', 'quote_sent', …
              */
             key: string;
             /**
@@ -8624,7 +8173,7 @@ export interface components {
          *     кнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`
          *     у договора.
          *
-         *     Поля-подсказки НЕ являются полным правом: подписку, KYC и стадию проверит сервис,
+         *     Поля-подсказки НЕ являются полным правом: подписку и стадию проверит сервис,
          *     выполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку
          *     кнопок чужой стороны.
          */
@@ -8662,7 +8211,7 @@ export interface components {
          *     кнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`
          *     у договора.
          *
-         *     Поля-подсказки НЕ являются полным правом: подписку, KYC и стадию проверит сервис,
+         *     Поля-подсказки НЕ являются полным правом: подписку и стадию проверит сервис,
          *     выполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку
          *     кнопок чужой стороны.
          */
@@ -8779,7 +8328,7 @@ export interface components {
          *     кнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`
          *     у договора.
          *
-         *     Поля-подсказки НЕ являются полным правом: подписку, KYC и стадию проверит сервис,
+         *     Поля-подсказки НЕ являются полным правом: подписку и стадию проверит сервис,
          *     выполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку
          *     кнопок чужой стороны.
          */
@@ -8866,7 +8415,7 @@ export interface components {
          *     кнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`
          *     у договора.
          *
-         *     Поля-подсказки НЕ являются полным правом: подписку, KYC и стадию проверит сервис,
+         *     Поля-подсказки НЕ являются полным правом: подписку и стадию проверит сервис,
          *     выполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку
          *     кнопок чужой стороны.
          */
@@ -8893,50 +8442,6 @@ export interface components {
             total_incl_vat?: string;
             currency?: number | null;
             notes?: string;
-        };
-        KYCDocument: {
-            readonly id: number;
-            /**
-             * Тип документа
-             * @description Вид документа из справочника (устав, лицензия, паспорт)
-             */
-            doc_type: number;
-            readonly doc_type_code: string;
-            readonly doc_type_display: string;
-            /**
-             * Файл
-             * Format: uri
-             * @description Загруженный скан документа (хранится в приватном хранилище)
-             */
-            file: string;
-            /**
-             * Оригинальное имя файла
-             * @description Имя файла, загруженного пользователем
-             */
-            readonly original_filename: string;
-            /**
-             * Дата загрузки
-             * Format: date-time
-             */
-            readonly uploaded_at: string;
-        };
-        KYCDocumentRequest: {
-            /**
-             * Тип документа
-             * @description Вид документа из справочника (устав, лицензия, паспорт)
-             */
-            doc_type: number;
-            /**
-             * Файл
-             * Format: binary
-             * @description Загруженный скан документа (хранится в приватном хранилище)
-             */
-            file: string;
-        };
-        KYCVerificationRequest: {
-            /** @description Code from VerificationStatus (e.g. 'L2_VERIFIED') */
-            status_code: string;
-            comment?: string;
         };
         /**
          * @description * `SOURCE` - Исходник заявки
@@ -9239,21 +8744,6 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["Company"][];
-        };
-        PaginatedCompanyRoleApplicationList: {
-            /** @example 123 */
-            count: number;
-            /**
-             * Format: uri
-             * @example http://api.example.org/accounts/?page=4
-             */
-            next?: string | null;
-            /**
-             * Format: uri
-             * @example http://api.example.org/accounts/?page=2
-             */
-            previous?: string | null;
-            results: components["schemas"]["CompanyRoleApplication"][];
         };
         PaginatedCompanyRoleList: {
             /** @example 123 */
@@ -9850,31 +9340,6 @@ export interface components {
             logo?: string | null;
             types?: string[];
         };
-        PatchedCompanyRoleApplicationRequest: {
-            /**
-             * Запрашиваемая роль
-             * @description Роль, на которую подаётся заявка (SUPPLIER или MANUFACTURER)
-             */
-            requested_type?: number;
-            /**
-             * Договор
-             * Format: binary
-             * @description Подписанный договор (обязательно для SUPPLIER)
-             */
-            contract_file?: string | null;
-            /**
-             * NDA
-             * Format: binary
-             * @description Соглашение о неразглашении (обязательно для SUPPLIER)
-             */
-            nda_file?: string | null;
-            /**
-             * Договор о партнёрстве
-             * Format: binary
-             * @description Партнёрское соглашение (обязательно для MANUFACTURER)
-             */
-            partnership_agreement?: string | null;
-        };
         /** @description A company-defined role with its permission set (the access matrix). */
         PatchedCompanyRoleRequest: {
             /** Название роли */
@@ -10158,7 +9623,7 @@ export interface components {
         PatchedEmailTemplateRequest: {
             /**
              * Ключ
-             * @description Совпадает с именем файлового шаблона: 'setup_password', 'kyc_verified', 'quote_sent', …
+             * @description Совпадает с именем файлового шаблона: 'setup_password', 'invite_member', 'quote_sent', …
              */
             key?: string;
             /**
@@ -10209,7 +9674,7 @@ export interface components {
          *     кнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`
          *     у договора.
          *
-         *     Поля-подсказки НЕ являются полным правом: подписку, KYC и стадию проверит сервис,
+         *     Поля-подсказки НЕ являются полным правом: подписку и стадию проверит сервис,
          *     выполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку
          *     кнопок чужой стороны.
          */
@@ -10738,7 +10203,7 @@ export interface components {
              *     * `SUSPENDED` - Приостановлена
              *     * `CANCELLED` - Отменена
              */
-            status?: components["schemas"]["SupplierSubscriptionStatusEnum"];
+            status?: components["schemas"]["StatusEnum"];
             /**
              * Ежемесячная стоимость
              * Format: decimal
@@ -10954,7 +10419,7 @@ export interface components {
         };
         /**
          * @description Lightweight company serializer for embedding into UserSerializer.primary_company.
-         *     Avoids nested kyc_documents/members/types — saves 4-5 SQL queries per request.
+         *     Avoids nested members/types — saves several SQL queries per request.
          */
         PrimaryCompanyLight: {
             readonly id: number;
@@ -10968,18 +10433,6 @@ export interface components {
              * @description Идентификационный номер налогоплательщика
              */
             inn?: (string) | null;
-            /**
-             * Статус верификации
-             * @description Текущий статус KYC-проверки компании
-             */
-            verification_status?: number | null;
-            readonly verification_status_name: string;
-            readonly verification_status_code: string;
-            /**
-             * Верифицирован
-             * @description Компания прошла базовую проверку RailTech
-             */
-            is_verified?: boolean;
             /**
              * Страна
              * @description Страна регистрации юридического лица
@@ -10995,7 +10448,7 @@ export interface components {
         };
         /**
          * @description Lightweight company serializer for embedding into UserSerializer.primary_company.
-         *     Avoids nested kyc_documents/members/types — saves 4-5 SQL queries per request.
+         *     Avoids nested members/types — saves several SQL queries per request.
          */
         PrimaryCompanyLightRequest: {
             /**
@@ -11008,16 +10461,6 @@ export interface components {
              * @description Идентификационный номер налогоплательщика
              */
             inn?: (string) | null;
-            /**
-             * Статус верификации
-             * @description Текущий статус KYC-проверки компании
-             */
-            verification_status?: number | null;
-            /**
-             * Верифицирован
-             * @description Компания прошла базовую проверку RailTech
-             */
-            is_verified?: boolean;
             /**
              * Страна
              * @description Страна регистрации юридического лица
@@ -12144,22 +11587,10 @@ export interface components {
             /** @default  */
             reference: string;
         };
-        RegisterInterestRequest: {
-            /** Format: email */
-            email: string;
-            first_name: string;
-            last_name: string;
-            /** @description Uzbekistan format: +998XXXXXXXXX */
-            phone: string;
-        };
         RejectActRequest: {
             reason: string;
         };
         RejectQuoteRequestRequest: {
-            /** @default  */
-            reason: string;
-        };
-        RejectRequestRequest: {
             /** @default  */
             reason: string;
         };
@@ -12233,9 +11664,6 @@ export interface components {
         };
         RemoveMemberRequest: {
             member_id: number;
-        };
-        RequestApplicationDocsRequest: {
-            reason: string;
         };
         ResetPasswordRequest: {
             uid: string;
@@ -12341,6 +11769,15 @@ export interface components {
          * @enum {string}
          */
         StageEnum: "PROSPECT" | "ACTIVE" | "DORMANT" | "LOST";
+        /**
+         * @description * `TRIAL` - Пробный период
+         *     * `ACTIVE` - Активна
+         *     * `PAST_DUE` - Просрочена
+         *     * `SUSPENDED` - Приостановлена
+         *     * `CANCELLED` - Отменена
+         * @enum {string}
+         */
+        StatusEnum: "TRIAL" | "ACTIVE" | "PAST_DUE" | "SUSPENDED" | "CANCELLED";
         StockStatus: {
             readonly id: number;
             /**
@@ -12353,13 +11790,6 @@ export interface components {
              * @description Отображаемое название
              */
             name: string;
-        };
-        SubmitProfileRequest: {
-            companyName: string;
-            /** @description Free-text job title, e.g. 'Директор по закупкам' */
-            position: string;
-            /** @default  */
-            invite: string;
         };
         SuggestedSellerItem: {
             company_id: number;
@@ -12564,7 +11994,7 @@ export interface components {
              *     * `SUSPENDED` - Приостановлена
              *     * `CANCELLED` - Отменена
              */
-            status?: components["schemas"]["SupplierSubscriptionStatusEnum"];
+            status?: components["schemas"]["StatusEnum"];
             readonly status_display: string;
             /**
              * Ежемесячная стоимость
@@ -12650,7 +12080,7 @@ export interface components {
              *     * `SUSPENDED` - Приостановлена
              *     * `CANCELLED` - Отменена
              */
-            status?: components["schemas"]["SupplierSubscriptionStatusEnum"];
+            status?: components["schemas"]["StatusEnum"];
             /**
              * Ежемесячная стоимость
              * Format: decimal
@@ -12692,15 +12122,6 @@ export interface components {
              */
             notes?: string;
         };
-        /**
-         * @description * `TRIAL` - Пробный период
-         *     * `ACTIVE` - Активна
-         *     * `PAST_DUE` - Просрочена
-         *     * `SUSPENDED` - Приостановлена
-         *     * `CANCELLED` - Отменена
-         * @enum {string}
-         */
-        SupplierSubscriptionStatusEnum: "TRIAL" | "ACTIVE" | "PAST_DUE" | "SUSPENDED" | "CANCELLED";
         /** @description Response shape for the SystemRole lookup feed ({code, name}). */
         SystemRoleLookup: {
             code: string;
@@ -12930,7 +12351,6 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             readonly workspace_role: string | null;
-            readonly kyc_status: string | null;
             readonly is_platform_admin: boolean;
             /**
              * 2FA Включена
@@ -13028,7 +12448,6 @@ export interface operations {
                 /** @description A search term. */
                 search?: string;
                 types__code?: string;
-                verification_status__code?: string;
             };
             header?: never;
             path?: never;
@@ -13205,35 +12624,6 @@ export interface operations {
             };
         };
     };
-    accounts_companies_delete_document_destroy: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                doc_id: string;
-                /** @description A unique integer value identifying this Компания. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No response body */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Document not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     accounts_companies_delete_logo_destroy: {
         parameters: {
             query?: never;
@@ -13390,35 +12780,6 @@ export interface operations {
             };
         };
     };
-    accounts_companies_download_document_retrieve: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                doc_id: string;
-                /** @description A unique integer value identifying this Компания. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description File stream */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     accounts_companies_invite_create: {
         parameters: {
             query?: never;
@@ -13454,62 +12815,6 @@ export interface operations {
             };
             /** @description Not authorized */
             403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    accounts_companies_merge_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Компания. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": {
-                    duplicate_id: number;
-                    reason?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description {merged: true} */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description error code */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    accounts_companies_merge_candidates_retrieve: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Компания. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description List of {id, name, stated_inn, is_registered} */
-            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -13688,7 +12993,6 @@ export interface operations {
                 /** @description A search term. */
                 search?: string;
                 types__code?: string;
-                verification_status__code?: string;
             };
             header?: never;
             path: {
@@ -13833,37 +13137,6 @@ export interface operations {
             };
         };
     };
-    accounts_companies_upload_document_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Компания. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "multipart/form-data": {
-                    /** Format: binary */
-                    file?: string;
-                    /** @default OTHER */
-                    doc_type?: string;
-                };
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["KYCDocument"];
-                };
-            };
-        };
-    };
     accounts_companies_upload_logo_create: {
         parameters: {
             query?: never;
@@ -13893,65 +13166,6 @@ export interface operations {
             };
         };
     };
-    accounts_companies_verify_kyc_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Компания. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["KYCVerificationRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["KYCVerificationRequest"];
-                "multipart/form-data": components["schemas"]["KYCVerificationRequest"];
-            };
-        };
-        responses: {
-            /** @description Status updated successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation error or business rule violation */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    accounts_companies_bulk_verify_kyc_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CompanyRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["CompanyRequest"];
-                "multipart/form-data": components["schemas"]["CompanyRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Company"];
-                };
-            };
-        };
-    };
     accounts_companies_export_retrieve: {
         parameters: {
             query?: never;
@@ -13961,12 +13175,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description approved count + skipped */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
             };
         };
     };
@@ -14308,34 +13523,6 @@ export interface operations {
             };
         };
     };
-    accounts_contacts_invite_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Контакт. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description {invited: true} */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description error code */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     accounts_me_retrieve: {
         parameters: {
             query?: never;
@@ -14371,273 +13558,6 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CompanyPermissionCatalog"];
                 };
-            };
-        };
-    };
-    accounts_role_applications_list: {
-        parameters: {
-            query?: {
-                company?: number;
-                /** @description A page number within the paginated result set. */
-                page?: number;
-                /** @description Number of results to return per page. */
-                page_size?: number;
-                requested_type?: number;
-                /** @description A search term. */
-                search?: string;
-                /**
-                 * @description Текущий статус рассмотрения заявки
-                 *
-                 *     * `PENDING` - На рассмотрении
-                 *     * `DOCUMENTS_REQUIRED` - Требуются документы
-                 *     * `PAYMENT_REQUIRED` - Ожидание оплаты
-                 *     * `APPROVED` - Одобрено
-                 *     * `REJECTED` - Отклонено
-                 */
-                status?: "APPROVED" | "DOCUMENTS_REQUIRED" | "PAYMENT_REQUIRED" | "PENDING" | "REJECTED";
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PaginatedCompanyRoleApplicationList"];
-                };
-            };
-        };
-    };
-    accounts_role_applications_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CompanyRoleApplicationRequest"];
-                "multipart/form-data": components["schemas"]["CompanyRoleApplicationRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["CompanyRoleApplicationRequest"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CompanyRoleApplication"];
-                };
-            };
-        };
-    };
-    accounts_role_applications_retrieve: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Заявка на роль компании. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CompanyRoleApplication"];
-                };
-            };
-        };
-    };
-    accounts_role_applications_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Заявка на роль компании. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CompanyRoleApplicationRequest"];
-                "multipart/form-data": components["schemas"]["CompanyRoleApplicationRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["CompanyRoleApplicationRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CompanyRoleApplication"];
-                };
-            };
-        };
-    };
-    accounts_role_applications_destroy: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Заявка на роль компании. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No response body */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    accounts_role_applications_partial_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Заявка на роль компании. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["PatchedCompanyRoleApplicationRequest"];
-                "multipart/form-data": components["schemas"]["PatchedCompanyRoleApplicationRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["PatchedCompanyRoleApplicationRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CompanyRoleApplication"];
-                };
-            };
-        };
-    };
-    accounts_role_applications_approve_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Заявка на роль компании. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CompanyRoleApplicationRequest"];
-                "multipart/form-data": components["schemas"]["CompanyRoleApplicationRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["CompanyRoleApplicationRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CompanyRoleApplication"];
-                };
-            };
-            /** @description Already processed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    accounts_role_applications_reject_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Заявка на роль компании. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["RejectRequestRequest"];
-                "multipart/form-data": components["schemas"]["RejectRequestRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["RejectRequestRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CompanyRoleApplication"];
-                };
-            };
-            /** @description Already processed */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    accounts_role_applications_request_documents_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Заявка на роль компании. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RequestApplicationDocsRequest"];
-                "multipart/form-data": components["schemas"]["RequestApplicationDocsRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["RequestApplicationDocsRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CompanyRoleApplication"];
-                };
-            };
-            /** @description ROLE_APPLICATION_CANNOT_REQUEST_DOCS */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
         };
     };
@@ -16131,37 +15051,6 @@ export interface operations {
             };
         };
     };
-    auth_register_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RegisterInterestRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["RegisterInterestRequest"];
-                "multipart/form-data": components["schemas"]["RegisterInterestRequest"];
-            };
-        };
-        responses: {
-            /** @description Verification email sent (neutral — see description) */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation error (malformed request only) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     auth_reset_password_create: {
         parameters: {
             query?: never;
@@ -16254,37 +15143,6 @@ export interface operations {
                 content?: never;
             };
             /** @description Invalid or expired token */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    auth_submit_profile_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SubmitProfileRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["SubmitProfileRequest"];
-                "multipart/form-data": components["schemas"]["SubmitProfileRequest"];
-            };
-        };
-        responses: {
-            /** @description Profile submitted successfully */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation error */
             400: {
                 headers: {
                     [name: string]: unknown;

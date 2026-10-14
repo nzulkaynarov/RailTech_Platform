@@ -36,8 +36,8 @@ def superuser_only_action(description):
     Non-superusers won't see the action in the dropdown.
 
     Usage:
-        @superuser_only_action(_("[Emergency] Подтвердить KYC"))
-        def verify_kyc(self, request, queryset):
+        @superuser_only_action(_("[Emergency] Приостановить"))
+        def suspend_selected(self, request, queryset):
             ...
     """
 
@@ -73,7 +73,7 @@ def _confirmation_page(model_admin, request, queryset, description, action_name,
     """Промежуточная страница подтверждения — приём самой Django (`delete_selected`).
 
     Действие срабатывало С ПЕРВОГО клика: выбрал 42 компании, промахнулся в выпадающем списке,
-    нажал «Выполнить» — и все 42 получили KYC L2. Отменить это нечем. Django ровно для такого
+    нажал «Выполнить» — и все 42 изменились разом. Отменить это нечем. Django ровно для такого
     случая показывает промежуточный экран со списком затрагиваемых строк, и здесь берётся он же,
     а не собственная выдумка.
 
@@ -139,9 +139,9 @@ class ReadOnlyInspectionMixin:
 
     AUDIT SCOPE (be precise — do NOT overclaim): django-pghistory triggers capture changes
     ONLY for the tracked business models — Deal, Quote, QuoteItem, Contract, Invoice, Payment,
-    Act (and SystemSetting). Mutations to OTHER models (Company, SupplierSubscription,
-    CompanyRoleApplication, Fulfillment, Product, SupplierOffer, …) are NOT history-tracked.
-    Direct edits here also BYPASS service-layer side effects (FSM transitions, KYC/subscription
+    Act (and SystemSetting). Mutations to OTHER models (Company,
+    Fulfillment, Product, SupplierOffer, …) are NOT history-tracked.
+    Direct edits here also BYPASS service-layer side effects (FSM transitions, notification
     emails, document-number minting, invoice.amount_paid recompute) — for those, prefer the
     React Operator pages / DRF services / @superuser_only_action handlers, which are audited.
     A handful of admins therefore keep `has_add_permission=False` (Contract/Invoice/Act/Payment)

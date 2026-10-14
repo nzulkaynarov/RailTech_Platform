@@ -52,6 +52,7 @@ const FIX_PATH: Record<string, string> = {
   erp: "/integrations?tab=erp",
   backup: "/backups",
   budget: "/spend",
+  ai_budget: "/spend",
   crm_url: "/settings?section=company",
 };
 

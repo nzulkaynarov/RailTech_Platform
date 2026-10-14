@@ -168,11 +168,11 @@ class TestContentMatchesExtension:
         # .pdf name but PNG bytes → ValidationError (keeps caller's own ext/size allowlist).
         f = SimpleUploadedFile("scan.pdf", b"\x89PNG\r\n\x1a\n" + b"\x00" * 50, content_type="application/pdf")
         with pytest.raises(ValidationError, match="does not match"):
-            assert_content_matches_extension(f, "KYC document")
+            assert_content_matches_extension(f, "Company document")
 
     def test_assert_helper_passes_real_file_and_rewinds(self):
         f = SimpleUploadedFile("scan.pdf", b"%PDF-1.4 body", content_type="application/pdf")
-        assert_content_matches_extension(f, "KYC document")
+        assert_content_matches_extension(f, "Company document")
         # Must not consume the stream — the caller still needs to store it.
         assert f.read().startswith(b"%PDF")
 

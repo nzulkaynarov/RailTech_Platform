@@ -16,15 +16,7 @@ import pytest
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SystemRole,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from notifications.models import Notification, NotificationType
 from notifications.services import (
     mark_notifications_read,
@@ -45,15 +37,12 @@ def lookups(db):
         SystemRole.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
 
 
 @pytest.fixture
 def people(lookups):
     """Обычный пользователь компании и платформенный оператор (без членств — ADR-0003)."""
-    company = Company.objects.create(
-        name="Notify Co", inn="N100", verification_status=VerificationStatus.objects.get(code="L2_VERIFIED")
-    )
+    company = Company.objects.create(name="Notify Co", inn="N100")
     company.types.add(CompanyType.objects.get(code="CLIENT"))
     member = CustomUser.objects.create_user(email="member@svc.test", username="member@svc.test", password="x")
     CompanyMember.objects.create(
@@ -90,7 +79,7 @@ def _ids(resp):
 
 
 def test_notify_platform_admins_creates_a_broadcast_row(people):
-    notification = notify_platform_admins("Очередь KYC растёт", "12 компаний ждут проверки")
+    notification = notify_platform_admins("Очередь импорта растёт", "12 файлов ждут обработки")
 
     assert notification.pk is not None
     assert notification.audience == Notification.AUDIENCE_PLATFORM_ADMIN

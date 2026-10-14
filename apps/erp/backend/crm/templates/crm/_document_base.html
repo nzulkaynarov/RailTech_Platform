@@ -18,7 +18,6 @@
     seller_profile  — its branded CompanyDocumentProfile (may be None)
     seller_logo_url — its logo URL (may be None)
     company         — the buyer Company
-    is_demo         — draw the DEMO watermark (unsendable seller)
 
   CSS is inline + WeasyPrint-safe (no flex/grid reliance; tables for layout; pt units).
 {% endcomment %}
@@ -210,13 +209,6 @@
   .footer-grid td { vertical-align: top; padding: 0 8pt 0 0; font-size: 6.5pt; color: #9aa0a6; }
   .footer-grid .fk { color: #7a828f; font-weight: 700; }
 
-  /* Move 4 monetization: DEMO watermark. position:fixed repeats on every page in WeasyPrint. */
-  .demo-watermark {
-    position: fixed; top: 45%; left: -5%; right: -5%;
-    text-align: center; transform: rotate(-27deg); transform-origin: center;
-    font-size: 16pt; font-weight: 700; letter-spacing: 1pt;
-    color: rgba(200, 55, 55, 0.13); white-space: nowrap;
-  }
   /* Governance: a NOT-yet-sent КП (draft / internally-approved-but-unsent) carries a «ЧЕРНОВИК»
      watermark so a copy handed to a client out-of-band — bypassing the review/send chain — is
      visibly not a binding offer. Cleared once the КП is frozen on send. */
@@ -255,7 +247,7 @@
 </style>
 </head>
 <body class="layout-{{ layout_preset|default:'light' }}">
-  {% block watermark %}{% if is_demo %}<div class="demo-watermark">{% translate "ДЕМО — не для коммерческого использования" %}</div>{% elif is_draft %}<div class="draft-watermark">{% translate "ЧЕРНОВИК · не является офертой" %}</div>{% endif %}{% endblock %}
+  {% block watermark %}{% if is_draft %}<div class="draft-watermark">{% translate "ЧЕРНОВИК · не является офертой" %}</div>{% endif %}{% endblock %}
 
   <!-- ── Brand header ── -->
   <table class="brandbar">

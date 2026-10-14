@@ -13,24 +13,13 @@
 docs ARE owner-anchored»), — как и в #463 у отгрузки, оно не выполняется для одной модели.
 """
 
-from datetime import timedelta
 from decimal import Decimal
 
 import pytest
-from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    SystemRole,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import (
     Deal,
     DealSellerRouting,
@@ -52,7 +41,6 @@ def lookups(db):
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     for code, name in (("CLIENT", "Client"), ("SUPPLIER", "Supplier")):
         CompanyType.objects.get_or_create(code=code, defaults={"name": name, "sort_order": 10})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     for code in ("USER", "ADMIN"):
         SystemRole.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
     DealStage.objects.get_or_create(code="CLOSED_WON", defaults={"name": "Won", "sort_order": 80})
@@ -66,9 +54,7 @@ def lookups(db):
 
 
 def _company(name, inn, type_code):
-    company = Company.objects.create(
-        name=name, inn=inn, verification_status=VerificationStatus.objects.get(code="L2_VERIFIED")
-    )
+    company = Company.objects.create(name=name, inn=inn)
     company.types.add(CompanyType.objects.get(code=type_code))
     return company
 
@@ -85,15 +71,6 @@ def _member(company, email, *, can_sell=False, can_buy=False):
         can_buy=can_buy,
     )
     return user
-
-
-def _subscribe(company):
-    SupplierSubscription.objects.create(
-        company=company,
-        plan="PREMIUM",
-        status="ACTIVE",
-        valid_until=timezone.localdate() + timedelta(days=30),
-    )
 
 
 def _api(user, ctx="SELLER"):
@@ -114,11 +91,9 @@ def act_on_manual_invoice(lookups):
 
     winner_co = _company("Winner", "S800", "SUPPLIER")
     winner_user = _member(winner_co, "winner@act.test", can_sell=True)
-    _subscribe(winner_co)
 
     loser_co = _company("Loser", "S801", "SUPPLIER")
     loser_user = _member(loser_co, "loser@act.test", can_sell=True)
-    _subscribe(loser_co)
 
     deal = Deal.objects.create(
         title="Manual act deal", company=buyer_co, stage=DealStage.objects.get(code="CLOSED_WON")

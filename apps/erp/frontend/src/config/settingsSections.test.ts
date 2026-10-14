@@ -13,7 +13,6 @@ import type { Capabilities } from '@/store/userStore';
 
 function makeCapabilities(overrides: Partial<Capabilities> = {}): Capabilities {
   return {
-    kyc_level: 'L2_VERIFIED',
     can_buy: true,
     can_sell: false,
     subscription_active: false,

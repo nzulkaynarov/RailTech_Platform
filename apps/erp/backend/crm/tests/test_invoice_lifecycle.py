@@ -9,22 +9,13 @@ Self-contained fixtures (mirrors test_billing_visibility.py): tests run with --n
 every lookup code the flow asserts on is seeded here.
 """
 
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
 
 import pytest
 from django.utils import timezone
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    SystemRole,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import (
     ActStatus,
     Contract,
@@ -48,7 +39,6 @@ def lookups(db):
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     SystemRole.objects.get_or_create(code="USER", defaults={"name": "User", "sort_order": 10})
     SystemRole.objects.get_or_create(code="ADMIN", defaults={"name": "Admin", "sort_order": 20})
     for code in ("DRAFT", "CONTRACT_SIGNED", "CLOSED_WON"):
@@ -64,11 +54,10 @@ def lookups(db):
     NotificationType.objects.get_or_create(code="INFO", defaults={"name": "Info", "sort_order": 10})
 
 
-def _company(name, inn, type_code, *, kyc=None):
+def _company(name, inn, type_code):
     company = Company.objects.create(
         name=name,
         inn=inn,
-        verification_status=(VerificationStatus.objects.get(code=kyc) if kyc else None),
         # O3: продавец с платёжными реквизитами — иначе `issue_invoice` не выпустит счёт (он неоплатен).
         bank_account="20208000900001234567",
         mfo="00443",
@@ -93,19 +82,13 @@ def _member(company, email, *, can_sell=False, can_buy=False):
 
 @pytest.fixture
 def world(lookups):
-    """A buyer, a seller (KYC L2 + operational subscription so it may issue/cancel), routed to a
+    """A buyer, a seller (may issue/cancel), routed to a
     signed-contract deal. Returns the actors + the DRAFT-able invoice's building blocks."""
-    buyer_co = _company("Buyer Co", "B900", "CLIENT", kyc="L2_VERIFIED")
+    buyer_co = _company("Buyer Co", "B900", "CLIENT")
     buyer_user = _member(buyer_co, "buyer@inv.test", can_buy=True)
 
-    seller_co = _company("Seller Co", "S900", "SUPPLIER", kyc="L2_VERIFIED")
+    seller_co = _company("Seller Co", "S900", "SUPPLIER")
     seller_user = _member(seller_co, "seller@inv.test", can_sell=True)
-    SupplierSubscription.objects.create(
-        company=seller_co,
-        plan="PREMIUM",
-        status="ACTIVE",
-        valid_until=timezone.localdate() + timedelta(days=30),
-    )
     deal = Deal.objects.create(title="Inv deal", company=buyer_co, stage=DealStage.objects.get(code="CONTRACT_SIGNED"))
     DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)
     quote = Quote.objects.create(

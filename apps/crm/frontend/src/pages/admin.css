@@ -225,3 +225,15 @@ h3.section-label.ant-typography {
 .model-warning {
   margin-bottom: 12px;
 }
+
+/* «Расходы» → «Ансамбль» (M3-CRM-09): плитки одной высоты в ряду, список дней превышения. */
+.ai-spend-tile {
+  height: 100%;
+}
+.ai-spend-hint.ant-typography {
+  margin: var(--ant-margin-xxs) 0 0;
+}
+.ai-spend-overruns {
+  margin: 0;
+  padding-inline-start: var(--ant-padding-md);
+}

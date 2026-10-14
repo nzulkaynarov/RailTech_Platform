@@ -4,7 +4,6 @@ import {
   approvalParticipationLabelKey,
   companyTypeLabelKey,
   dealStageLabelKey,
-  kycLevelLabelKey,
 } from './codes';
 
 /**
@@ -65,8 +64,6 @@ export function renderable(i18n: I18nType, key: string, params: Record<string, u
 const CODED_PARAMS: ReadonlyArray<{ param: string; source: string; labelKey: (code: string) => string }> = [
   { param: 'from_stage', source: 'from_stage_code', labelKey: dealStageLabelKey },
   { param: 'to_stage', source: 'to_stage_code', labelKey: dealStageLabelKey },
-  { param: 'from_status', source: 'from_status_code', labelKey: kycLevelLabelKey },
-  { param: 'to_status', source: 'to_status_code', labelKey: kycLevelLabelKey },
   { param: 'participation', source: 'participation_code', labelKey: approvalParticipationLabelKey },
   { param: 'role_name', source: 'role_code', labelKey: companyTypeLabelKey },
   { param: 'role_code', source: 'role_code', labelKey: companyTypeLabelKey },
@@ -76,7 +73,6 @@ const CODED_PARAMS: ReadonlyArray<{ param: string; source: string; labelKey: (co
   // Уведомления: сервер шлёт код прямо в параметре с тем же именем.
   { param: 'stage_code', source: 'stage_code', labelKey: dealStageLabelKey },
   { param: 'status_code', source: 'status_code', labelKey: (code) => `fulfillmentPage.status.${code}` },
-  { param: 'level_code', source: 'level_code', labelKey: kycLevelLabelKey },
 ];
 
 /** i18n-ключ подписи пункта договора по машинному имени поля формулировки. */

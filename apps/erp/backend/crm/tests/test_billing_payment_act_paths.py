@@ -6,22 +6,12 @@
 существенное — запрет продавцу выпускать акт по инвойсу КОНКУРЕНТА (аудит H4).
 """
 
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
 
 import pytest
-from django.utils import timezone
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    SystemRole,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import (
     Act,
     ActStatus,
@@ -44,7 +34,6 @@ def lookups(db):
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     SystemRole.objects.get_or_create(code="USER", defaults={"name": "User", "sort_order": 10})
     SystemRole.objects.get_or_create(code="ADMIN", defaults={"name": "Admin", "sort_order": 20})
     for code in ("DRAFT", "CONTRACT_SIGNED", "CLOSED_WON"):
@@ -59,9 +48,7 @@ def lookups(db):
 
 
 def _company(name, inn, type_code):
-    company = Company.objects.create(
-        name=name, inn=inn, verification_status=VerificationStatus.objects.get(code="L2_VERIFIED")
-    )
+    company = Company.objects.create(name=name, inn=inn)
     company.types.add(CompanyType.objects.get(code=type_code))
     return company
 
@@ -89,21 +76,9 @@ def world(lookups):
 
     seller_co = _company("Продавец", "S902", "SUPPLIER")
     seller_user = _member(seller_co, "seller@billpaths.test", can_sell=True)
-    SupplierSubscription.objects.create(
-        company=seller_co,
-        plan="PREMIUM",
-        status="ACTIVE",
-        valid_until=timezone.localdate() + timedelta(days=30),
-    )
 
     other_co = _company("Посторонний продавец", "O902", "SUPPLIER")
     other_user = _member(other_co, "other@billpaths.test", can_sell=True)
-    SupplierSubscription.objects.create(
-        company=other_co,
-        plan="PREMIUM",
-        status="ACTIVE",
-        valid_until=timezone.localdate() + timedelta(days=30),
-    )
 
     operator = CustomUser.objects.create_user(
         is_superuser=True,

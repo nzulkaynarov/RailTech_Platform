@@ -1,14 +1,12 @@
 import { useUserStore, type Capabilities } from '@/store/userStore';
-import { isKycVerified } from '@/config/navigation';
 
-/** Why the current seller cannot send the КП. Order mirrors the backend send_to_client gates
- * (SELLER_KYC_REQUIRED is checked before the quote.send entitlement). */
-export type QuoteSendBlockReason = 'kyc' | 'subscription' | 'demo' | 'disabled_by_operator';
+/** Why the current seller cannot send the КП. Order mirrors the backend send_to_client gates. */
+export type QuoteSendBlockReason = 'subscription' | 'demo' | 'disabled_by_operator';
 
 export interface QuoteSendGate {
   /** The viewer is acting on the seller side (the only side that sends a КП). */
   isSeller: boolean;
-  /** The seller cannot send the КП yet — a KYC / entitlement / demo blocker applies. */
+  /** The seller cannot send the КП yet — an entitlement / demo blocker applies. */
   blocked: boolean;
   reason: QuoteSendBlockReason | null;
   /** The stable API error code the backend would raise, for translateApiError() reuse. */
@@ -20,14 +18,12 @@ const NOT_BLOCKED: QuoteSendGate = { isSeller: false, blocked: false, reason: nu
 /**
  * Чистая часть гейта — отдельно от хука, чтобы её можно было проверить без монтирования
  * компонента и стора. Порядок проверок повторяет `crm.services.quotes.send_to_client`:
- * сначала пол KYC, затем право на отправку, DEMO — отдельным случаем.
+ * право на отправку, DEMO — отдельным случаем. Порога верификации компании больше нет
+ * (M1-ERP-02): отправку ограничивает право роли и подписка, их держит бэкенд.
  */
 export function resolveQuoteSendGate(capabilities: Capabilities, isSeller: boolean): QuoteSendGate {
   if (!isSeller) return NOT_BLOCKED;
 
-  if (!isKycVerified(capabilities.kyc_level)) {
-    return { isSeller, blocked: true, reason: 'kyc', errorCode: 'SELLER_KYC_REQUIRED' };
-  }
   if (capabilities.quote_send_is_demo) {
     return { isSeller, blocked: true, reason: 'demo', errorCode: 'QUOTE_SEND_NOT_ENTITLED' };
   }
@@ -47,7 +43,7 @@ export function resolveQuoteSendGate(capabilities: Capabilities, isSeller: boole
 
 /**
  * WP-H — proactive КП send-gate, read from /me.capabilities. Lets the builder surface a
- * KYC/subscription/demo blocker BEFORE the seller spends an hour on data entry (the audit's
+ * subscription/demo blocker BEFORE the seller spends an hour on data entry (the audit's
  * "late surprise" at send). UI-gating only — send_to_client remains the authoritative gate.
  */
 export function useQuoteSendGate(): QuoteSendGate {

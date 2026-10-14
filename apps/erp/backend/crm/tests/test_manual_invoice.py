@@ -15,29 +15,13 @@ from decimal import Decimal
 
 import pytest
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
 from crm.models import Deal, DealSellerRouting, DealStage, Invoice, InvoiceStatus, Quote, QuoteItem, QuoteStatus
 from crm.services import create_manual_invoice
 from crm.services.billing import record_payment
 from crm.services.invoice_lifecycle import cancel_invoice, issue_invoice
 from crm.views.billing import _invoice_seller_side_q
 from master_data.models import Currency
-
-
-def _grant_subscription(company):
-    """Operational subscription so assert_seller_can_operate passes (paid-seller gate)."""
-    SupplierSubscription.objects.update_or_create(
-        company=company,
-        defaults={"plan": "PREMIUM", "status": "ACTIVE", "valid_until": date(2999, 1, 1)},
-    )
 
 
 @pytest.fixture
@@ -47,7 +31,6 @@ def scenario(db):
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
-    vs = VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})[0]
     for code in ("DRAFT", "ISSUED", "PARTIAL", "PAID", "CANCELLED"):
         InvoiceStatus.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
     uzs = Currency.objects.get_or_create(code="UZS", defaults={"name": "Sum", "symbol": "сум", "sort_order": 1})[0]
@@ -55,11 +38,8 @@ def scenario(db):
 
     def _seller(name, inn):
         # O3: продавец с платёжными реквизитами — иначе `issue_invoice` не выпустит счёт (он неоплатен).
-        co = Company.objects.create(
-            name=name, inn=inn, verification_status=vs, bank_account="20208000900001234567", mfo="00443"
-        )
+        co = Company.objects.create(name=name, inn=inn, bank_account="20208000900001234567", mfo="00443")
         co.types.add(CompanyType.objects.get(code="SUPPLIER"))
-        _grant_subscription(co)
         user = CustomUser.objects.create_user(email=f"{inn}@s.test", username=f"{inn}@s.test", password="pw")
         CompanyMember.objects.create(
             user=user, company=co, role=WorkspaceRole.objects.get(code="OWNER"), is_active=True, can_sell=True

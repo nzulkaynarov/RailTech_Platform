@@ -273,7 +273,7 @@ class DocumentTemplateViewSet(viewsets.ModelViewSet):
 
 class GeneratedDocumentViewSet(viewsets.ModelViewSet):
     """Rendered documents registry. List/retrieve are company-scoped; generation and
-    status transitions run in services (entitlement + IDOR + viewer gates)."""
+    status transitions run in services (permission + IDOR + viewer gates)."""
 
     serializer_class = GeneratedDocumentSerializer
     permission_classes = [IsAuthenticated]

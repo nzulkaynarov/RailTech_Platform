@@ -20,15 +20,7 @@ from decimal import Decimal
 import pytest
 from django.utils import timezone
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SystemRole,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from catalog.models import DomainType, ProductStatus, StockStatus
 from crm import services as crm_services
 from crm.models import (
@@ -78,7 +70,6 @@ def lookups(db):
         QuoteStatus.objects.get_or_create(code=code, defaults={"name": name, "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     SystemRole.objects.get_or_create(code="USER", defaults={"name": "User", "sort_order": 10})
     Country.objects.get_or_create(code="UZ", defaults={"name": "Uzbekistan", "sort_order": 10})
@@ -113,7 +104,6 @@ def _make_company_with_owner(*, name, inn, type_code, email, username):
     company = Company.objects.create(
         name=name,
         inn=inn,
-        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
         # O3: продавец с платёжными реквизитами — иначе `issue_invoice` не выпустит счёт (он неоплатен).
         bank_account="20208000900001234567",
         mfo="00443",
@@ -360,7 +350,7 @@ def test_contract_and_billing_events_are_structured(deal, buyer, manager):
 
 def _ready_priced_quote(deal, manager):
     """A properly-priced КП in READY_TO_SEND — same setup the golden path sends successfully,
-    so all the OTHER send guards (routing/entitlement/KYC/priced-lines) are satisfied."""
+    so all the OTHER send guards (routing/priced-lines) are satisfied."""
     quote = _build_quote_with_items(deal, manager)
     QuoteCalculationService.recalculate_quote(quote.id)
     quote.refresh_from_db()

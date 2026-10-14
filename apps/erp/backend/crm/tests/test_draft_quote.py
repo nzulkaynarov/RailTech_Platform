@@ -8,15 +8,7 @@ from decimal import Decimal
 
 import pytest
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyRole,
-    CompanyType,
-    CustomUser,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, CustomUser, WorkspaceRole
 from catalog.models import Product, SupplierOffer
 from crm.models import Deal, DealSellerRouting, DealStage, Quote, QuoteItem, QuoteStatus
 from crm.services.draft_quote import generate_draft_quote
@@ -33,7 +25,6 @@ def _disable_ai_by_default(settings):
 
 @pytest.fixture
 def scene(db):
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
     usd = Currency.objects.get_or_create(code="USD", defaults={"name": "USD", "symbol": "$", "sort_order": 10})[0]
@@ -44,20 +35,6 @@ def scene(db):
     buyer.types.add(CompanyType.objects.get(code="CLIENT"))
     seller = Company.objects.create(name="Seller", inn="2220000001")
     seller.types.add(CompanyType.objects.get(code="SUPPLIER"))
-    # Operational subscription → entitles the seller to ai.draft (baseline) so the gate passes.
-    from datetime import timedelta
-
-    from django.utils import timezone
-
-    from accounts.models import SupplierSubscription
-
-    SupplierSubscription.objects.create(
-        company=seller,
-        plan="BASIC",
-        status="ACTIVE",
-        valid_from=timezone.localdate(),
-        valid_until=(timezone.now() + timedelta(days=365)).date(),
-    )
 
     product = Product.objects.create(name="Автосцепка СА-3")
     SupplierOffer.objects.create(
@@ -120,10 +97,11 @@ def test_no_request_lines(scene):
     assert err == "NO_REQUEST_LINES"
 
 
-def test_ai_draft_gated_without_entitlement(scene):
-    """A routed seller WITHOUT a subscription/entitlement can't generate an AI draft (paid feature)."""
+def test_ai_draft_needs_no_paid_plan(scene):
+    """M1-ERP-02 wave 2: the paid ai.draft entitlement is gone — any routed seller who may build
+    КП (quote.edit_pricing) gets the draft, no subscription / entitlement / credit involved."""
     seller2 = Company.objects.create(name="Seller2", inn="2220000077")
-    seller2.types.add(CompanyType.objects.get(code="SUPPLIER"))  # no subscription, no entitlement
+    seller2.types.add(CompanyType.objects.get(code="SUPPLIER"))
     DealSellerRouting.objects.create(deal=scene["deal"], seller_company=seller2)
     role = CompanyRole.objects.create(company=seller2, name="М", permissions=["quote.edit_pricing"])
     ws = WorkspaceRole.objects.get(code="SALES_MANAGER")
@@ -131,8 +109,9 @@ def test_ai_draft_gated_without_entitlement(scene):
     CompanyMember.objects.create(
         user=member, company=seller2, role=ws, company_role=role, is_active=True, is_primary=True, can_sell=True
     )
-    _, err, _ = generate_draft_quote(scene["deal"].id, member)
-    assert err == "AI_DRAFT_NOT_ENTITLED"
+    quote, err, _ = generate_draft_quote(scene["deal"].id, member)
+    assert err is None
+    assert quote is not None and quote.prepared_by_id == member.id
 
 
 def test_auto_matches_unmatched_line_by_exact_gost(scene):
@@ -244,8 +223,8 @@ def test_ai_fuzzy_match_below_threshold_not_bound(scene, settings, monkeypatch):
 
 
 def test_validate_gates_pass_is_read_only(scene):
-    """The pre-enqueue validation clears an entitled routed seller WITHOUT side effects —
-    no draft Quote is created and no credit is consumed (has_entitlement, not consume_credit)."""
+    """The pre-enqueue validation clears a routed seller WITHOUT side effects —
+    no draft Quote is created."""
     from crm.services.draft_quote import validate_draft_quote_gates
 
     assert validate_draft_quote_gates(scene["deal"].id, scene["seller_user"]) is None
@@ -295,13 +274,12 @@ def test_endpoint_enqueues_202_with_owned_aijob(scene, monkeypatch):
 
 
 def test_endpoint_gate_error_short_circuits_before_enqueue(scene, monkeypatch):
-    """A cheap gate failure (unentitled seller) 4xxs synchronously and never queues a job."""
+    """A cheap gate failure (seller NOT routed to the deal) 4xxs synchronously and never queues a job."""
     import pytest as _pytest
     from rest_framework.test import APIClient
 
     seller2 = Company.objects.create(name="Seller2V", inn="2220000076")
-    seller2.types.add(CompanyType.objects.get(code="SUPPLIER"))  # no subscription, no entitlement
-    DealSellerRouting.objects.create(deal=scene["deal"], seller_company=seller2)
+    seller2.types.add(CompanyType.objects.get(code="SUPPLIER"))  # not routed to scene["deal"]
     role = CompanyRole.objects.create(company=seller2, name="М", permissions=["quote.edit_pricing"])
     ws = WorkspaceRole.objects.get(code="SALES_MANAGER")
     member = CustomUser.objects.create_user(email="s2v@s.uz", username="s2v@s.uz", password="pw", is_active=True)
@@ -317,7 +295,7 @@ def test_endpoint_gate_error_short_circuits_before_enqueue(scene, monkeypatch):
     client.force_authenticate(member)
     response = client.post(f"/api/v1/crm/deals/{scene['deal'].id}/generate-draft-quote/", {}, format="json")
     assert response.status_code == 403
-    assert response.json() == {"detail": "AI_DRAFT_NOT_ENTITLED"}
+    assert response.json() == {"detail": "MEMBER_REQUIRED_FOR_ACTION"}
 
 
 def test_draft_quote_handler_serializes_deal_with_pdf_quote(scene):

@@ -22,7 +22,6 @@ export function HelpPage() {
     {
       title: t('pages.help.sections.gettingStarted'),
       items: [
-        { question: t('pages.help.faq.howRegister'), answer: t('pages.help.faq.howRegisterAnswer') },
         { question: t('pages.help.faq.howAddEmployees'), answer: t('pages.help.faq.howAddEmployeesAnswer') },
         { question: t('pages.help.faq.howSwitchStatus'), answer: t('pages.help.faq.howSwitchStatusAnswer') },
       ],

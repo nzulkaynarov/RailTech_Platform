@@ -9,7 +9,9 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
-from typing import Literal, Protocol
+from typing import Any, Literal, Protocol
+
+from app.domain.ai_spend import call_tags
 
 Purpose = Literal[
     "dialog",
@@ -25,6 +27,22 @@ Purpose = Literal[
 ]
 
 UsageKind = Literal["work", "test"]
+
+# Журнал расходов LiteLLM (M3-CRM-09, ARCHITECTURE §8): каждый вызов несёт теги
+# `system=crm`, `feature=<функция>`, `model=<алиас>` в `metadata.tags` тела запроса — прокси
+# пишет их в `LiteLLM_SpendLogs.request_tags`, «Расходы» сворачивают по ним (`domain/ai_spend`).
+FEATURE_BY_PURPOSE: dict[Purpose, str] = {
+    "dialog": "dialog",
+    "qualifier": "qualifier",
+    "judge": "judge",
+    "fallback": "fallback",
+    "embed_query": "kb-search",
+    "embed_ingest": "kb-ingest",
+    "probe": "probe",
+    "test": "test",
+    "assist_draft": "assist-draft",
+    "assist_improve": "assist-improve",
+}
 
 _current_lead: ContextVar[int | None] = ContextVar("llm_usage_lead_id", default=None)
 _current_kind: ContextVar[UsageKind | None] = ContextVar("llm_usage_kind", default=None)
@@ -82,3 +100,8 @@ def parse_cost(raw: str | None) -> float | None:
         return float(raw) if raw else None
     except ValueError:
         return None
+
+
+def gateway_body(purpose: Purpose, alias: str, **extra: Any) -> dict[str, Any]:
+    """`extra_body` вызова LiteLLM: теги журнала расходов и параметры прокси."""
+    return {"metadata": {"tags": call_tags("crm", FEATURE_BY_PURPOSE[purpose], alias)}, **extra}

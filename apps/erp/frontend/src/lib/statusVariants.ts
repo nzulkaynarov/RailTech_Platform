@@ -15,18 +15,12 @@ const stockVariantMap: Record<string, BadgeVariant> = {
 };
 const dealStageVariantMap: Record<string, BadgeVariant> = {
   DRAFT: 'neutral',
-  KYC_PENDING: 'warning',
   SOURCING: 'info',
   CALCULATING: 'info',
   QUOTE_SENT: 'warning',
   CONTRACT_SIGNED: 'success',
   CLOSED_WON: 'success',
   CLOSED_LOST: 'danger',
-};
-const kycVariantMap: Record<string, BadgeVariant> = {
-  L1_UNVERIFIED: 'warning',
-  L2_VERIFIED: 'success',
-  L3_CONTRACTED: 'success',
 };
 
 export function getStockVariant(status: string): BadgeVariant {
@@ -35,8 +29,4 @@ export function getStockVariant(status: string): BadgeVariant {
 
 export function getDealStageVariant(stage: string): BadgeVariant {
   return dealStageVariantMap[stage] ?? 'neutral';
-}
-
-export function getKycVariant(status: string): BadgeVariant {
-  return kycVariantMap[status] ?? 'neutral';
 }

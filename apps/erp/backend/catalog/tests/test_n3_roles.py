@@ -3,8 +3,9 @@
 До N3: `catalog.manage`/`catalog.publish` только прятали пункт меню («Наблюдатель» не видел
 «Номенклатуру», но правил и публиковал карточки прямым API); любая суб-роль оператора —
 включая SUPPORT «только просмотр» — удаляла товары и перекраивала дерево категорий;
-операторские карточки рождались «ничьими»; `hs_lookup`/`hs_classify` звали платный LLM без
-entitlement, в отличие от enrich на той же странице.
+операторские карточки рождались «ничьими»; `hs_lookup`/`hs_classify` звали LLM без гейта,
+в отличие от enrich на той же странице. С M1-ERP-02 (волна 2) гейт у всех трёх — право роли
+`catalog.manage`, а не платный план.
 """
 
 import pytest
@@ -107,13 +108,31 @@ def test_operator_card_requires_owner_company(world):
     assert Product.objects.get(pk=owned.json()["id"]).owner_company_id == world["company"].pk
 
 
-def test_hs_lookup_is_entitlement_gated(world):
-    """Платный LLM-подбор кода — под тем же entitlement, что enrich (две монетизации ≠ одна механика)."""
+def test_hs_lookup_is_role_gated(world):
+    """LLM-подбор кода — под тем же гейтом, что enrich: право роли `catalog.manage`."""
+    viewer = _member(world, "viewer@n3.test", [])
+
+    response = _client_for(viewer).post(
+        "/api/v1/catalog/products/hs-lookup/", {"description": "прокладка под рельс"}, format="json"
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "ROLE_NOT_PERMITTED"
+
+
+def test_hs_lookup_is_open_to_a_catalog_manager_without_any_plan(world, settings, monkeypatch):
+    """Платного плана больше нет: ведущий каталог доходит до постановки задачи."""
+    from types import SimpleNamespace
+
+    settings.AI_IMPORT_ENABLED = True
+    monkeypatch.setattr(
+        "sourcing.tasks_ai.run_ai_job.apply_async",
+        lambda args=None, task_id=None, **kw: SimpleNamespace(id=task_id),
+    )
     seller = _member(world, "no-plan@n3.test", ["catalog.manage"])
 
     response = _client_for(seller).post(
         "/api/v1/catalog/products/hs-lookup/", {"description": "прокладка под рельс"}, format="json"
     )
 
-    assert response.status_code == 403
-    assert response.json()["detail"] == "AI_FEATURE_NOT_ENTITLED"
+    assert response.status_code == 202, response.content

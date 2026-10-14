@@ -11,7 +11,7 @@ from decimal import Decimal
 
 import pytest
 
-from accounts.models import Company, CompanyType, VerificationStatus
+from accounts.models import Company, CompanyType
 from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteStatus
 from crm.services import export_quote
 from crm.services.exporters import _client_columns, _cost_columns
@@ -22,7 +22,6 @@ def export_lookups(db):
     DealStage.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})
     QuoteStatus.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
 
 
 @pytest.fixture
@@ -30,7 +29,6 @@ def quote_with_items(export_lookups):
     company = Company.objects.create(
         name="Buyer LLC",
         inn="7700000001",
-        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
     )
     company.types.add(CompanyType.objects.get(code="CLIENT"))
     deal = Deal.objects.create(company=company, stage=DealStage.objects.get(code="DRAFT"), title="Export test")

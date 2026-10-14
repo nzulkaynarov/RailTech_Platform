@@ -2,34 +2,29 @@
 
 One-click-quotation (Odoo): claim + стадия CALCULATING + предзаполненный КП одной операцией —
 вместо 4–6 ручных шагов на двух экранах. Оркестрация существующих сервисов (claim_deal,
-transition_deal_stage FSM, общий builder копии строк). AI-режим (ai.draft) уходит в существующий
-async job — здесь тестируется маршрутизация режимов и детерминированный путь.
+transition_deal_stage FSM, общий builder копии строк). При включённом ИИ (AI_IMPORT_ENABLED) режим
+уходит в существующий async job — здесь тестируется маршрутизация режимов и детерминированный путь.
+Платный гейт ai.draft (подписка/entitlement) удалён в M1-ERP-02 волна 2: режим решает только то,
+включён ли ИИ.
 """
 
-from datetime import timedelta
 from decimal import Decimal
 
 import pytest
-from django.utils import timezone
 
-from accounts.models import SupplierSubscription
 from crm.models import DealStage, Quote, QuoteStatus
 from crm.services.draft_quote import prefill_created_quote, take_and_prepare_quote
 
 
-def _grant_ai(seller):
-    SupplierSubscription.objects.create(
-        company=seller,
-        plan="BASIC",
-        status="ACTIVE",
-        valid_from=timezone.localdate(),
-        valid_until=(timezone.now() + timedelta(days=365)).date(),
-    )
+@pytest.fixture(autouse=True)
+def _ai_off_by_default(settings):
+    # Local dev may carry an API key → AI_IMPORT_ENABLED=True; the deterministic path is the default here.
+    settings.AI_IMPORT_ENABLED = False
 
 
 @pytest.mark.django_db
 def test_one_click_claims_advances_stage_and_prefills_quote(scene):
-    """Не-entitled продавец: claim + RFQ_OPEN→CALCULATING (один FSM-переход) + КП со строками."""
+    """ИИ выключен: claim + RFQ_OPEN→CALCULATING (один FSM-переход) + КП со строками."""
     result, err = take_and_prepare_quote(scene["deal"].id, scene["seller_user"])
     assert err is None
     assert result["mode"] == "quote"
@@ -59,8 +54,8 @@ def test_one_click_is_idempotent(scene):
 
 
 @pytest.mark.django_db
-def test_one_click_routes_entitled_seller_to_ai_mode(scene):
-    _grant_ai(scene["seller"])
+def test_one_click_routes_to_ai_mode_when_ai_is_on(scene, settings):
+    settings.AI_IMPORT_ENABLED = True
     result, err = take_and_prepare_quote(scene["deal"].id, scene["seller_user"])
     assert err is None
     assert result["mode"] == "ai" and result["quote"] is None  # КП создаст AI-job (view enqueues)

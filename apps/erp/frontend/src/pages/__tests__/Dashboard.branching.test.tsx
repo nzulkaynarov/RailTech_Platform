@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 
 import { renderWithProviders } from '@/test/renderWithProviders';
 import { Dashboard } from '@/pages/Dashboard';
@@ -11,20 +11,21 @@ import { dashboardApi, type DashboardStats } from '@/api/dashboardApi';
  * The pre-auth context default is BUYER (ADR-0005), so a seller-capable / dual company
  * used to land on BuyerDashboard → the buyer onboarding («Начните за 3 шага») even
  * though its real inbound work lives on the seller side. The Dashboard now routes any
- * seller-capable company (verified SELLER context + can_sell) to the SellerDashboard
+ * seller-capable company (SELLER context + can_sell) to the SellerDashboard
  * without flipping the global activeStatus default. These tests pin the branching:
  *   • seller-capable (single-side)   → seller content, never BuyerWelcome
  *   • dual buyer+seller (BUYER active default) → seller content, never BuyerWelcome
- *   • pure buyer, verified, no activity        → BuyerWelcome (unchanged behaviour)
+ *   • pure buyer, no activity                  → BuyerWelcome (unchanged behaviour)
+ * There is no company-verification banner any more (M1-ERP-02).
  */
 
 // ── Mutable store state fed to the mocked useUserStore (hoisted so the vi.mock
 //    factory below can close over it; each test sets `storeRef.state`). ──
-type Entry = { status: 'BUYER' | 'SELLER'; verification: 'verified' | 'pending' | 'rejected' };
+type Entry = { status: 'BUYER' | 'SELLER' };
 type MockState = {
   activeStatus: 'BUYER' | 'SELLER';
   profile: { firstName: string };
-  company: { name: string; inn: string; kycStatus: string; statusEntries: Entry[] };
+  company: { name: string; inn: string; statusEntries: Entry[] };
 };
 const storeRef = vi.hoisted(() => ({ state: null as unknown as MockState }));
 
@@ -88,7 +89,7 @@ describe('Dashboard — context-aware landing (WP-2)', () => {
     storeRef.state = {
       activeStatus: 'SELLER',
       profile: { firstName: 'Diana' },
-      company: { name: 'ООО Продавец', inn: '1', kycStatus: 'verified', statusEntries: [{ status: 'SELLER', verification: 'verified' }] },
+      company: { name: 'ООО Продавец', inn: '1', statusEntries: [{ status: 'SELLER' }] },
     };
 
     renderWithProviders(<Dashboard onNavigate={vi.fn()} />);
@@ -106,10 +107,10 @@ describe('Dashboard — context-aware landing (WP-2)', () => {
       activeStatus: 'BUYER',
       profile: { firstName: 'Aziz' },
       company: {
-        name: 'ООО Дуал', inn: '2', kycStatus: 'verified',
+        name: 'ООО Дуал', inn: '2',
         statusEntries: [
-          { status: 'BUYER', verification: 'verified' },
-          { status: 'SELLER', verification: 'verified' },
+          { status: 'BUYER' },
+          { status: 'SELLER' },
         ],
       },
     };
@@ -122,11 +123,11 @@ describe('Dashboard — context-aware landing (WP-2)', () => {
     expect(screen.queryByText('Начните работу на платформе за 3 простых шага')).toBeNull();
   });
 
-  it('keeps the unchanged BuyerWelcome onboarding for a pure buyer (verified, no activity)', async () => {
+  it('keeps the unchanged BuyerWelcome onboarding for a pure buyer (no activity)', async () => {
     storeRef.state = {
       activeStatus: 'BUYER',
       profile: { firstName: 'Boris' },
-      company: { name: 'ООО Покупатель', inn: '3', kycStatus: 'verified', statusEntries: [{ status: 'BUYER', verification: 'verified' }] },
+      company: { name: 'ООО Покупатель', inn: '3', statusEntries: [{ status: 'BUYER' }] },
     };
 
     renderWithProviders(<Dashboard onNavigate={vi.fn()} />);
@@ -137,41 +138,5 @@ describe('Dashboard — context-aware landing (WP-2)', () => {
     // Seller surface is absent for a pure buyer.
     expect(screen.queryByText('SELLER_ATTENTION_STRIP')).toBeNull();
     expect(screen.queryByText('QUOTE_APPROVAL_QUEUE')).toBeNull();
-  });
-
-  it('does NOT treat an unverified SELLER context as seller-capable (verification gate)', async () => {
-    // A pending SELLER entry must not flip the landing — mirrors App.tsx / AppShell gating.
-    storeRef.state = {
-      activeStatus: 'BUYER',
-      profile: { firstName: 'Nadia' },
-      company: {
-        name: 'ООО Ожидание', inn: '4', kycStatus: 'verified',
-        statusEntries: [
-          { status: 'BUYER', verification: 'verified' },
-          { status: 'SELLER', verification: 'pending' },
-        ],
-      },
-    };
-
-    renderWithProviders(<Dashboard onNavigate={vi.fn()} />);
-
-    expect(await screen.findByText('Начните работу на платформе за 3 простых шага')).toBeInTheDocument();
-    expect(screen.queryByText('SELLER_ATTENTION_STRIP')).toBeNull();
-  });
-
-  it('shows the KYC pending banner (not the seller strip) for a seller-capable company below KYC L2', async () => {
-    storeRef.state = {
-      activeStatus: 'SELLER',
-      profile: { firstName: 'Diana' },
-      company: { name: 'ООО Продавец', inn: '5', kycStatus: 'pending', statusEntries: [{ status: 'SELLER', verification: 'verified' }] },
-    };
-
-    renderWithProviders(<Dashboard onNavigate={vi.fn()} />);
-
-    // KYC gate wins over the seller inbox until verified (SellerDashboard's own guard).
-    await waitFor(() => expect(dashboardApi.getStats).toHaveBeenCalled());
-    expect(await screen.findByText('Статус верификации')).toBeInTheDocument();
-    expect(screen.queryByText('SELLER_ATTENTION_STRIP')).toBeNull();
-    expect(screen.queryByText('Начните работу на платформе за 3 простых шага')).toBeNull();
   });
 });

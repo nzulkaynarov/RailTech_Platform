@@ -325,7 +325,7 @@ def test_draft_quote_gate_error_becomes_error_result(monkeypatch):
     user = _user("aijob-draft@x.test")
     monkeypatch.setattr(
         "crm.services.draft_quote.generate_draft_quote",
-        lambda deal_id, actor: (None, "AI_DRAFT_NOT_ENTITLED", 0),
+        lambda deal_id, actor: (None, "NO_REQUEST_LINES", 0),
     )
     result = run_ai_job("draft_quote", {"deal_id": 1, "user_id": user.id})
-    assert result == {"error": "AI_DRAFT_NOT_ENTITLED"}
+    assert result == {"error": "NO_REQUEST_LINES"}

@@ -70,6 +70,15 @@ class BackupFacts:
 
 
 @dataclass(frozen=True, slots=True)
+class AiBudgetFacts:
+    """Расход ИИ сегодня по системе из журнала LiteLLM (M3-CRM-09); лимит 0 — без лимита."""
+
+    system: str
+    spent_usd: float
+    daily_usd: float
+
+
+@dataclass(frozen=True, slots=True)
 class ErpFacts:
     """Итог последней проверки коннектора ERP (`services/erp_connector.py`, кэш 30 с)."""
 
@@ -304,3 +313,28 @@ def secrets(missing: Sequence[str], now: datetime, *, secrets_key: bool = True) 
         reason = "Не задан ключ шифрования (SECRETS_KEY) — токен бота нельзя сменить из интерфейса"
         return Component("secrets", title, "warn", reason, now)
     return Component("secrets", title, "ok", "все обязательные заданы", now)
+
+
+AI_BUDGET_TITLE: Final = "Бюджет ИИ сегодня"
+_SYSTEM_LABELS: Final = {"crm": "CRM", "erp": "ERP", "other": "без тега"}
+
+
+def ai_budget(facts: Sequence[AiBudgetFacts] | None, now: datetime) -> Component:
+    """«Бюджет ИИ сегодня: CRM x/y USD, ERP x/y USD» — из журнала шлюза; превышение — `warn`."""
+    if facts is None:
+        reason = "Журнал расходов шлюза моделей недоступен — расход по системам неизвестен"
+        return Component("ai_budget", AI_BUDGET_TITLE, "unknown", reason, now)
+    parts = [_ai_part(f) for f in facts if f.system != "other" or f.spent_usd > 0]
+    over = [f for f in facts if f.daily_usd > 0 and f.spent_usd >= f.daily_usd]
+    if over:
+        names = ", ".join(_SYSTEM_LABELS.get(f.system, f.system) for f in over)
+        reason = f"Бюджет превышен: {names}. {', '.join(parts)}"
+        return Component("ai_budget", AI_BUDGET_TITLE, "warn", reason, now)
+    return Component("ai_budget", AI_BUDGET_TITLE, "ok", ", ".join(parts), now)
+
+
+def _ai_part(f: AiBudgetFacts) -> str:
+    label = _SYSTEM_LABELS.get(f.system, f.system)
+    if f.daily_usd > 0:
+        return f"{label} {f.spent_usd:.2f}/{f.daily_usd:.2f} USD"
+    return f"{label} {f.spent_usd:.2f} USD (без лимита)"

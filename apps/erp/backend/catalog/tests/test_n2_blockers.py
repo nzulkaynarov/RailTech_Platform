@@ -12,7 +12,7 @@ import pytest
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import Company, CompanyMember, CompanyType, CustomUser, VerificationStatus, WorkspaceRole
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
 from catalog.models import Product, ProductStatus
 
 pytestmark = pytest.mark.django_db
@@ -26,12 +26,10 @@ def seller(db):
         code="SUPPLIER", defaults={"name": "Поставщик", "sort_order": 20}
     )
     role, _ = WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
-    # Верифицирована: тесты N2 проверяют блокеры формы и публикации, а не порог KYC
-    # (тот покрыт в test_fill_before_kyc.py).
+    # Тесты N2 проверяют блокеры формы и публикации.
     company = Company.objects.create(
         name="ООО Н2",
         inn="9400000001",
-        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
     )
     company.types.add(supplier_type)
     user = CustomUser.objects.create_user(email="n2@seller.test", username="n2@seller.test", password="pw")

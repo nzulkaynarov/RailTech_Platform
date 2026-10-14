@@ -12,17 +12,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from accounts.constants import Permission
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyRole,
-    CompanySettings,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyRole, CompanySettings, CompanyType, CustomUser, WorkspaceRole
 from crm.models import Deal, DealSellerRouting, DealStage, Quote, QuoteStatus
 from crm.services import reapply_company_defaults
 from master_data.models import Country, Currency, DeliveryBasis
@@ -39,7 +29,6 @@ def lookups(db):
     Currency.objects.get_or_create(code="UZS", defaults={"name": "Sum", "sort_order": 10})
     Currency.objects.get_or_create(code="USD", defaults={"name": "Dollar", "sort_order": 20})
     DeliveryBasis.objects.get_or_create(code="EXW", defaults={"name": "Ex Works", "sort_order": 10})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
 
 
 @pytest.fixture
@@ -47,13 +36,9 @@ def seller_company(lookups):
     company = Company.objects.create(
         name="Seller LLC",
         inn="7700000101",
-        verification_status=VerificationStatus.objects.get(code="L2_VERIFIED"),
     )
     company.types.add(
         CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})[0]
-    )
-    SupplierSubscription.objects.create(
-        company=company, plan="PREMIUM", status="ACTIVE", valid_until=timezone.localdate() + timedelta(days=365)
     )
     return company
 

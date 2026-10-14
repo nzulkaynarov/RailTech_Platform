@@ -12,17 +12,7 @@ import pytest
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.constants import FeatureKey
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SystemRole,
-    VerificationStatus,
-    WorkspaceRole,
-)
-from accounts.services.entitlements import grant_entitlement
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm import services as crm_services
 from crm.models import Deal, DealSellerRouting, DealStage, DocumentTemplateKind, GeneratedDocumentStatus
 from crm.services.generated_documents import _brand_context_from_snapshot
@@ -39,7 +29,6 @@ def lookups(db):
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     SystemRole.objects.get_or_create(code="USER", defaults={"name": "User", "sort_order": 10})
     SystemRole.objects.get_or_create(code="ADMIN", defaults={"name": "Admin", "sort_order": 20})
     NotificationType.objects.get_or_create(code="INFO", defaults={"name": "Info", "sort_order": 10})
@@ -79,7 +68,6 @@ def _template(company, user, body="<p>{{deal.title}}</p>"):
 def world(lookups):
     seller_co = _company("Seller Co", "S1", "SUPPLIER")
     seller_user = _member(seller_co, "seller@doc.test", can_sell=True)
-    grant_entitlement(seller_co.id, FeatureKey.DOCUMENT_GENERATE)
 
     buyer_co = _company("Buyer Co", "B1", "CLIENT")
     buyer_user = _member(buyer_co, "buyer@doc.test", can_buy=True)
@@ -118,7 +106,7 @@ def test_issue_saves_nonempty_brand_snapshot(world):
     # The issuing company's live values are frozen into the seller block.
     assert document.brand_snapshot["seller"]["name"] == "Seller Co"
     # Scalar branding keys the base template reads are present.
-    for key in ("accent", "accent_contrast", "show_logo", "is_demo"):
+    for key in ("accent", "accent_contrast", "show_logo"):
         assert key in document.brand_snapshot
 
 

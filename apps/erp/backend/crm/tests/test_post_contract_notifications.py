@@ -15,16 +15,7 @@ from decimal import Decimal
 import pytest
 from django.utils import timezone
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    SystemRole,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import (
     Act,
     ActStatus,
@@ -49,7 +40,6 @@ def lookups(db):
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     for code, name in (("CLIENT", "Client"), ("SUPPLIER", "Supplier")):
         CompanyType.objects.get_or_create(code=code, defaults={"name": name, "sort_order": 10})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     for code in ("USER", "ADMIN"):
         SystemRole.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
     for code in ("CONTRACT_SIGNED", "CLOSED_WON"):
@@ -69,9 +59,7 @@ def lookups(db):
 
 
 def _company(name, inn, type_code):
-    company = Company.objects.create(
-        name=name, inn=inn, verification_status=VerificationStatus.objects.get(code="L2_VERIFIED")
-    )
+    company = Company.objects.create(name=name, inn=inn)
     company.types.add(CompanyType.objects.get(code=type_code))
     return company
 
@@ -96,9 +84,6 @@ def chain(lookups):
     buyer_user = _member(buyer_co, "buyer@notify.test", can_buy=True)
     seller_co = _company("Seller Notify", "S600", "SUPPLIER")
     seller_user = _member(seller_co, "seller@notify.test", can_sell=True)
-    SupplierSubscription.objects.create(
-        company=seller_co, plan="PREMIUM", status="ACTIVE", valid_until=timezone.localdate() + timedelta(days=30)
-    )
 
     deal = Deal.objects.create(title="Notify deal", company=buyer_co, stage=DealStage.objects.get(code="CLOSED_WON"))
     DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)

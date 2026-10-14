@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 
 from ..constants import WorkspaceRoleCode
-from ..models import CustomUser, SupplierSubscription
+from ..models import CustomUser
 
 logger = logging.getLogger(__name__)
 
@@ -140,47 +140,6 @@ def can_view_quote_costs_for(user: "CustomUser", quote) -> bool:
         CompanyMember.objects.filter(user_id=prepared_by_id, is_active=True).values_list("company_id", flat=True)
     )
     return bool(viewer_company_ids & preparer_company_ids)
-
-
-def company_has_operational_subscription(company_id: int) -> bool:
-    """True if the company has a SupplierSubscription that is_operational right now.
-
-    Seller-side write operations (bid submit, offer CRUD, product CRUD) must be
-    gated by this — SELLER / MANUFACTURER companies without a valid subscription
-    cannot sell on the platform. CLIENTs don't need a subscription to buy.
-    """
-    sub = SupplierSubscription.objects.filter(company_id=company_id).order_by("-updated_at").first()
-    if sub is None:
-        return False
-    return sub.is_operational
-
-
-def assert_seller_can_operate(actor: "CustomUser") -> Optional[str]:
-    """KYC + subscription gate for paid seller writes (send КП, sign contract, issue act).
-
-    The seller half of the business model: «без KYC только демо», продавать = KYC + подписка.
-    Returns an error code string to abort with, or None if the actor may proceed:
-      * superuser → None (DBA emergency bypass, parity with the other guards)
-      * no seller company → "SUBSCRIPTION_REQUIRED"
-      * company not KYC-verified (< L2) → "SELLER_KYC_REQUIRED" (ADR-0006 Phase E, seller floor)
-      * KYC-verified but no operational SupplierSubscription → "SUBSCRIPTION_REQUIRED"
-
-    Callers must already have established that `actor` is a seller (is_seller); this layers the
-    KYC + *paid* requirement on top. CLIENT/buyer actions never call it (buyers verify at заявка
-    submit). Documented in ADR-0002 ("subscription-gated seller writes") + ADR-0006 Phase E.
-    """
-    if getattr(actor, "is_superuser", False):
-        return None
-    company_id = primary_seller_company_id(actor)
-    if company_id is None:
-        return "SUBSCRIPTION_REQUIRED"
-    from accounts.services.kyc import company_kyc_verified
-
-    if not company_kyc_verified(company_id):
-        return "SELLER_KYC_REQUIRED"
-    if not company_has_operational_subscription(company_id):
-        return "SUBSCRIPTION_REQUIRED"
-    return None
 
 
 # Frontend context-switcher value, sent on every SPA request so the backend can

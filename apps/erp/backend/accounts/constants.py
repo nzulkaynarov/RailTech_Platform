@@ -1,7 +1,7 @@
 """Single source of truth for accounts lookup CODES.
 
 These mirror the `code` of seeded lookup rows (WorkspaceRole, SystemRole,
-CompanyType, VerificationStatus). Reference these constants in business logic
+CompanyType). Reference these constants in business logic
 instead of bare string literals — a typo becomes an AttributeError, not a silent
 runtime miss. The rows themselves still live in the DB (names, i18n, sort_order);
 this is just the stable contract between code and data.
@@ -127,75 +127,3 @@ class CompanyTypeCode(models.TextChoices):
 # Company types whose members operate on the seller side. A manufacturer that sells
 # is simply a SUPPLIER; the OEM-as-brand lives in catalog.Manufacturer.
 SELLER_COMPANY_TYPES = (CompanyTypeCode.SUPPLIER,)
-
-
-class VerificationStatusCode(models.TextChoices):
-    L1_UNVERIFIED = "L1_UNVERIFIED", "Не верифицирован"
-    PROFILE_SUBMITTED = "PROFILE_SUBMITTED", "Профиль подан"
-    L2_VERIFIED = "L2_VERIFIED", "Верифицирован (L2)"
-    L3_CONTRACTED = "L3_CONTRACTED", "Контракт (L3)"
-
-
-# ADR-0006 Phase E — the KYC floor. A company completes KYC at L2; below it can register + browse
-# + build a DRAFT заявка, but not SUBMIT it (or otherwise trade). L3_CONTRACTED is MORE verified
-# than L2, so it belongs in the set: filtering on L2 alone silently hides contracted counterparties.
-#
-# Lives here, not in accounts.services.kyc, so the model layer can use it: the Company queryset
-# below (`verified_sellers`) needs it, and models cannot import services without a cycle.
-# `accounts.services.kyc` re-exports it, so the historical import path keeps working.
-KYC_VERIFIED_CODES = frozenset({VerificationStatusCode.L2_VERIFIED, VerificationStatusCode.L3_CONTRACTED})
-
-
-class FeatureKey(models.TextChoices):
-    """Stable feature keys for the entitlement layer (ADR-0006 §3 monetization).
-
-    The app gates on these codes — NEVER a plan name. A company's plan / promo / demo is projected
-    into CompanyEntitlement rows keyed by these. Add a key here, then gate the call site with
-    accounts.services.entitlements.has_entitlement(company_id, FeatureKey.X).
-    """
-
-    QUOTE_SEND = "quote.send", "Отправка КП клиенту"
-    QUOTE_EXPORT = "quote.export", "Экспорт КП (PDF/Excel)"
-    AI_MATCH = "ai.match", "AI-подбор каталога"
-    AI_DRAFT = "ai.draft", "AI-черновик КП"
-    AI_PREFLIGHT = "ai.preflight", "AI-проверка заявки"
-    AI_ENRICH = "ai.enrich", "AI-обогащение карточки товара (PIM)"
-    ROLES_CUSTOM = "roles.custom", "Кастомные роли компании"
-    DOCUMENT_GENERATE = "document.generate", "Генерация документов по шаблонам"
-    # NOT a grantable feature — a per-company OVERRIDE carrier for the daily AI-job ceiling.
-    # An operator sets CompanyEntitlement(feature_key=ai.daily_cap).limit = N to give ONE company
-    # a custom daily allowance that wins over its subscription-plan tier (ai_spend_cap.py reads
-    # `.limit`, not has_entitlement). Deliberately absent from FREE_FLOOR / SUBSCRIPTION_BASELINE.
-    AI_DAILY_CAP = "ai.daily_cap", "Суточный лимит ИИ (override)"
-
-
-# The FREE FLOOR — features always granted, no entitlement row required. Keeps the platform's core
-# loop usable for free and avoids a circular gate (the permission engine the КП builder reads must
-# never be paywalled). Everything NOT here is locked unless an entitlement row grants it.
-FREE_FLOOR_FEATURES = frozenset(
-    {
-        FeatureKey.AI_MATCH.value,  # match заявка↔catalog — feeds the wedge, drives adoption; free
-        FeatureKey.AI_PREFLIGHT.value,  # advisory request quality — free, improves data for everyone
-    }
-)
-
-# Baseline features an OPERATIONAL SupplierSubscription grants (no explicit entitlement row needed)
-# — so a paying/trial seller keeps sending & exporting КП and building AI drafts. An explicit
-# CompanyEntitlement row OVERRIDES this (a promo grant, or a DEMO downgrade). This is the ONE place
-# that maps "has a plan" → features; business code still only ever checks a FeatureKey.
-SUBSCRIPTION_BASELINE_FEATURES = frozenset(
-    {
-        FeatureKey.QUOTE_SEND.value,
-        FeatureKey.QUOTE_EXPORT.value,
-        FeatureKey.AI_DRAFT.value,
-        # AI PIM enrichment is a SELLER premium (like ai.draft): it accelerates the seller's
-        # catalog build, which only matters once they're subscribed to actually sell. NOT part
-        # of the free floor — enrich is gated on this baseline / an explicit grant.
-        FeatureKey.AI_ENRICH.value,
-        FeatureKey.ROLES_CUSTOM.value,
-        # «Документы 2.0» (owner decision 2026-07-22): generating arbitrary
-        # template-based documents (letters, reports, поручения) is a baseline
-        # subscription feature, gated like quote.send.
-        FeatureKey.DOCUMENT_GENERATE.value,
-    }
-)

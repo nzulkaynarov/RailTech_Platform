@@ -1,1 +1,0 @@
-{% load i18n %}{% if level_code == "L3_CONTRACTED" %}{% blocktranslate %}RailTech: контракт для {{ company_name }} активирован{% endblocktranslate %}{% else %}{% blocktranslate %}RailTech: KYC компании {{ company_name }} подтверждён{% endblocktranslate %}{% endif %}

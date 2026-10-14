@@ -5,7 +5,7 @@ not rewritten. These are leaf validators: they read a Quote (+ the acting user a
 pre-computed economics) and either raise ``ValueError(<CODE>)`` (render/send path — the
 caller maps the code to HTTP) or return an ``(value, error_code)`` / error-code result
 (submit path — the caller maps the tuple). They perform NO writes and NO side effects, so
-the KYC-floor / entitlement / loss-prevention / below-floor policy lives in ONE place and
+the loss-prevention / below-floor policy lives in ONE place and
 both the admin and DRF surfaces reach it through ``QuoteLifecycleService`` unchanged
 (Rule 8 — business logic stays in services).
 
@@ -67,9 +67,8 @@ def assert_renderable(quote):
 def assert_sendable(quote, sent_by_user):
     """Non-economics send preconditions; returns the issuing seller company.
 
-    Runs the status / recipient / claim / KYC-floor / entitlement gates in the exact
-    order ``send_to_client`` used to inline them (order is contractual — an unverified
-    seller must see "do KYC" before a generic billing error).
+    Runs the status / recipient / claim gates in the exact order
+    ``send_to_client`` used to inline them (order is contractual).
     """
     # Status guard: only an internally-approved КП (READY_TO_SEND — it passed
     # the sales → ВЭД → director chain) may go out to the client.
@@ -109,20 +108,6 @@ def assert_sendable(quote, sent_by_user):
     deal_for_send = quote.deal
     if not (deal_for_send.company_id or deal_for_send.contact_id or deal_for_send.client_id):
         raise ValueError("RECIPIENT_REQUIRED")
-
-    # SELLER FLOOR (ADR-0006 Phase E): «без KYC только демо». A seller must be KYC-verified (L2+)
-    # to send a real КП — checked first so an unverified seller gets a clear "do KYC" message
-    # rather than a generic billing error. Then the MONETIZATION GATE (Move 4): sending is a PAID
-    # action needing the quote.send entitlement (an operational subscription grants it). A
-    # demo/unsubscribed seller can build the КП but not send it. Superuser = platform escalation.
-    if seller_company is not None and not getattr(sent_by_user, "is_superuser", False):
-        from accounts.services import quote_send_entitled
-        from accounts.services.kyc import company_kyc_verified
-
-        if not company_kyc_verified(seller_company.id):
-            raise ValueError("SELLER_KYC_REQUIRED")
-        if not quote_send_entitled(seller_company.id):
-            raise ValueError("QUOTE_SEND_NOT_ENTITLED")
 
     return seller_company
 

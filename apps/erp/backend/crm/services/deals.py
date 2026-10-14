@@ -44,10 +44,10 @@ def user_can_access_deal(user: CustomUser, deal: Deal) -> bool:
 
 
 ALLOWED_STAGE_TRANSITIONS = {
-    # KYC_PENDING выведен из эксплуатации (решение владельца 28-07): KYC — свойство КОМПАНИИ
-    # (verification_status + KYC-floor гейты), а не этап сделки; бизнес-логика этап никогда не
-    # ставила (мёртвая колонка воронки). ВХОДА в него больше нет; ВЫХОДЫ сохранены, чтобы
-    # застрявшая сделка всегда могла уйти (никаких тупиков).
+    # KYC_PENDING выведен из эксплуатации (решение владельца 28-07), а сам KYC удалён в
+    # M1-ERP-02 волна 1c; бизнес-логика этап никогда не ставила (мёртвая колонка воронки).
+    # ВХОДА в него нет; ВЫХОДЫ сохранены, чтобы застрявшая сделка всегда могла уйти (никаких
+    # тупиков). Строка справочника уйдёт со свежими миграциями M1-ERP-03.
     _S.DRAFT: [_S.RFQ_OPEN, _S.SOURCING, _S.CLOSED_LOST],
     _S.KYC_PENDING: [_S.RFQ_OPEN, _S.SOURCING, _S.CLOSED_LOST],
     _S.RFQ_OPEN: [_S.SOURCING, _S.CALCULATING, _S.CLOSED_LOST],
@@ -130,46 +130,24 @@ def register_new_deal(deal: Deal, actor: CustomUser) -> Deal:
     return deal
 
 
-def link_registered_client_to_contact_deals(contact_id: int, user: CustomUser) -> int:
-    """Wave E F4 — promote-invite backfill.
-
-    A seller works an offline client for months (deals carry `contact`, `client` is NULL
-    because the person had no account). When that contact accepts the invite and registers,
-    every КП the seller already sent them would stay orphaned: the buyer cabinet lists deals
-    by `client`/company membership, so the new user would log in to an empty history.
-
-    Point the historical deals of THAT contact at the freshly-registered user. Scoped by
-    contact id and only fills NULLs — it never re-points a deal that already has a client,
-    and the caller has just proven ownership of the contact by consuming a signed invite.
-    Returns the number of deals updated.
-    """
-    if not contact_id or user is None or not user.pk:
-        return 0
-    return Deal.objects.filter(contact_id=contact_id, client__isnull=True).update(client=user)
-
-
 def assert_user_may_change_stage(deal: Deal, actor: Optional[CustomUser], target_stage_code: str) -> Optional[str]:
     """SEC (audit #7): user-initiated FSM guard for the change-stage ENDPOINT only — NOT the
     shared transition_deal_stage, which internal auto-transitions (Move-0 send-КП/approve/
     dual-sign) invoke with seller/system actors and must not be re-gated.
 
     Closes two bypasses of submit_request's gates via the generic change-stage endpoint:
-      (a) an unverified/non-buyer moving DRAFT→RFQ_OPEN (fanning the заявка to sellers below
-          KYC L2, skipping submit_request's KYC + buy-capability gates);
+      (a) a non-buyer moving DRAFT→RFQ_OPEN (fanning the заявка to sellers, skipping
+          submit_request's buy-capability gate);
       (b) a co-routed seller driving the SHARED Deal.stage to a terminal state (CLOSED_LOST/
           CLOSED_WON), griefing the buyer and the competing seller on a multi-seller RFQ.
     Returns an error code or None. superuser/internal (actor=None) bypass."""
     if actor is None or getattr(actor, "is_superuser", False):
         return None
-    from accounts.services.kyc import company_kyc_verified
     from accounts.services.permissions import is_member_of
 
     is_buyer_side = is_member_of(actor, deal.company_id, capability="buy")
-    if target_stage_code == DealStageCode.RFQ_OPEN:
-        if not is_buyer_side:
-            return "ONLY_BUYER_CAN_SUBMIT_REQUEST"
-        if not company_kyc_verified(deal.company_id):
-            return "KYC_REQUIRED_TO_SUBMIT"
+    if target_stage_code == DealStageCode.RFQ_OPEN and not is_buyer_side:
+        return "ONLY_BUYER_CAN_SUBMIT_REQUEST"
     # A seller may decline a SINGLE-seller deal, but must not close a SHARED (multi-seller)
     # deal out from under the buyer and the competing sellers (CLOSED_LOST griefing).
     if target_stage_code == DealStageCode.CLOSED_LOST and not is_buyer_side and deal.seller_routings.count() > 1:

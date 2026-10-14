@@ -5,14 +5,10 @@ import en from '@/i18n/locales/en.json';
 import {
   COMPANY_TYPE_LABEL_KEY,
   ENTITLEMENT_ACCESS_LABEL_KEY,
-  KYC_DOC_TYPE_LABEL_KEY,
-  ROLE_APPLICATION_STATUS_LABEL_KEY,
   SUBSCRIPTION_PLAN_LABEL_KEY,
   SUBSCRIPTION_STATUS_LABEL_KEY,
   companyTypeLabelKey,
   entitlementAccessLabelKey,
-  kycDocTypeLabelKey,
-  roleApplicationStatusLabelKey,
   subscriptionPlanLabelKey,
   subscriptionStatusLabelKey,
 } from '@/lib/codes';
@@ -36,9 +32,7 @@ const LABEL_MAPS: Array<[string, Record<string, string>]> = [
   ['SUBSCRIPTION_PLAN_LABEL_KEY', SUBSCRIPTION_PLAN_LABEL_KEY],
   ['SUBSCRIPTION_STATUS_LABEL_KEY', SUBSCRIPTION_STATUS_LABEL_KEY],
   ['ENTITLEMENT_ACCESS_LABEL_KEY', ENTITLEMENT_ACCESS_LABEL_KEY],
-  ['ROLE_APPLICATION_STATUS_LABEL_KEY', ROLE_APPLICATION_STATUS_LABEL_KEY],
   ['COMPANY_TYPE_LABEL_KEY', COMPANY_TYPE_LABEL_KEY],
-  ['KYC_DOC_TYPE_LABEL_KEY', KYC_DOC_TYPE_LABEL_KEY],
 ];
 
 describe('display-code label maps', () => {
@@ -77,14 +71,7 @@ describe('display-code label-key resolvers', () => {
       'subscriptionStatuses.pastDue',
     ],
     ['entitlementAccessLabelKey', entitlementAccessLabelKey, 'DEMO', 'entitlementAccess.demo'],
-    [
-      'roleApplicationStatusLabelKey',
-      roleApplicationStatusLabelKey,
-      'DOCUMENTS_REQUIRED',
-      'roleApplicationStatuses.documentsRequired',
-    ],
     ['companyTypeLabelKey', companyTypeLabelKey, 'MANUFACTURER', 'companyTypes.manufacturer'],
-    ['kycDocTypeLabelKey', kycDocTypeLabelKey, 'TAX_CERT', 'kycDocTypes.taxCert'],
   ];
 
   it.each(RESOLVERS)('%s maps a known code to its i18n key', (_name, resolver, code, expected) => {
@@ -94,7 +81,7 @@ describe('display-code label-key resolvers', () => {
   it.each(RESOLVERS)(
     '%s returns "" for unknown/empty codes so callers fall back to the DB display',
     (_name, resolver) => {
-      // Operators can add lookup rows (KYCDocType) and the backend can gain new choices;
+      // Operators can add lookup rows and the backend can gain new choices;
       // an empty key is the documented signal to render the server-provided string.
       expect(resolver('NOT_A_REAL_CODE')).toBe('');
       expect(resolver(undefined)).toBe('');
@@ -108,7 +95,5 @@ describe('display-code label-key resolvers', () => {
     expect(subscriptionStatusLabelKey('Просрочена')).toBe('');
     expect(subscriptionPlanLabelKey('Премиум')).toBe('');
     expect(entitlementAccessLabelKey('Демо')).toBe('');
-    expect(roleApplicationStatusLabelKey('На рассмотрении')).toBe('');
-    expect(kycDocTypeLabelKey('Устав')).toBe('');
   });
 });

@@ -78,70 +78,16 @@ class TestAuthenticationEndpoints:
 
 
 @pytest.mark.django_db
-class TestRegisterEndpoint:
-    """Tests for user registration endpoint."""
+class TestSelfRegistrationIsGone:
+    """M1-ERP-02 wave 1c: no registration «from the street» and no self-onboarding into a new
+    company. Employees are provisioned by CRM (ADR-0003) or invited by a colleague; counterparties
+    are created by the back office (ARCHITECTURE §17)."""
 
-    @pytest.fixture
-    def client(self):
-        return APIClient()
-
-    def test_register_user_success(self, client):
-        """Test successful user registration."""
-        url = "/api/v1/auth/register/"
-        data = {
-            "email": "newuser@example.com",
-            "first_name": "New",
-            "last_name": "User",
-            "phone": "+998901234567",
-        }
-        response = client.post(url, data, format="json")
-
-        # Should return success - the register view creates a pending user
-        assert response.status_code in [status.HTTP_201_CREATED, status.HTTP_200_OK]
-
-    def test_register_duplicate_email(self, client, user_factory):
-        """Anti-enumeration (P2): a duplicate email must NOT 400 — it returns the same
-        neutral 201 as a fresh registration. Detailed branch behaviour (which email is
-        sent, no second user) is pinned in test_register_anti_enumeration.py."""
-        user_factory(email="existing@example.com")
-
-        url = "/api/v1/auth/register/"
-        data = {
-            "email": "existing@example.com",
-            "first_name": "New",
-            "last_name": "User",
-            "phone": "+998901234567",
-        }
-        response = client.post(url, data, format="json")
-
-        assert response.status_code == status.HTTP_201_CREATED
-
-    def test_register_missing_required_fields(self, client):
-        """Test registration with missing required fields."""
-        url = "/api/v1/auth/register/"
-        data = {
-            "email": "test@example.com"
-            # Missing first_name, last_name and phone
-        }
-        response = client.post(url, data, format="json")
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-    def test_register_invalid_email(self, client):
-        """Test registration with invalid email."""
-        url = "/api/v1/auth/register/"
-        data = {"email": "invalid-email", "first_name": "Test", "last_name": "User", "phone": "+998901234567"}
-        response = client.post(url, data, format="json")
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-    def test_register_invalid_phone(self, client):
-        """Phone must be Uzbekistan format +998XXXXXXXXX."""
-        url = "/api/v1/auth/register/"
-        data = {"email": "ph@example.com", "first_name": "Test", "last_name": "User", "phone": "12345"}
-        response = client.post(url, data, format="json")
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+    @pytest.mark.parametrize("path", ["/api/v1/auth/register/", "/api/v1/auth/submit-profile/"])
+    def test_endpoint_is_not_routed(self, path):
+        client = APIClient()
+        response = client.post(path, {"email": "street@example.com"}, format="json")
+        assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 @pytest.mark.django_db
@@ -235,87 +181,3 @@ class TestSetupPassword:
         )
         assert ok.status_code == status.HTTP_200_OK
         assert BlacklistedToken.objects.filter(token__jti=refresh["jti"]).exists()
-
-
-@pytest.mark.django_db
-class TestSubmitProfile:
-    """Tests for profile submission endpoint."""
-
-    @pytest.fixture
-    def client(self, db):
-        # submit-profile requires an authenticated user (step 3 of onboarding).
-        from django.contrib.auth import get_user_model
-
-        user = get_user_model().objects.create_user(
-            email="profileuser@example.com",
-            username="profileuser",
-            password="testpass123",
-            first_name="Profile",
-            last_name="User",
-            is_active=True,
-        )
-        api = APIClient()
-        api.force_authenticate(user=user)
-        return api
-
-    def test_submit_profile_valid_data(self, client):
-        """Test submitting profile with valid minimal data (company + position)."""
-        url = "/api/v1/auth/submit-profile/"
-        data = {"companyName": "Test Company", "position": "Директор по закупкам"}
-        response = client.post(url, data, format="json")
-
-        # 200 when OWNER role/CLIENT type are seeded; 400 (WORKSPACE_ROLE_NOT_FOUND)
-        # on a bare test DB without the seed data migration.
-        assert response.status_code in [status.HTTP_400_BAD_REQUEST, status.HTTP_201_CREATED, status.HTTP_200_OK]
-
-    def test_submit_profile_missing_company_name(self, client):
-        """Company name is the only hard-required field now."""
-        url = "/api/v1/auth/submit-profile/"
-        data = {"companyName": "", "position": "Director"}  # Invalid: blank company name
-        response = client.post(url, data, format="json")
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-    def test_submit_profile_creates_own_company_no_inn(self, db, workspace_role_factory):
-        """Minimal onboarding: each user gets a brand-new CLIENT company as OWNER,
-        with no INN (deferred to KYC). Two strangers never share a company —
-        the old INN-collision merge vector is gone entirely."""
-        from accounts.models import CompanyMember, CompanyType, VerificationStatus
-        from accounts.services import submit_company_profile
-
-        workspace_role_factory(code="OWNER", name="Owner")
-        CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Покупатель"})
-        VerificationStatus.objects.get_or_create(code="PROFILE_SUBMITTED", defaults={"name": "Profile submitted"})
-
-        alice = User.objects.create_user(email="alice@example.com", username="alice", password="x", is_active=True)
-        bob = User.objects.create_user(email="bob@example.com", username="bob", password="x", is_active=True)
-
-        _, e_alice = submit_company_profile(user=alice, company_name="Acme", position="Снабженец")
-        _, e_bob = submit_company_profile(user=bob, company_name="Acme", position="Менеджер")
-
-        assert e_alice is None and e_bob is None
-        alice_co = CompanyMember.objects.get(user=alice).company
-        bob_co = CompanyMember.objects.get(user=bob).company
-        # Same name, different companies — no silent merge.
-        assert alice_co.pk != bob_co.pk
-        assert alice_co.inn is None and bob_co.inn is None
-        assert alice_co.types.filter(code="CLIENT").exists()
-        alice.refresh_from_db()
-        assert alice.position == "Снабженец"
-
-    def test_submit_profile_idempotent_for_same_user(self, db, workspace_role_factory):
-        """A user who already has an active membership does not get a second
-        company on re-submit — it is a no-op success."""
-        from accounts.models import CompanyMember, CompanyType, VerificationStatus
-        from accounts.services import submit_company_profile
-
-        user = User.objects.create_user(email="dup@example.com", username="dup", password="x", is_active=True)
-        workspace_role_factory(code="OWNER", name="Owner")
-        CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Покупатель"})
-        VerificationStatus.objects.get_or_create(code="PROFILE_SUBMITTED", defaults={"name": "Profile submitted"})
-
-        _, e1 = submit_company_profile(user=user, company_name="My Co", position="Dir")
-        assert e1 is None
-        _, e2 = submit_company_profile(user=user, company_name="Another Co", position="Dir")
-        assert e2 is None
-        assert CompanyMember.objects.filter(user=user).count() == 1

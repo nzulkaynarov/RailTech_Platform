@@ -16,15 +16,7 @@ import pytest
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SystemRole,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import Contract, ContractStatus, Deal, DealStage, Quote, QuoteStatus
 
 CONTRACTS_URL = "/api/v1/crm/contracts/"
@@ -35,7 +27,6 @@ def lookups(db):
     """Seed the codes this flow asserts on (--nomigrations skips the data migrations)."""
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     SystemRole.objects.get_or_create(code="USER", defaults={"name": "User", "sort_order": 10})
     DealStage.objects.get_or_create(code="CONTRACT_SIGNED", defaults={"name": "Signed", "sort_order": 70})
     QuoteStatus.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})
@@ -46,9 +37,7 @@ def lookups(db):
 @pytest.fixture
 def two_deals_one_buyer(lookups):
     """ONE buyer company owning TWO deals, each with its own contract."""
-    buyer_co = Company.objects.create(
-        name="Buyer Co", inn="B900", verification_status=VerificationStatus.objects.get(code="L2_VERIFIED")
-    )
+    buyer_co = Company.objects.create(name="Buyer Co", inn="B900")
     buyer_co.types.add(CompanyType.objects.get(code="CLIENT"))
     buyer_user = CustomUser.objects.create_user(
         email="buyer@twodeals.test", username="buyer@twodeals.test", password="x"

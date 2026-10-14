@@ -103,19 +103,6 @@ def test_client_email_falls_back_to_platform_brand_without_seller():
 
 
 @pytest.mark.django_db
-def test_invite_client_names_the_inviting_company():
-    subject, text, html = _render_bodies(
-        "invite_client",
-        {"company_name": "ООО «Рельсы»", "contact_name": "Пётр", "invite_url": "https://x/register?invite=abc"},
-    )
-    # The inviting company is NAMED (audit: «приглашающая компания НЕ названа»), not a generic
-    # «ваш поставщик».
-    assert "ООО «Рельсы»" in subject
-    assert "ООО «Рельсы»" in html
-    assert "ваш поставщик приглашает" not in html.lower()
-
-
-@pytest.mark.django_db
 def test_send_quote_email_passes_seller_name_not_buyer():
     """The task must resolve the КП's OWN seller company into the email context (Rule 1)."""
     from accounts.models import Company
@@ -173,16 +160,3 @@ def test_support_email_injected_into_email_context():
     assert captured.get("support_email") == "help@acme.uz"
     # Caller context still wins over the injected defaults.
     assert captured.get("first_name") == "A"
-
-
-# ── m3: trial length parameterised ────────────────────────────────────────────────
-
-
-@pytest.mark.django_db
-def test_role_approved_email_uses_trial_days_variable():
-    _subject, _text, html = _render_bodies(
-        "role_application_approved",
-        {"company_name": "Acme", "requested_type_name": "Поставщик", "trial_granted": True, "trial_days": 14},
-    )
-    assert "14 дней" in html
-    assert "30 дней" not in html

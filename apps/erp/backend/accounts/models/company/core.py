@@ -6,7 +6,7 @@ from django.core.validators import RegexValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from accounts.constants import KYC_VERIFIED_CODES, SELLER_COMPANY_TYPES
+from accounts.constants import SELLER_COMPANY_TYPES
 from core.storage import company_logo_path, get_public_storage
 from master_data.models import Country
 
@@ -33,16 +33,6 @@ def seller_company_q(prefix: str = "") -> models.Q:
     """
     field = f"{prefix}__types__code__in" if prefix else "types__code__in"
     return models.Q(**{field: SELLER_COMPANY_TYPES})
-
-
-def verified_seller_company_q(prefix: str = "") -> models.Q:
-    """«Продавец, которого покупатель может пригласить»: продавец + пройденный KYC.
-
-    Именно эта пара — продавец И верификация — расходилась между пикером и подсказкой.
-    Держим её вместе, чтобы забыть половину было невозможно.
-    """
-    status_field = f"{prefix}__verification_status__code__in" if prefix else "verification_status__code__in"
-    return seller_company_q(prefix) & models.Q(**{status_field: KYC_VERIFIED_CODES}) & active_company_q(prefix)
 
 
 def active_company_q(prefix: str = "") -> models.Q:
@@ -77,12 +67,8 @@ class CompanyQuerySet(models.QuerySet):
         """Архивные — их видно по явному фильтру, как «Archived» в Odoo."""
         return self.filter(is_active=False)
 
-    def verified_sellers(self):
-        """Продавцы, которых покупатель может пригласить в заявку (продавец + KYC)."""
-        return self.filter(verified_seller_company_q()).distinct()
 
-
-@pghistory.track()  # G6: audit engineer (Unfold superuser) edits — KYC level, types, requisites
+@pghistory.track()  # G6: audit engineer (Unfold superuser) edits — types, requisites
 class Company(models.Model):
     """
     Юридическое лицо / Организация.
@@ -95,7 +81,7 @@ class Company(models.Model):
         verbose_name=_("Название"),
         help_text=_("Полное наименование организации"),
     )
-    # INN is deferred from registration (Phase 1) — collected later at KYC.
+    # INN may be unknown when the back office first records a counterparty.
     # null=True keeps the unique index valid for many INN-less companies
     # (Postgres treats NULLs as distinct); the regex validator still runs once
     # an INN is actually provided.
@@ -109,16 +95,15 @@ class Company(models.Model):
         verbose_name=_("ИНН"),
         help_text=_("Идентификационный номер налогоплательщика"),
     )
-    # INN as STATED by a seller for an offline (unverified) client — NOT unique, because
-    # two sellers may independently enter the same real company before KYC (owner: "I'm
-    # not afraid of duplicates — the admin merges/rejects at KYC"). The canonical, unique
-    # `inn` above is assigned only when the company is verified (that's where dups surface).
+    # INN as STATED for an offline client recorded from the client book — NOT unique (the
+    # client-book search-before-create dedups by it). The canonical, unique `inn` above is
+    # filled on the company card.
     stated_inn = models.CharField(
         max_length=20,
         blank=True,
         db_index=True,
         verbose_name=_("ИНН (со слов, до проверки)"),
-        help_text=_("ИНН клиента, указанный продавцом; канонический ИНН присваивается на KYC"),
+        help_text=_("ИНН клиента, указанный при заведении в клиентской базе"),
     )
     types = models.ManyToManyField(
         "accounts.CompanyType",
@@ -126,46 +111,6 @@ class Company(models.Model):
         blank=True,
         verbose_name=_("Роли на платформе"),
         help_text=_("Роли компании: клиент, поставщик, производитель"),
-    )
-    verification_status = models.ForeignKey(
-        "accounts.VerificationStatus",
-        on_delete=models.PROTECT,
-        related_name="+",
-        null=True,
-        blank=True,
-        verbose_name=_("Статус верификации"),
-        help_text=_("Текущий статус KYC-проверки компании"),
-    )
-
-    def save(self, *args, **kwargs):
-        """Компания всегда рождается в ОПРЕДЕЛЁННОМ состоянии KYC.
-
-        Поле nullable исторически, и часть путей создания его не заполняла: компания, заведённая
-        оператором из панели (`POST accounts/companies/` — в сериализаторе поле read-only), и
-        оффлайн-клиент из адресной книги продавца получали `verification_status = NULL`. На
-        экране KYC такие 15 из 42 компаний показывались с подстановочным бейджем «Не
-        верифицирован», но НЕ попадали ни в одну вкладку: счётчики «На проверке» и «Не
-        верифицированы» стояли на нуле при пятнадцати таких строках в таблице (найдено глазами
-        20-08). «Нет статуса» и «не верифицирован» — разные вещи только для базы; для человека и
-        для фильтра это одно и то же, поэтому и храним одно.
-
-        Ставим ровно на создании и не трогаем существующие: смену статуса выполняет
-        `accounts.services.kyc.verify_company_kyc` с аудитом (Rule 8).
-        """
-        if self._state.adding and self.verification_status_id is None:
-            from accounts.constants import VerificationStatusCode
-            from accounts.models.lookups import VerificationStatus
-
-            self.verification_status = VerificationStatus.objects.filter(
-                code=VerificationStatusCode.L1_UNVERIFIED
-            ).first()
-        super().save(*args, **kwargs)
-
-    is_verified = models.BooleanField(
-        default=False,
-        db_index=True,
-        verbose_name=_("Верифицирован"),
-        help_text=_("Компания прошла базовую проверку RailTech"),
     )
     has_iso9001 = models.BooleanField(
         default=False,
@@ -235,11 +180,6 @@ class Company(models.Model):
         blank=True,
         verbose_name=_("Логотип"),
         help_text=_("Логотип компании для отображения на платформе"),
-    )
-    kyc_notes = models.TextField(
-        blank=True,
-        verbose_name=_("Заметки по KYC"),
-        help_text=_("Внутренние заметки менеджера (не видны клиенту)"),
     )
     # False = an "offline" client a seller created in their CRM (no platform login yet).
     # Flips to True when a real user joins the company (signal / invite-accept). Lets the

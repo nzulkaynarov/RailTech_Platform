@@ -69,7 +69,7 @@ class DealAiActionsMixin:
         responses={
             202: OpenApiResponse(description="AI draft job queued, task_id returned"),
             400: OpenApiResponse(description="No request lines"),
-            403: OpenApiResponse(description="Not a routed seller / not entitled"),
+            403: OpenApiResponse(description="Not a routed seller"),
             404: OpenApiResponse(description="Deal not found"),
         },
         tags=["CRM"],
@@ -87,8 +87,8 @@ class DealAiActionsMixin:
         from sourcing.ai_jobs import enqueue_ai_job
 
         # ARCH-01: run the read-only gate checks synchronously (no LLM, no writes) so an
-        # unauthorized / unentitled caller still gets an immediate 4xx instead of a queued job.
-        # The worker re-runs the authoritative gates (incl. credit consumption) in the service.
+        # unauthorized caller still gets an immediate 4xx instead of a queued job.
+        # The worker re-runs the authoritative gates in the service.
         err = validate_draft_quote_gates(int(pk), request.user)
         if err:
             http_status = (
@@ -98,7 +98,6 @@ class DealAiActionsMixin:
                     "ADMIN_VIEWER_CANNOT_ACT",
                     "ONLY_SELLER_CAN_BUILD_QUOTE",
                     "MEMBER_REQUIRED_FOR_ACTION",
-                    "AI_DRAFT_NOT_ENTITLED",
                 )
                 else status.HTTP_404_NOT_FOUND if err == "DEAL_NOT_FOUND" else status.HTTP_400_BAD_REQUEST
             )

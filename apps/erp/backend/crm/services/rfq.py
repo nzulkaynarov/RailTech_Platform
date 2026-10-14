@@ -2,8 +2,7 @@
 
 ADR-0006 module split: the buyer's request lifecycle (build draft line items → route to seller(s)
 → submit DRAFT→RFQ_OPEN) is a SEPARATE, always-free module from the paid КП/quoting engine in
-`quotes.py`. It's a leaf: no dependency on the pricing/economics/approval engine, so the paid КП
-feature can be gated/toggled as an entitlement without touching the free заявка path.
+`quotes.py`. It's a leaf: no dependency on the pricing/economics/approval engine.
 """
 
 from django.db import models, transaction
@@ -400,16 +399,10 @@ def submit_request(user: CustomUser, deal: Deal) -> Deal:
     """
     from rest_framework.exceptions import PermissionDenied, ValidationError
 
-    from accounts.services.kyc import company_kyc_verified
     from accounts.services.permissions import is_member_of
 
     if not is_member_of(user, deal.company_id, capability="buy"):
         raise PermissionDenied("ONLY_BUYER_CAN_SUBMIT_REQUEST")
-    # ADR-0006 Phase E — KYC floor: «после KYC = минимум». Browsing + building a DRAFT заявка is
-    # free, but SUBMITTING it to sellers requires a KYC-verified (L2+) company. This is the first
-    # real backend gate on verification (it was FE-cosmetic only — the Layer-0 gap).
-    if not company_kyc_verified(deal.company_id):
-        raise PermissionDenied("KYC_REQUIRED_TO_SUBMIT")
     if (deal.stage.code if deal.stage_id else None) != DealStageCode.DRAFT:
         raise ValidationError({"detail": "REQUEST_ALREADY_SUBMITTED"})
 

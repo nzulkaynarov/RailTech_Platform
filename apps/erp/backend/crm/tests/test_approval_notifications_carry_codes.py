@@ -15,23 +15,12 @@
 подаёт, руководитель согласует) — иначе тест мерил бы не тот путь.
 """
 
-from datetime import timedelta
 from decimal import Decimal
 
 import pytest
-from django.utils import timezone
 
 from accounts.constants import Permission
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyRole,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, CustomUser, WorkspaceRole
 from crm.models import Deal, DealStage, Quote, QuoteStatus
 from crm.models.approvals import StepParticipation
 from crm.services.approvals import act_on_step
@@ -55,7 +44,6 @@ def lookups(db):
         DealStage.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     Country.objects.get_or_create(code="UZ", defaults={"name": "Uzbekistan", "sort_order": 10})
 
 
@@ -79,9 +67,6 @@ def _member(company, user, *, workspace_role, company_role):
 def seller(lookups):
     company = Company.objects.create(name="Продавец согласований", inn="908700001")
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
-    SupplierSubscription.objects.create(
-        company=company, plan="PREMIUM", status="ACTIVE", valid_until=timezone.localdate() + timedelta(days=365)
-    )
     admin_role = CompanyRole.objects.create(company=company, name="Администратор компании", is_system=True)
     sales_role = CompanyRole.objects.create(company=company, name="Продажи", permissions=[Permission.QUOTE_BUILD.value])
     sales_user = _user("sales@codes.test")
@@ -93,9 +78,7 @@ def seller(lookups):
 
 @pytest.fixture
 def deal(seller, lookups):
-    client_company = Company.objects.create(
-        name="Заказчик", inn="908700002", verification_status=VerificationStatus.objects.get(code="L2_VERIFIED")
-    )
+    client_company = Company.objects.create(name="Заказчик", inn="908700002")
     client_company.types.add(CompanyType.objects.get(code="CLIENT"))
     return Deal.objects.create(
         title="Сделка согласований",

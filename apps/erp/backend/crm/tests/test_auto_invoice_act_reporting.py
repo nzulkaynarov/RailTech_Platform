@@ -11,21 +11,11 @@
 прогон идемпотентен. Триггер выпуска акта проверяется в `test_act_trigger_and_due_date.py`.
 """
 
-from datetime import timedelta
 from decimal import Decimal
 
 import pytest
-from django.utils import timezone
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
 from crm.models import (
     ActStatus,
     Contract,
@@ -46,7 +36,6 @@ def won_deal(db):
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     for code in ("CLIENT", "SUPPLIER"):
         CompanyType.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     DealStage.objects.get_or_create(code="CLOSED_WON", defaults={"name": "Won", "sort_order": 90})
     QuoteStatus.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})
     ContractStatus.objects.get_or_create(code="SIGNED", defaults={"name": "Signed", "sort_order": 10})
@@ -56,10 +45,9 @@ def won_deal(db):
         ActStatus.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
     FulfillmentStatus.objects.get_or_create(code="PENDING", defaults={"name": "Pending", "sort_order": 10})
 
-    verified = VerificationStatus.objects.get(code="L2_VERIFIED")
-    buyer_co = Company.objects.create(name="Покупатель", inn="AB905", verification_status=verified)
+    buyer_co = Company.objects.create(name="Покупатель", inn="AB905")
     buyer_co.types.add(CompanyType.objects.get(code="CLIENT"))
-    seller_co = Company.objects.create(name="Продавец", inn="AS905", verification_status=verified)
+    seller_co = Company.objects.create(name="Продавец", inn="AS905")
     seller_co.types.add(CompanyType.objects.get(code="SUPPLIER"))
     seller = CustomUser.objects.create_user(email="seller@autoact.test", username="autoact_seller", password="x")
     CompanyMember.objects.create(
@@ -69,12 +57,6 @@ def won_deal(db):
         is_active=True,
         is_primary=True,
         can_sell=True,
-    )
-    SupplierSubscription.objects.create(
-        company=seller_co,
-        plan="PREMIUM",
-        status="ACTIVE",
-        valid_until=timezone.localdate() + timedelta(days=30),
     )
 
     deal = Deal.objects.create(title="Выигранная", company=buyer_co, stage=DealStage.objects.get(code="CLOSED_WON"))

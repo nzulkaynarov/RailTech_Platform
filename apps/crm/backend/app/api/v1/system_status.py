@@ -1,4 +1,4 @@
-"""«Состояние системы» (admin): зависимости, модели по монитору, бот, очередь, ERP, секреты."""
+"""«Состояние системы» (admin): зависимости, модели, бюджет ИИ, бот, очередь, ERP, секреты."""
 
 from dataclasses import asdict
 from datetime import UTC, datetime
@@ -41,7 +41,8 @@ async def collect_components(
         container.backup_service,
     )
     erp = await container.erp_connector.health_facts()
-    return await service.collect(now, bot, token_configured=has_token, erp=erp)
+    ai_budget = await container.ai_spend.today_facts()
+    return await service.collect(now, bot, token_configured=has_token, erp=erp, ai_budget=ai_budget)
 
 
 @router.get("/status", response_model=SystemStatusOut)

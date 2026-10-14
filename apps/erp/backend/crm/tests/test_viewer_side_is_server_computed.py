@@ -10,23 +10,11 @@
 `UserRecordAccess`, Odoo Portal сверяет партнёра на сервере. Клиент роль ЧИТАЕТ.
 """
 
-from datetime import timedelta
-
 import pytest
-from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    SystemRole,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import Deal, DealSellerRouting, DealStage
 
 pytestmark = pytest.mark.django_db
@@ -38,7 +26,6 @@ def lookups(db):
     SystemRole.objects.get_or_create(code="USER", defaults={"name": "User", "sort_order": 10})
     for code, name in (("CLIENT", "Клиент"), ("SUPPLIER", "Поставщик")):
         CompanyType.objects.get_or_create(code=code, defaults={"name": name, "sort_order": 10})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     DealStage.objects.get_or_create(code="RFQ_OPEN", defaults={"name": "Открытый RFQ", "sort_order": 25})
 
 
@@ -57,15 +44,11 @@ def _member(user, company):
 @pytest.fixture
 def dual_world(lookups):
     """Компания, которая И ПОКУПАЕТ, И ПРОДАЁТ — именно на ней ломался вывод стороны."""
-    verified = VerificationStatus.objects.get(code="L2_VERIFIED")
-    dual = Company.objects.create(name="ООО Двусторонняя", inn="8000000001", verification_status=verified)
+    dual = Company.objects.create(name="ООО Двусторонняя", inn="8000000001")
     # Порядок типов важен: CLIENT первым — из него фронт и делал `activeStatus = BUYER`.
     dual.types.add(CompanyType.objects.get(code="CLIENT"))
     dual.types.add(CompanyType.objects.get(code="SUPPLIER"))
-    SupplierSubscription.objects.create(
-        company=dual, plan="PREMIUM", status="ACTIVE", valid_until=timezone.localdate() + timedelta(days=30)
-    )
-    buyer_co = Company.objects.create(name="ООО Покупатель", inn="8000000002", verification_status=verified)
+    buyer_co = Company.objects.create(name="ООО Покупатель", inn="8000000002")
     buyer_co.types.add(CompanyType.objects.get(code="CLIENT"))
 
     user = CustomUser.objects.create_user(email="dual@side.test", username="dual@side.test", password="pw")

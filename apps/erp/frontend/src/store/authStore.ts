@@ -5,11 +5,8 @@ import { setAccessToken } from '../api/accessToken';
 import { User } from '../api/accountsApi';
 import { queryClient } from '../lib/queryClient';
 
-type KYCStatus = 'L1_UNVERIFIED' | 'PROFILE_SUBMITTED' | 'L2_VERIFIED' | 'L3_CONTRACTED' | null;
-
 interface AuthState {
     user: User | null;
-    kyc_status: KYCStatus;
     // Access token is held in memory only (see api/accessToken.ts); the refresh
     // token lives in an HttpOnly cookie the server sets — never in JS (F2.1).
     accessToken: string | null;
@@ -37,7 +34,6 @@ export const useAuthStore = create<AuthState>()(
     persist(
         (set, get) => ({
             user: null,
-            kyc_status: null,
             accessToken: null,
             isLoading: false,
             isAuthenticated: false,
@@ -133,7 +129,6 @@ export const useAuthStore = create<AuthState>()(
                 setAccessToken(null);
                 set({
                     user: null,
-                    kyc_status: null,
                     accessToken: null,
                     isAuthenticated: false,
                 });
@@ -175,10 +170,7 @@ export const useAuthStore = create<AuthState>()(
                     user.company = apiUser.primary_company;
                 }
 
-                set({
-                    user,
-                    kyc_status: (user.kyc_status as KYCStatus) || null,
-                });
+                set({ user });
             },
 
             setTokens: (access: string) => {

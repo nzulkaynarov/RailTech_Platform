@@ -10,11 +10,11 @@ Usage:
     from core.audit import log_admin_action
     log_admin_action(
         entity_type='company', entity_id=company.id,
-        action='KYC approved to L2',
-        detail=f'{company.name}: PROFILE_SUBMITTED → L2_VERIFIED',
+        action='Компания архивирована',
+        detail=f'{company.name}: в обороте → архив',
         actor=request.user, reason=reason,
-        before={'verification_status': 'PROFILE_SUBMITTED'},
-        after={'verification_status': 'L2_VERIFIED'},
+        before={'is_active': True},
+        after={'is_active': False},
     )
 """
 
@@ -117,8 +117,8 @@ class AuditedWriteMixin:
 
     def audit_entity_type(self, instance) -> str:
         """По умолчанию — метка модели. Переопределять ТОЛЬКО ради совместимости с уже
-        записанной историей: у подписок в журнале лежит короткое `subscription`, и смена
-        значения оторвала бы новые записи от старых при разборе инцидента."""
+        записанной историей: смена значения оторвала бы новые записи от старых при разборе
+        инцидента."""
         return instance._meta.label_lower
 
     def audit_action(self, instance, event: str) -> str:

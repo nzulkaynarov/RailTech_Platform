@@ -17,16 +17,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyType,
-    CustomUser,
-    SupplierSubscription,
-    SystemRole,
-    VerificationStatus,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import (
     Act,
     ActStatus,
@@ -53,8 +44,6 @@ def lookups(db):
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
-    VerificationStatus.objects.get_or_create(code="L1_UNVERIFIED", defaults={"name": "L1", "sort_order": 10})
-    VerificationStatus.objects.get_or_create(code="L2_VERIFIED", defaults={"name": "L2", "sort_order": 30})
     SystemRole.objects.get_or_create(code="USER", defaults={"name": "User", "sort_order": 10})
     SystemRole.objects.get_or_create(code="ADMIN", defaults={"name": "Admin", "sort_order": 20})
     DealStage.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})
@@ -68,11 +57,10 @@ def lookups(db):
         GeneratedDocumentStatus.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
 
 
-def _company(name, inn, type_code, *, kyc=None):
+def _company(name, inn, type_code):
     company = Company.objects.create(
         name=name,
         inn=inn,
-        verification_status=(VerificationStatus.objects.get(code=kyc) if kyc else None),
     )
     company.types.add(CompanyType.objects.get(code=type_code))
     return company
@@ -113,21 +101,15 @@ def _pairs(results):
 
 @pytest.fixture
 def world(lookups):
-    """Buyer, a routed seller (KYC L2 + operational sub), a competing seller, a platform
+    """Buyer, a routed seller (operational sub), a competing seller, a platform
     admin, and a non-member."""
-    buyer_co = _company("Buyer Co", "B100", "CLIENT", kyc="L2_VERIFIED")
+    buyer_co = _company("Buyer Co", "B100", "CLIENT")
     buyer_user = _member(buyer_co, "buyer@ds.test", can_buy=True)
 
-    seller_co = _company("Seller Co", "S100", "SUPPLIER", kyc="L2_VERIFIED")
+    seller_co = _company("Seller Co", "S100", "SUPPLIER")
     seller_user = _member(seller_co, "seller@ds.test", can_sell=True)
-    SupplierSubscription.objects.create(
-        company=seller_co,
-        plan="PREMIUM",
-        status="ACTIVE",
-        valid_until=timezone.localdate() + timedelta(days=30),
-    )
 
-    other_co = _company("Other Seller Co", "O100", "SUPPLIER", kyc="L2_VERIFIED")
+    other_co = _company("Other Seller Co", "O100", "SUPPLIER")
     other_user = _member(other_co, "other@ds.test", can_sell=True)
 
     admin_user = CustomUser.objects.create_user(

@@ -30,7 +30,7 @@ import { LoadingRows, EmptyState } from './shared/PageShell';
 interface DealQuotePageProps {
   dealId: number;
   onBack: () => void;
-  /** App-level hash navigation, for the send-gate banner CTA (KYC / subscription). */
+  /** App-level hash navigation, for the send-gate banner CTA (subscription / help). */
   onNavigate?: (target: string) => void;
 }
 
@@ -45,7 +45,7 @@ export function DealQuotePage({ dealId, onBack, onNavigate }: DealQuotePageProps
   const { data: deal, isLoading, isError, refetch } = useDeal(dealId);
   const activeStatus = useUserStore((s) => s.activeStatus);
   const takeMut = useTakeAndPrepareQuote();
-  // WP-H: proactive KYC/entitlement send-gate — banner up-front + disabled Send with the reason.
+  // WP-H: proactive entitlement send-gate — banner up-front + disabled Send with the reason.
   const sendGate = useQuoteSendGate();
   const [contractOpen, setContractOpen] = useState(false);
   // Q1: seller lands on the builder route before a КП exists — offer the manual «Сформировать КП»
@@ -178,7 +178,7 @@ export function DealQuotePage({ dealId, onBack, onNavigate }: DealQuotePageProps
           )}
           {canSend && (
             sendGate.blocked ? (
-              // A known blocker (KYC / subscription / demo) → disable Send and explain why via a
+              // A known blocker (subscription / demo / platform ban) → disable Send and explain why via a
               // tooltip, using the SAME apiErrors.* copy the backend would return. A disabled button
               // swallows pointer events, so the wrapping span carries the tooltip trigger.
               <TooltipProvider>
@@ -241,7 +241,7 @@ export function DealQuotePage({ dealId, onBack, onNavigate }: DealQuotePageProps
         </div>
       )}
 
-      {/* WP-H: proactive send-gate banner — surfaces a KYC/subscription/demo blocker BEFORE the
+      {/* WP-H: proactive send-gate banner — surfaces a subscription/demo blocker BEFORE the
           seller finishes pricing, instead of a late surprise at «Отправить». Seller-side only.
           U2: dismissible here — folding it away returns its row to the line grid on a 14" screen,
           and the disabled «Отправить» button still explains the blocker at the point of action. */}

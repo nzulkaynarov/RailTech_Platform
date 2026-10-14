@@ -41,11 +41,9 @@ class UserViewSet(viewsets.ModelViewSet):
             Prefetch(
                 "memberships",
                 queryset=CompanyMember.objects.select_related(
-                    "company__verification_status",
                     "company__country",
                     "role",
                 ).prefetch_related(
-                    "company__kyc_documents__doc_type",
                     "company__types",
                     "company__members",
                 ),
@@ -344,7 +342,6 @@ class UserViewSet(viewsets.ModelViewSet):
                 Prefetch(
                     "memberships",
                     queryset=CompanyMember.objects.select_related(
-                        "company__verification_status",
                         "company__country",
                         "role",
                         "company_role",  # capabilities.permissions reads the member's CompanyRole

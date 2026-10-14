@@ -10,22 +10,22 @@ from ..models import Product, ProductDocument, ProductImage
 from ..serializers import ProductDocumentSerializer, ProductImageSerializer, ProductListSerializer, ProductSerializer
 
 
-def _ai_enrich_entitlement_gate(user):
-    """403, если платный ИИ-подбор кода не входит в план компании; None — путь открыт.
+def catalog_ai_gate(user):
+    """403, если у пользователя нет права роли `catalog.manage` в компании-продавце; None — путь открыт.
 
-    N3 (дыра №7 аудита): `hs_lookup`/`hs_classify` зовут LLM, но в отличие от enrich на той же
-    странице не были под entitlement — две монетизации у одной механики. Гейт тот же:
-    `ai.enrich` (подписка даёт по умолчанию, CompanyEntitlement переопределяет), superuser —
-    DBA-эскалация, глобальный дневной спенд-кап действует дальше в enqueue_ai_job.
+    ИИ по карточкам каталога (обогащение, подбор кода ТН ВЭД) — инструмент того, кто ведёт
+    каталог. До M1-ERP-02 (волна 2) здесь стоял платный гейт `ai.enrich` (подписка/entitlement);
+    монетизация удалена — решают права роли. Администратор (`is_superuser`) проходит всегда;
+    дневной предохранитель расхода ИИ действует дальше в `enqueue_ai_job`.
     """
     if getattr(user, "is_superuser", False):
         return None
-    from accounts.constants import FeatureKey
-    from accounts.services import has_entitlement, primary_seller_company_id
+    from accounts.constants import Permission
+    from accounts.services import member_has_permission, primary_seller_company_id
 
     seller_company_id = primary_seller_company_id(user)
-    if not has_entitlement(seller_company_id, FeatureKey.AI_ENRICH):
-        return Response({"detail": "AI_FEATURE_NOT_ENTITLED"}, status=status.HTTP_403_FORBIDDEN)
+    if not (seller_company_id and member_has_permission(user, seller_company_id, Permission.CATALOG_MANAGE)):
+        return Response({"detail": "ROLE_NOT_PERMITTED"}, status=status.HTTP_403_FORBIDDEN)
     return None
 
 
@@ -325,7 +325,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         from catalog.publishing import can_manage
         from sourcing.ai_jobs import enqueue_ai_job
 
-        gate = _ai_enrich_entitlement_gate(request.user)
+        gate = catalog_ai_gate(request.user)
         if gate is not None:
             return gate
         ids = [int(pk) for pk in (request.data.get("product_ids") or []) if str(pk).isdigit()][:100]
@@ -394,7 +394,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     def hs_lookup(self, request):
         from sourcing.ai_jobs import enqueue_ai_job
 
-        gate = _ai_enrich_entitlement_gate(request.user)
+        gate = catalog_ai_gate(request.user)
         if gate is not None:
             return gate
         description = (request.data.get("description") or "").strip()
@@ -579,7 +579,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         summary="Unpublish a product (owner)",
         description=(
             "Снимает карточку с витрины: PUBLISHED → DRAFT (Shopify: Active → Draft двусторонне). "
-            "Право то же, что у публикации; KYC не требуется — снятие уменьшает экспозицию."
+            "Право то же, что у публикации."
         ),
         responses={200: OpenApiResponse(description="Unpublished"), 400: OpenApiResponse(description="Not published")},
         tags=["Catalog"],

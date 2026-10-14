@@ -32,12 +32,6 @@ SAMPLE_CONTEXTS: dict[str, dict] = {
         "company_name": "ООО «Пример»",
         "setup_url": "https://b2b.railtech.uz/setup-password?uid=NDA&token=sample-token",
     },
-    "kyc_verified": {
-        "company_name": "ООО «Пример»",
-        "company_inn": "123456789",
-        "level_code": "L2_VERIFIED",
-        "frontend_url": "https://b2b.railtech.uz",
-    },
     "quote_sent": {
         # Mirrors the REAL merge variables passed by crm.tasks.send_quote_email — an operator
         # editing this template by the preview must see the same names the live send substitutes.
@@ -52,19 +46,6 @@ SAMPLE_CONTEXTS: dict[str, dict] = {
     "reset_password": {
         "first_name": "Алиса",
         "reset_url": "https://b2b.railtech.uz/reset-password?uid=NDA&token=sample-token",
-    },
-    "role_application_approved": {
-        "company_name": "ООО «Пример»",
-        "requested_type_name": "Поставщик",
-        "trial_granted": True,
-        "trial_days": 30,
-        "frontend_url": "https://b2b.railtech.uz",
-    },
-    "role_application_rejected": {
-        "company_name": "ООО «Пример»",
-        "requested_type_name": "Производитель",
-        "review_notes": "Не хватает учредительных документов.",
-        "frontend_url": "https://b2b.railtech.uz",
     },
 }
 

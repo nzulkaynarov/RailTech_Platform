@@ -9,16 +9,7 @@ from django.contrib.auth.models import Group
 from django.core.cache import cache
 from rest_framework.test import APIClient
 
-from accounts.models import (
-    Company,
-    CompanyMember,
-    CompanyRole,
-    CompanyRoleApplication,
-    CompanyType,
-    CustomUser,
-    SystemRole,
-    WorkspaceRole,
-)
+from accounts.models import Company, CompanyMember, CompanyRole, CustomUser, SystemRole, WorkspaceRole
 from accounts.services.members import can_delete_user, create_platform_user
 from master_data.models import UnitOfMeasure
 
@@ -145,88 +136,6 @@ def test_clean_account_still_deletes(operator):
     assert not CustomUser.objects.filter(pk=user.pk).exists()
 
 
-# ── 3. Заявки на роль: отказ приходил как 415 ───────────────────────────────
-
-
-@pytest.mark.django_db
-def test_reject_accepts_json(operator, tenant):
-    """Классовые `parser_classes` были только multipart — JSON модерации давал 415."""
-    supplier, _ = CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Поставщик", "sort_order": 20})
-    application = CompanyRoleApplication.objects.create(
-        company=tenant["company"], requested_type=supplier, status="PENDING", submitted_by=tenant["user"]
-    )
-
-    response = _client(operator).post(
-        f"/api/v1/accounts/role-applications/{application.pk}/reject/",
-        {"reason": "Нет договора"},
-        format="json",
-    )
-
-    assert response.status_code != 415, "отказ снова упирается в тип содержимого"
-    assert response.status_code == 200, response.data
-    application.refresh_from_db()
-    assert application.status == "REJECTED"
-
-
-# ── 4. Заявки на роль: подача была мертва с обеих сторон ────────────────────
-
-
-@pytest.mark.django_db
-def test_company_admin_can_submit_for_own_company(tenant):
-    """`company` стал read-only при закрытии M2, а perform_create продолжал его читать → 403."""
-    supplier, _ = CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Поставщик", "sort_order": 20})
-
-    response = _client(tenant["user"]).post(
-        "/api/v1/accounts/role-applications/", {"requested_type": supplier.pk}, format="json"
-    )
-
-    assert response.status_code == 201, response.data
-    assert CompanyRoleApplication.objects.get(pk=response.data["id"]).company_id == tenant["company"].pk
-
-
-@pytest.mark.django_db
-def test_operator_must_name_the_company(operator):
-    """У оператора членств нет по определению — без явной компании был 500 на NOT NULL."""
-    supplier, _ = CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Поставщик", "sort_order": 20})
-
-    response = _client(operator).post(
-        "/api/v1/accounts/role-applications/", {"requested_type": supplier.pk}, format="json"
-    )
-
-    assert response.status_code == 400, response.data
-    assert response.data["detail"] == "COMPANY_REQUIRED"
-
-
-@pytest.mark.django_db
-def test_operator_submits_on_behalf_of_a_tenant(operator, tenant):
-    supplier, _ = CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Поставщик", "sort_order": 20})
-
-    response = _client(operator).post(
-        "/api/v1/accounts/role-applications/",
-        {"requested_type": supplier.pk, "company": tenant["company"].pk},
-        format="json",
-    )
-
-    assert response.status_code == 201, response.data
-    assert CompanyRoleApplication.objects.get(pk=response.data["id"]).company_id == tenant["company"].pk
-
-
-@pytest.mark.django_db
-def test_cannot_file_for_a_foreign_company(tenant):
-    """Защита M2 остаётся: своей заявкой нельзя пометить чужого арендатора."""
-    supplier, _ = CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Поставщик", "sort_order": 20})
-    stranger = Company.objects.create(name="Чужая", inn="770000078")
-
-    response = _client(tenant["user"]).post(
-        "/api/v1/accounts/role-applications/",
-        {"requested_type": supplier.pk, "company": stranger.pk},
-        format="json",
-    )
-
-    assert response.status_code == 403
-    assert not CompanyRoleApplication.objects.filter(company=stranger).exists()
-
-
 # ── 5. Справочники: правка пропадала до десяти минут ────────────────────────
 
 
@@ -271,53 +180,16 @@ def test_created_user_is_not_platform_staff(operator):
     assert Group.objects.filter(name="system_engineers").exists(), "группа заводится миграцией 0006"
 
 
-# ── 6. Компания без статуса KYC выпадала из всех вкладок реестра ────────────
+# ── 6. Контрагента заводит бэк-офис (KYC и саморегистрации нет — M1-ERP-02 волна 1c) ──
 
 
 @pytest.mark.django_db
-def test_new_company_always_has_a_kyc_status():
-    """Поле nullable, и часть путей его не заполняла — компания жила «вне вкладок»."""
-    company = Company.objects.create(name="Новая", inn="770000079")
-
-    assert company.verification_status_id is not None
-    assert company.verification_status.code == "L1_UNVERIFIED"
-
-
-@pytest.mark.django_db
-def test_company_created_by_operator_gets_a_status(operator):
-    """`verification_status` read-only в сериализаторе — статус должен ставить сервер."""
+def test_company_created_by_operator(operator):
+    """Компания из панели создаётся сразу рабочей: ни статуса верификации, ни очереди KYC."""
     response = _client(operator).post(
         "/api/v1/accounts/companies/", {"name": "Из панели", "inn": "770000080"}, format="json"
     )
 
     assert response.status_code == 201, response.data
-    assert Company.objects.get(inn="770000080").verification_status.code == "L1_UNVERIFIED"
-
-
-@pytest.mark.django_db
-def test_kyc_registry_buckets_add_up(operator, tenant):
-    """Сумма вкладок обязана сходиться с итогом — иначе счётчики врут оператору."""
-    Company.objects.create(name="Ещё одна", inn="770000081")
-    rows = _client(operator).get("/api/v1/accounts/companies/", {"page_size": 200}).data
-    rows = rows["results"] if isinstance(rows, dict) else rows
-
-    known = {"L1_UNVERIFIED", "PROFILE_SUBMITTED", "L2_VERIFIED", "L3_CONTRACTED"}
-    # Ровно то поле, по которому реестр раскладывает записи по вкладкам (`getStatusCode`).
-    codes = [row.get("verification_status_code") for row in rows]
-
-    assert all(code in known for code in codes), f"есть компании вне вкладок: {set(codes) - known}"
-
-
-@pytest.mark.django_db
-def test_existing_status_is_not_overwritten():
-    """Подстановка — только на создании: смену статуса делает сервис KYC с аудитом."""
-    from accounts.models import VerificationStatus
-
-    verified = VerificationStatus.objects.get(code="L2_VERIFIED")
-    company = Company.objects.create(name="Проверенная", inn="770000082", verification_status=verified)
-
-    company.name = "Проверенная (переименована)"
-    company.save()
-    company.refresh_from_db()
-
-    assert company.verification_status.code == "L2_VERIFIED"
+    assert Company.objects.filter(inn="770000080", is_active=True).exists()
+    assert not any(key.startswith("verification") for key in response.data)

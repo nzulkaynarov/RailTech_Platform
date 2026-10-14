@@ -61,8 +61,6 @@ def company_history_holders(company: Company) -> list[str]:
 
     if SupplierOffer.objects.filter(supplier=company).exists():
         holders.append("offers")
-    if hasattr(company, "subscription"):
-        holders.append("subscription")
     if company.members.filter(is_active=True).exists():
         holders.append("members")
     return holders
@@ -94,7 +92,7 @@ def archive_company(
     архив прячет из ОБОРОТА, а не из истории.
 
     Причина обязательна: это действие оператора над чужой компанией, и без основания
-    запись в журнале бесполезна обеим сторонам (тот же порядок, что у отзыва KYC).
+    запись в журнале бесполезна обеим сторонам (тот же порядок, что у приостановки подписки).
     """
     clean_reason = (reason or "").strip()
     if not clean_reason:

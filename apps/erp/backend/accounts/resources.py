@@ -20,9 +20,6 @@ class CompanyResource(resources.ModelResource):
         attribute="country",
         widget=ForeignKeyWidget(Country, field="code"),
     )
-    # Статус верификации в импорте/экспорте НЕ участвует: KYC-уровень ставит сервис
-    # (`accounts.services.kyc.verify_company_kyc`) — с проверкой, аудитом и письмом компании.
-    # Строкой в файле его штамповать нельзя (20-08).
     types = fields.Field(
         column_name=_("Роли (через ;)"),
         attribute="types",

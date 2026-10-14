@@ -5,23 +5,16 @@ Re-exports all ViewSets and Views for backwards compatibility so that
 ``from accounts.views import CompanyViewSet`` continues to work unchanged.
 """
 
-from accounts.views.applications import (  # noqa: F401
-    CompanyEntitlementViewSet,
-    CompanyRoleApplicationViewSet,
-    SupplierSubscriptionViewSet,
-)
 from accounts.views.auth import (  # noqa: F401
     CookieTokenObtainPairView,
     CookieTokenRefreshView,
     ForgotPasswordView,
     LogoutView,
     MeView,
-    RegisterView,
     ResetPasswordView,
     SessionListView,
     SessionsRevokeOthersView,
     SetupPasswordView,
-    SubmitProfileView,
     ThrottledTokenObtainPairView,
     TOTPDisableView,
     TOTPLoginView,
@@ -45,9 +38,7 @@ __all__ = [
     # users
     "UserViewSet",
     # auth
-    "RegisterView",
     "SetupPasswordView",
-    "SubmitProfileView",
     "ForgotPasswordView",
     "ResetPasswordView",
     "MeView",
@@ -62,10 +53,6 @@ __all__ = [
     "TOTPLoginView",
     "SessionListView",
     "SessionsRevokeOthersView",
-    # applications & subscriptions
-    "SupplierSubscriptionViewSet",
-    "CompanyRoleApplicationViewSet",
-    "CompanyEntitlementViewSet",
     # lookups
     "CompanyTypeViewSet",
     "SystemRoleViewSet",

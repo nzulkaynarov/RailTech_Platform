@@ -12,7 +12,6 @@
   },
   "dealStages": {
     "draft": "Draft",
-    "kycPending": "KYC Verification",
     "rfqOpen": "RFQ open",
     "sourcing": "Sourcing",
     "calculating": "Calculating",
@@ -84,8 +83,6 @@
     "loginError": "Invalid email or password",
     "tooManyAttempts": "Too many failed login attempts. This account is temporarily locked — please try again in a few minutes.",
     "genericError": "Login failed. Please try again later.",
-    "newCompany": "New company?",
-    "registerLink": "Register with your TIN",
     "forgotPassword": "Forgot password?",
     "showPassword": "Show password",
     "hidePassword": "Hide password",
@@ -103,7 +100,12 @@
       "totpLength": "Code must be exactly 6 digits"
     },
     "ticketExpired": "Verification window expired — please sign in again",
-    "invalidResponse": "Invalid server response. Please try signing in again."
+    "invalidResponse": "Invalid server response. Please try signing in again.",
+    "noCompany": {
+      "title": "Your account is not linked to a company",
+      "hint": "Back-office access is granted by an administrator. Ask them to add you to the company.",
+      "logout": "Sign out"
+    }
   },
   "onboarding": {
     "title": "Getting started",
@@ -114,12 +116,6 @@
         "label": "Complete your profile",
         "hint": "First and last name — so teammates recognise you in activity logs.",
         "cta": "Open profile"
-      },
-      "kyc": {
-        "label": "Verify KYC",
-        "hint": "Upload documents to reach level L2 and unlock transactions.",
-        "hintSubmitted": "Documents submitted. Awaiting platform admin approval.",
-        "cta": "Upload documents"
       },
       "subscription": {
         "label": "Activate subscription",
@@ -417,11 +413,6 @@
       "title": "Active Deals"
     }
   },
-  "kyc": {
-    "banner": {
-      "action": "Start verification"
-    }
-  },
   "sourcing": {
     "title": "Specification Import",
     "uploadTitle": "Upload file",
@@ -572,8 +563,6 @@
       "fields": "Check fields:"
     },
     "sendGate": {
-      "kyc": "Complete company verification (KYC L2) to send a quote to the client.",
-      "kycCta": "Get verified",
       "subscription": "Sending a quote to the client requires an active subscription.",
       "disabledByOperator": "Sending quotes is disabled by the platform for your company. This is not about the subscription — please contact support.",
       "disabledByOperatorCta": "Contact support",
@@ -770,8 +759,6 @@
     },
     "searchPlaceholder": "Search by name or TIN",
     "newClient": "New client",
-    "invite": "Invite to register",
-    "inviteSent": "Invitation sent",
     "inn": "TIN",
     "offline": "Offline",
     "registered": "Registered",
@@ -1029,30 +1016,7 @@
     }
   },
   "company": {
-    "title": "Company",
-    "docTypeLabel": "Type of document to upload",
-    "docTypes": {
-      "CHARTER": "Company Charter",
-      "LICENSE": "License",
-      "PASSPORT": "Director's Passport",
-      "TAX_CERT": "Tax Registration Certificate",
-      "OTHER": "Other document",
-      "BANK_REF": "Bank details"
-    }
-  },
-  "profileForm": {
-    "title": "Company Profile",
-    "step": "Step 3 of 4: Final details",
-    "companyName": "Organization name",
-    "companyNamePlaceholder": "LLC / Sole Proprietorship Name",
-    "positionLabel": "Your position",
-    "positionPlaceholder": "e.g. Head of Procurement",
-    "submit": "Submit for verification",
-    "saveError": "Failed to save profile. Check TIN.",
-    "validation": {
-      "minChars": "Minimum 2 characters",
-      "positionRequired": "Enter your position"
-    }
+    "title": "Company"
   },
   "passwordSetup": {
     "title": "Password Setup",
@@ -1072,31 +1036,6 @@
       "mismatch": "Passwords do not match."
     },
     "subtitle": "Choose a password and your account will be activated."
-  },
-  "registration": {
-    "title": "Register at RailTech",
-    "subtitle": "Secure start in the B2B ecosystem",
-    "stepContact": "Step 1: Contact information",
-    "firstName": "First name",
-    "firstNamePlaceholder": "First name",
-    "lastName": "Last name",
-    "lastNamePlaceholder": "Last name",
-    "emailLabel": "Work Email",
-    "emailPlaceholder": "Work Email",
-    "phoneLabel": "Phone",
-    "phonePlaceholder": "90 123 45 67",
-    "submit": "Register",
-    "genericError": "Registration failed. Check your data.",
-    "emailSent": "Email sent!",
-    "emailSentHint": "We've sent a confirmation link to <strong>{{email}}</strong>. Please check your inbox (including Spam) to continue.",
-    "waitHint": "Waiting for the link? It usually arrives within 1-2 minutes.",
-    "backToLogin": "Back to sign in",
-    "progress": "Registration progress",
-    "validation": {
-      "email": "Enter a valid email",
-      "minChars": "Minimum 2 characters",
-      "phone": "Enter a phone in +998 XX XXX XX XX format"
-    }
   },
   "breadcrumb": {
     "productDetail": "Product details",
@@ -1147,11 +1086,6 @@
     "assigned": "Assigned",
     "release": "Return to queue",
     "released": "Request returned to the team queue"
-  },
-  "verification": {
-    "pending": "Pending",
-    "verified": "Verified",
-    "rejected": "Rejected"
   },
   "companyStatus": {
     "BUYER": "Buyer",
@@ -1249,42 +1183,6 @@
   },
   "dashboardPage": {
     "title": "Dashboard",
-    "kyc": {
-      "title": "Hello, {{name}}!",
-      "subtitle": "Your company is being verified. After KYC approval you will get full access to the platform.",
-      "statusTitle": "Verification Status",
-      "company": "Company",
-      "inn": "TIN",
-      "status": "KYC Status",
-      "pending": "Under review",
-      "rejected": "Verification failed",
-      "rejectedHint": "Verification failed. Reason: {{reason}}. Fix what is listed and submit the documents again.",
-      "notSpecified": "Not specified",
-      "hint": "Verification usually takes 1-2 business days. We'll notify you by email once access is confirmed.",
-      "editProfile": "Edit profile",
-      "contactSupport": "Contact support",
-      "supportSubject": "KYC verification inquiry",
-      "levelsTitle": "Verification Levels",
-      "yourLevel": "Current",
-      "access": "Access",
-      "levels": {
-        "l1": {
-          "label": "L1 — Registration",
-          "desc": "Account created, profile submitted, awaiting manager review",
-          "features": "View profile, edit company data, contact support"
-        },
-        "l2": {
-          "label": "L2 — KYC Verified",
-          "desc": "Manager verified company data and approved verification",
-          "features": "Full catalog, create requests, receive quotes, deal chat, analytics"
-        },
-        "l3": {
-          "label": "L3 — Partner",
-          "desc": "Framework contract signed, full banking details confirmed",
-          "features": "Everything from L2 + sign contracts, electronic documents, priority support"
-        }
-      }
-    },
     "welcome": {
       "title": "Welcome, {{name}}!",
       "subtitle": "Get started on the platform in 3 simple steps",
@@ -1411,18 +1309,12 @@
       "legalAddress": "Legal address",
       "iso9001": "ISO 9001 certificate",
       "iso9001Help": "Check if the company holds a valid ISO 9001 quality certificate",
-      "kycStatus": "KYC Status",
       "platformStatuses": "Company statuses on the platform",
-      "pendingVerification": "pending",
       "contactAdmin": "Contact administrator to change company data",
-      "kycVerified": "Verified",
-      "kycPending": "Under review",
       "save": "Save company data",
       "saved": "Company data saved",
       "logo": "Company logo",
       "logoDescription": "Shown on company card and documents",
-      "kycDocuments": "KYC documents",
-      "kycDocumentsHelp": "Incorporation docs, tax ID, licenses, certificates",
       "docsLoadError": "Failed to load company documents"
     },
     "security": {
@@ -1520,8 +1412,6 @@
       "requisitesDescription": "Logo, contact details and legal information",
       "bankTitle": "Bank details",
       "bankDescription": "Settlement account and bank MFO",
-      "kycTitle": "KYC documents",
-      "kycDescription": "Verification status and supporting documents",
       "brandingSubtitle": "Document branding (PDF)",
       "brandingSubtitleHint": "The quote and contract inherit the requisites above; configure the logo, signatory, footer and display toggles here."
     },
@@ -1763,8 +1653,6 @@
         "emailSupport": "Email Support"
       },
       "faq": {
-        "howRegister": "How to register a company?",
-        "howRegisterAnswer": "Fill out the registration form, select your company status (Buyer, Seller, or Manufacturer) and wait for administrator confirmation. Verification usually takes 1-2 business days.",
         "howAddEmployees": "How to add employees?",
         "howAddEmployeesAnswer": "Go to Settings > Users. Click 'Add user', enter email and role (Manager or Employee). An invitation will be sent to their email.",
         "howSwitchStatus": "How to switch company status?",
@@ -2341,7 +2229,6 @@
     "esign": "Manual mode: click-to-sign. A legally binding e-signature (E-IMZO) will be wired before production release."
   },
   "guards": {
-    "kycRequired": "Finish KYC verification to access this section",
     "notAvailableHere": "This section isn't available in the current mode"
   },
   "aiImport": {
@@ -2521,8 +2408,6 @@
     "MEMBER_REQUIRED_FOR_ACTION": "Only a company member (buyer or seller side) can perform this action",
     "ONLY_SELLER_CAN_BUILD_QUOTE": "Only the seller can build a commercial proposal",
     "ONLY_BUYER_CAN_SUBMIT_REQUEST": "Only the buyer can submit the request",
-    "KYC_REQUIRED_TO_SUBMIT": "Complete company verification (KYC) to submit requests. You can prepare a draft without it.",
-    "SELLER_KYC_REQUIRED": "Complete company verification (KYC) to send and export quotes. Without it, only demo mode is available.",
     "REQUEST_EMPTY": "Add at least one line item before submitting",
     "REQUEST_HAS_INCOMPLETE_ITEMS": "Complete the highlighted rows before submitting",
     "REQUEST_ALREADY_SUBMITTED": "The request has already been submitted",
@@ -2556,7 +2441,6 @@
     "DEAL_DELETE_ONLY_DRAFT": "Only a draft deal can be deleted — an active deal is removed by a platform admin",
     "QUOTE_FROZEN_CANNOT_REASSIGN": "Cannot reassign product in a frozen quote",
     "PRODUCT_NOT_FOUND": "Product not found",
-    "REGISTRATION_FIELDS_REQUIRED": "Email, first name and last name are required",
     "USER_EMAIL_ALREADY_EXISTS": "A user with this email already exists",
     "EMAIL_SEND_FAILED": "Failed to send email. Please try again later",
     "EMAIL_REQUIRED": "Email is required",
@@ -2565,16 +2449,12 @@
     "PROFILE_FIELDS_REQUIRED": "Fill in INN, company name and role",
     "COMPANY_INN_TAKEN": "A company with this INN is already registered. Double-check the INN or ask the company owner to invite you.",
     "SALES_MANAGER_ROLE_NOT_FOUND": "Sales manager role not found",
-    "VERIFICATION_STATUS_NOT_FOUND": "Verification status not found",
     "LOOKUP_IN_USE": "This lookup row is already in use — it cannot be deleted. Deactivate it: it disappears from forms while documents keep their history",
     "TEMPLATE_IN_USE": "Documents have already been issued from this template — it cannot be deleted. Deactivate it instead",
-    "KYC_DOCUMENTS_MISSING": "Company has no KYC documents uploaded",
-    "KYC_REASON_REQUIRED_WITHOUT_EVIDENCE": "Verifying without checked evidence requires a reason — it goes into the audit trail",
     "ACT_ALREADY_EXISTS": "An act for this invoice already exists — a second closing document is not created",
     "ACT_AWAITING_REISSUE": "The act for this invoice came back with a remark — re-issue it instead of creating a second one",
     "ACT_REISSUE_NOT_ALLOWED": "Only an act returned by the customer can be re-issued",
     "COMPANY_NOT_FOUND": "Company not found",
-    "ROLE_APPLICATION_CANNOT_REQUEST_DOCS": "Documents can only be requested for an application under review",
     "SUBSCRIPTION_EXPIRED_EXTEND_FIRST": "The subscription has expired — a payment renews it, not a status change",
     "INVALID_MONTHS": "The number of months must be between 1 and 60",
     "INVALID_AMOUNT": "The amount cannot be negative",
@@ -2588,11 +2468,6 @@
     "COMPANY_IN_USE": "Data still references this company — it cannot be deleted; remove it from circulation instead",
     "COMPANY_ALREADY_ARCHIVED": "The company is already out of circulation",
     "COMPANY_NOT_ARCHIVED": "The company is already in circulation",
-    "KYC_LEVEL_UNCHANGED": "The company is already at this KYC level — nothing to change",
-    "ROLE_APPLICATION_CANNOT_APPROVE": "Application cannot be approved in current status",
-    "ROLE_APPLICATION_CANNOT_REJECT": "Application cannot be rejected in current status",
-    "ROLE_APPLICATION_MISSING_CONTRACT_NDA": "Contract and NDA files are required for SUPPLIER",
-    "ROLE_APPLICATION_MISSING_PARTNERSHIP": "Partnership agreement file is required for MANUFACTURER",
     "CURRENT_PASSWORD_WRONG": "Current password is incorrect",
     "PASSWORD_TOO_WEAK": "Password is too weak. Use at least 8 characters; not all-numeric, not common, and not similar to your email.",
     "CANNOT_DEACTIVATE_SELF": "Cannot deactivate yourself",
@@ -3205,25 +3080,9 @@
       }
     },
     "company": {
-      "kyc_verified": {
-        "title": "KYC: verified",
-        "detail": "{{company_name}}: {{from_status}} → {{to_status}}"
-      },
-      "kyc_downgraded": {
-        "title": "KYC: level downgraded",
-        "detail": "{{company_name}}: {{from_status}} → {{to_status}}"
-      },
       "merged": {
         "title": "Duplicate company merged",
         "detail": "Duplicate #{{duplicate_id}} “{{duplicate_name}}” merged into “{{survivor_name}}”"
-      },
-      "role_application_approved": {
-        "title": "Role application approved",
-        "detail": "{{company_name}} → {{role_name}}"
-      },
-      "role_added": {
-        "title": "Role added: {{role_code}}",
-        "detail": "Application #{{application_id}} approved"
       }
     },
     "product": {
@@ -3285,12 +3144,6 @@
           "detail": "{{company_name}}"
         }
       },
-      "role_application": {
-        "documents_requested": {
-          "title": "Documents requested for the role application",
-          "detail": "{{company_name}} → {{requested_type}}"
-        }
-      },
       "lead": {
         "routed": {
           "title": "Lead assigned to a company",
@@ -3340,21 +3193,6 @@
     "enabled": "Enabled",
     "disabled": "Disabled",
     "demo": "Demo"
-  },
-  "roleApplicationStatuses": {
-    "pending": "Pending review",
-    "documentsRequired": "Documents required",
-    "paymentRequired": "Awaiting payment",
-    "approved": "Approved",
-    "rejected": "Rejected"
-  },
-  "kycDocTypes": {
-    "charter": "Charter",
-    "license": "License",
-    "passport": "Director's passport",
-    "taxCert": "Tax registration certificate",
-    "bankRef": "Bank reference",
-    "other": "Other"
   },
   "chargeTypes": {
     "freight": "Freight / logistics",
@@ -3568,28 +3406,6 @@
     "deleteConfirmTitle": "Delete this charge?",
     "deleteConfirmDescription": "Charge {{name}} will be removed and the quote total recalculated. It can only be restored by adding it again."
   },
-  "companyRole": {
-    "title": "Company role on the platform",
-    "current": "Current roles",
-    "requestLabel": "Request a role",
-    "requestPlaceholder": "Choose a role",
-    "submit": "Submit application",
-    "submitted": "Application submitted for review",
-    "pending": "Application for the «{{role}}» role is under review",
-    "pendingHint": "A platform operator will review it and let you know. No need to apply again.",
-    "rejected": "The previous application was rejected",
-    "rejectedWithReason": "The previous application was rejected: {{reason}}",
-    "docs": {
-      "contract": "Contract",
-      "nda": "NDA (non-disclosure agreement)",
-      "partnership": "Partnership agreement"
-    },
-    "docsRequested": "The operator asks you to attach the missing documents.",
-    "docsRequestedWithReason": "The operator asks you to attach the missing documents: {{reason}}",
-    "docsUploaded": "Documents sent — the application is back in review",
-    "uploadDocs": "Send documents",
-    "allRolesGranted": "All available roles are already granted"
-  },
   "recordHistory": {
     "title": "Record history"
   },
@@ -3682,14 +3498,6 @@
       "title": "A request was assigned to you",
       "message": "Request #{{deal_id}} is assigned to you — a quote is needed"
     },
-    "company.kyc_status_changed": {
-      "title": "Verification status updated",
-      "message": "Your company status: {{level_code}}"
-    },
-    "company.kyc_verified": {
-      "title": "KYC status updated",
-      "message": "KYC for {{company}} — {{level_code}}"
-    },
     "invoice.issued": {
       "title": "Invoice issued",
       "message": "Invoice {{number}} issued for payment on deal #{{deal_id}}"
@@ -3747,12 +3555,6 @@
     "HEAD": "Head of unit",
     "APPROVER": "Approver",
     "INFORMED": "For information"
-  },
-  "kycLevels": {
-    "L1_UNVERIFIED": "Unverified",
-    "L2_VERIFIED": "KYC verified (L2)",
-    "L3_CONTRACTED": "Platform contract (L3)",
-    "PROFILE_SUBMITTED": "Profile submitted"
   },
   "docPlaceholders": {
     "deal_number": "Deal number",
@@ -3870,11 +3672,7 @@
     "resetFilters": "Clear filters",
     "filters": {
       "allDomains": "All domains"
-    },
-    "publishNeedsKyc": "Publishing unlocks once your company is verified",
-    "kycGateTitle": "Fill your catalog now — publishing unlocks after verification",
-    "kycGateHint": "While your company documents are being reviewed you can create cards, upload a price list and enrich data. Publishing to the shared catalog unlocks right after verification.",
-    "kycGateCta": "Check status"
+    }
   },
   "hsField": {
     "placeholder": "code or product name…",

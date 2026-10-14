@@ -58,25 +58,3 @@ class WorkspaceRole(AbstractLookup):
     class Meta(AbstractLookup.Meta):
         verbose_name = _("Роль в компании")
         verbose_name_plural = _("Справочник: Роли в компании")
-
-
-class VerificationStatus(AbstractLookup):
-    """
-    Статусы верификации KYC.
-    Seed: L1_UNVERIFIED, PROFILE_SUBMITTED, L2_VERIFIED, L3_CONTRACTED
-    """
-
-    class Meta(AbstractLookup.Meta):
-        verbose_name = _("Статус верификации")
-        verbose_name_plural = _("Справочник: Статусы верификации")
-
-
-class KYCDocType(AbstractLookup):
-    """
-    Типы KYC-документов.
-    Seed: CHARTER, LICENSE, PASSPORT, TAX_CERT, BANK_REF, OTHER
-    """
-
-    class Meta(AbstractLookup.Meta):
-        verbose_name = _("Тип KYC документа")
-        verbose_name_plural = _("Справочник: Типы KYC документов")

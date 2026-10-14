@@ -112,6 +112,7 @@ export const system = {
       budget: "бюджет",
       crm_url: "адрес CRM",
       erp: "ERP",
+      ai_budget: "бюджет ИИ",
     } as Record<string, string>,
   },
   auditUi: {

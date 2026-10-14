@@ -45,7 +45,6 @@ def _ctx(**over):
         "seller": Company(name="Seller", inn="3000000000", phone="+998 90 111-22-33"),
         "seller_profile": None,
         "seller_logo_url": None,
-        "is_demo": False,
         "public_quote_url": None,
     }
     ctx.update(over)

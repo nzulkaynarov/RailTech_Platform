@@ -23,6 +23,7 @@ from app.services.settings import SettingsService
 
 if TYPE_CHECKING:
     from app.domain.backoffice import BackofficeMode
+    from app.services.ai_spend import AiSpendService
     from app.services.assist import AssistService
     from app.services.auth import AuthService
     from app.services.backups import BackupService
@@ -79,6 +80,15 @@ class Container:
         from app.services.budget import BudgetGuard
 
         return BudgetGuard(self.session_factory, self.settings_service, self.model_catalog)
+
+    @cached_property
+    def ai_spend(self) -> "AiSpendService":
+        """«Расходы» по ансамблю (M3-CRM-09): журнал LiteLLM `/spend/logs/v2`, кэш 60 с."""
+        from app.integrations.litellm_spend import LiteLLMSpendLogs
+        from app.services.ai_spend import AiSpendService
+
+        source = LiteLLMSpendLogs(self.settings.litellm_base_url, self.settings.litellm_api_key)
+        return AiSpendService(source, self.settings_service)
 
     @cached_property
     def embedder(self) -> Embedder:

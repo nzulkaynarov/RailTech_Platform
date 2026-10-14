@@ -185,7 +185,7 @@ def _has_legacy_send_role(actor, company_id: int) -> bool:
     EXACTLY the pre-U3 gate, but scoped to un-migrated members only. This deliberately does NOT
     honour the bare can_sell capability (which defaults True), so a company_role-less member with
     a non-sales WorkspaceRole is not auto-granted a client-facing send. Dies once every member has
-    a CompanyRole (invite / submit_company_profile / add_company_member all seed one)."""
+    a CompanyRole (invite / add_company_member seed one)."""
     membership = (
         actor.memberships.filter(company_id=company_id, is_active=True, company_role__isnull=True)
         .select_related("role")
@@ -211,8 +211,7 @@ def can_send_quote_to_client(actor, quote) -> bool:
     default capability flag never promotes them to send a binding КП; mirrors the sibling
     client-facing gates contract.sign / payment.record). `_has_legacy_send_role` bridges members
     not yet migrated to a CompanyRole so no existing OWNER/SALES_MANAGER seller loses send
-    mid-rollout. Client-facing send stays additionally gated by the paid-seller subscription
-    (assert_seller_can_operate) and the quote.send entitlement in send_to_client.
+    mid-rollout.
     """
     if getattr(actor, "is_superuser", False) or getattr(actor, "is_superuser", False):
         return True

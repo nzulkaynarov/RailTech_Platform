@@ -77,7 +77,7 @@ def render_document_profile_preview_html(company, doc_type: str = "KP", override
         if row is None:
             row = CompanyDocumentProfile(company=company)  # in-memory only — never .save()
         _apply_preview_overrides(row, overrides)
-    brand = _brand_context_from_row(company, row, is_demo=False)
+    brand = _brand_context_from_row(company, row)
 
     if doc_type == "CT":
         return _render_sample_contract_html(brand)
@@ -238,7 +238,7 @@ def _render_sample_quote_html(brand: dict, cover_profile=None) -> str:
             vat_amount=sample_quote["vat_amount"],
             total=sample_quote["total_incl_vat"],
         ),
-        # Branding preview, not a real export — no «ЧЕРНОВИК» watermark (it would obscure the very
+        # Branding preview, not a real export — no «ЧЕРНОВИК» stamp (it would obscure the very
         # branding this sample exists to show); keep the lead-time column visible so the seller can
         # see it styled when their profile toggle is on.
         "is_draft": False,
